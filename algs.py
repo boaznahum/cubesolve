@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Sequence
+from random import Random
+from typing import Sequence, Any
 
 from cube import Cube
 
@@ -208,6 +209,18 @@ class _BigAlg(Alg):
                 return "[" + " ".join([str(a) for a in self._algs]) + "]"
 
 
+def _scramble(seed: Any) -> Alg:
+    rnd: Random = Random(seed)
+
+    n = rnd.randint(400, 600)
+
+    s = Algs.Simple
+
+    algs: list[Alg] = [rnd.choice(s) for _ in range(0, n)]
+
+    return _BigAlg(str(seed) + "[" + str(n) + "]", *algs)
+
+
 class Algs:
     L = _L()
     R = _R()
@@ -220,6 +233,8 @@ class Algs:
     X = _X()
     Y = _Y()
 
+    Simple = [L, R, U, F, B, D, M, X, U]
+
     RU = _BigAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
 
     UR = _BigAlg("UR(top)", U, R, -U, -L, U, -R, -U, L)
@@ -230,3 +245,7 @@ class Algs:
             Algs.RU,
             Algs.UR
         ]
+
+    @classmethod
+    def scramble1(cls):
+        return _scramble("scramble1")

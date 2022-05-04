@@ -30,3 +30,9 @@ class Operator:
     def reset(self):
         self._cube.reset()
         self._history.clear()
+
+    def undo(self):
+        if self.history:
+            alg = self._history.pop()
+            alg.play(self._cube, True)
+
