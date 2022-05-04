@@ -39,7 +39,7 @@ def main():
 
                 modifier = False
                 print(f"History={op.history}")
-                print(f"(iv={inv}) Please enter a command 'R L U F B D  M,X(R), Y(U) A(algs) Q:")
+                print(f"(iv={inv}) Please enter a command 'R L U F B D  M,X(R), Y(U) Algs Clear Q:")
 
                 value = msvcrt.getch()
                 print(value.upper())
@@ -93,6 +93,12 @@ def main():
 
                         history += str(alg) + inc + " "
                         alg.play(c, inv)
+                        inv = False
+                        break
+
+                    case b"C":
+
+                        op.reset()
                         inv = False
                         break
 

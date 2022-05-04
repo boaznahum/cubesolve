@@ -23,12 +23,12 @@ class Cube:
         self._reset()
 
     def _reset(self):
-        f: Face = Face(Color.BLUE)
-        l: Face = Face(Color.ORANGE)
-        u: Face = Face(Color.YELLOW)
-        r: Face = Face(Color.RED)
-        d: Face = Face(Color.WHITE)
-        b: Face = Face(Color.GREEN)
+        f: Face = Face(FaceName.F, Color.BLUE)
+        l: Face = Face(FaceName.L, Color.ORANGE)
+        u: Face = Face(FaceName.U, Color.YELLOW)
+        r: Face = Face(FaceName.R, Color.RED)
+        d: Face = Face(FaceName.D, Color.WHITE)
+        b: Face = Face(FaceName.B, Color.GREEN)
 
         self._front = f
         self._left = l
@@ -92,7 +92,7 @@ class Cube:
     def down(self):
         return self._down
 
-    def m_rotate(self,  n=1):
+    def m_rotate(self, n=1):
         """
         middle over R
         :param n:
@@ -104,7 +104,6 @@ class Cube:
         down: Face = self.down
 
         for _ in range(0, n % 4):
-
             saved_up: Center = self.up.center.copy()
 
             self.up.center.replace_colors(self.front.center)
@@ -118,7 +117,6 @@ class Cube:
             self.front.edge_bottom.replace_colors2(self.back.edge_bottom, down, front, back, down)
             self.back.edge_bottom.replace_colors2(saved_up_top, up, back, back, down)
 
-
     def x_rotate(self, n):
         """
         Entire cube or X
@@ -130,8 +128,7 @@ class Cube:
             self.right.rotate()
             self.left.rotate(-1)
 
-
-    def e_rotate(self,  n=1):
+    def e_rotate(self, n=1):
         """
         middle over D
         :param n:
@@ -156,10 +153,7 @@ class Cube:
             self.back.edge_left.replace_colors2(self.right.edge_left, front, right, right, back)
             self.front.edge_right.replace_colors2(saved_front_left, front, right, left, front)
 
-
-
-
-    def y_rotate(self,  n=1):
+    def y_rotate(self, n=1):
         """
         entire over U  (please note that e is over D)
         :param n:
@@ -170,7 +164,7 @@ class Cube:
             self.up.rotate(-1)
             self.down.rotate(1)
 
-    def s_rotate(self,  n=1):
+    def s_rotate(self, n=1):
         """
         middle over F
         :param n:
@@ -178,7 +172,7 @@ class Cube:
         """
         pass
 
-    def z_rotate(self,  n=1):
+    def z_rotate(self, n=1):
         """
         entire over F
         :param n:
@@ -188,8 +182,6 @@ class Cube:
             self.s_rotate()
             self.front.rotate()
             self.back.rotate(-1)
-
-
 
     @property
     def solved(self):
@@ -202,6 +194,9 @@ class Cube:
 
     def view(self) -> "CubeView":
         return CubeView(self)
+
+    def reset(self):
+        self._reset()
 
 
 def _create_edge(f1: Face, f2: Face) -> Edge:

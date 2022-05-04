@@ -22,4 +22,8 @@ class Operator:
     def history(self) -> Sequence[Alg]:
         return self._history
 
+    def reset(self):
+        self._cube.reset()
+        self._history.clear()
+
 

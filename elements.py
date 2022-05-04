@@ -19,6 +19,15 @@ class Direction(Enum):
     D270 = 270
 
 
+class FaceName:
+    U = "U"
+    D = "D"
+    F = "U"
+    B = "B"
+    L = "L"
+    R = "R"
+
+
 _Face: TypeAlias = "Face"
 
 
@@ -49,7 +58,7 @@ class PartEdge:
 
     def copy(self) -> "PartEdge":
         """
-        Used as temporary for rotate, must not used in cube
+        Used as temporary for rotate, must not be used in cube
         :return:
         """
         return PartEdge(self._face, self._color)
@@ -57,6 +66,11 @@ class PartEdge:
 
 class Part(ABC):
     """
+
+
+    Parts never chane position, only the color of the parts
+
+
     n = 1 - center
     n = 2 - edge
     n = 3 - corner
@@ -68,9 +82,12 @@ class Part(ABC):
         super().__init__()
         self._edges: MutableSequence[PartEdge] = [*edges]
 
+        self._pos_id = tuple( e.face.name for e in edges )
+
+
     def get_face_edge(self, face: _Face) -> PartEdge:
         """
-        retunr the edge belong to face, raise erro if not found
+        return the edge belong to face, raise error if not found
         :param face:
         :return:
         """
@@ -103,6 +120,14 @@ class Part(ABC):
 
     def f_color(self, f: _Face):
         return self.get_face_edge(f).color
+
+    @property
+    def pos_id(self):
+        """
+        A unqiue ID according to pos
+        :return:
+        """
+        return self._pos_id
 
 
 class Center(Part):
@@ -179,12 +204,11 @@ class Edge(Part):
 
         other_face_target.copy_color(other_face_source)
 
-
     def replace_colors2(self,
-                       source: "Edge",
-                       source_1: _Face, target_1: _Face,
-                       source_2: _Face, target_2: _Face,
-                       ):
+                        source: "Edge",
+                        source_1: _Face, target_1: _Face,
+                        source_2: _Face, target_2: _Face,
+                        ):
         """
         Replace the colors of this corner with the colors from source
         Find the edge part contains on_face both in self and other face
@@ -192,13 +216,15 @@ class Edge(Part):
 
         We assume that both source and self are belonged to on_face
 
-        :param on_face:
+        :param source_1:
+        :param source_2:
+        :param target_2:
+        :param target_1:
         :param source:
         :return:
         """
 
         self._replace_colors(source, (source_1, target_1), (source_2, target_2))
-
 
     def copy(self) -> "Edge":
         """
@@ -229,8 +255,11 @@ class Corner(Part):
         Find the edge part contains on_face both in self and other face
         replace the edge part color on on_face with the matched color from source
 
-        We assume that both source and self are belonged to on_face
-
+        We assume that both source and self are belonged to on_face.
+        :param target_3:
+        :param source_3:
+        :param target_2:
+        :param source_2:
         :param on_face:
         :param source:
         :return:
@@ -240,7 +269,10 @@ class Corner(Part):
 
 
 class Face:
-    __slots__ = ["_center", "_direction",
+    """
+    Faces never chane position, only the color of the parts
+    """
+    __slots__ = ["_center", "_direction", "_name",
                  "_edge_left", "_edge_top", "_edge_right", "_edge_bottom",
                  "_corner_top_left", "_corner_top_right", "_corner_bottom_right", "_corner_bottom_left",
                  "_parts"
@@ -259,13 +291,18 @@ class Face:
     _corner_bottom_right: Corner
     _corner_bottom_left: Corner
 
-    def __init__(self, color: Color) -> None:
+    def __init__(self, name: FaceName, color: Color) -> None:
         super().__init__()
 
+        self._name = name
         self._center = Center(PartEdge(self, color))
         self._direction = Direction.D0
 
         # all others are created by Cube#reset
+
+    @property
+    def name(self) -> FaceName:
+        return self._name
 
     @property
     def center(self) -> Center:

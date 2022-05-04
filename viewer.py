@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Hashable
 
 import colorama
 
@@ -213,11 +214,11 @@ class _Board:
         return _FaceBoard(cells)
 
 
-_parts: dict[int, int] = {}
+_parts: dict[Hashable, int] = {}
 
 
 def _part_id(p: Part) -> str:
-    p_id = id(p)
+    p_id = p.pos_id
 
     _id = _parts.get(p_id)
 
