@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 import colorama
 
-from cube import CubeView
+from cube import Cube
 from elements import Face, Color, Part
 
 _CELL_SIZE: int = 2
@@ -282,7 +282,7 @@ def _plot_face(b: _Board, f: Face, fy: int, fx: int, flip_v=False, flip_h=False)
     _plot_cell(y2, x2, f.corner_bottom_right)
 
 
-def plot(cube: CubeView):
+def plot(cube: Cube):
     """
         Face coordinates
 

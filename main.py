@@ -1,3 +1,5 @@
+import algs
+from algs import Alg
 from cube import Cube, CubeView
 import viewer
 
@@ -9,7 +11,7 @@ def main():
 
     c: Cube = Cube()
 
-   # c: CubeView = _c.view()
+    # c: CubeView = _c.view()
 
     viewer.plot(c)
 
@@ -33,7 +35,7 @@ def main():
 
                 modifier = False
                 print(f"History={history}")
-                print(f"(iv={inv}) Please enter a command 'R L U F B D  M,X(R), Y(U) Q:")
+                print(f"(iv={inv}) Please enter a command 'R L U F B D  M,X(R), Y(U) A(algs) Q:")
 
                 value = msvcrt.getch()
                 print(value.upper())
@@ -100,6 +102,14 @@ def main():
                         inv = False
                         break
 
+                    case b"A":
+
+                        alg: Alg = get_alg()
+
+                        history += str(alg) + inc + " "
+                        alg.play(c, inv)
+                        inv = False
+                        break
 
                     case b"\x03" | b"Q":
                         done = True
@@ -108,6 +118,20 @@ def main():
             print("DONE=", done)
             if not done and not modifier:
                 viewer.plot(c)
+
+
+def get_alg() -> Alg:
+    print("Algs:")
+    _algs = algs.Algs.lib()
+
+    for i, a in enumerate(_algs):
+        print("", i + 1, "):", str(a))
+
+    index = input("Alg index:")
+
+    return _algs[int(index)-1]
+
+    pass
 
 
 if __name__ == '__main__':
