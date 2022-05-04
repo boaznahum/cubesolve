@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 
-from elements import Face, Center, Color, Part
-from cube import Cube
-
 import colorama
+
+from cube import CubeView
+from elements import Face, Color, Part
 
 _CELL_SIZE: int = 2
 
@@ -28,7 +28,6 @@ def _color_2_str(c: Color, x: str) -> str:
     if not _inited:
         colorama.init()
 
-
         _colors[Color.BLUE] = colorama.Fore.BLUE
         _colors[Color.ORANGE] = colorama.Fore.MAGENTA
         _colors[Color.YELLOW] = colorama.Fore.YELLOW
@@ -38,7 +37,7 @@ def _color_2_str(c: Color, x: str) -> str:
 
         _inited = True
 
-#    return str(c.value)[0]
+    #    return str(c.value)[0]
     return _ansi_color(_colors[c], x)
 
 
@@ -88,7 +87,6 @@ _FACE_SIZE = 3
 
 
 class _FaceBoard:
-
     """
      0,0 | 0,1 | 0,2
      ---------------
@@ -214,9 +212,11 @@ class _Board:
                                             for y in range(fy * _FACE_SIZE, fy * _FACE_SIZE + _FACE_SIZE)]
         return _FaceBoard(cells)
 
-_parts: dict[int, int] = {}
-def _part_id(p: Part) -> str:
 
+_parts: dict[int, int] = {}
+
+
+def _part_id(p: Part) -> str:
     p_id = id(p)
 
     _id = _parts.get(p_id)
@@ -228,10 +228,7 @@ def _part_id(p: Part) -> str:
     return chr(ord("A") + _id - 1)
 
 
-
-
-def _plot_face(b: _Board, f: Face, fy: int, fx: int, flip_v = False, flip_h = False):
-
+def _plot_face(b: _Board, f: Face, fy: int, fx: int, flip_v=False, flip_h=False):
     """
      0,0 | 0,1 | 0,2
      ---------------
@@ -240,16 +237,15 @@ def _plot_face(b: _Board, f: Face, fy: int, fx: int, flip_v = False, flip_h = Fa
      2,0 | 2,1 | 2,2
     """
 
-
     # cell start
     fb: _FaceBoard = b.get_face(fy, fx)
 
     def _plot_cell(cy: int, cx: int, p: Part):
 
         c: Color
-        chr: str
+        char: str
         if p:
-            c = p.get_face(f).color
+            c = p.get_face_edge(f).color
             char = _part_id(p)
         else:
             c = f.color
@@ -262,14 +258,18 @@ def _plot_face(b: _Board, f: Face, fy: int, fx: int, flip_v = False, flip_h = Fa
                 fb.put_cell_char(cy, cx, y, x, s)
 
     if flip_v:
-        y0 = 2; y2 = 0
+        y0 = 2
+        y2 = 0
     else:
-        y0 = 0; y2 = 2
+        y0 = 0
+        y2 = 2
 
     if flip_h:
-        x0 = 2; x2 = 0
+        x0 = 2
+        x2 = 0
     else:
-        x0 = 0; x2 = 2
+        x0 = 0
+        x2 = 2
 
     _plot_cell(y0, x0, f.corner_top_left)
     _plot_cell(y0, 1, f.edge_top)
@@ -282,7 +282,7 @@ def _plot_face(b: _Board, f: Face, fy: int, fx: int, flip_v = False, flip_h = Fa
     _plot_cell(y2, x2, f.corner_bottom_right)
 
 
-def plot(cube: Cube):
+def plot(cube: CubeView):
     """
         Face coordinates
 
@@ -304,3 +304,4 @@ def plot(cube: Cube):
     _plot_face(b, cube.back, 3, 1, flip_v=True, flip_h=True)
 
     b.print()
+    print("Solved=", cube.solved)

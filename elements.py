@@ -1,6 +1,6 @@
 from abc import ABC
 from enum import Enum
-from typing import TypeAlias, MutableSequence
+from typing import TypeAlias, MutableSequence, Tuple
 
 
 class Color(Enum):
@@ -10,6 +10,7 @@ class Color(Enum):
     GREEN = "G"
     RED = "R"
     WHITE = "W"
+
 
 class Direction(Enum):
     D0 = 0
@@ -40,6 +41,19 @@ class PartEdge:
     def color(self) -> Color:
         return self._color
 
+    def __str__(self) -> str:
+        return f"{self._color.name}@{self._face}"
+
+    def copy_color(self, source: "PartEdge"):
+        self._color = source._color
+
+    def copy(self) -> "PartEdge":
+        """
+        Used as temporary for rotate, must not used in cube
+        :return:
+        """
+        return PartEdge(self._face, self._color)
+
 
 class Part(ABC):
     """
@@ -54,7 +68,7 @@ class Part(ABC):
         super().__init__()
         self._edges: MutableSequence[PartEdge] = [*edges]
 
-    def get_face(self, face: _Face) -> PartEdge:
+    def get_face_edge(self, face: _Face) -> PartEdge:
         """
         retunr the edge belong to face, raise erro if not found
         :param face:
@@ -67,29 +81,162 @@ class Part(ABC):
         raise ValueError(f"Part {self} doesn't contain face {face}")
 
     def __str__(self) -> str:
-        return str([ str(e.face.color) for e in self._edges ] )
+        return str([str(e) for e in self._edges])
+
+    def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face]):
+
+        """
+        Replace the colors of this edge with the colors from source
+        Find the edge part contains source_dest[i][0] and copy it to
+        edge part that mathces source_dest[i][0]
+
+        :param source:
+        :return:
+        """
+        source: _Face
+        target: _Face
+        for source, target in source_dest:
+            source_edge: PartEdge = source_part.get_face_edge(source)
+            target_edge: PartEdge = self.get_face_edge(target)
+
+            target_edge.copy_color(source_edge)
+
+    def f_color(self, f: _Face):
+        return self.get_face_edge(f).color
 
 
 class Center(Part):
     def __init__(self, center: PartEdge) -> None:
         super().__init__(center)
 
-    def edg(self):
+    def edg(self) -> PartEdge:
         return self._edges[0]
 
     @property
     def color(self):
         return self.edg().color
 
+    def copy(self):
+        return Center(self._edges[0].copy())
+
+    def replace_colors(self, other: "Center"):
+        self._edges[0].copy_color(other.edg())
+
 
 class Edge(Part):
     def __init__(self, e1: PartEdge, e2: PartEdge) -> None:
         super().__init__(e1, e2)
 
+    @property
+    def e1(self) -> "PartEdge":
+        return self._edges[0]
+
+    @property
+    def e2(self) -> "PartEdge":
+        return self._edges[1]
+
+    def get_other_face_edge(self, f: _Face) -> "PartEdge":
+
+        """
+        Getthe edge that is on face that is not f
+        :param f:
+        :return:
+        """
+
+        e1 = self.e1
+        e2 = self.e2
+        if e1.face is f:
+            return e2
+        elif e2.face is f:
+            return e1
+        else:
+            raise ValueError(f"Face {f} not in edge {self}")
+
+    def get_other_face(self, f: _Face) -> _Face:
+
+        return self.get_other_face_edge(f).face
+
+    def replace_colors(self, on_face: _Face, source: "Edge"):
+        """
+        Replace the colors of this edge with the colors from source
+        Find the edge part contains on_face both in self and other face
+        replace the edge part color on on_face with the matched color from source
+
+        We assume that both source and self are belonged to on_face
+
+        :param on_face:
+        :param source:
+        :return:
+        """
+
+        this_face_source_edge: PartEdge = source.get_face_edge(on_face)
+        this_face_target_edge: PartEdge = self.get_face_edge(on_face)
+
+        this_face_target_edge.copy_color(this_face_source_edge)
+
+        other_face_source: PartEdge = source.get_other_face_edge(on_face)
+        other_face_target: PartEdge = self.get_other_face_edge(on_face)
+
+        other_face_target.copy_color(other_face_source)
+
+
+    def replace_colors2(self,
+                       source: "Edge",
+                       source_1: _Face, target_1: _Face,
+                       source_2: _Face, target_2: _Face,
+                       ):
+        """
+        Replace the colors of this corner with the colors from source
+        Find the edge part contains on_face both in self and other face
+        replace the edge part color on on_face with the matched color from source
+
+        We assume that both source and self are belonged to on_face
+
+        :param on_face:
+        :param source:
+        :return:
+        """
+
+        self._replace_colors(source, (source_1, target_1), (source_2, target_2))
+
+
+    def copy(self) -> "Edge":
+        """
+        Used as temporary for rotate, must not used in cube
+        :return:
+        """
+        return Edge(self.e1.copy(), self.e2.copy())
+
 
 class Corner(Part):
     def __init__(self, e1: PartEdge, e2: PartEdge, e3: PartEdge) -> None:
         super().__init__(e1, e2, e3)
+
+    def copy(self) -> "Corner":
+        """
+        Used as temporary for rotate, must not used in cube
+        :return:
+        """
+        return Corner(self._edges[0].copy(), self._edges[1].copy(), self._edges[2].copy())
+
+    def replace_colors(self, on_face: _Face,
+                       source: "Corner",
+                       source_2: _Face, target_2: _Face,
+                       source_3: _Face, target_3: _Face,
+                       ):
+        """
+        Replace the colors of this corner with the colors from source
+        Find the edge part contains on_face both in self and other face
+        replace the edge part color on on_face with the matched color from source
+
+        We assume that both source and self are belonged to on_face
+
+        :param on_face:
+        :param source:
+        :return:
+        """
+
+        self._replace_colors(source, (on_face, on_face), (source_2, target_2), (source_3, target_3))
 
 
 class Face:
@@ -118,16 +265,7 @@ class Face:
         self._center = Center(PartEdge(self, color))
         self._direction = Direction.D0
 
-        self._edge_left: Edge = None
-        self._edge_top: Edge = None
-        self._edge_right: Edge = None
-        self._edge_bottom: Edge = None
-
-        self._corner_top_left: Corner  = None
-        self._corner_top_right: Corner  = None
-        self._corner_bottom_right: Corner  = None
-        self._corner_bottom_left: Corner  = None
-
+        # all others are created by Cube#reset
 
     @property
     def center(self) -> Center:
@@ -165,19 +303,58 @@ class Face:
     def corner_bottom_left(self) -> Corner:
         return self._corner_bottom_left
 
-
     @property
     def color(self):
         return self.center.color
 
     def __str__(self) -> str:
-        return f"Face: {self._center.edg().color}"
+        return f"Face: {self._center.edg().color.name}"
 
     # for constructing only, valid only after ctor
     def create_part(self) -> PartEdge:
-
         e: PartEdge = PartEdge(self, self.color)
         return e
 
+    def _get_other_face(self, e: Edge) -> _Face:
+        return e.get_other_face(self)
 
+    def rotate(self, n=1):
+        def _rotate():
+            left: Face = self._get_other_face(self._edge_left)
+            right: Face = self._get_other_face(self._edge_right)
+            top: Face = self._get_other_face(self._edge_top)
+            bottom: Face = self._get_other_face(self._edge_bottom)
 
+            # top -> right -> bottom -> left -> top
+
+            saved_top: Edge = self._edge_top.copy()
+            # left --> top
+            self._edge_top.replace_colors(self, self._edge_left)
+            self._edge_left.replace_colors(self, self._edge_bottom)
+            self._edge_bottom.replace_colors(self, self._edge_right)
+            self._edge_right.replace_colors(self, saved_top)
+
+            saved_bottom_left = self._corner_bottom_left.copy()
+
+            # bottom_left -> top_left -> top_right -> bottom_right -> bottom_left
+            self._corner_bottom_left.replace_colors(self, self._corner_bottom_right, right, bottom, bottom, left)
+            self._corner_bottom_right.replace_colors(self, self._corner_top_right, top, right, right, bottom)
+            self._corner_top_right.replace_colors(self, self._corner_top_left, top, right, left, top)
+            self._corner_top_left.replace_colors(self, saved_bottom_left, left, top, bottom, left)
+
+        for _ in range(0, n % 4):
+            # -1 --> 3
+            _rotate()
+
+    @property
+    def solved(self):
+        return (self.center.color ==
+                self._edge_top.f_color(self) ==
+                self._edge_right.f_color(self) ==
+                self._edge_bottom.f_color(self) ==
+                self._edge_left.f_color(self) ==
+                self._corner_top_left.f_color(self) ==
+                self._corner_top_right.f_color(self) ==
+                self._corner_bottom_left.f_color(self) ==
+                self._corner_bottom_right.f_color(self)
+                )
