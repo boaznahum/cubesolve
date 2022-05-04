@@ -10,19 +10,42 @@ from solver import Solver
 
 _terminal: bool = sys.stdin.isatty()
 
-print(f"{_terminal=}")
-print(f"{sys.stdin.isatty()=}")
+
+# print(f"{_terminal=}")
+# print(f"{sys.stdin.isatty()=}")
 
 
-def get_input() -> str:
-    if _terminal:
-        value = msvcrt.getch()
-        return value.decode("utf-8")
-    else:
-        return input()
+class _Input:
+
+    def __init__(self, *replay: str) -> None:
+        super().__init__()
+
+        _replay: list[str] = []
+
+        if replay:
+            for r in replay:
+                _replay.extend([*r])
+
+            print(f"{_replay=}")
+
+        self._replay = _replay
+
+    def get_input(self) -> str:
+
+        if self._replay:
+            return self._replay.pop(0)
+
+        if _terminal:
+            value = msvcrt.getch()
+            return value.decode("utf-8")
+        else:
+            return input()
 
 
 def main():
+
+    inp: _Input = _Input(*sys.argv[1:])
+
     c: Cube = Cube()
 
     op: Operator = Operator(c)
@@ -34,7 +57,6 @@ def main():
 
     done = False
     inv = False
-    history = ""
     while not done:
 
         while True:
@@ -45,8 +67,8 @@ def main():
             print(f" 'inv R L U F B D  M,X(R), Y(U) ?solve Algs Clear Q")
             print(f" !scramble, <undo")
 
-            value = get_input()
-#            print(value.upper())
+            value = inp.get_input()
+            print(value.upper())
 
             # the 'break' is to quit the input loop
             match value.upper():
@@ -112,7 +134,7 @@ def main():
                     done = True
                     break
 
-        #print("DONE=", done)
+        # print("DONE=", done)
         if not done and not not_operation:
             inv = False  # consumed
             viewer.plot(c)

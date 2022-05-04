@@ -196,8 +196,10 @@ class _BigAlg(Alg):
             for a in reversed(self._algs):
                 a.play(cube, True)
         else:
-            for a in self._algs:
+            for i, a in enumerate(self._algs):
+                cube.sanity()
                 a.play(cube, False)
+                cube.sanity()
 
     def atomic_str(self):
         if self._name:

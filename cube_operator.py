@@ -16,7 +16,9 @@ class Operator:
         if inv:
             alg = alg.inv()
 
+        self._cube.sanity()
         alg.play(self._cube, False)
+        self._cube.sanity()
         self._history.append(alg)
 
     @property

@@ -1,6 +1,6 @@
 from _solver.base_solver import SolverElement, ISolver
 from algs import Algs
-from elements import Color, Face, FaceName
+from elements import Color, Face, FaceName, Edge, PartColorsID
 
 
 class L0(SolverElement):
@@ -43,10 +43,10 @@ class L0(SolverElement):
         return True
 
     def solve_l0_cross(self):
+
         self._bring_white_up()
 
-
-
+        self._do_cross()
 
     def _bring_white_up(self):
 
@@ -73,3 +73,30 @@ class L0(SolverElement):
 
                 case FaceName.R:
                     self.op.op(-Algs.Y + Algs.X)
+
+    def _do_cross(self):
+
+        wf: Face = self._white_face
+        assert wf.name == FaceName.U
+
+        es = wf.edges
+        for e in es:
+            self._fix_edge(wf, e)
+            # assert e.match_faces
+
+    def _fix_edge(self, wf: Face, e: Edge):
+        """
+        Bring edge to correct place in the cross
+        :param wf:
+        :param e:
+        :return:
+        """
+        if e.match_faces:
+            return
+
+        # the required colors
+        by_pos_id: PartColorsID = e.colors_id_by_pos
+
+        required_edge = self.cube.find_part_by_colors(by_pos_id)
+
+        self.debug("L0", "Need to bring ", required_edge, "to", e)

@@ -34,6 +34,8 @@ class FaceName(Enum):
 
 _Face: TypeAlias = "Face"
 
+PartColorsID = frozenset(Color)
+
 
 class PartEdge:
     __slots__ = ["_face", "_color"]
@@ -79,15 +81,16 @@ class Part(ABC):
     n = 2 - edge
     n = 3 - corner
     """
-    __slots__ = ["_edges"]
+    __slots__ = ["_edges", "_colors_id_by_pos", "_colors_id_by_colors"]
     _edges: MutableSequence[PartEdge]
 
     def __init__(self, *edges: PartEdge) -> None:
         super().__init__()
         self._edges: MutableSequence[PartEdge] = [*edges]
 
-        self._pos_id = tuple( e.face.name for e in edges )
-
+        self._pos_id = tuple(e.face.name for e in edges)
+        self._colors_id_by_pos: PartColorsID = None
+        self._colors_id_by_colors: PartColorsID = None
 
     def get_face_edge(self, face: _Face) -> PartEdge:
         """
@@ -104,12 +107,15 @@ class Part(ABC):
     def __str__(self) -> str:
         return str([str(e) for e in self._edges])
 
+    def __repr__(self):
+        return self.__str__()
+
     def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face]):
 
         """
         Replace the colors of this edge with the colors from source
         Find the edge part contains source_dest[i][0] and copy it to
-        edge part that mathces source_dest[i][0]
+        edge part that matches source_dest[i][0]
 
         :param source:
         :return:
@@ -121,6 +127,8 @@ class Part(ABC):
             target_edge: PartEdge = self.get_face_edge(target)
 
             target_edge.copy_color(source_edge)
+
+        self.reset_colors_id()
 
     def f_color(self, f: _Face):
         return self.get_face_edge(f).color
@@ -137,14 +145,53 @@ class Part(ABC):
 
         return True
 
-
     @property
     def pos_id(self):
         """
-        A unqiue ID according to pos
+        A unique ID according to pos
         :return:
         """
         return self._pos_id
+
+    @property
+    def colors_id_by_pos(self) -> PartColorsID:
+        """
+        Return the parts required colors, assume it was in place, not actual colors
+        the colors of the faces it is currently on
+        :return:
+        """
+
+        by_pos: PartColorsID = self._colors_id_by_pos
+
+        if not by_pos:
+            by_pos = frozenset(e.face.color for e in self._edges)
+            self._colors_id_by_pos = by_pos
+
+        return by_pos
+
+    def reset_after_faces_changes(self):
+        self._colors_id_by_pos = None
+
+
+    @property
+    def colors_id_by_color(self) -> PartColorsID:
+        """
+        Return the parts actual color
+        the colors of the faces it is currently on
+        :return:
+        """
+
+        colors_id: PartColorsID = self._colors_id_by_colors
+
+        if not colors_id:
+            colors_id = frozenset(e.color for e in self._edges)
+            self._colors_id_by_colors = colors_id
+
+        return colors_id
+
+
+    def reset_colors_id(self):
+        self._colors_id_by_colors = None
 
 
 class Center(Part):
@@ -163,6 +210,7 @@ class Center(Part):
 
     def replace_colors(self, other: "Center"):
         self._edges[0].copy_color(other.edg())
+        self.reset_colors_id()
 
 
 class Edge(Part):
@@ -180,7 +228,7 @@ class Edge(Part):
     def get_other_face_edge(self, f: _Face) -> "PartEdge":
 
         """
-        Getthe edge that is on face that is not f
+        Get the edge that is on face that is not f
         :param f:
         :return:
         """
@@ -204,7 +252,7 @@ class Edge(Part):
         Find the edge part contains on_face both in self and other face
         replace the edge part color on on_face with the matched color from source
 
-        We assume that both source and self are belonged to on_face
+        We assume that both source and self are belonged to on_face.
 
         :param on_face:
         :param source:
@@ -220,6 +268,8 @@ class Edge(Part):
         other_face_target: PartEdge = self.get_other_face_edge(on_face)
 
         other_face_target.copy_color(other_face_source)
+
+        self.reset_colors_id()
 
     def replace_colors2(self,
                         source: "Edge",
@@ -310,6 +360,7 @@ class Face:
     _corner_bottom_left: Corner
 
     _edges: Sequence[Edge]
+    _parts: Sequence[Part]
 
     def __init__(self, name: FaceName, color: Color) -> None:
         super().__init__()
@@ -321,8 +372,14 @@ class Face:
         # all others are created by Cube#reset
 
     def finish_init(self):
-        self._edges = ( self._edge_top, self._edge_left, self._edge_right, self._edge_right)
+        self._edges = (self._edge_top, self._edge_left, self._edge_right, self._edge_bottom)
 
+        corners = [self.corner_top_left,
+                   self._corner_top_right,
+                   self._corner_bottom_right,
+                   self._corner_bottom_left]
+
+        self._parts = (self._center, *self._edges, *corners)
 
     @property
     def name(self) -> FaceName:
@@ -427,3 +484,18 @@ class Face:
     def edges(self) -> Sequence[Edge]:
         # need to cache
         return self._edges
+
+    def reset_after_faces_changes(self):
+        """
+        Call after faces colors aare changes , M, S, E rotations
+        """
+        for p in self._parts:
+            p.reset_after_faces_changes()
+
+    def find_part_by_colors(self, part_colors_id: PartColorsID) -> Part | None:
+        for p in self._parts:
+
+            if part_colors_id == p.colors_id_by_color:
+                return p
+        return None
+

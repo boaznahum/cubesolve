@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 from elements import *
 
 
@@ -113,8 +115,20 @@ class Cube:
     def down(self):
         return self._down
 
-    def _reset_color_2_face_cache(self):
+    @property
+    def faces(self) -> Iterable[Face]:
+        return self._faces.values()
+
+
+    def _reset_after_faces_changes(self):
+        """
+        Call after faces colors aare changes , M, S, E rotations
+        :return:
+        """
         self._color_2_face.clear()
+
+        for f in self.faces:
+            f.reset_after_faces_changes()
 
     def m_rotate(self, n=1):
         """
@@ -123,7 +137,9 @@ class Cube:
         :return:
         """
 
-        self._reset_color_2_face_cache()
+        self.sanity()
+
+        self._reset_after_faces_changes()
 
         front: Face = self.front
         back: Face = self.back
@@ -144,6 +160,9 @@ class Cube:
             self.front.edge_bottom.replace_colors2(self.back.edge_bottom, down, front, back, down)
             self.back.edge_bottom.replace_colors2(saved_up_top, up, back, back, down)
 
+        self.sanity()
+
+
     def x_rotate(self, n):
         """
         Entire cube or X
@@ -162,7 +181,7 @@ class Cube:
         :return:
         """
 
-        self._reset_color_2_face_cache()
+        self._reset_after_faces_changes()
 
         front: Face = self.front
         back: Face = self.back
@@ -200,7 +219,7 @@ class Cube:
         :param n:
         :return:
         """
-        self._reset_color_2_face_cache()
+        self._reset_after_faces_changes()
         pass
 
     def z_rotate(self, n=1):
@@ -213,6 +232,32 @@ class Cube:
             self.s_rotate()
             self.front.rotate()
             self.back.rotate(-1)
+
+    def sanity(self):
+
+        # if True:
+        #     return
+
+        # noinspection PyUnreachableCode
+        self._do_sanity()
+
+    def _do_sanity(self):
+        for c1, c2 in [
+            (Color.WHITE, Color.ORANGE),
+            (Color.WHITE, Color.BLUE),
+            (Color.WHITE, Color.GREEN),
+            (Color.WHITE, Color.RED),
+            (Color.YELLOW, Color.ORANGE),
+            (Color.YELLOW, Color.BLUE),
+            (Color.YELLOW, Color.GREEN),
+            (Color.YELLOW, Color.RED),
+
+            (Color.ORANGE, Color.BLUE),
+            (Color.BLUE, Color.RED),
+            (Color.RED, Color.GREEN),
+            (Color.GREEN, Color.ORANGE),
+        ]:
+            self.find_part_by_colors(frozenset([c1, c2]))
 
     @property
     def solved(self):
@@ -234,6 +279,16 @@ class Cube:
             self._color_2_face = {f.color: f for f in self._faces.values()}
 
         return self._color_2_face[c]
+
+    def find_part_by_colors(self, part_colors_id: PartColorsID) -> Part:
+
+        for f in self.faces:
+            p = f.find_part_by_colors(part_colors_id)
+            if p:
+                return p
+
+        raise ValueError(f"Cube doesn't contain part {str(part_colors_id)}")
+
 
 
 def _create_edge(f1: Face, f2: Face) -> Edge:
