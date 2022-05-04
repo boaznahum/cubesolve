@@ -1,9 +1,10 @@
-import algs
-from algs import Alg
-from cube import Cube, CubeView
-import viewer
-
 import msvcrt
+
+import algs
+import viewer
+from algs import Alg
+from cube import Cube
+from cube_operator import Operator
 
 
 def main():
@@ -11,17 +12,20 @@ def main():
 
     c: Cube = Cube()
 
-    # c: CubeView = _c.view()
+    op: Operator = Operator(c)
 
     viewer.plot(c)
 
     if not interactive:
 
-        c.front.rotate()
+        op.op(algs.Algs.R)
 
         print("\n")
 
         viewer.plot(c)
+
+        h = op.history
+        print(f"History={h}")
 
         return
 
@@ -34,7 +38,7 @@ def main():
             while True:
 
                 modifier = False
-                print(f"History={history}")
+                print(f"History={op.history}")
                 print(f"(iv={inv}) Please enter a command 'R L U F B D  M,X(R), Y(U) A(algs) Q:")
 
                 value = msvcrt.getch()
@@ -49,56 +53,37 @@ def main():
                         modifier = True
                         break
                     case b"R":
-                        history += "R" + inc + " "
-                        c.right.rotate(n)
+                        op.op(algs.Algs.R, inv)
                         inv = False
                         break
                     case b"L":
-                        history += "L" + inc + " "
-                        c.left.rotate(n)
+                        op.op(algs.Algs.L, inv)
+                        inv = False
                         break
                     case b"U":
-                        history += "U" + inc + " "
-                        c.up.rotate(n)
+                        op.op(algs.Algs.U, inv)
                         inv = False
                         break
                     case b"F":
-                        history += "F" + inc + " "
-                        c.front.rotate(n)
+                        op.op(algs.Algs.F, inv)
                         inv = False
                         break
                     case b"B":
-                        history += "B" + inc + " "
-                        c.back.rotate(n)
+                        op.op(algs.Algs.B, inv)
                         inv = False
                         break
                     case b"D":
-                        history += "D" + inc + " "
-                        c.down.rotate(n)
-                        inv = False
-                        break
-
-                    case b"D":
-                        history += "D" + inc + " "
-                        c.down.rotate(n)
+                        op.op(algs.Algs.D, inv)
                         inv = False
                         break
 
                     case b"X":
-                        history += "X" + inc + " "
-                        c.x_rotate(n)
-                        inv = False
-                        break
-
-                    case b"M":
-                        history += "M" + inc + " "
-                        c.m_rotate(n)
+                        op.op(algs.Algs.M, inv)
                         inv = False
                         break
 
                     case b"Y":
-                        history += "Y" + inc + " "
-                        c.y_rotate(n)
+                        op.op(algs.Algs.R, inv)
                         inv = False
                         break
 
@@ -129,7 +114,7 @@ def get_alg() -> Alg:
 
     index = input("Alg index:")
 
-    return _algs[int(index)-1]
+    return _algs[int(index) - 1]
 
     pass
 

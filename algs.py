@@ -8,17 +8,100 @@ def _inv(inv: bool) -> int:
     return -1 if inv else 1
 
 
-def _invinv(inv: bool) -> int:
-    return 1 if inv else -1
-
-
 class Alg(ABC):
 
     @abstractmethod
-    def play(self, cube: Cube, inv: bool = False): ...
+    def play(self, cube: Cube, inv: bool): ...
+
+    def inv(self) -> "Alg":
+        return _Inv(self)
+
+    @abstractmethod
+    def atomic_str(self):
+        pass
+
+    def __str__(self) -> str:
+        return self.atomic_str()
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __neg__(self):
+        return self.inv()
+
+    def __mul__(self, other: int):
+        return self.inv()
 
 
-class U(Alg):
+class _Inv(Alg):
+    __slots__ = "_alg"
+
+    def __init__(self, a: Alg) -> None:
+        super().__init__()
+        self._alg = a
+
+    def __str__(self) -> str:
+        return self._alg.atomic_str() + "'"
+
+    def play(self, cube: Cube, inv: bool):
+        self._alg.play(cube, not inv)
+
+    def inv(self) -> Alg:
+        return self._alg
+
+    def atomic_str(self):
+        return self._alg.atomic_str() + "'"
+
+
+class _Mul(Alg, ABC):
+    __slots__ = ["_alg", "_n"]
+
+    def __init__(self, a: Alg, n: int) -> None:
+        super().__init__()
+        self._alg = a
+        self._n = n
+
+    def atomic_str(self):
+        s = self._alg.atomic_str()
+
+        if self._n != 1:
+            s += str(self._n)
+
+        return s
+
+    def play(self, cube: Cube, inv: bool):
+
+        for _ in range(0, self._n):
+            self._alg.play(cube, not inv)
+
+    def inv(self) -> Alg:
+        return self._alg
+
+
+class _SimpleAlg(Alg, ABC):
+    __slots__ = ["_n", "_code"]
+
+    def __init__(self, code: str, n: int = 1) -> None:
+        super().__init__()
+        self._code = code
+        self._n = n
+
+    def atomic_str(self):
+        s = self._code
+        if self._n != 1:
+            s += str(self._n)
+
+        return s
+
+    def __str__(self):
+        return self.atomic_str()
+
+
+class _U(_SimpleAlg):
+
+    def __init__(self) -> None:
+        super().__init__("U")
+
     def play(self, cube: Cube, inv: bool = False):
         cube.up.rotate(_inv(inv))
 
@@ -26,60 +109,76 @@ class U(Alg):
         return "U"
 
 
-class UT(Alg):
-    def play(self, cube: Cube, inv: bool = False):
-        cube.up.rotate(_invinv(inv))
+class _F(_SimpleAlg):
 
-    def __str__(self):
-        return "U'"
+    def __init__(self) -> None:
+        super().__init__("F")
 
-
-class F(Alg):
     def play(self, cube: Cube, inv: bool = False):
         cube.front.rotate(_inv(inv))
 
-    def __str__(self):
-        return "F"
 
+class _R(_SimpleAlg):
 
-class FT(Alg):
-    def play(self, cube: Cube, inv: bool = False):
-        cube.front.rotate(_invinv(inv))
+    def __init__(self) -> None:
+        super().__init__("R")
 
-    def __str__(self):
-        return "F'"
-
-
-class R(Alg):
     def play(self, cube: Cube, inv: bool = False):
         cube.right.rotate(_inv(inv))
 
-    def __str__(self):
-        return "R"
 
+class _L(_SimpleAlg):
 
-class RT(Alg):
-    def play(self, cube: Cube, inv: bool = False):
-        cube.right.rotate(_invinv(inv))
+    def __init__(self) -> None:
+        super().__init__("L")
 
-    def __str__(self):
-        return "R'"
-
-
-class L(Alg):
     def play(self, cube: Cube, inv: bool = False):
         cube.left.rotate(_inv(inv))
 
-    def __str__(self):
-        return "L"
 
+class _B(_SimpleAlg):
 
-class LT(Alg):
+    def __init__(self) -> None:
+        super().__init__("B")
+
     def play(self, cube: Cube, inv: bool = False):
-        cube.left.rotate(_invinv(inv))
+        cube.back.rotate(_inv(inv))
 
-    def __str__(self):
-        return "L'"
+
+class _D(_SimpleAlg):
+
+    def __init__(self) -> None:
+        super().__init__("D")
+
+    def play(self, cube: Cube, inv: bool = False):
+        cube.down.rotate(_inv(inv))
+
+
+class _M(_SimpleAlg):
+
+    def __init__(self) -> None:
+        super().__init__("M")
+
+    def play(self, cube: Cube, inv: bool = False):
+        cube.m_rotate(_inv(inv))
+
+
+class _X(_SimpleAlg):
+
+    def __init__(self) -> None:
+        super().__init__("X")
+
+    def play(self, cube: Cube, inv: bool = False):
+        cube.x_rotate(_inv(inv))
+
+
+class _Y(_SimpleAlg):
+
+    def __init__(self) -> None:
+        super().__init__("Y")
+
+    def play(self, cube: Cube, inv: bool = False):
+        cube.x_rotate(_inv(inv))
 
 
 class _BigAlg(Alg):
@@ -97,16 +196,33 @@ class _BigAlg(Alg):
                 a.play(cube, True)
         else:
             for a in self._algs:
-                a.play(cube)
+                a.play(cube, False)
 
-    def __str__(self):
-        return self._name
+    def atomic_str(self):
+        if self._name:
+            return "{" + self._name + "}"
+        else:
+            if len(self._algs) == 1:
+                return self._algs[0].atomic_str()
+            else:
+                return "[" + " ".join([str(a) for a in self._algs]) + "]"
 
 
 class Algs:
-    RU = _BigAlg("RU(top)", R(), U(), RT(), U(), R(), U(), U(), RT(), U())
+    L = _L()
+    R = _R()
+    U = _U()
+    F = _F()
+    B = _B()
+    D = _D()
 
-    UR = _BigAlg("UR(top)", U(), R(), UT(), LT(), U(), RT(), UT(), L())
+    M = _M()
+    X = _X()
+    Y = _Y()
+
+    RU = _BigAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
+
+    UR = _BigAlg("UR(top)", U, R, -U, -L, U, -R, -U, L)
 
     @staticmethod
     def lib() -> Sequence[Alg]:
