@@ -29,8 +29,8 @@ class Alg(ABC):
     def __neg__(self):
         return self.inv()
 
-    def __mul__(self, other: int):
-        return self.inv()
+    def __mul__(self, n: int):
+        return _Mul(self, n)
 
 
 class _Inv(Alg):
@@ -72,7 +72,7 @@ class _Mul(Alg, ABC):
     def play(self, cube: Cube, inv: bool):
 
         for _ in range(0, self._n):
-            self._alg.play(cube, not inv)
+            self._alg.play(cube, inv)
 
     def inv(self) -> Alg:
         return self._alg
@@ -178,7 +178,7 @@ class _Y(_SimpleAlg):
         super().__init__("Y")
 
     def play(self, cube: Cube, inv: bool = False):
-        cube.x_rotate(_inv(inv))
+        cube.y_rotate(_inv(inv))
 
 
 class _BigAlg(Alg):

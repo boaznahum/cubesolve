@@ -305,4 +305,4 @@ def plot(cube: Cube):
     _plot_face(b, cube.back, 3, 1, flip_v=True, flip_h=True)
 
     b.print()
-    print("Solved=", cube.solved)
+

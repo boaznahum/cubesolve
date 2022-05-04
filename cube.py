@@ -9,7 +9,11 @@ class Cube:
            2:     D
            3:     B
     """
-    __slots__ = ["_front", "_left", "_up", "_right", "_down", "_back"]
+    __slots__ = ["_front", "_left", "_up", "_right", "_down",
+                 "_back",
+                 "_color_2_face",
+                 "_faces"
+                 ]
 
     _front: Face
     _left: Face
@@ -17,12 +21,17 @@ class Cube:
     _right: Face
     _down: Face
     _back: Face
+    _color_2_face: dict[Color, Face]
+    _faces: dict[FaceName, Face]
 
     def __init__(self) -> None:
         super().__init__()
         self._reset()
 
     def _reset(self):
+
+        self._color_2_face = {}
+
         f: Face = Face(FaceName.F, Color.BLUE)
         l: Face = Face(FaceName.L, Color.ORANGE)
         u: Face = Face(FaceName.U, Color.YELLOW)
@@ -36,6 +45,15 @@ class Cube:
         self._right = r
         self._down = d
         self._back = b
+
+        self._faces = {
+            FaceName.F: f,
+            FaceName.L: l,
+            FaceName.U: u,
+            FaceName.R: r,
+            FaceName.D: d,
+            FaceName.B: b
+        }
 
         e: Edge
 
@@ -68,6 +86,9 @@ class Cube:
         b._corner_bottom_left = r._corner_bottom_right = d._corner_bottom_right = _create_corner(b, r, d)
         b._corner_bottom_right = l._corner_bottom_left = d._corner_bottom_left = _create_corner(b, l, d)
 
+        for f in self._faces.values():
+            f.finish_init()
+
     @property
     def front(self):
         return self._front
@@ -92,12 +113,18 @@ class Cube:
     def down(self):
         return self._down
 
+    def _reset_color_2_face_cache(self):
+        self._color_2_face.clear()
+
     def m_rotate(self, n=1):
         """
         middle over R
         :param n:
         :return:
         """
+
+        self._reset_color_2_face_cache()
+
         front: Face = self.front
         back: Face = self.back
         up: Face = self.up
@@ -134,6 +161,9 @@ class Cube:
         :param n:
         :return:
         """
+
+        self._reset_color_2_face_cache()
+
         front: Face = self.front
         back: Face = self.back
         left: Face = self.left
@@ -170,6 +200,7 @@ class Cube:
         :param n:
         :return:
         """
+        self._reset_color_2_face_cache()
         pass
 
     def z_rotate(self, n=1):
@@ -197,6 +228,12 @@ class Cube:
 
     def reset(self):
         self._reset()
+
+    def color_2_face(self, c: Color) -> Face:
+        if not self._color_2_face:
+            self._color_2_face = {f.color: f for f in self._faces.values()}
+
+        return self._color_2_face[c]
 
 
 def _create_edge(f1: Face, f2: Face) -> Edge:

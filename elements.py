@@ -1,8 +1,10 @@
 from abc import ABC
-from enum import Enum
+from collections.abc import Sequence
+from enum import Enum, unique
 from typing import TypeAlias, MutableSequence, Tuple
 
 
+@unique
 class Color(Enum):
     BLUE = "B"
     ORANGE = "O"
@@ -12,6 +14,7 @@ class Color(Enum):
     WHITE = "W"
 
 
+@unique
 class Direction(Enum):
     D0 = 0
     D90 = 90
@@ -19,10 +22,11 @@ class Direction(Enum):
     D270 = 270
 
 
-class FaceName:
+@unique
+class FaceName(Enum):
     U = "U"
     D = "D"
-    F = "U"
+    F = "F"
     B = "B"
     L = "L"
     R = "R"
@@ -120,6 +124,19 @@ class Part(ABC):
 
     def f_color(self, f: _Face):
         return self.get_face_edge(f).color
+
+    @property
+    def match_faces(self):
+        """
+        Part is in position, all colors match the faces
+        :return:
+        """
+        for p in self._edges:
+            if p.color != p.face.color:
+                return False
+
+        return True
+
 
     @property
     def pos_id(self):
@@ -275,7 +292,8 @@ class Face:
     __slots__ = ["_center", "_direction", "_name",
                  "_edge_left", "_edge_top", "_edge_right", "_edge_bottom",
                  "_corner_top_left", "_corner_top_right", "_corner_bottom_right", "_corner_bottom_left",
-                 "_parts"
+                 "_parts",
+                 "_edges"
                  ]
 
     _center: Center
@@ -291,6 +309,8 @@ class Face:
     _corner_bottom_right: Corner
     _corner_bottom_left: Corner
 
+    _edges: Sequence[Edge]
+
     def __init__(self, name: FaceName, color: Color) -> None:
         super().__init__()
 
@@ -299,6 +319,10 @@ class Face:
         self._direction = Direction.D0
 
         # all others are created by Cube#reset
+
+    def finish_init(self):
+        self._edges = ( self._edge_top, self._edge_left, self._edge_right, self._edge_right)
+
 
     @property
     def name(self) -> FaceName:
@@ -345,7 +369,10 @@ class Face:
         return self.center.color
 
     def __str__(self) -> str:
-        return f"Face: {self._center.edg().color.name}"
+        return f"{self._center.edg().color.name}@{self._name.value}"
+
+    def __repr__(self):
+        return self.__str__()
 
     # for constructing only, valid only after ctor
     def create_part(self) -> PartEdge:
@@ -395,3 +422,8 @@ class Face:
                 self._corner_bottom_left.f_color(self) ==
                 self._corner_bottom_right.f_color(self)
                 )
+
+    @property
+    def edges(self) -> Sequence[Edge]:
+        # need to cache
+        return self._edges

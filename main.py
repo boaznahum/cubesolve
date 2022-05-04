@@ -1,114 +1,128 @@
 import msvcrt
+import sys
 
 import algs
 import viewer
 from algs import Alg
 from cube import Cube
 from cube_operator import Operator
+from solver import Solver
+
+_terminal: bool = sys.stdin.isatty()
+
+print(f"{_terminal=}")
+print(f"{sys.stdin.isatty()=}")
+
+
+def get_input() -> str:
+    if _terminal:
+        value = msvcrt.getch()
+        return value.decode("utf-8")
+    else:
+        return input()
 
 
 def main():
-    interactive: bool = True
-
     c: Cube = Cube()
 
     op: Operator = Operator(c)
 
+    slv: Solver = Solver(op)
+
     viewer.plot(c)
+    print("Status=", slv.status)
 
-    if not interactive:
+    done = False
+    inv = False
+    history = ""
+    while not done:
 
-        op.op(algs.Algs.R)
+        while True:
 
-        print("\n")
+            modifier = False
+            print(f"History={op.history}")
+            print(f"(iv={inv}) Please enter a command 'R L U F B D  M,X(R), Y(U) ?solve Algs Clear Q:")
 
-        viewer.plot(c)
+            value = get_input()
+            print(value.upper())
+            print(value.upper() == b"R")
 
-        h = op.history
-        print(f"History={h}")
+            n = 1 if not inv else -1
+            inc = "" if not inv else "'"
+            match value.upper():
+                case "'":
+                    inv = not inv
+                    modifier = True
+                    break
+                case "R":
+                    op.op(algs.Algs.R, inv)
+                    inv = False
+                    break
+                case "L":
+                    op.op(algs.Algs.L, inv)
+                    inv = False
+                    break
+                case "U":
+                    op.op(algs.Algs.U, inv)
+                    inv = False
+                    break
+                case "F":
+                    op.op(algs.Algs.F, inv)
+                    inv = False
+                    break
+                case "B":
+                    op.op(algs.Algs.B, inv)
+                    inv = False
+                    break
+                case "D":
+                    op.op(algs.Algs.D, inv)
+                    inv = False
+                    break
 
-        return
+                case "X":
+                    op.op(algs.Algs.X, inv)
+                    inv = False
+                    break
 
-    else:
-        done = False
-        inv = False
-        history = ""
-        while not done:
+                case "Y":
+                    op.op(algs.Algs.Y, inv)
+                    inv = False
+                    break
 
-            while True:
+                case "M":
+                    op.op(algs.Algs.M, inv)
+                    inv = False
+                    break
 
-                modifier = False
-                print(f"History={op.history}")
-                print(f"(iv={inv}) Please enter a command 'R L U F B D  M,X(R), Y(U) Algs Clear Q:")
+                case "A":
 
-                value = msvcrt.getch()
-                print(value.upper())
-                print(value.upper() == b"R")
+                    alg: Alg = get_alg()
 
-                n = 1 if not inv else -1
-                inc = "" if not inv else "'"
-                match value.upper():
-                    case b"'":
-                        inv = not inv
-                        modifier = True
-                        break
-                    case b"R":
-                        op.op(algs.Algs.R, inv)
-                        inv = False
-                        break
-                    case b"L":
-                        op.op(algs.Algs.L, inv)
-                        inv = False
-                        break
-                    case b"U":
-                        op.op(algs.Algs.U, inv)
-                        inv = False
-                        break
-                    case b"F":
-                        op.op(algs.Algs.F, inv)
-                        inv = False
-                        break
-                    case b"B":
-                        op.op(algs.Algs.B, inv)
-                        inv = False
-                        break
-                    case b"D":
-                        op.op(algs.Algs.D, inv)
-                        inv = False
-                        break
+                    history += str(alg) + inc + " "
+                    alg.play(c, inv)
+                    inv = False
+                    break
 
-                    case b"X":
-                        op.op(algs.Algs.M, inv)
-                        inv = False
-                        break
+                case "C":
 
-                    case b"Y":
-                        op.op(algs.Algs.R, inv)
-                        inv = False
-                        break
+                    op.reset()
+                    inv = False
+                    break
 
-                    case b"A":
+                case "?":
 
-                        alg: Alg = get_alg()
+                    slv.solve()
+                    inv = False
+                    break
 
-                        history += str(alg) + inc + " "
-                        alg.play(c, inv)
-                        inv = False
-                        break
+                case "\x03" | "Q":
+                    done = True
+                    break
 
-                    case b"C":
-
-                        op.reset()
-                        inv = False
-                        break
-
-                    case b"\x03" | b"Q":
-                        done = True
-                        break
-
-            print("DONE=", done)
-            if not done and not modifier:
-                viewer.plot(c)
+        print("DONE=", done)
+        if not done and not modifier:
+            viewer.plot(c)
+            print("Status=", slv.status)
 
 
 def get_alg() -> Alg:
