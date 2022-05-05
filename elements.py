@@ -1,5 +1,5 @@
 from abc import ABC
-from collections.abc import Sequence
+from collections.abc import Sequence, Iterable
 from enum import Enum, unique
 from typing import TypeAlias, MutableSequence, Tuple
 
@@ -193,6 +193,34 @@ class Part(ABC):
     def reset_colors_id(self):
         self._colors_id_by_colors = None
 
+    def on_face(self, f: _Face) -> PartEdge | None :
+        """
+        :param f:
+        :return: true if any edge is on f
+        """
+        for p in self._edges:
+            if p.face is f:
+                return p
+
+        return None
+
+    def face_of_actual_color(self, c: Color):
+
+        """
+        Not the color the edge is on !!!
+        :param c:
+        :return:
+        """
+
+        for p in self._edges:
+            if p.color == c:
+                return p.face
+
+        raise ValueError(f"No color {c} on {self}")
+
+
+
+
 
 class Center(Part):
     def __init__(self, center: PartEdge) -> None:
@@ -301,6 +329,7 @@ class Edge(Part):
         return Edge(self.e1.copy(), self.e2.copy())
 
 
+
 class Corner(Part):
     def __init__(self, e1: PartEdge, e2: PartEdge, e3: PartEdge) -> None:
         super().__init__(e1, e2, e3)
@@ -343,7 +372,7 @@ class Face:
                  "_edge_left", "_edge_top", "_edge_right", "_edge_bottom",
                  "_corner_top_left", "_corner_top_right", "_corner_bottom_right", "_corner_bottom_left",
                  "_parts",
-                 "_edges"
+                 "_edges", "_opposite"
                  ]
 
     _center: Center
@@ -361,6 +390,8 @@ class Face:
 
     _edges: Sequence[Edge]
     _parts: Sequence[Part]
+
+    _opposite : _Face
 
     def __init__(self, name: FaceName, color: Color) -> None:
         super().__init__()
@@ -498,4 +529,81 @@ class Face:
             if part_colors_id == p.colors_id_by_color:
                 return p
         return None
+
+    def find_edge_by_colors(self, part_colors_id: PartColorsID) -> Edge | None:
+        for p in self._edges:
+
+            if part_colors_id == p.colors_id_by_color:
+                return p
+        return None
+
+    def find_edge_by_pos_colors(self, part_colors_id: PartColorsID) -> Edge | None:
+        for p in self._edges:
+
+            if part_colors_id == p.colors_id_by_pos:
+                return p
+        return None
+
+    def adjusted_faces(self) -> Iterable[_Face]:
+
+        # todo: optimize
+        for e in self.edges:
+            yield e.get_other_face(self)
+
+    def is_left_or_right(self, edge: Edge) -> bool:
+
+        if self._edge_left is edge:
+            return True
+        elif self._edge_right is edge:
+            return True
+        else:
+            return False
+
+    def is_edge(self, edge: Edge) -> bool:
+        """
+        This edge belongs to face
+        :param edge:
+        :return:
+        """
+        return edge in self._edges
+
+
+    @property
+    def opposite(self) -> _Face:
+        return self._opposite
+
+    def set_opposite(self, o: _Face):
+        """
+        By cube constructor only
+        :param b:
+        :return:
+        """
+        self._opposite = o
+        o._opposite = self
+
+    @property
+    def is_front(self):
+        return self.name is FaceName.F
+
+    @property
+    def is_back(self):
+        return self.name is FaceName.B
+    @property
+
+    def is_down(self):
+        return self.name is FaceName.D
+
+    @property
+    def is_up(self):
+        return self.name is FaceName.U
+
+    @property
+    def is_right(self):
+        return self.name is FaceName.R
+
+    @property
+    def is_left(self):
+        return self.name is FaceName.L
+
+
 

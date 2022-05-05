@@ -1,21 +1,10 @@
 from abc import ABC, abstractmethod
-
+from _solver.isolver import ISolver
 from cube import Cube
 from cube_operator import Operator
 
 
-class ISolver(ABC):
 
-    @abstractmethod
-    def debug(self, *args): ...
-
-    @property
-    @abstractmethod
-    def cube(self) -> Cube: ...
-
-    @property
-    @abstractmethod
-    def op(self) -> Operator: ...
 
 
 class SolverElement:
@@ -36,4 +25,9 @@ class SolverElement:
     @property
     def op(self) -> Operator:
         return self._solver.op
+
+    @property
+    def cmn(self):
+        return self._solver.cmn
+
 

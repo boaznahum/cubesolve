@@ -1,4 +1,5 @@
 from _solver.base_solver import ISolver
+from _solver.common_op import CommonOp
 from _solver.l0 import L0
 from cube import Cube
 from cube_operator import Operator
@@ -7,13 +8,16 @@ _DEBUG = True
 
 
 class Solver(ISolver):
-    __slots__ = ["_op", "_cube", "l0"]
+    __slots__ = ["_op", "_cube", "l0", "common"]
 
     def __init__(self, op: Operator) -> None:
         super().__init__()
         self._cube = op.cube
         self._op = op
+
+        self.common = CommonOp(self)
         self.l0 = L0(self)
+
 
     @property
     def cube(self) -> Cube:
@@ -22,6 +26,10 @@ class Solver(ISolver):
     @property
     def op(self) -> Operator:
         return self._op
+
+    @property
+    def cmn(self) -> CommonOp:
+        return self.common
 
     @property
     def status(self):

@@ -41,6 +41,10 @@ class Cube:
         d: Face = Face(FaceName.D, Color.WHITE)
         b: Face = Face(FaceName.B, Color.GREEN)
 
+        f.set_opposite(b)
+        u.set_opposite(d)
+        r.set_opposite(l)
+
         self._front = f
         self._left = l
         self._up = u
@@ -209,9 +213,9 @@ class Cube:
         :return:
         """
         for _ in range(0, n % 4):
-            self.e_rotate()
-            self.up.rotate(-1)
-            self.down.rotate(1)
+            self.e_rotate(-1)
+            self.up.rotate(1)
+            self.down.rotate(-1)
 
     def s_rotate(self, n=1):
         """
@@ -288,6 +292,29 @@ class Cube:
                 return p
 
         raise ValueError(f"Cube doesn't contain part {str(part_colors_id)}")
+
+    def find_edge_by_colors(self, part_colors_id: PartColorsID) -> Edge:
+
+        for f in self.faces:
+            p = f.find_edge_by_colors(part_colors_id)
+            if p:
+                return p
+
+        raise ValueError(f"Cube doesn't contain edge {str(part_colors_id)}")
+
+    def find_edge_by_pos_colors(self, part_colors_id: PartColorsID) -> Edge:
+        """
+        Find the edge that it's postion matches color id
+        :param part_colors_id:
+        :return:
+        """
+
+        for f in self.faces:
+            p = f.find_edge_by_pos_colors(part_colors_id)
+            if p:
+                return p
+
+        raise ValueError(f"Cube doesn't contain edge {str(part_colors_id)}")
 
 
 

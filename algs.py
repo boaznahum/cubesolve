@@ -33,6 +33,9 @@ class Alg(ABC):
     def __mul__(self, n: int):
         return _Mul(self, n)
 
+    def __add__(self, other: "Alg"):
+        return _BigAlg(None, self, other)
+
 
 class _Inv(Alg):
     __slots__ = "_alg"
@@ -173,6 +176,18 @@ class _X(_SimpleAlg):
         cube.x_rotate(_inv(inv))
 
 
+class _E(_SimpleAlg):
+    """
+    Middle slice over D
+    """
+
+    def __init__(self) -> None:
+        super().__init__("E")
+
+    def play(self, cube: Cube, inv: bool = False):
+        cube.e_rotate(_inv(inv))
+
+
 class _Y(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -184,7 +199,7 @@ class _Y(_SimpleAlg):
 
 class _BigAlg(Alg):
 
-    def __init__(self, name: str, *algs: Alg) -> None:
+    def __init__(self, name: str | None, *algs: Alg) -> None:
         super().__init__()
         self._name = name
         self._algs: list[Alg] = [*algs]
@@ -210,6 +225,18 @@ class _BigAlg(Alg):
             else:
                 return "[" + " ".join([str(a) for a in self._algs]) + "]"
 
+    def __add__(self, other: "Alg"):
+
+        if self._name:
+            # we can't combine
+            return super().__add__(other)
+
+        if isinstance(other, _BigAlg) and not other._name:
+            return _BigAlg(None, *[*self._algs, * other._algs])
+        else:
+            return _BigAlg(None, *[ *self._algs, other])
+
+
 
 def _scramble(seed: Any) -> Alg:
     rnd: Random = Random(seed)
@@ -233,6 +260,10 @@ class Algs:
 
     M = _M()
     X = _X()
+
+    # Middle slice over D
+    E = _E()
+    # entire over U
     Y = _Y()
 
     Simple = [L, R, U, F, B, D, M, X, U]
