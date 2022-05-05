@@ -346,3 +346,8 @@ class Algs:
     @classmethod
     def scramble(cls):
         return _scramble(None)
+
+    @classmethod
+    def alg(cls, name, *algs: Alg):
+        return _BigAlg(name, *algs)
+

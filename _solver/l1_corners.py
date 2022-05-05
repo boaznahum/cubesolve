@@ -11,7 +11,7 @@ def use(_):
 
 
 class L0Corners(SolverElement):
-    __slots__ = ["_start_color"]
+    __slots__ = []
 
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)

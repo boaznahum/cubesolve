@@ -5,6 +5,8 @@ from cube_operator import Operator
 
 class ISolver(ABC):
 
+    __slots__ = []
+
     @abstractmethod
     def debug(self, *args): ...
 

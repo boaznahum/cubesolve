@@ -42,7 +42,7 @@ class CommonOp(ICommon):
 
         f: Face = self.cube.color_2_face(w)
 
-        self.debug(w, " is on ", f)
+        #self.debug(w, " is on ", f)
 
         return f
 

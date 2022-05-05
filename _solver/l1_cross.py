@@ -97,7 +97,7 @@ class L0Cross(SolverElement):
         target_edge: Edge = cube.find_edge_by_pos_colors(target_colors_id)
 
         if target_edge.match_faces:
-            self.debug("L0X C1.0", target_edge, "is on place")
+            self.debug("L1-X C1.0", target_edge, "is on place")
             return
 
         assert wf.name == FaceName.U
@@ -110,17 +110,17 @@ class L0Cross(SolverElement):
 
         source_edge = cube.find_edge_by_color(target_colors_id)
 
-        self.debug("L0X", "Need to bring ", source_edge, "to", target_edge)
+        self.debug("L1-X", "Need to bring ", source_edge, "to", target_edge)
 
         # Is it on white face
         on_face: PartEdge
         if on_face := source_edge.on_face(wf):
-            self.debug("L0X. C1", source_edge, "is on required", wf, "@", on_face)
+            self.debug("L1-X. C1", source_edge, "is on required", wf, "@", on_face)
 
             if on_face.face is wf:
-                self.debug("??L0X. C1.1", source_edge, "is on required", wf, "@", on_face, "color matches")
+                self.debug("??L1-X. C1.1", source_edge, "is on required", wf, "@", on_face, "color matches")
             else:
-                self.debug("??L0X. C1.2", source_edge, "is on required", wf, "@", on_face, "color doesn't match")
+                self.debug("??L1-X. C1.2", source_edge, "is on required", wf, "@", on_face, "color doesn't match")
 
             # Now bring it to adjusted face
             if wf.edge_right is source_edge:
