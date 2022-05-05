@@ -34,6 +34,9 @@ class FaceName(Enum):
 
 _Face: TypeAlias = "Face"
 
+# noinspection PyUnresolvedReferences
+_Cube: TypeAlias = "Cube"
+
 PartColorsID = frozenset(Color)
 
 
@@ -131,6 +134,11 @@ class Part(ABC):
         self.reset_colors_id()
 
     def f_color(self, f: _Face):
+        """
+        The color of part on given face
+        :param f:
+        :return:
+        """
         return self.get_face_edge(f).color
 
     @property
@@ -169,9 +177,13 @@ class Part(ABC):
 
         return by_pos
 
+    @classmethod
+    def parts_id_by_pos(cls, parts: Sequence["Part"]) -> Sequence[PartColorsID]:
+
+        return [p.colors_id_by_pos for p in parts]
+
     def reset_after_faces_changes(self):
         self._colors_id_by_pos = None
-
 
     @property
     def colors_id_by_color(self) -> PartColorsID:
@@ -189,11 +201,10 @@ class Part(ABC):
 
         return colors_id
 
-
     def reset_colors_id(self):
         self._colors_id_by_colors = None
 
-    def on_face(self, f: _Face) -> PartEdge | None :
+    def on_face(self, f: _Face) -> PartEdge | None:
         """
         :param f:
         :return: true if any edge is on f
@@ -203,6 +214,16 @@ class Part(ABC):
                 return p
 
         return None
+
+    def on_face_by_name(self, name: FaceName) -> PartEdge | None:
+
+        for p in self._edges:
+            if p.face.name == name:
+                return p
+
+        return None
+
+
 
     def face_of_actual_color(self, c: Color):
 
@@ -218,8 +239,14 @@ class Part(ABC):
 
         raise ValueError(f"No color {c} on {self}")
 
-
-
+    @classmethod
+    def all_match_faces(cls, parts: Sequence["Part"]):
+        """
+        Return true if all parts match - each part edge matches the face it is located on
+        :param parts:
+        :return:
+        """
+        return all(p.match_faces for p in parts)
 
 
 class Center(Part):
@@ -329,7 +356,6 @@ class Edge(Part):
         return Edge(self.e1.copy(), self.e2.copy())
 
 
-
 class Corner(Part):
     def __init__(self, e1: PartEdge, e2: PartEdge, e3: PartEdge) -> None:
         super().__init__(e1, e2, e3)
@@ -364,15 +390,19 @@ class Corner(Part):
         self._replace_colors(source, (on_face, on_face), (source_2, target_2), (source_3, target_3))
 
 
+
 class Face:
     """
     Faces never chane position, only the color of the parts
     """
-    __slots__ = ["_center", "_direction", "_name",
+    __slots__ = ["_cube",
+                 "_center", "_direction", "_name",
                  "_edge_left", "_edge_top", "_edge_right", "_edge_bottom",
                  "_corner_top_left", "_corner_top_right", "_corner_bottom_right", "_corner_bottom_left",
                  "_parts",
-                 "_edges", "_opposite"
+                 "_edges",
+                 "_corners",
+                 "_opposite"
                  ]
 
     _center: Center
@@ -389,13 +419,15 @@ class Face:
     _corner_bottom_left: Corner
 
     _edges: Sequence[Edge]
+    _corners: Sequence[Corner]
     _parts: Sequence[Part]
 
-    _opposite : _Face
+    _opposite: _Face
 
-    def __init__(self, name: FaceName, color: Color) -> None:
+    def __init__(self, cube: _Cube, name: FaceName, color: Color) -> None:
         super().__init__()
 
+        self._cube = cube
         self._name = name
         self._center = Center(PartEdge(self, color))
         self._direction = Direction.D0
@@ -405,12 +437,17 @@ class Face:
     def finish_init(self):
         self._edges = (self._edge_top, self._edge_left, self._edge_right, self._edge_bottom)
 
-        corners = [self.corner_top_left,
-                   self._corner_top_right,
-                   self._corner_bottom_right,
-                   self._corner_bottom_left]
+        self._corners = [self.corner_top_left,
+                         self._corner_top_right,
+                         self._corner_bottom_right,
+                         self._corner_bottom_left]
 
-        self._parts = (self._center, *self._edges, *corners)
+        self._parts = (self._center, *self._edges, *self._corners)
+
+    # noinspection PyUnresolvedReferences
+    @property
+    def cube(self) -> _Cube:
+        return self._cube
 
     @property
     def name(self) -> FaceName:
@@ -419,6 +456,16 @@ class Face:
     @property
     def center(self) -> Center:
         return self._center
+
+    @property
+    def edges(self) -> Sequence[Edge]:
+        # need to cache
+        return self._edges
+
+    @property
+    def corners(self) -> Sequence[Corner]:
+        # need to cache
+        return self._corners
 
     @property
     def edge_left(self) -> Edge:
@@ -511,11 +558,6 @@ class Face:
                 self._corner_bottom_right.f_color(self)
                 )
 
-    @property
-    def edges(self) -> Sequence[Edge]:
-        # need to cache
-        return self._edges
-
     def reset_after_faces_changes(self):
         """
         Call after faces colors aare changes , M, S, E rotations
@@ -537,9 +579,23 @@ class Face:
                 return p
         return None
 
+    def find_corner_by_colors(self, part_colors_id: PartColorsID) -> Corner | None:
+        for p in self._corners:
+
+            if part_colors_id == p.colors_id_by_color:
+                return p
+        return None
+
     def find_edge_by_pos_colors(self, part_colors_id: PartColorsID) -> Edge | None:
         for p in self._edges:
 
+            if part_colors_id == p.colors_id_by_pos:
+                return p
+        return None
+
+    def find_corner_by_pos_colors(self, part_colors_id: PartColorsID) -> Corner | None:
+
+        for p in self._corners:
             if part_colors_id == p.colors_id_by_pos:
                 return p
         return None
@@ -567,7 +623,6 @@ class Face:
         """
         return edge in self._edges
 
-
     @property
     def opposite(self) -> _Face:
         return self._opposite
@@ -575,7 +630,6 @@ class Face:
     def set_opposite(self, o: _Face):
         """
         By cube constructor only
-        :param b:
         :return:
         """
         self._opposite = o
@@ -588,8 +642,8 @@ class Face:
     @property
     def is_back(self):
         return self.name is FaceName.B
-    @property
 
+    @property
     def is_down(self):
         return self.name is FaceName.D
 
@@ -604,6 +658,3 @@ class Face:
     @property
     def is_left(self):
         return self.name is FaceName.L
-
-
-

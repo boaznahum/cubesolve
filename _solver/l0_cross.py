@@ -1,53 +1,38 @@
 from typing import Sequence, Any
 
 from _solver.base_solver import SolverElement, ISolver
+from _solver.common_op import CommonOp
 from algs import Algs, Alg
 from cube import Cube
-from elements import Color, Face, FaceName, Edge, PartColorsID, PartEdge
+from elements import Color, Face, FaceName, Edge, PartColorsID, PartEdge, Part
 
 
 def use(_):
     pass
 
 
-class L0(SolverElement):
-    __slots__ = ["_start_color"]
+_status = None
+
+
+class L0Cross(SolverElement):
 
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)
 
-        self._start_color = Color.WHITE
-
     @property
-    def _white(self):
-        """
-        when ever we say 'white' we mean color of start color
-        """
-        return self._start_color
+    def cmn(self) -> CommonOp:
+        return self._cmn
 
-    @property
-    def _white_face(self) -> Face:
-        w: Color = self._white
-
-        f: Face = self.cube.color_2_face(w)
-
-        self.debug(w, " is on ", f)
-
-        return f
-
-    def is_l0_cross(self) -> bool:
-        """
-        :return: true if there is 'white' cross
+    def is_cross(self) -> bool:
         """
 
-        wf: Face = self._white_face
-        es = wf.edges
+        :return: true if all edges matches ignoring cross orientation.
+        so you must call solve even if this return true
+        """
 
-        for e in es:
-            if not e.match_faces:
-                return False
-
-        return True
+        wf: Face = self.white_face
+        def pred(): return Part.all_match_faces(self.white_face.edges)
+        return self.cmn.rotate_and_check(wf, pred) >= 0
 
     def solve_l0_cross(self):
 
@@ -57,31 +42,7 @@ class L0(SolverElement):
 
     def _bring_white_up(self):
 
-        # 1 bring white face up
-        w: Face = self._white_face
-
-        if w.name != FaceName.U:
-
-            self.debug("Need to Binging ", w, 'to', FaceName.U)
-
-            match w.name:
-
-                case FaceName.F:
-                    self.op.op(Algs.X)
-
-                case FaceName.B:
-                    self.op.op(-Algs.X)
-
-                case FaceName.D:
-                    self.op.op(Algs.X * 2)
-
-                case FaceName.L:
-                    self.op.op(Algs.Y + Algs.X)
-
-                case FaceName.R:
-                    self.op.op(-Algs.Y + Algs.X)
-
-    _status = None
+        self.cmn.bring_face_up(self.white_face)
 
     def __print_cross_status(self):
 
@@ -91,7 +52,7 @@ class L0(SolverElement):
         wf = self._white_face
         es: Sequence[Edge] = wf.edges
         color_codes = [e.colors_id_by_pos for e in es]
-        status = [self.cube.find_edge_by_colors(c).match_faces for c in color_codes]
+        status = [self.cube.find_edge_by_color(c).match_faces for c in color_codes]
 
         print("Cross Status:", status)
 
@@ -102,11 +63,19 @@ class L0(SolverElement):
 
     def _do_cross(self):
 
-        wf: Face = self._white_face
+        wf: Face = self.white_face
         assert wf.name == FaceName.U
 
-        es: Sequence[Edge] = wf.edges
-        color_codes: list[frozenset[Color] | Any] = [e.colors_id_by_pos for e in es]
+        wf: Face = self.white_face
+        def pred(): return Part.all_match_faces(self.white_face.edges)
+        n = self.cmn.rotate_and_check(wf, pred)
+        if n >= 0:
+            if n > 0:
+                # the query solves by rotate  n, so we need
+                self.op.op(Algs.U * n)
+            return
+
+        color_codes: Sequence[PartColorsID] = Part.parts_id_by_pos(wf.edges)
         for color_id in color_codes:
             st = self.__print_cross_status()
             use(st)
@@ -139,7 +108,7 @@ class L0(SolverElement):
         # the required colors
         target_colors_id: PartColorsID = target_edge.colors_id_by_pos
 
-        source_edge = cube.find_edge_by_colors(target_colors_id)
+        source_edge = cube.find_edge_by_color(target_colors_id)
 
         self.debug("L0X", "Need to bring ", source_edge, "to", target_edge)
 
@@ -155,19 +124,18 @@ class L0(SolverElement):
 
             # Now bring it to adjusted face
             if wf.edge_right is source_edge:
-                self.op.op(Algs.R) # move it R-B
+                self.op.op(Algs.R)  # move it R-B
             elif wf.edge_bottom is source_edge:
-                self.op.op(Algs.F) # move it F-R
+                self.op.op(Algs.F)  # move it F-R
             elif wf.edge_left is source_edge:
-                self.op.op(Algs.L) # move it F-L
+                self.op.op(Algs.L)  # move it F-L
             elif wf.edge_top is source_edge:
-                self.op.op(Algs.B) # move it R-B
+                self.op.op(Algs.B)  # move it R-B
             else:
                 raise ValueError(f"{source_edge} is not U-R, U-F, U-L, nor U-B")
 
             # continue with C2
-            source_edge = cube.find_edge_by_colors(target_colors_id)
-
+            source_edge = cube.find_edge_by_color(target_colors_id)
 
         adjusted_face: Face
         for adjusted_face in wf.adjusted_faces():
@@ -188,15 +156,15 @@ class L0(SolverElement):
                 st = self.__print_cross_status()
                 use(st)
 
-                source_edge = cube.find_edge_by_colors(target_colors_id)
+                source_edge = cube.find_edge_by_color(target_colors_id)
                 e_alg: Alg = cmn.bring_edge_to_front_by_e_rotate(source_edge)
 
                 st = self.__print_cross_status()
                 use(st)
 
                 # was moved
-                source_edge = cube.find_edge_by_colors(target_colors_id)
-                # now source is on front so the target , and the target doesn't match so we can rotate
+                source_edge = cube.find_edge_by_color(target_colors_id)
+                # now source is on front so the target , and the target doesn't match, so we can rotate
 
                 if cube.front.edge_right is source_edge:
                     self.op.op(Algs.F)
@@ -229,13 +197,13 @@ class L0(SolverElement):
         assert target_colors_id == cube.front.edge_top.colors_id_by_pos
 
         # it was moved
-        source_edge = cube.find_edge_by_colors(target_colors_id)
+        source_edge = cube.find_edge_by_color(target_colors_id)
         cmn.bring_bottom_edge_to_front_by_d_rotate(source_edge)
         # make sure the source matches
         assert target_colors_id == cube.front.edge_bottom.colors_id_by_color
 
         # it was moved
-        source_edge = cube.find_edge_by_colors(target_colors_id)
+        source_edge = cube.find_edge_by_color(target_colors_id)
         # now target and source on front top/bottom
         white_color = wf.color
         source_face_on_edge = source_edge.face_of_actual_color(white_color)

@@ -218,7 +218,7 @@ _parts: dict[Hashable, int] = {}
 
 
 def _part_id(p: Part) -> str:
-    p_id = p.pos_id
+    p_id = p.colors_id_by_color
 
     _id = _parts.get(p_id)
 

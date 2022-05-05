@@ -1,3 +1,4 @@
+import functools
 from abc import ABC, abstractmethod
 from random import Random
 from typing import Sequence, Any
@@ -16,6 +17,13 @@ class Alg(ABC):
 
     def inv(self) -> "Alg":
         return _Inv(self)
+
+    @property
+    def prime(self) -> "Alg":
+        return _Inv(self)
+
+    @abstractmethod
+    def count(self) -> int: ...
 
     @abstractmethod
     def atomic_str(self):
@@ -56,6 +64,9 @@ class _Inv(Alg):
     def atomic_str(self):
         return self._alg.atomic_str() + "'"
 
+    def count(self) -> int:
+        return self._alg.count()
+
 
 class _Mul(Alg, ABC):
     __slots__ = ["_alg", "_n"]
@@ -81,6 +92,19 @@ class _Mul(Alg, ABC):
     def inv(self) -> Alg:
         return self._alg
 
+    def count(self) -> int:
+        if not isinstance(self._alg, _BigAlg):
+            return _normal_simple_count(self._n * self._alg.count())
+        else:
+            return self._n * self._alg.count()
+
+
+def _normal_simple_count(n) -> int:
+    n = n % 4
+    if n == 3:
+        n = 1  # 3 is like -1
+    return n
+
 
 class _SimpleAlg(Alg, ABC):
     __slots__ = ["_n", "_code"]
@@ -99,6 +123,16 @@ class _SimpleAlg(Alg, ABC):
 
     def __str__(self):
         return self.atomic_str()
+
+    @property
+    def is_whole(self):
+        return False
+
+    def count(self) -> int:
+        if self.is_whole:
+            return 0
+        else:
+            return _normal_simple_count(self._n)
 
 
 class _U(_SimpleAlg):
@@ -175,6 +209,10 @@ class _X(_SimpleAlg):
     def play(self, cube: Cube, inv: bool = False):
         cube.x_rotate(_inv(inv))
 
+    @property
+    def is_whole(self):
+        return True
+
 
 class _E(_SimpleAlg):
     """
@@ -195,6 +233,10 @@ class _Y(_SimpleAlg):
 
     def play(self, cube: Cube, inv: bool = False):
         cube.y_rotate(_inv(inv))
+
+    @property
+    def is_whole(self):
+        return True
 
 
 class _BigAlg(Alg):
@@ -225,6 +267,9 @@ class _BigAlg(Alg):
             else:
                 return "[" + " ".join([str(a) for a in self._algs]) + "]"
 
+    def count(self) -> int:
+        return functools.reduce(lambda n, a: n + a.count(), self._algs, 0)
+
     def __add__(self, other: "Alg"):
 
         if self._name:
@@ -232,10 +277,18 @@ class _BigAlg(Alg):
             return super().__add__(other)
 
         if isinstance(other, _BigAlg) and not other._name:
-            return _BigAlg(None, *[*self._algs, * other._algs])
+            return _BigAlg(None, *[*self._algs, *other._algs])
         else:
-            return _BigAlg(None, *[ *self._algs, other])
+            return _BigAlg(None, *[*self._algs, other])
 
+
+class _Scramble(_BigAlg):
+
+    def __init__(self, name: str | None, *algs: Alg) -> None:
+        super().__init__(name, *algs)
+
+    def count(self) -> int:
+        return 0
 
 
 def _scramble(seed: Any) -> Alg:
@@ -251,9 +304,10 @@ def _scramble(seed: Any) -> Alg:
     if seed:
         name = str(seed)
     else:
+        # noinspection SpellCheckingInspection
         name = "random-scrm"
 
-    return _BigAlg(name + "[" + str(n) + "]", *algs)
+    return _Scramble(name + "[" + str(n) + "]", *algs)
 
 
 class Algs:

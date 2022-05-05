@@ -1,10 +1,7 @@
-from abc import ABC, abstractmethod
 from _solver.isolver import ISolver
 from cube import Cube
 from cube_operator import Operator
-
-
-
+from elements import Face
 
 
 class SolverElement:
@@ -26,8 +23,12 @@ class SolverElement:
     def op(self) -> Operator:
         return self._solver.op
 
+    # noinspection PyUnresolvedReferences
     @property
-    def cmn(self):
+    def _cmn(self) -> "CommonOp":
         return self._solver.cmn
 
+    @property
+    def white_face(self) -> Face:
+        return self._cmn.white_face
 

@@ -62,7 +62,7 @@ def main():
         while True:
 
             not_operation = False  # if not_operation is true then no need to replot
-            print(f"History={op.history}")
+            print(f"Count={op.count}, History={op.history}")
             print(f"(iv={inv}) Please enter a command:")
             print(f" 'inv R L U F B D  M,X(R), Y(U) ?solve Algs Clear Q")
             print(f" 1scramble1, 0scramble-random <undo")

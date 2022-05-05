@@ -1,5 +1,3 @@
-from collections.abc import Iterable
-
 from elements import *
 
 
@@ -34,12 +32,12 @@ class Cube:
 
         self._color_2_face = {}
 
-        f: Face = Face(FaceName.F, Color.BLUE)
-        l: Face = Face(FaceName.L, Color.ORANGE)
-        u: Face = Face(FaceName.U, Color.YELLOW)
-        r: Face = Face(FaceName.R, Color.RED)
-        d: Face = Face(FaceName.D, Color.WHITE)
-        b: Face = Face(FaceName.B, Color.GREEN)
+        f: Face = Face(self, FaceName.F, Color.BLUE)
+        l: Face = Face(self, FaceName.L, Color.ORANGE)
+        u: Face = Face(self, FaceName.U, Color.YELLOW)
+        r: Face = Face(self, FaceName.R, Color.RED)
+        d: Face = Face(self, FaceName.D, Color.WHITE)
+        b: Face = Face(self, FaceName.B, Color.GREEN)
 
         f.set_opposite(b)
         u.set_opposite(d)
@@ -293,7 +291,13 @@ class Cube:
 
         raise ValueError(f"Cube doesn't contain part {str(part_colors_id)}")
 
-    def find_edge_by_colors(self, part_colors_id: PartColorsID) -> Edge:
+    def find_edge_by_color(self, part_colors_id: PartColorsID) -> Edge:
+
+        """
+        Find edge that its color id is part_colors_id
+        :param part_colors_id:
+        :return:
+        """
 
         for f in self.faces:
             p = f.find_edge_by_colors(part_colors_id)
@@ -302,19 +306,48 @@ class Cube:
 
         raise ValueError(f"Cube doesn't contain edge {str(part_colors_id)}")
 
-    def find_edge_by_pos_colors(self, part_colors_id: PartColorsID) -> Edge:
+    def find_corner_by_colors(self, part_colors_id: PartColorsID) -> Corner:
+
         """
-        Find the edge that it's postion matches color id
+        Find edge that its color id is part_colors_id
         :param part_colors_id:
         :return:
         """
 
+        assert len(part_colors_id) == 3  # it is a corner
+
+        for f in self.faces:
+            p = f.find_corner_by_colors(part_colors_id)
+            if p:
+                return p
+
+        raise ValueError(f"Cube doesn't contain corner {str(part_colors_id)}")
+
+    def find_edge_by_pos_colors(self, part_colors_id: PartColorsID) -> Edge:
+        """
+        Find the edge that it's position matches color id
+        :param part_colors_id:
+        :return:
+        """
         for f in self.faces:
             p = f.find_edge_by_pos_colors(part_colors_id)
             if p:
                 return p
 
         raise ValueError(f"Cube doesn't contain edge {str(part_colors_id)}")
+
+    def find_corner_by_pos_colors(self, part_colors_id: PartColorsID) -> Corner:
+        """
+        Find the edge that it's position matches color id
+        :param part_colors_id:
+        :return:
+        """
+        for f in self.faces:
+            p = f.find_corner_by_pos_colors(part_colors_id)
+            if p:
+                return p
+
+        raise ValueError(f"Cube doesn't contain corner {str(part_colors_id)}")
 
 
 

@@ -1,3 +1,4 @@
+import functools
 from collections.abc import MutableSequence, Sequence
 
 from algs import Alg
@@ -28,6 +29,10 @@ class Operator:
     @property
     def history(self) -> Sequence[Alg]:
         return self._history
+
+    @property
+    def count(self):
+        return functools.reduce(lambda n,a: n + a.count(), self._history, 0)
 
     def reset(self):
         self._cube.reset()
