@@ -65,7 +65,7 @@ def main():
             print(f"History={op.history}")
             print(f"(iv={inv}) Please enter a command:")
             print(f" 'inv R L U F B D  M,X(R), Y(U) ?solve Algs Clear Q")
-            print(f" !scramble, <undo")
+            print(f" 1scramble1, 0scramble-random <undo")
 
             value = inp.get_input()
             print(value.upper())
@@ -117,8 +117,13 @@ def main():
                     op.reset()
                     break
 
-                case "!":
+                case "1":
                     alg: Alg = Algs.scramble1()
+                    op.op(alg, inv)
+                    break
+
+                case "0":
+                    alg: Alg = Algs.scramble()
                     op.op(alg, inv)
                     break
 

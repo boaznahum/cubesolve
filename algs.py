@@ -241,13 +241,19 @@ class _BigAlg(Alg):
 def _scramble(seed: Any) -> Alg:
     rnd: Random = Random(seed)
 
-    n = rnd.randint(400, 600)
+    n = rnd.randint(400, 800)
 
     s = Algs.Simple
 
     algs: list[Alg] = [rnd.choice(s) for _ in range(0, n)]
 
-    return _BigAlg(str(seed) + "[" + str(n) + "]", *algs)
+    name: str
+    if seed:
+        name = str(seed)
+    else:
+        name = "random-scrm"
+
+    return _BigAlg(name + "[" + str(n) + "]", *algs)
 
 
 class Algs:
@@ -282,3 +288,7 @@ class Algs:
     @classmethod
     def scramble1(cls):
         return _scramble("scramble1")
+
+    @classmethod
+    def scramble(cls):
+        return _scramble(None)

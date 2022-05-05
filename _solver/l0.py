@@ -153,7 +153,21 @@ class L0(SolverElement):
             else:
                 self.debug("??L0X. C1.2", source_edge, "is on required", wf, "@", on_face, "color doesn't match")
 
-            raise NotImplementedError("L0X. C1")
+            # Now bring it to adjusted face
+            if wf.edge_right is source_edge:
+                self.op.op(Algs.R) # move it R-B
+            elif wf.edge_bottom is source_edge:
+                self.op.op(Algs.F) # move it F-R
+            elif wf.edge_left is source_edge:
+                self.op.op(Algs.L) # move it F-L
+            elif wf.edge_top is source_edge:
+                self.op.op(Algs.B) # move it R-B
+            else:
+                raise ValueError(f"{source_edge} is not U-R, U-F, U-L, nor U-B")
+
+            # continue with C2
+            source_edge = cube.find_edge_by_colors(target_colors_id)
+
 
         adjusted_face: Face
         for adjusted_face in wf.adjusted_faces():
@@ -193,7 +207,7 @@ class L0(SolverElement):
                     st = self.__print_cross_status()
                     use(st)
                 else:
-                    raise ValueError(f"{source_edge} is L-F nor R-F")
+                    raise ValueError(f"{source_edge} is not L-F nor R-F")
 
                 if e_alg:
                     # bring centers to match the cross
