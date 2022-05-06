@@ -10,7 +10,7 @@ def use(_):
     pass
 
 
-class L0Corners(SolverElement):
+class L1Corners(SolverElement):
     __slots__ = []
 
     def __init__(self, slv: ISolver) -> None:

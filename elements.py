@@ -141,6 +141,13 @@ class Part(ABC):
         """
         return self.get_face_edge(f).color
 
+    def match_face(self, face: _Face):
+        """
+        Part edge on given face match its color
+        :return:
+        """
+        return self.get_face_edge(face).color == face.color
+
     @property
     def match_faces(self):
         """
@@ -223,8 +230,6 @@ class Part(ABC):
 
         return None
 
-
-
     def face_of_actual_color(self, c: Color):
 
         """
@@ -247,6 +252,10 @@ class Part(ABC):
         :return:
         """
         return all(p.match_faces for p in parts)
+
+    @property
+    def cube(self) -> _Cube:
+        return self._edges[0].face.cube
 
 
 class Center(Part):
@@ -388,7 +397,6 @@ class Corner(Part):
         """
 
         self._replace_colors(source, (on_face, on_face), (source_2, target_2), (source_3, target_3))
-
 
 
 class Face:
@@ -571,6 +579,22 @@ class Face:
             if part_colors_id == p.colors_id_by_color:
                 return p
         return None
+
+    def find_part_by_pos_colors(self, part_colors_id: PartColorsID) -> Part | None:
+
+        n = len(part_colors_id)
+
+        assert n in range(1, 4)
+
+        if n == 1:
+            if self.center._colors_id_by_pos == part_colors_id:
+                return self.center
+            else:
+                return None
+        elif n == 2:
+            return self.find_edge_by_pos_colors(part_colors_id)
+        else:
+            return self.find_corner_by_pos_colors(part_colors_id)
 
     def find_edge_by_colors(self, part_colors_id: PartColorsID) -> Edge | None:
         for p in self._edges:

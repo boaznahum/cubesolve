@@ -344,8 +344,8 @@ class Algs:
         return _scramble("scramble1")
 
     @classmethod
-    def scramble(cls):
-        return _scramble(None)
+    def scramble(cls, seed=None):
+        return _scramble(seed)
 
     @classmethod
     def alg(cls, name, *algs: Alg):

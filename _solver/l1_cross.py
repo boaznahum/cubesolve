@@ -14,7 +14,7 @@ def use(_):
 _status = None
 
 
-class L0Cross(SolverElement):
+class L1Cross(SolverElement):
 
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)

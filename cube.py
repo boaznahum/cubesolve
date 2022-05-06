@@ -291,6 +291,21 @@ class Cube:
 
         raise ValueError(f"Cube doesn't contain part {str(part_colors_id)}")
 
+    def find_part_by_pos_colors(self, part_colors_id: PartColorsID) -> Part:
+
+        """
+        Given a color id, find where it should be located in cube
+        :param part_colors_id:
+        :return:
+        """
+
+        for f in self.faces:
+            p = f.find_part_by_pos_colors(part_colors_id)
+            if p:
+                return p
+
+        raise ValueError(f"Cube doesn't contain part {str(part_colors_id)}")
+
     def find_edge_by_color(self, part_colors_id: PartColorsID) -> Edge:
 
         """

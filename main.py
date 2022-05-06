@@ -1,5 +1,6 @@
 import msvcrt
 import sys
+import traceback
 
 import algs
 import viewer
@@ -37,13 +38,16 @@ class _Input:
 
         if _terminal:
             value = msvcrt.getch()
-            return value.decode("utf-8")
+            value = value.decode("utf-8")
         else:
-            return input()
+            value = input()
+
+        if len(value) > 1:
+            self._replay.extend([*value[1:]])
+        return value[0]
 
 
 def main():
-
     inp: _Input = _Input(*sys.argv[1:])
 
     c: Cube = Cube()
@@ -65,13 +69,14 @@ def main():
             print(f"Count={op.count}, History={op.history}")
             print(f"(iv={inv}) Please enter a command:")
             print(f" 'inv R L U F B D  M,X(R), Y(U) ?solve Algs Clear Q")
-            print(f" 1scramble1, 0scramble-random <undo")
+            print(f" 1scramble1, 0scramble-random <undo, Test")
 
             value = inp.get_input()
             print(value.upper())
 
             # the 'break' is to quit the input loop
-            match value.upper():
+            value = value.upper()
+            match value:
                 case "'":
                     inv = not inv
                     not_operation = True
@@ -117,13 +122,14 @@ def main():
                     op.reset()
                     break
 
-                case "1":
-                    alg: Alg = Algs.scramble1()
+                case "0":
+                    alg: Alg = Algs.scramble()
                     op.op(alg, inv)
                     break
 
-                case "0":
-                    alg: Alg = Algs.scramble()
+                case "1" | "2" | "3" | "4" | "5" | "6":
+                    # to match test int
+                    alg: Alg = Algs.scramble(int(value))
                     op.op(alg, inv)
                     break
 
@@ -133,6 +139,23 @@ def main():
 
                 case "?":
                     slv.solve()
+                    break
+
+                case "T":
+                    # test
+                    for s in range(0, 20):
+                        op.reset()
+                        alg: Alg = Algs.scramble(s)
+                        op.op(alg)
+
+                        # noinspection PyBroadException
+                        try:
+                            slv.solve()
+
+                        except Exception:
+                            print(f"Failure on {s}")
+                            traceback.print_exc()
+                            break
                     break
 
                 case "\x03" | "Q":
