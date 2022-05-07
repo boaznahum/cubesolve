@@ -143,7 +143,7 @@ def main():
 
                 case "T":
                     # test
-                    for s in range(0, 20):
+                    for s in range(0, 50):
                         op.reset()
                         alg: Alg = Algs.scramble(s)
                         op.op(alg)
@@ -151,6 +151,7 @@ def main():
                         # noinspection PyBroadException
                         try:
                             slv.solve()
+                            assert slv.is_solved
 
                         except Exception:
                             print(f"Failure on {s}")

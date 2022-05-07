@@ -2,14 +2,14 @@ from collections.abc import Iterable, Sequence
 from typing import TypeVar, Generic
 
 from cube import Cube
-from elements import Part, Edge
+from elements import Part, Edge, Corner
 
 T = TypeVar("T", bound=Part)
 
 
 class PartTracker(Generic[T]):
     """
-    Track a part olor id, even if algorithm change its location, this
+    Track a part color id, even if algorithm change its location, this
     will return the required location(where it should be located on cube) and it's actual location
     """
     __slots__ = ["_color_id", "_actual",
@@ -53,6 +53,13 @@ class PartTracker(Generic[T]):
         """
         return self.required.match_faces
 
+    @property
+    def in_position(self):
+        """
+        :return: true if part in position, position id same as color id, actual == required
+        """
+        return self.required.in_position
+
     def __str__(self):
         if self.match:
             s = "+"
@@ -72,7 +79,7 @@ class EdgeTracker(PartTracker[Edge]):
     @staticmethod
     def of(edge: Edge) -> "EdgeTracker":
         """
-        Given a edge, tracks its position(not actual) id
+        Given an edge, tracks its position(not actual) id
         :param edge:
         :return:
         """
@@ -81,3 +88,22 @@ class EdgeTracker(PartTracker[Edge]):
     @staticmethod
     def of_many(edges: Iterable[Edge]) -> Sequence["EdgeTracker"]:
         return [EdgeTracker.of(e) for e in edges]
+
+
+class CornerTracker(PartTracker[Corner]):
+
+    def __init__(self, corner: Corner) -> None:
+        super().__init__(corner)
+
+    @staticmethod
+    def of(corner: Corner) -> "CornerTracker":
+        """
+        Given a corner, tracks its position(not actual) id
+        :param corner:
+        :return:
+        """
+        return CornerTracker(corner)
+
+    @staticmethod
+    def of_many(corners: Iterable[Corner]) -> Sequence["CornerTracker"]:
+        return [CornerTracker.of(c) for c in corners]

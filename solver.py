@@ -3,6 +3,7 @@ from _solver.common_op import CommonOp
 from _solver.l1_corners import L1Corners
 from _solver.l1_cross import L1Cross
 from _solver.l2 import L2
+from _solver.l3_corners import L3Corners
 from _solver.l3_cross import L3Cross
 from cube import Cube
 from cube_operator import Operator
@@ -16,6 +17,7 @@ class Solver(ISolver):
                  "l1_corners",
                  "l2",
                  "l3_cross",
+                 "l3_corners",
                  "common"]
 
     def __init__(self, op: Operator) -> None:
@@ -28,6 +30,7 @@ class Solver(ISolver):
         self.l1_corners = L1Corners(self)
         self.l2 = L2(self)
         self.l3_cross = L3Cross(self)
+        self.l3_corners = L3Corners(self)
 
     @property
     def cube(self) -> Cube:
@@ -40,6 +43,10 @@ class Solver(ISolver):
     @property
     def cmn(self) -> CommonOp:
         return self.common
+
+    @property
+    def is_solved(self):
+        return self._cube.solved
 
     @property
     def status(self):
@@ -69,6 +76,11 @@ class Solver(ISolver):
         else:
             s += ", No L3-Cross"
 
+        if self.l3_corners.solved():
+            s += ", L3-Corners"
+        else:
+            s += ", No L3-Corners"
+
         return s
 
     def solve(self):
@@ -79,6 +91,7 @@ class Solver(ISolver):
         self.l1_corners.solve()
         self.l2.solve()
         self.l3_cross.solve()
+        self.l3_corners.solve()
 
     def debug(self, *args):
         if _DEBUG:

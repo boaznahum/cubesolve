@@ -161,6 +161,13 @@ class Part(ABC):
         return True
 
     @property
+    def in_position(self):
+        """
+        :return: true if part in position, position id same as color id
+        """
+        return self.colors_id_by_pos == self.colors_id_by_color
+
+    @property
     def pos_id(self):
         """
         A unique ID according to pos
@@ -252,6 +259,15 @@ class Part(ABC):
         :return:
         """
         return all(p.match_faces for p in parts)
+
+    @classmethod
+    def all_in_position(cls, parts: Sequence["Part"]):
+        """
+        Return true if all parts match - each part edge matches the face it is located on
+        :param parts:
+        :return:
+        """
+        return all(p.in_position for p in parts)
 
     @property
     def cube(self) -> _Cube:
