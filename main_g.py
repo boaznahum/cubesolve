@@ -186,10 +186,10 @@ def _handle_input(value: int, op: Operator, viewer: GCubeViewer, slv: Solver) ->
                     traceback.print_exc()
                     break
 
-        case "\x03" | "Q":
-            done = True
+        case key.Q:
+            return True
 
-    if not done and not not_operation:
+    if not not_operation:
         inv = False  # consumed
         viewer.plot()
         print("Status=", slv.status)
