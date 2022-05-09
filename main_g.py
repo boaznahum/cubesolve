@@ -7,6 +7,7 @@ from typing import Tuple
 
 import glooey
 import pyglet
+from glooey import Label
 from pyglet import shapes
 from pyglet.graphics import Batch
 from pyglet.window import Window, key
@@ -56,15 +57,65 @@ class _Input:
         return value[0]
 
 
-def _create_initial_gui() -> Tuple[Batch, Window]:
+class Screen:
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.batch = None
+        self.window = None
+        #self.status: glooey.Label | None = None
+        self.status: pyglet.text.Label | None = None
+        self.alpha_x: float = 0
+        self.alpha_y: float = 0
+        self.alpha_z: float = 0
+        self.alpha_delta = 0.1
+
+
+def _create_initial_gui() -> Screen:
+
     window = pyglet.window.Window(720, 480, "Cube")
     batch = pyglet.graphics.Batch()
+
+    s: Screen = Screen()
+    s.window = window
+    s.batch = batch
+
+
+    gui = glooey.Gui(window, batch=batch)
+
+    grid = glooey.Grid()
+
+    ph = glooey.Placeholder()
+    grid.add(0, 0, ph)
+
+    ph = glooey.Placeholder()
+    grid.add(0, 1, ph)
+
+    hbox1 = glooey.HBox()
+    grid.add(0, 1, hbox1)
+    hbox2 = glooey.HBox()
+    grid.add(1, 0, hbox2)
+
+
+    hbox3 = glooey.HBox()
+    grid.add(1, 0, hbox2)
+
+    grid.add(1, 1,  hbox3)
+
+
+    gui.add(grid)
+
+    #s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
+    s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
+    #document = pyglet.text.decode_text('Hello, world.')
+    #layout = pyglet.text.layout.TextLayout(document, 100, 20, batch=batch)
+
 
     @window.event
     def on_draw():
         batch.draw()
 
-    return batch, window
+    return s
 
 
 def main():
@@ -74,17 +125,15 @@ def main():
 
     slv: Solver = Solver(op)
 
-    batch: Batch
-    window: Window
-    batch, window = _create_initial_gui()
+    s: Screen = _create_initial_gui()
 
-    viewer: GCubeViewer = GCubeViewer(batch, c)
+    viewer: GCubeViewer = GCubeViewer(s.batch, c)
 
-    @window.event
+    @s.window.event
     def on_key_press(symbol, modifiers):
-        done = _handle_input(symbol, op, viewer, slv)
+        done = _handle_input(symbol, modifiers, op, viewer, slv, s)
         if done:
-            window.close()
+            s.window.close()
 
 
     pyglet.app.run()
@@ -110,38 +159,57 @@ def main():
     #         # the 'break' is to quit the input loop
 
 
-def _handle_input(value: int, op: Operator, viewer: GCubeViewer, slv: Solver) -> bool:
+def _handle_input(value: int, modifiers: int, op: Operator, viewer: GCubeViewer,
+                  slv: Solver, s: Screen) -> bool:
     inv = False
 
     done = False
     not_operation = False
 
-    print(value)
+    inv = modifiers & key.MOD_SHIFT
+
     match value:
-        case "'":
-            inv = not inv
-            not_operation = True
+
         case key.R:
             op.op(algs.Algs.R, inv)
-        case "L":
+        case key.L:
             op.op(algs.Algs.L, inv)
-        case "U":
+
+        case key.U:
             op.op(algs.Algs.U, inv)
 
-        case "F":
+        case key.F:
             op.op(algs.Algs.F, inv)
 
-        case "B":
+        case key.B:
             op.op(algs.Algs.B, inv)
 
-        case "D":
+        case key.D:
             op.op(algs.Algs.D, inv)
 
-        case "X":
-            op.op(algs.Algs.X, inv)
+        case key.X:
+            if modifiers & key.MOD_CTRL:
+                s.alpha_x -= s.alpha_delta
+            elif modifiers & key.MOD_ALT:
+                s.alpha_x += s.alpha_delta
+            else:
+                op.op(algs.Algs.X, inv)
 
-        case "Y":
-            op.op(algs.Algs.Y, inv)
+        case key.Y:
+            if modifiers & key.MOD_CTRL:
+                s.alpha_y -= s.alpha_delta
+            elif modifiers & key.MOD_ALT:
+                s.alpha_y += s.alpha_delta
+            else:
+                op.op(algs.Algs.Y, inv)
+
+        case key.Z:
+            if modifiers & key.MOD_CTRL:
+                s.alpha_z -= s.alpha_delta
+            elif modifiers & key.MOD_ALT:
+                s.alpha_z += s.alpha_delta
+
+
 
         case "M":
             op.op(algs.Algs.M, inv)
@@ -151,8 +219,10 @@ def _handle_input(value: int, op: Operator, viewer: GCubeViewer, slv: Solver) ->
             alg: Alg = get_alg()
             op.op(alg, inv)
 
-        case "C":
+        case key.C:
             op.reset()
+            s.alpha_z = s.alpha_y = s.alpha_x = 0
+
 
         case "0":
             alg: Alg = Algs.scramble()
@@ -166,7 +236,7 @@ def _handle_input(value: int, op: Operator, viewer: GCubeViewer, slv: Solver) ->
         case "<":
             op.undo()
 
-        case "?":
+        case key.SLASH:
             slv.solve()
 
         case "T":
@@ -189,10 +259,13 @@ def _handle_input(value: int, op: Operator, viewer: GCubeViewer, slv: Solver) ->
         case key.Q:
             return True
 
+        case _ :
+            return False
+
     if not not_operation:
-        inv = False  # consumed
-        viewer.plot()
-        print("Status=", slv.status)
+        s.window.clear()
+        viewer.update(s.alpha_x, s.alpha_y, s.alpha_z)
+        s.status.text = "Status:" + slv.status
 
     return done
 
