@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Hashable, Tuple, MutableSequence
+from typing import Hashable, Tuple, MutableSequence, Callable
 
 import colorama
 import numpy as np
@@ -97,6 +97,8 @@ class _Cell:
 
         if self._g_polygon:
             p = self._g_polygon
+            p.position = (10, 10)
+            p.color = (255, 0, 0)
             p.delete()
             self._g_polygon = None
             del p
@@ -105,6 +107,8 @@ class _Cell:
             lines = self._g_lines
             self._g_lines = None
             for i, l in enumerate(lines):
+                l.position = (10, 10, 15, 15)
+                l.color = (255, 0, 0)
                 l.delete()
                 del l
 
@@ -112,6 +116,8 @@ class _Cell:
             lines = self._g_markers
             self._g_markers = None
             for i, l in enumerate(lines):
+                l.position = (10, 10)
+                l.color = (255, 0, 0)
                 l.delete()
                 del l
 
@@ -138,7 +144,7 @@ class _Cell:
         x0 = (vertexes[0][0] + vertexes[2][0]) // 2
         y0 = (vertexes[0][1] + vertexes[2][1]) // 2
 
-        for i in range(marker+1):
+        for i in range(marker + 1):
             self._g_markers.append(pyglet.shapes.Circle(x0, y0, i * 2, batch=self._batch, color=[0, 0, 0]))
 
 
@@ -160,12 +166,12 @@ class _FaceBoard:
 
     def __init__(self,
                  board: "_Board",
-                 cube_face: Face, batch: Batch,
+                 cube_face_supplier: Callable[[], Face], batch: Batch,
                  f0: np.ndarray, left_right_direction: ndarray, left_top_direction: ndarray
                  ) -> None:
         super().__init__()
         self._board: "_Board" = board
-        self.cube_face = cube_face
+        self.cube_face_supplier = cube_face_supplier
         # self.flip_h = flip_h
         # self.flip_v = flip_v
         self.f0: np.ndarray = f0
@@ -174,6 +180,10 @@ class _FaceBoard:
         self._cells: Sequence[Sequence[_Cell]] = [[_Cell(batch) for _ in range(0, _FaceBoard._h_size)] for _
                                                   in
                                                   range(0, _FaceBoard._v_size)]
+
+    @property
+    def cube_face(self) -> Face:
+        return self.cube_face_supplier()
 
     def set_cell(self, cy: int, cx: int, vertexes: Sequence[Sequence[int, int]], c: _VColor, marker: int) -> None:
         """
@@ -297,7 +307,7 @@ class _Board:
     def v_size(self) -> int:
         return _Board._v_size
 
-    def create_face(self, cube_face: Face,
+    def create_face(self, cube_face: Callable[[], Face],
                     y_index, x_index,
                     f0: ndarray,
                     left_right_direction: ndarray,
@@ -341,7 +351,7 @@ def _part_id(p: Part) -> str:
     return chr(ord("A") + _id - 1)
 
 
-def _plot_face(b: _Board, f: Face, fy: int, fx: int,
+def _plot_face(b: _Board, f: Callable[[], Face], fy: int, fx: int,
                left_bottom: list[int],  # 3d
                left_right_direction: list[int],  # 3d
                left_top_direction: list[int],  # 3d
@@ -389,11 +399,12 @@ class GCubeViewer:
         self._board.update()
 
     def update(self, alpha_x, alpha_y, alpha_z):
-        print(f"{alpha_x=} {alpha_y=} {alpha_z=}")
+        # print(f"{alpha_x=} {alpha_y=} {alpha_z=}")
         self._board._alpha_x = alpha_x
         self._board._alpha_y = alpha_y
         self._board._alpha_z = alpha_z
         self.plot()
+        self._batch.invalidate()
 
     def _init_gui(self):
         b = self._board
@@ -410,9 +421,14 @@ class GCubeViewer:
 
          """
 
-        _plot_face(b, cube.up, 0, 1, [0, 1, 0], [1, 0, 0], [0, 0, 1])
-        _plot_face(b, cube.left, 1, 0, [0, 0, 1], [0, 0, -1], [0, 1, 0])
-        _plot_face(b, cube.front, 1, 1, [0, 0, 0], [1, 0, 0], [0, 1, 0])
-        _plot_face(b, cube.right, 1, 2, [1, 0, 0], [0, 0, 1], [0, 1, 0])
+        # we pass a supplier to Face and not a face, because might reset itself
+
+        # debug with # s.alpha_x=-0.30000000000000004 s.alpha_y=-0.5 s.alpha_z=0
+        _plot_face(b, lambda : cube.back, 3, 1, [0, 0, 1], [1, 0, 0], [0, 1, 0])
+
+        _plot_face(b, lambda : cube.up, 0, 1, [0, 1, 0], [1, 0, 0], [0, 0, 1])
+        _plot_face(b, lambda : cube.left, 1, 0, [0, 0, 1], [0, 0, -1], [0, 1, 0])
+        _plot_face(b, lambda : cube.front, 1, 1, [0, 0, 0], [1, 0, 0], [0, 1, 0])
+        _plot_face(b, lambda : cube.right, 1, 2, [1, 0, 0], [0, 0, 1], [0, 1, 0])
         # _plot_face(b, cube.down, 2, 1, [0, 0, -1], [1, 0, 0], [0, 1, 0])
-        # _plot_face(b, cube.back, 3, 1, [0, 0, -1], [1, 0, 0], [0,0,1])
+
