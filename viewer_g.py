@@ -5,20 +5,18 @@ from typing import Hashable, Tuple, MutableSequence, Callable
 import colorama
 import numpy as np
 import pyglet
-from pyglet.gl import *
 from numpy import ndarray
+from pyglet.gl import *
 from pyglet.graphics import Batch
 
-import graphic_helper
 from cube import Cube
 from elements import Face, Color, Part
-
 
 alpha_x: float = 0
 alpha_y: float = 0
 alpha_z: float = 0
 
-_CELL_SIZE: int = 30
+_CELL_SIZE: int = 25
 
 # def _color_2_str(c: Color) -> str:
 #    return str(c.value)[0]
@@ -84,12 +82,6 @@ class _Cell:
         # self._create_objects(x0, y0, x1, y1, (255, 255, 255))
 
     def _create_objects(self, vertexes: Sequence[Sequence[int]], color, marker: int):
-        # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
-        self._create_polygon(vertexes, color)
-        # self._create_lines(vertexes, [255, 255, 255])
-        # self._create_markers(vertexes, marker)
-
-    def _create_polygon(self, vertexes: Sequence[Sequence[int, int, int]], color):
 
         glPushMatrix()
 
@@ -97,64 +89,53 @@ class _Cell:
         glRotatef(math.degrees(alpha_y), 0, 1, 0)
         glRotatef(math.degrees(alpha_z), 0, 0, 1)
 
-        # Draw the six sides of the cube
-        glBegin(GL_TRIANGLE_FAN)
-        #glBegin(GL_QUADS)
 
-        glColor3ub(*color)
-
-        for v in vertexes:
-            v = [ GLfloat(v[0]), GLfloat(v[1]), GLfloat(v[2])]
-            glVertex3f(*v)
-            #print(glGetError())
-
-        glEnd()
+        # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
+        self._create_polygon(vertexes, color)
+        self._create_lines(vertexes, [0, 0, 0])
+        # self._create_markers(vertexes, marker)
 
         # Pop Matrix off stack
         glPopMatrix()
 
+
+    def _create_polygon(self, vertexes: Sequence[Sequence[int, int, int]], color):
+
+
+        # Draw the six sides of the cube
+        glBegin(GL_TRIANGLE_FAN)
+        # glBegin(GL_QUADS)
+
+        glColor3ub(*color)
+
+        for v in vertexes:
+            glVertex3f(*v)
+            # print(glGetError())
+
+        glEnd()
+
+
     def set_attributes(self, vertexes: Sequence[Sequence[int, int, int]], c: _VColor, marker):
 
-        # if self._g_polygon:
-        #     p = self._g_polygon
-        #     p.position = (10, 10)
-        #     p.color = (255, 0, 0)
-        #     p.delete()
-        #     self._g_polygon = None
-        #     del p
-        #
-        # if self._g_lines:
-        #     lines = self._g_lines
-        #     self._g_lines = None
-        #     for i, l in enumerate(lines):
-        #         l.position = (10, 10, 15, 15)
-        #         l.color = (255, 0, 0)
-        #         l.delete()
-        #         del l
-        #
-        # if self._g_markers:
-        #     lines = self._g_markers
-        #     self._g_markers = None
-        #     for i, l in enumerate(lines):
-        #         l.position = (10, 10)
-        #         l.color = (255, 0, 0)
-        #         l.delete()
-        #         del l
 
         self._create_objects(vertexes, c, marker)
 
     def _create_lines(self, vertexes, color):
 
-        n = len(vertexes)
-        lines = []
+
+        glPushAttrib(GL_LINE_WIDTH)
+        glLineWidth(4)
+
+        glColor3ub(*color)
+
         for i in range(len(vertexes) - 1):
-            line = pyglet.shapes.Line(vertexes[i][0], vertexes[i][1],
-                                      vertexes[(i + 1) % n][0], vertexes[(i + 1) % n][1],
-                                      width=2,
-                                      color=color,
-                                      batch=self._batch)
-            lines.append(line)
-        self._g_lines = lines
+            glBegin(GL_LINES)
+            glVertex3f(*vertexes[i])
+            glVertex3f(*vertexes[i+1])
+            glEnd()
+
+        glPopAttrib()
+
 
     def _create_markers(self, vertexes, marker):
         if not marker:
@@ -257,8 +238,13 @@ class _FaceBoard:
             for i in range(len(box)):
                 box[i] = box[i].reshape(1, 3) + screen0
 
+            lbox = [x.reshape((3,)).tolist() for x in box]
 
-            lbox = [ x.reshape((3,)).tolist() for x in box]
+
+            for i in range(len(lbox)):
+                 lbox[i] = [GLfloat(lbox[i][0]), GLfloat(lbox[i][1]), GLfloat(lbox[i][2])]
+
+
 
 
             fb.set_cell(cy, cx, lbox, face_color, marker)
@@ -376,11 +362,23 @@ def _part_id(p: Part) -> str:
 
 
 def _plot_face(b: _Board, f: Callable[[], Face], fy: int, fx: int,
-               left_bottom: list[int],  # 3d
+               left_bottom: list[float],  # 3d
                left_right_direction: list[int],  # 3d
                left_top_direction: list[int],  # 3d
                # flip_v=False, flip_h=False,
                ):
+
+    """
+
+    :param b:
+    :param f:
+    :param fy:
+    :param fx:
+    :param left_bottom: in units of faces
+    :param left_right_direction:
+    :param left_top_direction:
+    :return:
+    """
     """
      0,0 | 0,1 | 0,2
      ---------------
@@ -395,7 +393,7 @@ def _plot_face(b: _Board, f: Callable[[], Face], fy: int, fx: int,
 
     f0: ndarray = np.array([fx0, fy0, fz0], dtype=float).reshape(3, 1)
     # left_bottom is length=1 vector, we convert it to face size in pixels
-    fs = np.array(left_bottom).reshape(3, 1) * _FACE_SIZE * _CELL_SIZE
+    fs = np.array(left_bottom, dtype=float).reshape(3, 1) * _FACE_SIZE * _CELL_SIZE
 
     f0 = f0 + fs
     _left_right_d: ndarray = np.array(left_right_direction, dtype=float).reshape(3, 1)
@@ -449,12 +447,21 @@ class GCubeViewer:
 
         # debug with # s.alpha_x=-0.30000000000000004 s.alpha_y=-0.5 s.alpha_z=0
 
-        _plot_face(b, lambda: cube.up, 0, 1, [0, 1, 0], [1, 0, 0], [0, 0, 1])
-        _plot_face(b, lambda: cube.left, 1, 0, [0, 0, 1], [0, 0, -1], [0, 1, 0])
-        _plot_face(b, lambda: cube.front, 1, 1, [0, 0, 1], [1, 0, 0], [0, 1, 0])
-        _plot_face(b, lambda: cube.right, 1, 2, [1, 0, 0], [0, 0, 1], [0, 1, 0])
+        # OK
+        _plot_face(b, lambda: cube.up, 0, 1, [0, 1, 1], [1, 0, 0], [0, 0, -1])
 
-        # OK!
+        # -0.75 from it x location, so we can see it in isometric view
+        # OK
+        _plot_face(b, lambda: cube.left, 1, 0, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0])
+
+        # OK
+        _plot_face(b, lambda: cube.front, 1, 1, [0, 0, 1], [1, 0, 0], [0, 1, 0])
+
+        # OK
+        _plot_face(b, lambda: cube.right, 1, 2, [1, 0, 1], [0, 0, -1], [0, 1, 0])
+
+        # OK! -1 far away so we can see it
         _plot_face(b, lambda: cube.back, 3, 1, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
 
-        # _plot_face(b, cube.down, 2, 1, [0, 0, -1], [1, 0, 0], [0, 1, 0])
+        # -05 below so we see it
+        _plot_face(b, lambda: cube.down, 2, 1, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])

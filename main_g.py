@@ -42,7 +42,7 @@ class Main:
         self.op: Operator = Operator(self.cube)
         self.slv: Solver = Solver(self.op)
 
-        #pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
+        # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
 
         self.alpha_delta = 0.1
         self.reset()
@@ -52,7 +52,6 @@ class Main:
         self.alpha_x: float = 0.3
         self.alpha_y: float = -0.4
         self.alpha_z: float = 0
-
 
 
 class Window(pyglet.window.Window):
@@ -74,14 +73,14 @@ class Window(pyglet.window.Window):
     def on_draw(self):
         self.clear()
         cube3d.on_draw(self.xRotation, self.yRotation)
-        #self.batch.draw()
+        # self.batch.draw()
 
         self.draw_axis()
 
         viewer_g.alpha_x = self.app.alpha_x
         viewer_g.alpha_y = self.app.alpha_y
         viewer_g.alpha_z = self.app.alpha_z
-        self.viewer.update(self.app.alpha_x, self.app.alpha_y,self.app.alpha_z)
+        self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
 
     def on_resize(self, width, height):
         cube3d.on_resize(width, height)
@@ -92,7 +91,6 @@ class Window(pyglet.window.Window):
             self.close()
 
     def draw_axis(self):
-
         glPushMatrix()
 
         glRotatef(math.degrees(self.app.alpha_x), 1, 0, 0)
@@ -105,28 +103,26 @@ class Window(pyglet.window.Window):
         glBegin(GL_LINES)
 
         glColor3ub(255, 255, 255)
-        glVertex3f( 0, 0, 0)
-        glVertex3f( 200, 0, 0)
+        glVertex3f(0, 0, 0)
+        glVertex3f(200, 0, 0)
         glEnd()
 
         glBegin(GL_LINES)
         glColor3ub(255, 0, 0)
-        glVertex3f( 0, 0, 0)
-        glVertex3f( 0, 200, 0)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, 200, 0)
         glEnd()
 
         glBegin(GL_LINES)
         glColor3ub(0, 255, 0)
-        glVertex3f( 0, 0, 0)
-        glVertex3f( 0, 0, 200)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, 0, 200)
         glEnd()
 
         glPopAttrib()
 
         # Pop Matrix off stack
         glPopMatrix()
-
-
 
 
 # def _create_initial_gui() -> Screen:
@@ -181,7 +177,7 @@ class Window(pyglet.window.Window):
 
 def main():
     app: Main = Main()
-    Window(app, 720, 480, '"Cube"')
+    Window(app, 720, 720, '"Cube"')
     pyglet.app.run()
 
 
@@ -196,6 +192,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
     inv = modifiers & key.MOD_SHIFT
 
+    # noinspection PyProtectedMember
     match value:
 
         case key.EQUAL:
@@ -234,7 +231,6 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
         case key.RIGHT:
             window.yRotation += app.INCREMENT
 
-
         case key.X:
             if modifiers & key.MOD_CTRL:
                 app.alpha_x -= app.alpha_delta
@@ -269,14 +265,13 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             op.reset()
             app.reset()
 
-
-        case "0":
+        case key._0:
             alg: Alg = Algs.scramble()
             op.op(alg, inv)
 
-        case "1" | "2" | "3" | "4" | "5" | "6":
+        case key._1 | key._2 | key._3 | key._4 | key._5 | key._6:
             # to match test int
-            alg: Alg = Algs.scramble(int(value))
+            alg: Alg = Algs.scramble(value - key._0)
             op.op(alg, inv)
 
         case "<":
