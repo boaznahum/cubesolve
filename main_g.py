@@ -7,7 +7,6 @@ from pyglet.window import key
 
 import algs
 import viewer_g
-from _try import cube3d
 from algs import Alg, Algs
 from cube import Cube
 from cube_operator import Operator
@@ -44,6 +43,9 @@ class Main:
 
         # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
 
+        self.alpha_x: float = 0
+        self.alpha_y: float = 0
+        self.alpha_z: float = 0
         self.alpha_delta = 0.1
         self.reset()
 
@@ -54,12 +56,13 @@ class Main:
         self.alpha_z: float = 0
 
 
+# noinspection PyAbstractClass
 class Window(pyglet.window.Window):
     #     # Cube 3D start rotation
     xRotation = yRotation = 30
 
     def __init__(self, app: Main, width, height, title=''):
-        super(Window, self).__init__(width, height, title)
+        super(Window, self).__init__(width, height, title, resizable=True)
         # from cube3d
         glClearColor(0, 0, 0, 1)
         glEnable(GL_DEPTH_TEST)
@@ -68,12 +71,10 @@ class Window(pyglet.window.Window):
         self.batch = pyglet.graphics.Batch()
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube)
 
-        self.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=self.batch)
+        self.status = pyglet.text.Label("Status:" + app.slv.status, x=-100, y=-100, font_size=15, batch=self.batch)
 
     def on_draw(self):
         self.clear()
-        cube3d.on_draw(self.xRotation, self.yRotation)
-        # self.batch.draw()
 
         self.draw_axis()
 
@@ -81,9 +82,23 @@ class Window(pyglet.window.Window):
         viewer_g.alpha_y = self.app.alpha_y
         viewer_g.alpha_z = self.app.alpha_z
         self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
+        self.batch.draw()
 
     def on_resize(self, width, height):
-        cube3d.on_resize(width, height)
+        # https://hub.packtpub.com/creating-amazing-3d-guis-pyglet/
+        # set the Viewport
+        glViewport(0, 0, width, height)
+
+        # using Projection mode
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+
+        aspect_ratio = width / height
+        gluPerspective(35, aspect_ratio, 1, 1000)
+
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        glTranslatef(0, 0, -400)
 
     def on_key_press(self, symbol, modifiers):
         done = _handle_input(self, symbol, modifiers)
@@ -183,7 +198,6 @@ def main():
 
 def _handle_input(window: Window, value: int, modifiers: int) -> bool:
     done = False
-    not_operation = False
 
     app: Main = window.app
     op: Operator = app.op
@@ -218,18 +232,6 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
         case key.D:
             op.op(algs.Algs.D, inv)
-
-        case key.UP:
-            window.xRotation -= app.INCREMENT
-
-        case key.DOWN:
-            window.xRotation += app.INCREMENT
-
-        case key.LEFT:
-            window.yRotation -= app.INCREMENT
-
-        case key.RIGHT:
-            window.yRotation += app.INCREMENT
 
         case key.X:
             if modifiers & key.MOD_CTRL:
@@ -271,6 +273,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
         case key._1 | key._2 | key._3 | key._4 | key._5 | key._6:
             # to match test int
+            # noinspection PyProtectedMember
             alg: Alg = Algs.scramble(value - key._0)
             op.op(alg, inv)
 
@@ -305,7 +308,8 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
     #    if not not_operation:
     # print("Updating ....")
-    viewer.update(app.alpha_x, app.alpha_y, app.alpha_z)
+    #viewer.update(app.alpha_x, app.alpha_y, app.alpha_z)
+    # no need to redraw, on_draw is called after any event
     window.status.text = "Status:" + slv.status
     # window.flip()
     # text_viewer.plot(s.cube)

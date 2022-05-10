@@ -303,8 +303,7 @@ class _Board:
     def __init__(self, batch: Batch) -> None:
         super().__init__()
         self.batch = batch
-        self._faces: Sequence[MutableSequence[_FaceBoard | None]] = [[None for _ in range(0, _Board._x_faces)]
-                                                                     for _ in range(0, _Board._y_faces)]
+        self._faces: MutableSequence[_FaceBoard] = []
         self._alpha_x = 0
         self._alpha_y = 0
         self._alpha_z = 0
@@ -324,14 +323,12 @@ class _Board:
                     left_top_direction: ndarray):
 
         f = _FaceBoard(self, cube_face, self.batch, f0, left_right_direction, left_top_direction)
-        self._faces[y_index][x_index] = f
+        self._faces.append(f)
         return f
 
     def update(self):
-        for fs in self._faces:
-            for f in fs:
-                if f:
-                    f.update()
+        for face in self._faces:
+            face.update()
 
     @property
     def alpha_x(self):
@@ -464,4 +461,5 @@ class GCubeViewer:
         _plot_face(b, lambda: cube.back, 3, 1, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
 
         # -05 below so we see it
+        _plot_face(b, lambda: cube.down, 2, 1, [0, -0, 0], [1, 0, 0], [0, 0, 1])
         _plot_face(b, lambda: cube.down, 2, 1, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])

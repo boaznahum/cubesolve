@@ -1,1 +1,5 @@
 https://github.com/YodaSnipe/Pygame/blob/master/RotateCube.py
+
+
+#good, I learnt to do 3d
+https://hub.packtpub.com/creating-amazing-3d-guis-pyglet/

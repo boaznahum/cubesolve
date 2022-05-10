@@ -39,6 +39,7 @@ def on_draw(xRotation=30, yRotation=30):
     glPopMatrix()
 
 def on_resize(width, height):
+    #https://hub.packtpub.com/creating-amazing-3d-guis-pyglet/
     # set the Viewport
     glViewport(0, 0, width, height)
 
