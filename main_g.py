@@ -1,13 +1,13 @@
+import math
 import traceback
 
 import pyglet
-#pyglet.options["debug_graphics_batch"] = True
-
-import glooey
+from pyglet.gl import *
 from pyglet.window import key
 
 import algs
-import viewer as text_viewer
+import viewer_g
+from _try import cube3d
 from algs import Alg, Algs
 from cube import Cube
 from cube_operator import Operator
@@ -15,113 +15,184 @@ from solver import Solver
 from viewer_g import GCubeViewer
 
 
-class Screen:
+# pyglet.options["debug_graphics_batch"] = True
+
+
+# class Screen:
+#
+#     def __init__(self) -> None:
+#         super().__init__()
+#         self.batch = None
+#         self.window = None
+#         # self.status: glooey.Label | None = None
+#         self.status: pyglet.text.Label | None = None
+#
+#         self.alpha_x: float = 0
+#         self.alpha_y: float = 0
+#         self.alpha_z: float = 0
+#         self.alpha_delta = 0.1
+#         self.cube = None
+
+
+class Main:
 
     def __init__(self) -> None:
         super().__init__()
-        self.batch = None
-        self.window = None
-        # self.status: glooey.Label | None = None
-        self.status: pyglet.text.Label | None = None
+        self.cube = Cube()
+        self.op: Operator = Operator(self.cube)
+        self.slv: Solver = Solver(self.op)
 
-        self.alpha_x: float = 0
-        self.alpha_y: float = 0
-        self.alpha_z: float = 0
+        #pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
+
         self.alpha_delta = 0.1
-        self.cube = None
+        self.reset()
+
+    def reset(self):
+        self.cube.reset()
+        self.alpha_x: float = 0.3
+        self.alpha_y: float = -0.4
+        self.alpha_z: float = 0
 
 
-def _create_initial_gui() -> Screen:
-    window = pyglet.window.Window(720, 480, "Cube")
-    batch = pyglet.graphics.Batch()
 
-    s: Screen = Screen()
-    s.window = window
-    s.batch = batch
+class Window(pyglet.window.Window):
+    #     # Cube 3D start rotation
+    xRotation = yRotation = 30
 
-    gui = glooey.Gui(window, batch=batch)
+    def __init__(self, app: Main, width, height, title=''):
+        super(Window, self).__init__(width, height, title)
+        # from cube3d
+        glClearColor(0, 0, 0, 1)
+        glEnable(GL_DEPTH_TEST)
 
-    grid = glooey.Grid()
+        self.app: Main = app
+        self.batch = pyglet.graphics.Batch()
+        self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube)
 
-    ph = glooey.Placeholder()
-    grid.add(0, 0, ph)
+        self.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=self.batch)
 
-    ph = glooey.Placeholder()
-    grid.add(0, 1, ph)
+    def on_draw(self):
+        self.clear()
+        cube3d.on_draw(self.xRotation, self.yRotation)
+        #self.batch.draw()
 
-    hbox1 = glooey.HBox()
-    hbox1.hide()
-    grid.add(0, 1, hbox1)
-    hbox2 = glooey.HBox()
-    grid.add(1, 0, hbox2)
+        self.draw_axis()
 
-    hbox3 = glooey.HBox()
-    grid.add(1, 0, hbox2)
+        viewer_g.alpha_x = self.app.alpha_x
+        viewer_g.alpha_y = self.app.alpha_y
+        viewer_g.alpha_z = self.app.alpha_z
+        self.viewer.update(self.app.alpha_x, self.app.alpha_y,self.app.alpha_z)
 
-    grid.add(1, 1, hbox3)
+    def on_resize(self, width, height):
+        cube3d.on_resize(width, height)
 
-    gui.add(grid)
+    def on_key_press(self, symbol, modifiers):
+        done = _handle_input(self, symbol, modifiers)
+        if done:
+            self.close()
 
-    # s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
-    s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
+    def draw_axis(self):
 
-    # document = pyglet.text.decode_text('Hello, world.')
-    # layout = pyglet.text.layout.TextLayout(document, 100, 20, batch=batch)
+        glPushMatrix()
 
-    @window.event
-    def on_draw():
-        window.clear()
-        batch.draw()
+        glRotatef(math.degrees(self.app.alpha_x), 1, 0, 0)
+        glRotatef(math.degrees(self.app.alpha_y), 0, 1, 0)
+        glRotatef(math.degrees(self.app.alpha_z), 0, 0, 1)
 
-    return s
+        glPushAttrib(GL_LINE_WIDTH)
+        glLineWidth(3)
+
+        glBegin(GL_LINES)
+
+        glColor3ub(255, 255, 255)
+        glVertex3f( 0, 0, 0)
+        glVertex3f( 200, 0, 0)
+        glEnd()
+
+        glBegin(GL_LINES)
+        glColor3ub(255, 0, 0)
+        glVertex3f( 0, 0, 0)
+        glVertex3f( 0, 200, 0)
+        glEnd()
+
+        glBegin(GL_LINES)
+        glColor3ub(0, 255, 0)
+        glVertex3f( 0, 0, 0)
+        glVertex3f( 0, 0, 200)
+        glEnd()
+
+        glPopAttrib()
+
+        # Pop Matrix off stack
+        glPopMatrix()
+
+
+
+
+# def _create_initial_gui() -> Screen:
+#     window = pyglet.window.Window(400, 400, "Cube")
+#     batch = pyglet.graphics.Batch()
+#
+#     s: Screen = Screen()
+#     s.window = window
+#     s.batch = batch
+#
+#     # gui = glooey.Gui(window, batch=batch)
+#     #
+#     # grid = glooey.Grid()
+#     #
+#     # ph = glooey.Placeholder()
+#     # grid.add(0, 0, ph)
+#     #
+#     # ph = glooey.Placeholder()
+#     # grid.add(0, 1, ph)
+#     #
+#     # hbox1 = glooey.HBox()
+#     # hbox1.hide()
+#     # grid.add(0, 1, hbox1)
+#     # hbox2 = glooey.HBox()
+#     # grid.add(1, 0, hbox2)
+#     #
+#     # hbox3 = glooey.HBox()
+#     # grid.add(1, 0, hbox2)
+#     #
+#     # grid.add(1, 1, hbox3)
+#     #
+#     # gui.add(grid)
+#     #
+#     # s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
+#     s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
+#
+#     # document = pyglet.text.decode_text('Hello, world.')
+#     # layout = pyglet.text.layout.TextLayout(document, 100, 20, batch=batch)
+#
+#     @window.event
+#     def on_draw():
+#         window.clear()
+#         cube3d.on_draw()
+#         # batch.draw()
+#
+#     @window.event
+#     def on_resize(width, height):
+#         cube3d.on_resize(width, height)
+#
+#     return s
 
 
 def main():
-
-
-    c: Cube = Cube()
-
-    op: Operator = Operator(c)
-
-    slv: Solver = Solver(op)
-
-    s: Screen = _create_initial_gui()
-    s.cube = c
-
-    viewer: GCubeViewer = GCubeViewer(s.batch, c)
-
-    @s.window.event
-    def on_key_press(symbol, modifiers):
-        done = _handle_input(symbol, modifiers, op, viewer, slv, s)
-        if done:
-            s.window.close()
-
+    app: Main = Main()
+    Window(app, 720, 480, '"Cube"')
     pyglet.app.run()
 
-    # viewer.plot()
-    # print("Status=", slv.status)
-    #
-    # done = False
-    # inv = False
-    # while not done:
-    #
-    #     while True:
-    #         not_operation = False  # if not_operation is true then no need to replot
-    #         print(f"Count={op.count}, History={op.history}")
-    #         print(f"(iv={inv}) Please enter a command:")
-    #         print(f" 'inv R L U F B D  M,X(R), Y(U) ?solve Algs Clear Q")
-    #         print(f" 1scramble1, 0scramble-random <undo, Test")
-    #
-    #         value = inp.get_input()
-    #         print(value.upper())
-    #
-    #         # the 'break' is to quit the input loop
 
-
-def _handle_input(value: int, modifiers: int, op: Operator, viewer: GCubeViewer,
-                  slv: Solver, s: Screen) -> bool:
+def _handle_input(window: Window, value: int, modifiers: int) -> bool:
     done = False
     not_operation = False
+
+    app: Main = window.app
+    op: Operator = app.op
+    viewer: GCubeViewer = window.viewer
+    slv: Solver = app.slv
 
     inv = modifiers & key.MOD_SHIFT
 
@@ -129,10 +200,10 @@ def _handle_input(value: int, modifiers: int, op: Operator, viewer: GCubeViewer,
 
         case key.EQUAL:
             print("Flipping...")
-            s.window.flip()
+            window.flip()
 
         case key.I:
-            print(f"{s.alpha_x=} {s.alpha_y=} {s.alpha_z=}")
+            print(f"{app.alpha_x=} {app.alpha_y=} {app.alpha_z=}")
 
         case key.R:
             op.op(algs.Algs.R, inv)
@@ -151,27 +222,40 @@ def _handle_input(value: int, modifiers: int, op: Operator, viewer: GCubeViewer,
         case key.D:
             op.op(algs.Algs.D, inv)
 
+        case key.UP:
+            window.xRotation -= app.INCREMENT
+
+        case key.DOWN:
+            window.xRotation += app.INCREMENT
+
+        case key.LEFT:
+            window.yRotation -= app.INCREMENT
+
+        case key.RIGHT:
+            window.yRotation += app.INCREMENT
+
+
         case key.X:
             if modifiers & key.MOD_CTRL:
-                s.alpha_x -= s.alpha_delta
+                app.alpha_x -= app.alpha_delta
             elif modifiers & key.MOD_ALT:
-                s.alpha_x += s.alpha_delta
+                app.alpha_x += app.alpha_delta
             else:
                 op.op(algs.Algs.X, inv)
 
         case key.Y:
             if modifiers & key.MOD_CTRL:
-                s.alpha_y -= s.alpha_delta
+                app.alpha_y -= app.alpha_delta
             elif modifiers & key.MOD_ALT:
-                s.alpha_y += s.alpha_delta
+                app.alpha_y += app.alpha_delta
             else:
                 op.op(algs.Algs.Y, inv)
 
         case key.Z:
             if modifiers & key.MOD_CTRL:
-                s.alpha_z -= s.alpha_delta
+                app.alpha_z -= app.alpha_delta
             elif modifiers & key.MOD_ALT:
-                s.alpha_z += s.alpha_delta
+                app.alpha_z += app.alpha_delta
 
         case "M":
             op.op(algs.Algs.M, inv)
@@ -183,7 +267,8 @@ def _handle_input(value: int, modifiers: int, op: Operator, viewer: GCubeViewer,
 
         case key.C:
             op.reset()
-            s.alpha_z = s.alpha_y = s.alpha_x = 0
+            app.reset()
+
 
         case "0":
             alg: Alg = Algs.scramble()
@@ -225,10 +310,10 @@ def _handle_input(value: int, modifiers: int, op: Operator, viewer: GCubeViewer,
 
     #    if not not_operation:
     # print("Updating ....")
-    viewer.update(s.alpha_x, s.alpha_y, s.alpha_z)
-    s.status.text = "Status:" + slv.status
-    s.window.flip()
-   # text_viewer.plot(s.cube)
+    viewer.update(app.alpha_x, app.alpha_y, app.alpha_z)
+    window.status.text = "Status:" + slv.status
+    # window.flip()
+    # text_viewer.plot(s.cube)
 
     return done
 

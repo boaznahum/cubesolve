@@ -1,15 +1,22 @@
+import math
 from collections.abc import Sequence
 from typing import Hashable, Tuple, MutableSequence, Callable
 
 import colorama
 import numpy as np
 import pyglet
+from pyglet.gl import *
 from numpy import ndarray
 from pyglet.graphics import Batch
 
 import graphic_helper
 from cube import Cube
 from elements import Face, Color, Part
+
+
+alpha_x: float = 0
+alpha_y: float = 0
+alpha_z: float = 0
 
 _CELL_SIZE: int = 30
 
@@ -79,47 +86,60 @@ class _Cell:
     def _create_objects(self, vertexes: Sequence[Sequence[int]], color, marker: int):
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
         self._create_polygon(vertexes, color)
-        self._create_lines(vertexes, [255, 255, 255])
-        self._create_markers(vertexes, marker)
+        # self._create_lines(vertexes, [255, 255, 255])
+        # self._create_markers(vertexes, marker)
 
-    def _create_polygon(self, vertexes: Sequence[Sequence[int, int]], color):
+    def _create_polygon(self, vertexes: Sequence[Sequence[int, int, int]], color):
 
-        vertexes = [[*p] for p in vertexes]  # need to copy, Polygon modify it
-        g = pyglet.shapes.Polygon(
-            *vertexes,  # must be lists and not tuples, the stupid one try to modify it
-            color=color,
-            batch=self._batch,
-            # border=2, border_color=(0, 0, 0)
-        )
-        self._g_polygon: pyglet.shapes.Polygon = g
+        glPushMatrix()
 
-    def set_attributes(self, vertexes: Sequence[Sequence[int, int]], c: _VColor, marker):
+        glRotatef(math.degrees(alpha_x), 1, 0, 0)
+        glRotatef(math.degrees(alpha_y), 0, 1, 0)
+        glRotatef(math.degrees(alpha_z), 0, 0, 1)
 
-        if self._g_polygon:
-            p = self._g_polygon
-            p.position = (10, 10)
-            p.color = (255, 0, 0)
-            p.delete()
-            self._g_polygon = None
-            del p
+        # Draw the six sides of the cube
+        glBegin(GL_TRIANGLE_FAN)
+        #glBegin(GL_QUADS)
 
-        if self._g_lines:
-            lines = self._g_lines
-            self._g_lines = None
-            for i, l in enumerate(lines):
-                l.position = (10, 10, 15, 15)
-                l.color = (255, 0, 0)
-                l.delete()
-                del l
+        glColor3ub(*color)
 
-        if self._g_markers:
-            lines = self._g_markers
-            self._g_markers = None
-            for i, l in enumerate(lines):
-                l.position = (10, 10)
-                l.color = (255, 0, 0)
-                l.delete()
-                del l
+        for v in vertexes:
+            v = [ GLfloat(v[0]), GLfloat(v[1]), GLfloat(v[2])]
+            glVertex3f(*v)
+            #print(glGetError())
+
+        glEnd()
+
+        # Pop Matrix off stack
+        glPopMatrix()
+
+    def set_attributes(self, vertexes: Sequence[Sequence[int, int, int]], c: _VColor, marker):
+
+        # if self._g_polygon:
+        #     p = self._g_polygon
+        #     p.position = (10, 10)
+        #     p.color = (255, 0, 0)
+        #     p.delete()
+        #     self._g_polygon = None
+        #     del p
+        #
+        # if self._g_lines:
+        #     lines = self._g_lines
+        #     self._g_lines = None
+        #     for i, l in enumerate(lines):
+        #         l.position = (10, 10, 15, 15)
+        #         l.color = (255, 0, 0)
+        #         l.delete()
+        #         del l
+        #
+        # if self._g_markers:
+        #     lines = self._g_markers
+        #     self._g_markers = None
+        #     for i, l in enumerate(lines):
+        #         l.position = (10, 10)
+        #         l.color = (255, 0, 0)
+        #         l.delete()
+        #         del l
 
         self._create_objects(vertexes, c, marker)
 
@@ -185,7 +205,7 @@ class _FaceBoard:
     def cube_face(self) -> Face:
         return self.cube_face_supplier()
 
-    def set_cell(self, cy: int, cx: int, vertexes: Sequence[Sequence[int, int]], c: _VColor, marker: int) -> None:
+    def set_cell(self, cy: int, cx: int, vertexes: Sequence[[int, int, int]], c: _VColor, marker: int) -> None:
         """
 
         :param marker:
@@ -230,14 +250,18 @@ class _FaceBoard:
             left_top3 = self.f0 + self.left_right_direction * (cx * _CELL_SIZE) + self.left_top_direction * (
                     (cy + 1) * _CELL_SIZE)
 
-            screen0 = [200, 100]
+            screen0 = [-0, -0, 0]
 
-            left_bottom2 = graphic_helper.vec3to2(left_bottom3, alpha_x, alpha_y, alpha_z, screen0)
-            right_bottom2 = graphic_helper.vec3to2(right_bottom3, alpha_x, alpha_y, alpha_z, screen0)
-            right_top2 = graphic_helper.vec3to2(right_top3, alpha_x, alpha_y, alpha_z, screen0)
-            left_top2 = graphic_helper.vec3to2(left_top3, alpha_x, alpha_y, alpha_z, screen0)
+            box: MutableSequence[np.ndarray] = [left_bottom3, right_bottom3, right_top3, left_top3]
 
-            fb.set_cell(cy, cx, [left_bottom2, right_bottom2, right_top2, left_top2], face_color, marker)
+            for i in range(len(box)):
+                box[i] = box[i].reshape(1, 3) + screen0
+
+
+            lbox = [ x.reshape((3,)).tolist() for x in box]
+
+
+            fb.set_cell(cy, cx, lbox, face_color, marker)
 
         y0 = 2  # need to fix the code below, we flipped by mistake when copied from text board
         y2 = 0
@@ -424,11 +448,13 @@ class GCubeViewer:
         # we pass a supplier to Face and not a face, because might reset itself
 
         # debug with # s.alpha_x=-0.30000000000000004 s.alpha_y=-0.5 s.alpha_z=0
-        _plot_face(b, lambda : cube.back, 3, 1, [0, 0, 1], [1, 0, 0], [0, 1, 0])
 
-        _plot_face(b, lambda : cube.up, 0, 1, [0, 1, 0], [1, 0, 0], [0, 0, 1])
-        _plot_face(b, lambda : cube.left, 1, 0, [0, 0, 1], [0, 0, -1], [0, 1, 0])
-        _plot_face(b, lambda : cube.front, 1, 1, [0, 0, 0], [1, 0, 0], [0, 1, 0])
-        _plot_face(b, lambda : cube.right, 1, 2, [1, 0, 0], [0, 0, 1], [0, 1, 0])
+        _plot_face(b, lambda: cube.up, 0, 1, [0, 1, 0], [1, 0, 0], [0, 0, 1])
+        _plot_face(b, lambda: cube.left, 1, 0, [0, 0, 1], [0, 0, -1], [0, 1, 0])
+        _plot_face(b, lambda: cube.front, 1, 1, [0, 0, 1], [1, 0, 0], [0, 1, 0])
+        _plot_face(b, lambda: cube.right, 1, 2, [1, 0, 0], [0, 0, 1], [0, 1, 0])
+
+        # OK!
+        _plot_face(b, lambda: cube.back, 3, 1, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
+
         # _plot_face(b, cube.down, 2, 1, [0, 0, -1], [1, 0, 0], [0, 1, 0])
-
