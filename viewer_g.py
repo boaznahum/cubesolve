@@ -146,22 +146,25 @@ class _Cell:
         """
 
         glPushAttrib(GL_LINE_WIDTH)
-        glLineWidth(3)
+        glLineWidth(6)
 
-        # glBegin(GL_LINES)
-        #
-        # glColor3ub(255, 255, 255)
-        # glVertex3f(0, 0, 0)
-        # glVertex3f(200, 0, 0)
-        # glEnd()
-        #
-        # glBegin(GL_LINES)
-        # glColor3ub(255, 0, 0)
-        # glVertex3f(0, 0, 0)
-        # glVertex3f(0, 200, 0)
-        # glEnd()
+        glBegin(GL_LINES)
 
-        # line on the Z axis , with offset on X
+        # parallel to X axis with offset on z/y
+        glColor3ub(255, 255, 255)
+        glVertex3f(0, 0, 50)
+        glVertex3f(200, 0, 50)
+        glVertex3f(0, 50, 0)
+        glVertex3f(200, 50,0 )
+        glEnd()
+
+        glBegin(GL_LINES)
+        glColor3ub(255, 0, 0)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, 200, 0)
+        glEnd()
+
+        # line parallel to Z axis , with offset on X
         glBegin(GL_LINES)
         glColor3ub(0, 255, 255)
         glVertex3f(50, 0, 0)

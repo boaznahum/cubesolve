@@ -1,6 +1,7 @@
 import math
 import traceback
 
+import glooey
 import pyglet
 from pyglet.gl import *
 from pyglet.window import key
@@ -32,11 +33,12 @@ class TextGroup(pyglet.graphics.Group):
         # using Projection mode
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
-#        glLoadIdentity()
+        glLoadIdentity()
+        glOrtho(0.0, 700, 0.0, 700.0, 0.0, 1.0)
 
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
-#        glLoadIdentity()
+        glLoadIdentity()
 
         glPopAttrib()
 
@@ -46,8 +48,8 @@ class TextGroup(pyglet.graphics.Group):
         glColor3ub(255, 255, 255)
 
         glBegin(GL_LINES)
-        glVertex3f(-0.9, -0.9, 0)
-        glVertex3f(0.9, 0.9, 0)
+        glVertex3f(0, 700, 0)
+        glVertex3f(0, 700, 0)
         glEnd()
 
     def unset_state(self):
@@ -108,11 +110,13 @@ class Window(pyglet.window.Window):
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         glEnable(GL_DEPTH_TEST)
 
-        self.app: Main = app
         self.batch = pyglet.graphics.Batch()
+        self.create_layout()
+
+        self.app: Main = app
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube)
 
-        text_group = None # TextGroup()
+        text_group = None  # TextGroup()
 
         self.status = pyglet.text.Label("Status:" + app.slv.status, x=-100, y=-100, font_size=10,
                                         batch=self.batch, group=text_group)
@@ -122,10 +126,11 @@ class Window(pyglet.window.Window):
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         self.clear()
 
-       # self.draw_axis()
+        # self.draw_axis()
 
-       # self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
-        self.batch.draw()
+        # self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
+        # self.batch.draw()
+        self.plot_text()
 
     def on_resize(self, width, height):
         # https://hub.packtpub.com/creating-amazing-3d-guis-pyglet/
@@ -176,18 +181,19 @@ class Window(pyglet.window.Window):
         glColor3ub(255, 255, 255)
         glVertex3f(0, 0, 0)
         glVertex3f(200, 0, 0)
-        glEnd()
+        # glEnd()
 
-        glBegin(GL_LINES)
+        # glBegin(GL_LINES)
         glColor3ub(255, 0, 0)
         glVertex3f(0, 0, 0)
         glVertex3f(0, 200, 0)
-        glEnd()
+        # glEnd()
 
-        glBegin(GL_LINES)
+        # glBegin(GL_LINES)
         glColor3ub(0, 255, 0)
         glVertex3f(0, 0, 0)
         glVertex3f(0, 0, 200)
+
         glEnd()
 
         glPopAttrib()  # line width
@@ -196,55 +202,80 @@ class Window(pyglet.window.Window):
         glPopMatrix()
         glPopAttrib()  # GL_MATRIX_MODE
 
+    def create_layout(self):
+        window = self
+        batch = self.batch
+        gui = glooey.Gui(window, batch=batch)
 
-# def _create_initial_gui() -> Screen:
-#     window = pyglet.window.Window(400, 400, "Cube")
-#     batch = pyglet.graphics.Batch()
-#
-#     s: Screen = Screen()
-#     s.window = window
-#     s.batch = batch
-#
-#     # gui = glooey.Gui(window, batch=batch)
-#     #
-#     # grid = glooey.Grid()
-#     #
-#     # ph = glooey.Placeholder()
-#     # grid.add(0, 0, ph)
-#     #
-#     # ph = glooey.Placeholder()
-#     # grid.add(0, 1, ph)
-#     #
-#     # hbox1 = glooey.HBox()
-#     # hbox1.hide()
-#     # grid.add(0, 1, hbox1)
-#     # hbox2 = glooey.HBox()
-#     # grid.add(1, 0, hbox2)
-#     #
-#     # hbox3 = glooey.HBox()
-#     # grid.add(1, 0, hbox2)
-#     #
-#     # grid.add(1, 1, hbox3)
-#     #
-#     # gui.add(grid)
-#     #
-#     # s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
-#     s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
-#
-#     # document = pyglet.text.decode_text('Hello, world.')
-#     # layout = pyglet.text.layout.TextLayout(document, 100, 20, batch=batch)
-#
-#     @window.event
-#     def on_draw():
-#         window.clear()
-#         cube3d.on_draw()
-#         # batch.draw()
-#
-#     @window.event
-#     def on_resize(width, height):
-#         cube3d.on_resize(width, height)
-#
-#     return s
+        grid = glooey.Grid()
+
+        ph = glooey.Placeholder()
+        grid.add(0, 0, ph)
+
+        ph = glooey.Placeholder()
+        grid.add(0, 1, ph)
+
+        hbox1 = glooey.HBox()
+        #        hbox1.hide()
+        grid.add(0, 1, hbox1)
+        hbox2 = glooey.HBox()
+        grid.add(1, 0, hbox2)
+
+        hbox3 = glooey.HBox()
+        grid.add(1, 0, hbox2)
+
+        grid.add(1, 1, hbox3)
+
+        gui.add(grid)
+        #
+        # s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
+
+    #        s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
+
+    # document = pyglet.text.decode_text('Hello, world.')
+    # layout = pyglet.text.layout.TextLayout(document, 100, 20, batch=batch)
+
+    def plot_text(self):
+        window = self
+
+        glPushAttrib(GL_MATRIX_MODE)
+
+        # using Projection mode
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+        glLoadIdentity()
+        glOrtho(-window.width / 2, window.width / 2, -window.height / 2, window.height / 2, -1.0, 1.0)
+
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+
+        glPopAttrib()
+
+        graphic_helper.print_matrix("mode-view", GL_MODELVIEW_MATRIX)
+        graphic_helper.print_matrix("projection", GL_PROJECTION_MATRIX)
+
+        glColor3ub(255, 255, 255)
+        glLineWidth(5)
+
+        glBegin(GL_LINES)
+        glVertex3f(0, 0, 0)
+        glVertex3f(0, 700, 0)
+        glEnd()
+
+        status = pyglet.text.Label("Status:" + self.app.slv.status, x=-100, y=-100, font_size=10)
+        status.draw()
+
+        glPushAttrib(GL_MATRIX_MODE)
+
+        # using Projection mode
+        glMatrixMode(GL_MODELVIEW)
+        glPopMatrix()
+
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+
+        glPopAttrib()
 
 
 def main():
@@ -312,7 +343,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             elif modifiers & key.MOD_ALT:
                 app.alpha_z += app.alpha_delta
 
-        case "M":
+        case key.M:
             op.op(algs.Algs.M, inv)
 
         case "A":
@@ -334,13 +365,13 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             alg: Alg = Algs.scramble(value - key._0)
             op.op(alg, inv)
 
-        case "<":
+        case key.LESS:
             op.undo()
 
         case key.SLASH:
             slv.solve()
 
-        case "T":
+        case key.T:
             # test
             for s in range(0, 50):
                 op.reset()
