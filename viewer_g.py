@@ -12,10 +12,6 @@ from pyglet.graphics import Batch
 from cube import Cube
 from elements import Face, Color, Part
 
-alpha_x: float = 0
-alpha_y: float = 0
-alpha_z: float = 0
-
 _CELL_SIZE: int = 25
 
 # def _color_2_str(c: Color) -> str:
@@ -72,9 +68,10 @@ def _color_2_v_color(c: Color) -> _VColor:
 
 class _Cell:
 
-    def __init__(self, batch: Batch) -> None:
+    def __init__(self, face_board: "_FaceBoard", batch: Batch) -> None:
         super().__init__()
         self._batch = batch
+        self._face_board = face_board
         self._g_polygon: pyglet.shapes.Polygon | None = None
         self._g_lines: Sequence[pyglet.shapes.Line] | None = None
         # noinspection PyProtectedMember
@@ -83,24 +80,35 @@ class _Cell:
 
     def _create_objects(self, vertexes: Sequence[Sequence[int]], color, marker: int):
 
+        # p = (GLint)()
+        # glGetIntegerv(GL_MATRIX_MODE, p)
+        # print(p, GL_MODELVIEW)
+        # default is GL_MODELVIEW, but we need to make sue by push attributes
+
+        glPushAttrib(GL_MATRIX_MODE)
+        glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
+
+        alpha_x = self._face_board.board.alpha_x
+        alpha_y = self._face_board.board.alpha_y
+        alpha_z = self._face_board.board.alpha_z
 
         glRotatef(math.degrees(alpha_x), 1, 0, 0)
         glRotatef(math.degrees(alpha_y), 0, 1, 0)
         glRotatef(math.degrees(alpha_z), 0, 0, 1)
 
-
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
         self._create_polygon(vertexes, color)
         self._create_lines(vertexes, [0, 0, 0])
+        self._create_helpers()
         # self._create_markers(vertexes, marker)
 
         # Pop Matrix off stack
         glPopMatrix()
+        glPopAttrib()
 
-
+    # noinspection PyMethodMayBeStatic
     def _create_polygon(self, vertexes: Sequence[Sequence[int, int, int]], color):
-
 
         # Draw the six sides of the cube
         glBegin(GL_TRIANGLE_FAN)
@@ -114,14 +122,8 @@ class _Cell:
 
         glEnd()
 
-
-    def set_attributes(self, vertexes: Sequence[Sequence[int, int, int]], c: _VColor, marker):
-
-
-        self._create_objects(vertexes, c, marker)
-
+    # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):
-
 
         glPushAttrib(GL_LINE_WIDTH)
         glLineWidth(4)
@@ -131,11 +133,46 @@ class _Cell:
         for i in range(len(vertexes) - 1):
             glBegin(GL_LINES)
             glVertex3f(*vertexes[i])
-            glVertex3f(*vertexes[i+1])
+            glVertex3f(*vertexes[i + 1])
             glEnd()
 
         glPopAttrib()
 
+    # noinspection PyMethodMayBeStatic
+    def _create_helpers(self):
+        """
+        For debug
+        :return:
+        """
+
+        glPushAttrib(GL_LINE_WIDTH)
+        glLineWidth(3)
+
+        # glBegin(GL_LINES)
+        #
+        # glColor3ub(255, 255, 255)
+        # glVertex3f(0, 0, 0)
+        # glVertex3f(200, 0, 0)
+        # glEnd()
+        #
+        # glBegin(GL_LINES)
+        # glColor3ub(255, 0, 0)
+        # glVertex3f(0, 0, 0)
+        # glVertex3f(0, 200, 0)
+        # glEnd()
+
+        # line on the Z axis , with offset on X
+        glBegin(GL_LINES)
+        glColor3ub(0, 255, 255)
+        glVertex3f(50, 0, 0)
+        glVertex3f(50, 0, 200)
+        glEnd()
+
+        glPopAttrib()  # line width
+
+    def set_attributes(self, vertexes: Sequence[Sequence[int, int, int]], c: _VColor, marker):
+
+        self._create_objects(vertexes, c, marker)
 
     def _create_markers(self, vertexes, marker):
         if not marker:
@@ -178,7 +215,7 @@ class _FaceBoard:
         self.f0: np.ndarray = f0
         self.left_right_direction: ndarray = left_right_direction
         self.left_top_direction: ndarray = left_top_direction
-        self._cells: Sequence[Sequence[_Cell]] = [[_Cell(batch) for _ in range(0, _FaceBoard._h_size)] for _
+        self._cells: Sequence[Sequence[_Cell]] = [[_Cell(self, batch) for _ in range(0, _FaceBoard._h_size)] for _
                                                   in
                                                   range(0, _FaceBoard._v_size)]
 
@@ -203,10 +240,6 @@ class _FaceBoard:
         fb: _FaceBoard = self
 
         f: Face = self.cube_face
-
-        alpha_x = self._board.alpha_x
-        alpha_y = self._board.alpha_y
-        alpha_z = self._board.alpha_z
 
         def _plot_cell(cy: int, cx: int, p: Part, marker: int = 0):
 
@@ -240,12 +273,8 @@ class _FaceBoard:
 
             lbox = [x.reshape((3,)).tolist() for x in box]
 
-
             for i in range(len(lbox)):
-                 lbox[i] = [GLfloat(lbox[i][0]), GLfloat(lbox[i][1]), GLfloat(lbox[i][2])]
-
-
-
+                lbox[i] = [GLfloat(lbox[i][0]), GLfloat(lbox[i][1]), GLfloat(lbox[i][2])]
 
             fb.set_cell(cy, cx, lbox, face_color, marker)
 
@@ -280,6 +309,10 @@ class _FaceBoard:
     def update(self):
         # need to optimize, no need to change position
         self.draw_init()
+
+    @property
+    def board(self):
+        return self._board
 
 
 class _Board:
@@ -317,11 +350,9 @@ class _Board:
         return _Board._v_size
 
     def create_face(self, cube_face: Callable[[], Face],
-                    y_index, x_index,
                     f0: ndarray,
                     left_right_direction: ndarray,
                     left_top_direction: ndarray):
-
         f = _FaceBoard(self, cube_face, self.batch, f0, left_right_direction, left_top_direction)
         self._faces.append(f)
         return f
@@ -358,19 +389,15 @@ def _part_id(p: Part) -> str:
     return chr(ord("A") + _id - 1)
 
 
-def _plot_face(b: _Board, f: Callable[[], Face], fy: int, fx: int,
-               left_bottom: list[float],  # 3d
+def _plot_face(b: _Board, f: Callable[[], Face], left_bottom: list[float],  # 3d
                left_right_direction: list[int],  # 3d
                left_top_direction: list[int],  # 3d
                # flip_v=False, flip_h=False,
                ):
-
     """
 
     :param b:
     :param f:
-    :param fy:
-    :param fx:
     :param left_bottom: in units of faces
     :param left_right_direction:
     :param left_top_direction:
@@ -396,7 +423,7 @@ def _plot_face(b: _Board, f: Callable[[], Face], fy: int, fx: int,
     _left_right_d: ndarray = np.array(left_right_direction, dtype=float).reshape(3, 1)
     _left_top_d: ndarray = np.array(left_top_direction, dtype=float).reshape(3, 1)
 
-    fb: _FaceBoard = b.create_face(f, fy, fx, f0, _left_right_d, _left_top_d)
+    fb: _FaceBoard = b.create_face(f, f0, _left_right_d, _left_top_d)
 
     fb.draw_init()
 
@@ -409,9 +436,10 @@ class GCubeViewer:
         self._cube = cube
         self._batch = batch
 
-        self._test = pyglet.shapes.Line(0, 0, 20, 20, width=10, color=(255, 255, 255), batch=batch)
+        #        self._test = pyglet.shapes.Line(0, 0, 20, 20, width=10, color=(255, 255, 255), batch=batch)
 
         self._board: _Board = _Board(self._batch)
+
         self._init_gui()
 
     def plot(self):
@@ -423,7 +451,6 @@ class GCubeViewer:
         self._board._alpha_y = alpha_y
         self._board._alpha_z = alpha_z
         self.plot()
-        self._batch.invalidate()
 
     def _init_gui(self):
         b = self._board
@@ -445,21 +472,23 @@ class GCubeViewer:
         # debug with # s.alpha_x=-0.30000000000000004 s.alpha_y=-0.5 s.alpha_z=0
 
         # OK
-        _plot_face(b, lambda: cube.up, 0, 1, [0, 1, 1], [1, 0, 0], [0, 0, -1])
+        _plot_face(b, lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1])
 
         # -0.75 from it x location, so we can see it in isometric view
         # OK
-        _plot_face(b, lambda: cube.left, 1, 0, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0])
+        _plot_face(b, lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0])
+        _plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0])
 
         # OK
-        _plot_face(b, lambda: cube.front, 1, 1, [0, 0, 1], [1, 0, 0], [0, 1, 0])
+        _plot_face(b, lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0])
 
         # OK
-        _plot_face(b, lambda: cube.right, 1, 2, [1, 0, 1], [0, 0, -1], [0, 1, 0])
+        _plot_face(b, lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0])
 
-        # OK! -1 far away so we can see it
-        _plot_face(b, lambda: cube.back, 3, 1, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
+        # OK! -2 far away so we can see it
+        _plot_face(b, lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0])
+        _plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
 
         # -05 below so we see it
-        _plot_face(b, lambda: cube.down, 2, 1, [0, -0, 0], [1, 0, 0], [0, 0, 1])
-        _plot_face(b, lambda: cube.down, 2, 1, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
+        _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1])
+        _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])

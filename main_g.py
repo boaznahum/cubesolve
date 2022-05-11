@@ -1,5 +1,6 @@
 import math
 import traceback
+from ctypes import POINTER, c_int
 
 import pyglet
 from pyglet.gl import *
@@ -43,17 +44,23 @@ class Main:
 
         # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
 
+        # for axes
+        self.alpha_x_0: float = 0.3
+        self.alpha_y_0: float = -0.4
+        self.alpha_z_0: float = 0
+
         self.alpha_x: float = 0
         self.alpha_y: float = 0
         self.alpha_z: float = 0
         self.alpha_delta = 0.1
+
         self.reset()
 
     def reset(self):
         self.cube.reset()
-        self.alpha_x: float = 0.3
-        self.alpha_y: float = -0.4
-        self.alpha_z: float = 0
+        self.alpha_x: float = self.alpha_x_0
+        self.alpha_y: float = self.alpha_y_0
+        self.alpha_z: float = self.alpha_z_0
 
 
 # noinspection PyAbstractClass
@@ -65,6 +72,9 @@ class Window(pyglet.window.Window):
         super(Window, self).__init__(width, height, title, resizable=True)
         # from cube3d
         glClearColor(0, 0, 0, 1)
+
+        # see Z-Buffer in
+        #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         glEnable(GL_DEPTH_TEST)
 
         self.app: Main = app
@@ -74,13 +84,12 @@ class Window(pyglet.window.Window):
         self.status = pyglet.text.Label("Status:" + app.slv.status, x=-100, y=-100, font_size=15, batch=self.batch)
 
     def on_draw(self):
+        # need to understand which buffers it clear, see
+        #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         self.clear()
 
         self.draw_axis()
 
-        viewer_g.alpha_x = self.app.alpha_x
-        viewer_g.alpha_y = self.app.alpha_y
-        viewer_g.alpha_z = self.app.alpha_z
         self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
         self.batch.draw()
 
@@ -106,11 +115,21 @@ class Window(pyglet.window.Window):
             self.close()
 
     def draw_axis(self):
+        # p = (GLint)()
+        # glGetIntegerv(GL_MATRIX_MODE, p)
+        # print(p, GL_MODELVIEW, GL_MODELVIEW==p.value)
+        # default is GL_MODELVIEW, but we need to make sue by push attributes
+
+        glPushAttrib(GL_MATRIX_MODE)
+        glMatrixMode(GL_MODELVIEW)
+
         glPushMatrix()
 
-        glRotatef(math.degrees(self.app.alpha_x), 1, 0, 0)
-        glRotatef(math.degrees(self.app.alpha_y), 0, 1, 0)
-        glRotatef(math.degrees(self.app.alpha_z), 0, 0, 1)
+        # ideally we want the axis to be fixed, but in this case we won't see the Z
+        #  so we rotate the Axes, or we should change the perspective
+        glRotatef(math.degrees(self.app.alpha_x_0), 1, 0, 0)
+        glRotatef(math.degrees(self.app.alpha_y_0), 0, 1, 0)
+        glRotatef(math.degrees(self.app.alpha_z_0), 0, 0, 1)
 
         glPushAttrib(GL_LINE_WIDTH)
         glLineWidth(3)
@@ -134,10 +153,11 @@ class Window(pyglet.window.Window):
         glVertex3f(0, 0, 200)
         glEnd()
 
-        glPopAttrib()
+        glPopAttrib()  # line width
 
         # Pop Matrix off stack
         glPopMatrix()
+        glPopAttrib()  # GL_MATRIX_MODE
 
 
 # def _create_initial_gui() -> Screen:
@@ -308,7 +328,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
     #    if not not_operation:
     # print("Updating ....")
-    #viewer.update(app.alpha_x, app.alpha_y, app.alpha_z)
+    # viewer.update(app.alpha_x, app.alpha_y, app.alpha_z)
     # no need to redraw, on_draw is called after any event
     window.status.text = "Status:" + slv.status
     # window.flip()
