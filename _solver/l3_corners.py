@@ -23,6 +23,9 @@ class L3Corners(SolverElement):
     def cmn(self) -> CommonOp:
         return self._cmn
 
+    def _is_solved(self):
+        return Part.all_match_faces(self.white_face.opposite.corners)
+
     def solved(self) -> bool:
         """
 
@@ -32,11 +35,13 @@ class L3Corners(SolverElement):
 
         yf: Face = self.white_face.opposite
 
-        def pred(): return Part.all_match_faces(yf.corners)
-
-        return self.cmn.rotate_and_check(yf, pred) >= 0
+        return self.cmn.rotate_and_check(yf, self._is_solved) >= 0
 
     def solve(self):
+
+        if self._is_solved():
+            return # avoid rotating cube
+
 
         # we assume we have a cross
         self.cmn.bring_face_up(self.white_face.opposite)

@@ -7,7 +7,6 @@ from pyglet.gl import *
 from pyglet.window import key
 
 import algs
-import graphic_helper
 from algs import Alg, Algs
 from cube import Cube
 from cube_operator import Operator
@@ -16,55 +15,6 @@ from viewer_g import GCubeViewer
 
 
 # pyglet.options["debug_graphics_batch"] = True
-
-
-class TextGroup(pyglet.graphics.Group):
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    def set_state(self):
-        super().set_state()
-
-        print("in text group")
-
-        glPushAttrib(GL_MATRIX_MODE)
-
-        # using Projection mode
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
-        glOrtho(0.0, 700, 0.0, 700.0, 0.0, 1.0)
-
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
-
-        glPopAttrib()
-
-        graphic_helper.print_matrix("mode-view", GL_MODELVIEW_MATRIX)
-        graphic_helper.print_matrix("projection", GL_PROJECTION_MATRIX)
-
-        glColor3ub(255, 255, 255)
-
-        glBegin(GL_LINES)
-        glVertex3f(0, 700, 0)
-        glVertex3f(0, 700, 0)
-        glEnd()
-
-    def unset_state(self):
-        super().unset_state()
-
-        glPushAttrib(GL_MATRIX_MODE)
-
-        # using Projection mode
-        glMatrixMode(GL_MODELVIEW)
-        glPopMatrix()
-
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
-
-        glPopAttrib()
 
 
 class Main:
@@ -116,11 +66,6 @@ class Window(pyglet.window.Window):
         self.app: Main = app
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube)
 
-        text_group = None  # TextGroup()
-
-        self.status = pyglet.text.Label("Status:" + app.slv.status, x=-100, y=-100, font_size=10,
-                                        batch=self.batch, group=text_group)
-
     def on_draw(self):
         # need to understand which buffers it clear, see
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
@@ -128,8 +73,8 @@ class Window(pyglet.window.Window):
 
         # self.draw_axis()
 
-        # self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
-        # self.batch.draw()
+        self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
+        self.batch.draw()
         self.plot_text()
 
     def on_resize(self, width, height):
@@ -244,27 +189,28 @@ class Window(pyglet.window.Window):
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
-        glOrtho(-window.width / 2, window.width / 2, -window.height / 2, window.height / 2, -1.0, 1.0)
+
+        w = window.width
+        h = window.height
+        glOrtho(0, w, 0, h / 2, -1.0, 1.0)
 
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()
 
-        glPopAttrib()
+        glPopAttrib()  # matrix mode
 
-        graphic_helper.print_matrix("mode-view", GL_MODELVIEW_MATRIX)
-        graphic_helper.print_matrix("projection", GL_PROJECTION_MATRIX)
-
-        glColor3ub(255, 255, 255)
-        glLineWidth(5)
-
-        glBegin(GL_LINES)
-        glVertex3f(0, 0, 0)
-        glVertex3f(0, 700, 0)
-        glEnd()
-
-        status = pyglet.text.Label("Status:" + self.app.slv.status, x=-100, y=-100, font_size=10)
+        status = pyglet.text.Label("Status:" + self.app.slv.status,
+                                   x=10, y=10, font_size=10)
         status.draw()
+
+        status = pyglet.text.Label("History:" + str(Algs.simplify(*self.app.op.history)),
+                                   x=10, y=30, font_size=10)
+        status.draw()
+
+
+
+        # restore state
 
         glPushAttrib(GL_MATRIX_MODE)
 
@@ -275,7 +221,7 @@ class Window(pyglet.window.Window):
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
 
-        glPopAttrib()
+        glPopAttrib()  # matrix mode
 
 
 def main():
@@ -394,17 +340,9 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
         # case _:
         #     return False
 
-    #    if not not_operation:
-    # print("Updating ....")
-    # viewer.update(app.alpha_x, app.alpha_y, app.alpha_z)
     # no need to redraw, on_draw is called after any event
-    window.status.text = "Status:" + slv.status
-    # window.flip()
-    # text_viewer.plot(s.cube)
 
     return done
-
-    # print("DONE=", done)
 
 
 def get_alg() -> Alg:

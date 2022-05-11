@@ -23,6 +23,10 @@ class L1Cross(SolverElement):
     def cmn(self) -> CommonOp:
         return self._cmn
 
+
+    def _is_cross(self):
+        return Part.all_match_faces(self.white_face.edges)
+
     def is_cross(self) -> bool:
         """
 
@@ -31,10 +35,21 @@ class L1Cross(SolverElement):
         """
 
         wf: Face = self.white_face
-        def pred(): return Part.all_match_faces(self.white_face.edges)
-        return self.cmn.rotate_and_check(wf, pred) >= 0
+        return self.cmn.rotate_and_check(wf, self._is_cross) >= 0
 
     def solve_l0_cross(self):
+
+        if self._is_cross():
+            return # avoid rotating cube
+
+
+        # before rotating
+        n = self.cmn.rotate_and_check(self.white_face, self._is_cross)
+        if n >= 0:
+            if n > 0:
+                # the query solves by rotate  n, so we need
+                self.op.op(self.cmn.face_rotate(self.white_face) * n)
+            return
 
         self._bring_white_up()
 
@@ -67,13 +82,6 @@ class L1Cross(SolverElement):
         assert wf.name == FaceName.U
 
         wf: Face = self.white_face
-        def pred(): return Part.all_match_faces(self.white_face.edges)
-        n = self.cmn.rotate_and_check(wf, pred)
-        if n >= 0:
-            if n > 0:
-                # the query solves by rotate  n, so we need
-                self.op.op(Algs.U * n)
-            return
 
         color_codes: Sequence[PartColorsID] = Part.parts_id_by_pos(wf.edges)
         for color_id in color_codes:

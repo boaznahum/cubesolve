@@ -23,6 +23,9 @@ class L3Cross(SolverElement):
     def cmn(self) -> CommonOp:
         return self._cmn
 
+    def _is_solved(self):
+        return Part.all_match_faces(self.white_face.opposite.edges)
+
     def solved(self) -> bool:
         """
 
@@ -32,31 +35,31 @@ class L3Cross(SolverElement):
 
         yf: Face = self.white_face.opposite
 
-        def pred(): return Part.all_match_faces(yf.edges)
-
-        return self.cmn.rotate_and_check(yf, pred) >= 0
+        return self.cmn.rotate_and_check(yf, self._is_solved) >= 0
 
     def solve(self):
+
+        if self._is_solved():
+            return  # avoid rotating cube
+
+        # quick without rotating cube:
+
+        # 'yellow' face
+        yf: Face = self.white_face.opposite
+        assert yf.name == FaceName.U
+
+        n = self.cmn.rotate_and_check(yf, self._is_solved)
+        if n >= 0:
+            if n > 0:
+                # the query solves by rotate  n, so we need
+                self.op.op(self.cmn.face_rotate(yf) * n)
+            return
 
         self.cmn.bring_face_up(self.white_face.opposite)
 
         self._do_cross()
 
     def _do_cross(self):
-
-        # 'yellow' face
-        yf: Face = self.white_face.opposite
-        assert yf.name == FaceName.U
-
-        def pred():
-            return Part.all_match_faces(yf.edges)
-
-        n = self.cmn.rotate_and_check(yf, pred)
-        if n >= 0:
-            if n > 0:
-                # the query solves by rotate  n, so we need
-                self.op.op(Algs.U * n)
-            return
 
         self._do_yellow_cross()
         assert self._is_yellow_cross()

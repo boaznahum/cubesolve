@@ -161,3 +161,23 @@ class CommonOp(ICommon):
 
     def debug(self, *args):
         self.slv.debug(args)
+
+    def face_rotate(self, face: Face) -> Alg:
+
+        match face.name:
+
+            case FaceName.U:
+                return Algs.U
+            case FaceName.D:
+                return Algs.D
+            case FaceName.R:
+                return Algs.R
+            case FaceName.L:
+                return Algs.L
+            case FaceName.D:
+                return Algs.D
+            case FaceName.B:
+                return Algs.B
+
+            case _:
+                raise ValueError(f"Unknown face {face.name}")

@@ -20,6 +20,9 @@ class L1Corners(SolverElement):
     def cmn(self) -> CommonOp:
         return self._cmn
 
+    def _is_corners(self) -> bool:
+        return Part.all_match_faces(self.white_face.corners)
+
     def is_corners(self) -> bool:
         """
         :return: true if 4 corners are in right place ignoring cross orientation
@@ -28,15 +31,16 @@ class L1Corners(SolverElement):
 
         wf: Face = self.white_face
 
-        def pred(): return Part.all_match_faces(wf.corners)
-
-        return self.cmn.rotate_and_check(wf, pred) >= 0
+        return self.cmn.rotate_and_check(wf, self._is_corners) >= 0
 
     def solve(self):
         """
         Must be called after cross is solved
         :return:
         """
+
+        if self.is_corners():
+            return  # avoid rotating cube
 
         self.cmn.bring_face_up(self.white_face)
 
@@ -94,7 +98,7 @@ class L1Corners(SolverElement):
         # is the white is on the down
         if sc().f_color(wf.opposite) == wf.color:
             self.debug(f"LO-Corners C3.  {wf.color} is on bottom")
-            self.op.op(Algs.R.prime + Algs.D.prime*2 + Algs.R + Algs.D)
+            self.op.op(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
             assert self.cube.front.corner_bottom_right is sc()
             assert sc().f_color(wf.opposite) != wf.color
 
@@ -104,9 +108,6 @@ class L1Corners(SolverElement):
             self.op.op(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)
 
         assert sc().match_faces
-
-
-
 
     def _bring_top_corner_to_front_right_up(self, c: Corner):
         """
@@ -177,7 +178,7 @@ class L1Corners(SolverElement):
         assert c.on_face(f)
 
         if f.corner_top_right is c:
-            pass # nothing to do
+            pass  # nothing to do
 
         elif f.corner_bottom_right is c:
             self.op.op(-Algs.D)

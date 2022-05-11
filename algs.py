@@ -1,7 +1,8 @@
 import functools
 from abc import ABC, abstractmethod
+from collections.abc import MutableSequence
 from random import Random
-from typing import Sequence, Any
+from typing import Sequence, Any, final
 
 from cube import Cube
 
@@ -27,6 +28,10 @@ class Alg(ABC):
 
     @abstractmethod
     def atomic_str(self):
+        pass
+
+    @abstractmethod
+    def simplify(self) -> "Alg":
         pass
 
     def __str__(self) -> str:
@@ -67,7 +72,24 @@ class _Inv(Alg):
     def count(self) -> int:
         return self._alg.count()
 
+    def simplify(self) -> "Alg":
 
+        a = self._alg.simplify()  # can't be _Mul
+
+        if isinstance(a, _SimpleAlg):
+            c = type(a)
+            s = c() # _n = 1
+            s._n = -a._n  # inv
+            return s.simplify()
+        elif isinstance(a, _BigAlg):
+
+            algs = [a.inv() for a in reversed(a._algs)]
+            return _BigAlg(None, *algs).simplify()
+        else:
+            raise TypeError("Unknown type:", type(self))
+
+
+@final
 class _Mul(Alg, ABC):
     __slots__ = ["_alg", "_n"]
 
@@ -98,12 +120,39 @@ class _Mul(Alg, ABC):
         else:
             return self._n * self._alg.count()
 
+    def simplify(self) -> "Alg":
+
+        a = self._alg.simplify()  # can't be _Mul
+
+        if isinstance(a, _SimpleAlg):
+            c = type(a)
+            s = c()  # _n = 1
+            s._n *= a._n * self._n
+            return s.simplify()
+        elif isinstance(self._alg, _BigAlg):
+            algs = [a.simplify() for a in self._alg._algs] * self._n
+            return _BigAlg(None, *algs).simplify()
+        else:
+            raise TypeError("Unknown type:", type(self))
+
 
 def _normal_simple_count(n) -> int:
     n = n % 4
     if n == 3:
-        n = 1  # 3 is like -1
+        n = -1  # 3 is like -1
     return n
+
+def n_to_str(alg_code, n):
+    s = alg_code
+    n = _normal_simple_count(n)
+
+    if  n != 1:
+        if n == -1 or n == 3:
+            return s + "'"
+        else:
+            return s + str(2) # 2
+    else:
+        return s
 
 
 class _SimpleAlg(Alg, ABC):
@@ -134,7 +183,12 @@ class _SimpleAlg(Alg, ABC):
         else:
             return _normal_simple_count(self._n)
 
+    @final
+    def simplify(self) -> "Alg":
+        return self
 
+
+@final
 class _U(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -147,6 +201,7 @@ class _U(_SimpleAlg):
         return "U"
 
 
+@final
 class _F(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -156,6 +211,7 @@ class _F(_SimpleAlg):
         cube.front.rotate(_inv(inv))
 
 
+@final
 class _R(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -165,6 +221,7 @@ class _R(_SimpleAlg):
         cube.right.rotate(_inv(inv))
 
 
+@final
 class _L(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -174,6 +231,7 @@ class _L(_SimpleAlg):
         cube.left.rotate(_inv(inv))
 
 
+@final
 class _B(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -183,6 +241,7 @@ class _B(_SimpleAlg):
         cube.back.rotate(_inv(inv))
 
 
+@final
 class _D(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -192,6 +251,7 @@ class _D(_SimpleAlg):
         cube.down.rotate(_inv(inv))
 
 
+@final
 class _M(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -201,6 +261,7 @@ class _M(_SimpleAlg):
         cube.m_rotate(_inv(inv))
 
 
+@final
 class _X(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -214,6 +275,7 @@ class _X(_SimpleAlg):
         return True
 
 
+@final
 class _E(_SimpleAlg):
     """
     Middle slice over D
@@ -226,6 +288,7 @@ class _E(_SimpleAlg):
         cube.e_rotate(_inv(inv))
 
 
+@final
 class _Y(_SimpleAlg):
 
     def __init__(self) -> None:
@@ -266,6 +329,65 @@ class _BigAlg(Alg):
                 return self._algs[0].atomic_str()
             else:
                 return "[" + " ".join([str(a) for a in self._algs]) + "]"
+
+    def simplify(self) -> "Alg":
+
+        flat_algs: MutableSequence[Alg] = []
+
+        for a in self._algs:
+            a = a.simplify()
+
+            if isinstance(a, _SimpleAlg):
+                flat_algs.append(a)
+            elif isinstance(a, _BigAlg):
+                flat_algs.extend(a._algs)
+            else:
+                raise TypeError("Unexpected type", type(a))
+
+        combined = self._combine(flat_algs)
+        return _BigAlg(self._name, *combined)
+
+    def _combine(self, algs: Sequence[Alg]) -> Sequence[Alg]:
+
+
+        work_to_do = bool(algs)
+        while work_to_do:
+            work_to_do  = False
+            new_algs = []
+            prev: Alg|None = None
+            for a in algs:
+                if not isinstance(a, _SimpleAlg):
+                    raise TypeError("Unexpected type", type(a))
+
+                if prev:
+                    if type(prev) == type(a):
+
+                        assert isinstance(prev, _SimpleAlg)
+
+                        c = type(a)
+                        a2 = c()  # _n = 1
+                        a2._n = prev._n + a._n
+                        if a2._n:
+                            prev = a2
+                        else:
+                            prev = None # R0 is a None
+                        work_to_do = True # really ?
+                    else:
+                        new_algs.append(prev)
+                        prev = a
+
+                else:
+                    prev = a
+
+            if prev:
+                new_algs.append(prev)
+
+            algs = new_algs
+
+        return algs
+
+
+
 
     def count(self) -> int:
         return functools.reduce(lambda n, a: n + a.count(), self._algs, 0)
@@ -351,3 +473,12 @@ class Algs:
     def alg(cls, name, *algs: Alg):
         return _BigAlg(name, *algs)
 
+    @classmethod
+    def simplify(cls, *algs: Alg) -> Alg:
+        return cls.alg(None, *algs).simplify()
+
+
+if __name__ == '__main__':
+    alg = Algs.alg(None, _R(), (_R().prime * 2 + Algs.R * 2) )
+    print(alg)
+    print(alg.simplify())

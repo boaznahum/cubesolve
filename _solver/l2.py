@@ -62,6 +62,9 @@ class L2(SolverElement):
         :return:
         """
 
+        if self.solved():
+            return  # avoid rotating cube
+
         self.cmn.bring_face_up(self.white_face.opposite)
 
         self._do_edges()
@@ -141,11 +144,12 @@ class L2(SolverElement):
 
     @property
     def _ur_alg(self) -> Alg:
-        return Algs.alg("L2-UR", Algs.U,  Algs.R,  Algs.U.prime, Algs.R.prime,  Algs.U.prime,  Algs.F.prime ,  Algs.U , Algs.F)
+        return Algs.alg("L2-UR", Algs.U, Algs.R, Algs.U.prime, Algs.R.prime, Algs.U.prime, Algs.F.prime, Algs.U, Algs.F)
 
     @property
     def _ul_alg(self) -> Alg:
-        return Algs.alg("L2-UL", Algs.U.prime + Algs.L.prime + Algs.U + Algs.L + Algs.U + Algs.F + Algs.U.prime + Algs.F.prime)
+        return Algs.alg("L2-UL",
+                        Algs.U.prime + Algs.L.prime + Algs.U + Algs.L + Algs.U + Algs.F + Algs.U.prime + Algs.F.prime)
 
     def _bring_edge_to_front_right(self, e: Edge):
         """
