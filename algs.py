@@ -203,9 +203,6 @@ class _U(_SimpleAlg):
     def play(self, cube: Cube, inv: bool = False):
         cube.up.rotate(_inv(inv))
 
-    def __str__(self):
-        return "U"
-
 
 @final
 class _F(_SimpleAlg):
@@ -479,8 +476,17 @@ class Algs:
     def simplify(cls, *algs: Alg) -> Alg:
         return cls.alg(None, *algs).simplify()
 
+    @classmethod
+    def count(cls, *algs: Alg) -> int:
+        return cls.alg(None, *algs).count()
+
 
 if __name__ == '__main__':
     alg = Algs.alg(None, _R(), (_R().prime * 2 + Algs.R * 2))
     print(alg)
+    print(alg.simplify())
+
+    alg = Algs.R + Algs.U + Algs.U + Algs.U + Algs.U
+    a = alg.simplify()
+    print(a.__str__())
     print(alg.simplify())

@@ -214,6 +214,11 @@ class Window(pyglet.window.Window):
                                    x=10, y=30, font_size=10)
         status.draw()
 
+        h = self.app.op.history
+        status = pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  "+ str(h),
+                                   x=10, y=50, font_size=10)
+        status.draw()
+
 
 
         # restore state
