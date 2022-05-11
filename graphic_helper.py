@@ -1,8 +1,8 @@
 from collections.abc import Sequence
-from typing import Tuple
 from math import *
 
 import numpy as np
+from pyglet.gl import *
 
 projection_matrix = np.matrix([
     [1, 0, 0],
@@ -13,8 +13,8 @@ scale = 1
 
 
 def vec3to2(point: np.ndarray,
-            alpha_x : float,alpha_y : float,alpha_z : float,
-            screen0:Sequence[int]) -> Sequence[int, int]:
+            alpha_x: float, alpha_y: float, alpha_z: float,
+            screen0: Sequence[int]) -> Sequence[int, int]:
     a_x = alpha_x
     a_y = alpha_y
     a_z = alpha_z
@@ -47,3 +47,25 @@ def vec3to2(point: np.ndarray,
     y = int(projected2d[1][0] * scale) + screen0[1]
 
     return (x, y)
+
+
+def print_matrix(name, id: int):
+    """
+
+    :param id:  GL_MODELVIEW, GL_PROJECTION
+    :return:
+    """
+    v = (GLdouble * 16)()
+    glGetDoublev(id, v)
+
+    # from column major to row major
+    m = [
+        [v[0], v[4], v[8], v[12]],
+        [v[1], v[5], v[9], v[13]],
+        [v[2], v[6], v[10], v[14]],
+        [v[3], v[7], v[11], v[15]]
+    ]
+
+    print(name + ":")
+    for r in m:
+        print(" ", r)

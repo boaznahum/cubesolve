@@ -1,13 +1,12 @@
 import math
 import traceback
-from ctypes import POINTER, c_int
 
 import pyglet
 from pyglet.gl import *
 from pyglet.window import key
 
 import algs
-import viewer_g
+import graphic_helper
 from algs import Alg, Algs
 from cube import Cube
 from cube_operator import Operator
@@ -18,20 +17,52 @@ from viewer_g import GCubeViewer
 # pyglet.options["debug_graphics_batch"] = True
 
 
-# class Screen:
-#
-#     def __init__(self) -> None:
-#         super().__init__()
-#         self.batch = None
-#         self.window = None
-#         # self.status: glooey.Label | None = None
-#         self.status: pyglet.text.Label | None = None
-#
-#         self.alpha_x: float = 0
-#         self.alpha_y: float = 0
-#         self.alpha_z: float = 0
-#         self.alpha_delta = 0.1
-#         self.cube = None
+class TextGroup(pyglet.graphics.Group):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def set_state(self):
+        super().set_state()
+
+        print("in text group")
+
+        glPushAttrib(GL_MATRIX_MODE)
+
+        # using Projection mode
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+#        glLoadIdentity()
+
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+#        glLoadIdentity()
+
+        glPopAttrib()
+
+        graphic_helper.print_matrix("mode-view", GL_MODELVIEW_MATRIX)
+        graphic_helper.print_matrix("projection", GL_PROJECTION_MATRIX)
+
+        glColor3ub(255, 255, 255)
+
+        glBegin(GL_LINES)
+        glVertex3f(-0.9, -0.9, 0)
+        glVertex3f(0.9, 0.9, 0)
+        glEnd()
+
+    def unset_state(self):
+        super().unset_state()
+
+        glPushAttrib(GL_MATRIX_MODE)
+
+        # using Projection mode
+        glMatrixMode(GL_MODELVIEW)
+        glPopMatrix()
+
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+
+        glPopAttrib()
 
 
 class Main:
@@ -81,16 +112,19 @@ class Window(pyglet.window.Window):
         self.batch = pyglet.graphics.Batch()
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube)
 
-        self.status = pyglet.text.Label("Status:" + app.slv.status, x=-100, y=-100, font_size=15, batch=self.batch)
+        text_group = None # TextGroup()
+
+        self.status = pyglet.text.Label("Status:" + app.slv.status, x=-100, y=-100, font_size=10,
+                                        batch=self.batch, group=text_group)
 
     def on_draw(self):
         # need to understand which buffers it clear, see
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         self.clear()
 
-        self.draw_axis()
+       # self.draw_axis()
 
-        self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
+       # self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
         self.batch.draw()
 
     def on_resize(self, width, height):
@@ -98,6 +132,7 @@ class Window(pyglet.window.Window):
         # set the Viewport
         glViewport(0, 0, width, height)
 
+        glPushAttrib(GL_MATRIX_MODE)
         # using Projection mode
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -108,6 +143,8 @@ class Window(pyglet.window.Window):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         glTranslatef(0, 0, -400)
+
+        glPopAttrib()
 
     def on_key_press(self, symbol, modifiers):
         done = _handle_input(self, symbol, modifiers)
