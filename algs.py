@@ -78,7 +78,7 @@ class _Inv(Alg):
 
         if isinstance(a, _SimpleAlg):
             c = type(a)
-            s = c() # _n = 1
+            s = c()  # _n = 1
             s._n = -a._n  # inv
             return s.simplify()
         elif isinstance(a, _BigAlg):
@@ -116,7 +116,7 @@ class _Mul(Alg, ABC):
 
     def count(self) -> int:
         if not isinstance(self._alg, _BigAlg):
-            return _normal_simple_count(self._n * self._alg.count())
+            return _normalize_for_count(self._n) * self._alg.count()
         else:
             return self._n * self._alg.count()
 
@@ -136,21 +136,31 @@ class _Mul(Alg, ABC):
             raise TypeError("Unknown type:", type(self))
 
 
-def _normal_simple_count(n) -> int:
-    n = n % 4
-    if n == 3:
-        n = -1  # 3 is like -1
+def _normalize_for_str(n) -> int:
+    n %= 4
     return n
+
+
+def _normalize_for_count(n) -> int:
+    n %= 4
+
+    if n == 3:
+        n = 1
+
+    return n
+
 
 def n_to_str(alg_code, n):
     s = alg_code
-    n = _normal_simple_count(n)
+    n = _normalize_for_str(n)
 
-    if  n != 1:
-        if n == -1 or n == 3:
+    if n != 1:
+        if n == 0:
+            return alg_code + "4"
+        elif n == 3:
             return s + "'"
         else:
-            return s + str(2) # 2
+            return s + str(2)  # 2
     else:
         return s
 
@@ -164,11 +174,7 @@ class _SimpleAlg(Alg, ABC):
         self._n = n
 
     def atomic_str(self):
-        s = self._code
-        if self._n != 1:
-            s += str(self._n)
-
-        return s
+        return n_to_str(self._code, self._n)
 
     def __str__(self):
         return self.atomic_str()
@@ -181,7 +187,7 @@ class _SimpleAlg(Alg, ABC):
         if self.is_whole:
             return 0
         else:
-            return _normal_simple_count(self._n)
+            return _normalize_for_count(self._n)
 
     @final
     def simplify(self) -> "Alg":
@@ -349,12 +355,11 @@ class _BigAlg(Alg):
 
     def _combine(self, algs: Sequence[Alg]) -> Sequence[Alg]:
 
-
         work_to_do = bool(algs)
         while work_to_do:
-            work_to_do  = False
+            work_to_do = False
             new_algs = []
-            prev: Alg|None = None
+            prev: Alg | None = None
             for a in algs:
                 if not isinstance(a, _SimpleAlg):
                     raise TypeError("Unexpected type", type(a))
@@ -370,8 +375,8 @@ class _BigAlg(Alg):
                         if a2._n:
                             prev = a2
                         else:
-                            prev = None # R0 is a None
-                        work_to_do = True # really ?
+                            prev = None  # R0 is a None
+                        work_to_do = True  # really ?
                     else:
                         new_algs.append(prev)
                         prev = a
@@ -385,9 +390,6 @@ class _BigAlg(Alg):
             algs = new_algs
 
         return algs
-
-
-
 
     def count(self) -> int:
         return functools.reduce(lambda n, a: n + a.count(), self._algs, 0)
@@ -479,6 +481,6 @@ class Algs:
 
 
 if __name__ == '__main__':
-    alg = Algs.alg(None, _R(), (_R().prime * 2 + Algs.R * 2) )
+    alg = Algs.alg(None, _R(), (_R().prime * 2 + Algs.R * 2))
     print(alg)
     print(alg.simplify())

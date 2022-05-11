@@ -61,7 +61,7 @@ class Window(pyglet.window.Window):
         glEnable(GL_DEPTH_TEST)
 
         self.batch = pyglet.graphics.Batch()
-        self.create_layout()
+        #self.create_layout()
 
         self.app: Main = app
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube)
@@ -71,10 +71,10 @@ class Window(pyglet.window.Window):
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         self.clear()
 
-        # self.draw_axis()
+        self.draw_axis()
 
         self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
-        self.batch.draw()
+        #self.batch.draw()
         self.plot_text()
 
     def on_resize(self, width, height):
@@ -101,6 +101,11 @@ class Window(pyglet.window.Window):
         if done:
             self.close()
 
+    # def on_text(self, text):
+    #     # printing some message
+    #     print("You are entering : " + text)
+    #     return GL_NOT
+
     def draw_axis(self):
         # p = (GLint)()
         # glGetIntegerv(GL_MATRIX_MODE, p)
@@ -126,15 +131,15 @@ class Window(pyglet.window.Window):
         glColor3ub(255, 255, 255)
         glVertex3f(0, 0, 0)
         glVertex3f(200, 0, 0)
-        # glEnd()
+        glEnd()
 
-        # glBegin(GL_LINES)
+        glBegin(GL_LINES)
         glColor3ub(255, 0, 0)
         glVertex3f(0, 0, 0)
         glVertex3f(0, 200, 0)
-        # glEnd()
+        glEnd()
 
-        # glBegin(GL_LINES)
+        glBegin(GL_LINES)
         glColor3ub(0, 255, 0)
         glVertex3f(0, 0, 0)
         glVertex3f(0, 0, 200)
@@ -204,7 +209,8 @@ class Window(pyglet.window.Window):
                                    x=10, y=10, font_size=10)
         status.draw()
 
-        status = pyglet.text.Label("History:" + str(Algs.simplify(*self.app.op.history)),
+        h = Algs.simplify(*self.app.op.history)
+        status = pyglet.text.Label("History: #" + str(h.count()) + "  "+ str(h),
                                    x=10, y=30, font_size=10)
         status.draw()
 
@@ -311,7 +317,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             alg: Alg = Algs.scramble(value - key._0)
             op.op(alg, inv)
 
-        case key.LESS:
+        case key.COMMA:
             op.undo()
 
         case key.SLASH:
