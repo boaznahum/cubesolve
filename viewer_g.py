@@ -1,4 +1,3 @@
-import math
 from collections.abc import Sequence
 from typing import Hashable, Tuple, MutableSequence, Callable
 
@@ -16,6 +15,7 @@ from view_state import ViewState
 _CELL_SIZE: int = 25
 
 _VColor = Tuple[int, int, int]
+
 
 def _ansi_color(color, char: str):
     return color + colorama.Style.BRIGHT + char + colorama.Style.RESET_ALL
@@ -74,7 +74,7 @@ class _Cell:
             glDeleteLists(self.gl_lists, 1)
 
         self.gl_lists = glGenLists(1)
-        #print(f"{self.gl_lists=}")
+        # print(f"{self.gl_lists=}")
 
         glNewList(self.gl_lists, GL_COMPILE)
 
@@ -93,29 +93,19 @@ class _Cell:
         self._restore_view_state()
 
     def _prepare_view_state(self):
-        glPushAttrib(GL_MATRIX_MODE)
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
-        glTranslatef(0, 0, -400)
+
         vs: ViewState = self._face_board.board.vs
-        # why rotate (a1 + a2)  is not rotate a1 then rotate a2
-        glRotatef(math.degrees(vs.alpha_x_0), 1, 0, 0)
-        glRotatef(math.degrees(vs.alpha_y_0), 0, 1, 0)
-        glRotatef(math.degrees(vs.alpha_z_0), 0, 0, 1)
-        glRotatef(math.degrees(vs.alpha_x), 1, 0, 0)
-        glRotatef(math.degrees(vs.alpha_y), 0, 1, 0)
-        glRotatef(math.degrees(vs.alpha_z), 0, 0, 1)
+        vs.prepare_objects_view()
 
     def _restore_view_state(self):
-        # Pop Matrix off stack
-        glPopMatrix()
-        glPopAttrib()
+
+        vs: ViewState = self._face_board.board.vs
+        vs.restore_objects_view()
 
     # noinspection PyMethodMayBeStatic
     def _create_polygon(self, vertexes: Sequence[Sequence[int, int, int]], color):
 
-        #glBegin(GL_TRIANGLE_FAN)
+        # glBegin(GL_TRIANGLE_FAN)
         glBegin(GL_QUADS)
 
         glColor3ub(*color)

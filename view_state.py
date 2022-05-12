@@ -1,5 +1,10 @@
-class ViewState:
+import math
 
+from pyglet.gl import *
+
+
+# noinspection PyMethodMayBeStatic
+class ViewState:
     __slots__ = [
         "_alpha_x_0",
         "_alpha_y_0",
@@ -30,7 +35,6 @@ class ViewState:
         self._alpha_y: float = 0
         self._alpha_z: float = 0
         self._alpha_delta = a_delta
-
 
     @property
     def alpha_x_0(self):
@@ -72,6 +76,26 @@ class ViewState:
     def alpha_z(self, value):
         self._alpha_z = value
 
+    def prepare_objects_view(self):
+        glPushAttrib(GL_MATRIX_MODE)
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+        glTranslatef(0, 0, -400)
 
+        # why rotate (a1 + a2)  is not rotate a1 then rotate a2
+        glRotatef(math.degrees(self.alpha_x_0), 1, 0, 0)
+        glRotatef(math.degrees(self.alpha_y_0), 0, 1, 0)
+        glRotatef(math.degrees(self.alpha_z_0), 0, 0, 1)
+        glRotatef(math.degrees(self.alpha_x), 1, 0, 0)
+        glRotatef(math.degrees(self.alpha_y), 0, 1, 0)
+        glRotatef(math.degrees(self.alpha_z), 0, 0, 1)
 
-
+    def restore_objects_view(self):
+        """
+        Undo prepare_objects_view
+        :return:
+        """
+        # Pop Matrix off stack
+        glPopMatrix()
+        glPopAttrib()
