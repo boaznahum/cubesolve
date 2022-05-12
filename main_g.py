@@ -7,10 +7,12 @@ from pyglet.gl import *
 from pyglet.window import key
 
 import algs
+import viewer_g
 from algs import Alg, Algs
 from cube import Cube
 from cube_operator import Operator
 from solver import Solver
+from view_state import ViewState
 from viewer_g import GCubeViewer
 
 
@@ -27,23 +29,15 @@ class Main:
 
         # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
 
-        # for axes
-        self.alpha_x_0: float = 0.3
-        self.alpha_y_0: float = -0.4
-        self.alpha_z_0: float = 0
-
-        self.alpha_x: float = 0
-        self.alpha_y: float = 0
-        self.alpha_z: float = 0
-        self.alpha_delta = 0.1
+        self.vs = ViewState(0, 0, 0, 0)
 
         self.reset()
 
     def reset(self):
         self.cube.reset()
-        self.alpha_x: float = self.alpha_x_0
-        self.alpha_y: float = self.alpha_y_0
-        self.alpha_z: float = self.alpha_z_0
+        # can't change instance, it is shared
+        self.vs.reset(0.3, -0.4, 0, 0.1)
+
 
 
 # noinspection PyAbstractClass
@@ -61,10 +55,10 @@ class Window(pyglet.window.Window):
         glEnable(GL_DEPTH_TEST)
 
         self.batch = pyglet.graphics.Batch()
-        #self.create_layout()
+        # self.create_layout()
 
         self.app: Main = app
-        self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube)
+        self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
 
     def on_draw(self):
         # need to understand which buffers it clear, see
@@ -73,8 +67,11 @@ class Window(pyglet.window.Window):
 
         self.draw_axis()
 
-        self.viewer.update(self.app.alpha_x, self.app.alpha_y, self.app.alpha_z)
-        #self.batch.draw()
+        vs = self.app.vs
+        viewer_g.view_state = self.app.vs
+
+        self.viewer.draw()
+        # self.batch.draw()
         self.plot_text()
 
     def on_resize(self, width, height):
@@ -107,21 +104,20 @@ class Window(pyglet.window.Window):
     #     return GL_NOT
 
     def draw_axis(self):
-        # p = (GLint)()
-        # glGetIntegerv(GL_MATRIX_MODE, p)
-        # print(p, GL_MODELVIEW, GL_MODELVIEW==p.value)
-        # default is GL_MODELVIEW, but we need to make sue by push attributes
-
         glPushAttrib(GL_MATRIX_MODE)
         glMatrixMode(GL_MODELVIEW)
 
         glPushMatrix()
 
-        # ideally we want the axis to be fixed, but in this case we won't see the Z
+        glLoadIdentity()
+        glTranslatef(0, 0, -400)
+
+        # ideally we want the axis to be fixed, but in this case we won't see the Z,
         #  so we rotate the Axes, or we should change the perspective
-        glRotatef(math.degrees(self.app.alpha_x_0), 1, 0, 0)
-        glRotatef(math.degrees(self.app.alpha_y_0), 0, 1, 0)
-        glRotatef(math.degrees(self.app.alpha_z_0), 0, 0, 1)
+        vs: ViewState = self.app.vs
+        glRotatef(math.degrees(vs.alpha_x_0), 1, 0, 0)
+        glRotatef(math.degrees(vs.alpha_y_0), 0, 1, 0)
+        glRotatef(math.degrees(vs.alpha_z_0), 0, 0, 1)
 
         glPushAttrib(GL_LINE_WIDTH)
         glLineWidth(3)
@@ -165,16 +161,16 @@ class Window(pyglet.window.Window):
         ph = glooey.Placeholder()
         grid.add(0, 1, ph)
 
-        hbox1 = glooey.HBox()
-        #        hbox1.hide()
-        grid.add(0, 1, hbox1)
-        hbox2 = glooey.HBox()
-        grid.add(1, 0, hbox2)
+        h_box1 = glooey.HBox()
+        #        h_box1.hide()
+        grid.add(0, 1, h_box1)
+        h_box2 = glooey.HBox()
+        grid.add(1, 0, h_box2)
 
-        hbox3 = glooey.HBox()
-        grid.add(1, 0, hbox2)
+        h_box3 = glooey.HBox()
+        grid.add(1, 0, h_box2)
 
-        grid.add(1, 1, hbox3)
+        grid.add(1, 1, h_box3)
 
         gui.add(grid)
         #
@@ -197,7 +193,7 @@ class Window(pyglet.window.Window):
 
         w = window.width
         h = window.height
-        glOrtho(0, w, 0, h / 2, -1.0, 1.0)
+        glOrtho(0, w, 0, h, -1.0, 1.0)
 
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
@@ -210,16 +206,14 @@ class Window(pyglet.window.Window):
         status.draw()
 
         h = Algs.simplify(*self.app.op.history)
-        status = pyglet.text.Label("History: #" + str(h.count()) + "  "+ str(h),
+        status = pyglet.text.Label("History: #" + str(h.count()) + "  " + str(h),
                                    x=10, y=30, font_size=10)
         status.draw()
 
         h = self.app.op.history
-        status = pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  "+ str(h),
+        status = pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + str(h),
                                    x=10, y=50, font_size=10)
         status.draw()
-
-
 
         # restore state
 
@@ -246,10 +240,12 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
     app: Main = window.app
     op: Operator = app.op
-    viewer: GCubeViewer = window.viewer
     slv: Solver = app.slv
+    vs: ViewState = app.vs
 
     inv = modifiers & key.MOD_SHIFT
+
+    no_operation = False
 
     # noinspection PyProtectedMember
     match value:
@@ -259,7 +255,8 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             window.flip()
 
         case key.I:
-            print(f"{app.alpha_x=} {app.alpha_y=} {app.alpha_z=}")
+            print(f"{vs.alpha_x=} {vs.alpha_y=} {vs.alpha_z=}")
+            no_operation = True
 
         case key.R:
             op.op(algs.Algs.R, inv)
@@ -280,25 +277,33 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
         case key.X:
             if modifiers & key.MOD_CTRL:
-                app.alpha_x -= app.alpha_delta
+                vs.alpha_x -= vs.alpha_delta
+                no_operation = True
+
             elif modifiers & key.MOD_ALT:
-                app.alpha_x += app.alpha_delta
+                vs.alpha_x += vs.alpha_delta
+                no_operation = True
+
             else:
                 op.op(algs.Algs.X, inv)
 
         case key.Y:
             if modifiers & key.MOD_CTRL:
-                app.alpha_y -= app.alpha_delta
+                vs.alpha_y -= vs.alpha_delta
+                no_operation = True
             elif modifiers & key.MOD_ALT:
-                app.alpha_y += app.alpha_delta
+                vs.alpha_y += vs.alpha_delta
+                no_operation = True
             else:
                 op.op(algs.Algs.Y, inv)
 
         case key.Z:
             if modifiers & key.MOD_CTRL:
-                app.alpha_z -= app.alpha_delta
+                vs.alpha_z -= vs.alpha_delta
+                no_operation = True
             elif modifiers & key.MOD_ALT:
-                app.alpha_z += app.alpha_delta
+                vs.alpha_z += vs.alpha_delta
+                no_operation = True
 
         case key.M:
             op.op(algs.Algs.M, inv)
@@ -348,10 +353,13 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
         case key.Q:
             return True
 
-        # case _:
-        #     return False
+        case _:
+            return False
 
     # no need to redraw, on_draw is called after any event
+
+    if not no_operation:
+        window.viewer.update()
 
     return done
 

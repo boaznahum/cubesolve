@@ -11,6 +11,7 @@ from pyglet.graphics import Batch
 
 from cube import Cube
 from elements import Face, Color, Part
+from view_state import ViewState
 
 _CELL_SIZE: int = 25
 
@@ -66,6 +67,7 @@ def _color_2_v_color(c: Color) -> _VColor:
     return _colors[c]
 
 
+# noinspection PyMethodMayBeStatic
 class _Cell:
 
     def __init__(self, face_board: "_FaceBoard", batch: Batch) -> None:
@@ -78,6 +80,8 @@ class _Cell:
         self._g_markers: Sequence[pyglet.shapes._ShapeBase] | None = None
         # self._create_objects(x0, y0, x1, y1, (255, 255, 255))
 
+        self.gl_lists = 0
+
     def _create_objects(self, vertexes: Sequence[Sequence[int]], color, marker: int):
 
         # p = (GLint)()
@@ -85,24 +89,44 @@ class _Cell:
         # print(p, GL_MODELVIEW)
         # default is GL_MODELVIEW, but we need to make sue by push attributes
 
-        glPushAttrib(GL_MATRIX_MODE)
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
+        if self.gl_lists:
+            glDeleteLists(self.gl_lists, 1)
 
-        alpha_x = self._face_board.board.alpha_x
-        alpha_y = self._face_board.board.alpha_y
-        alpha_z = self._face_board.board.alpha_z
+        self.gl_lists = glGenLists(1)
+        print(f"{self.gl_lists=}")
 
-        glRotatef(math.degrees(alpha_x), 1, 0, 0)
-        glRotatef(math.degrees(alpha_y), 0, 1, 0)
-        glRotatef(math.degrees(alpha_z), 0, 0, 1)
+        glNewList(self.gl_lists, GL_COMPILE)
 
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
         self._create_polygon(vertexes, color)
         self._create_lines(vertexes, [0, 0, 0])
-        self._create_helpers()
+        # self._create_helpers()
         # self._create_markers(vertexes, marker)
+        glEndList()
 
+    def draw(self):
+        if not self.gl_lists:
+            print(f"Error no gl lists in {self}")
+        self._prepare_view_state()
+        glCallList(self.gl_lists)
+        self._restore_view_state()
+
+    def _prepare_view_state(self):
+        glPushAttrib(GL_MATRIX_MODE)
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+        glTranslatef(0, 0, -400)
+        vs: ViewState = self._face_board.board.vs
+        # why rotate (a1 + a2)  is not rotate a1 then rotate a2
+        glRotatef(math.degrees(vs.alpha_x_0), 1, 0, 0)
+        glRotatef(math.degrees(vs.alpha_y_0), 0, 1, 0)
+        glRotatef(math.degrees(vs.alpha_z_0), 0, 0, 1)
+        glRotatef(math.degrees(vs.alpha_x), 1, 0, 0)
+        glRotatef(math.degrees(vs.alpha_y), 0, 1, 0)
+        glRotatef(math.degrees(vs.alpha_z), 0, 0, 1)
+
+    def _restore_view_state(self):
         # Pop Matrix off stack
         glPopMatrix()
         glPopAttrib()
@@ -155,13 +179,22 @@ class _Cell:
         glVertex3f(0, 0, 50)
         glVertex3f(200, 0, 50)
         glVertex3f(0, 50, 0)
-        glVertex3f(200, 50,0 )
+        glVertex3f(200, 50, 0)
+
+        # the problematic one, the one on X
+        glColor3ub(255, 255, 0)
+        glVertex3f(0, 0, 0)
+        glVertex3f(50, 0, 0)
+
         glEnd()
 
+        # parallel to Y axis with offset on x/z
         glBegin(GL_LINES)
         glColor3ub(255, 0, 0)
-        glVertex3f(0, 0, 0)
-        glVertex3f(0, 200, 0)
+        glVertex3f(50, 0, 0)
+        glVertex3f(50, 200, 0)
+        glVertex3f(0, 0, 50)
+        glVertex3f(0, 200, 50)
         glEnd()
 
         # line parallel to Z axis , with offset on X
@@ -310,8 +343,14 @@ class _FaceBoard:
         _plot_cell(y2, x2, f.corner_bottom_right)
 
     def update(self):
-        # need to optimize, no need to change position
         self.draw_init()
+
+    def draw(self):
+        # need to optimize, no need to change position
+        for cs in self._cells:
+            for c in cs:
+                if c:
+                    c.draw()
 
     @property
     def board(self):
@@ -336,13 +375,11 @@ class _Board:
     _h_size: int = _FACE_SIZE * 3  # L F R
     _v_size: int = _FACE_SIZE * 4  # U F D B
 
-    def __init__(self, batch: Batch) -> None:
+    def __init__(self, batch: Batch, vs: ViewState) -> None:
         super().__init__()
         self.batch = batch
         self._faces: MutableSequence[_FaceBoard] = []
-        self._alpha_x = 0
-        self._alpha_y = 0
-        self._alpha_z = 0
+        self._vs = vs
 
     @property
     def h_size(self) -> int:
@@ -364,17 +401,25 @@ class _Board:
         for face in self._faces:
             face.update()
 
+    def draw(self):
+        for face in self._faces:
+            face.draw()
+
     @property
     def alpha_x(self):
-        return self._alpha_x
+        return self._vs.alpha_x
 
     @property
     def alpha_y(self):
-        return self._alpha_y
+        return self._vs.alpha_y
 
     @property
     def alpha_z(self):
-        return self._alpha_z
+        return self._vs.alpha_z
+
+    @property
+    def vs(self):
+        return self._vs
 
 
 _parts: dict[Hashable, int] = {}
@@ -434,26 +479,22 @@ def _plot_face(b: _Board, f: Callable[[], Face], left_bottom: list[float],  # 3d
 class GCubeViewer:
     __slots__ = ["_batch", "_cube", "_board", "_test"]
 
-    def __init__(self, batch: Batch, cube: Cube) -> None:
+    def __init__(self, batch: Batch, cube: Cube, vs: ViewState) -> None:
         super().__init__()
         self._cube = cube
         self._batch = batch
 
         #        self._test = pyglet.shapes.Line(0, 0, 20, 20, width=10, color=(255, 255, 255), batch=batch)
 
-        self._board: _Board = _Board(self._batch)
+        self._board: _Board = _Board(self._batch, vs)
 
         self._init_gui()
 
-    def plot(self):
+    def update(self):
         self._board.update()
 
-    def update(self, alpha_x, alpha_y, alpha_z):
-        # print(f"{alpha_x=} {alpha_y=} {alpha_z=}")
-        self._board._alpha_x = alpha_x
-        self._board._alpha_y = alpha_y
-        self._board._alpha_z = alpha_z
-        self.plot()
+    def draw(self):
+        self._board.draw()
 
     def _init_gui(self):
         b = self._board
