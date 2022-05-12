@@ -305,6 +305,33 @@ class _Y(_SimpleAlg):
         return True
 
 
+@final
+class _S(_SimpleAlg):
+    """
+    Middle slice over F
+    """
+
+    def __init__(self) -> None:
+        super().__init__("S")
+
+    def play(self, cube: Cube, inv: bool = False):
+        cube.s_rotate(_inv(inv))
+
+
+@final
+class _Z(_SimpleAlg):
+
+    def __init__(self) -> None:
+        super().__init__("Y")
+
+    def play(self, cube: Cube, inv: bool = False):
+        cube.z_rotate(_inv(inv))
+
+    @property
+    def is_whole(self):
+        return True
+
+
 class _BigAlg(Alg):
 
     def __init__(self, name: str | None, *algs: Alg) -> None:
@@ -447,7 +474,14 @@ class Algs:
     # entire over U
     Y = _Y()
 
-    Simple = [L, R, U, F, B, D, M, X, U]
+    Z = _Z()
+    S = _S()
+
+    Simple = [L, R,
+              S, Z,
+              S, Z, F,
+              B, D,
+              M, X, U]
 
     RU = _BigAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
 

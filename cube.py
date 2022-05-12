@@ -221,6 +221,9 @@ class Cube:
         :param n:
         :return:
         """
+        self.z_rotate()
+        self.front.rotate(-1)
+        self.back.rotate()
         self._reset_after_faces_changes()
         pass
 
@@ -231,9 +234,10 @@ class Cube:
         :return:
         """
         for _ in range(0, n % 4):
-            self.s_rotate()
-            self.front.rotate()
-            self.back.rotate(-1)
+            self.y_rotate(1)
+            self.x_rotate(-1)
+            self.y_rotate(-1)
+
 
     def sanity(self):
 

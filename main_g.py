@@ -68,15 +68,20 @@ class Window(pyglet.window.Window):
         # so they can be used by draw mehod
 
         self.viewer.update()
-        self.text = [None, None, None]
-        self.text[0] = pyglet.text.Label("Status:" + self.app.slv.status,
-                                         x=10, y=10, font_size=10)
+        self.text.clear()
+        self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
+                                           x=10, y=10, font_size=10))
         h = Algs.simplify(*self.app.op.history)
-        self.text[1] = pyglet.text.Label("History: #" + str(h.count()) + "  " + str(h),
-                                         x=10, y=30, font_size=10)
+        self.text.append(pyglet.text.Label("History: #" + str(h.count()) + "  " + str(h),
+                                           x=10, y=30, font_size=10))
         h = self.app.op.history
-        self.text[2] = pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + str(h),
-                                         x=10, y=50, font_size=10)
+        self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + str(h),
+                                           x=10, y=50, font_size=10))
+
+        instruction = "R L U S/Z/F B D  M/X/R E/Y/U (SHIFT-INv), ?-Solve, Clear, Q " + "0-9 scramble1, <undo, Test"
+        self.text.append(pyglet.text.Label(instruction,
+                                           x=10, y=70, font_size=10))
+
 
     def on_draw(self):
         # need to understand which buffers it clear, see
@@ -270,8 +275,14 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
         case key.U:
             op.op(algs.Algs.U, inv)
 
+        case key.E:
+            op.op(algs.Algs.E, inv)
+
         case key.F:
             op.op(algs.Algs.F, inv)
+
+        case key.S:
+            op.op(algs.Algs.S, inv)
 
         case key.B:
             op.op(algs.Algs.B, inv)
@@ -291,6 +302,10 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             else:
                 op.op(algs.Algs.X, inv)
 
+        case key.M:
+            op.op(algs.Algs.M, inv)
+
+
         case key.Y:
             if modifiers & key.MOD_CTRL:
                 vs.alpha_y -= vs.alpha_delta
@@ -301,6 +316,9 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             else:
                 op.op(algs.Algs.Y, inv)
 
+        case key.E:
+            op.op(algs.Algs.E, inv)
+
         case key.Z:
             if modifiers & key.MOD_CTRL:
                 vs.alpha_z -= vs.alpha_delta
@@ -308,9 +326,9 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             elif modifiers & key.MOD_ALT:
                 vs.alpha_z += vs.alpha_delta
                 no_operation = True
+            else:
+                op.op(algs.Algs.Z, inv)
 
-        case key.M:
-            op.op(algs.Algs.M, inv)
 
         case "A":
 

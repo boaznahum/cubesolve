@@ -63,7 +63,7 @@ class _Cell:
 
         self.gl_lists = 0
 
-    def _create_objects(self, vertexes: Sequence[Sequence[int]], color, marker: int):
+    def create_objects(self, vertexes: Sequence[Sequence[int]], color, marker: int):
 
         # p = (GLint)()
         # glGetIntegerv(GL_MATRIX_MODE, p)
@@ -74,7 +74,7 @@ class _Cell:
             glDeleteLists(self.gl_lists, 1)
 
         self.gl_lists = glGenLists(1)
-        print(f"{self.gl_lists=}")
+        #print(f"{self.gl_lists=}")
 
         glNewList(self.gl_lists, GL_COMPILE)
 
@@ -115,16 +115,13 @@ class _Cell:
     # noinspection PyMethodMayBeStatic
     def _create_polygon(self, vertexes: Sequence[Sequence[int, int, int]], color):
 
-        # Draw the six sides of the cube
-        glBegin(GL_TRIANGLE_FAN)
-        # glBegin(GL_QUADS)
+        #glBegin(GL_TRIANGLE_FAN)
+        glBegin(GL_QUADS)
 
         glColor3ub(*color)
 
         for v in vertexes:
             glVertex3f(*v)
-            # print(glGetError())
-
         glEnd()
 
     # noinspection PyMethodMayBeStatic
@@ -187,10 +184,6 @@ class _Cell:
 
         glPopAttrib()  # line width
 
-    def set_attributes(self, vertexes: Sequence[Sequence[int, int, int]], c: _VColor, marker):
-
-        self._create_objects(vertexes, c, marker)
-
     def _create_markers(self, vertexes, marker):
         if not marker:
             return
@@ -250,7 +243,7 @@ class _FaceBoard:
         :param vertexes: four corners of edge
         :return:
         """
-        self._cells[cy][cx].set_attributes(vertexes, c, marker)
+        self._cells[cy][cx].create_objects(vertexes, c, marker)
 
     def draw_init(self):
 
@@ -281,12 +274,7 @@ class _FaceBoard:
             left_top3 = self.f0 + self.left_right_direction * (cx * _CELL_SIZE) + self.left_top_direction * (
                     (cy + 1) * _CELL_SIZE)
 
-            screen0 = [-0, -0, 0]
-
             box: MutableSequence[np.ndarray] = [left_bottom3, right_bottom3, right_top3, left_top3]
-
-            for i in range(len(box)):
-                box[i] = box[i].reshape(1, 3) + screen0
 
             lbox = [x.reshape((3,)).tolist() for x in box]
 
