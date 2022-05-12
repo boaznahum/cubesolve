@@ -99,6 +99,10 @@ class _Mul(Alg, ABC):
         self._n = n
 
     def atomic_str(self):
+
+        if isinstance(self._alg, _SimpleAlg):
+            return self.simplify().atomic_str()  #  R3 -> R'
+
         s = self._alg.atomic_str()
 
         if self._n != 1:

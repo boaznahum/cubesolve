@@ -38,8 +38,17 @@ class Operator:
         self._cube.reset()
         self._history.clear()
 
-    def undo(self):
+    def undo(self) -> Alg | None:
+        """
+
+        :return: the undo alg
+        """
         if self.history:
             alg = self._history.pop()
             alg.play(self._cube, True)
+            return alg
+        else:
+            return None
+
+
 

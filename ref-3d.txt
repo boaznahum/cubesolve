@@ -4,7 +4,7 @@ https://github.com/YodaSnipe/Pygame/blob/master/RotateCube.py
 #good, I learnt to do 3d
 https://hub.packtpub.com/creating-amazing-3d-guis-pyglet/
 
-# in gl you have combined modelview matrix
+# in gl you have combined mode lview matrix
 # model -- model matrix --> world
 #    --view matrix --> camera coordinates -->
 #    -- projection matrix --> clip space [-1, -1] [-1, 1]
@@ -13,6 +13,8 @@ https://learnopengl.com/Getting-started/Coordinate-Systems
 
 http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#the-model-matrix
 
+# good primitives description and model view projection matrix
 
-gluPerspective parameters- what do they mean?
+
+gluPerspective parameters-what do they mean?
 https://stackoverflow.com/questions/16571981/gluperspective-parameters-what-do-they-mean

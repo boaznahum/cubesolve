@@ -92,10 +92,15 @@ class Window(pyglet.window.Window):
         self.text.append(pyglet.text.Label(err,
                                            x=10, y=70, font_size=10))
 
+        solution = self.app.slv.solution().simplify()
+        s = "Solution:(" + str(solution.count()) + ") "+ str(solution)
+        self.text.append(pyglet.text.Label(s,
+                                           x=10, y=90, font_size=10))
+
         if self.app.error:
             err = f"Error:{self.app.error}"
             self.text.append(pyglet.text.Label(err,
-                                               x=10, y=90, font_size=10, color=(255, 0, 0, 255), bold=True))
+                                               x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
 
 
     def on_draw(self):
@@ -143,8 +148,7 @@ class Window(pyglet.window.Window):
                 s += m
 
             self.app.set_error(s)
-            self.update_gui_elements() # to create error label
-
+            self.update_gui_elements()  # to create error label
 
     # def on_text(self, text):
     #     # printing some message
@@ -333,7 +337,6 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
         case key.M:
             op.op(algs.Algs.M, inv)
 
-
         case key.Y:
             if modifiers & key.MOD_CTRL:
                 vs.alpha_y -= vs.alpha_delta
@@ -356,7 +359,6 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
                 no_operation = True
             else:
                 op.op(algs.Algs.Z, inv)
-
 
         case "A":
 

@@ -5,14 +5,13 @@ from _solver.l1_cross import L1Cross
 from _solver.l2 import L2
 from _solver.l3_corners import L3Corners
 from _solver.l3_cross import L3Cross
+from algs import Algs
 from cube import Cube
 from cube_operator import Operator
 
-_DEBUG = True
-
 
 class Solver(ISolver):
-    __slots__ = ["_op", "_cube",
+    __slots__ = ["_op", "_cube", "_debug",
                  "l1_cross",
                  "l1_corners",
                  "l2",
@@ -31,6 +30,8 @@ class Solver(ISolver):
         self.l2 = L2(self)
         self.l3_cross = L3Cross(self)
         self.l3_corners = L3Corners(self)
+
+        self._debug = True
 
     @property
     def cube(self) -> Cube:
@@ -71,28 +72,50 @@ class Solver(ISolver):
         else:
             s += ", No L2"
 
-        if self.l3_cross.solved():
+        if self.l3_cross.solved() and self.l3_corners.solved():
+            s += ", L3"
+        elif self.l3_cross.solved():
             s += ", L3-Cross"
-        else:
-            s += ", No L3-Cross"
-
-        if self.l3_corners.solved():
+        elif self.l3_corners.solved():
             s += ", L3-Corners"
         else:
-            s += ", No L3-Corners"
+            s += ", No L3"
+
 
         return s
 
-    def solve(self):
+    def solve(self, debug=True):
         if self._cube.solved:
             return
 
-        self.l1_cross.solve_l0_cross()
-        self.l1_corners.solve()
-        self.l2.solve()
-        self.l3_cross.solve()
-        self.l3_corners.solve()
+        _d = self.debug
+        try:
+            self._debug = debug
+            self.l1_cross.solve_l0_cross()
+            self.l1_corners.solve()
+            self.l2.solve()
+            self.l3_cross.solve()
+            self.l3_corners.solve()
+        finally:
+            self._debug = _d
 
     def debug(self, *args):
-        if _DEBUG:
+        if self._debug:
             print("Solver:", *args)
+
+    def solution(self):
+        if self.is_solved:
+            return Algs.alg(None)
+
+        n = len(self.op.history)
+        solution_algs = []
+
+        self.solve(debug=False)
+        while n < len(self.op.history):
+            step = self.op.undo()
+            #s=str(step)
+            if step:
+                solution_algs.insert(0, step)
+
+        return Algs.alg(None, * solution_algs)
+

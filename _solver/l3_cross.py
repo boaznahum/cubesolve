@@ -24,7 +24,8 @@ class L3Cross(SolverElement):
         return self._cmn
 
     def _is_solved(self):
-        return Part.all_match_faces(self.white_face.opposite.edges)
+        opposite = self.white_face.opposite
+        return Part.all_match_faces(opposite.edges)
 
     def solved(self) -> bool:
         """
@@ -46,7 +47,6 @@ class L3Cross(SolverElement):
 
         # 'yellow' face
         yf: Face = self.white_face.opposite
-        assert yf.name == FaceName.U
 
         n = self.cmn.rotate_and_check(yf, self._is_solved)
         if n >= 0:
@@ -56,6 +56,10 @@ class L3Cross(SolverElement):
             return
 
         self.cmn.bring_face_up(self.white_face.opposite)
+        # yf is no longer valid - need to track
+        wf = self.white_face
+        op = wf.opposite
+        assert self.white_face.opposite.name == FaceName.U
 
         self._do_cross()
 
