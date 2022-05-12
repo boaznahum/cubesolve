@@ -477,8 +477,8 @@ class Algs:
 
     Simple = [L,
               R,  X, M,
-              U,  E, #y
-              F,  # Z, S
+              U,  E, Y,
+              F,  Z, S,
               B,
               D,
               ]
