@@ -141,8 +141,6 @@ class Cube:
 
         self.sanity()
 
-        self._reset_after_faces_changes()
-
         front: Face = self.front
         back: Face = self.back
         up: Face = self.up
@@ -162,12 +160,14 @@ class Cube:
             self.front.edge_bottom.replace_colors2(self.back.edge_bottom, down, front, back, down)
             self.back.edge_bottom.replace_colors2(saved_up_top, up, back, back, down)
 
+        self._reset_after_faces_changes()
+
         self.sanity()
 
 
     def x_rotate(self, n):
         """
-        Entire cube or X
+        Entire cube or R
         :param n:
         :return:
         """
@@ -183,7 +183,7 @@ class Cube:
         :return:
         """
 
-        self._reset_after_faces_changes()
+        self.sanity()
 
         front: Face = self.front
         back: Face = self.back
@@ -204,6 +204,11 @@ class Cube:
             self.back.edge_left.replace_colors2(self.right.edge_left, front, right, right, back)
             self.front.edge_right.replace_colors2(saved_front_left, front, right, left, front)
 
+        self._reset_after_faces_changes()
+
+        self.sanity()
+
+
     def y_rotate(self, n=1):
         """
         entire over U  (please note that e is over D)
@@ -221,11 +226,13 @@ class Cube:
         :param n:
         :return:
         """
-        self.z_rotate()
-        self.front.rotate(-1)
-        self.back.rotate()
+        for _ in range(0, n % 4):
+            self.z_rotate()
+            self.front.rotate(-1)
+            self.back.rotate()
+
         self._reset_after_faces_changes()
-        pass
+
 
     def z_rotate(self, n=1):
         """
@@ -248,6 +255,10 @@ class Cube:
         self._do_sanity()
 
     def _do_sanity(self):
+
+        for c in Color:
+            self.find_part_by_colors(frozenset([c]))
+
         for c1, c2 in [
             (Color.WHITE, Color.ORANGE),
             (Color.WHITE, Color.BLUE),
@@ -263,6 +274,7 @@ class Cube:
             (Color.RED, Color.GREEN),
             (Color.GREEN, Color.ORANGE),
         ]:
+
             self.find_part_by_colors(frozenset([c1, c2]))
 
     @property

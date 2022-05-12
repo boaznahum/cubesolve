@@ -23,7 +23,6 @@ class L1Cross(SolverElement):
     def cmn(self) -> CommonOp:
         return self._cmn
 
-
     def _is_cross(self):
         return Part.all_match_faces(self.white_face.edges)
 
@@ -40,8 +39,7 @@ class L1Cross(SolverElement):
     def solve_l0_cross(self):
 
         if self._is_cross():
-            return # avoid rotating cube
-
+            return  # avoid rotating cube
 
         # before rotating
         n = self.cmn.rotate_and_check(self.white_face, self._is_cross)

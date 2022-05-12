@@ -460,28 +460,28 @@ def _scramble(seed: Any) -> Alg:
 
 class Algs:
     L = _L()
-    R = _R()
-    U = _U()
-    F = _F()
     B = _B()
     D = _D()
 
-    M = _M()
-    X = _X()
+    R = _R()
+    X = _X()  # Entire cube or R
+    M = _M()  # Middle over R
 
-    # Middle slice over D
-    E = _E()
-    # entire over U
-    Y = _Y()
+    U = _U()
+    Y = _Y()  # Entire over U
+    E = _E()  # Middle slice over D
 
-    Z = _Z()
-    S = _S()
+    F = _F()
+    Z = _Z()  # Entire over F
+    S = _S()  # Middle over F
 
-    Simple = [L, R,
-              S, Z,
-              S, Z, F,
-              B, D,
-              M, X, U]
+    Simple = [L,
+              R,  X, M,
+              U,  E, #y
+              F,  # Z, S
+              B,
+              D,
+              ]
 
     RU = _BigAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
 

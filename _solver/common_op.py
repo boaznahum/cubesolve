@@ -88,10 +88,10 @@ class CommonOp(ICommon):
                     self.op.op(Algs.X * 2)
 
                 case FaceName.L:
-                    self.op.op(Algs.Y + Algs.X)
+                    self.op.op(Algs.Y + -Algs.X)
 
                 case FaceName.R:
-                    self.op.op(-Algs.Y + Algs.X)
+                    self.op.op(Algs.Y + Algs.X)
 
     def bring_edge_to_front_by_e_rotate(self, edge: Edge) -> Alg | None:
         """

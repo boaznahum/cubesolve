@@ -1,4 +1,5 @@
 import math
+import sys
 import traceback
 from typing import MutableSequence
 
@@ -24,6 +25,7 @@ class Main:
 
     def __init__(self) -> None:
         super().__init__()
+        self._error = None
         self.cube = Cube()
         self.op: Operator = Operator(self.cube)
         self.slv: Solver = Solver(self.op)
@@ -38,6 +40,14 @@ class Main:
         self.cube.reset()
         # can't change instance, it is shared
         self.vs.reset(0.3, -0.4, 0, 0.1)
+        self._error = None
+
+    def set_error(self, error: str):
+        self._error = error
+
+    @property
+    def error(self):
+        return self._error
 
 
 # noinspection PyAbstractClass
@@ -78,9 +88,14 @@ class Window(pyglet.window.Window):
         self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + str(h),
                                            x=10, y=50, font_size=10))
 
-        instruction = "R L U S/Z/F B D  M/X/R E/Y/U (SHIFT-INv), ?-Solve, Clear, Q " + "0-9 scramble1, <undo, Test"
-        self.text.append(pyglet.text.Label(instruction,
+        err = "R L U S/Z/F B D  M/X/R E/Y/U (SHIFT-INv), ?-Solve, Clear, Q " + "0-9 scramble1, <undo, Test"
+        self.text.append(pyglet.text.Label(err,
                                            x=10, y=70, font_size=10))
+
+        if self.app.error:
+            err = f"Error:{self.app.error}"
+            self.text.append(pyglet.text.Label(err,
+                                               x=10, y=90, font_size=10, color=(255, 0, 0, 255), bold=True))
 
 
     def on_draw(self):
@@ -114,9 +129,22 @@ class Window(pyglet.window.Window):
         glPopAttrib()
 
     def on_key_press(self, symbol, modifiers):
-        done = _handle_input(self, symbol, modifiers)
-        if done:
-            self.close()
+        try:
+            done = _handle_input(self, symbol, modifiers)
+            if done:
+                self.close()
+
+        except Exception as e:
+            traceback.print_exc()
+
+            m = str(e)
+            s = "Some error occurred"
+            if m:
+                s += m
+
+            self.app.set_error(s)
+            self.update_gui_elements() # to create error label
+
 
     # def on_text(self, text):
     #     # printing some message
@@ -367,10 +395,10 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
                     slv.solve()
                     assert slv.is_solved
 
-                except Exception:
+                except Exception as e:
                     print(f"Failure on {s}")
                     traceback.print_exc()
-                    break
+                    raise
 
         case key.Q:
             return True
