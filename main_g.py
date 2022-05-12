@@ -1,5 +1,6 @@
 import math
 import traceback
+from typing import MutableSequence
 
 import glooey
 import pyglet
@@ -39,7 +40,6 @@ class Main:
         self.vs.reset(0.3, -0.4, 0, 0.1)
 
 
-
 # noinspection PyAbstractClass
 class Window(pyglet.window.Window):
     #     # Cube 3D start rotation
@@ -59,6 +59,24 @@ class Window(pyglet.window.Window):
 
         self.app: Main = app
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
+        self.text: MutableSequence[pyglet.text.Label] = []
+
+        self.update_gui_elements()
+
+    def update_gui_elements(self):
+
+        # so they can be used by draw mehod
+
+        self.viewer.update()
+        self.text = [None, None, None]
+        self.text[0] = pyglet.text.Label("Status:" + self.app.slv.status,
+                                         x=10, y=10, font_size=10)
+        h = Algs.simplify(*self.app.op.history)
+        self.text[1] = pyglet.text.Label("History: #" + str(h.count()) + "  " + str(h),
+                                         x=10, y=30, font_size=10)
+        h = self.app.op.history
+        self.text[2] = pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + str(h),
+                                         x=10, y=50, font_size=10)
 
     def on_draw(self):
         # need to understand which buffers it clear, see
@@ -67,12 +85,9 @@ class Window(pyglet.window.Window):
 
         self.draw_axis()
 
-        vs = self.app.vs
-        viewer_g.view_state = self.app.vs
-
         self.viewer.draw()
         # self.batch.draw()
-        self.plot_text()
+        self.draw_text()
 
     def on_resize(self, width, height):
         # https://hub.packtpub.com/creating-amazing-3d-guis-pyglet/
@@ -181,7 +196,7 @@ class Window(pyglet.window.Window):
     # document = pyglet.text.decode_text('Hello, world.')
     # layout = pyglet.text.layout.TextLayout(document, 100, 20, batch=batch)
 
-    def plot_text(self):
+    def draw_text(self):
         window = self
 
         glPushAttrib(GL_MATRIX_MODE)
@@ -201,19 +216,8 @@ class Window(pyglet.window.Window):
 
         glPopAttrib()  # matrix mode
 
-        status = pyglet.text.Label("Status:" + self.app.slv.status,
-                                   x=10, y=10, font_size=10)
-        status.draw()
-
-        h = Algs.simplify(*self.app.op.history)
-        status = pyglet.text.Label("History: #" + str(h.count()) + "  " + str(h),
-                                   x=10, y=30, font_size=10)
-        status.draw()
-
-        h = self.app.op.history
-        status = pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + str(h),
-                                   x=10, y=50, font_size=10)
-        status.draw()
+        for t in self.text:
+            t.draw()
 
         # restore state
 
@@ -359,7 +363,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
     # no need to redraw, on_draw is called after any event
 
     if not no_operation:
-        window.viewer.update()
+        window.update_gui_elements()
 
     return done
 

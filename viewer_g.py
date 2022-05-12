@@ -15,26 +15,7 @@ from view_state import ViewState
 
 _CELL_SIZE: int = 25
 
-# def _color_2_str(c: Color) -> str:
-#    return str(c.value)[0]
-
 _VColor = Tuple[int, int, int]
-
-_TRACKER = []
-
-
-def _track(obj):
-    """
-    Your issue is due to garbage collection.
-    Sprites and Shapes will automatically delete themselves from the Batch when they fall out of scope.
-    Labels do not have the same behavior (maybe they should?).
-    Sprites have always had this behavior, and the new Shape's module was modeled after that behavior.
-    :param obj:
-    :return:
-    """
-    global _TRACKER
-    _TRACKER.append(obj)
-
 
 def _ansi_color(color, char: str):
     return color + colorama.Style.BRIGHT + char + colorama.Style.RESET_ALL
