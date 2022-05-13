@@ -455,6 +455,7 @@ class Face:
         self._name = name
         self._center = Center(PartEdge(self, color))
         self._direction = Direction.D0
+        self._parts: Tuple[Part]
 
         # all others are created by Cube#reset
 
@@ -698,3 +699,7 @@ class Face:
     @property
     def is_left(self):
         return self.name is FaceName.L
+
+    @property
+    def parts(self) -> Sequence[Part]:
+        return self._parts

@@ -1,5 +1,6 @@
 from collections.abc import Sequence
-from typing import Hashable, Tuple, MutableSequence, Callable
+from ctypes import c_float
+from typing import Hashable, Tuple, MutableSequence, Callable, Iterable
 
 import colorama
 import numpy as np
@@ -9,7 +10,7 @@ from pyglet.gl import *
 from pyglet.graphics import Batch
 
 from cube import Cube
-from elements import Face, Color, Part
+from elements import Face, Color, Part, FaceName
 from view_state import ViewState
 
 _CELL_SIZE: int = 25
@@ -53,6 +54,8 @@ class _Cell:
 
     def __init__(self, face_board: "_FaceBoard", batch: Batch) -> None:
         super().__init__()
+        self._right_top_v3: Sequence[GLfloat] | None = None
+        self._left_bottom_v3: Sequence[GLfloat] | None = None
         self._batch = batch
         self._face_board = face_board
         self._g_polygon: pyglet.shapes.Polygon | None = None
@@ -63,12 +66,17 @@ class _Cell:
 
         self.gl_lists = 0
 
-    def create_objects(self, vertexes: Sequence[Sequence[int]], color, marker: int):
+    def create_objects(self, vertexes: Sequence[Sequence[GLfloat]], color, marker: int):
 
         # p = (GLint)()
         # glGetIntegerv(GL_MATRIX_MODE, p)
         # print(p, GL_MODELVIEW)
         # default is GL_MODELVIEW, but we need to make sue by push attributes
+
+        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
+
+        self._left_bottom_v3 = vertexes[0]
+        self._right_top_v3 = vertexes[2]
 
         if self.gl_lists:
             glDeleteLists(self.gl_lists, 1)
@@ -103,7 +111,7 @@ class _Cell:
         vs.restore_objects_view()
 
     # noinspection PyMethodMayBeStatic
-    def _create_polygon(self, vertexes: Sequence[Sequence[int, int, int]], color):
+    def _create_polygon(self, vertexes: Sequence[Sequence[GLfloat, GLfloat, GLfloat]], color):
 
         # glBegin(GL_TRIANGLE_FAN)
         glBegin(GL_QUADS)
@@ -185,10 +193,22 @@ class _Cell:
         for i in range(marker + 1):
             self._g_markers.append(pyglet.shapes.Circle(x0, y0, i * 2, batch=self._batch, color=[0, 0, 0]))
 
+    def gui_objects(self) -> Sequence[int]:
+        return [self.gl_lists]
+
+    @property
+    def left_bottom_v3(self):
+        return self._left_bottom_v3
+
+    @property
+    def right_top_v3(self):
+        return self._right_top_v3
+
 
 _FACE_SIZE = 3
 
 
+# noinspection PyMethodMayBeStatic
 class _FaceBoard:
     """
      0,0 | 0,1 | 0,2
@@ -205,7 +225,7 @@ class _FaceBoard:
     def __init__(self,
                  board: "_Board",
                  cube_face_supplier: Callable[[], Face], batch: Batch,
-                 f0: np.ndarray, left_right_direction: ndarray, left_top_direction: ndarray
+                 f0: np.ndarray, left_right_direction: ndarray, left_top_direction: ndarray,
                  ) -> None:
         super().__init__()
         self._board: "_Board" = board
@@ -215,25 +235,23 @@ class _FaceBoard:
         self.f0: np.ndarray = f0
         self.left_right_direction: ndarray = left_right_direction
         self.left_top_direction: ndarray = left_top_direction
-        self._cells: Sequence[Sequence[_Cell]] = [[_Cell(self, batch) for _ in range(0, _FaceBoard._h_size)] for _
-                                                  in
-                                                  range(0, _FaceBoard._v_size)]
+
+        self._cells: dict[Part, _Cell] = {p: _Cell(self, batch) for p in cube_face_supplier().parts}
 
     @property
     def cube_face(self) -> Face:
         return self.cube_face_supplier()
 
-    def set_cell(self, cy: int, cx: int, vertexes: Sequence[[int, int, int]], c: _VColor, marker: int) -> None:
+    def set_cell(self, part: Part, vertexes: Sequence[[int, int, int]], c: _VColor, marker: int) -> None:
         """
 
+        :param part:
         :param marker:
         :param c:
-        :param cy: 0. _FACE_SIZE
-        :param cx: 0 .. _FACE_SIZE
         :param vertexes: four corners of edge
         :return:
         """
-        self._cells[cy][cx].create_objects(vertexes, c, marker)
+        self._cells[part].create_objects(vertexes, c, marker)
 
     def draw_init(self):
 
@@ -271,49 +289,49 @@ class _FaceBoard:
             for i in range(len(lbox)):
                 lbox[i] = [GLfloat(lbox[i][0]), GLfloat(lbox[i][1]), GLfloat(lbox[i][2])]
 
-            fb.set_cell(cy, cx, lbox, face_color, marker)
+            fb.set_cell(p, lbox, face_color, marker)
 
-        y0 = 2  # need to fix the code below, we flipped by mistake when copied from text board
-        y2 = 0
-        x0 = 0
-        x2 = 2
-        # if self.flip_v:
-        #     _y0 = 2
-        #     y2 = 0
-        # else:
-        #     _y0 = 0
-        #     y2 = 2
-        #
-        # if self.flip_h:
-        #     _x0 = 2
-        #     x2 = 0
-        # else:
-        #     _x0 = 0
-        #     x2 = 2
-
-        _plot_cell(y0, x0, f.corner_top_left)
-        _plot_cell(y0, 1, f.edge_top)
-        _plot_cell(y0, x2, f.corner_top_right, marker=2)
-        _plot_cell(1, x0, f.edge_left)
+        _plot_cell(2, 0, f.corner_top_left)
+        _plot_cell(2, 1, f.edge_top)
+        _plot_cell(2, 2, f.corner_top_right, marker=2)
+        _plot_cell(1, 0, f.edge_left)
         _plot_cell(1, 1, f.center)
-        _plot_cell(1, x2, f.edge_right)
-        _plot_cell(y2, x0, f.corner_bottom_left, marker=1)
-        _plot_cell(y2, 1, f.edge_bottom)
-        _plot_cell(y2, x2, f.corner_bottom_right)
+        _plot_cell(1, 2, f.edge_right)
+        _plot_cell(0, 0, f.corner_bottom_left, marker=1)
+        _plot_cell(0, 1, f.edge_bottom)
+        _plot_cell(0, 2, f.corner_bottom_right)
 
     def update(self):
         self.draw_init()
 
+    @property
+    def cells(self) -> Iterable[_Cell]:
+        return self._cells.values()
+
     def draw(self):
         # need to optimize, no need to change position
-        for cs in self._cells:
-            for c in cs:
-                if c:
-                    c.draw()
+        for c in self.cells:
+            c.draw()
 
     @property
     def board(self):
         return self._board
+
+    def gui_objects(self) -> Tuple[ndarray, Sequence[int]]:
+        lists = []
+        for c in self.cells:
+            lists.extend(c.gui_objects())
+
+        face: Face = self.cube_face
+        bl: Sequence[GLfloat] = self._cells[face.corner_bottom_left].left_bottom_v3
+        rt: Sequence[GLfloat] = self._cells[face.corner_top_right].right_top_v3
+
+        _bl = np.array([x.value for x in bl], dtype=float).reshape((3,))
+        _rt = np.array([x.value for x in rt], dtype=float).reshape((3,))
+
+        center = (_bl + _rt) / 2
+
+        return center, lists
 
 
 class _Board:
@@ -379,6 +397,10 @@ class _Board:
     @property
     def vs(self):
         return self._vs
+
+    @property
+    def faces(self):
+        return self._faces
 
 
 _parts: dict[Hashable, int] = {}
@@ -495,3 +517,24 @@ class GCubeViewer:
         # -05 below so we see it
         _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1])
         _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
+
+    def _get_face(self, name: FaceName) -> _FaceBoard:
+        for f in self._board.faces:
+            if f.cube_face.name == name:
+                return f
+
+        assert False
+
+    def get_face_objects(self) -> Tuple[ndarray, ndarray, Sequence[int]]:
+
+        right = self._get_face(FaceName.R)
+        left = self._get_face(FaceName.L)
+
+        right_center: ndarray
+        left_center: ndarray
+
+        right_center, right_objects = right.gui_objects()
+        [left_center, _] = left.gui_objects()
+
+
+        return right_center, left_center, right_objects

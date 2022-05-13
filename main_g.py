@@ -1,10 +1,14 @@
 import math
 import sys
+import time
 import traceback
-from typing import MutableSequence
+from collections.abc import Sequence
+from typing import MutableSequence, Callable, Sequence
 
 import glooey
+import numpy as np
 import pyglet
+from numpy import ndarray
 from pyglet.gl import *
 from pyglet.window import key
 
@@ -71,6 +75,8 @@ class Window(pyglet.window.Window):
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
         self.text: MutableSequence[pyglet.text.Label] = []
 
+        self._animation: Callable[[], bool] | None = None
+
         self.update_gui_elements()
 
     def update_gui_elements(self):
@@ -93,7 +99,7 @@ class Window(pyglet.window.Window):
                                            x=10, y=70, font_size=10))
 
         solution = self.app.slv.solution().simplify()
-        s = "Solution:(" + str(solution.count()) + ") "+ str(solution)
+        s = "Solution:(" + str(solution.count()) + ") " + str(solution)
         self.text.append(pyglet.text.Label(s,
                                            x=10, y=90, font_size=10))
 
@@ -102,8 +108,8 @@ class Window(pyglet.window.Window):
             self.text.append(pyglet.text.Label(err,
                                                x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
 
-
     def on_draw(self):
+        print("Updating")
         # need to understand which buffers it clear, see
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         self.clear()
@@ -113,6 +119,8 @@ class Window(pyglet.window.Window):
         self.viewer.draw()
         # self.batch.draw()
         self.draw_text()
+
+        self.draw_animation()
 
     def on_resize(self, width, height):
         # https://hub.packtpub.com/creating-amazing-3d-guis-pyglet/
@@ -269,11 +277,141 @@ class Window(pyglet.window.Window):
 
         glPopAttrib()  # matrix mode
 
+    def draw_animation(self):
+        animation = self._animation
+
+        if animation:
+            print("Play animation")
+            cont = animation()
+            if not cont:
+                self._animation = None
+
 
 def main():
     app: Main = Main()
     Window(app, 720, 720, '"Cube"')
     pyglet.app.run()
+
+
+def play_rotate_face(window: Window) -> Callable[[], bool]:
+    face: Sequence[int]
+    center: ndarray
+    p1, p2, face = window.viewer.get_face_objects()
+
+    vs: ViewState = window.app.vs
+    i = 0
+    a = 0
+    func = None
+    start: float = time.time()
+
+    # Rotate A Point
+    # About An Arbitrary Axis
+    # (3 Dimensions)
+    # Written by Paul Bourke
+    # https://www.eng.uc.edu/~beaucag/Classes/Properties/OptionalProjects/CoordinateTransformationCode/Rotate%20about%20an%20arbitrary%20axis%20(3%20dimensions).html#:~:text=Step%202-,Rotate%20space%20about%20the%20x%20axis%20so%20that%20the%20rotation,no%20additional%20rotation%20is%20necessary.
+
+    x1 = p1[0]
+    y1 = p1[1]
+    z1 = p1[2]
+    x2 = p2[0]
+    y2 = p2[1]
+    z2 = p2[2]
+    T: ndarray = np.array([[1, 0, 0, -x1],
+                           [0, 1, 0, -y1],
+                           [0, 0, 1, -z1],
+                           [0, 0, 0, 1]
+                           ], dtype=float)
+    TT = np.linalg.inv(T)
+    U = (p1 - p2) / np.linalg.norm(p1 - p2)
+    a = U[0]
+    b = U[1]
+    c = U[2]
+    d = math.sqrt(b * b + c * c)
+    if d == 0:
+        Rx = np.array([[1, 0, 0, 0],
+                      [0, 1, 0, 0],
+                      [0, 0, 1, 0],
+                      [0, 0, 0, 1]], dtype=float)
+    else:
+        Rx = np.array([[1, 0, 0, 0],
+                      [0, c / d, -b / d, 0],
+                      [0, b / d, c / d, 0],
+                      [0, 0, 0, 1]], dtype=float)
+
+    RxT = np.linalg.inv(Rx)
+
+    Ry = np.array([[d, 0, -a, 0],
+                  [0, 1, 0, 0],
+                  [a, 0, d, 0],
+                  [0, 0, 0, 1]], dtype=float)
+
+    RyT = np.linalg.inv(Ry)
+
+    def _update() -> bool:
+
+        nonlocal i, func, a
+
+        i += 1
+        if time.time() - start > 1:
+            pyglet.clock.unschedule(func)
+            return False
+
+        vs.prepare_objects_view()
+
+        ct = math.cos(a)
+        st = math.sin(a)
+        Rz = np.array([[ct, st, 0, 0],
+                      [-st, ct, 0, 0],
+                      [0, 0, 1, 0],
+                      [0, 0, 0, 1]], dtype=float)
+
+        m = TT @ RxT @ RyT @ Rz @ Ry @ Rx @ T
+
+        gm = (GLfloat * 16)(0)
+        # column major
+        gm[0] = m[0][0]
+        gm[1] = m[1][0]
+        gm[2] = m[2][0]
+        gm[3] = m[3][0]
+
+        gm[4] = m[0][1]
+        gm[5] = m[1][1]
+        gm[6] = m[2][1]
+        gm[7] = m[3][1]
+
+        gm[8] = m[0][2]
+        gm[9] = m[1][2]
+        gm[10] = m[2][2]
+        gm[11] = m[3][2]
+
+        gm[12] = m[0][3]
+        gm[13] = m[1][3]
+        gm[14] = m[2][3]
+        gm[15] = m[3][3]
+
+        glMultMatrixf(gm)
+
+      #  glRotatef(math.degrepes(a), *direction)
+        a += vs.alpha_delta
+
+        try:
+            # if it R face, move it along X
+            glTranslatef(20, 0, 0)
+            for f in face:
+                glCallList(f)
+        finally:
+            vs.restore_objects_view()
+
+        return True
+
+    def _fire_event(dt):
+        window.dispatch_event("on_draw")
+
+    func = _fire_event
+
+    pyglet.clock.schedule_interval(func, 1 / 10)
+
+    return _update
 
 
 def _handle_input(window: Window, value: int, modifiers: int) -> bool:
@@ -298,6 +436,9 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
         case key.I:
             print(f"{vs.alpha_x=} {vs.alpha_y=} {vs.alpha_z=}")
             no_operation = True
+
+        case key.P:
+            window._animation = play_rotate_face(window)
 
         case key.R:
             op.op(algs.Algs.R, inv)
