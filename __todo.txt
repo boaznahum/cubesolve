@@ -1,0 +1,2 @@
+works only with numpy types or glm
+create a middle slice type

@@ -1,5 +1,5 @@
 from abc import ABC
-from collections.abc import Sequence, Iterable
+from collections.abc import Sequence, Iterable, Hashable
 from enum import Enum, unique
 from typing import TypeAlias, MutableSequence, Tuple
 
@@ -37,7 +37,8 @@ _Face: TypeAlias = "Face"
 # noinspection PyUnresolvedReferences
 _Cube: TypeAlias = "Cube"
 
-PartColorsID = frozenset(Color)
+PartColorsID = frozenset[Color]
+PartFixedID = frozenset[FaceName]
 
 
 class PartEdge:
@@ -92,8 +93,32 @@ class Part(ABC):
         self._edges: MutableSequence[PartEdge] = [*edges]
 
         self._pos_id = tuple(e.face.name for e in edges)
-        self._colors_id_by_pos: PartColorsID = None
-        self._colors_id_by_colors: PartColorsID = None
+        self._colors_id_by_pos: PartColorsID|None = None
+        self._colors_id_by_colors: PartColorsID|None = None
+        self._fixed_id: PartFixedID|None = None
+
+    def finish_init(self):
+        """
+        Assign a part a fixed _id, that is not changed when face color is changed
+        Must be called before any face changed
+        :return:
+        """
+        _id = frozenset((p.face.name for p in self._edges))
+
+        if self._fixed_id:
+            if _id != self._fixed_id:
+                raise Exception(f"SW error, you are trying to re assign part id was: {self._fixed_id}, new: {_id}")
+        else:
+            self._fixed_id = _id
+
+    @property
+    def fixed_id(self) -> PartFixedID:
+        """
+        An ID that is not changed when color ir parent face color is changed
+        It actaully track the instance of the edge, but it will same for all instances of cube
+        :return:
+        """
+        return self._fixed_id
 
     def get_face_edge(self, face: _Face) -> PartEdge:
         """
@@ -183,7 +208,7 @@ class Part(ABC):
         :return:
         """
 
-        by_pos: PartColorsID = self._colors_id_by_pos
+        by_pos: PartColorsID|None = self._colors_id_by_pos
 
         if not by_pos:
             by_pos = frozenset(e.face.color for e in self._edges)
@@ -207,7 +232,7 @@ class Part(ABC):
         :return:
         """
 
-        colors_id: PartColorsID = self._colors_id_by_colors
+        colors_id: PartColorsID|None = self._colors_id_by_colors
 
         if not colors_id:
             colors_id = frozenset(e.color for e in self._edges)
@@ -468,6 +493,8 @@ class Face:
                          self._corner_bottom_left]
 
         self._parts = (self._center, *self._edges, *self._corners)
+        for p in self._parts:
+            p.finish_init()
 
     # noinspection PyUnresolvedReferences
     @property
