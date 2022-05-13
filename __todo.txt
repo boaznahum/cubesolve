@@ -1,2 +1,2 @@
-works only with numpy types or glm
+works only with numpy types or glm, we convert to c_float and then agin in animation to ndarray
 create a middle slice type

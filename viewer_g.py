@@ -18,6 +18,8 @@ _CELL_SIZE: int = 25
 
 _VColor = Tuple[int, int, int]
 
+Vec3f = Tuple[c_float]
+
 
 def _ansi_color(color, char: str):
     return color + colorama.Style.BRIGHT + char + colorama.Style.RESET_ALL
@@ -68,7 +70,7 @@ class _Cell:
         self.gl_lists = 0
 
     # noinspection PyUnusedLocal
-    def create_objects(self, vertexes: Sequence[Sequence[c_float]], color, marker: int):
+    def create_objects(self, vertexes: Sequence[Vec3f], color, marker: int):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
@@ -108,7 +110,7 @@ class _Cell:
         vs.restore_objects_view()
 
     # noinspection PyMethodMayBeStatic
-    def _create_polygon(self, vertexes: Sequence[Sequence[c_float, c_float, c_float]], color):
+    def _create_polygon(self, vertexes: Sequence[Vec3f], color):
 
         # glBegin(GL_TRIANGLE_FAN)
         gl.glBegin(gl.GL_QUADS)
@@ -239,7 +241,7 @@ class _FaceBoard:
     def cube_face(self) -> Face:
         return self.cube_face_supplier()
 
-    def set_cell(self, part: Part, vertexes: Sequence[[int, int, int]], c: _VColor, marker: int) -> None:
+    def set_cell(self, part: Part, vertexes: Sequence[Vec3f], c: _VColor, marker: int) -> None:
         """
 
         :param part:
@@ -283,6 +285,8 @@ class _FaceBoard:
 
             l_box = [x.reshape((3,)).tolist() for x in box]
 
+            # convert to gl,
+            # but this is waste of time, when calculating center and rotate axis, we again convert to ndarray
             for i in range(len(l_box)):
                 l_box[i] = [c_float(l_box[i][0]), c_float(l_box[i][1]), c_float(l_box[i][2])]
 
