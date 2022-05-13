@@ -348,6 +348,10 @@ def play_rotate_face(window: Window) -> Callable[[], bool]:
 
     RyT = np.linalg.inv(Ry)
 
+    #TT @ RxT @ RyT @ Rz @ Ry @ Rx @ T
+    MT:ndarray = TT @ RxT @ RyT  # ? == inv(M)
+    M:ndarray = Ry @ Rx @ T
+
     def _update() -> bool:
 
         nonlocal i, func, a
@@ -366,33 +370,14 @@ def play_rotate_face(window: Window) -> Callable[[], bool]:
                       [0, 0, 1, 0],
                       [0, 0, 0, 1]], dtype=float)
 
-        m = TT @ RxT @ RyT @ Rz @ Ry @ Rx @ T
+        m: ndarray = MT @ Rz @ M
 
         gm = (gl.GLfloat * 16)(0)
         # column major
-        gm[0] = m[0][0]
-        gm[1] = m[1][0]
-        gm[2] = m[2][0]
-        gm[3] = m[3][0]
-
-        gm[4] = m[0][1]
-        gm[5] = m[1][1]
-        gm[6] = m[2][1]
-        gm[7] = m[3][1]
-
-        gm[8] = m[0][2]
-        gm[9] = m[1][2]
-        gm[10] = m[2][2]
-        gm[11] = m[3][2]
-
-        gm[12] = m[0][3]
-        gm[13] = m[1][3]
-        gm[14] = m[2][3]
-        gm[15] = m[3][3]
+        gm[:] = m.flatten(order="F")
+        print(f"{type(gm[0])=},{type(m[0][0])}")
 
         gl.glMultMatrixf(gm)
-
-      #  glRotatef(math.degrepes(a), *direction)
         a += vs.alpha_delta
 
         try:
