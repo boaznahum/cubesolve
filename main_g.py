@@ -5,18 +5,19 @@ import traceback
 from collections.abc import Sequence
 from typing import MutableSequence, Callable, Sequence
 
-import glooey
+import glooey  # type: ignore
 import numpy as np
-import pyglet
+import pyglet  # type: ignore
+from pyglet import gl
 from numpy import ndarray
-from pyglet.gl import *
-from pyglet.window import key
+from pyglet.window import key  # type: ignore
 
 import algs
 import viewer_g
 from algs import Alg, Algs
 from cube import Cube
 from cube_operator import Operator
+from elements import FaceName
 from solver import Solver
 from view_state import ViewState
 from viewer_g import GCubeViewer
@@ -62,11 +63,11 @@ class Window(pyglet.window.Window):
     def __init__(self, app: Main, width, height, title=''):
         super(Window, self).__init__(width, height, title, resizable=True)
         # from cube3d
-        glClearColor(0, 0, 0, 1)
+        gl.glClearColor(0, 0, 0, 1)
 
         # see Z-Buffer in
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
-        glEnable(GL_DEPTH_TEST)
+        gl.glEnable(gl.GL_DEPTH_TEST)
 
         self.batch = pyglet.graphics.Batch()
         # self.create_layout()
@@ -125,21 +126,21 @@ class Window(pyglet.window.Window):
     def on_resize(self, width, height):
         # https://hub.packtpub.com/creating-amazing-3d-guis-pyglet/
         # set the Viewport
-        glViewport(0, 0, width, height)
+        gl.glViewport(0, 0, width, height)
 
-        glPushAttrib(GL_MATRIX_MODE)
+        gl.glPushAttrib(gl.GL_MATRIX_MODE)
         # using Projection mode
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
 
         aspect_ratio = width / height
-        gluPerspective(35, aspect_ratio, 1, 1000)
+        gl.gluPerspective(35, aspect_ratio, 1, 1000)
 
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-        glTranslatef(0, 0, -400)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
+        gl.glTranslatef(0, 0, -400)
 
-        glPopAttrib()
+        gl.glPopAttrib()
 
     def on_key_press(self, symbol, modifiers):
         try:
@@ -164,49 +165,49 @@ class Window(pyglet.window.Window):
     #     return GL_NOT
 
     def draw_axis(self):
-        glPushAttrib(GL_MATRIX_MODE)
-        glMatrixMode(GL_MODELVIEW)
+        gl.glPushAttrib(gl.GL_MATRIX_MODE)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
 
-        glPushMatrix()
+        gl.glPushMatrix()
 
-        glLoadIdentity()
-        glTranslatef(0, 0, -400)
+        gl.glLoadIdentity()
+        gl.glTranslatef(0, 0, -400)
 
         # ideally we want the axis to be fixed, but in this case we won't see the Z,
         #  so we rotate the Axes, or we should change the perspective
         vs: ViewState = self.app.vs
-        glRotatef(math.degrees(vs.alpha_x_0), 1, 0, 0)
-        glRotatef(math.degrees(vs.alpha_y_0), 0, 1, 0)
-        glRotatef(math.degrees(vs.alpha_z_0), 0, 0, 1)
+        gl.glRotatef(math.degrees(vs.alpha_x_0), 1, 0, 0)
+        gl.glRotatef(math.degrees(vs.alpha_y_0), 0, 1, 0)
+        gl.glRotatef(math.degrees(vs.alpha_z_0), 0, 0, 1)
 
-        glPushAttrib(GL_LINE_WIDTH)
-        glLineWidth(3)
+        gl.glPushAttrib(gl.GL_LINE_WIDTH)
+        gl.glLineWidth(3)
 
-        glBegin(GL_LINES)
+        gl.glBegin(gl.GL_LINES)
 
-        glColor3ub(255, 255, 255)
-        glVertex3f(0, 0, 0)
-        glVertex3f(200, 0, 0)
-        glEnd()
+        gl.glColor3ub(255, 255, 255)
+        gl.glVertex3f(0, 0, 0)
+        gl.glVertex3f(200, 0, 0)
+        gl.glEnd()
 
-        glBegin(GL_LINES)
-        glColor3ub(255, 0, 0)
-        glVertex3f(0, 0, 0)
-        glVertex3f(0, 200, 0)
-        glEnd()
+        gl.glBegin(gl.GL_LINES)
+        gl.glColor3ub(255, 0, 0)
+        gl.glVertex3f(0, 0, 0)
+        gl.glVertex3f(0, 200, 0)
+        gl.glEnd()
 
-        glBegin(GL_LINES)
-        glColor3ub(0, 255, 0)
-        glVertex3f(0, 0, 0)
-        glVertex3f(0, 0, 200)
+        gl.glBegin(gl.GL_LINES)
+        gl.glColor3ub(0, 255, 0)
+        gl.glVertex3f(0, 0, 0)
+        gl.glVertex3f(0, 0, 200)
 
-        glEnd()
+        gl.glEnd()
 
-        glPopAttrib()  # line width
+        gl.glPopAttrib()  # line width
 
         # Pop Matrix off stack
-        glPopMatrix()
-        glPopAttrib()  # GL_MATRIX_MODE
+        gl.glPopMatrix()
+        gl.glPopAttrib()  # GL_MATRIX_MODE
 
     def create_layout(self):
         window = self
@@ -244,38 +245,38 @@ class Window(pyglet.window.Window):
     def draw_text(self):
         window = self
 
-        glPushAttrib(GL_MATRIX_MODE)
+        gl.glPushAttrib(gl.GL_MATRIX_MODE)
 
         # using Projection mode
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
 
         w = window.width
         h = window.height
-        glOrtho(0, w, 0, h, -1.0, 1.0)
+        gl.glOrtho(0, w, 0, h, -1.0, 1.0)
 
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
 
-        glPopAttrib()  # matrix mode
+        gl.glPopAttrib()  # matrix mode
 
         for t in self.text:
             t.draw()
 
         # restore state
 
-        glPushAttrib(GL_MATRIX_MODE)
+        gl.glPushAttrib(gl.GL_MATRIX_MODE)
 
         # using Projection mode
-        glMatrixMode(GL_MODELVIEW)
-        glPopMatrix()
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPopMatrix()
 
-        glMatrixMode(GL_PROJECTION)
-        glPopMatrix()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPopMatrix()
 
-        glPopAttrib()  # matrix mode
+        gl.glPopAttrib()  # matrix mode
 
     def draw_animation(self):
         animation = self._animation
@@ -296,7 +297,7 @@ def main():
 def play_rotate_face(window: Window) -> Callable[[], bool]:
     face: Sequence[int]
     center: ndarray
-    p1, p2, face = window.viewer.get_face_objects()
+    p1, p2, face = window.viewer.get_face_objects(FaceName.R)
 
     vs: ViewState = window.app.vs
     i = 0
@@ -367,7 +368,7 @@ def play_rotate_face(window: Window) -> Callable[[], bool]:
 
         m = TT @ RxT @ RyT @ Rz @ Ry @ Rx @ T
 
-        gm = (GLfloat * 16)(0)
+        gm = (gl.GLfloat * 16)(0)
         # column major
         gm[0] = m[0][0]
         gm[1] = m[1][0]
@@ -389,16 +390,16 @@ def play_rotate_face(window: Window) -> Callable[[], bool]:
         gm[14] = m[2][3]
         gm[15] = m[3][3]
 
-        glMultMatrixf(gm)
+        gl.glMultMatrixf(gm)
 
       #  glRotatef(math.degrepes(a), *direction)
         a += vs.alpha_delta
 
         try:
             # if it R face, move it along X
-            glTranslatef(20, 0, 0)
+            # gl.glTranslatef(20, 0, 0)
             for f in face:
-                glCallList(f)
+                gl.glCallList(f)
         finally:
             vs.restore_objects_view()
 

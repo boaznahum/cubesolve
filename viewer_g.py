@@ -192,7 +192,7 @@ class _Cell:
         for i in range(marker + 1):
             self._g_markers.append(pyglet.shapes.Circle(x0, y0, i * 2, batch=self._batch, color=[0, 0, 0]))
 
-    def gui_objects(self) -> Sequence[int]:
+    def gui_objects(self) -> Iterable[int]:
         return [self.gl_lists]
 
     @property
@@ -318,10 +318,14 @@ class _FaceBoard:
     def board(self):
         return self._board
 
-    def gui_objects(self) -> Tuple[ndarray, Sequence[int]]:
+    def gui_objects(self) -> Sequence[int]:
         lists: list[int] = []
         for c in self.cells:
             lists.extend(c.gui_objects())
+
+        return lists
+
+    def get_center(self) -> ndarray:
 
         face: Face = self.cube_face
         bl: Sequence[c_float] = self._cells[face.corner_bottom_left.fixed_id].left_bottom_v3
@@ -332,7 +336,14 @@ class _FaceBoard:
 
         center = (_bl + _rt) / 2
 
-        return center, lists
+        return center
+
+    def center_and_gui_objects(self) -> Tuple[ndarray, Sequence[int]]:
+
+        return self.get_center(), self.gui_objects()
+
+    def get_part_gui_object(self, p: Part) -> Iterable[int]:
+        return self._cells[p.fixed_id].gui_objects()
 
 
 class _Board:
@@ -526,15 +537,36 @@ class GCubeViewer:
 
         assert False
 
-    def get_face_objects(self) -> Tuple[ndarray, ndarray, Sequence[int]]:
+    def _get_face_gui_objects(self, f: _FaceBoard) -> Iterable[int]:
 
-        right = self._get_face(FaceName.R)
-        left = self._get_face(FaceName.L)
+        lists: set[int] = set()
+
+        this_face_objects = f.gui_objects()
+        lists.update(this_face_objects)
+
+        this_cube_face: Face = f.cube_face
+
+        cube_face_adjusts: Iterable[Face] = this_cube_face.adjusted_faces()
+
+        for adjust in cube_face_adjusts:
+            adjust_board: _FaceBoard = self._get_face(adjust.name)
+            for p in adjust.parts:
+                if p.on_face(this_cube_face):
+                    p_lists = adjust_board.get_part_gui_object(p)
+                    lists.update(p_lists)
+
+        return lists
+
+    def get_face_objects(self, name: FaceName) -> Tuple[ndarray, ndarray, Sequence[int]]:
+
+        right: _FaceBoard = self._get_face(name)
+        left: _FaceBoard = self._get_face(self._cube.face(name).opposite.name)
 
         right_center: ndarray
         left_center: ndarray
 
-        right_center, right_objects = right.gui_objects()
-        [left_center, _] = left.gui_objects()
+        right_center = right.get_center()
+        right_objects = self._get_face_gui_objects(right)
+        left_center = left.get_center()
 
         return right_center, left_center, right_objects

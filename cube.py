@@ -121,6 +121,8 @@ class Cube:
     def faces(self) -> Iterable[Face]:
         return self._faces.values()
 
+    def face(self, name: FaceName) -> Face:
+        return self._faces[name]
 
     def _reset_after_faces_changes(self):
         """
@@ -163,7 +165,6 @@ class Cube:
         self._reset_after_faces_changes()
 
         self.sanity()
-
 
     def x_rotate(self, n):
         """
@@ -208,7 +209,6 @@ class Cube:
 
         self.sanity()
 
-
     def y_rotate(self, n=1):
         """
         entire over U  (please note that e is over D)
@@ -233,7 +233,6 @@ class Cube:
 
         self._reset_after_faces_changes()
 
-
     def z_rotate(self, n=1):
         """
         entire over F
@@ -244,7 +243,6 @@ class Cube:
             self.y_rotate(1)
             self.x_rotate(-1)
             self.y_rotate(-1)
-
 
     def sanity(self):
 
@@ -274,7 +272,6 @@ class Cube:
             (Color.RED, Color.GREEN),
             (Color.GREEN, Color.ORANGE),
         ]:
-
             self.find_part_by_colors(frozenset([c1, c2]))
 
     @property
@@ -379,7 +376,6 @@ class Cube:
                 return p
 
         raise ValueError(f"Cube doesn't contain corner {str(part_colors_id)}")
-
 
 
 def _create_edge(f1: Face, f2: Face) -> Edge:
