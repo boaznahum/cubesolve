@@ -294,10 +294,10 @@ def main():
     pyglet.app.run()
 
 
-def play_rotate_face(window: Window) -> Callable[[], bool]:
+def play_rotate_face(window: Window, name: FaceName) -> Callable[[], bool]:
     face: Sequence[int]
     center: ndarray
-    p1, p2, face = window.viewer.get_face_objects(FaceName.R)
+    p1, p2, face = window.viewer.get_face_objects(name)
 
     vs: ViewState = window.app.vs
     i = 0
@@ -400,6 +400,8 @@ def play_rotate_face(window: Window) -> Callable[[], bool]:
     return _update
 
 
+_last_face: FaceName = FaceName.R
+
 def _handle_input(window: Window, value: int, modifiers: int) -> bool:
     done = False
 
@@ -411,6 +413,8 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
     inv = modifiers & key.MOD_SHIFT
 
     no_operation = False
+
+    global _last_face
 
     # noinspection PyProtectedMember
     match value:
@@ -424,29 +428,35 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             no_operation = True
 
         case key.P:
-            window._animation = play_rotate_face(window)
+            window._animation = play_rotate_face(window, _last_face)
 
         case key.R:
+            _last_face = FaceName.R
             op.op(algs.Algs.R, inv)
         case key.L:
+            _last_face = FaceName.L
             op.op(algs.Algs.L, inv)
 
         case key.U:
+            _last_face = FaceName.U
             op.op(algs.Algs.U, inv)
 
         case key.E:
             op.op(algs.Algs.E, inv)
 
         case key.F:
+            _last_face = FaceName.F
             op.op(algs.Algs.F, inv)
 
         case key.S:
             op.op(algs.Algs.S, inv)
 
         case key.B:
+            _last_face = FaceName.B
             op.op(algs.Algs.B, inv)
 
         case key.D:
+            _last_face = FaceName.D
             op.op(algs.Algs.D, inv)
 
         case key.X:

@@ -537,6 +537,12 @@ class GCubeViewer:
 
         assert False
 
+    def _get_faces(self, name: FaceName) -> Iterable[_FaceBoard]:
+
+        for f in self._board.faces:
+            if f.cube_face.name == name:
+                yield f
+
     def _get_face_gui_objects(self, f: _FaceBoard) -> Iterable[int]:
 
         lists: set[int] = set()
@@ -557,6 +563,19 @@ class GCubeViewer:
 
         return lists
 
+    def _get_faces_gui_objects(self, fs: Iterable[_FaceBoard]) -> Iterable[int]:
+
+        lists: set[int] = set()
+
+
+        for f in fs:
+            lists.update(self._get_face_gui_objects(f))
+
+        return lists
+
+
+
+
     def get_face_objects(self, name: FaceName) -> Tuple[ndarray, ndarray, Sequence[int]]:
 
         right: _FaceBoard = self._get_face(name)
@@ -566,7 +585,9 @@ class GCubeViewer:
         left_center: ndarray
 
         right_center = right.get_center()
-        right_objects = self._get_face_gui_objects(right)
+        # because left,back and down have more than one gui faces
+        right_objects = self._get_faces_gui_objects(self._get_faces(name))
         left_center = left.get_center()
 
         return right_center, left_center, right_objects
+
