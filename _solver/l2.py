@@ -106,6 +106,9 @@ class L2(SolverElement):
         up: Face = self.cube.up
         down: Face = up.opposite
 
+        if se().on_face(down):
+            print()
+
         assert not se().on_face(down)
 
         if not se().on_face(up):

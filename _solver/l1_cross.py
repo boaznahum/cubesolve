@@ -38,7 +38,7 @@ class L1Cross(SolverElement):
 
     def solve_l0_cross(self):
 
-        if self._is_cross():
+        if self._is_cross(): #
             return  # avoid rotating cube
 
         # before rotating

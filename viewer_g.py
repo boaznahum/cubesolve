@@ -11,7 +11,7 @@ import pyglet.gl as gl
 from pyglet.graphics import Batch  # type: ignore
 
 from cube import Cube
-from elements import Face, Color, Part, FaceName, PartFixedID
+from elements import Face, Color, Part, FaceName, PartFixedID, AxisName
 from view_state import ViewState
 
 _CELL_SIZE: int = 25
@@ -103,7 +103,6 @@ class _Cell:
         hidden = self._face_board.board.get_hidden()
         if hidden and lists in hidden:
             return
-
 
         self._prepare_view_state()
         glCallList(self.gl_lists)
@@ -435,7 +434,6 @@ class _Board:
         self._hidden_objects = set()
 
 
-
 _parts: dict[Hashable, int] = {}
 
 
@@ -505,7 +503,6 @@ class GCubeViewer:
 
         self._init_gui()
 
-
     def update(self):
         self._board.update()
 
@@ -537,7 +534,7 @@ class GCubeViewer:
         # -0.75 from it x location, so we can see it in isometric view
         # OK
         _plot_face(b, lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0])
-        _plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0])
+        #_plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0])
 
         # OK
         _plot_face(b, lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0])
@@ -547,11 +544,11 @@ class GCubeViewer:
 
         # OK! -2 far away so we can see it
         _plot_face(b, lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0])
-        _plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
+        #_plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
 
         # -05 below so we see it
         _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1])
-        _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
+        #_plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
 
     def _get_face(self, name: FaceName) -> _FaceBoard:
         for f in self._board.faces:
@@ -603,7 +600,6 @@ class GCubeViewer:
         right: _FaceBoard = self._get_face(name)
         left: _FaceBoard = self._get_face(self._cube.face(name).opposite.name)
 
-
         right_center: ndarray = right.get_center()
         # because left,back and down have more than one gui faces
         right_objects: Iterable[int] = self._get_faces_gui_objects(self._get_faces(name))
@@ -613,3 +609,36 @@ class GCubeViewer:
             self._board.set_hidden(right_objects)
 
         return right_center, left_center, right_objects
+
+    def git_whole_cube_objects(self, axis_name: AxisName, hide: bool = True) -> Tuple[ndarray, ndarray, Sequence[int]]:
+
+        name: FaceName
+        match axis_name:
+
+            case AxisName.X:
+                name = FaceName.R
+
+            case AxisName.Y:
+                name = FaceName.U
+
+            case AxisName.Z:
+                name = FaceName.F
+
+            case _:
+                raise RuntimeError(f"Unknown Axis {axis_name}")
+
+        right: _FaceBoard = self._get_face(name)
+        left: _FaceBoard = self._get_face(self._cube.face(name).opposite.name)
+
+        right_center: ndarray = right.get_center()
+        # because left,back and down have more than one gui faces
+        left_center: ndarray = left.get_center()
+
+        objects = set()
+        for f in  self._board.faces:
+            objects.update(f.gui_objects())
+
+        if hide:
+            self._board.set_hidden(objects)
+
+        return right_center, left_center, objects

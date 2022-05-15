@@ -244,6 +244,21 @@ class Cube:
             self.x_rotate(-1)
             self.y_rotate(-1)
 
+    def rotate_whole(self, axis_name: AxisName, n=1):
+        match axis_name:
+
+            case AxisName.X:
+                self.x_rotate(n)
+
+            case AxisName.Y:
+                self.y_rotate(n)
+
+            case AxisName.Z:
+                self.z_rotate(n)
+
+            case _:
+                raise RuntimeError(f"Unknown Axis {axis_name}")
+
     def sanity(self):
 
         # if True:
@@ -282,9 +297,6 @@ class Cube:
                 self._up.solved and
                 self._back.solved and
                 self._down.solved)
-
-    def view(self) -> "CubeView":
-        return CubeView(self)
 
     def reset(self):
         self._reset()
@@ -395,47 +407,3 @@ def _create_corner(f1: Face, f2: Face, f3: Face) -> Corner:
     e: Corner = Corner(p1, p2, p3)
 
     return e
-
-
-class CubeView:
-    __slots__ = ["_cube",
-                 "_front", "_left", "_up", "_right", "_down", "_back"]
-
-    def __init__(self, cube: Cube) -> None:
-        super().__init__()
-        self._cube: Cube = cube
-
-        self._front = cube.front
-        self._left = cube.left
-        self._up = cube.up
-        self._right = cube.right
-        self._down = cube.down
-        self._back = cube.back
-
-    @property
-    def front(self):
-        return self._front
-
-    @property
-    def left(self):
-        return self._left
-
-    @property
-    def right(self) -> Face:
-        return self._right
-
-    @property
-    def up(self):
-        return self._up
-
-    @property
-    def back(self):
-        return self._back
-
-    @property
-    def down(self):
-        return self._down
-
-    @property
-    def solved(self):
-        return self._cube.solved

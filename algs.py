@@ -5,11 +5,10 @@ from random import Random
 from typing import Sequence, Any, final
 
 from cube import Cube
-from elements import FaceName
+from elements import FaceName, AxisName
 
 
 def _inv(inv: bool, n) -> int:
-
     return -n if inv else n
 
 
@@ -85,7 +84,6 @@ class _Inv(Alg):
         :return:
         """
 
-
         if isinstance(self._alg, _Inv):
             return self._alg.simplify()
 
@@ -113,7 +111,6 @@ class _Inv(Alg):
         a = self.simplify()  # can't be _Mul, nor Inv
 
         return a.flatten()
-
 
 
 @final
@@ -228,7 +225,11 @@ class SimpleAlg(Alg, ABC):
         return self._n
 
     @property
-    def face(self):
+    def face(self) -> FaceName | None:
+        return None
+
+    @property
+    def axis_name(self) -> AxisName | None:
         return None
 
     @final
@@ -254,6 +255,25 @@ class FaceAlg(SimpleAlg, ABC):
         cube.face(self._face).rotate(_inv(inv, self._n))
 
 
+class WholeCubeAlg(SimpleAlg, ABC):
+
+    def __init__(self, axis_name: AxisName, n: int = 1) -> None:
+        super().__init__(axis_name.value, n)
+        self._axis_name = axis_name
+
+    @property
+    def axis_name(self) -> AxisName:
+        return self._axis_name
+
+    @final
+    def play(self, cube: Cube, inv: bool):
+        cube.rotate_whole(self.axis_name, _inv(inv, self._n))
+
+    @final
+    @property
+    def is_whole(self):
+        return True
+
 
 @final
 class _U(FaceAlg):
@@ -269,8 +289,6 @@ class _F(FaceAlg):
         super().__init__(FaceName.F)
 
 
-
-
 @final
 class _R(FaceAlg):
 
@@ -278,13 +296,11 @@ class _R(FaceAlg):
         super().__init__(FaceName.R)
 
 
-
 @final
 class _L(FaceAlg):
 
     def __init__(self) -> None:
         super().__init__(FaceName.L)
-
 
 
 @final
@@ -301,7 +317,6 @@ class _D(FaceAlg):
         super().__init__(FaceName.D)
 
 
-
 @final
 class _M(SimpleAlg):
 
@@ -313,17 +328,11 @@ class _M(SimpleAlg):
 
 
 @final
-class _X(SimpleAlg):
+class _X(WholeCubeAlg):
 
     def __init__(self) -> None:
-        super().__init__("X")
+        super().__init__(AxisName.X)
 
-    def play(self, cube: Cube, inv: bool = False):
-        cube.x_rotate(_inv(inv, self._n))
-
-    @property
-    def is_whole(self):
-        return True
 
 
 @final
@@ -340,17 +349,10 @@ class _E(SimpleAlg):
 
 
 @final
-class _Y(SimpleAlg):
+class _Y(WholeCubeAlg):
 
     def __init__(self) -> None:
-        super().__init__("Y")
-
-    def play(self, cube: Cube, inv: bool = False):
-        cube.y_rotate(_inv(inv, self._n))
-
-    @property
-    def is_whole(self):
-        return True
+        super().__init__(AxisName.Y)
 
 
 @final
@@ -367,17 +369,10 @@ class _S(SimpleAlg):
 
 
 @final
-class _Z(SimpleAlg):
+class _Z(WholeCubeAlg):
 
     def __init__(self) -> None:
-        super().__init__("Y")
-
-    def play(self, cube: Cube, inv: bool = False):
-        cube.z_rotate(_inv(inv, self._n))
-
-    @property
-    def is_whole(self):
-        return True
+        super().__init__(AxisName.Z)
 
 
 class _BigAlg(Alg):

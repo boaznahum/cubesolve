@@ -168,8 +168,8 @@ class CommonOp(ICommon):
 
             case FaceName.U:
                 return Algs.U
-            case FaceName.D:
-                return Algs.D
+            case FaceName.F:
+                return Algs.F
             case FaceName.R:
                 return Algs.R
             case FaceName.L:

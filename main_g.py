@@ -14,7 +14,7 @@ import algs
 from algs import Alg, Algs
 from cube import Cube
 from cube_operator import Operator
-from elements import FaceName
+from elements import FaceName, AxisName
 from solver import Solver
 from view_state import ViewState
 from viewer_g import GCubeViewer
@@ -30,7 +30,6 @@ class Main:
         self._error: str | None = None
         self.cube = Cube()
         self.op: Operator = Operator(self.cube)
-
 
         self.slv: Solver = Solver(self.op)
 
@@ -100,10 +99,10 @@ class Window(pyglet.window.Window):
         self.text.append(pyglet.text.Label(err,
                                            x=10, y=70, font_size=10))
 
-        solution = self.app.slv.solution().simplify()
-        s = "Solution:(" + str(solution.count()) + ") " + str(solution)
-        self.text.append(pyglet.text.Label(s,
-                                           x=10, y=90, font_size=10))
+        # solution = self.app.slv.solution().simplify()
+        # s = "Solution:(" + str(solution.count()) + ") " + str(solution)
+        # self.text.append(pyglet.text.Label(s,
+        #                                    x=10, y=90, font_size=10))
 
         if self.app.error:
             err = f"Error:{self.app.error}"
@@ -111,7 +110,7 @@ class Window(pyglet.window.Window):
                                                x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
 
     def on_draw(self):
-        #print("Updating")
+        # print("Updating")
         # need to understand which buffers it clear, see
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         self.clear()
@@ -283,7 +282,7 @@ class Window(pyglet.window.Window):
         animation = self._animation
 
         if animation:
-            #print("Play animation")
+            # print("Play animation")
             animation()
 
     @property
@@ -311,10 +310,15 @@ class Animation:
 
 
 # noinspection PyPep8Naming
-def _create_animation(window: Window, name: FaceName, n_count) -> Animation:
+def _create_animation(window: Window, face_name: FaceName, axis_name: AxisName, n_count) -> Animation:
     face: Sequence[int]
     center: ndarray
-    face_center, opposite_face_center, face = window.viewer.get_face_objects(name)
+
+    if face_name:
+        face_center, opposite_face_center, face = window.viewer.get_face_objects(face_name)
+    else:
+        assert axis_name
+        face_center, opposite_face_center, face = window.viewer.git_whole_cube_objects(axis_name)
 
     vs: ViewState = window.app.vs
     current_angel = 0
@@ -399,7 +403,6 @@ def _create_animation(window: Window, name: FaceName, n_count) -> Animation:
         gm = (gl.GLfloat * 16)(0)
         # column major
         gm[:] = m.flatten(order="F")
-        #print(f"{type(gm[0])=},{type(m[0][0])}")
 
         gl.glMultMatrixf(gm)
         current_angel += angel_delta
@@ -426,8 +429,7 @@ def _create_animation(window: Window, name: FaceName, n_count) -> Animation:
 
 
 def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: algs.SimpleAlg):
-    name = alg.face
-    if not name:
+    if not alg.face and not alg.axis_name:
         operator.op(alg, inv)
         return
 
@@ -436,7 +438,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
         assert isinstance(_alg, algs.SimpleAlg)
         alg = _alg
 
-    animation: Animation = _create_animation(window, name, alg.n)
+    animation: Animation = _create_animation(window, alg.face, alg.axis_name, alg.n)
     delay: float = animation.delay
 
     window._animation = animation.animation_draw
@@ -447,7 +449,6 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
         window.flip()
         time.sleep(delay)
 
-    #print("Animation done")
     if animation.animation_cleanup:
         animation.animation_cleanup()
 
@@ -529,7 +530,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
                 no_operation = True
 
             else:
-                op.op(algs.Algs.X, inv)
+                op_and_play_animation(window, op, inv, algs.Algs.X)
 
         case key.M:
             op.op(algs.Algs.M, inv)
@@ -542,7 +543,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
                 vs.alpha_y += vs.alpha_delta
                 no_operation = True
             else:
-                op.op(algs.Algs.Y, inv)
+                op_and_play_animation(window, op, inv, algs.Algs.Y)
 
         case key.E:
             op.op(algs.Algs.E, inv)
@@ -555,7 +556,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
                 vs.alpha_z += vs.alpha_delta
                 no_operation = True
             else:
-                op.op(algs.Algs.Z, inv)
+                op_and_play_animation(window, op, inv, algs.Algs.Z)
 
         case "A":
 
@@ -587,11 +588,11 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             for s in range(0, 50):
                 op.reset()
                 alg = Algs.scramble(s)
-                op.op(alg)
+                op.op(alg, animation=False)
 
                 # noinspection PyBroadException
                 try:
-                    slv.solve()
+                    slv.solve(animation=False)
                     assert slv.is_solved
 
                 except Exception:

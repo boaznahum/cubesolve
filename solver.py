@@ -1,3 +1,4 @@
+import viewer
 from _solver.base_solver import ISolver
 from _solver.common_op import CommonOp
 from _solver.l1_corners import L1Corners
@@ -84,7 +85,7 @@ class Solver(ISolver):
         return s
 
     def solve(self, debug=True, animation=True):
-        if self._op.suspended_animation(not animation):
+        with self._op.suspended_animation(not animation):
             return self._solve(debug)
 
     def _solve(self, debug=True):

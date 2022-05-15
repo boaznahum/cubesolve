@@ -31,6 +31,15 @@ class FaceName(Enum):
     L = "L"
     R = "R"
 
+@unique
+class AxisName(Enum):
+    """
+    Whole cube Axis name
+    """
+    X = "X"
+    Y = "Y"
+    Z = "Z"
+
 
 _Face: TypeAlias = "Face"
 
@@ -133,7 +142,14 @@ class Part(ABC):
         raise ValueError(f"Part {self} doesn't contain face {face}")
 
     def __str__(self) -> str:
-        return str([str(e) for e in self._edges])
+        s = str([str(e) for e in self._edges])
+
+        if self.match_faces:
+            s = "+" + s
+        else:
+            s = "-" + s
+
+        return s
 
     def __repr__(self):
         return self.__str__()
