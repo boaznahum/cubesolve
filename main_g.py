@@ -1,7 +1,8 @@
 import math
 import time
 import traceback
-from typing import MutableSequence, Callable, Sequence
+from collections.abc import Iterable
+from typing import MutableSequence, Callable
 
 import glooey  # type: ignore
 import numpy as np
@@ -14,7 +15,7 @@ import algs
 from algs import Alg, Algs
 from cube import Cube
 from cube_operator import Operator
-from elements import FaceName, AxisName
+from elements import FaceName
 from solver import Solver
 from view_state import ViewState
 from viewer_g import GCubeViewer
@@ -310,15 +311,18 @@ class Animation:
 
 
 # noinspection PyPep8Naming
-def _create_animation(window: Window, face_name: FaceName | None, axis_name: AxisName | None, n_count) -> Animation:
-    face: Sequence[int]
+def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation:
+    gui_objects: Iterable[int]
     center: ndarray
 
-    if face_name:
-        face_center, opposite_face_center, face = window.viewer.get_face_objects(face_name)
+    if alg.face:
+        face_center, opposite_face_center, gui_objects = window.viewer.get_face_objects(alg.face)
+    elif alg.axis_name:
+        face_center, opposite_face_center, gui_objects = window.viewer.git_whole_cube_objects(alg.axis_name)
+    elif alg.slice_name:
+        face_center, opposite_face_center, gui_objects = window.viewer.git_slice_objects(alg.slice_name)
     else:
-        assert axis_name
-        face_center, opposite_face_center, face = window.viewer.git_whole_cube_objects(axis_name)
+        raise TimeoutError(f"At lest face/axis/slice name in {alg}")
 
     vs: ViewState = window.app.vs
     current_angel = 0
@@ -328,9 +332,7 @@ def _create_animation(window: Window, face_name: FaceName | None, axis_name: Axi
     if n == 3:
         n = -1
     angel = math.radians(90 * n)
-    angel_delta = 0.05
-    if angel < 0:
-        angel_delta = -angel_delta
+    angel_delta = angel / 15
 
     # Rotate A Point
     # About An Arbitrary Axis
@@ -408,7 +410,7 @@ def _create_animation(window: Window, face_name: FaceName | None, axis_name: Axi
         current_angel += angel_delta
 
         try:
-            for f in face:
+            for f in gui_objects:
                 gl.glCallList(f)
         finally:
             vs.restore_objects_view()
@@ -429,16 +431,12 @@ def _create_animation(window: Window, face_name: FaceName | None, axis_name: Axi
 
 
 def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: algs.SimpleAlg):
-    if not alg.face and not alg.axis_name:
-        operator.op(alg, inv)
-        return
-
     if inv:
         _alg = alg.inv().simplify()
         assert isinstance(_alg, algs.SimpleAlg)
         alg = _alg
 
-    animation: Animation = _create_animation(window, alg.face, alg.axis_name, alg.n)
+    animation: Animation = _create_animation(window, alg, alg.n)
     delay: float = animation.delay
 
     window._animation = animation.animation_draw
@@ -506,13 +504,13 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             op_and_play_animation(window, op, inv, algs.Algs.U)
 
         case key.E:
-            op.op(algs.Algs.E, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.E)
 
         case key.F:
             op_and_play_animation(window, op, inv, algs.Algs.F)
 
         case key.S:
-            op.op(algs.Algs.S, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.S)
 
         case key.B:
             op_and_play_animation(window, op, inv, algs.Algs.B)
@@ -534,7 +532,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
                 op_and_play_animation(window, op, inv, algs.Algs.X)
 
         case key.M:
-            op.op(algs.Algs.M, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.M)
 
         case key.Y:
             if modifiers & key.MOD_CTRL:
@@ -547,7 +545,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
                 op_and_play_animation(window, op, inv, algs.Algs.Y)
 
         case key.E:
-            op.op(algs.Algs.E, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.E)
 
         case key.Z:
             if modifiers & key.MOD_CTRL:

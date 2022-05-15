@@ -1,18 +1,21 @@
+from collections import defaultdict
 from collections.abc import Sequence, Set
 from ctypes import c_float
-from typing import Hashable, Tuple, MutableSequence, Callable, Iterable
+from typing import Hashable, Tuple, MutableSequence, Callable, Iterable, DefaultDict, Sequence, Set
 
 import colorama
 import numpy as np
 import pyglet  # type: ignore
 from numpy import ndarray
+from numpy.distutils.fcompiler import get_default_fcompiler
 from pyglet.gl import *  # type: ignore
 import pyglet.gl as gl
 from pyglet.graphics import Batch  # type: ignore
 
 from cube import Cube
 from cube_face import Face
-from elements import Color, Part, FaceName, PartFixedID, AxisName
+from cube_slice import SliceName
+from elements import Color, Part, FaceName, PartFixedID, AxisName, SuperElement
 from view_state import ViewState
 
 _CELL_SIZE: int = 25
@@ -355,6 +358,9 @@ class _FaceBoard:
     def get_part_gui_object(self, p: Part) -> Iterable[int]:
         return self._cells[p.fixed_id].gui_objects()
 
+    def get_cell(self, _id: PartFixedID) -> _Cell:
+        return self._cells[_id]
+
 
 class _Board:
     """
@@ -381,6 +387,9 @@ class _Board:
         self._faces: MutableSequence[_FaceBoard] = []
         self._vs = vs
 
+        # why sequence, because we can have multiple back faces
+        self._cells: dict[PartFixedID, MutableSequence[_Cell]] = dict()
+
     @property
     def h_size(self) -> int:
         return _Board._h_size
@@ -396,6 +405,28 @@ class _Board:
         f = _FaceBoard(self, cube_face, self.batch, f0, left_right_direction, left_top_direction)
         self._faces.append(f)
         return f
+
+    def finish_faces(self):
+
+        cells: dict[PartFixedID:list[_Cell]] = defaultdict(list)
+
+        for fb in self._faces:
+
+            f: Face = fb.cube_face
+            for p in f.parts:
+                _id = p.fixed_id
+                cell: _Cell = fb.get_cell(_id)
+                cells[_id].append(cell)
+
+        self._cells = cells
+
+    def get_cells(self, _id: PartFixedID) -> Sequence[_Cell]:
+        """
+        PArt can appear more than none due to multiple faces
+        :param _id: 
+        :return: 
+        """
+        return self._cells[_id]
 
     def update(self):
         for face in self._faces:
@@ -433,6 +464,17 @@ class _Board:
 
     def unhidden_all(self):
         self._hidden_objects = set()
+
+    def get_all_cells_gui_elemnts(self, element: SuperElement) -> Set[int]:
+
+        lists: set[int] = set()
+
+        for p in element.parts:
+            cells: Sequence[_Cell] = self.get_cells(p.fixed_id)
+            for c in cells:
+                lists.update(c.gui_objects())
+
+        return lists
 
 
 _parts: dict[Hashable, int] = {}
@@ -535,7 +577,7 @@ class GCubeViewer:
         # -0.75 from it x location, so we can see it in isometric view
         # OK
         _plot_face(b, lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0])
-        #_plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0])
+        # _plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0])
 
         # OK
         _plot_face(b, lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0])
@@ -545,11 +587,13 @@ class GCubeViewer:
 
         # OK! -2 far away so we can see it
         _plot_face(b, lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0])
-        #_plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
+        # _plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
 
         # -05 below so we see it
         _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1])
-        #_plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
+        _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
+
+        self._board.finish_faces()
 
     def _get_face(self, name: FaceName) -> _FaceBoard:
         for f in self._board.faces:
@@ -596,48 +640,87 @@ class GCubeViewer:
     def unhidden_all(self):
         self._board.unhidden_all()
 
-    def get_face_objects(self, name: FaceName, hide: bool = True) -> Tuple[ndarray, ndarray, Sequence[int]]:
+    def get_face_objects(self, name: FaceName, hide: bool = True) -> Tuple[ndarray, ndarray, Iterable[int]]:
 
         right: _FaceBoard = self._get_face(name)
         left: _FaceBoard = self._get_face(self._cube.face(name).opposite.name)
 
         right_center: ndarray = right.get_center()
         # because left,back and down have more than one gui faces
-        right_objects: Iterable[int] = self._get_faces_gui_objects(self._get_faces(name))
+        #right_objects: Iterable[int] = self._get_faces_gui_objects(self._get_faces(name))
         left_center: ndarray = left.get_center()
 
+        objects: set[int] = set()
+
+        objects.update(self._board.get_all_cells_gui_elemnts(self._cube.face(name)))
+
+
         if hide:
-            self._board.set_hidden(right_objects)
+            self._board.set_hidden(objects)
 
-        return right_center, left_center, right_objects
+        return right_center, left_center, objects
 
-    def git_whole_cube_objects(self, axis_name: AxisName, hide: bool = True) -> Tuple[ndarray, ndarray, Sequence[int]]:
+    def git_whole_cube_objects(self, axis_name: AxisName, hide: bool = True) -> Tuple[ndarray, ndarray, Iterable[int]]:
 
-        name: FaceName
+        face_name: FaceName
         match axis_name:
 
             case AxisName.X:
-                name = FaceName.R
+                face_name = FaceName.R
 
             case AxisName.Y:
-                name = FaceName.U
+                face_name = FaceName.U
 
             case AxisName.Z:
-                name = FaceName.F
+                face_name = FaceName.F
 
             case _:
                 raise RuntimeError(f"Unknown Axis {axis_name}")
 
-        right: _FaceBoard = self._get_face(name)
-        left: _FaceBoard = self._get_face(self._cube.face(name).opposite.name)
+        right: _FaceBoard = self._get_face(face_name)
+        left: _FaceBoard = self._get_face(self._cube.face(face_name).opposite.name)
 
         right_center: ndarray = right.get_center()
         # because left,back and down have more than one gui faces
         left_center: ndarray = left.get_center()
 
         objects = set()
-        for f in  self._board.faces:
+        for f in self._board.faces:
             objects.update(f.gui_objects())
+
+        if hide:
+            self._board.set_hidden(objects)
+
+        return right_center, left_center, objects
+
+    def git_slice_objects(self, slice_name, hide=True) -> Tuple[ndarray, ndarray, Iterable[int]]:
+
+        face_name: FaceName
+
+        match slice_name:
+
+            case SliceName.S:  # over F
+                face_name = FaceName.F
+
+            case SliceName.M:  # over R
+                face_name = FaceName.R
+
+            case SliceName.E:  # over D
+                face_name = FaceName.D
+
+            case _:
+                raise RuntimeError(f"Unknown Slice {slice_name}")
+
+        right: _FaceBoard = self._get_face(face_name)
+        left: _FaceBoard = self._get_face(self._cube.face(face_name).opposite.name)
+
+        right_center: ndarray = right.get_center()
+        # because left,back and down have more than one gui faces
+        left_center: ndarray = left.get_center()
+
+        objects = set()
+
+        objects.update(self._board.get_all_cells_gui_elemnts(self._cube.slice(slice_name)))
 
         if hide:
             self._board.set_hidden(objects)

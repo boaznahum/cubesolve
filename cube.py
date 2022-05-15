@@ -1,3 +1,6 @@
+from collections.abc import Iterable
+
+from cube_slice import Slice, SliceName
 from elements import *
 from cube_face import Face
 
@@ -13,7 +16,9 @@ class Cube:
     __slots__ = ["_front", "_left", "_up", "_right", "_down",
                  "_back",
                  "_color_2_face",
-                 "_faces"
+                 "_faces",
+                 "_slice_m", "_slice_e", "_slice_s",
+                 "_slices"
                  ]
 
     _front: Face
@@ -24,6 +29,7 @@ class Cube:
     _back: Face
     _color_2_face: dict[Color, Face]
     _faces: dict[FaceName, Face]
+    _slices: dict[SliceName, Slice]
 
     def __init__(self) -> None:
         super().__init__()
@@ -91,8 +97,33 @@ class Cube:
         b._corner_bottom_left = r._corner_bottom_right = d._corner_bottom_right = _create_corner(b, r, d)
         b._corner_bottom_right = l._corner_bottom_left = d._corner_bottom_left = _create_corner(b, l, d)
 
-        for f in self._faces.values():
-            f.finish_init()
+        for _f in self._faces.values():
+            _f.finish_init()
+
+        slice_s: Slice = Slice(self, SliceName.S,  # Middle over F
+                               l.edge_top, u.center, r.edge_top,
+                               r.center,
+                               r.edge_bottom, d.center, l.edge_bottom,
+                               l.center
+                               )
+
+        slice_m: Slice = Slice(self, SliceName.M,  # Middle over R
+                               f.edge_top, u.center, b.edge_top,
+                               b.center,
+                               b.edge_bottom, d.center, f.edge_bottom,
+                               f.center
+                               )
+
+        slice_e: Slice = Slice(self, SliceName.E,  # Middle over D
+                               f.edge_left, f.center, f.edge_right,
+                               r.center,
+                               b.edge_left, b.center, b.edge_right,
+                               l.center
+                               )
+
+        self._slices = {SliceName.S: slice_s, SliceName.M: slice_m, SliceName.E: slice_e}
+        for s in self._slices.values():
+            s.finish_init()
 
     @property
     def front(self):
@@ -125,7 +156,10 @@ class Cube:
     def face(self, name: FaceName) -> Face:
         return self._faces[name]
 
-    def _reset_after_faces_changes(self):
+    def slice(self, name: SliceName) -> Slice:
+        return self._slices[name]
+
+    def reset_after_faces_changes(self):
         """
         Call after faces colors aare changes , M, S, E rotations
         :return:
@@ -135,38 +169,6 @@ class Cube:
         for f in self.faces:
             f.reset_after_faces_changes()
 
-    def m_rotate(self, n=1):
-        """
-        middle over R
-        :param n:
-        :return:
-        """
-
-        self.sanity()
-
-        front: Face = self.front
-        back: Face = self.back
-        up: Face = self.up
-        down: Face = self.down
-
-        for _ in range(0, n % 4):
-            saved_up: Center = self.up.center.copy()
-
-            self.up.center.replace_colors(self.front.center)
-            self.front.center.replace_colors(self.down.center)
-            self.down.center.replace_colors(self.back.center)
-            self.back.center.replace_colors(saved_up)
-
-            saved_up_top: Edge = self.up.edge_top.copy()
-            self.up.edge_top.replace_colors2(self.up.edge_bottom, up, back, front, up)
-            self.front.edge_top.replace_colors2(self.front.edge_bottom, front, up, down, front)
-            self.front.edge_bottom.replace_colors2(self.back.edge_bottom, down, front, back, down)
-            self.back.edge_bottom.replace_colors2(saved_up_top, up, back, back, down)
-
-        self._reset_after_faces_changes()
-
-        self.sanity()
-
     def x_rotate(self, n):
         """
         Entire cube or R
@@ -174,41 +176,9 @@ class Cube:
         :return:
         """
         for _ in range(0, n % 4):
-            self.m_rotate()
+            self.rotate_slice(SliceName.M, 1)
             self.right.rotate()
             self.left.rotate(-1)
-
-    def e_rotate(self, n=1):
-        """
-        middle over D
-        :param n:
-        :return:
-        """
-
-        self.sanity()
-
-        front: Face = self.front
-        back: Face = self.back
-        left: Face = self.left
-        right: Face = self.right
-
-        for _ in range(0, n % 4):
-            saved_front: Center = self.front.center.copy()
-
-            self.front.center.replace_colors(self.left.center)
-            self.left.center.replace_colors(self.back.center)
-            self.back.center.replace_colors(self.right.center)
-            self.right.center.replace_colors(saved_front)
-
-            saved_front_left: Edge = self.front.edge_left.copy()
-            self.front.edge_left.replace_colors2(self.left.edge_left, left, front, back, left)
-            self.left.edge_left.replace_colors2(self.back.edge_left, back, left, right, back)
-            self.back.edge_left.replace_colors2(self.right.edge_left, front, right, right, back)
-            self.front.edge_right.replace_colors2(saved_front_left, front, right, left, front)
-
-        self._reset_after_faces_changes()
-
-        self.sanity()
 
     def y_rotate(self, n=1):
         """
@@ -217,22 +187,9 @@ class Cube:
         :return:
         """
         for _ in range(0, n % 4):
-            self.e_rotate(-1)
+            self.rotate_slice(SliceName.E, -1)
             self.up.rotate(1)
             self.down.rotate(-1)
-
-    def s_rotate(self, n=1):
-        """
-        middle over F
-        :param n:
-        :return:
-        """
-        for _ in range(0, n % 4):
-            self.z_rotate()
-            self.front.rotate(-1)
-            self.back.rotate()
-
-        self._reset_after_faces_changes()
 
     def z_rotate(self, n=1):
         """
@@ -241,9 +198,9 @@ class Cube:
         :return:
         """
         for _ in range(0, n % 4):
-            self.y_rotate(1)
-            self.x_rotate(-1)
-            self.y_rotate(-1)
+            self.rotate_slice(SliceName.S, 1)
+            self.front.rotate(1)
+            self.back.rotate(-1)
 
     def rotate_whole(self, axis_name: AxisName, n=1):
         match axis_name:
@@ -259,6 +216,11 @@ class Cube:
 
             case _:
                 raise RuntimeError(f"Unknown Axis {axis_name}")
+
+    def rotate_slice(self, slice_name: SliceName, n: int):
+
+        a_slice: Slice = self.slice(slice_name)
+        a_slice.rotate(n)
 
     def sanity(self):
 

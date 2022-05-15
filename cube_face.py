@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+
 from elements import *
 
 _Face: TypeAlias = "Face"
@@ -53,12 +55,10 @@ class Face(SuperElement):
                          self._corner_bottom_right,
                          self._corner_bottom_left]
 
-        self.set_and_finish_init(self._center, *self._edges, *self._corners)
+        self.set_parts(self._center, *self._edges, *self._corners)
+        super().finish_init()
 
     # noinspection PyUnresolvedReferences
-    @property
-    def cube(self) -> _Cube:
-        return self._cube
 
     @property
     def name(self) -> FaceName:
@@ -286,6 +286,3 @@ class Face(SuperElement):
     def is_left(self):
         return self.name is FaceName.L
 
-    @property
-    def parts(self) -> Sequence[Part]:
-        return self._parts

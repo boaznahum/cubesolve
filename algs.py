@@ -5,6 +5,7 @@ from random import Random
 from typing import Sequence, Any, final
 
 from cube import Cube
+from cube_slice import SliceName
 from elements import FaceName, AxisName
 
 
@@ -212,10 +213,6 @@ class SimpleAlg(Alg, ABC):
     def __str__(self):
         return self.atomic_str()
 
-    @property
-    def is_whole(self):
-        return False
-
     def count(self) -> int:
         if self.is_whole:
             return 0
@@ -226,20 +223,32 @@ class SimpleAlg(Alg, ABC):
     def n(self):
         return self._n
 
-    @property
-    def face(self) -> FaceName | None:
-        return None
-
-    @property
-    def axis_name(self) -> AxisName | None:
-        return None
-
     @final
     def simplify(self) -> "Alg":
         return self
 
     def flatten(self) -> Iterable["SimpleAlg"]:
         return [self]
+
+    # ---------------------------------
+    # type of simple: face, axis, slice
+
+    @property
+    def face(self) -> FaceName | None:
+        return None
+
+    @property
+    def is_whole(self):
+        return False
+
+    @property
+    def axis_name(self) -> AxisName | None:
+        # only if whole is true
+        return None
+
+    @property
+    def slice_name(self) -> SliceName | None:
+        return None
 
 
 class FaceAlg(SimpleAlg, ABC):
@@ -275,6 +284,21 @@ class WholeCubeAlg(SimpleAlg, ABC):
     @property
     def is_whole(self):
         return True
+
+
+class SliceAlg(SimpleAlg, ABC):
+
+    def __init__(self, slice_name: SliceName, n: int = 1) -> None:
+        super().__init__(slice_name.value, n)
+        self._slice_name = slice_name
+
+    @property
+    def slice_name(self) -> SliceName | None:
+        return self._slice_name
+
+    @final
+    def play(self, cube: Cube, inv: bool):
+        cube.rotate_slice(self._slice_name, _inv(inv, self._n))
 
 
 @final
@@ -320,13 +344,11 @@ class _D(FaceAlg):
 
 
 @final
-class _M(SimpleAlg):
+class _M(SliceAlg):
 
     def __init__(self) -> None:
-        super().__init__("M")
+        super().__init__(SliceName.M)
 
-    def play(self, cube: Cube, inv: bool = False):
-        cube.m_rotate(_inv(inv, self._n))
 
 
 @final
@@ -336,18 +358,15 @@ class _X(WholeCubeAlg):
         super().__init__(AxisName.X)
 
 
-
 @final
-class _E(SimpleAlg):
+class _E(SliceAlg):
     """
     Middle slice over D
     """
 
     def __init__(self) -> None:
-        super().__init__("E")
+        super().__init__(SliceName.E)
 
-    def play(self, cube: Cube, inv: bool = False):
-        cube.e_rotate(_inv(inv, self._n))
 
 
 @final
@@ -358,16 +377,14 @@ class _Y(WholeCubeAlg):
 
 
 @final
-class _S(SimpleAlg):
+class _S(SliceAlg):
     """
     Middle slice over F
     """
 
     def __init__(self) -> None:
-        super().__init__("S")
+        super().__init__(SliceName.S)
 
-    def play(self, cube: Cube, inv: bool = False):
-        cube.s_rotate(_inv(inv, self._n))
 
 
 @final
@@ -497,7 +514,7 @@ def _scramble(seed: Any) -> Alg:
     rnd: Random = Random(seed)
 
     n = rnd.randint(400, 800)
-    #n = rnd.randint(5, 6)
+    # n = rnd.randint(5, 6)
 
     s = Algs.Simple
 

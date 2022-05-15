@@ -1,5 +1,5 @@
 from abc import ABC
-from collections.abc import Sequence, Iterable, Hashable
+from collections.abc import Sequence
 from enum import Enum, unique
 from typing import TypeAlias, MutableSequence, Tuple
 
@@ -42,10 +42,10 @@ class AxisName(Enum):
     Z = "Z"
 
 
-_Face: TypeAlias = "Face"
+_Face: TypeAlias = "Face"  # type: ignore
 
 # noinspection PyUnresolvedReferences
-_Cube: TypeAlias = "Cube"
+_Cube: TypeAlias = "Cube"  # type: ignore
 
 PartColorsID = frozenset[Color]
 PartFixedID = frozenset[FaceName]
@@ -128,6 +128,7 @@ class Part(ABC):
         It actaully track the instance of the edge, but it will same for all instances of cube
         :return:
         """
+        assert self._fixed_id
         return self._fixed_id
 
     def get_face_edge(self, face: _Face) -> PartEdge:
@@ -327,12 +328,13 @@ class Center(Part):
     def color(self):
         return self.edg().color
 
-    def copy(self):
+    def copy(self) -> "Center":
         return Center(self._edges[0].copy())
 
     def replace_colors(self, other: "Center"):
         self._edges[0].copy_color(other.edg())
         self.reset_colors_id()
+
 
 
 class Edge(Part):
@@ -415,12 +417,64 @@ class Edge(Part):
 
         self._replace_colors(source, (source_1, target_1), (source_2, target_2))
 
+    def copy_colors_ver(self,
+                        source: "Edge"
+                        ):
+        """
+        Copy from vertical edge
+        self and source assume to share a face
+
+        source_other_face, shared_face  --> shared_face,this_other_face
+
+        :param source
+        """
+
+        shared_face = self.single_shared_face(source)
+        source_other = source.get_other_face(shared_face)
+        dest_other = self.get_other_face(shared_face)
+
+        self._replace_colors(source, (source_other, shared_face), (shared_face, dest_other))
+
     def copy(self) -> "Edge":
         """
         Used as temporary for rotate, must not used in cube
         :return:
         """
         return Edge(self.e1.copy(), self.e2.copy())
+
+    def single_shared_face(self, other: "Edge"):
+        """
+        Return a face that appears in both edges
+        raise error more than one (how can it be) or no one
+        :param other:
+        :return:
+        """
+
+        f1: _Face = self._edges[0].face
+        f2: _Face = self._edges[1].face
+
+        of1: _Face = other._edges[0].face
+        of2: _Face = other._edges[1].face
+
+        e11 = f1 is of1
+        e12 = f1 is of2
+
+        e21 = f2 is of1
+        e22 = f2 is of2
+
+        count = sum([e11, e12, e21, e22])
+
+        if count == 0:
+            raise RuntimeError(f"No matches: {f1} {f2} and {of1} {of2}")
+
+        if count > 1:
+            raise RuntimeError(f"Too many matches: {f1} {f2} and {of1} {of2}")
+
+        if e11 or e12:
+            return f1
+        else:
+            return f2
+
 
 
 class Corner(Part):
@@ -468,8 +522,23 @@ class SuperElement:
         self._cube = cube
         self._parts: Tuple[Part, ...] = ()
 
-    def set_and_finish_init(self, *parts: Part):
+    def set_parts(self, *parts: Part):
         self._parts = tuple(parts)
 
+    @property
+    def parts(self) -> Sequence[Part]:
+        return self._parts
+
+    def finish_init(self):
         for p in self._parts:
             p.finish_init()
+
+    def set_and_finish_init(self, *parts: Part):
+        self.set_parts(*parts)
+
+        self.finish_init()
+
+    @property
+    def cube(self) -> _Cube:
+        return self._cube
+
