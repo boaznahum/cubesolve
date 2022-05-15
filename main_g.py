@@ -310,7 +310,7 @@ class Animation:
 
 
 # noinspection PyPep8Naming
-def _create_animation(window: Window, face_name: FaceName, axis_name: AxisName, n_count) -> Animation:
+def _create_animation(window: Window, face_name: FaceName | None, axis_name: AxisName | None, n_count) -> Animation:
     face: Sequence[int]
     center: ndarray
 
@@ -456,6 +456,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
 
     operator.op(alg, False, animation=False)
 
+    window.update_gui_elements()
     window.on_draw()
     window.flip()
 
@@ -569,19 +570,20 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
         case key._0:
             alg = Algs.scramble()
-            op.op(alg, inv)
+            op.op(alg, inv, animation=False)
 
         case key._1 | key._2 | key._3 | key._4 | key._5 | key._6:
             # to match test int
             # noinspection PyProtectedMember
             alg = Algs.scramble(value - key._0)
-            op.op(alg, inv)
+            op.op(alg, inv, animation=False)
 
         case key.COMMA:
             op.undo()
 
         case key.SLASH:
-            slv.solve()
+            solution = slv.solution().simplify()
+            op.op(solution)
 
         case key.T:
             # test
@@ -606,7 +608,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
         case _:
             return False
 
-    # no need to redraw, on_draw is called after any event
+    # no need to redraw, on_draw is called after any eventq
 
     if not no_operation:
         window.update_gui_elements()

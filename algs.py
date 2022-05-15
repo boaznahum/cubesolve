@@ -490,6 +490,7 @@ def _scramble(seed: Any) -> Alg:
     rnd: Random = Random(seed)
 
     n = rnd.randint(400, 800)
+    #n = rnd.randint(5, 6)
 
     s = Algs.Simple
 
