@@ -4,7 +4,8 @@ from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
 from _solver.tracker import EdgeTracker
 from algs import Algs
-from elements import Face, FaceName, Part, Edge
+from cube_face import Face
+from elements import FaceName, Part, Edge
 
 
 def use(_):

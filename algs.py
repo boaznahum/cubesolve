@@ -58,9 +58,9 @@ class Alg(ABC):
 class _Inv(Alg):
     __slots__ = "_alg"
 
-    def __init__(self, a: Alg) -> None:
+    def __init__(self, _a: Alg) -> None:
         super().__init__()
-        self._alg = a
+        self._alg = _a
 
     def __str__(self) -> str:
         return self._alg.atomic_str() + "'"
@@ -91,12 +91,13 @@ class _Inv(Alg):
 
         if isinstance(a, SimpleAlg):
             c = type(a)
-            s = c()  # _n = 1
-            s._n = -a._n  # inv
+            # noinspection PyArgumentList
+            s = c()  # type: ignore # _n = 1
+            s._n = -a.n  # inv
             return s.simplify()
         elif isinstance(a, _BigAlg):
 
-            algs = [a.inv() for a in reversed(a._algs)]
+            algs = [a.inv() for a in reversed(a.algs)]
             return _BigAlg(None, *algs).simplify()
         else:
             raise TypeError("Unknown type:", type(self))
@@ -154,7 +155,8 @@ class _Mul(Alg, ABC):
 
         if isinstance(a, SimpleAlg):
             c = type(a)
-            s = c()  # _n = 1
+            # noinspection PyArgumentList
+            s = c()  # type: ignore # _n = 1
             s._n *= a._n * self._n
             return s.simplify()
         elif isinstance(self._alg, _BigAlg):
@@ -441,7 +443,8 @@ class _BigAlg(Alg):
                         assert isinstance(prev, SimpleAlg)
 
                         c = type(a)
-                        a2 = c()  # _n = 1
+                        # noinspection PyArgumentList
+                        a2 = c()  # type: ignore # _n = 1
                         a2._n = prev._n + a._n
                         if a2._n:
                             prev = a2
@@ -475,6 +478,10 @@ class _BigAlg(Alg):
             return _BigAlg(None, *[*self._algs, *other._algs])
         else:
             return _BigAlg(None, *[*self._algs, other])
+
+    @property
+    def algs(self):
+        return self._algs
 
 
 class _Scramble(_BigAlg):
@@ -569,6 +576,6 @@ if __name__ == '__main__':
     print(alg.simplify())
 
     alg = Algs.R + Algs.U + Algs.U + Algs.U + Algs.U
-    a = alg.simplify()
-    print(a.__str__())
+    _a = alg.simplify()
+    print(_a.__str__())
     print(alg.simplify())

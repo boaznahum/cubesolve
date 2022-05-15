@@ -11,7 +11,8 @@ import pyglet.gl as gl
 from pyglet.graphics import Batch  # type: ignore
 
 from cube import Cube
-from elements import Face, Color, Part, FaceName, PartFixedID, AxisName
+from cube_face import Face
+from elements import Color, Part, FaceName, PartFixedID, AxisName
 from view_state import ViewState
 
 _CELL_SIZE: int = 25

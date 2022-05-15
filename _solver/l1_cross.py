@@ -4,7 +4,8 @@ from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
 from algs import Algs, Alg
 from cube import Cube
-from elements import Color, Face, FaceName, Edge, PartColorsID, PartEdge, Part
+from cube_face import Face
+from elements import Color,FaceName, Edge, PartColorsID, PartEdge, Part
 
 
 def use(_):

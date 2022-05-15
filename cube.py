@@ -1,4 +1,5 @@
 from elements import *
+from cube_face import Face
 
 
 class Cube:

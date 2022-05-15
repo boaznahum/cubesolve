@@ -3,7 +3,7 @@ from typing import Sequence
 from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
 from algs import Algs
-from elements import Face, PartColorsID, Part, Corner
+from elements import  PartColorsID, Part, Corner
 
 
 def use(_):

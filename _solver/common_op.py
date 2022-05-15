@@ -4,8 +4,9 @@ from _solver.icommon_op import ICommon
 from _solver.base_solver import ISolver
 from algs import Algs, Alg
 from cube import Cube
+from cube_face import Face
 from cube_operator import Operator
-from elements import Edge, Face, Color, FaceName
+from elements import Edge, Color, FaceName
 
 
 class CommonOp(ICommon):

@@ -4,7 +4,8 @@ from typing import Hashable
 import colorama
 
 from cube import Cube
-from elements import Face, Color, Part
+from elements import Color, Part
+from cube_face import Face
 
 _CELL_SIZE: int = 2
 
