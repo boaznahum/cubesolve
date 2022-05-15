@@ -22,7 +22,7 @@ class Solver(ISolver):
     def __init__(self, op: Operator) -> None:
         super().__init__()
         self._cube = op.cube
-        self._op = op
+        self._op: Operator = op
 
         self.common = CommonOp(self)
         self.l1_cross = L1Cross(self)
@@ -81,10 +81,13 @@ class Solver(ISolver):
         else:
             s += ", No L3"
 
-
         return s
 
-    def solve(self, debug=True):
+    def solve(self, debug=True, animation=True):
+        if self._op.suspended_animation(not animation):
+            return self._solve(debug)
+
+    def _solve(self, debug=True):
         if self._cube.solved:
             return
 
@@ -110,12 +113,12 @@ class Solver(ISolver):
         n = len(self.op.history)
         solution_algs = []
 
-        self.solve(debug=False)
-        while n < len(self.op.history):
-            step = self.op.undo()
-            #s=str(step)
-            if step:
-                solution_algs.insert(0, step)
+        with self._op.suspended_animation():
+            self.solve(debug=False, animation=False)
+            while n < len(self.op.history):
+                step = self.op.undo()
+                # s=str(step)
+                if step:
+                    solution_algs.insert(0, step)
 
-        return Algs.alg(None, * solution_algs)
-
+            return Algs.alg(None, *solution_algs)

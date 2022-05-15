@@ -1,19 +1,19 @@
 import math
 
-from pyglet.gl import *
+from pyglet.gl import *  # type: ignore
 
 
 # noinspection PyMethodMayBeStatic
 class ViewState:
-    __slots__ = [
-        "_alpha_x_0",
-        "_alpha_y_0",
-        "_alpha_z_0",
-        "_alpha_x",
-        "_alpha_y",
-        "_alpha_z",
-        "_alpha_delta",
-    ]
+    # __slots__ = [
+    #     "_alpha_x_0",
+    #     "_alpha_y_0",
+    #     "_alpha_z_0",
+    #     "_alpha_x",
+    #     "_alpha_y",
+    #     "_alpha_z",
+    #     "_alpha_delta",
+    # ]
 
     def __init__(self, ax0, ay0, az0, a_delta) -> None:
         super().__init__()
@@ -60,21 +60,21 @@ class ViewState:
     def alpha_y(self):
         return self._alpha_y
 
-    @property
-    def alpha_z(self):
-        return self._alpha_z
-
-    @property
-    def alpha_delta(self):
-        return self._alpha_delta
-
     @alpha_y.setter
     def alpha_y(self, value):
         self._alpha_y = value
 
+    @property
+    def alpha_z(self):
+        return self._alpha_z
+
     @alpha_z.setter
     def alpha_z(self, value):
         self._alpha_z = value
+
+    @property
+    def alpha_delta(self):
+        return self._alpha_delta
 
     def prepare_objects_view(self):
         glPushAttrib(GL_MATRIX_MODE)

@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Sequence, Set
 from ctypes import c_float
 from typing import Hashable, Tuple, MutableSequence, Callable, Iterable
 
@@ -93,8 +93,18 @@ class _Cell:
         gl.glEndList()
 
     def draw(self):
+
+        lists: int = self.gl_lists
+
         if not self.gl_lists:
             print(f"Error no gl lists in {self}")
+            return
+
+        hidden = self._face_board.board.get_hidden()
+        if hidden and lists in hidden:
+            return
+
+
         self._prepare_view_state()
         glCallList(self.gl_lists)
         self._restore_view_state()
@@ -366,6 +376,7 @@ class _Board:
 
     def __init__(self, batch: Batch, vs: ViewState) -> None:
         super().__init__()
+        self._hidden_objects: Set[int] = set()
         self.batch = batch
         self._faces: MutableSequence[_FaceBoard] = []
         self._vs = vs
@@ -413,6 +424,16 @@ class _Board:
     @property
     def faces(self):
         return self._faces
+
+    def set_hidden(self, lists: Iterable[int]):
+        self._hidden_objects = set(lists)
+
+    def get_hidden(self) -> Set[int]:
+        return self._hidden_objects
+
+    def unhidden_all(self):
+        self._hidden_objects = set()
+
 
 
 _parts: dict[Hashable, int] = {}
@@ -470,7 +491,8 @@ def _plot_face(b: _Board, f: Callable[[], Face], left_bottom: list[float],  # 3d
 
 
 class GCubeViewer:
-    __slots__ = ["_batch", "_cube", "_board", "_test"]
+    __slots__ = ["_batch", "_cube", "_board", "_test",
+                 "_hidden_objects"]
 
     def __init__(self, batch: Batch, cube: Cube, vs: ViewState) -> None:
         super().__init__()
@@ -482,6 +504,7 @@ class GCubeViewer:
         self._board: _Board = _Board(self._batch, vs)
 
         self._init_gui()
+
 
     def update(self):
         self._board.update()
@@ -567,27 +590,26 @@ class GCubeViewer:
 
         lists: set[int] = set()
 
-
         for f in fs:
             lists.update(self._get_face_gui_objects(f))
 
         return lists
 
+    def unhidden_all(self):
+        self._board.unhidden_all()
 
-
-
-    def get_face_objects(self, name: FaceName) -> Tuple[ndarray, ndarray, Sequence[int]]:
+    def get_face_objects(self, name: FaceName, hide: bool = True) -> Tuple[ndarray, ndarray, Sequence[int]]:
 
         right: _FaceBoard = self._get_face(name)
         left: _FaceBoard = self._get_face(self._cube.face(name).opposite.name)
 
-        right_center: ndarray
-        left_center: ndarray
 
-        right_center = right.get_center()
+        right_center: ndarray = right.get_center()
         # because left,back and down have more than one gui faces
-        right_objects = self._get_faces_gui_objects(self._get_faces(name))
-        left_center = left.get_center()
+        right_objects: Iterable[int] = self._get_faces_gui_objects(self._get_faces(name))
+        left_center: ndarray = left.get_center()
+
+        if hide:
+            self._board.set_hidden(right_objects)
 
         return right_center, left_center, right_objects
-

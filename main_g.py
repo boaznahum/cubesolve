@@ -1,19 +1,16 @@
 import math
-import sys
 import time
 import traceback
-from collections.abc import Sequence
 from typing import MutableSequence, Callable, Sequence
 
 import glooey  # type: ignore
 import numpy as np
 import pyglet  # type: ignore
-from pyglet import gl
 from numpy import ndarray
+from pyglet import gl
 from pyglet.window import key  # type: ignore
 
 import algs
-import viewer_g
 from algs import Alg, Algs
 from cube import Cube
 from cube_operator import Operator
@@ -30,9 +27,11 @@ class Main:
 
     def __init__(self) -> None:
         super().__init__()
-        self._error = None
+        self._error: str | None = None
         self.cube = Cube()
         self.op: Operator = Operator(self.cube)
+
+
         self.slv: Solver = Solver(self.op)
 
         # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
@@ -47,8 +46,8 @@ class Main:
         self.vs.reset(0.3, -0.4, 0, 0.1)
         self._error = None
 
-    def set_error(self, error: str):
-        self._error = error
+    def set_error(self, _error: str):
+        self._error = _error
 
     @property
     def error(self):
@@ -76,13 +75,15 @@ class Window(pyglet.window.Window):
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
         self.text: MutableSequence[pyglet.text.Label] = []
 
-        self._animation: Callable[[], bool] | None = None
+        self._animation: Callable[[], None] | None = None
 
         self.update_gui_elements()
 
+        self.app.op._animation_hook = lambda op, alg: op_and_play_animation(self, op, False, alg)
+
     def update_gui_elements(self):
 
-        # so they can be used by draw mehod
+        # so they can be used by draw method
 
         self.viewer.update()
         self.text.clear()
@@ -110,7 +111,7 @@ class Window(pyglet.window.Window):
                                                x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
 
     def on_draw(self):
-        print("Updating")
+        #print("Updating")
         # need to understand which buffers it clear, see
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         self.clear()
@@ -282,10 +283,12 @@ class Window(pyglet.window.Window):
         animation = self._animation
 
         if animation:
-            print("Play animation")
-            cont = animation()
-            if not cont:
-                self._animation = None
+            #print("Play animation")
+            animation()
+
+    @property
+    def animation(self):
+        return self._animation
 
 
 def main():
@@ -294,16 +297,36 @@ def main():
     pyglet.app.run()
 
 
-def play_rotate_face(window: Window, name: FaceName) -> Callable[[], bool]:
+class Animation:
+    done: bool
+    animation_draw: Callable[[], None] | None
+    delay: float
+    animation_cleanup: Callable[[], None] | None
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.done = False
+        self.animation_draw = None
+        self.delay = 1 / 20.
+
+
+# noinspection PyPep8Naming
+def _create_animation(window: Window, name: FaceName, n_count) -> Animation:
     face: Sequence[int]
     center: ndarray
-    p1, p2, face = window.viewer.get_face_objects(name)
+    face_center, opposite_face_center, face = window.viewer.get_face_objects(name)
 
     vs: ViewState = window.app.vs
-    i = 0
-    a = 0
-    func = None
-    start: float = time.time()
+    current_angel = 0
+
+    # compute angel
+    n = n_count % 4
+    if n == 3:
+        n = -1
+    angel = math.radians(90 * n)
+    angel_delta = 0.05
+    if angel < 0:
+        angel_delta = -angel_delta
 
     # Rotate A Point
     # About An Arbitrary Axis
@@ -311,78 +334,77 @@ def play_rotate_face(window: Window, name: FaceName) -> Callable[[], bool]:
     # Written by Paul Bourke
     # https://www.eng.uc.edu/~beaucag/Classes/Properties/OptionalProjects/CoordinateTransformationCode/Rotate%20about%20an%20arbitrary%20axis%20(3%20dimensions).html#:~:text=Step%202-,Rotate%20space%20about%20the%20x%20axis%20so%20that%20the%20rotation,no%20additional%20rotation%20is%20necessary.
 
-    x1 = p1[0]
-    y1 = p1[1]
-    z1 = p1[2]
-    x2 = p2[0]
-    y2 = p2[1]
-    z2 = p2[2]
+    x1 = face_center[0]
+    y1 = face_center[1]
+    z1 = face_center[2]
     T: ndarray = np.array([[1, 0, 0, -x1],
                            [0, 1, 0, -y1],
                            [0, 0, 1, -z1],
                            [0, 0, 0, 1]
                            ], dtype=float)
     TT = np.linalg.inv(T)
-    U = (p1 - p2) / np.linalg.norm(p1 - p2)
+    U = (face_center - opposite_face_center) / np.linalg.norm(face_center - opposite_face_center)
     a = U[0]
     b = U[1]
     c = U[2]
     d = math.sqrt(b * b + c * c)
     if d == 0:
         Rx = np.array([[1, 0, 0, 0],
-                      [0, 1, 0, 0],
-                      [0, 0, 1, 0],
-                      [0, 0, 0, 1]], dtype=float)
+                       [0, 1, 0, 0],
+                       [0, 0, 1, 0],
+                       [0, 0, 0, 1]], dtype=float)
     else:
         Rx = np.array([[1, 0, 0, 0],
-                      [0, c / d, -b / d, 0],
-                      [0, b / d, c / d, 0],
-                      [0, 0, 0, 1]], dtype=float)
+                       [0, c / d, -b / d, 0],
+                       [0, b / d, c / d, 0],
+                       [0, 0, 0, 1]], dtype=float)
 
     RxT = np.linalg.inv(Rx)
 
     Ry = np.array([[d, 0, -a, 0],
-                  [0, 1, 0, 0],
-                  [a, 0, d, 0],
-                  [0, 0, 0, 1]], dtype=float)
+                   [0, 1, 0, 0],
+                   [a, 0, d, 0],
+                   [0, 0, 0, 1]], dtype=float)
 
     RyT = np.linalg.inv(Ry)
 
-    #TT @ RxT @ RyT @ Rz @ Ry @ Rx @ T
-    MT:ndarray = TT @ RxT @ RyT  # ? == inv(M)
-    M:ndarray = Ry @ Rx @ T
+    # TT @ RxT @ RyT @ Rz @ Ry @ Rx @ T
+    MT: ndarray = TT @ RxT @ RyT  # ? == inv(M)
+    M: ndarray = Ry @ Rx @ T
 
-    def _update() -> bool:
+    animation = Animation()
+    animation.done = False
+    animation.animation_cleanup = lambda: window.viewer.unhidden_all()
 
-        nonlocal i, func, a
+    # noinspection PyPep8Naming
+    def _draw_and_update_state():
 
-        i += 1
-        if time.time() - start > 1:
-            pyglet.clock.unschedule(func)
-            return False
+        nonlocal current_angel
+
+        if abs(current_angel) > abs(angel):
+            animation.done = True
+            return
 
         vs.prepare_objects_view()
 
-        ct = math.cos(a)
-        st = math.sin(a)
+        ct = math.cos(current_angel)
+        st = math.sin(current_angel)
         Rz = np.array([[ct, st, 0, 0],
-                      [-st, ct, 0, 0],
-                      [0, 0, 1, 0],
-                      [0, 0, 0, 1]], dtype=float)
+                       [-st, ct, 0, 0],
+                       [0, 0, 1, 0],
+                       [0, 0, 0, 1]], dtype=float)
 
         m: ndarray = MT @ Rz @ M
 
         gm = (gl.GLfloat * 16)(0)
         # column major
         gm[:] = m.flatten(order="F")
-        print(f"{type(gm[0])=},{type(m[0][0])}")
+        #print(f"{type(gm[0])=},{type(m[0][0])}")
 
         gl.glMultMatrixf(gm)
-        a += vs.alpha_delta
+        current_angel += angel_delta
 
         try:
-            # if it R face, move it along X
-            # gl.glTranslatef(20, 0, 0)
             for f in face:
                 gl.glCallList(f)
         finally:
@@ -390,17 +412,55 @@ def play_rotate_face(window: Window, name: FaceName) -> Callable[[], bool]:
 
         return True
 
-    def _fire_event(dt):
-        window.dispatch_event("on_draw")
+    animation.animation_draw = _draw_and_update_state
+    animation.delay = 1 / 40
 
-    func = _fire_event
+    return animation
 
-    pyglet.clock.schedule_interval(func, 1 / 10)
+    # def _fire_event(dt):
+    #     window.dispatch_event("on_draw")
+    #
+    # func = _fire_event
+    #
+    # pyglet.clock.schedule_interval(func, 1 / 10)
 
-    return _update
+
+def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: algs.SimpleAlg):
+    name = alg.face
+    if not name:
+        operator.op(alg, inv)
+        return
+
+    if inv:
+        _alg = alg.inv().simplify()
+        assert isinstance(_alg, algs.SimpleAlg)
+        alg = _alg
+
+    animation: Animation = _create_animation(window, name, alg.n)
+    delay: float = animation.delay
+
+    window._animation = animation.animation_draw
+    while not animation.done:
+        window.on_draw()
+        if animation.done:
+            break  # don't sleep !!!
+        window.flip()
+        time.sleep(delay)
+
+    #print("Animation done")
+    if animation.animation_cleanup:
+        animation.animation_cleanup()
+
+    window._animation = None
+
+    operator.op(alg, False, animation=False)
+
+    window.on_draw()
+    window.flip()
 
 
 _last_face: FaceName = FaceName.R
+
 
 def _handle_input(window: Window, value: int, modifiers: int) -> bool:
     done = False
@@ -416,6 +476,8 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
     global _last_face
 
+    alg: Alg
+
     # noinspection PyProtectedMember
     match value:
 
@@ -427,37 +489,35 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             print(f"{vs.alpha_x=} {vs.alpha_y=} {vs.alpha_z=}")
             no_operation = True
 
-        case key.P:
-            window._animation = play_rotate_face(window, _last_face)
+        # case key.P:
+        #     op_and_play_animation(window, _last_face)
 
         case key.R:
-            _last_face = FaceName.R
-            op.op(algs.Algs.R, inv)
+            # _last_face = FaceName.R
+            # op.op(algs.Algs.R, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.R)
+
         case key.L:
-            _last_face = FaceName.L
-            op.op(algs.Algs.L, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.L)
 
         case key.U:
-            _last_face = FaceName.U
-            op.op(algs.Algs.U, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.U)
 
         case key.E:
             op.op(algs.Algs.E, inv)
 
         case key.F:
-            _last_face = FaceName.F
-            op.op(algs.Algs.F, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.F)
 
         case key.S:
             op.op(algs.Algs.S, inv)
 
         case key.B:
-            _last_face = FaceName.B
-            op.op(algs.Algs.B, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.B)
 
         case key.D:
             _last_face = FaceName.D
-            op.op(algs.Algs.D, inv)
+            op_and_play_animation(window, op, inv, algs.Algs.D)
 
         case key.X:
             if modifiers & key.MOD_CTRL:
@@ -499,7 +559,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
         case "A":
 
-            alg: Alg = get_alg()
+            alg = get_alg()
             op.op(alg, inv)
 
         case key.C:
@@ -507,13 +567,13 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             app.reset()
 
         case key._0:
-            alg: Alg = Algs.scramble()
+            alg = Algs.scramble()
             op.op(alg, inv)
 
         case key._1 | key._2 | key._3 | key._4 | key._5 | key._6:
             # to match test int
             # noinspection PyProtectedMember
-            alg: Alg = Algs.scramble(value - key._0)
+            alg = Algs.scramble(value - key._0)
             op.op(alg, inv)
 
         case key.COMMA:
@@ -526,7 +586,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             # test
             for s in range(0, 50):
                 op.reset()
-                alg: Alg = Algs.scramble(s)
+                alg = Algs.scramble(s)
                 op.op(alg)
 
                 # noinspection PyBroadException
@@ -534,7 +594,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
                     slv.solve()
                     assert slv.is_solved
 
-                except Exception as e:
+                except Exception:
                     print(f"Failure on {s}")
                     traceback.print_exc()
                     raise

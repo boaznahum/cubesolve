@@ -1,14 +1,16 @@
 import functools
 from abc import ABC, abstractmethod
-from collections.abc import MutableSequence
+from collections.abc import MutableSequence, Iterable
 from random import Random
 from typing import Sequence, Any, final
 
 from cube import Cube
+from elements import FaceName
 
 
-def _inv(inv: bool) -> int:
-    return -1 if inv else 1
+def _inv(inv: bool, n) -> int:
+
+    return -n if inv else n
 
 
 class Alg(ABC):
@@ -49,6 +51,10 @@ class Alg(ABC):
     def __add__(self, other: "Alg"):
         return _BigAlg(None, self, other)
 
+    @abstractmethod
+    def flatten(self) -> Iterable["SimpleAlg"]:
+        pass
+
 
 class _Inv(Alg):
     __slots__ = "_alg"
@@ -74,9 +80,18 @@ class _Inv(Alg):
 
     def simplify(self) -> "Alg":
 
-        a = self._alg.simplify()  # can't be _Mul
+        """
+        Must returns SimpleAlg if _alg is SimpleAlg
+        :return:
+        """
 
-        if isinstance(a, _SimpleAlg):
+
+        if isinstance(self._alg, _Inv):
+            return self._alg.simplify()
+
+        a = self._alg.simplify()  # can't be _Mul, nor Inv
+
+        if isinstance(a, SimpleAlg):
             c = type(a)
             s = c()  # _n = 1
             s._n = -a._n  # inv
@@ -87,6 +102,18 @@ class _Inv(Alg):
             return _BigAlg(None, *algs).simplify()
         else:
             raise TypeError("Unknown type:", type(self))
+
+    def flatten(self) -> Iterable["SimpleAlg"]:
+
+        """
+        Must returns SimpleAlg if _alg is SimpleAlg
+        :return:
+        """
+
+        a = self.simplify()  # can't be _Mul, nor Inv
+
+        return a.flatten()
+
 
 
 @final
@@ -100,8 +127,8 @@ class _Mul(Alg, ABC):
 
     def atomic_str(self):
 
-        if isinstance(self._alg, _SimpleAlg):
-            return self.simplify().atomic_str()  #  R3 -> R'
+        if isinstance(self._alg, SimpleAlg):
+            return self.simplify().atomic_str()  # R3 -> R'
 
         s = self._alg.atomic_str()
 
@@ -128,7 +155,7 @@ class _Mul(Alg, ABC):
 
         a = self._alg.simplify()  # can't be _Mul
 
-        if isinstance(a, _SimpleAlg):
+        if isinstance(a, SimpleAlg):
             c = type(a)
             s = c()  # _n = 1
             s._n *= a._n * self._n
@@ -138,6 +165,9 @@ class _Mul(Alg, ABC):
             return _BigAlg(None, *algs).simplify()
         else:
             raise TypeError("Unknown type:", type(self))
+
+    def flatten(self) -> Iterable["SimpleAlg"]:
+        return self.simplify().flatten()
 
 
 def _normalize_for_str(n) -> int:
@@ -169,7 +199,7 @@ def n_to_str(alg_code, n):
         return s
 
 
-class _SimpleAlg(Alg, ABC):
+class SimpleAlg(Alg, ABC):
     __slots__ = ["_n", "_code"]
 
     def __init__(self, code: str, n: int = 1) -> None:
@@ -193,89 +223,103 @@ class _SimpleAlg(Alg, ABC):
         else:
             return _normalize_for_count(self._n)
 
+    @property
+    def n(self):
+        return self._n
+
+    @property
+    def face(self):
+        return None
+
     @final
     def simplify(self) -> "Alg":
         return self
 
+    def flatten(self) -> Iterable["SimpleAlg"]:
+        return [self]
+
+
+class FaceAlg(SimpleAlg, ABC):
+
+    def __init__(self, face: FaceName, n: int = 1) -> None:
+        super().__init__(face.value, n)
+        self._face = face
+
+    @property
+    def face(self) -> FaceName:
+        return self._face
+
+    @final
+    def play(self, cube: Cube, inv: bool):
+        cube.face(self._face).rotate(_inv(inv, self._n))
+
+
 
 @final
-class _U(_SimpleAlg):
+class _U(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__("U")
-
-    def play(self, cube: Cube, inv: bool = False):
-        cube.up.rotate(_inv(inv))
+        super().__init__(FaceName.U)
 
 
 @final
-class _F(_SimpleAlg):
+class _F(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__("F")
+        super().__init__(FaceName.F)
 
-    def play(self, cube: Cube, inv: bool = False):
-        cube.front.rotate(_inv(inv))
+
 
 
 @final
-class _R(_SimpleAlg):
+class _R(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__("R")
+        super().__init__(FaceName.R)
 
-    def play(self, cube: Cube, inv: bool = False):
-        cube.right.rotate(_inv(inv))
 
 
 @final
-class _L(_SimpleAlg):
+class _L(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__("L")
+        super().__init__(FaceName.L)
 
-    def play(self, cube: Cube, inv: bool = False):
-        cube.left.rotate(_inv(inv))
 
 
 @final
-class _B(_SimpleAlg):
+class _B(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__("B")
-
-    def play(self, cube: Cube, inv: bool = False):
-        cube.back.rotate(_inv(inv))
+        super().__init__(FaceName.B)
 
 
 @final
-class _D(_SimpleAlg):
+class _D(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__("D")
+        super().__init__(FaceName.D)
 
-    def play(self, cube: Cube, inv: bool = False):
-        cube.down.rotate(_inv(inv))
 
 
 @final
-class _M(_SimpleAlg):
+class _M(SimpleAlg):
 
     def __init__(self) -> None:
         super().__init__("M")
 
     def play(self, cube: Cube, inv: bool = False):
-        cube.m_rotate(_inv(inv))
+        cube.m_rotate(_inv(inv, self._n))
 
 
 @final
-class _X(_SimpleAlg):
+class _X(SimpleAlg):
 
     def __init__(self) -> None:
         super().__init__("X")
 
     def play(self, cube: Cube, inv: bool = False):
-        cube.x_rotate(_inv(inv))
+        cube.x_rotate(_inv(inv, self._n))
 
     @property
     def is_whole(self):
@@ -283,7 +327,7 @@ class _X(_SimpleAlg):
 
 
 @final
-class _E(_SimpleAlg):
+class _E(SimpleAlg):
     """
     Middle slice over D
     """
@@ -292,17 +336,17 @@ class _E(_SimpleAlg):
         super().__init__("E")
 
     def play(self, cube: Cube, inv: bool = False):
-        cube.e_rotate(_inv(inv))
+        cube.e_rotate(_inv(inv, self._n))
 
 
 @final
-class _Y(_SimpleAlg):
+class _Y(SimpleAlg):
 
     def __init__(self) -> None:
         super().__init__("Y")
 
     def play(self, cube: Cube, inv: bool = False):
-        cube.y_rotate(_inv(inv))
+        cube.y_rotate(_inv(inv, self._n))
 
     @property
     def is_whole(self):
@@ -310,7 +354,7 @@ class _Y(_SimpleAlg):
 
 
 @final
-class _S(_SimpleAlg):
+class _S(SimpleAlg):
     """
     Middle slice over F
     """
@@ -319,17 +363,17 @@ class _S(_SimpleAlg):
         super().__init__("S")
 
     def play(self, cube: Cube, inv: bool = False):
-        cube.s_rotate(_inv(inv))
+        cube.s_rotate(_inv(inv, self._n))
 
 
 @final
-class _Z(_SimpleAlg):
+class _Z(SimpleAlg):
 
     def __init__(self) -> None:
         super().__init__("Y")
 
     def play(self, cube: Cube, inv: bool = False):
-        cube.z_rotate(_inv(inv))
+        cube.z_rotate(_inv(inv, self._n))
 
     @property
     def is_whole(self):
@@ -371,7 +415,7 @@ class _BigAlg(Alg):
         for a in self._algs:
             a = a.simplify()
 
-            if isinstance(a, _SimpleAlg):
+            if isinstance(a, SimpleAlg):
                 flat_algs.append(a)
             elif isinstance(a, _BigAlg):
                 flat_algs.extend(a._algs)
@@ -381,6 +425,10 @@ class _BigAlg(Alg):
         combined = self._combine(flat_algs)
         return _BigAlg(self._name, *combined)
 
+    def flatten(self) -> Iterable["SimpleAlg"]:
+        for a in self._algs:
+            yield from a.flatten()
+
     def _combine(self, algs: Sequence[Alg]) -> Sequence[Alg]:
 
         work_to_do = bool(algs)
@@ -389,13 +437,13 @@ class _BigAlg(Alg):
             new_algs = []
             prev: Alg | None = None
             for a in algs:
-                if not isinstance(a, _SimpleAlg):
+                if not isinstance(a, SimpleAlg):
                     raise TypeError("Unexpected type", type(a))
 
                 if prev:
                     if type(prev) == type(a):
 
-                        assert isinstance(prev, _SimpleAlg)
+                        assert isinstance(prev, SimpleAlg)
 
                         c = type(a)
                         a2 = c()  # _n = 1
@@ -480,9 +528,9 @@ class Algs:
     S = _S()  # Middle over F
 
     Simple = [L,
-              R,  X, M,
-              U,  E, Y,
-              F,  Z, S,
+              R, X, M,
+              U, E, Y,
+              F, Z, S,
               B,
               D,
               ]
