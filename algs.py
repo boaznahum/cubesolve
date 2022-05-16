@@ -55,6 +55,10 @@ class Alg(ABC):
     def flatten(self) -> Iterable["SimpleAlg"]:
         pass
 
+    @property
+    def is_ann(self):
+        return False
+
 
 class _Inv(Alg):
     __slots__ = "_alg"
@@ -248,6 +252,19 @@ class SimpleAlg(Alg, ABC):
         return None
 
 
+class Annotation(SimpleAlg):
+
+    def __init__(self, n: int = 1) -> None:
+        super().__init__("ann", n)
+
+    def play(self, cube: Cube, inv: bool):
+        pass
+
+    @property
+    def is_ann(self):
+        return True
+
+
 class FaceAlg(SimpleAlg, ABC):
 
     def __init__(self, face: FaceName, n: int = 1) -> None:
@@ -347,7 +364,6 @@ class _M(SliceAlg):
         super().__init__(SliceName.M)
 
 
-
 @final
 class _X(WholeCubeAlg):
 
@@ -365,7 +381,6 @@ class _E(SliceAlg):
         super().__init__(SliceName.E)
 
 
-
 @final
 class _Y(WholeCubeAlg):
 
@@ -381,7 +396,6 @@ class _S(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.S)
-
 
 
 @final
@@ -507,7 +521,7 @@ class _Scramble(_BigAlg):
         return 0
 
 
-def _scramble(seed: Any, n:int | None = None) -> Alg:
+def _scramble(seed: Any, n: int | None = None) -> Alg:
     rnd: Random = Random(seed)
 
     if not n:
@@ -529,6 +543,7 @@ def _scramble(seed: Any, n:int | None = None) -> Alg:
 
 
 class Algs:
+    AN = Annotation()
     L = _L()
     B = _B()
     D = _D()
@@ -557,6 +572,8 @@ class Algs:
 
     UR = _BigAlg("UR(top)", U, R, -U, -L, U, -R, -U, L)
 
+    RD = _BigAlg("RD(top)", ((R.prime + D.prime + R + D) * 2 + U) * 3)
+
     @staticmethod
     def lib() -> Sequence[Alg]:
         return [
@@ -569,7 +586,7 @@ class Algs:
         return _scramble("scramble1")
 
     @classmethod
-    def scramble(cls, seed=None, n:int | None = None):
+    def scramble(cls, seed=None, n: int | None = None):
         return _scramble(seed, n)
 
     @classmethod

@@ -476,6 +476,14 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
     if event_loop.has_exit:
         return  # maybe long alg is still running
 
+    platform_event_loop = pyglet.app.platform_event_loop
+
+    if alg.is_ann:
+        operator.op(alg, False, animation=False)
+        window.update_gui_elements()
+        platform_event_loop.notify()
+        return
+
     if inv:
         _alg = alg.inv().simplify()
         assert isinstance(_alg, algs.SimpleAlg)
@@ -487,7 +495,6 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
     # this is called from window.on_draw
     window._animation = animation
 
-    platform_event_loop = pyglet.app.platform_event_loop
 
     def _update(_):
         animation.update_gui_elements()
@@ -561,6 +568,13 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
         case key.I:
             print(f"{vs.alpha_x=} {vs.alpha_y=} {vs.alpha_z=}")
             no_operation = True
+
+        case key.W:
+            app.cube.front.corner_top_right.annotate()
+            op.op(Algs.AN)
+
+        case key.P:
+            op.op(Algs.RD)
 
         # case key.P:
         #     op_and_play_animation(window, _last_face)
@@ -658,8 +672,9 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             op.undo()
 
         case key.SLASH:
-            solution = slv.solution().simplify()
-            op.op(solution)
+            # solution = slv.solution().simplify()
+            # op.op(solution)
+            slv.solve()
 
         case key.T:
             # test

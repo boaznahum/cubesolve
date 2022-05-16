@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
+
+from algs import Algs
 from cube import Cube
 from cube_operator import Operator
+from elements import Part
 
 
 class ISolver(ABC):
@@ -21,3 +24,9 @@ class ISolver(ABC):
     @property
     @abstractmethod
     def cmn(self): ...
+
+    @property
+    @abstractmethod
+    def running_solution(self):
+        pass
+

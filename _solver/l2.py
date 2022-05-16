@@ -139,10 +139,17 @@ class L2(SolverElement):
 
         assert te().on_face(cube.front) and (te().on_face(cube.right) or te().on_face(cube.left))
 
-        if te().on_face(cube.right):
-            self.op.op(self._ur_alg)
-        else:
-            self.op.op(self._ul_alg)
+        _te = te()  # don't track
+        _se = se()  # don't track
+        _te_id = _te.colors_id_by_color
+        _se_id = _se.colors_id_by_color
+
+        with self.w_annotate(_te, _se):
+
+            if te().on_face(cube.right):
+                self.op.op(self._ur_alg)
+            else:
+                self.op.op(self._ul_alg)
 
         assert se().match_faces
 

@@ -3,6 +3,7 @@ from collections.abc import MutableSequence, Sequence, Iterable
 from contextlib import contextmanager
 from typing import Callable
 
+
 from algs import Alg, SimpleAlg
 from cube import Cube
 
@@ -30,6 +31,10 @@ class Operator:
             for a in algs:
                 an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
         else:
+
+            if alg.is_ann:
+                return
+
             if inv:
                 alg = alg.inv()
 
@@ -92,3 +97,7 @@ class Operator:
             yield None
         finally:
             self._history[:] = _history
+
+    @property
+    def is_with_animation(self):
+        return self._animation_hook

@@ -13,6 +13,7 @@ from cube_operator import Operator
 
 class Solver(ISolver):
     __slots__ = ["_op", "_cube", "_debug",
+                 "_running_solution",
                  "l1_cross",
                  "l1_corners",
                  "l2",
@@ -32,6 +33,8 @@ class Solver(ISolver):
         self.l3_cross = L3Cross(self)
         self.l3_corners = L3Corners(self)
 
+        # allow solver to not put annotations
+        self._running_solution = False
         self._debug = True
 
     @property
@@ -107,21 +110,30 @@ class Solver(ISolver):
         if self._debug:
             print("Solver:", *args)
 
+    @property
+    def running_solution(self):
+        return self._running_solution
+
     def solution(self):
         if self.is_solved:
             return Algs.alg(None)
 
-        n = len(self.op.history)
-        solution_algs = []
+        rs = self._running_solution
+        self._running_solution = True
+        try:
+            n = len(self.op.history)
+            solution_algs = []
 
-        with self._op.suspended_animation():
+            with self._op.suspended_animation():
 
-            with self._op.save_history():  #not really needed
-                self.solve(debug=False, animation=False)
-                while n < len(self.op.history):
-                    step = self.op.undo(animation=False)
-                    # s=str(step)
-                    if step:
-                        solution_algs.insert(0, step)
+                with self._op.save_history():  # not really needed
+                    self.solve(debug=False, animation=False)
+                    while n < len(self.op.history):
+                        step = self.op.undo(animation=False)
+                        # s=str(step)
+                        if step:
+                            solution_algs.insert(0, step)
 
-            return Algs.alg(None, *solution_algs)
+                return Algs.alg(None, *solution_algs)
+        finally:
+            self._running_solution = rs

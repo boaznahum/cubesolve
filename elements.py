@@ -52,7 +52,7 @@ PartFixedID = frozenset[FaceName]
 
 
 class PartEdge:
-    __slots__ = ["_face", "_color"]
+    __slots__ = ["_face", "_color", "_annotated"]
 
     _face: _Face
     _color: Color
@@ -61,6 +61,7 @@ class PartEdge:
         super().__init__()
         self._face = face
         self._color = color
+        self._annotated: bool = False
 
     @property
     def face(self) -> _Face:
@@ -75,13 +76,27 @@ class PartEdge:
 
     def copy_color(self, source: "PartEdge"):
         self._color = source._color
+        self._annotated = source._annotated
 
     def copy(self) -> "PartEdge":
         """
         Used as temporary for rotate, must not be used in cube
         :return:
         """
-        return PartEdge(self._face, self._color)
+        p = PartEdge(self._face, self._color)
+        p._annotated = self._annotated
+
+        return p
+
+    def annotate(self):
+        self._annotated = True
+
+    def un_annotate(self):
+        self._annotated = False
+
+    @property
+    def annotated(self):
+        return self._annotated
 
 
 class Part(ABC):
@@ -315,6 +330,18 @@ class Part(ABC):
     @property
     def cube(self) -> _Cube:
         return self._edges[0].face.cube
+
+    def annotate(self):
+        for p in self._edges:
+            p.annotate()
+
+    def un_annotate(self):
+        for p in self._edges:
+            p.un_annotate()
+
+    @property
+    def annotated(self) -> bool:
+        return any( p.annotated for p in self._edges )
 
 
 class Center(Part):

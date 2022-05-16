@@ -1,15 +1,15 @@
 from collections import defaultdict
-from collections.abc import Sequence, Set
+from collections.abc import Set
 from ctypes import c_float
-from typing import Hashable, Tuple, MutableSequence, Callable, Iterable, DefaultDict, Sequence, Set
+from typing import Hashable, Tuple, MutableSequence, Callable, Iterable, Sequence, Set
 
 import colorama
 import numpy as np
+import numpy.linalg
 import pyglet  # type: ignore
+import pyglet.gl as gl  # type: ignore
 from numpy import ndarray
-from numpy.distutils.fcompiler import get_default_fcompiler
 from pyglet.gl import *  # type: ignore
-import pyglet.gl as gl
 from pyglet.graphics import Batch  # type: ignore
 
 from cube import Cube
@@ -44,7 +44,7 @@ def _color_2_v_color(c: Color) -> _VColor:
         #  https://www.rapidtables.com/web/color/blue-color.html
 
         _colors[Color.BLUE] = (0, 0, 255)
-        _colors[Color.ORANGE] = (255, 165, 0)
+        _colors[Color.ORANGE] = (255,69,0) # (255,127,80) # (255, 165, 0)
         _colors[Color.YELLOW] = (255, 255, 0)
         _colors[Color.GREEN] = (0, 255, 0)
         _colors[Color.RED] = (255, 0, 0)
@@ -74,7 +74,7 @@ class _Cell:
         self.gl_lists = 0
 
     # noinspection PyUnusedLocal
-    def create_objects(self, vertexes: Sequence[Vec3f], color, marker: int):
+    def create_objects(self, vertexes: Sequence[Vec3f], color, marker: bool):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
@@ -93,7 +93,7 @@ class _Cell:
         self._create_polygon(vertexes, color)
         self._create_lines(vertexes, [0, 0, 0])
         # self._create_helpers()
-        # self._create_markers(vertexes, marker)
+        self._create_markers(vertexes, (255-color[0], 255-color[1], 255-color[2] ), marker)
         gl.glEndList()
 
     def draw(self):
@@ -194,16 +194,35 @@ class _Cell:
 
         glPopAttrib()  # line width
 
-    def _create_markers(self, vertexes, marker):
+    def _create_markers(self, vertexes: Sequence[Vec3f], color, marker: bool):
+
         if not marker:
             return
-        self._g_markers = []
 
-        x0 = (vertexes[0][0] + vertexes[2][0]) // 2
-        y0 = (vertexes[0][1] + vertexes[2][1]) // 2
+        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
-        for i in range(marker + 1):
-            self._g_markers.append(pyglet.shapes.Circle(x0, y0, i * 2, batch=self._batch, color=[0, 0, 0]))
+        vx = [numpy.array([f.value for f in v], dtype=float) for v in vertexes]
+
+        gl.glPushAttrib(gl.GL_LINE_LOOP)
+        gl.glLineWidth(3)
+
+        gl.glColor3ub(*color)  #cyan
+
+        center = (vx[0] + vx[2]) / 2
+
+        # a unit vectors
+        v1 = [(v - center) / numpy.linalg.norm(v - center) for v in vx]
+
+        for i in range(3):
+            gl.glBegin(gl.GL_LINE_LOOP)
+
+            for v in v1:
+                p = center + v * 2.0 * (i + 1)
+                gl.glVertex3f(*p)
+
+            gl.glEnd()
+
+        gl.glPopAttrib()
 
     def gui_objects(self) -> Iterable[int]:
         return [self.gl_lists]
@@ -263,7 +282,7 @@ class _FaceBoard:
         :param vertexes: four corners of edge
         :return:
         """
-        self._cells[part.fixed_id].create_objects(vertexes, c, marker)
+        self._cells[part.fixed_id].create_objects(vertexes, c, part.annotated)
 
     def draw_init(self):
 
@@ -591,7 +610,7 @@ class GCubeViewer:
 
         # -05 below so we see it
         _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1])
-#        _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
+        #        _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
 
         self._board.finish_faces()
 
@@ -647,13 +666,12 @@ class GCubeViewer:
 
         right_center: ndarray = right.get_center()
         # because left,back and down have more than one gui faces
-        #right_objects: Iterable[int] = self._get_faces_gui_objects(self._get_faces(name))
+        # right_objects: Iterable[int] = self._get_faces_gui_objects(self._get_faces(name))
         left_center: ndarray = left.get_center()
 
         objects: set[int] = set()
 
         objects.update(self._board.get_all_cells_gui_elemnts(self._cube.face(name)))
-
 
         if hide:
             self._board.set_hidden(objects)
@@ -718,7 +736,7 @@ class GCubeViewer:
         # because left,back and down have more than one gui faces
         left_center: ndarray = left.get_center()
 
-        objects = set()
+        objects: set[int] = set()
 
         objects.update(self._board.get_all_cells_gui_elemnts(self._cube.slice(slice_name)))
 

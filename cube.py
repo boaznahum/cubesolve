@@ -125,6 +125,8 @@ class Cube:
         for s in self._slices.values():
             s.finish_init()
 
+        #self.front.edge_top.annotate()
+
     @property
     def front(self):
         return self._front

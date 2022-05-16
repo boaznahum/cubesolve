@@ -140,9 +140,13 @@ class L3Corners(SolverElement):
 
         for _ in range(0, 4):
 
+            self.annotate(yf.corner_bottom_right)
             # we can't check all_match because we rotate the cube
             while not yf.corner_bottom_right.match_face(yf):
                 self.op.op(Algs.alg("L3-RD", Algs.R.prime, Algs.D.prime, Algs.R, Algs.D)*2)
+
+            # before U'
+            self.annotate(yf.corner_bottom_right, un_an=True)
 
             self.op.op(Algs.U.prime)
 
