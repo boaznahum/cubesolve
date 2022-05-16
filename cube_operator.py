@@ -1,13 +1,10 @@
 import functools
-from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, Sequence, Iterable
 from contextlib import contextmanager
 from typing import Callable
 
 from algs import Alg, SimpleAlg
 from cube import Cube
-
-
 
 
 class Operator:
@@ -17,26 +14,21 @@ class Operator:
         super().__init__()
         self._cube = cube
         self._history: MutableSequence[Alg] = []
-        self._animation_hook: Callable[["Operator", SimpleAlg], None] |None = None
+        self._animation_hook: Callable[["Operator", SimpleAlg], None] | None = None
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
         if animation and self._animation_hook:
+
             an = self._animation_hook
+            if inv:
+                alg = alg.inv()
 
-            # just in case
-            self._animation_hook = None
-            try:
-                if inv:
-                    alg = alg.inv()
+            algs: Iterable[SimpleAlg] = alg.flatten()
 
-                algs: Iterable[SimpleAlg] = alg.flatten()
-
-                algs = [* algs ] # for debug only
-                for a in algs:
-                    an(self, a)
-            finally:
-                self._animation_hook = an
+            algs = [*algs]  # for debug only
+            for a in algs:
+                an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
         else:
             if inv:
                 alg = alg.inv()
@@ -45,6 +37,20 @@ class Operator:
             alg.play(self._cube, False)
             self._cube.sanity()
             self._history.append(alg)
+
+    def undo(self, animation=True) -> Alg | None:
+
+        """
+        :return: the undo alg
+        """
+        if self.history:
+            alg = self._history.pop()
+            self.op(alg, True, animation)
+            # do not add to history !!! otherwise history will never shrink
+            self._history.pop()
+            return alg
+        else:
+            return None
 
     @property
     def cube(self) -> Cube:
@@ -62,18 +68,6 @@ class Operator:
         self._cube.reset()
         self._history.clear()
 
-    def undo(self) -> Alg | None:
-        """
-
-        :return: the undo alg
-        """
-        if self.history:
-            alg = self._history.pop()
-            alg.play(self._cube, True)
-            return alg
-        else:
-            return None
-
     @contextmanager
     def suspended_animation(self, suspend=True):
 
@@ -86,4 +80,3 @@ class Operator:
                 self._animation_hook = an
         else:
             yield None
-

@@ -291,12 +291,6 @@ class Window(pyglet.window.Window):
         return self._animation
 
 
-def main():
-    app: Main = Main()
-    Window(app, 720, 720, '"Cube"')
-    pyglet.app.run()
-
-
 class Animation:
     done: bool
     animation_draw: Callable[[], None] | None
@@ -431,6 +425,11 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
 
 
 def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: algs.SimpleAlg):
+    event_loop = pyglet.app.event_loop
+
+    if event_loop.has_exit:
+        return  # maybe long alg is still running
+
     if inv:
         _alg = alg.inv().simplify()
         assert isinstance(_alg, algs.SimpleAlg)
@@ -439,16 +438,36 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
     animation: Animation = _create_animation(window, alg, alg.n)
     delay: float = animation.delay
 
+    # this is called from window.on_draw
     window._animation = animation.animation_draw
-    while not animation.done:
-        window.on_draw()
-        if animation.done:
-            break  # don't sleep !!!
-        window.flip()
-        time.sleep(delay)
+
+    platform_event_loop = pyglet.app.platform_event_loop
+
+    def _update(dt):
+        platform_event_loop.notify()
+
+    clock: pyglet.clock.Clock = event_loop.clock
+    clock.schedule_interval(_update, delay)
+
+    # copied from EventLoop#run
+    while not event_loop.has_exit and not animation.done:
+        timeout = event_loop.idle()
+        platform_event_loop.step(timeout)
+
+    if event_loop.has_exit:
+        return
+
+    clock.unschedule(_update)
+
+    # while not animation.done:
+    #     window.on_draw()
+    #     time.sleep(delay)
 
     if animation.animation_cleanup:
         animation.animation_cleanup()
+    #     if animation.done:
+    #         break  # don't sleep !!!
+    #     window.flip()
 
     window._animation = None
 
@@ -464,6 +483,14 @@ _last_face: FaceName = FaceName.R
 
 def _handle_input(window: Window, value: int, modifiers: int) -> bool:
     done = False
+
+    if window.animation:
+        match value:
+
+            case key.Q:
+                window.close()
+                return True
+        return False
 
     app: Main = window.app
     op: Operator = app.op
@@ -626,6 +653,12 @@ def get_alg() -> Alg:
     return _algs[int(index) - 1]
 
     pass
+
+
+def main():
+    app: Main = Main()
+    Window(app, 720, 720, '"Cube"')
+    pyglet.app.run()
 
 
 if __name__ == '__main__':
