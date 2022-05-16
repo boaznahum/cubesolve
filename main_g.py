@@ -398,7 +398,7 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
         nonlocal current_angel
         nonlocal last_update
 
-        #print(f"In update before {current_angel=} {target_angel}")
+        # print(f"In update before {current_angel=} {target_angel}")
         if (time.time() - last_update) > animation.delay:
             _angel = current_angel + angel_delta
 
@@ -414,13 +414,14 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
 
             last_update = time.time()
 
-        #print(f"In update after {current_angel=} {target_angel}")
+        # print(f"In update after {current_angel=} {target_angel}")
 
+    # noinspection PyPep8Naming
     def _draw():
 
         nonlocal current_angel
 
-        #print(f"In _draw {current_angel=} {target_angel=}")
+        # print(f"In _draw {current_angel=} {target_angel=}")
 
         if abs(current_angel) > abs(target_angel):
             animation.done = True
@@ -466,7 +467,6 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
 
 
 def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: algs.SimpleAlg):
-
     # if True:
     #     operator.op(alg, inv, animation=False)
     #     return
@@ -489,7 +489,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
 
     platform_event_loop = pyglet.app.platform_event_loop
 
-    def _update(dt):
+    def _update(_):
         animation.update_gui_elements()
         platform_event_loop.notify()
 
@@ -519,7 +519,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
 
     operator.op(alg, False, animation=False)
 
-    window.update_gui_elements() # most important !!! otherwise animation jumps
+    window.update_gui_elements()  # most important !!! otherwise animation jumps
     # window.on_draw()
     # window.flip()
 
@@ -643,7 +643,12 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
             alg = Algs.scramble()
             op.op(alg, inv, animation=False)
 
-        case key._1 | key._2 | key._3 | key._4 | key._5 | key._6:
+        case key._1:
+            # noinspection PyProtectedMember
+            alg = Algs.scramble(value - key._0, 5)
+            op.op(alg, inv, animation=False)
+
+        case key._2 | key._3 | key._4 | key._5 | key._6:
             # to match test int
             # noinspection PyProtectedMember
             alg = Algs.scramble(value - key._0)

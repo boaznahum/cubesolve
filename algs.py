@@ -507,10 +507,11 @@ class _Scramble(_BigAlg):
         return 0
 
 
-def _scramble(seed: Any) -> Alg:
+def _scramble(seed: Any, n:int | None = None) -> Alg:
     rnd: Random = Random(seed)
 
-    n = rnd.randint(400, 800)
+    if not n:
+        n = rnd.randint(400, 800)
     # n = rnd.randint(5, 6)
 
     s = Algs.Simple
@@ -568,8 +569,8 @@ class Algs:
         return _scramble("scramble1")
 
     @classmethod
-    def scramble(cls, seed=None):
-        return _scramble(seed)
+    def scramble(cls, seed=None, n:int | None = None):
+        return _scramble(seed, n)
 
     @classmethod
     def alg(cls, name, *algs: Alg):

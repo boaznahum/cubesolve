@@ -115,11 +115,13 @@ class Solver(ISolver):
         solution_algs = []
 
         with self._op.suspended_animation():
-            self.solve(debug=False, animation=False)
-            while n < len(self.op.history):
-                step = self.op.undo(animation=False)
-                # s=str(step)
-                if step:
-                    solution_algs.insert(0, step)
+
+            with self._op.save_history():  #not really needed
+                self.solve(debug=False, animation=False)
+                while n < len(self.op.history):
+                    step = self.op.undo(animation=False)
+                    # s=str(step)
+                    if step:
+                        solution_algs.insert(0, step)
 
             return Algs.alg(None, *solution_algs)

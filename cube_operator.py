@@ -43,12 +43,15 @@ class Operator:
         """
         :return: the undo alg
         """
-        with self.suspended_animation():
+        with self.suspended_animation(False):
             if self.history:
                 alg = self._history.pop()
+                _history = [ * self._history ]
                 self.op(alg, True, animation)
                 # do not add to history !!! otherwise history will never shrink
-                self._history.pop()
+                # becuase op may break big algs to steps, and add more than one , we can't just pop
+                #self._history.pop()
+                self._history[:] = _history
                 return alg
             else:
                 return None
@@ -81,3 +84,11 @@ class Operator:
                 self._animation_hook = an
         else:
             yield None
+
+    @contextmanager
+    def save_history(self):
+        _history = [* self._history ]
+        try:
+            yield None
+        finally:
+            self._history[:] = _history
