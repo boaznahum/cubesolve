@@ -17,6 +17,8 @@ class ViewState:
 
     def __init__(self, ax0, ay0, az0, a_delta) -> None:
         super().__init__()
+        self._animation_speed_delay_between_steps: float = 1/40
+        self._animation_speed_number_of_steps = 40
         self._alpha_x_0: float = ax0
         self._alpha_y_0: float = ay0
         self._alpha_z_0: float = az0
@@ -99,3 +101,15 @@ class ViewState:
         # Pop Matrix off stack
         glPopMatrix()
         glPopAttrib()
+
+    @property
+    def animation_speed_number_of_steps(self):
+        return self._animation_speed_number_of_steps
+
+    @property
+    def animation_speed_delay_between_steps(self) -> float:
+        """
+
+        :return: delay (seconds) between steps
+        """
+        return self._animation_speed_delay_between_steps

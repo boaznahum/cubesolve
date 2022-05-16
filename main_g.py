@@ -25,18 +25,13 @@ from viewer_g import GCubeViewer
 
 
 class Animation:
-    done: bool
-    _animation_update_only: Callable[[], None] | None
-    _animation_draw_only: Callable[[], None] | None
-    delay: float
-    _animation_cleanup: Callable[[], None] | None
 
     def __init__(self) -> None:
         super().__init__()
-        self.done = False
-        self._animation_update_only = None
-        self._animation_draw_only = None
-        self._animation_cleanup = None
+        self.done: bool = False
+        self._animation_update_only: Callable[[], None] | None = None
+        self._animation_draw_only: Callable[[], None] | None = None
+        self._animation_cleanup: Callable[[], None] | None = None
         self.delay = 1 / 20.
 
     def update_gui_elements(self):
@@ -344,7 +339,7 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
     if n == 3:
         n = -1
     target_angel = math.radians(90 * n)
-    angel_delta = target_angel / 15
+    angel_delta = target_angel / float(window.app.vs.animation_speed_number_of_steps)
 
     # Rotate A Point
     # About An Arbitrary Axis
@@ -406,8 +401,13 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
         #print(f"In update before {current_angel=} {target_angel}")
         if (time.time() - last_update) > animation.delay:
             _angel = current_angel + angel_delta
+
             if abs(_angel) > abs(target_angel):
-                animation.done = True
+
+                if current_angel < target_angel:
+                    current_angel = target_angel
+                else:
+                    animation.done = True
             else:
                 # don't update if done, make animation smoother, no jump at end
                 current_angel = _angel
@@ -451,7 +451,7 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
 
         return True
 
-    animation.delay = 1 / 40
+    animation.delay = window.app.vs.animation_speed_delay_between_steps
     animation._animation_draw_only = _draw
     animation._animation_update_only = _update
 
@@ -519,7 +519,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
 
     operator.op(alg, False, animation=False)
 
-    # window.update_gui_elements()
+    window.update_gui_elements() # most important !!! otherwise animation jumps
     # window.on_draw()
     # window.flip()
 
