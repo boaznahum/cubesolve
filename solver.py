@@ -117,7 +117,7 @@ class Solver(ISolver):
         with self._op.suspended_animation():
             self.solve(debug=False, animation=False)
             while n < len(self.op.history):
-                step = self.op.undo()
+                step = self.op.undo(animation=False)
                 # s=str(step)
                 if step:
                     solution_algs.insert(0, step)

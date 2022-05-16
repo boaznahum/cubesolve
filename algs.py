@@ -141,9 +141,6 @@ class _Mul(Alg, ABC):
         for _ in range(0, self._n):
             self._alg.play(cube, inv)
 
-    def inv(self) -> Alg:
-        return self._alg
-
     def count(self) -> int:
         if not isinstance(self._alg, _BigAlg):
             return _normalize_for_count(self._n) * self._alg.count()

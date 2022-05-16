@@ -24,6 +24,34 @@ from viewer_g import GCubeViewer
 # pyglet.options["debug_graphics_batch"] = True
 
 
+class Animation:
+    done: bool
+    _animation_update_only: Callable[[], None] | None
+    _animation_draw_only: Callable[[], None] | None
+    delay: float
+    _animation_cleanup: Callable[[], None] | None
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.done = False
+        self._animation_update_only = None
+        self._animation_draw_only = None
+        self._animation_cleanup = None
+        self.delay = 1 / 20.
+
+    def update_gui_elements(self):
+        if self._animation_update_only:
+            self._animation_update_only()
+
+    def draw(self):
+        if self._animation_draw_only:
+            self._animation_draw_only()
+
+    def cleanup(self):
+        if self._animation_cleanup:
+            self._animation_cleanup()
+
+
 class Main:
 
     def __init__(self) -> None:
@@ -75,7 +103,7 @@ class Window(pyglet.window.Window):
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
         self.text: MutableSequence[pyglet.text.Label] = []
 
-        self._animation: Callable[[], None] | None = None
+        self._animation: Animation | None = None
 
         self.update_gui_elements()
 
@@ -100,15 +128,18 @@ class Window(pyglet.window.Window):
         self.text.append(pyglet.text.Label(err,
                                            x=10, y=70, font_size=10))
 
-        # solution = self.app.slv.solution().simplify()
-        # s = "Solution:(" + str(solution.count()) + ") " + str(solution)
-        # self.text.append(pyglet.text.Label(s,
-        #                                    x=10, y=90, font_size=10))
+        solution = self.app.slv.solution().simplify()
+        s = "Solution:(" + str(solution.count()) + ") " + str(solution)
+        self.text.append(pyglet.text.Label(s,
+                                           x=10, y=90, font_size=10))
 
         if self.app.error:
             err = f"Error:{self.app.error}"
             self.text.append(pyglet.text.Label(err,
                                                x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
+
+        if self._animation:
+            self._animation.update_gui_elements()
 
     def on_draw(self):
         # print("Updating")
@@ -284,24 +315,11 @@ class Window(pyglet.window.Window):
 
         if animation:
             # print("Play animation")
-            animation()
+            animation.draw()
 
     @property
     def animation(self):
         return self._animation
-
-
-class Animation:
-    done: bool
-    animation_draw: Callable[[], None] | None
-    delay: float
-    animation_cleanup: Callable[[], None] | None
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.done = False
-        self.animation_draw = None
-        self.delay = 1 / 20.
 
 
 # noinspection PyPep8Naming
@@ -321,12 +339,12 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
     vs: ViewState = window.app.vs
     current_angel = 0
 
-    # compute angel
+    # compute target_angel
     n = n_count % 4
     if n == 3:
         n = -1
-    angel = math.radians(90 * n)
-    angel_delta = angel / 15
+    target_angel = math.radians(90 * n)
+    angel_delta = target_angel / 15
 
     # Rotate A Point
     # About An Arbitrary Axis
@@ -374,14 +392,37 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
 
     animation = Animation()
     animation.done = False
-    animation.animation_cleanup = lambda: window.viewer.unhidden_all()
+    animation._animation_cleanup = lambda: window.viewer.unhidden_all()
 
     # noinspection PyPep8Naming
-    def _draw_and_update_state():
+
+    last_update = time.time()
+
+    def _update():
+
+        nonlocal current_angel
+        nonlocal last_update
+
+        #print(f"In update before {current_angel=} {target_angel}")
+        if (time.time() - last_update) > animation.delay:
+            _angel = current_angel + angel_delta
+            if abs(_angel) > abs(target_angel):
+                animation.done = True
+            else:
+                # don't update if done, make animation smoother, no jump at end
+                current_angel = _angel
+
+            last_update = time.time()
+
+        #print(f"In update after {current_angel=} {target_angel}")
+
+    def _draw():
 
         nonlocal current_angel
 
-        if abs(current_angel) > abs(angel):
+        #print(f"In _draw {current_angel=} {target_angel=}")
+
+        if abs(current_angel) > abs(target_angel):
             animation.done = True
             return
 
@@ -401,7 +442,6 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
         gm[:] = m.flatten(order="F")
 
         gl.glMultMatrixf(gm)
-        current_angel += angel_delta
 
         try:
             for f in gui_objects:
@@ -411,8 +451,9 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
 
         return True
 
-    animation.animation_draw = _draw_and_update_state
     animation.delay = 1 / 40
+    animation._animation_draw_only = _draw
+    animation._animation_update_only = _update
 
     return animation
 
@@ -425,6 +466,11 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
 
 
 def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: algs.SimpleAlg):
+
+    # if True:
+    #     operator.op(alg, inv, animation=False)
+    #     return
+
     event_loop = pyglet.app.event_loop
 
     if event_loop.has_exit:
@@ -439,11 +485,12 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
     delay: float = animation.delay
 
     # this is called from window.on_draw
-    window._animation = animation.animation_draw
+    window._animation = animation
 
     platform_event_loop = pyglet.app.platform_event_loop
 
     def _update(dt):
+        animation.update_gui_elements()
         platform_event_loop.notify()
 
     clock: pyglet.clock.Clock = event_loop.clock
@@ -451,7 +498,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
 
     # copied from EventLoop#run
     while not event_loop.has_exit and not animation.done:
-        timeout = event_loop.idle()
+        timeout = event_loop.idle()  # this will trigger on_draw
         platform_event_loop.step(timeout)
 
     if event_loop.has_exit:
@@ -463,8 +510,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
     #     window.on_draw()
     #     time.sleep(delay)
 
-    if animation.animation_cleanup:
-        animation.animation_cleanup()
+    animation.cleanup()
     #     if animation.done:
     #         break  # don't sleep !!!
     #     window.flip()
@@ -473,9 +519,9 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
 
     operator.op(alg, False, animation=False)
 
-    window.update_gui_elements()
-    window.on_draw()
-    window.flip()
+    # window.update_gui_elements()
+    # window.on_draw()
+    # window.flip()
 
 
 _last_face: FaceName = FaceName.R
@@ -484,13 +530,13 @@ _last_face: FaceName = FaceName.R
 def _handle_input(window: Window, value: int, modifiers: int) -> bool:
     done = False
 
-    if window.animation:
-        match value:
-
-            case key.Q:
-                window.close()
-                return True
-        return False
+    # if window.animation:
+    #     match value:
+    #
+    #         case key.Q:
+    #             window.close()
+    #             return True
+    #     return False
 
     app: Main = window.app
     op: Operator = app.op
@@ -633,7 +679,7 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
         case _:
             return False
 
-    # no need to redraw, on_draw is called after any eventq
+    # no need to redraw, on_draw is called after any event
 
     if not no_operation:
         window.update_gui_elements()

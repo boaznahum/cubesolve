@@ -43,14 +43,15 @@ class Operator:
         """
         :return: the undo alg
         """
-        if self.history:
-            alg = self._history.pop()
-            self.op(alg, True, animation)
-            # do not add to history !!! otherwise history will never shrink
-            self._history.pop()
-            return alg
-        else:
-            return None
+        with self.suspended_animation():
+            if self.history:
+                alg = self._history.pop()
+                self.op(alg, True, animation)
+                # do not add to history !!! otherwise history will never shrink
+                self._history.pop()
+                return alg
+            else:
+                return None
 
     @property
     def cube(self) -> Cube:
