@@ -93,6 +93,13 @@ class L1Cross(SolverElement):
             # assert e.match_faces
 
     def _fix_edge(self, wf: Face, target_colors_id: PartColorsID):
+        with self.w_annotate(
+                (target_colors_id, False),
+                (target_colors_id, True)
+        ):
+            self.__fix_edge(wf, target_colors_id)
+
+    def __fix_edge(self, wf: Face, target_colors_id: PartColorsID):
         """
         Bring edge to correct place in the cross
         :param wf:
@@ -113,7 +120,7 @@ class L1Cross(SolverElement):
         cmn: CommonOp = self.cmn
 
         # the required colors
-        target_colors_id: PartColorsID = target_edge.colors_id_by_pos
+        target_colors_id = target_edge.colors_id_by_pos
 
         source_edge = cube.find_edge_by_color(target_colors_id)
 

@@ -1,26 +1,29 @@
 import functools
 from collections.abc import MutableSequence, Sequence, Iterable
 from contextlib import contextmanager
-from typing import Callable
-
+from typing import Callable, Any
 
 from algs import Alg, SimpleAlg
 from cube import Cube
 
 
 class Operator:
-    __slots__ = ["_cube", "_history", "_animation_hook", "_animation_running"]
+    __slots__ = ["_cube", "_history", "_animation_hook", "_animation_running",
+                 "_aborted", "_animation_on"]
 
     def __init__(self, cube: Cube) -> None:
         super().__init__()
+        self._aborted: Any = None
         self._cube = cube
         self._history: MutableSequence[Alg] = []
         self._animation_hook: Callable[["Operator", SimpleAlg], None] | None = None
         self._animation_running = False
+        self._animation_on: bool = True
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
-        if animation and self._animation_hook:
+        self._aborted = False
+        if animation and self.animation_on:
 
             with self._w_with_animation:
 
@@ -33,6 +36,8 @@ class Operator:
                 algs = [*algs]  # for debug only
                 for a in algs:
                     an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
+                    if self._aborted:
+                        break
         else:
 
             if alg.is_ann:
@@ -103,7 +108,7 @@ class Operator:
 
     @property
     def is_with_animation(self):
-        return self._animation_hook
+        return self._animation_hook and self._animation_hook
 
     @property
     def is_animation_running(self):
@@ -119,4 +124,19 @@ class Operator:
             yield None
         finally:
             self._animation_running=b
+
+    def set_aborted(self):
+        self._aborted = True
+
+    @property
+    def aborted(self):
+        return self._aborted
+
+    @property
+    def animation_on(self):
+        return self._animation_on and self._animation_hook
+
+    def toggle_animation_on(self):
+        self._animation_on = not self._animation_on
+
 

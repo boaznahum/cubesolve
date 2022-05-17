@@ -100,18 +100,22 @@ class L3Cross(SolverElement):
             return  # done
 
         if n == 0:
-            self.op.op(self._fur)  # --> |
-            self.op.op(Algs.U)  # --> -
-            self.op.op(self._fru)  # --> +
+            with self.w_annotate(*zip(yf.edges, [False] * 4)):
+                self.op.op(self._fur)  # --> |
+                self.op.op(Algs.U)  # --> -
+                self.op.op(self._fru)  # --> +
             return
 
         if n == 2:
             if left and right:  # -
-                self.op.op(self._fru)  # --> +
+                with self.w_annotate(*zip([yf.edge_top, yf.edge_bottom], [False] * 2)):
+                    self.op.op(self._fru)  # --> +
+
                 return
             elif top and bottom:  # |
-                self.op.op(Algs.U)  # --> -
-                self.op.op(self._fru)  # --> +
+                with self.w_annotate(*zip([yf.edge_right, yf.edge_left], [False] * 2)):
+                    self.op.op(Algs.U)  # --> -
+                    self.op.op(self._fru)  # --> +
                 return
 
             else:
@@ -128,7 +132,8 @@ class L3Cross(SolverElement):
                 else:
                     ValueError(f"Unrecognized {left=} {top=} {right=} {bottom=} ")
 
-                self.op.op(self._fur)  # --| --> +
+                with self.w_annotate(*zip([yf.edge_bottom, yf.edge_right], [False] * 2)):
+                    self.op.op(self._fur)  # op L | --> +
                 return
 
     def _do_cross_position(self):
@@ -152,25 +157,30 @@ class L3Cross(SolverElement):
         if not top.match:
             # where is top ?
             if yf.edge_left is top.actual:
-                # need to swap top and left
-                self.op.op(Algs.U.prime)
-                self.op.op(self._ru)
-                self.op.op(Algs.U)
+                with self.w_annotate((yf.edge_left, False), (yf.edge_top, False)):
+                    # need to swap top and left
+                    self.op.op(Algs.U.prime)
+                    self.op.op(self._ru)
+                    self.op.op(Algs.U)
             else:
                 # it is on bottom
                 # need to swap bottom and left , then top and left
-                self.op.op(self._ru)
+                with self.w_annotate((yf.edge_left, False), (yf.edge_bottom, False)):
+                    self.op.op(self._ru)
 
-                self.op.op(Algs.U.prime)
-                self.op.op(self._ru)
-                self.op.op(Algs.U)
+                with self.w_annotate((yf.edge_top, False), (yf.edge_right, False)):
+                    self.op.op(Algs.U.prime)
+                    self.op.op(self._ru)
+                    self.op.op(Algs.U)
 
             assert top.match
 
         # now bottom and left
         if not yf.edge_left.match_faces:
             # need to swap bottom and left
-            self.op.op(self._ru)
+            with self.w_annotate((yf.edge_bottom, False), (yf.edge_left, False)):
+                self.op.op(self._ru)
+
             assert yf.edge_left.match_faces
 
         assert yf.edge_bottom.match_faces

@@ -2,7 +2,9 @@ from collections.abc import Sequence
 from math import *
 
 import numpy as np
-from pyglet.gl import *
+from numpy import ndarray
+from pyglet.gl import *  # type: ignore
+from pyglet import gl  # type: ignore
 
 projection_matrix = np.matrix([
     [1, 0, 0],
@@ -52,19 +54,23 @@ def vec3to2(point: np.ndarray,
 def print_matrix(name, id: int):
     """
 
-    :param id:  GL_MODELVIEW, GL_PROJECTION
+    :param id:  GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX, GL_VIEWPORT
     :return:
     """
-    v = (GLdouble * 16)()
-    glGetDoublev(id, v)
+    v = (gl.GLdouble * 16)()
+    gl.glGetDoublev(id, v)
+
+    m: ndarray = np.array( [ *v ]) # because iterator return floats
+
+    m=m.reshape((4,4)).transpose()
 
     # from column major to row major
-    m = [
-        [v[0], v[4], v[8], v[12]],
-        [v[1], v[5], v[9], v[13]],
-        [v[2], v[6], v[10], v[14]],
-        [v[3], v[7], v[11], v[15]]
-    ]
+    # m = [
+    #     [v[0], v[4], v[8], v[12]],
+    #     [v[1], v[5], v[9], v[13]],
+    #     [v[2], v[6], v[10], v[14]],
+    #     [v[3], v[7], v[11], v[15]]
+    # ]
 
     print(name + ":")
     for r in m:

@@ -1,11 +1,9 @@
-from typing import Sequence
-
-from _solver.base_solver import SolverElement, ISolver
+from _solver.base_solver import SolverElement, ISolver, AnnWhat
 from _solver.common_op import CommonOp
-from _solver.tracker import EdgeTracker, CornerTracker
+from _solver.tracker import CornerTracker
 from algs import Algs, Alg
 from cube_face import Face
-from elements import FaceName, Part, Edge, Corner
+from elements import FaceName, Part, Corner
 
 
 def use(_):
@@ -41,8 +39,7 @@ class L3Corners(SolverElement):
     def solve(self):
 
         if self._is_solved():
-            return # avoid rotating cube
-
+            return  # avoid rotating cube
 
         # we assume we have a cross
         self.cmn.bring_face_up(self.white_face.opposite)
@@ -79,11 +76,17 @@ class L3Corners(SolverElement):
 
         assert yf.corner_bottom_right.in_position
 
+        # at most two cycles
         if not yf.corner_bottom_left.in_position:
-            self.op.op(self._ur)
+            with self.w_annotate2(
+                    (yf.corner_top_right, AnnWhat.FindLocationTrackByColor),
+                    (yf.corner_top_left, AnnWhat.FindLocationTrackByColor),
+                    (yf.corner_bottom_left, AnnWhat.FindLocationTrackByColor),
+            ):
 
-        if not yf.corner_bottom_left.in_position:
-            self.op.op(self._ur)
+                for _ in [1, 1]:
+                    if not yf.corner_bottom_left.in_position:
+                        self.op.op(self._ur)
 
         assert Part.all_in_position
 
@@ -91,24 +94,27 @@ class L3Corners(SolverElement):
 
         yf: Face = self.white_face.opposite
 
-        front_right = CornerTracker.of(yf.corner_bottom_right)
+        with self.w_annotate2((yf.corner_bottom_right, AnnWhat.FindLocationTrackByColor),
+                              (yf.corner_bottom_right, AnnWhat.Postion)):
 
-        assert not front_right.in_position
+            front_right = CornerTracker.of(yf.corner_bottom_right)
 
-        source = front_right.actual
+            assert not front_right.in_position
 
-        if yf.corner_top_right is source:
-            self.op.op(Algs.Y.prime)
-            self.op.op(self._ur.prime)
-            self.op.op(Algs.Y)
-        elif yf.corner_top_left is source:
-            self.op.op(Algs.Y.prime)
-            self.op.op(self._ur)
-            self.op.op(Algs.Y)
-        elif yf.corner_bottom_left is source:
-            self.op.op(Algs.Y)
-            self.op.op(self._ur)
-            self.op.op(Algs.Y.prime)
+            source = front_right.actual
+
+            if yf.corner_top_right is source:
+                self.op.op(Algs.Y.prime)
+                self.op.op(self._ur.prime)
+                self.op.op(Algs.Y)
+            elif yf.corner_top_left is source:
+                self.op.op(Algs.Y.prime)
+                self.op.op(self._ur)
+                self.op.op(Algs.Y)
+            elif yf.corner_bottom_left is source:
+                self.op.op(Algs.Y)
+                self.op.op(self._ur)
+                self.op.op(Algs.Y.prime)
 
     @property
     def _ur(self) -> Alg:
@@ -125,14 +131,16 @@ class L3Corners(SolverElement):
         if yf.corner_bottom_right is c:
             return
 
-        if yf.corner_top_right is c:
-            return self.op.op(Algs.Y)
+        with self.w_annotate((c, False), (yf.corner_top_right, True)):
 
-        if yf.corner_top_left is c:
-            return self.op.op(Algs.Y * 2)
+            if yf.corner_top_right is c:
+                return self.op.op(Algs.Y)
 
-        if yf.corner_bottom_left is c:
-            return self.op.op(Algs.Y.prime)
+            if yf.corner_top_left is c:
+                return self.op.op(Algs.Y * 2)
+
+            if yf.corner_bottom_left is c:
+                return self.op.op(Algs.Y.prime)
 
         raise ValueError(f"Corner {c} is not on {yf}")
 
@@ -140,15 +148,10 @@ class L3Corners(SolverElement):
 
         for _ in range(0, 4):
 
-            self.annotate(yf.corner_bottom_right)
-            # we can't check all_match because we rotate the cube
-            while not yf.corner_bottom_right.match_face(yf):
-                self.op.op(Algs.alg("L3-RD", Algs.R.prime, Algs.D.prime, Algs.R, Algs.D)*2)
+            with self.w_annotate((yf.corner_bottom_right, False), (yf.corner_bottom_right, True)):
+                # we can't check all_match because we rotate the cube
+                while not yf.corner_bottom_right.match_face(yf):
+                    self.op.op(Algs.alg("L3-RD", Algs.R.prime, Algs.D.prime, Algs.R, Algs.D) * 2)
 
             # before U'
-            self.annotate(yf.corner_bottom_right, un_an=True)
-
             self.op.op(Algs.U.prime)
-
-
-

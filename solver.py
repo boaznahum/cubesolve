@@ -1,3 +1,5 @@
+from enum import Enum, unique
+
 import viewer
 from _solver.base_solver import ISolver
 from _solver.common_op import CommonOp
@@ -11,8 +13,18 @@ from cube import Cube
 from cube_operator import Operator
 
 
+@unique
+class SolveStep(Enum):
+    ALL = "ALL"
+    L1 = "L1"
+    L2 = "L2"
+    L3 = "L3"
+    L3x = "L3x"
+
+
+
 class Solver(ISolver):
-    __slots__ = ["_op", "_cube", "_debug",
+    __slots__ = ["_op", "_cube", "_debug", "_aborted",
                  "_running_solution",
                  "l1_cross",
                  "l1_corners",
@@ -23,6 +35,7 @@ class Solver(ISolver):
 
     def __init__(self, op: Operator) -> None:
         super().__init__()
+        self._aborted = None
         self._cube = op.cube
         self._op: Operator = op
 
@@ -35,7 +48,7 @@ class Solver(ISolver):
 
         # allow solver to not put annotations
         self._running_solution = False
-        self._debug = True
+        self._debug: bool = True
 
     @property
     def cube(self) -> Cube:
@@ -87,22 +100,50 @@ class Solver(ISolver):
 
         return s
 
-    def solve(self, debug=True, animation=True):
+    def solve(self, debug=True, animation=True, what: SolveStep = SolveStep.ALL):
         with self._op.suspended_animation(not animation):
-            return self._solve(debug)
+            self._aborted = None
+            try:
+                return self._solve(debug, what)
+            except:
+                if self._aborted:
+                    return
+                else:
+                    raise
 
-    def _solve(self, debug=True):
+    def _solve(self, _debug=True, what: SolveStep=SolveStep.ALL):
         if self._cube.solved:
             return
 
-        _d = self.debug
+        _d = self._debug
         try:
-            self._debug = debug
-            self.l1_cross.solve_l0_cross()
-            self.l1_corners.solve()
-            self.l2.solve()
-            self.l3_cross.solve()
-            self.l3_corners.solve()
+            self._debug = _debug
+
+            match what:
+
+                case SolveStep.ALL | SolveStep.L3:
+                    self.l1_cross.solve_l0_cross()
+                    self.l1_corners.solve()
+                    self.l2.solve()
+                    self.l3_cross.solve()
+                    self.l3_corners.solve()
+
+                case SolveStep.L3x:
+                    self.l1_cross.solve_l0_cross()
+                    self.l1_corners.solve()
+                    self.l2.solve()
+                    self.l3_cross.solve()
+
+
+                case SolveStep.L2:
+                    self.l1_cross.solve_l0_cross()
+                    self.l1_corners.solve()
+                    self.l2.solve()
+
+                case SolveStep.L1:
+                    self.l1_cross.solve_l0_cross()
+                    self.l1_corners.solve()
+
         finally:
             self._debug = _d
 
@@ -137,3 +178,11 @@ class Solver(ISolver):
                 return Algs.alg(None, *solution_algs)
         finally:
             self._running_solution = rs
+
+    def set_aborted(self):
+        self.op.set_aborted()
+        self._aborted = True
+
+    @property
+    def aborted(self):
+        return self._aborted

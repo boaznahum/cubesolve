@@ -1,7 +1,7 @@
 from abc import ABC
 from collections.abc import Sequence
 from enum import Enum, unique
-from typing import TypeAlias, MutableSequence, Tuple
+from typing import TypeAlias, MutableSequence, Tuple, Any
 
 
 @unique
@@ -52,7 +52,7 @@ PartFixedID = frozenset[FaceName]
 
 
 class PartEdge:
-    __slots__ = ["_face", "_color", "_annotated"]
+    __slots__ = ["_face", "_color", "_annotated_by_color", "_annotated_fixed_location"]
 
     _face: _Face
     _color: Color
@@ -61,7 +61,8 @@ class PartEdge:
         super().__init__()
         self._face = face
         self._color = color
-        self._annotated: bool = False
+        self._annotated_by_color: bool = False
+        self._annotated_fixed_location: bool = False
 
     @property
     def face(self) -> _Face:
@@ -76,7 +77,7 @@ class PartEdge:
 
     def copy_color(self, source: "PartEdge"):
         self._color = source._color
-        self._annotated = source._annotated
+        self._annotated_by_color = source._annotated_by_color
 
     def copy(self) -> "PartEdge":
         """
@@ -84,19 +85,31 @@ class PartEdge:
         :return:
         """
         p = PartEdge(self._face, self._color)
-        p._annotated = self._annotated
+        p._annotated_by_color = self._annotated_by_color
 
         return p
 
-    def annotate(self):
-        self._annotated = True
+    def annotate(self, fixed_location: bool):
+        if fixed_location:
+            self._annotated_fixed_location = True
+        else:
+            self._annotated_by_color = True
 
     def un_annotate(self):
-        self._annotated = False
+        self._annotated_by_color = False
+        self._annotated_fixed_location = False
 
     @property
-    def annotated(self):
-        return self._annotated
+    def annotated(self) -> Any:
+        return self._annotated_by_color or self._annotated_fixed_location
+
+    @property
+    def annotated_by_color(self) -> Any:
+        return self._annotated_by_color
+
+    @property
+    def annotated_fixed(self) -> Any:
+        return self._annotated_fixed_location
 
 
 class Part(ABC):
@@ -331,9 +344,9 @@ class Part(ABC):
     def cube(self) -> _Cube:
         return self._edges[0].face.cube
 
-    def annotate(self):
+    def annotate(self, fixed_location: bool):
         for p in self._edges:
-            p.annotate()
+            p.annotate(fixed_location)
 
     def un_annotate(self):
         for p in self._edges:
@@ -341,7 +354,15 @@ class Part(ABC):
 
     @property
     def annotated(self) -> bool:
-        return any( p.annotated for p in self._edges )
+        return any(p.annotated for p in self._edges)
+
+    @property
+    def annotated_by_color(self) -> bool:
+        return any(p.annotated_by_color for p in self._edges)
+
+    @property
+    def annotated_fixed(self) -> bool:
+        return any(p.annotated_fixed for p in self._edges)
 
 
 class Center(Part):
@@ -361,7 +382,6 @@ class Center(Part):
     def replace_colors(self, other: "Center"):
         self._edges[0].copy_color(other.edg())
         self.reset_colors_id()
-
 
 
 class Edge(Part):
@@ -503,7 +523,6 @@ class Edge(Part):
             return f2
 
 
-
 class Corner(Part):
     def __init__(self, e1: PartEdge, e2: PartEdge, e3: PartEdge) -> None:
         super().__init__(e1, e2, e3)
@@ -568,4 +587,3 @@ class SuperElement:
     @property
     def cube(self) -> _Cube:
         return self._cube
-

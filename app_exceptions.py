@@ -1,0 +1,12 @@
+class AppExit(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+
+class RunStop(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+class OpAborted(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)

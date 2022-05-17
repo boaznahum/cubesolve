@@ -44,7 +44,7 @@ def _color_2_v_color(c: Color) -> _VColor:
         #  https://www.rapidtables.com/web/color/blue-color.html
 
         _colors[Color.BLUE] = (0, 0, 255)
-        _colors[Color.ORANGE] = (255,69,0) # (255,127,80) # (255, 165, 0)
+        _colors[Color.ORANGE] = (255, 69, 0)  # (255,127,80) # (255, 165, 0)
         _colors[Color.YELLOW] = (255, 255, 0)
         _colors[Color.GREEN] = (0, 255, 0)
         _colors[Color.RED] = (255, 0, 0)
@@ -71,45 +71,61 @@ class _Cell:
         self._g_markers: Sequence[pyglet.shapes._ShapeBase] | None = None
         # self._create_objects(x0, y0, x1, y1, (255, 255, 255))
 
-        self.gl_lists = 0
+        self.gl_lists_movable: Sequence[int] = []
+        self.gl_lists_unmovable: Sequence[int] = []
 
     # noinspection PyUnusedLocal
-    def create_objects(self, vertexes: Sequence[Vec3f], color, marker: bool):
+    def create_objects(self, vertexes: Sequence[Vec3f], color, marker: str):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
         self._left_bottom_v3 = vertexes[0]
         self._right_top_v3 = vertexes[2]
 
-        if self.gl_lists:
-            gl.glDeleteLists(self.gl_lists, 1)
+        for ls in self.gl_lists_movable:
+            gl.glDeleteLists(ls, 1)
+        for ls in self.gl_lists_unmovable:
+            gl.glDeleteLists(ls, 1)
 
-        self.gl_lists = gl.glGenLists(1)
+        self.gl_lists_unmovable = []
+        self.gl_lists_movable = [gl.glGenLists(1)]
         # print(f"{self.gl_lists=}")
 
-        gl.glNewList(self.gl_lists, gl.GL_COMPILE)
+        gl.glNewList(self.gl_lists_movable[0], gl.GL_COMPILE)
 
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
         self._create_polygon(vertexes, color)
         self._create_lines(vertexes, [0, 0, 0])
+        if marker == "M":
+            self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
         # self._create_helpers()
-        self._create_markers(vertexes, (255-color[0], 255-color[1], 255-color[2] ), marker)
         gl.glEndList()
+
+        if marker == "F":
+            self.gl_lists_unmovable = [gl.glGenLists(1)]
+            gl.glNewList(self.gl_lists_unmovable[0], gl.GL_COMPILE)
+            self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
+            gl.glEndList()
+
+
 
     def draw(self):
 
-        lists: int = self.gl_lists
+        lists: Sequence[int] = [ *self.gl_lists_movable , *self.gl_lists_unmovable]
 
-        if not self.gl_lists:
+        if not lists:
             print(f"Error no gl lists in {self}")
             return
 
         hidden = self._face_board.board.get_hidden()
-        if hidden and lists in hidden:
+
+        if all( ll in hidden for ll in lists ):
             return
 
         self._prepare_view_state()
-        glCallList(self.gl_lists)
+        for ll in lists:
+            if not ll in hidden:
+                glCallList(ll)
         self._restore_view_state()
 
     def _prepare_view_state(self):
@@ -201,31 +217,76 @@ class _Cell:
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
+        ortho_dir: ndarray = self._face_board.ortho_direction
+        norm = np.linalg.norm(ortho_dir)
+        ortho_dir /= norm
+
         vx = [numpy.array([f.value for f in v], dtype=float) for v in vertexes]
 
-        gl.glPushAttrib(gl.GL_LINE_LOOP)
         gl.glLineWidth(3)
-
-        gl.glColor3ub(*color)  #cyan
+        gl.glColor3ub(*color)
 
         center = (vx[0] + vx[2]) / 2
 
         # a unit vectors
-        v1 = [(v - center) / numpy.linalg.norm(v - center) for v in vx]
+        v1: list[ndarray] = [(v - center) / numpy.linalg.norm(v - center) for v in vx]
 
-        for i in range(3):
-            gl.glBegin(gl.GL_LINE_LOOP)
+        # [left_bottom3, right_bottom3, right_top3, left_top3]
+        bottom: list[ndarray] = []
+        top: list[ndarray] = []
 
-            for v in v1:
-                p = center + v * 2.0 * (i + 1)
-                gl.glVertex3f(*p)
+        height = 2
+        bottom_size = 7
+        top_size = 3
+
+        for v in v1:
+            p = center + v * bottom_size
+            bottom.append(p)
+            p = center + height * ortho_dir + v * top_size
+            top.append(p)
+
+        def _q(is_line: bool, *ps: ndarray):
+
+            if is_line:
+                gl.glColor3ub(0, 0, 0)
+                gl.glBegin(gl.GL_LINE_LOOP)
+            else:
+                gl.glColor3ub(*color)
+                gl.glBegin(gl.GL_QUADS)
+
+            for v in ps:
+                gl.glVertex3f(*v)
 
             gl.glEnd()
 
-        gl.glPopAttrib()
+        # [left_bottom3, right_bottom3, right_top3, left_top3]
+        lb = 0
+        rb = 1
+        rt = 2
+        lt = 3
 
-    def gui_objects(self) -> Iterable[int]:
-        return [self.gl_lists]
+        for ll in [True, False]:
+            # gl.glColor3ub(255, 51, 255)
+            _q(ll, *bottom)
+            # gl.glColor3ub(51, 255, 51)
+            _q(ll, *top)
+
+            # gl.glColor3ub(255, 255, 51)
+            _q(ll, bottom[lb], bottom[rb], top[rb], top[lb])
+
+            # gl.glColor3ub(255, 0, 51)
+            _q(ll, bottom[rb], bottom[rt], top[rt], top[rb])
+
+            # gl.glColor3ub(0, 255, 255)
+            _q(ll, bottom[lt], bottom[rt], top[rt], top[lt])
+
+            # gl.glColor3ub(51, 102, 0)
+            _q(ll, bottom[lb], bottom[lt], top[lt], top[lb])
+
+        # gl.glPopAttrib()  # line width
+
+    def gui_movable_gui_objects(self) -> Iterable[int]:
+        return [*self.gl_lists_movable]
 
     @property
     def left_bottom_v3(self):
@@ -257,6 +318,7 @@ class _FaceBoard:
                  board: "_Board",
                  cube_face_supplier: Callable[[], Face], batch: Batch,
                  f0: np.ndarray, left_right_direction: ndarray, left_top_direction: ndarray,
+                 ortho_direction: ndarray
                  ) -> None:
         super().__init__()
         self._board: "_Board" = board
@@ -266,6 +328,7 @@ class _FaceBoard:
         self.f0: np.ndarray = f0
         self.left_right_direction: ndarray = left_right_direction
         self.left_top_direction: ndarray = left_top_direction
+        self._ortho_direction: ndarray = ortho_direction
 
         self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, batch) for p in cube_face_supplier().parts}
 
@@ -273,6 +336,7 @@ class _FaceBoard:
     def cube_face(self) -> Face:
         return self.cube_face_supplier()
 
+    # noinspection PyUnusedLocal
     def set_cell(self, part: Part, vertexes: Sequence[Vec3f], c: _VColor, marker: int) -> None:
         """
 
@@ -282,7 +346,12 @@ class _FaceBoard:
         :param vertexes: four corners of edge
         :return:
         """
-        self._cells[part.fixed_id].create_objects(vertexes, c, part.annotated)
+        _marker = ""
+        if part.annotated_by_color:
+            _marker = "M"
+        elif part.annotated_fixed:
+            _marker = "F"
+        self._cells[part.fixed_id].create_objects(vertexes, c, _marker)
 
     def draw_init(self):
 
@@ -353,7 +422,7 @@ class _FaceBoard:
     def gui_objects(self) -> Sequence[int]:
         lists: list[int] = []
         for c in self.cells:
-            lists.extend(c.gui_objects())
+            lists.extend(c.gui_movable_gui_objects())
 
         return lists
 
@@ -375,10 +444,14 @@ class _FaceBoard:
         return self.get_center(), self.gui_objects()
 
     def get_part_gui_object(self, p: Part) -> Iterable[int]:
-        return self._cells[p.fixed_id].gui_objects()
+        return self._cells[p.fixed_id].gui_movable_gui_objects()
 
     def get_cell(self, _id: PartFixedID) -> _Cell:
         return self._cells[_id]
+
+    @property
+    def ortho_direction(self):
+        return self._ortho_direction
 
 
 class _Board:
@@ -420,8 +493,9 @@ class _Board:
     def create_face(self, cube_face: Callable[[], Face],
                     f0: ndarray,
                     left_right_direction: ndarray,
-                    left_top_direction: ndarray):
-        f = _FaceBoard(self, cube_face, self.batch, f0, left_right_direction, left_top_direction)
+                    left_top_direction: ndarray,
+                    ortho_direction: ndarray):
+        f = _FaceBoard(self, cube_face, self.batch, f0, left_right_direction, left_top_direction, ortho_direction)
         self._faces.append(f)
         return f
 
@@ -484,14 +558,14 @@ class _Board:
     def unhidden_all(self):
         self._hidden_objects = set()
 
-    def get_all_cells_gui_elemnts(self, element: SuperElement) -> Set[int]:
+    def get_all_cells_gui_elements(self, element: SuperElement) -> Set[int]:
 
         lists: set[int] = set()
 
         for p in element.parts:
             cells: Sequence[_Cell] = self.get_cells(p.fixed_id)
             for c in cells:
-                lists.update(c.gui_objects())
+                lists.update(c.gui_movable_gui_objects())
 
         return lists
 
@@ -514,7 +588,7 @@ def _part_id(p: Part) -> str:
 def _plot_face(b: _Board, f: Callable[[], Face], left_bottom: list[float],  # 3d
                left_right_direction: list[int],  # 3d
                left_top_direction: list[int],  # 3d
-               # flip_v=False, flip_h=False,
+               orthogonal_direction: list[int]
                ):
     """
 
@@ -545,7 +619,9 @@ def _plot_face(b: _Board, f: Callable[[], Face], left_bottom: list[float],  # 3d
     _left_right_d: ndarray = np.array(left_right_direction, dtype=float).reshape(3, 1)
     _left_top_d: ndarray = np.array(left_top_direction, dtype=float).reshape(3, 1)
 
-    fb: _FaceBoard = b.create_face(f, f0, _left_right_d, _left_top_d)
+    _ortho: ndarray = np.array(orthogonal_direction, dtype=float).reshape((3,))
+
+    fb: _FaceBoard = b.create_face(f, f0, _left_right_d, _left_top_d, _ortho)
 
     fb.draw_init()
 
@@ -591,25 +667,25 @@ class GCubeViewer:
         # debug with # s.alpha_x=-0.30000000000000004 s.alpha_y=-0.5 s.alpha_z=0
 
         # OK
-        _plot_face(b, lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1])
+        _plot_face(b, lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1], [0, 1, 0])
 
         # -0.75 from it x location, so we can see it in isometric view
         # OK
-        _plot_face(b, lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0])
+        _plot_face(b, lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
         # _plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0])
 
         # OK
-        _plot_face(b, lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0])
+        _plot_face(b, lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1])
 
         # OK
-        _plot_face(b, lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0])
+        _plot_face(b, lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
 
         # OK! -2 far away so we can see it
-        _plot_face(b, lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0])
+        _plot_face(b, lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
         # _plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
 
         # -05 below so we see it
-        _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1])
+        _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
         #        _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
 
         self._board.finish_faces()
@@ -671,7 +747,7 @@ class GCubeViewer:
 
         objects: set[int] = set()
 
-        objects.update(self._board.get_all_cells_gui_elemnts(self._cube.face(name)))
+        objects.update(self._board.get_all_cells_gui_elements(self._cube.face(name)))
 
         if hide:
             self._board.set_hidden(objects)
@@ -738,7 +814,7 @@ class GCubeViewer:
 
         objects: set[int] = set()
 
-        objects.update(self._board.get_all_cells_gui_elemnts(self._cube.slice(slice_name)))
+        objects.update(self._board.get_all_cells_gui_elements(self._cube.slice(slice_name)))
 
         if hide:
             self._board.set_hidden(objects)

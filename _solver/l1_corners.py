@@ -61,7 +61,10 @@ class L1Corners(SolverElement):
 
     def _solve_corner(self, corner_id: PartColorsID):
 
-        with self.w_annotate(self.cube.find_part_by_colors(corner_id)):
+        with self.w_annotate(
+                    (self.cube.find_corner_by_pos_colors(corner_id), True),
+                    (self.cube.find_corner_by_colors(corner_id), False) ):
+
             self.__solve_corner(corner_id)
 
     def __solve_corner(self, corner_id: PartColorsID):
