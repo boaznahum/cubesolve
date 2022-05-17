@@ -94,6 +94,14 @@ class Window(pyglet.window.Window):
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         gl.glEnable(gl.GL_DEPTH_TEST)
 
+        #https://stackoverflow.com/questions/3512456/how-to-draw-smooth-line-in-opengl-with-antialiasing
+        # gl.glEnable(gl.GL_BLEND)
+        # gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        # gl.glEnable(gl.GL_LINE_SMOOTH)
+        # gl.glEnable(gl.GL_POLYGON_SMOOTH)
+        # gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+        # gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
+
         self.batch = pyglet.graphics.Batch()
         # self.create_layout()
 

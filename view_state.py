@@ -28,6 +28,8 @@ class ViewState:
         self._alpha_z: float = 0
         self._alpha_delta = a_delta
 
+        self._draw_shadows = True
+
     def reset(self, ax0, ay0, az0, a_delta):
         self._alpha_x_0: float = ax0
         self._alpha_y_0: float = ay0
@@ -113,3 +115,7 @@ class ViewState:
         :return: delay (seconds) between steps
         """
         return self._animation_speed_delay_between_steps
+
+    @property
+    def draw_shadows(self):
+        return self._draw_shadows

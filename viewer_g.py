@@ -450,7 +450,7 @@ class _FaceBoard:
         return self._cells[_id]
 
     @property
-    def ortho_direction(self):
+    def ortho_direction(self) -> ndarray:
         return self._ortho_direction
 
 
@@ -628,12 +628,13 @@ def _plot_face(b: _Board, f: Callable[[], Face], left_bottom: list[float],  # 3d
 
 class GCubeViewer:
     __slots__ = ["_batch", "_cube", "_board", "_test",
-                 "_hidden_objects"]
+                 "_hidden_objects","_vs"]
 
     def __init__(self, batch: Batch, cube: Cube, vs: ViewState) -> None:
         super().__init__()
         self._cube = cube
         self._batch = batch
+        self._vs = vs
 
         #        self._test = pyglet.shapes.Line(0, 0, 20, 20, width=10, color=(255, 255, 255), batch=batch)
 
@@ -669,10 +670,11 @@ class GCubeViewer:
         # OK
         _plot_face(b, lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1], [0, 1, 0])
 
-        # -0.75 from it x location, so we can see it in isometric view
         # OK
         _plot_face(b, lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
-        # _plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0])
+        if self._vs.draw_shadows:
+            # -0.75 from it x location, so we can see it in isometric view
+            _plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
 
         # OK
         _plot_face(b, lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1])
@@ -680,13 +682,15 @@ class GCubeViewer:
         # OK
         _plot_face(b, lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
 
-        # OK! -2 far away so we can see it
         _plot_face(b, lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
-        # _plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0])
+        if self._vs.draw_shadows:
+            # -2 far away so we can see it
+            _plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
 
-        # -05 below so we see it
         _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
-        #        _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1])
+        if self._vs.draw_shadows:
+            # -05 below so we see it
+            _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
 
         self._board.finish_faces()
 
