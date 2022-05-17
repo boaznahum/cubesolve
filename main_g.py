@@ -171,9 +171,7 @@ class Window(pyglet.window.Window):
 
     def on_key_press(self, symbol, modifiers):
         try:
-            done = _handle_input(self, symbol, modifiers)
-            if done:
-                self.close()
+            _handle_input(self, symbol, modifiers)
 
         except Exception as e:
             traceback.print_exc()
@@ -538,7 +536,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
 _last_face: FaceName = FaceName.R
 
 
-def _handle_input(window: Window, value: int, modifiers: int) -> bool:
+def _handle_input(window: Window, value: int, modifiers: int):
 
     done = False
     app: Main = window.app
@@ -550,7 +548,6 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
 
             case key.Q:
                 window.close()
-                return True
         return False
 
     slv: Solver = app.slv
@@ -701,7 +698,8 @@ def _handle_input(window: Window, value: int, modifiers: int) -> bool:
                     raise
 
         case key.Q:
-            return True
+            window.close()
+            return
 
         case _:
             return False

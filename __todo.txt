@@ -1,1 +1,2 @@
-move slice rotate into slice
+When quiting in middle of solver, it fails due to unxepcted state.
+  Need some how to throw ApplicationStopped exception
