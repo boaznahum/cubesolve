@@ -313,7 +313,11 @@ class Window(pyglet.window.Window):
             animation.draw()
 
     @property
-    def animation(self):
+    def animation_running(self):
+        """
+        Return non None if animation is running
+        :return:
+        """
         return self._animation
 
 
@@ -535,22 +539,25 @@ _last_face: FaceName = FaceName.R
 
 
 def _handle_input(window: Window, value: int, modifiers: int) -> bool:
+
     done = False
-
-    # if window.animation:
-    #     match value:
-    #
-    #         case key.Q:
-    #             window.close()
-    #             return True
-    #     return False
-
     app: Main = window.app
     op: Operator = app.op
+
+    if window.animation_running or op.is_animation_running:
+        print(f"In _handle_input , ignoring {value} because animation is running")
+        match value:
+
+            case key.Q:
+                window.close()
+                return True
+        return False
+
     slv: Solver = app.slv
     vs: ViewState = app.vs
 
     inv = modifiers & key.MOD_SHIFT
+
 
     no_operation = False
 

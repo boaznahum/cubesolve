@@ -9,27 +9,30 @@ from cube import Cube
 
 
 class Operator:
-    __slots__ = ["_cube", "_history", "_animation_hook"]
+    __slots__ = ["_cube", "_history", "_animation_hook", "_animation_running"]
 
     def __init__(self, cube: Cube) -> None:
         super().__init__()
         self._cube = cube
         self._history: MutableSequence[Alg] = []
         self._animation_hook: Callable[["Operator", SimpleAlg], None] | None = None
+        self._animation_running = False
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
         if animation and self._animation_hook:
 
-            an = self._animation_hook
-            if inv:
-                alg = alg.inv()
+            with self._w_with_animation:
 
-            algs: Iterable[SimpleAlg] = alg.flatten()
+                an = self._animation_hook
+                if inv:
+                    alg = alg.inv()
 
-            algs = [*algs]  # for debug only
-            for a in algs:
-                an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
+                algs: Iterable[SimpleAlg] = alg.flatten()
+
+                algs = [*algs]  # for debug only
+                for a in algs:
+                    an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
         else:
 
             if alg.is_ann:
@@ -101,3 +104,19 @@ class Operator:
     @property
     def is_with_animation(self):
         return self._animation_hook
+
+    @property
+    def is_animation_running(self):
+        return self._animation_running
+
+    @property
+    @contextmanager
+    def _w_with_animation(self):
+        b = self._animation_running
+        self._animation_running = True
+
+        try:
+            yield None
+        finally:
+            self._animation_running=b
+
