@@ -44,7 +44,8 @@ class Operator:
 
             with self._w_with_animation:
 
-                an = self._animation_hook
+                an: Callable[[Operator, SimpleAlg], None] | None = self._animation_hook
+                assert an  # just to make mypy happy
                 if inv:
                     alg = alg.inv()
 
@@ -134,7 +135,7 @@ class Operator:
     def is_animation_running(self):
         return self._animation_running
 
-    @property
+    @property  # type: ignore
     @contextmanager
     def _w_with_animation(self):
         b = self._animation_running
