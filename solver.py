@@ -9,6 +9,7 @@ from _solver.l2 import L2
 from _solver.l3_corners import L3Corners
 from _solver.l3_cross import L3Cross
 from algs import Algs
+from app_exceptions import OpAborted
 from cube import Cube
 from cube_operator import Operator
 
@@ -20,7 +21,6 @@ class SolveStep(Enum):
     L2 = "L2"
     L3 = "L3"
     L3x = "L3x"
-
 
 
 class Solver(ISolver):
@@ -35,7 +35,6 @@ class Solver(ISolver):
 
     def __init__(self, op: Operator) -> None:
         super().__init__()
-        self._aborted = None
         self._cube = op.cube
         self._op: Operator = op
 
@@ -48,7 +47,7 @@ class Solver(ISolver):
 
         # allow solver to not put annotations
         self._running_solution = False
-        self._debug: bool = True
+        self._debug: bool = False
 
     @property
     def cube(self) -> Cube:
@@ -100,18 +99,18 @@ class Solver(ISolver):
 
         return s
 
-    def solve(self, debug=True, animation=True, what: SolveStep = SolveStep.ALL):
+    def solve(self, debug: bool|None = None, animation=True, what: SolveStep = SolveStep.ALL):
+
+        if debug is None:
+            debug = self._debug
+
         with self._op.suspended_animation(not animation):
-            self._aborted = None
             try:
                 return self._solve(debug, what)
-            except:
-                if self._aborted:
-                    return
-                else:
-                    raise
+            except OpAborted:
+                return
 
-    def _solve(self, _debug=True, what: SolveStep=SolveStep.ALL):
+    def _solve(self, _debug=True, what: SolveStep = SolveStep.ALL):
         if self._cube.solved:
             return
 
@@ -133,7 +132,6 @@ class Solver(ISolver):
                     self.l1_corners.solve()
                     self.l2.solve()
                     self.l3_cross.solve()
-
 
                 case SolveStep.L2:
                     self.l1_cross.solve_l0_cross()
@@ -178,11 +176,3 @@ class Solver(ISolver):
                 return Algs.alg(None, *solution_algs)
         finally:
             self._running_solution = rs
-
-    def set_aborted(self):
-        self.op.set_aborted()
-        self._aborted = True
-
-    @property
-    def aborted(self):
-        return self._aborted

@@ -4,12 +4,13 @@ from contextlib import contextmanager
 from typing import Callable, Any
 
 from algs import Alg, SimpleAlg
+from app_exceptions import OpAborted
 from cube import Cube
 
 
 class Operator:
     __slots__ = ["_cube", "_history", "_animation_hook", "_animation_running",
-                 "_aborted", "_animation_on"]
+                 "_aborted", "_animation_enabled"]
 
     def __init__(self, cube: Cube) -> None:
         super().__init__()
@@ -18,12 +19,28 @@ class Operator:
         self._history: MutableSequence[Alg] = []
         self._animation_hook: Callable[["Operator", SimpleAlg], None] | None = None
         self._animation_running = False
-        self._animation_on: bool = True
+        self._animation_enabled: bool = True
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
-        self._aborted = False
-        if animation and self.animation_on:
+        """
+        Aniamtion can run only from top level, not from animation itself
+        :param alg:
+        :param inv:
+        :param animation:
+        :return:
+        """
+
+        # if we clean signal here, then we have a problem, because
+        # solver run op in loop, so we will miss the latest signal
+        # so maybe we need seperated method for single op and a long op
+
+        if self._aborted:
+            self._aborted = False
+            print(f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
+            raise OpAborted()
+
+        if animation and self.animation_enabled:
 
             with self._w_with_animation:
 
@@ -37,7 +54,9 @@ class Operator:
                 for a in algs:
                     an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
                     if self._aborted:
-                        break
+                        self._aborted = False
+                        print(f"A signal abort was raise, raising an exception {OpAborted}")
+                        raise OpAborted()
         else:
 
             if alg.is_ann:
@@ -59,11 +78,11 @@ class Operator:
         with self.suspended_animation(False):
             if self.history:
                 alg = self._history.pop()
-                _history = [ * self._history ]
+                _history = [*self._history]
                 self.op(alg, True, animation)
                 # do not add to history !!! otherwise history will never shrink
                 # becuase op may break big algs to steps, and add more than one , we can't just pop
-                #self._history.pop()
+                # self._history.pop()
                 self._history[:] = _history
                 return alg
             else:
@@ -82,6 +101,7 @@ class Operator:
         return functools.reduce(lambda n, a: n + a.count(), self._history, 0)
 
     def reset(self):
+        self._aborted = False
         self._cube.reset()
         self._history.clear()
 
@@ -100,7 +120,7 @@ class Operator:
 
     @contextmanager
     def save_history(self):
-        _history = [* self._history ]
+        _history = [*self._history]
         try:
             yield None
         finally:
@@ -123,20 +143,24 @@ class Operator:
         try:
             yield None
         finally:
-            self._animation_running=b
-
-    def set_aborted(self):
-        self._aborted = True
+            self._animation_running = b
 
     @property
     def aborted(self):
         return self._aborted
 
     @property
-    def animation_on(self):
-        return self._animation_on and self._animation_hook
+    def animation_enabled(self):
+        return self._animation_enabled and self._animation_hook
 
     def toggle_animation_on(self):
-        self._animation_on = not self._animation_on
+        self._animation_enabled = not self._animation_enabled
 
-
+    def abort(self):
+        """
+        When operator is back to main loop, it will raise an exception
+        Only animation from top can be aborted
+        :return:
+        """
+        print("Operator: raised an abort signal")
+        self._aborted = True

@@ -8,17 +8,15 @@ import glooey  # type: ignore
 import numpy as np
 import pyglet  # type: ignore
 from numpy import ndarray
-
 from pyglet import gl
 from pyglet.window import key  # type: ignore
 
 import algs
 from algs import Alg, Algs
+from app_exceptions import AppExit, RunStop, OpAborted
 from cube import Cube
 from cube_operator import Operator
 from elements import FaceName
-from app_exceptions import AppExit, RunStop
-from graphic_helper import print_matrix
 from solver import Solver, SolveStep
 from view_state import ViewState
 from viewer_g import GCubeViewer
@@ -94,7 +92,7 @@ class Window(pyglet.window.Window):
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         gl.glEnable(gl.GL_DEPTH_TEST)
 
-        #https://stackoverflow.com/questions/3512456/how-to-draw-smooth-line-in-opengl-with-antialiasing
+        # https://stackoverflow.com/questions/3512456/how-to-draw-smooth-line-in-opengl-with-antialiasing
         # gl.glEnable(gl.GL_BLEND)
         # gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         # gl.glEnable(gl.GL_LINE_SMOOTH)
@@ -151,7 +149,7 @@ class Window(pyglet.window.Window):
             self.text.append(pyglet.text.Label(err,
                                                x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
 
-        err = f"Animation:{'On' if self.app.op.animation_on else 'Off'}"
+        err = f"Animation:{'On' if self.app.op.animation_enabled else 'Off'}"
         self.text.append(pyglet.text.Label(err,
                                            x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
 
@@ -196,8 +194,7 @@ class Window(pyglet.window.Window):
         try:
             _handle_input(self, symbol, modifiers)
 
-        except (AppExit , RunStop):
-            self.app.slv.set_aborted()
+        except (AppExit, RunStop, OpAborted):
             self.app.set_error("Asked to stop")
             self.update_gui_elements()  # to create error label
 
@@ -224,7 +221,6 @@ class Window(pyglet.window.Window):
         # print_matrix("GL_MODELVIEW_MATRIX", gl.GL_MODELVIEW_MATRIX)
         # print_matrix("GL_PROJECTION_MATRIX", gl.GL_PROJECTION_MATRIX)
         # print_matrix("GL_VIEWPORT", gl.GL_VIEWPORT)
-
 
         # ideally we want the axis to be fixed, but in this case we won't see the Z,
         #  so we rotate the Axes, or we should change the perspective
@@ -497,11 +493,19 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
 
 
 def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: algs.SimpleAlg):
+    """
+    This must be called only from operator
+    :param window:
+    :param operator:
+    :param inv:
+    :param alg:
+    :return:
+    """
     # if True:
     #     operator.op(alg, inv, animation=False)
     #     return
 
-    if not operator.animation_on:
+    if not operator.animation_enabled:
         operator.op(alg, inv)
         return
 
@@ -515,7 +519,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
     if alg.is_ann:
         operator.op(alg, False, animation=False)
         window.update_gui_elements()
-#        time.sleep(1)
+        #        time.sleep(1)
         platform_event_loop.notify()
         return
 
@@ -538,13 +542,9 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
     clock.schedule_interval(_update, delay)
 
     # copied from EventLoop#run
-    slv = window.app.slv
-    while not event_loop.has_exit and not animation.done and not slv.aborted:
+    while not event_loop.has_exit and not animation.done:
         timeout = event_loop.idle()  # this will trigger on_draw
         platform_event_loop.step(timeout)
-
-    if slv.aborted:
-        print("Slv aborted")
 
     if event_loop.has_exit:
         return
@@ -573,22 +573,24 @@ _last_face: FaceName = FaceName.R
 
 
 def _handle_input(window: Window, value: int, modifiers: int):
-
-    #print(f"{hex(value)}=")
+    # print(f"{hex(value)}=")
     done = False
     app: Main = window.app
     op: Operator = app.op
 
     if window.animation_running or op.is_animation_running:
-        print(f"In _handle_input , ignoring {value} because animation is running")
+        # print(f"In _handle_input , ignoring {value}  {hex(value)} { chr(ord('A') + (value - key.A))} because animation is running")
+        #
+        # print(f"{value==key.S}")
         match value:
 
             case key.Q:
+                op.abort() # solver will not try to check state
                 window.close()
                 raise AppExit
 
             case key.S:
-                raise RunStop  # doesn't work, we can't catch it, maybe pyglet ignore it, because it is in handler
+                op.abort()  # doesn't work, we can't catch it, maybe pyglet ignore it, because it is in handler
 
         return False
 
@@ -630,30 +632,30 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
         case key.R:
             # _last_face = FaceName.R
+            op.op(algs.Algs.R, inv)
             # op.op(algs.Algs.R, inv)
-            op_and_play_animation(window, op, inv, algs.Algs.R)
 
         case key.L:
-            op_and_play_animation(window, op, inv, algs.Algs.L)
+            op.op(algs.Algs.L, inv)
 
         case key.U:
-            op_and_play_animation(window, op, inv, algs.Algs.U)
+            op.op(algs.Algs.U, inv)
 
         case key.E:
-            op_and_play_animation(window, op, inv, algs.Algs.E)
+            op.op(algs.Algs.E, inv)
 
         case key.F:
-            op_and_play_animation(window, op, inv, algs.Algs.F)
+            op.op(algs.Algs.F, inv)
 
         case key.S:
-            op_and_play_animation(window, op, inv, algs.Algs.S)
+            op.op(algs.Algs.S, inv)
 
         case key.B:
-            op_and_play_animation(window, op, inv, algs.Algs.B)
+            op.op(algs.Algs.B, inv)
 
         case key.D:
             _last_face = FaceName.D
-            op_and_play_animation(window, op, inv, algs.Algs.D)
+            op.op(algs.Algs.D, inv)
 
         case key.X:
             if modifiers & key.MOD_CTRL:
@@ -665,10 +667,10 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 no_operation = True
 
             else:
-                op_and_play_animation(window, op, inv, algs.Algs.X)
+                op.op(algs.Algs.X, inv)
 
         case key.M:
-            op_and_play_animation(window, op, inv, algs.Algs.M)
+            op.op(algs.Algs.M, inv)
 
         case key.Y:
             if modifiers & key.MOD_CTRL:
@@ -678,10 +680,10 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 vs.alpha_y += vs.alpha_delta
                 no_operation = True
             else:
-                op_and_play_animation(window, op, inv, algs.Algs.Y)
+                op.op(algs.Algs.Y, inv)
 
         case key.E:
-            op_and_play_animation(window, op, inv, algs.Algs.E)
+            op.op(algs.Algs.E, inv)
 
         case key.Z:
             if modifiers & key.MOD_CTRL:
@@ -691,7 +693,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 vs.alpha_z += vs.alpha_delta
                 no_operation = True
             else:
-                op_and_play_animation(window, op, inv, algs.Algs.Z)
+                op.op(algs.Algs.Z, inv)
 
         case "A":
 
@@ -726,7 +728,6 @@ def _handle_input(window: Window, value: int, modifiers: int):
             slv.solve()
 
         case key.F1:
-            x = SolveStep
             slv.solve(what=SolveStep.L1)
 
         case key.F2:

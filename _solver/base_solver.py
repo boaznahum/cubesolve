@@ -81,7 +81,7 @@ class SolverElement:
         :return:
         """
 
-        on = self.op.animation_on
+        on = self.op.animation_enabled
 
         if not on:
             try:
@@ -130,7 +130,7 @@ class SolverElement:
         :return:
         """
 
-        on = self.op.animation_on
+        on = self.op.animation_enabled
 
         if not on:
             try:
