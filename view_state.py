@@ -17,8 +17,10 @@ class ViewState:
 
     def __init__(self, ax0, ay0, az0, a_delta) -> None:
         super().__init__()
-        self._animation_speed_delay_between_steps: float = 1/40
-        self._animation_speed_number_of_steps = 30
+        # self._animation_speed_delay_between_steps: float = 1/40
+        # self._animation_speed_number_of_steps = 30
+        self._animation_speed_delay_between_steps: float = 1/50
+        self._animation_speed_number_of_steps = 20
         self._alpha_x_0: float = ax0
         self._alpha_y_0: float = ay0
         self._alpha_z_0: float = az0
@@ -28,7 +30,7 @@ class ViewState:
         self._alpha_z: float = 0
         self._alpha_delta = a_delta
 
-        self._draw_shadows = True
+        self._draw_shadows = False
 
     def reset(self, ax0, ay0, az0, a_delta):
         self._alpha_x_0: float = ax0
