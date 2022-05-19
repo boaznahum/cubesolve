@@ -12,7 +12,6 @@ from numpy import ndarray
 from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
-import graphic_helper
 import shapes
 from cube import Cube
 from cube_face import Face
@@ -124,7 +123,7 @@ class _Cell:
 
         self._prepare_view_state()
         for ll in lists:
-            if not ll in hidden:
+            if ll not in hidden:
                 glCallList(ll)
         self._restore_view_state()
 
@@ -299,34 +298,17 @@ class _FaceBoard:
         return self.cube_face_supplier()
 
     # noinspection PyUnusedLocal
-    def set_cell(self, part: Part, vertexes: Sequence[Vec3f], c: _VColor, marker: int) -> None:
-        """
-
-        :param part:
-        :param marker:
-        :param c:
-        :param vertexes: four corners of edge
-        :return:
-        """
-        _marker = ""
-        if part.annotated_by_color:
-            _marker = "M"
-        elif part.annotated_fixed:
-            _marker = "F"
-        self._cells[part.fixed_id].create_objects(vertexes, c, _marker)
 
     def draw_init(self):
 
-        fb: _FaceBoard = self
-
         f: Face = self.cube_face
 
-        def _plot_cell(cy: int, cx: int, p: Part, marker: int = 0):
+        def _plot_cell(cy: int, cx: int, part: Part):
 
             c: Color
             char: str
-            if p:
-                c = p.get_face_edge(f).color
+            if part:
+                c = part.get_face_edge(f).color
             else:
                 c = f.color
 
@@ -353,15 +335,21 @@ class _FaceBoard:
             for i in range(len(l_box)):
                 l_box[i] = [c_float(l_box[i][0]), c_float(l_box[i][1]), c_float(l_box[i][2])]
 
-            fb.set_cell(p, l_box, face_color, marker)
+            _marker = ""
+            if part.annotated_by_color:
+                _marker = "M"
+            elif part.annotated_fixed:
+                _marker = "F"
+
+            self._cells[part.fixed_id].create_objects(l_box, face_color, _marker)
 
         _plot_cell(2, 0, f.corner_top_left)
         _plot_cell(2, 1, f.edge_top)
-        _plot_cell(2, 2, f.corner_top_right, marker=2)
+        _plot_cell(2, 2, f.corner_top_right)
         _plot_cell(1, 0, f.edge_left)
         _plot_cell(1, 1, f.center)
         _plot_cell(1, 2, f.edge_right)
-        _plot_cell(0, 0, f.corner_bottom_left, marker=1)
+        _plot_cell(0, 0, f.corner_bottom_left)
         _plot_cell(0, 1, f.edge_bottom)
         _plot_cell(0, 2, f.corner_bottom_right)
 
