@@ -23,9 +23,6 @@ _CELL_SIZE: int = 25
 
 _VColor = Tuple[int, int, int]
 
-Vec3f = Tuple[c_float]
-
-
 def _ansi_color(color, char: str):
     return color + colorama.Style.BRIGHT + char + colorama.Style.RESET_ALL
 
@@ -62,8 +59,8 @@ class _Cell:
 
     def __init__(self, face_board: "_FaceBoard", batch: Batch) -> None:
         super().__init__()
-        self._right_top_v3: Sequence[c_float] | None = None
-        self._left_bottom_v3: Sequence[c_float] | None = None
+        self._right_top_v3: ndarray | None = None
+        self._left_bottom_v3: ndarray | None = None
         self._batch = batch
         self._face_board = face_board
         self._g_polygon: pyglet.shapes.Polygon | None = None
@@ -76,7 +73,7 @@ class _Cell:
         self.gl_lists_unmovable: Sequence[int] = []
 
     # noinspection PyUnusedLocal
-    def create_objects(self, vertexes: Sequence[Vec3f], color, marker: str):
+    def create_objects(self, vertexes: Sequence[ndarray], color, marker: str):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
@@ -138,7 +135,7 @@ class _Cell:
         vs.restore_objects_view()
 
     # noinspection PyMethodMayBeStatic
-    def _create_polygon(self, vertexes: Sequence[Vec3f], color):
+    def _create_polygon(self, vertexes: Sequence[ndarray], color):
 
         # glBegin(GL_TRIANGLE_FAN)
         gl.glBegin(gl.GL_QUADS)
@@ -209,7 +206,7 @@ class _Cell:
 
         glPopAttrib()  # line width
 
-    def _create_markers(self, vertexes: Sequence[Vec3f], color, marker: bool):
+    def _create_markers(self, vertexes: Sequence[ndarray], color, marker: bool):
 
         if not marker:
             return
@@ -220,7 +217,7 @@ class _Cell:
         norm = np.linalg.norm(ortho_dir)
         ortho_dir /= norm
 
-        vx = [numpy.array([f.value for f in v], dtype=float) for v in vertexes]
+        vx = vertexes  # [numpy.array([f.value for f in v], dtype=float) for v in vertexes]
 
         gl.glLineWidth(3)
         gl.glColor3ub(*color)
@@ -250,11 +247,13 @@ class _Cell:
         return [*self.gl_lists_movable]
 
     @property
-    def left_bottom_v3(self):
+    def left_bottom_v3(self) -> ndarray:
+        assert self._left_bottom_v3 is not None
         return self._left_bottom_v3
 
     @property
-    def right_top_v3(self):
+    def right_top_v3(self) -> ndarray:
+        assert self._right_top_v3 is not None
         return self._right_top_v3
 
 
@@ -328,12 +327,13 @@ class _FaceBoard:
 
             box: MutableSequence[np.ndarray] = [left_bottom3, right_bottom3, right_top3, left_top3]
 
-            l_box = [x.reshape((3,)).tolist() for x in box]
+            # why it is needed
+            l_box = [x.reshape((3,)) for x in box]
 
-            # convert to gl,
-            # but this is waste of time, when calculating center and rotate axis, we again convert to ndarray
-            for i in range(len(l_box)):
-                l_box[i] = [c_float(l_box[i][0]), c_float(l_box[i][1]), c_float(l_box[i][2])]
+            # # convert to gl,
+            # # but this is waste of time, when calculating center and rotate axis, we again convert to ndarray
+            # for i in range(len(l_box)):
+            #     l_box[i] = [c_float(l_box[i][0]), c_float(l_box[i][1]), c_float(l_box[i][2])]
 
             _marker = ""
             if part.annotated_by_color:
@@ -379,11 +379,11 @@ class _FaceBoard:
     def get_center(self) -> ndarray:
 
         face: Face = self.cube_face
-        bl: Sequence[c_float] = self._cells[face.corner_bottom_left.fixed_id].left_bottom_v3
-        rt: Sequence[c_float] = self._cells[face.corner_top_right.fixed_id].right_top_v3
+        bl: ndarray = self._cells[face.corner_bottom_left.fixed_id].left_bottom_v3
+        rt: ndarray = self._cells[face.corner_top_right.fixed_id].right_top_v3
 
-        _bl = np.array([x.value for x in bl], dtype=float).reshape((3,))
-        _rt = np.array([x.value for x in rt], dtype=float).reshape((3,))
+        _bl = bl  # np.array([x.value for x in bl], dtype=float).reshape((3,))
+        _rt = rt  # np.array([x.value for x in rt], dtype=float).reshape((3,))
 
         center = (_bl + _rt) / 2
 
