@@ -12,6 +12,8 @@ class Face(SuperElement):
     """
     Faces never chane position, only the color of the parts
     """
+
+
     __slots__ = ["_center", "_direction", "_name",
                  "_edge_left", "_edge_top", "_edge_right", "_edge_bottom",
                  "_corner_top_left", "_corner_top_right", "_corner_bottom_right", "_corner_bottom_left",
@@ -121,6 +123,7 @@ class Face(SuperElement):
     @property
     def corner_bottom_left(self) -> Corner:
         return self._corner_bottom_left
+
 
     @property
     def color(self):

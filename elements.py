@@ -49,6 +49,7 @@ _Cube: TypeAlias = "Cube"  # type: ignore
 
 PartColorsID = frozenset[Color]
 PartFixedID = frozenset[FaceName]
+PartSliceHashID = frozenset[FaceName]
 
 
 class PartEdge:
@@ -138,7 +139,7 @@ class PartSlice(ABC):
 
         self._colors_id_by_pos: PartColorsID | None = None
         self._colors_id_by_colors: PartColorsID | None = None
-        self._fixed_id: PartFixedID | None = None
+        self._fixed_id: PartSliceHashID | None = None
 
     def finish_init(self):
         """
@@ -146,7 +147,7 @@ class PartSlice(ABC):
         Must be called before any face changed
         :return:
         """
-        _id = frozenset( tuple([self._index]) + tuple(p.face.name for p in self._edges))
+        _id = frozenset(tuple([self._index]) + tuple(p.face.name for p in self._edges))
 
         if self._fixed_id:
             if _id != self._fixed_id:
@@ -155,7 +156,7 @@ class PartSlice(ABC):
             self._fixed_id = _id
 
     @property
-    def fixed_id(self) -> PartFixedID:
+    def fixed_id(self) -> PartSliceHashID:
         """
         An ID that is not changed when color ir parent face color is changed
         It actaully track the instance of the edge, but it will same for all instances of cube
@@ -403,7 +404,7 @@ class Part(ABC):
 
     @property
     @abstractmethod
-    def _all_slices(self) -> Iterable[PartSlice]:
+    def all_slices(self) -> Iterable[PartSlice]:
         pass
 
     def finish_init(self):
@@ -413,10 +414,10 @@ class Part(ABC):
         :return:
         """
 
-        for s in self._all_slices:
+        for s in self.all_slices:
             s.finish_init()
 
-        _id = frozenset(s.fixed_id for s in self._all_slices)
+        _id = frozenset(s.fixed_id for s in self.all_slices)
 
         if self._fixed_id:
             if _id != self._fixed_id:
@@ -633,7 +634,6 @@ class Part(ABC):
 
 
 class Center(Part):
-
     __slots__ = "_slices"
 
     def __init__(self, center_slices: Sequence[Sequence[PartSlice]]) -> None:
@@ -646,13 +646,16 @@ class Center(Part):
         return self._slices[0][0].edges
 
     @property
-    def _all_slices(self) -> Iterable[PartSlice]:
+    def all_slices(self) -> Iterable[PartSlice]:
         for ss in self._slices:
             yield from ss
 
     @property
     def n_slices(self):
         return self.cube.size - 2
+
+    def get_slice(self, y, x) -> PartSlice:
+        return self._slices[y][x]
 
     def edg(self) -> PartEdge:
         return self._edges[0]
@@ -677,7 +680,6 @@ class Center(Part):
 
 class Edge(Part):
 
-
     def __init__(self, slices: Sequence[PartSlice]) -> None:
         # assign before call to init because _edges is called from ctor
         self._slices: Sequence[PartSlice] = slices
@@ -688,12 +690,15 @@ class Edge(Part):
         return self._slices[0].edges
 
     @property
-    def _all_slices(self) -> Iterable[PartSlice]:
+    def all_slices(self) -> Iterable[PartSlice]:
         return self._slices
 
     @property
     def n_slices(self):
         return self.cube.size - 2
+
+    def get_slice(self, i):
+        return self._slices[i]
 
     @property
     def e1(self) -> "PartEdge":
@@ -830,27 +835,8 @@ class Edge(Part):
         else:
             return f2
 
-    @property
-    def is_left(self):
-        return self is self.e1.face.edge_left or self is self.e2.face.edge_left
-
-    @property
-    def is_right(self):
-        return self is self.e1.face.edge_right or self is self.e2.face.edge_right
-
-    @property
-    def is_top(self):
-        return self is self.e1.face.edge_top or self is self.e2.face.edge_top
-
-    @property
-    def is_bottom(self):
-        return self is self.e1.face.edge_bottom or self is self.e2.face.edge_bottom
-
 
 class Corner(Part):
-
-
-
     __slots__ = ["_slice"]
 
     def __init__(self, a_slice: PartSlice) -> None:
@@ -862,9 +848,12 @@ class Corner(Part):
         return self._slice.edges
 
     @property
-    def _all_slices(self) -> Iterable[PartSlice]:
+    def all_slices(self) -> Iterable[PartSlice]:
         return [self._slice]
 
+    @property
+    def slice(self):
+        return self._slice
 
     def copy(self) -> "Corner":
         """
@@ -926,3 +915,8 @@ class SuperElement:
     @property
     def cube(self) -> _Cube:
         return self._cube
+
+    @property
+    def slices(self) -> Iterable[PartSlice]:
+        for p in self._parts:
+            yield from p.all_slices

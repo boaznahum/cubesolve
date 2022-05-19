@@ -1,5 +1,6 @@
 from collections import defaultdict
 from collections.abc import Set
+from contextlib import contextmanager
 from typing import Hashable, Tuple, MutableSequence, Callable, Iterable, Sequence, Set
 
 import colorama
@@ -15,7 +16,9 @@ import shapes
 from cube import Cube
 from cube_face import Face
 from cube_slice import SliceName
-from elements import Color, Part, FaceName, PartFixedID, AxisName, SuperElement, Corner, Edge, Center
+from elements import Color, Part, FaceName, PartFixedID, AxisName, SuperElement
+from elements import Corner, Edge, Center, PartSliceHashID, PartSlice
+
 from view_state import ViewState
 
 _CELL_SIZE: int = 25
@@ -71,11 +74,11 @@ class _Cell:
         self._g_markers: Sequence[pyglet.shapes._ShapeBase] | None = None
         # self._create_objects(x0, y0, x1, y1, (255, 255, 255))
 
-        self.gl_lists_movable: Sequence[int] = []
-        self.gl_lists_unmovable: Sequence[int] = []
+        self.gl_lists_movable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
+        self.gl_lists_unmovable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
 
     # noinspection PyUnusedLocal
-    def create_objects(self, part: Part, vertexes: Sequence[ndarray], color, marker: str):
+    def create_objects(self, part: Part, vertexes: Sequence[ndarray], marker: str):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
@@ -84,33 +87,40 @@ class _Cell:
         self._left_bottom_v3 = vertexes[0]
         self._right_top_v3 = vertexes[2]
 
-        for ls in self.gl_lists_movable:
-            gl.glDeleteLists(ls, 1)
-        for ls in self.gl_lists_unmovable:
-            gl.glDeleteLists(ls, 1)
+        # delete and clear all lists
+        for ls in self.gl_lists_movable.values():
+            for ll in ls:
+                gl.glDeleteLists(ll, 1)
+        self.gl_lists_movable.clear()
 
-        self.gl_lists_unmovable = []
-        self.gl_lists_movable = [gl.glGenLists(1)]
+        for ls in self.gl_lists_unmovable.values():
+            for ll in ls:
+                gl.glDeleteLists(ll, 1)
+        self.gl_lists_unmovable.clear()
+
+        #         = [gl.glGenLists(1)]
         # print(f"{self.gl_lists=}")
 
-        gl.glNewList(self.gl_lists_movable[0], gl.GL_COMPILE)
+        #       gl.glNewList(self.gl_lists_movable[0], gl.GL_COMPILE)
 
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
-        self._create_polygon(part, vertexes, color)
-        if marker == "M":
-            self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
-        # self._create_helpers()
-        gl.glEndList()
+        self._create_polygon(self.gl_lists_movable, part, vertexes)
+        # if marker == "M":
+        #     self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
 
-        if marker == "F":
-            self.gl_lists_unmovable = [gl.glGenLists(1)]
-            gl.glNewList(self.gl_lists_unmovable[0], gl.GL_COMPILE)
-            self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
-            gl.glEndList()
+        # self._create_helpers()
+        # gl.glEndList()
+
+        # if marker == "F":
+        #     self.gl_lists_unmovable = [gl.glGenLists(1)]
+        #     gl.glNewList(self.gl_lists_unmovable[0], gl.GL_COMPILE)
+        #     self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
+        #     gl.glEndList()
 
     def draw(self):
 
-        lists: Sequence[int] = [*self.gl_lists_movable, *self.gl_lists_unmovable]
+        lists: Sequence[int] = [ll for m in [self.gl_lists_movable, self.gl_lists_unmovable]
+                                for ls in m.values() for ll in ls]
 
         if not lists:
             print(f"Error no gl lists in {self}")
@@ -137,8 +147,33 @@ class _Cell:
         vs: ViewState = self._face_board.board.vs
         vs.restore_objects_view()
 
+    @contextmanager
+    def _gen_list_for_slice(self, p_slice: PartSlice, dest: dict[PartSliceHashID, MutableSequence[int]]):
+        g_list = gl.glGenLists(1)
+
+        gl.glNewList(g_list, gl.GL_COMPILE)
+
+        try:
+            yield None
+        finally:
+            gl.glEndList()
+
+            dest[p_slice.fixed_id].append(g_list)
+
+    def _slice_color(self, _slice: PartSlice):
+
+        face = self._face_board.cube_face
+
+        c: Color = _slice.get_face_edge(face).color
+
+        slice_color = _color_2_v_color(c)
+
+        return slice_color
+
     # noinspection PyMethodMayBeStatic
-    def _create_polygon(self, part: Part, vertexes: Sequence[ndarray], color):
+    def _create_polygon(self, dest: dict[PartSliceHashID, MutableSequence[int]],
+                        part: Part,
+                        vertexes: Sequence[ndarray]):
 
         # vertex = [left_bottom, right_bottom, right_top, left_top]
 
@@ -146,9 +181,15 @@ class _Cell:
         lw = 4
 
         if isinstance(part, Corner):
-            shapes.quad_with_line(vertexes, color, lw, lc)
+
+            corner_slice = part.slice
+            with self._gen_list_for_slice(corner_slice, dest):
+                shapes.quad_with_line(vertexes,
+                                      self._slice_color(corner_slice),
+                                      lw, lc)
+
         elif isinstance(part, Edge):
-            shapes.quad_with_line(vertexes, color, lw, lc)
+            # shapes.quad_with_line(vertexes, color, lw, lc)
 
             n = part.n_slices
             fb: _FaceBoard = self._face_board
@@ -162,8 +203,13 @@ class _Cell:
 
                 d = (left_top - left_bottom) / n
 
-                for _ in range(n):
-                    shapes.quad_with_line([left_bottom, right_bottom, right_bottom + d, left_bottom + d], color, lw, lc)
+                for i in range(n):
+                    _slice = part.get_slice(i)
+                    color = self._slice_color(_slice)
+                    with self._gen_list_for_slice(_slice, dest):
+                        shapes.quad_with_line([left_bottom, right_bottom,
+                                               right_bottom + d, left_bottom + d],
+                                              color, lw, lc)
                     left_bottom += d
                     right_bottom += d
 
@@ -171,8 +217,14 @@ class _Cell:
 
                 left_top = vertexes[3]
                 d = (right_bottom - left_bottom) / n
-                for _ in range(n):
-                    shapes.quad_with_line([left_bottom, left_bottom + d, left_top + d, left_top], color, lw, lc)
+                for i in range(n):
+                    _slice = part.get_slice(i)
+                    color = self._slice_color(_slice)
+                    with self._gen_list_for_slice(_slice, dest):
+                        shapes.quad_with_line([left_bottom,
+                                               left_bottom + d,
+                                               left_top + d,
+                                               left_top], color, lw, lc)
                     left_bottom += d
                     left_top += d
 
@@ -188,14 +240,17 @@ class _Cell:
             dy = (lt - lb) / n
             for x in range(n):
                 for y in range(n):
-                    shapes.quad_with_line(
+                    _slice = part.get_slice(y, x)
+                    color = self._slice_color(_slice)
+                    with self._gen_list_for_slice(_slice, dest):
+                        shapes.quad_with_line(
 
-                        [lb + x * dx + y * dy,
-                         lb + (x + 1) * dx + y * dy,
-                         lb + (x + 1) * dx + (y + 1) * dy,
-                         lb + x * dx + (y + 1) * dy],
+                            [lb + x * dx + y * dy,
+                             lb + (x + 1) * dx + y * dy,
+                             lb + (x + 1) * dx + (y + 1) * dy,
+                             lb + x * dx + (y + 1) * dy],
 
-                        color, lw, lc)
+                            color, lw, lc)
 
     # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):
@@ -295,7 +350,20 @@ class _Cell:
         shapes.box_with_lines(bottom, top, color, 3, (0, 0, 0))
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
-        return [*self.gl_lists_movable]
+        return [ll for ls in self.gl_lists_movable.values() for ll in ls]
+
+    def gui_slice_movable_gui_objects(self, _slice: PartSlice) -> Iterable[int]:
+
+        _id = _slice.fixed_id
+
+        d: dict[frozenset[FaceName], MutableSequence[int]] = self.gl_lists_movable
+
+        # does it work for default dict ?
+        sl = d.get(_id, None)
+        if not sl:
+            return
+        else:
+            yield from sl
 
     @property
     def left_bottom_v3(self) -> ndarray:
@@ -355,15 +423,6 @@ class _FaceBoard:
 
         def _plot_cell(cy: int, cx: int, part: Part):
 
-            c: Color
-            char: str
-            if part:
-                c = part.get_face_edge(f).color
-            else:
-                c = f.color
-
-            face_color = _color_2_v_color(c)
-
             left_bottom3, left_top3, right_bottom3, right_top3 = self._calc_cell_quad_coords(part, cx, cy)
 
             box: MutableSequence[np.ndarray] = [left_bottom3, right_bottom3, right_top3, left_top3]
@@ -382,7 +441,7 @@ class _FaceBoard:
             elif part.annotated_fixed:
                 _marker = "F"
 
-            self._cells[part.fixed_id].create_objects(part, l_box, face_color, _marker)
+            self._cells[part.fixed_id].create_objects(part, l_box, _marker)
 
         _plot_cell(2, 0, f.corner_top_left)
         _plot_cell(2, 1, f.edge_top)
@@ -627,10 +686,13 @@ class _Board:
 
         lists: set[int] = set()
 
-        for p in element.parts:
-            cells: Sequence[_Cell] = self.get_cells(p.fixed_id)
-            for c in cells:
-                lists.update(c.gui_movable_gui_objects())
+        # need to optimize !!!
+        for s in element.slices:
+
+            c: _Cell
+            for cs in self._cells.values():
+                for c in cs:
+                    lists.update(c.gui_slice_movable_gui_objects(s))
 
         return lists
 
