@@ -1,7 +1,7 @@
-from abc import ABC
-from collections.abc import Sequence
+from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from enum import Enum, unique
-from typing import TypeAlias, MutableSequence, Tuple, Any
+from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence
 
 
 @unique
@@ -112,7 +112,7 @@ class PartEdge:
         return self._annotated_fixed_location
 
 
-class Part(ABC):
+class PartSlice(ABC):
     """
 
 
@@ -123,17 +123,19 @@ class Part(ABC):
     n = 2 - edge
     n = 3 - corner
     """
-    __slots__ = ["_cube", "_edges", "_colors_id_by_pos", "_colors_id_by_colors"]
+    __slots__ = ["_cube", "_index", "_edges", "_colors_id_by_pos",
+                 "_fixed_id",
+                 "_colors_id_by_colors"]
     _edges: MutableSequence[PartEdge]
 
-    def __init__(self, *edges: PartEdge) -> None:
+    def __init__(self, index: int, *edges: PartEdge) -> None:
         super().__init__()
 
-        self._cube: _Cube = edges[0].face.cube # we have at least one edge
+        self._cube: _Cube = edges[0].face.cube  # we have at least one edge
+        self._index = index
 
         self._edges: MutableSequence[PartEdge] = [*edges]
 
-        self._pos_id = tuple(e.face.name for e in edges)
         self._colors_id_by_pos: PartColorsID | None = None
         self._colors_id_by_colors: PartColorsID | None = None
         self._fixed_id: PartFixedID | None = None
@@ -144,7 +146,7 @@ class Part(ABC):
         Must be called before any face changed
         :return:
         """
-        _id = frozenset((p.face.name for p in self._edges))
+        _id = frozenset( tuple([self._index]) + tuple(p.face.name for p in self._edges))
 
         if self._fixed_id:
             if _id != self._fixed_id:
@@ -242,12 +244,274 @@ class Part(ABC):
         return self.colors_id_by_pos == self.colors_id_by_color
 
     @property
-    def pos_id(self):
+    def colors_id_by_pos(self) -> PartColorsID:
         """
-        A unique ID according to pos
+        Return the parts required colors, assume it was in place, not actual colors
+        the colors of the faces it is currently on
         :return:
         """
-        return self._pos_id
+
+        by_pos: PartColorsID | None = self._colors_id_by_pos
+
+        if not by_pos:
+            by_pos = frozenset(e.face.color for e in self._edges)
+            self._colors_id_by_pos = by_pos
+
+        return by_pos
+
+    @classmethod
+    def parts_id_by_pos(cls, parts: Sequence["Part"]) -> Sequence[PartColorsID]:
+
+        return [p.colors_id_by_pos for p in parts]
+
+    def reset_after_faces_changes(self):
+        self._colors_id_by_pos = None
+
+    @property
+    def colors_id_by_color(self) -> PartColorsID:
+        """
+        Return the parts actual color
+        the colors of the faces it is currently on
+        :return:
+        """
+
+        colors_id: PartColorsID | None = self._colors_id_by_colors
+
+        if not colors_id:
+            colors_id = frozenset(e.color for e in self._edges)
+            self._colors_id_by_colors = colors_id
+
+        return colors_id
+
+    def reset_colors_id(self):
+        self._colors_id_by_colors = None
+
+    def on_face(self, f: _Face) -> PartEdge | None:
+        """
+        :param f:
+        :return: true if any edge is on f
+        """
+        for p in self._edges:
+            if p.face is f:
+                return p
+
+        return None
+
+    def on_face_by_name(self, name: FaceName) -> PartEdge | None:
+
+        for p in self._edges:
+            if p.face.name == name:
+                return p
+
+        return None
+
+    def face_of_actual_color(self, c: Color):
+
+        """
+        Not the color the edge is on !!!
+        :param c:
+        :return:
+        """
+
+        for p in self._edges:
+            if p.color == c:
+                return p.face
+
+        raise ValueError(f"No color {c} on {self}")
+
+    @classmethod
+    def all_match_faces(cls, parts: Sequence["Part"]):
+        """
+        Return true if all parts match - each part edge matches the face it is located on
+        :param parts:
+        :return:
+        """
+        return all(p.match_faces for p in parts)
+
+    @classmethod
+    def all_in_position(cls, parts: Sequence["Part"]):
+        """
+        Return true if all parts match - each part edge matches the face it is located on
+        :param parts:
+        :return:
+        """
+        return all(p.in_position for p in parts)
+
+    @property
+    def cube(self) -> _Cube:
+        return self._cube
+
+    def annotate(self, fixed_location: bool):
+        for p in self._edges:
+            p.annotate(fixed_location)
+
+    def un_annotate(self):
+        for p in self._edges:
+            p.un_annotate()
+
+    @property
+    def annotated(self) -> bool:
+        return any(p.annotated for p in self._edges)
+
+    @property
+    def annotated_by_color(self) -> bool:
+        return any(p.annotated_by_color for p in self._edges)
+
+    @property
+    def annotated_fixed(self) -> bool:
+        return any(p.annotated_fixed for p in self._edges)
+
+    @property
+    def edges(self):
+        return self._edges
+
+    def clone(self) -> "PartSlice":
+        edges = [e.copy() for e in self._edges]
+        return PartSlice(self._index, *edges)
+
+
+class Part(ABC):
+    """
+
+
+    Parts never chane position, only the color of the parts
+
+
+    n = 1 - center
+    n = 2 - edge
+    n = 3 - corner
+    """
+    __slots__ = ["_cube", "_fixed_id", "_colors_id_by_pos", "_colors_id_by_colors"]
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self._cube: _Cube = self._edges[0].face.cube
+
+        self._colors_id_by_pos: PartColorsID | None = None
+        self._colors_id_by_colors: PartColorsID | None = None
+        self._fixed_id: PartFixedID | None = None
+
+    @property
+    @abstractmethod
+    def _edges(self) -> Sequence[PartEdge]:
+        """
+        A represented edges, valid for 3x3 only (probably)
+        :return:
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def _all_slices(self) -> Iterable[PartSlice]:
+        pass
+
+    def finish_init(self):
+        """
+        Assign a part a fixed _id, that is not changed when face color is changed
+        Must be called before any face changed
+        :return:
+        """
+
+        for s in self._all_slices:
+            s.finish_init()
+
+        _id = frozenset(s.fixed_id for s in self._all_slices)
+
+        if self._fixed_id:
+            if _id != self._fixed_id:
+                raise Exception(f"SW error, you are trying to re assign part id was: {self._fixed_id}, new: {_id}")
+        else:
+            self._fixed_id = _id
+
+    @property
+    def fixed_id(self) -> PartFixedID:
+        """
+        An ID that is not changed when color ir parent face color is changed
+        It actually track the instance of the edge, but it will same for all instances of cube
+        :return:
+        """
+        assert self._fixed_id
+        return self._fixed_id
+
+    def get_face_edge(self, face: _Face) -> PartEdge:
+        """
+        return the edge belong to face, raise error if not found
+        :param face:
+        :return:
+        """
+        for e in self._edges:
+            if face is e.face:
+                return e
+
+        raise ValueError(f"Part {self} doesn't contain face {face}")
+
+    def __str__(self) -> str:
+        s = str([str(e) for e in self._edges])
+
+        if self.match_faces:
+            s = "+" + s
+        else:
+            s = "-" + s
+
+        return s
+
+    def __repr__(self):
+        return self.__str__()
+
+    def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face]):
+
+        """
+        Replace the colors of this edge with the colors from source
+        Find the edge part contains source_dest[i][0] and copy it to
+        edge part that matches source_dest[i][0]
+
+        :param source:
+        :return:
+        """
+        source: _Face
+        target: _Face
+        for source, target in source_dest:
+            source_edge: PartEdge = source_part.get_face_edge(source)
+            target_edge: PartEdge = self.get_face_edge(target)
+
+            target_edge.copy_color(source_edge)
+
+        self.reset_colors_id()
+
+    def f_color(self, f: _Face):
+        """
+        The color of part on given face
+        :param f:
+        :return:
+        """
+        return self.get_face_edge(f).color
+
+    def match_face(self, face: _Face):
+        """
+        Part edge on given face match its color
+        :return:
+        """
+        return self.get_face_edge(face).color == face.color
+
+    @property
+    def match_faces(self):
+        """
+        Part is in position, all colors match the faces
+        :return:
+        """
+        for p in self._edges:
+            if p.color != p.face.color:
+                return False
+
+        return True
+
+    @property
+    def in_position(self):
+        """
+        :return: true if part in position, position id same as color id
+        """
+        return self.colors_id_by_pos == self.colors_id_by_color
 
     @property
     def colors_id_by_pos(self) -> PartColorsID:
@@ -369,12 +633,26 @@ class Part(ABC):
 
 
 class Center(Part):
-    def __init__(self, center: PartEdge) -> None:
-        super().__init__(center)
+
+    __slots__ = "_slices"
+
+    def __init__(self, center_slices: Sequence[Sequence[PartSlice]]) -> None:
+        # assign before call to init because _edges is called from ctor
+        self._slices: Sequence[Sequence[PartSlice]] = center_slices
+        super().__init__()
+
+    @property
+    def _edges(self) -> Sequence[PartEdge]:
+        return self._slices[0][0].edges
+
+    @property
+    def _all_slices(self) -> Iterable[PartSlice]:
+        for ss in self._slices:
+            yield from ss
 
     @property
     def n_slices(self):
-        return self.cube.size-2
+        return self.cube.size - 2
 
     def edg(self) -> PartEdge:
         return self._edges[0]
@@ -384,7 +662,13 @@ class Center(Part):
         return self.edg().color
 
     def copy(self) -> "Center":
-        return Center(self._edges[0].copy())
+        n = self.n_slices
+
+        my = self._slices
+
+        _slices = [[my[i][j].clone() for j in range(n)] for i in range(n)]
+
+        return Center(_slices)
 
     def replace_colors(self, other: "Center"):
         self._edges[0].copy_color(other.edg())
@@ -392,12 +676,24 @@ class Center(Part):
 
 
 class Edge(Part):
-    def __init__(self, e1: PartEdge, e2: PartEdge) -> None:
-        super().__init__(e1, e2)
+
+
+    def __init__(self, slices: Sequence[PartSlice]) -> None:
+        # assign before call to init because _edges is called from ctor
+        self._slices: Sequence[PartSlice] = slices
+        super().__init__()
+
+    @property
+    def _edges(self) -> Sequence[PartEdge]:
+        return self._slices[0].edges
+
+    @property
+    def _all_slices(self) -> Iterable[PartSlice]:
+        return self._slices
 
     @property
     def n_slices(self):
-        return self.cube.size-2
+        return self.cube.size - 2
 
     @property
     def e1(self) -> "PartEdge":
@@ -498,7 +794,8 @@ class Edge(Part):
         Used as temporary for rotate, must not used in cube
         :return:
         """
-        return Edge(self.e1.copy(), self.e2.copy())
+        slices = [s.clone() for s in self._slices]
+        return Edge(slices)
 
     def single_shared_face(self, other: "Edge"):
         """
@@ -533,7 +830,6 @@ class Edge(Part):
         else:
             return f2
 
-
     @property
     def is_left(self):
         return self is self.e1.face.edge_left or self is self.e2.face.edge_left
@@ -552,15 +848,30 @@ class Edge(Part):
 
 
 class Corner(Part):
-    def __init__(self, e1: PartEdge, e2: PartEdge, e3: PartEdge) -> None:
-        super().__init__(e1, e2, e3)
+
+
+
+    __slots__ = ["_slice"]
+
+    def __init__(self, a_slice: PartSlice) -> None:
+        self._slice = a_slice
+        super().__init__()
+
+    @property
+    def _edges(self) -> Sequence[PartEdge]:
+        return self._slice.edges
+
+    @property
+    def _all_slices(self) -> Iterable[PartSlice]:
+        return [self._slice]
+
 
     def copy(self) -> "Corner":
         """
-        Used as temporary for rotate, must not used in cube
+        Used as temporary for rotate, must not be used in cube
         :return:
         """
-        return Corner(self._edges[0].copy(), self._edges[1].copy(), self._edges[2].copy())
+        return Corner(self._slice.clone())
 
     def replace_colors(self, on_face: _Face,
                        source: "Corner",

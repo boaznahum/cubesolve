@@ -1,6 +1,5 @@
 from collections import defaultdict
 from collections.abc import Set
-from ctypes import c_float
 from typing import Hashable, Tuple, MutableSequence, Callable, Iterable, Sequence, Set
 
 import colorama
@@ -21,7 +20,6 @@ from view_state import ViewState
 
 _CELL_SIZE: int = 25
 
-# if if look on left edge:
 _CORNER_SIZE = 0.2
 
 _VColor = Tuple[int, int, int]
@@ -81,7 +79,7 @@ class _Cell:
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
-        marker = None
+        marker = ""
 
         self._left_bottom_v3 = vertexes[0]
         self._right_top_v3 = vertexes[2]
@@ -99,7 +97,6 @@ class _Cell:
 
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
         self._create_polygon(part, vertexes, color)
-        #self._create_lines(vertexes, [0, 0, 0])
         if marker == "M":
             self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
         # self._create_helpers()
@@ -145,7 +142,6 @@ class _Cell:
 
         # vertex = [left_bottom, right_bottom, right_top, left_top]
 
-
         lc = (0, 0, 0)
         lw = 4
 
@@ -160,7 +156,7 @@ class _Cell:
 
             left_bottom = vertexes[0]
             right_bottom = vertexes[1]
-            if part  is f.edge_left or part is f.edge_right:
+            if part is f.edge_left or part is f.edge_right:
 
                 left_top = vertexes[3]
 
@@ -171,8 +167,8 @@ class _Cell:
                     left_bottom += d
                     right_bottom += d
 
-            else: # top or bottom
-                right_top = vertexes[2]
+            else:  # top or bottom
+
                 left_top = vertexes[3]
                 d = (right_bottom - left_bottom) / n
                 for _ in range(n):
@@ -180,30 +176,26 @@ class _Cell:
                     left_bottom += d
                     left_top += d
 
-
-
         else:
             assert isinstance(part, Center)
-            #shapes.quad_with_line(vertexes, color, 4, (0, 0, 1))
+            # shapes.quad_with_line(vertexes, color, 4, (0, 0, 1))
             n = part.n_slices
 
             lb = vertexes[0]
             rb = vertexes[1]
-            rt = vertexes[2]
             lt = vertexes[3]
             dx = (rb - lb) / n
-            dy = (lt-lb) / n
+            dy = (lt - lb) / n
             for x in range(n):
                 for y in range(n):
                     shapes.quad_with_line(
 
                         [lb + x * dx + y * dy,
-                         lb + (x+1)*dx + y * dy,
-                         lb + (x+1)*dx + (y+1)*dy,
-                         lb + x*dx + (y+1)*dy],
+                         lb + (x + 1) * dx + y * dy,
+                         lb + (x + 1) * dx + (y + 1) * dy,
+                         lb + x * dx + (y + 1) * dy],
 
                         color, lw, lc)
-
 
     # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):
@@ -276,7 +268,7 @@ class _Cell:
         norm = np.linalg.norm(ortho_dir)
         ortho_dir /= norm
 
-        vx = vertexes  # [numpy.array([f.value for f in v], dtype=float) for v in vertexes]
+        vx = vertexes
 
         gl.glLineWidth(3)
         gl.glColor3ub(*color)
@@ -431,26 +423,26 @@ class _FaceBoard:
             #  1, 2 - up
             match (cx, cy):
                 case (0, 1):  # left
-                    x0 = 0;
+                    x0 = 0
                     x1 = x0 + corner_size
-                    y0 = corner_size;
+                    y0 = corner_size
                     y1 = y0 + center_size
                 case (2, 1):  # right
-                    x0 = face_size - corner_size;
+                    x0 = face_size - corner_size
                     x1 = face_size
-                    y0 = corner_size;
+                    y0 = corner_size
                     y1 = y0 + center_size
 
                 case (1, 0):  # bottom
-                    x0 = corner_size;
+                    x0 = corner_size
                     x1 = x0 + center_size
-                    y0 = 0;
+                    y0 = 0
                     y1 = y0 + corner_size
 
                 case (1, 2):  # top
-                    x0 = corner_size;
+                    x0 = corner_size
                     x1 = x0 + center_size
-                    y0 = face_size - corner_size;
+                    y0 = face_size - corner_size
                     y1 = face_size
 
                 case _:
@@ -505,8 +497,8 @@ class _FaceBoard:
         bl: ndarray = self._cells[face.corner_bottom_left.fixed_id].left_bottom_v3
         rt: ndarray = self._cells[face.corner_top_right.fixed_id].right_top_v3
 
-        _bl = bl  # np.array([x.value for x in bl], dtype=float).reshape((3,))
-        _rt = rt  # np.array([x.value for x in rt], dtype=float).reshape((3,))
+        _bl = bl
+        _rt = rt
 
         center = (_bl + _rt) / 2
 

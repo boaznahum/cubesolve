@@ -1,6 +1,8 @@
 from collections.abc import Iterable
+from typing import List
 
 from elements import *
+from elements import PartSlice
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore
@@ -41,11 +43,21 @@ class Face(SuperElement):
         super().__init__(cube)
 
         self._name = name
-        self._center = Center(PartEdge(self, color))
+        self._center = self._create_center(color)
         self._direction = Direction.D0
         self._parts: Tuple[Part]
 
         # all others are created by Cube#reset
+
+    def _create_center(self, color: Color) -> Center:
+        n = self.cube.n_slices
+
+        f = self
+
+        slices: list[list[PartSlice]]
+        slices = [[PartSlice(i * n + j, PartEdge(f, color)) for j in range(n)] for i in range(n)]
+
+        return Center(slices)
 
     def finish_init(self):
         self._edges = (self._edge_top, self._edge_left, self._edge_right, self._edge_bottom)
@@ -285,4 +297,3 @@ class Face(SuperElement):
     @property
     def is_left(self):
         return self.name is FaceName.L
-

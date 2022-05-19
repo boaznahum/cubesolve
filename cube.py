@@ -135,6 +135,10 @@ class Cube:
         return self._size
 
     @property
+    def n_slices(self) -> int:
+        return self._size - 2
+
+    @property
     def front(self):
         return self._front
 
@@ -363,10 +367,15 @@ class Cube:
 
 
 def _create_edge(f1: Face, f2: Face) -> Edge:
-    p1: PartEdge = f1.create_part()
-    p2: PartEdge = f2.create_part()
+    n = f1.cube.n_slices
 
-    e: Edge = Edge(p1, p2)
+    def _create_slice(i):
+        p1: PartEdge = f1.create_part()
+        p2: PartEdge = f2.create_part()
+
+        return PartSlice(i, p1, p2)
+
+    e: Edge = Edge([_create_slice(i) for i in range(n)])
 
     return e
 
@@ -376,6 +385,8 @@ def _create_corner(f1: Face, f2: Face, f3: Face) -> Corner:
     p2: PartEdge = f2.create_part()
     p3: PartEdge = f3.create_part()
 
-    e: Corner = Corner(p1, p2, p3)
+    slice = PartSlice(0, p1, p2, p3)
+
+    e: Corner = Corner(slice)
 
     return e
