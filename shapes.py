@@ -7,13 +7,13 @@ from pyglet import gl  # type: ignore
 from pyglet.gl import *  # type: ignore
 
 
-def create_quad_with_line(vertexes: Sequence[np.ndarray], face_color: Tuple[int, int, int],
-                          line_width: int,
-                          line_color: Tuple[int, int, int]):
+def quad_with_line(vertexes: Sequence[np.ndarray], face_color: Tuple[int, int, int],
+                   line_width: int,
+                   line_color: Tuple[int, int, int]):
     """
 
     :param line_width:
-    :param vertexes:  # [left_bottom3, right_bottom3, right_top3, left_top3]
+    :param vertexes:  # [left_bottom, right_bottom, right_top, left_top]
     :param face_color:
     :param line_color:
     :return:
@@ -63,7 +63,7 @@ def box_with_lines(bottom_quad: Sequence[np.ndarray],
     top = top_quad
 
     def _q(*vertexes: ndarray):
-        create_quad_with_line([*vertexes], face_color, line_width, line_color)
+        quad_with_line([*vertexes], face_color, line_width, line_color)
 
     # create six quads to form a box
 

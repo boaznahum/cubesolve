@@ -53,7 +53,7 @@ class Main:
     def __init__(self) -> None:
         super().__init__()
         self._error: str | None = None
-        self.cube = Cube(3)
+        self.cube = Cube(7)
         self.op: Operator = Operator(self.cube)
 
         self.slv: Solver = Solver(self.op)

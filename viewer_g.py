@@ -16,12 +16,16 @@ import shapes
 from cube import Cube
 from cube_face import Face
 from cube_slice import SliceName
-from elements import Color, Part, FaceName, PartFixedID, AxisName, SuperElement
+from elements import Color, Part, FaceName, PartFixedID, AxisName, SuperElement, Corner, Edge, Center
 from view_state import ViewState
 
 _CELL_SIZE: int = 25
 
+# if if look on left edge:
+_CORNER_SIZE = 0.2
+
 _VColor = Tuple[int, int, int]
+
 
 def _ansi_color(color, char: str):
     return color + colorama.Style.BRIGHT + char + colorama.Style.RESET_ALL
@@ -73,9 +77,11 @@ class _Cell:
         self.gl_lists_unmovable: Sequence[int] = []
 
     # noinspection PyUnusedLocal
-    def create_objects(self, vertexes: Sequence[ndarray], color, marker: str):
+    def create_objects(self, part: Part, vertexes: Sequence[ndarray], color, marker: str):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
+
+        marker = None
 
         self._left_bottom_v3 = vertexes[0]
         self._right_top_v3 = vertexes[2]
@@ -92,8 +98,8 @@ class _Cell:
         gl.glNewList(self.gl_lists_movable[0], gl.GL_COMPILE)
 
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
-        self._create_polygon(vertexes, color)
-        self._create_lines(vertexes, [0, 0, 0])
+        self._create_polygon(part, vertexes, color)
+        #self._create_lines(vertexes, [0, 0, 0])
         if marker == "M":
             self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
         # self._create_helpers()
@@ -135,16 +141,69 @@ class _Cell:
         vs.restore_objects_view()
 
     # noinspection PyMethodMayBeStatic
-    def _create_polygon(self, vertexes: Sequence[ndarray], color):
+    def _create_polygon(self, part: Part, vertexes: Sequence[ndarray], color):
 
-        # glBegin(GL_TRIANGLE_FAN)
-        gl.glBegin(gl.GL_QUADS)
+        # vertex = [left_bottom, right_bottom, right_top, left_top]
 
-        gl.glColor3ub(*color)
 
-        for v in vertexes:
-            gl.glVertex3f(*v)
-        gl.glEnd()
+        lc = (0, 0, 0)
+        lw = 4
+
+        if isinstance(part, Corner):
+            shapes.quad_with_line(vertexes, color, lw, lc)
+        elif isinstance(part, Edge):
+            shapes.quad_with_line(vertexes, color, lw, lc)
+
+            n = part.n_slices
+            fb: _FaceBoard = self._face_board
+            f: Face = fb.cube_face
+
+            left_bottom = vertexes[0]
+            right_bottom = vertexes[1]
+            if part  is f.edge_left or part is f.edge_right:
+
+                left_top = vertexes[3]
+
+                d = (left_top - left_bottom) / n
+
+                for _ in range(n):
+                    shapes.quad_with_line([left_bottom, right_bottom, right_bottom + d, left_bottom + d], color, lw, lc)
+                    left_bottom += d
+                    right_bottom += d
+
+            else: # top or bottom
+                right_top = vertexes[2]
+                left_top = vertexes[3]
+                d = (right_bottom - left_bottom) / n
+                for _ in range(n):
+                    shapes.quad_with_line([left_bottom, left_bottom + d, left_top + d, left_top], color, lw, lc)
+                    left_bottom += d
+                    left_top += d
+
+
+
+        else:
+            assert isinstance(part, Center)
+            #shapes.quad_with_line(vertexes, color, 4, (0, 0, 1))
+            n = part.n_slices
+
+            lb = vertexes[0]
+            rb = vertexes[1]
+            rt = vertexes[2]
+            lt = vertexes[3]
+            dx = (rb - lb) / n
+            dy = (lt-lb) / n
+            for x in range(n):
+                for y in range(n):
+                    shapes.quad_with_line(
+
+                        [lb + x * dx + y * dy,
+                         lb + (x+1)*dx + y * dy,
+                         lb + (x+1)*dx + (y+1)*dy,
+                         lb + x*dx + (y+1)*dy],
+
+                        color, lw, lc)
+
 
     # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):
@@ -313,17 +372,7 @@ class _FaceBoard:
 
             face_color = _color_2_v_color(c)
 
-            left_bottom3 = self.f0 + self.left_right_direction * (cx * _CELL_SIZE) + self.left_top_direction * (
-                    cy * _CELL_SIZE)
-
-            right_bottom3 = self.f0 + self.left_right_direction * ((cx + 1) * _CELL_SIZE) + self.left_top_direction * (
-                    cy * _CELL_SIZE)
-
-            right_top3 = self.f0 + self.left_right_direction * ((cx + 1) * _CELL_SIZE) + self.left_top_direction * (
-                    (cy + 1) * _CELL_SIZE)
-
-            left_top3 = self.f0 + self.left_right_direction * (cx * _CELL_SIZE) + self.left_top_direction * (
-                    (cy + 1) * _CELL_SIZE)
+            left_bottom3, left_top3, right_bottom3, right_top3 = self._calc_cell_quad_coords(part, cx, cy)
 
             box: MutableSequence[np.ndarray] = [left_bottom3, right_bottom3, right_top3, left_top3]
 
@@ -341,7 +390,7 @@ class _FaceBoard:
             elif part.annotated_fixed:
                 _marker = "F"
 
-            self._cells[part.fixed_id].create_objects(l_box, face_color, _marker)
+            self._cells[part.fixed_id].create_objects(part, l_box, face_color, _marker)
 
         _plot_cell(2, 0, f.corner_top_left)
         _plot_cell(2, 1, f.edge_top)
@@ -352,6 +401,80 @@ class _FaceBoard:
         _plot_cell(0, 0, f.corner_bottom_left)
         _plot_cell(0, 1, f.edge_bottom)
         _plot_cell(0, 2, f.corner_bottom_right)
+
+    def _calc_cell_quad_coords(self, part: Part, cx, cy):
+
+        face_size: float = _CELL_SIZE * 3.0
+
+        corner_size: float = face_size * _CORNER_SIZE
+        center_size = face_size - 2 * corner_size
+
+        cell_width: float
+        cell_height: float
+
+        x0: float
+        y0: float
+
+        if isinstance(part, Corner):
+            # cx = 0 | 2
+            # cy = 0 | 2
+            x0 = cx / 2.0 * (corner_size + center_size)
+            x1 = x0 + corner_size  # corner_size or face_size
+
+            y0 = cy / 2.0 * (corner_size + center_size)
+            y1 = y0 + corner_size  # edge_with or face_size
+        elif isinstance(part, Edge):
+            # cx, cy:
+            #  0, 1 - left     x= 0, corner  y = corner, corner+center
+            #  2, 1 - right    x= corner + center, corner + center + corner
+            #  1, 0 - bottom   x = corner
+            #  1, 2 - up
+            match (cx, cy):
+                case (0, 1):  # left
+                    x0 = 0;
+                    x1 = x0 + corner_size
+                    y0 = corner_size;
+                    y1 = y0 + center_size
+                case (2, 1):  # right
+                    x0 = face_size - corner_size;
+                    x1 = face_size
+                    y0 = corner_size;
+                    y1 = y0 + center_size
+
+                case (1, 0):  # bottom
+                    x0 = corner_size;
+                    x1 = x0 + center_size
+                    y0 = 0;
+                    y1 = y0 + corner_size
+
+                case (1, 2):  # top
+                    x0 = corner_size;
+                    x1 = x0 + center_size
+                    y0 = face_size - corner_size;
+                    y1 = face_size
+
+                case _:
+                    assert False
+
+        else:
+            assert isinstance(part, Center)
+            x0 = corner_size
+            x1 = x0 + center_size
+
+            y0 = corner_size
+            y1 = y0 + center_size
+
+        l_r_d = self.left_right_direction
+        l_t_d = self.left_top_direction
+        left_bottom3 = self.f0 + l_r_d * x0 + l_t_d * y0
+
+        right_bottom3 = self.f0 + l_r_d * x1 + l_t_d * y0
+
+        right_top3 = self.f0 + l_r_d * x1 + l_t_d * y1
+
+        left_top3 = self.f0 + l_r_d * x0 + l_t_d * y1
+
+        return left_bottom3, left_top3, right_bottom3, right_top3
 
     def update(self):
         self.draw_init()
@@ -617,19 +740,15 @@ class GCubeViewer:
 
         # debug with # s.alpha_x=-0.30000000000000004 s.alpha_y=-0.5 s.alpha_z=0
 
-        # OK
         _plot_face(b, lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1], [0, 1, 0])
 
-        # OK
         _plot_face(b, lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
         if self._vs.draw_shadows:
             # -0.75 from it x location, so we can see it in isometric view
             _plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
 
-        # OK
         _plot_face(b, lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1])
 
-        # OK
         _plot_face(b, lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
 
         _plot_face(b, lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0], [0, 0, -1])

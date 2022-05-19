@@ -129,7 +129,7 @@ class Part(ABC):
     def __init__(self, *edges: PartEdge) -> None:
         super().__init__()
 
-        self._cube: _Cube = edges[0].face # we have at least one edge
+        self._cube: _Cube = edges[0].face.cube # we have at least one edge
 
         self._edges: MutableSequence[PartEdge] = [*edges]
 
@@ -372,6 +372,10 @@ class Center(Part):
     def __init__(self, center: PartEdge) -> None:
         super().__init__(center)
 
+    @property
+    def n_slices(self):
+        return self.cube.size-2
+
     def edg(self) -> PartEdge:
         return self._edges[0]
 
@@ -528,6 +532,23 @@ class Edge(Part):
             return f1
         else:
             return f2
+
+
+    @property
+    def is_left(self):
+        return self is self.e1.face.edge_left or self is self.e2.face.edge_left
+
+    @property
+    def is_right(self):
+        return self is self.e1.face.edge_right or self is self.e2.face.edge_right
+
+    @property
+    def is_top(self):
+        return self is self.e1.face.edge_top or self is self.e2.face.edge_top
+
+    @property
+    def is_bottom(self):
+        return self is self.e1.face.edge_bottom or self is self.e2.face.edge_bottom
 
 
 class Corner(Part):
