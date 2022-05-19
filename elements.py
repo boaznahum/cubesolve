@@ -123,11 +123,14 @@ class Part(ABC):
     n = 2 - edge
     n = 3 - corner
     """
-    __slots__ = ["_edges", "_colors_id_by_pos", "_colors_id_by_colors"]
+    __slots__ = ["_cube", "_edges", "_colors_id_by_pos", "_colors_id_by_colors"]
     _edges: MutableSequence[PartEdge]
 
     def __init__(self, *edges: PartEdge) -> None:
         super().__init__()
+
+        self._cube: _Cube = edges[0].face # we have at least one edge
+
         self._edges: MutableSequence[PartEdge] = [*edges]
 
         self._pos_id = tuple(e.face.name for e in edges)
@@ -342,7 +345,7 @@ class Part(ABC):
 
     @property
     def cube(self) -> _Cube:
-        return self._edges[0].face.cube
+        return self._cube
 
     def annotate(self, fixed_location: bool):
         for p in self._edges:
@@ -387,6 +390,10 @@ class Center(Part):
 class Edge(Part):
     def __init__(self, e1: PartEdge, e2: PartEdge) -> None:
         super().__init__(e1, e2)
+
+    @property
+    def n_slices(self):
+        return self.cube.size-2
 
     @property
     def e1(self) -> "PartEdge":

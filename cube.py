@@ -13,13 +13,15 @@ class Cube:
            2:     D
            3:     B
     """
-    __slots__ = ["_front", "_left", "_up", "_right", "_down",
-                 "_back",
-                 "_color_2_face",
-                 "_faces",
-                 "_slice_m", "_slice_e", "_slice_s",
-                 "_slices"
-                 ]
+    __slots__ = [
+        "_size",  # 3x3, 4x4
+        "_front", "_left", "_up", "_right", "_down",
+        "_back",
+        "_color_2_face",
+        "_faces",
+        "_slice_m", "_slice_e", "_slice_s",
+        "_slices"
+    ]
 
     _front: Face
     _left: Face
@@ -31,8 +33,9 @@ class Cube:
     _faces: dict[FaceName, Face]
     _slices: dict[SliceName, Slice]
 
-    def __init__(self) -> None:
+    def __init__(self, size: int) -> None:
         super().__init__()
+        self._size = size
         self._reset()
 
     def _reset(self):
@@ -125,7 +128,11 @@ class Cube:
         for s in self._slices.values():
             s.finish_init()
 
-        #self.front.edge_top.annotate()
+        # self.front.edge_top.annotate()
+
+    @property
+    def size(self) -> int:
+        return self._size
 
     @property
     def front(self):

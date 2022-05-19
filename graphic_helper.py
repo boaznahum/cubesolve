@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from math import *
+from typing import Tuple
 
 import numpy as np
 from numpy import ndarray
@@ -60,9 +61,9 @@ def print_matrix(name, id: int):
     v = (gl.GLdouble * 16)()
     gl.glGetDoublev(id, v)
 
-    m: ndarray = np.array( [ *v ]) # because iterator return floats
+    m: ndarray = np.array([*v])  # because iterator return floats
 
-    m=m.reshape((4,4)).transpose()
+    m = m.reshape((4, 4)).transpose()
 
     # from column major to row major
     # m = [
@@ -75,3 +76,5 @@ def print_matrix(name, id: int):
     print(name + ":")
     for r in m:
         print(" ", r)
+
+

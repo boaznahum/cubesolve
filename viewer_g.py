@@ -12,6 +12,8 @@ from numpy import ndarray
 from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
+import graphic_helper
+import shapes
 from cube import Cube
 from cube_face import Face
 from cube_slice import SliceName
@@ -107,11 +109,9 @@ class _Cell:
             self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
             gl.glEndList()
 
-
-
     def draw(self):
 
-        lists: Sequence[int] = [ *self.gl_lists_movable , *self.gl_lists_unmovable]
+        lists: Sequence[int] = [*self.gl_lists_movable, *self.gl_lists_unmovable]
 
         if not lists:
             print(f"Error no gl lists in {self}")
@@ -119,7 +119,7 @@ class _Cell:
 
         hidden = self._face_board.board.get_hidden()
 
-        if all( ll in hidden for ll in lists ):
+        if all(ll in hidden for ll in lists):
             return
 
         self._prepare_view_state()
@@ -245,45 +245,7 @@ class _Cell:
             p = center + height * ortho_dir + v * top_size
             top.append(p)
 
-        def _q(is_line: bool, *ps: ndarray):
-
-            if is_line:
-                gl.glColor3ub(0, 0, 0)
-                gl.glBegin(gl.GL_LINE_LOOP)
-            else:
-                gl.glColor3ub(*color)
-                gl.glBegin(gl.GL_QUADS)
-
-            for v in ps:
-                gl.glVertex3f(*v)
-
-            gl.glEnd()
-
-        # [left_bottom3, right_bottom3, right_top3, left_top3]
-        lb = 0
-        rb = 1
-        rt = 2
-        lt = 3
-
-        for ll in [True, False]:
-            # gl.glColor3ub(255, 51, 255)
-            _q(ll, *bottom)
-            # gl.glColor3ub(51, 255, 51)
-            _q(ll, *top)
-
-            # gl.glColor3ub(255, 255, 51)
-            _q(ll, bottom[lb], bottom[rb], top[rb], top[lb])
-
-            # gl.glColor3ub(255, 0, 51)
-            _q(ll, bottom[rb], bottom[rt], top[rt], top[rb])
-
-            # gl.glColor3ub(0, 255, 255)
-            _q(ll, bottom[lt], bottom[rt], top[rt], top[lt])
-
-            # gl.glColor3ub(51, 102, 0)
-            _q(ll, bottom[lb], bottom[lt], top[lt], top[lb])
-
-        # gl.glPopAttrib()  # line width
+        shapes.box_with_lines(bottom, top, color, 3, (0, 0, 0))
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [*self.gl_lists_movable]
@@ -628,7 +590,7 @@ def _plot_face(b: _Board, f: Callable[[], Face], left_bottom: list[float],  # 3d
 
 class GCubeViewer:
     __slots__ = ["_batch", "_cube", "_board", "_test",
-                 "_hidden_objects","_vs"]
+                 "_hidden_objects", "_vs"]
 
     def __init__(self, batch: Batch, cube: Cube, vs: ViewState) -> None:
         super().__init__()
