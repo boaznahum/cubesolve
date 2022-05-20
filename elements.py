@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from enum import Enum, unique
-from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence
+from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, List
 
 
 @unique
@@ -366,9 +366,11 @@ class PartSlice(ABC):
     def edges(self):
         return self._edges
 
+    def _clone_edges(self) -> Iterable[PartEdge]:
+        return [e.copy() for e in self._edges]
+
     def clone(self) -> "PartSlice":
-        edges = [e.copy() for e in self._edges]
-        return PartSlice(self._index, *edges)
+        return PartSlice(self._index, *self._clone_edges())
 
 
 class Part(ABC):
@@ -392,6 +394,10 @@ class Part(ABC):
         self._colors_id_by_pos: PartColorsID | None = None
         self._colors_id_by_colors: PartColorsID | None = None
         self._fixed_id: PartFixedID | None = None
+
+        # todo - check that all slices matches faces
+        #   all edges with same index has the same face, see is3x3
+        # all edges with same size (1, 2, 3)
 
     @property
     @abstractmethod
@@ -447,6 +453,21 @@ class Part(ABC):
 
         raise ValueError(f"Part {self} doesn't contain face {face}")
 
+    @property
+    def is3x3(self):
+        # todo: Optimize it !!!, reset after slice rotation
+
+        s0: PartSlice = iter(self.all_slices).__next__()
+
+        colors = [e.color for e in s0.edges]
+
+        for s in self.all_slices:
+            for c1, c2 in zip(colors, (e.color for e in s.edges)):
+                if c1 != c2:
+                    return False
+
+        return True
+
     def __str__(self) -> str:
         s = str([str(e) for e in self._edges])
 
@@ -460,7 +481,7 @@ class Part(ABC):
     def __repr__(self):
         return self.__str__()
 
-    def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face]):
+    def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face], index=-1):
 
         """
         Replace the colors of this edge with the colors from source
@@ -470,13 +491,29 @@ class Part(ABC):
         :param source:
         :return:
         """
+
+        source_slices: Iterable[PartSlice]
+        dest_slices: Iterable[PartSlice]
+
+        if index >= 0:
+            source_slices = [*source_part.all_slices][index:index + 1]
+            dest_slices = [*self.all_slices][index:index + 1]
+        else:
+            source_slices = source_part.all_slices
+            dest_slices = self.all_slices
+
         source: _Face
         target: _Face
         for source, target in source_dest:
-            source_edge: PartEdge = source_part.get_face_edge(source)
-            target_edge: PartEdge = self.get_face_edge(target)
 
-            target_edge.copy_color(source_edge)
+            # we assume they are in same  order
+            for source_slice, target_slice in zip(source_slices, dest_slices):
+                source_edge: PartEdge = source_slice.get_face_edge(source)
+                target_edge: PartEdge = target_slice.get_face_edge(target)
+
+                target_edge.copy_color(source_edge)
+
+                target_slice.reset_colors_id()
 
         self.reset_colors_id()
 
@@ -642,6 +679,11 @@ class Center(Part):
         super().__init__()
 
     @property
+    def face(self) -> _Face:
+        # always true, even for non 3x3
+        return self._slices[0][0].edges[0].face
+
+    @property
     def _edges(self) -> Sequence[PartEdge]:
         return self._slices[0][0].edges
 
@@ -673,16 +715,25 @@ class Center(Part):
 
         return Center(_slices)
 
-    def replace_colors(self, other: "Center"):
-        self._edges[0].copy_color(other.edg())
-        self.reset_colors_id()
+    def copy_colors(self, other: "Center"):
+        # self._edges[0].copy_color(other.edg())
+        self._replace_colors(other, (other.face, self.face))
+
+
+class EdgeSlice(PartSlice):
+
+    def __init__(self, index: int, *edges: PartEdge) -> None:
+        super().__init__(index, *edges)
+
+    def clone(self) -> "EdgeSlice":
+        return EdgeSlice(self._index, *self._clone_edges())
 
 
 class Edge(Part):
 
-    def __init__(self, slices: Sequence[PartSlice]) -> None:
+    def __init__(self, slices: Sequence[EdgeSlice]) -> None:
         # assign before call to init because _edges is called from ctor
-        self._slices: Sequence[PartSlice] = slices
+        self._slices: Sequence[EdgeSlice] = slices
         super().__init__()
 
     @property
@@ -690,14 +741,14 @@ class Edge(Part):
         return self._slices[0].edges
 
     @property
-    def all_slices(self) -> Iterable[PartSlice]:
+    def all_slices(self) -> Iterable[EdgeSlice]:
         return self._slices
 
     @property
     def n_slices(self):
         return self.cube.size - 2
 
-    def get_slice(self, i):
+    def get_slice(self, i) -> PartSlice:
         return self._slices[i]
 
     @property
@@ -776,14 +827,19 @@ class Edge(Part):
 
         self._replace_colors(source, (source_1, target_1), (source_2, target_2))
 
-    def copy_colors_ver(self,
-                        source: "Edge"
-                        ):
+    def copy_colors_horizontal(self,
+                               source: "Edge",
+                               index=-1
+                               ):
         """
-        Copy from vertical edge
+        Copy from edge - copy from shared face
         self and source assume to share a face
 
-        source_other_face, shared_face  --> shared_face,this_other_face
+        source_other_face, shared_face  --> this_other_face, shared_face
+
+        other  |__     __|  other
+              shared,  shared
+
 
         :param source
         """
@@ -792,14 +848,37 @@ class Edge(Part):
         source_other = source.get_other_face(shared_face)
         dest_other = self.get_other_face(shared_face)
 
-        self._replace_colors(source, (source_other, shared_face), (shared_face, dest_other))
+        self._replace_colors(source, (shared_face, shared_face), (source_other, dest_other), index=index)
+
+    def copy_colors_ver(self,
+                        source: "Edge",
+                        index=-1
+                        ):
+        """
+        Copy from vertical edge - copy from other face
+        self and source assume to share a face
+
+        other  |__     __|  other
+              shared,  shared
+
+        source_other_face, shared_face  --> shared_face,this_other_face
+
+        :param index:
+        :param source
+        """
+
+        shared_face = self.single_shared_face(source)
+        source_other = source.get_other_face(shared_face)
+        dest_other = self.get_other_face(shared_face)
+
+        self._replace_colors(source, (source_other, shared_face), (shared_face, dest_other), index=index)
 
     def copy(self) -> "Edge":
         """
         Used as temporary for rotate, must not used in cube
         :return:
         """
-        slices = [s.clone() for s in self._slices]
+        slices: list[EdgeSlice] = [s.clone() for s in self._slices]
         return Edge(slices)
 
     def single_shared_face(self, other: "Edge"):
@@ -917,6 +996,6 @@ class SuperElement:
         return self._cube
 
     @property
+    @abstractmethod
     def slices(self) -> Iterable[PartSlice]:
-        for p in self._parts:
-            yield from p.all_slices
+        pass

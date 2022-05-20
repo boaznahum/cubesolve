@@ -1,6 +1,3 @@
-from collections.abc import Iterable
-from typing import List
-
 from elements import *
 from elements import PartSlice
 
@@ -124,7 +121,6 @@ class Face(SuperElement):
     def corner_bottom_left(self) -> Corner:
         return self._corner_bottom_left
 
-
     @property
     def color(self):
         return self.center.color
@@ -154,10 +150,10 @@ class Face(SuperElement):
 
             saved_top: Edge = self._edge_top.copy()
             # left --> top
-            self._edge_top.replace_colors(self, self._edge_left)
-            self._edge_left.replace_colors(self, self._edge_bottom)
-            self._edge_bottom.replace_colors(self, self._edge_right)
-            self._edge_right.replace_colors(self, saved_top)
+            self._edge_top.copy_colors_horizontal(self._edge_left)
+            self._edge_left.copy_colors_horizontal(self._edge_bottom)
+            self._edge_bottom.copy_colors_horizontal(self._edge_right)
+            self._edge_right.copy_colors_horizontal(saved_top)
 
             saved_bottom_left = self._corner_bottom_left.copy()
 
@@ -183,6 +179,12 @@ class Face(SuperElement):
                 self._corner_bottom_left.f_color(self) ==
                 self._corner_bottom_right.f_color(self)
                 )
+
+    @property
+    def is3x3(self):
+        # todo: Optimize it !!!, reset after slice rotation
+        return all( p.is3x3 for p in self.parts)
+
 
     def reset_after_faces_changes(self):
         """
@@ -300,3 +302,9 @@ class Face(SuperElement):
     @property
     def is_left(self):
         return self.name is FaceName.L
+
+    @property
+    def slices(self) -> Iterable[PartSlice]:
+        for p in self._parts:
+            yield from p.all_slices
+

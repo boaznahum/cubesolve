@@ -153,6 +153,10 @@ class Window(pyglet.window.Window):
         self.text.append(pyglet.text.Label(err,
                                            x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
 
+        s = f"Is 3x3:{'Yes' if self.app.cube.is3x3 else 'No'}"
+        self.text.append(pyglet.text.Label(s,
+                                           x=10, y=130, font_size=10, color=(0, 255, 0, 255), bold=True))
+
     def on_draw(self):
         # print("Updating")
         # need to understand which buffers it clear, see

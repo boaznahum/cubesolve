@@ -274,6 +274,12 @@ class Cube:
                 self._back.solved and
                 self._down.solved)
 
+    @property
+    def is3x3(self):
+        # todo: Optimize it !!!
+        return all( f.is3x3 for f in self.faces)
+
+
     def reset(self):
         self._reset()
 
@@ -373,7 +379,7 @@ def _create_edge(f1: Face, f2: Face) -> Edge:
         p1: PartEdge = f1.create_part()
         p2: PartEdge = f2.create_part()
 
-        return PartSlice(i, p1, p2)
+        return EdgeSlice(i, p1, p2)
 
     e: Edge = Edge([_create_slice(i) for i in range(n)])
 
