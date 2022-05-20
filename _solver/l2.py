@@ -42,7 +42,7 @@ class L2(SolverElement):
 
     def solved(self) -> bool:
         """
-        :return: true if 4 middle slice match faces, don't try to rotate (todo)
+        :return: true if 4 middle slice match faces, don't try to rotate
         """
 
         edges = self.l2_edges

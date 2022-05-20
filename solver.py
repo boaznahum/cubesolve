@@ -47,7 +47,7 @@ class Solver(ISolver):
 
         # allow solver to not put annotations
         self._running_solution = False
-        self._debug: bool = False
+        self._debug: bool = True
 
     @property
     def cube(self) -> Cube:
