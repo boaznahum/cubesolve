@@ -87,7 +87,7 @@ class Cube:
         l._edge_left = b._edge_right = _create_edge(l, b, True)
 
         u._edge_top = b._edge_top = _create_edge(u, b, False)
-        u._edge_right = r._edge_top = _create_edge(u, r, False)
+        u._edge_right = r._edge_top = _create_edge(u, r, True)
 
         f._corner_top_left = l._corner_top_right = u._corner_bottom_left = _create_corner(f, l, u)
         f._corner_top_right = r._corner_top_left = u._corner_bottom_right = _create_corner(f, r, u)

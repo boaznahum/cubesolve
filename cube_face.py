@@ -202,6 +202,7 @@ class Face(SuperElement):
             # saved_left: Edge = self._edge_left.copy()
 
             # not clear why is needed, but without it when rotating front, left face is not correctly colord
+            # TODO: CHECK AND IMPROVE
             e_right: Edge = self._edge_right.copy()
             e_bottom: Edge = self._edge_bottom.copy()
             e_left: Edge = self._edge_left.copy()
