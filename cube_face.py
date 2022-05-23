@@ -54,8 +54,8 @@ class Face(SuperElement):
 
         f = self
 
-        slices: list[list[PartSlice]]
-        slices = [[PartSlice((i, j), PartEdge(f, color)) for j in range(n)] for i in range(n)]
+        slices: list[list[CenterSlice]]
+        slices = [[CenterSlice((i, j), PartEdge(f, color)) for j in range(n)] for i in range(n)]
 
         return Center(slices)
 
@@ -87,12 +87,16 @@ class Face(SuperElement):
 
         for e in self._edges:
             for i in range(n):
-                #cw = self._edge_bottom.get_slice(i).get_face_edge(self).attributes["cw"]
+                # cw = self._edge_bottom.get_slice(i).get_face_edge(self).attributes["cw"]
                 e.get_left_top_left_edge(self, i).c_attributes["n"] = i + 1
 
         self._center.get_center_slice((0, 0)).get_face_edge(self).attributes["origin"] = True
         self._center.get_center_slice((0, n1)).get_face_edge(self).attributes["on_x"] = True
         self._center.get_center_slice((n1, 0)).get_face_edge(self).attributes["on_y"] = True
+
+        for r in range(n):
+            for c in range(n):
+                self._center.get_center_slice((r, c)).edge.c_attributes["n"] = r * n + c
 
     # noinspection PyUnresolvedReferences
 
@@ -173,7 +177,7 @@ class Face(SuperElement):
         n_slices = self.cube.n_slices
 
         def inv(i):
-            return  n_slices -1 - i
+            return n_slices - 1 - i
 
         def _rotate():
             left: Face = self._get_other_face(self._edge_left)
@@ -208,13 +212,12 @@ class Face(SuperElement):
             e_left: Edge = self._edge_left.copy()
 
             for index in range(n_slices):
-
-                #todo: optimize - we can calc only once
+                # todo: optimize - we can calc only once
 
                 top_ltr_index = saved_top.get_left_top_left_slice_index(self, index)
 
                 i_left = e_left.get_slice_index_from_ltr_index(self, top_ltr_index)
-                i_top = index # saved_top.get_left_top_left_slice_index(self, index)
+                i_top = index  # saved_top.get_left_top_left_slice_index(self, index)
                 i_right = e_right.get_left_top_left_slice_index(self, inv(top_ltr_index))
                 i_bottom = e_bottom.get_left_top_left_slice_index(self, inv(top_ltr_index))
 
@@ -231,6 +234,40 @@ class Face(SuperElement):
             self._corner_bottom_right.replace_colors(self, self._corner_top_right, top, right, right, bottom)
             self._corner_top_right.replace_colors(self, self._corner_top_left, top, right, left, top)
             self._corner_top_left.replace_colors(self, saved_bottom_left, left, top, bottom, left)
+
+            # rotate center
+            center = self._center
+            saved_center = center.clone()
+            # e.g n = 3
+            is_odd = n_slices % 2
+            n_half = n_slices // 2  # = 1 (assume ceil)
+
+            def _c1(tr, tc, sr, sc):
+                center.get_center_slice((tr, tc)).edge.copy_color(saved_center.get_center_slice((sr, sc)).edge)
+
+            def _cs(r, c):
+                ri = inv(r)
+                ci = inv(c)
+
+                # copy 4 points on the ...
+                # for example n = 6, r,c = 1,2
+                #  1,2 = 2,4
+                #  2, 4 = 4,3
+                #  4, 3 = 3, 1
+                #  3, 1 = 1, 2
+                #  ~1, ~0 =
+                for _ in range(4):
+                    s = (c, inv(r))
+                    _c1(r, c, s[0], s[1])
+                    (r, c) = s
+
+            for column in range(n_half):  # 0, 1
+                for row in range(n_half):  # 0, 1
+                    _cs(row, column)
+
+            if is_odd:
+                for column in range(n_half):
+                    _cs(n_half, column)
 
         for _ in range(0, n_rotations % 4):
             # -1 --> 3

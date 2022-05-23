@@ -379,7 +379,7 @@ class PartSlice(ABC):
         return any(p.annotated_fixed for p in self._edges)
 
     @property
-    def edges(self):
+    def edges(self) -> Sequence[PartEdge]:
         return self._edges
 
     def _clone_edges(self) -> Iterable[PartEdge]:
@@ -716,9 +716,9 @@ class Part(ABC):
 class Center(Part):
     __slots__ = "_slices"
 
-    def __init__(self, center_slices: Sequence[Sequence[PartSlice]]) -> None:
+    def __init__(self, center_slices: Sequence[Sequence["CenterSlice"]]) -> None:
         # assign before call to init because _edges is called from ctor
-        self._slices: Sequence[Sequence[PartSlice]] = center_slices
+        self._slices: Sequence[Sequence[CenterSlice]] = center_slices
         super().__init__()
 
     @property
@@ -731,7 +731,7 @@ class Center(Part):
         return self._slices[0][0].edges
 
     @property
-    def all_slices(self) -> Iterable[PartSlice]:
+    def all_slices(self) -> Iterable["CenterSlice"]:
         for ss in self._slices:
             yield from ss
 
@@ -739,7 +739,7 @@ class Center(Part):
     def n_slices(self):
         return self.cube.size - 2
 
-    def get_slice(self, index: SliceIndex) -> PartSlice:
+    def get_slice(self, index: SliceIndex) -> "CenterSlice":
         """
 
         :param index: row, column
@@ -748,7 +748,7 @@ class Center(Part):
         assert isinstance(index, tuple)
         return self._slices[index[0]][index[1]]
 
-    def get_slices(self, index: SliceIndex | None) -> Iterable[PartSlice]:
+    def get_slices(self, index: SliceIndex | None) -> Iterable["CenterSlice"]:
 
         if index:
             assert isinstance(index, tuple)
@@ -768,7 +768,12 @@ class Center(Part):
         else:
             return self.all_slices
 
-    def get_center_slice(self, index: CenterSliceIndex) -> PartSlice:
+    def get_center_slice(self, index: CenterSliceIndex) -> "CenterSlice":
+        """
+        Row, Column
+        :param index:
+        :return:
+        """
         return self._slices[index[0]][index[1]]
 
     def edg(self) -> PartEdge:
@@ -778,7 +783,7 @@ class Center(Part):
     def color(self):
         return self.edg().color
 
-    def copy(self) -> "Center":
+    def clone(self) -> "Center":
         n = self.n_slices
 
         my = self._slices
@@ -793,6 +798,15 @@ class Center(Part):
         # self._edges[0].copy_color(other.edg())
         self._replace_colors(other, (other.face, self.face), index=index, source_index=source_index)
 
+    def __str__(self):
+        s = ""
+        for r in range(self.n_slices):
+            for c in range(self.n_slices):
+                s += str(self.get_center_slice((r,c)).edge.c_attributes["n"]) + "|"
+            s += "\n"
+
+        return s
+
 
 class EdgeSlice(PartSlice):
 
@@ -804,6 +818,27 @@ class EdgeSlice(PartSlice):
         assert isinstance(index, int)  # satisfy mypy
 
         return EdgeSlice(index, *self._clone_edges())
+
+
+class CenterSlice(PartSlice):
+
+    def __init__(self, index: CenterSliceIndex, *edges: PartEdge) -> None:
+        super().__init__(index, *edges)
+
+    def clone(self) -> "CenterSlice":
+        index = self._index
+        assert isinstance(index, tuple)  # satisfy mypy
+
+        return CenterSlice(index, *self._clone_edges())
+
+    @property
+    def edge(self) -> PartEdge:
+        """
+        Ignoring face
+
+        :return: The single edge in center slice
+        """
+        return self._edges[0]
 
 
 class Edge(Part):
@@ -886,7 +921,6 @@ class Edge(Part):
         assert ltr_i == self.get_left_top_left_slice_index(face, si)
 
         return si
-
 
     def get_left_top_left_slice(self, face: _Face, i) -> PartSlice:
         """

@@ -1,0 +1,8 @@
+On Face:
+   Edges:
+     Absolute coordinates are left-top / lef-right (ltr) coordinates
+     Slice coordinates are unknown, so you need to convert from ltr to index on each operation
+   Center:
+      Center belong to one face only, so center and ltr are the (choose) to be the same
+
+      0, 0 is left/bottom corner

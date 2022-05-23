@@ -31,7 +31,7 @@ class ViewState:
         self._alpha_delta = 0.1
 
         self._draw_shadows = True
-        self.cube_size = 5
+        self.cube_size = 7
 
     def reset(self):
         self._alpha_x: float = 0

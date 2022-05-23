@@ -91,7 +91,7 @@ class Slice(SuperElement):
             left_index = None
 
         for _ in range(0, n % 4):
-            saved_up: Center = top.copy()
+            saved_up: Center = top.clone()
 
             top.copy_colors(left, index=top_index)
             left.copy_colors(bottom, index=left_index)
