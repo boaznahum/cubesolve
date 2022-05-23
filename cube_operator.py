@@ -19,7 +19,7 @@ class Operator:
         self._history: MutableSequence[Alg] = []
         self._animation_hook: Callable[["Operator", SimpleAlg], None] | None = None
         self._animation_running = False
-        self._animation_enabled: bool = True
+        self._animation_enabled: bool = False
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 

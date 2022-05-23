@@ -53,21 +53,24 @@ class Main:
     def __init__(self) -> None:
         super().__init__()
         self._error: str | None = None
-        self.cube = Cube(7)
+
+        self.vs = ViewState()
+
+        self.cube = Cube(self.vs.cube_size)
+
         self.op: Operator = Operator(self.cube)
 
         self.slv: Solver = Solver(self.op)
 
         # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
 
-        self.vs = ViewState(0, 0, 0, 0)
-
         self.reset()
 
-    def reset(self):
+    def reset(self, dont_reset_axis=False):
         self.cube.reset()
         # can't change instance, it is shared
-        self.vs.reset(0.3, -0.4, 0, 0.1)
+        if not dont_reset_axis:
+            self.vs.reset()
         self._error = None
 
     def set_error(self, _error: str):
@@ -126,8 +129,8 @@ class Window(pyglet.window.Window):
             return  # don't update text while animation
 
         self.text.clear()
-        self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
-                                           x=10, y=10, font_size=10))
+        # self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
+        #                                    x=10, y=10, font_size=10))
         h = Algs.simplify(*self.app.op.history)
         self.text.append(pyglet.text.Label("History: #" + str(h.count()) + "  " + str(h),
                                            x=10, y=30, font_size=10))
@@ -589,7 +592,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
         match value:
 
             case key.Q:
-                op.abort() # solver will not try to check state
+                op.abort()  # solver will not try to check state
                 window.close()
                 raise AppExit
 
@@ -617,7 +620,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
             window.flip()
 
         case key.I:
-            print(f"{vs.alpha_x=} {vs.alpha_y=} {vs.alpha_z=}")
+            print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
             no_operation = True
 
         case key.W:
@@ -706,7 +709,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
         case key.C:
             op.reset()
-            app.reset()
+            app.reset(not (modifiers and key.MOD_CTRL))
 
         case key._0:
             alg = Algs.scramble()

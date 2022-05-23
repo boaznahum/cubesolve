@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Iterable
 from enum import Enum, unique
-from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, List
+from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable
 
 
 @unique
@@ -53,7 +54,9 @@ PartSliceHashID = frozenset[FaceName]
 
 
 class PartEdge:
-    __slots__ = ["_face", "_color", "_annotated_by_color", "_annotated_fixed_location"]
+    __slots__ = ["_face", "_color", "_annotated_by_color",
+                 "_annotated_fixed_location",
+                 "attributes", "c_attributes"]
 
     _face: _Face
     _color: Color
@@ -64,6 +67,8 @@ class PartEdge:
         self._color = color
         self._annotated_by_color: bool = False
         self._annotated_fixed_location: bool = False
+        self.attributes: dict[Hashable, Any] = defaultdict(bool)
+        self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
 
     @property
     def face(self) -> _Face:
@@ -74,19 +79,23 @@ class PartEdge:
         return self._color
 
     def __str__(self) -> str:
-        return f"{self._color.name}@{self._face}"
+        return f"{self.c_attributes['n']}{self._color.name}@{self._face}"
 
     def copy_color(self, source: "PartEdge"):
         self._color = source._color
         self._annotated_by_color = source._annotated_by_color
+        self.c_attributes.clear()
+        self.c_attributes.update(source.c_attributes)
 
-    def copy(self) -> "PartEdge":
+    def clone(self) -> "PartEdge":
         """
         Used as temporary for rotate, must not be used in cube
         :return:
         """
         p = PartEdge(self._face, self._color)
         p._annotated_by_color = self._annotated_by_color
+        p.attributes = self.attributes.copy()
+        p.c_attributes = self.c_attributes.copy()
 
         return p
 
@@ -113,6 +122,11 @@ class PartEdge:
         return self._annotated_fixed_location
 
 
+EdgeSliceIndex = int | slice
+CenterSliceIndex = Tuple[int, int]
+SliceIndex = EdgeSliceIndex | CenterSliceIndex  # type: ignore # row, column, must be hashable
+
+
 class PartSlice(ABC):
     """
 
@@ -129,11 +143,11 @@ class PartSlice(ABC):
                  "_colors_id_by_colors"]
     _edges: MutableSequence[PartEdge]
 
-    def __init__(self, index: int, *edges: PartEdge) -> None:
+    def __init__(self, index: SliceIndex, *edges: PartEdge) -> None:
         super().__init__()
 
         self._cube: _Cube = edges[0].face.cube  # we have at least one edge
-        self._index = index
+        self._index: SliceIndex = index
 
         self._edges: MutableSequence[PartEdge] = [*edges]
 
@@ -179,6 +193,8 @@ class PartSlice(ABC):
 
     def __str__(self) -> str:
         s = str([str(e) for e in self._edges])
+
+        s = "[" + str(self._index) + "]" + s
 
         if self.match_faces:
             s = "+" + s
@@ -290,7 +306,7 @@ class PartSlice(ABC):
     def on_face(self, f: _Face) -> PartEdge | None:
         """
         :param f:
-        :return: true if any edge is on f
+        :return: true if any edge/facet is on f
         """
         for p in self._edges:
             if p.face is f:
@@ -367,7 +383,7 @@ class PartSlice(ABC):
         return self._edges
 
     def _clone_edges(self) -> Iterable[PartEdge]:
-        return [e.copy() for e in self._edges]
+        return [e.clone() for e in self._edges]
 
     def clone(self) -> "PartSlice":
         return PartSlice(self._index, *self._clone_edges())
@@ -411,6 +427,15 @@ class Part(ABC):
     @property
     @abstractmethod
     def all_slices(self) -> Iterable[PartSlice]:
+        pass
+
+    @abstractmethod
+    def get_slice(self, index: SliceIndex) -> PartSlice:
+        pass
+
+    # todo: fix to iterator
+    @abstractmethod
+    def get_slices(self, index: SliceIndex | None) -> Iterable[PartSlice]:
         pass
 
     def finish_init(self):
@@ -469,19 +494,32 @@ class Part(ABC):
         return True
 
     def __str__(self) -> str:
-        s = str([str(e) for e in self._edges])
+
+        st = ""
+        n_edges = len(self._edges)
+        for i in range(n_edges):
+            es = ""
+            s: PartSlice
+            for s in self.all_slices:
+                e = s.edges[i]
+                es += str(e) + "|"
+            st += es + " "
+
+        # s = str([str(e) for e in self.all_slices])
 
         if self.match_faces:
-            s = "+" + s
+            st = "+" + st
         else:
-            s = "-" + s
+            st = "-" + st
 
-        return s
+        return st
 
     def __repr__(self):
         return self.__str__()
 
-    def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face], index=-1):
+    def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face],
+                        index: SliceIndex | None = None,
+                        source_index: SliceIndex = None):
 
         """
         Replace the colors of this edge with the colors from source
@@ -492,15 +530,20 @@ class Part(ABC):
         :return:
         """
 
+        if source_index is None:
+            source_index = index
+
         source_slices: Iterable[PartSlice]
         dest_slices: Iterable[PartSlice]
 
-        if index >= 0:
-            source_slices = [*source_part.all_slices][index:index + 1]
-            dest_slices = [*self.all_slices][index:index + 1]
-        else:
-            source_slices = source_part.all_slices
-            dest_slices = self.all_slices
+        # for debug only unpack todo:
+        source_slices = source_part.get_slices(source_index)
+        dest_slices = self.get_slices(index)
+
+        # without that they below doesn't work, it doesn't iterate all
+        # slice rotate doesn't work
+        source_slices = [*source_slices]
+        dest_slices = [*dest_slices]
 
         source: _Face
         target: _Face
@@ -696,8 +739,37 @@ class Center(Part):
     def n_slices(self):
         return self.cube.size - 2
 
-    def get_slice(self, y, x) -> PartSlice:
-        return self._slices[y][x]
+    def get_slice(self, index: SliceIndex) -> PartSlice:
+        """
+
+        :param index: row, column
+        :return:
+        """
+        assert isinstance(index, tuple)
+        return self._slices[index[0]][index[1]]
+
+    def get_slices(self, index: SliceIndex | None) -> Iterable[PartSlice]:
+
+        if index:
+            assert isinstance(index, tuple)
+            i = index[0]
+            j = index[1]
+
+            if i < 0 and j < 0:
+                return self.all_slices
+            elif i < 0:
+                for i in range(self.n_slices):
+                    yield self.get_slice((i, j))
+            elif j < 0:
+                for j in range(self.n_slices):
+                    yield self.get_slice((i, j))
+            else:
+                yield self.get_slice((i, j))
+        else:
+            return self.all_slices
+
+    def get_center_slice(self, index: CenterSliceIndex) -> PartSlice:
+        return self._slices[index[0]][index[1]]
 
     def edg(self) -> PartEdge:
         return self._edges[0]
@@ -715,9 +787,11 @@ class Center(Part):
 
         return Center(_slices)
 
-    def copy_colors(self, other: "Center"):
+    def copy_colors(self, other: "Center",
+                    index: CenterSliceIndex = None,
+                    source_index: CenterSliceIndex = None):
         # self._edges[0].copy_color(other.edg())
-        self._replace_colors(other, (other.face, self.face))
+        self._replace_colors(other, (other.face, self.face), index=index, source_index=source_index)
 
 
 class EdgeSlice(PartSlice):
@@ -726,15 +800,34 @@ class EdgeSlice(PartSlice):
         super().__init__(index, *edges)
 
     def clone(self) -> "EdgeSlice":
-        return EdgeSlice(self._index, *self._clone_edges())
+        index = self._index
+        assert isinstance(index, int)  # satisfy mypy
+
+        return EdgeSlice(index, *self._clone_edges())
 
 
 class Edge(Part):
 
-    def __init__(self, slices: Sequence[EdgeSlice]) -> None:
+    def __init__(self, f1: _Face, f2: _Face, right_top_left_same_direction: bool,
+                 slices: Sequence[EdgeSlice]) -> None:
         # assign before call to init because _edges is called from ctor
         self._slices: Sequence[EdgeSlice] = slices
         super().__init__()
+        self._f1: _Face = f1
+        self._f2: _Face = f2
+        self.right_top_left_same_direction = right_top_left_same_direction
+
+        assert f1 is not f2
+        assert f1 is self.e1.face or f1 is self.e2.face
+        assert f2 is self.e1.face or f2 is self.e2.face
+
+    @property
+    def e1(self) -> "PartEdge":
+        return self._edges[0]
+
+    @property
+    def e2(self) -> "PartEdge":
+        return self._edges[1]
 
     @property
     def _edges(self) -> Sequence[PartEdge]:
@@ -749,15 +842,83 @@ class Edge(Part):
         return self.cube.size - 2
 
     def get_slice(self, i) -> PartSlice:
+        """
+        In unpractical order
+        :param i:
+        :return:
+        """
         return self._slices[i]
 
-    @property
-    def e1(self) -> "PartEdge":
-        return self._edges[0]
+    def get_left_top_left_slice_index(self, face: _Face, i) -> int:
+        """
 
-    @property
-    def e2(self) -> "PartEdge":
-        return self._edges[1]
+        # todo: combine and optimize with get_face_edge
+        Given an index of slice in direction from left to right, or left to top
+        find it's actual slice
+        :param face:
+        :param i:
+        :return:
+        """
+        assert face is self._f1 or face is self._f2
+
+        if self.right_top_left_same_direction:
+            return i
+        else:
+            if face is self._f1:
+                return i  # arbitrary f1 was chosen
+            else:
+                # todo make it generic
+                return self.inv_index(i)  # type: ignore
+
+    def get_slice_index_from_ltr_index(self, face: _Face, ltr_i: int) -> int:
+        assert face is self._f1 or face is self._f2
+
+        si: int
+        if self.right_top_left_same_direction:
+            si = ltr_i
+        else:
+            if face is self._f1:
+                si = ltr_i  # arbitrary f1 was chosen
+            else:
+                # todo make it generic
+                si = self.inv_index(ltr_i)  # type: ignore
+
+        assert ltr_i == self.get_left_top_left_slice_index(face, si)
+
+        return si
+
+
+    def get_left_top_left_slice(self, face: _Face, i) -> PartSlice:
+        """
+
+        # todo: combine and optimize with get_face_edge
+        Given an index of slice in direction from left to right, or left to top
+        find it's actual slice
+        :param face:
+        :param i:
+        :return:
+        """
+        return self.get_slice(self.get_left_top_left_slice_index(face, i))
+
+    def get_left_top_left_edge(self, face: _Face, i) -> PartEdge:
+        """
+        todo: optimize, combine both methods
+        :param face:
+        :param i:
+        :return:
+        """
+        return self.get_left_top_left_slice(face, i).get_face_edge(face)
+
+    def get_slices(self, index: SliceIndex | None) -> Iterable[PartSlice]:
+
+        if index is not None:  # can be zero
+            assert isinstance(index, int)
+            if index < 0:
+                yield from self.all_slices
+            else:
+                yield self.get_slice(index)
+        else:
+            yield from self.all_slices
 
     def get_other_face_edge(self, f: _Face) -> "PartEdge":
 
@@ -829,7 +990,8 @@ class Edge(Part):
 
     def copy_colors_horizontal(self,
                                source: "Edge",
-                               index=-1
+                               index: SliceIndex | None = None,
+                               source_index: SliceIndex = None
                                ):
         """
         Copy from edge - copy from shared face
@@ -841,6 +1003,8 @@ class Edge(Part):
               shared,  shared
 
 
+        :param source_index:
+        :param index:
         :param source
         """
 
@@ -848,11 +1012,14 @@ class Edge(Part):
         source_other = source.get_other_face(shared_face)
         dest_other = self.get_other_face(shared_face)
 
-        self._replace_colors(source, (shared_face, shared_face), (source_other, dest_other), index=index)
+        self._replace_colors(source, (shared_face, shared_face), (source_other, dest_other),
+                             index=index,
+                             source_index=source_index)
 
     def copy_colors_ver(self,
                         source: "Edge",
-                        index=-1
+                        index: SliceIndex | None = None,
+                        source_index: SliceIndex = None
                         ):
         """
         Copy from vertical edge - copy from other face
@@ -863,6 +1030,7 @@ class Edge(Part):
 
         source_other_face, shared_face  --> shared_face,this_other_face
 
+        :param source_index:
         :param index:
         :param source
         """
@@ -871,7 +1039,10 @@ class Edge(Part):
         source_other = source.get_other_face(shared_face)
         dest_other = self.get_other_face(shared_face)
 
-        self._replace_colors(source, (source_other, shared_face), (shared_face, dest_other), index=index)
+        self._replace_colors(source, (source_other, shared_face),
+                             (shared_face, dest_other),
+                             index=index,
+                             source_index=source_index)
 
     def copy(self) -> "Edge":
         """
@@ -879,7 +1050,7 @@ class Edge(Part):
         :return:
         """
         slices: list[EdgeSlice] = [s.clone() for s in self._slices]
-        return Edge(slices)
+        return Edge(self._f1, self._f2, self.right_top_left_same_direction, slices)
 
     def single_shared_face(self, other: "Edge"):
         """
@@ -914,6 +1085,46 @@ class Edge(Part):
         else:
             return f2
 
+    def inv_index(self, slices_indexes: EdgeSliceIndex) -> EdgeSliceIndex:
+
+        n = self.n_slices
+
+        if isinstance(slices_indexes, int):
+            return n - 1 - slices_indexes
+        else:
+            assert False
+
+    def _find_cw(self, face: _Face, cw: int) -> PartEdge:
+        """
+        Don't use, not optimized
+        :param face:
+        :return:  values of 'n' ordered by 'cw'
+        """
+        sl: EdgeSlice
+        for sl in self.all_slices:
+            e: PartEdge = sl.get_face_edge(face)
+            _cw = e.attributes["cw"]
+            if _cw == cw:
+                return e
+
+        assert False, f"No cw {cw} in edge {self} on face {_Face}"
+
+    def cw_s(self, face: _Face):
+        """
+
+        :param face:
+        :return:  values of 'n' ordered by 'cw'
+        """
+        n = self.n_slices
+        cw_s = ""
+        n_s = ""
+        for i in range(n):
+            sl: PartEdge = self._find_cw(face, i)
+            cw_s += str(self.get_slice(i).get_face_edge(face).attributes["cw"])
+            n_s += str(sl.c_attributes["n"])
+
+        return cw_s + " " + n_s
+
 
 class Corner(Part):
     __slots__ = ["_slice"]
@@ -930,8 +1141,14 @@ class Corner(Part):
     def all_slices(self) -> Iterable[PartSlice]:
         return [self._slice]
 
+    def get_slice(self, index: SliceIndex) -> PartSlice:
+        return self._slice
+
+    def get_slices(self, index: SliceIndex | None) -> Iterable[PartSlice]:
+        return self.all_slices
+
     @property
-    def slice(self):
+    def slice(self) -> PartSlice:
         return self._slice
 
     def copy(self) -> "Corner":

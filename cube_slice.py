@@ -3,7 +3,7 @@ from enum import Enum, unique
 from typing import Iterable
 
 from cube_face import Face
-from elements import SuperElement, _Cube, Edge, Center, PartSlice
+from elements import SuperElement, _Cube, Edge, Center, PartSlice, EdgeSliceIndex, CenterSliceIndex
 
 
 @unique
@@ -32,7 +32,7 @@ class Slice(SuperElement):
                  left: Center) -> None:
         super().__init__(cube)
         self._name = name
-        self._slice_index = 0
+        self._slice_index: int | None = 0
         self._left = left
         self._left_bottom = left_bottom
         self._bottom = bottom
@@ -43,7 +43,7 @@ class Slice(SuperElement):
         self._left_top = left_top
 
         self._edges: Sequence[Edge] = [left_top, right_top, right_bottom, left_bottom]
-        self._centers: Sequence[Center] = [ top, left, bottom, right ]
+        self._centers: Sequence[Center] = [top, left, bottom, right]
 
         self.set_parts(
             left_top, top, right_top,
@@ -68,23 +68,43 @@ class Slice(SuperElement):
 
         cube = self.cube
         cube.sanity()
-        index = self._slice_index
+
+        edge_index: EdgeSliceIndex
+        center_index: CenterSliceIndex | None
+        edge_index: EdgeSliceIndex = self._slice_index
+
+        if edge_index is not None:  # can be zero
+            center_index: CenterSliceIndex = (-1, edge_index)
+            top_index = center_index
+            left_index = center_index
+
+            # # todo: fix
+            # if self._name == SliceName.E:
+            #     center_index = center_index[::-1]
+            # elif self._name == SliceName.S:
+            #     top_index = top_index[::-1]
+            #     left_index = left_index[::-1]
+
+        else:
+            center_index = None
+            top_index = None
+            left_index = None
 
         for _ in range(0, n % 4):
             saved_up: Center = top.copy()
 
-            top.copy_colors(left)
-            left.copy_colors(bottom)
-            bottom.copy_colors(right)
-            right.copy_colors(saved_up)
+            top.copy_colors(left, index=top_index)
+            left.copy_colors(bottom, index=left_index)
+            bottom.copy_colors(right, index=top_index, source_index=center_index)
+            right.copy_colors(saved_up, index=center_index, source_index=top_index)
 
             # right_top <-- left_top <-- left_bottom < --right_bottom <-- right_top
 
             saved_right_top: Edge = right_top.copy()
-            right_top.copy_colors_ver(left_top, index=index)
-            left_top.copy_colors_ver(left_bottom, index=index)
-            left_bottom.copy_colors_ver(right_bottom, index=index)
-            right_bottom.copy_colors_ver(saved_right_top, index=index)
+            right_top.copy_colors_ver(left_top, index=edge_index)
+            left_top.copy_colors_ver(left_bottom, index=edge_index)
+            left_bottom.copy_colors_ver(right_bottom, index=edge_index)
+            right_bottom.copy_colors_ver(saved_right_top, index=edge_index)
 
         cube.reset_after_faces_changes()
         cube.sanity()
@@ -92,14 +112,14 @@ class Slice(SuperElement):
     @property
     def slices(self) -> Iterable[PartSlice]:
         index = self._slice_index
-        if index < 0:
+        if index is None:
             for p in self._parts:
                 yield from p.all_slices
         else:
             for e in self._edges:
-                    yield e.get_slice(index)
+                yield e.get_slice(index)
 
             n = self.cube.n_slices
             for c in self._centers:
                 for i in range(n):
-                    yield c.get_slice(i, index)
+                    yield c.get_slice((i, index))

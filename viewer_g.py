@@ -21,7 +21,7 @@ from elements import Corner, Edge, Center, PartSliceHashID, PartSlice
 
 from view_state import ViewState
 
-_CELL_SIZE: int = 25
+_CELL_SIZE: int = 30
 
 _CORNER_SIZE = 0.2
 
@@ -179,6 +179,23 @@ class _Cell:
 
         lc = (0, 0, 0)
         lw = 4
+        cross_width = 5
+        cross_width_x = 8
+        cross_width_y = 2
+        cross_color = (0, 0, 0)
+        cross_color_x = (138, 43, 226)  # blueviolet	#8A2BE2	rgb(138,43,226)
+        cross_color_y = (0, 191, 255)  # deepskyblue	#00BFFF	rgb(0,191,255)
+
+        n: int = part.cube.n_slices
+
+        fb: _FaceBoard = self._face_board
+        cube_face: Face = fb.cube_face
+
+        def _inv(i, b: bool):
+            if b:
+                return n - 1 - i
+            else:
+                return i
 
         if isinstance(part, Corner):
 
@@ -187,29 +204,46 @@ class _Cell:
                 shapes.quad_with_line(vertexes,
                                       self._slice_color(corner_slice),
                                       lw, lc)
+                if cube_face.corner_bottom_left is part:
+                    shapes.cross(vertexes, cross_width, cross_color)
+                elif cube_face.corner_bottom_right is part:
+                    shapes.cross(vertexes, cross_width_x, cross_color_x)
+                if cube_face.corner_top_left is part:
+                    shapes.cross(vertexes, cross_width_y, cross_color_y)
+
 
         elif isinstance(part, Edge):
             # shapes.quad_with_line(vertexes, color, lw, lc)
 
             n = part.n_slices
-            fb: _FaceBoard = self._face_board
-            f: Face = fb.cube_face
 
             left_bottom = vertexes[0]
             right_bottom = vertexes[1]
-            if part is f.edge_left or part is f.edge_right:
+            if part is cube_face.edge_left or part is cube_face.edge_right:
 
                 left_top = vertexes[3]
 
                 d = (left_top - left_bottom) / n
 
                 for i in range(n):
-                    _slice = part.get_slice(i)
+
+                    ix = i
+
+                    _slice = part.get_left_top_left_slice(cube_face, ix)
                     color = self._slice_color(_slice)
                     with self._gen_list_for_slice(_slice, dest):
-                        shapes.quad_with_line([left_bottom, right_bottom,
-                                               right_bottom + d, left_bottom + d],
-                                              color, lw, lc)
+                        vx = [left_bottom, right_bottom,
+                              right_bottom + d, left_bottom + d]
+                        shapes.quad_with_line(vx, color, lw, lc)
+                        nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
+                        shapes.lines_in_quad(vx, nn, 5, (138,43,226))
+                        # if _slice.get_face_edge(cube_face).attributes["origin"]:
+                        #     shapes.cross(vx, cross_width, cross_color)
+                        # if _slice.get_face_edge(cube_face).attributes["on_x"]:
+                        #     shapes.cross(vx, cross_width_x, cross_color_x)
+                        # if _slice.get_face_edge(cube_face).attributes["on_y"]:
+                        #     shapes.cross(vx, cross_width_y, cross_color_y)
+
                     left_bottom += d
                     right_bottom += d
 
@@ -217,14 +251,29 @@ class _Cell:
 
                 left_top = vertexes[3]
                 d = (right_bottom - left_bottom) / n
+
+                # if is_back:
+                #     d = -d
+
                 for i in range(n):
-                    _slice = part.get_slice(i)
+                    ix = i # _inv(i, is_back)
+                    _slice = part.get_left_top_left_slice(cube_face, ix)
                     color = self._slice_color(_slice)
                     with self._gen_list_for_slice(_slice, dest):
-                        shapes.quad_with_line([left_bottom,
-                                               left_bottom + d,
-                                               left_top + d,
-                                               left_top], color, lw, lc)
+                        vx = [left_bottom,
+                              left_bottom + d,
+                              left_top + d,
+                              left_top]
+                        shapes.quad_with_line(vx, color, lw, lc)
+                        nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
+                        shapes.lines_in_quad(vx, nn, 5, (138,43,226))
+                        # if _slice.get_face_edge(cube_face).attributes["origin"]:
+                        #     shapes.cross(vx, cross_width, cross_color)
+                        # if _slice.get_face_edge(cube_face).attributes["on_x"]:
+                        #     shapes.cross(vx, cross_width_x, cross_color_x)
+                        # if _slice.get_face_edge(cube_face).attributes["on_y"]:
+                        #     shapes.cross(vx, cross_width_y, cross_color_y)
+
                     left_bottom += d
                     left_top += d
 
@@ -240,17 +289,30 @@ class _Cell:
             dy = (lt - lb) / n
             for x in range(n):
                 for y in range(n):
-                    _slice = part.get_slice(y, x)
+
+                    ix = x
+                    iy = y
+
+                    #ix = _inv(ix, is_back)
+
+                    _slice = part.get_slice((iy, ix))
+
                     color = self._slice_color(_slice)
                     with self._gen_list_for_slice(_slice, dest):
-                        shapes.quad_with_line(
+                        vx = [lb + x * dx + y * dy,
+                              lb + (x + 1) * dx + y * dy,
+                              lb + (x + 1) * dx + (y + 1) * dy,
+                              lb + x * dx + (y + 1) * dy]
 
-                            [lb + x * dx + y * dy,
-                             lb + (x + 1) * dx + y * dy,
-                             lb + (x + 1) * dx + (y + 1) * dy,
-                             lb + x * dx + (y + 1) * dy],
-
-                            color, lw, lc)
+                        edge = _slice.get_face_edge(cube_face)
+                        attributes = edge.attributes
+                        shapes.quad_with_line(vx, color, lw, lc)
+                        if attributes["origin"]:
+                            shapes.cross(vx, cross_width, cross_color)
+                        if attributes["on_x"]:
+                            shapes.cross(vx, cross_width_x, cross_color_x)
+                        if attributes["on_y"]:
+                            shapes.cross(vx, cross_width_y, cross_color_y)
 
     # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):

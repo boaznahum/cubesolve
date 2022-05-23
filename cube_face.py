@@ -10,8 +10,8 @@ class Face(SuperElement):
     Faces never chane position, only the color of the parts
     """
 
-
-    __slots__ = ["_center", "_direction", "_name",
+    __slots__ = ["_name", "_original_color",
+                 "_center", "_direction",
                  "_edge_left", "_edge_top", "_edge_right", "_edge_bottom",
                  "_corner_top_left", "_corner_top_right", "_corner_bottom_right", "_corner_bottom_left",
                  "_parts",
@@ -42,6 +42,7 @@ class Face(SuperElement):
         super().__init__(cube)
 
         self._name = name
+        self._original_color = color
         self._center = self._create_center(color)
         self._direction = Direction.D0
         self._parts: Tuple[Part]
@@ -54,20 +55,44 @@ class Face(SuperElement):
         f = self
 
         slices: list[list[PartSlice]]
-        slices = [[PartSlice(i * n + j, PartEdge(f, color)) for j in range(n)] for i in range(n)]
+        slices = [[PartSlice((i, j), PartEdge(f, color)) for j in range(n)] for i in range(n)]
 
         return Center(slices)
 
     def finish_init(self):
         self._edges = (self._edge_top, self._edge_left, self._edge_right, self._edge_bottom)
 
-        self._corners = [self.corner_top_left,
+        self._corners = [self._corner_top_left,
                          self._corner_top_right,
                          self._corner_bottom_right,
                          self._corner_bottom_left]
 
         self.set_parts(self._center, *self._edges, *self._corners)
         super().finish_init()
+
+        n = self.cube.n_slices
+        n1 = n - 1
+        self._edge_bottom.get_slice(0).get_face_edge(self).attributes["origin"] = True
+        self._edge_left.get_slice(0).get_face_edge(self).attributes["origin"] = True
+        self._edge_top.get_slice(0).get_face_edge(self).attributes["origin"] = True
+        self._edge_right.get_slice(0).get_face_edge(self).attributes["origin"] = True
+        self._edge_bottom.get_slice(n1).get_face_edge(self).attributes["on_x"] = True
+        self._edge_left.get_slice(n1).get_face_edge(self).attributes["on_y"] = True
+
+        for i in range(n):
+            self._edge_left.get_slice(i).get_face_edge(self).attributes["cw"] = i
+            self._edge_top.get_slice(i).get_face_edge(self).attributes["cw"] = i
+            self._edge_right.get_slice(i).get_face_edge(self).attributes["cw"] = n1 - i
+            self._edge_bottom.get_slice(i).get_face_edge(self).attributes["cw"] = n1 - i
+
+        for e in self._edges:
+            for i in range(n):
+                #cw = self._edge_bottom.get_slice(i).get_face_edge(self).attributes["cw"]
+                e.get_left_top_left_edge(self, i).c_attributes["n"] = i + 1
+
+        self._center.get_center_slice((0, 0)).get_face_edge(self).attributes["origin"] = True
+        self._center.get_center_slice((0, n1)).get_face_edge(self).attributes["on_x"] = True
+        self._center.get_center_slice((n1, 0)).get_face_edge(self).attributes["on_y"] = True
 
     # noinspection PyUnresolvedReferences
 
@@ -126,7 +151,7 @@ class Face(SuperElement):
         return self.center.color
 
     def __str__(self) -> str:
-        return f"{self._center.edg().color.name}@{self._name.value}"
+        return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"
 
     def __repr__(self):
         return self.__str__()
@@ -139,7 +164,17 @@ class Face(SuperElement):
     def _get_other_face(self, e: Edge) -> _Face:
         return e.get_other_face(self)
 
-    def rotate(self, n=1):
+    def rotate(self, n_rotations=1):
+
+        # slices_indexes: EdgeSliceIndex = slice(0, self.cube.n_slices)
+        #
+        # to_right__indexes = Edge.inv_index(slices_indexes)
+
+        n_slices = self.cube.n_slices
+
+        def inv(i):
+            return  n_slices -1 - i
+
         def _rotate():
             left: Face = self._get_other_face(self._edge_left)
             right: Face = self._get_other_face(self._edge_right)
@@ -148,12 +183,45 @@ class Face(SuperElement):
 
             # top -> right -> bottom -> left -> top
 
+            #           -->
+            #           TOP
+            #          0 1 2
+            #       2         2
+            # ^ LEFT  1         1 RIGHT  ^
+            #       0         0
+            #          0 1 2
+            #          BOTTOM
+            #          -->
+            # - so bottom and right are in reverse left-top-right direction, see right-top-left-coordinates.jpg
+            #  So when copying from LEFT<--BOTTOM and RIGHT<-TOP we need to switch indexes
+            #
+            # todo if it works, replace with slices
             saved_top: Edge = self._edge_top.copy()
-            # left --> top
-            self._edge_top.copy_colors_horizontal(self._edge_left)
-            self._edge_left.copy_colors_horizontal(self._edge_bottom)
-            self._edge_bottom.copy_colors_horizontal(self._edge_right)
-            self._edge_right.copy_colors_horizontal(saved_top)
+            # saved_right: Edge = self._edge_right.copy()
+            # saved_bottom: Edge = self._edge_bottom.copy()
+            # saved_left: Edge = self._edge_left.copy()
+
+            # not clear why is needed, but without it when rotating front, left face is not correctly colord
+            e_right: Edge = self._edge_right.copy()
+            e_bottom: Edge = self._edge_bottom.copy()
+            e_left: Edge = self._edge_left.copy()
+
+            for index in range(n_slices):
+
+                #todo: optimize - we can calc only once
+
+                top_ltr_index = saved_top.get_left_top_left_slice_index(self, index)
+
+                i_left = e_left.get_slice_index_from_ltr_index(self, top_ltr_index)
+                i_top = index # saved_top.get_left_top_left_slice_index(self, index)
+                i_right = e_right.get_left_top_left_slice_index(self, inv(top_ltr_index))
+                i_bottom = e_bottom.get_left_top_left_slice_index(self, inv(top_ltr_index))
+
+                # left --> top
+                self._edge_top.copy_colors_horizontal(e_left, index=i_top, source_index=i_left)
+                self._edge_left.copy_colors_horizontal(e_bottom, index=i_left, source_index=i_bottom)
+                self._edge_bottom.copy_colors_horizontal(e_right, index=i_bottom, source_index=i_right)
+                self._edge_right.copy_colors_horizontal(saved_top, index=i_right, source_index=i_top)
 
             saved_bottom_left = self._corner_bottom_left.copy()
 
@@ -163,7 +231,7 @@ class Face(SuperElement):
             self._corner_top_right.replace_colors(self, self._corner_top_left, top, right, left, top)
             self._corner_top_left.replace_colors(self, saved_bottom_left, left, top, bottom, left)
 
-        for _ in range(0, n % 4):
+        for _ in range(0, n_rotations % 4):
             # -1 --> 3
             _rotate()
 
@@ -183,8 +251,7 @@ class Face(SuperElement):
     @property
     def is3x3(self):
         # todo: Optimize it !!!, reset after slice rotation
-        return all( p.is3x3 for p in self.parts)
-
+        return all(p.is3x3 for p in self.parts)
 
     def reset_after_faces_changes(self):
         """
@@ -307,4 +374,3 @@ class Face(SuperElement):
     def slices(self) -> Iterable[PartSlice]:
         for p in self._parts:
             yield from p.all_slices
-

@@ -38,6 +38,73 @@ def quad_with_line(vertexes: Sequence[np.ndarray], face_color: Tuple[int, int, i
     _q(True)
 
 
+def cross(vertexes: Sequence[np.ndarray],
+          line_width: int,
+          line_color: Tuple[int, int, int]):
+    """
+
+    :param line_width:
+    :param vertexes:  # [left_bottom, right_bottom, right_top, left_top]
+    :param face_color:
+    :param line_color:
+    :return:
+    """
+
+    gl.glLineWidth(line_width)
+
+    gl.glColor3ub(*line_color)
+    gl.glBegin(gl.GL_LINES)
+    gl.glVertex3f(*vertexes[0])
+    gl.glVertex3f(*vertexes[2])
+    gl.glVertex3f(*vertexes[1])
+    gl.glVertex3f(*vertexes[3])
+
+    gl.glEnd()
+
+
+def lines_in_quad(vertexes: Sequence[np.ndarray],
+                  n: int,
+                  line_width: int,
+                  line_color: Tuple[int, int, int]):
+    """
+
+    :param n:
+    :param line_width:
+    :param vertexes:  # [left_bottom, right_bottom, right_top, left_top]
+    :param face_color:
+    :param line_color:
+    :return:
+    """
+
+    if n == 0:
+        return
+
+    lb = vertexes[0]
+    rb = vertexes[1]
+    rt = vertexes[2]
+    lt = vertexes[3]
+
+    # lb = lb.copy()
+    # lt = lt.copy()
+
+    dx1 = (rb - lb) / (n + 1)
+    dx2 = (rt - lt) / (n + 1)
+
+    gl.glLineWidth(line_width)
+    gl.glColor3ub(*line_color)
+    gl.glBegin(gl.GL_LINES)
+
+    for i in range(n):
+        lb = lb + dx1  # don't use +=
+        lt = lt + dx2
+
+        gl.glVertex3f(*lb)
+        gl.glVertex3f(*lt)
+
+
+    gl.glEnd()
+
+
 def box_with_lines(bottom_quad: Sequence[np.ndarray],
                    top_quad: Sequence[np.ndarray],
                    face_color: Tuple[int, int, int],

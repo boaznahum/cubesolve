@@ -1,8 +1,6 @@
-from collections.abc import Iterable
-
+from cube_face import Face
 from cube_slice import Slice, SliceName
 from elements import *
-from cube_face import Face
 
 
 class Cube:
@@ -71,24 +69,25 @@ class Cube:
 
         e: Edge
 
-        f._edge_top = u._edge_bottom = _create_edge(f, u)
-        f._edge_left = l._edge_right = _create_edge(f, l)
-        f._edge_right = r._edge_left = _create_edge(f, r)
-        f._edge_bottom = d._edge_top = _create_edge(f, d)
+        # see document right-top-left-coordinates.jpg
+        # 12 edges
+        f._edge_top = u._edge_bottom = _create_edge(f, u, True)
+        f._edge_left = l._edge_right = _create_edge(f, l, True)
+        f._edge_right = r._edge_left = _create_edge(f, r, True)
+        f._edge_bottom = d._edge_top = _create_edge(f, d, True)
 
-        l._edge_top = u._edge_left = _create_edge(l, u)
-        l._edge_bottom = d._edge_left = _create_edge(l, d)
+        l._edge_top = u._edge_left = _create_edge(l, u, False)
+        l._edge_bottom = d._edge_left = _create_edge(l, d, True)
 
-        d._edge_right = r._edge_bottom = _create_edge(d, r)
-        d._edge_bottom = b._edge_bottom = _create_edge(d, b)
+        d._edge_right = r._edge_bottom = _create_edge(d, r, False)
+        d._edge_bottom = b._edge_bottom = _create_edge(d, b, False)
 
-        r._edge_right = b._edge_left = _create_edge(r, b)
-        d._edge_bottom = b._edge_bottom = _create_edge(d, b)
+        r._edge_right = b._edge_left = _create_edge(r, b, True)
 
-        l._edge_left = b._edge_right = _create_edge(l, b)
+        l._edge_left = b._edge_right = _create_edge(l, b, True)
 
-        u._edge_top = b._edge_top = _create_edge(u, b)
-        u._edge_right = r._edge_top = _create_edge(u, r)
+        u._edge_top = b._edge_top = _create_edge(u, b, False)
+        u._edge_right = r._edge_top = _create_edge(u, r, False)
 
         f._corner_top_left = l._corner_top_right = u._corner_bottom_left = _create_corner(f, l, u)
         f._corner_top_right = r._corner_top_left = u._corner_bottom_right = _create_corner(f, r, u)
@@ -236,6 +235,8 @@ class Cube:
         a_slice.rotate(n)
 
     def sanity(self):
+        if not self.is3x3:
+            return
 
         # if True:
         #     return
@@ -372,7 +373,17 @@ class Cube:
         raise ValueError(f"Cube doesn't contain corner {str(part_colors_id)}")
 
 
-def _create_edge(f1: Face, f2: Face) -> Edge:
+def _create_edge(f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:
+
+    """
+
+    :param f1:
+    :param f2:
+    :param right_top_left_same_direction: tru if on both faces, the left to top/right is on smae direction
+    See right-top-left-coordinates.jpg
+    :return:
+    """
+
     n = f1.cube.n_slices
 
     def _create_slice(i):
@@ -381,7 +392,7 @@ def _create_edge(f1: Face, f2: Face) -> Edge:
 
         return EdgeSlice(i, p1, p2)
 
-    e: Edge = Edge([_create_slice(i) for i in range(n)])
+    e: Edge = Edge(f1, f2, right_top_left_same_direction, [_create_slice(i) for i in range(n)])
 
     return e
 
