@@ -736,18 +736,18 @@ def _handle_input(window: Window, value: int, modifiers: int):
             app.reset(not (modifiers and key.MOD_CTRL))
 
         case key._0:
-            alg = Algs.scramble()
+            alg = Algs.scramble(app.cube.size)
             op.op(alg, inv, animation=False)
 
         case key._1:
             # noinspection PyProtectedMember
-            alg = Algs.scramble(value - key._0, 5)
+            alg = Algs.scramble(app.cube.size, value - key._0, 5)
             op.op(alg, inv, animation=False)
 
         case key._2 | key._3 | key._4 | key._5 | key._6:
             # to match test int
             # noinspection PyProtectedMember
-            alg = Algs.scramble(value - key._0)
+            alg = Algs.scramble(app.cube.size, value - key._0)
             op.op(alg, inv, animation=False)
 
         case key.COMMA:

@@ -354,7 +354,10 @@ class SliceAbleAlg(SimpleAlg, ABC):
             return s
 
         if start == stop or not stop:
-            return str(start) + s
+            if start == 1:
+                return s
+            else:
+                return str(start) + s
         else:
             return "[" + str(start) + "," + str(stop) + "]" + s
 
@@ -653,7 +656,7 @@ class _Scramble(_BigAlg):
         return 0
 
 
-def _scramble(seed: Any, n: int | None = None) -> Alg:
+def _scramble(cube_size: int, seed: Any, n: int | None = None) -> Alg:
     rnd: Random = Random(seed)
 
     if not n:
@@ -662,7 +665,26 @@ def _scramble(seed: Any, n: int | None = None) -> Alg:
 
     s = Algs.Simple
 
-    algs: list[Alg] = [rnd.choice(s) for _ in range(0, n)]
+    algs: list[Alg] = []
+
+    for i in range(n):
+        a = rnd.choice(s)
+
+        if isinstance(a, FaceAlg) and rnd.randint(1, 6):  # 1/6 percentage
+            sta = rnd.randint(1, cube_size - 1)
+            if sta == cube_size - 1:
+                sto = sta
+            else:
+                left = cube_size - 1 - sta
+
+                if left == 0 or rnd.random() > 0.5:
+                        sto = sta
+                else:
+                    sto = rnd.randint(1, left) + sta
+
+            a = a[sta:sto]
+
+        algs.append(a)
 
     name: str
     if seed:
@@ -714,12 +736,12 @@ class Algs:
         ]
 
     @classmethod
-    def scramble1(cls):
-        return _scramble("scramble1")
+    def scramble1(cls, cube_size):
+        return _scramble(cube_size, "scramble1")
 
     @classmethod
-    def scramble(cls, seed=None, n: int | None = None):
-        return _scramble(seed, n)
+    def scramble(cls, cube_size, seed=None, n: int | None = None):
+        return _scramble(cube_size, seed, n)
 
     @classmethod
     def alg(cls, name, *algs: Alg):
