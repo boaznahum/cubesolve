@@ -24,7 +24,7 @@ class Operator:
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
         """
-        Aniamtion can run only from top level, not from animation itself
+        Animation can run only from top level, not from animation itself
         :param alg:
         :param inv:
         :param animation:
@@ -32,7 +32,7 @@ class Operator:
         """
 
         # if we clean signal here, then we have a problem, because
-        # solver run op in loop, so we will miss the latest signal
+        # solver run op in loop, so we will miss the latest signal,
         # so maybe we need seperated method for single op and a long op
 
         if self._aborted:
@@ -82,7 +82,7 @@ class Operator:
                 _history = [*self._history]
                 self.op(alg, True, animation)
                 # do not add to history !!! otherwise history will never shrink
-                # becuase op may break big algs to steps, and add more than one , we can't just pop
+                # because op may break big algs to steps, and add more than one , we can't just pop
                 # self._history.pop()
                 self._history[:] = _history
                 return alg

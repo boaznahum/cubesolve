@@ -897,7 +897,7 @@ class EdgeSlice(PartSlice):
         source_other_face, shared_face  --> this_other_face, shared_face
 
         other  |__     __|  other
-              shared,  shared
+              shared,  shared,
 
 
         :param source
@@ -918,10 +918,8 @@ class EdgeSlice(PartSlice):
         other  |__     __|  other
               shared,  shared
 
-        source_other_face, shared_face  --> shared_face,this_other_face
+        source_other_face, shared_face  --> shared_face,this_other_face,
 
-        :param source_index:
-        :param index:
         :param source
         """
 
@@ -930,8 +928,7 @@ class EdgeSlice(PartSlice):
         dest_other = self.get_other_face(shared_face)
 
         self.copy_colors(source, (source_other, shared_face),
-                             (shared_face, dest_other))
-
+                         (shared_face, dest_other))
 
 
 class CenterSlice(PartSlice):
@@ -958,11 +955,9 @@ class CenterSlice(PartSlice):
     def face(self) -> _Face:
         return self.edge.face
 
-
     def copy_center_colors(self, other: "CenterSlice"):
         # self._edges[0].copy_color(other.edg())
         self.copy_colors(other, (other.face, self.face))
-
 
 
 class Edge(Part):
@@ -1097,7 +1092,7 @@ class Edge(Part):
         Find the edge part contains on_face both in self and other face
         replace the edge part color on on_face with the matched color from source
 
-        We assume that both source and self are belonged to on_face.
+        We assume that both source and self are belonged to on_face,
 
         :param on_face:
         :param source:
@@ -1152,7 +1147,7 @@ class Edge(Part):
         other  |__     __|  other
               shared,  shared
 
-
+        ;
         :param source_index:
         :param index:
         :param source
@@ -1316,7 +1311,7 @@ class Corner(Part):
         Find the edge part contains on_face both in self and other face
         replace the edge part color on on_face with the matched color from source
 
-        We assume that both source and self are belonged to on_face.
+        We assume that both source and self are belonged to on_face,
         :param target_3:
         :param source_3:
         :param target_2:

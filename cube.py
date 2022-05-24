@@ -229,10 +229,18 @@ class Cube:
             case _:
                 raise RuntimeError(f"Unknown Axis {axis_name}")
 
-    def rotate_slice(self, slice_name: SliceName, n: int):
+    def rotate_slice(self, slice_name: SliceName, n: int, slice_index=None):
+
+        """
+
+        :param slice_name:
+        :param n:
+        :param slice_index [0, n_slices-1]:
+        :return:
+        """
 
         a_slice: Slice = self.slice(slice_name)
-        a_slice.rotate(n)
+        a_slice.rotate(n, slice_index)
 
     def sanity(self):
         if not self.is3x3:

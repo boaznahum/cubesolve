@@ -33,6 +33,9 @@ class ViewState:
         self._draw_shadows = True
         self.cube_size = 7
 
+        self.slice_start: int = 1
+        self.slice_stop: int = 3
+
     def reset(self):
         self._alpha_x: float = 0
         self._alpha_y: float = 0

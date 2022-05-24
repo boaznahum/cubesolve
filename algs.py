@@ -2,8 +2,9 @@ import functools
 from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, Iterable
 from random import Random
-from typing import Sequence, Any, final
+from typing import Sequence, Any, final, TypeVar
 
+from app_exceptions import InternalSWError
 from cube import Cube
 from cube_slice import SliceName
 from elements import FaceName, AxisName
@@ -158,6 +159,7 @@ class _Mul(Alg, ABC):
         if isinstance(a, SimpleAlg):
             c = type(a)
             # noinspection PyArgumentList
+            # todo: every where we clone like this, there is a bug, beucase we added _a_slice, need to use clone method
             s = c()  # type: ignore # _n = 1
             s._n *= a._n * self._n
             return s.simplify()
@@ -208,6 +210,10 @@ class SimpleAlg(Alg, ABC):
         self._code = code
         self._n = n
 
+    def copy(self, other: "SliceAbleAlg"):
+        self._n = other.n
+        return self
+
     def atomic_str(self):
         return n_to_str(self._code, self._n)
 
@@ -249,6 +255,10 @@ class SimpleAlg(Alg, ABC):
 
     @property
     def slice_name(self) -> SliceName | None:
+        """
+        only for SliceAlg
+        :return:
+        """
         return None
 
 
@@ -265,10 +275,96 @@ class Annotation(SimpleAlg):
         return True
 
 
-class FaceAlg(SimpleAlg, ABC):
+SL = TypeVar("SL", bound="SliceAbleAlg")
 
-    def __init__(self, face: FaceName, n: int = 1) -> None:
+
+class SliceAbleAlg(SimpleAlg, ABC):
+
+    def __init__(self, code: str, n: int = 1) -> None:
+        super().__init__(code, n)
+        self.a_slice: slice | None = None  # [1 n]
+
+    def copy(self, other: "SliceAbleAlg"):
+        super(SliceAbleAlg, self).copy(other)
+        self.a_slice = other.a_slice
+        return self
+
+    @final
+    def clone(self) -> "SliceAbleAlg":
+        cl = SimpleAlg.__new__(type(self))
+        # noinspection PyArgumentList
+        cl.__init__()  # type: ignore
+        cl.copy(self)
+
+        return cl
+
+    def __getitem__(self: SL, items) -> SL:
+
+        if not items:
+            return self
+
+        if self.a_slice is not None:
+            raise InternalSWError(f"Already sliced: {self}")
+        if isinstance(items, int):
+            a_slice = slice(items)  # start/stop the same
+        elif isinstance(items, slice):
+            a_slice = items
+        else:
+            raise InternalSWError(f"Unknown type for slice: {items} {type(items)}")
+
+        clone: SliceAbleAlg = self.clone()
+        clone.a_slice = a_slice
+
+        return clone  # type: ignore
+
+    @property
+    def start(self):
+        if not self.a_slice:
+            return None
+
+        sl = self.a_slice
+
+        start = sl.start
+        stop = sl.stop
+
+        if stop and not start:
+            return 1
+        else:
+            return start  # maybe be None
+
+    @property
+    def stop(self):
+        if not self.a_slice:
+            return None
+
+        sl = self.a_slice
+
+        return sl.stop  # may be NOne
+
+    def __str__(self):
+        s = super().__str__()
+
+        if not self.a_slice:
+            return s
+
+        start = self.start
+        stop = self.stop
+
+        if not start and not stop:
+            return s
+
+        if start == stop or not stop:
+            return str(start) + s
+        else:
+            return "[" + str(start) + "," + str(stop) + "]" + s
+
+
+class FaceAlg(SliceAbleAlg, ABC):
+
+    def __init__(self, face: FaceName, slice_n: SliceName, neg_slice: bool, n: int = 1) -> None:
         super().__init__(face.value, n)
+        self.neg_slice = neg_slice
+        self._slice_name = slice_n
         self._face = face
 
     @property
@@ -277,7 +373,42 @@ class FaceAlg(SimpleAlg, ABC):
 
     @final
     def play(self, cube: Cube, inv: bool):
-        cube.face(self._face).rotate(_inv(inv, self._n))
+
+        start = self.start
+        stop = self.stop
+
+        _stop = None
+        _start = None
+
+        if not start and not stop:
+
+            _start, _stop = (1, 1)
+
+        elif start and not stop:
+            _start, _stop = (start, start)
+
+        elif not start and stop:
+            _start, _stop = (1, stop)
+
+        else:
+            _start, _stop = (start, stop)
+
+        assert _start
+        assert _stop
+        if _start == 1:
+            cube.face(self._face).rotate(_inv(inv, self._n))
+            _start += 1
+
+        n = cube.size
+        for i in range(_start, _stop + 1):
+            if 2 <= i <= n:
+                # todo - move to cubic ?
+                si = i - 2
+                if self.neg_slice:
+                    si = cube.front.inv(si)
+                cube.rotate_slice(self._slice_name, _inv(self.neg_slice, _inv(inv, self._n)), si)
+            else:
+                print(f"In {self} Ignoring slice index {i}")
 
 
 class WholeCubeAlg(SimpleAlg, ABC):
@@ -300,7 +431,7 @@ class WholeCubeAlg(SimpleAlg, ABC):
         return True
 
 
-class SliceAlg(SimpleAlg, ABC):
+class SliceAlg(SliceAbleAlg, ABC):
 
     def __init__(self, slice_name: SliceName, n: int = 1) -> None:
         super().__init__(slice_name.value, n)
@@ -319,42 +450,42 @@ class SliceAlg(SimpleAlg, ABC):
 class _U(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__(FaceName.U)
-
-
-@final
-class _F(FaceAlg):
-
-    def __init__(self) -> None:
-        super().__init__(FaceName.F)
-
-
-@final
-class _R(FaceAlg):
-
-    def __init__(self) -> None:
-        super().__init__(FaceName.R)
-
-
-@final
-class _L(FaceAlg):
-
-    def __init__(self) -> None:
-        super().__init__(FaceName.L)
-
-
-@final
-class _B(FaceAlg):
-
-    def __init__(self) -> None:
-        super().__init__(FaceName.B)
+        super().__init__(FaceName.U, SliceName.E, True)
 
 
 @final
 class _D(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__(FaceName.D)
+        super().__init__(FaceName.D, SliceName.E, False)
+
+
+@final
+class _F(FaceAlg):
+
+    def __init__(self) -> None:
+        super().__init__(FaceName.F, SliceName.S, False)
+
+
+@final
+class _B(FaceAlg):
+
+    def __init__(self) -> None:
+        super().__init__(FaceName.B, SliceName.S, True)
+
+
+@final
+class _R(FaceAlg):
+
+    def __init__(self) -> None:
+        super().__init__(FaceName.R, SliceName.M, False)
+
+
+@final
+class _L(FaceAlg):
+
+    def __init__(self) -> None:
+        super().__init__(FaceName.L, SliceName.M, True)
 
 
 @final
@@ -454,7 +585,8 @@ class _BigAlg(Alg):
         for a in self._algs:
             yield from a.flatten()
 
-    def _combine(self, algs: Sequence[Alg]) -> Sequence[Alg]:
+    @staticmethod
+    def _combine(algs: Sequence[Alg]) -> Sequence[Alg]:
 
         work_to_do = bool(algs)
         while work_to_do:

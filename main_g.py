@@ -128,6 +128,9 @@ class Window(pyglet.window.Window):
         if self.animation_running:
             return  # don't update text while animation
 
+        self.update_text()
+
+    def update_text(self):
         self.text.clear()
         # self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
         #                                    x=10, y=10, font_size=10))
@@ -137,26 +140,28 @@ class Window(pyglet.window.Window):
         h = self.app.op.history
         self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + str(h),
                                            x=10, y=50, font_size=10))
-
         err = "R L U S/Z/F B D  M/X/R E/Y/U (SHIFT-INv), ?-Solve, Clear, Q " + "0-9 scramble1, <undo, Test"
         self.text.append(pyglet.text.Label(err,
                                            x=10, y=70, font_size=10))
-
         # solution = self.app.slv.solution().simplify()
         # s = "Solution:(" + str(solution.count()) + ") " + str(solution)
         # self.text.append(pyglet.text.Label(s,
         #                                    x=10, y=90, font_size=10))
-
         if self.app.error:
             err = f"Error:{self.app.error}"
             self.text.append(pyglet.text.Label(err,
                                                x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
-
         err = f"Animation:{'On' if self.app.op.animation_enabled else 'Off'}"
         self.text.append(pyglet.text.Label(err,
                                            x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
-
         s = f"Is 3x3:{'Yes' if self.app.cube.is3x3 else 'No'}"
+
+        vs = self.app.vs
+        ar = Algs.R
+        if vs.slice_start or vs.slice_stop:
+            ar = ar[vs.slice_start:vs.slice_stop]
+        s += "  " + str(ar)
+
         self.text.append(pyglet.text.Label(s,
                                            x=10, y=130, font_size=10, color=(0, 255, 0, 255), bold=True))
 
@@ -585,8 +590,9 @@ def _handle_input(window: Window, value: int, modifiers: int):
     app: Main = window.app
     op: Operator = app.op
 
+    print(f"In _handle_input , {value}  {hex(value)} {chr(ord('A') + (value - key.A))} ")
+
     if window.animation_running or op.is_animation_running:
-        # print(f"In _handle_input , ignoring {value}  {hex(value)} { chr(ord('A') + (value - key.A))} because animation is running")
         #
         # print(f"{value==key.S}")
         match value:
@@ -612,6 +618,12 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
     alg: Alg
 
+    def _slice_alg(r: algs.FaceAlg):
+
+        if vs.slice_start or vs.slice_stop:
+            r = r[vs.slice_start:vs.slice_stop]
+        return r
+
     # noinspection PyProtectedMember
     match value:
 
@@ -634,35 +646,47 @@ def _handle_input(window: Window, value: int, modifiers: int):
         case key.O:
             op.toggle_animation_on()
 
+        case key.BRACKETLEFT:
+            if modifiers and key.MOD_SHIFT:
+                vs.slice_start -= 1
+            else:
+                vs.slice_start += 1
+
+        case key.BRACKETRIGHT:
+            if modifiers and key.MOD_SHIFT:
+                vs.slice_stop -= 1
+            else:
+                vs.slice_stop += 1
+
         # case key.P:
         #     op_and_play_animation(window, _last_face)
 
         case key.R:
             # _last_face = FaceName.R
-            op.op(algs.Algs.R, inv)
+            op.op(_slice_alg(algs.Algs.R), inv)
             # op.op(algs.Algs.R, inv)
 
         case key.L:
-            op.op(algs.Algs.L, inv)
+            op.op(_slice_alg(algs.Algs.L), inv)
 
         case key.U:
-            op.op(algs.Algs.U, inv)
+            op.op(_slice_alg(algs.Algs.U), inv)
 
         case key.E:
             op.op(algs.Algs.E, inv)
 
         case key.F:
-            op.op(algs.Algs.F, inv)
+            op.op(_slice_alg(algs.Algs.F), inv)
 
         case key.S:
             op.op(algs.Algs.S, inv)
 
         case key.B:
-            op.op(algs.Algs.B, inv)
+            op.op(_slice_alg(algs.Algs.B), inv)
 
         case key.D:
             _last_face = FaceName.D
-            op.op(algs.Algs.D, inv)
+            op.op(_slice_alg(algs.Algs.D), inv)
 
         case key.X:
             if modifiers & key.MOD_CTRL:

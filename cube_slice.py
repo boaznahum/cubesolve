@@ -32,7 +32,6 @@ class Slice(SuperElement):
                  left: Center) -> None:
         super().__init__(cube)
         self._name: SliceName = name
-        self._slice_index: int | None = 0
         self._left = left
         self._left_bottom = left_bottom
         self._bottom = bottom
@@ -62,17 +61,17 @@ class Slice(SuperElement):
         current_face: Face
 
         match self._name:
-            case SliceName.M:  # over R
+            case SliceName.M:  # over R, works
                 current_face = self.cube.front
                 current_edge = current_face.edge_bottom
                 current_index = self.inv(slice_index)
 
-            case SliceName.E:  # over D, todo: check
-                current_face = self.cube.front
-                current_edge = current_face.edge_right
+            case SliceName.E:  # over D, works
+                current_face = self.cube.right
+                current_edge = current_face.edge_left
                 current_index = slice_index
 
-            case SliceName.S:  # over F, todo: check
+            case SliceName.S:  # over F, works
                 current_face = self.cube.up
                 current_edge = current_face.edge_left
                 current_index = slice_index
@@ -117,14 +116,14 @@ class Slice(SuperElement):
 
         return edges, centers
 
-    def _rotate(self):
+    def _rotate(self, slice_index):
 
         n_slices = self.n_slices
 
-        if self._slice_index is None:
+        if slice_index is None:
             s_range = range(0, n_slices)
         else:
-            s_range = range(self._slice_index, self._slice_index + 1)
+            s_range = range(slice_index, slice_index + 1)
 
         for i in s_range:
 
@@ -156,13 +155,16 @@ class Slice(SuperElement):
 
                 centers[j + 3 * n_slices].copy_center_colors(c0)
 
-    def rotate(self, n=1):
+    def rotate(self, n=1, slice_index=None):
 
         if n == 0:
             return
 
+        # todo: bug, due to a bug in the algorithm
+        n = - n  # still
+
         for _ in range(n % 4):
-            self._rotate()
+            self._rotate(slice_index)
 
         self.cube.reset_after_faces_changes()
         self.cube.sanity()
@@ -226,7 +228,7 @@ class Slice(SuperElement):
 
     @property
     def slices(self) -> Iterable[PartSlice]:
-        index = self._slice_index
+        index = 0
         if index is None:
             for p in self._parts:
                 yield from p.all_slices
