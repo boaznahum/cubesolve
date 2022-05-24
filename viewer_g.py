@@ -229,7 +229,7 @@ class _Cell:
 
                     ix = i
 
-                    _slice = part.get_left_top_left_slice(cube_face, ix)
+                    _slice = part.get_ltr_index(cube_face, ix)
                     color = self._slice_color(_slice)
                     with self._gen_list_for_slice(_slice, dest):
                         vx = [left_bottom, right_bottom,
@@ -257,7 +257,7 @@ class _Cell:
 
                 for i in range(n):
                     ix = i # _inv(i, is_back)
-                    _slice = part.get_left_top_left_slice(cube_face, ix)
+                    _slice = part.get_ltr_index(cube_face, ix)
                     color = self._slice_color(_slice)
                     with self._gen_list_for_slice(_slice, dest):
                         vx = [left_bottom,

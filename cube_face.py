@@ -1,3 +1,5 @@
+from typing import Callable
+
 from elements import *
 from elements import PartSlice
 
@@ -176,8 +178,7 @@ class Face(SuperElement):
 
         n_slices = self.cube.n_slices
 
-        def inv(i):
-            return n_slices - 1 - i
+        inv: Callable[[int], int] = self.inv
 
         def _rotate():
             left: Face = self._get_other_face(self._edge_left)
@@ -214,12 +215,12 @@ class Face(SuperElement):
             for index in range(n_slices):
                 # todo: optimize - we can calc only once
 
-                top_ltr_index = saved_top.get_left_top_left_slice_index(self, index)
+                top_ltr_index = saved_top.get_ltr_index_from_slice_index(self, index)
 
                 i_left = e_left.get_slice_index_from_ltr_index(self, top_ltr_index)
                 i_top = index  # saved_top.get_left_top_left_slice_index(self, index)
-                i_right = e_right.get_left_top_left_slice_index(self, inv(top_ltr_index))
-                i_bottom = e_bottom.get_left_top_left_slice_index(self, inv(top_ltr_index))
+                i_right = e_right.get_ltr_index_from_slice_index(self, inv(top_ltr_index))
+                i_bottom = e_bottom.get_ltr_index_from_slice_index(self, inv(top_ltr_index))
 
                 # left --> top
                 self._edge_top.copy_colors_horizontal(e_left, index=i_top, source_index=i_left)
@@ -246,8 +247,6 @@ class Face(SuperElement):
                 center.get_center_slice((tr, tc)).edge.copy_color(saved_center.get_center_slice((sr, sc)).edge)
 
             def _cs(r, c):
-                ri = inv(r)
-                ci = inv(c)
 
                 # copy 4 points on the ...
                 # for example n = 6, r,c = 1,2
@@ -355,15 +354,6 @@ class Face(SuperElement):
         for e in self.edges:
             yield e.get_other_face(self)
 
-    def is_left_or_right(self, edge: Edge) -> bool:
-
-        if self._edge_left is edge:
-            return True
-        elif self._edge_right is edge:
-            return True
-        else:
-            return False
-
     def is_edge(self, edge: Edge) -> bool:
         """
         This edge belongs to face
@@ -407,6 +397,12 @@ class Face(SuperElement):
     @property
     def is_left(self):
         return self.name is FaceName.L
+
+    def is_bottom_or_top(self, e: Edge):
+        return e is self._edge_top or e is self._edge_bottom
+
+    def is_left_or_right(self, e: Edge):
+        return e is self._edge_top or e is self._edge_bottom
 
     @property
     def slices(self) -> Iterable[PartSlice]:

@@ -138,7 +138,7 @@ class Cube:
         return self._size - 2
 
     @property
-    def front(self):
+    def front(self) -> Face:
         return self._front
 
     @property
