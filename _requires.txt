@@ -1,0 +1,6 @@
+pip
+glooey
+numpy
+mypy
+
+
