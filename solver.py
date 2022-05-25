@@ -69,6 +69,9 @@ class Solver(ISolver):
     @property
     def status(self):
 
+        if not self._cube.is3x3:
+            return "Not 3x3"
+
         if self._cube.solved:
             return "Solved"
 

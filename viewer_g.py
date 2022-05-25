@@ -462,6 +462,7 @@ class _FaceBoard:
                  ortho_direction: ndarray
                  ) -> None:
         super().__init__()
+        self._batch = batch
         self._board: "_Board" = board
         self.cube_face_supplier = cube_face_supplier
         # self.flip_h = flip_h
@@ -471,7 +472,13 @@ class _FaceBoard:
         self.left_top_direction: ndarray = left_top_direction
         self._ortho_direction: ndarray = ortho_direction
 
-        self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, batch) for p in cube_face_supplier().parts}
+        self._cells: dict[PartFixedID, _Cell] = {}
+
+        self.reset()
+
+    def reset(self):
+        self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, self._batch) for p in self.cube_face_supplier().parts}
+
 
     @property
     def cube_face(self) -> Face:
@@ -668,6 +675,10 @@ class _Board:
         # why sequence, because we can have multiple back faces
         self._cells: dict[PartFixedID, MutableSequence[_Cell]] = dict()
 
+    def reset(self):
+        for f in self._faces:
+            f.reset()
+
     @property
     def h_size(self) -> int:
         return _Board._h_size
@@ -836,6 +847,10 @@ class GCubeViewer:
 
     def draw(self):
         self._board.draw()
+
+    def reset(self):
+        self._board.reset()
+        self._init_gui()
 
     def _init_gui(self):
         b = self._board

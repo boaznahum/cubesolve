@@ -40,7 +40,10 @@ class Cube:
         self._last_sanity_counter = 0
         self._reset()
 
-    def _reset(self):
+    def _reset(self, cube_size=None):
+
+        if cube_size:
+            self._size = cube_size
 
         self._modify_counter = 0
         self._last_sanity_counter = 0
@@ -317,8 +320,8 @@ class Cube:
         # todo: Optimize it !!!
         return all(f.is3x3 for f in self.faces)
 
-    def reset(self):
-        self._reset()
+    def reset(self, cube_size=None):
+        self._reset(cube_size)
 
     def color_2_face(self, c: Color) -> Face:
         if not self._color_2_face:

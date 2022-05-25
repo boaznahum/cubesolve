@@ -67,7 +67,7 @@ class Main:
         self.reset()
 
     def reset(self, dont_reset_axis=False):
-        self.cube.reset()
+        self.cube.reset(self.vs.cube_size)
         # can't change instance, it is shared
         if not dont_reset_axis:
             self.vs.reset()
@@ -629,9 +629,6 @@ def _handle_input(window: Window, value: int, modifiers: int):
     # noinspection PyProtectedMember
     match value:
 
-        case key.EQUAL:
-            print("Flipping...")
-            window.flip()
 
         case key.I:
             print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
@@ -647,6 +644,19 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
         case key.O:
             op.toggle_animation_on()
+
+        case key.EQUAL:
+            app.vs.cube_size += 1
+            app.cube.reset(app.vs.cube_size)
+            op.reset()
+            window.viewer.reset()
+
+        case key.MINUS:
+            if vs.cube_size > 3:
+                app.vs.cube_size -= 1
+            app.cube.reset(app.vs.cube_size)
+            op.reset()
+            window.viewer.reset()
 
         case key.BRACKETLEFT:
             if modifiers and key.MOD_ALT:
@@ -668,7 +678,6 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 if vs.slice_start > vs.slice_stop:
                     vs.slice_start = vs.slice_stop
 
-
         case key.BRACKETRIGHT:
             if modifiers and key.MOD_SHIFT:
                 vs.slice_stop -= 1
@@ -678,7 +687,6 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 vs.slice_stop += 1
                 if vs.slice_stop > app.cube.size:
                     vs.slice_stop = app.cube.size
-
 
         # case key.P:
         #     op_and_play_animation(window, _last_face)
@@ -795,14 +803,14 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
         case key.T:
             # test
-            nn=50
-            l= 0
+            nn = 50
+            ll = 0
             for s in range(0, nn):
-                print(str(s+1) + f"/{nn}, ",end='')
-                l += 1
-                if l > 15:
+                print(str(s + 1) + f"/{nn}, ", end='')
+                ll += 1
+                if ll > 15:
                     print()
-                    l=0
+                    ll = 0
 
                 op.reset()
                 alg = Algs.scramble(app.cube.size, s)
