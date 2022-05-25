@@ -1,11 +1,13 @@
 from typing import Sequence, Any
 
+import config
+import viewer
 from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
 from algs import Algs, Alg
 from cube import Cube
 from cube_face import Face
-from elements import Color,FaceName, Edge, PartColorsID, PartEdge, Part
+from elements import Color, FaceName, Edge, PartColorsID, PartEdge, Part
 
 
 def use(_):
@@ -39,7 +41,7 @@ class L1Cross(SolverElement):
 
     def solve_l0_cross(self):
 
-        if self._is_cross(): #
+        if self._is_cross():  #
             return  # avoid rotating cube
 
         # before rotating
@@ -106,7 +108,17 @@ class L1Cross(SolverElement):
         :param target_colors_id: we use color code because this alg move edges
         :return:
         """
+
         cube: Cube = self.cube
+
+        if config.PRINT_CUBE_AS_TEXT_DURING_SOLVE:
+            def _debug():
+                viewer.plot(cube)
+        else:
+            def _debug():
+                pass
+
+        _debug()
 
         target_edge: Edge = cube.find_edge_by_pos_colors(target_colors_id)
 
@@ -116,25 +128,25 @@ class L1Cross(SolverElement):
 
         assert wf.name == FaceName.U
 
-        from .common_op import CommonOp
+        from .common_op import CommonOp  # type: ignore
         cmn: CommonOp = self.cmn
 
         # the required colors
         target_colors_id = target_edge.colors_id_by_pos
 
-        source_edge = cube.find_edge_by_color(target_colors_id)
+        source_edge: Edge = cube.find_edge_by_color(target_colors_id)
 
         self.debug("L1-X", "Need to bring ", source_edge, "to", target_edge)
 
         # Is it on white face
-        on_face: PartEdge
-        if on_face := source_edge.on_face(wf):
-            self.debug("L1-X. C1", source_edge, "is on required", wf, "@", on_face)
+        edge_on_face: PartEdge | None = source_edge.on_face(wf)
+        if edge_on_face:
+            self.debug("L1-X. C1", source_edge, "is on required", wf, "@", edge_on_face)
 
-            if on_face.face is wf:
-                self.debug("??L1-X. C1.1", source_edge, "is on required", wf, "@", on_face, "color matches")
+            if edge_on_face.face is wf:
+                self.debug("??L1-X. C1.1", source_edge, "is on required", wf, "@", edge_on_face, "color matches")
             else:
-                self.debug("??L1-X. C1.2", source_edge, "is on required", wf, "@", on_face, "color doesn't match")
+                self.debug("??L1-X. C1.2", source_edge, "is on required", wf, "@", edge_on_face, "color doesn't match")
 
             # Now bring it to adjusted face
             if wf.edge_right is source_edge:
@@ -148,17 +160,20 @@ class L1Cross(SolverElement):
             else:
                 raise ValueError(f"{source_edge} is not U-R, U-F, U-L, nor U-B")
 
+            _debug()
+
             # continue with C2
             source_edge = cube.find_edge_by_color(target_colors_id)
 
         adjusted_face: Face
+        target_face: Face
         for adjusted_face in wf.adjusted_faces():
 
             if adjusted_face.is_left_or_right(source_edge):
                 self.debug("L0X. C2", source_edge, "is left/right on adjusted ", adjusted_face)
 
                 # target_edge is where we want to bring
-                target_face: Face = target_edge.get_other_face(wf)
+                target_face = target_edge.get_other_face(wf)
 
                 st = self.__print_cross_status()
                 use(st)
@@ -171,7 +186,7 @@ class L1Cross(SolverElement):
                 use(st)
 
                 source_edge = cube.find_edge_by_color(target_colors_id)
-                e_alg: Alg = cmn.bring_edge_to_front_by_e_rotate(source_edge)
+                e_alg: Alg = cmn.bring_edge_to_front_by_e_rotate(source_edge)  # type: ignore
 
                 st = self.__print_cross_status()
                 use(st)
@@ -204,7 +219,7 @@ class L1Cross(SolverElement):
         self.debug("L0X. C3", source_edge, "is on bottom", bottom)
 
         # target_edge is where we want to bring
-        target_face: Face = target_edge.get_other_face(wf)
+        target_face = target_edge.get_other_face(wf)
 
         # bring target face to front by rotating all cube
         cmn.bring_face_to_front_by_y_rotate(target_face)

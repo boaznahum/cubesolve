@@ -123,6 +123,7 @@ class Slice(SuperElement):
         if slice_index is None:
             s_range = range(0, n_slices)
         else:
+            assert 0 <= slice_index <= self.n_slices - 1
             s_range = range(slice_index, slice_index + 1)
 
         for i in s_range:
@@ -157,6 +158,13 @@ class Slice(SuperElement):
 
     def rotate(self, n=1, slice_index=None):
 
+        """
+
+        :param n:
+        :param slice_index: [0..n-2-1] [0, n_slices-1] or None
+        :return:
+        """
+
         if n == 0:
             return
 
@@ -165,6 +173,7 @@ class Slice(SuperElement):
 
         for _ in range(n % 4):
             self._rotate(slice_index)
+            self.cube.modified()
 
         self.cube.reset_after_faces_changes()
         self.cube.sanity()

@@ -132,8 +132,8 @@ class Window(pyglet.window.Window):
 
     def update_text(self):
         self.text.clear()
-        # self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
-        #                                    x=10, y=10, font_size=10))
+        self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
+                                           x=10, y=10, font_size=10))
         h = Algs.simplify(*self.app.op.history)
         self.text.append(pyglet.text.Label("History: #" + str(h.count()) + "  " + str(h),
                                            x=10, y=30, font_size=10))
@@ -161,6 +161,8 @@ class Window(pyglet.window.Window):
         if vs.slice_start or vs.slice_stop:
             ar = ar[vs.slice_start:vs.slice_stop]
         s += "  " + str(ar)
+
+        s += f" ,sanity:{self.app.cube.is_sanity}"
 
         self.text.append(pyglet.text.Label(s,
                                            x=10, y=130, font_size=10, color=(0, 255, 0, 255), bold=True))
@@ -647,16 +649,36 @@ def _handle_input(window: Window, value: int, modifiers: int):
             op.toggle_animation_on()
 
         case key.BRACKETLEFT:
-            if modifiers and key.MOD_SHIFT:
-                vs.slice_start -= 1
+            if modifiers and key.MOD_ALT:
+                vs.slice_start = vs.slice_stop = 0
+
+            elif modifiers and key.MOD_SHIFT:
+                if vs.slice_start:
+                    vs.slice_start -= 1
+                else:
+                    vs.slice_start = 0
+                if vs.slice_start < 1:
+                    vs.slice_start = 1
+
             else:
-                vs.slice_start += 1
+                if vs.slice_start:
+                    vs.slice_start += 1
+                else:
+                    vs.slice_start = 1
+                if vs.slice_start > vs.slice_stop:
+                    vs.slice_start = vs.slice_stop
+
 
         case key.BRACKETRIGHT:
             if modifiers and key.MOD_SHIFT:
                 vs.slice_stop -= 1
+                if vs.slice_stop < vs.slice_start:
+                    vs.slice_stop = vs.slice_start
             else:
                 vs.slice_stop += 1
+                if vs.slice_stop > app.cube.size:
+                    vs.slice_stop = app.cube.size
+
 
         # case key.P:
         #     op_and_play_animation(window, _last_face)
@@ -773,9 +795,17 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
         case key.T:
             # test
-            for s in range(0, 50):
+            nn=50
+            l= 0
+            for s in range(0, nn):
+                print(str(s+1) + f"/{nn}, ",end='')
+                l += 1
+                if l > 15:
+                    print()
+                    l=0
+
                 op.reset()
-                alg = Algs.scramble(s)
+                alg = Algs.scramble(app.cube.size, s)
                 op.op(alg, animation=False)
 
                 # noinspection PyBroadException
@@ -787,6 +817,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                     print(f"Failure on {s}")
                     traceback.print_exc()
                     raise
+            print()
 
         case key.Q:
             window.close()

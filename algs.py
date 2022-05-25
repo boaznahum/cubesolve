@@ -404,7 +404,7 @@ class FaceAlg(SliceAbleAlg, ABC):
 
         n = cube.size
         for i in range(_start, _stop + 1):
-            if 2 <= i <= n:
+            if 2 <= i <= n-1:
                 # todo - move to cubic ?
                 si = i - 2
                 if self.neg_slice:
@@ -553,8 +553,9 @@ class _BigAlg(Alg):
             for a in reversed(self._algs):
                 a.play(cube, True)
         else:
+            cube.sanity()
             for i, a in enumerate(self._algs):
-                cube.sanity()
+                # cube.sanity()
                 a.play(cube, False)
                 cube.sanity()
 

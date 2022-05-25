@@ -1,5 +1,6 @@
 from enum import Enum, unique
 
+import config
 import viewer
 from _solver.base_solver import ISolver
 from _solver.common_op import CommonOp
@@ -47,7 +48,7 @@ class Solver(ISolver):
 
         # allow solver to not put annotations
         self._running_solution = False
-        self._debug: bool = True
+        self._debug: bool = config.SOLVER_DEBUG
 
     @property
     def cube(self) -> Cube:

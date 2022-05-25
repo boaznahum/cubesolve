@@ -157,7 +157,8 @@ class Face(SuperElement):
         return self.center.color
 
     def __str__(self) -> str:
-        return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"
+        #return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"
+        return f"{self._center.edg().color.name}@{self._name.value}"
 
     def __repr__(self):
         return self.__str__()
@@ -271,6 +272,8 @@ class Face(SuperElement):
         for _ in range(0, n_rotations % 4):
             # -1 --> 3
             _rotate()
+            self.cube.modified()
+            self.cube.sanity()
 
     @property
     def solved(self):
@@ -402,7 +405,7 @@ class Face(SuperElement):
         return e is self._edge_top or e is self._edge_bottom
 
     def is_left_or_right(self, e: Edge):
-        return e is self._edge_top or e is self._edge_bottom
+        return e is self.edge_right or e is self.edge_left
 
     @property
     def slices(self) -> Iterable[PartSlice]:

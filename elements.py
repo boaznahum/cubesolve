@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from enum import Enum, unique
 from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable
 
+import config
 from app_exceptions import InternalSWError
 
 
@@ -81,7 +82,11 @@ class PartEdge:
         return self._color
 
     def __str__(self) -> str:
-        return f"{self.c_attributes['n']}{self._color.name}@{self._face}"
+        if config.SHORT_PART_NAME:
+            return str(self._color.name)
+        else:
+            return f"{self.c_attributes['n']}{self._color.name}@{self._face}"
+
 
     def copy_color(self, source: "PartEdge"):
         self._color = source._color
@@ -198,11 +203,6 @@ class PartSlice(ABC):
 
         s = "[" + str(self._index) + "]" + s
 
-        if self.match_faces:
-            s = "+" + s
-        else:
-            s = "-" + s
-
         return s
 
     def __repr__(self):
@@ -272,7 +272,7 @@ class PartSlice(ABC):
 
         by_pos: PartColorsID | None = self._colors_id_by_pos
 
-        if not by_pos:
+        if not by_pos or config.DONT_OPTIMIZED_PART_ID:
             by_pos = frozenset(e.face.color for e in self._edges)
             self._colors_id_by_pos = by_pos
 
@@ -615,7 +615,7 @@ class Part(ABC, CubeElement):
 
         by_pos: PartColorsID | None = self._colors_id_by_pos
 
-        if not by_pos:
+        if not by_pos or config.DONT_OPTIMIZED_PART_ID:
             by_pos = frozenset(e.face.color for e in self._edges)
             self._colors_id_by_pos = by_pos
 
@@ -639,7 +639,7 @@ class Part(ABC, CubeElement):
 
         colors_id: PartColorsID | None = self._colors_id_by_colors
 
-        if not colors_id:
+        if not colors_id or config.DONT_OPTIMIZED_PART_ID:
             colors_id = frozenset(e.color for e in self._edges)
             self._colors_id_by_colors = colors_id
 

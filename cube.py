@@ -18,7 +18,9 @@ class Cube:
         "_color_2_face",
         "_faces",
         "_slice_m", "_slice_e", "_slice_s",
-        "_slices"
+        "_slices",
+        "_modify_counter",
+        "_last_sanity_counter"
     ]
 
     _front: Face
@@ -34,9 +36,14 @@ class Cube:
     def __init__(self, size: int) -> None:
         super().__init__()
         self._size = size
+        self._modify_counter = 0
+        self._last_sanity_counter = 0
         self._reset()
 
     def _reset(self):
+
+        self._modify_counter = 0
+        self._last_sanity_counter = 0
 
         self._color_2_face = {}
 
@@ -233,16 +240,31 @@ class Cube:
 
         """
 
+        :param slice_index: [0..n-2-1] [0, n_slices-1]
         :param slice_name:
         :param n:
-        :param slice_index [0, n_slices-1]:
         :return:
         """
 
         a_slice: Slice = self.slice(slice_name)
         a_slice.rotate(n, slice_index)
 
+    def modified(self):
+        self._modify_counter += 1
+
+    @property
+    def is_sanity(self) -> bool:
+        try:
+            self.sanity()
+            return True
+        except:
+            return False
+
     def sanity(self):
+
+        if self._modify_counter == self._last_sanity_counter:
+            return
+
         if not self.is3x3:
             return
 
@@ -250,9 +272,16 @@ class Cube:
         #     return
 
         # noinspection PyUnreachableCode
-        self._do_sanity()
+        try:
+            self._do_sanity()
+            self._last_sanity_counter = self._modify_counter
+        except:
+            raise
 
     def _do_sanity(self):
+
+        if not config.CHECK_CUBE_SANITY:
+            return
 
         for c in Color:
             self.find_part_by_colors(frozenset([c]))
@@ -286,8 +315,7 @@ class Cube:
     @property
     def is3x3(self):
         # todo: Optimize it !!!
-        return all( f.is3x3 for f in self.faces)
-
+        return all(f.is3x3 for f in self.faces)
 
     def reset(self):
         self._reset()
@@ -382,7 +410,6 @@ class Cube:
 
 
 def _create_edge(f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:
-
     """
 
     :param f1:
