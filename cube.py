@@ -147,6 +147,9 @@ class Cube:
     def n_slices(self) -> int:
         return self._size - 2
 
+    def inv(self, i: int) -> int:
+        return self.n_slices - 1 - i
+
     @property
     def front(self) -> Face:
         return self._front
@@ -178,7 +181,7 @@ class Cube:
     def face(self, name: FaceName) -> Face:
         return self._faces[name]
 
-    def slice(self, name: SliceName) -> Slice:
+    def get_slice(self, name: SliceName) -> Slice:
         return self._slices[name]
 
     def reset_after_faces_changes(self):
@@ -249,14 +252,79 @@ class Cube:
         :return:
         """
 
-        a_slice: Slice = self.slice(slice_name)
+        a_slice: Slice = self.get_slice(slice_name)
         a_slice.rotate(n, slice_index)
+
+    def rotate_face_and_slice(self, n: int, face_name: FaceName, _slice: slice = None):
+
+        """
+
+        :param n:
+        :param face_name:
+        :param _slice: [0, n-2]    not including last face
+        :return:
+        """
+
+        if not _slice:
+            _slice = slice(1, 1)
+
+        stop = _slice.stop
+        assert stop is not None
+
+        start = _slice.start
+
+        if not start:
+            start = 0
+
+        assert start is not None
+
+        size = self.size
+
+        assert start <= stop
+        assert 0 <= start <= size - 2
+        assert 0 <= stop <= size - 2
+
+        if start == 0:
+            self.face(face_name).rotate(n)
+            start += 1
+
+        neg_slice_index: bool
+        slice_name: SliceName
+
+        match face_name:
+
+            case FaceName.R:
+                slice_name, neg_slice_index = (SliceName.M, False)
+            case FaceName.L:
+                slice_name, neg_slice_index = (SliceName.M, True)
+
+            case FaceName.U:
+                slice_name, neg_slice_index = (SliceName.E, True)
+            case FaceName.D:
+                slice_name, neg_slice_index = (SliceName.E, False)
+            case FaceName.F:
+                slice_name, neg_slice_index = (SliceName.S, False)
+            case FaceName.B:
+                slice_name, neg_slice_index = (SliceName.S, True)
+
+            case _:
+                raise InternalSWError(f"Unknown face {face_name}")
+
+        if neg_slice_index:
+            n = -n
+
+        # slice index is cube index -1
+        for si in range(start-1, stop + 1 - 1):
+            if neg_slice_index:
+                si = self.inv(si)
+            self.rotate_slice(slice_name, n, si)
 
     def modified(self):
         self._modify_counter += 1
 
     @property
     def is_sanity(self) -> bool:
+        # noinspection PyBroadException
         try:
             self.sanity()
             return True
@@ -417,7 +485,7 @@ def _create_edge(f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edg
 
     :param f1:
     :param f2:
-    :param right_top_left_same_direction: tru if on both faces, the left to top/right is on smae direction
+    :param right_top_left_same_direction: tru if on both faces, the left to top/right is on same direction
     See right-top-left-coordinates.jpg
     :return:
     """
@@ -440,8 +508,8 @@ def _create_corner(f1: Face, f2: Face, f3: Face) -> Corner:
     p2: PartEdge = f2.create_part()
     p3: PartEdge = f3.create_part()
 
-    slice = PartSlice(0, p1, p2, p3)
+    _slice = PartSlice(0, p1, p2, p3)
 
-    e: Corner = Corner(slice)
+    e: Corner = Corner(_slice)
 
     return e

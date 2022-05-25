@@ -364,10 +364,8 @@ class SliceAbleAlg(SimpleAlg, ABC):
 
 class FaceAlg(SliceAbleAlg, ABC):
 
-    def __init__(self, face: FaceName, slice_n: SliceName, neg_slice: bool, n: int = 1) -> None:
+    def __init__(self, face: FaceName, n: int = 1) -> None:
         super().__init__(face.value, n)
-        self.neg_slice = neg_slice
-        self._slice_name = slice_n
         self._face = face
 
     @property
@@ -396,23 +394,10 @@ class FaceAlg(SliceAbleAlg, ABC):
         else:
             _start, _stop = (start, stop)
 
-        assert _start
-        assert _stop
-        if _start == 1:
-            cube.face(self._face).rotate(_inv(inv, self._n))
-            _start += 1
+        assert _start is not None
+        assert _stop is not None
 
-        n = cube.size
-        for i in range(_start, _stop + 1):
-            if 2 <= i <= n-1:
-                # todo - move to cubic ?
-                si = i - 2
-                if self.neg_slice:
-                    si = cube.front.inv(si)
-                cube.rotate_slice(self._slice_name, _inv(self.neg_slice, _inv(inv, self._n)), si)
-            else:
-                print(f"In {self} Ignoring slice index {i}")
-
+        cube.rotate_face_and_slice(self._n, self._face, slice(_start - 1, _stop - 1))
 
 class WholeCubeAlg(SimpleAlg, ABC):
 
@@ -453,42 +438,42 @@ class SliceAlg(SliceAbleAlg, ABC):
 class _U(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__(FaceName.U, SliceName.E, True)
+        super().__init__(FaceName.U)
 
 
 @final
 class _D(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__(FaceName.D, SliceName.E, False)
+        super().__init__(FaceName.D)
 
 
 @final
 class _F(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__(FaceName.F, SliceName.S, False)
+        super().__init__(FaceName.F)
 
 
 @final
 class _B(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__(FaceName.B, SliceName.S, True)
+        super().__init__(FaceName.B)
 
 
 @final
 class _R(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__(FaceName.R, SliceName.M, False)
+        super().__init__(FaceName.R)
 
 
 @final
 class _L(FaceAlg):
 
     def __init__(self) -> None:
-        super().__init__(FaceName.L, SliceName.M, True)
+        super().__init__(FaceName.L)
 
 
 @final
@@ -679,7 +664,7 @@ def _scramble(cube_size: int, seed: Any, n: int | None = None) -> Alg:
                 left = cube_size - 1 - sta
 
                 if left == 0 or rnd.random() > 0.5:
-                        sto = sta
+                    sto = sta
                 else:
                     sto = rnd.randint(1, left) + sta
 

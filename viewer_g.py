@@ -1018,7 +1018,7 @@ class GCubeViewer:
 
         objects: set[int] = set()
 
-        objects.update(self._board.get_all_cells_gui_elements(self._cube.slice(slice_name)))
+        objects.update(self._board.get_all_cells_gui_elements(self._cube.get_slice(slice_name)))
 
         if hide:
             self._board.set_hidden(objects)
