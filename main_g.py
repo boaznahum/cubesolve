@@ -805,15 +805,20 @@ def _handle_input(window: Window, value: int, modifiers: int):
             # test
             nn = 50
             ll = 0
-            for s in range(0, nn):
-                print(str(s + 1) + f"/{nn}, ", end='')
+            for s in range(-1, nn):
+                print(str(s + 2) + f"/{nn+1}, ", end='')
                 ll += 1
                 if ll > 15:
                     print()
                     ll = 0
 
                 op.reset()
-                alg = Algs.scramble(app.cube.size, s)
+                if s == -1:
+                    # key._1 case
+                    alg = Algs.scramble(app.cube.size, value - key._0, 5)
+                else:
+                    alg = Algs.scramble(app.cube.size, s)
+
                 op.op(alg, animation=False)
 
                 # noinspection PyBroadException

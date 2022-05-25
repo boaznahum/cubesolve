@@ -394,10 +394,11 @@ class FaceAlg(SliceAbleAlg, ABC):
         else:
             _start, _stop = (start, stop)
 
-        assert _start is not None
-        assert _stop is not None
+        assert _start
+        assert _stop
 
-        cube.rotate_face_and_slice(self._n, self._face, slice(_start - 1, _stop - 1))
+        cube.rotate_face_and_slice(_inv(inv, self._n), self._face, slice(_start - 1, _stop - 1))
+
 
 class WholeCubeAlg(SimpleAlg, ABC):
 
