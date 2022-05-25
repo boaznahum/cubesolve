@@ -65,7 +65,7 @@ class L1Cross(SolverElement):
         return
 
         # noinspection PyUnreachableCode
-        wf = self._white_face
+        wf = self.white_face
         es: Sequence[Edge] = wf.edges
         color_codes = [e.colors_id_by_pos for e in es]
         status = [self.cube.find_edge_by_color(c).match_faces for c in color_codes]
