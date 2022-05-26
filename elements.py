@@ -87,7 +87,6 @@ class PartEdge:
         else:
             return f"{self.c_attributes['n']}{self._color.name}@{self._face}"
 
-
     def copy_color(self, source: "PartEdge"):
         self._color = source._color
         self._annotated_by_color = source._annotated_by_color
@@ -159,7 +158,6 @@ class PartSlice(ABC):
         self._edges: MutableSequence[PartEdge] = [*edges]
 
         self._colors_id_by_pos: PartColorsID | None = None
-        self._colors_id_by_colors: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
 
     def finish_init(self):
@@ -226,8 +224,6 @@ class PartSlice(ABC):
 
             target_edge.copy_color(source_edge)
 
-        self.reset_colors_id()
-
     def f_color(self, f: _Face):
         """
         The color of part on given face
@@ -255,29 +251,6 @@ class PartSlice(ABC):
 
         return True
 
-    @property
-    def in_position(self):
-        """
-        :return: true if part in position, position id same as color id
-        """
-        return self.colors_id_by_pos == self.colors_id_by_color
-
-    @property
-    def colors_id_by_pos(self) -> PartColorsID:
-        """
-        Return the parts required colors, assume it was in place, not actual colors
-        the colors of the faces it is currently on
-        :return:
-        """
-
-        by_pos: PartColorsID | None = self._colors_id_by_pos
-
-        if not by_pos or config.DONT_OPTIMIZED_PART_ID:
-            by_pos = frozenset(e.face.color for e in self._edges)
-            self._colors_id_by_pos = by_pos
-
-        return by_pos
-
     @classmethod
     def parts_id_by_pos(cls, parts: Sequence["Part"]) -> Sequence[PartColorsID]:
 
@@ -286,24 +259,6 @@ class PartSlice(ABC):
     def reset_after_faces_changes(self):
         self._colors_id_by_pos = None
 
-    @property
-    def colors_id_by_color(self) -> PartColorsID:
-        """
-        Return the parts actual color
-        the colors of the faces it is currently on
-        :return:
-        """
-
-        colors_id: PartColorsID | None = self._colors_id_by_colors
-
-        if not colors_id:
-            colors_id = frozenset(e.color for e in self._edges)
-            self._colors_id_by_colors = colors_id
-
-        return colors_id
-
-    def reset_colors_id(self):
-        self._colors_id_by_colors = None
 
     def on_face(self, f: _Face) -> PartEdge | None:
         """
@@ -615,7 +570,7 @@ class Part(ABC, CubeElement):
 
         by_pos: PartColorsID | None = self._colors_id_by_pos
 
-        if not by_pos or config.DONT_OPTIMIZED_PART_ID:
+        if not by_pos or (False and config.DONT_OPTIMIZED_PART_ID):
             by_pos = frozenset(e.face.color for e in self._edges)
             self._colors_id_by_pos = by_pos
 
