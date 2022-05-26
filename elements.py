@@ -164,7 +164,6 @@ class PartSlice(ABC):
     def set_parent(self, p: "Part"):
         self._parent = p
 
-
     def finish_init(self):
         """
         Assign a part a fixed _id, that is not changed when face color is changed
@@ -234,7 +233,6 @@ class PartSlice(ABC):
         assert parent
         parent.reset_colors_id()
 
-
     def f_color(self, f: _Face):
         """
         The color of part on given face
@@ -269,7 +267,6 @@ class PartSlice(ABC):
 
     def reset_after_faces_changes(self):
         self._colors_id_by_pos = None
-
 
     def on_face(self, f: _Face) -> PartEdge | None:
         """
@@ -357,7 +354,6 @@ class PartSlice(ABC):
         return PartSlice(self._index, *self._clone_edges())
 
 
-
 class CubeElement:
 
     def __init__(self, cube: _Cube) -> None:
@@ -390,7 +386,8 @@ class Part(ABC, CubeElement):
     __slots__ = ["_cube", "_fixed_id", "_colors_id_by_pos", "_colors_id_by_colors"]
 
     def __init__(self) -> None:
-        super().__init__(self._edges[0].face.cube)
+        cube = next(iter(self.all_slices)).cube
+        super().__init__(cube)
 
         self._colors_id_by_pos: PartColorsID | None = None
         self._colors_id_by_colors: PartColorsID | None = None
@@ -406,9 +403,9 @@ class Part(ABC, CubeElement):
 
     @property
     @abstractmethod
-    def _edges(self) -> Sequence[PartEdge]:
+    def _3x3_representative_edges(self) -> Sequence[PartEdge]:
         """
-        A represented edges, valid for 3x3 only (probably)
+        A 3x3 representative edges, valid for 3x3 only (probably)
         :return:
         """
         pass
@@ -461,7 +458,7 @@ class Part(ABC, CubeElement):
         :param face:
         :return:
         """
-        for e in self._edges:
+        for e in self._3x3_representative_edges:
             if face is e.face:
                 return e
 
@@ -485,7 +482,7 @@ class Part(ABC, CubeElement):
     def __str__(self) -> str:
 
         st = ""
-        n_edges = len(self._edges)
+        n_edges = len(self._3x3_representative_edges)
         for i in range(n_edges):
             es = ""
             s: PartSlice
@@ -563,7 +560,7 @@ class Part(ABC, CubeElement):
         Part is in position, all colors match the faces
         :return:
         """
-        for p in self._edges:
+        for p in self._3x3_representative_edges:
             if p.color != p.face.color:
                 return False
 
@@ -587,7 +584,7 @@ class Part(ABC, CubeElement):
         by_pos: PartColorsID | None = self._colors_id_by_pos
 
         if not by_pos or (False and config.DONT_OPTIMIZED_PART_ID):
-            by_pos = frozenset(e.face.color for e in self._edges)
+            by_pos = frozenset(e.face.color for e in self._3x3_representative_edges)
             self._colors_id_by_pos = by_pos
 
         return by_pos
@@ -612,7 +609,7 @@ class Part(ABC, CubeElement):
 
         if not colors_id or config.DONT_OPTIMIZED_PART_ID:
 
-            new_colors_id = frozenset(e.color for e in self._edges)
+            new_colors_id = frozenset(e.color for e in self._3x3_representative_edges)
 
             if colors_id and new_colors_id != colors_id:
                 print("Bug here !!!!")
@@ -631,7 +628,7 @@ class Part(ABC, CubeElement):
         :param f:
         :return: true if any edge is on f
         """
-        for p in self._edges:
+        for p in self._3x3_representative_edges:
             if p.face is f:
                 return p
 
@@ -639,7 +636,7 @@ class Part(ABC, CubeElement):
 
     def on_face_by_name(self, name: FaceName) -> PartEdge | None:
 
-        for p in self._edges:
+        for p in self._3x3_representative_edges:
             if p.face.name == name:
                 return p
 
@@ -653,7 +650,7 @@ class Part(ABC, CubeElement):
         :return:
         """
 
-        for p in self._edges:
+        for p in self._3x3_representative_edges:
             if p.color == c:
                 return p.face
 
@@ -682,24 +679,24 @@ class Part(ABC, CubeElement):
         return self._cube
 
     def annotate(self, fixed_location: bool):
-        for p in self._edges:
+        for p in self._3x3_representative_edges:
             p.annotate(fixed_location)
 
     def un_annotate(self):
-        for p in self._edges:
+        for p in self._3x3_representative_edges:
             p.un_annotate()
 
     @property
     def annotated(self) -> bool:
-        return any(p.annotated for p in self._edges)
+        return any(p.annotated for p in self._3x3_representative_edges)
 
     @property
     def annotated_by_color(self) -> bool:
-        return any(p.annotated_by_color for p in self._edges)
+        return any(p.annotated_by_color for p in self._3x3_representative_edges)
 
     @property
     def annotated_fixed(self) -> bool:
-        return any(p.annotated_fixed for p in self._edges)
+        return any(p.annotated_fixed for p in self._3x3_representative_edges)
 
 
 class Center(Part):
@@ -716,8 +713,9 @@ class Center(Part):
         return self._slices[0][0].edges[0].face
 
     @property
-    def _edges(self) -> Sequence[PartEdge]:
-        return self._slices[0][0].edges
+    def _3x3_representative_edges(self) -> Sequence[PartEdge]:
+        n2 = self.n_slices // 2
+        return self._slices[n2][n2].edges
 
     @property
     def all_slices(self) -> Iterable["CenterSlice"]:
@@ -766,7 +764,7 @@ class Center(Part):
         return self._slices[index[0]][index[1]]
 
     def edg(self) -> PartEdge:
-        return self._edges[0]
+        return self._3x3_representative_edges[0]
 
     @property
     def color(self):
@@ -955,15 +953,15 @@ class Edge(Part):
 
     @property
     def e1(self) -> "PartEdge":
-        return self._edges[0]
+        return self._3x3_representative_edges[0]
 
     @property
     def e2(self) -> "PartEdge":
-        return self._edges[1]
+        return self._3x3_representative_edges[1]
 
     @property
-    def _edges(self) -> Sequence[PartEdge]:
-        return self._slices[0].edges
+    def _3x3_representative_edges(self) -> Sequence[PartEdge]:
+        return self._slices[self.n_slices // 2].edges
 
     @property
     def all_slices(self) -> Iterable[EdgeSlice]:
@@ -1254,9 +1252,11 @@ class Corner(Part):
         self._slice = a_slice
         super().__init__()
 
-
     @property
-    def _edges(self) -> Sequence[PartEdge]:
+    def _3x3_representative_edges(self) -> Sequence[PartEdge]:
+        """
+        In case of Corner it is also the actual edges
+        """
         return self._slice.edges
 
     @property
@@ -1301,7 +1301,6 @@ class Corner(Part):
         """
 
         self._replace_colors(source, (on_face, on_face), (source_2, target_2), (source_3, target_3))
-
 
 
 class SuperElement(CubeElement):

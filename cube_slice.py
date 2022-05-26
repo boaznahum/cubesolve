@@ -172,10 +172,12 @@ class Slice(SuperElement):
         n = - n  # still
 
         def _p():
-            f: Face
-            for f in self.cube.faces:
-                print(f, f.center._colors_id_by_colors, ",", end='')
-            print()
+            # f: Face
+            # for f in self.cube.faces:
+            #     print(f, f.center._colors_id_by_colors, ",", end='')
+            # print()
+            pass
+
         _p()
         for _ in range(n % 4):
             self._rotate(slice_index)
