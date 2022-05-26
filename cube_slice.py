@@ -171,12 +171,22 @@ class Slice(SuperElement):
         # todo: bug, due to a bug in the algorithm
         n = - n  # still
 
+        def _p():
+            f: Face
+            for f in self.cube.faces:
+                print(f, f.center._colors_id_by_colors, ",", end='')
+            print()
+        _p()
         for _ in range(n % 4):
             self._rotate(slice_index)
+            _p()
             self.cube.modified()
 
+        _p()
         self.cube.reset_after_faces_changes()
+        _p()
         self.cube.sanity()
+        _p()
 
 
     @property

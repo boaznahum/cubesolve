@@ -144,7 +144,7 @@ class PartSlice(ABC):
     n = 2 - edge
     n = 3 - corner
     """
-    __slots__ = ["_cube", "_index", "_edges", "_colors_id_by_pos",
+    __slots__ = ["_cube", "_parent", "_index", "_edges", "_colors_id_by_pos",
                  "_fixed_id",
                  "_colors_id_by_colors"]
     _edges: MutableSequence[PartEdge]
@@ -159,6 +159,11 @@ class PartSlice(ABC):
 
         self._colors_id_by_pos: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
+        self._parent: Part | None = None
+
+    def set_parent(self, p: "Part"):
+        self._parent = p
+
 
     def finish_init(self):
         """
@@ -223,6 +228,12 @@ class PartSlice(ABC):
             target_edge: PartEdge = self.get_face_edge(target)
 
             target_edge.copy_color(source_edge)
+
+        # this is critical for 3x3
+        parent = self._parent
+        assert parent
+        parent.reset_colors_id()
+
 
     def f_color(self, f: _Face):
         """
@@ -346,6 +357,7 @@ class PartSlice(ABC):
         return PartSlice(self._index, *self._clone_edges())
 
 
+
 class CubeElement:
 
     def __init__(self, cube: _Cube) -> None:
@@ -383,6 +395,10 @@ class Part(ABC, CubeElement):
         self._colors_id_by_pos: PartColorsID | None = None
         self._colors_id_by_colors: PartColorsID | None = None
         self._fixed_id: PartFixedID | None = None
+
+        s: PartSlice
+        for s in self.all_slices:
+            s.set_parent(self)
 
         # todo - check that all slices matches faces
         #   all edges with same index has the same face, see is3x3
@@ -595,8 +611,15 @@ class Part(ABC, CubeElement):
         colors_id: PartColorsID | None = self._colors_id_by_colors
 
         if not colors_id or config.DONT_OPTIMIZED_PART_ID:
-            colors_id = frozenset(e.color for e in self._edges)
-            self._colors_id_by_colors = colors_id
+
+            new_colors_id = frozenset(e.color for e in self._edges)
+
+            if colors_id and new_colors_id != colors_id:
+                print("Bug here !!!!")
+
+            colors_id = new_colors_id
+
+            self._colors_id_by_colors = new_colors_id
 
         return colors_id
 
@@ -765,7 +788,7 @@ class Center(Part):
         self._replace_colors(other, (other.face, self.face), index=index, source_index=source_index)
 
     def __str__(self):
-        s = ""
+        s = str(self.face.name)
         for r in range(self.n_slices):
             for c in range(self.n_slices):
                 s += str(self.get_center_slice((r, c)).edge.c_attributes["n"]) + "|"
@@ -1231,6 +1254,7 @@ class Corner(Part):
         self._slice = a_slice
         super().__init__()
 
+
     @property
     def _edges(self) -> Sequence[PartEdge]:
         return self._slice.edges
@@ -1277,6 +1301,7 @@ class Corner(Part):
         """
 
         self._replace_colors(source, (on_face, on_face), (source_2, target_2), (source_3, target_3))
+
 
 
 class SuperElement(CubeElement):
