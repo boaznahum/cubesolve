@@ -380,6 +380,7 @@ class SliceAbleAlg(SimpleAlg, ABC):
 
         """
         We have no way to no what is max n
+        :default in [1,n] space
         :return:
         """
 
@@ -424,16 +425,16 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
     @final
     def play(self, cube: Cube, inv: bool):
-        start_stop = self.normalize_slice_index(default=slice(0, 0))
+        start_stop = self.normalize_slice_index(default=slice(1, 1))
 
         cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
 
-    def get_animation_objects(self, cube) -> Tuple[FaceName, Sequence[PartSlice]]:
+    def get_animation_objects(self, cube) -> Tuple[FaceName, Collection[PartSlice]]:
         face = self._face
 
-        start_stop = self.normalize_slice_index(default=slice(0, 0))
+        start_stop = self.normalize_slice_index(default=slice(1, 1))
 
-        parts: Sequence[Any] = cube.get_rotate_face_and_slice_involved_parts(face, start_stop)
+        parts: Collection[Any] = cube.get_rotate_face_and_slice_involved_parts(face, start_stop)
 
         return face, parts
 
