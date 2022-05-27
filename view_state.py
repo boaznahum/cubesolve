@@ -23,7 +23,7 @@ class ViewState:
         super().__init__()
         # self._animation_speed_delay_between_steps: float = 1/40
         # self._animation_speed_number_of_steps = 30
-        self._animation_speed_delay_between_steps: float = 1 / 10  # 1/50
+        self._animation_speed_delay_between_steps: float = 1 / 20  # 1/50
         self._animation_speed_number_of_steps = 20
         self._alpha_x_0: float = 0.3
         self._alpha_y_0: float = -0.4
@@ -125,7 +125,14 @@ class ViewState:
     def draw_shadows(self):
         return self._draw_shadows
 
-    def slice_alg(self, cube: Cube, r: algs.FaceAlg):
+    def slice_alg(self, cube: Cube, r: algs.SliceAbleAlg):
+
+        mx : int
+
+        if isinstance(r, algs.FaceAlg):
+            mx = cube.n_slices + 1  # face + slices
+        else:
+            mx = cube.n_slices
 
         start = self.slice_start
         stop = self.slice_stop
@@ -137,8 +144,8 @@ class ViewState:
 
         if start < 1:
             start = 1
-        if stop > cube.n_slices + 1:
-            stop = cube.n_slices + 1
+        if stop > mx:
+            stop = mx
 
         r = r[start:stop]
         return r

@@ -162,12 +162,12 @@ class Window(pyglet.window.Window):
 
         s += ", Slices"
         vs = self.app.vs
-        ar = Algs.R
-        if vs.slice_start or vs.slice_stop:
-            ar = ar[vs.slice_start:vs.slice_stop]
-        s += "  " + str(ar) + ", " + str(vs.slice_alg(cube, Algs.R))
+        s += "  [" + str(vs.slice_start) + ", " + str(vs.slice_stop) + "]"
 
-        s += f" ,sanity:{cube.is_sanity}"
+        s += ", " + str(vs.slice_alg(cube, Algs.R))
+        s += ", " + str(vs.slice_alg(cube, Algs.M))
+
+        s += f" ,sanity:{cube.is_sanity(force_check=True)}"
 
         self.text.append(pyglet.text.Label(s,
                                            x=10, y=130, font_size=10, color=(0, 255, 0, 255), bold=True))
@@ -648,7 +648,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
     alg: Alg
 
-    def _slice_alg(r: algs.FaceAlg):
+    def _slice_alg(r: algs.SliceAbleAlg):
         return vs.slice_alg(app.cube, r)
 
     # noinspection PyProtectedMember
@@ -727,14 +727,11 @@ def _handle_input(window: Window, value: int, modifiers: int):
         case key.U:
             op.op(_slice_alg(algs.Algs.U), inv)
 
-        case key.E:
-            op.op(algs.Algs.E, inv)
-
         case key.F:
             op.op(_slice_alg(algs.Algs.F), inv)
 
         case key.S:
-            op.op(algs.Algs.S, inv)
+            op.op(_slice_alg(algs.Algs.S), inv)
 
         case key.B:
             op.op(_slice_alg(algs.Algs.B), inv)
@@ -756,7 +753,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 op.op(algs.Algs.X, inv)
 
         case key.M:
-            op.op(algs.Algs.M, inv)
+            op.op(_slice_alg(algs.Algs.M), inv)
 
         case key.Y:
             if modifiers & key.MOD_CTRL:
@@ -769,7 +766,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 op.op(algs.Algs.Y, inv)
 
         case key.E:
-            op.op(algs.Algs.E, inv)
+            op.op(_slice_alg(algs.Algs.E), inv)
 
         case key.Z:
             if modifiers & key.MOD_CTRL:

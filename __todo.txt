@@ -5,4 +5,5 @@ When quiting in middle of solver, it fails due to unxepcted state.
 enable/disable markers on cube
 draw boxes instead of quad for cube facets
 
+#bug: als optimized should consider slices 2R != R
 

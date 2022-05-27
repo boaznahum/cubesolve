@@ -116,15 +116,41 @@ class Slice(SuperElement):
 
         return edges, centers
 
-    def _rotate(self, slice_index):
+    def _get_index_range(self, slice_index: int | slice | None):
+        """
+            :param slice_index:         None=[0, n_slices-1]
+
+            :return:
+            """
 
         n_slices = self.n_slices
 
         if slice_index is None:
             s_range = range(0, n_slices)
+        elif isinstance(slice_index, slice):
+            start = slice_index.start
+            stop = slice_index.stop
+
+            assert 0 <= start <= self.n_slices - 1
+            assert 0 <= stop <= self.n_slices - 1
+            s_range = range(start, stop + 1)
         else:
             assert 0 <= slice_index <= self.n_slices - 1
             s_range = range(slice_index, slice_index + 1)
+
+        return s_range
+
+    def _rotate(self, slice_index: int | slice | None):
+
+        """
+        :param slice_index:         None=[0, n_slices-1]
+
+        :return:
+        """
+
+        s_range = self._get_index_range(slice_index)
+
+        n_slices = self.n_slices
 
         for i in s_range:
 
@@ -156,12 +182,12 @@ class Slice(SuperElement):
 
                 centers[j + 3 * n_slices].copy_center_colors(c0)
 
-    def rotate(self, n=1, slice_index=None):
+    def rotate(self, n=1, slice_index: int | slice | None = None):
 
         """
 
         :param n:
-        :param slice_index: [0..n-2-1] [0, n_slices-1] or None
+        :param slice_index: [0..n-2-1] [0, n_slices-1] or None=[0, n_slices-1]
         :return:
         """
 
@@ -199,13 +225,9 @@ class Slice(SuperElement):
 
         parts: list[PartSlice] = []
 
-        n_slices = self.n_slices
+        s_range = self._get_index_range(slice_index)
 
-        if slice_index is None:
-            s_range = range(0, n_slices)
-        else:
-            assert 0 <= slice_index <= self.n_slices - 1
-            s_range = range(slice_index, slice_index + 1)
+        n_slices = self.n_slices
 
         for i in s_range:
             elements: tuple[Sequence[EdgeSlice], Sequence[CenterSlice]] = self._get_slices_by_index(i)

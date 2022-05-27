@@ -244,20 +244,36 @@ class Cube:
             case _:
                 raise RuntimeError(f"Unknown Axis {axis_name}")
 
-    def rotate_slice(self, slice_name: SliceName, n: int, slice_index=None):
+    def rotate_slice(self, slice_name: SliceName, n: int, slice_index: int | slice | None = None):
 
         """
 
-        :param slice_index: [0..n-2-1] [0, n_slices-1]
+        :param slice_index: [0..n-2-1] [0, n_slices-1], default is [0, n_slices-1]
         :param slice_name:
         :param n:
         :return:
         """
 
         a_slice: Slice = self.get_slice(slice_name)
+
         a_slice.rotate(n, slice_index)
 
-    def _get_rotation_info(self, face_name: FaceName, _slice: slice = None) -> Tuple[slice, bool, SliceName]:
+    def get_rotate_slice_involved_parts(self, slice_name: SliceName, slice_index: int | slice | None = None) -> \
+            Collection[PartSlice]:
+
+        """
+
+        :param slice_index: [0..n-2-1] [0, n_slices-1], default is [0, n_slices-1]
+        :param slice_name:
+        :param n:
+        :return:
+        """
+
+        a_slice: Slice = self.get_slice(slice_name)
+
+        return a_slice.get_rotate_involved_parts(slice_index)
+
+    def _get_face_and_rotation_info(self, face_name: FaceName, _slice: slice = None) -> Tuple[slice, bool, SliceName]:
         """
 
         :param face_name:
@@ -322,7 +338,7 @@ class Cube:
         neg_slice_index: bool
         slice_name: SliceName
 
-        start_stop, neg_slice_index, slice_name = self._get_rotation_info(face_name, _slice)
+        start_stop, neg_slice_index, slice_name = self._get_face_and_rotation_info(face_name, _slice)
 
         start = start_stop.start
         stop = start_stop.stop
@@ -341,7 +357,7 @@ class Cube:
             self.rotate_slice(slice_name, n, si)
 
     def get_rotate_face_and_slice_involved_parts(self, face_name: FaceName, _slice: slice = None) -> \
-            Sequence[PartSlice]:
+            Collection[PartSlice]:
 
         """
 
@@ -354,7 +370,7 @@ class Cube:
         neg_slice_index: bool
         slice_name: SliceName
 
-        start_stop, neg_slice_index, slice_name = self._get_rotation_info(face_name, _slice)
+        start_stop, neg_slice_index, slice_name = self._get_face_and_rotation_info(face_name, _slice)
 
         parts: MutableSequence[PartSlice] = []
 
@@ -384,8 +400,7 @@ class Cube:
     def modified(self):
         self._modify_counter += 1
 
-    @property
-    def is_sanity(self) -> bool:
+    def is_sanity(self, force_check=False) -> bool:
         # noinspection PyBroadException
         try:
             self.sanity()
@@ -393,7 +408,7 @@ class Cube:
         except:
             return False
 
-    def sanity(self):
+    def sanity(self, force_check=False):
 
         if self._modify_counter == self._last_sanity_counter:
             return
@@ -406,14 +421,14 @@ class Cube:
 
         # noinspection PyUnreachableCode
         try:
-            self._do_sanity()
+            self._do_sanity(force_check)
             self._last_sanity_counter = self._modify_counter
         except:
             raise
 
-    def _do_sanity(self):
+    def _do_sanity(self, force_check=False):
 
-        if not config.CHECK_CUBE_SANITY:
+        if not force_check and not config.CHECK_CUBE_SANITY:
             return
 
         for c in Color:

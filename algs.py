@@ -1,6 +1,6 @@
 import functools
 from abc import ABC, abstractmethod
-from collections.abc import MutableSequence
+from collections.abc import MutableSequence, Collection
 from random import Random
 from typing import Sequence, Any, final, TypeVar, Tuple, Iterable
 
@@ -99,6 +99,7 @@ class _Inv(Alg):
             c = type(a)
             # noinspection PyArgumentList
             s = c()  # type: ignore # _n = 1
+            s.copy(a)
             s._n = -a.n  # inv
             return s.simplify()
         elif isinstance(a, _BigAlg):
@@ -161,6 +162,7 @@ class _Mul(Alg, ABC):
             # noinspection PyArgumentList
             # todo: every where we clone like this, there is a bug, beucase we added _a_slice, need to use clone method
             s = c()  # type: ignore # _n = 1
+            s.copy(a)
             s._n *= a._n * self._n
             return s.simplify()
         elif isinstance(self._alg, _BigAlg):
@@ -278,7 +280,7 @@ class Annotation(SimpleAlg):
 class AnimationAbleAlg(SimpleAlg, ABC):
 
     @abstractmethod
-    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Sequence[PartSlice]]:
+    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
         """
 
         :param cube:
@@ -353,9 +355,7 @@ class SliceAbleAlg(SimpleAlg, ABC):
 
         return sl.stop  # may be NOne
 
-    def __str__(self):
-        s = super().__str__()
-
+    def _add_to_str(self, s):
         if not self.a_slice:
             return s
 
@@ -373,35 +373,15 @@ class SliceAbleAlg(SimpleAlg, ABC):
         else:
             return "[" + str(start) + "," + str(stop) + "]" + s
 
+    def atomic_str(self):
+        return self._add_to_str(super().atomic_str())
 
-class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
+    def normalize_slice_index(self, default: slice) -> slice:
 
-    def __init__(self, face: FaceName, n: int = 1) -> None:
-        super().__init__(face.value, n)
-        self._face: FaceName = face
-
-    @property
-    def face(self) -> FaceName:
-        return self._face
-
-    @final
-    def play(self, cube: Cube, inv: bool):
-
-        start_stop = self.normalize_slice_index()
-
-        cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
-
-    def get_animation_objects(self, cube) -> Tuple[FaceName, Sequence[PartSlice]]:
-
-        face = self._face
-
-        start_stop = self.normalize_slice_index()
-
-        parts: Sequence[Any] = cube.get_rotate_face_and_slice_involved_parts(face, start_stop)
-
-        return face, parts
-
-    def normalize_slice_index(self) -> slice:
+        """
+        We have no way to no what is max n
+        :return:
+        """
 
         """
 
@@ -415,7 +395,7 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
         if not start and not stop:
 
-            _start, _stop = (1, 1)
+            _start, _stop = (default.start, default.stop)
 
         elif start and not stop:
             _start, _stop = (start, start)
@@ -429,7 +409,33 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         assert _start
         assert _stop
 
-        return slice(_start-1, _stop-1)
+        return slice(_start - 1, _stop - 1)
+
+
+class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
+
+    def __init__(self, face: FaceName, n: int = 1) -> None:
+        super().__init__(face.value, n)
+        self._face: FaceName = face
+
+    @property
+    def face(self) -> FaceName:
+        return self._face
+
+    @final
+    def play(self, cube: Cube, inv: bool):
+        start_stop = self.normalize_slice_index(default=slice(0, 0))
+
+        cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
+
+    def get_animation_objects(self, cube) -> Tuple[FaceName, Sequence[PartSlice]]:
+        face = self._face
+
+        start_stop = self.normalize_slice_index(default=slice(0, 0))
+
+        parts: Sequence[Any] = cube.get_rotate_face_and_slice_involved_parts(face, start_stop)
+
+        return face, parts
 
 
 class WholeCubeAlg(AnimationAbleAlg, ABC):
@@ -446,7 +452,7 @@ class WholeCubeAlg(AnimationAbleAlg, ABC):
     def play(self, cube: Cube, inv: bool):
         cube.rotate_whole(self.axis_name, _inv(inv, self._n))
 
-    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Sequence[PartSlice]]:
+    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
 
         face_name: FaceName
         match self.axis_name:
@@ -463,12 +469,7 @@ class WholeCubeAlg(AnimationAbleAlg, ABC):
             case _:
                 raise InternalSWError(f"Unknown Axis {self.axis_name}")
 
-
-
-        objects = set()
-
         return face_name, cube.get_all_parts()
-
 
     @final
     @property
@@ -476,7 +477,7 @@ class WholeCubeAlg(AnimationAbleAlg, ABC):
         return True
 
 
-class SliceAlg(SliceAbleAlg, ABC):
+class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
     def __init__(self, slice_name: SliceName, n: int = 1) -> None:
         super().__init__(slice_name.value, n)
@@ -488,7 +489,34 @@ class SliceAlg(SliceAbleAlg, ABC):
 
     @final
     def play(self, cube: Cube, inv: bool):
-        cube.rotate_slice(self._slice_name, _inv(inv, self._n))
+        # cube.rotate_slice(self._slice_name, _inv(inv, self._n))
+
+        start_stop = self.normalize_slice_index(default=slice(1, cube.n_slices))
+
+        cube.rotate_slice(self._slice_name, _inv(inv, self._n), start_stop)
+
+    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
+
+        face_name: FaceName
+
+        name = self._slice_name
+        match name:
+
+            case SliceName.S:  # over F
+                face_name = FaceName.F
+
+            case SliceName.M:  # over R
+                face_name = FaceName.R
+
+            case SliceName.E:  # over D
+                face_name = FaceName.D
+
+            case _:
+                raise RuntimeError(f"Unknown Slice {name}")
+
+        start_stop = self.normalize_slice_index(default=slice(1, cube.n_slices))
+
+        return face_name, cube.get_rotate_slice_involved_parts(name, start_stop)
 
 
 @final
@@ -800,11 +828,18 @@ class Algs:
 
 
 if __name__ == '__main__':
-    alg = Algs.alg(None, _R(), (_R().prime * 2 + Algs.R * 2))
-    print(alg)
-    print(alg.simplify())
+    # alg = Algs.alg(None, _R(), (_R().prime * 2 + Algs.R * 2))
+    # print(alg)
+    # print(alg.simplify())
+    #
+    # alg = Algs.R + Algs.U + Algs.U + Algs.U + Algs.U
+    # _a = alg.simplify()
+    # print(_a.__str__())
+    # print(alg.simplify())
 
-    alg = Algs.R + Algs.U + Algs.U + Algs.U + Algs.U
-    _a = alg.simplify()
-    print(_a.__str__())
-    print(alg.simplify())
+    m = Algs.M[2:3] * 2
+    print(m)
+    print(m.prime)
+    flatten = m.flatten()
+    print(flatten)
+
