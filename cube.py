@@ -362,11 +362,11 @@ class Cube:
         if start == 0:
             face = self.face(face_name)
             parts.extend(face.slices)
+            start += 1
 
         # slice index is cube index -1
-        # start + 1, because start was for face
         # stop + 1 because it is a range
-        r = range(start + 1 - 1, stop + 1 - 1)
+        r = range(start - 1, stop + 1 - 1)
         if r:
             a_slice: Slice = self.get_slice(slice_name)
 
