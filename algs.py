@@ -1,13 +1,13 @@
 import functools
 from abc import ABC, abstractmethod
-from collections.abc import MutableSequence, Iterable
+from collections.abc import MutableSequence
 from random import Random
-from typing import Sequence, Any, final, TypeVar
+from typing import Sequence, Any, final, TypeVar, Tuple, Iterable
 
 from app_exceptions import InternalSWError
 from cube import Cube
 from cube_slice import SliceName
-from elements import FaceName, AxisName
+from elements import FaceName, AxisName, PartSlice
 
 
 def _inv(inv: bool, n) -> int:
@@ -275,6 +275,18 @@ class Annotation(SimpleAlg):
         return True
 
 
+class AnimationAbleAlg(SimpleAlg, ABC):
+
+    @abstractmethod
+    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Sequence[PartSlice]]:
+        """
+
+        :param cube:
+        :return: The face for rotation Axis and all cube elements involved in this animation
+        """
+        pass
+
+
 SL = TypeVar("SL", bound="SliceAbleAlg")
 
 
@@ -362,11 +374,11 @@ class SliceAbleAlg(SimpleAlg, ABC):
             return "[" + str(start) + "," + str(stop) + "]" + s
 
 
-class FaceAlg(SliceAbleAlg, ABC):
+class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
     def __init__(self, face: FaceName, n: int = 1) -> None:
         super().__init__(face.value, n)
-        self._face = face
+        self._face: FaceName = face
 
     @property
     def face(self) -> FaceName:
@@ -375,6 +387,26 @@ class FaceAlg(SliceAbleAlg, ABC):
     @final
     def play(self, cube: Cube, inv: bool):
 
+        start_stop = self.normalize_slice_index()
+
+        cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
+
+    def get_animation_objects(self, cube) -> Tuple[FaceName, Sequence[PartSlice]]:
+
+        face = self._face
+
+        start_stop = self.normalize_slice_index()
+
+        parts: Sequence[Any] = cube.get_rotate_face_and_slice_involved_parts(face, start_stop)
+
+        return face, parts
+
+    def normalize_slice_index(self) -> slice:
+
+        """
+
+        :return: [start, stop] in cube coordinates [0, size-2]
+        """
         start = self.start
         stop = self.stop
 
@@ -397,7 +429,7 @@ class FaceAlg(SliceAbleAlg, ABC):
         assert _start
         assert _stop
 
-        cube.rotate_face_and_slice(_inv(inv, self._n), self._face, slice(_start - 1, _stop - 1))
+        return slice(_start-1, _stop-1)
 
 
 class WholeCubeAlg(SimpleAlg, ABC):

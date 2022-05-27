@@ -1,7 +1,7 @@
 import math
 import time
 import traceback
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import MutableSequence, Callable
 
 import glooey  # type: ignore
@@ -16,7 +16,7 @@ from algs import Alg, Algs
 from app_exceptions import AppExit, RunStop, OpAborted
 from cube import Cube
 from cube_operator import Operator
-from elements import FaceName
+from elements import FaceName, PartSlice
 from solver import Solver, SolveStep
 from view_state import ViewState
 from viewer_g import GCubeViewer
@@ -131,6 +131,10 @@ class Window(pyglet.window.Window):
         self.update_text()
 
     def update_text(self):
+
+        cube = self.app.cube
+
+
         self.text.clear()
         self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
                                            x=10, y=10, font_size=10))
@@ -154,15 +158,16 @@ class Window(pyglet.window.Window):
         err = f"Animation:{'On' if self.app.op.animation_enabled else 'Off'}"
         self.text.append(pyglet.text.Label(err,
                                            x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
-        s = f"Is 3x3:{'Yes' if self.app.cube.is3x3 else 'No'}"
+        s = f"Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
 
+        s += ", Slices"
         vs = self.app.vs
         ar = Algs.R
         if vs.slice_start or vs.slice_stop:
             ar = ar[vs.slice_start:vs.slice_stop]
-        s += "  " + str(ar)
+        s += "  " + str(ar) + ", " + str(vs.slice_alg(cube, Algs.R))
 
-        s += f" ,sanity:{self.app.cube.is_sanity}"
+        s += f" ,sanity:{cube.is_sanity}"
 
         self.text.append(pyglet.text.Label(s,
                                            x=10, y=130, font_size=10, color=(0, 255, 0, 255), bold=True))
@@ -358,18 +363,31 @@ class Window(pyglet.window.Window):
 
 
 # noinspection PyPep8Naming
-def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation:
-    gui_objects: Iterable[int]
-    center: ndarray
+def _create_animation(window: Window, alg: algs.AnimationAbleAlg, n_count) -> Animation:
 
-    if alg.face:
-        face_center, opposite_face_center, gui_objects = window.viewer.get_face_objects(alg.face)
-    elif alg.axis_name:
-        face_center, opposite_face_center, gui_objects = window.viewer.git_whole_cube_objects(alg.axis_name)
-    elif alg.slice_name:
-        face_center, opposite_face_center, gui_objects = window.viewer.git_slice_objects(alg.slice_name)
-    else:
-        raise TimeoutError(f"At lest face/axis/slice name in {alg}")
+
+
+
+    rotate_face: FaceName
+    cube_parts: Sequence[PartSlice]
+
+    rotate_face, cube_parts = alg.get_animation_objects(window.app.cube)
+    face_center: ndarray
+    opposite_face_center: ndarray
+    gui_objects: Iterable[int]
+
+    viewer = window.viewer
+    face_center, opposite_face_center, gui_objects = viewer.get_slices_movable_gui_objects(rotate_face, cube_parts)
+
+    #
+    # if alg.face:
+    #     face_center, opposite_face_center, gui_objects = viewer.get_face_objects(alg.face)
+    # elif alg.axis_name:
+    #     face_center, opposite_face_center, gui_objects = viewer.git_whole_cube_objects(alg.axis_name)
+    # elif alg.slice_name:
+    #     face_center, opposite_face_center, gui_objects = viewer.git_slice_objects(alg.slice_name)
+    # else:
+    #     raise TimeoutError(f"At lest face/axis/slice name in {alg}")
 
     vs: ViewState = window.app.vs
     current_angel = 0
@@ -427,7 +445,7 @@ def _create_animation(window: Window, alg: algs.SimpleAlg, n_count) -> Animation
 
     animation = Animation()
     animation.done = False
-    animation._animation_cleanup = lambda: window.viewer.unhidden_all()
+    animation._animation_cleanup = lambda: viewer.unhidden_all()
 
     # noinspection PyPep8Naming
 
@@ -542,6 +560,11 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
         assert isinstance(_alg, algs.SimpleAlg)
         alg = _alg
 
+    if not isinstance(alg, algs.AnimationAbleAlg):
+        print(f"{alg} is not animation-able")
+        operator.op(alg, False, animation=False)
+        return
+
     animation: Animation = _create_animation(window, alg, alg.n)
     delay: float = animation.delay
 
@@ -621,10 +644,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
     alg: Alg
 
     def _slice_alg(r: algs.FaceAlg):
-
-        if vs.slice_start or vs.slice_stop:
-            r = r[vs.slice_start:vs.slice_stop]
-        return r
+        return vs.slice_alg(app.cube, r)
 
     # noinspection PyProtectedMember
     match value:
@@ -806,7 +826,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
             nn = 50
             ll = 0
             for s in range(-1, nn):
-                print(str(s + 2) + f"/{nn+1}, ", end='')
+                print(str(s + 2) + f"/{nn + 1}, ", end='')
                 ll += 1
                 if ll > 15:
                     print()

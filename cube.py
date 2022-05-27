@@ -255,14 +255,12 @@ class Cube:
         a_slice: Slice = self.get_slice(slice_name)
         a_slice.rotate(n, slice_index)
 
-    def rotate_face_and_slice(self, n: int, face_name: FaceName, _slice: slice = None):
-
+    def _get_rotation_info(self, face_name: FaceName, _slice: slice = None) -> Tuple[slice, bool, SliceName]:
         """
 
-        :param n:
         :param face_name:
-        :param _slice: [0, n-2]    not including last face
-        :return:
+        :param _slice:
+        :return: indexes (of face and slices), neg slices, slice name
         """
 
         if not _slice:
@@ -283,10 +281,6 @@ class Cube:
         assert start <= stop
         assert 0 <= start <= size - 2
         assert 0 <= stop <= size - 2
-
-        if start == 0:
-            self.face(face_name).rotate(n)
-            start += 1
 
         neg_slice_index: bool
         slice_name: SliceName
@@ -310,14 +304,80 @@ class Cube:
             case _:
                 raise InternalSWError(f"Unknown face {face_name}")
 
+        return slice(start, stop), neg_slice_index, slice_name
+
+    def rotate_face_and_slice(self, n: int, face_name: FaceName, _slice: slice = None):
+
+        """
+
+        :param n:
+        :param face_name:
+        :param _slice: [0, n-2]    not including last face
+        :return:
+        """
+
+        start_stop: slice
+        neg_slice_index: bool
+        slice_name: SliceName
+
+        start_stop, neg_slice_index, slice_name = self._get_rotation_info(face_name, _slice)
+
+        start = start_stop.start
+        stop = start_stop.stop
+
+        if start == 0:
+            self.face(face_name).rotate(n)
+            start += 1
+
         if neg_slice_index:
             n = -n
 
         # slice index is cube index -1
-        for si in range(start-1, stop + 1 - 1):
+        for si in range(start - 1, stop + 1 - 1):
             if neg_slice_index:
                 si = self.inv(si)
             self.rotate_slice(slice_name, n, si)
+
+    def get_rotate_face_and_slice_involved_parts(self, face_name: FaceName, _slice: slice = None) -> \
+            Sequence[PartSlice]:
+
+        """
+
+        :param face_name:
+        :param _slice: [0, n-2]    not including last face
+        :return:
+        """
+
+        start_stop: slice
+        neg_slice_index: bool
+        slice_name: SliceName
+
+        start_stop, neg_slice_index, slice_name = self._get_rotation_info(face_name, _slice)
+
+        parts: MutableSequence[PartSlice] = []
+
+        start = start_stop.start
+        stop = start_stop.stop
+
+        if start == 0:
+            face = self.face(face_name)
+            parts.extend(face.slices)
+
+        # slice index is cube index -1
+        # start + 1, because start was for face
+        # stop + 1 because it is a range
+        r = range(start + 1 - 1, stop + 1 - 1)
+        if r:
+            a_slice: Slice = self.get_slice(slice_name)
+
+            for si in r:
+                if neg_slice_index:
+                    si = self.inv(si)
+
+                _slice_parts = a_slice.get_rotate_involved_parts(si)
+                parts.extend(_slice_parts)
+
+        return parts
 
     def modified(self):
         self._modify_counter += 1

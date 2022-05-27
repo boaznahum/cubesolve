@@ -4,6 +4,10 @@ from pyglet.gl import *  # type: ignore
 
 
 # noinspection PyMethodMayBeStatic
+import algs
+from cube import Cube
+
+
 class ViewState:
     # __slots__ = [
     #     "_alpha_x_0",
@@ -30,7 +34,7 @@ class ViewState:
         self._alpha_z: float = 0
         self._alpha_delta = 0.1
 
-        self._draw_shadows = True
+        self._draw_shadows = False
         self.cube_size = 3
 
         self.slice_start: int = 1
@@ -120,3 +124,22 @@ class ViewState:
     @property
     def draw_shadows(self):
         return self._draw_shadows
+
+    def slice_alg(self, cube: Cube, r: algs.FaceAlg):
+
+        start = self.slice_start
+        stop = self.slice_stop
+
+        if not (start or stop):
+            return r
+
+        cube = cube
+
+        if start < 1:
+            start = 1
+        if stop > cube.n_slices + 1:
+            stop = cube.n_slices + 1
+
+        r = r[start:stop]
+        return r
+

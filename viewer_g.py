@@ -226,7 +226,6 @@ class _Cell:
                 d = (left_top - left_bottom) / n
 
                 for i in range(n):
-
                     ix = i
 
                     _slice = part.get_ltr_index(cube_face, ix)
@@ -236,7 +235,7 @@ class _Cell:
                               right_bottom + d, left_bottom + d]
                         shapes.quad_with_line(vx, color, lw, lc)
                         nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
-                        shapes.lines_in_quad(vx, nn, 5, (138,43,226))
+                        shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
                         # if _slice.get_face_edge(cube_face).attributes["origin"]:
                         #     shapes.cross(vx, cross_width, cross_color)
                         # if _slice.get_face_edge(cube_face).attributes["on_x"]:
@@ -256,7 +255,7 @@ class _Cell:
                 #     d = -d
 
                 for i in range(n):
-                    ix = i # _inv(i, is_back)
+                    ix = i  # _inv(i, is_back)
                     _slice = part.get_ltr_index(cube_face, ix)
                     color = self._slice_color(_slice)
                     with self._gen_list_for_slice(_slice, dest):
@@ -266,7 +265,7 @@ class _Cell:
                               left_top]
                         shapes.quad_with_line(vx, color, lw, lc)
                         nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
-                        shapes.lines_in_quad(vx, nn, 5, (138,43,226))
+                        shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
                         # if _slice.get_face_edge(cube_face).attributes["origin"]:
                         #     shapes.cross(vx, cross_width, cross_color)
                         # if _slice.get_face_edge(cube_face).attributes["on_x"]:
@@ -293,7 +292,7 @@ class _Cell:
                     ix = x
                     iy = y
 
-                    #ix = _inv(ix, is_back)
+                    # ix = _inv(ix, is_back)
 
                     _slice = part.get_slice((iy, ix))
 
@@ -477,8 +476,8 @@ class _FaceBoard:
         self.reset()
 
     def reset(self):
-        self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, self._batch) for p in self.cube_face_supplier().parts}
-
+        self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, self._batch) for p in
+                                                 self.cube_face_supplier().parts}
 
     @property
     def cube_face(self) -> Face:
@@ -755,6 +754,7 @@ class _Board:
     def unhidden_all(self):
         self._hidden_objects = set()
 
+    # todo: to delete
     def get_all_cells_gui_elements(self, element: SuperElement) -> Set[int]:
 
         lists: set[int] = set()
@@ -765,6 +765,19 @@ class _Board:
             c: _Cell
             for cs in self._cells.values():
                 for c in cs:
+                    lists.update(c.gui_slice_movable_gui_objects(s))
+
+        return lists
+
+    def get_all_gui_elements(self, for_parts: Sequence[PartSlice]) -> Set[int]:
+
+        lists: set[int] = set()
+
+        # need otpimization !!!
+        c: _Cell
+        for cs in self._cells.values():
+            for c in cs:
+                for s in for_parts:
                     lists.update(c.gui_slice_movable_gui_objects(s))
 
         return lists
@@ -939,7 +952,8 @@ class GCubeViewer:
     def unhidden_all(self):
         self._board.unhidden_all()
 
-    def get_face_objects(self, name: FaceName, hide: bool = True) -> Tuple[ndarray, ndarray, Iterable[int]]:
+    #todo:cleanup: delete
+    def xxxxxget_face_objects(self, name: FaceName, hide: bool = True) -> Tuple[ndarray, ndarray, Iterable[int]]:
 
         right: _FaceBoard = self._get_face(name)
         left: _FaceBoard = self._get_face(self._cube.face(name).opposite.name)
@@ -958,6 +972,7 @@ class GCubeViewer:
 
         return right_center, left_center, objects
 
+    #todo:cleanup: delete
     def git_whole_cube_objects(self, axis_name: AxisName, hide: bool = True) -> Tuple[ndarray, ndarray, Iterable[int]]:
 
         face_name: FaceName
@@ -991,6 +1006,7 @@ class GCubeViewer:
 
         return right_center, left_center, objects
 
+    #todo:cleanup: delete
     def git_slice_objects(self, slice_name, hide=True) -> Tuple[ndarray, ndarray, Iterable[int]]:
 
         face_name: FaceName
@@ -1019,6 +1035,28 @@ class GCubeViewer:
         objects: set[int] = set()
 
         objects.update(self._board.get_all_cells_gui_elements(self._cube.get_slice(slice_name)))
+
+        if hide:
+            self._board.set_hidden(objects)
+
+        return right_center, left_center, objects
+
+    def get_slices_movable_gui_objects(self, face_name_rotate_axis: FaceName,
+                                       cube_parts: Sequence[PartSlice],
+                                       hide=True) -> Tuple[ndarray, ndarray, Iterable[int]]:
+
+        face_name: FaceName = face_name_rotate_axis
+
+        right: _FaceBoard = self._get_face(face_name)
+        left: _FaceBoard = self._get_face(self._cube.face(face_name).opposite.name)
+
+        right_center: ndarray = right.get_center()
+        # because left,back and down have more than one gui faces
+        left_center: ndarray = left.get_center()
+
+        objects: set[int] = set()
+
+        objects.update(self._board.get_all_gui_elements(cube_parts))
 
         if hide:
             self._board.set_hidden(objects)

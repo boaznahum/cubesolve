@@ -2,8 +2,8 @@ from enum import Enum, unique
 from typing import Iterable, Tuple, Sequence
 
 from cube_face import Face
-from elements import SuperElement, _Cube, Edge, Center, PartSlice, EdgeSliceIndex, CenterSliceIndex, EdgeSlice, \
-    CenterSlice
+from elements import SuperElement, _Cube, Edge, Center, PartSlice, EdgeSlice
+from elements import CenterSlice
 
 
 @unique
@@ -190,6 +190,30 @@ class Slice(SuperElement):
         self.cube.sanity()
         _p()
 
+    def get_rotate_involved_parts(self, slice_index) -> Sequence[PartSlice]:
+
+        """
+        :param slice_index: [0..n-2-1] [0, n_slices-1] or None
+        :return:
+        """
+
+        parts: list[PartSlice] = []
+
+        n_slices = self.n_slices
+
+        if slice_index is None:
+            s_range = range(0, n_slices)
+        else:
+            assert 0 <= slice_index <= self.n_slices - 1
+            s_range = range(slice_index, slice_index + 1)
+
+        for i in s_range:
+            elements: tuple[Sequence[EdgeSlice], Sequence[CenterSlice]] = self._get_slices_by_index(i)
+
+            parts.extend(elements[0])
+            parts.extend(elements[1])
+
+        return parts
 
     @property
     def slices(self) -> Iterable[PartSlice]:
