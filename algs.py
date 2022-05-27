@@ -432,7 +432,7 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         return slice(_start-1, _stop-1)
 
 
-class WholeCubeAlg(SimpleAlg, ABC):
+class WholeCubeAlg(AnimationAbleAlg, ABC):
 
     def __init__(self, axis_name: AxisName, n: int = 1) -> None:
         super().__init__(axis_name.value, n)
@@ -445,6 +445,30 @@ class WholeCubeAlg(SimpleAlg, ABC):
     @final
     def play(self, cube: Cube, inv: bool):
         cube.rotate_whole(self.axis_name, _inv(inv, self._n))
+
+    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Sequence[PartSlice]]:
+
+        face_name: FaceName
+        match self.axis_name:
+
+            case AxisName.X:
+                face_name = FaceName.R
+
+            case AxisName.Y:
+                face_name = FaceName.U
+
+            case AxisName.Z:
+                face_name = FaceName.F
+
+            case _:
+                raise InternalSWError(f"Unknown Axis {self.axis_name}")
+
+
+
+        objects = set()
+
+        return face_name, cube.get_all_parts()
+
 
     @final
     @property

@@ -1,5 +1,5 @@
 from collections import defaultdict
-from collections.abc import Set
+from collections.abc import Set, Collection
 from contextlib import contextmanager
 from typing import Hashable, Tuple, MutableSequence, Callable, Iterable, Sequence, Set
 
@@ -769,7 +769,7 @@ class _Board:
 
         return lists
 
-    def get_all_gui_elements(self, for_parts: Sequence[PartSlice]) -> Set[int]:
+    def get_all_gui_elements(self, for_parts: Collection[PartSlice]) -> Set[int]:
 
         lists: set[int] = set()
 
@@ -952,61 +952,7 @@ class GCubeViewer:
     def unhidden_all(self):
         self._board.unhidden_all()
 
-    #todo:cleanup: delete
-    def xxxxxget_face_objects(self, name: FaceName, hide: bool = True) -> Tuple[ndarray, ndarray, Iterable[int]]:
-
-        right: _FaceBoard = self._get_face(name)
-        left: _FaceBoard = self._get_face(self._cube.face(name).opposite.name)
-
-        right_center: ndarray = right.get_center()
-        # because left,back and down have more than one gui faces
-        # right_objects: Iterable[int] = self._get_faces_gui_objects(self._get_faces(name))
-        left_center: ndarray = left.get_center()
-
-        objects: set[int] = set()
-
-        objects.update(self._board.get_all_cells_gui_elements(self._cube.face(name)))
-
-        if hide:
-            self._board.set_hidden(objects)
-
-        return right_center, left_center, objects
-
-    #todo:cleanup: delete
-    def git_whole_cube_objects(self, axis_name: AxisName, hide: bool = True) -> Tuple[ndarray, ndarray, Iterable[int]]:
-
-        face_name: FaceName
-        match axis_name:
-
-            case AxisName.X:
-                face_name = FaceName.R
-
-            case AxisName.Y:
-                face_name = FaceName.U
-
-            case AxisName.Z:
-                face_name = FaceName.F
-
-            case _:
-                raise RuntimeError(f"Unknown Axis {axis_name}")
-
-        right: _FaceBoard = self._get_face(face_name)
-        left: _FaceBoard = self._get_face(self._cube.face(face_name).opposite.name)
-
-        right_center: ndarray = right.get_center()
-        # because left,back and down have more than one gui faces
-        left_center: ndarray = left.get_center()
-
-        objects = set()
-        for f in self._board.faces:
-            objects.update(f.gui_objects())
-
-        if hide:
-            self._board.set_hidden(objects)
-
-        return right_center, left_center, objects
-
-    #todo:cleanup: delete
+    # todo:cleanup: delete
     def git_slice_objects(self, slice_name, hide=True) -> Tuple[ndarray, ndarray, Iterable[int]]:
 
         face_name: FaceName
@@ -1042,7 +988,7 @@ class GCubeViewer:
         return right_center, left_center, objects
 
     def get_slices_movable_gui_objects(self, face_name_rotate_axis: FaceName,
-                                       cube_parts: Sequence[PartSlice],
+                                       cube_parts: Collection[PartSlice],
                                        hide=True) -> Tuple[ndarray, ndarray, Iterable[int]]:
 
         face_name: FaceName = face_name_rotate_axis

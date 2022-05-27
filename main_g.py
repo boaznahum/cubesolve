@@ -1,7 +1,7 @@
 import math
 import time
 import traceback
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Sequence, Container, Collection, Set
 from typing import MutableSequence, Callable
 
 import glooey  # type: ignore
@@ -369,9 +369,14 @@ def _create_animation(window: Window, alg: algs.AnimationAbleAlg, n_count) -> An
 
 
     rotate_face: FaceName
-    cube_parts: Sequence[PartSlice]
+    cube_parts: Collection[PartSlice]
 
     rotate_face, cube_parts = alg.get_animation_objects(window.app.cube)
+
+    # to be on the safe side !!!
+    if not isinstance(cube_parts, Set):
+        cube_parts = set(cube_parts)
+
     face_center: ndarray
     opposite_face_center: ndarray
     gui_objects: Iterable[int]

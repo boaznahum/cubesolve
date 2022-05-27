@@ -1,3 +1,5 @@
+from typing import Collection
+
 from cube_face import Face
 from cube_slice import Slice, SliceName
 from elements import *
@@ -538,6 +540,16 @@ class Cube:
                 return p
 
         raise ValueError(f"Cube doesn't contain corner {str(part_colors_id)}")
+
+    def get_all_parts(self) -> Collection[PartSlice]:
+
+        # set - because faces share parts
+        parts: set[PartSlice] = set()
+
+        for f in self.faces:
+            parts.update(f.slices)
+
+        return parts
 
 
 def _create_edge(f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:
