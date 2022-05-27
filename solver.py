@@ -1,7 +1,6 @@
 from enum import Enum, unique
 
 import config
-import viewer
 from _solver.base_solver import ISolver
 from _solver.common_op import CommonOp
 from _solver.l1_corners import L1Corners
@@ -9,6 +8,7 @@ from _solver.l1_cross import L1Cross
 from _solver.l2 import L2
 from _solver.l3_corners import L3Corners
 from _solver.l3_cross import L3Cross
+from _solver.nxn_centers import NxNCenters
 from algs import Algs
 from app_exceptions import OpAborted
 from cube import Cube
@@ -22,6 +22,7 @@ class SolveStep(Enum):
     L2 = "L2"
     L3 = "L3"
     L3x = "L3x"
+    NxNCenters = "NxNCenters"
 
 
 class Solver(ISolver):
@@ -32,6 +33,7 @@ class Solver(ISolver):
                  "l2",
                  "l3_cross",
                  "l3_corners",
+                 "nxn_centers",
                  "common"]
 
     def __init__(self, op: Operator) -> None:
@@ -45,6 +47,7 @@ class Solver(ISolver):
         self.l2 = L2(self)
         self.l3_cross = L3Cross(self)
         self.l3_corners = L3Corners(self)
+        self.nxn_centers = NxNCenters(self)
 
         # allow solver to not put annotations
         self._running_solution = False
@@ -125,6 +128,7 @@ class Solver(ISolver):
             match what:
 
                 case SolveStep.ALL | SolveStep.L3:
+                    self.nxn_centers.solve()
                     self.l1_cross.solve_l0_cross()
                     self.l1_corners.solve()
                     self.l2.solve()
@@ -145,6 +149,9 @@ class Solver(ISolver):
                 case SolveStep.L1:
                     self.l1_cross.solve_l0_cross()
                     self.l1_corners.solve()
+
+                case SolveStep.NxNCenters:
+                    self.nxn_centers.solve()
 
         finally:
             self._debug = _d

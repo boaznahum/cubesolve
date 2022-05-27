@@ -221,7 +221,7 @@ class Window(pyglet.window.Window):
             traceback.print_exc()
 
             m = str(e)
-            s = "Some error occurred"
+            s = "Some error occurred:"
             if m:
                 s += m
 
@@ -822,6 +822,10 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 slv.solve(what=SolveStep.L3x)
             else:
                 slv.solve(what=SolveStep.L3)
+
+        case key.F4:
+
+            slv.solve(what=SolveStep.NxNCenters)
 
         case key.T:
             # test

@@ -3,6 +3,7 @@ from typing import Callable
 from _solver.icommon_op import ICommon
 from _solver.base_solver import ISolver
 from algs import Algs, Alg
+from app_exceptions import InternalSWError
 from cube import Cube
 from cube_face import Face
 from cube_operator import Operator
@@ -43,7 +44,7 @@ class CommonOp(ICommon):
 
         f: Face = self.cube.color_2_face(w)
 
-        #self.debug(w, " is on ", f)
+        # self.debug(w, " is on ", f)
 
         return f
 
@@ -93,6 +94,38 @@ class CommonOp(ICommon):
 
                 case FaceName.R:
                     self.op.op(Algs.Y + Algs.X)
+
+    def bring_face_front(self, f: Face):
+
+        """
+        By Whole cube rotation
+        :param f:
+        :return:
+        """
+
+        if f.name != FaceName.F:
+
+            self.debug("Need to Binging ", f, 'to', FaceName.F)
+
+            match f.name:
+
+                case FaceName.U:
+                    self.op.op(Algs.X.prime)
+
+                case FaceName.B:
+                    self.op.op(-Algs.X.prime * 2)
+
+                case FaceName.D:
+                    self.op.op(Algs.X)
+
+                case FaceName.L:
+                    self.op.op(Algs.Y.prime)
+
+                case FaceName.R:
+                    self.op.op(Algs.Y)
+
+                case _:
+                    raise InternalSWError(f"Unknown face {f}")
 
     def bring_edge_to_front_by_e_rotate(self, edge: Edge) -> Alg | None:
         """

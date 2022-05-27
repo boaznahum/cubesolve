@@ -796,7 +796,8 @@ class Center(Part):
         s = str(self.face.name)
         for r in range(self.n_slices):
             for c in range(self.n_slices):
-                s += str(self.get_center_slice((r, c)).edge.c_attributes["n"]) + "|"
+                #s += str(self.get_center_slice((r, c)).edge.c_attributes["n"]) + "|"
+                s += str(self.get_center_slice((r, c)).color.name) + "|"
             s += "\n"
 
         return s
@@ -925,6 +926,12 @@ class CenterSlice(PartSlice):
 
         return CenterSlice(index, *self._clone_edges())
 
+
+    @property
+    def index(self) -> CenterSliceIndex:
+        # todo: how to assert
+        return self._index  # type: ignore
+
     @property
     def edge(self) -> PartEdge:
         """
@@ -933,6 +940,10 @@ class CenterSlice(PartSlice):
         :return: The single edge in center slice
         """
         return self._edges[0]
+
+    @property
+    def color(self):
+        return self.edge.color
 
     @property
     def face(self) -> _Face:
