@@ -18,6 +18,7 @@ class Color(Enum):
     WHITE = "W"
 
 
+
 @unique
 class Direction(Enum):
     D0 = 0
@@ -55,6 +56,12 @@ PartColorsID = frozenset[Color]
 PartFixedID = frozenset[FaceName]
 PartSliceHashID = frozenset[FaceName]
 
+
+class CHelper:
+
+    @staticmethod
+    def colors_id(c: Iterable[Color]):
+        return frozenset(c)
 
 class PartEdge:
     __slots__ = ["_face", "_color", "_annotated_by_color",

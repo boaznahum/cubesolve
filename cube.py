@@ -413,9 +413,6 @@ class Cube:
         if self._modify_counter == self._last_sanity_counter:
             return
 
-        if not self.is3x3:
-            return
-
         # if True:
         #     return
 
@@ -428,7 +425,26 @@ class Cube:
 
     def _do_sanity(self, force_check=False):
 
-        if not force_check and not config.CHECK_CUBE_SANITY:
+        if not ( force_check or config.CHECK_CUBE_SANITY):
+            return
+
+        # find all corners , NxN still have simple corners
+
+        corners = [
+            (Color.YELLOW, Color.ORANGE, Color.BLUE),
+            (Color.YELLOW, Color.RED, Color.BLUE),
+            (Color.YELLOW, Color.ORANGE, Color.GREEN),
+            (Color.YELLOW, Color.RED, Color.GREEN),
+            (Color.WHITE, Color.ORANGE, Color.BLUE),
+            (Color.WHITE, Color.RED, Color.BLUE),
+            (Color.WHITE, Color.ORANGE, Color.GREEN),
+            (Color.WHITE, Color.RED, Color.GREEN),
+        ]
+
+        for c in corners:
+            self.find_corner_by_colors(CHelper.colors_id(c))
+
+        if not self.is3x3:
             return
 
         for c in Color:
