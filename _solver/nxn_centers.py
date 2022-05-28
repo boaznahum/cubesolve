@@ -83,12 +83,12 @@ class NxNCenters(SolverElement):
 
         self.debug(f"Working on face {face}")
 
-        missing = self.count_missing(face, color)
-        on_back = self.count_color_on_face(face.opposite, color)
-
-        if missing == on_back:
-            self.debug(f"On face {face}, required color is {color}, all {missing} missing are no opposite")
-            return False
+        # missing = self.count_missing(face, color)
+        # on_back = self.count_color_on_face(face.opposite, color)
+        #
+        # if missing == on_back:
+        #     self.debug(f"On face {face}, required color is {color}, all {missing} missing are no opposite")
+        #     return False
 
         cmn.bring_face_front(face)
 
@@ -98,23 +98,38 @@ class NxNCenters(SolverElement):
 
         work_done = False
 
-        for _ in range(4):  # 4 faces
+        for _ in range(3):  # 3 faces
             # need to optimize ,maybe no sources on this face
 
-            if self._do_center_from_face(face, color, cube.up):
+            # don't use face - it was moved !!!
+            if self._do_center_from_face(cube.front, color, cube.up):
                 work_done = True
 
             if self._is_face_solved(face, color):
-                break
+                return work_done
 
             self._bring_face_up_preserve_Front(cube.left)
+
+        # on the last face
+        # don't use face - it was moved !!!
+        if self._do_center_from_face(cube.front, color, cube.up):
+            work_done = True
+
+        if self._is_face_solved(face, color):
+            return work_done
+
+        if False:
+            # now from back
+            # don't use face - it was moved !!!
+            if self._do_center_from_face(cube.front, color, cube.back):
+                work_done = True
 
         return work_done
 
     def _do_center_from_face(self, face: Face, color: Color, source_face: Face) -> bool:
 
         """
-        The sources are on source_face !!!
+        The sources are on source_face !!! source face is in its location up /back
         The target face is on front !!!
         :param face:
         :param color:
@@ -125,6 +140,9 @@ class NxNCenters(SolverElement):
         cube = self.cube
 
         assert source_face in [cube.up, cube.back]
+
+        if self.count_color_on_face(source_face, color) == 0:
+            return False  # nothing can be done here
 
         n = cube.n_slices
 
@@ -170,30 +188,45 @@ class NxNCenters(SolverElement):
         # before the rotation
         assert required_color == source.color
 
-        self._bring_face_up_preserve_Front(source.face)
+        source_face = source.face
+
+        is_back = source_face is self.cube.back
+
+        rotate_source: algs.Alg
+        target_to_source_conversion: int
+        if is_back:
+            target_to_source_conversion = 1
+            rotate_source = Algs.B
+        else:
+            target_to_source_conversion = 0
+            rotate_source = Algs.U
 
         # Because it was moved, index might be changed
         r, c = cs.index
 
-        with self.w_slice_annotate(cs):
-            up = self.cube.up
-            new_location_source = self._find_matching_slice(up, r, c, required_color)
+        # with self.w_slice_annotate(cs):
+        if True:
+            new_location_source = self._find_matching_slice(source_face, r, c, required_color)
             assert new_location_source
             source = new_location_source
             assert required_color == source.color
 
-            self.debug(f" Source {source} is now on {source.face.name} {source.index}")
+            source_index = self.rotate_point_clockwise(r, c, n=target_to_source_conversion)
+
+            self.debug(f" Source {source} is now on {source.face.name} {source.index} , but assume {source_index}")
 
             # optimize it, can be done by less rotation, more math
             for _ in range(0, 4):
-                if up.center.get_center_slice((r, c)).color == required_color:  # maybe it will find other :)
+                if source_face.center.get_center_slice(source_index).color == required_color:  # maybe it will find other :)
                     break
-                self.op.op(Algs.U)
+                self.op.op(rotate_source)
 
-            source_slice = up.center.get_center_slice((r, c))
+            source_slice = source_face.center.get_center_slice(source_index)
             assert source_slice.color == required_color
 
-            with self.w_slice_annotate(source_slice):
+
+            if True:
+            #with self.w_slice_annotate(source_slice):
 
                 self.debug(f" On  {source.face.name} , {(r, c)} is {source_slice.color}")
 
@@ -222,13 +255,18 @@ class NxNCenters(SolverElement):
                 R1 = Algs.M[inv(c) + 1:inv(c) + 1]
                 R2 = Algs.M[inv(cc) + 1:inv(cc) + 1]
 
+                if is_back:
+                    r1_mul = 2
+                else:
+                    r1_mul = 1
+
                 self.debug(f"Doing communicator on {(r, c)} using second column {cc}, rotating {on_front_rotate}")
 
-                _algs = [R1.prime,
+                _algs = [R1.prime * r1_mul,
                          on_front_rotate,
                          R2.prime,
                          on_front_rotate.prime,
-                         R1,
+                         R1 * r1_mul,
                          on_front_rotate,
                          R2,
                          on_front_rotate.prime]
@@ -236,7 +274,11 @@ class NxNCenters(SolverElement):
                 for a in _algs:
                     self.op.op(a)  # so I can debug
 
-                #       raise RuntimeError("Stopped")
+                if cs.color != required_color:
+                    print()
+                assert cs.color == required_color, f"Color was not solved, {(r,c)} {cs} color is {cs.color}, {required_color=}"
+
+                print(f"Color was  solved, {(r, c)} {cs} color is {cs.color}, {required_color=} , from {source_slice}")
 
     def _is_face_solved(self, face: Face, color: Color) -> bool:
 
@@ -297,8 +339,11 @@ class NxNCenters(SolverElement):
             yield r, c
             (r, c) = (c, inv(r))
 
-    def rotate_point_clockwise(self, row: int, column: int) -> Tuple[int, int]:
-        return self.cube.inv(column), row
+    def rotate_point_clockwise(self, row: int, column: int, n=1) -> Tuple[int, int]:
+        for i in range(0, n%4):
+            row, column = self.cube.inv(column), row
+
+        return row, column
 
     def rotate_point_counterclockwise(self, row: int, column: int) -> Tuple[int, int]:
         return column, self.cube.inv(row)
