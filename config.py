@@ -5,3 +5,5 @@ DONT_OPTIMIZED_PART_ID=False
 PRINT_CUBE_AS_TEXT_DURING_SOLVE=False
 
 CHECK_CUBE_SANITY=True
+
+animation_enabled=True

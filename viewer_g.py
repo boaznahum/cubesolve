@@ -16,7 +16,7 @@ import shapes
 from cube import Cube
 from cube_face import Face
 from cube_slice import SliceName
-from elements import Color, Part, FaceName, PartFixedID, AxisName, SuperElement
+from elements import Color, Part, FaceName, PartFixedID, AxisName, SuperElement, CenterSlice
 from elements import Corner, Edge, Center, PartSliceHashID, PartSlice
 
 from view_state import ViewState
@@ -294,7 +294,7 @@ class _Cell:
 
                     # ix = _inv(ix, is_back)
 
-                    _slice = part.get_slice((iy, ix))
+                    _slice: CenterSlice = part.get_slice((iy, ix))
 
                     color = self._slice_color(_slice)
                     with self._gen_list_for_slice(_slice, dest):
@@ -306,12 +306,18 @@ class _Cell:
                         edge = _slice.get_face_edge(cube_face)
                         attributes = edge.attributes
                         shapes.quad_with_line(vx, color, lw, lc)
+
+
                         if attributes["origin"]:
                             shapes.cross(vx, cross_width, cross_color)
                         if attributes["on_x"]:
                             shapes.cross(vx, cross_width_x, cross_color_x)
                         if attributes["on_y"]:
                             shapes.cross(vx, cross_width_y, cross_color_y)
+
+                        if _slice.edge.c_attributes["annotation"]:
+                            self._create_markers(vx, (0, 0, 0), True)
+
 
     # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):

@@ -12,6 +12,7 @@ from pyglet import gl
 from pyglet.window import key  # type: ignore
 
 import algs
+import config
 from algs import Alg, Algs
 from app_exceptions import AppExit, RunStop, OpAborted
 from cube import Cube
@@ -58,7 +59,7 @@ class Main:
 
         self.cube = Cube(self.vs.cube_size)
 
-        self.op: Operator = Operator(self.cube)
+        self.op: Operator = Operator(self.cube, config.animation_enabled)
 
         self.slv: Solver = Solver(self.op)
 

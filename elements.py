@@ -140,6 +140,8 @@ CenterSliceIndex = Tuple[int, int]
 SliceIndex = EdgeSliceIndex | CenterSliceIndex  # type: ignore # row, column, must be hashable
 
 
+# a patch
+_SliceUniqueID:int = 0
 class PartSlice(ABC):
     """
 
@@ -153,7 +155,8 @@ class PartSlice(ABC):
     """
     __slots__ = ["_cube", "_parent", "_index", "_edges", "_colors_id_by_pos",
                  "_fixed_id",
-                 "_colors_id_by_colors"]
+                 "_colors_id_by_colors",
+                 "_unique_id"]
     _edges: MutableSequence[PartEdge]
 
     def __init__(self, index: SliceIndex, *edges: PartEdge) -> None:
@@ -167,6 +170,10 @@ class PartSlice(ABC):
         self._colors_id_by_pos: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
         self._parent: Part | None = None
+
+        global _SliceUniqueID
+        _SliceUniqueID += 1
+        self._unique_id = _SliceUniqueID
 
     def set_parent(self, p: "Part"):
         self._parent = p
@@ -235,10 +242,13 @@ class PartSlice(ABC):
 
             target_edge.copy_color(source_edge)
 
+        self._unique_id = source_slice._unique_id
         # this is critical for 3x3
         parent = self._parent
         assert parent
         parent.reset_colors_id()
+
+
 
     def f_color(self, f: _Face):
         """
@@ -358,7 +368,13 @@ class PartSlice(ABC):
         return [e.clone() for e in self._edges]
 
     def clone(self) -> "PartSlice":
-        return PartSlice(self._index, *self._clone_edges())
+        s = PartSlice(self._index, *self._clone_edges())
+        s._unique_id = self._unique_id
+        return s
+
+    @property
+    def unique_id(self):
+        return self._unique_id
 
 
 class CubeElement:
@@ -813,10 +829,17 @@ class EdgeSlice(PartSlice):
         self.e2: PartEdge = edges[1]
 
     def clone(self) -> "EdgeSlice":
+
+
+
         index = self._index
         assert isinstance(index, int)  # satisfy mypy
 
-        return EdgeSlice(index, *self._clone_edges())
+        e = EdgeSlice(index, *self._clone_edges())
+        # todo fix it should be done by super clone
+        e._unique_id = self._unique_id
+
+        return e
 
     def single_shared_face(self, other: "EdgeSlice") -> _Face:
         """
@@ -924,7 +947,12 @@ class CenterSlice(PartSlice):
         index = self._index
         assert isinstance(index, tuple)  # satisfy mypy
 
-        return CenterSlice(index, *self._clone_edges())
+        c = CenterSlice(index, *self._clone_edges())
+        # todo fix it should be done by super clone
+        c._unique_id = self._unique_id
+
+        return c
+
 
 
     @property

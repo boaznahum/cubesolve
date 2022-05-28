@@ -12,14 +12,14 @@ class Operator:
     __slots__ = ["_cube", "_history", "_animation_hook", "_animation_running",
                  "_aborted", "_animation_enabled"]
 
-    def __init__(self, cube: Cube) -> None:
+    def __init__(self, cube: Cube, animation_enabled: bool) -> None:
         super().__init__()
         self._aborted: Any = None
         self._cube = cube
         self._history: MutableSequence[Alg] = []
         self._animation_hook: Callable[["Operator", SimpleAlg], None] | None = None
         self._animation_running = False
-        self._animation_enabled: bool = False
+        self._animation_enabled: bool = animation_enabled
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 

@@ -154,8 +154,20 @@ class Face(SuperElement):
 
     @property
     def color(self):
+        """
+        The color of center, valid in 3x3 only or for odd cubes !!!
+        :return:
+        """
         return self.center.color
 
+    @property
+    def original_color(self):
+        """
+        The color the face was born with, never changed, doesn't move
+        good only for locate physical faces
+        :return:
+        """
+        return self._original_color
     def __str__(self) -> str:
         #return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"
         return f"{self._center.edg().color.name}@{self._name.value}"
@@ -411,3 +423,5 @@ class Face(SuperElement):
     def slices(self) -> Iterable[PartSlice]:
         for p in self._parts:
             yield from p.all_slices
+
+

@@ -7,7 +7,10 @@ from algs import Algs
 from cube import Cube
 from cube_face import Face
 from cube_operator import Operator
-from elements import Part, PartColorsID
+from cube_queries import CubeQueries
+from elements import Part, PartColorsID, CenterSlice
+
+_SLice_Tracking_UniqID: int = 0
 
 
 @unique
@@ -160,3 +163,45 @@ class SolverElement:
             what_to_track.append((c, by_position))
 
         yield from self._w_annotate(*what_to_track)
+
+
+    @contextmanager
+    def w_slice_annotate(self, *slices: CenterSlice):
+
+        """
+        Annotate moved slice
+        :param elements:  bool in tuple is  'annotated by fixed_location'
+        if part is given we annotate the part (by color or by fixed), if color is given we search for it
+        :param un_an:
+        :return:
+        """
+
+        on = self.op.animation_enabled
+
+        global _SLice_Tracking_UniqID
+
+        if not on:
+            try:
+                yield None
+            finally:
+                return
+
+        ids = []
+        for s in slices:
+            _SLice_Tracking_UniqID += 1
+            ids.append(_SLice_Tracking_UniqID)
+            s.edge.c_attributes["annotation"] = True
+            s.edge.c_attributes["annotation_track"] = _SLice_Tracking_UniqID
+
+        self.op.op(Algs.AN)
+
+        try:
+            yield None
+        finally:
+
+            cube = self.cube
+            for i in ids:
+                s = CubeQueries.find_center_slice(cube, lambda _s : i == _s.edge.c_attributes["annotation_track"])
+                del s.edge.c_attributes["annotation"]
+
+            self.op.op(Algs.AN)
