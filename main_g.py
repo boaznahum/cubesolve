@@ -849,7 +849,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
                 # noinspection PyBroadException
                 try:
-                    slv.solve(animation=False)
+                    slv.solve(animation=False, debug=False)
                     assert slv.is_solved
 
                 except Exception:

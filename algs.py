@@ -91,7 +91,8 @@ class _Inv(Alg):
         """
 
         if isinstance(self._alg, _Inv):
-            return self._alg.simplify()
+            # X'' = X
+            return self._alg._alg.simplify()
 
         a = self._alg.simplify()  # can't be _Mul, nor Inv
 
@@ -828,6 +829,11 @@ class Algs:
         return cls.alg(None, *algs).count()
 
 
+def _test_prime_prime():
+    a = Algs.F.prime.prime
+    ap = a.simplify()
+    print(f"{a} {ap=}")
+
 if __name__ == '__main__':
     # alg = Algs.alg(None, _R(), (_R().prime * 2 + Algs.R * 2))
     # print(alg)
@@ -838,9 +844,11 @@ if __name__ == '__main__':
     # print(_a.__str__())
     # print(alg.simplify())
 
-    m = Algs.M[2:3] * 2
-    print(m)
-    print(m.prime)
-    flatten = m.flatten()
-    print(flatten)
+    _test_prime_prime()
+
+    # m = Algs.M[2:3] * 2
+    # print(m)
+    # print(m.prime)
+    # flatten = m.flatten()
+    # print(flatten)
 
