@@ -68,7 +68,7 @@ class NxNCenters(SolverElement):
 
         for r in range(0, n):  # 5: 3..4
 
-            for j in range(n2+1, n):
+            for j in range(n):
                 cs: CenterSlice = center.get_center_slice((r, j))
 
                 if cs.color != color:
@@ -137,6 +137,9 @@ class NxNCenters(SolverElement):
 
         assert up.center.get_center_slice((r, c)).color == required_color
 
+        self.debug(f" On  {source.face.name} , {(r,c)} is {up.center.get_center_slice((r, c)).color}")
+
+
         # this can be done, because Front and UP have the same coordinates system !!!
         # now do the communicator:
         n_slices = self.cube.n_slices
@@ -154,11 +157,14 @@ class NxNCenters(SolverElement):
         elif c < n_slices //2 :
             F = Algs.F.prime
         else:
-            raise InternalSWError(f"Not yet supported {c}=={n_slices // 2}")
+            self.debug(f"Not yet supported {r}=={n_slices // 2}")
+            return
 
         _algs = [R1.prime, F, R2.prime, F.prime, R1, F, R2, F.prime]
         for a in _algs:
             self.op.op(a)  # so I can debug
+
+        x=0
 
 
 
