@@ -321,7 +321,7 @@ class SliceAbleAlg(SimpleAlg, ABC):
         if self.a_slice is not None:
             raise InternalSWError(f"Already sliced: {self}")
         if isinstance(items, int):
-            a_slice = slice(items)  # start/stop the same
+            a_slice = slice(items,items)  # start/stop the same
         elif isinstance(items, slice):
             a_slice = items
         else:
@@ -337,55 +337,38 @@ class SliceAbleAlg(SimpleAlg, ABC):
         if not self.a_slice:
             return None
 
-        sl = self.a_slice
-
-        start = sl.start
-        stop = sl.stop
-
-        if stop and not start:
-            return 1
-        else:
-            return start  # maybe be None
+        return self.a_slice.start
 
     @property
     def stop(self):
         if not self.a_slice:
             return None
+        return self.a_slice.stop
 
-        sl = self.a_slice
 
-        return sl.stop  # may be NOne
-
+    @abstractmethod
     def _add_to_str(self, s):
-        if not self.a_slice:
-            return s
-
-        start = self.start
-        stop = self.stop
-
-        if not start and not stop:
-            return s
-
-        if start == stop or not stop:
-            if start == 1:
-                return s
-            else:
-                return str(start) + s
-        else:
-            return "[" + str(start) + "," + str(stop) + "]" + s
+        pass
 
     def atomic_str(self):
         return self._add_to_str(super().atomic_str())
 
-    def normalize_slice_index(self, default: slice) -> slice:
+    def normalize_slice_index(self, n_max: int, default: slice) -> slice:
 
         """
         We have no way to no what is max n
         :default in [1,n] space
-        :return:
-        """
+        :return: below - (1,1)
 
-        """
+            [i] -> (i,i)  - by  get_item
+            None -> (None, None)
+
+            (None, None) -> default
+            (start, None) -> (start, n_max)
+            (None, Stop) -> (1, stop)
+            (start, stop) -> (1, stop)
+
+
 
         :return: [start, stop] in cube coordinates [0, size-2]
         """
@@ -400,7 +383,7 @@ class SliceAbleAlg(SimpleAlg, ABC):
             _start, _stop = (default.start, default.stop)
 
         elif start and not stop:
-            _start, _stop = (start, start)
+            _start, _stop = (start, n_max)
 
         elif not start and stop:
             _start, _stop = (1, stop)
@@ -424,16 +407,49 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
     def face(self) -> FaceName:
         return self._face
 
+    def _add_to_str(self, s):
+        """
+            None -> default = R
+            (None, None) -> default R
+            (1, 1) -> default R
+            (start, None) -> [start:]R
+            (None, stop) -> [:stop] == [1:stop]
+            (start, stop) -> [start:stop]
+
+        :param s:
+        :return:
+        """
+
+        start = self.start
+        stop = self.stop
+
+        if not start and not stop:
+            return s
+
+        if 1 == start and 1 == stop:
+            return s
+
+        if start and not stop:
+            return "[" + str(start) + ":" + "]" + s
+
+        if not start and stop:
+            return "[1:" + str(stop) + "]" + s
+
+        if start and stop:
+            return "[" + str(start) + ":" + str(stop) + "]" + s
+
+        raise InternalSWError(f"Unknown {start} {stop}")
+
     @final
     def play(self, cube: Cube, inv: bool):
-        start_stop = self.normalize_slice_index(default=slice(1, 1))
+        start_stop = self.normalize_slice_index(n_max=1 + cube.n_slices, default=slice(1, 1))
 
         cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
 
     def get_animation_objects(self, cube) -> Tuple[FaceName, Collection[PartSlice]]:
         face = self._face
 
-        start_stop = self.normalize_slice_index(default=slice(1, 1))
+        start_stop = self.normalize_slice_index(n_max=1 + cube.n_slices, default=slice(1, 1))
 
         parts: Collection[Any] = cube.get_rotate_face_and_slice_involved_parts(face, start_stop)
 
@@ -493,7 +509,7 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
     def play(self, cube: Cube, inv: bool):
         # cube.rotate_slice(self._slice_name, _inv(inv, self._n))
 
-        start_stop = self.normalize_slice_index(default=slice(1, cube.n_slices))
+        start_stop = self.normalize_slice_index(n_max=cube.n_slices, default=slice(1, cube.n_slices))
 
         cube.rotate_slice(self._slice_name, _inv(inv, self._n), start_stop)
 
@@ -516,9 +532,39 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
             case _:
                 raise RuntimeError(f"Unknown Slice {name}")
 
-        start_stop = self.normalize_slice_index(default=slice(1, cube.n_slices))
+        start_stop = self.normalize_slice_index(n_max=cube.n_slices, default=slice(1, cube.n_slices))
 
         return face_name, cube.get_rotate_slice_involved_parts(name, start_stop)
+
+    def _add_to_str(self, s):
+        """
+            None -> default = M
+            (None, None) -> default M
+            (start, None) -> [start:]R
+            (None, stop) -> [:stop] == [1:stop]
+            (start, stop) -> [start:stop]
+
+        :param s:
+        :return:
+        """
+
+        start = self.start
+        stop = self.stop
+
+        if not start and not stop:
+            return s
+
+        if start and not stop:
+            return "[" + str(start) + ":" + "]" + s
+
+        if not start and stop:
+            return "[1:" + str(stop) + "]" + s
+
+        if start and stop:
+            return "[" + str(start) + ":" + str(stop) + "]" + s
+
+        raise InternalSWError(f"Unknown {start} {stop}")
+
 
 
 @final
@@ -834,6 +880,7 @@ def _test_prime_prime():
     ap = a.simplify()
     print(f"{a} {ap=}")
 
+
 if __name__ == '__main__':
     # alg = Algs.alg(None, _R(), (_R().prime * 2 + Algs.R * 2))
     # print(alg)
@@ -851,4 +898,3 @@ if __name__ == '__main__':
     # print(m.prime)
     # flatten = m.flatten()
     # print(flatten)
-
