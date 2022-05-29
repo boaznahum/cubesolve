@@ -20,6 +20,8 @@ _status = None
 
 class NxNCenters(SolverElement):
 
+    work_on_b: bool = False
+
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)
 
@@ -63,7 +65,7 @@ class NxNCenters(SolverElement):
                 _f: Face = CubeQueries.find_face(self.cube, lambda _x: _x.original_color == f.original_color)
                 if self._do_center(_f, _f.color):
                     work_done = True
-            if not work_done:
+            if NxNCenters.work_on_b or not work_done:
                 break
 
     def _do_center(self, face: Face, color: Color) -> bool:
@@ -118,7 +120,7 @@ class NxNCenters(SolverElement):
         if self._is_face_solved(face, color):
             return work_done
 
-        if False:
+        if NxNCenters.work_on_b:
             # now from back
             # don't use face - it was moved !!!
             if self._do_center_from_face(cube.front, color, cube.back):
@@ -161,6 +163,22 @@ class NxNCenters(SolverElement):
                     if self._fix_center_slice(cs, color, source_face):
                         work_done = True
 
+        if not work_done:
+            self.debug(f"Internal error, no work was done on face {face} required color {color}, "
+                       f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}")
+            for r in range(n):
+                for c in range(n):
+                    if center.get_center_slice((r, c)).color != color:
+                        print(f"Missing: {(r,c)}  {[*self._get_four_center_points(r,c)]}")
+            for r in range(n):
+                for c in range(n):
+                    if source_face.center.get_center_slice((r, c)).color == color:
+                        print(f"Found on {source_face}: {(r,c)}  {source_face.center.get_center_slice((r, c))}")
+
+
+
+            raise InternalSWError("See error in log")
+
         return work_done
 
     def _fix_center_slice(self, cs: CenterSlice, required_color, source_face: Face) -> bool:
@@ -190,7 +208,8 @@ class NxNCenters(SolverElement):
 
         source_face = source.face
 
-        is_back = source_face is self.cube.back
+        cube = self.cube
+        is_back = source_face is cube.back
 
         rotate_source: algs.Alg
         target_to_source_conversion: int
@@ -211,7 +230,14 @@ class NxNCenters(SolverElement):
             source = new_location_source
             assert required_color == source.color
 
-            source_index = self.rotate_point_clockwise(r, c, n=target_to_source_conversion)
+            if is_back:
+                # compute index on back face - sees lice rotating
+                next_slice_index = cube.up.edge_top.get_slice_index_from_ltr_index(cube.up, c)
+                # now index on next face
+                c_on_back = cube.up.edge_top.get_ltr_index_from_slice_index(cube.back, next_slice_index)
+                source_index=(r, c_on_back)
+            else:
+                source_index = (r, c)
 
             self.debug(f" Source {source} is now on {source.face.name} {source.index} , but assume {source_index}")
 
@@ -232,7 +258,7 @@ class NxNCenters(SolverElement):
 
                 # this can be done, because Front and UP have the same coordinates system !!!
 
-                inv = self.cube.inv
+                inv = cube.inv
 
                 on_front_rotate: algs.Alg
 

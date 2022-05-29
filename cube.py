@@ -1,8 +1,9 @@
-from typing import Collection
+from typing import Collection, Callable, Tuple, Mapping, Hashable, Sequence
 
 from cube_face import Face
 from cube_slice import Slice, SliceName
 from elements import *
+from elements import Color
 
 
 class Cube:
@@ -425,7 +426,7 @@ class Cube:
 
     def _do_sanity(self, force_check=False):
 
-        if not ( force_check or config.CHECK_CUBE_SANITY):
+        if not (force_check or config.CHECK_CUBE_SANITY):
             return
 
         # find all corners , NxN still have simple corners
@@ -443,6 +444,75 @@ class Cube:
 
         for c in corners:
             self.find_corner_by_colors(CHelper.colors_id(c))
+
+        # very expansive, but there is a corruption
+        if True:
+
+            n_slices = self.n_slices
+
+            from cube_queries import CubeQueries
+
+            dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = CubeQueries.get_dist(self)
+
+            for clr in Color:
+                clr_dist= dist[clr]
+
+                def _print_clr():
+                    for k, v in clr_dist.items():
+                        if len(v) != 4:
+                            m = "!!!"
+                        else:
+                            m = "+++"
+                        print(clr, k, f"{m}{len(v)}{m}", v)
+
+                clr_n = sum(len(s) for s in clr_dist.values())
+
+                if clr_n != n_slices * n_slices:
+                    s = f"Too few entries for color {clr}"
+                    _print_clr()
+                    print(s)
+                    raise InternalSWError(s)
+                for k, v in clr_dist.items():
+                    if len(v) != 4:
+                        s = f"Too few point {k} entire for color {clr}"
+                        _print_clr()
+                        print(s)
+                        raise InternalSWError(s)
+
+            for clr in Color:
+
+                def _c_pred(_r, _c):
+
+                    def pred(cs: CenterSlice) -> bool:
+                        if not cs.color == clr:
+                            return False
+
+                        return cs.index in CubeQueries.get_four_center_points(self, _r, _c)
+                        #return cs.index == rc
+
+                    return pred
+
+                for r in range(self.n_slices):
+                    for c in range(self.n_slices):
+                        if not CubeQueries.find_center_slice(self, _c_pred(r, c)):
+                            n = 0
+                            counter = defaultdict(int)
+                            for f in self.faces:
+                                for r in range(self.n_slices):
+                                    for c in range(self.n_slices):
+                                        s = f.center.get_center_slice((r,c))
+                                        if s.color == clr:
+                                            n += 1
+                                            key = frozenset([*CubeQueries.get_four_center_points(self, r, c)])
+                                            counter[key] += 1
+                                            print(n, "]", s, *CubeQueries.get_four_center_points(self, r, c))
+                            for k,v in counter.items():
+                                print(k, v)
+
+                            raise InternalSWError(f"{(clr, r, c)}")
+                            assert CubeQueries.find_center_slice(self, _c_pred(r, c)), f"{(clr, r, c)}"
+
+
 
         if not self.is3x3:
             return

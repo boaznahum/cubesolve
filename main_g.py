@@ -1,4 +1,5 @@
 import math
+import sys
 import time
 import traceback
 from collections.abc import Iterable, Sequence, Container, Collection, Set
@@ -140,10 +141,12 @@ class Window(pyglet.window.Window):
         self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
                                            x=10, y=10, font_size=10))
         h = Algs.simplify(*self.app.op.history)
-        self.text.append(pyglet.text.Label("History: #" + str(h.count()) + "  " + str(h),
+        sh = str(h)[-70:]
+        self.text.append(pyglet.text.Label("History: #" + str(h.count()) + "  " + sh,
                                            x=10, y=30, font_size=10))
         h = self.app.op.history
-        self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + str(h),
+        sh = str(h)[-70:]
+        self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + sh,
                                            x=10, y=50, font_size=10))
         err = "R L U S/Z/F B D  M/X/R E/Y/U (SHIFT-INv), ?-Solve, Clear, Q " + "0-9 scramble1, <undo, Test"
         self.text.append(pyglet.text.Label(err,
@@ -159,7 +162,7 @@ class Window(pyglet.window.Window):
         err = f"Animation:{'On' if self.app.op.animation_enabled else 'Off'}"
         self.text.append(pyglet.text.Label(err,
                                            x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
-        s = f"Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
+        s = f"S={cube.size}, Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
 
         s += ", Slices"
         vs = self.app.vs
@@ -614,6 +617,8 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
 
 _last_face: FaceName = FaceName.R
 
+good = algs._BigAlg("good")
+
 
 def _handle_input(window: Window, value: int, modifiers: int):
     # print(f"{hex(value)}=")
@@ -652,6 +657,8 @@ def _handle_input(window: Window, value: int, modifiers: int):
     def _slice_alg(r: algs.SliceAbleAlg):
         return vs.slice_alg(app.cube, r)
 
+
+    global good
     # noinspection PyProtectedMember
     match value:
 
@@ -659,6 +666,8 @@ def _handle_input(window: Window, value: int, modifiers: int):
         case key.I:
             print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
             no_operation = True
+            from cube_queries import CubeQueries
+            CubeQueries.print_dist(app.cube)
 
         case key.W:
             app.cube.front.corner_top_right.annotate(False)
@@ -789,8 +798,12 @@ def _handle_input(window: Window, value: int, modifiers: int):
             app.reset(not (modifiers and key.MOD_CTRL))
 
         case key._0:
-            alg = Algs.scramble(app.cube.size)
-            op.op(alg, inv, animation=False)
+            if modifiers & key.MOD_ALT:
+                alg = Algs.R[1:3] + Algs.D[3:4] + Algs.S + Algs.L * 2 + Algs.B * 5
+                op.op(alg, inv, animation=False)
+            else:
+                alg = Algs.scramble(app.cube.size)
+                op.op(alg, inv, animation=False)
 
         case key._1:
             # noinspection PyProtectedMember
@@ -798,10 +811,37 @@ def _handle_input(window: Window, value: int, modifiers: int):
             op.op(alg, inv, animation=False)
 
         case key._2 | key._3 | key._4 | key._5 | key._6:
-            # to match test int
-            # noinspection PyProtectedMember
-            alg = Algs.scramble(app.cube.size, value - key._0)
-            op.op(alg, inv, animation=False)
+
+            print(f"{modifiers & key.MOD_CTRL=}  {modifiers & key.MOD_ALT=}")
+            if modifiers & key.MOD_CTRL:
+                balg: algs._BigAlg = Algs.scramble(app.cube.size, value - key._0)
+                good = algs._BigAlg("good")
+                for a in balg.algs:
+                    try:
+                        op.op(a, animation=False)
+                        good = good + a
+                    except:
+                        from cube_queries import CubeQueries
+                        CubeQueries.print_dist(app.cube)
+                        print("Faild on", a)
+                        print(good)
+                        raise
+            elif modifiers & key.MOD_ALT:
+                print("Rerunning good:", good)
+                for a in good.algs:
+                    try:
+                        op.op(a, animation=False)
+                        from cube_queries import CubeQueries
+                        CubeQueries.print_dist(app.cube)
+                    except:
+                        print(good)
+                        raise
+
+            else:
+                # to match test int
+                # noinspection PyProtectedMember
+                alg = Algs.scramble(app.cube.size, value - key._0)
+                op.op(alg, inv, animation=False)
 
         case key.COMMA:
             op.undo()

@@ -1,17 +1,20 @@
-from typing import Callable, TypeVar
+from collections import defaultdict
+from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping
+from typing import Callable, TypeVar, Tuple
 
 from app_exceptions import InternalSWError
 from cube import Cube
 from cube_face import Face
-from elements import PartSlice, CenterSlice
+from elements import PartSlice, CenterSlice, Color
 
-T=TypeVar("T")
-Pred=Callable[[T], bool]
+T = TypeVar("T")
+Pred = Callable[[T], bool]
+
 
 class CubeQueries:
 
     @staticmethod
-    def find_face(cube: Cube, pred:Pred[Face]) -> Face:
+    def find_face(cube: Cube, pred: Pred[Face]) -> Face:
 
         s: PartSlice
         for f in cube.faces:
@@ -42,4 +45,51 @@ class CubeQueries:
 
         return None
 
+    @staticmethod
+    def get_four_center_points(cube: Cube, r, c) -> Iterator[Tuple[int, int]]:
 
+        inv = cube.inv
+
+        for _ in range(4):
+            yield r, c
+            (r, c) = (c, inv(r))
+
+    @staticmethod
+    def print_dist(cube: Cube):
+        for clr in Color:
+            n = 0
+            counter: dict[Hashable, MutableSequence[Tuple[int, int]]] = defaultdict(list)
+            for f in cube.faces:
+                for r in range(cube.n_slices):
+                    for c in range(cube.n_slices):
+                        s = f.center.get_center_slice((r, c))
+                        if s.color == clr:
+                            n += 1
+                            key = frozenset([*CubeQueries.get_four_center_points(cube, r, c)])
+                            counter[key].append((r, c))
+                            # print(n, "]", s, *CubeQueries.get_four_center_points(cube, r, c))
+            for k, v in counter.items():
+                if len(v) != 4:
+                    m = "!!!"
+                else:
+                    m = "+++"
+                print(clr, k, f"{m}{len(v)}{m}", v)
+
+    @staticmethod
+    def get_dist(cube: Cube) -> Mapping[Color, Mapping[Hashable, Sequence[Tuple[int, int]]]]:
+
+        dist: Mapping[Color, MutableMapping[Hashable, MutableSequence[Tuple[int, int]]]]
+
+        dist = defaultdict(lambda: defaultdict(list))
+
+        for clr in Color:
+            counter: MutableMapping[Hashable, MutableSequence[Tuple[int, int]]] = dist[clr]
+            for f in cube.faces:
+                for r in range(cube.n_slices):
+                    for c in range(cube.n_slices):
+                        s = f.center.get_center_slice((r, c))
+                        if s.color == clr:
+                            key = frozenset([*CubeQueries.get_four_center_points(cube, r, c)])
+                            counter[key].append((r, c))
+                            # print(n, "]", s, *CubeQueries.get_four_center_points(cube, r, c))
+        return dist
