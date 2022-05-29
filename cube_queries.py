@@ -82,14 +82,13 @@ class CubeQueries:
 
         dist = defaultdict(lambda: defaultdict(list))
 
-        for clr in Color:
-            counter: MutableMapping[Hashable, MutableSequence[Tuple[int, int]]] = dist[clr]
-            for f in cube.faces:
-                for r in range(cube.n_slices):
-                    for c in range(cube.n_slices):
-                        s = f.center.get_center_slice((r, c))
-                        if s.color == clr:
-                            key = frozenset([*CubeQueries.get_four_center_points(cube, r, c)])
-                            counter[key].append((r, c))
-                            # print(n, "]", s, *CubeQueries.get_four_center_points(cube, r, c))
+        for f in cube.faces:
+            for r in range(cube.n_slices):
+                for c in range(cube.n_slices):
+                    s = f.center.get_center_slice((r, c))
+                    clr = s.color
+                    counter: MutableMapping[Hashable, MutableSequence[Tuple[int, int]]] = dist[clr]
+                    key = frozenset([*CubeQueries.get_four_center_points(cube, r, c)])
+                    counter[key].append((r, c))
+                        # print(n, "]", s, *CubeQueries.get_four_center_points(cube, r, c))
         return dist

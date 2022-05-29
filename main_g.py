@@ -799,7 +799,14 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
         case key._0:
             if modifiers & key.MOD_ALT:
-                alg = Algs.R[1:3] + Algs.D[3:4] + Algs.S + Algs.L * 2 + Algs.B * 5
+                # Faild on [5:5]B
+                # [{good} [3:3]R [3:4]D S [2:2]L]
+
+                alg = alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2] # + Algs.B[5:5]
+                op.op(alg, inv, animation=False)
+
+            elif modifiers & key.MOD_CTRL:
+                alg = alg = Algs.B[5:5]
                 op.op(alg, inv, animation=False)
             else:
                 alg = Algs.scramble(app.cube.size)

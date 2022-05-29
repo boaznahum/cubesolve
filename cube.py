@@ -474,10 +474,18 @@ class Cube:
                     raise InternalSWError(s)
                 for k, v in clr_dist.items():
                     if len(v) != 4:
-                        s = f"Too few point {k} entire for color {clr}"
-                        _print_clr()
-                        print(s)
-                        raise InternalSWError(s)
+                        if n_slices % 2 and k == frozenset([*CubeQueries.get_four_center_points(self, n_slices//2, n_slices //2)]):
+                            if len(v) != 1:
+                                s = f"Wrong middle center {k} entries for color {clr}"
+                                _print_clr()
+                                print(s)
+                                raise InternalSWError(s)
+
+                        else:
+                            s = f"Too few point {k} entries for color {clr}"
+                            _print_clr()
+                            print(s)
+                            raise InternalSWError(s)
 
             for clr in Color:
 

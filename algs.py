@@ -17,7 +17,7 @@ def _inv(inv: bool, n) -> int:
 class Alg(ABC):
 
     @abstractmethod
-    def play(self, cube: Cube, inv: bool): ...
+    def play(self, cube: Cube, inv: bool = False): ...
 
     def inv(self) -> "Alg":
         return _Inv(self)
@@ -71,7 +71,7 @@ class _Inv(Alg):
     def __str__(self) -> str:
         return self._alg.atomic_str() + "'"
 
-    def play(self, cube: Cube, inv: bool):
+    def play(self, cube: Cube, inv: bool = False):
         self._alg.play(cube, not inv)
 
     def inv(self) -> Alg:
@@ -143,7 +143,7 @@ class _Mul(Alg, ABC):
 
         return s
 
-    def play(self, cube: Cube, inv: bool):
+    def play(self, cube: Cube, inv: bool = False):
 
         for _ in range(0, self._n):
             self._alg.play(cube, inv)
@@ -270,7 +270,7 @@ class Annotation(SimpleAlg):
     def __init__(self, n: int = 1) -> None:
         super().__init__("ann", n)
 
-    def play(self, cube: Cube, inv: bool):
+    def play(self, cube: Cube, inv: bool = False):
         pass
 
     @property
@@ -441,7 +441,7 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         raise InternalSWError(f"Unknown {start} {stop}")
 
     @final
-    def play(self, cube: Cube, inv: bool):
+    def play(self, cube: Cube, inv: bool = False):
         start_stop = self.normalize_slice_index(n_max=1 + cube.n_slices, default=slice(1, 1))
 
         cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
@@ -467,7 +467,7 @@ class WholeCubeAlg(AnimationAbleAlg, ABC):
         return self._axis_name
 
     @final
-    def play(self, cube: Cube, inv: bool):
+    def play(self, cube: Cube, inv: bool = False):
         cube.rotate_whole(self.axis_name, _inv(inv, self._n))
 
     def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
@@ -506,7 +506,7 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         return self._slice_name
 
     @final
-    def play(self, cube: Cube, inv: bool):
+    def play(self, cube: Cube, inv: bool = False):
         # cube.rotate_slice(self._slice_name, _inv(inv, self._n))
 
         start_stop = self.normalize_slice_index(n_max=cube.n_slices, default=slice(1, cube.n_slices))

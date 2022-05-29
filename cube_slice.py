@@ -81,7 +81,12 @@ class Slice(SuperElement):
 
         assert current_face.is_edge(current_edge)
 
+        prev_edge = current_edge
+        prev_face = current_face
+
         n_slices = self.n_slices
+
+        inv = self.inv
 
         # !!! we treat start index as in LTR coordinates on start face !!!
         edges: list[EdgeSlice] = []
@@ -94,9 +99,16 @@ class Slice(SuperElement):
             _c: Sequence[CenterSlice]
 
             if current_face.is_bottom_or_top(current_edge):
-                _c = [center.get_center_slice((i, current_index)) for i in range(n_slices)]
+                if current_face.is_top_edge(current_edge):
+                    _c = [center.get_center_slice((inv(i), current_index)) for i in range(n_slices)]
+                else:
+                    _c = [center.get_center_slice((i, current_index)) for i in range(n_slices)]
+
             else:
-                _c = [center.get_center_slice((current_index, i)) for i in range(n_slices)]
+                if current_face.is_right_edge(current_edge):
+                    _c = [center.get_center_slice((current_index, inv(i))) for i in range(n_slices)]
+                else:
+                    _c = [center.get_center_slice((current_index, i)) for i in range(n_slices)]
 
             centers.extend(_c)
 
@@ -111,6 +123,8 @@ class Slice(SuperElement):
             next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
             # now index on next face
             current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
+            prev_face = current_face
+            prev_edge = current_edge
             current_edge = next_edge
             current_face = next_face
 

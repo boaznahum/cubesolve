@@ -416,6 +416,15 @@ class Face(SuperElement):
     def is_bottom_or_top(self, e: Edge):
         return e is self._edge_top or e is self._edge_bottom
 
+    def is_top_edge(self, e: Edge):
+        return e is self._edge_top
+
+    def is_bottom_edge(self, e: Edge):
+        return e is self._edge_bottom
+
+    def is_right_edge(self, e: Edge):
+        return e is self._edge_right
+
     def is_left_or_right(self, e: Edge):
         return e is self.edge_right or e is self.edge_left
 
