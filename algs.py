@@ -213,7 +213,16 @@ class SimpleAlg(Alg, ABC):
         self._code = code
         self._n = n
 
-    def copy(self, other: "SliceAbleAlg"):
+    @final
+    def clone(self) -> "SimpleAlg":
+        cl = SimpleAlg.__new__(type(self))
+        # noinspection PyArgumentList
+        cl.__init__()  # type: ignore
+        cl.copy(self)
+
+        return cl
+
+    def copy(self, other: "SimpleAlg"):
         self._n = other.n
         return self
 
@@ -234,7 +243,7 @@ class SimpleAlg(Alg, ABC):
         return self._n
 
     @final
-    def simplify(self) -> "Alg":
+    def simplify(self) -> "SimpleAlg":
         return self
 
     def flatten(self) -> Iterable["SimpleAlg"]:
@@ -263,6 +272,10 @@ class SimpleAlg(Alg, ABC):
         :return:
         """
         return None
+
+    def same_form(self, a: "SimpleAlg"):
+        return True
+
 
 
 class Annotation(SimpleAlg):
@@ -304,14 +317,6 @@ class SliceAbleAlg(SimpleAlg, ABC):
         self.a_slice = other.a_slice
         return self
 
-    @final
-    def clone(self) -> "SliceAbleAlg":
-        cl = SimpleAlg.__new__(type(self))
-        # noinspection PyArgumentList
-        cl.__init__()  # type: ignore
-        cl.copy(self)
-
-        return cl
 
     def __getitem__(self: SL, items) -> SL:
 
@@ -395,6 +400,17 @@ class SliceAbleAlg(SimpleAlg, ABC):
         assert _stop
 
         return slice(_start - 1, _stop - 1)
+
+    def same_form(self, a: "SliceAbleAlg"):
+
+        s1 = self.start
+        t1 = self.stop
+
+        s2 = a.start
+        t2 = a.stop
+
+        return (s1 == None and s2 == None or s1 == s2 ) and (t1 == None and t2 == None or t1 == t2)
+
 
 
 class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
@@ -567,6 +583,10 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
 
 
+
+
+
+
 @final
 class _U(FaceAlg):
 
@@ -714,19 +734,19 @@ class _BigAlg(Alg):
         while work_to_do:
             work_to_do = False
             new_algs = []
-            prev: Alg | None = None
+            prev: SimpleAlg | None = None
             for a in algs:
                 if not isinstance(a, SimpleAlg):
                     raise TypeError("Unexpected type", type(a))
 
                 if prev:
-                    if type(prev) == type(a):
+                    if type(prev) == type(a) and prev.same_form(a):
 
                         assert isinstance(prev, SimpleAlg)
 
-                        c = type(a)
+#                        c = type(a)
                         # noinspection PyArgumentList
-                        a2 = c()  # type: ignore # _n = 1
+                        a2 = a.clone()  # type: ignore # _n = 1
                         a2._n = prev._n + a._n
                         if a2._n:
                             prev = a2

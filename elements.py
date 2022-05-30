@@ -1,3 +1,4 @@
+import itertools
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
@@ -142,7 +143,7 @@ SliceIndex = EdgeSliceIndex | CenterSliceIndex  # type: ignore # row, column, mu
 
 # a patch
 _SliceUniqueID:int = 0
-class PartSlice(ABC):
+class PartSlice(ABC, Hashable):
     """
 
 
@@ -202,6 +203,18 @@ class PartSlice(ABC):
         assert self._fixed_id
         return self._fixed_id
 
+    def __hash__(self) -> int:
+        return hash(self._fixed_id)
+
+    def __eq__(self, o: object) -> bool:
+
+        if not isinstance(o, PartSlice):
+            return False
+
+        return self._fixed_id == o._fixed_id
+
+
+
     def get_face_edge(self, face: _Face) -> PartEdge:
         """
         return the edge belong to face, raise error if not found
@@ -247,6 +260,18 @@ class PartSlice(ABC):
         parent = self._parent
         assert parent
         parent.reset_colors_id()
+
+    def same_colors(self, other: "PartSlice"):
+        """
+        Assume both have the same structure
+        :param other:
+        :return:
+        """
+
+        e1: PartEdge
+        e2 : PartEdge
+
+        return all( e1.color == e2.color for e1,e2 in itertools.zip_longest(self.edges,other._edges) )
 
 
 

@@ -1,5 +1,6 @@
+import itertools
 from collections import defaultdict
-from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping
+from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
 from typing import Callable, TypeVar, Tuple
 
 from app_exceptions import InternalSWError
@@ -92,3 +93,15 @@ class CubeQueries:
                     counter[key].append((r, c))
                         # print(n, "]", s, *CubeQueries.get_four_center_points(cube, r, c))
         return dist
+
+    @staticmethod
+    def get_sate(cube) -> Iterable[PartSlice]:
+
+        return cube.get_all_parts()
+
+    @staticmethod
+    def compare_state(cube: Cube, st1: Iterable[PartSlice]):
+
+        st2 = CubeQueries.get_sate(cube)
+
+        return all ( s1.same_colors(s2)  for s1, s2 in itertools.zip_longest(st1, st2) )
