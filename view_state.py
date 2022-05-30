@@ -35,7 +35,7 @@ class ViewState:
         self._alpha_delta = 0.1
 
         self._draw_shadows = True
-        self.cube_size = 6
+        self.cube_size = 5
 
         self.slice_start: int = 0
         self.slice_stop: int = 0

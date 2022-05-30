@@ -1,5 +1,5 @@
-from collections.abc import Iterator
-from typing import Tuple
+from collections.abc import Iterator, Sequence
+from typing import Tuple, Callable
 
 import algs
 from _solver.base_solver import SolverElement, ISolver
@@ -17,11 +17,29 @@ def use(_):
 
 _status = None
 
+FaceTracker = Callable[[], Face]
+
+
+class FaceLoc:
+
+    def __init__(self, color: Color, tracker: FaceTracker) -> None:
+        super().__init__()
+        self._tracker = tracker
+        self._color = color
+
+    @property
+    def face(self):
+        return self._tracker()
+
+    @property
+    def color(self):
+        return self._color
+
 
 class NxNCenters(SolverElement):
     work_on_b: bool = True
 
-    D_LEVEL=1
+    D_LEVEL = 1
 
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)
@@ -53,38 +71,138 @@ class NxNCenters(SolverElement):
             return  # avoid rotating cube
 
         cube = self.cube
-        n_slices = cube.n_slices
 
-        # currently supports only odd
-        assert n_slices % 2
+        f1: FaceLoc = self._track_no_1()
 
+        f2 = self._track_opposite(f1)
+
+        self._do_faces([f1, f2])
+
+        assert f1.face.center.is3x3
+        assert f2.face.center.is3x3
+
+        # now colors of f1/f2 can't be on 4 that left, so we can choose any one
+        f3 = self._track_no_3([f1.face, f2.face])
+        f4 = self._track_opposite(f3)
+
+        self._do_faces([f3, f4])
+        assert f3.face.center.is3x3
+        assert f4.face.center.is3x3
+
+        f5, f6 = self._track_two_last([f1.face, f2.face, f3.face, f4.face])
+        self._do_faces([f5, f6])
+        assert f5.face.center.is3x3
+        assert f6.face.center.is3x3
+
+        assert self._is_solved()
+
+
+
+
+    def _do_faces(self, faces):
         while True:
             work_done = False
-            for f in self.cube.faces:
+            for f in faces:
                 # we must trace faces, because they are moved by algorith
                 # we need to locate the face by original_color, b ut on odd cube, the color is of the center
-                _f: Face = CubeQueries.find_face(self.cube, lambda _x: _x.original_color == f.original_color)
-                if self._do_center(_f, _f.color):
+                if self._do_center(f):
                     work_done = True
             if NxNCenters.work_on_b or not work_done:
                 break
 
-    def _do_center(self, face: Face, color: Color) -> bool:
+    def _track_no_1(self) -> FaceLoc:
 
-        if self._is_face_solved(face, color):
-            self.debug(f"Face is already done {face}",
+        cube = self.cube
+        if cube.n_slices % 2:
+            return self._track_odd(cube.front)
+        else:
+            return self._track_even(cube.front, (0, 0))
+
+    def _track_no_3(self, two_first: Sequence[Face]) -> FaceLoc:
+
+        cube = self.cube
+
+        left = list({*cube.faces} - set(two_first))
+
+        if cube.n_slices % 2:
+            return self._track_odd(left[0])
+        else:
+            # can be any
+            return self._track_even(left[0], (0, 0))
+
+    def _track_two_last(self, four_first: Sequence[Face]) -> Tuple[FaceLoc, FaceLoc]:
+
+        cube = self.cube
+
+        left = list({*cube.faces} - set(four_first))
+
+        assert cube.n_slices % 2
+        if cube.n_slices % 2:
+            f5: FaceLoc = self._track_odd(left[0])
+            f6 = self._track_opposite(f5)
+
+            return f5, f6
+
+        else:
+            # can be any
+            return self._track_even(left[0], (0, 0))
+
+    def _track_opposite(self, f: FaceLoc):
+
+        f_color = f.color
+
+        second_color=self.boy_opposite(f_color)
+
+        def _pred() -> Face:
+
+            _f : Face
+            return CubeQueries.find_face(self.cube, lambda _f : _f.opposite is f.face)
+
+        return FaceLoc(second_color, _pred)
+
+    def _do_center(self, face_loc: FaceLoc) -> bool:
+
+        if self._is_face_solved(face_loc.face, face_loc.color):
+            self.debug(f"Face is already done {face_loc.face}",
                        level=1)
             return False
 
-        self.debug(f"Need to work on {face}",
+        self.debug(f"Need to work on {face_loc.face}",
                    level=1)
 
-        work_done = self.__do_center(face, color)
+        work_done = self.__do_center(face_loc.face, face_loc.color)
 
-        self.debug(f"After working on {face} {work_done=}, solved={self._is_solved()}")
+        self.debug(f"After working on {face_loc.face} {work_done=}, "
+                   f"solved={self._is_face_solved(face_loc.face, face_loc.color)}",
+                   level=1)
 
         return work_done
 
+    def _track_slice(self, f: Face, rc: Tuple[int, int]) -> FaceLoc:
+
+        """
+        Track as specific slice
+        :param f:
+        :return:
+        """
+
+        color = f.center.get_center_slice(rc).color
+
+        def pred(_f: Face):
+            return _f.center.get_center_slice(rc).color == color
+
+        t: FaceTracker = lambda: CubeQueries.find_face(self.cube, pred)
+
+        return FaceLoc(color, t)
+
+    def _track_odd(self, f: Face) -> FaceLoc:
+
+        n_slices = self.cube.n_slices
+        return self._track_slice(f, (n_slices // 2, n_slices // 2))
+
+    def _track_even(self, f: Face, rc: Tuple[int, int]) -> FaceLoc:
+
+        return self._track_slice(f, rc)
 
     def __do_center(self, face: Face, color: Color) -> bool:
 
@@ -96,12 +214,14 @@ class NxNCenters(SolverElement):
         """
 
         if self._is_face_solved(face, color):
-            self.debug(f"Face is already done {face}")
+            self.debug(f"Face is already done {face}",
+                   level=1)
             return False
 
         cmn = self.cmn
 
-        self.debug(f"Working on face {face}")
+        self.debug(f"Working on face {face}",
+                   level=1)
 
         # missing = self.count_missing(face, color)
         # on_back = self.count_color_on_face(face.opposite, color)
@@ -143,7 +263,6 @@ class NxNCenters(SolverElement):
             # don't use face - it was moved !!!
             if self._do_center_from_face(cube.front, color, cube.back):
                 work_done = True
-
 
         return work_done
 
@@ -293,8 +412,8 @@ class NxNCenters(SolverElement):
 
                 # center indexes are in opposite direction of R
                 #   index is from left to right, R is from right to left
-                R1 = Algs.M[inv(c) + 1:inv(c) + 1]
-                R2 = Algs.M[inv(cc) + 1:inv(cc) + 1]
+                rotate_on_cell = Algs.M[inv(c) + 1:inv(c) + 1]
+                rotate_on_second = Algs.M[inv(cc) + 1:inv(cc) + 1]
 
                 if is_back:
                     r1_mul = 2
@@ -303,13 +422,13 @@ class NxNCenters(SolverElement):
 
                 self.debug(f"Doing communicator on {(r, c)} using second column {cc}, rotating {on_front_rotate}")
 
-                _algs = [R1.prime * r1_mul,
+                _algs = [rotate_on_cell.prime * r1_mul,
                          on_front_rotate,
-                         R2.prime * r1_mul,
+                         rotate_on_second.prime * r1_mul,
                          on_front_rotate.prime,
-                         R1 * r1_mul,
+                         rotate_on_cell * r1_mul,
                          on_front_rotate,
-                         R2 * r1_mul,
+                         rotate_on_second * r1_mul,
                          on_front_rotate.prime]
 
                 for a in _algs:
@@ -319,8 +438,6 @@ class NxNCenters(SolverElement):
                     print()
                 assert cs.color == required_color, f"Color was not solved, {(r, c)} {cs} " \
                                                    f"color is {cs.color}, {required_color=}"
-
-                #print(f"Color was  solved, {(r, c)} {cs} color is {cs.color}, {required_color=} , from {source_slice}")
 
     @staticmethod
     def _is_face_solved(face: Face, color: Color) -> bool:
@@ -408,3 +525,15 @@ class NxNCenters(SolverElement):
             if s.color == color:
                 n += 1
         return n
+
+    def boy_opposite(self, color: Color) -> Color:
+
+        f: Face = CubeQueries.find_face(self.cube, lambda _f: _f.original_color == color)
+
+        assert f
+
+        # original colors are BOY
+        return f.opposite.original_color
+
+
+
