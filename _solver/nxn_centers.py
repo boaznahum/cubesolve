@@ -19,8 +19,7 @@ _status = None
 
 
 class NxNCenters(SolverElement):
-
-    work_on_b: bool = False
+    work_on_b: bool = True
 
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)
@@ -56,7 +55,6 @@ class NxNCenters(SolverElement):
         # currently supports only odd
         assert n_slices % 2
 
-        work_done = True
         while True:
             work_done = False
             for f in self.cube.faces:
@@ -110,7 +108,7 @@ class NxNCenters(SolverElement):
             if self._is_face_solved(face, color):
                 return work_done
 
-            self._bring_face_up_preserve_Front(cube.left)
+            self._bring_face_up_preserve_front(cube.left)
 
         # on the last face
         # don't use face - it was moved !!!
@@ -169,13 +167,11 @@ class NxNCenters(SolverElement):
             for r in range(n):
                 for c in range(n):
                     if center.get_center_slice((r, c)).color != color:
-                        print(f"Missing: {(r,c)}  {[*self._get_four_center_points(r,c)]}")
+                        print(f"Missing: {(r, c)}  {[*self._get_four_center_points(r, c)]}")
             for r in range(n):
                 for c in range(n):
                     if source_face.center.get_center_slice((r, c)).color == color:
-                        print(f"Found on {source_face}: {(r,c)}  {source_face.center.get_center_slice((r, c))}")
-
-
+                        print(f"Found on {source_face}: {(r, c)}  {source_face.center.get_center_slice((r, c))}")
 
             raise InternalSWError("See error in log")
 
@@ -214,14 +210,14 @@ class NxNCenters(SolverElement):
         rotate_source: algs.Alg
         target_to_source_conversion: int
         if is_back:
-            target_to_source_conversion = 1
             rotate_source = Algs.B
         else:
-            target_to_source_conversion = 0
             rotate_source = Algs.U
 
         # Because it was moved, index might be changed
         r, c = cs.index
+
+        inv = cube.inv
 
         # with self.w_slice_annotate(cs):
         if True:
@@ -230,12 +226,12 @@ class NxNCenters(SolverElement):
             source = new_location_source
             assert required_color == source.color
 
+            # the logic here is hard code of the logic in slice rotate
+            # it will be broken if cube layout is changed
+            # here we assume we work on F, and UP has same coord system as F, and
+            # back is mirrored in both direction
             if is_back:
-                # compute index on back face - sees lice rotating
-                next_slice_index = cube.up.edge_top.get_slice_index_from_ltr_index(cube.up, c)
-                # now index on next face
-                c_on_back = cube.up.edge_top.get_ltr_index_from_slice_index(cube.back, next_slice_index)
-                source_index=(r, c_on_back)
+                source_index = (inv(r), inv(c))
             else:
                 source_index = (r, c)
 
@@ -243,22 +239,20 @@ class NxNCenters(SolverElement):
 
             # optimize it, can be done by less rotation, more math
             for _ in range(0, 4):
-                if source_face.center.get_center_slice(source_index).color == required_color:  # maybe it will find other :)
+                if source_face.center.get_center_slice(
+                        source_index).color == required_color:  # maybe it will find other :)
                     break
                 self.op.op(rotate_source)
 
             source_slice = source_face.center.get_center_slice(source_index)
             assert source_slice.color == required_color
 
-
             if True:
-            #with self.w_slice_annotate(source_slice):
+                # with self.w_slice_annotate(source_slice):
 
                 self.debug(f" On  {source.face.name} , {(r, c)} is {source_slice.color}")
 
                 # this can be done, because Front and UP have the same coordinates system !!!
-
-                inv = cube.inv
 
                 on_front_rotate: algs.Alg
 
@@ -290,11 +284,11 @@ class NxNCenters(SolverElement):
 
                 _algs = [R1.prime * r1_mul,
                          on_front_rotate,
-                         R2.prime,
+                         R2.prime * r1_mul,
                          on_front_rotate.prime,
                          R1 * r1_mul,
                          on_front_rotate,
-                         R2,
+                         R2 * r1_mul,
                          on_front_rotate.prime]
 
                 for a in _algs:
@@ -302,18 +296,20 @@ class NxNCenters(SolverElement):
 
                 if cs.color != required_color:
                     print()
-                assert cs.color == required_color, f"Color was not solved, {(r,c)} {cs} color is {cs.color}, {required_color=}"
+                assert cs.color == required_color, f"Color was not solved, {(r, c)} {cs} " \
+                                                   f"color is {cs.color}, {required_color=}"
 
                 print(f"Color was  solved, {(r, c)} {cs} color is {cs.color}, {required_color=} , from {source_slice}")
 
-    def _is_face_solved(self, face: Face, color: Color) -> bool:
+    @staticmethod
+    def _is_face_solved(face: Face, color: Color) -> bool:
 
         x = face.center.is3x3
         slice__color = face.center.get_center_slice((0, 0)).color
 
         return x and slice__color == color
 
-    def _bring_face_up_preserve_Front(self, face):
+    def _bring_face_up_preserve_front(self, face):
 
         if face.name == FaceName.U:
             return
@@ -366,7 +362,7 @@ class NxNCenters(SolverElement):
             (r, c) = (c, inv(r))
 
     def rotate_point_clockwise(self, row: int, column: int, n=1) -> Tuple[int, int]:
-        for i in range(0, n%4):
+        for i in range(0, n % 4):
             row, column = self.cube.inv(column), row
 
         return row, column
@@ -374,7 +370,8 @@ class NxNCenters(SolverElement):
     def rotate_point_counterclockwise(self, row: int, column: int) -> Tuple[int, int]:
         return column, self.cube.inv(row)
 
-    def count_missing(self, face: Face, color: Color) -> int:
+    @staticmethod
+    def count_missing(face: Face, color: Color) -> int:
         n = 0
 
         for s in face.center.all_slices:
@@ -382,7 +379,8 @@ class NxNCenters(SolverElement):
                 n += 1
         return n
 
-    def count_color_on_face(self, face: Face, color: Color) -> int:
+    @staticmethod
+    def count_color_on_face(face: Face, color: Color) -> int:
         n = 0
 
         for s in face.center.all_slices:
