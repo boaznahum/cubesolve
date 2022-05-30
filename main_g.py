@@ -136,7 +136,6 @@ class Window(pyglet.window.Window):
 
         cube = self.app.cube
 
-
         self.text.clear()
         self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
                                            x=10, y=10, font_size=10))
@@ -155,13 +154,27 @@ class Window(pyglet.window.Window):
         # s = "Solution:(" + str(solution.count()) + ") " + str(solution)
         # self.text.append(pyglet.text.Label(s,
         #                                    x=10, y=90, font_size=10))
+
+        s = f"Sanity:{cube.is_sanity(force_check=True)}"
+
         if self.app.error:
-            err = f"Error:{self.app.error}"
-            self.text.append(pyglet.text.Label(err,
-                                               x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
-        err = f"Animation:{'On' if self.app.op.animation_enabled else 'Off'}"
-        self.text.append(pyglet.text.Label(err,
+            s += f", Error:{self.app.error}"
+
+        self.text.append(pyglet.text.Label(s,
                                            x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
+
+        # ---------------------------------------
+
+        def _b(b: bool): return "On" if b else "Off"
+
+
+        s = f"Animation:{_b(self.app.op.animation_enabled)}"
+        s += ", Sanity check:" + _b(config.CHECK_CUBE_SANITY)
+        s += ", Debug=" + _b(self.app.slv.is_debug_config_mode)
+        self.text.append(pyglet.text.Label(s,
+                                           x=10, y=130, font_size=10, color=(255, 255, 0, 255), bold=True))
+        # ----------------------------
+
         s = f"S={cube.size}, Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
 
         s += ", Slices"
@@ -171,10 +184,8 @@ class Window(pyglet.window.Window):
         s += ", " + str(vs.slice_alg(cube, Algs.R))
         s += ", " + str(vs.slice_alg(cube, Algs.M))
 
-        s += f" ,sanity:{cube.is_sanity(force_check=True)}"
-
         self.text.append(pyglet.text.Label(s,
-                                           x=10, y=130, font_size=10, color=(0, 255, 0, 255), bold=True))
+                                           x=10, y=150, font_size=10, color=(0, 255, 0, 255), bold=True))
 
     def on_draw(self):
         # print("Updating")
@@ -368,10 +379,6 @@ class Window(pyglet.window.Window):
 
 # noinspection PyPep8Naming
 def _create_animation(window: Window, alg: algs.AnimationAbleAlg, n_count) -> Animation:
-
-
-
-
     rotate_face: FaceName
     cube_parts: Collection[PartSlice]
 
@@ -657,7 +664,6 @@ def _handle_input(window: Window, value: int, modifiers: int):
     def _slice_alg(r: algs.SliceAbleAlg):
         return vs.slice_alg(app.cube, r)
 
-
     global good
     # noinspection PyProtectedMember
     match value:
@@ -678,7 +684,12 @@ def _handle_input(window: Window, value: int, modifiers: int):
             op.op(Algs.RD)
 
         case key.O:
-            op.toggle_animation_on()
+            if modifiers & key.MOD_CTRL:
+                config.SOLVER_DEBUG = not config.SOLVER_DEBUG
+            elif modifiers & key.MOD_ALT:
+                config.CHECK_CUBE_SANITY = not config.CHECK_CUBE_SANITY
+            else:
+                op.toggle_animation_on()
 
         case key.EQUAL:
             app.vs.cube_size += 1
@@ -802,7 +813,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 # Faild on [5:5]B
                 # [{good} [3:3]R [3:4]D S [2:2]L]
 
-                alg = alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2] # + Algs.B[5:5]
+                alg = alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]  # + Algs.B[5:5]
                 op.op(alg, inv, animation=False)
 
             elif modifiers & key.MOD_CTRL:

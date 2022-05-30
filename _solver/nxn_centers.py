@@ -21,11 +21,14 @@ _status = None
 class NxNCenters(SolverElement):
     work_on_b: bool = True
 
+    D_LEVEL=1
+
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)
 
-    def debug(self, *args):
-        super().debug("NxX Centers:", args)
+    def debug(self, *args, level=3):
+        if level <= NxNCenters.D_LEVEL:
+            super().debug("NxX Centers:", args)
 
     @property
     def cmn(self) -> CommonOp:
@@ -67,6 +70,23 @@ class NxNCenters(SolverElement):
                 break
 
     def _do_center(self, face: Face, color: Color) -> bool:
+
+        if self._is_face_solved(face, color):
+            self.debug(f"Face is already done {face}",
+                       level=1)
+            return False
+
+        self.debug(f"Need to work on {face}",
+                   level=1)
+
+        work_done = self.__do_center(face, color)
+
+        self.debug(f"After working on {face} {work_done=}, solved={self._is_solved()}")
+
+        return work_done
+
+
+    def __do_center(self, face: Face, color: Color) -> bool:
 
         """
 
@@ -123,6 +143,7 @@ class NxNCenters(SolverElement):
             # don't use face - it was moved !!!
             if self._do_center_from_face(cube.front, color, cube.back):
                 work_done = True
+
 
         return work_done
 
@@ -299,7 +320,7 @@ class NxNCenters(SolverElement):
                 assert cs.color == required_color, f"Color was not solved, {(r, c)} {cs} " \
                                                    f"color is {cs.color}, {required_color=}"
 
-                print(f"Color was  solved, {(r, c)} {cs} color is {cs.color}, {required_color=} , from {source_slice}")
+                #print(f"Color was  solved, {(r, c)} {cs} color is {cs.color}, {required_color=} , from {source_slice}")
 
     @staticmethod
     def _is_face_solved(face: Face, color: Color) -> bool:

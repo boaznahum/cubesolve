@@ -26,7 +26,7 @@ class SolveStep(Enum):
 
 
 class Solver(ISolver):
-    __slots__ = ["_op", "_cube", "_debug", "_aborted",
+    __slots__ = ["_op", "_cube", "_debug_override", "_aborted",
                  "_running_solution",
                  "l1_cross",
                  "l1_corners",
@@ -51,7 +51,7 @@ class Solver(ISolver):
 
         # allow solver to not put annotations
         self._running_solution = False
-        self._debug: bool = config.SOLVER_DEBUG
+        self._debug_override : bool | None = None
 
     @property
     def cube(self) -> Cube:
@@ -68,6 +68,17 @@ class Solver(ISolver):
     @property
     def is_solved(self):
         return self._cube.solved
+
+    @property
+    def is_debug_config_mode(self) -> bool:
+        return config.SOLVER_DEBUG
+
+    @property
+    def _is_debug_enabled(self) -> bool:
+        if self._debug_override is None:
+            return self.is_debug_config_mode
+        else:
+            return self._debug_override
 
     @property
     def status(self):
@@ -106,10 +117,10 @@ class Solver(ISolver):
 
         return s
 
-    def solve(self, debug: bool|None = None, animation=True, what: SolveStep = SolveStep.ALL):
+    def solve(self, debug: bool | None = None, animation=True, what: SolveStep = SolveStep.ALL):
 
         if debug is None:
-            debug = self._debug
+            debug = self._is_debug_enabled
 
         with self._op.suspended_animation(not animation):
             try:
@@ -117,13 +128,13 @@ class Solver(ISolver):
             except OpAborted:
                 return
 
-    def _solve(self, _debug=True, what: SolveStep = SolveStep.ALL):
+    def _solve(self, _debug: bool | None = True, what: SolveStep = SolveStep.ALL):
         if self._cube.solved:
             return
 
-        _d = self._debug
+        _d = self._debug_override
         try:
-            self._debug = _debug
+            self._debug_override = _debug
 
             match what:
 
@@ -154,10 +165,10 @@ class Solver(ISolver):
                     self.nxn_centers.solve()
 
         finally:
-            self._debug = _d
+            self._debug_override = _d
 
     def debug(self, *args):
-        if self._debug:
+        if self._is_debug_enabled:
             print("Solver:", *args)
 
     @property
