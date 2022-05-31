@@ -77,6 +77,21 @@ class _Cell:
         self.gl_lists_movable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
         self.gl_lists_unmovable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
 
+    def _clear_gl_lists(self):
+        # delete and clear all lists
+        for ls in self.gl_lists_movable.values():
+            for ll in ls:
+                gl.glDeleteLists(ll, 1)
+        self.gl_lists_movable.clear()
+
+        for ls in self.gl_lists_unmovable.values():
+            for ll in ls:
+                gl.glDeleteLists(ll, 1)
+        self.gl_lists_unmovable.clear()
+
+    def release_resources(self):
+        self._clear_gl_lists()
+
     # noinspection PyUnusedLocal
     def create_objects(self, part: Part, vertexes: Sequence[ndarray], marker: str):
 
@@ -88,15 +103,7 @@ class _Cell:
         self._right_top_v3 = vertexes[2]
 
         # delete and clear all lists
-        for ls in self.gl_lists_movable.values():
-            for ll in ls:
-                gl.glDeleteLists(ll, 1)
-        self.gl_lists_movable.clear()
-
-        for ls in self.gl_lists_unmovable.values():
-            for ll in ls:
-                gl.glDeleteLists(ll, 1)
-        self.gl_lists_unmovable.clear()
+        self._clear_gl_lists()
 
         #         = [gl.glGenLists(1)]
         # print(f"{self.gl_lists=}")
@@ -307,7 +314,6 @@ class _Cell:
                         attributes = edge.attributes
                         shapes.quad_with_line(vx, color, lw, lc)
 
-
                         if attributes["origin"]:
                             shapes.cross(vx, cross_width, cross_color)
                         if attributes["on_x"]:
@@ -317,7 +323,6 @@ class _Cell:
 
                         if _slice.edge.c_attributes["annotation"]:
                             self._create_markers(vx, (0, 0, 0), True)
-
 
     # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):
@@ -482,6 +487,11 @@ class _FaceBoard:
         self.reset()
 
     def reset(self):
+
+        c: _Cell
+        for c in self._cells.values():
+            c.release_resources()
+
         self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, self._batch) for p in
                                                  self.cube_face_supplier().parts}
 
