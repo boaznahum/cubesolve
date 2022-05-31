@@ -279,6 +279,7 @@ class NxNCenters(SolverElement):
 
         cube = self.cube
 
+        assert face is cube.front
         assert source_face in [cube.up, cube.back]
 
         if self.count_color_on_face(source_face, color) == 0:

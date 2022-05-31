@@ -565,7 +565,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
     platform_event_loop = pyglet.app.platform_event_loop
 
     if alg.is_ann:
-        operator.op(alg, False, animation=False)
+        operator.op(alg, inv, animation=False)
         window.update_gui_elements()
         #        time.sleep(1)
         platform_event_loop.notify()
@@ -575,6 +575,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
         _alg = alg.inv().simplify()
         assert isinstance(_alg, algs.SimpleAlg)
         alg = _alg
+        inv =  False
 
     if not isinstance(alg, algs.AnimationAbleAlg):
         print(f"{alg} is not animation-able")

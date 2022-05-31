@@ -164,7 +164,7 @@ class _Mul(Alg, ABC):
             # todo: every where we clone like this, there is a bug, beucase we added _a_slice, need to use clone method
             s = c()  # type: ignore # _n = 1
             s.copy(a)
-            s._n *= a._n * self._n
+            s._n *= self._n
             return s.simplify()
         elif isinstance(self._alg, _BigAlg):
             algs = [a.simplify() for a in self._alg._algs] * self._n
