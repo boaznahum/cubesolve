@@ -2,6 +2,7 @@ from collections.abc import Sequence, Collection
 from enum import unique, Enum
 from typing import Mapping
 
+import config
 from app_exceptions import InternalSWError
 
 
@@ -38,15 +39,14 @@ class CubeLayout:
         self._read_only = read_only
 
     def colors(self) -> Collection[Color]:
-        return [* self._faces.values() ]
+        return [*self._faces.values()]
 
     @staticmethod
     def opposite(fn: FaceName) -> FaceName:
         return CubeLayout._all_opposite[fn]
 
     def opposite_color(self, color: Color) -> Color:
-        return self._faces[CubeLayout.opposite(self.find_face(color))]
-
+        return self._faces[CubeLayout.opposite(self._find_face(color))]
 
     def same(self, other: "CubeLayout"):
         """
@@ -54,6 +54,14 @@ class CubeLayout:
         :param other:
         :return: true if same layout as other
         """
+
+        # becuase this might bin NxN in which center color have no meaning
+        # we need to check
+        for c in other.colors():
+            if not self._is_face(c):
+                return False
+
+        # so it safe to continue !!!
 
         this = self.clone()
 
@@ -64,7 +72,7 @@ class CubeLayout:
             c1 = other._faces[f1]
             c2 = other._faces[f2]
 
-            this_c1_face: FaceName = this.find_face(c1)
+            this_c1_face: FaceName = this._find_face(c1)
             this_c2_face = CubeLayout._all_opposite[this_c1_face]
 
             this_c2 = this._faces[this_c2_face]
@@ -74,7 +82,7 @@ class CubeLayout:
         # find color of other front
         other_f_color: Color = other._faces[FaceName.F]
 
-        this_f_match = this.find_face(other_f_color)
+        this_f_match = this._find_face(other_f_color)
 
         this._bring_face_to_front(this_f_match)
         assert this._faces[FaceName.F] == other_f_color
@@ -82,7 +90,7 @@ class CubeLayout:
         # find UP color on other
         other_u_color = other._faces[FaceName.U]
 
-        this_u_match = this.find_face(other_u_color)
+        this_u_match = this._find_face(other_u_color)
         if this_u_match == FaceName.B:
             return False  # on this it is on Back, can't match other layout
 
@@ -102,11 +110,20 @@ class CubeLayout:
 
         return CubeLayout(False, self._faces)
 
-    def find_face(self, color) -> FaceName:
+    def _is_face(self, color) -> FaceName | None:
         for f, c in self._faces.items():
 
             if c == color:
                 return f
+
+        return None
+
+    def _find_face(self, color) -> FaceName:
+
+        fn = self._is_face(color)
+
+        if fn:
+            return fn
 
         raise InternalSWError(f"No such color {color} in {self}")
 
@@ -168,11 +185,13 @@ class CubeLayout:
         faces = self._faces
 
         for _ in range(n % 4):
+            self._check()
             f = faces[FaceName.F]
             faces[FaceName.F] = faces[FaceName.D]
             faces[FaceName.D] = faces[FaceName.B]
             faces[FaceName.B] = faces[FaceName.U]
             faces[FaceName.U] = f
+            self._check()
 
     def _rotate_y(self, n: int):
 
@@ -184,11 +203,13 @@ class CubeLayout:
         faces = self._faces
 
         for _ in range(n % 4):
+            self._check()
             f = faces[FaceName.F]
             faces[FaceName.F] = faces[FaceName.R]
             faces[FaceName.R] = faces[FaceName.B]
             faces[FaceName.B] = faces[FaceName.L]
             faces[FaceName.L] = f
+            self._check()
 
     def _rotate_z(self, n: int):
 
@@ -200,11 +221,13 @@ class CubeLayout:
         faces = self._faces
 
         for _ in range(n % 4):
+            self._check()
             u = faces[FaceName.U]
             faces[FaceName.U] = faces[FaceName.L]
             faces[FaceName.L] = faces[FaceName.D]
             faces[FaceName.D] = faces[FaceName.R]
             faces[FaceName.R] = u
+            self._check()
 
     def __str__(self) -> str:
 
@@ -222,4 +245,9 @@ class CubeLayout:
     def __repr__(self) -> str:
         return self.__str__()
 
+    def _check(self):
+        if not config.CHECK_CUBE_SANITY:
+            return
 
+        for c in Color:
+            assert self._find_face(c)

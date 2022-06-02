@@ -655,7 +655,7 @@ class Cube:
         from cube_face import Face
         f: Face
 
-        faces: dict[FaceName, Color] = {f.name: f.original_color for f in self._faces.values()}
+        faces: dict[FaceName, Color] = {f.name: f.center.color for f in self._faces.values()}
         return CubeLayout(False, faces)
 
     @property
