@@ -81,7 +81,7 @@ class NxNEdges(SolverElement):
             if n_to_fix > 0:
 
                 if i == 0:
-                    even_parity_was_done= True
+                    even_parity_was_done = True
                     self._do_last_edge_parity()
                 else:
                     # actaully we can nver reach here, becuase if it no parity, at least two msut be not completed
@@ -328,11 +328,10 @@ class NxNEdges(SolverElement):
 
     def _do_last_edge_parity(self):
 
-        #self.op.toggle_animation_on()
+        # self.op.toggle_animation_on()
         # still don't know how to handle
         cube = self.cube
         n_slices = cube.n_slices
-        assert n_slices % 2
 
         assert self._left_to_fix == 1
 
@@ -351,7 +350,11 @@ class NxNEdges(SolverElement):
         assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
         edge = cube.front.edge_top
 
-        required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
+        if n_slices % 2:
+            required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
+        else:
+            # just pick one, maybe it will cause parity problem at the end 3x3
+            required_color = self._get_slice_ordered_color(face, edge.get_slice(0))
 
         for i in range(n_slices // 2):
 
@@ -359,7 +362,7 @@ class NxNEdges(SolverElement):
             # print(f"{i} ,{required_color}, {color}")
             if color != required_color:
                 self.debug(f"*** Doing parity on R {i + 1}", level=2)
-                self.op.op((Algs.M[i + 1:i + 1] + Algs.U * 2) * 5 + Algs.U*2)
+                self.op.op((Algs.M[i + 1:i + 1] + Algs.U * 2) * 5 + Algs.U * 2)
 
     def _get_slice_ordered_color(self, f: Face, s: EdgeSlice) -> Tuple[Color, Color]:
         """
