@@ -57,7 +57,6 @@ class CubeQueries:
 
         return None
 
-
     @staticmethod
     def get_four_center_points(cube: Cube, r, c) -> Iterator[Tuple[int, int]]:
 
@@ -73,7 +72,6 @@ class CubeQueries:
         inv = cube.inv
 
         return (i, inv(i))
-
 
     @staticmethod
     def print_dist(cube: Cube):
@@ -130,11 +128,11 @@ class CubeQueries:
         e: Edge
         for e in cube.edges:
             for i in range(cube.n_slices):
-                    s: EdgeSlice = e.get_slice(i)
-                    clr = s.colors_id_by_color
-                    counter: MutableMapping[Hashable, MutableSequence[int]] = dist[clr]
-                    key = frozenset([*CubeQueries.get_two_edge_slice_points(cube, i)])
-                    counter[key].append(i)
+                s: EdgeSlice = e.get_slice(i)
+                clr = s.colors_id_by_color
+                counter: MutableMapping[Hashable, MutableSequence[int]] = dist[clr]
+                key = frozenset([*CubeQueries.get_two_edge_slice_points(cube, i)])
+                counter[key].append(i)
 
         return dist
 
@@ -151,13 +149,36 @@ class CubeQueries:
         return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(st1, st2))
 
     @classmethod
-    def find_slice_in_cube_edges(cls, cube: Cube, pred:Pred[EdgeSlice]) -> EdgeSlice | None:
+    def find_slice_in_cube_edges(cls, cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:
 
-        for e in cube.edges:
-            for i in range(cube.n_slices):
+        return CubeQueries.find_slice_in_edges(cube.edges, pred)
+
+    @classmethod
+    def find_slice_in_edges(cls, edges: Iterable[Edge], pred: Pred[EdgeSlice]) -> EdgeSlice | None:
+
+        for e in edges:
+            for i in range(e.n_slices):
                 s: EdgeSlice = e.get_slice(i)
 
                 if pred(s):
                     return s
+
+        return None
+
+    @classmethod
+    def find_edge_in_cube(cls, cube: Cube, pred: Pred[Edge]) -> Edge | None:
+
+        for e in cube.edges:
+            if pred(e):
+                return e
+
+        return None
+
+    @classmethod
+    def find_edge(cls, edges: Iterable[Edge], pred: Pred[Edge]) -> Edge | None:
+
+        for e in edges:
+            if pred(e):
+                return e
 
         return None

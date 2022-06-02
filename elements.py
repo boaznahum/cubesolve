@@ -18,8 +18,6 @@ class Direction(Enum):
     D270 = 270
 
 
-
-
 @unique
 class AxisName(Enum):
     """
@@ -45,6 +43,7 @@ class CHelper:
     @staticmethod
     def colors_id(c: Iterable[Color]):
         return frozenset(c)
+
 
 class PartEdge:
     __slots__ = ["_face", "_color", "_annotated_by_color",
@@ -122,9 +121,10 @@ EdgeSliceIndex = int | slice
 CenterSliceIndex = Tuple[int, int]
 SliceIndex = EdgeSliceIndex | CenterSliceIndex  # type: ignore # row, column, must be hashable
 
-
 # a patch
-_SliceUniqueID:int = 0
+_SliceUniqueID: int = 0
+
+
 class PartSlice(ABC, Hashable):
     """
 
@@ -199,8 +199,6 @@ class PartSlice(ABC, Hashable):
 
         return self._fixed_id == o._fixed_id
 
-
-
     def get_face_edge(self, face: _Face) -> PartEdge:
         """
         return the edge belong to face, raise error if not found
@@ -254,7 +252,6 @@ class PartSlice(ABC, Hashable):
         self.c_attributes.clear()
         self.c_attributes.update(source_slice.c_attributes)
 
-
     def same_colors(self, other: "PartSlice"):
         """
         Assume both have the same structure
@@ -263,11 +260,9 @@ class PartSlice(ABC, Hashable):
         """
 
         e1: PartEdge
-        e2 : PartEdge
+        e2: PartEdge
 
-        return all( e1.color == e2.color for e1,e2 in itertools.zip_longest(self.edges,other._edges) )
-
-
+        return all(e1.color == e2.color for e1, e2 in itertools.zip_longest(self.edges, other._edges))
 
     def f_color(self, f: _Face):
         """
@@ -411,7 +406,6 @@ class PartSlice(ABC, Hashable):
 
     def _clone_edges(self) -> Iterable[PartEdge]:
         return [e.clone() for e in self._edges]
-
 
     # todo: clone logic is duplicated all over
     def clone(self) -> "PartSlice":
@@ -868,7 +862,7 @@ class Center(Part):
         s = str(self.face.name)
         for r in range(self.n_slices):
             for c in range(self.n_slices):
-                #s += str(self.get_center_slice((r, c)).edge.c_attributes["n"]) + "|"
+                # s += str(self.get_center_slice((r, c)).edge.c_attributes["n"]) + "|"
                 s += str(self.get_center_slice((r, c)).color.name) + "|"
             s += "\n"
 
@@ -884,9 +878,10 @@ class EdgeSlice(PartSlice):
         self.e1: PartEdge = edges[0]
         self.e2: PartEdge = edges[1]
 
+        # my simple index
+        self._my_index = index
+
     def clone(self) -> "EdgeSlice":
-
-
 
         index = self._index
         assert isinstance(index, int)  # satisfy mypy
@@ -995,14 +990,16 @@ class EdgeSlice(PartSlice):
         self.copy_colors(source, (source_other, shared_face),
                          (shared_face, dest_other))
 
-
-
     @property
     def parent(self) -> "Edge":
         p = super().parent
 
         assert isinstance(p, Edge)
         return p
+
+    @property
+    def index(self) -> EdgeSliceIndex:
+        return self._my_index
 
 
 class CenterSlice(PartSlice):
@@ -1021,8 +1018,6 @@ class CenterSlice(PartSlice):
         c.c_attributes = self.c_attributes.copy()
 
         return c
-
-
 
     @property
     def index(self) -> CenterSliceIndex:

@@ -11,8 +11,9 @@ from cube_operator import Operator
 from cube_queries import Pred, CubeQueries
 from elements import Edge, Color, FaceName, EdgeSlice
 
+TRACE_UNIQUE_ID: int = 0
 
-TRACE_UNIQUE_ID : int = 0
+
 class EdgeSliceTracker:
 
     def __init__(self, cube: Cube, pred: Pred[EdgeSlice]) -> None:
@@ -172,6 +173,9 @@ class CommonOp(ICommon):
         :param edge:
         :return:
         """
+
+        begin_edge = edge
+
         cube: Cube = self.slv.cube
 
         if cube.front.edge_left is edge:
@@ -182,65 +186,130 @@ class CommonOp(ICommon):
         slice = edge.get_slice(0)
 
         s_tracker: EdgeSliceTracker
-        with self._track_e_slice(slice) as s_tracker:
+        with self.track_e_slice(slice) as s_tracker:
 
             for _ in range(max_n):
                 slice = s_tracker.the_slice
 
                 edge = slice.parent
 
-                if cube.front.edge_left is edge:
-                    return  # nothing to do
+                if not edge in cube.front.edges:
 
-                if edge in cube.down.edges:
-                    self.op.op(Algs.Z)  # Over F, now on left
-                    continue
+                    # if cube.front.edge_left is edge:
+                    #     return  # nothing to do
 
-                elif edge in cube.back.edges:
-                    self.op.op(-Algs.Y)  # Over U, now on left
+                    if edge in cube.down.edges:
+                        self.op.op(Algs.X)  # Over R, now on front
+                        continue
 
-                elif edge in cube.up.edges:
-                    self.op.op(-Algs.Z)  # Over F, now on left
+                    elif edge in cube.back.edges:
+                        self.op.op(-Algs.X*2)  # Over R, now on front
 
-                elif edge in cube.right.edges:
-                    self.op.op(Algs.Z * 2)  # Over F, now on left
+                    elif edge in cube.up.edges:
+                        self.op.op(-Algs.X)  # Over R, now on front
 
-                elif edge in cube.front.edges:
-                    self.op.op(Algs.Y )  # Over U, now on left
+                    elif edge in cube.right.edges:
+                        self.op.op(Algs.Y * 2)  # Over U, now on front
+
+                    elif edge in cube.left.edges:
+                        self.op.op(-Algs.Y)  # Over U, now on  front
+
+                    else:
+                        raise InternalSWError(f"Unknown case {edge}")
 
                 else:
 
-                    assert edge in cube.front.edges
+                    if cube.front.edge_left is edge:
+                        return  # nothing to do
 
-                    if edge is cube.left.edge_top:
-                        self.op.op(Algs.L)
-                    elif edge is cube.left.edge_left:
-                        self.op.op(Algs.L * 2)
-                    elif edge is cube.left.edge_bottom:
-                        self.op.op(-Algs.L)
+                    if edge is cube.front.edge_top:
+                        self.op.op(Algs.Z.prime)
+                    elif edge is cube.front.edge_right:
+                        self.op.op(Algs.Z * 2)
+                    elif edge is cube.front.edge_bottom:
+                        self.op.op(Algs.Z)
 
-                    assert s_tracker.the_slice.parent is cube.left.edge_right
+                    now_edge = s_tracker.the_slice.parent
+
+                    if not s_tracker.the_slice.parent is cube.left.edge_right:
+                        raise InternalSWError(f"Internal error {begin_edge} {now_edge}")
 
                     return
 
-            raise InternalSWError("Too many iteration")
+            now_edge = s_tracker.the_slice.parent
 
 
+            raise InternalSWError(f"Too many iteration {begin_edge} {now_edge}")
+
+    def bring_edge_to_front_right_preserve_front_left(self, edge: Edge):
+        cube: Cube = self.slv.cube
+
+        if cube.front.edge_right is edge:
+            return None  # nothing to do
+
+        if cube.front.edge_left is edge:
+            raise InternalSWError("Can be of front left")
+
+        max_n = 3
+
+        s_tracker: EdgeSliceTracker
+        with self.track_e_slice(edge.get_slice(0)) as s_tracker:
+
+            for _ in range(max_n):
+                slice = s_tracker.the_slice
+
+                edge = slice.parent
+
+                if cube.front.edge_right is edge:
+                    return  # done
+
+                # ---------------------- on back --------------------
+                if edge is cube.back.edge_top:
+                    self.op.op(Algs.B.prime)  # now on right right
+                    continue
+
+                elif edge is cube.back.edge_right:
+                    self.op.op(Algs.B.prime * 2)  # now on right right
+
+                elif edge is cube.back.edge_bottom:
+                    self.op.op(Algs.B)  # now on right right
+
+                # back left is right
+
+                # ---------------------- on top --------------------
+
+                # up top and up right are on back/right - no need to handle
+
+                elif edge is cube.up.edge_left:
+                    self.op.op(Algs.U.prime * 2)  # now on right top
+
+                elif edge is cube.up.edge_bottom:
+                    self.op.op(Algs.U.prime)  # now on right top
+
+                # ---------------------- front --------------------
+                elif edge is cube.front.edge_bottom:
+                    self.op.op(Algs.D)  # now on right bottom
+
+                elif edge is cube.left.edge_bottom:
+                    self.op.op(Algs.D.prime * 2)  # now on right bottom
 
 
+                # now handle on right
+
+                elif edge is cube.right.edge_bottom:
+                    self.op.op(Algs.R)  # now on front right
+
+                elif edge is cube.right.edge_right:
+                    self.op.op(Algs.R * 2)  # Over F, now on left
+
+                elif edge is cube.right.edge_top:
+                    self.op.op(Algs.R.prime)  # Over F, now on left
 
 
-        if cube.right.edge_right is edge:
-            alg = -Algs.E
-            self.slv.op.op(alg)
-            return alg
+                else:
 
-        if cube.left.edge_left is edge:
-            alg = Algs.E
-            self.slv.op.op(alg)
-            return alg
+                    raise InternalSWError(f"Unknwon case, edge is {edge}")
 
-        raise ValueError(f"{edge} is not on E slice")
 
     def bring_face_to_front_by_y_rotate(self, face):
         """
@@ -308,9 +377,8 @@ class CommonOp(ICommon):
             case _:
                 raise ValueError(f"Unknown face {face.name}")
 
-
     @contextmanager
-    def _track_e_slice(self, es: EdgeSlice) -> Generator[EdgeSliceTracker, None, None]:
+    def track_e_slice(self, es: EdgeSlice) -> Generator[EdgeSliceTracker, None, None]:
 
         global TRACE_UNIQUE_ID
 
@@ -320,7 +388,7 @@ class CommonOp(ICommon):
 
         key = "SliceTracker:" + str(n)
 
-        def _pred(s : EdgeSlice) -> bool:
+        def _pred(s: EdgeSlice) -> bool:
             return key in s.c_attributes
 
         tracker: EdgeSliceTracker = EdgeSliceTracker(self.cube, _pred)
@@ -332,7 +400,3 @@ class CommonOp(ICommon):
         finally:
             c_att = tracker.the_slice.c_attributes
             del c_att[key]
-
-
-
-
