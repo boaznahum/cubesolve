@@ -7,3 +7,5 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE=False
 CHECK_CUBE_SANITY=True
 
 animation_enabled=True
+
+GUI_DRAW_MARKERS=False

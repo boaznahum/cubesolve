@@ -12,6 +12,7 @@ from numpy import ndarray
 from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
+import config
 import shapes
 from cube import Cube
 from cube_face import Face
@@ -205,12 +206,14 @@ class _Cell:
                 shapes.quad_with_line(vertexes,
                                       self._slice_color(corner_slice),
                                       lw, lc)
-                if cube_face.corner_bottom_left is part:
-                    shapes.cross(vertexes, cross_width, cross_color)
-                elif cube_face.corner_bottom_right is part:
-                    shapes.cross(vertexes, cross_width_x, cross_color_x)
-                if cube_face.corner_top_left is part:
-                    shapes.cross(vertexes, cross_width_y, cross_color_y)
+
+                if config.GUI_DRAW_MARKERS:
+                    if cube_face.corner_bottom_left is part:
+                        shapes.cross(vertexes, cross_width, cross_color)
+                    elif cube_face.corner_bottom_right is part:
+                        shapes.cross(vertexes, cross_width_x, cross_color_x)
+                    if cube_face.corner_top_left is part:
+                        shapes.cross(vertexes, cross_width_y, cross_color_y)
 
 
         elif isinstance(part, Edge):
@@ -235,8 +238,10 @@ class _Cell:
                         vx = [left_bottom, right_bottom,
                               right_bottom + d, left_bottom + d]
                         shapes.quad_with_line(vx, color, lw, lc)
-                        nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
-                        shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
+
+                        if config.GUI_DRAW_MARKERS:
+                            nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
+                            shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
                         # if _slice.get_face_edge(cube_face).attributes["origin"]:
                         #     shapes.cross(vx, cross_width, cross_color)
                         # if _slice.get_face_edge(cube_face).attributes["on_x"]:
@@ -265,8 +270,9 @@ class _Cell:
                               left_top + d,
                               left_top]
                         shapes.quad_with_line(vx, color, lw, lc)
-                        nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
-                        shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
+                        if config.GUI_DRAW_MARKERS:
+                            nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
+                            shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
                         # if _slice.get_face_edge(cube_face).attributes["origin"]:
                         #     shapes.cross(vx, cross_width, cross_color)
                         # if _slice.get_face_edge(cube_face).attributes["on_x"]:
@@ -308,12 +314,13 @@ class _Cell:
                         attributes = edge.attributes
                         shapes.quad_with_line(vx, color, lw, lc)
 
-                        if attributes["origin"]:
-                            shapes.cross(vx, cross_width, cross_color)
-                        if attributes["on_x"]:
-                            shapes.cross(vx, cross_width_x, cross_color_x)
-                        if attributes["on_y"]:
-                            shapes.cross(vx, cross_width_y, cross_color_y)
+                        if config.GUI_DRAW_MARKERS:
+                            if attributes["origin"]:
+                                shapes.cross(vx, cross_width, cross_color)
+                            if attributes["on_x"]:
+                                shapes.cross(vx, cross_width_x, cross_color_x)
+                            if attributes["on_y"]:
+                                shapes.cross(vx, cross_width_y, cross_color_y)
 
                         if _slice.edge.c_attributes["annotation"]:
                             self._create_markers(vx, (0, 0, 0), True)
