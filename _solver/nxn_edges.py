@@ -23,7 +23,7 @@ _status = None
 class NxNEdges(SolverElement):
     work_on_b: bool = True
 
-    D_LEVEL = 3
+    D_LEVEL = 2
 
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)
@@ -49,6 +49,8 @@ class NxNEdges(SolverElement):
 
     def solve(self):
 
+        even_parity_was_done = False
+
         for i in range(2):
             if self._is_solved():
                 return  # avoid rotating cube
@@ -70,7 +72,8 @@ class NxNEdges(SolverElement):
                         # self.debug(f"Sub loop edge was done, Still more to fix {n_to_fix}", level=1)
 
             n_to_fix = self._left_to_fix
-            self.debug(f"After main loop, Still more to fix {n_to_fix}", level=1)
+            self.debug(f"After main loop, Still more to fix, parity done: {even_parity_was_done}, "
+                       f"iteration={i} {n_to_fix}", level=1)
 
             if n_to_fix > 1:
                 raise InternalSWError
@@ -78,8 +81,10 @@ class NxNEdges(SolverElement):
             if n_to_fix > 0:
 
                 if i == 0:
+                    even_parity_was_done= True
                     self._do_last_edge_parity()
                 else:
+                    # actaully we can nver reach here, becuase if it no parity, at least two msut be not completed
                     edge = CubeQueries.find_edge(self.cube.edges, lambda e: not e.is3x3)
                     self._do_edge(edge)
 
@@ -207,17 +212,44 @@ class NxNEdges(SolverElement):
                         assert edge_can_destroyed
                         self.cmn.bring_edge_to_front_right_preserve_front_left(edge_can_destroyed)
 
-                with self.w_edge_slice_annotate(face, a_slice, other_slice, animation=is_last):
-                    self.op.op(Algs.E[i_ltr + 1])  # move me to opposite E begin from D, slice begin with 1
-                    self.op.op(Algs.E[other_ltr + 1])  # move other
+                    with self.w_edge_slice_annotate(face, a_slice, other_slice, animation=is_last):
+                        self.op.op(Algs.E[i_ltr + 1])  # move me to opposite E begin from D, slice begin with 1
+                        self.op.op(Algs.E[other_ltr + 1])  # move other
 
-                    self.op.op(self.rf)
+                        self.op.op(self.rf)
 
-                    # bring them back
-                    self.op.op(Algs.E[i_ltr + 1].prime)  # move me to opposite E begin from D, slice begin with 1
-                    self.op.op(Algs.E[other_ltr + 1].prime)  # move other
+                        # bring them back
+                        self.op.op(Algs.E[i_ltr + 1].prime)  # move me to opposite E begin from D, slice begin with 1
+                        self.op.op(Algs.E[other_ltr + 1].prime)  # move other
 
-                assert self._get_slice_ordered_color(face, other_slice) == ordered_color
+                    assert self._get_slice_ordered_color(face, other_slice) == ordered_color
+
+                else:
+
+                    # we're not looking for non-good edge to destory it
+
+                    self.debug(f"**** Doing on last edge, {a_slice}", level=1)
+                    self.debug(f"****               slice {a_slice}", level=1)
+                    self.debug(f"****               other_slice {other_slice}", level=1)
+                    self.debug(f"****               other edge {face.edge_right}", level=1)
+
+                    with self.w_edge_slice_annotate(face, a_slice, other_slice, animation=is_last):
+                        self.op.op(Algs.E[i_ltr + 1])  # move me to opposite E begin from D, slice begin with 1
+                        self.op.op(Algs.E[other_ltr + 1])  # move other
+
+                        self.op.op(self.rf)
+
+                        # bring them back
+                        self.op.op(Algs.E[i_ltr + 1].prime)  # move me to opposite E begin from D, slice begin with 1
+                        self.op.op(Algs.E[other_ltr + 1].prime)  # move other
+
+                    assert self._get_slice_ordered_color(face, other_slice) == ordered_color
+
+                    if is_last:
+                        self.debug(f"**** Did on last edge, {a_slice}", level=1)
+                        self.debug(f"****               slice {a_slice}", level=1)
+                        self.debug(f"****               other_slice {other_slice}", level=1)
+                        self.debug(f"****               other edge {face.edge_right}", level=1)
 
                 work_done = True
 
@@ -296,7 +328,7 @@ class NxNEdges(SolverElement):
 
     def _do_last_edge_parity(self):
 
-        self.op.toggle_animation_on()
+        #self.op.toggle_animation_on()
         # still don't know how to handle
         cube = self.cube
         n_slices = cube.n_slices
@@ -327,7 +359,7 @@ class NxNEdges(SolverElement):
             # print(f"{i} ,{required_color}, {color}")
             if color != required_color:
                 self.debug(f"*** Doing parity on R {i + 1}", level=2)
-                self.op.op((Algs.M[i + 1:i + 1] + Algs.U * 2) * 5)
+                self.op.op((Algs.M[i + 1:i + 1] + Algs.U * 2) * 5 + Algs.U*2)
 
     def _get_slice_ordered_color(self, f: Face, s: EdgeSlice) -> Tuple[Color, Color]:
         """
