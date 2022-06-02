@@ -166,7 +166,7 @@ class CommonOp(ICommon):
 
         raise ValueError(f"{edge} is not on E slice")
 
-    def bring_edge_to_front_left_by_whole_rotate(self, edge: Edge):
+    def bring_edge_to_front_left_by_whole_rotate(self, edge: Edge) -> Edge:
 
         """
         Doesn't preserve any other edge
@@ -179,7 +179,7 @@ class CommonOp(ICommon):
         cube: Cube = self.slv.cube
 
         if cube.front.edge_left is edge:
-            return None  # nothing to do
+            return edge  # nothing to do
 
         max_n = 2
 
@@ -203,7 +203,7 @@ class CommonOp(ICommon):
                         continue
 
                     elif edge in cube.back.edges:
-                        self.op.op(-Algs.X*2)  # Over R, now on front
+                        self.op.op(-Algs.X * 2)  # Over R, now on front
 
                     elif edge in cube.up.edges:
                         self.op.op(-Algs.X)  # Over R, now on front
@@ -220,7 +220,7 @@ class CommonOp(ICommon):
                 else:
 
                     if cube.front.edge_left is edge:
-                        return  # nothing to do
+                        return s_tracker.the_slice.parent  # nothing to do
 
                     if edge is cube.front.edge_top:
                         self.op.op(Algs.Z.prime)
@@ -234,10 +234,9 @@ class CommonOp(ICommon):
                     if not s_tracker.the_slice.parent is cube.left.edge_right:
                         raise InternalSWError(f"Internal error {begin_edge} {now_edge}")
 
-                    return
+                    return s_tracker.the_slice.parent
 
             now_edge = s_tracker.the_slice.parent
-
 
             raise InternalSWError(f"Too many iteration {begin_edge} {now_edge}")
 
@@ -309,7 +308,6 @@ class CommonOp(ICommon):
                 else:
 
                     raise InternalSWError(f"Unknwon case, edge is {edge}")
-
 
     def bring_face_to_front_by_y_rotate(self, face):
         """

@@ -6,6 +6,6 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE=False
 
 CHECK_CUBE_SANITY=True
 
-animation_enabled=True
+animation_enabled=False
 
 GUI_DRAW_MARKERS=False

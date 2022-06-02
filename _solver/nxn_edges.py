@@ -48,26 +48,49 @@ class NxNEdges(SolverElement):
 
     def solve(self):
 
-        if self._is_solved():
-            return  # avoid rotating cube
+        for i in range(2):
+            if self._is_solved():
+                return  # avoid rotating cube
 
-        edge: Edge = next(self.cube.edges.__iter__())
+            next(self.cube.edges.__iter__())
 
-        first_11 = [*self.cube.edges]
-        first_11.pop()
+            first_11 = [*self.cube.edges]
+            first_11.pop()
 
-        n_did_work = 0
-        while self._left_to_fix > 1:
-            n_to_fix = sum(not e.is3x3 for e in first_11)
-            self.debug(f"Main loop, {n_did_work} solved in prev, Still more to fix {n_to_fix}", level=1)
             n_did_work = 0
-            for e in first_11:
-                # because each do move all other edges
-                if self._do_edge(e):
-                    n_did_work += 1
-                    # self.debug(f"Sub loop edge was done, Still more to fix {n_to_fix}", level=1)
+            while self._left_to_fix > 1:
+                n_to_fix = sum(not e.is3x3 for e in first_11)
+                self.debug(f"Main loop, {n_did_work} solved in prev, Still more to fix {n_to_fix}", level=1)
+                n_did_work = 0
+                for e in first_11:
+                    # because each do move all other edges
+                    if self._do_edge(e):
+                        n_did_work += 1
+                        # self.debug(f"Sub loop edge was done, Still more to fix {n_to_fix}", level=1)
 
-        self.debug(f"After main loop, Still more to fix {self._left_to_fix}", level=1)
+            n_to_fix = self._left_to_fix
+            self.debug(f"After main loop, Still more to fix {n_to_fix}", level=1)
+
+            if n_to_fix > 1:
+                raise InternalSWError
+
+            if n_to_fix > 0:
+
+                if i == 0:
+                    self._do_last_edge_parity()
+                else:
+                    edge = CubeQueries.find_edge(self.cube.edges, lambda e: not e.is3x3)
+                    self._do_edge(edge)
+
+                    assert self._is_solved()
+
+
+
+
+
+
+
+
 
     def _report_done(self, s):
         n_to_fix = sum(not e.is3x3 for e in self.cube.edges)
@@ -269,6 +292,42 @@ class NxNEdges(SolverElement):
 
             # need to optimize, should starrt from the one already
 
+
+    def _do_last_edge_parity(self):
+        # still don't know how to handle
+        cube = self.cube
+        n_slices = cube.n_slices
+        assert n_slices % 2
+
+        assert self._left_to_fix == 1
+
+        face = cube.front
+        edge = CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3)
+        assert edge
+
+        self.debug(f"Doing parity on {edge}", level=1)
+
+
+        edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
+
+        assert edge is face.edge_left
+
+        #optimie it , use directly bring to up
+        self.op.op(Algs.F)
+        assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
+        edge = cube.front.edge_top
+
+        required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
+
+        for i in range(n_slices // 2):
+
+            color = self._get_slice_ordered_color(face, edge.get_slice(i))
+            print(f"{i} ,{required_color}, {color}")
+            if color != required_color:
+                self.op.op( ( Algs.M[i+1:i+1] + Algs.U * 2) * 5 )
+
+
+
     def _get_slice_ordered_color(self, f: Face, s: EdgeSlice) -> Tuple[Color, Color]:
         """
 
@@ -291,3 +350,4 @@ class NxNEdges(SolverElement):
     @property
     def rf(self) -> algs.Alg:
         return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
+
