@@ -7,17 +7,7 @@ from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable
 
 import config
 from app_exceptions import InternalSWError
-
-
-@unique
-class Color(Enum):
-    BLUE = "B"
-    ORANGE = "O"
-    YELLOW = "Y"
-    GREEN = "G"
-    RED = "R"
-    WHITE = "W"
-
+from cube_boy import Color, FaceName
 
 
 @unique
@@ -28,14 +18,6 @@ class Direction(Enum):
     D270 = 270
 
 
-@unique
-class FaceName(Enum):
-    U = "U"
-    D = "D"
-    F = "F"
-    B = "B"
-    L = "L"
-    R = "R"
 
 
 @unique
@@ -816,6 +798,10 @@ class Center(Part):
 
     @property
     def color(self):
+        """
+        Meaningfully only for 3x3
+        :return:
+        """
         return self.edg().color
 
     def clone(self) -> "Center":

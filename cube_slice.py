@@ -81,9 +81,6 @@ class Slice(SuperElement):
 
         assert current_face.is_edge(current_edge)
 
-        prev_edge = current_edge
-        prev_face = current_face
-
         n_slices = self.n_slices
 
         inv = self.inv
@@ -123,8 +120,6 @@ class Slice(SuperElement):
             next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
             # now index on next face
             current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
-            prev_face = current_face
-            prev_edge = current_edge
             current_edge = next_edge
             current_face = next_face
 
@@ -240,8 +235,6 @@ class Slice(SuperElement):
         parts: list[PartSlice] = []
 
         s_range = self._get_index_range(slice_index)
-
-        n_slices = self.n_slices
 
         for i in s_range:
             elements: tuple[Sequence[EdgeSlice], Sequence[CenterSlice]] = self._get_slices_by_index(i)

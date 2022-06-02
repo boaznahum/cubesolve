@@ -5,8 +5,9 @@ from typing import Callable, TypeVar, Tuple
 
 from app_exceptions import InternalSWError
 from cube import Cube
+from cube_boy import Color
 from cube_face import Face
-from elements import PartSlice, CenterSlice, Color
+from elements import PartSlice, CenterSlice
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]
@@ -45,6 +46,17 @@ class CubeQueries:
                     return s
 
         return None
+
+    @staticmethod
+    def find_slice_in_face_center(face: Face, pred: Pred[CenterSlice]) -> CenterSlice | None:
+
+        s: CenterSlice
+        for s in face.center.all_slices:
+            if pred(s):
+                return s
+
+        return None
+
 
     @staticmethod
     def get_four_center_points(cube: Cube, r, c) -> Iterator[Tuple[int, int]]:
@@ -91,7 +103,7 @@ class CubeQueries:
                     counter: MutableMapping[Hashable, MutableSequence[Tuple[int, int]]] = dist[clr]
                     key = frozenset([*CubeQueries.get_four_center_points(cube, r, c)])
                     counter[key].append((r, c))
-                        # print(n, "]", s, *CubeQueries.get_four_center_points(cube, r, c))
+
         return dist
 
     @staticmethod
@@ -104,4 +116,4 @@ class CubeQueries:
 
         st2 = CubeQueries.get_sate(cube)
 
-        return all ( s1.same_colors(s2)  for s1, s2 in itertools.zip_longest(st1, st2) )
+        return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(st1, st2))

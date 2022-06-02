@@ -84,7 +84,17 @@ class Solver(ISolver):
     def status(self):
 
         if not self._cube.is3x3:
-            return "Not 3x3"
+            if self._cube.is_boy:
+                s = "Boy:True"
+            else:
+                s = "Boy:False"
+
+            if self.nxn_centers.solved():
+                s += ", Centers"
+            else:
+                s += ", No Centers"
+
+            return s + ", Not 3x3"
 
         if self._cube.solved:
             return "Solved"

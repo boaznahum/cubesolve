@@ -1,9 +1,9 @@
-from typing import Collection, Callable, Tuple, Mapping, Hashable, Sequence
+from typing import Collection, Mapping
 
+from cube_boy import Color, FaceName, CubeLayout
 from cube_face import Face
 from cube_slice import Slice, SliceName
 from elements import *
-from elements import Color
 
 
 class Cube:
@@ -23,7 +23,8 @@ class Cube:
         "_slice_m", "_slice_e", "_slice_s",
         "_slices",
         "_modify_counter",
-        "_last_sanity_counter"
+        "_last_sanity_counter",
+        "_original_layout"
     ]
 
     _front: Face
@@ -41,6 +42,7 @@ class Cube:
         self._size = size
         self._modify_counter = 0
         self._last_sanity_counter = 0
+        self._original_layout: CubeLayout | None = None
         self._reset()
 
     def _reset(self, cube_size=None):
@@ -71,7 +73,7 @@ class Cube:
         self._down = d
         self._back = b
 
-        self._faces = {
+        self._faces: Mapping[FaceName, Face] = {
             FaceName.F: f,
             FaceName.L: l,
             FaceName.U: u,
@@ -266,7 +268,6 @@ class Cube:
 
         :param slice_index: [0..n-2-1] [0, n_slices-1], default is [0, n_slices-1]
         :param slice_name:
-        :param n:
         :return:
         """
 
@@ -404,7 +405,7 @@ class Cube:
     def is_sanity(self, force_check=False) -> bool:
         # noinspection PyBroadException
         try:
-            self.sanity()
+            self.sanity(force_check)
             return True
         except:
             return False
@@ -455,15 +456,15 @@ class Cube:
             dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = CubeQueries.get_dist(self)
 
             for clr in Color:
-                clr_dist= dist[clr]
+                clr_dist = dist[clr]
 
                 def _print_clr():
-                    for k, v in clr_dist.items():
-                        if len(v) != 4:
+                    for _k, _v in clr_dist.items():
+                        if len(_v) != 4:
                             m = "!!!"
                         else:
                             m = "+++"
-                        print(clr, k, f"{m}{len(v)}{m}", v)
+                        print(clr, _k, f"{m}{len(_v)}{m}", v)
 
                 clr_n = sum(len(s) for s in clr_dist.values())
 
@@ -474,7 +475,8 @@ class Cube:
                     raise InternalSWError(s)
                 for k, v in clr_dist.items():
                     if len(v) != 4:
-                        if n_slices % 2 and k == frozenset([*CubeQueries.get_four_center_points(self, n_slices//2, n_slices //2)]):
+                        if n_slices % 2 and k == frozenset(
+                                [*CubeQueries.get_four_center_points(self, n_slices // 2, n_slices // 2)]):
                             if len(v) != 1:
                                 s = f"Wrong middle center {k} entries for color {clr}"
                                 _print_clr()
@@ -486,41 +488,6 @@ class Cube:
                             _print_clr()
                             print(s)
                             raise InternalSWError(s)
-
-            for clr in Color:
-
-                def _c_pred(_r, _c):
-
-                    def pred(cs: CenterSlice) -> bool:
-                        if not cs.color == clr:
-                            return False
-
-                        return cs.index in CubeQueries.get_four_center_points(self, _r, _c)
-                        #return cs.index == rc
-
-                    return pred
-
-                for r in range(self.n_slices):
-                    for c in range(self.n_slices):
-                        if not CubeQueries.find_center_slice(self, _c_pred(r, c)):
-                            n = 0
-                            counter = defaultdict(int)
-                            for f in self.faces:
-                                for r in range(self.n_slices):
-                                    for c in range(self.n_slices):
-                                        s = f.center.get_center_slice((r,c))
-                                        if s.color == clr:
-                                            n += 1
-                                            key = frozenset([*CubeQueries.get_four_center_points(self, r, c)])
-                                            counter[key] += 1
-                                            print(n, "]", s, *CubeQueries.get_four_center_points(self, r, c))
-                            for k,v in counter.items():
-                                print(k, v)
-
-                            raise InternalSWError(f"{(clr, r, c)}")
-                            assert CubeQueries.find_center_slice(self, _c_pred(r, c)), f"{(clr, r, c)}"
-
-
 
         if not self.is3x3:
             return
@@ -557,7 +524,7 @@ class Cube:
     @property
     def is3x3(self):
         # todo: Optimize it !!!
-        return all(f.is3x3 for f in self.faces)
+        return all(f.is3x3 for f in self.faces) and self.is_boy
 
     def reset(self, cube_size=None):
         self._reset(cube_size)
@@ -659,6 +626,41 @@ class Cube:
             parts.update(f.slices)
 
         return parts
+
+    @property
+    def original_layout(self) -> CubeLayout:
+        """
+
+        :return: BOY layout
+        """
+
+        if not self._original_layout:
+            from cube_face import Face
+            f: Face
+
+            faces: dict[FaceName, Color] = {f.name: f.original_color for f in self._faces.values()}
+            lo = CubeLayout(True, faces)
+
+            self._original_layout = lo
+
+        return self._original_layout
+
+    @property
+    def current_layout(self) -> CubeLayout:
+        """
+
+        :return: current layout, valid only in case of 3x3, guess center color by taking middle slice
+        """
+
+        from cube_face import Face
+        f: Face
+
+        faces: dict[FaceName, Color] = {f.name: f.original_color for f in self._faces.values()}
+        return CubeLayout(False, faces)
+
+    @property
+    def is_boy(self):
+        return self.current_layout.same(self.original_layout)
 
 
 def _create_edge(f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:

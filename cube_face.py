@@ -1,5 +1,6 @@
 from typing import Callable
 
+from cube_boy import FaceName, Color
 from elements import *
 from elements import PartSlice
 
@@ -168,8 +169,9 @@ class Face(SuperElement):
         :return:
         """
         return self._original_color
+
     def __str__(self) -> str:
-        #return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"
+        # return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"
         return f"{self._center.edg().color.name}@{self._name.value}"
 
     def __repr__(self):
@@ -432,5 +434,3 @@ class Face(SuperElement):
     def slices(self) -> Iterable[PartSlice]:
         for p in self._parts:
             yield from p.all_slices
-
-

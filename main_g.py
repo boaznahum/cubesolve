@@ -1,8 +1,7 @@
 import math
-import sys
 import time
 import traceback
-from collections.abc import Iterable, Sequence, Container, Collection, Set
+from collections.abc import Iterable, Collection, Set
 from typing import MutableSequence, Callable
 
 import glooey  # type: ignore
