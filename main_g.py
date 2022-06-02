@@ -886,6 +886,10 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
             slv.solve(what=SolveStep.NxNCenters)
 
+        case key.F5:
+
+            slv.solve(what=SolveStep.NxNEdges)
+
         case key.T:
             # test
             nn = 50

@@ -149,3 +149,15 @@ class CubeQueries:
         st2 = CubeQueries.get_sate(cube)
 
         return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(st1, st2))
+
+    @classmethod
+    def find_slice_in_cube_edges(cls, cube: Cube, pred:Pred[EdgeSlice]) -> EdgeSlice | None:
+
+        for e in cube.edges:
+            for i in range(cube.n_slices):
+                s: EdgeSlice = e.get_slice(i)
+
+                if pred(s):
+                    return s
+
+        return None

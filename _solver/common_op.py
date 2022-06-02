@@ -1,4 +1,5 @@
-from typing import Callable
+from contextlib import contextmanager
+from typing import Callable, Generator
 
 from _solver.icommon_op import ICommon
 from _solver.base_solver import ISolver
@@ -7,7 +8,21 @@ from app_exceptions import InternalSWError
 from cube import Cube
 from cube_face import Face
 from cube_operator import Operator
-from elements import Edge, Color, FaceName
+from cube_queries import Pred, CubeQueries
+from elements import Edge, Color, FaceName, EdgeSlice
+
+
+TRACE_UNIQUE_ID : int = 0
+class EdgeSliceTracker:
+
+    def __init__(self, cube: Cube, pred: Pred[EdgeSlice]) -> None:
+        super().__init__()
+        self.pred = pred
+        self.cube = cube
+
+    @property
+    def the_slice(self):
+        return CubeQueries.find_slice_in_cube_edges(self.cube, self.pred)
 
 
 class CommonOp(ICommon):
@@ -150,6 +165,83 @@ class CommonOp(ICommon):
 
         raise ValueError(f"{edge} is not on E slice")
 
+    def bring_edge_to_front_left_by_whole_rotate(self, edge: Edge):
+
+        """
+        Doesn't preserve any other edge
+        :param edge:
+        :return:
+        """
+        cube: Cube = self.slv.cube
+
+        if cube.front.edge_left is edge:
+            return None  # nothing to do
+
+        max_n = 2
+
+        slice = edge.get_slice(0)
+
+        s_tracker: EdgeSliceTracker
+        with self._track_e_slice(slice) as s_tracker:
+
+            for _ in range(max_n):
+                slice = s_tracker.the_slice
+
+                edge = slice.parent
+
+                if cube.front.edge_left is edge:
+                    return  # nothing to do
+
+                if edge in cube.down.edges:
+                    self.op.op(Algs.Z)  # Over F, now on left
+                    continue
+
+                elif edge in cube.back.edges:
+                    self.op.op(-Algs.Y)  # Over U, now on left
+
+                elif edge in cube.up.edges:
+                    self.op.op(-Algs.Z)  # Over F, now on left
+
+                elif edge in cube.right.edges:
+                    self.op.op(Algs.Z * 2)  # Over F, now on left
+
+                elif edge in cube.front.edges:
+                    self.op.op(Algs.Y )  # Over U, now on left
+
+                else:
+
+                    assert edge in cube.front.edges
+
+                    if edge is cube.left.edge_top:
+                        self.op.op(Algs.L)
+                    elif edge is cube.left.edge_left:
+                        self.op.op(Algs.L * 2)
+                    elif edge is cube.left.edge_bottom:
+                        self.op.op(-Algs.L)
+
+                    assert s_tracker.the_slice.parent is cube.left.edge_right
+
+                    return
+
+            raise InternalSWError("Too many iteration")
+
+
+
+
+
+
+        if cube.right.edge_right is edge:
+            alg = -Algs.E
+            self.slv.op.op(alg)
+            return alg
+
+        if cube.left.edge_left is edge:
+            alg = Algs.E
+            self.slv.op.op(alg)
+            return alg
+
+        raise ValueError(f"{edge} is not on E slice")
+
     def bring_face_to_front_by_y_rotate(self, face):
         """
         rotate over U
@@ -215,3 +307,32 @@ class CommonOp(ICommon):
 
             case _:
                 raise ValueError(f"Unknown face {face.name}")
+
+
+    @contextmanager
+    def _track_e_slice(self, es: EdgeSlice) -> Generator[EdgeSliceTracker, None, None]:
+
+        global TRACE_UNIQUE_ID
+
+        TRACE_UNIQUE_ID += 1
+
+        n = TRACE_UNIQUE_ID
+
+        key = "SliceTracker:" + str(n)
+
+        def _pred(s : EdgeSlice) -> bool:
+            return key in s.c_attributes
+
+        tracker: EdgeSliceTracker = EdgeSliceTracker(self.cube, _pred)
+
+        es.c_attributes[key] = key
+
+        try:
+            yield tracker
+        finally:
+            c_att = tracker.the_slice.c_attributes
+            del c_att[key]
+
+
+
+

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
 from enum import Enum, unique
-from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable
+from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable, final
 
 import config
 from app_exceptions import InternalSWError
@@ -139,7 +139,8 @@ class PartSlice(ABC, Hashable):
     __slots__ = ["_cube", "_parent", "_index", "_edges", "_colors_id_by_pos",
                  "_fixed_id",
                  "_colors_id_by_colors",
-                 "_unique_id"]
+                 "_unique_id",
+                 "c_attributes"]
     _edges: MutableSequence[PartEdge]
 
     def __init__(self, index: SliceIndex, *edges: PartEdge) -> None:
@@ -154,6 +155,8 @@ class PartSlice(ABC, Hashable):
         self._colors_id_by_colors: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
         self._parent: Part | None = None
+        # attributes that are move aroud with the slice
+        self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
 
         global _SliceUniqueID
         _SliceUniqueID += 1
@@ -230,6 +233,8 @@ class PartSlice(ABC, Hashable):
         :param source_slice:
         :return:
         """
+
+        assert len(source_dest) == len(self._edges)
         source: _Face
         target: _Face
         for source, target in source_dest:
@@ -243,6 +248,12 @@ class PartSlice(ABC, Hashable):
         parent = self._parent
         assert parent
         parent.reset_colors_id()
+
+        self.reset_colors_id()
+
+        self.c_attributes.clear()
+        self.c_attributes.update(source_slice.c_attributes)
+
 
     def same_colors(self, other: "PartSlice"):
         """
@@ -316,6 +327,8 @@ class PartSlice(ABC, Hashable):
 
         return colors_id
 
+    def reset_colors_id(self):
+        self._colors_id_by_colors = None
 
     def on_face(self, f: _Face) -> PartEdge | None:
         """
@@ -399,14 +412,21 @@ class PartSlice(ABC, Hashable):
     def _clone_edges(self) -> Iterable[PartEdge]:
         return [e.clone() for e in self._edges]
 
+
+    # todo: clone logic is duplicated all over
     def clone(self) -> "PartSlice":
         s = PartSlice(self._index, *self._clone_edges())
         s._unique_id = self._unique_id
+        s.c_attributes = self.c_attributes.copy()
         return s
 
     @property
     def unique_id(self):
         return self._unique_id
+
+    @property
+    def parent(self) -> "Part":
+        return self._parent
 
 
 class CubeElement:
@@ -875,6 +895,8 @@ class EdgeSlice(PartSlice):
         # todo fix it should be done by super clone
         e._unique_id = self._unique_id
 
+        e.c_attributes = self.c_attributes.copy()
+
         return e
 
     def single_shared_face(self, other: "EdgeSlice") -> _Face:
@@ -974,6 +996,15 @@ class EdgeSlice(PartSlice):
                          (shared_face, dest_other))
 
 
+
+    @property
+    def parent(self) -> "Edge":
+        p = super().parent
+
+        assert isinstance(p, Edge)
+        return p
+
+
 class CenterSlice(PartSlice):
 
     def __init__(self, index: CenterSliceIndex, *edges: PartEdge) -> None:
@@ -986,6 +1017,8 @@ class CenterSlice(PartSlice):
         c = CenterSlice(index, *self._clone_edges())
         # todo fix it should be done by super clone
         c._unique_id = self._unique_id
+
+        c.c_attributes = self.c_attributes.copy()
 
         return c
 

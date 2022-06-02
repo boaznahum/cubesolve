@@ -9,6 +9,7 @@ from _solver.l2 import L2
 from _solver.l3_corners import L3Corners
 from _solver.l3_cross import L3Cross
 from _solver.nxn_centers import NxNCenters
+from _solver.nxn_edges import NxNEdges
 from algs import Algs
 from app_exceptions import OpAborted
 from cube import Cube
@@ -23,6 +24,7 @@ class SolveStep(Enum):
     L3 = "L3"
     L3x = "L3x"
     NxNCenters = "NxNCenters"
+    NxNEdges = "NxNEdges"
 
 
 class Solver(ISolver):
@@ -34,6 +36,7 @@ class Solver(ISolver):
                  "l3_cross",
                  "l3_corners",
                  "nxn_centers",
+                 "nxn_edges",
                  "common"]
 
     def __init__(self, op: Operator) -> None:
@@ -48,6 +51,7 @@ class Solver(ISolver):
         self.l3_cross = L3Cross(self)
         self.l3_corners = L3Corners(self)
         self.nxn_centers = NxNCenters(self)
+        self.nxn_edges = NxNEdges(self)
 
         # allow solver to not put annotations
         self._running_solution = False
@@ -93,6 +97,11 @@ class Solver(ISolver):
                 s += ", Centers"
             else:
                 s += ", No Centers"
+
+            if self.nxn_edges.solved():
+                s += ", Edges"
+            else:
+                s += ", No Edges"
 
             return s + ", Not 3x3"
 
@@ -150,6 +159,7 @@ class Solver(ISolver):
 
                 case SolveStep.ALL | SolveStep.L3:
                     self.nxn_centers.solve()
+                    self.nxn_edges.solve()
                     self.l1_cross.solve_l0_cross()
                     self.l1_corners.solve()
                     self.l2.solve()
@@ -173,6 +183,11 @@ class Solver(ISolver):
 
                 case SolveStep.NxNCenters:
                     self.nxn_centers.solve()
+
+                case SolveStep.NxNEdges:
+                    # centres are not must
+                    #self.nxn_centers.solve()
+                    self.nxn_edges.solve()
 
         finally:
             self._debug_override = _d
