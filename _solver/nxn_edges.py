@@ -2,6 +2,7 @@ from collections.abc import Iterator, Sequence
 from typing import Tuple, Callable, Collection, Set
 
 import algs
+import config
 from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
 from algs import Algs
@@ -22,7 +23,7 @@ _status = None
 class NxNEdges(SolverElement):
     work_on_b: bool = True
 
-    D_LEVEL = 2
+    D_LEVEL = 3
 
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)
@@ -84,14 +85,6 @@ class NxNEdges(SolverElement):
 
                     assert self._is_solved()
 
-
-
-
-
-
-
-
-
     def _report_done(self, s):
         n_to_fix = sum(not e.is3x3 for e in self.cube.edges)
         self.debug(f"{s}, Still more to fix {n_to_fix}", level=2)
@@ -109,10 +102,9 @@ class NxNEdges(SolverElement):
         else:
             self.debug(f"Need to work on Edge {edge} ")
 
-        if self._left_to_fix < 2:
-            self.debug(f"But I can't continue because I'm the last {edge} ")
-            return False
-
+        # if self._left_to_fix < 2:
+        #     self.debug(f"But I can't continue because I'm the last {edge} ")
+        #     return False
 
         # find needed color
         n_slices = self.cube.n_slices
@@ -174,50 +166,60 @@ class NxNEdges(SolverElement):
 
         edge_can_destroyed: Edge | None = None
 
-        for i in range(0, n_slices):
+        is_last = self._left_to_fix == 1
 
-            a_slice = edge.get_slice(i)
+        work_done = True
 
-            a_slice_id = a_slice.colors_id_by_color
+        while work_done:
+            work_done = False
+            for i in range(0, n_slices):
 
-            if a_slice_id != color_un_ordered:
-                continue
+                a_slice = edge.get_slice(i)
 
-            ordered = self._get_slice_ordered_color(face, a_slice)
-            if ordered == ordered_color:
-                # done
-                continue
+                a_slice_id = a_slice.colors_id_by_color
 
-            if n_slices % 2 and i == n_slices // 2:
-                raise InternalSWError()
+                if a_slice_id != color_un_ordered:
+                    continue
 
-            # now need to fix
+                ordered = self._get_slice_ordered_color(face, a_slice)
+                if ordered == ordered_color:
+                    # done
+                    continue
 
-            other_slice_i = inv(i)
-            other_slice = edge.get_slice(other_slice_i)
-            other_order = self._get_slice_ordered_color(face, other_slice)
-            if other_order == ordered_color:
-                raise InternalSWError("Don't know what to do")
+                if n_slices % 2 and i == n_slices // 2:
+                    raise InternalSWError()
 
-            i_ltr = edge.get_ltr_index_from_slice_index(face, i)
-            other_ltr = edge.get_ltr_index_from_slice_index(face, other_slice_i)
+                # now need to fix
 
-            if edge_can_destroyed is None:
-                search_in: set[Edge] = set(self.cube.edges) - {edge}
-                edge_can_destroyed = CubeQueries.find_edge(search_in, lambda e: not e.is3x3)
-                assert edge_can_destroyed
-                self.cmn.bring_edge_to_front_right_preserve_front_left(edge_can_destroyed)
+                other_slice_i = inv(i)
+                other_slice = edge.get_slice(other_slice_i)
+                other_order = self._get_slice_ordered_color(face, other_slice)
+                if other_order == ordered_color:
+                    raise InternalSWError("Don't know what to do")
 
-            self.op.op(Algs.E[i_ltr + 1])  # move me to opposite E begin from D, slice begin with 1
-            self.op.op(Algs.E[other_ltr + 1])  # move other
+                i_ltr = edge.get_ltr_index_from_slice_index(face, i)
+                other_ltr = edge.get_ltr_index_from_slice_index(face, other_slice_i)
 
-            self.op.op(self.rf)
+                if not is_last:
+                    if edge_can_destroyed is None:
+                        search_in: set[Edge] = set(self.cube.edges) - {edge}
+                        edge_can_destroyed = CubeQueries.find_edge(search_in, lambda e: not e.is3x3)
+                        assert edge_can_destroyed
+                        self.cmn.bring_edge_to_front_right_preserve_front_left(edge_can_destroyed)
 
-            # bring them back
-            self.op.op(Algs.E[i_ltr + 1].prime)  # move me to opposite E begin from D, slice begin with 1
-            self.op.op(Algs.E[other_ltr + 1].prime)  # move other
+                with self.w_edge_slice_annotate(face, a_slice, other_slice, animation=is_last):
+                    self.op.op(Algs.E[i_ltr + 1])  # move me to opposite E begin from D, slice begin with 1
+                    self.op.op(Algs.E[other_ltr + 1])  # move other
 
-            assert self._get_slice_ordered_color(face, other_slice) == ordered_color
+                    self.op.op(self.rf)
+
+                    # bring them back
+                    self.op.op(Algs.E[i_ltr + 1].prime)  # move me to opposite E begin from D, slice begin with 1
+                    self.op.op(Algs.E[other_ltr + 1].prime)  # move other
+
+                assert self._get_slice_ordered_color(face, other_slice) == ordered_color
+
+                work_done = True
 
     def _fix_all_from_other_edges(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                   color_un_ordered: PartColorsID):
@@ -257,7 +259,7 @@ class NxNEdges(SolverElement):
                 # we can't search again , because it might that we have another one there !!!
                 # but we know it was inverted
                 source_slice = edge_right.get_slice(inv(source_index))
-#                source_slice = self._find_slice_in_edge_by_color_id(edge_right, color_un_ordered)
+                #                source_slice = self._find_slice_in_edge_by_color_id(edge_right, color_un_ordered)
                 assert source_slice
 
                 source_ordered_color = self._get_slice_ordered_color(face, source_slice)
@@ -292,8 +294,9 @@ class NxNEdges(SolverElement):
 
             # need to optimize, should starrt from the one already
 
-
     def _do_last_edge_parity(self):
+
+        self.op.toggle_animation_on()
         # still don't know how to handle
         cube = self.cube
         n_slices = cube.n_slices
@@ -307,12 +310,11 @@ class NxNEdges(SolverElement):
 
         self.debug(f"Doing parity on {edge}", level=1)
 
-
         edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
 
         assert edge is face.edge_left
 
-        #optimie it , use directly bring to up
+        # optimie it , use directly bring to up
         self.op.op(Algs.F)
         assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
         edge = cube.front.edge_top
@@ -322,11 +324,10 @@ class NxNEdges(SolverElement):
         for i in range(n_slices // 2):
 
             color = self._get_slice_ordered_color(face, edge.get_slice(i))
-            print(f"{i} ,{required_color}, {color}")
+            # print(f"{i} ,{required_color}, {color}")
             if color != required_color:
-                self.op.op( ( Algs.M[i+1:i+1] + Algs.U * 2) * 5 )
-
-
+                self.debug(f"*** Doing parity on R {i + 1}", level=2)
+                self.op.op((Algs.M[i + 1:i + 1] + Algs.U * 2) * 5)
 
     def _get_slice_ordered_color(self, f: Face, s: EdgeSlice) -> Tuple[Color, Color]:
         """
@@ -350,4 +351,3 @@ class NxNEdges(SolverElement):
     @property
     def rf(self) -> algs.Alg:
         return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
-

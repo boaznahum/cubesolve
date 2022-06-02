@@ -166,6 +166,11 @@ class CubeQueries:
         return None
 
     @classmethod
+    def find_slice_in_cube(cls, cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:
+        return CubeQueries.find_slice_in_edges(cube.edges, pred)
+
+
+    @classmethod
     def find_edge_in_cube(cls, cube: Cube, pred: Pred[Edge]) -> Edge | None:
 
         for e in cube.edges:

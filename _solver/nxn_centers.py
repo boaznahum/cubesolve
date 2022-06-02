@@ -405,7 +405,7 @@ class NxNCenters(SolverElement):
 
         inv = cube.inv
 
-        with self.w_slice_annotate(cs):
+        with self.w_center_slice_annotate(cs):
             new_location_source = self._find_matching_slice(source_face, r, c, required_color)
             assert new_location_source
             source = new_location_source
@@ -432,7 +432,7 @@ class NxNCenters(SolverElement):
             source_slice = source_face.center.get_center_slice(source_index)
             assert source_slice.color == required_color
 
-            with self.w_slice_annotate(source_slice):
+            with self.w_center_slice_annotate(source_slice):
 
                 self.debug(f" On  {source.face.name} , {(r, c)} is {source_slice.color}")
 

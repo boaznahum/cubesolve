@@ -168,11 +168,16 @@ class _Cell:
 
             dest[p_slice.fixed_id].append(g_list)
 
+    def _get_slice_edge(self, _slice):
+        face = self._face_board.cube_face
+        edge = _slice.get_face_edge(face)
+        return edge
+
     def _slice_color(self, _slice: PartSlice):
 
-        face = self._face_board.cube_face
+        edge = self._get_slice_edge(_slice)
 
-        c: Color = _slice.get_face_edge(face).color
+        c: Color = edge.color
 
         slice_color = _color_2_v_color(c)
 
@@ -249,6 +254,10 @@ class _Cell:
                         # if _slice.get_face_edge(cube_face).attributes["on_y"]:
                         #     shapes.cross(vx, cross_width_y, cross_color_y)
 
+                        if self._get_slice_edge(_slice).c_attributes["annotation"]:
+                            self._create_markers(vx, (0, 0, 0), True)
+
+
                     left_bottom += d
                     right_bottom += d
 
@@ -273,6 +282,12 @@ class _Cell:
                         if config.GUI_DRAW_MARKERS:
                             nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
                             shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
+
+                        if self._get_slice_edge(_slice).c_attributes["annotation"]:
+                            self._create_markers(vx, (0, 0, 0), True)
+
+
+
                         # if _slice.get_face_edge(cube_face).attributes["origin"]:
                         #     shapes.cross(vx, cross_width, cross_color)
                         # if _slice.get_face_edge(cube_face).attributes["on_x"]:

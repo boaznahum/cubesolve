@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from enum import unique, Enum
-from typing import Tuple
+from typing import Tuple, List, Callable
 
 from _solver.isolver import ISolver
 from algs import Algs
@@ -8,7 +8,7 @@ from cube import Cube
 from cube_face import Face
 from cube_operator import Operator
 from cube_queries import CubeQueries
-from elements import Part, PartColorsID, CenterSlice
+from elements import Part, PartColorsID, CenterSlice, EdgeSlice
 
 _SLice_Tracking_UniqID: int = 0
 
@@ -166,10 +166,11 @@ class SolverElement:
 
 
     @contextmanager
-    def w_slice_annotate(self, *slices: CenterSlice):
+    def w_center_slice_annotate(self, *slices: CenterSlice, animation=True):
 
         """
         Annotate moved slice
+        :param animation:
         :param elements:  bool in tuple is  'annotated by fixed_location'
         if part is given we annotate the part (by color or by fixed), if color is given we search for it
         :param un_an:
@@ -180,7 +181,7 @@ class SolverElement:
 
         global _SLice_Tracking_UniqID
 
-        if not on:
+        if (not on) or (not animation):
             try:
                 yield None
             finally:
@@ -203,5 +204,60 @@ class SolverElement:
             for i in ids:
                 s = CubeQueries.find_center_slice(cube, lambda _s : i == _s.edge.c_attributes["annotation_track"])
                 del s.edge.c_attributes["annotation"]
+                del s.edge.c_attributes["annotation_track"]
+
+            self.op.op(Algs.AN)
+
+    @contextmanager
+    def w_edge_slice_annotate(self, face: Face, *slices: EdgeSlice, animation=True):
+
+        """
+        Annotate moved slice
+        :param face:
+        :param animation:
+        :param elements:  bool in tuple is  'annotated by fixed_location'
+        if part is given we annotate the part (by color or by fixed), if color is given we search for it
+        :param un_an:
+        :return:
+        """
+
+        on = self.op.animation_enabled
+
+        global _SLice_Tracking_UniqID
+
+        if (not on) or (not animation):
+            try:
+                yield None
+            finally:
+                return
+
+        ids: list[int] = []
+        for s in slices:
+            _SLice_Tracking_UniqID += 1
+            ids.append(_SLice_Tracking_UniqID)
+            s.get_face_edge(face).c_attributes["annotation"] = True
+            s.get_face_edge(face).c_attributes["annotation_track"] = _SLice_Tracking_UniqID
+
+        self.op.op(Algs.AN)
+
+        try:
+            yield None
+        finally:
+
+            def _slice_pred(_i: int) -> Callable[[EdgeSlice], bool]:
+
+                def _pred(s: EdgeSlice):
+                    for e in s.edges:
+                        if e.c_attributes["annotation_track"] == i:
+                            del e.c_attributes["annotation"]
+                            del e.c_attributes["annotation_track"]
+                            return True
+                    return False
+
+                return _pred
+
+            cube = self.cube
+            for i in ids:
+                CubeQueries.find_slice_in_cube_edges(cube, _slice_pred(i))
 
             self.op.op(Algs.AN)
