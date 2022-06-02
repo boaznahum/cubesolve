@@ -117,7 +117,7 @@ class PartEdge:
         return self._annotated_fixed_location
 
 
-EdgeSliceIndex = int | slice
+EdgeSliceIndex = int
 CenterSliceIndex = Tuple[int, int]
 SliceIndex = EdgeSliceIndex | CenterSliceIndex  # type: ignore # row, column, must be hashable
 

@@ -226,15 +226,25 @@ class NxNEdges(SolverElement):
             assert source_slice.parent is edge_right
 
             if self._get_slice_ordered_color(face, source_slice) != ordered_color:
+
+                source_index: int = source_slice.index
+
                 self.op.op(self.rf)
 
-                source_slice = self._find_slice_in_edge_by_color_id(edge_right, color_un_ordered)
+                # we can't search again , because it might that we have another one there !!!
+                # but we know it was inverted
+                source_slice = edge_right.get_slice(inv(source_index))
+#                source_slice = self._find_slice_in_edge_by_color_id(edge_right, color_un_ordered)
                 assert source_slice
 
-                if self._get_slice_ordered_color(face, source_slice) != ordered_color:
-                    print()
+                source_ordered_color = self._get_slice_ordered_color(face, source_slice)
+                if source_ordered_color != ordered_color:
+                    print(f"Problem, on source slice {source_slice}, {source_slice.index}")
+                    print(f"  ....  {source_slice.colors_id_by_color}")
+                    print(f"  ....  on source {source_ordered_color}, required {ordered_color}")
+                    print(f"  ....  on source {type(source_ordered_color)}, required {type(ordered_color)}")
 
-                assert self._get_slice_ordered_color(face, source_slice) == ordered_color
+                assert source_ordered_color == ordered_color
 
             source_index = source_slice.index
 
