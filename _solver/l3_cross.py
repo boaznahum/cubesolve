@@ -4,6 +4,7 @@ from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
 from _solver.tracker import EdgeTracker
 from algs import Algs
+from app_exceptions import EvenCubeEdgeParityException
 from cube_face import Face
 from elements import FaceName, Part, Edge
 
@@ -94,6 +95,10 @@ class L3Cross(SolverElement):
         n: int = left + right + top + bottom
 
         self.debug(f"L3 cross-color: {n} match {yf}")
+
+        if not n in [0, 2, 4]:
+            if self.cube.n_slices % 2 == 0:
+                raise EvenCubeEdgeParityException()
 
         assert n in [0, 2, 4]
         if n == 4:

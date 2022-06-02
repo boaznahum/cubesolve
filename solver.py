@@ -11,7 +11,7 @@ from _solver.l3_cross import L3Cross
 from _solver.nxn_centers import NxNCenters
 from _solver.nxn_edges import NxNEdges
 from algs import Algs
-from app_exceptions import OpAborted
+from app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError
 from cube import Cube
 from cube_operator import Operator
 
@@ -55,7 +55,7 @@ class Solver(ISolver):
 
         # allow solver to not put annotations
         self._running_solution = False
-        self._debug_override : bool | None = None
+        self._debug_override: bool | None = None
 
     @property
     def cube(self) -> Cube:
@@ -151,46 +151,57 @@ class Solver(ISolver):
         if self._cube.solved:
             return
 
+        even_edge_parity_was_detected = False
+
         _d = self._debug_override
-        try:
-            self._debug_override = _debug
+        self._debug_override = _debug
+        for i in [0, 1]:
+            try:
 
-            match what:
 
-                case SolveStep.ALL | SolveStep.L3:
-                    self.nxn_centers.solve()
-                    self.nxn_edges.solve()
-                    self.l1_cross.solve_l0_cross()
-                    self.l1_corners.solve()
-                    self.l2.solve()
-                    self.l3_cross.solve()
-                    self.l3_corners.solve()
+                match what:
 
-                case SolveStep.L3x:
-                    self.l1_cross.solve_l0_cross()
-                    self.l1_corners.solve()
-                    self.l2.solve()
-                    self.l3_cross.solve()
+                    case SolveStep.ALL | SolveStep.L3:
+                        self.nxn_centers.solve()
+                        self.nxn_edges.solve()
+                        self.l1_cross.solve_l0_cross()
+                        self.l1_corners.solve()
+                        self.l2.solve()
+                        self.l3_cross.solve()
+                        self.l3_corners.solve()
 
-                case SolveStep.L2:
-                    self.l1_cross.solve_l0_cross()
-                    self.l1_corners.solve()
-                    self.l2.solve()
+                    case SolveStep.L3x:
+                        self.l1_cross.solve_l0_cross()
+                        self.l1_corners.solve()
+                        self.l2.solve()
+                        self.l3_cross.solve()
 
-                case SolveStep.L1:
-                    self.l1_cross.solve_l0_cross()
-                    self.l1_corners.solve()
+                    case SolveStep.L2:
+                        self.l1_cross.solve_l0_cross()
+                        self.l1_corners.solve()
+                        self.l2.solve()
 
-                case SolveStep.NxNCenters:
-                    self.nxn_centers.solve()
+                    case SolveStep.L1:
+                        self.l1_cross.solve_l0_cross()
+                        self.l1_corners.solve()
 
-                case SolveStep.NxNEdges:
-                    # centres are not must
-                    #self.nxn_centers.solve()
-                    self.nxn_edges.solve()
+                    case SolveStep.NxNCenters:
+                        self.nxn_centers.solve()
 
-        finally:
-            self._debug_override = _d
+                    case SolveStep.NxNEdges:
+                        # centres are not must
+                        # self.nxn_centers.solve()
+                        self.nxn_edges.solve()
+
+            except EvenCubeEdgeParityException:
+                if even_edge_parity_was_detected:
+                    raise InternalSWError("already even_edge_parity_was_detected")
+                else:
+                    even_edge_parity_was_detected = True
+                    self.nxn_edges.do_edge_parity_on_any()
+
+            finally:
+                self._debug_override = _d
 
     def debug(self, *args):
         if self._is_debug_enabled:

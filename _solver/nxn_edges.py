@@ -1,16 +1,13 @@
-from collections.abc import Iterator, Sequence
-from typing import Tuple, Callable, Collection, Set
+from typing import Tuple
 
 import algs
-import config
 from _solver.base_solver import SolverElement, ISolver
-from _solver.common_op import CommonOp
+from _solver.common_op import CommonOp, EdgeSliceTracker
 from algs import Algs
 from app_exceptions import InternalSWError
-from cube_boy import CubeLayout
 from cube_face import Face
-from cube_queries import CubeQueries, Pred
-from elements import FaceName, Color, CenterSlice, Edge, PartColorsID, EdgeSlice
+from cube_queries import CubeQueries
+from elements import Color, Edge, PartColorsID, EdgeSlice
 
 
 def use(_):
@@ -328,34 +325,47 @@ class NxNEdges(SolverElement):
 
     def _do_last_edge_parity(self):
 
-        # self.op.toggle_animation_on()
-        # still don't know how to handle
-        cube = self.cube
-        n_slices = cube.n_slices
 
         assert self._left_to_fix == 1
 
-        face = cube.front
+        # self.op.toggle_animation_on()
+        # still don't know how to handle
+        cube = self.cube
+
         edge = CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3)
         assert edge
 
-        self.debug(f"Doing parity on {edge}", level=1)
+        self._do_edge_parity_on_edge(edge)
 
-        edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
+    def _do_edge_parity_on_edge(self, edge):
 
-        assert edge is face.edge_left
+        cube = self.cube
+        n_slices = cube.n_slices
 
-        # optimie it , use directly bring to up
-        self.op.op(Algs.F)
-        assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
-        edge = cube.front.edge_top
+        face = cube.front
+
+        tracer: EdgeSliceTracker
+        with self.cmn.track_e_slice(edge.get_slice(0)) as tracer:
+            self.debug(f"Doing parity on {edge}", level=1)
+            edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
+            assert edge is face.edge_left
+            # optimize it , use directly bring to up
+            self.op.op(Algs.F)
+
+            # not true on even, edge is OK
+            #assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
+
+            edge =  tracer.the_slice.parent
+            assert edge is face.edge_top
+            edge = cube.front.edge_top
 
         if n_slices % 2:
             required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
         else:
             # just pick one, maybe it will cause parity problem at the end 3x3
+            #  but we want to force all, so we swap
             required_color = self._get_slice_ordered_color(face, edge.get_slice(0))
-
+            required_color = required_color[::-1]
         for i in range(n_slices // 2):
 
             color = self._get_slice_ordered_color(face, edge.get_slice(i))
@@ -386,3 +396,8 @@ class NxNEdges(SolverElement):
     @property
     def rf(self) -> algs.Alg:
         return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
+
+    def do_edge_parity_on_any(self):
+        assert self.cube.n_slices % 2 == 0
+
+        self._do_edge_parity_on_edge(self.cube.front.edge_left)
