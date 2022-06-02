@@ -14,6 +14,8 @@ In even search first /second pair with maximum colors
 Compare counts
 Fix scramble also to invertת  and multiple and generate sub lists
 
+# try to optimize, work less on B
+
 Before centers counting, size 6, scramble 5, #ops=532 , size 8 1326
 #  after counting only on first face(without opposite) 6 -> 546(bug) ! -> 8->1288
 

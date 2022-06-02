@@ -54,14 +54,12 @@ class NxNCenters(SolverElement):
         return self._cmn
 
     def _is_solved(self):
-
-        # todo: check BOY
-        return all((f.center.is3x3 for f in self.cube.faces))
+        return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy
 
     def solved(self) -> bool:
         """
 
-        :return: if all centers have uniqe colors and it is a boy
+        :return: if all centers have unique colors, and it is a boy
         """
 
         return self._is_solved()
@@ -242,7 +240,7 @@ class NxNCenters(SolverElement):
 
     def _track_even(self, f: Face, rc: Tuple[int, int]) -> FaceLoc:
 
-        # Why can't we track by slice index ? becuase when moving from face to face
+        # Why can't we track by slice index ? because when moving from face to face
         #  index may be changed
         _slice = f.center.get_center_slice(rc)
         key = "track:" + str(_slice.color)
@@ -276,13 +274,6 @@ class NxNCenters(SolverElement):
 
         self.debug(f"Working on face {face}",
                    level=1)
-
-        # missing = self.count_missing(face, color)
-        # on_back = self.count_color_on_face(face.opposite, color)
-        #
-        # if missing == on_back:
-        #     self.debug(f"On face {face}, required color is {color}, all {missing} missing are no opposite")
-        #     return False
 
         cmn.bring_face_front(face)
 
@@ -475,16 +466,16 @@ class NxNCenters(SolverElement):
 
                 self.debug(f"Doing communicator on {(r, c)} using second column {cc}, rotating {on_front_rotate}")
 
-                _algs = [rotate_on_cell.prime * r1_mul,
-                         on_front_rotate,
-                         rotate_on_second.prime * r1_mul,
-                         on_front_rotate.prime,
-                         rotate_on_cell * r1_mul,
-                         on_front_rotate,
-                         rotate_on_second * r1_mul,
-                         on_front_rotate.prime]
+                _alg_s = [rotate_on_cell.prime * r1_mul,
+                          on_front_rotate,
+                          rotate_on_second.prime * r1_mul,
+                          on_front_rotate.prime,
+                          rotate_on_cell * r1_mul,
+                          on_front_rotate,
+                          rotate_on_second * r1_mul,
+                          on_front_rotate.prime]
 
-                for a in _algs:
+                for a in _alg_s:
                     self.op.op(a)  # so I can debug
 
                 if cs.color != required_color:

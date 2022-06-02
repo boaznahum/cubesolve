@@ -198,12 +198,6 @@ class _Cell:
         fb: _FaceBoard = self._face_board
         cube_face: Face = fb.cube_face
 
-        def _inv(i, b: bool):
-            if b:
-                return n - 1 - i
-            else:
-                return i
-
         if isinstance(part, Corner):
 
             corner_slice = part.slice
@@ -409,14 +403,16 @@ class _Cell:
         bottom: list[ndarray] = []
         top: list[ndarray] = []
 
+        _face_size = np.linalg.norm(vertexes[0] - vertexes[2])
+
         height = 2
-        bottom_size = 7
-        top_size = 3
+        half_bottom_size = _face_size * 0.8 / 2.0
+        half_top_size = _face_size * 0.5 / 2.0
 
         for v in v1:
-            p = center + v * bottom_size
+            p = center + v * half_bottom_size
             bottom.append(p)
-            p = center + height * ortho_dir + v * top_size
+            p = center + height * ortho_dir + v * half_top_size
             top.append(p)
 
         shapes.box_with_lines(bottom, top, color, 3, (0, 0, 0))
