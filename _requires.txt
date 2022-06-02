@@ -2,5 +2,7 @@ pip
 glooey
 numpy
 mypy
+colorama
+
 
 
