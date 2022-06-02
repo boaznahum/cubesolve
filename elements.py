@@ -151,6 +151,7 @@ class PartSlice(ABC, Hashable):
         self._edges: MutableSequence[PartEdge] = [*edges]
 
         self._colors_id_by_pos: PartColorsID | None = None
+        self._colors_id_by_colors: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
         self._parent: Part | None = None
 
@@ -291,6 +292,30 @@ class PartSlice(ABC, Hashable):
 
     def reset_after_faces_changes(self):
         self._colors_id_by_pos = None
+
+    @property
+    def colors_id_by_color(self) -> PartColorsID:
+        """
+        Return the parts actual color
+        the colors of the faces it is currently on
+        :return:
+        """
+
+        colors_id: PartColorsID | None = self._colors_id_by_colors
+
+        if not colors_id or config.DONT_OPTIMIZED_PART_ID:
+
+            new_colors_id = frozenset(e.color for e in self._edges)
+
+            if colors_id and new_colors_id != colors_id:
+                print("Bug here !!!!")
+
+            colors_id = new_colors_id
+
+            self._colors_id_by_colors = new_colors_id
+
+        return colors_id
+
 
     def on_face(self, f: _Face) -> PartEdge | None:
         """

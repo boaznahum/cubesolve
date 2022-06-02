@@ -1,4 +1,4 @@
-from collections.abc import Sequence, Collection
+from collections.abc import Collection
 from enum import unique, Enum
 from typing import Mapping
 
@@ -37,9 +37,33 @@ class CubeLayout:
         super().__init__()
         self._faces: dict[FaceName, Color] = dict(faces)
         self._read_only = read_only
+        self._edge_colors : Collection[frozenset[Color]] | None = None
 
     def colors(self) -> Collection[Color]:
         return [*self._faces.values()]
+
+    def edge_colors(self) -> Collection[frozenset[Color]]:
+
+        if self._edge_colors is not None:
+            return self._edge_colors
+
+        colors:set[frozenset[Color]] = set()
+
+        for f1, c1 in self._faces.items():
+            for f2, c2 in self._faces.items():
+                if f1 is not f2:
+                    if f2 is not CubeLayout._all_opposite[f1]:
+                        c = frozenset((c1, c2))
+                        colors.add(c)
+
+        self._edge_colors = colors
+
+        return self._edge_colors
+
+
+
+
+
 
     @staticmethod
     def opposite(fn: FaceName) -> FaceName:
@@ -235,10 +259,10 @@ class CubeLayout:
 
         s = ""
 
-        s += "-" + faces[FaceName.B].value + "-" + "\n"
-        s += "-" + faces[FaceName.U].value + "-" + "\n"
-        s += faces[FaceName.L].value + faces[FaceName.F].value + faces[FaceName.R].value + "\n"
-        s += "-" + faces[FaceName.D].value + "-" + "\n"
+        s += "-" + str(faces[FaceName.B].value) + "-" + "\n"
+        s += "-" + str(faces[FaceName.U].value) + "-" + "\n"
+        s += str(faces[FaceName.L].value) + str(faces[FaceName.F].value) + str(faces[FaceName.R].value) + "\n"
+        s += "-" + str(faces[FaceName.D].value) + "-" + "\n"
 
         return s
 

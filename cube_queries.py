@@ -7,7 +7,7 @@ from app_exceptions import InternalSWError
 from cube import Cube
 from cube_boy import Color
 from cube_face import Face
-from elements import PartSlice, CenterSlice
+from elements import PartSlice, CenterSlice, PartColorsID, Edge, EdgeSlice
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]
@@ -68,6 +68,14 @@ class CubeQueries:
             (r, c) = (c, inv(r))
 
     @staticmethod
+    def get_two_edge_slice_points(cube: Cube, i) -> Iterable[int]:
+
+        inv = cube.inv
+
+        return (i, inv(i))
+
+
+    @staticmethod
     def print_dist(cube: Cube):
         for clr in Color:
             n = 0
@@ -89,7 +97,7 @@ class CubeQueries:
                 print(clr, k, f"{m}{len(v)}{m}", v)
 
     @staticmethod
-    def get_dist(cube: Cube) -> Mapping[Color, Mapping[Hashable, Sequence[Tuple[int, int]]]]:
+    def get_centers_dist(cube: Cube) -> Mapping[Color, Mapping[Hashable, Sequence[Tuple[int, int]]]]:
 
         dist: Mapping[Color, MutableMapping[Hashable, MutableSequence[Tuple[int, int]]]]
 
@@ -103,6 +111,30 @@ class CubeQueries:
                     counter: MutableMapping[Hashable, MutableSequence[Tuple[int, int]]] = dist[clr]
                     key = frozenset([*CubeQueries.get_four_center_points(cube, r, c)])
                     counter[key].append((r, c))
+
+        return dist
+
+    @staticmethod
+    def get_edges_dist(cube: Cube) -> Mapping[PartColorsID, Mapping[Hashable, Sequence[int]]]:
+
+        """
+        For each possible edge color, return list of slice corrdinates
+        Slice coordinate can be i or inv(i) and in some cases it will have both equal
+        :return:
+        """
+
+        dist: Mapping[PartColorsID, MutableMapping[Hashable, MutableSequence[int]]]
+
+        dist = defaultdict(lambda: defaultdict(list))
+
+        e: Edge
+        for e in cube.edges:
+            for i in range(cube.n_slices):
+                    s: EdgeSlice = e.get_slice(i)
+                    clr = s.colors_id_by_color
+                    counter: MutableMapping[Hashable, MutableSequence[int]] = dist[clr]
+                    key = frozenset([*CubeQueries.get_two_edge_slice_points(cube, i)])
+                    counter[key].append(i)
 
         return dist
 

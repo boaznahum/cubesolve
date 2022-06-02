@@ -20,6 +20,7 @@ class Cube:
         "_back",
         "_color_2_face",
         "_faces",
+        "_edges",
         "_slice_m", "_slice_e", "_slice_s",
         "_slices",
         "_modify_counter",
@@ -49,6 +50,8 @@ class Cube:
 
         if cube_size:
             self._size = cube_size
+
+        self._original_layout = None
 
         self._modify_counter = 0
         self._last_sanity_counter = 0
@@ -84,25 +87,29 @@ class Cube:
 
         e: Edge
 
+        edges: list[Edge] = []
+
         # see document right-top-left-coordinates.jpg
         # 12 edges
-        f._edge_top = u._edge_bottom = _create_edge(f, u, True)
-        f._edge_left = l._edge_right = _create_edge(f, l, True)
-        f._edge_right = r._edge_left = _create_edge(f, r, True)
-        f._edge_bottom = d._edge_top = _create_edge(f, d, True)
+        f._edge_top = u._edge_bottom = _create_edge(edges, f, u, True)
+        f._edge_left = l._edge_right = _create_edge(edges,f, l, True)
+        f._edge_right = r._edge_left = _create_edge(edges, f, r, True)
+        f._edge_bottom = d._edge_top = _create_edge(edges, f, d, True)
 
-        l._edge_top = u._edge_left = _create_edge(l, u, False)
-        l._edge_bottom = d._edge_left = _create_edge(l, d, True)
+        l._edge_top = u._edge_left = _create_edge(edges, l, u, False)
+        l._edge_bottom = d._edge_left = _create_edge(edges, l, d, True)
 
-        d._edge_right = r._edge_bottom = _create_edge(d, r, False)
-        d._edge_bottom = b._edge_bottom = _create_edge(d, b, False)
+        d._edge_right = r._edge_bottom = _create_edge(edges, d, r, False)
+        d._edge_bottom = b._edge_bottom = _create_edge(edges, d, b, False)
 
-        r._edge_right = b._edge_left = _create_edge(r, b, True)
+        r._edge_right = b._edge_left = _create_edge(edges, r, b, True)
 
-        l._edge_left = b._edge_right = _create_edge(l, b, True)
+        l._edge_left = b._edge_right = _create_edge(edges, l, b, True)
 
-        u._edge_top = b._edge_top = _create_edge(u, b, False)
-        u._edge_right = r._edge_top = _create_edge(u, r, True)
+        u._edge_top = b._edge_top = _create_edge(edges, u, b, False)
+        u._edge_right = r._edge_top = _create_edge(edges, u, r, True)
+
+        self._edges = edges
 
         f._corner_top_left = l._corner_top_right = u._corner_bottom_left = _create_corner(f, l, u)
         f._corner_top_right = r._corner_top_left = u._corner_bottom_right = _create_corner(f, r, u)
@@ -182,6 +189,10 @@ class Cube:
     @property
     def faces(self) -> Iterable[Face]:
         return self._faces.values()
+
+    @property
+    def edges(self) -> Iterable[Edge]:
+        return self._edges
 
     def face(self, name: FaceName) -> Face:
         return self._faces[name]
@@ -430,87 +441,11 @@ class Cube:
         if not (force_check or config.CHECK_CUBE_SANITY):
             return
 
-        # find all corners , NxN still have simple corners
+        from cube_sanity import CubeSanity
 
-        corners = [
-            (Color.YELLOW, Color.ORANGE, Color.BLUE),
-            (Color.YELLOW, Color.RED, Color.BLUE),
-            (Color.YELLOW, Color.ORANGE, Color.GREEN),
-            (Color.YELLOW, Color.RED, Color.GREEN),
-            (Color.WHITE, Color.ORANGE, Color.BLUE),
-            (Color.WHITE, Color.RED, Color.BLUE),
-            (Color.WHITE, Color.ORANGE, Color.GREEN),
-            (Color.WHITE, Color.RED, Color.GREEN),
-        ]
+        CubeSanity.do_sanity(self)
 
-        for c in corners:
-            self.find_corner_by_colors(CHelper.colors_id(c))
-
-        # very expansive, but there is a corruption
-        if True:
-
-            n_slices = self.n_slices
-
-            from cube_queries import CubeQueries
-
-            dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = CubeQueries.get_dist(self)
-
-            for clr in Color:
-                clr_dist = dist[clr]
-
-                def _print_clr():
-                    for _k, _v in clr_dist.items():
-                        if len(_v) != 4:
-                            m = "!!!"
-                        else:
-                            m = "+++"
-                        print(clr, _k, f"{m}{len(_v)}{m}", v)
-
-                clr_n = sum(len(s) for s in clr_dist.values())
-
-                if clr_n != n_slices * n_slices:
-                    s = f"Too few entries for color {clr}"
-                    _print_clr()
-                    print(s)
-                    raise InternalSWError(s)
-                for k, v in clr_dist.items():
-                    if len(v) != 4:
-                        if n_slices % 2 and k == frozenset(
-                                [*CubeQueries.get_four_center_points(self, n_slices // 2, n_slices // 2)]):
-                            if len(v) != 1:
-                                s = f"Wrong middle center {k} entries for color {clr}"
-                                _print_clr()
-                                print(s)
-                                raise InternalSWError(s)
-
-                        else:
-                            s = f"Too few point {k} entries for color {clr}"
-                            _print_clr()
-                            print(s)
-                            raise InternalSWError(s)
-
-        if not self.is3x3:
-            return
-
-        for c in Color:
-            self.find_part_by_colors(frozenset([c]))
-
-        for c1, c2 in [
-            (Color.WHITE, Color.ORANGE),
-            (Color.WHITE, Color.BLUE),
-            (Color.WHITE, Color.GREEN),
-            (Color.WHITE, Color.RED),
-            (Color.YELLOW, Color.ORANGE),
-            (Color.YELLOW, Color.BLUE),
-            (Color.YELLOW, Color.GREEN),
-            (Color.YELLOW, Color.RED),
-
-            (Color.ORANGE, Color.BLUE),
-            (Color.BLUE, Color.RED),
-            (Color.RED, Color.GREEN),
-            (Color.GREEN, Color.ORANGE),
-        ]:
-            self.find_part_by_colors(frozenset([c1, c2]))
+        return
 
     @property
     def solved(self):
@@ -663,7 +598,7 @@ class Cube:
         return self.current_layout.same(self.original_layout)
 
 
-def _create_edge(f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:
+def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:
     """
 
     :param f1:
@@ -682,6 +617,8 @@ def _create_edge(f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edg
         return EdgeSlice(i, p1, p2)
 
     e: Edge = Edge(f1, f2, right_top_left_same_direction, [_create_slice(i) for i in range(n)])
+
+    edges.append(e)
 
     return e
 
