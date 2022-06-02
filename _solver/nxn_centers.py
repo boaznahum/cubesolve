@@ -1,5 +1,5 @@
 from collections.abc import Iterator, Sequence
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Collection
 
 import algs
 from _solver.base_solver import SolverElement, ISolver
@@ -8,7 +8,7 @@ from algs import Algs
 from app_exceptions import InternalSWError
 from cube_boy import CubeLayout
 from cube_face import Face
-from cube_queries import CubeQueries
+from cube_queries import CubeQueries, Pred
 from elements import FaceName, Color, CenterSlice
 
 
@@ -112,7 +112,11 @@ class NxNCenters(SolverElement):
         if cube.n_slices % 2:
             return self._track_odd(cube.front)
         else:
-            return self._track_even(cube.front, (0, 0))
+            f, c = self._find_face_with_max_colors()
+            _slice = CubeQueries.find_slice_in_face_center(f, lambda s: s.color == c)
+            assert _slice
+            # todo: see bug _track_even
+            return self._track_even(f, _slice.index)
 
     def _track_no_3(self, two_first: Sequence[Face]) -> FaceLoc:
 
@@ -212,14 +216,20 @@ class NxNCenters(SolverElement):
 
         return work_done
 
-    def _track_slice(self, f: Face, rc: Tuple[int, int]) -> FaceLoc:
+    def _track_face(self, color: Color, pred: Pred[Face]) -> FaceLoc:
 
-        """
-        Track as specific slice
-        :param f:
-        :return:
-        """
+        t: FaceTracker = lambda: CubeQueries.find_face(self.cube, pred)
 
+        return FaceLoc(color, t)
+
+    def _track_odd(self, f: Face) -> FaceLoc:
+
+        n_slices = self.cube.n_slices
+        rc = (n_slices // 2, n_slices // 2)
+
+        # only middle in odd, doesn't change index when moving from face to face
+
+        #        return self._track_slice(f, rc)
         color = f.center.get_center_slice(rc).color
 
         def pred(_f: Face):
@@ -230,15 +240,23 @@ class NxNCenters(SolverElement):
 
         return FaceLoc(color, t)
 
-    def _track_odd(self, f: Face) -> FaceLoc:
-
-        n_slices = self.cube.n_slices
-        return self._track_slice(f, (n_slices // 2, n_slices // 2))
-
     def _track_even(self, f: Face, rc: Tuple[int, int]) -> FaceLoc:
 
-        # actually it is bug, on even, when moving from face to face slice coordinate smay be changed
-        return self._track_slice(f, rc)
+        # Why can't we track by slice index ? becuase when moving from face to face
+        #  index may be changed
+        _slice = f.center.get_center_slice(rc)
+        key = "track:" + str(_slice.color)
+        _slice.edge.c_attributes[key] = True
+
+        def _slice_pred(s: CenterSlice):
+            return key in s.edge.c_attributes
+
+        def _face_pred(_f: Face):
+            return CubeQueries.find_slice_in_face_center(_f, _slice_pred) is not None
+
+        color = _slice.color
+
+        return self._track_face(color, _face_pred)
 
     def __do_center(self, face: Face, color: Color) -> bool:
 
@@ -560,3 +578,20 @@ class NxNCenters(SolverElement):
 
     def boy_opposite(self, color: Color) -> Color:
         return self.cube.original_layout.opposite_color(color)
+
+    def _find_face_with_max_colors(self) -> Tuple[Face, Color]:
+        n_max = -1
+        f_max: Face | None = None
+        c_max: Color | None = None
+        cube = self.cube
+        colors: Collection[Color] = cube.original_layout.colors()
+        for f in cube.faces:
+            for c in colors:
+                n = self.count_color_on_face(f, c)
+                if n > n_max:
+                    n_max = n
+                    f_max = f
+                    c_max = c
+
+        assert f_max and c_max  # mypy
+        return f_max, c_max
