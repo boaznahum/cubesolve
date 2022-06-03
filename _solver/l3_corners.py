@@ -2,6 +2,7 @@ from _solver.base_solver import SolverElement, ISolver, AnnWhat
 from _solver.common_op import CommonOp
 from _solver.tracker import CornerTracker
 from algs import Algs, Alg
+from app_exceptions import InternalSWError, EvenCubeCornerSwapException
 from cube_face import Face
 from elements import FaceName, Part, Corner
 
@@ -46,6 +47,8 @@ class L3Corners(SolverElement):
 
         self._do_corners()
 
+        assert self._is_solved()
+
     def _do_corners(self):
 
         # 'yellow' face
@@ -88,7 +91,17 @@ class L3Corners(SolverElement):
                     if not yf.corner_bottom_left.in_position:
                         self.op.op(self._ur)
 
-        assert Part.all_in_position
+        if not Part.all_in_position(yf.corners):
+            if self.cube.n_slices % 2 == 0:
+                # Even cube
+                n = sum(c.in_position for c in yf.corners)
+                if n == 2:
+                    self._do_corner_swap()
+                    raise EvenCubeCornerSwapException()
+
+                raise InternalSWError("Cube not all corners in position, don't know why")
+            else:
+                raise InternalSWError("Odd cube not all corners in position")
 
     def bring_front_right_to_position(self):
 
@@ -155,3 +168,47 @@ class L3Corners(SolverElement):
 
             # before U'
             self.op.op(Algs.U.prime)
+
+    def _do_corner_swap(self):
+
+        n_slices = self.cube.n_slices
+        assert n_slices % 2 == 0
+
+        self.op.toggle_animation_on(enable=True)
+
+        self.debug("Doing corner swap")
+
+
+        if False:
+            face = self.cube.up
+
+            assert face.corner_bottom_right.in_position
+
+            for i in range(3):
+                if face.corner_bottom_left.in_position:
+                    break
+                # try to bring bottom left into position
+                self.op.op(self._ur)
+
+            assert face.corner_bottom_left.in_position
+
+            # now two swapped are on back
+            self.op.op(Algs.U * 2)  # bring them to front
+
+
+
+        nh = n_slices // 2
+
+        # 2-kRw2 U2
+        # 2-kRw2  kUw2   // half cube
+        # 2-kRw2 kUw2  // half cube
+
+        alg = Algs.alg("cswap",
+                       Algs.R[2:nh + 1] * 2, Algs.U * 2,
+                       Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2,
+                       Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2)
+
+        # for a in alg.algs:
+        #     self.op.op(a)
+
+        self.op.op(alg)

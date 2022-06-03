@@ -813,11 +813,11 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 # Faild on [5:5]B
                 # [{good} [3:3]R [3:4]D S [2:2]L]
 
-                alg = alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]  # + Algs.B[5:5]
+                alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]  # + Algs.B[5:5]
                 op.op(alg, inv, animation=False)
 
             elif modifiers & key.MOD_CTRL:
-                alg = alg = Algs.B[5:5]
+                alg = Algs.B[5:5]
                 op.op(alg, inv, animation=False)
             else:
                 alg = Algs.scramble(app.cube.size)
@@ -903,10 +903,13 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
                 op.reset()
                 if s == -1:
-                    # key._1 case
-                    alg = Algs.scramble(app.cube.size, value - key._0, 5)
+                    scramble_key= -1
+                    n = 5
                 else:
-                    alg = Algs.scramble(app.cube.size, s)
+                    scramble_key= s
+                    n = None
+
+                alg = Algs.scramble(app.cube.size, scramble_key, n)
 
                 op.op(alg, animation=False)
 
@@ -916,7 +919,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                     assert slv.is_solved
 
                 except Exception:
-                    print(f"Failure on {s}")
+                    print(f"Failure on scramble key={scramble_key}, n={n} ")
                     traceback.print_exc()
                     raise
             print()

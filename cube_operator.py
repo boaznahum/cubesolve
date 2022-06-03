@@ -154,8 +154,12 @@ class Operator:
     def animation_enabled(self):
         return self._animation_enabled and self._animation_hook
 
-    def toggle_animation_on(self):
-        self._animation_enabled = not self._animation_enabled
+    def toggle_animation_on(self, enable: bool|None =None):
+
+        if enable is None:
+            self._animation_enabled = not self._animation_enabled
+        else:
+            self._animation_enabled = bool(enable)
 
     def abort(self):
         """
