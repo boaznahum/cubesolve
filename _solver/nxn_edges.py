@@ -381,6 +381,7 @@ class NxNEdges(SolverElement):
                 color = self._get_slice_ordered_color(face, edge.get_slice(i))
                 # print(f"{i} ,{required_color}, {color}")
                 if color != required_color:
+                    # TODO - REPLACE WITH SLICE INDEXING
                     self.debug(f"*** Doing parity on R {i + 1}", level=2)
                     self.op.op((Algs.M[i + 1:i + 1] + Algs.U * 2) * 5 + Algs.U * 2)
 
