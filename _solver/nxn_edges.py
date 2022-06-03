@@ -165,6 +165,10 @@ class NxNEdges(SolverElement):
 
         is_last = self._left_to_fix == 1
 
+        # todo:
+        # failed on scramble 26 , size 8
+        # assert not is_last  # is last is handled only in parity, we can't have one not done
+
         work_done = True
 
         while work_done:
