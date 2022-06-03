@@ -216,7 +216,7 @@ class Solver(ISolver):
                         even_corner_swap_was_detected = True
                         continue  # try agin, swap was done by l3_corners
 
-                if not self.is_solved:
+                if what == SolveStep.ALL and not self.is_solved:
                     raise InternalSWError(f"Non solved iteration {i}, but no parity detected")
 
 
