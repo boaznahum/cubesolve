@@ -166,7 +166,6 @@ class Window(pyglet.window.Window):
 
         def _b(b: bool): return "On" if b else "Off"
 
-
         s = f"Animation:{_b(self.app.op.animation_enabled)}"
         s += ", Sanity check:" + _b(config.CHECK_CUBE_SANITY)
         s += ", Debug=" + _b(self.app.slv.is_debug_config_mode)
@@ -574,7 +573,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
         _alg = alg.inv().simplify()
         assert isinstance(_alg, algs.SimpleAlg)
         alg = _alg
-        inv =  False
+        inv = False
 
     if not isinstance(alg, algs.AnimationAbleAlg):
         print(f"{alg} is not animation-able")
@@ -894,6 +893,8 @@ def _handle_input(window: Window, value: int, modifiers: int):
             # test
             nn = 50
             ll = 0
+            count = 0
+            n_loops = 0
             for s in range(-1, nn):
                 print(str(s + 2) + f"/{nn + 1}, ", end='')
                 ll += 1
@@ -901,12 +902,12 @@ def _handle_input(window: Window, value: int, modifiers: int):
                     print()
                     ll = 0
 
-                op.reset()
+                op.reset()  # also reset cube
                 if s == -1:
-                    scramble_key= -1
+                    scramble_key = -1
                     n = 5
                 else:
-                    scramble_key= s
+                    scramble_key = s
                     n = None
 
                 alg = Algs.scramble(app.cube.size, scramble_key, n)
@@ -915,14 +916,18 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
                 # noinspection PyBroadException
                 try:
+                    c0 = op.count
                     slv.solve(animation=False, debug=False)
                     assert slv.is_solved
+                    count += op.count - c0
+                    n_loops +=1
 
                 except Exception:
                     print(f"Failure on scramble key={scramble_key}, n={n} ")
                     traceback.print_exc()
                     raise
             print()
+            print(f"Count={count}, average={count / n_loops}")
 
         case key.Q:
             window.close()

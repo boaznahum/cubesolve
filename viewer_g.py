@@ -921,7 +921,7 @@ class GCubeViewer:
         _plot_face(b, lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1], [0, 1, 0])
 
         _plot_face(b, lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
-        if self._vs.draw_shadows:
+        if "L" in self._vs.draw_shadows:
             # -0.75 from it x location, so we can see it in isometric view
             _plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
 
@@ -930,12 +930,12 @@ class GCubeViewer:
         _plot_face(b, lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
 
         _plot_face(b, lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
-        if self._vs.draw_shadows:
+        if "B" in self._vs.draw_shadows:
             # -2 far away so we can see it
             _plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
 
         _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
-        if self._vs.draw_shadows:
+        if "D" in self._vs.draw_shadows:
             # -05 below so we see it
             _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
 
