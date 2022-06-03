@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Tuple
 
 import algs
@@ -81,7 +82,7 @@ class NxNEdges(SolverElement):
                     even_parity_was_done = True
                     self._do_last_edge_parity()
                 else:
-                    # actaully we can nver reach here, becuase if it no parity, at least two msut be not completed
+                    # actually we can nver reach here, becuase if it no parity, at least two msut be not completed
                     edge = CubeQueries.find_edge(self.cube.edges, lambda e: not e.is3x3)
                     self._do_edge(edge)
 
@@ -112,22 +113,27 @@ class NxNEdges(SolverElement):
         n_slices = self.cube.n_slices
         color_un_ordered: PartColorsID
 
-        if n_slices % 2:
-            color_un_ordered = edge.get_slice(n_slices // 2).colors_id_by_color
-        else:
-            # todo: Count max in edge
-            color_un_ordered = edge.get_slice(0).colors_id_by_color
-
         self.debug(f"Brining {edge} to front-right")
         self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
+        edge = self.cube.front.edge_left
 
-        self._solve_on_front_left(color_un_ordered)
+        face = self.cube.front
+
+        if n_slices % 2:
+            _slice = edge.get_slice(n_slices // 2)
+            color_un_ordered = _slice.colors_id_by_color
+            ordered_color = self._get_slice_ordered_color(face, _slice)
+        else:
+            ordered_color = self._find_max_of_color(face, edge)
+            color_un_ordered = frozenset(ordered_color)
+
+        self._solve_on_front_left(color_un_ordered, ordered_color)
 
         self._report_done(f"Done {edge}")
 
         return True
 
-    def _solve_on_front_left(self, color_un_ordered: PartColorsID):
+    def _solve_on_front_left(self, color_un_ordered: PartColorsID, ordered_color: Tuple[Color, Color]):
         """
         Edge is on front left, and we need to solve it without moving it
         :return:
@@ -139,19 +145,8 @@ class NxNEdges(SolverElement):
         face = cube.front
         edge: Edge = face.edge_left
 
-        n_slices = cube.n_slices
-        _slice: EdgeSlice
-        if n_slices % 2:
-            _slice = edge.get_slice(n_slices // 2)
-        else:
-            _slice = self._find_slice_in_edge_by_color_id(edge, color_un_ordered)
-
-        # ordered color
-        ordered_color = self._get_slice_ordered_color(face, _slice)
-
         # now start to work
         self.debug(f"Working on edge {edge} color {ordered_color}")
-        inv = cube.inv
 
         # first fix all that match color on this edge
         self._fix_all_slices_on_edge(face, edge, ordered_color, color_un_ordered)
@@ -252,8 +247,6 @@ class NxNEdges(SolverElement):
     def _fix_all_from_other_edges(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                   color_un_ordered: PartColorsID):
 
-        n_slices = edge.n_slices
-
         inv = edge.inv
 
         other_edges = set(face.cube.edges) - {edge}
@@ -325,7 +318,6 @@ class NxNEdges(SolverElement):
 
     def _do_last_edge_parity(self):
 
-
         assert self._left_to_fix == 1
 
         # self.op.toggle_animation_on()
@@ -353,16 +345,16 @@ class NxNEdges(SolverElement):
             self.op.op(Algs.F)
 
             # not true on even, edge is OK
-            #assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
+            # assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
 
-            edge =  tracer.the_slice.parent
+            edge = tracer.the_slice.parent
             assert edge is face.edge_top
             edge = cube.front.edge_top
 
         if n_slices % 2:
             required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
         else:
-            # just pick one, maybe it will cause parity problem at the end 3x3
+            # just pick one, maybe it will cause parity problem at the end 3x3,
             #  but we want to force all, so we swap
             required_color = self._get_slice_ordered_color(face, edge.get_slice(0))
             required_color = required_color[::-1]
@@ -385,7 +377,8 @@ class NxNEdges(SolverElement):
                     self.debug(f"*** Doing parity on R {i + 1}", level=2)
                     self.op.op((Algs.M[i + 1:i + 1] + Algs.U * 2) * 5 + Algs.U * 2)
 
-    def _get_slice_ordered_color(self, f: Face, s: EdgeSlice) -> Tuple[Color, Color]:
+    @staticmethod
+    def _get_slice_ordered_color(f: Face, s: EdgeSlice) -> Tuple[Color, Color]:
         """
 
         :param f:
@@ -395,7 +388,8 @@ class NxNEdges(SolverElement):
 
         return s.get_face_edge(f).color, s.get_other_face_edge(f).color
 
-    def _find_slice_in_edge_by_color_id(self, edge: Edge, color_un_ordered: PartColorsID) -> EdgeSlice:
+    @staticmethod
+    def _find_slice_in_edge_by_color_id(edge: Edge, color_un_ordered: PartColorsID) -> EdgeSlice:
 
         for i in range(edge.n_slices):
             s = edge.get_slice(i)
@@ -412,3 +406,51 @@ class NxNEdges(SolverElement):
         assert self.cube.n_slices % 2 == 0
 
         self._do_edge_parity_on_edge(self.cube.front.edge_left)
+
+    def _find_max_of_color(self, face, edge) -> Tuple[Color, Color]:
+        c_max = None
+        n_max = 0
+
+        hist: dict[PartColorsID, int] = defaultdict(int)
+
+        for i in range(0, self.cube.n_slices):
+
+            c = edge.get_slice(i).colors_id_by_color
+
+            hist[c] += 1
+
+            if hist[c] > n_max:
+                n_max = hist[c]
+                c_max = c
+
+        assert c_max
+
+        n_c1 = 0
+        n_c2 = 0
+        c1 = None
+        c2 = None
+
+        for i in range(self.cube.n_slices):
+
+            _slice = edge.get_slice(i)
+            if _slice.colors_id_by_color == c_max:
+
+                c = edge.get_slice(i).colors_id_by_color
+
+                ordered = self._get_slice_ordered_color(face, _slice)
+
+                if c == ordered:
+                    n_c1 += 1
+                    c1 = ordered
+                else:
+                    n_c2 += 1
+                    c2 = ordered
+
+        assert c1 or c2
+
+        if n_c1 > n_c2:
+            assert c1
+            return c1
+        else:
+            assert c2
+            return c2

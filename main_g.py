@@ -887,7 +887,9 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
         case key.F5:
 
+            n0 = op.count
             slv.solve(what=SolveStep.NxNEdges)
+            print(f"Count={op.count-n0}")
 
         case key.T:
             # test
