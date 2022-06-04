@@ -174,7 +174,7 @@ class L3Corners(SolverElement):
         n_slices = self.cube.n_slices
         assert n_slices % 2 == 0
 
-        self.op.toggle_animation_on(enable=True)
+        #self.op.toggle_animation_on(enable=True)
 
         self.debug("Doing corner swap")
 
