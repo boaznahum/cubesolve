@@ -892,44 +892,54 @@ def _handle_input(window: Window, value: int, modifiers: int):
             print(f"Count={op.count-n0}")
 
         case key.T:
-            # test
-            nn = 50
-            ll = 0
-            count = 0
-            n_loops = 0
-            for s in range(-1, nn):
-                print(str(s + 2) + f"/{nn + 1}, ", end='')
-                ll += 1
-                if ll > 15:
-                    print()
-                    ll = 0
+            if modifiers & key.MOD_ALT:
+                scramble_key = 26
+                n = None
 
                 op.reset()  # also reset cube
-                if s == -1:
-                    scramble_key = -1
-                    n = 5
-                else:
-                    scramble_key = s
-                    n = None
-
                 alg = Algs.scramble(app.cube.size, scramble_key, n)
-
                 op.op(alg, animation=False)
+                slv.solve(animation=False, debug=False)
+                assert slv.is_solved
+            else:
+                # test
+                nn = 50
+                ll = 0
+                count = 0
+                n_loops = 0
+                for s in range(-1, nn):
+                    print(str(s + 2) + f"/{nn + 1}, ", end='')
+                    ll += 1
+                    if ll > 15:
+                        print()
+                        ll = 0
 
-                # noinspection PyBroadException
-                try:
-                    c0 = op.count
-                    slv.solve(animation=False, debug=False)
-                    assert slv.is_solved
-                    count += op.count - c0
-                    n_loops +=1
+                    op.reset()  # also reset cube
+                    if s == -1:
+                        scramble_key = -1
+                        n = 5
+                    else:
+                        scramble_key = s
+                        n = None
 
-                except Exception:
-                    print(f"Failure on scramble key={scramble_key}, n={n} ")
-                    traceback.print_exc()
-                    raise
-            print()
-            print(f"Count={count}, average={count / n_loops}")
+                    alg = Algs.scramble(app.cube.size, scramble_key, n)
+
+                    op.op(alg, animation=False)
+
+                    # noinspection PyBroadException
+                    try:
+                        c0 = op.count
+                        slv.solve(animation=False, debug=False)
+                        assert slv.is_solved
+                        count += op.count - c0
+                        n_loops +=1
+
+                    except Exception:
+                        print(f"Failure on scramble key={scramble_key}, n={n} ")
+                        traceback.print_exc()
+                        raise
+                print()
+                print(f"Count={count}, average={count / n_loops}")
 
         case key.Q:
             window.close()

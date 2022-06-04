@@ -47,46 +47,33 @@ class NxNEdges(SolverElement):
 
     def solve(self):
 
-        even_parity_was_done = False
+        self._do_first_11()
 
-        for i in range(2):
-            if self._is_solved():
-                return  # avoid rotating cube
+        if self._is_solved():
+            return
 
-            next(self.cube.edges.__iter__())
+        assert self._left_to_fix == 1
 
-            first_11 = [*self.cube.edges]
-            first_11.pop()
+        # even cube can have edge parity too
+        self._do_last_edge_parity()
 
-            n_did_work = 0
-            while self._left_to_fix > 1:
-                n_to_fix = sum(not e.is3x3 for e in first_11)
-                self.debug(f"Main loop, {n_did_work} solved in prev, Still more to fix {n_to_fix}", level=1)
-                n_did_work = 0
-                for e in first_11:
-                    # because each do move all other edges
-                    if self._do_edge(e):
-                        n_did_work += 1
-                        # self.debug(f"Sub loop edge was done, Still more to fix {n_to_fix}", level=1)
+        self._do_first_11()
 
+        assert self._is_solved()
+    def _do_first_11(self):
+        """
+
+        :return:
+        """
+
+        # We must not try to solve the last one - it is parity - even in even cube
+        while self._left_to_fix > 1:
             n_to_fix = self._left_to_fix
-            self.debug(f"After main loop, Still more to fix, parity done: {even_parity_was_done}, "
-                       f"iteration={i} {n_to_fix}", level=1)
-
-            if n_to_fix > 1:
-                raise InternalSWError
-
-            if n_to_fix > 0:
-
-                if i == 0:
-                    even_parity_was_done = True
-                    self._do_last_edge_parity()
-                else:
-                    # actually we can nver reach here, becuase if it no parity, at least two msut be not completed
-                    edge = CubeQueries.find_edge(self.cube.edges, lambda e: not e.is3x3)
-                    self._do_edge(edge)
-
-                    assert self._is_solved()
+            # we need to search again and gain becuase solving move all edges
+            e = next(e for e in self.cube.edges if not e.is3x3)
+            assert e
+            self._do_edge(e)
+            assert self._left_to_fix < n_to_fix
 
     def _report_done(self, s):
         n_to_fix = sum(not e.is3x3 for e in self.cube.edges)
@@ -168,6 +155,7 @@ class NxNEdges(SolverElement):
         # todo:
         # failed on scramble 26 , size 8
         # assert not is_last  # is last is handled only in parity, we can't have one not done
+        assert not is_last
 
         work_done = True
 
@@ -345,7 +333,7 @@ class NxNEdges(SolverElement):
             self.debug(f"Doing parity on {edge}", level=1)
             edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             assert edge is face.edge_left
-            # optimize it , use directly bring to up
+            # todo: optimize it , use directly bring to up
             self.op.op(Algs.F)
 
             # not true on even, edge is OK
@@ -358,8 +346,10 @@ class NxNEdges(SolverElement):
         if n_slices % 2:
             required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
         else:
-            # just pick one, maybe it will cause parity problem at the end 3x3,
-            #  but we want to force all, so we swap
+            # In even, we can have partail and complete parity in cas eof complte, we reach here from solver after
+            # finding edge in 3x3 with partial we reach here from this solver so in first case we need to reverse all
+            # slices in second case we have no idea which, so we pick the first one (that can later cause and OLL
+            # parity when solving as 3x3)
             required_color = self._get_slice_ordered_color(face, edge.get_slice(0))
             required_color = required_color[::-1]
 
