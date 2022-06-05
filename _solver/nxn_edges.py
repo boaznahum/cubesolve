@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Tuple
+from typing import Tuple, List
 
 import algs
 from _solver.base_solver import SolverElement, ISolver
@@ -21,7 +21,7 @@ _status = None
 class NxNEdges(SolverElement):
     work_on_b: bool = True
 
-    D_LEVEL = 2
+    D_LEVEL = 3
 
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)
@@ -60,6 +60,7 @@ class NxNEdges(SolverElement):
         self._do_first_11()
 
         assert self._is_solved()
+
     def _do_first_11(self):
         """
 
@@ -69,8 +70,9 @@ class NxNEdges(SolverElement):
         # We must not try to solve the last one - it is parity - even in even cube
         while self._left_to_fix > 1:
             n_to_fix = self._left_to_fix
-            # we need to search again and gain becuase solving move all edges
-            e = next(e for e in self.cube.edges if not e.is3x3)
+            # we need to search again and gain because solving move all edges
+            # search first front-left to avoid rotation
+            e = next(e for e in [self.cube.front.edge_left, *self.cube.front.edges, *self.cube.edges] if not e.is3x3)
             assert e
             self._do_edge(e)
             assert self._left_to_fix < n_to_fix
@@ -152,92 +154,182 @@ class NxNEdges(SolverElement):
 
         is_last = self._left_to_fix == 1
 
-        # todo:
-        # failed on scramble 26 , size 8
-        # assert not is_last  # is last is handled only in parity, we can't have one not done
         assert not is_last
 
-        work_done = True
+        # Why set, because sometimes we need to fix i nad inv(i), so when we reach inv(i) we will try to add
+        # again inv(inv(i)) == i
+        slices_to_fix: set[int] = set()
+        slices_to_slice: set[int] = set()
 
-        while work_done:
-            work_done = False
-            for i in range(0, n_slices):
+        for i in range(0, n_slices):
 
-                a_slice = edge.get_slice(i)
+            a_slice = edge.get_slice(i)
 
-                a_slice_id = a_slice.colors_id_by_color
+            a_slice_id = a_slice.colors_id_by_color
 
-                if a_slice_id != color_un_ordered:
-                    continue
+            if a_slice_id != color_un_ordered:
+                continue
 
-                ordered = self._get_slice_ordered_color(face, a_slice)
-                if ordered == ordered_color:
-                    # done
-                    continue
+            ordered = self._get_slice_ordered_color(face, a_slice)
+            if ordered == ordered_color:
+                # done
+                continue
 
-                if n_slices % 2 and i == n_slices // 2:
-                    raise InternalSWError()
+            if n_slices % 2 and i == n_slices // 2:
+                raise InternalSWError()
 
-                # now need to fix
+            other_slice_i = inv(i)
+            other_slice = edge.get_slice(other_slice_i)
+            other_order = self._get_slice_ordered_color(face, other_slice)
+            if other_order == ordered_color:
+                raise InternalSWError("Don't know what to do")
 
-                other_slice_i = inv(i)
-                other_slice = edge.get_slice(other_slice_i)
-                other_order = self._get_slice_ordered_color(face, other_slice)
-                if other_order == ordered_color:
-                    raise InternalSWError("Don't know what to do")
+            slices_to_fix.add(i)
+            slices_to_slice.add(i)
+            slices_to_slice.add(inv(i))
 
-                i_ltr = edge.get_ltr_index_from_slice_index(face, i)
-                other_ltr = edge.get_ltr_index_from_slice_index(face, other_slice_i)
+        if not slices_to_fix:
+            return
 
-                if not is_last and edge_can_destroyed is None:
-                    search_in: set[Edge] = set(self.cube.edges) - {edge}
-                    edge_can_destroyed = CubeQueries.find_edge(search_in, lambda e: not e.is3x3)
-                    assert edge_can_destroyed
-                    self.cmn.bring_edge_to_front_right_preserve_front_left(edge_can_destroyed)
+        # bring an edge to help
+        if not is_last and edge_can_destroyed is None:
+            search_in: list[Edge] = [self.cube.front.edge_right, *set(self.cube.edges) - {edge}]
+            edge_can_destroyed = CubeQueries.find_edge(search_in, lambda e: not e.is3x3)
+            assert edge_can_destroyed
+            self.cmn.bring_edge_to_front_right_preserve_front_left(edge_can_destroyed)
 
-                with self.w_edge_slice_annotate(face, a_slice, other_slice):
-                    self.op.op(Algs.E[i_ltr + 1])  # move me to opposite E begin from D, slice begin with 1
-                    self.op.op(Algs.E[other_ltr + 1])  # move other
+        slices = [edge.get_slice(i) for i in slices_to_slice]
+        ltrs = [edge.get_ltr_index_from_slice_index(face, i) for i in slices_to_slice]
 
-                    self.op.op(self.rf)
+        # Now fix
 
-                    # bring them back
-                    self.op.op(Algs.E[i_ltr + 1].prime)  # move me to opposite E begin from D, slice begin with 1
-                    self.op.op(Algs.E[other_ltr + 1].prime)  # move other
+        self.debug(f"On same edge, going to slice {ltrs}")
 
-                assert self._get_slice_ordered_color(face, other_slice) == ordered_color
+        with self.w_edge_slice_annotate(face, *slices):
 
-                # else:
-                #
-                #     # we're not looking for non-good edge to destory it
-                #
-                #     self.debug(f"**** Doing on last edge, {a_slice}", level=1)
-                #     self.debug(f"****               slice {a_slice}", level=1)
-                #     self.debug(f"****               other_slice {other_slice}", level=1)
-                #     self.debug(f"****               other edge {face.edge_right}", level=1)
-                #
-                #     with self.w_edge_slice_annotate(face, a_slice, other_slice, animation=is_last):
-                #         self.op.op(Algs.E[i_ltr + 1])  # move me to opposite E begin from D, slice begin with 1
-                #         self.op.op(Algs.E[other_ltr + 1])  # move other
-                #
-                #         self.op.op(self.rf)
-                #
-                #         # bring them back
-                #         self.op.op(Algs.E[i_ltr + 1].prime)  # move me to opposite E begin from D, slice begin with 1
-                #         self.op.op(Algs.E[other_ltr + 1].prime)  # move other
-                #
-                #     assert self._get_slice_ordered_color(face, other_slice) == ordered_color
-                #
-                #     if is_last:
-                #         self.debug(f"**** Did on last edge, {a_slice}", level=1)
-                #         self.debug(f"****               slice {a_slice}", level=1)
-                #         self.debug(f"****               other_slice {other_slice}", level=1)
-                #         self.debug(f"****               other edge {face.edge_right}", level=1)
+            for ltr in ltrs:
+                self.op.op(Algs.E[ltr + 1])  # move me to opposite E begin from D, slice begin with 1
 
-                work_done = True
+            self.op.op(self.rf)
+
+            # bring them back
+            for ltr in ltrs:
+                self.op.op(Algs.E[ltr + 1].prime)  # move me to opposite E begin from D, slice begin with 1
+
+        for i in slices_to_fix:
+            assert self._get_slice_ordered_color(face, edge.get_slice(inv(i))) == ordered_color
 
     def _fix_all_from_other_edges(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                   color_un_ordered: PartColorsID):
+
+        inv = edge.inv
+
+        other_edges = set(face.cube.edges) - {edge}
+        assert len(other_edges) == 11
+
+        while not edge.is3x3:
+
+            # start from one on right - to optimize
+            edge_right = face.edge_right
+            _other_edges = [edge_right, *(other_edges - {edge_right})]
+            source_slice = CubeQueries.find_slice_in_edges(_other_edges,
+                                                           lambda s: s.colors_id_by_color == color_un_ordered)
+
+            assert source_slice
+
+            self.debug(f"Found source slice {source_slice}")
+
+            self.cmn.bring_edge_to_front_right_preserve_front_left(source_slice.parent)
+
+            source_slice = self._find_slice_in_edge_by_color_id(edge_right, color_un_ordered)
+            assert source_slice
+
+            while self._find_slice_in_edge_by_color_id(edge_right, color_un_ordered):
+                # ok now do for all that color order match
+                # is there one that can be sliced ?
+
+                if not any(self._get_slice_ordered_color(face, s) == ordered_color for s in edge_right.all_slices):
+                    self.op.op(self.rf)
+
+                self._fix_many_from_other_edges_same_order(face, edge, ordered_color, color_un_ordered)
+
+    def _fix_many_from_other_edges_same_order(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
+                                              color_un_ordered: PartColorsID):
+
+        """
+        Source edge is in front right
+
+        Slice all selices that are opposite of required color
+        :param face:
+        :param edge:
+        :param ordered_color:
+        :param color_un_ordered:
+        :return:
+        """
+
+        inv = edge.inv
+
+        source_slice_indices = []
+        source_slices = []
+        target_slices = []
+        target_indices = []
+
+        edge_right = face.edge_right
+
+        for source_index in range(edge.n_slices):
+
+            source_slice = edge_right.get_slice(source_index)
+
+            if source_slice.colors_id_by_color != color_un_ordered:
+                continue  # skip this one
+
+            if self._get_slice_ordered_color(face, source_slice) != ordered_color:
+                continue  # we will handle it in next iteration
+
+            source_ltr_index = edge_right.get_ltr_index_from_slice_index(face, source_index)
+
+            # source nad target have the sme lrt
+            target_index = edge.get_slice_index_from_ltr_index(face, source_ltr_index)
+
+            target_index = inv(target_index)  # we want to bring to opposite location
+
+            # if n slices=4, we can't handle both 1, 4, it will be handled in next iteration
+            if inv(target_index) in target_indices:
+                continue
+
+            source_slices.append(source_slice)
+            source_slice_indices.append(source_index)
+
+            target_slice = edge.get_slice(target_index)
+
+            target_slices.append(target_slice)
+            target_indices.append(target_index)
+
+            if target_slice.colors_id_by_color == color_un_ordered:
+                raise InternalSWError("Don't know how to handle")
+
+        if not target_slices:
+            return False
+
+        self.debug(f"Going to slice, sources={source_slice_indices}, target={target_indices}")
+
+        # now slice them all
+        with self.w_edge_slice_annotate(face, *source_slices, *target_slices):
+
+            for target_index in target_indices:
+                # slice me
+                self.op.op(Algs.E[target_index + 1])  # slice begin with 1
+            self.op.op(self.rf)
+            for target_index in target_indices:
+                self.op.op(Algs.E[target_index + 1].prime)
+
+        for target_index in target_indices:
+            assert self._get_slice_ordered_color(face, edge.get_slice(target_index)) == ordered_color
+
+        return True
+
+    def _was_fix_all_from_other_edges(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
+                                      color_un_ordered: PartColorsID):
 
         inv = edge.inv
 
@@ -353,23 +445,24 @@ class NxNEdges(SolverElement):
             required_color = self._get_slice_ordered_color(face, edge.get_slice(0))
             required_color = required_color[::-1]
 
-        slices_to_fix = []
+        slices_to_fix: list[EdgeSlice] = []
+        slices_indices_to_fix: list[int] = []
         for i in range(n_slices // 2):
 
             s = edge.get_slice(i)
             color = self._get_slice_ordered_color(face, s)
             # print(f"{i} ,{required_color}, {color}")
             if color != required_color:
+                slices_indices_to_fix.append(i)
                 slices_to_fix.append(s)
 
         with self.w_edge_slice_annotate(face, *slices_to_fix):
-            for i in range(n_slices // 2):
-                color = self._get_slice_ordered_color(face, edge.get_slice(i))
-                # print(f"{i} ,{required_color}, {color}")
-                if color != required_color:
-                    # TODO - REPLACE WITH SLICE INDEXING
-                    self.debug(f"*** Doing parity on R {i + 1}", level=2)
-                    self.op.op((Algs.M[i + 1:i + 1] + Algs.U * 2) * 5 + Algs.U * 2)
+            for _ in range(5):
+                self.debug(f"*** Doing parity on R {i + 1}", level=2)
+                # TODO - REPLACE WITH SLICE INDEXING
+                for i in slices_indices_to_fix:
+                    self.op.op(Algs.M[i + 1:i + 1])
+                self.op.op(Algs.U * 2)
 
     @staticmethod
     def _get_slice_ordered_color(f: Face, s: EdgeSlice) -> Tuple[Color, Color]:
@@ -383,14 +476,14 @@ class NxNEdges(SolverElement):
         return s.get_face_edge(f).color, s.get_other_face_edge(f).color
 
     @staticmethod
-    def _find_slice_in_edge_by_color_id(edge: Edge, color_un_ordered: PartColorsID) -> EdgeSlice:
+    def _find_slice_in_edge_by_color_id(edge: Edge, color_un_ordered: PartColorsID) -> EdgeSlice | None:
 
         for i in range(edge.n_slices):
             s = edge.get_slice(i)
             if s.colors_id_by_color == color_un_ordered:
                 return s
 
-        assert False
+        return None
 
     @property
     def rf(self) -> algs.Alg:

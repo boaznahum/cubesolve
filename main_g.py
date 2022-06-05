@@ -113,9 +113,12 @@ class Window(pyglet.window.Window):
 
         self._animation: Animation | None = None
 
+        self._last_edge_solve_count = 0
+
         self.update_gui_elements()
 
         self.app.op._animation_hook = lambda op, alg: op_and_play_animation(self, op, False, alg)
+
 
     def update_gui_elements(self):
 
@@ -138,10 +141,14 @@ class Window(pyglet.window.Window):
         self.text.clear()
         self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
                                            x=10, y=10, font_size=10))
-        h = Algs.simplify(*self.app.op.history)
-        sh = str(h)[-70:]
-        self.text.append(pyglet.text.Label("History: #" + str(h.count()) + "  " + sh,
+        # h = Algs.simplify(*self.app.op.history)
+        # sh = str(h)[-70:]
+        self.text.append(pyglet.text.Label("Edges: #" + str(self._last_edge_solve_count),
                                            x=10, y=30, font_size=10))
+        # h = Algs.simplify(*self.app.op.history)
+        # sh = str(h)[-70:]
+        # self.text.append(pyglet.text.Label("History: #" + str(h.count()) + "  " + sh,
+        #                                    x=10, y=30, font_size=10))
         h = self.app.op.history
         sh = str(h)[-70:]
         self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + sh,
@@ -889,7 +896,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
             n0 = op.count
             slv.solve(what=SolveStep.NxNEdges)
-            print(f"Count={op.count-n0}")
+            window._last_edge_solve_count = op.count - n0
 
         case key.T:
             if modifiers & key.MOD_ALT:
