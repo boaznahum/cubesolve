@@ -142,11 +142,11 @@ class CubeQueries:
         return cube.get_all_parts()
 
     @staticmethod
-    def compare_state(cube: Cube, st1: Iterable[PartSlice]):
+    def compare_state(cube: Cube, other: Iterable[PartSlice]):
 
         st2 = CubeQueries.get_sate(cube)
 
-        return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(st1, st2))
+        return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(other, st2))
 
     @classmethod
     def find_slice_in_cube_edges(cls, cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:

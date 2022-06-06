@@ -1,6 +1,7 @@
 import functools
 from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, Collection
+from email.policy import default
 from random import Random
 from typing import Sequence, Any, final, TypeVar, Tuple, Iterable
 
@@ -277,7 +278,6 @@ class SimpleAlg(Alg, ABC):
         return True
 
 
-
 class Annotation(SimpleAlg):
 
     def __init__(self, n: int = 1) -> None:
@@ -310,46 +310,48 @@ class SliceAbleAlg(SimpleAlg, ABC):
 
     def __init__(self, code: str, n: int = 1) -> None:
         super().__init__(code, n)
-        self.a_slice: slice | None = None  # [1 n]
+        # sorted sequence
+        self.slices: slice | Sequence[int] | None = None  # [1 n]
 
     def copy(self, other: "SliceAbleAlg"):
         super(SliceAbleAlg, self).copy(other)
-        self.a_slice = other.a_slice
+        self.slices = other.slices
         return self
-
 
     def __getitem__(self: SL, items) -> SL:
 
         if not items:
             return self
 
-        if self.a_slice is not None:
+        a_slice: slice | Sequence[int]
+        if self.slices is not None:
             raise InternalSWError(f"Already sliced: {self}")
         if isinstance(items, int):
-            a_slice = slice(items,items)  # start/stop the same
+            a_slice = slice(items, items)  # start/stop the same
         elif isinstance(items, slice):
             a_slice = items
+        elif isinstance(items, Sequence):
+            a_slice = sorted(items)
         else:
             raise InternalSWError(f"Unknown type for slice: {items} {type(items)}")
 
         clone: SliceAbleAlg = self.clone()
-        clone.a_slice = a_slice
+        clone.slices = a_slice
 
         return clone  # type: ignore
 
     @property
     def start(self):
-        if not self.a_slice:
+        if not self.slices:
             return None
 
-        return self.a_slice.start
+        return self.slices.start
 
     @property
     def stop(self):
-        if not self.a_slice:
+        if not self.slices:
             return None
-        return self.a_slice.stop
-
+        return self.slices.stop
 
     @abstractmethod
     def _add_to_str(self, s):
@@ -358,7 +360,7 @@ class SliceAbleAlg(SimpleAlg, ABC):
     def atomic_str(self):
         return self._add_to_str(super().atomic_str())
 
-    def normalize_slice_index(self, n_max: int, default: slice) -> slice:
+    def normalize_slice_index(self, n_max: int, _default: Iterable[int]) -> Iterable[int]:
 
         """
         We have no way to no what is max n
@@ -377,40 +379,67 @@ class SliceAbleAlg(SimpleAlg, ABC):
 
         :return: [start, stop] in cube coordinates [0, size-2]
         """
-        start = self.start
-        stop = self.stop
 
-        _stop = None
-        _start = None
+        slices = self.slices
 
-        if not start and not stop:
+        res: Iterable[int]
 
-            _start, _stop = (default.start, default.stop)
+        if slices is None:
+            res = _default
 
-        elif start and not stop:
-            _start, _stop = (start, n_max)
-
-        elif not start and stop:
-            _start, _stop = (1, stop)
+        elif isinstance(slices, Sequence):
+            res = slices
 
         else:
-            _start, _stop = (start, stop)
 
-        assert _start
-        assert _stop
+            start = self.start
+            stop = self.stop
 
-        return slice(_start - 1, _stop - 1)
+            _stop = None
+            _start = None
 
-    def same_form(self, a: "SliceAbleAlg"):
+            if not start and not stop:
 
-        s1 = self.start
-        t1 = self.stop
+                res = _default
 
-        s2 = a.start
-        t2 = a.stop
+            else:
+                if start and not stop:
+                    _start, _stop = (start, n_max)
 
-        return (s1 == None and s2 == None or s1 == s2 ) and (t1 == None and t2 == None or t1 == t2)
+                elif not start and stop:
+                    _start, _stop = (1, stop)
 
+                else:
+                    _start, _stop = (start, stop)
+
+                assert _start
+                assert _stop
+                res = [*range(_start, stop + 1)]
+
+        return [i - 1 for i in res]
+
+    def same_form(self, a: "SliceAbleAlg") -> bool:
+
+        my = self.slices
+        other = a.slices
+        if my is None and other is None:
+            return True
+
+        if type(my) != type(other):
+            return True
+
+        if isinstance(my, slice):
+            s1 = self.start
+            t1 = self.stop
+
+            s2 = a.start
+            t2 = a.stop
+
+            return (s1 == None and s2 is None or s1 == s2) and (t1 is None and t2 is None or t1 == t2)
+        elif isinstance(my, Sequence):
+            assert isinstance(other, Sequence)  # for my py
+            # they are sorted
+            return my == other
 
 
 class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
@@ -458,16 +487,16 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
     @final
     def play(self, cube: Cube, inv: bool = False):
-        start_stop = self.normalize_slice_index(n_max=1 + cube.n_slices, default=slice(1, 1))
+        start_stop: Iterable[int] = self.normalize_slice_index(n_max=1 + cube.n_slices, _default=[1])
 
         cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
 
     def get_animation_objects(self, cube) -> Tuple[FaceName, Collection[PartSlice]]:
         face = self._face
 
-        start_stop = self.normalize_slice_index(n_max=1 + cube.n_slices, default=slice(1, 1))
+        slices: Iterable[int] = self.normalize_slice_index(n_max=1 + cube.n_slices, _default=[1])
 
-        parts: Collection[Any] = cube.get_rotate_face_and_slice_involved_parts(face, start_stop)
+        parts: Collection[Any] = cube.get_rotate_face_and_slice_involved_parts(face, slices)
 
         return face, parts
 
@@ -475,7 +504,8 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 class WholeCubeAlg(AnimationAbleAlg, ABC):
 
     def __init__(self, axis_name: AxisName, n: int = 1) -> None:
-        super().__init__(axis_name.value, n)
+        # cast to satisfy numpy
+        super().__init__(str(axis_name.value), n)
         self._axis_name = axis_name
 
     @property
@@ -525,9 +555,9 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
     def play(self, cube: Cube, inv: bool = False):
         # cube.rotate_slice(self._slice_name, _inv(inv, self._n))
 
-        start_stop = self.normalize_slice_index(n_max=cube.n_slices, default=slice(1, cube.n_slices))
+        slices = self.normalize_slice_index(n_max=cube.n_slices, _default=range(1, cube.n_slices+1))
 
-        cube.rotate_slice(self._slice_name, _inv(inv, self._n), start_stop)
+        cube.rotate_slice(self._slice_name, _inv(inv, self._n), slices)
 
     def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
 
@@ -548,7 +578,7 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
             case _:
                 raise RuntimeError(f"Unknown Slice {name}")
 
-        start_stop = self.normalize_slice_index(n_max=cube.n_slices, default=slice(1, cube.n_slices))
+        start_stop: Iterable[int] = self.normalize_slice_index(n_max=cube.n_slices, _default=range(1, cube.n_slices+1))
 
         return face_name, cube.get_rotate_slice_involved_parts(name, start_stop)
 
@@ -564,27 +594,30 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         :return:
         """
 
-        start = self.start
-        stop = self.stop
+        slices = self.slices
 
-        if not start and not stop:
+        if slices is None:
             return s
 
-        if start and not stop:
-            return "[" + str(start) + ":" + "]" + s
+        if isinstance(slices, slice):
+            start = self.start
+            stop = self.stop
 
-        if not start and stop:
-            return "[1:" + str(stop) + "]" + s
+            if not start and not stop:
+                return s
 
-        if start and stop:
-            return "[" + str(start) + ":" + str(stop) + "]" + s
+            if start and not stop:
+                return "[" + str(start) + ":" + "]" + s
 
-        raise InternalSWError(f"Unknown {start} {stop}")
+            if not start and stop:
+                return "[1:" + str(stop) + "]" + s
 
+            if start and stop:
+                return "[" + str(start) + ":" + str(stop) + "]" + s
 
-
-
-
+            raise InternalSWError(f"Unknown {start} {stop}")
+        else:
+            return "{" + ",".join(str(i) for i in slices) + "}" + s
 
 
 @final
@@ -744,7 +777,7 @@ class _BigAlg(Alg):
 
                         assert isinstance(prev, SimpleAlg)
 
-#                        c = type(a)
+                        #                        c = type(a)
                         # noinspection PyArgumentList
                         a2 = a.clone()  # type: ignore # _n = 1
                         a2._n = prev._n + a._n

@@ -17,7 +17,7 @@ scale = 1
 
 def vec3to2(point: np.ndarray,
             alpha_x: float, alpha_y: float, alpha_z: float,
-            screen0: Sequence[int]) -> Sequence[int, int]:
+            screen0: Sequence[int]) -> Sequence[int]:
     a_x = alpha_x
     a_y = alpha_y
     a_z = alpha_z

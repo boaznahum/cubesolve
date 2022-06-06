@@ -27,6 +27,27 @@ class SolveStep(Enum):
     NxNEdges = "NxNEdges"
 
 
+class SolverResults:
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._was_corner_swap = False
+        self._was_partial_edge_parity = False
+        self._was_even_edge_parity = False
+
+    @property
+    def was_corner_swap(self):
+        return self._was_corner_swap
+
+    @property
+    def was_even_edge_parity(self):
+        return self._was_even_edge_parity
+
+    @property
+    def was_partial_edge_parity(self):
+        return self._was_partial_edge_parity
+
+
 class Solver(ISolver):
     __slots__ = ["_op", "_cube", "_debug_override", "_aborted",
                  "_running_solution",
@@ -136,7 +157,7 @@ class Solver(ISolver):
 
         return s
 
-    def solve(self, debug: bool | None = None, animation=True, what: SolveStep = SolveStep.ALL):
+    def solve(self, debug: bool | None = None, animation=True, what: SolveStep = SolveStep.ALL) -> SolverResults:
 
         if debug is None:
             debug = self._is_debug_enabled
@@ -145,22 +166,25 @@ class Solver(ISolver):
             try:
                 return self._solve(debug, what)
             except OpAborted:
-                return
+                return SolverResults()
 
-    def _solve(self, _debug: bool | None = True, what: SolveStep = SolveStep.ALL):
+    def _solve(self, _debug: bool | None = True, what: SolveStep = SolveStep.ALL) -> SolverResults:
+        sr: SolverResults = SolverResults()
+
         if self._cube.solved:
-            return
+            return sr
 
         even_edge_parity_was_detected = False
         even_corner_swap_was_detected = False
+        partial_edge_was_detected = False
 
         _d = self._debug_override
         try:
             self._debug_override = _debug
-            for i in [1, 2, 3]: # in case of even, we need 1 for edge parity and one for corner swap
+            for i in [1, 2, 3]:  # in case of even, we need 1 for edge parity and one for corner swap
 
                 if self._cube.solved:
-                    return
+                    break
 
                 self.debug(f"@@@@ Iteration # {i}")
 
@@ -169,7 +193,8 @@ class Solver(ISolver):
 
                         case SolveStep.ALL | SolveStep.L3:
                             self.nxn_centers.solve()
-                            self.nxn_edges.solve()
+                            if self.nxn_edges.solve():
+                                partial_edge_was_detected = True
                             self.l1_cross.solve_l0_cross()
                             self.l1_corners.solve()
                             self.l2.solve()
@@ -197,7 +222,8 @@ class Solver(ISolver):
                         case SolveStep.NxNEdges:
                             # centres are not must
                             # self.nxn_centers.solve()
-                            self.nxn_edges.solve()
+                            if self.nxn_edges.solve():
+                                partial_edge_was_detected = True
 
                 except EvenCubeEdgeParityException:
                     self.debug(f"Catch even edge parity in iteration #{i}")
@@ -206,7 +232,7 @@ class Solver(ISolver):
                     else:
                         even_edge_parity_was_detected = True
                         self.nxn_edges.do_edge_parity_on_any()
-                        continue # try again
+                        continue  # try again
 
                 except EvenCubeCornerSwapException:
                     self.debug(f"Catch corner swap in iteration #{i}")
@@ -222,6 +248,17 @@ class Solver(ISolver):
 
         finally:
             self._debug_override = _d
+
+        if even_edge_parity_was_detected:
+            sr._was_even_edge_parity = True
+
+        if even_corner_swap_was_detected:
+            sr._was_corner_swap = True
+
+        if partial_edge_was_detected:
+            sr._was_partial_edge_parity = True
+
+        return sr
 
     def debug(self, *args):
         if self._is_debug_enabled:

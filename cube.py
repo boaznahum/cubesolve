@@ -1,6 +1,6 @@
 from typing import Collection, Mapping
 
-from cube_boy import Color, FaceName, CubeLayout
+from cube_boy import CubeLayout
 from cube_face import Face
 from cube_slice import Slice, SliceName
 from elements import *
@@ -92,7 +92,7 @@ class Cube:
         # see document right-top-left-coordinates.jpg
         # 12 edges
         f._edge_top = u._edge_bottom = _create_edge(edges, f, u, True)
-        f._edge_left = l._edge_right = _create_edge(edges,f, l, True)
+        f._edge_left = l._edge_right = _create_edge(edges, f, l, True)
         f._edge_right = r._edge_left = _create_edge(edges, f, r, True)
         f._edge_bottom = d._edge_top = _create_edge(edges, f, d, True)
 
@@ -258,11 +258,11 @@ class Cube:
             case _:
                 raise RuntimeError(f"Unknown Axis {axis_name}")
 
-    def rotate_slice(self, slice_name: SliceName, n: int, slice_index: int | slice | None = None):
+    def rotate_slice(self, slice_name: SliceName, n: int, slices: Iterable[int] = None):
 
         """
 
-        :param slice_index: [0..n-2-1] [0, n_slices-1], default is [0, n_slices-1]
+        :param slices: [0..n-2-1] [0, n_slices-1], default is [0, n_slices-1]
         :param slice_name:
         :param n:
         :return:
@@ -270,48 +270,38 @@ class Cube:
 
         a_slice: Slice = self.get_slice(slice_name)
 
-        a_slice.rotate(n, slice_index)
+        a_slice.rotate(n, slices)
 
-    def get_rotate_slice_involved_parts(self, slice_name: SliceName, slice_index: int | slice | None = None) -> \
+    def get_rotate_slice_involved_parts(self, slice_name: SliceName, slice_indexes: int | Iterable[int] | None = None) -> \
             Collection[PartSlice]:
 
         """
 
-        :param slice_index: [0..n-2-1] [0, n_slices-1], default is [0, n_slices-1]
+        :param slice_indexes: [0..n-2-1] [0, n_slices-1], default is [0, n_slices-1]
         :param slice_name:
         :return:
         """
 
         a_slice: Slice = self.get_slice(slice_name)
 
-        return a_slice.get_rotate_involved_parts(slice_index)
+        return a_slice.get_rotate_involved_parts(slice_indexes)
 
-    def _get_face_and_rotation_info(self, face_name: FaceName, _slice: slice = None) -> Tuple[slice, bool, SliceName]:
+    def _get_face_and_rotation_info(self, face_name: FaceName, _slices: Iterable[int] = None) -> Tuple[
+            Iterable[int], bool, SliceName]:
         """
 
         :param face_name:
-        :param _slice:
+        :param _slices:
         :return: indexes (of face and slices), neg slices, slice name
         """
 
-        if not _slice:
-            _slice = slice(1, 1)
-
-        stop = _slice.stop
-        assert stop is not None
-
-        start = _slice.start
-
-        if not start:
-            start = 0
-
-        assert start is not None
+        if not _slices:
+            _slices = [0]
 
         size = self.size
 
-        assert start <= stop
-        assert 0 <= start <= size - 2
-        assert 0 <= stop <= size - 2
+        for i in _slices:
+            assert 0 <= i <= size - 2
 
         neg_slice_index: bool
         slice_name: SliceName
@@ -335,73 +325,72 @@ class Cube:
             case _:
                 raise InternalSWError(f"Unknown face {face_name}")
 
-        return slice(start, stop), neg_slice_index, slice_name
+        return _slices, neg_slice_index, slice_name
 
-    def rotate_face_and_slice(self, n: int, face_name: FaceName, _slice: slice = None):
+    def rotate_face_and_slice(self, n: int, face_name: FaceName, _slices: Iterable[int] = None):
 
         """
 
+        :param _slices:  all in range [0, n-2]
         :param n:
         :param face_name:
-        :param _slice: [0, n-2]    not including last face
         :return:
         """
 
-        start_stop: slice
+        actual_slices: Iterable[int]
         neg_slice_index: bool
         slice_name: SliceName
 
-        start_stop, neg_slice_index, slice_name = self._get_face_and_rotation_info(face_name, _slice)
+        actual_slices, neg_slice_index, slice_name = self._get_face_and_rotation_info(face_name, _slices)
 
-        start = start_stop.start
-        stop = start_stop.stop
-
-        if start == 0:
-            self.face(face_name).rotate(n)
-            start += 1
+        slice_rotate_n = n
 
         if neg_slice_index:
-            n = -n
+            slice_rotate_n = -slice_rotate_n
 
-        # slice index is cube index -1
-        for si in range(start - 1, stop + 1 - 1):
-            if neg_slice_index:
-                si = self.inv(si)
-            self.rotate_slice(slice_name, n, si)
+        for i in actual_slices:
 
-    def get_rotate_face_and_slice_involved_parts(self, face_name: FaceName, _slice: slice = None) -> \
+            if i == 0:
+                self.face(face_name).rotate(n)
+
+            else:
+                # it is inner slice index
+
+                # slice index is cube index -1
+                si = i - 1
+                if neg_slice_index:
+                    si = self.inv(si)
+                #can be optimized, by passing sequnece
+                self.rotate_slice(slice_name, slice_rotate_n, [si])
+
+    def get_rotate_face_and_slice_involved_parts(self, face_name: FaceName, slices: Iterable[int] = None) -> \
             Collection[PartSlice]:
 
         """
 
         :param face_name:
-        :param _slice: [0, n-2]    not including last face
+        :param slices: [0, n-2]    not including last face
         :return:
         """
 
-        start_stop: slice
+        actual_slices: Iterable[int]
         neg_slice_index: bool
         slice_name: SliceName
 
-        start_stop, neg_slice_index, slice_name = self._get_face_and_rotation_info(face_name, _slice)
+        actual_slices, neg_slice_index, slice_name = self._get_face_and_rotation_info(face_name, slices)
 
         parts: MutableSequence[PartSlice] = []
 
-        start = start_stop.start
-        stop = start_stop.stop
+        for i in actual_slices:
+            if i == 0:
+                face = self.face(face_name)
+                parts.extend(face.slices)
 
-        if start == 0:
-            face = self.face(face_name)
-            parts.extend(face.slices)
-            start += 1
+            else:
 
-        # slice index is cube index -1
-        # stop + 1 because it is a range
-        r = range(start - 1, stop + 1 - 1)
-        if r:
-            a_slice: Slice = self.get_slice(slice_name)
-
-            for si in r:
+                # slice index is cube index -1
+                a_slice: Slice = self.get_slice(slice_name)
+                si = i - 1
                 if neg_slice_index:
                     si = self.inv(si)
 

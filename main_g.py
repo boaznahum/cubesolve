@@ -847,7 +847,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                     except:
                         from cube_queries import CubeQueries
                         CubeQueries.print_dist(app.cube)
-                        print("Faild on", a)
+                        print("Failed on", a)
                         print(good)
                         raise
             elif modifiers & key.MOD_ALT:

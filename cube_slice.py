@@ -125,39 +125,35 @@ class Slice(SuperElement):
 
         return edges, centers
 
-    def _get_index_range(self, slice_index: int | slice | None):
+    def _get_index_range(self, slices_indexes: Iterable[int] | int | None) -> Iterable[int]:
         """
-            :param slice_index:         None=[0, n_slices-1]
+            :param slices_indexes:         None=[0, n_slices-1]
 
             :return:
             """
 
         n_slices = self.n_slices
 
-        if slice_index is None:
-            s_range = range(0, n_slices)
-        elif isinstance(slice_index, slice):
-            start = slice_index.start
-            stop = slice_index.stop
+        if slices_indexes is None:
+            return range(0, n_slices)
 
-            assert 0 <= start <= self.n_slices - 1
-            assert 0 <= stop <= self.n_slices - 1
-            s_range = range(start, stop + 1)
-        else:
-            assert 0 <= slice_index <= self.n_slices - 1
-            s_range = range(slice_index, slice_index + 1)
+        if isinstance(slices_indexes, int):
+            slices_indexes = [slices_indexes]
 
-        return s_range
+        for i in slices_indexes:
+            assert 0 <= i <= self.n_slices - 1
 
-    def _rotate(self, slice_index: int | slice | None):
+        return slices_indexes
+
+    def _rotate(self, slices_indexes: Iterable[int] | None):
 
         """
-        :param slice_index:         None=[0, n_slices-1]
+        :param slices_indexes:         None=[0, n_slices-1]
 
         :return:
         """
 
-        s_range = self._get_index_range(slice_index)
+        s_range = self._get_index_range(slices_indexes)
 
         n_slices = self.n_slices
 
@@ -191,12 +187,12 @@ class Slice(SuperElement):
 
                 centers[j + 3 * n_slices].copy_center_colors(c0)
 
-    def rotate(self, n=1, slice_index: int | slice | None = None):
+    def rotate(self, n=1, slices_indexes: Iterable[int] | None = None):
 
         """
 
         :param n:
-        :param slice_index: [0..n-2-1] [0, n_slices-1] or None=[0, n_slices-1]
+        :param slices_indexes: [0..n-2-1] [0, n_slices-1] or None=[0, n_slices-1]
         :return:
         """
 
@@ -215,7 +211,7 @@ class Slice(SuperElement):
 
         _p()
         for _ in range(n % 4):
-            self._rotate(slice_index)
+            self._rotate(slices_indexes)
             _p()
             self.cube.modified()
 
@@ -225,16 +221,16 @@ class Slice(SuperElement):
         self.cube.sanity()
         _p()
 
-    def get_rotate_involved_parts(self, slice_index) -> Sequence[PartSlice]:
+    def get_rotate_involved_parts(self, slice_indexes: int | Iterable[int] | None) -> Sequence[PartSlice]:
 
         """
-        :param slice_index: [0..n-2-1] [0, n_slices-1] or None
+        :param slice_indexes: [0..n-2-1] [0, n_slices-1] or None
         :return:
         """
 
         parts: list[PartSlice] = []
 
-        s_range = self._get_index_range(slice_index)
+        s_range = self._get_index_range(slice_indexes)
 
         for i in s_range:
             elements: tuple[Sequence[EdgeSlice], Sequence[CenterSlice]] = self._get_slices_by_index(i)

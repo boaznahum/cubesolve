@@ -45,12 +45,16 @@ class NxNEdges(SolverElement):
 
         return self._is_solved()
 
-    def solve(self):
+    def solve(self) -> bool:
+        """
+
+        :return: True if edge parity was performedd
+        """
 
         self._do_first_11()
 
         if self._is_solved():
-            return
+            return False
 
         assert self._left_to_fix == 1
 
@@ -60,6 +64,8 @@ class NxNEdges(SolverElement):
         self._do_first_11()
 
         assert self._is_solved()
+
+        return True
 
     def _do_first_11(self):
         """
@@ -456,13 +462,14 @@ class NxNEdges(SolverElement):
                 slices_indices_to_fix.append(i)
                 slices_to_fix.append(s)
 
+        #self.op.toggle_animation_on(enable=True)
         with self.w_edge_slice_annotate(face, *slices_to_fix):
-            for _ in range(5):
-                self.debug(f"*** Doing parity on R {i + 1}", level=2)
-                # TODO - REPLACE WITH SLICE INDEXING
-                for i in slices_indices_to_fix:
-                    self.op.op(Algs.M[i + 1:i + 1])
+            plus_one = [i + 1 for i in slices_indices_to_fix]
+            for _ in range(4):
+                self.debug(f"*** Doing parity on R {plus_one}", level=2)
+                self.op.op(Algs.M[plus_one])
                 self.op.op(Algs.U * 2)
+            self.op.op(Algs.M[plus_one])
 
     @staticmethod
     def _get_slice_ordered_color(f: Face, s: EdgeSlice) -> Tuple[Color, Color]:
