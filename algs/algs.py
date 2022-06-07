@@ -2,7 +2,7 @@ import functools
 from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, Collection
 from random import Random
-from typing import Sequence, Any, final, TypeVar, Tuple, Iterable
+from typing import Sequence, Any, final, TypeVar, Tuple, Iterable, Iterator
 
 from app_exceptions import InternalSWError
 from model.cube import Cube
@@ -39,6 +39,14 @@ class Alg(ABC):
 
     @abstractmethod
     def simplify(self) -> "Alg":
+        """
+        In case of big alg, try to simplify R+R2 == R
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def flatten(self) -> Iterator["SimpleAlg"]:
         pass
 
     def __str__(self) -> str:
@@ -55,10 +63,6 @@ class Alg(ABC):
 
     def __add__(self, other: "Alg"):
         return _BigAlg(None, self, other)
-
-    @abstractmethod
-    def flatten(self) -> Iterable["SimpleAlg"]:
-        pass
 
     @property
     def is_ann(self):
@@ -114,7 +118,7 @@ class _Inv(Alg):
         else:
             raise TypeError("Unknown type:", type(self))
 
-    def flatten(self) -> Iterable["SimpleAlg"]:
+    def flatten(self) -> Iterator["SimpleAlg"]:
 
         """
         Must returns SimpleAlg if _alg is SimpleAlg
@@ -176,7 +180,7 @@ class _Mul(Alg, ABC):
         else:
             raise TypeError("Unknown type:", type(self))
 
-    def flatten(self) -> Iterable["SimpleAlg"]:
+    def flatten(self) -> Iterator["SimpleAlg"]:
         return self.simplify().flatten()
 
 
@@ -209,6 +213,9 @@ def n_to_str(alg_code, n):
         return s
 
 
+TSimpleAlg = TypeVar("TSimpleAlg", bound="SimpleAlg")
+
+
 class SimpleAlg(Alg, ABC):
     __slots__ = ["_n", "_code"]
 
@@ -218,7 +225,7 @@ class SimpleAlg(Alg, ABC):
         self._n = n
 
     @final
-    def clone(self) -> "SimpleAlg":
+    def clone(self: TSimpleAlg) -> TSimpleAlg:
         cl = SimpleAlg.__new__(type(self))
         # noinspection PyArgumentList
         cl.__init__()  # type: ignore
@@ -250,8 +257,8 @@ class SimpleAlg(Alg, ABC):
     def simplify(self) -> "SimpleAlg":
         return self
 
-    def flatten(self) -> Iterable["SimpleAlg"]:
-        return [self]
+    def flatten(self) -> Iterator["SimpleAlg"]:
+        yield self
 
     # ---------------------------------
     # type of simple: face, axis, slice
@@ -316,7 +323,8 @@ class SliceAbleAlg(SimpleAlg, ABC):
         # sorted sequence
         self.slices: slice | Sequence[int] | None = None  # [1 n]
 
-    def copy(self, other: "SliceAbleAlg"):
+    def copy(self, other: "SimpleAlg"):
+        assert isinstance(other, SliceAbleAlg)
         super(SliceAbleAlg, self).copy(other)
         self.slices = other.slices
         return self
@@ -421,15 +429,21 @@ class SliceAbleAlg(SimpleAlg, ABC):
 
         return [i - 1 for i in res]
 
-    def same_form(self, a: "SliceAbleAlg") -> bool:
+    def same_form(self, a: "SimpleAlg") -> bool:
+
+        if not isinstance(a, SliceAbleAlg):
+            return False
 
         my = self.slices
         other = a.slices
         if my is None and other is None:
             return True
 
+        # todo: optimize it, [1:2] are the same as [1,2]
+        # but it become more complicated when it is [1: ] becuase we don't know
+        # the size of the cube
         if type(my) != type(other):
-            return True
+            return False
 
         if isinstance(my, slice):
             s1 = self.start
@@ -443,12 +457,15 @@ class SliceAbleAlg(SimpleAlg, ABC):
             assert isinstance(other, Sequence)  # for my py
             # they are sorted
             return my == other
+        else:
+            raise InternalSWError(f"Unknown type for slices object {my}")
 
 
 class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
     def __init__(self, face: FaceName, n: int = 1) -> None:
-        super().__init__(face.value, n)
+        # we know it is str, still we need to cast for mypy
+        super().__init__(str(face.value), n)
         self._face: FaceName = face
 
     @property
@@ -547,7 +564,8 @@ class WholeCubeAlg(AnimationAbleAlg, ABC):
 class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
     def __init__(self, slice_name: SliceName, n: int = 1) -> None:
-        super().__init__(slice_name.value, n)
+        # we know it is str, still we need to cast for mypy
+        super().__init__(slice_name.value.__str__(), n)
         self._slice_name = slice_name
 
     @property
@@ -558,7 +576,7 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
     def play(self, cube: Cube, inv: bool = False):
         # cube.rotate_slice(self._slice_name, _inv(inv, self._n))
 
-        slices = self.normalize_slice_index(n_max=cube.n_slices, _default=range(1, cube.n_slices+1))
+        slices = self.normalize_slice_index(n_max=cube.n_slices, _default=range(1, cube.n_slices + 1))
 
         cube.rotate_slice(self._slice_name, _inv(inv, self._n), slices)
 
@@ -581,7 +599,8 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
             case _:
                 raise RuntimeError(f"Unknown Slice {name}")
 
-        start_stop: Iterable[int] = self.normalize_slice_index(n_max=cube.n_slices, _default=range(1, cube.n_slices+1))
+        start_stop: Iterable[int] = self.normalize_slice_index(n_max=cube.n_slices,
+                                                               _default=range(1, cube.n_slices + 1))
 
         return face_name, cube.get_rotate_slice_involved_parts(name, start_stop)
 
@@ -759,7 +778,7 @@ class _BigAlg(Alg):
         combined = self._combine(flat_algs)
         return _BigAlg(self._name, *combined)
 
-    def flatten(self) -> Iterable["SimpleAlg"]:
+    def flatten(self) -> Iterator["SimpleAlg"]:
         for a in self._algs:
             yield from a.flatten()
 
@@ -783,8 +802,8 @@ class _BigAlg(Alg):
                         #                        c = type(a)
                         # noinspection PyArgumentList
                         a2 = a.clone()  # type: ignore # _n = 1
-                        a2._n = prev._n + a._n
-                        if a2._n:
+                        a2._n = prev.n + a.n
+                        if a2.n:
                             prev = a2
                         else:
                             prev = None  # R0 is a None
