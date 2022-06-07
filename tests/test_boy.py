@@ -1,5 +1,5 @@
 import algs
-from cube import Cube
+from model.cube import Cube
 from cube_operator import Operator
 from solver import Solver
 

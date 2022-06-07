@@ -4,8 +4,8 @@ import traceback
 
 import algs
 import viewer
-from algs import Alg, Algs
-from cube import Cube
+from algs.algs import Alg, Algs
+from model.cube import Cube
 from cube_operator import Operator
 from solver import Solver
 

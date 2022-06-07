@@ -3,9 +3,9 @@ from collections.abc import MutableSequence, Sequence, Iterable
 from contextlib import contextmanager
 from typing import Callable, Any
 
-from algs import Alg, SimpleAlg
+from algs.algs import Alg, SimpleAlg
 from app_exceptions import OpAborted
-from cube import Cube
+from model.cube import Cube
 
 
 class Operator:

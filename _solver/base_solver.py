@@ -1,14 +1,14 @@
 from contextlib import contextmanager
 from enum import unique, Enum
-from typing import Tuple, List, Callable
+from typing import Tuple, Callable
 
 from _solver.isolver import ISolver
-from algs import Algs
-from cube import Cube
-from cube_face import Face
+from algs.algs import Algs
+from model.cube import Cube
+from model.cube_face import Face
 from cube_operator import Operator
-from cube_queries import CubeQueries
-from elements import Part, PartColorsID, CenterSlice, EdgeSlice
+from model.cube_queries import CubeQueries
+from model.elements import Part, PartColorsID, CenterSlice, EdgeSlice
 
 _SLice_Tracking_UniqID: int = 0
 

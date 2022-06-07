@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 
-from algs import Algs
-from cube import Cube
+from model.cube import Cube
 from cube_operator import Operator
-from elements import Part
 
 
 class ISolver(ABC):

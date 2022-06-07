@@ -1,8 +1,8 @@
 from collections.abc import Iterable, Sequence
 from typing import TypeVar, Generic
 
-from cube import Cube
-from elements import Part, Edge, Corner
+from model.cube import Cube
+from model.elements import Part, Edge, Corner
 
 T = TypeVar("T", bound=Part)
 

@@ -1,7 +1,7 @@
-from algs import Algs
-from cube import Cube
+from algs.algs import Algs
+from model.cube import Cube
 from cube_operator import Operator
-from cube_queries import CubeQueries
+from model.cube_queries import CubeQueries
 from solver import Solver
 
 

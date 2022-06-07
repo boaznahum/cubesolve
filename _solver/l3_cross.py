@@ -3,10 +3,10 @@ from typing import Sequence
 from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
 from _solver.tracker import EdgeTracker
-from algs import Algs
+from algs.algs import Algs
 from app_exceptions import EvenCubeEdgeParityException
-from cube_face import Face
-from elements import FaceName, Part, Edge
+from model.cube_face import Face
+from model.elements import FaceName, Part, Edge
 
 
 def use(_):

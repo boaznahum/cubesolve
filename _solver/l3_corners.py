@@ -1,10 +1,10 @@
 from _solver.base_solver import SolverElement, ISolver, AnnWhat
 from _solver.common_op import CommonOp
 from _solver.tracker import CornerTracker
-from algs import Algs, Alg
+from algs.algs import Algs, Alg
 from app_exceptions import InternalSWError, EvenCubeCornerSwapException
-from cube_face import Face
-from elements import FaceName, Part, Corner
+from model.cube_face import Face
+from model.elements import FaceName, Part, Corner
 
 
 def use(_):

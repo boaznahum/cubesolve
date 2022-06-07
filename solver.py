@@ -10,9 +10,9 @@ from _solver.l3_corners import L3Corners
 from _solver.l3_cross import L3Cross
 from _solver.nxn_centers import NxNCenters
 from _solver.nxn_edges import NxNEdges
-from algs import Algs
+from algs.algs import Algs
 from app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
-from cube import Cube
+from model.cube import Cube
 from cube_operator import Operator
 
 

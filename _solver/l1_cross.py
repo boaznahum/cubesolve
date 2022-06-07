@@ -1,13 +1,13 @@
-from typing import Sequence, Any
+from typing import Sequence
 
 import config
 import viewer
 from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
-from algs import Algs, Alg
-from cube import Cube
-from cube_face import Face
-from elements import Color, FaceName, Edge, PartColorsID, PartEdge, Part
+from algs.algs import Algs, Alg
+from model.cube import Cube
+from model.cube_face import Face
+from model.elements import FaceName, Edge, PartColorsID, PartEdge, Part
 
 
 def use(_):

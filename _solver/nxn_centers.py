@@ -4,12 +4,12 @@ from typing import Tuple, Callable, Collection
 import algs
 from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
-from algs import Algs
+from algs.algs import Algs
 from app_exceptions import InternalSWError
-from cube_boy import CubeLayout
-from cube_face import Face
-from cube_queries import CubeQueries, Pred
-from elements import FaceName, Color, CenterSlice
+from model.cube_boy import CubeLayout
+from model.cube_face import Face
+from model.cube_queries import CubeQueries, Pred
+from model.elements import FaceName, Color, CenterSlice
 
 
 def use(_):

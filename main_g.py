@@ -11,16 +11,16 @@ from numpy import ndarray
 from pyglet import gl
 from pyglet.window import key  # type: ignore
 
-import algs
+import algs.algs as algs
 import config
-from algs import Alg, Algs
+from algs.algs import Alg, Algs
 from app_exceptions import AppExit, RunStop, OpAborted
-from cube import Cube
+from model.cube import Cube
 from cube_operator import Operator
-from elements import FaceName, PartSlice
+from model.elements import FaceName, PartSlice
 from solver import Solver, SolveStep
-from view_state import ViewState
-from viewer_g import GCubeViewer
+from app_state import ViewState
+from viewer.viewer_g import GCubeViewer
 
 
 # pyglet.options["debug_graphics_batch"] = True
@@ -678,7 +678,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
         case key.I:
             print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
             no_operation = True
-            from cube_queries import CubeQueries
+            from model.cube_queries import CubeQueries
             CubeQueries.print_dist(app.cube)
 
         case key.W:
@@ -845,7 +845,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                         op.op(a, animation=False)
                         good = good + a
                     except:
-                        from cube_queries import CubeQueries
+                        from model.cube_queries import CubeQueries
                         CubeQueries.print_dist(app.cube)
                         print("Failed on", a)
                         print(good)
@@ -855,7 +855,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                 for a in good.algs:
                     try:
                         op.op(a, animation=False)
-                        from cube_queries import CubeQueries
+                        from model.cube_queries import CubeQueries
                         CubeQueries.print_dist(app.cube)
                     except:
                         print(good)

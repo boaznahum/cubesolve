@@ -3,13 +3,13 @@ from typing import Callable, Generator
 
 from _solver.icommon_op import ICommon
 from _solver.base_solver import ISolver
-from algs import Algs, Alg
+from algs.algs import Algs, Alg
 from app_exceptions import InternalSWError
-from cube import Cube
-from cube_face import Face
+from model.cube import Cube
+from model.cube_face import Face
 from cube_operator import Operator
-from cube_queries import Pred, CubeQueries
-from elements import Edge, Color, FaceName, EdgeSlice
+from model.cube_queries import Pred, CubeQueries
+from model.elements import Edge, Color, FaceName, EdgeSlice
 
 TRACE_UNIQUE_ID: int = 0
 

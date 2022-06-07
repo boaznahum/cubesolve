@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from cube_face import Face
+from model.cube_face import Face
 
 
 class ICommon(ABC):

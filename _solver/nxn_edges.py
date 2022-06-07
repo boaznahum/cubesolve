@@ -1,14 +1,14 @@
 from collections import defaultdict
-from typing import Tuple, List
+from typing import Tuple
 
-import algs
+import algs.algs as algs
 from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp, EdgeSliceTracker
-from algs import Algs
+from algs.algs import Algs
 from app_exceptions import InternalSWError
-from cube_face import Face
-from cube_queries import CubeQueries
-from elements import Color, Edge, PartColorsID, EdgeSlice
+from model.cube_face import Face
+from model.cube_queries import CubeQueries
+from model.elements import Color, Edge, PartColorsID, EdgeSlice
 
 
 def use(_):
