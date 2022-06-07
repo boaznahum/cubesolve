@@ -12,4 +12,5 @@ Fix scramble also to invertת  and multiple and generate sub lists
 
 # try to optimize, work less on B
 
-Bug, solver count on scramble is not reproducible, is alg is ?
+Bug, solver count on scramble is not reproducible, is alg is ? -yes, see test test_scramble_repeatable.py
+  the problem is probably in solver, need to check if some queries/serach are in set, sol order os changes

@@ -27,7 +27,11 @@ class Alg(ABC):
         return _Inv(self)
 
     @abstractmethod
-    def count(self) -> int: ...
+    def count(self) -> int:
+        """
+            return number of 90 moves, nn = n % 4, nn:1 -> 1 nn:2 -> 2 nn:3 -> 1
+        """
+        pass
 
     @abstractmethod
     def atomic_str(self):

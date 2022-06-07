@@ -1,7 +1,7 @@
 import itertools
 from collections import defaultdict
-from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
-from typing import Callable, TypeVar, Tuple
+from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable, Collection
+from typing import Callable, TypeVar, Tuple, Collection
 
 from app_exceptions import InternalSWError
 from .cube import Cube
@@ -137,15 +137,20 @@ class CubeQueries:
         return dist
 
     @staticmethod
-    def get_sate(cube) -> Iterable[PartSlice]:
+    def get_sate(cube) -> Collection[PartSlice]:
 
         return cube.get_all_parts()
 
     @staticmethod
-    def compare_state(cube: Cube, other: Iterable[PartSlice]):
+    def compare_state(cube: Cube, other: Collection[PartSlice]):
 
-        st2 = CubeQueries.get_sate(cube)
+        st2: Collection[PartSlice] = CubeQueries.get_sate(cube)
 
+        if len(other) != len(st2):
+            return False
+
+        s1: PartSlice
+        s2: PartSlice
         return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(other, st2))
 
     @classmethod
@@ -168,7 +173,6 @@ class CubeQueries:
     @classmethod
     def find_slice_in_cube(cls, cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:
         return CubeQueries.find_slice_in_edges(cube.edges, pred)
-
 
     @classmethod
     def find_edge_in_cube(cls, cube: Cube, pred: Pred[Edge]) -> Edge | None:
