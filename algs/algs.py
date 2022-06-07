@@ -105,11 +105,8 @@ class _Inv(Alg):
         a = self._alg.simplify()  # can't be _Mul, nor Inv
 
         if isinstance(a, SimpleAlg):
-            c = type(a)
-            # noinspection PyArgumentList
-            s = c()  # type: ignore # _n = 1
-            s.copy(a)
-            s._n = -a.n  # inv
+            s = a.clone()
+            s *= -1  # inv - that is my function
             return s.simplify()
         elif isinstance(a, _BigAlg):
 
@@ -167,14 +164,11 @@ class _Mul(Alg, ABC):
         a = self._alg.simplify()  # can't be _Mul
 
         if isinstance(a, SimpleAlg):
-            c = type(a)
-            # noinspection PyArgumentList
-            # todo: every where we clone like this, there is a bug, beucase we added _a_slice, need to use clone method
-            s = c()  # type: ignore # _n = 1
-            s.copy(a)
-            s._n *= self._n
+            s = a.clone()
+            s *= self._n  # multipy by me - that is my function
             return s.simplify()
         elif isinstance(self._alg, _BigAlg):
+            # noinspection PyProtectedMember
             algs = [a.simplify() for a in self._alg._algs] * self._n
             return _BigAlg(None, *algs).simplify()
         else:
@@ -286,6 +280,15 @@ class SimpleAlg(Alg, ABC):
 
     def same_form(self, a: "SimpleAlg"):
         return True
+
+    def __imul__(self, other: int):
+        """
+        For simple algorithm inv and mul
+        :param other:
+        :return:
+        """
+        self ._n *= other
+        return self
 
 
 class Annotation(SimpleAlg):
@@ -440,7 +443,7 @@ class SliceAbleAlg(SimpleAlg, ABC):
             return True
 
         # todo: optimize it, [1:2] are the same as [1,2]
-        # but it become more complicated when it is [1: ] becuase we don't know
+        # but it become more complicated when it is [1: ] because we don't know
         # the size of the cube
         if type(my) != type(other):
             return False
@@ -452,7 +455,7 @@ class SliceAbleAlg(SimpleAlg, ABC):
             s2 = a.start
             t2 = a.stop
 
-            return (s1 == None and s2 is None or s1 == s2) and (t1 is None and t2 is None or t1 == t2)
+            return (s1 is None and s2 is None or s1 == s2) and (t1 is None and t2 is None or t1 == t2)
         elif isinstance(my, Sequence):
             assert isinstance(other, Sequence)  # for my py
             # they are sorted
