@@ -1,6 +1,5 @@
 from typing import Callable
 
-from cube_boy import FaceName, Color
 from elements import *
 from elements import PartSlice
 
@@ -305,7 +304,7 @@ class Face(SuperElement):
     @property
     def is3x3(self):
         # todo: Optimize it !!!, reset after slice rotation
-        return all(p.is3x3 for p in self.parts)
+        return all(p.is3x3 for p in self.edges) and self.center.is3x3
 
     def reset_after_faces_changes(self):
         """

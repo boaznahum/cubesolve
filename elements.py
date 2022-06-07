@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
 from enum import Enum, unique
-from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable, final
+from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable, final, Iterator
 
 import config
 from app_exceptions import InternalSWError
@@ -155,7 +155,7 @@ class PartSlice(ABC, Hashable):
         self._colors_id_by_colors: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
         self._parent: Part | None = None
-        # attributes that are move aroud with the slice
+        # attributes that are move around with the slice
         self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
 
         global _SliceUniqueID
@@ -455,7 +455,7 @@ class Part(ABC, CubeElement):
     __slots__ = ["_cube", "_fixed_id", "_colors_id_by_pos", "_colors_id_by_colors"]
 
     def __init__(self) -> None:
-        cube = next(iter(self.all_slices)).cube
+        cube = next(self.all_slices).cube
         super().__init__(cube)
 
         self._colors_id_by_pos: PartColorsID | None = None
@@ -481,7 +481,7 @@ class Part(ABC, CubeElement):
 
     @property
     @abstractmethod
-    def all_slices(self) -> Iterable[PartSlice]:
+    def all_slices(self) -> Iterator[PartSlice]:
         pass
 
     @abstractmethod
@@ -534,19 +534,9 @@ class Part(ABC, CubeElement):
         raise ValueError(f"Part {self} doesn't contain face {face}")
 
     @property
-    def is3x3(self):
-        # todo: Optimize it !!!, reset after slice rotation
-
-        s0: PartSlice = iter(self.all_slices).__next__()
-
-        colors = [e.color for e in s0.edges]
-
-        for s in self.all_slices:
-            for c1, c2 in zip(colors, (e.color for e in s.edges)):
-                if c1 != c2:
-                    return False
-
-        return True
+    @abstractmethod
+    def is3x3(self) -> bool:
+        pass
 
     def __str__(self) -> str:
 
@@ -787,7 +777,20 @@ class Center(Part):
         return self._slices[n2][n2].edges
 
     @property
-    def all_slices(self) -> Iterable["CenterSlice"]:
+    def is3x3(self) -> bool:
+        slices: Iterator[CenterSlice] = self.all_slices
+
+        c = next(slices).color
+
+        for s in slices:
+            if c != s.color:
+                return False
+
+        return True
+
+
+    @property
+    def all_slices(self) -> Iterator["CenterSlice"]:
         for ss in self._slices:
             yield from ss
 
@@ -1074,8 +1077,25 @@ class Edge(Part):
         return self._slices[self.n_slices // 2].edges
 
     @property
-    def all_slices(self) -> Iterable[EdgeSlice]:
-        return self._slices
+    def is3x3(self) -> bool:
+        slices = self.all_slices
+
+        s0 = next(slices)
+
+        c1, c2 = (s0.e1.color, s0.e2.color)
+
+        for s in slices:
+            _c1, _c2 = (s.e1.color, s.e2.color)
+
+            if c1 != _c1 or c2 != _c2:
+                return False
+
+        return True
+
+
+    @property
+    def all_slices(self) -> Iterator[EdgeSlice]:
+        return self._slices.__iter__()
 
     @property
     def n_slices(self):
@@ -1370,8 +1390,8 @@ class Corner(Part):
         return self._slice.edges
 
     @property
-    def all_slices(self) -> Iterable[PartSlice]:
-        return [self._slice]
+    def all_slices(self) -> Iterator[PartSlice]:
+        yield self._slice
 
     def get_slice(self, index: SliceIndex) -> PartSlice:
         return self._slice
@@ -1411,6 +1431,10 @@ class Corner(Part):
         """
 
         self._replace_colors(source, (on_face, on_face), (source_2, target_2), (source_3, target_3))
+
+    @property
+    def is3x3(self) -> bool:
+        return True
 
 
 class SuperElement(CubeElement):
