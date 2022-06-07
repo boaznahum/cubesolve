@@ -51,6 +51,7 @@ class Cube:
         if cube_size:
             self._size = cube_size
 
+        assert self._size >= 2
         self._original_layout = None
 
         self._modify_counter = 0
@@ -272,8 +273,8 @@ class Cube:
 
         a_slice.rotate(n, slices)
 
-    def get_rotate_slice_involved_parts(self, slice_name: SliceName, slice_indexes: int | Iterable[int] | None = None) -> \
-            Collection[PartSlice]:
+    def get_rotate_slice_involved_parts(self, slice_name: SliceName,
+                                        slice_indexes: int | Iterable[int] | None = None) -> Collection[PartSlice]:
 
         """
 
@@ -286,8 +287,8 @@ class Cube:
 
         return a_slice.get_rotate_involved_parts(slice_indexes)
 
-    def _get_face_and_rotation_info(self, face_name: FaceName, _slices: Iterable[int] = None) -> Tuple[
-            Iterable[int], bool, SliceName]:
+    def _get_face_and_rotation_info(self, face_name: FaceName,
+                                    _slices: Iterable[int] = None) -> Tuple[Iterable[int], bool, SliceName]:
         """
 
         :param face_name:
@@ -360,7 +361,7 @@ class Cube:
                 si = i - 1
                 if neg_slice_index:
                     si = self.inv(si)
-                #can be optimized, by passing sequnece
+                # can be optimized, by passing sequence
                 self.rotate_slice(slice_name, slice_rotate_n, [si])
 
     def get_rotate_face_and_slice_involved_parts(self, face_name: FaceName, slices: Iterable[int] = None) -> \
