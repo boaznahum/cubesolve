@@ -1,52 +1,25 @@
-import math
-import time
 import traceback
-from collections.abc import Iterable, Collection, Set
-from typing import MutableSequence, Callable
+from typing import MutableSequence
 
 import glooey  # type: ignore
-import numpy as np
 import pyglet  # type: ignore
-from numpy import ndarray
 from pyglet import gl
 from pyglet.window import key  # type: ignore
 
 import algs.algs as algs
 import config
+import main_g_animation
 from algs.algs import Alg, Algs
 from app_exceptions import AppExit, RunStop, OpAborted
-from model.cube import Cube
-from cube_operator import Operator
-from model.elements import FaceName, PartSlice
-from solver import Solver, SolveStep
 from app_state import ViewState
+from cube_operator import Operator
+from main_g_animation import Animation
+from model.cube import Cube
+from model.elements import FaceName
+from solver import Solver, SolveStep
 from viewer.viewer_g import GCubeViewer
-
-
 # pyglet.options["debug_graphics_batch"] = True
-
-
-class Animation:
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.done: bool = False
-        self._animation_update_only: Callable[[], None] | None = None
-        self._animation_draw_only: Callable[[], None] | None = None
-        self._animation_cleanup: Callable[[], None] | None = None
-        self.delay = 1 / 20.
-
-    def update_gui_elements(self):
-        if self._animation_update_only:
-            self._animation_update_only()
-
-    def draw(self):
-        if self._animation_draw_only:
-            self._animation_draw_only()
-
-    def cleanup(self):
-        if self._animation_cleanup:
-            self._animation_cleanup()
+from viewer.viewer_g_ext import GViewerExt
 
 
 class Main:
@@ -83,7 +56,7 @@ class Main:
 
 
 # noinspection PyAbstractClass
-class Window(pyglet.window.Window):
+class Window(main_g_animation.AbstractWindow):
     #     # Cube 3D start rotation
     xRotation = yRotation = 30
 
@@ -119,6 +92,8 @@ class Window(pyglet.window.Window):
 
         self.app.op._animation_hook = lambda op, alg: op_and_play_animation(self, op, False, alg)
 
+    def set_animation(self, an: Animation | None):
+        self._animation = an
 
     def update_gui_elements(self):
 
@@ -249,53 +224,7 @@ class Window(pyglet.window.Window):
             self.update_gui_elements()  # to create error label
 
     def draw_axis(self):
-        gl.glPushAttrib(gl.GL_MATRIX_MODE)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-
-        gl.glPushMatrix()
-
-        gl.glLoadIdentity()
-        gl.glTranslatef(0, 0, -400)
-
-        # print_matrix("GL_MODELVIEW_MATRIX", gl.GL_MODELVIEW_MATRIX)
-        # print_matrix("GL_PROJECTION_MATRIX", gl.GL_PROJECTION_MATRIX)
-        # print_matrix("GL_VIEWPORT", gl.GL_VIEWPORT)
-
-        # ideally we want the axis to be fixed, but in this case we won't see the Z,
-        #  so we rotate the Axes, or we should change the perspective
-        vs: ViewState = self.app.vs
-        gl.glRotatef(math.degrees(vs.alpha_x_0), 1, 0, 0)
-        gl.glRotatef(math.degrees(vs.alpha_y_0), 0, 1, 0)
-        gl.glRotatef(math.degrees(vs.alpha_z_0), 0, 0, 1)
-
-        gl.glPushAttrib(gl.GL_LINE_WIDTH)
-        gl.glLineWidth(3)
-
-        gl.glBegin(gl.GL_LINES)
-
-        gl.glColor3ub(255, 255, 255)
-        gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(200, 0, 0)
-        gl.glEnd()
-
-        gl.glBegin(gl.GL_LINES)
-        gl.glColor3ub(255, 0, 0)
-        gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(0, 200, 0)
-        gl.glEnd()
-
-        gl.glBegin(gl.GL_LINES)
-        gl.glColor3ub(0, 255, 0)
-        gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(0, 0, 200)
-
-        gl.glEnd()
-
-        gl.glPopAttrib()  # line width
-
-        # Pop Matrix off stack
-        gl.glPopMatrix()
-        gl.glPopAttrib()  # GL_MATRIX_MODE
+        GViewerExt.draw_axis(self.app.vs)
 
     def create_layout(self):
         window = self
@@ -383,249 +312,15 @@ class Window(pyglet.window.Window):
 
 
 # noinspection PyPep8Naming
-def _create_animation(window: Window, alg: algs.AnimationAbleAlg, n_count) -> Animation:
-    rotate_face: FaceName
-    cube_parts: Collection[PartSlice]
-
-    rotate_face, cube_parts = alg.get_animation_objects(window.app.cube)
-
-    # to be on the safe side !!!
-    if not isinstance(cube_parts, Set):
-        cube_parts = set(cube_parts)
-
-    face_center: ndarray
-    opposite_face_center: ndarray
-    gui_objects: Iterable[int]
-
-    viewer = window.viewer
-    face_center, opposite_face_center, gui_objects = viewer.get_slices_movable_gui_objects(rotate_face, cube_parts)
-
-    #
-    # if alg.face:
-    #     face_center, opposite_face_center, gui_objects = viewer.get_face_objects(alg.face)
-    # elif alg.axis_name:
-    #     face_center, opposite_face_center, gui_objects = viewer.git_whole_cube_objects(alg.axis_name)
-    # elif alg.slice_name:
-    #     face_center, opposite_face_center, gui_objects = viewer.git_slice_objects(alg.slice_name)
-    # else:
-    #     raise TimeoutError(f"At lest face/axis/slice name in {alg}")
-
-    vs: ViewState = window.app.vs
-    current_angel = 0
-
-    # compute target_angel
-    n = n_count % 4
-    if n == 3:
-        n = -1
-    target_angel = math.radians(90 * n)
-    angel_delta = target_angel / float(window.app.vs.animation_speed_number_of_steps)
-
-    # Rotate A Point
-    # About An Arbitrary Axis
-    # (3 Dimensions)
-    # Written by Paul Bourke
-    # https://www.eng.uc.edu/~beaucag/Classes/Properties/OptionalProjects/CoordinateTransformationCode/Rotate%20about%20an%20arbitrary%20axis%20(3%20dimensions).html#:~:text=Step%202-,Rotate%20space%20about%20the%20x%20axis%20so%20that%20the%20rotation,no%20additional%20rotation%20is%20necessary.
-
-    x1 = face_center[0]
-    y1 = face_center[1]
-    z1 = face_center[2]
-    T: ndarray = np.array([[1, 0, 0, -x1],
-                           [0, 1, 0, -y1],
-                           [0, 0, 1, -z1],
-                           [0, 0, 0, 1]
-                           ], dtype=float)
-    TT = np.linalg.inv(T)
-    U = (face_center - opposite_face_center) / np.linalg.norm(face_center - opposite_face_center)
-    a = U[0]
-    b = U[1]
-    c = U[2]
-    d = math.sqrt(b * b + c * c)
-    if d == 0:
-        Rx = np.array([[1, 0, 0, 0],
-                       [0, 1, 0, 0],
-                       [0, 0, 1, 0],
-                       [0, 0, 0, 1]], dtype=float)
-    else:
-        Rx = np.array([[1, 0, 0, 0],
-                       [0, c / d, -b / d, 0],
-                       [0, b / d, c / d, 0],
-                       [0, 0, 0, 1]], dtype=float)
-
-    RxT = np.linalg.inv(Rx)
-
-    Ry = np.array([[d, 0, -a, 0],
-                   [0, 1, 0, 0],
-                   [a, 0, d, 0],
-                   [0, 0, 0, 1]], dtype=float)
-
-    RyT = np.linalg.inv(Ry)
-
-    # TT @ RxT @ RyT @ Rz @ Ry @ Rx @ T
-    MT: ndarray = TT @ RxT @ RyT  # ? == inv(M)
-    M: ndarray = Ry @ Rx @ T
-
-    animation = Animation()
-    animation.done = False
-    animation._animation_cleanup = lambda: viewer.unhidden_all()
-
-    # noinspection PyPep8Naming
-
-    last_update = time.time()
-
-    def _update():
-
-        nonlocal current_angel
-        nonlocal last_update
-
-        # print(f"In update before {current_angel=} {target_angel}")
-        if (time.time() - last_update) > animation.delay:
-            _angel = current_angel + angel_delta
-
-            if abs(_angel) > abs(target_angel):
-
-                if current_angel < target_angel:
-                    current_angel = target_angel
-                else:
-                    animation.done = True
-            else:
-                # don't update if done, make animation smoother, no jump at end
-                current_angel = _angel
-
-            last_update = time.time()
-
-        # print(f"In update after {current_angel=} {target_angel}")
-
-    # noinspection PyPep8Naming
-    def _draw():
-
-        nonlocal current_angel
-
-        # print(f"In _draw {current_angel=} {target_angel=}")
-
-        if abs(current_angel) > abs(target_angel):
-            animation.done = True
-            return
-
-        vs.prepare_objects_view()
-
-        ct = math.cos(current_angel)
-        st = math.sin(current_angel)
-        Rz = np.array([[ct, st, 0, 0],
-                       [-st, ct, 0, 0],
-                       [0, 0, 1, 0],
-                       [0, 0, 0, 1]], dtype=float)
-
-        m: ndarray = MT @ Rz @ M
-
-        gm = (gl.GLfloat * 16)(0)
-        # column major
-        gm[:] = m.flatten(order="F")
-
-        gl.glMultMatrixf(gm)
-
-        try:
-            for f in gui_objects:
-                gl.glCallList(f)
-        finally:
-            vs.restore_objects_view()
-
-        return True
-
-    animation.delay = window.app.vs.animation_speed_delay_between_steps
-    animation._animation_draw_only = _draw
-    animation._animation_update_only = _update
-
-    return animation
-
-    # def _fire_event(dt):
-    #     window.dispatch_event("on_draw")
-    #
-    # func = _fire_event
-    #
-    # pyglet.clock.schedule_interval(func, 1 / 10)
 
 
 def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: algs.SimpleAlg):
-    """
-    This must be called only from operator
-    :param window:
-    :param operator:
-    :param inv:
-    :param alg:
-    :return:
-    """
-    # if True:
-    #     operator.op(alg, inv, animation=False)
-    #     return
-
-    if not operator.animation_enabled:
-        operator.op(alg, inv)
-        return
-
-    event_loop = pyglet.app.event_loop
-
-    if event_loop.has_exit:
-        return  # maybe long alg is still running
-
-    platform_event_loop = pyglet.app.platform_event_loop
-
-    if alg.is_ann:
-        operator.op(alg, inv, animation=False)
-        window.update_gui_elements()
-        #        time.sleep(1)
-        platform_event_loop.notify()
-        return
-
-    if inv:
-        _alg = alg.inv().simplify()
-        assert isinstance(_alg, algs.SimpleAlg)
-        alg = _alg
-        inv = False
-
-    if not isinstance(alg, algs.AnimationAbleAlg):
-        print(f"{alg} is not animation-able")
-        operator.op(alg, False, animation=False)
-        return
-
-    animation: Animation = _create_animation(window, alg, alg.n)
-    delay: float = animation.delay
-
-    # this is called from window.on_draw
-    window._animation = animation
-
-    def _update(_):
-        animation.update_gui_elements()
-        platform_event_loop.notify()
-
-    clock: pyglet.clock.Clock = event_loop.clock
-    clock.schedule_interval(_update, delay)
-
-    # copied from EventLoop#run
-    while not event_loop.has_exit and not animation.done:
-        timeout = event_loop.idle()  # this will trigger on_draw
-        platform_event_loop.step(timeout)
-
-    if event_loop.has_exit:
-        return
-
-    clock.unschedule(_update)
-
-    # while not animation.done:
-    #     window.on_draw()
-    #     time.sleep(delay)
-
-    animation.cleanup()
-    #     if animation.done:
-    #         break  # don't sleep !!!
-    #     window.flip()
-
-    window._animation = None
-
-    operator.op(alg, False, animation=False)
-
-    window.update_gui_elements()  # most important !!! otherwise animation jumps
-    # window.on_draw()
-    # window.flip()
+    main_g_animation.op_and_play_animation(window,
+                                           window.app.cube,
+                                           window.viewer,
+                                           window.app.vs,
+                                           operator,
+                                           inv, alg)
 
 
 _last_face: FaceName = FaceName.R
@@ -939,7 +634,7 @@ def _handle_input(window: Window, value: int, modifiers: int):
                         slv.solve(animation=False, debug=False)
                         assert slv.is_solved
                         count += op.count - c0
-                        n_loops +=1
+                        n_loops += 1
 
                     except Exception:
                         print(f"Failure on scramble key={scramble_key}, n={n} ")

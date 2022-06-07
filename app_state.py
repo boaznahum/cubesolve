@@ -34,7 +34,7 @@ class ViewState:
         self._alpha_z: float = 0
         self._alpha_delta = 0.1
 
-        self._draw_shadows = "L" # "LDB"
+        self._draw_shadows = "" # "LDB"
         self.cube_size = 5
 
         self.slice_start: int = 0
