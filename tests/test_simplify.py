@@ -70,7 +70,7 @@ def __test_flattern(alg, n):
     alg.play(cube)
     s1 = CubeQueries.get_sate(cube)
     alg_s = alg.flatten()
-    flattern = algs._BigAlg(None, *alg_s)
+    flattern = algs.BigAlg(None, *alg_s)
 #    flattern = alg_s
     print("simplify=", alg_s)
 
@@ -129,8 +129,8 @@ def test_flattern():
              on_front_rotate.prime]
     #
     # for a in _algs:
-    __test_simplify(algs._BigAlg(None, *_algs), cube_size)
-    __test_simplify(algs._BigAlg(None, *_algs).inv(), cube_size)
+    __test_simplify(algs.BigAlg(None, *_algs), cube_size)
+    __test_simplify(algs.BigAlg(None, *_algs).inv(), cube_size)
     #
     # a = Algs.B[1:cube.n_slices + 1]
     # __test_flattern(a, cube_size)

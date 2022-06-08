@@ -78,7 +78,8 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ViewState, alg: algs.
     if n == 3:
         n = -1
     target_angel = math.radians(90 * n)
-    angel_delta = target_angel / float(vs.animation_speed_number_of_steps)
+    animation_speed = vs.get_speed
+    angel_delta = target_angel / float(animation_speed.number_of_steps) / math.fabs(n)
 
     # Rotate A Point
     # About An Arbitrary Axis
@@ -191,7 +192,7 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ViewState, alg: algs.
 
         return True
 
-    animation.delay = vs.animation_speed_delay_between_steps
+    animation.delay = animation_speed.delay_between_steps
     animation._animation_draw_only = _draw
     animation._animation_update_only = _update
 
