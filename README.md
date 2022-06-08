@@ -39,6 +39,11 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     X, Y, Z - Entire cube over R, U and F 
     M, E, S - Middle slice over R, **D** and F
 
+    < - Undo last move (user or sovlver)
+
+    C - Reset the cube
+    Ctrl+C - reset the cube and itss orinetation.
+
 ### Scrambling 
 
     0 to 6 -  Scramble with diffrent random seed, yet no good scramble agorithm
