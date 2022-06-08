@@ -65,14 +65,19 @@ Python
     In package model:
      Cube, Face, Slice, Corner, Edge, Center ...
 
+## Operator
+    Operator accept any algorithn and apply it on cube, if animation is enabled then play it ...
+    Keep history of operation and can undo them
+    Contained in Solver to animate and track solution
 ## Solver
-   nxn_edges.py
-
-   nxn_centers.py
-   l1_cross.py
-   l1_corners.py
-   l2.py 
-   l3_cross.py
-   l3_corners.py
+    nxn_edges.py
+    nxn_centers.py
+    l1_cross.py
+    l1_corners.py
+    l2.py 
+    l3_cross.py
+    l3_corners.py
+    
+    Operate on cube using Operator
    
 ## Viewer/GUI
