@@ -61,6 +61,14 @@ class Face(SuperElement):
 
         return Center(slices)
 
+    def __hash__(self) -> int:
+        # we use faces in set in nxn_centers
+        return hash(self._name)
+
+    def __eq__(self, __o: object) -> bool:
+        # we use faces in set in nxn_centers
+        return isinstance(__o, Face) and __o._name == self._name
+
     def finish_init(self):
         self._edges = (self._edge_top, self._edge_left, self._edge_right, self._edge_bottom)
 

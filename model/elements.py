@@ -175,11 +175,14 @@ class PartSlice(ABC, Hashable):
         """
         _id = frozenset(tuple([self._index]) + tuple(p.face.name for p in self._edges))
 
+
         if self._fixed_id:
             if _id != self._fixed_id:
                 raise Exception(f"SW error, you are trying to re assign part id was: {self._fixed_id}, new: {_id}")
         else:
             self._fixed_id = _id
+
+
 
     @property
     def fixed_id(self) -> PartSliceHashID:
@@ -1073,6 +1076,9 @@ class Edge(Part):
         assert f1 is self.e1.face or f1 is self.e2.face
         assert f2 is self.e1.face or f2 is self.e2.face
 
+        # FU, FR
+        self._name: str = str(f1.name) + str(f2.name)
+
     @property
     def e1(self) -> "PartEdge":
         return self._3x3_representative_edges[0]
@@ -1080,6 +1086,15 @@ class Edge(Part):
     @property
     def e2(self) -> "PartEdge":
         return self._3x3_representative_edges[1]
+
+    def __hash__(self) -> int:
+        # we use faces in set in nxn_centers
+        return hash(self._name)
+
+    def __eq__(self, __o: object) -> bool:
+        # we use faces in set in nxn_centers
+        return isinstance(__o, Edge) and __o._name == self._name
+
 
     @property
     def _3x3_representative_edges(self) -> Sequence[PartEdge]:
