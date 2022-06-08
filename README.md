@@ -20,4 +20,26 @@ Python
 ![image](https://user-images.githubusercontent.com/3913990/172592023-3513feb2-28ea-4f8d-94e6-d9fbd4c99cb7.png)
 
 
-## Keybaord
+## Keyboard
+
+
+### Controlling view 
+    Ctlr/Alt X, Y, Z - Rotate cube over X, Y , Z Axis
+### Modes
+    o - Turn animation on/off
+    Num Pad +/- Change Animation speed
+    +/- Cube size
+
+### Rotating
+    R, L, F, B, U, B  - As suauls - rotate faces
+    X, Y, Z - Entire cube over R, U and F 
+    M, E, S - Middle slice over R, **D** and F
+
+### Scrambling 
+
+    0 to 6 -  Scramble with diffrent random seed, yet no good scramble agorithm
+
+
+### Solving
+
+    
