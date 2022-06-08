@@ -27,11 +27,8 @@ Python
     Ctlr/Alt X, Y, Z - Rotate cube over X, Y , Z Axis
 ### Modes
     o - Turn animation on/off
-   
-   
-   
-Num Pad +/- Change Animation speed
-    +/- Cube size
+    Num Pad +/- Change Animation speed
+    +/-   Cube size
 
 ### Rotating
     R, L, F, B, U, B  - As suauls - rotate faces
@@ -41,6 +38,7 @@ Num Pad +/- Change Animation speed
 ### Scrambling 
 
     0 to 6 -  Scramble with diffrent random seed, yet no good scramble agorithm
+                Only 0 is animated 
 
 
 ### Solving
@@ -48,4 +46,33 @@ Num Pad +/- Change Animation speed
     ?/  - Solve the cube, See above animation mode
 
 
+# Code organization
+
+## Algs
+   All basic algs are in algs.py
+   Algs can be combined, inverted sliced and multiplied
+   ```
+    @property
+    def rf(self) -> algs.Alg:
+        return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
+        
+    ....
     
+    slice_alg = Algs.E[ [ltr + 1  for ltr in ltrs]]
+   ```
+
+## Model
+    In package model:
+     Cube, Face, Slice, Corner, Edge, Center ...
+
+## Solver
+   nxn_edges.py
+
+   nxn_centers.py
+   l1_cross.py
+   l1_corners.py
+   l2.py 
+   l3_cross.py
+   l3_corners.py
+   
+## Viewer/GUI
