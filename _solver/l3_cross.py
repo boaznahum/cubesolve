@@ -145,9 +145,8 @@ class L3Cross(SolverElement):
         """Assume we have yellow cross"""
 
         yf = self.white_face.opposite
-        edges: Sequence[EdgeTracker] = EdgeTracker.of_many(self.white_face.opposite.edges)
 
-        right = EdgeTracker.of(yf.edge_right)
+        right = EdgeTracker.of_position(yf.edge_right)
 
         self.debug(f"L3-Cross-Pos, right before moving:{right}")
         self._bring_edge_to_right_up(right.actual)
@@ -156,7 +155,7 @@ class L3Cross(SolverElement):
         assert right.match
 
         # right is in place
-        top = EdgeTracker.of(yf.edge_top)
+        top = EdgeTracker.of_position(yf.edge_top)
 
         # now we try to make top and right matches, by fixing top
         if not top.match:

@@ -1,13 +1,13 @@
 import itertools
 from collections import defaultdict
-from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable, Collection
+from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
 from typing import Callable, TypeVar, Tuple, Collection
 
 from app_exceptions import InternalSWError
 from .cube import Cube
 from .cube_boy import Color
 from .cube_face import Face
-from .elements import PartSlice, CenterSlice, PartColorsID, Edge, EdgeSlice
+from .elements import PartSlice, CenterSlice, PartColorsID, Edge, EdgeSlice, PartType
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]
@@ -35,6 +35,24 @@ class CubeQueries:
                     return s
 
         raise InternalSWError(f"Can't find slice with unique id {slice_unique_id}")
+
+    @staticmethod
+    def find_part_by_color(parts: Iterable[PartType], color_id: PartColorsID) -> PartType:
+
+        for p in parts:
+            if p.colors_id_by_color == color_id:
+                return p
+
+        raise InternalSWError(f"Can't find part with color id {color_id}")
+
+    @staticmethod
+    def find_part_by_position(parts: Iterable[PartType], position_id: PartColorsID) -> PartType:
+
+        for p in parts:
+            if p.colors_id_by_pos == position_id:
+                return p
+
+        raise InternalSWError(f"Can't find part with color id {position_id}")
 
     @staticmethod
     def find_center_slice(cube: Cube, pred: Callable[[CenterSlice], bool]) -> CenterSlice | None:
@@ -71,7 +89,7 @@ class CubeQueries:
 
         inv = cube.inv
 
-        return (i, inv(i))
+        return i, inv(i)
 
     @staticmethod
     def print_dist(cube: Cube):

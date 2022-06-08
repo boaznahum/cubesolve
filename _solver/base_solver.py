@@ -4,7 +4,7 @@ from typing import Tuple, Callable
 
 from _solver.isolver import ISolver
 from algs.algs import Algs
-from model.cube import Cube
+from model.cube import Cube, CubeSupplier
 from model.cube_face import Face
 from cube_operator import Operator
 from model.cube_queries import CubeQueries
@@ -23,7 +23,7 @@ class AnnWhat(Enum):
     Postion = 2
 
 
-class SolverElement:
+class SolverElement(CubeSupplier):
     __slots__ = ["_solver"]
 
     _solver: ISolver

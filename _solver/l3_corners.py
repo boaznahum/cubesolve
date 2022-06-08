@@ -110,7 +110,7 @@ class L3Corners(SolverElement):
         with self.w_annotate2((yf.corner_bottom_right, AnnWhat.FindLocationTrackByColor),
                               (yf.corner_bottom_right, AnnWhat.Postion)):
 
-            front_right = CornerTracker.of(yf.corner_bottom_right)
+            front_right = CornerTracker.of_position(yf.corner_bottom_right)
 
             assert not front_right.in_position
 

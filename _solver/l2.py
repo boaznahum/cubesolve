@@ -2,6 +2,7 @@ from typing import Sequence
 
 from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
+from _solver.tracker import EdgeTracker
 from algs.algs import Algs, Alg
 from model.cube_face import Face
 from model.elements import PartColorsID, Part, Edge, Color
@@ -84,74 +85,78 @@ class L2(SolverElement):
 
         _target_corner: Edge | None = None
 
+        # color tracker
+        st: EdgeTracker = EdgeTracker.of_color(self, edge_id)
+
         # source edge
-        def se() -> Edge:
-            nonlocal _source_corner
-            if not _source_corner or _source_corner.colors_id_by_color != edge_id:
-                _source_corner = self.cube.find_edge_by_color(edge_id)
-            return _source_corner
+        # def se() -> Edge:
+        #     nonlocal _source_corner
+        #     if not _source_corner or _source_corner.colors_id_by_color != edge_id:
+        #         _source_corner = self.cube.find_edge_by_color(edge_id)
+        #     return _source_corner
 
         # target edge
-        def te() -> Edge:
-            nonlocal _target_corner
-            if not _target_corner or _target_corner.colors_id_by_pos != edge_id:
-                _target_corner = self.cube.find_edge_by_pos_colors(edge_id)
-            return _target_corner
+        # def te() -> Edge:
+        #     return st.position
+            # nonlocal _target_corner
+            # if not _target_corner or _target_corner.colors_id_by_pos != edge_id:
+            #     _target_corner = self.cube.find_edge_by_pos_colors(edge_id)
+            # return _target_corner
 
-        if se().match_faces:
+        if st.match:
             # because we have cross and L1, so if it matches then it is in position
-            self.debug(f"L2-C0. {te()} matches")
+            self.debug(f"L2-C0. {st.position} matches")
             return
 
         cube = self.cube
         up: Face = self.cube.up
         down: Face = up.opposite
 
-        if se().on_face(down):
+        if st.actual.on_face(down):
             print()
 
-        assert not se().on_face(down)
+        assert not st.actual.on_face(down)
 
-        if not se().on_face(up):
-            self.debug(f"L2-C1. source {se()} is not on top")
+        if not st.actual.on_face(up):
+            self.debug(f"L2-C1. source {st.actual} is not on top")
 
-            self._bring_edge_to_front_right(se())
+            self._bring_edge_to_front_right(st.actual)
 
-            assert self.cube.front.edge_right is se()
+            assert self.cube.front.edge_right is st.actual
 
             # replace it with something on top  todo: optimize, try to bring yellow edge
             self.op.op(self._ur_alg)
 
-            assert se().on_face(up)
+            assert st.actual.on_face(up)
 
         else:
-            self.debug(f"L2-C2. source {se()} is on top")
+            self.debug(f"L2-C2. source {st.actual} is on top")
 
         # now source is no top
 
         # find the face of source that is not on top
-        target_face_color: Color = se().get_other_face_edge(up).color
+        target_face_color: Color = st.actual.get_other_face_edge(up).color
         self._bring_face_to_front(target_face_color)
-        assert self.cube.front.color == se().get_other_face_edge(up).color
+        assert self.cube.front.color == st.actual.get_other_face_edge(up).color
 
-        self._bring_edge_to_front_up(se())
-        assert self.cube.front.edge_top is se()
+        self._bring_edge_to_front_up(st.actual)
+        assert self.cube.front.edge_top is st.actual
 
-        assert te().on_face(cube.front) and (te().on_face(cube.right) or te().on_face(cube.left))
+        assert st.position.on_face(cube.front) and ( st.position.on_face(cube.right) or st.position.on_face(cube.left))
 
-        _te = te()  # don't track
-        _se = se()  # don't track
+        _te = st.position  # don't track
+        _se = st.actual  # don't track
         _te_id = _te.colors_id_by_color
         _se_id = _se.colors_id_by_color
 
         with self.w_annotate((_se, False), (_te, True)):
 
-            if te().on_face(cube.right):
+            if st.position.on_face(cube.right):
                 self.op.op(self._ur_alg) # U R U' R' U' F' U F
             else:
                 self.op.op(self._ul_alg)
 
-        assert se().match_faces
+        assert st.match
 
     @property
     def _ur_alg(self) -> Alg:

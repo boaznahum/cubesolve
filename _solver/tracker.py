@@ -1,13 +1,13 @@
-from collections.abc import Iterable, Sequence
+from abc import abstractmethod
+from collections.abc import Iterable, Sequence, Iterator
 from typing import TypeVar, Generic
 
-from model.cube import Cube
-from model.elements import Part, Edge, Corner
+from model.cube import Cube, CubeSupplier
+from model.cube_queries import CubeQueries
+from model.elements import Part, Edge, Corner, PartColorsID, PartType
 
-T = TypeVar("T", bound=Part)
 
-
-class PartTracker(Generic[T]):
+class PartTracker(Generic[PartType]):
     """
     Track a part color id, even if algorithm change its location, this
     will return the required location(where it should be located on cube) and it's actual location
@@ -16,56 +16,64 @@ class PartTracker(Generic[T]):
                  "_required",
                  "_cube"]
 
-    def __init__(self, part: T) -> None:
+    def __init__(self, cube: CubeSupplier, color_id: PartColorsID) -> None:
         super().__init__()
-        self._color_id = part.colors_id_by_pos
-        self._actual: T | None = None
-        self._required: T = part
-        self._cube: Cube = part.cube
+        self._color_id = color_id
+        self._actual: PartType | None = None
+        self._required: PartType | None = None
+        self._cube: Cube = cube.cube
 
     @property
-    def required(self) -> T:
+    def position(self) -> PartType:
         """
-        The position where this part should be located
+        The position where this part should be located.
+        Given the color it in ctr, locate the part where this color should be
+        Position can be changed if faces are changed, Whole and slice rotations
         :return:
         """
 
         if not self._required or self._required.colors_id_by_pos != self._color_id:
-            self._required = self._cube.find_corner_by_pos_colors(self._color_id)
+            self._required = CubeQueries.find_part_by_position(self._search_in(), self._color_id)
+
         return self._required
 
     @property
-    def actual(self) -> T:
+    def actual(self) -> PartType:
         """
         The current location, where part with the given color is located
         :return:
         """
 
         if not self._actual or self._actual.colors_id_by_color != self._color_id:
-            self._actual = self._cube.find_part_by_colors(self._color_id)
+            self._actual = CubeQueries.find_part_by_color(self._search_in(), self._color_id)
+
         return self._actual
 
     @property
     def match(self) -> bool:
         """
-        Edge is in required match faces
+        Edge is in required position and correctly oriented
         :return:
         """
-        return self.required.match_faces
+        return self.position.match_faces
 
     @property
     def in_position(self):
         """
-        :return: true if part in position, position id same as color id, actual == required
+        :return: true if part in position(ignoring orientation), position id same as color id, actual == required
         """
-        return self.required.in_position
+        return self.position.in_position
+
+    @abstractmethod
+    def _search_in(self) -> Iterable[PartType]:
+        ...
 
     def __str__(self):
         if self.match:
             s = "+"
         else:
             s = "!"
-        return s + " " + str(self.actual) + "-->" + str(self.required)
+        return s + " " + str(self.actual) + "-->" + str(self.position)
 
     def __repr__(self):
         return self.__str__()
@@ -73,37 +81,54 @@ class PartTracker(Generic[T]):
 
 class EdgeTracker(PartTracker[Edge]):
 
-    def __init__(self, edge: Edge) -> None:
-        super().__init__(edge)
+    def _search_in(self) -> Iterable[Edge]:
+        return self._cube.edges
+
+    def __init__(self, cube: CubeSupplier, color_id: PartColorsID) -> None:
+        super().__init__(cube, color_id)
 
     @staticmethod
-    def of(edge: Edge) -> "EdgeTracker":
+    def of_position(edge: Edge) -> "EdgeTracker":
         """
-        Given an edge, tracks its position(not actual) id
+        Given an edge, tracks its position id
         :param edge:
         :return:
         """
-        return EdgeTracker(edge)
+        return EdgeTracker(edge.cube, edge.position_id)
 
     @staticmethod
-    def of_many(edges: Iterable[Edge]) -> Sequence["EdgeTracker"]:
-        return [EdgeTracker.of(e) for e in edges]
+    def of_color(cube: CubeSupplier, color_id: PartColorsID):
+        """
+        Given a color_id ID, locate the part. position or actual
+        :param color_id:
+        :param cube:
+        :return:
+        """
+        return EdgeTracker(cube, color_id)
+
+    @staticmethod
+    def of_many_by_position(edges: Iterable[Edge]) -> Sequence["EdgeTracker"]:
+        return [EdgeTracker.of_position(e) for e in edges]
 
 
 class CornerTracker(PartTracker[Corner]):
 
-    def __init__(self, corner: Corner) -> None:
-        super().__init__(corner)
+    def __init__(self, cube: Cube, color_id: PartColorsID) -> None:
+        super().__init__(cube, color_id)
 
     @staticmethod
-    def of(corner: Corner) -> "CornerTracker":
+    def of_position(corner: Corner) -> "CornerTracker":
         """
         Given a corner, tracks its position(not actual) id
+        Create a tracker from position id
         :param corner:
         :return:
         """
-        return CornerTracker(corner)
+        return CornerTracker(corner.cube, corner.colors_id_by_pos)
 
     @staticmethod
-    def of_many(corners: Iterable[Corner]) -> Sequence["CornerTracker"]:
-        return [CornerTracker.of(c) for c in corners]
+    def of_many_by_position(corners: Iterable[Corner]) -> Sequence["CornerTracker"]:
+        return [CornerTracker.of_position(c) for c in corners]
+
+    def _search_in(self) -> Iterable[Corner]:
+        return self._cube.corners

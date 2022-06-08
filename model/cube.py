@@ -1,4 +1,4 @@
-from typing import Collection, Mapping
+from typing import Collection, Mapping, Protocol
 
 from .cube_boy import CubeLayout
 from .cube_face import Face
@@ -6,7 +6,14 @@ from .cube_slice import Slice, SliceName
 from .elements import *
 
 
-class Cube:
+class CubeSupplier(Protocol):
+
+    @property
+    def cube(self) -> "Cube":
+        raise NotImplementedError()
+
+
+class Cube(CubeSupplier):
     """
            0  1  2
            0:     U
@@ -20,7 +27,7 @@ class Cube:
         "_back",
         "_color_2_face",
         "_faces",
-        "_edges",
+        "_edges", "_corners",
         "_slice_m", "_slice_e", "_slice_s",
         "_slices",
         "_modify_counter",
@@ -112,15 +119,19 @@ class Cube:
 
         self._edges = edges
 
-        f._corner_top_left = l._corner_top_right = u._corner_bottom_left = _create_corner(f, l, u)
-        f._corner_top_right = r._corner_top_left = u._corner_bottom_right = _create_corner(f, r, u)
-        f._corner_bottom_left = l._corner_bottom_right = d._corner_top_left = _create_corner(f, l, d)
-        f._corner_bottom_right = r._corner_bottom_left = d._corner_top_right = _create_corner(f, r, d)
+        corners = []
 
-        b._corner_top_left = r._corner_top_right = u._corner_top_right = _create_corner(b, r, u)
-        b._corner_top_right = l._corner_top_left = u._corner_top_left = _create_corner(b, l, u)
-        b._corner_bottom_left = r._corner_bottom_right = d._corner_bottom_right = _create_corner(b, r, d)
-        b._corner_bottom_right = l._corner_bottom_left = d._corner_bottom_left = _create_corner(b, l, d)
+        f._corner_top_left = l._corner_top_right = u._corner_bottom_left = _create_corner(corners, f, l, u)
+        f._corner_top_right = r._corner_top_left = u._corner_bottom_right = _create_corner(corners, f, r, u)
+        f._corner_bottom_left = l._corner_bottom_right = d._corner_top_left = _create_corner(corners, f, l, d)
+        f._corner_bottom_right = r._corner_bottom_left = d._corner_top_right = _create_corner(corners, f, r, d)
+
+        b._corner_top_left = r._corner_top_right = u._corner_top_right = _create_corner(corners, b, r, u)
+        b._corner_top_right = l._corner_top_left = u._corner_top_left = _create_corner(corners, b, l, u)
+        b._corner_bottom_left = r._corner_bottom_right = d._corner_bottom_right = _create_corner(corners, b, r, d)
+        b._corner_bottom_right = l._corner_bottom_left = d._corner_bottom_left = _create_corner(corners, b, l, d)
+
+        self._corners = corners
 
         for _f in self._faces.values():
             _f.finish_init()
@@ -151,6 +162,10 @@ class Cube:
             s.finish_init()
 
         # self.front.edge_top.annotate()
+
+    @property
+    def cube(self) -> "Cube":
+        return self
 
     @property
     def size(self) -> int:
@@ -194,6 +209,10 @@ class Cube:
     @property
     def edges(self) -> Iterable[Edge]:
         return self._edges
+
+    @property
+    def corners(self) -> Iterable[Corner]:
+        return self._corners
 
     def face(self, name: FaceName) -> Face:
         return self._faces[name]
@@ -613,13 +632,15 @@ def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_dire
     return e
 
 
-def _create_corner(f1: Face, f2: Face, f3: Face) -> Corner:
+def _create_corner(corners: list[Corner], f1: Face, f2: Face, f3: Face) -> Corner:
     p1: PartEdge = f1.create_part()
     p2: PartEdge = f2.create_part()
     p3: PartEdge = f3.create_part()
 
     _slice = PartSlice(0, p1, p2, p3)
 
-    e: Corner = Corner(_slice)
+    c: Corner = Corner(_slice)
 
-    return e
+    corners.append(c)
+
+    return c

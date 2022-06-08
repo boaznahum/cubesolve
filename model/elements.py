@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
 from enum import Enum, unique
-from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable, Iterator
+from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable, Iterator, TypeVar
 
 import config
 from app_exceptions import InternalSWError
@@ -36,6 +36,8 @@ _Cube: TypeAlias = "Cube"  # type: ignore
 PartColorsID = frozenset[Color]
 PartFixedID = frozenset[FaceName]
 PartSliceHashID = frozenset[FaceName]
+
+PartType = TypeVar("PartType", bound="Part")
 
 
 class CHelper:
@@ -628,15 +630,16 @@ class Part(ABC, CubeElement):
     @property
     def in_position(self):
         """
-        :return: true if part in position, position id same as color id
+        :return: true if part in position, ignoring orientation, position id same as color id
         """
         return self.colors_id_by_pos == self.colors_id_by_color
 
     @property
-    def colors_id_by_pos(self) -> PartColorsID:
+    def position_id(self) -> PartColorsID:
         """
         Return the parts required colors, assume it was in place, not actual colors
         the colors of the faces it is currently on
+        This id can be changed only if faces are changed in slice and whole cube rotation
         :return:
         """
 
@@ -647,6 +650,13 @@ class Part(ABC, CubeElement):
             self._colors_id_by_pos = by_pos
 
         return by_pos
+
+    @property
+    def colors_id_by_pos(self) -> PartColorsID:
+        """
+        :deprecated, use :position_id
+        """
+        return self.position_id
 
     @classmethod
     def parts_id_by_pos(cls, parts: Sequence["Part"]) -> Sequence[PartColorsID]:
