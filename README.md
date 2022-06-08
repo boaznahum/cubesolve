@@ -51,7 +51,7 @@ Python
 ## Algs
    All basic algs are in algs.py
    Algs can be combined, inverted sliced and multiplied
-   ```
+   ```python
     @property
     def rf(self) -> algs.Alg:
         return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
@@ -70,14 +70,34 @@ Python
     Keep history of operation and can undo them
     Contained in Solver to animate and track solution
 ## Solver
-    nxn_edges.py
-    nxn_centers.py
-    l1_cross.py
-    l1_corners.py
-    l2.py 
-    l3_cross.py
-    l3_corners.py
+  nxn_edges.py
+  nxn_centers.py
+  l1_cross.py
+  l1_corners.py
+  l2.py 
+  l3_cross.py
+  l3_corners.py
     
-    Operate on cube using Operator
+  Operate on cube using Operator
+    
+  The operator is very naive, it is simply mimics the beginner solver, for example from l2.py, bring edge from top to its location
+  ```python
+            if te().on_face(cube.right):
+                self.op.op(self._ur_alg) # U R U' R' U' F' U F 
+            else:
+                self.op.op(self._ul_alg)
+                
+            ...
+            
+            @property
+            def _ur_alg(self) -> Alg:
+              return Algs.alg("L2-UR", Algs.U, Algs.R, Algs.U.prime, Algs.R.prime, Algs.U.prime, Algs.F.prime, Algs.U, Algs.F)
+
+            @property
+            def _ul_alg(self) -> Alg:
+              return Algs.alg("L2-UL", Algs.U.prime + Algs.L.prime + Algs.U + Algs.L + Algs.U + Algs.F + Algs.U.prime + Algs.F.prime)
+
+
+    ```
    
 ## Viewer/GUI
