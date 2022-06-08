@@ -30,6 +30,8 @@ Python
     Num Pad +/- Change Animation speed
     +/-   Cube size
 
+    S - during the animation stop the solver
+
 ### Rotating
     R, L, F, B, U, B  - As suauls - rotate faces
     X, Y, Z - Entire cube over R, U and F 

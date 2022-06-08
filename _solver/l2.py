@@ -147,7 +147,7 @@ class L2(SolverElement):
         with self.w_annotate((_se, False), (_te, True)):
 
             if te().on_face(cube.right):
-                self.op.op(self._ur_alg)
+                self.op.op(self._ur_alg) # U R U' R' U' F' U F
             else:
                 self.op.op(self._ul_alg)
 
