@@ -228,7 +228,7 @@ class Window(main_g_animation.AbstractWindow):
             self.update_gui_elements()  # to create error label
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        print(f"{dx=}, {dy=}")
+        # print(f"{dx=}, {dy=}")
         # https://stackoverflow.com/questions/59823131/how-to-rotate-a-cube-using-mouse-in-pyopengl
         # if event.type == pygame.MOUSEMOTION:
         #                 if button_down == True:
