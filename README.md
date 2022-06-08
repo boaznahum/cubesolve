@@ -27,7 +27,10 @@ Python
     Ctlr/Alt X, Y, Z - Rotate cube over X, Y , Z Axis
 ### Modes
     o - Turn animation on/off
-    Num Pad +/- Change Animation speed
+   
+   
+   
+Num Pad +/- Change Animation speed
     +/- Cube size
 
 ### Rotating
@@ -41,5 +44,8 @@ Python
 
 
 ### Solving
+
+    ![image](https://user-images.githubusercontent.com/3913990/172595901-acf88699-95e7-433b-a9e4-63b7edce7351.png)
+
 
     
