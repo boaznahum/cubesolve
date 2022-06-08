@@ -8,4 +8,11 @@ CHECK_CUBE_SANITY=False
 
 animation_enabled=False
 
+# Viewer
 GUI_DRAW_MARKERS=False
+
+CELL_SIZE: int = 30
+
+CORNER_SIZE = 0.2  # relative to cell size (should be 1 in 3x3)
+
+AXIS_LENGTH = 4 * CELL_SIZE

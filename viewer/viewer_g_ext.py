@@ -2,6 +2,7 @@ import math
 
 from pyglet import gl  # type: ignore
 
+import config
 from app_state import ViewState
 
 
@@ -12,6 +13,9 @@ class GViewerExt:
 
     @staticmethod
     def draw_axis(vs: ViewState):
+
+        axis_length = config.CELL_SIZE * 4
+
         gl.glPushAttrib(gl.GL_MATRIX_MODE)
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
@@ -37,19 +41,19 @@ class GViewerExt:
 
         gl.glColor3ub(255, 255, 255)
         gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(200, 0, 0)
+        gl.glVertex3f(axis_length, 0, 0)
         gl.glEnd()
 
         gl.glBegin(gl.GL_LINES)
         gl.glColor3ub(255, 0, 0)
         gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(0, 200, 0)
+        gl.glVertex3f(0, axis_length, 0)
         gl.glEnd()
 
         gl.glBegin(gl.GL_LINES)
         gl.glColor3ub(0, 255, 0)
         gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(0, 0, 200)
+        gl.glVertex3f(0, 0, axis_length)
 
         gl.glEnd()
 

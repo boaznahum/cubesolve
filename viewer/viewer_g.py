@@ -22,9 +22,9 @@ from model.elements import Corner, Edge, Center, PartSliceHashID, PartSlice
 
 from app_state import ViewState
 
-_CELL_SIZE: int = 30
+_CELL_SIZE: int = config.AXIS_LENGTH
 
-_CORNER_SIZE = 0.2
+_CORNER_SIZE = config.CORNER_SIZE
 
 _VColor = Tuple[int, int, int]
 
