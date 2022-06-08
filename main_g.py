@@ -1,3 +1,4 @@
+import math
 import traceback
 from typing import MutableSequence
 
@@ -225,6 +226,17 @@ class Window(main_g_animation.AbstractWindow):
 
             self.app.set_error(s)
             self.update_gui_elements()  # to create error label
+
+    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
+        print(f"{dx=}, {dy=}")
+        # https://stackoverflow.com/questions/59823131/how-to-rotate-a-cube-using-mouse-in-pyopengl
+        # if event.type == pygame.MOUSEMOTION:
+        #                 if button_down == True:
+        #                     glRotatef(event.rel[1], 1, 0, 0)
+        #                     glRotatef(event.rel[0], 0, 1, 0)
+        #                 print(event.rel)
+        self.app.vs.alpha_x += math.radians(-dy)
+        self.app.vs.alpha_y += math.radians(dx)
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)

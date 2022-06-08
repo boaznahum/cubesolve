@@ -14,7 +14,7 @@ class GViewerExt:
     @staticmethod
     def draw_axis(vs: ViewState):
 
-        axis_length = config.CELL_SIZE * 4
+        axis_length = config.AXIS_LENGTH
 
         gl.glPushAttrib(gl.GL_MATRIX_MODE)
         gl.glMatrixMode(gl.GL_MODELVIEW)

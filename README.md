@@ -25,6 +25,7 @@ Python
 
 ### Controlling view 
     Ctlr/Alt X, Y, Z - Rotate cube over X, Y , Z Axis
+    This is alos can be down by dragging mouse
 ### Modes
     o - Turn animation on/off
     Num Pad +/- Change Animation speed
@@ -48,7 +49,7 @@ Python
     ?/  - Solve the cube, See above animation mode
 
 
-# Code organization
+# Code layout
 
 ## Algs
    All basic algs are in algs.py

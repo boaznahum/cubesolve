@@ -22,7 +22,7 @@ from model.elements import Corner, Edge, Center, PartSliceHashID, PartSlice
 
 from app_state import ViewState
 
-_CELL_SIZE: int = config.AXIS_LENGTH
+_CELL_SIZE: int = config.CELL_SIZE
 
 _CORNER_SIZE = config.CORNER_SIZE
 
