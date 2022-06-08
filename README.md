@@ -26,7 +26,7 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
 ### Controlling view 
     Ctlr/Alt X, Y, Z - Rotate cube over X, Y , Z Axis
-    This is alos can be down by dragging mouse
+    This is alos can be done by dragging mouse
 ### Modes
     o - Turn animation on/off
     Num Pad +/- Change Animation speed
