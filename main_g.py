@@ -325,7 +325,7 @@ def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: al
 
 _last_face: FaceName = FaceName.R
 
-good = algs._BigAlg("good")
+good = Algs.bigAlg("good")
 
 
 def _handle_input(window: Window, value: int, modifiers: int):
@@ -368,7 +368,6 @@ def _handle_input(window: Window, value: int, modifiers: int):
     global good
     # noinspection PyProtectedMember
     match value:
-
 
         case key.I:
             print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
@@ -533,8 +532,9 @@ def _handle_input(window: Window, value: int, modifiers: int):
 
             print(f"{modifiers & key.MOD_CTRL=}  {modifiers & key.MOD_ALT=}")
             if modifiers & key.MOD_CTRL:
-                balg: algs._BigAlg = Algs.scramble(app.cube.size, value - key._0)
-                good = algs._BigAlg("good")
+                # noinspection PyProtectedMember
+                balg: algs.BigAlg = Algs.scramble(app.cube.size, value - key._0)
+                good = algs.BigAlg("good")
                 for a in balg.algs:
                     try:
                         op.op(a, animation=False)

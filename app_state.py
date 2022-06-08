@@ -86,6 +86,10 @@ class ViewState:
         return self._alpha_delta
 
     def prepare_objects_view(self):
+        """
+        leave matrix mode GL_MODELVIEW
+        :return:
+        """
         glPushAttrib(GL_MATRIX_MODE)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()

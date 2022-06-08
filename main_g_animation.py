@@ -1,12 +1,13 @@
 import math
 import time
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from collections.abc import Collection, Set, Iterable
 from typing import Callable
+
 import numpy as np
+import pyglet  # type: ignore
 from numpy import ndarray
 from pyglet import gl  # type: ignore
-import pyglet  # type: ignore
 
 from algs import algs
 from app_state import ViewState
@@ -15,8 +16,6 @@ from model.cube import Cube
 from model.cube_boy import FaceName
 from model.elements import PartSlice
 from viewer.viewer_g import GCubeViewer
-
-
 
 
 class Animation:
@@ -46,6 +45,9 @@ class AbstractWindow(pyglet.window.Window):
 
     @abstractmethod
     def set_animation(self, an: Animation | None):
+        pass
+
+    def set_annotation_text(self, text1: str | None, text2: str | None):
         pass
 
     @abstractmethod
@@ -87,40 +89,40 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ViewState, alg: algs.
     x1 = face_center[0]
     y1 = face_center[1]
     z1 = face_center[2]
-    T: ndarray = np.array([[1, 0, 0, -x1],
+    t: ndarray = np.array([[1, 0, 0, -x1],
                            [0, 1, 0, -y1],
                            [0, 0, 1, -z1],
                            [0, 0, 0, 1]
                            ], dtype=float)
-    TT = np.linalg.inv(T)
-    U = (face_center - opposite_face_center) / np.linalg.norm(face_center - opposite_face_center)
-    a = U[0]
-    b = U[1]
-    c = U[2]
+    tt = np.linalg.inv(t)
+    u = (face_center - opposite_face_center) / np.linalg.norm(face_center - opposite_face_center)
+    a = u[0]
+    b = u[1]
+    c = u[2]
     d = math.sqrt(b * b + c * c)
     if d == 0:
-        Rx = np.array([[1, 0, 0, 0],
+        rx = np.array([[1, 0, 0, 0],
                        [0, 1, 0, 0],
                        [0, 0, 1, 0],
                        [0, 0, 0, 1]], dtype=float)
     else:
-        Rx = np.array([[1, 0, 0, 0],
+        rx = np.array([[1, 0, 0, 0],
                        [0, c / d, -b / d, 0],
                        [0, b / d, c / d, 0],
                        [0, 0, 0, 1]], dtype=float)
 
-    RxT = np.linalg.inv(Rx)
+    rx_t = np.linalg.inv(rx)
 
-    Ry = np.array([[d, 0, -a, 0],
+    ry = np.array([[d, 0, -a, 0],
                    [0, 1, 0, 0],
                    [a, 0, d, 0],
                    [0, 0, 0, 1]], dtype=float)
 
-    RyT = np.linalg.inv(Ry)
+    ry_t = np.linalg.inv(ry)
 
-    # TT @ RxT @ RyT @ Rz @ Ry @ Rx @ T
-    MT: ndarray = TT @ RxT @ RyT  # ? == inv(M)
-    M: ndarray = Ry @ Rx @ T
+    # tt @ rx_t @ ry_t @ Rz @ ry @ rx @ T
+    mt: ndarray = tt @ rx_t @ ry_t  # ? == inv(M)
+    m: ndarray = ry @ rx @ t
 
     animation = Animation()
     animation.done = False
@@ -173,11 +175,11 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ViewState, alg: algs.
                        [0, 0, 1, 0],
                        [0, 0, 0, 1]], dtype=float)
 
-        m: ndarray = MT @ Rz @ M
+        model_view: ndarray = mt @ Rz @ m
 
         gm = (gl.GLfloat * 16)(0)
         # column major
-        gm[:] = m.flatten(order="F")
+        gm[:] = model_view.flatten(order="F")
 
         gl.glMultMatrixf(gm)
 
@@ -196,9 +198,13 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ViewState, alg: algs.
     return animation
 
 
-def op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewer, vs: ViewState, operator: Operator, inv: bool, alg: algs.SimpleAlg):
+def op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewer, vs: ViewState, operator: Operator,
+                          inv: bool, alg: algs.SimpleAlg):
     """
     This must be called only from operator
+    :param viewer:
+    :param vs:
+    :param cube:
     :param window:
     :param operator:
     :param inv:
@@ -220,7 +226,12 @@ def op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewe
 
     platform_event_loop = pyglet.app.platform_event_loop
 
-    if alg.is_ann:
+    if isinstance(alg, algs.Annotation):
+        text1 = alg.text1
+        text2 = alg.text2
+
+        window.set_annotation_text(text1, text2)
+
         operator.op(alg, inv, animation=False)
         window.update_gui_elements()
         #        time.sleep(1)
@@ -231,7 +242,6 @@ def op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewe
         _alg = alg.inv().simplify()
         assert isinstance(_alg, algs.SimpleAlg)
         alg = _alg
-        inv = False
 
     if not isinstance(alg, algs.AnimationAbleAlg):
         print(f"{alg} is not animation-able")

@@ -62,7 +62,7 @@ class Alg(ABC):
         return _Mul(self, n)
 
     def __add__(self, other: "Alg"):
-        return _BigAlg(None, self, other)
+        return BigAlg(None, self, other)
 
     @property
     def is_ann(self):
@@ -108,10 +108,10 @@ class _Inv(Alg):
             s = a.clone()
             s *= -1  # inv - that is my function
             return s.simplify()
-        elif isinstance(a, _BigAlg):
+        elif isinstance(a, BigAlg):
 
             algs = [a.inv() for a in reversed(a.algs)]
-            return _BigAlg(None, *algs).simplify()
+            return BigAlg(None, *algs).simplify()
         else:
             raise TypeError("Unknown type:", type(self))
 
@@ -154,7 +154,7 @@ class _Mul(Alg, ABC):
             self._alg.play(cube, inv)
 
     def count(self) -> int:
-        if not isinstance(self._alg, _BigAlg):
+        if not isinstance(self._alg, BigAlg):
             return _normalize_for_count(self._n) * self._alg.count()
         else:
             return self._n * self._alg.count()
@@ -167,10 +167,10 @@ class _Mul(Alg, ABC):
             s = a.clone()
             s *= self._n  # multipy by me - that is my function
             return s.simplify()
-        elif isinstance(self._alg, _BigAlg):
+        elif isinstance(self._alg, BigAlg):
             # noinspection PyProtectedMember
             algs = [a.simplify() for a in self._alg._algs] * self._n
-            return _BigAlg(None, *algs).simplify()
+            return BigAlg(None, *algs).simplify()
         else:
             raise TypeError("Unknown type:", type(self))
 
@@ -295,6 +295,8 @@ class Annotation(SimpleAlg):
 
     def __init__(self, n: int = 1) -> None:
         super().__init__("ann", n)
+        self.text1 = None
+        self.text2 = None
 
     def play(self, cube: Cube, inv: bool = False):
         pass
@@ -735,7 +737,7 @@ class _Z(WholeCubeAlg):
         super().__init__(AxisName.Z)
 
 
-class _BigAlg(Alg):
+class BigAlg(Alg):
 
     def __init__(self, name: str | None, *algs: Alg) -> None:
         super().__init__()
@@ -773,13 +775,13 @@ class _BigAlg(Alg):
 
             if isinstance(a, SimpleAlg):
                 flat_algs.append(a)
-            elif isinstance(a, _BigAlg):
+            elif isinstance(a, BigAlg):
                 flat_algs.extend(a._algs)
             else:
                 raise TypeError("Unexpected type", type(a))
 
         combined = self._combine(flat_algs)
-        return _BigAlg(self._name, *combined)
+        return BigAlg(self._name, *combined)
 
     def flatten(self) -> Iterator["SimpleAlg"]:
         for a in self._algs:
@@ -834,17 +836,17 @@ class _BigAlg(Alg):
             # we can't combine
             return super().__add__(other)
 
-        if isinstance(other, _BigAlg) and not other._name:
-            return _BigAlg(None, *[*self._algs, *other._algs])
+        if isinstance(other, BigAlg) and not other._name:
+            return BigAlg(None, *[*self._algs, *other._algs])
         else:
-            return _BigAlg(None, *[*self._algs, other])
+            return BigAlg(None, *[*self._algs, other])
 
     @property
     def algs(self):
         return self._algs
 
 
-class _Scramble(_BigAlg):
+class _Scramble(BigAlg):
 
     def __init__(self, name: str | None, *algs: Alg) -> None:
         super().__init__(name, *algs)
@@ -911,6 +913,11 @@ class Algs:
     Z = _Z()  # Entire over F
     S = _S()  # Middle over F
 
+
+    @staticmethod
+    def bigAlg(name: str | None, *algs: Alg) -> BigAlg:
+        return BigAlg(name, *algs)
+
     Simple = [L,
               R, X, M,
               U, E, Y,
@@ -919,11 +926,11 @@ class Algs:
               D,
               ]
 
-    RU = _BigAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
+    RU = BigAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
 
-    UR = _BigAlg("UR(top)", U, R, -U, -L, U, -R, -U, L)
+    UR = BigAlg("UR(top)", U, R, -U, -L, U, -R, -U, L)
 
-    RD = _BigAlg("RD(top)", ((R.prime + D.prime + R + D) * 2 + U) * 3)
+    RD = BigAlg("RD(top)", ((R.prime + D.prime + R + D) * 2 + U) * 3)
 
     @staticmethod
     def lib() -> Sequence[Alg]:
@@ -942,7 +949,7 @@ class Algs:
 
     @classmethod
     def alg(cls, name, *algs: Alg):
-        return _BigAlg(name, *algs)
+        return BigAlg(name, *algs)
 
     @classmethod
     def simplify(cls, *algs: Alg) -> Alg:
