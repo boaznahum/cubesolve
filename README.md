@@ -45,7 +45,7 @@ Num Pad +/- Change Animation speed
 
 ### Solving
 
-    ![image](https://user-images.githubusercontent.com/3913990/172595901-acf88699-95e7-433b-a9e4-63b7edce7351.png)
+    ?/  - Solve the cube, See above animation mode
 
 
     
