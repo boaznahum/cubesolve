@@ -14,7 +14,7 @@ import main_g_keyboard_input
 import main_g_mouse_click
 from algs.algs import Algs
 from app_exceptions import AppExit, RunStop, OpAborted
-from app_state import ViewState
+from app_state import AppState
 from cube_operator import Operator
 from main_g_abstract import AbstractMain, AbstractWindow
 from main_g_animation import Animation
@@ -31,7 +31,7 @@ class Main(AbstractMain):
         super().__init__()
         self._error: str | None = None
 
-        self._vs = ViewState()
+        self._vs = AppState()
 
         self._cube = Cube(self.vs.cube_size)
 
@@ -62,7 +62,7 @@ class Main(AbstractMain):
         return self._op
 
     @property
-    def vs(self) -> ViewState:
+    def vs(self) -> AppState:
         return self._vs
 
     @property
@@ -137,7 +137,7 @@ class Window(AbstractWindow):
 
         cube = self.app.cube
 
-        app_vs: ViewState = self.app.vs
+        app_vs: AppState = self.app.vs
 
         self.text.clear()
         self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,

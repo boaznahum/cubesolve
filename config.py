@@ -6,7 +6,7 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE=False
 
 CHECK_CUBE_SANITY=False
 
-animation_enabled=True
+animation_enabled=False
 
 # Viewer
 GUI_DRAW_MARKERS=False

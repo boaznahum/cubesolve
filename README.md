@@ -66,6 +66,12 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
     ?/  - Solve the cube, See above animation mode
 
 
+### Testing
+  
+    T - Run heavy testing on the solver. During this, GUI does not response. TBD 
+
+    Use it if you are going to improve the solver
+
 # Code layout
 
 ## Algs

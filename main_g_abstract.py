@@ -3,7 +3,7 @@ from typing import Callable
 
 import pyglet  # type: ignore
 
-from app_state import ViewState
+from app_state import AppState
 from cube_operator import Operator
 from model.cube import Cube
 from solver import Solver
@@ -44,7 +44,7 @@ class AbstractMain:
 
     @property
     @abstractmethod
-    def vs(self) -> ViewState:
+    def vs(self) -> AppState:
         raise NotImplementedError
 
     @property

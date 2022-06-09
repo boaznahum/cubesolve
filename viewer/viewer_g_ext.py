@@ -3,7 +3,7 @@ import math
 from pyglet import gl  # type: ignore
 
 import config
-from app_state import ViewState
+from app_state import AppState
 
 
 class GViewerExt:
@@ -12,7 +12,7 @@ class GViewerExt:
     """
 
     @staticmethod
-    def draw_axis(vs: ViewState):
+    def draw_axis(vs: AppState):
 
         axis_length = config.AXIS_LENGTH
 

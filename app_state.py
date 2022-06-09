@@ -45,15 +45,16 @@ class _AnimationSpeed:
 
 speeds = [
 
-    _AnimationSpeed(1/40, 20),
-    _AnimationSpeed(1/40, 10),
-    _AnimationSpeed(1/60, 10),
-    _AnimationSpeed(1/100, 10),
-    _AnimationSpeed(1/100, 5),
-    _AnimationSpeed(1/100, 3)  # 3000 d/s
+    _AnimationSpeed(1 / 40, 20),
+    _AnimationSpeed(1 / 40, 10),
+    _AnimationSpeed(1 / 60, 10),
+    _AnimationSpeed(1 / 100, 10),
+    _AnimationSpeed(1 / 100, 5),
+    _AnimationSpeed(1 / 100, 3)  # 3000 d/s
 ]
 
-class ViewState:
+
+class AppState:
     # __slots__ = [
     #     "_alpha_x_0",
     #     "_alpha_y_0",
@@ -160,17 +161,15 @@ class ViewState:
         glPopMatrix()
         glPopAttrib()
 
-
     @property
     def get_speed_index(self):
         return self._speed
 
     def inc_speed(self):
-        self._speed = min(len(speeds) -1, self._speed + 1)
+        self._speed = min(len(speeds) - 1, self._speed + 1)
 
     def dec_speed(self):
         self._speed = max(0, self._speed - 1)
-
 
     @property
     def get_speed(self) -> _AnimationSpeed:
@@ -206,7 +205,7 @@ class ViewState:
         return r
 
     @contextmanager
-    def w_animation_speed(self, animation_speed :int):
+    def w_animation_speed(self, animation_speed: int):
 
         assert animation_speed in range(len(speeds))
         saved = self._speed
@@ -216,4 +215,3 @@ class ViewState:
             yield None
         finally:
             self._speed = saved
-

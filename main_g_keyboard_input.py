@@ -6,7 +6,7 @@ import config
 from algs import algs
 from algs.algs import Alg, Algs
 from app_exceptions import AppExit
-from app_state import ViewState
+from app_state import AppState
 from cube_operator import Operator
 from main_g_abstract import AbstractWindow, AbstractMain
 from model.cube_boy import FaceName
@@ -23,7 +23,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
     #print(f"In _handle_input , {value}  {hex(value)} {chr(ord('A') + (value - key.A))} ")
 
-    vs: ViewState = app.vs
+    vs: AppState = app.vs
 
     def handle_in_both_modes():
         match value:

@@ -13,7 +13,7 @@ from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
 import config
-from app_state import ViewState
+from app_state import AppState
 from model.cube import Cube
 from model.cube_face import Face
 from model.cube_slice import SliceName
@@ -151,12 +151,12 @@ class _Cell:
 
     def _prepare_view_state(self):
 
-        vs: ViewState = self._face_board.board.vs
+        vs: AppState = self._face_board.board.vs
         vs.prepare_objects_view()
 
     def _restore_view_state(self):
 
-        vs: ViewState = self._face_board.board.vs
+        vs: AppState = self._face_board.board.vs
         vs.restore_objects_view()
 
     @contextmanager
@@ -713,7 +713,7 @@ class _Board:
     _h_size: int = _FACE_SIZE * 3  # L F R
     _v_size: int = _FACE_SIZE * 4  # U F D B
 
-    def __init__(self, batch: Batch, vs: ViewState) -> None:
+    def __init__(self, batch: Batch, vs: AppState) -> None:
         super().__init__()
         self._hidden_objects: Set[int] = set()
         self.batch = batch
@@ -996,7 +996,7 @@ class GCubeViewer:
     __slots__ = ["_batch", "_cube", "_board", "_test",
                  "_hidden_objects", "_vs"]
 
-    def __init__(self, batch: Batch, cube: Cube, vs: ViewState) -> None:
+    def __init__(self, batch: Batch, cube: Cube, vs: AppState) -> None:
         super().__init__()
         self._cube = cube
         self._batch = batch

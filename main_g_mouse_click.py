@@ -9,7 +9,7 @@ from pyglet import gl  # type: ignore
 
 from algs import algs
 from algs.algs import Alg, Algs
-from app_state import ViewState
+from app_state import AppState
 from cube_operator import Operator
 from main_g_animation import AbstractWindow
 from model.cube_boy import FaceName
@@ -18,7 +18,7 @@ from model.elements import PartEdge, PartSlice, Part, Corner, Edge, EdgeSlice
 from viewer.viewer_g import GCubeViewer
 
 
-def on_mouse_press(window: AbstractWindow, vs: ViewState, op: Operator, viewer: GCubeViewer, x, y, modifiers):
+def on_mouse_press(window: AbstractWindow, vs: AppState, op: Operator, viewer: GCubeViewer, x, y, modifiers):
     if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
 
         # almost as in
