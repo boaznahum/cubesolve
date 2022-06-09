@@ -841,7 +841,7 @@ class _Board:
                     yield e, r
 
     def _find_facet(self, x: float, y: float, z: float) -> PartEdge | None:
-        # print(x, y, z)
+        #print(x, y, z)
 
         f: _FaceBoard
 

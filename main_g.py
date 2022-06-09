@@ -20,6 +20,7 @@ from model.cube import Cube
 from model.elements import FaceName
 from solver import Solver, SolveStep
 from viewer.viewer_g import GCubeViewer
+# pyglet.options["debug_graphics_batch"] = True
 from viewer.viewer_g_ext import GViewerExt
 
 
