@@ -959,6 +959,34 @@ class Algs:
     def count(cls, *algs: Alg) -> int:
         return cls.alg(None, *algs).count()
 
+    @classmethod
+    def of_face(cls, face: FaceName) -> FaceAlg:
+
+        match face:
+
+            case FaceName.F:
+                return cls.F
+
+            case FaceName.B:
+                return cls.B
+
+            case FaceName.L:
+                return cls.L
+
+            case FaceName.R:
+                return cls.R
+
+            case FaceName.U:
+                return cls.U
+
+            case FaceName.B:
+                return cls.B
+
+            case _:
+                raise InternalSWError(f"Unknown face name {face}")
+
+
+
 
 def _test_prime_prime():
     a = Algs.F.prime.prime

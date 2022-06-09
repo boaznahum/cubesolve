@@ -16,7 +16,8 @@ from app_state import ViewState
 from cube_operator import Operator
 from main_g_animation import Animation
 from model.cube import Cube
-from model.elements import FaceName
+from model.cube_face import Face
+from model.elements import FaceName, PartEdge, Corner, Part
 from solver import Solver, SolveStep
 from viewer.viewer_g import GCubeViewer
 # pyglet.options["debug_graphics_batch"] = True
@@ -240,8 +241,8 @@ class Window(main_g_animation.AbstractWindow):
             self.app.vs.alpha_x += math.radians(-dy)
             self.app.vs.alpha_y += math.radians(dx)
 
-    def _on_mouse_press(self, x, y, button, modifiers):
-        if modifiers & key.MOD_SHIFT:
+    def on_mouse_press(self, x, y, button, modifiers):
+        if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
 
             # almost as in https://stackoverflow.com/questions/57495078/trying-to-get-3d-point-from-2d-click-on-screen-with-opengl
             #print(f"on mouse press: {x} {y}")
@@ -289,6 +290,33 @@ class Window(main_g_animation.AbstractWindow):
             vs.tz = pz.value
 
             vs.restore_objects_view()
+
+            edge: PartEdge = self.viewer.find_facet(px.value, py.value, pz.value)
+            if edge:
+                part: Part = edge.parent.parent
+                print(f"@@@@@@@@@@@@@@@@@{edge.face} {part} {type(part)}")
+
+                # is it a corner ?
+                if isinstance(part, Corner):
+
+                    print("Is corner")
+                    edge_face: Face = edge.face
+                    face: FaceName = edge_face.name
+                    alg = Algs.of_face(face)
+
+                    if modifiers & key.MOD_CTRL:
+                        alg = alg.prime
+
+                    print(f"{alg=}")
+
+                    op = self.app.op
+
+                    op.op(alg)
+
+                    # why I need that
+                    if not op.animation_enabled:
+                        self.update_gui_elements()
+
 
             # continue with https://math.stackexchange.com/questions/1472049/check-if-a-point-is-inside-a-rectangular-shaped-area-3d
 

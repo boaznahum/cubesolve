@@ -1,7 +1,7 @@
 from collections import defaultdict
 from collections.abc import Set, Collection
 from contextlib import contextmanager
-from typing import Hashable, Tuple, MutableSequence, Callable, Iterable, Sequence, Set
+from typing import Hashable, Tuple, MutableSequence, Callable, Iterable, Sequence, Set, Dict, FrozenSet, Iterator
 
 import colorama
 import numpy as np
@@ -13,11 +13,12 @@ from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
 import config
+from model.cube_boy import FaceName
 from . import shapes
 from model.cube import Cube
 from model.cube_face import Face
 from model.cube_slice import SliceName
-from model.elements import Color, Part, FaceName, PartFixedID, SuperElement, CenterSlice
+from model.elements import Color, Part, FaceName, PartFixedID, SuperElement, CenterSlice, PartEdge
 from model.elements import Corner, Edge, Center, PartSliceHashID, PartSlice
 
 from app_state import ViewState
@@ -78,6 +79,10 @@ class _Cell:
         self.gl_lists_movable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
         self.gl_lists_unmovable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
 
+        # the boxes of the part PartEdge
+        #  # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
+        self.facets: dict[PartEdge, Sequence[ndarray]] = {}
+
     def _clear_gl_lists(self):
         # delete and clear all lists
         for ls in self.gl_lists_movable.values():
@@ -92,6 +97,7 @@ class _Cell:
 
     def release_resources(self):
         self._clear_gl_lists()
+        self.facets.clear()
 
     # noinspection PyUnusedLocal
     def create_objects(self, part: Part, vertexes: Sequence[ndarray], marker: str):
@@ -105,28 +111,14 @@ class _Cell:
 
         # delete and clear all lists
         self._clear_gl_lists()
-
-        #         = [gl.glGenLists(1)]
-        # print(f"{self.gl_lists=}")
-
-        #       gl.glNewList(self.gl_lists_movable[0], gl.GL_COMPILE)
+        self.facets.clear()
 
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
         self._create_polygon(self.gl_lists_movable, part, vertexes)
-        # if marker == "M":
-        #     self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
-
-        # self._create_helpers()
-        # gl.glEndList()
-
-        # if marker == "F":
-        #     self.gl_lists_unmovable = [gl.glGenLists(1)]
-        #     gl.glNewList(self.gl_lists_unmovable[0], gl.GL_COMPILE)
-        #     self._create_markers(vertexes, (255 - color[0], 255 - color[1], 255 - color[2]), True)
-        #     gl.glEndList()
 
     def draw(self):
 
+        m: dict[frozenset[FaceName], MutableSequence[int]]
         lists: Sequence[int] = [ll for m in [self.gl_lists_movable, self.gl_lists_unmovable]
                                 for ls in m.values() for ll in ls]
 
@@ -170,6 +162,12 @@ class _Cell:
 
     @contextmanager
     def _gen_list_for_slice(self, p_slice: PartSlice, dest: dict[PartSliceHashID, MutableSequence[int]]):
+        """
+        Generate new gl list and on exit add this list to slice
+        :param p_slice:
+        :param dest:
+        :return:
+        """
         g_list = gl.glGenLists(1)
 
         gl.glNewList(g_list, gl.GL_COMPILE)
@@ -197,7 +195,7 @@ class _Cell:
         return slice_color
 
     # noinspection PyMethodMayBeStatic
-    def _create_polygon(self, dest: dict[PartSliceHashID, MutableSequence[int]],
+    def _create_polygon(self, g_list_dest: dict[PartSliceHashID, MutableSequence[int]],
                         part: Part,
                         vertexes: Sequence[ndarray]):
 
@@ -220,10 +218,12 @@ class _Cell:
         if isinstance(part, Corner):
 
             corner_slice = part.slice
-            with self._gen_list_for_slice(corner_slice, dest):
+            with self._gen_list_for_slice(corner_slice, g_list_dest):
                 shapes.quad_with_line(vertexes,
                                       self._slice_color(corner_slice),
                                       lw, lc)
+
+                self.facets[self._get_slice_edge(corner_slice)] = vertexes
 
                 if config.GUI_DRAW_MARKERS:
                     if cube_face.corner_bottom_left is part:
@@ -252,7 +252,7 @@ class _Cell:
 
                     _slice = part.get_ltr_index(cube_face, ix)
                     color = self._slice_color(_slice)
-                    with self._gen_list_for_slice(_slice, dest):
+                    with self._gen_list_for_slice(_slice, g_list_dest):
                         vx = [left_bottom, right_bottom,
                               right_bottom + d, left_bottom + d]
                         shapes.quad_with_line(vx, color, lw, lc)
@@ -270,7 +270,6 @@ class _Cell:
                         if self._get_slice_edge(_slice).c_attributes["annotation"]:
                             self._create_markers(vx, (0, 0, 0), True)
 
-
                     left_bottom += d
                     right_bottom += d
 
@@ -286,7 +285,7 @@ class _Cell:
                     ix = i  # _inv(i, is_back)
                     _slice = part.get_ltr_index(cube_face, ix)
                     color = self._slice_color(_slice)
-                    with self._gen_list_for_slice(_slice, dest):
+                    with self._gen_list_for_slice(_slice, g_list_dest):
                         vx = [left_bottom,
                               left_bottom + d,
                               left_top + d,
@@ -298,8 +297,6 @@ class _Cell:
 
                         if self._get_slice_edge(_slice).c_attributes["annotation"]:
                             self._create_markers(vx, (0, 0, 0), True)
-
-
 
                         # if _slice.get_face_edge(cube_face).attributes["origin"]:
                         #     shapes.cross(vx, cross_width, cross_color)
@@ -332,7 +329,7 @@ class _Cell:
                     _slice: CenterSlice = part.get_slice((iy, ix))
 
                     color = self._slice_color(_slice)
-                    with self._gen_list_for_slice(_slice, dest):
+                    with self._gen_list_for_slice(_slice, g_list_dest):
                         vx = [lb + x * dx + y * dy,
                               lb + (x + 1) * dx + y * dy,
                               lb + (x + 1) * dx + (y + 1) * dy,
@@ -829,6 +826,102 @@ class _Board:
 
         return lists
 
+    def _get_all_facets_rectangles(self) -> Iterator[Tuple[PartEdge, Sequence[ndarray]]]:
+
+        f: _FaceBoard
+        for f in self._faces:
+            c: _Cell
+            for c in f.cells:
+                for e, r in c.facets.items():
+                    yield e, r
+
+    def _find_facet(self, x: float, y: float, z: float) -> PartEdge | None:
+        #print(x, y, z)
+
+        f: _FaceBoard
+        for f in self._faces:
+
+            ortho_dir: ndarray = f.ortho_direction
+            norm = np.linalg.norm(ortho_dir)
+            ortho_dir /= norm
+
+            ortho_dir *= 2
+
+            c: _Cell
+            for c in f.cells:
+                for e, r in c.facets.items():
+
+                    #: param bottom_quad:  [left_bottom, right_bottom, right_top, left_top]
+                    # :param top_quad:  [left_bottom, right_bottom, right_top, left_top]
+
+                    bottom_quad = [p - ortho_dir for p in r]
+                    top_quad = [p + ortho_dir for p in r]
+
+                    if self._in_box(x, y, z, bottom_quad, top_quad):
+                        return e
+
+        return None
+
+    @staticmethod
+    def _in_box(x, y, z, bottom_quad: Sequence[np.ndarray],
+                   top_quad: Sequence[np.ndarray]):
+        """
+        https://stackoverflow.com/questions/2752725/finding-whether-a-point-lies-inside-a-rectangle-or-not
+        https://math.stackexchange.com/questions/1472049/check-if-a-point-is-inside-a-rectangular-shaped-area-3d
+        :param x:
+        :param y:
+        :param z: # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
+        :param bottom_quad:  [left_bottom, right_bottom, right_top, left_top]
+        :param top_quad:  [left_bottom, right_bottom, right_top, left_top]
+        :return:
+        """
+
+        # Assuming the rectangle is represented by three points A,B,C, with AB and BC perpendicula
+
+        #    p6-------p7
+        #   /         /
+        #  /         /
+        # p5 ------ p8
+        #
+        #
+        #    p2-------p3
+        #   /         /
+        #  /         /
+        # p1 ------ p4
+
+        # Given p1,p2,p4,p5 vertices of your cuboid, and pv the point to test for intersection with the cuboid, compute:
+        # i=p2−p1
+        # j=p4−p1
+        # k=p5−p1
+        # v=pv−p1
+        # then, if
+        # 0<v⋅i<i⋅i
+        # 0<v⋅j<j⋅j
+        # 0<v⋅k<k⋅k
+
+        p1 = bottom_quad[0]
+        p2 = bottom_quad[3]
+        p4 = bottom_quad[1]
+        p5 = top_quad[0]
+
+        i = p2 - p1
+        j = p4 - p1
+        k = p5 - p1
+        v = np.array([x, y, z]) - p1
+
+        dot = np.dot
+
+        ii = dot(i, i)
+        jj = dot(j, j)
+        kk = dot(k, k)
+        vi = dot(v, i)
+        vj = dot(v, j)
+        vk = dot(v, k)
+
+        return 0 <= vi <= ii and 0 <= vj <= jj and 0 <= vk <= kk
+
+        pass
+
 
 _parts: dict[Hashable, int] = {}
 
@@ -1055,3 +1148,6 @@ class GCubeViewer:
             self._board.set_hidden(objects)
 
         return right_center, left_center, objects
+
+    def find_facet(self, x: float, y: float, z: float) -> PartEdge | None:
+        return self._board._find_facet(x, y, z)

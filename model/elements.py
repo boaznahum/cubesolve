@@ -48,7 +48,7 @@ class CHelper:
 
 
 class PartEdge:
-    __slots__ = ["_face", "_color", "_annotated_by_color",
+    __slots__ = ["_face", "_parent", "_color", "_annotated_by_color",
                  "_annotated_fixed_location",
                  "attributes", "c_attributes"]
 
@@ -63,10 +63,18 @@ class PartEdge:
         self._annotated_fixed_location: bool = False
         self.attributes: dict[Hashable, Any] = defaultdict(bool)
         self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
+        self._parent : PartSlice
+
 
     @property
     def face(self) -> _Face:
         return self._face
+
+    @property
+    def parent(self) -> "PartSlice":
+        return self._parent
+
+
 
     @property
     def color(self) -> Color:
@@ -76,7 +84,7 @@ class PartEdge:
         if config.SHORT_PART_NAME:
             return str(self._color.name)
         else:
-            return f"{self.c_attributes['n']}{self._color.name}@{self._face}"
+            return f"{self._color.name}@{self._face}"
 
     def copy_color(self, source: "PartEdge"):
         self._color = source._color
@@ -173,6 +181,11 @@ class PartSlice(ABC, Hashable):
         Must be called before any face changed
         :return:
         """
+
+        for e in self._edges:
+            e._parent = self
+
+        #self._parent = parent
         _id = frozenset(tuple([self._index]) + tuple(p.face.name for p in self._edges))
 
 
@@ -425,7 +438,7 @@ class PartSlice(ABC, Hashable):
 
     @property
     def parent(self) -> "Part":
-        return self._parent
+        return self._parent  # type: ignore
 
 
 class CubeElement:
