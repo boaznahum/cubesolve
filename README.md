@@ -38,6 +38,15 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     R, L, F, B, U, B  - As suauls - rotate faces
     X, Y, Z - Entire cube over R, U and F 
     M, E, S - Middle slice over R, **D** and F
+    
+    ####
+      Rotating can be done also by using the mouse.
+      Shift/Ctrl clik on corner face will rotate this face (ctrl counterclockwise) 
+      Shift/Ctrl on edge will slice
+
+
+https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a18f-719876cb7b59.mp4
+
 
     < - Undo last move (user or sovlver)
 
