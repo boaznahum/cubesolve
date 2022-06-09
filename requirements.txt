@@ -1,8 +1,10 @@
 pip
-glooey
-numpy
+glooey~=0.3.6
+numpy~=1.22.4
 mypy
-colorama
+colorama~=0.4.4
 
 
 
+
+pyglet

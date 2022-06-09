@@ -10,17 +10,16 @@ from pyglet.window import key  # type: ignore
 import algs.algs as algs
 import config
 import main_g_animation
+import main_g_mouse_click
 from algs.algs import Alg, Algs
 from app_exceptions import AppExit, RunStop, OpAborted
 from app_state import ViewState
 from cube_operator import Operator
 from main_g_animation import Animation
 from model.cube import Cube
-from model.cube_face import Face
-from model.elements import FaceName, PartEdge, Corner, Part
+from model.elements import FaceName
 from solver import Solver, SolveStep
 from viewer.viewer_g import GCubeViewer
-# pyglet.options["debug_graphics_batch"] = True
 from viewer.viewer_g_ext import GViewerExt
 
 
@@ -244,81 +243,8 @@ class Window(main_g_animation.AbstractWindow):
     def on_mouse_press(self, x, y, button, modifiers):
         if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
 
-            # almost as in https://stackoverflow.com/questions/57495078/trying-to-get-3d-point-from-2d-click-on-screen-with-opengl
-            #print(f"on mouse press: {x} {y}")
-            x = float(x)
-            y = self.height - float(y)
-            # The following could work if we were not initially scaling to zoom on
-            # the bed
-            # if self.orthographic:
-            #    return (x - self.width / 2, y - self.height / 2, 0)
-            pmat = (gl.GLdouble * 16)()
-            mvmat = (gl.GLdouble * 16)()
-            #mvmat = self.get_modelview_mat(local_transform)
-            viewport = (gl.GLint * 4)()
-            px = (gl.GLdouble)()
-            py = (gl.GLdouble)()
-            pz = (gl.GLdouble)()
+            return main_g_mouse_click.on_mouse_press(self, self.app.vs, self.app.op, self.viewer, x, y, modifiers)
 
-            vs = self.app.vs
-
-            vs.prepare_objects_view()
-
-
-            # 0, 0, width, height
-            gl.glGetIntegerv(gl.GL_VIEWPORT, viewport)
-            # print(f"{[f for f in viewport]}")
-
-            gl.glGetDoublev(gl.GL_PROJECTION_MATRIX, pmat)
-            gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX, mvmat)
-
-            real_y = viewport[3] - y  # mouse is up down, gl is down up
-
-            d = (gl.GLfloat * 1)()  # why ?
-
-            gl.glReadPixels(int(x), int(real_y), 1, 1, gl.GL_DEPTH_COMPONENT, gl.GL_FLOAT, d)
-            # print(f"{[ f for f in d ]=}")
-            # the z coordinate
-            depth = d[0]
-
-            gl.gluUnProject(x, real_y, depth, mvmat, pmat, viewport, px, py, pz)
-
-            #print(f"{px.value=}, {py.value=}, {pz.value=}")
-
-            vs.tx = px.value
-            vs.ty = py.value
-            vs.tz = pz.value
-
-            vs.restore_objects_view()
-
-            edge: PartEdge = self.viewer.find_facet(px.value, py.value, pz.value)
-            if edge:
-                part: Part = edge.parent.parent
-                print(f"@@@@@@@@@@@@@@@@@{edge.face} {part} {type(part)}")
-
-                # is it a corner ?
-                if isinstance(part, Corner):
-
-                    print("Is corner")
-                    edge_face: Face = edge.face
-                    face: FaceName = edge_face.name
-                    alg = Algs.of_face(face)
-
-                    if modifiers & key.MOD_CTRL:
-                        alg = alg.prime
-
-                    print(f"{alg=}")
-
-                    op = self.app.op
-
-                    op.op(alg)
-
-                    # why I need that
-                    if not op.animation_enabled:
-                        self.update_gui_elements()
-
-
-            # continue with https://math.stackexchange.com/questions/1472049/check-if-a-point-is-inside-a-rectangular-shaped-area-3d
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)

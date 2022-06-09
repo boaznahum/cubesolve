@@ -1183,7 +1183,7 @@ class Edge(Part):
 
         return si
 
-    def get_ltr_index(self, face: _Face, i) -> EdgeSlice:
+    def get_slice_by_ltr_index(self, face: _Face, i) -> EdgeSlice:
         """
 
         # todo: combine and optimize with get_face_edge
@@ -1202,7 +1202,7 @@ class Edge(Part):
         :param i:
         :return:
         """
-        return self.get_ltr_index(face, i).get_face_edge(face)
+        return self.get_slice_by_ltr_index(face, i).get_face_edge(face)
 
     def get_slices(self, index: SliceIndex | None) -> Iterable[PartSlice]:
 

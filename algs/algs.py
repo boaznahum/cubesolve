@@ -985,6 +985,24 @@ class Algs:
             case _:
                 raise InternalSWError(f"Unknown face name {face}")
 
+    @classmethod
+    def of_slice(cls, slice_name: SliceName) -> SliceAbleAlg:
+
+        match slice_name:
+
+            case SliceName.E:
+                return cls.E
+
+            case SliceName.S:
+                return cls.S
+
+            case SliceName.M:
+                return cls.M
+
+
+            case _:
+                raise InternalSWError(f"Unknown slice name {slice_name}")
+
 
 
 

@@ -306,8 +306,8 @@ class Cube(CubeSupplier):
 
         return a_slice.get_rotate_involved_parts(slice_indexes)
 
-    def _get_face_and_rotation_info(self, face_name: FaceName,
-                                    _slices: Iterable[int] = None) -> Tuple[Iterable[int], bool, SliceName]:
+    def get_face_and_rotation_info(self, face_name: FaceName,
+                                   _slices: Iterable[int] = None) -> Tuple[Iterable[int], bool, SliceName]:
         """
 
         :param face_name:
@@ -361,7 +361,7 @@ class Cube(CubeSupplier):
         neg_slice_index: bool
         slice_name: SliceName
 
-        actual_slices, neg_slice_index, slice_name = self._get_face_and_rotation_info(face_name, _slices)
+        actual_slices, neg_slice_index, slice_name = self.get_face_and_rotation_info(face_name, _slices)
 
         slice_rotate_n = n
 
@@ -397,7 +397,7 @@ class Cube(CubeSupplier):
         neg_slice_index: bool
         slice_name: SliceName
 
-        actual_slices, neg_slice_index, slice_name = self._get_face_and_rotation_info(face_name, slices)
+        actual_slices, neg_slice_index, slice_name = self.get_face_and_rotation_info(face_name, slices)
 
         parts: MutableSequence[PartSlice] = []
 
