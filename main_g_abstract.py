@@ -5,6 +5,7 @@ import pyglet  # type: ignore
 
 from app_state import AppState
 from cube_operator import Operator
+from main_g_app import AbstractApp
 from model.cube import Cube
 from solver import Solver
 
@@ -32,39 +33,6 @@ class Animation:
             self._animation_cleanup()
 
 
-class AbstractMain:
-    def __init__(self):
-        pass
-
-
-    @property
-    @abstractmethod
-    def op(self) -> Operator:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def vs(self) -> AppState:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def slv(self) -> Solver:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def cube(self) -> Cube:
-        raise NotImplementedError
-
-    @abstractmethod
-    def reset(self, dont_reset_axis=False):
-        raise NotImplementedError
-
-
-
-
-
 class AbstractWindow(pyglet.window.Window):
 
     @abstractmethod
@@ -80,5 +48,5 @@ class AbstractWindow(pyglet.window.Window):
 
     @property
     @abstractmethod
-    def app(self) -> AbstractMain:
+    def app(self) -> AbstractApp:
         pass

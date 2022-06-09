@@ -7,7 +7,6 @@ import pyglet  # type: ignore
 from pyglet import gl
 from pyglet.window import key  # type: ignore
 
-import algs.algs as algs
 import config
 import main_g_animation
 import main_g_keyboard_input
@@ -15,63 +14,12 @@ import main_g_mouse_click
 from algs.algs import Algs
 from app_exceptions import AppExit, RunStop, OpAborted
 from app_state import AppState
-from cube_operator import Operator
-from main_g_abstract import AbstractMain, AbstractWindow
+from main_g_abstract import AbstractWindow
 from main_g_animation import Animation
-from model.cube import Cube
-from solver import Solver
+from main_g_app import App
 from viewer.viewer_g import GCubeViewer
 # pyglet.options["debug_graphics_batch"] = True
 from viewer.viewer_g_ext import GViewerExt
-
-
-class Main(AbstractMain):
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._error: str | None = None
-
-        self._vs = AppState()
-
-        self._cube = Cube(self.vs.cube_size)
-
-        self._op: Operator = Operator(self.cube, config.animation_enabled)
-
-        self._slv: Solver = Solver(self.op)
-
-        # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
-
-        self.reset()
-
-    def reset(self, dont_reset_axis=False):
-        self.cube.reset(self.vs.cube_size)
-        # can't change instance, it is shared
-        if not dont_reset_axis:
-            self.vs.reset()
-        self._error = None
-
-    def set_error(self, _error: str):
-        self._error = _error
-
-    @property
-    def error(self):
-        return self._error
-
-    @property
-    def op(self) -> Operator:
-        return self._op
-
-    @property
-    def vs(self) -> AppState:
-        return self._vs
-
-    @property
-    def slv(self) -> Solver:
-        return self._slv
-
-    @property
-    def cube(self) -> Cube:
-        return self._cube
 
 
 # noinspection PyAbstractClass
@@ -79,7 +27,7 @@ class Window(AbstractWindow):
     #     # Cube 3D start rotation
     xRotation = yRotation = 30
 
-    def __init__(self, app: Main, width, height, title=''):
+    def __init__(self, app: App, width, height, title=''):
         super(Window, self).__init__(width, height, title, resizable=True)
         # from cube3d
         gl.glClearColor(0, 0, 0, 1)
@@ -99,7 +47,7 @@ class Window(AbstractWindow):
         self.batch = pyglet.graphics.Batch()
         # self.create_layout()
 
-        self._app: Main = app
+        self._app: App = app
         self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
         self.text: MutableSequence[pyglet.text.Label] = []
 
@@ -108,12 +56,12 @@ class Window(AbstractWindow):
         self._last_edge_solve_count = 0
 
         # todo: stil don't know what to do with this patch
-        self.app.op._animation_hook = lambda op, alg: op_and_play_animation(self, op, False, alg)
+        self.app.op._animation_hook = lambda op, alg: main_g_animation.op_and_play_animation(self, op, False, alg)
 
         self.update_gui_elements()
 
     @property
-    def app(self) -> Main:
+    def app(self) -> App:
         return self._app
 
     def set_animation(self, an: Animation | None):
@@ -358,18 +306,13 @@ class Window(AbstractWindow):
 # noinspection PyPep8Naming
 
 
-def op_and_play_animation(window: Window, operator: Operator, inv: bool, alg: algs.SimpleAlg):
-    main_g_animation.op_and_play_animation(window,
-                                           window.app.cube,
-                                           window.viewer,
-                                           window.app.vs,
-                                           operator,
-                                           inv, alg)
 
 
 def main():
-    app: Main = Main()
-    Window(app, 720, 720, '"Cube"')
+    app: App = App()
+    win = Window(app, 720, 720, '"Cube"')
+
+    win.set_mouse_visible(True)
     pyglet.app.run()
 
 

@@ -16,6 +16,13 @@ from model.cube_boy import FaceName
 from model.elements import PartSlice
 from viewer.viewer_g import GCubeViewer
 
+def op_and_play_animation(window: AbstractWindow, operator: Operator, inv: bool, alg: algs.SimpleAlg):
+    _op_and_play_animation(window,
+                                           window.app.cube,
+                                           window.viewer,
+                                           window.app.vs,
+                                           operator,
+                                           inv, alg)
 
 def _create_animation(cube: Cube, viewer: GCubeViewer, vs: AppState, alg: algs.AnimationAbleAlg, n_count) -> Animation:
     rotate_face: FaceName
@@ -161,7 +168,7 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: AppState, alg: algs.A
     return animation
 
 
-def op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewer, vs: AppState, operator: Operator,
+def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewer, vs: AppState, operator: Operator,
                           inv: bool, alg: algs.SimpleAlg):
     """
     This must be called only from operator

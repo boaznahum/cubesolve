@@ -1,5 +1,6 @@
 import traceback
 
+import pyglet
 from pyglet.window import key
 
 import config
@@ -8,7 +9,7 @@ from algs.algs import Alg, Algs
 from app_exceptions import AppExit
 from app_state import AppState
 from cube_operator import Operator
-from main_g_abstract import AbstractWindow, AbstractMain
+from main_g_abstract import AbstractWindow, AbstractApp
 from model.cube_boy import FaceName
 from solver import Solver, SolveStep
 
@@ -18,7 +19,7 @@ good = Algs.bigAlg("good")
 def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     # print(f"{hex(value)}=")
     done = False
-    app: AbstractMain = window.app
+    app: AbstractApp = window.app
     op: Operator = app.op
 
     #print(f"In _handle_input , {value}  {hex(value)} {chr(ord('A') + (value - key.A))} ")
@@ -303,44 +304,49 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     slv.solve(animation=False, debug=False)
                     assert slv.is_solved
                 else:
-                    # test
-                    nn = 50
-                    ll = 0
-                    count = 0
-                    n_loops = 0
-                    for s in range(-1, nn):
-                        print(str(s + 2) + f"/{nn + 1}, ", end='')
-                        ll += 1
-                        if ll > 15:
-                            print()
-                            ll = 0
 
-                        op.reset()  # also reset cube
-                        if s == -1:
-                            scramble_key = -1
-                            n = 5
-                        else:
-                            scramble_key = s
-                            n = None
+                    cursor = window.get_system_mouse_cursor(window.CURSOR_WAIT)
+                    window.set_mouse_cursor(cursor)
+                    try: # test
+                        nn = 50
+                        ll = 0
+                        count = 0
+                        n_loops = 0
+                        for s in range(-1, nn):
+                            print(str(s + 2) + f"/{nn + 1}, ", end='')
+                            ll += 1
+                            if ll > 15:
+                                print()
+                                ll = 0
 
-                        alg = Algs.scramble(app.cube.size, scramble_key, n)
+                            op.reset()  # also reset cube
+                            if s == -1:
+                                scramble_key = -1
+                                n = 5
+                            else:
+                                scramble_key = s
+                                n = None
 
-                        op.op(alg, animation=False)
+                            alg = Algs.scramble(app.cube.size, scramble_key, n)
 
-                        # noinspection PyBroadException
-                        try:
-                            c0 = op.count
-                            slv.solve(animation=False, debug=False)
-                            assert slv.is_solved
-                            count += op.count - c0
-                            n_loops += 1
+                            op.op(alg, animation=False)
 
-                        except Exception:
-                            print(f"Failure on scramble key={scramble_key}, n={n} ")
-                            traceback.print_exc()
-                            raise
-                    print()
-                    print(f"Count={count}, average={count / n_loops}")
+                            # noinspection PyBroadException
+                            try:
+                                c0 = op.count
+                                slv.solve(animation=False, debug=False)
+                                assert slv.is_solved
+                                count += op.count - c0
+                                n_loops += 1
+
+                            except Exception:
+                                print(f"Failure on scramble key={scramble_key}, n={n} ")
+                                traceback.print_exc()
+                                raise
+                        print()
+                        print(f"Count={count}, average={count / n_loops}")
+                    finally:
+                        window.set_mouse_cursor(None)
 
             case key.Q:
                 window.close()
