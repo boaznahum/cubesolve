@@ -808,7 +808,7 @@ class BigAlg(Alg):
                         # noinspection PyArgumentList
                         a2 = a.clone()  # type: ignore # _n = 1
                         a2._n = prev.n + a.n
-                        if a2.n:
+                        if a2.n % 4:
                             prev = a2
                         else:
                             prev = None  # R0 is a None

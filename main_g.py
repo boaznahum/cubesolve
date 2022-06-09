@@ -87,24 +87,35 @@ class Window(AbstractWindow):
 
         app_vs: AppState = self.app.vs
 
+        y = 10
+
         self.text.clear()
         self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
-                                           x=10, y=10, font_size=10))
+                                           x=10, y=y, font_size=10))
+        y += 20
         # h = Algs.simplify(*self.app.op.history)
         # sh = str(h)[-70:]
         self.text.append(pyglet.text.Label("Edges: #" + str(self._last_edge_solve_count),
-                                           x=10, y=30, font_size=10))
-        # h = Algs.simplify(*self.app.op.history)
-        # sh = str(h)[-70:]
-        # self.text.append(pyglet.text.Label("History: #" + str(h.count()) + "  " + sh,
-        #                                    x=10, y=30, font_size=10))
+                                           x=10, y=y, font_size=10))
+        y += 20
+
+        h = Algs.simplify(*self.app.op.history)
+        sh = str(h)[-120:]
+        self.text.append(pyglet.text.Label("History(simplified): #" + str(h.count()) + "  " + sh,
+                                           x=10, y=y, font_size=10))
+        y += 20
+
         h = self.app.op.history
         sh = str(h)[-70:]
         self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + sh,
-                                           x=10, y=50, font_size=10))
+                                           x=10, y=y, font_size=10))
+        y += 20
+
         err = "R L U S/Z/F B D  M/X/R E/Y/U (SHIFT-INv), ?-Solve, Clear, Q " + "0-9 scramble1, <undo, Test"
         self.text.append(pyglet.text.Label(err,
-                                           x=10, y=70, font_size=10))
+                                           x=10, y=y, font_size=10))
+        y += 20
+
         # solution = self.app.slv.solution().simplify()
         # s = "Solution:(" + str(solution.count()) + ") " + str(solution)
         # self.text.append(pyglet.text.Label(s,
@@ -116,7 +127,9 @@ class Window(AbstractWindow):
             s += f", Error:{self.app.error}"
 
         self.text.append(pyglet.text.Label(s,
-                                           x=10, y=110, font_size=10, color=(255, 0, 0, 255), bold=True))
+                                           x=10, y=y, font_size=10, color=(255, 0, 0, 255), bold=True))
+        y += 20
+
 
         # ---------------------------------------
 
@@ -127,7 +140,9 @@ class Window(AbstractWindow):
         s += ", Sanity check:" + _b(config.CHECK_CUBE_SANITY)
         s += ", Debug=" + _b(self.app.slv.is_debug_config_mode)
         self.text.append(pyglet.text.Label(s,
-                                           x=10, y=130, font_size=10, color=(255, 255, 0, 255), bold=True))
+                                           x=10, y=y, font_size=10, color=(255, 255, 0, 255), bold=True))
+        y += 20
+
         # ----------------------------
 
         s = f"S={cube.size}, Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
@@ -140,7 +155,9 @@ class Window(AbstractWindow):
         s += ", " + str(vs.slice_alg(cube, Algs.M))
 
         self.text.append(pyglet.text.Label(s,
-                                           x=10, y=150, font_size=10, color=(0, 255, 0, 255), bold=True))
+                                           x=10, y=y, font_size=10, color=(0, 255, 0, 255), bold=True))
+        y += 20
+
 
     def on_draw(self):
         # print("Updating")

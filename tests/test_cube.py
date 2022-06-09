@@ -17,7 +17,7 @@ def main():
     alg1 = Algs.scramble(cube.size, 4)
     alg2 = Algs.scramble(cube.size, 4)
 
-    s1 = alg1.simplify()
+    s1 = alg1.implify()
 
     alg2.play(cube)
 
