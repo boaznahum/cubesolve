@@ -1,0 +1,84 @@
+from abc import abstractmethod
+from typing import Callable
+
+import pyglet  # type: ignore
+
+from app_state import ViewState
+from cube_operator import Operator
+from model.cube import Cube
+from solver import Solver
+
+
+class Animation:
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.done: bool = False
+        self._animation_update_only: Callable[[], None] | None = None
+        self._animation_draw_only: Callable[[], None] | None = None
+        self._animation_cleanup: Callable[[], None] | None = None
+        self.delay = 1 / 20.
+
+    def update_gui_elements(self):
+        if self._animation_update_only:
+            self._animation_update_only()
+
+    def draw(self):
+        if self._animation_draw_only:
+            self._animation_draw_only()
+
+    def cleanup(self):
+        if self._animation_cleanup:
+            self._animation_cleanup()
+
+
+class AbstractMain:
+    def __init__(self):
+        pass
+
+
+    @property
+    @abstractmethod
+    def op(self) -> Operator:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def vs(self) -> ViewState:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def slv(self) -> Solver:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def cube(self) -> Cube:
+        raise NotImplementedError
+
+    @abstractmethod
+    def reset(self, dont_reset_axis=False):
+        raise NotImplementedError
+
+
+
+
+
+class AbstractWindow(pyglet.window.Window):
+
+    @abstractmethod
+    def set_animation(self, an: Animation | None):
+        pass
+
+    def set_annotation_text(self, text1: str | None, text2: str | None):
+        pass
+
+    @abstractmethod
+    def update_gui_elements(self):
+        pass
+
+    @property
+    @abstractmethod
+    def app(self) -> AbstractMain:
+        pass
