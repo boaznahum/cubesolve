@@ -68,6 +68,9 @@ class ViewState:
         super().__init__()
         # self._animation_speed_delay_between_steps: float = 1/40
         # self._animation_speed_number_of_steps = 30
+        self.tx = 0
+        self.ty = 0
+        self.tz = 0
         self._speed = 0
         self._alpha_x_0: float = 0.3
         self._alpha_y_0: float = -0.4

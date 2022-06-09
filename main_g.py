@@ -235,8 +235,62 @@ class Window(main_g_animation.AbstractWindow):
         #                     glRotatef(event.rel[1], 1, 0, 0)
         #                     glRotatef(event.rel[0], 0, 1, 0)
         #                 print(event.rel)
-        self.app.vs.alpha_x += math.radians(-dy)
-        self.app.vs.alpha_y += math.radians(dx)
+        if not modifiers & key.MOD_SHIFT:
+            # still don't know to distinguish between ad drag and simple press
+            self.app.vs.alpha_x += math.radians(-dy)
+            self.app.vs.alpha_y += math.radians(dx)
+
+    def _on_mouse_press(self, x, y, button, modifiers):
+        if modifiers & key.MOD_SHIFT:
+
+            # almost as in https://stackoverflow.com/questions/57495078/trying-to-get-3d-point-from-2d-click-on-screen-with-opengl
+            #print(f"on mouse press: {x} {y}")
+            x = float(x)
+            y = self.height - float(y)
+            # The following could work if we were not initially scaling to zoom on
+            # the bed
+            # if self.orthographic:
+            #    return (x - self.width / 2, y - self.height / 2, 0)
+            pmat = (gl.GLdouble * 16)()
+            mvmat = (gl.GLdouble * 16)()
+            #mvmat = self.get_modelview_mat(local_transform)
+            viewport = (gl.GLint * 4)()
+            px = (gl.GLdouble)()
+            py = (gl.GLdouble)()
+            pz = (gl.GLdouble)()
+
+            vs = self.app.vs
+
+            vs.prepare_objects_view()
+
+
+            # 0, 0, width, height
+            gl.glGetIntegerv(gl.GL_VIEWPORT, viewport)
+            # print(f"{[f for f in viewport]}")
+
+            gl.glGetDoublev(gl.GL_PROJECTION_MATRIX, pmat)
+            gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX, mvmat)
+
+            real_y = viewport[3] - y  # mouse is up down, gl is down up
+
+            d = (gl.GLfloat * 1)()  # why ?
+
+            gl.glReadPixels(int(x), int(real_y), 1, 1, gl.GL_DEPTH_COMPONENT, gl.GL_FLOAT, d)
+            # print(f"{[ f for f in d ]=}")
+            # the z coordinate
+            depth = d[0]
+
+            gl.gluUnProject(x, real_y, depth, mvmat, pmat, viewport, px, py, pz)
+
+            #print(f"{px.value=}, {py.value=}, {pz.value=}")
+
+            vs.tx = px.value
+            vs.ty = py.value
+            vs.tz = pz.value
+
+            vs.restore_objects_view()
+
+            # continue with https://math.stackexchange.com/questions/1472049/check-if-a-point-is-inside-a-rectangular-shaped-area-3d
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)

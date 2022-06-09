@@ -143,6 +143,19 @@ class _Cell:
         for ll in lists:
             if ll not in hidden:
                 glCallList(ll)
+
+        # vs: ViewState = self._face_board.board.vs
+        #
+        # # [left_bottom, right_bottom, right_top, left_top]
+        # tx = vs.tx
+        # ty = vs.ty
+        # tz = vs.tz
+        # p0 = np.array([tx, ty, tz])
+        # lx = np.array([1.0, 0.0, 0.0]) * 10
+        # ly = np.array([0.0, 1.0, 0.0]) * 10
+        #
+        # shapes.quad_with_line( [p0, p0 + lx, p0 + lx + ly , p0 + ly],(0, 0, 0), 10, (255, 0, 0))
+
         self._restore_view_state()
 
     def _prepare_view_state(self):
