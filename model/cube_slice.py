@@ -109,7 +109,7 @@ class Slice(SuperElement):
 
             centers.extend(_c)
 
-            edge_slice = current_edge.get_ltr_index(current_face, current_index)
+            edge_slice = current_edge.get_slice_by_ltr_index(current_face, current_index)
             edges.append(edge_slice)
 
             # now compute next face

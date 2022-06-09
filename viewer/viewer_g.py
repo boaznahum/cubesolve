@@ -250,11 +250,14 @@ class _Cell:
                 for i in range(n):
                     ix = i
 
-                    _slice = part.get_ltr_index(cube_face, ix)
+                    _slice = part.get_slice_by_ltr_index(cube_face, ix)
                     color = self._slice_color(_slice)
                     with self._gen_list_for_slice(_slice, g_list_dest):
                         vx = [left_bottom, right_bottom,
                               right_bottom + d, left_bottom + d]
+
+                        self.facets[self._get_slice_edge(_slice)] = vx
+
                         shapes.quad_with_line(vx, color, lw, lc)
 
                         if config.GUI_DRAW_MARKERS:
@@ -270,8 +273,9 @@ class _Cell:
                         if self._get_slice_edge(_slice).c_attributes["annotation"]:
                             self._create_markers(vx, (0, 0, 0), True)
 
-                    left_bottom += d
-                    right_bottom += d
+                    # do not iadd, we keep references to thes coordinates
+                    left_bottom = left_bottom + d
+                    right_bottom = right_bottom + d
 
             else:  # top or bottom
 
@@ -283,13 +287,15 @@ class _Cell:
 
                 for i in range(n):
                     ix = i  # _inv(i, is_back)
-                    _slice = part.get_ltr_index(cube_face, ix)
+                    _slice = part.get_slice_by_ltr_index(cube_face, ix)
                     color = self._slice_color(_slice)
                     with self._gen_list_for_slice(_slice, g_list_dest):
                         vx = [left_bottom,
                               left_bottom + d,
                               left_top + d,
                               left_top]
+
+                        self.facets[self._get_slice_edge(_slice)] = vx
                         shapes.quad_with_line(vx, color, lw, lc)
                         if config.GUI_DRAW_MARKERS:
                             nn: int = _slice.get_face_edge(cube_face).c_attributes["n"]
@@ -305,8 +311,9 @@ class _Cell:
                         # if _slice.get_face_edge(cube_face).attributes["on_y"]:
                         #     shapes.cross(vx, cross_width_y, cross_color_y)
 
-                    left_bottom += d
-                    left_top += d
+                    # do not iadd, we keep references to thes coordinates
+                    left_bottom = left_bottom + d
+                    left_top = left_top + d
 
         else:
             assert isinstance(part, Center)
@@ -836,9 +843,17 @@ class _Board:
                     yield e, r
 
     def _find_facet(self, x: float, y: float, z: float) -> PartEdge | None:
-        #print(x, y, z)
+        print(x, y, z)
 
         f: _FaceBoard
+
+        # for f in self._faces:
+        #     c: _Cell
+        #     for c in f.cells:
+        #         for e, r in c.facets.items():
+        #             print(f"{e} {e.parent} {r}")
+
+
         for f in self._faces:
 
             ortho_dir: ndarray = f.ortho_direction

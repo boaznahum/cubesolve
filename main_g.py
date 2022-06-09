@@ -17,7 +17,7 @@ from cube_operator import Operator
 from main_g_animation import Animation
 from model.cube import Cube
 from model.cube_face import Face
-from model.elements import FaceName, PartEdge, Corner, Part
+from model.elements import FaceName, PartEdge, Corner, Part, Edge, PartSlice, EdgeSlice
 from solver import Solver, SolveStep
 from viewer.viewer_g import GCubeViewer
 # pyglet.options["debug_graphics_batch"] = True
@@ -291,31 +291,87 @@ class Window(main_g_animation.AbstractWindow):
 
             vs.restore_objects_view()
 
-            edge: PartEdge = self.viewer.find_facet(px.value, py.value, pz.value)
-            if edge:
-                part: Part = edge.parent.parent
-                print(f"@@@@@@@@@@@@@@@@@{edge.face} {part} {type(part)}")
+            def _play(alg: Alg):
+
+                if modifiers & key.MOD_CTRL:
+                    alg = alg.prime
+
+                print(f"{alg=}")
+
+                op = self.app.op
+
+                op.op(alg)
+                # why I need that
+                if not op.animation_enabled:
+                    self.update_gui_elements()
+
+            face: PartEdge = self.viewer.find_facet(px.value, py.value, pz.value)
+            if face:
+                _slice: PartSlice = face.parent
+                part: Part = _slice.parent
+
+                print(f"@@@@@@@@@@@@@@@@@ {face} {part} @ {face.face} {type(part)}")
+                print(f"@@@@@@@@@@@@@@@@@ {str(_slice)}")
 
                 # is it a corner ?
                 if isinstance(part, Corner):
 
                     print("Is corner")
-                    edge_face: Face = edge.face
-                    face: FaceName = edge_face.name
-                    alg = Algs.of_face(face)
+                    face: Face = face.face
+                    face_name: FaceName = face.name
+                    face_alg = Algs.of_face(face_name)
+                    _play(face_alg)
 
-                    if modifiers & key.MOD_CTRL:
-                        alg = alg.prime
+                if isinstance(part, Edge):
 
-                    print(f"{alg=}")
 
-                    op = self.app.op
 
-                    op.op(alg)
+                    print("Is Edge")
+                    face: Face = face.face
+                    face_name: FaceName = face.name
 
-                    # why I need that
-                    if not op.animation_enabled:
-                        self.update_gui_elements()
+                    assert isinstance(_slice, EdgeSlice)
+
+                    slice_alg: algs.SliceAlg | None = None
+                    neg_slice_index = False
+                    if face_name in [ FaceName.F, FaceName.B ]:
+
+                        if face.is_bottom_or_top(part):
+                            slice_alg = Algs.M  # we want over R
+                            neg_slice_index = face_name == FaceName.F # but r start at right, ltr is from left
+                        else:
+                            slice_alg = Algs.E  # we want over D
+                            neg_slice_index = False
+                    elif face_name in  [FaceName.R, FaceName.L]:
+
+                        if face.is_bottom_or_top(part):
+                            slice_alg = Algs.S  # we want over F
+                            neg_slice_index = face_name == FaceName.L
+                        else:
+                            slice_alg = Algs.E  # we want over D
+                            neg_slice_index = False
+                    elif face_name in [FaceName.U, FaceName.D]:
+
+                        if face.is_bottom_or_top(part):
+                            slice_alg = Algs.M  # we want over R
+                            neg_slice_index = True
+                        else:
+                            slice_alg = Algs.S  # we want over F
+                            neg_slice_index = face_name == FaceName.D
+
+                    if slice_alg:
+
+                        index = _slice.index
+                        index = part.get_ltr_index_from_slice_index(face, index)
+
+                        if neg_slice_index:
+                            index = face.inv(index)
+
+                        slice_alg = slice_alg[index + 1] # index start from 1
+
+                        _play(slice_alg)
+
+
 
 
             # continue with https://math.stackexchange.com/questions/1472049/check-if-a-point-is-inside-a-rectangular-shaped-area-3d
