@@ -1,3 +1,4 @@
+import sys
 from collections import defaultdict
 from collections.abc import Set, Collection
 from contextlib import contextmanager
@@ -17,7 +18,6 @@ import config
 from app_state import AppState
 from model.cube import Cube
 from model.cube_face import Face
-from model.cube_slice import SliceName
 from model.elements import Color, Part, FaceName, PartFixedID, SuperElement, CenterSlice, PartEdge, EdgeSlice
 from model.elements import Corner, Edge, Center, PartSliceHashID, PartSlice
 from . import shapes
@@ -123,7 +123,7 @@ class _Cell:
                                 for ls in m.values() for ll in ls]
 
         if not lists:
-            print(f"Error no gl lists in {self}")
+            print(f"Error no gl lists in {self}", file=sys.stderr)
             return
 
         hidden = self._face_board.board.get_hidden()
@@ -149,6 +149,17 @@ class _Cell:
         # shapes.quad_with_line( [p0, p0 + lx, p0 + lx + ly , p0 + ly],(0, 0, 0), 10, (255, 0, 0))
 
         self._restore_view_state()
+
+    def get_all_gui_elements(self, dest: set[int]):
+        m: dict[frozenset[FaceName], MutableSequence[int]]
+        lists: Sequence[int] = [ll for m in [self.gl_lists_movable, self.gl_lists_unmovable]
+                                for ls in m.values() for ll in ls]
+
+        if not lists:
+            print(f"Error no gl lists in {self}", file=sys.stderr)
+            return
+
+        dest.update(lists)
 
     def _prepare_view_state(self):
 
@@ -723,6 +734,15 @@ class _FaceBoard:
     def get_part_gui_object(self, p: Part) -> Iterable[int]:
         return self._cells[p.fixed_id].gui_movable_gui_objects()
 
+    def get_all_gui_elements(self, dest: set[int]):
+        """
+        Including hidden, for drawing
+        :param dest
+        :return:
+        """
+        for c in self.cells:
+            c.get_all_gui_elements(dest)
+
     def get_cell(self, _id: PartFixedID) -> _Cell:
         return self._cells[_id]
 
@@ -807,8 +827,34 @@ class _Board:
             face.update()
 
     def draw(self):
-        for face in self._faces:
-            face.draw()
+        # for face in self._faces:
+        #     face.draw()
+
+        lists: set[int] = set()
+
+        for f in self._faces:
+            f.get_all_gui_elements(lists)
+
+        hidden: set[int] = self.get_hidden()
+
+        lists -= hidden
+
+        self._prepare_view_state()
+
+        for ll in lists:
+            glCallList(ll)
+
+        self._restore_view_state()
+
+    def _prepare_view_state(self):
+
+        vs: AppState = self.vs
+        vs.prepare_objects_view()
+
+    def _restore_view_state(self):
+
+        vs: AppState = self.vs
+        vs.restore_objects_view()
 
     @property
     def alpha_x(self):
@@ -840,7 +886,7 @@ class _Board:
         self._hidden_objects = set()
 
     # todo: to delete
-    def get_all_cells_gui_elements(self, element: SuperElement) -> Set[int]:
+    def get_all_cells_movable_gui_elements(self, element: SuperElement) -> Set[int]:
 
         lists: set[int] = set()
 
@@ -1139,41 +1185,6 @@ class GCubeViewer:
 
     def unhidden_all(self):
         self._board.unhidden_all()
-
-    # todo:cleanup: delete
-    def git_slice_objects(self, slice_name, hide=True) -> Tuple[ndarray, ndarray, Iterable[int]]:
-
-        face_name: FaceName
-
-        match slice_name:
-
-            case SliceName.S:  # over F
-                face_name = FaceName.F
-
-            case SliceName.M:  # over R
-                face_name = FaceName.R
-
-            case SliceName.E:  # over D
-                face_name = FaceName.D
-
-            case _:
-                raise RuntimeError(f"Unknown Slice {slice_name}")
-
-        right: _FaceBoard = self._get_face(face_name)
-        left: _FaceBoard = self._get_face(self._cube.face(face_name).opposite.name)
-
-        right_center: ndarray = right.get_center()
-        # because left,back and down have more than one gui faces
-        left_center: ndarray = left.get_center()
-
-        objects: set[int] = set()
-
-        objects.update(self._board.get_all_cells_gui_elements(self._cube.get_slice(slice_name)))
-
-        if hide:
-            self._board.set_hidden(objects)
-
-        return right_center, left_center, objects
 
     def get_slices_movable_gui_objects(self, face_name_rotate_axis: FaceName,
                                        cube_parts: Collection[PartSlice],
