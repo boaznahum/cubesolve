@@ -93,11 +93,10 @@ class Window(AbstractWindow):
         self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
                                            x=10, y=y, font_size=10))
         y += 20
-        # h = Algs.simplify(*self.app.op.history)
-        # sh = str(h)[-70:]
-        self.text.append(pyglet.text.Label("Edges: #" + str(self._last_edge_solve_count),
-                                           x=10, y=y, font_size=10))
-        y += 20
+
+        # self.text.append(pyglet.text.Label("Edges: #" + str(self._last_edge_solve_count),
+        #                                    x=10, y=y, font_size=10))
+        # y += 20
 
         h = Algs.simplify(*self.app.op.history)
         sh = str(h)[-120:]

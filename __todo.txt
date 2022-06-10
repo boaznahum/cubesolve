@@ -12,3 +12,5 @@ Feature: Fix scramble also to invert and multiple and generate sub lists
     assert f3.face.center.is3x3
 
 #BUG: Single step mode, screen is not refreshed when waiting. What I'm doing wrong ?
+
+Feature: WAIT cursor on scramble
