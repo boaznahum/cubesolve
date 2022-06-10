@@ -19,4 +19,4 @@ AXIS_LENGTH = 4 * CELL_SIZE
 
 
 # Solver
-OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False  # under test doesn't work well
+OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = True  # under test doesn't work well

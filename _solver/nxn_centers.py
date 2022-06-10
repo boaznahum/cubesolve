@@ -390,7 +390,7 @@ class NxNCenters(SolverElement):
         # we want to bring the other to front
 
         # [2:2]E [2:2]M [2:2]E' [2:2]M'
-        #   back -> up, up -> right, right->front
+        #   back -> up -> right->back  left->front->down->left
         mid = 1 + nn // 2
         _center_move_alg = Algs.E[mid] + Algs.M[mid] + Algs.E[mid].prime + Algs.M[mid].prime
 
@@ -473,10 +473,11 @@ class NxNCenters(SolverElement):
                 self._bring_face_up_preserve_front(face_loc.face)
                 assert face_loc.face is cube.up
 
-                # noy we need to bring up centerpiece into front preserving left and right
+                # now we need to bring centerpiece from up face into front preserving left and right
                 # we can destroy back and down
-                #   back -> up, up -> right, right->front
-                assert False
+                # how don't know how to di it, so I', moving all the slice
+                # todo: Optimize it
+                op.op(-Algs.M[mid])
 
     def _do_center_from_face(self, face: Face, color: Color, source_face: Face) -> bool:
 

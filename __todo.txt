@@ -4,6 +4,8 @@ Feature: Fix scramble also to invert and multiple and generate sub lists
 
 # try to optimize, work less on B
 
-# On odd big cueb, still don't know to handle the case to switch centres FU slice without touching the left/right
+# On odd big cueb, still don't know to handle the case to switch
+#  centres FU slice without touching the left/right, for now I'm bring ing all the slice
+#   See
 
 #BUG: Single step mode, screen is not refreshed when waiting. What I'm doing wrong ?
