@@ -839,10 +839,18 @@ class _Board:
 
         lists -= hidden
 
+        n = len(lists)
+
+        lists_array = (gl.GLint * n)()
+        lists_array[:] = [*lists]
+
         self._prepare_view_state()
 
-        for ll in lists:
-            glCallList(ll)
+        # https://www.glprogramming.com/red/chapter07.html
+        gl.glCallLists(n, gl.GL_INT, lists_array)
+
+        # for ll in lists:
+        #     gl.glCallList(ll)
 
         self._restore_view_state()
 
