@@ -4,7 +4,7 @@ Python
 
   Don't search for sophisticated algorithm, my challenge was exactly the contrary - to mimic the way I solve the cube – a very beginner solver. So, when animation is turn on – you even can see how the cube does a whole rotate just to put the parts in front face – the way I know to solve.
   
-  But the code is originzed(see below) in such way that you can enhance and even replace the solver, the model and the viewer is totaly seperated from other layers(as should be)
+  But the code is originzed(see below) in such way that you can enhance and even replace the solver, the model and the viewer is totaly seperated from other layers(as should be :wink:)
   
   
 
