@@ -232,12 +232,15 @@ def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeView
             platform_event_loop.notify()
 
         # TO UPDATE TEXT
-        clock.schedule_once(_update_gui, 0)
+        clock.schedule_interval(_update_gui, 1.0/ 20)
 
         # wait for user press space
-        while not event_loop.has_exit and vs.paused_on_single_step_mode:
+        while not event_loop.has_exit and (vs.paused_on_single_step_mode and vs.single_step_mode):
             timeout = event_loop.idle()  # this will trigger on_draw
             platform_event_loop.step(timeout)
+
+        clock.unschedule(_update_gui)
+
 
     # but still useful for SS mode
     if alg.n % 4 == 0:

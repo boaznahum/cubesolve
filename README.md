@@ -36,6 +36,9 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
     S - during the animation stop the solver
 
+    Ctrl+Space - enter/exit single sterp mode, in this mode animation is suspned till user hit 'SPACE' (or Ctrl+SPACE)
+    Very useful for debugging new algorithms
+
 ### Rotating
     R, L, F, B, U, B  - As suauls - rotate faces
     X, Y, Z - Entire cube over R, U and F 
