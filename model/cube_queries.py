@@ -23,7 +23,7 @@ class CubeQueries:
             if pred(f):
                 return f
 
-        raise InternalSWError(f"Can't find face with pred {pred}")
+        return None
 
     @staticmethod
     def find_face(cube: Cube, pred: Pred[Face]) -> Face:
@@ -65,7 +65,7 @@ class CubeQueries:
         raise InternalSWError(f"Can't find part with color id {position_id}")
 
     @staticmethod
-    def find_center_slice(cube: Cube, pred: Callable[[CenterSlice], bool]) -> CenterSlice | None:
+    def is_center_slice(cube: Cube, pred: Callable[[CenterSlice], bool]) -> CenterSlice | None:
 
         s: CenterSlice
         for f in cube.faces:
@@ -74,6 +74,16 @@ class CubeQueries:
                     return s
 
         return None
+
+    @staticmethod
+    def find_center_slice(cube: Cube, pred: Callable[[CenterSlice], bool]) -> CenterSlice:
+
+        s = CubeQueries.is_center_slice(cube, pred)
+
+        if s:
+            return s
+
+        raise InternalSWError(f"No such center slice for pred{pred}")
 
     @staticmethod
     def find_slice_in_face_center(face: Face, pred: Pred[CenterSlice]) -> CenterSlice | None:

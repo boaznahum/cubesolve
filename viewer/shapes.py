@@ -4,6 +4,7 @@ from typing import Tuple
 import numpy as np
 from numpy import ndarray
 from pyglet import gl  # type: ignore
+import pyglet.gl.glu as glu
 from pyglet.gl import *  # type: ignore
 
 
@@ -150,3 +151,15 @@ def box_with_lines(bottom_quad: Sequence[np.ndarray],
 
     # gl.glColor3ub(51, 102, 0)
     _q(bottom[lb], bottom[lt], top[lt], top[lb])
+
+
+def sphere(center:np.ndarray, radius: float, color: Tuple[int, int, int]):
+    gl.glMatrixMode(gl.GL_MODELVIEW)
+    gl.glPushMatrix()
+    gl.glTranslatef(center[0], center[1], center[2])
+    _sphere = glu.gluNewQuadric()
+    # gluSphere(GLUquadric * (quad), GLdouble(radius), GLint(slices), GLint(stacks))-> void
+    gl.glColor3ub(*color)
+    glu.gluSphere(_sphere, radius, 25, 25)
+    glu.gluDeleteQuadric(_sphere)
+    gl.glPopMatrix()

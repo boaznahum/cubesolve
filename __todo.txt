@@ -7,5 +7,8 @@ Feature: Fix scramble also to invert and multiple and generate sub lists
 # On odd big cueb, still don't know to handle the case to switch
 #  centres FU slice without touching the left/right, for now I'm bring ing all the slice
 #   See
+# BUG: Centeres optimization, size 9, scramble 4
+#  File "F:\dev\code\python\cubesolve\_solver\nxn_centers.py", line 102, in solve
+    assert f3.face.center.is3x3
 
 #BUG: Single step mode, screen is not refreshed when waiting. What I'm doing wrong ?

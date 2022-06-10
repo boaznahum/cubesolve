@@ -8,6 +8,7 @@ import numpy as np
 import numpy.linalg
 import pyglet  # type: ignore
 import pyglet.gl as gl  # type: ignore
+import pyglet.gl.glu as glu  # type: ignore
 from numpy import ndarray
 from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
@@ -236,7 +237,7 @@ class _Cell:
 
             n = part.n_slices
 
-            nn :int
+            nn: int
             left_bottom = vertexes[0]
             right_bottom = vertexes[1]
             if part is cube_face.edge_left or part is cube_face.edge_right:
@@ -269,7 +270,7 @@ class _Cell:
                         #     shapes.cross(vx, cross_width_y, cross_color_y)
 
                         if self._get_slice_edge(_slice).c_attributes["annotation"]:
-                            self._create_markers(vx, (0, 0, 0), True)
+                            self._create_markers(vx, color, (0, 0, 0), True)
 
                     # do not iadd, we keep references to thes coordinates
                     left_bottom = left_bottom + d
@@ -300,7 +301,7 @@ class _Cell:
                             shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
 
                         if self._get_slice_edge(_slice).c_attributes["annotation"]:
-                            self._create_markers(vx, (0, 0, 0), True)
+                            self._create_markers(vx, color, (0, 0, 0), True)
 
                         # if _slice.get_face_edge(cube_face).attributes["origin"]:
                         #     shapes.cross(vx, cross_width, cross_color)
@@ -353,7 +354,7 @@ class _Cell:
                                 shapes.cross(vx, cross_width_y, cross_color_y)
 
                         if center_slice.edge.c_attributes["annotation"]:
-                            self._create_markers(vx, (0, 0, 0), True)
+                            self._create_markers(vx, color, (0, 0, 0), True)
 
     # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):
@@ -415,7 +416,7 @@ class _Cell:
 
         glPopAttrib()  # line width
 
-    def _create_markers(self, vertexes: Sequence[ndarray], color, marker: bool):
+    def _create_markers_box(self, vertexes: Sequence[ndarray], color, marker: bool):
 
         if not marker:
             return
@@ -453,6 +454,41 @@ class _Cell:
             top.append(p)
 
         shapes.box_with_lines(bottom, top, color, 3, (0, 0, 0))
+
+    def _create_markers(self, vertexes: Sequence[ndarray], facet_color, color, marker: bool):
+
+        if not marker:
+            return
+
+        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
+        vx = vertexes
+
+        center = (vx[0] + vx[2]) / 2
+
+        l1: float = np.linalg.norm(vertexes[0] - vertexes[1])  # type: ignore
+        l2: float = np.linalg.norm(vertexes[0] - vertexes[3])  # type: ignore
+        _face_size = min([l1, l2])
+
+        radius = _face_size / 2.0 * 0.8
+        radius = min([radius, config.MAX_MARKER_RADIUS])
+
+        # print(f"{radius=}")
+
+        color = config.MARKER_COLOR
+
+        # this is also supported by glCallLine
+        shapes.sphere(center, radius, color)
+
+        # # gluSphere( GLUquadric* ( quad ) , GLdouble ( radius ) , GLint ( slices ) , GLint ( stacks ) )-> void
+        # gl.glMatrixMode(gl.GL_MODELVIEW)
+        # gl.glPushMatrix()
+        # gl.glTranslatef(center[0], center[1], center[2])
+        # _sphere = glu.gluNewQuadric()
+        # # gluSphere(GLUquadric * (quad), GLdouble(radius), GLint(slices), GLint(stacks))-> void
+        # gl.glColor3ub(*color)
+        # glu.gluSphere(_sphere, radius, 25, 25)
+        # glu.gluDeleteQuadric(_sphere)
+        # gl.glPopMatrix()
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]
@@ -841,7 +877,7 @@ class _Board:
                     yield e, r
 
     def _find_facet(self, x: float, y: float, z: float) -> PartEdge | None:
-        #print(x, y, z)
+        # print(x, y, z)
 
         f: _FaceBoard
 
@@ -850,7 +886,6 @@ class _Board:
         #     for c in f.cells:
         #         for e, r in c.facets.items():
         #             print(f"{e} {e.parent} {r}")
-
 
         for f in self._faces:
 
@@ -877,7 +912,7 @@ class _Board:
 
     @staticmethod
     def _in_box(x, y, z, bottom_quad: Sequence[np.ndarray],
-                   top_quad: Sequence[np.ndarray]):
+                top_quad: Sequence[np.ndarray]):
         """
         https://stackoverflow.com/questions/2752725/finding-whether-a-point-lies-inside-a-rectangle-or-not
         https://math.stackexchange.com/questions/1472049/check-if-a-point-is-inside-a-rectangular-shaped-area-3d

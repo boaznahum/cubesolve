@@ -188,6 +188,7 @@ class SolverElement(CubeSupplier):
                 return
 
         ids = []
+        s: CenterSlice
         for s in slices:
             _SLice_Tracking_UniqID += 1
             ids.append(_SLice_Tracking_UniqID)
