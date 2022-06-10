@@ -1,12 +1,14 @@
 from collections.abc import Iterator, Sequence
-from typing import Tuple, Callable, Collection
+from typing import Tuple, Callable, Collection, Any
 
-import algs
+import config
 from _solver.base_solver import SolverElement, ISolver
 from _solver.common_op import CommonOp
+from algs import algs
 from algs.algs import Algs
 from app_exceptions import InternalSWError
-from model.cube_boy import CubeLayout
+from model.cube import Cube
+from model.cube_boy import CubeLayout, Color
 from model.cube_face import Face
 from model.cube_queries import CubeQueries, Pred
 from model.elements import FaceName, Color, CenterSlice
@@ -20,6 +22,11 @@ _status = None
 
 FaceTracker = Callable[[], Face]
 
+IS_FIRST = "is_first"
+TWO_LAST = "two last"
+
+_tracer_unique_id: int = 0
+
 
 class FaceLoc:
 
@@ -27,6 +34,7 @@ class FaceLoc:
         super().__init__()
         self._tracker = tracker
         self._color = color
+        self._attributes: dict[Any, Any] = {}
 
     @property
     def face(self):
@@ -36,11 +44,17 @@ class FaceLoc:
     def color(self):
         return self._color
 
+    def set_attribute(self, att: Any):
+        self._attributes[att] = att
+
+    def has_attribute(self, att: Any):
+        return att in self._attributes
+
 
 class NxNCenters(SolverElement):
     work_on_b: bool = True
 
-    D_LEVEL = 1
+    D_LEVEL = 3
 
     def __init__(self, slv: ISolver) -> None:
         super().__init__(slv)
@@ -71,6 +85,8 @@ class NxNCenters(SolverElement):
 
         f1: FaceLoc = self._track_no_1()
 
+        f1.set_attribute(IS_FIRST)
+
         f2 = self._track_opposite(f1)
 
         self._do_faces([f1, f2])
@@ -90,6 +106,9 @@ class NxNCenters(SolverElement):
         self._do_faces([f5, f6])
         assert f5.face.center.is3x3
         assert f6.face.center.is3x3
+
+        f5.set_attribute(TWO_LAST)
+        f6.set_attribute(TWO_LAST)
 
         assert self._is_solved()
 
@@ -206,7 +225,7 @@ class NxNCenters(SolverElement):
         self.debug(f"Need to work on {face_loc.face}",
                    level=1)
 
-        work_done = self.__do_center(face_loc.face, face_loc.color)
+        work_done = self.__do_center(face_loc)
 
         self.debug(f"After working on {face_loc.face} {work_done=}, "
                    f"solved={self._is_face_solved(face_loc.face, face_loc.color)}",
@@ -243,7 +262,14 @@ class NxNCenters(SolverElement):
         # Why can't we track by slice index ? because when moving from face to face
         #  index may be changed
         _slice = f.center.get_center_slice(rc)
-        key = "track:" + str(_slice.color)
+        return self._trace_face_by_slice(_slice)
+
+    def _trace_face_by_slice(self, _slice) -> FaceLoc:
+
+        global _tracer_unique_id
+        _tracer_unique_id += 1
+
+        key = "track:" + str(_slice.color) + str(_tracer_unique_id)
         _slice.edge.c_attributes[key] = True
 
         def _slice_pred(s: CenterSlice):
@@ -253,17 +279,34 @@ class NxNCenters(SolverElement):
             return CubeQueries.find_slice_in_face_center(_f, _slice_pred) is not None
 
         color = _slice.color
-
         return self._track_face(color, _face_pred)
 
-    def __do_center(self, face: Face, color: Color) -> bool:
+    def _trace_face_by_slice_color(self, face: Face, color: Color):
+        """
+        Find slice on face and trace it
+        :param face:
+        :param color:
+        :return:
+        """
+
+        _slice = CubeQueries.find_slice_in_face_center(face, lambda s: s.color == color)
+        assert _slice
+
+        return self._trace_face_by_slice(_slice)
+
+    def __do_center(self, face_loc: FaceLoc) -> bool:
 
         """
 
         :param face:
         :param color:
         :return: if nay work was done
+
+
         """
+
+        face: Face = face_loc.face
+        color: Color = face_loc.color
 
         if self._is_face_solved(face, color):
             self.debug(f"Face is already done {face}",
@@ -275,11 +318,22 @@ class NxNCenters(SolverElement):
         self.debug(f"Working on face {face}",
                    level=1)
 
-        cmn.bring_face_front(face)
-
         cube = self.cube
 
+        nn = face.n_slices
+        if nn % 2 and config.OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
+            ok_on_this = self.count_color_on_face(face, color)
+            if not (ok_on_this > nn * nn / 2):
+                other = CubeQueries.is_face(cube, lambda f: self.count_color_on_face(f, color) > ok_on_this)
+                if other:
+                    self._optimize_by_moving_centres(face_loc, other)
+
+                    if face_loc.face.is3x3:
+                        return True
+
         # we loop bringing all adjusted faces up
+        cmn.bring_face_front(face_loc.face)
+        # from here face is no longer valid
 
         work_done = False
 
@@ -310,6 +364,119 @@ class NxNCenters(SolverElement):
                 work_done = True
 
         return work_done
+
+    def _optimize_by_moving_centres(self, face_loc: FaceLoc, other: Face):
+
+        """
+        We reach here becuase we neet to do face_loc, but most of its pieces or on other
+        :param cmn:
+        :param color:
+        :param cube:
+        :param face_loc:
+        :param nn:
+        :param other:
+        :return:
+        """
+
+        color: Color = face_loc.color
+        cube: Cube = self.cube
+        nn: int = cube.n_slices
+        cmn = self.cmn
+
+        other_tracer = self._trace_face_by_slice_color(other, color)
+
+        self.debug(f"Found most of {face_loc.face} color {color} on {other_tracer.face}")
+
+        # we want to bring the other to front
+
+        # [2:2]E [2:2]M [2:2]E' [2:2]M'
+        #   back -> up, up -> right, right->front
+        mid = 1 + nn // 2
+        _center_move_alg = Algs.E[mid] + Algs.M[mid] + Algs.E[mid].prime + Algs.M[mid].prime
+
+        self.debug(f"Bringing center piece {color} from {face_loc.face} into {other_tracer.face}")
+
+        others_un_resolved = [f for f in set(cube.faces) - {face_loc.face} - {face_loc.face.opposite} if
+                              not f.is3x3]
+        self.debug(f"Found others unsolved {others_un_resolved}")
+
+        op = self.op
+        if len(others_un_resolved) >= 4:
+
+            self.debug("Bringing without preserving any face")
+
+            cmn.bring_face_front(other_tracer.face)
+            assert other_tracer.face is cube.front
+
+            self.debug(f"Out face is now on {face_loc.face}")
+
+            if cube.back is not face_loc.face:
+                self._bring_face_up_preserve_front(face_loc.face)
+                # todo: optimize it, find alg to bring face from up to front, it should be easy
+                op.op(Algs.B[1:nn + 1])
+                # now other is on right
+                op.op(_center_move_alg)
+            else:
+                # it is on back
+                # todo: Optimize !!!
+                self.debug("Switching back/front up/down not affecting left/right centers")
+
+                # this algorith switch front<->back up<->sown
+                op.op(Algs.Y)
+
+                # now these 3 switch right and left
+                op.op(_center_move_alg)
+                op.op(Algs.Y)
+                op.op(_center_move_alg)
+
+                # so no it switches front/back
+                op.op(Algs.Y.prime)
+
+        elif len(others_un_resolved) >= 2:
+
+            self.debug("Bringing , but need to preserve two")
+
+            if other_tracer.face is face_loc.face.opposite:
+                self.debug(f"Face {face_loc.face} is opposite of  {other_tracer.face}")
+
+                cmn.bring_face_front(other_tracer.face)
+                assert other_tracer.face is cube.front
+                self.debug(f"Now {other_tracer.face} on front, center piece {color} is  on {face_loc.face}")
+
+                # we are going to switch front and back, not affecting left/right
+                # sw we must be sure up/down are not solved
+
+                if not cube.right.is3x3:
+                    # moving up to right, making sure not to harm it
+                    op.op(Algs.Z)
+
+                assert not cube.up.is3x3 and not cube.down.is3x3
+
+                op.op(Algs.Y)
+
+                # now these 3 switch right and left
+                op.op(_center_move_alg)
+                op.op(Algs.Y)
+                op.op(_center_move_alg)
+
+                # so no it switches front/back
+                op.op(Algs.Y.prime)
+
+                # self.debug(f"Inspect cube now, {face_loc.face} should be on front with color {color}")
+                # op.op(Algs.Y + Algs.Y.prime)
+            else:
+                # to reproduce: simply [mid]E
+                # two others are unsolved, so in total we have 4 (me my opposite) + two others
+                cmn.bring_face_front(other_tracer.face)
+                assert other_tracer.face is cube.front
+
+                self._bring_face_up_preserve_front(face_loc.face)
+                assert face_loc.face is cube.up
+
+                # noy we need to bring up centerpiece into front preserving left and right
+                # we can destroy back and down
+                #   back -> up, up -> right, right->front
+                assert False
 
     def _do_center_from_face(self, face: Face, color: Color, source_face: Face) -> bool:
 
@@ -496,8 +663,8 @@ class NxNCenters(SolverElement):
         if face.name == FaceName.U:
             return
 
-        if face.name == FaceName.B:
-            raise InternalSWError(f"{face.name} is not supported")
+        if face.name == FaceName.B or face.name == FaceName.F:
+            raise InternalSWError(f"{face.name} is not supported, can't bring them to up preserving front")
 
         self.debug(f"Need to bring {face} to up")
 

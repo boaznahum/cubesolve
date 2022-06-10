@@ -16,13 +16,15 @@ from model.cube_boy import FaceName
 from model.elements import PartSlice
 from viewer.viewer_g import GCubeViewer
 
+
 def op_and_play_animation(window: AbstractWindow, operator: Operator, inv: bool, alg: algs.SimpleAlg):
     _op_and_play_animation(window,
-                                           window.app.cube,
-                                           window.viewer,
-                                           window.app.vs,
-                                           operator,
-                                           inv, alg)
+                           window.app.cube,
+                           window.viewer,
+                           window.app.vs,
+                           operator,
+                           inv, alg)
+
 
 def _create_animation(cube: Cube, viewer: GCubeViewer, vs: AppState, alg: algs.AnimationAbleAlg, n_count) -> Animation:
     rotate_face: FaceName
@@ -169,7 +171,7 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: AppState, alg: algs.A
 
 
 def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewer, vs: AppState, operator: Operator,
-                          inv: bool, alg: algs.SimpleAlg):
+                           inv: bool, alg: algs.SimpleAlg):
     """
     This must be called only from operator
     :param viewer:
@@ -218,6 +220,31 @@ def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeView
         operator.op(alg, False, animation=False)
         return
 
+    clock: pyglet.clock.Clock = event_loop.clock
+
+    # single step mode ?
+    if vs.single_step_mode:
+
+        vs.paused_on_single_step_mode = alg
+
+        def _update_gui(_):
+            window.update_gui_elements()
+            platform_event_loop.notify()
+
+        # TO UPDATE TEXT
+        clock.schedule_once(_update_gui, 0)
+
+        # wait for user press space
+        while not event_loop.has_exit and vs.paused_on_single_step_mode:
+            timeout = event_loop.idle()  # this will trigger on_draw
+            platform_event_loop.step(timeout)
+
+    # but still useful for SS mode
+    if alg.n % 4 == 0:
+        print(f"{alg} is zero rotating, can't animate")
+        operator.op(alg, False, animation=False)
+        return
+
     animation: Animation = _create_animation(cube, viewer, vs, alg, alg.n)
     delay: float = animation.delay
 
@@ -228,7 +255,6 @@ def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeView
         animation.update_gui_elements()
         platform_event_loop.notify()
 
-    clock: pyglet.clock.Clock = event_loop.clock
     clock.schedule_interval(_update, delay)
 
     # copied from EventLoop#run

@@ -83,10 +83,13 @@ class AppState:
         self._alpha_delta = 0.1
 
         self._draw_shadows = ""  # "LDB"
-        self.cube_size = 5
+        self.cube_size = 9
 
         self.slice_start: int = 0
         self.slice_stop: int = 0
+
+        self.single_step_mode = False
+        self.paused_on_single_step_mode: algs.Alg | None = None
 
     def reset(self):
         self._alpha_x: float = 0

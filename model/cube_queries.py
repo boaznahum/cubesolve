@@ -16,12 +16,22 @@ Pred = Callable[[T], bool]
 class CubeQueries:
 
     @staticmethod
-    def find_face(cube: Cube, pred: Pred[Face]) -> Face:
+    def is_face(cube: Cube, pred: Pred[Face]) -> Face | None:
 
         s: PartSlice
         for f in cube.faces:
             if pred(f):
                 return f
+
+        raise InternalSWError(f"Can't find face with pred {pred}")
+
+    @staticmethod
+    def find_face(cube: Cube, pred: Pred[Face]) -> Face:
+
+        face = CubeQueries.is_face(cube, pred)
+
+        if face:
+            return face
 
         raise InternalSWError(f"Can't find face with pred {pred}")
 

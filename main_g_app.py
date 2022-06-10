@@ -46,7 +46,7 @@ class App(AbstractApp):
 
         self._cube = Cube(self.vs.cube_size)
 
-        self._op: Operator = Operator(self.cube, config.animation_enabled)
+        self._op: Operator = Operator(self.cube, self._vs, config.animation_enabled)
 
         self._slv: Solver = Solver(self.op)
 

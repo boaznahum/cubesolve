@@ -55,7 +55,7 @@ class Window(AbstractWindow):
 
         self._last_edge_solve_count = 0
 
-        # todo: stil don't know what to do with this patch
+        # todo: still don't know what to do without this patch
         self.app.op._animation_hook = lambda op, alg: main_g_animation.op_and_play_animation(self, op, False, alg)
 
         self.update_gui_elements()
@@ -85,7 +85,7 @@ class Window(AbstractWindow):
 
         cube = self.app.cube
 
-        app_vs: AppState = self.app.vs
+        vs: AppState = self.app.vs
 
         y = 10
 
@@ -130,15 +130,17 @@ class Window(AbstractWindow):
                                            x=10, y=y, font_size=10, color=(255, 0, 0, 255), bold=True))
         y += 20
 
-
         # ---------------------------------------
 
-        def _b(b: bool): return "On" if b else "Off"
+        def _b(b: bool):
+            return "On" if b else "Off"
 
         s = f"Animation:{_b(self.app.op.animation_enabled)}"
-        s += ", [" + str(app_vs.get_speed_index) + "] " + app_vs.get_speed.get_speed()
+        s += ", [" + str(vs.get_speed_index) + "] " + vs.get_speed.get_speed()
         s += ", Sanity check:" + _b(config.CHECK_CUBE_SANITY)
         s += ", Debug=" + _b(self.app.slv.is_debug_config_mode)
+        s += ", SS Mode:" + _b(vs.single_step_mode)
+
         self.text.append(pyglet.text.Label(s,
                                            x=10, y=y, font_size=10, color=(255, 255, 0, 255), bold=True))
         y += 20
@@ -148,7 +150,6 @@ class Window(AbstractWindow):
         s = f"S={cube.size}, Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
 
         s += ", Slices"
-        vs = app_vs
         s += "  [" + str(vs.slice_start) + ", " + str(vs.slice_stop) + "]"
 
         s += ", " + str(vs.slice_alg(cube, Algs.R))
@@ -158,6 +159,12 @@ class Window(AbstractWindow):
                                            x=10, y=y, font_size=10, color=(0, 255, 0, 255), bold=True))
         y += 20
 
+        s = ""
+        if vs.paused_on_single_step_mode:
+            s = f"PAUSED: {vs.paused_on_single_step_mode}. press space"
+
+        self.text.append(pyglet.text.Label(s, x=10, y=y, font_size=15, color=(0, 255, 0, 255), bold=True))
+        y += 20
 
     def on_draw(self):
         # print("Updating")
@@ -321,8 +328,6 @@ class Window(AbstractWindow):
 
 
 # noinspection PyPep8Naming
-
-
 
 
 def main():

@@ -1,18 +1,22 @@
 import functools
 from collections.abc import MutableSequence, Sequence, Iterable
 from contextlib import contextmanager
-from typing import Callable, Any
+from typing import Callable, Any, List
 
 from algs.algs import Alg, SimpleAlg
 from app_exceptions import OpAborted
+from app_state import AppState
 from model.cube import Cube
 
 
 class Operator:
     __slots__ = ["_cube", "_history", "_animation_hook", "_animation_running",
-                 "_aborted", "_animation_enabled"]
+                 "_aborted", "_animation_enabled",
+                 "_app_state"]
 
-    def __init__(self, cube: Cube, animation_enabled: bool = False) -> None:
+    def __init__(self, cube: Cube,
+                app_state: AppState,     #PATCH PATCH, operator should hold SS mode
+                 animation_enabled: bool = False) -> None:
         super().__init__()
         self._aborted: Any = None
         self._cube = cube
@@ -20,6 +24,7 @@ class Operator:
         self._animation_hook: Callable[["Operator", SimpleAlg], None] | None = None
         self._animation_running = False
         self._animation_enabled: bool = animation_enabled
+        self._app_state = app_state
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
@@ -49,9 +54,12 @@ class Operator:
                 if inv:
                     alg = alg.inv()
 
-                algs: Iterable[SimpleAlg] = alg.flatten()
+                # todo: Patch - move singlestep mode into operator
+                algs: list[SimpleAlg] = [ * alg.flatten() ]
 
-                algs = [*algs]  # for debug only
+                if self._app_state.single_step_mode:
+                    print(f"In SS mode: going to run: {' '.join([ str(a) for a in algs ])}")
+
                 for a in algs:
                     an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
                     if self._aborted:

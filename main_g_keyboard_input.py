@@ -28,6 +28,15 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
     def handle_in_both_modes():
         match value:
+
+            case key.SPACE:
+                if modifiers & key.MOD_CTRL:
+                    vs.single_step_mode = not vs.single_step_mode
+                else:
+                    vs.paused_on_single_step_mode = None
+
+                return True
+
             case key.NUM_ADD:
                 vs.inc_speed()
                 return True
@@ -72,6 +81,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     if not handle_in_both_modes():
 
         match value:
+
 
             case key.I:
                 print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
@@ -138,8 +148,20 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     if vs.slice_stop > app.cube.size:
                         vs.slice_stop = app.cube.size
 
-            # case key.P:
-            #     op_and_play_animation(window, _last_face)
+            case key.A:
+
+                nn = slv.cube.n_slices
+
+                mid = 1 + nn // 2
+                _center_move_alg = Algs.E[mid] + Algs.M[mid] + Algs.E[mid].prime + Algs.M[mid].prime
+
+                op.op(_center_move_alg, inv)
+
+                if modifiers & key.MOD_CTRL:
+
+                    op.op(Algs.Y)
+
+                    op.op(_center_move_alg, inv)
 
             case key.R:
                 # _last_face = FaceName.R

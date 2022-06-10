@@ -1,16 +1,9 @@
-# BUG CORNER SWAP -Scramble 4, size 8
+Generalize slice walking and use in communicator
 
-When quiting in middle of solver, it fails due to unxepcted state.
-  Need some how to throw ApplicationStopped exception
-
-
-
-Generalize slice walking use in communicator
-Optimize movements in centers
-
-Fix scramble also to invertת  and multiple and generate sub lists
+Feature: Fix scramble also to invert and multiple and generate sub lists
 
 # try to optimize, work less on B
 
-Bug, solver count on scramble is not reproducible, is alg is ? -yes, see test test_scramble_repeatable.py
-  the problem is probably in solver, need to check if some queries/serach are in set, sol order os changes
+# On odd big cueb, still don't know to handle the case to switch centres FU slice without touching the left/right
+
+#BUG: Single step mode, screen is not refreshed when waiting. What I'm doing wrong ?

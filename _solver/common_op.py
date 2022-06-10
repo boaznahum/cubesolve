@@ -92,7 +92,7 @@ class CommonOp(ICommon):
 
         if f.name != FaceName.U:
 
-            self.debug("Need to Binging ", f, 'to', FaceName.U)
+            self.debug("Need to bring ", f, 'to', FaceName.U)
 
             match f.name:
 
@@ -121,7 +121,7 @@ class CommonOp(ICommon):
 
         if f.name != FaceName.F:
 
-            self.debug("Need to Binging ", f, 'to', FaceName.F)
+            self.debug("Need to bring ", f, 'to', FaceName.F)
 
             match f.name:
 
