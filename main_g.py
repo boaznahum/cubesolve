@@ -1,4 +1,3 @@
-import math
 import traceback
 from typing import MutableSequence
 
@@ -10,7 +9,7 @@ from pyglet.window import key  # type: ignore
 import config
 import main_g_animation
 import main_g_keyboard_input
-import main_g_mouse_click
+import main_g_mouse
 from algs.algs import Algs
 from app_exceptions import AppExit, RunStop, OpAborted
 from app_state import AppState
@@ -222,21 +221,11 @@ class Window(AbstractWindow):
             self.update_gui_elements()  # to create error label
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        # print(f"{dx=}, {dy=}")
-        # https://stackoverflow.com/questions/59823131/how-to-rotate-a-cube-using-mouse-in-pyopengl
-        # if event.type == pygame.MOUSEMOTION:
-        #                 if button_down == True:
-        #                     glRotatef(event.rel[1], 1, 0, 0)
-        #                     glRotatef(event.rel[0], 0, 1, 0)
-        #                 print(event.rel)
-        if not modifiers & key.MOD_SHIFT:
-            # still don't know to distinguish between ad drag and simple press
-            self.app.vs.alpha_x += math.radians(-dy)
-            self.app.vs.alpha_y += math.radians(dx)
+        return main_g_mouse.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
 
     def on_mouse_press(self, x, y, button, modifiers):
         if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
-            return main_g_mouse_click.on_mouse_press(self, self.app.vs, self.app.op, self.viewer, x, y, modifiers)
+            return main_g_mouse.on_mouse_press(self, self.app.vs, self.app.op, self.viewer, x, y, modifiers)
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)
