@@ -6,4 +6,4 @@ Cube 15x15
  before improvement:
    .board_update   0.0654548
 
- create geometry only once reduce it to -> 0.0499305
+ create geometry only once reduce it to -> 0.0499305  - 24%
