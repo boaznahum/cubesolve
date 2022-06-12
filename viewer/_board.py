@@ -301,14 +301,6 @@ class _Board:
 
         return lists
 
-    def _get_all_facets_rectangles(self) -> Iterator[Tuple[PartEdge, Sequence[ndarray]]]:
-
-        f: _FaceBoard
-        for f in self._faces:
-            c: _Cell
-            for c in f.cells:
-                for e, r in c.facets.items():
-                    yield e, r
 
     def find_facet(self, x: float, y: float, z: float) -> PartEdge | None:
         # print(x, y, z)
