@@ -45,14 +45,14 @@ class _FaceBoard:
         self.left_top_direction: ndarray = left_top_direction
         self._ortho_direction: ndarray = ortho_direction
 
-        self._cells: dict[PartFixedID, _Cell] = {}
+        self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, self._batch) for p in
+                                                 self.cube_face_supplier().parts}
 
-        self.reset()
 
-    def reset(self):
+    def release_resources(self):
 
         """
-        Release cells resources and recreate them
+        Release cells resources
         :return:
         """
 
@@ -63,17 +63,19 @@ class _FaceBoard:
         self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, self._batch) for p in
                                                  self.cube_face_supplier().parts}
 
+
+
     @property
     def cube_face(self) -> Face:
         return self.cube_face_supplier()
 
     # noinspection PyUnusedLocal
 
-    def draw_init(self):
+    def prepare_gui_geometry(self):
 
         f: Face = self.cube_face
 
-        def _plot_cell(cy: int, cx: int, part: Part):
+        def _create_cell(cy: int, cx: int, part: Part):
 
             left_bottom3, left_top3, right_bottom3, right_top3 = self._calc_cell_quad_coords(part, cx, cy)
 
@@ -87,23 +89,24 @@ class _FaceBoard:
             # for i in range(len(l_box)):
             #     l_box[i] = [c_float(l_box[i][0]), c_float(l_box[i][1]), c_float(l_box[i][2])]
 
-            _marker = ""
-            if part.annotated_by_color:
-                _marker = "M"
-            elif part.annotated_fixed:
-                _marker = "F"
 
-            self._cells[part.fixed_id].create_objects(part, l_box, _marker)
+            self._cells[part.fixed_id].prepare_geometry(part, l_box)
 
-        _plot_cell(2, 0, f.corner_top_left)
-        _plot_cell(2, 1, f.edge_top)
-        _plot_cell(2, 2, f.corner_top_right)
-        _plot_cell(1, 0, f.edge_left)
-        _plot_cell(1, 1, f.center)
-        _plot_cell(1, 2, f.edge_right)
-        _plot_cell(0, 0, f.corner_bottom_left)
-        _plot_cell(0, 1, f.edge_bottom)
-        _plot_cell(0, 2, f.corner_bottom_right)
+        _create_cell(2, 0, f.corner_top_left)
+        _create_cell(2, 1, f.edge_top)
+        _create_cell(2, 2, f.corner_top_right)
+        _create_cell(1, 0, f.edge_left)
+        _create_cell(1, 1, f.center)
+        _create_cell(1, 2, f.edge_right)
+        _create_cell(0, 0, f.corner_bottom_left)
+        _create_cell(0, 1, f.edge_bottom)
+        _create_cell(0, 2, f.corner_bottom_right)
+
+    def update(self):
+        c: _Cell
+        for c in self._cells.values():
+            c.update_drawing()
+
 
     def _calc_cell_quad_coords(self, part: Part, cx, cy):
 
@@ -179,17 +182,11 @@ class _FaceBoard:
 
         return left_bottom3, left_top3, right_bottom3, right_top3
 
-    def update(self):
-        self.draw_init()
 
     @property
     def cells(self) -> Iterable[_Cell]:
         return self._cells.values()
 
-    def draw(self):
-        # need to optimize, no need to change position
-        for c in self.cells:
-            c.draw()
 
     @property
     def board(self):

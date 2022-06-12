@@ -1,11 +1,9 @@
-test_perf.py
 
-09-06-2022
 
- <module>	1	48124	0
 
- copy_colors	1979744	11511	4696
- get_face_edge	6248737	2938	2270
- clone	1870698	5109	1921
- copy_color	3443992	2877	1829
- <method 'copy' of 'collections.defaultdict' objects>	4963316	1828	1828
+viewer
+Cube 15x15
+ before improvement:
+   .board_update   0.0654548
+
+ create geometry only once reduce it to -> 0.0499305

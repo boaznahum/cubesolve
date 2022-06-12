@@ -51,6 +51,11 @@ def _color_2_v_color(c: Color) -> _VColor:
     return _colors[c]
 
 
+class _RectGeometry:
+    two_d_draw_rect: Sequence[ndarray]  # [left_bottom, right_bottom, right_top, left_top]
+    three_d_search_box: Tuple[Sequence[ndarray], Sequence[ndarray]]
+
+
 # noinspection PyMethodMayBeStatic
 class _Cell:
 
@@ -71,7 +76,7 @@ class _Cell:
 
         # the boxes of the part PartEdge
         #  # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
-        self.facets: dict[PartEdge, Sequence[ndarray]] = {}
+        self.facets: dict[PartEdge, _RectGeometry] = {}
 
     def _clear_gl_lists(self):
         # delete and clear all lists
@@ -90,7 +95,7 @@ class _Cell:
         self.facets.clear()
 
     # noinspection PyUnusedLocal
-    def create_objects(self, part: Part, vertexes: Sequence[ndarray], marker: str):
+    def prepare_geometry(self, part: Part, vertexes: Sequence[ndarray]):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
@@ -103,43 +108,20 @@ class _Cell:
         self._clear_gl_lists()
         self.facets.clear()
 
+        self._part: Part = part
+
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
         self._create_polygon(self.gl_lists_movable, part, vertexes)
 
-    def draw(self):
+    def update_drawing(self):
 
-        # self.gl_lists_movable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
-        m: dict[frozenset[FaceName], MutableSequence[int]]
-        lists: Sequence[int] = [ll for m in [self.gl_lists_movable, self.gl_lists_unmovable]
-                                for ls in m.values() for ll in ls]
+        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
-        if not lists:
-            print(f"Error no gl lists in {self}", file=sys.stderr)
-            return
+        # delete and clear all lists
+        self._clear_gl_lists()
 
-        hidden = self._face_board.board.get_hidden()
-
-        if all(ll in hidden for ll in lists):
-            return
-
-        self._prepare_view_state()
-        for ll in lists:
-            if ll not in hidden:
-                gl.glCallList(ll)
-
-        # vs: ViewState = self._face_board.board.vs
-        #
-        # # [left_bottom, right_bottom, right_top, left_top]
-        # tx = vs.tx
-        # ty = vs.ty
-        # tz = vs.tz
-        # p0 = np.array([tx, ty, tz])
-        # lx = np.array([1.0, 0.0, 0.0]) * 10
-        # ly = np.array([0.0, 1.0, 0.0]) * 10
-        #
-        # shapes.quad_with_line( [p0, p0 + lx, p0 + lx + ly , p0 + ly],(0, 0, 0), 10, (255, 0, 0))
-
-        self._restore_view_state()
+        # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
+        self._update_polygon(self.gl_lists_movable)
 
     def get_all_gui_elements(self, dest: set[int]):
         m: dict[frozenset[FaceName], MutableSequence[int]]
@@ -181,14 +163,23 @@ class _Cell:
 
             dest[p_slice.fixed_id].append(g_list)
 
-    def _get_slice_edge(self, _slice):
+    def _get_slice_edge(self, _slice) -> PartEdge:
         face = self._face_board.cube_face
         edge = _slice.get_face_edge(face)
         return edge
 
+    # to do remove - use edge color
     def _slice_color(self, _slice: PartSlice):
 
         edge = self._get_slice_edge(_slice)
+
+        c: Color = edge.color
+
+        slice_color = _color_2_v_color(c)
+
+        return slice_color
+
+    def _edge_color(self, edge: PartEdge):
 
         c: Color = edge.color
 
@@ -203,14 +194,8 @@ class _Cell:
 
         # vertex = [left_bottom, right_bottom, right_top, left_top]
 
-        lc = (0, 0, 0)
-        lw = 4
-        cross_width = 5
-        cross_width_x = 8
-        cross_width_y = 2
-        cross_color = (0, 0, 0)
-        cross_color_x = (138, 43, 226)  # blueviolet	#8A2BE2	rgb(138,43,226)
-        cross_color_y = (0, 191, 255)  # deepskyblue	#00BFFF	rgb(0,191,255)
+        # xlc = (0, 0, 0)
+        # lxw = 4
 
         from ._faceboard import _FaceBoard
         fb: _FaceBoard = self._face_board
@@ -220,19 +205,12 @@ class _Cell:
 
             corner_slice = part.slice
             with self._gen_list_for_slice(corner_slice, g_list_dest):
-                shapes.quad_with_line(vertexes,
-                                      self._slice_color(corner_slice),
-                                      lw, lc)
 
-                self.facets[self._get_slice_edge(corner_slice)] = vertexes
+                crg: _RectGeometry = _RectGeometry()
+                crg.two_d_draw_rect = vertexes
 
-                if config.GUI_DRAW_MARKERS:
-                    if cube_face.corner_bottom_left is part:
-                        shapes.cross(vertexes, cross_width, cross_color)
-                    elif cube_face.corner_bottom_right is part:
-                        shapes.cross(vertexes, cross_width_x, cross_color_x)
-                    if cube_face.corner_top_left is part:
-                        shapes.cross(vertexes, cross_width_y, cross_color_y)
+                self.facets[self._get_slice_edge(corner_slice)] = crg
+
 
 
         elif isinstance(part, Edge):
@@ -256,7 +234,6 @@ class _Cell:
                 ix = i
 
                 _slice: EdgeSlice = part.get_slice_by_ltr_index(cube_face, ix)
-                color = self._slice_color(_slice)
                 with self._gen_list_for_slice(_slice, g_list_dest):
 
                     # set a rect and advanced to the next one
@@ -278,22 +255,11 @@ class _Cell:
                         left_bottom = left_bottom + d
                         left_top = left_top + d
 
-                    self.facets[self._get_slice_edge(_slice)] = vx
+                    erg: _RectGeometry = _RectGeometry()
+                    erg.two_d_draw_rect = vx
 
-                    shapes.quad_with_line(vx, color, lw, lc)
+                    self.facets[self._get_slice_edge(_slice)] = erg
 
-                    if config.GUI_DRAW_MARKERS:
-                        nn = _slice.get_face_edge(cube_face).c_attributes["n"]
-                        shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
-                    # if _slice.get_face_edge(cube_face).attributes["origin"]:
-                    #     shapes.cross(vx, cross_width, cross_color)
-                    # if _slice.get_face_edge(cube_face).attributes["on_x"]:
-                    #     shapes.cross(vx, cross_width_x, cross_color_x)
-                    # if _slice.get_face_edge(cube_face).attributes["on_y"]:
-                    #     shapes.cross(vx, cross_width_y, cross_color_y)
-
-                    if self._get_slice_edge(_slice).c_attributes["annotation"]:
-                        self._create_markers(vx, color, (0, 0, 0), True)
 
 
 
@@ -309,7 +275,6 @@ class _Cell:
             dy = (lt - lb) / n
             for x in range(n):
                 for y in range(n):
-
                     ix = x
                     iy = y
 
@@ -325,6 +290,112 @@ class _Cell:
                               lb + x * dx + (y + 1) * dy]
 
                         edge = center_slice.get_face_edge(cube_face)
+
+                        center_rg: _RectGeometry = _RectGeometry()
+                        center_rg.two_d_draw_rect = vx
+                        self.facets[edge] = center_rg
+
+    def _update_polygon(self, g_list_dest: dict[PartSliceHashID, MutableSequence[int]]):
+
+        # vertex = [left_bottom, right_bottom, right_top, left_top]
+
+        lc = (0, 0, 0)
+        lw = 4
+        cross_width = 5
+        cross_width_x = 8
+        cross_width_y = 2
+        cross_color = (0, 0, 0)
+        cross_color_x = (138, 43, 226)  # blueviolet	#8A2BE2	rgb(138,43,226)
+        cross_color_y = (0, 191, 255)  # deepskyblue	#00BFFF	rgb(0,191,255)
+
+        from ._faceboard import _FaceBoard
+        fb: _FaceBoard = self._face_board
+        cube_face: Face = fb.cube_face
+
+        part: Part = self._part
+
+        _marker = ""
+        if part.annotated_by_color:
+            _marker = "M"
+        elif part.annotated_fixed:
+            _marker = "F"
+
+        n: int = part.n_slices
+
+        if isinstance(part, Corner):
+
+            corner_slice = part.slice
+            with self._gen_list_for_slice(corner_slice, g_list_dest):
+                edge = self._get_slice_edge(corner_slice)
+
+                vertexes = self.facets[edge].two_d_draw_rect
+
+                shapes.quad_with_line(vertexes,
+                                      self._slice_color(corner_slice),
+                                      lw, lc)
+
+                if config.GUI_DRAW_MARKERS:
+                    if cube_face.corner_bottom_left is part:
+                        shapes.cross(vertexes, cross_width, cross_color)
+                    elif cube_face.corner_bottom_right is part:
+                        shapes.cross(vertexes, cross_width_x, cross_color_x)
+                    if cube_face.corner_top_left is part:
+                        shapes.cross(vertexes, cross_width_y, cross_color_y)
+
+
+        elif isinstance(part, Edge):
+            # shapes.quad_with_line(vertexes, color, lw, lc)
+
+            nn: int
+
+            for i in range(n):
+                ix = i
+
+                _slice: EdgeSlice = part.get_slice_by_ltr_index(cube_face, ix)
+                color = self._slice_color(_slice)
+                edge = self._get_slice_edge(_slice)
+                vx = self.facets[edge].two_d_draw_rect
+
+                with self._gen_list_for_slice(_slice, g_list_dest):
+
+                    shapes.quad_with_line(vx, color, lw, lc)
+
+                    if config.GUI_DRAW_MARKERS:
+                        nn = _slice.get_face_edge(cube_face).c_attributes["n"]
+                        shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
+                    # if _slice.get_face_edge(cube_face).attributes["origin"]:
+                    #     shapes.cross(vx, cross_width, cross_color)
+                    # if _slice.get_face_edge(cube_face).attributes["on_x"]:
+                    #     shapes.cross(vx, cross_width_x, cross_color_x)
+                    # if _slice.get_face_edge(cube_face).attributes["on_y"]:
+                    #     shapes.cross(vx, cross_width_y, cross_color_y)
+
+                    if edge.c_attributes["annotation"]:
+                        self._create_markers(vx, color, (0, 0, 0), True)
+
+
+
+        else:
+            assert isinstance(part, Center)
+            # shapes.quad_with_line(vertexes, color, 4, (0, 0, 1))
+            n = part.n_slices
+
+            for x in range(n):
+                for y in range(n):
+
+                    ix = x
+                    iy = y
+
+                    # ix = _inv(ix, is_back)
+
+                    center_slice: CenterSlice = part.get_slice((iy, ix))
+                    edge = center_slice.get_face_edge(cube_face)
+
+                    vx = self.facets[edge].two_d_draw_rect
+
+                    color = self._edge_color(edge)
+                    with self._gen_list_for_slice(center_slice, g_list_dest):
+
                         attributes = edge.attributes
                         shapes.quad_with_line(vx, color, lw, lc)
 

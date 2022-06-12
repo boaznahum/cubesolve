@@ -26,11 +26,13 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 #   <reset <--|
 #
 #   reset ---reset------|          -*reset----------|  -----*release_resources    |
-#                                                          --*init----------------|
+#                                                          --*init----------------| basically empty collections
 #
-#                      _init_gui   -*init-----------|
+#                      _create_faces -*init-----------|
 #                                                   empty cell list
-#                                     --draw_init---|   -----*create_objects------|
+#                                   * --draw_init---|   -----*create_objects------|
+#                           collect cells from all faces
+
 #
 #   update  --update----|           -*update--------|-------------------|
 #                                                   <-----draw_init-----|
@@ -67,11 +69,52 @@ class _Board:
 
     def reset(self):
         for f in self._faces:
-            f.reset()
+            f.release_resources()
 
-        self._init_gui()
+        self._faces.clear()
 
-    def _init_gui(self):
+        self._create_faces()
+
+        self.update()
+
+    def update(self):
+
+        start = time.time_ns()
+        try:
+            for face in self._faces:
+                face.update()
+        finally:
+            print(f"Update took {(time.time_ns() - start) / (10 ** 9)}")
+
+    def draw(self):
+        # for face in self._faces:
+        #     face.draw()
+
+        lists: set[int] = set()
+
+        for f in self._faces:
+            f.get_all_gui_elements(lists)
+
+        hidden: Set[int] = self.get_hidden()
+
+        lists -= hidden
+
+        n = len(lists)
+
+        lists_array = (gl.GLint * n)()
+        lists_array[:] = [*lists]
+
+        self._prepare_view_state()
+
+        # https://www.glprogramming.com/red/chapter07.html
+        gl.glCallLists(n, gl.GL_INT, lists_array)
+
+        # for ll in lists:
+        #     gl.glCallList(ll)
+
+        self._restore_view_state()
+
+    def _create_faces(self):
         cube = self._cube
 
         """
@@ -89,34 +132,34 @@ class _Board:
 
         # debug with # s.alpha_x=-0.30000000000000004 s.alpha_y=-0.5 s.alpha_z=0
 
-        self._plot_face(lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1], [0, 1, 0])
+        self._create_face(lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1], [0, 1, 0])
 
-        self._plot_face(lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
+        self._create_face(lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
         if "L" in self._vs.draw_shadows:
             # -0.75 from it x location, so we can see it in isometric view
-            self._plot_face(lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
+            self._create_face(lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
 
-        self._plot_face(lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1])
+        self._create_face(lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1])
 
-        self._plot_face(lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
+        self._create_face(lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
 
-        self._plot_face(lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
+        self._create_face(lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
         if "B" in self._vs.draw_shadows:
             # -2 far away so we can see it
-            self._plot_face(lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
+            self._create_face(lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
 
-        self._plot_face(lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
+        self._create_face(lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
         if "D" in self._vs.draw_shadows:
             # -05 below so we see it
-            self._plot_face(lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
+            self._create_face(lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
 
         self.finish_faces()
 
-    def _plot_face(self, f: Callable[[], Face], left_bottom: list[float],  # 3d
-                   left_right_direction: list[int],  # 3d
-                   left_top_direction: list[int],  # 3d
-                   orthogonal_direction: list[int]
-                   ):
+    def _create_face(self, f: Callable[[], Face], left_bottom: list[float],  # 3d
+                     left_right_direction: list[int],  # 3d
+                     left_top_direction: list[int],  # 3d
+                     orthogonal_direction: list[int]
+                     ):
         """
 
         :param self:
@@ -150,7 +193,7 @@ class _Board:
 
         fb: _FaceBoard = self.create_face(f, f0, _left_right_d, _left_top_d, _ortho)
 
-        fb.draw_init()
+        fb.prepare_gui_geometry()
 
     @property
     def h_size(self) -> int:
@@ -190,43 +233,6 @@ class _Board:
         :return:
         """
         return self._cells[_id]
-
-    def update(self):
-
-        start = time.time_ns()
-        try:
-            for face in self._faces:
-                face.update()
-        finally:
-            print(f"Update took {(time.time_ns() -start)/ (10 ** 9)}")
-
-    def draw(self):
-        # for face in self._faces:
-        #     face.draw()
-
-        lists: set[int] = set()
-
-        for f in self._faces:
-            f.get_all_gui_elements(lists)
-
-        hidden: set[int] = self.get_hidden()
-
-        lists -= hidden
-
-        n = len(lists)
-
-        lists_array = (gl.GLint * n)()
-        lists_array[:] = [*lists]
-
-        self._prepare_view_state()
-
-        # https://www.glprogramming.com/red/chapter07.html
-        gl.glCallLists(n, gl.GL_INT, lists_array)
-
-        # for ll in lists:
-        #     gl.glCallList(ll)
-
-        self._restore_view_state()
 
     def _prepare_view_state(self):
 
@@ -325,7 +331,9 @@ class _Board:
 
             c: _Cell
             for c in f.cells:
-                for e, r in c.facets.items():
+                for e, rg in c.facets.items():
+
+                    r = rg.two_d_draw_rect
 
                     #: param bottom_quad:  [left_bottom, right_bottom, right_top, left_top]
                     # :param top_quad:  [left_bottom, right_bottom, right_top, left_top]
