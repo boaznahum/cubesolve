@@ -1,7 +1,6 @@
-import time
 from collections import defaultdict
-from collections.abc import Set, MutableSequence, Sequence, Iterable, Collection, Iterator
-from typing import Callable, Tuple
+from collections.abc import Set, MutableSequence, Sequence, Iterable, Collection
+from typing import Callable
 
 import numpy as np
 from numpy import ndarray
@@ -81,8 +80,8 @@ class _Board:
 
         # start = time.time_ns()
         # try:
-            for face in self._faces:
-                face.update()
+        for face in self._faces:
+            face.update()
 
     # finally:
     #     print(f"Update took {(time.time_ns() - start) / (10 ** 9)}")
