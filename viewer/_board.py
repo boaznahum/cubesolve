@@ -79,12 +79,13 @@ class _Board:
 
     def update(self):
 
-        start = time.time_ns()
-        try:
+        # start = time.time_ns()
+        # try:
             for face in self._faces:
                 face.update()
-        finally:
-            print(f"Update took {(time.time_ns() - start) / (10 ** 9)}")
+
+    # finally:
+    #     print(f"Update took {(time.time_ns() - start) / (10 ** 9)}")
 
     def draw(self):
         # for face in self._faces:
