@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 from collections.abc import Set, MutableSequence, Sequence, Iterable, Collection, Iterator
 from typing import Callable, Tuple
@@ -8,10 +9,31 @@ from pyglet import gl  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
 from app_state import AppState
+from model.cube import Cube
 from model.cube_face import Face
 from model.elements import PartFixedID, SuperElement, PartSlice, PartEdge
-from ._cell import _Cell
+from ._cell import _Cell, _CELL_SIZE
 from ._faceboard import _FACE_SIZE, _FaceBoard
+
+
+##########################################################################
+# Sequence diagram  (wht a mess !!!!)
+#
+# Viewer              Board                       _Face                        _Cell
+#  init     -->        init
+#                        empty cells list ?
+#   >---------|
+#   <reset <--|
+#
+#   reset ---reset------|          -*reset----------|  -----*release_resources    |
+#                                                          --*init----------------|
+#
+#                      _init_gui   -*init-----------|
+#                                                   empty cell list
+#                                     --draw_init---|   -----*create_objects------|
+#
+#   update  --update----|           -*update--------|-------------------|
+#                                                   <-----draw_init-----|
 
 
 class _Board:
@@ -32,7 +54,7 @@ class _Board:
     _h_size: int = _FACE_SIZE * 3  # L F R
     _v_size: int = _FACE_SIZE * 4  # U F D B
 
-    def __init__(self, batch: Batch, vs: AppState) -> None:
+    def __init__(self, cube: Cube, batch: Batch, vs: AppState) -> None:
         super().__init__()
         self._hidden_objects: Set[int] = set()
         self.batch = batch
@@ -41,10 +63,94 @@ class _Board:
 
         # why sequence, because we can have multiple back faces
         self._cells: dict[PartFixedID, MutableSequence[_Cell]] = dict()
+        self._cube: Cube = cube
 
     def reset(self):
         for f in self._faces:
             f.reset()
+
+        self._init_gui()
+
+    def _init_gui(self):
+        cube = self._cube
+
+        """
+             Face coordinates
+
+                    0  1  2
+                0:     U
+                1:  L  F  R
+                2:     D
+                3:     B
+
+         """
+
+        # we pass a supplier to Face and not a face, because might reset itself
+
+        # debug with # s.alpha_x=-0.30000000000000004 s.alpha_y=-0.5 s.alpha_z=0
+
+        self._plot_face(lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1], [0, 1, 0])
+
+        self._plot_face(lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
+        if "L" in self._vs.draw_shadows:
+            # -0.75 from it x location, so we can see it in isometric view
+            self._plot_face(lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
+
+        self._plot_face(lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1])
+
+        self._plot_face(lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
+
+        self._plot_face(lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
+        if "B" in self._vs.draw_shadows:
+            # -2 far away so we can see it
+            self._plot_face(lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
+
+        self._plot_face(lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
+        if "D" in self._vs.draw_shadows:
+            # -05 below so we see it
+            self._plot_face(lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
+
+        self.finish_faces()
+
+    def _plot_face(self, f: Callable[[], Face], left_bottom: list[float],  # 3d
+                   left_right_direction: list[int],  # 3d
+                   left_top_direction: list[int],  # 3d
+                   orthogonal_direction: list[int]
+                   ):
+        """
+
+        :param self:
+        :param f:
+        :param left_bottom: in units of faces
+        :param left_right_direction:
+        :param left_top_direction:
+        :return:
+        """
+        """
+         0,0 | 0,1 | 0,2
+         ---------------
+         1,0 | 1,1 | 1,2
+         ---------------
+         2,0 | 2,1 | 2,2
+        """
+
+        fy0 = 0  # 480 - 100
+        fx0 = 0  # 10
+        fz0 = 0
+
+        f0: ndarray = np.array([fx0, fy0, fz0], dtype=float).reshape(3, 1)
+        # left_bottom is length=1 vector, we convert it to face size in pixels
+        fs = np.array(left_bottom, dtype=float).reshape(3, 1) * _FACE_SIZE * _CELL_SIZE
+
+        f0 = f0 + fs
+        _left_right_d: ndarray = np.array(left_right_direction, dtype=float).reshape(3, 1)
+        _left_top_d: ndarray = np.array(left_top_direction, dtype=float).reshape(3, 1)
+
+        _ortho: ndarray = np.array(orthogonal_direction, dtype=float).reshape((3,))
+
+        fb: _FaceBoard = self.create_face(f, f0, _left_right_d, _left_top_d, _ortho)
+
+        fb.draw_init()
 
     @property
     def h_size(self) -> int:
@@ -86,8 +192,13 @@ class _Board:
         return self._cells[_id]
 
     def update(self):
-        for face in self._faces:
-            face.update()
+
+        start = time.time_ns()
+        try:
+            for face in self._faces:
+                face.update()
+        finally:
+            print(f"Update took {(time.time_ns() -start)/ (10 ** 9)}")
 
     def draw(self):
         # for face in self._faces:

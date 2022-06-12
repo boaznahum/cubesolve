@@ -22,9 +22,11 @@ from ._cell import _CELL_SIZE
 from ._faceboard import _FACE_SIZE, _FaceBoard
 from ._board import _Board
 
-_parts: dict[Hashable, int] = {}
+# todo: delete ?
+#  _parts: dict[Hashable, int] = {}
 
 
+# todo: delete ?
 def _part_id(p: Part) -> str:
     p_id = p.colors_id_by_color
 
@@ -37,45 +39,6 @@ def _part_id(p: Part) -> str:
     return chr(ord("A") + _id - 1)
 
 
-def _plot_face(b: _Board, f: Callable[[], Face], left_bottom: list[float],  # 3d
-               left_right_direction: list[int],  # 3d
-               left_top_direction: list[int],  # 3d
-               orthogonal_direction: list[int]
-               ):
-    """
-
-    :param b:
-    :param f:
-    :param left_bottom: in units of faces
-    :param left_right_direction:
-    :param left_top_direction:
-    :return:
-    """
-    """
-     0,0 | 0,1 | 0,2
-     ---------------
-     1,0 | 1,1 | 1,2
-     ---------------
-     2,0 | 2,1 | 2,2
-    """
-
-    fy0 = 0  # 480 - 100
-    fx0 = 0  # 10
-    fz0 = 0
-
-    f0: ndarray = np.array([fx0, fy0, fz0], dtype=float).reshape(3, 1)
-    # left_bottom is length=1 vector, we convert it to face size in pixels
-    fs = np.array(left_bottom, dtype=float).reshape(3, 1) * _FACE_SIZE * _CELL_SIZE
-
-    f0 = f0 + fs
-    _left_right_d: ndarray = np.array(left_right_direction, dtype=float).reshape(3, 1)
-    _left_top_d: ndarray = np.array(left_top_direction, dtype=float).reshape(3, 1)
-
-    _ortho: ndarray = np.array(orthogonal_direction, dtype=float).reshape((3,))
-
-    fb: _FaceBoard = b.create_face(f, f0, _left_right_d, _left_top_d, _ortho)
-
-    fb.draw_init()
 
 
 class GCubeViewer:
@@ -90,9 +53,16 @@ class GCubeViewer:
 
         #        self._test = pyglet.shapes.Line(0, 0, 20, 20, width=10, color=(255, 255, 255), batch=batch)
 
-        self._board: _Board = _Board(self._batch, vs)
+        self._board: _Board = _Board(cube, self._batch, vs)
 
-        self._init_gui()
+        self.reset()
+
+    def reset(self):
+        """
+        Called on cube resize
+        :return:
+        """
+        self._board.reset()
 
     def update(self):
         """
@@ -108,55 +78,8 @@ class GCubeViewer:
         """
         self._board.draw()
 
-    def reset(self):
-        """
-        Called on cube resize
-        :return:
-        """
-        self._board.reset()
-        self._init_gui()
 
-    def _init_gui(self):
-        b = self._board
-        cube = self._cube
 
-        """
-             Face coordinates
-
-                    0  1  2
-                0:     U
-                1:  L  F  R
-                2:     D
-                3:     B
-
-         """
-
-        # we pass a supplier to Face and not a face, because might reset itself
-
-        # debug with # s.alpha_x=-0.30000000000000004 s.alpha_y=-0.5 s.alpha_z=0
-
-        _plot_face(b, lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1], [0, 1, 0])
-
-        _plot_face(b, lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
-        if "L" in self._vs.draw_shadows:
-            # -0.75 from it x location, so we can see it in isometric view
-            _plot_face(b, lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
-
-        _plot_face(b, lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1])
-
-        _plot_face(b, lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
-
-        _plot_face(b, lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
-        if "B" in self._vs.draw_shadows:
-            # -2 far away so we can see it
-            _plot_face(b, lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
-
-        _plot_face(b, lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
-        if "D" in self._vs.draw_shadows:
-            # -05 below so we see it
-            _plot_face(b, lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
-
-        self._board.finish_faces()
 
     def _get_face(self, name: FaceName) -> _FaceBoard:
         for f in self._board.faces:

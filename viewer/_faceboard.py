@@ -51,6 +51,11 @@ class _FaceBoard:
 
     def reset(self):
 
+        """
+        Release cells resources and recreate them
+        :return:
+        """
+
         c: _Cell
         for c in self._cells.values():
             c.release_resources()

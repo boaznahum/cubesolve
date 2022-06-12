@@ -26,7 +26,6 @@ _VColor = Tuple[int, int, int]
 if TYPE_CHECKING:
     from ._faceboard import _FaceBoard
 
-
 _inited = False
 
 _colors: dict[Color, _VColor] = {}
@@ -37,7 +36,6 @@ def _color_2_v_color(c: Color) -> _VColor:
     global _colors
 
     if not _inited:
-
         #  https://www.rapidtables.com/web/color/blue-color.html
 
         _colors[Color.BLUE] = (0, 0, 255)
@@ -245,79 +243,59 @@ class _Cell:
             nn: int
             left_bottom = vertexes[0]
             right_bottom = vertexes[1]
+            left_top = vertexes[3]
+
             if part is cube_face.edge_left or part is cube_face.edge_right:
-
-                left_top = vertexes[3]
-
+                is_left_right = True
                 d = (left_top - left_bottom) / n
-
-                for i in range(n):
-                    ix = i
-
-                    _slice: EdgeSlice = part.get_slice_by_ltr_index(cube_face, ix)
-                    color = self._slice_color(_slice)
-                    with self._gen_list_for_slice(_slice, g_list_dest):
-                        vx = [left_bottom, right_bottom,
-                              right_bottom + d, left_bottom + d]
-
-                        self.facets[self._get_slice_edge(_slice)] = vx
-
-                        shapes.quad_with_line(vx, color, lw, lc)
-
-                        if config.GUI_DRAW_MARKERS:
-                            nn = _slice.get_face_edge(cube_face).c_attributes["n"]
-                            shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
-                        # if _slice.get_face_edge(cube_face).attributes["origin"]:
-                        #     shapes.cross(vx, cross_width, cross_color)
-                        # if _slice.get_face_edge(cube_face).attributes["on_x"]:
-                        #     shapes.cross(vx, cross_width_x, cross_color_x)
-                        # if _slice.get_face_edge(cube_face).attributes["on_y"]:
-                        #     shapes.cross(vx, cross_width_y, cross_color_y)
-
-                        if self._get_slice_edge(_slice).c_attributes["annotation"]:
-                            self._create_markers(vx, color, (0, 0, 0), True)
-
-                    # do not iadd, we keep references to thes coordinates
-                    left_bottom = left_bottom + d
-                    right_bottom = right_bottom + d
-
-            else:  # top or bottom
-
-                left_top = vertexes[3]
+            else:
+                is_left_right = False
                 d = (right_bottom - left_bottom) / n
 
-                # if is_back:
-                #     d = -d
+            for i in range(n):
+                ix = i
 
-                for i in range(n):
-                    ix = i  # _inv(i, is_back)
-                    _slice = part.get_slice_by_ltr_index(cube_face, ix)
-                    color = self._slice_color(_slice)
-                    with self._gen_list_for_slice(_slice, g_list_dest):
+                _slice: EdgeSlice = part.get_slice_by_ltr_index(cube_face, ix)
+                color = self._slice_color(_slice)
+                with self._gen_list_for_slice(_slice, g_list_dest):
+
+                    # set a rect and advanced to the next one
+                    if is_left_right:
+
+                        vx = [left_bottom,
+                              right_bottom,
+                              right_bottom + d,
+                              left_bottom + d]
+
+                        # be aware of += - you kept references to them
+                        left_bottom = left_bottom + d
+                        right_bottom = right_bottom + d
+                    else:
                         vx = [left_bottom,
                               left_bottom + d,
                               left_top + d,
                               left_top]
+                        left_bottom = left_bottom + d
+                        left_top = left_top + d
 
-                        self.facets[self._get_slice_edge(_slice)] = vx
-                        shapes.quad_with_line(vx, color, lw, lc)
-                        if config.GUI_DRAW_MARKERS:
-                            nn = _slice.get_face_edge(cube_face).c_attributes["n"]
-                            shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
+                    self.facets[self._get_slice_edge(_slice)] = vx
 
-                        if self._get_slice_edge(_slice).c_attributes["annotation"]:
-                            self._create_markers(vx, color, (0, 0, 0), True)
+                    shapes.quad_with_line(vx, color, lw, lc)
 
-                        # if _slice.get_face_edge(cube_face).attributes["origin"]:
-                        #     shapes.cross(vx, cross_width, cross_color)
-                        # if _slice.get_face_edge(cube_face).attributes["on_x"]:
-                        #     shapes.cross(vx, cross_width_x, cross_color_x)
-                        # if _slice.get_face_edge(cube_face).attributes["on_y"]:
-                        #     shapes.cross(vx, cross_width_y, cross_color_y)
+                    if config.GUI_DRAW_MARKERS:
+                        nn = _slice.get_face_edge(cube_face).c_attributes["n"]
+                        shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
+                    # if _slice.get_face_edge(cube_face).attributes["origin"]:
+                    #     shapes.cross(vx, cross_width, cross_color)
+                    # if _slice.get_face_edge(cube_face).attributes["on_x"]:
+                    #     shapes.cross(vx, cross_width_x, cross_color_x)
+                    # if _slice.get_face_edge(cube_face).attributes["on_y"]:
+                    #     shapes.cross(vx, cross_width_y, cross_color_y)
 
-                    # do not iadd, we keep references to thes coordinates
-                    left_bottom = left_bottom + d
-                    left_top = left_top + d
+                    if self._get_slice_edge(_slice).c_attributes["annotation"]:
+                        self._create_markers(vx, color, (0, 0, 0), True)
+
+
 
         else:
             assert isinstance(part, Center)
