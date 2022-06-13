@@ -1,7 +1,7 @@
 import traceback
 
-import pyglet
-from pyglet.window import key
+import pyglet  # type: ignore
+from pyglet.window import key  # type: ignore
 
 import config
 from algs import algs
@@ -27,6 +27,10 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     vs: AppState = app.vs
 
     def handle_in_both_modes():
+        """
+
+        :return: (True if was handled, True no-op : no need redrawing)
+        """
         match value:
 
             case key.SPACE:
@@ -35,19 +39,51 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 else:
                     vs.paused_on_single_step_mode = None
 
-                return True
+                return True, False
 
             case key.NUM_ADD:
                 vs.inc_speed()
-                return True
+                return True, False
 
             case key.NUM_SUBTRACT:
                 vs.dec_speed()
-                return True
+                return True, False
+
+            case key.X:
+                if modifiers & key.MOD_CTRL:
+                    vs.alpha_x -= vs.alpha_delta
+                    return True, True
+
+                elif modifiers & key.MOD_ALT:
+                    vs.alpha_x += vs.alpha_delta
+                    return True, True
+
+            case key.Y:
+                if modifiers & key.MOD_CTRL:
+                    vs.alpha_y -= vs.alpha_delta
+                    return True, True
+                elif modifiers & key.MOD_ALT:
+                    vs.alpha_y += vs.alpha_delta
+                    return True, True
+
+            case key.Z:
+                if modifiers & key.MOD_CTRL:
+                    vs.alpha_z -= vs.alpha_delta
+                    return True, True
+                elif modifiers & key.MOD_ALT:
+                    vs.alpha_z += vs.alpha_delta
+                    return True, True
+
+
+
+
+        return False, None
 
     if window.animation_running or op.is_animation_running:
 
-        if handle_in_both_modes():
+        handled, _ = handle_in_both_modes()
+
+        if handled:
             return
 
         #
@@ -68,7 +104,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
     inv = modifiers & key.MOD_SHIFT
 
-    no_operation = False
+    no_operation: bool
 
     alg: Alg
 
@@ -78,7 +114,11 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     global good
     # noinspection PyProtectedMember
 
-    if not handle_in_both_modes():
+    handled, no_operation = handle_in_both_modes()
+
+    if not handled:
+
+        no_operation = False
 
         match value:
 
@@ -162,42 +202,38 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     ml = 2
 
                 # on odd cube
-                swap_faces = [Algs.M[1:mid - 1].prime * ml + Algs.F.prime * 2 + Algs.M[1:mid - 1]*ml +
-                              Algs.M[mid + 1:end].prime*ml + Algs.F * 2 + Algs.M[mid + 1:end] * ml
+                swap_faces = [Algs.M[1:mid - 1].prime * ml + Algs.F.prime * 2 + Algs.M[1:mid - 1] * ml +
+                              Algs.M[mid + 1:end].prime * ml + Algs.F * 2 + Algs.M[mid + 1:end] * ml
                               ]
                 op.op(Algs.bigAlg(None, *swap_faces))
 
                 inv = slv.cube.inv
 
-                #communicator 1
+                # communicator 1
                 rotate_on_cell = Algs.M[mid]
-                rotate_on_second = Algs.M[1:mid-1]  # E is from right to left
+                rotate_on_second = Algs.M[1:mid - 1]  # E is from right to left
                 on_front_rotate = Algs.F.prime
 
-
                 cum = [rotate_on_cell.prime * ml,
-                          on_front_rotate,
-                          rotate_on_second.prime * ml,
-                          on_front_rotate.prime,
-                          rotate_on_cell * ml,
-                          on_front_rotate,
-                          rotate_on_second * ml,
-                          on_front_rotate.prime]
+                       on_front_rotate,
+                       rotate_on_second.prime * ml,
+                       on_front_rotate.prime,
+                       rotate_on_cell * ml,
+                       on_front_rotate,
+                       rotate_on_second * ml,
+                       on_front_rotate.prime]
                 op.op(Algs.bigAlg(None, *cum))
 
-                rotate_on_second = Algs.M[mid+1:nn]  # E is from right to left
+                rotate_on_second = Algs.M[mid + 1:nn]  # E is from right to left
                 cum = [rotate_on_cell.prime * ml,
-                          on_front_rotate,
-                          rotate_on_second.prime * ml,
-                          on_front_rotate.prime,
-                          rotate_on_cell * ml,
-                          on_front_rotate,
-                          rotate_on_second * ml,
-                          on_front_rotate.prime]
+                       on_front_rotate,
+                       rotate_on_second.prime * ml,
+                       on_front_rotate.prime,
+                       rotate_on_cell * ml,
+                       on_front_rotate,
+                       rotate_on_second * ml,
+                       on_front_rotate.prime]
                 op.op(Algs.bigAlg(None, *cum))
-
-
-
 
             case key.R:
                 # _last_face = FaceName.R
@@ -223,42 +259,24 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 _last_face = FaceName.D
                 op.op(_slice_alg(algs.Algs.D), inv)
 
-            case key.X:
-                if modifiers & key.MOD_CTRL:
-                    vs.alpha_x -= vs.alpha_delta
-                    no_operation = True
-
-                elif modifiers & key.MOD_ALT:
-                    vs.alpha_x += vs.alpha_delta
-                    no_operation = True
-
-                else:
+            case key.X:  # Alt/Ctrl was handled in both
+                if not modifiers & (key.MOD_CTRL | key.MOD_ALT):
                     op.op(algs.Algs.X, inv)
 
             case key.M:
                 op.op(_slice_alg(algs.Algs.M), inv)
 
             case key.Y:
-                if modifiers & key.MOD_CTRL:
-                    vs.alpha_y -= vs.alpha_delta
-                    no_operation = True
-                elif modifiers & key.MOD_ALT:
-                    vs.alpha_y += vs.alpha_delta
-                    no_operation = True
-                else:
+                # Alt/Ctrl was handled in both
+                if not modifiers & (key.MOD_CTRL | key.MOD_ALT):
                     op.op(algs.Algs.Y, inv)
 
             case key.E:
                 op.op(_slice_alg(algs.Algs.E), inv)
 
             case key.Z:
-                if modifiers & key.MOD_CTRL:
-                    vs.alpha_z -= vs.alpha_delta
-                    no_operation = True
-                elif modifiers & key.MOD_ALT:
-                    vs.alpha_z += vs.alpha_delta
-                    no_operation = True
-                else:
+                # Alt/Ctrl was handled in both
+                if not modifiers & (key.MOD_CTRL | key.MOD_ALT):
                     op.op(algs.Algs.Z, inv)
 
             case key.C:

@@ -16,7 +16,7 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 
 
 ##########################################################################
-# Sequence diagram  (wht a mess !!!!)
+# Sequence diagram  $ todo:update squence was improved
 #
 # Viewer              Board                       _Face                        _Cell
 #  init     -->        init
@@ -24,6 +24,7 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 #   >---------|
 #   <reset <--|
 #
+#   (non public call)
 #   reset ---reset------|          -*reset----------|  -----*release_resources    |
 #                                                          --*init----------------| basically empty collections
 #
@@ -78,10 +79,14 @@ class _Board:
 
     def update(self):
 
-        # start = time.time_ns()
-        # try:
-        for face in self._faces:
-            face.update()
+        # we error after cube reset, and we don't want to complicate the call to viewer
+        if self._front is not self._cube.front: # same cube as before
+            self.reset()
+        else:
+            # start = time.time_ns()
+            # try:
+            for face in self._faces:
+                face.update()
 
     # finally:
     #     print(f"Update took {(time.time_ns() - start) / (10 ** 9)}")
@@ -139,7 +144,8 @@ class _Board:
             # -0.75 from it x location, so we can see it in isometric view
             self._create_face(lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
 
-        self._create_face(lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1])
+        f = self._create_face(lambda: cube.front, [0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, 1])
+        self._front = cube.front
 
         self._create_face(lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
 
@@ -194,6 +200,8 @@ class _Board:
         fb: _FaceBoard = self.create_face(f, f0, _left_right_d, _left_top_d, _ortho)
 
         fb.prepare_gui_geometry()
+
+        return fb
 
     @property
     def h_size(self) -> int:

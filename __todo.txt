@@ -12,8 +12,7 @@ Feature: Fix scramble also to invert and multiple and generate sub lists
 
 
 #BUG: Single step mode, screen is not refreshed when waiting. What I'm doing wrong ?
+#      scheduling  event, but now response is very pure, see Alt/Ctrl XYZ
 
 Feature: WAIT cursor on scramble
 
-Bug: support rotate cube by keybaord during pause mode
-Bug: viwer update upate twice inc ase it decided to reset
