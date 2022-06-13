@@ -83,7 +83,7 @@ class AppState:
         self._alpha_delta = 0.1
 
         self._draw_shadows = ""  # "LDB"
-        self.cube_size = 15
+        self.cube_size = 7
 
         self.slice_start: int = 0
         self.slice_stop: int = 0

@@ -22,7 +22,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     app: AbstractApp = window.app
     op: Operator = app.op
 
-    #print(f"In _handle_input , {value}  {hex(value)} {chr(ord('A') + (value - key.A))} ")
+    # print(f"In _handle_input , {value}  {hex(value)} {chr(ord('A') + (value - key.A))} ")
 
     vs: AppState = app.vs
 
@@ -152,16 +152,52 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
                 nn = slv.cube.n_slices
 
-                mid = 1 + nn // 2
-                _center_move_alg = Algs.E[mid] + Algs.M[mid] + Algs.E[mid].prime + Algs.M[mid].prime
+                st = 1
+                mid = 1 + nn // 2  # == 3 on 5
 
-                op.op(_center_move_alg, inv)
+                end = nn
 
+                ml = 1
                 if modifiers & key.MOD_CTRL:
+                    ml = 2
 
-                    op.op(Algs.Y)
+                # on odd cube
+                swap_faces = [Algs.M[1:mid - 1].prime * ml + Algs.F.prime * 2 + Algs.M[1:mid - 1]*ml +
+                              Algs.M[mid + 1:end].prime*ml + Algs.F * 2 + Algs.M[mid + 1:end] * ml
+                              ]
+                op.op(Algs.bigAlg(None, *swap_faces))
 
-                    op.op(_center_move_alg, inv)
+                inv = slv.cube.inv
+
+                #communicator 1
+                rotate_on_cell = Algs.M[mid]
+                rotate_on_second = Algs.M[1:mid-1]  # E is from right to left
+                on_front_rotate = Algs.F.prime
+
+
+                cum = [rotate_on_cell.prime * ml,
+                          on_front_rotate,
+                          rotate_on_second.prime * ml,
+                          on_front_rotate.prime,
+                          rotate_on_cell * ml,
+                          on_front_rotate,
+                          rotate_on_second * ml,
+                          on_front_rotate.prime]
+                op.op(Algs.bigAlg(None, *cum))
+
+                rotate_on_second = Algs.M[mid+1:nn]  # E is from right to left
+                cum = [rotate_on_cell.prime * ml,
+                          on_front_rotate,
+                          rotate_on_second.prime * ml,
+                          on_front_rotate.prime,
+                          rotate_on_cell * ml,
+                          on_front_rotate,
+                          rotate_on_second * ml,
+                          on_front_rotate.prime]
+                op.op(Algs.bigAlg(None, *cum))
+
+
+
 
             case key.R:
                 # _last_face = FaceName.R
@@ -329,7 +365,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
                     cursor = window.get_system_mouse_cursor(window.CURSOR_WAIT)
                     window.set_mouse_cursor(cursor)
-                    try: # test
+                    try:  # test
                         nn = 50
                         ll = 0
                         count = 0

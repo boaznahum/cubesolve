@@ -26,4 +26,4 @@ MAX_MARKER_RADIUS = 4.0  # when decreasing cube size, we don't want the markers 
 MARKER_COLOR:Tuple[int, int, int] = (0,0,0) # dimgray / dimgray	#696969	rgb(105,105,105)
 
 # Solver
-OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False  # under test doesn't work well, see _todo
+OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = True  # under test doesn't work well, see _todo

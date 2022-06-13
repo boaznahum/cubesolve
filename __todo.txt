@@ -7,13 +7,13 @@ Feature: Fix scramble also to invert and multiple and generate sub lists
 # On odd big cueb, still don't know to handle the case to switch
 #  centres FU slice without touching the left/right, for now I'm bring ing all the slice
 #   See
-# BUG: Centers optimization, size 9, scramble 4
-#  File "F:\dev\code\python\cubesolve\_solver\nxn_centers.py", line 102, in solve
-    assert f3.face.center.is3x3
+# Feuture: Centers optimization, size 9, scramble 4
+#       Try to detect blocks
 
-    I think better is to simply use simple algorithm that swaps all faces (maybe
-     ing 1,2 we can still use the swap centerpiece
 
 #BUG: Single step mode, screen is not refreshed when waiting. What I'm doing wrong ?
 
 Feature: WAIT cursor on scramble
+
+Bug: support rotate cube by keybaord during pause mode
+Bug: viwer update upate twice inc ase it decided to reset

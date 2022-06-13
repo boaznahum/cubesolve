@@ -8,7 +8,7 @@ from algs import algs
 from algs.algs import Algs
 from app_exceptions import InternalSWError
 from model.cube import Cube
-from model.cube_boy import CubeLayout, Color
+from model.cube_boy import CubeLayout
 from model.cube_face import Face
 from model.cube_queries import CubeQueries, Pred
 from model.elements import FaceName, Color, CenterSlice
@@ -320,20 +320,10 @@ class NxNCenters(SolverElement):
 
         cube = self.cube
 
-        nn = face.n_slices
-        if nn % 2 and config.OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
-            ok_on_this = self.count_color_on_face(face, color)
-            if not (ok_on_this > nn * nn / 2):
-                other = CubeQueries.is_face(cube, lambda f: self.count_color_on_face(f, color) > ok_on_this)
-                if other:
-                    self._optimize_by_moving_centres(face_loc, other)
-
-                    if face_loc.face.is3x3:
-                        return True
-
         # we loop bringing all adjusted faces up
         cmn.bring_face_front(face_loc.face)
         # from here face is no longer valid
+        # so
 
         work_done = False
 
@@ -344,7 +334,7 @@ class NxNCenters(SolverElement):
             if self._do_center_from_face(cube.front, color, cube.up):
                 work_done = True
 
-            if self._is_face_solved(face, color):
+            if self._is_face_solved(face_loc.face, color):
                 return work_done
 
             self._bring_face_up_preserve_front(cube.left)
@@ -354,7 +344,7 @@ class NxNCenters(SolverElement):
         if self._do_center_from_face(cube.front, color, cube.up):
             work_done = True
 
-        if self._is_face_solved(face, color):
+        if self._is_face_solved(face_loc.face, color):
             return work_done
 
         if NxNCenters.work_on_b:
@@ -365,7 +355,7 @@ class NxNCenters(SolverElement):
 
         return work_done
 
-    def _optimize_by_moving_centres(self, face_loc: FaceLoc, other: Face):
+    def _to_delete_optimize_by_moving_centres(self, face_loc: FaceLoc, other: Face):
 
         """
         We reach here becuase we neet to do face_loc, but most of its pieces or on other
@@ -498,11 +488,21 @@ class NxNCenters(SolverElement):
         if self.count_color_on_face(source_face, color) == 0:
             return False  # nothing can be done here
 
+        work_done = False
+
         n = cube.n_slices
 
-        center = face.center
+        if n % 2 and config.OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
 
-        work_done = False
+            ok_on_this = self.count_color_on_face(face, color)
+
+            on_source = self.count_color_on_face(source_face, color)
+
+            if on_source - ok_on_this > 2:  # swap two faces is about two communicators
+                self._swap_entire_face_odd_cube(color, face, source_face)
+                work_done = True
+
+        center = face.center
 
         for r in range(0, n):  # 5: 3..4
 
@@ -717,23 +717,6 @@ class NxNCenters(SolverElement):
     def rotate_point_counterclockwise(self, row: int, column: int) -> Tuple[int, int]:
         return column, self.cube.inv(row)
 
-    @staticmethod
-    def count_missing(face: Face, color: Color) -> int:
-        n = 0
-
-        for s in face.center.all_slices:
-            if s.color != color:
-                n += 1
-        return n
-
-    @staticmethod
-    def count_color_on_face(face: Face, color: Color) -> int:
-        n = 0
-
-        for s in face.center.all_slices:
-            if s.color == color:
-                n += 1
-        return n
 
     def boy_opposite(self, color: Color) -> Color:
         return self.cube.original_layout.opposite_color(color)
@@ -754,3 +737,121 @@ class NxNCenters(SolverElement):
 
         assert f_max and c_max  # mypy
         return f_max, c_max
+
+    def _swap_entire_face_odd_cube(self, required_color: Color, face: Face, source: Face):
+
+        cube = self.cube
+        nn = cube.n_slices
+
+        assert nn % 2, "Cube must be odd"
+
+        assert face is cube.front
+        assert source is cube.up or source is cube.back
+
+        op = self.op
+
+        st = 1
+        mid = 1 + nn // 2  # == 3 on 5
+
+        end = nn
+
+        rotate_mul = 1
+        if source is cube.back:
+            rotate_mul = 2
+
+        # on odd cube
+        swap_faces = [Algs.M[1:mid - 1].prime * rotate_mul + Algs.F.prime * 2 + Algs.M[1:mid - 1] * rotate_mul +
+                      Algs.M[mid + 1:end].prime * rotate_mul + Algs.F * 2 + Algs.M[mid + 1:end] * rotate_mul
+                      ]
+        op.op(Algs.bigAlg(None, *swap_faces))
+
+        # communicator 1, upper block about center
+        rotate_on_cell = Algs.M[mid]
+        rotate_on_second = Algs.M[1:mid - 1]  # E is from right to left
+        on_front_rotate = Algs.F.prime
+
+        if self._count_colors_on_block(required_color, source, (mid, mid-1), (nn-1, mid-1)) >\
+            self._count_colors_on_block(required_color, face, (mid, mid - 1), (nn - 1, mid - 1)) :
+
+            cum = [rotate_on_cell.prime * rotate_mul,
+                   on_front_rotate,
+                   rotate_on_second.prime * rotate_mul,
+                   on_front_rotate.prime,
+                   rotate_on_cell * rotate_mul,
+                   on_front_rotate,
+                   rotate_on_second * rotate_mul,
+                   on_front_rotate.prime]
+            op.op(Algs.bigAlg(None, *cum))
+
+        # communicator 2, lower block below center
+        rotate_on_second = Algs.M[mid + 1:nn]  # E is from right to left
+        if self._count_colors_on_block(required_color, source, (0, mid-1), (mid-1, mid-1)) >\
+            self._count_colors_on_block(required_color, face, (0, mid - 1), (mid-1, mid - 1)) :
+            cum = [rotate_on_cell.prime * rotate_mul,
+                   on_front_rotate,
+                   rotate_on_second.prime * rotate_mul,
+                   on_front_rotate.prime,
+                   rotate_on_cell * rotate_mul,
+                   on_front_rotate,
+                   rotate_on_second * rotate_mul,
+                   on_front_rotate.prime]
+            op.op(Algs.bigAlg(None, *cum))
+
+    @staticmethod
+    def count_missing(face: Face, color: Color) -> int:
+        n = 0
+
+        for s in face.center.all_slices:
+            if s.color != color:
+                n += 1
+        return n
+
+    @staticmethod
+    def count_color_on_face(face: Face, color: Color) -> int:
+        n = 0
+
+        for s in face.center.all_slices:
+            if s.color == color:
+                n += 1
+        return n
+
+    def _count_colors_on_block(self, color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int]):
+
+        """
+
+        :param source_face:
+        :param rc1: one corner of block, center slice indexes
+        :param rc2: other corner of block, center slice indexes
+        :return:
+        """
+
+        cube = source_face.cube
+        is_back = source_face is cube.back
+
+        if is_back:
+            # the logic here is hard code of the logic in slice rotate
+            # it will be broken if cube layout is changed
+            # here we assume we work on F, and UP has same coord system as F, and
+            # back is mirrored in both direction
+            inv = cube.inv
+            rc1 = (inv(rc1[0]), inv(rc1[1]))
+            rc2 = (inv(rc2[0]), inv(rc2[1]))
+
+        r1 = rc1[0]
+        c1 = rc1[1]
+
+        r2 = rc2[0]
+        c2 = rc2[1]
+
+        sr = 1 if r1 < r2 else -1
+        sc = 1 if c1 < c2 else -1
+
+        c = 0
+        for r in range(r1, r2, sr):
+            for c in range(c1, c2, sc):
+                if color == source_face.center.get_center_slice((r,c)).color:
+                    c += 1
+
+        return c
+
+
