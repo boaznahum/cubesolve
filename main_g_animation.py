@@ -240,6 +240,7 @@ def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeView
             platform_event_loop.step(timeout)
 
         clock.unschedule(_update_gui)
+        vs.paused_on_single_step_mode = None
 
 
     # but still useful for SS mode
