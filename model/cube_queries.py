@@ -105,6 +105,24 @@ class CubeQueries:
             (r, c) = (c, inv(r))
 
     @staticmethod
+    def rotate_point_clockwise(cube: Cube, rc: Tuple[int, int], n=1) -> Tuple[int, int]:
+        inv = cube.inv
+        for i in range(0, n % 4):
+            rc = inv(rc[1]), rc[0]
+
+        return rc
+
+    @staticmethod
+    def rotate_point_counterclockwise(cube: Cube, rc: Tuple[int, int], n=1) -> Tuple[int, int]:
+
+        inv = cube.inv
+        for i in range(0, n % 4):
+            row, column = rc[1], inv(rc[0])
+
+        return rc
+
+
+    @staticmethod
     def get_two_edge_slice_points(cube: Cube, i) -> Iterable[int]:
 
         inv = cube.inv

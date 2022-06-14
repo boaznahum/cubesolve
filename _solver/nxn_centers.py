@@ -1,4 +1,5 @@
 from collections.abc import Iterator, Sequence
+from enum import Enum, unique
 from typing import Tuple, Callable, Collection, Any
 
 import config
@@ -26,6 +27,12 @@ IS_FIRST = "is_first"
 TWO_LAST = "two last"
 
 _tracer_unique_id: int = 0
+
+
+@unique
+class _SearchBlockMode(Enum):
+    CompleteBlock = 1
+    BigThanSource = 2
 
 
 class FaceLoc:
@@ -717,7 +724,6 @@ class NxNCenters(SolverElement):
     def rotate_point_counterclockwise(self, row: int, column: int) -> Tuple[int, int]:
         return column, self.cube.inv(row)
 
-
     def boy_opposite(self, color: Color) -> Color:
         return self.cube.original_layout.opposite_color(color)
 
@@ -750,8 +756,8 @@ class NxNCenters(SolverElement):
 
         op = self.op
 
-        st = 1
-        mid = 1 + nn // 2  # == 3 on 5
+        mid = nn // 2
+        midpls1 = 1 + nn // 2  # == 3 on 5
 
         end = nn
 
@@ -760,42 +766,119 @@ class NxNCenters(SolverElement):
             rotate_mul = 2
 
         # on odd cube
-        swap_faces = [Algs.M[1:mid - 1].prime * rotate_mul + Algs.F.prime * 2 + Algs.M[1:mid - 1] * rotate_mul +
-                      Algs.M[mid + 1:end].prime * rotate_mul + Algs.F * 2 + Algs.M[mid + 1:end] * rotate_mul
+        swap_faces = [Algs.M[1:midpls1 - 1].prime * rotate_mul + Algs.F.prime * 2 + Algs.M[1:midpls1 - 1] * rotate_mul +
+                      Algs.M[midpls1 + 1:end].prime * rotate_mul + Algs.F * 2 + Algs.M[midpls1 + 1:end] * rotate_mul
                       ]
         op.op(Algs.bigAlg(None, *swap_faces))
 
         # communicator 1, upper block about center
-        rotate_on_cell = Algs.M[mid]
-        rotate_on_second = Algs.M[1:mid - 1]  # E is from right to left
-        on_front_rotate = Algs.F.prime
-
-        if self._count_colors_on_block(required_color, source, (mid, mid-1), (nn-1, mid-1)) >\
-            self._count_colors_on_block(required_color, face, (mid, mid - 1), (nn - 1, mid - 1)) :
-
-            cum = [rotate_on_cell.prime * rotate_mul,
-                   on_front_rotate,
-                   rotate_on_second.prime * rotate_mul,
-                   on_front_rotate.prime,
-                   rotate_on_cell * rotate_mul,
-                   on_front_rotate,
-                   rotate_on_second * rotate_mul,
-                   on_front_rotate.prime]
-            op.op(Algs.bigAlg(None, *cum))
+        self._block_communicator(required_color, face, source,
+                                 (mid + 1, mid), (nn - 1, mid),
+                                 _SearchBlockMode.BigThanSource)
 
         # communicator 2, lower block below center
-        rotate_on_second = Algs.M[mid + 1:nn]  # E is from right to left
-        if self._count_colors_on_block(required_color, source, (0, mid-1), (mid-1, mid-1)) >\
-            self._count_colors_on_block(required_color, face, (0, mid - 1), (mid-1, mid - 1)) :
-            cum = [rotate_on_cell.prime * rotate_mul,
-                   on_front_rotate,
-                   rotate_on_second.prime * rotate_mul,
-                   on_front_rotate.prime,
-                   rotate_on_cell * rotate_mul,
-                   on_front_rotate,
-                   rotate_on_second * rotate_mul,
-                   on_front_rotate.prime]
-            op.op(Algs.bigAlg(None, *cum))
+        self._block_communicator(required_color, face, source,
+                                 (0, mid), (mid - 1, mid),
+                                 _SearchBlockMode.BigThanSource)
+
+        # communicator 3, left to center
+        self._block_communicator(required_color, face, source,
+                                 (mid, 0), (mid, mid-1),
+                                 _SearchBlockMode.BigThanSource)
+
+        # communicator 4, right ot center
+        self._block_communicator(required_color, face, source,
+                                 (mid, mid+1), (mid, nn-1),
+                                 _SearchBlockMode.BigThanSource)
+
+    def _block_communicator(self,
+                            required_color: Color,
+                            face: Face, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
+                            mode: _SearchBlockMode) -> bool:
+        """
+
+        :param face:
+        :param source_face:
+        :param rc1: one corner of block, center slices indexes [0..n)
+        :param rc2: other corner of block, center slices indexes [0..n)
+        :param mode: to search complete block or with colors more than mine
+        :return: False if block not found
+        """
+        cube: Cube = face.cube
+        assert face is cube.front
+        assert source_face is cube.up or source_face is cube.back
+
+        is_back = source_face is cube.back
+
+        # normalize block
+        r1 = rc1[0]
+        c1 = rc1[1]
+
+        r2 = rc2[0]
+        c2 = rc2[1]
+
+        if r1 > r2:
+            r1, r2 = r2, r1
+        if c1 > c2:
+            c1, c2 = c2, c1
+
+        rc1 = (r1, c1)
+        rc2 = (r2, c2)
+
+        on_front_rotate: algs.Alg
+
+        # assume we rotate F clockwise
+        rc1_f_rotated = self.rotate_point_clockwise(r1, c1)
+        rc2_f_rotated = self.rotate_point_clockwise(r2, c2)
+
+        # the columns ranges must not intersect
+        if self._1_d_intesect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
+            on_front_rotate = Algs.F.prime
+            rc1_f_rotated = self.rotate_point_counterclockwise(r1, c1)
+            rc2_f_rotated = self.rotate_point_counterclockwise(r2, c2)
+
+            if self._1_d_intesect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
+                print("xxx")
+            assert not self._1_d_intesect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1]))
+        else:
+            # clockwise is OK
+            on_front_rotate = Algs.F
+
+        # now search block
+        n_rotate = self._search_block(face, source_face, required_color, _SearchBlockMode.BigThanSource, rc1, rc2)
+
+        if not n_rotate:
+            return False
+
+        n_rotate -= 1
+
+        # center indexes are in opposite direction of R
+        #   index is from left to right, R is from right to left
+        rotate_on_cell = self._get_slice_m_alg(rc1[1], rc2[1])
+        rotate_on_second = self._get_slice_m_alg(rc1_f_rotated[1], rc2_f_rotated[1])
+
+        if is_back:
+            rotate_mul = 2
+        else:
+            rotate_mul = 1
+
+        cum = [rotate_on_cell.prime * rotate_mul,
+               on_front_rotate,
+               rotate_on_second.prime * rotate_mul,
+               on_front_rotate.prime,
+               rotate_on_cell * rotate_mul,
+               on_front_rotate,
+               rotate_on_second * rotate_mul,
+               on_front_rotate.prime]
+
+        # fix query source with rotation
+        source_slices = [source_face.center.get_center_slice(rc) for rc in self._2d_range_on_source(is_back, rc1, rc2)]
+
+        target_slices = [face.center.get_center_slice(rc) for rc in self._2d_range_on_source(False, rc1, rc2)]
+
+        with self.w_center_slice_annotate(*source_slices, *target_slices):
+            self.op.op(Algs.of_face(source_face.name) * n_rotate)
+            self.op.op(Algs.bigAlg(None, *cum))
 
     @staticmethod
     def count_missing(face: Face, color: Color) -> int:
@@ -819,9 +902,9 @@ class NxNCenters(SolverElement):
 
         """
 
-        :param source_face:
-        :param rc1: one corner of block, center slice indexes
-        :param rc2: other corner of block, center slice indexes
+        :param source_face: front up or back
+        :param rc1: one corner of block, front coords, center slice indexes
+        :param rc2: other corner of block, front coords, center slice indexes
         :return:
         """
 
@@ -843,15 +926,157 @@ class NxNCenters(SolverElement):
         r2 = rc2[0]
         c2 = rc2[1]
 
-        sr = 1 if r1 < r2 else -1
-        sc = 1 if c1 < c2 else -1
+        if r1 > r2:
+            r1, r2 = r2, r1
 
-        c = 0
-        for r in range(r1, r2, sr):
-            for c in range(c1, c2, sc):
-                if color == source_face.center.get_center_slice((r,c)).color:
-                    c += 1
+        if c1 > c2:
+            c1, c2 = c2, c1
 
-        return c
+        _count = 0
+        for r in range(r1, r2 + 1):
+            for c in range(c1, c2 + 1):
+                if color == source_face.center.get_center_slice((r, c)).color:
+                    _count += 1
 
+        return _count
 
+    def _1_d_intesect(self, range_1: Tuple[int, int], range_2: Tuple[int, int]):
+
+        """
+                 x3--------------x4
+           x1--------x2
+        :param range_1:  x1, x2
+        :param range_2:  x3, x4
+        :return:  not ( x3  > x2 or x4 < x1 )
+        """
+
+        if range_2[0] > range_1[1]:
+            return False
+
+        if range_2[1] < range_1[0]:
+            return False
+
+        return True
+
+    def _point_on_source(self, is_back: bool, rc: Tuple[int, int]):
+
+        inv = self.cube.inv
+
+        # the logic here is hard code of the logic in slice rotate
+        # it will be broken if cube layout is changed
+        # here we assume we work on F, and UP has same coord system as F, and
+        # back is mirrored in both direction
+        if is_back:
+            return inv(rc[0]), inv(rc[1])
+        else:
+            # on up
+            return rc
+
+    def _2d_range_on_source(self, is_back: bool, rc1: Tuple[int, int], rc2: Tuple[int, int]) -> Iterator[
+        Tuple[int, int]]:
+
+        """
+        :param rc1: one corner of block, front coords, center slice indexes
+        :param rc2: other corner of block, front coords, center slice indexes
+        :return:
+        """
+
+        rc1 = self._point_on_source(is_back, rc1)
+        rc2 = self._point_on_source(is_back, rc2)
+
+        r1 = rc1[0]
+        c1 = rc1[1]
+
+        r2 = rc2[0]
+        c2 = rc2[1]
+
+        if r1 > r2:
+            r1, r2 = r2, r1
+
+        if c1 > c2:
+            c1, c2 = c2, c1
+
+        for r in range(r1, r2 + 1):
+            for c in range(c1, c2 + 1):
+                yield r, c
+
+    @staticmethod
+    def _block_size(rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int:
+        return (abs(rc2[0] - rc1[0]) + 1) * (abs(rc2[1] - rc1[1]) + 1)
+
+    def _is_block(self,
+                  source_face: Face,
+                  required_color: Color,
+                  min_points: int,
+                  rc1: Tuple[int, int], rc2: Tuple[int, int]) -> bool:
+
+        # Number of points in block
+        _max = self._block_size(rc1, rc2)
+
+        max_allowed_not_match = _max - min_points  # 0 in cas emin is max
+
+        center = source_face.center
+        miss_count = 0
+        for rc in self._2d_range_on_source(source_face is source_face.cube.back,
+                                           rc1, rc2):
+
+            if center.get_center_slice(rc).color != required_color:
+
+                miss_count += 1
+                if miss_count > max_allowed_not_match:
+                    return False
+
+        return True
+
+    def _search_block(self,
+                      target_face: Face,
+                      source_face: Face,
+                      required_color: Color,
+                      mode: _SearchBlockMode,
+                      rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int:
+
+        """
+        Search block according to mode, if target is already satisfied, then return not found
+        :param source_face:
+        :param required_color:
+        :param mode:
+        :param rc1:
+        :param rc2:
+        :return: rotate count + 1, 0 means not found
+        """
+
+        block_size = self._block_size(rc1, rc2)
+
+        n_ok = self._count_colors_on_block(required_color, target_face, rc1, rc2)
+
+        if n_ok == block_size:
+            return 0  # nothing to do
+
+        if mode == _SearchBlockMode.CompleteBlock:
+            min_required = block_size
+        else:
+            min_required = n_ok + 1
+
+        cube = self.cube
+
+        for n in range(1, 5):
+            if self._is_block(source_face, required_color, min_required, rc1, rc2):
+                return n  # n turns + 1
+            rc1 = CubeQueries.rotate_point_clockwise(cube, rc1)
+            rc2 = CubeQueries.rotate_point_clockwise(cube, rc2)
+
+        return 0  # not found
+
+    def _get_slice_m_alg(self, c1, c2):
+
+        inv = self.cube.inv
+
+        #   index is from left to right, R is from right to left
+        # so we nned to invert
+        c1 = inv(c1)
+        c2 = inv(c2)
+
+        if c1 > c2:
+            c1, c2 = c2, c1
+
+        return Algs.M[c1 + 1:c2 + 1]
