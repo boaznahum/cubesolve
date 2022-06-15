@@ -657,7 +657,7 @@ class NxNCenters(SolverElement):
             # why - ? because we didn't yet rotate it
             _on_src1_1 = CubeQueries.rotate_point_clockwise(cube, _on_src1_1, -n_rotate)
             _on_src1_2 = CubeQueries.rotate_point_clockwise(cube, _on_src1_2, -n_rotate)
-            source_slices = [source_face.center.get_center_slice(rc) for rc in self._2d_range(_on_src1_2, _on_src1_2)]
+            source_slices = [source_face.center.get_center_slice(rc) for rc in self._2d_range(_on_src1_1, _on_src1_2)]
 
             target_slices = [face.center.get_center_slice(rc) for rc in self._2d_range_on_source(False, rc1, rc2)]
 
