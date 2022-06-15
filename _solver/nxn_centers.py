@@ -662,7 +662,8 @@ class NxNCenters(SolverElement):
             target_slices = [face.center.get_center_slice(rc) for rc in self._2d_range_on_source(False, rc1, rc2)]
 
         with self.w_center_slice_annotate(*source_slices, *target_slices):
-            self.op.op(Algs.of_face(source_face.name) * n_rotate)
+            if n_rotate:
+                self.op.op(Algs.of_face(source_face.name) * n_rotate)
             self.op.op(Algs.bigAlg(None, *cum))
 
         return True
