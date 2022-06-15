@@ -38,7 +38,7 @@ class Alg(ABC):
         pass
 
     @abstractmethod
-    def simplify(self) -> "Alg":
+    def simplify(self) -> "SimpleAlg|BigSimpleAlg":
         """
         In case of big alg, try to simplify R+R2 == R
         :return:
@@ -91,7 +91,7 @@ class _Inv(Alg):
     def count(self) -> int:
         return self._alg.count()
 
-    def simplify(self) -> "Alg":
+    def simplify(self) -> "SimpleAlg|BigSimpleAlg":
 
         """
         Must returns SimpleAlg if _alg is SimpleAlg
@@ -159,7 +159,7 @@ class _Mul(Alg, ABC):
         else:
             return self._n * self._alg.count()
 
-    def simplify(self) -> "Alg":
+    def simplify(self) -> "SimpleAlg|BigSimpleAlg":
 
         a = self._alg.simplify()  # can't be _Mul
 
@@ -213,6 +213,8 @@ TSimpleAlg = TypeVar("TSimpleAlg", bound="SimpleAlg")
 class SimpleAlg(Alg, ABC):
     __slots__ = ["_n", "_code"]
 
+    # todo: most of the code in this lags should be moved into NSimpleAlg
+
     def __init__(self, code: str, n: int = 1) -> None:
         super().__init__()
         self._code = code
@@ -247,8 +249,7 @@ class SimpleAlg(Alg, ABC):
     def n(self):
         return self._n
 
-    @final
-    def simplify(self) -> "SimpleAlg":
+    def simplify(self) -> "SimpleAlg|BigSimpleAlg":
         return self
 
     def flatten(self) -> Iterator["SimpleAlg"]:
@@ -287,8 +288,24 @@ class SimpleAlg(Alg, ABC):
         :param other:
         :return:
         """
-        self ._n *= other
+        self._n *= other
         return self
+
+
+class NSimpleAlg(SimpleAlg, ABC):
+    """
+    A simple alg with n property
+    todo: all code from SimpleAlg should be moved here
+    """
+
+    def __init__(self, code: str, n: int = 1) -> None:
+        super().__init__(code, n)
+
+    def simplify(self) -> "NSimpleAlg|BigSimpleAlg":
+        if self._n % 4:
+            return self
+        else:
+            return BigSimpleAlg(None)
 
 
 class Annotation(SimpleAlg):
@@ -321,7 +338,7 @@ class AnimationAbleAlg(SimpleAlg, ABC):
 SL = TypeVar("SL", bound="SliceAbleAlg")
 
 
-class SliceAbleAlg(SimpleAlg, ABC):
+class SliceAbleAlg(NSimpleAlg, ABC):
 
     def __init__(self, code: str, n: int = 1) -> None:
         super().__init__(code, n)
@@ -526,7 +543,7 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         return face, parts
 
 
-class WholeCubeAlg(AnimationAbleAlg, ABC):
+class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
 
     def __init__(self, axis_name: AxisName, n: int = 1) -> None:
         # cast to satisfy numpy
@@ -766,29 +783,29 @@ class BigAlg(Alg):
             else:
                 return "[" + " ".join([str(a) for a in self._algs]) + "]"
 
-    def simplify(self) -> "Alg":
+    def simplify(self) -> "BigSimpleAlg":
 
-        flat_algs: MutableSequence[Alg] = []
+        flat_algs: MutableSequence[SimpleAlg] = []
 
         for a in self._algs:
             a = a.simplify()
 
             if isinstance(a, SimpleAlg):
                 flat_algs.append(a)
-            elif isinstance(a, BigAlg):
-                flat_algs.extend(a._algs)
+            elif isinstance(a, BigSimpleAlg):
+                flat_algs.extend(a.algs)
             else:
                 raise TypeError("Unexpected type", type(a))
 
         combined = self._combine(flat_algs)
-        return BigAlg(self._name, *combined)
+        return BigSimpleAlg(self._name, *combined)
 
     def flatten(self) -> Iterator["SimpleAlg"]:
         for a in self._algs:
             yield from a.flatten()
 
     @staticmethod
-    def _combine(algs: Sequence[Alg]) -> Sequence[Alg]:
+    def _combine(algs: Sequence[SimpleAlg]) -> Sequence[SimpleAlg]:
 
         work_to_do = bool(algs)
         while work_to_do:
@@ -799,7 +816,7 @@ class BigAlg(Alg):
                 if not isinstance(a, SimpleAlg):
                     raise TypeError("Unexpected type", type(a))
 
-                if not a.n % 4: # get rid of R4
+                if not a.n % 4:  # get rid of R4
                     continue
 
                 if prev:
@@ -845,8 +862,21 @@ class BigAlg(Alg):
             return BigAlg(None, *[*self._algs, other])
 
     @property
-    def algs(self):
+    def algs(self) -> Sequence[Alg]:
         return self._algs
+
+
+class BigSimpleAlg(BigAlg):
+    """
+    A big alg composed of SimpleAlg s only
+    """
+
+    def __init__(self, name: str | None, *algs: SimpleAlg) -> None:
+        super().__init__(name, *algs)
+
+    @property
+    def algs(self) -> Sequence[SimpleAlg]:
+        return super().algs  # type: ignore
 
 
 class _Scramble(BigAlg):
@@ -915,7 +945,6 @@ class Algs:
     F = _F()
     Z = _Z()  # Entire over F
     S = _S()  # Middle over F
-
 
     @staticmethod
     def bigAlg(name: str | None, *algs: Alg) -> BigAlg:
@@ -1002,11 +1031,8 @@ class Algs:
             case SliceName.M:
                 return cls.M
 
-
             case _:
                 raise InternalSWError(f"Unknown slice name {slice_name}")
-
-
 
 
 def _test_prime_prime():
