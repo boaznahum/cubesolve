@@ -799,6 +799,9 @@ class BigAlg(Alg):
                 if not isinstance(a, SimpleAlg):
                     raise TypeError("Unexpected type", type(a))
 
+                if not a.n % 4: # get rid of R4
+                    continue
+
                 if prev:
                     if type(prev) == type(a) and prev.same_form(a):
 
