@@ -514,13 +514,27 @@ class NxNCenters(SolverElement):
         for r in range(0, n):  # 5: 3..4
 
             for j in range(n):
-                cs: CenterSlice = center.get_center_slice((r, j))
 
-                if cs.color != color:
-                    self.debug(f"Need to fix slice {r}, {j}, {cs.color} to {color}")
+                if self._block_communicator(color,
+                                            face,
+                                            source_face,
+                                            (r,j), (r,j),
+                                            _SearchBlockMode.CompleteBlock):
 
-                    if self._fix_center_slice(cs, color, source_face):
-                        work_done = True
+                    self.debug(f"Fixed slice {r}, {j}")
+                    assert center.get_center_slice((r, j)).color == color, f"Slice was not fixed {(r, j)}, " \
+                                                                           f"required={color}, " \
+                                                                           f"actual={center.get_center_slice((r, j)).color}"
+
+                    work_done = True
+
+                # cs: CenterSlice = center.get_center_slice((r, j))
+                #
+                # if cs.color != color:
+                #     self.debug(f"Need to fix slice {r}, {j}, {cs.color} to {color}")
+                #
+                #     if self._fix_center_slice(cs, color, source_face):
+                #         work_done = True
 
         if not work_done:
             self.debug(f"Internal error, no work was done on face {face} required color {color}, "
@@ -562,6 +576,12 @@ class NxNCenters(SolverElement):
 
         # before the rotation
         assert required_color == source.color
+
+        s_index = cs.index
+        return self._block_communicator(required_color,
+                                        cs.face,
+                                        source.face,
+                                        s_index, s_index, _SearchBlockMode.BigThanSource)
 
         source_face = source.face
 
@@ -802,7 +822,7 @@ class NxNCenters(SolverElement):
         :param rc1: one corner of block, center slices indexes [0..n)
         :param rc2: other corner of block, center slices indexes [0..n)
         :param mode: to search complete block or with colors more than mine
-        :return: False if block not found
+        :return: False if block not found (or no work need to be done), no communicator was done
         """
         cube: Cube = face.cube
         assert face is cube.front
@@ -825,6 +845,16 @@ class NxNCenters(SolverElement):
         rc1 = (r1, c1)
         rc2 = (r2, c2)
 
+        # in case of odd nd (mid, mid), search will fail, nothing to do
+        # if we change the order, then block validation below will fail,
+        #  so we need to check for case odd (mid, mid) somewhere else
+        # now search block
+        n_rotate = self._search_block(face, source_face, required_color, mode, rc1, rc2)
+
+        if n_rotate is None:
+            return False
+
+
         on_front_rotate: algs.Alg
 
         # assume we rotate F clockwise
@@ -844,13 +874,6 @@ class NxNCenters(SolverElement):
             # clockwise is OK
             on_front_rotate = Algs.F
 
-        # now search block
-        n_rotate = self._search_block(face, source_face, required_color, _SearchBlockMode.BigThanSource, rc1, rc2)
-
-        if not n_rotate:
-            return False
-
-        n_rotate -= 1
 
         # center indexes are in opposite direction of R
         #   index is from left to right, R is from right to left
@@ -879,6 +902,8 @@ class NxNCenters(SolverElement):
         with self.w_center_slice_annotate(*source_slices, *target_slices):
             self.op.op(Algs.of_face(source_face.name) * n_rotate)
             self.op.op(Algs.bigAlg(None, *cum))
+
+        return True
 
     @staticmethod
     def count_missing(face: Face, color: Color) -> int:
@@ -1033,7 +1058,7 @@ class NxNCenters(SolverElement):
                       source_face: Face,
                       required_color: Color,
                       mode: _SearchBlockMode,
-                      rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int:
+                      rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int | None:
 
         """
         Search block according to mode, if target is already satisfied, then return not found
@@ -1042,7 +1067,7 @@ class NxNCenters(SolverElement):
         :param mode:
         :param rc1:
         :param rc2:
-        :return: rotate count + 1, 0 means not found
+        :return: How many source clockwise rotate in order to match the block to source
         """
 
         block_size = self._block_size(rc1, rc2)
@@ -1050,7 +1075,7 @@ class NxNCenters(SolverElement):
         n_ok = self._count_colors_on_block(required_color, target_face, rc1, rc2)
 
         if n_ok == block_size:
-            return 0  # nothing to do
+            return None  # nothing to do
 
         if mode == _SearchBlockMode.CompleteBlock:
             min_required = block_size
@@ -1059,13 +1084,14 @@ class NxNCenters(SolverElement):
 
         cube = self.cube
 
-        for n in range(1, 5):
+        for n in range(4):
             if self._is_block(source_face, required_color, min_required, rc1, rc2):
-                return n  # n turns + 1
+                # we rotate n to find the block, so client need to rotate -n
+                return (-n) % 4
             rc1 = CubeQueries.rotate_point_clockwise(cube, rc1)
             rc2 = CubeQueries.rotate_point_clockwise(cube, rc2)
 
-        return 0  # not found
+        return None
 
     def _get_slice_m_alg(self, c1, c2):
 
