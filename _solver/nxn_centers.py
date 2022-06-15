@@ -408,7 +408,7 @@ class NxNCenters(SolverElement):
 
                 after_fixed_color = center.get_center_slice(rc).color
 
--                if after_fixed_color != color:
+                if after_fixed_color != color:
                     raise InternalSWError(f"Slice was not fixed {rc}, " +
                                           f"required={color}, " +
                                           f"actual={after_fixed_color}")
@@ -548,7 +548,7 @@ class NxNCenters(SolverElement):
         op.op(Algs.bigAlg(None, *swap_faces))
 
         # communicator 1, upper block about center
--------------++        self._block_communicator(required_color, face, source,
+        self._block_communicator(required_color, face, source,
                                  (mid + 1, mid), (nn - 1, mid),
                                  _SearchBlockMode.BigThanSource)
 
