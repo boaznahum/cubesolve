@@ -1,6 +1,6 @@
 from collections.abc import Iterator, Sequence
 from enum import Enum, unique
-from typing import Tuple, Callable, Collection, Any, TypeAlias
+from typing import Tuple, Callable, Collection, Any, TypeAlias, List
 
 import config
 from _solver.base_solver import SolverElement, ISolver
@@ -24,6 +24,7 @@ _status = None
 FaceTracker = Callable[[], Face]
 
 Point: TypeAlias = Tuple[int, int]
+Block: TypeAlias = Tuple[Point, Point]
 
 IS_FIRST = "is_first"
 TWO_LAST = "two last"
@@ -397,7 +398,7 @@ class NxNCenters(SolverElement):
 
         center = face.center
 
-        for rc in self._2d_range_iter():
+        for rc in self._2d_center_iter():
 
             if self._block_communicator(color,
                                         face,
@@ -407,7 +408,7 @@ class NxNCenters(SolverElement):
 
                 after_fixed_color = center.get_center_slice(rc).color
 
-                if after_fixed_color != color:
+-                if after_fixed_color != color:
                     raise InternalSWError(f"Slice was not fixed {rc}, " +
                                           f"required={color}, " +
                                           f"actual={after_fixed_color}")
@@ -419,10 +420,10 @@ class NxNCenters(SolverElement):
         if not work_done:
             self.debug(f"Internal error, no work was done on face {face} required color {color}, "
                        f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}")
-            for rc in self._2d_range_iter():
+            for rc in self._2d_center_iter():
                 if center.get_center_slice(rc).color != color:
                     print(f"Missing: {rc}  {[*self._get_four_center_points(rc[0], rc[1])]}")
-            for rc in self._2d_range_iter():
+            for rc in self._2d_center_iter():
                 if source_face.center.get_center_slice(rc).color == color:
                     print(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
 
@@ -547,7 +548,7 @@ class NxNCenters(SolverElement):
         op.op(Algs.bigAlg(None, *swap_faces))
 
         # communicator 1, upper block about center
-        self._block_communicator(required_color, face, source,
+-------------++        self._block_communicator(required_color, face, source,
                                  (mid + 1, mid), (nn - 1, mid),
                                  _SearchBlockMode.BigThanSource)
 
@@ -647,10 +648,18 @@ class NxNCenters(SolverElement):
                rotate_on_second * rotate_mul,
                on_front_rotate.prime]
 
-        # fix query source with rotation
-        source_slices = [source_face.center.get_center_slice(rc) for rc in self._2d_range_on_source(is_back, rc1, rc2)]
+        source_slices: list[CenterSlice] = []
+        target_slices: list[CenterSlice] = []
 
-        target_slices = [face.center.get_center_slice(rc) for rc in self._2d_range_on_source(False, rc1, rc2)]
+        if self.animation_on:
+            _on_src1_1 = self._point_on_source(is_back, rc1)
+            _on_src1_2 = self._point_on_source(is_back, rc2)
+            # why - ? because we didn't yet rotate it
+            _on_src1_1 = CubeQueries.rotate_point_clockwise(cube, _on_src1_1, -n_rotate)
+            _on_src1_2 = CubeQueries.rotate_point_clockwise(cube, _on_src1_2, -n_rotate)
+            source_slices = [source_face.center.get_center_slice(rc) for rc in self._2d_range(_on_src1_2, _on_src1_2)]
+
+            target_slices = [face.center.get_center_slice(rc) for rc in self._2d_range_on_source(False, rc1, rc2)]
 
         with self.w_center_slice_annotate(*source_slices, *target_slices):
             self.op.op(Algs.of_face(source_face.name) * n_rotate)
@@ -738,7 +747,7 @@ class NxNCenters(SolverElement):
 
         return True
 
-    def _point_on_source(self, is_back: bool, rc: Tuple[int, int]):
+    def _point_on_source(self, is_back: bool, rc: Tuple[int, int]) -> Point:
 
         inv = self.cube.inv
 
@@ -752,6 +761,10 @@ class NxNCenters(SolverElement):
             # on up
             return rc
 
+    def _block_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Block:
+
+        return self._point_on_source(is_back, rc1), self._point_on_source(is_back, rc2)
+
     def _2d_range_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Iterator[Point]:
 
         """
@@ -762,6 +775,17 @@ class NxNCenters(SolverElement):
 
         rc1 = self._point_on_source(is_back, rc1)
         rc2 = self._point_on_source(is_back, rc2)
+
+        yield from self._2d_range(rc1, rc2)
+
+    @staticmethod
+    def _2d_range(rc1: Point, rc2: Point) -> Iterator[Point]:
+
+        """
+        :param rc1: one corner of block, front coords, center slice indexes
+        :param rc2: other corner of block, front coords, center slice indexes
+        :return:
+        """
 
         r1 = rc1[0]
         c1 = rc1[1]
@@ -779,7 +803,7 @@ class NxNCenters(SolverElement):
             for c in range(c1, c2 + 1):
                 yield r, c
 
-    def _2d_range_iter(self) -> Iterator[Point]:
+    def _2d_center_iter(self) -> Iterator[Point]:
 
         """
         Walk on all points in center of size n_slices

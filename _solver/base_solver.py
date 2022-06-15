@@ -164,6 +164,9 @@ class SolverElement(CubeSupplier):
 
         yield from self._w_annotate(*what_to_track)
 
+    @property
+    def animation_on(self):
+        return self.op.animation_enabled
 
     @contextmanager
     def w_center_slice_annotate(self, *slices: CenterSlice, animation=True):
@@ -203,7 +206,7 @@ class SolverElement(CubeSupplier):
 
             cube = self.cube
             for i in ids:
-                s = CubeQueries.find_center_slice(cube, lambda _s : i == _s.edge.c_attributes["annotation_track"])
+                s = CubeQueries.find_center_slice(cube, lambda _s: i == _s.edge.c_attributes["annotation_track"])
                 del s.edge.c_attributes["annotation"]
                 del s.edge.c_attributes["annotation_track"]
 

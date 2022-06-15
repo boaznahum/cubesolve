@@ -14,7 +14,6 @@ Feature: Fix scramble also to invert and multiple and generate sub lists
 #BUG: Single step mode, screen is not refreshed when waiting. What I'm doing wrong ?
 #      scheduling  event, but now response is very pure, see Alt/Ctrl XYZ
 
-#Bug block communicator, source are wrongly traced
 
 Feature: WAIT cursor on scramble
 
