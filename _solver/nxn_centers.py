@@ -1,6 +1,6 @@
 from collections.abc import Iterator, Sequence
 from enum import Enum, unique
-from typing import Tuple, Callable, Collection, Any
+from typing import Tuple, Callable, Collection, Any, TypeAlias
 
 import config
 from _solver.base_solver import SolverElement, ISolver
@@ -22,6 +22,8 @@ def use(_):
 _status = None
 
 FaceTracker = Callable[[], Face]
+
+Point: TypeAlias = Tuple[int, int]
 
 IS_FIRST = "is_first"
 TWO_LAST = "two last"
@@ -305,8 +307,6 @@ class NxNCenters(SolverElement):
 
         """
 
-        :param face:
-        :param color:
         :return: if nay work was done
 
 
@@ -362,120 +362,6 @@ class NxNCenters(SolverElement):
 
         return work_done
 
-    def _to_delete_optimize_by_moving_centres(self, face_loc: FaceLoc, other: Face):
-
-        """
-        We reach here becuase we neet to do face_loc, but most of its pieces or on other
-        :param cmn:
-        :param color:
-        :param cube:
-        :param face_loc:
-        :param nn:
-        :param other:
-        :return:
-        """
-
-        color: Color = face_loc.color
-        cube: Cube = self.cube
-        nn: int = cube.n_slices
-        cmn = self.cmn
-
-        other_tracer = self._trace_face_by_slice_color(other, color)
-
-        self.debug(f"Found most of {face_loc.face} color {color} on {other_tracer.face}")
-
-        # we want to bring the other to front
-
-        # [2:2]E [2:2]M [2:2]E' [2:2]M'
-        #   back -> up -> right->back  left->front->down->left
-        mid = 1 + nn // 2
-        _center_move_alg = Algs.E[mid] + Algs.M[mid] + Algs.E[mid].prime + Algs.M[mid].prime
-
-        self.debug(f"Bringing center piece {color} from {face_loc.face} into {other_tracer.face}")
-
-        others_un_resolved = [f for f in set(cube.faces) - {face_loc.face} - {face_loc.face.opposite} if
-                              not f.is3x3]
-        self.debug(f"Found others unsolved {others_un_resolved}")
-
-        op = self.op
-        if len(others_un_resolved) >= 4:
-
-            self.debug("Bringing without preserving any face")
-
-            cmn.bring_face_front(other_tracer.face)
-            assert other_tracer.face is cube.front
-
-            self.debug(f"Out face is now on {face_loc.face}")
-
-            if cube.back is not face_loc.face:
-                self._bring_face_up_preserve_front(face_loc.face)
-                # todo: optimize it, find alg to bring face from up to front, it should be easy
-                op.op(Algs.B[1:nn + 1])
-                # now other is on right
-                op.op(_center_move_alg)
-            else:
-                # it is on back
-                # todo: Optimize !!!
-                self.debug("Switching back/front up/down not affecting left/right centers")
-
-                # this algorith switch front<->back up<->sown
-                op.op(Algs.Y)
-
-                # now these 3 switch right and left
-                op.op(_center_move_alg)
-                op.op(Algs.Y)
-                op.op(_center_move_alg)
-
-                # so no it switches front/back
-                op.op(Algs.Y.prime)
-
-        elif len(others_un_resolved) >= 2:
-
-            self.debug("Bringing , but need to preserve two")
-
-            if other_tracer.face is face_loc.face.opposite:
-                self.debug(f"Face {face_loc.face} is opposite of  {other_tracer.face}")
-
-                cmn.bring_face_front(other_tracer.face)
-                assert other_tracer.face is cube.front
-                self.debug(f"Now {other_tracer.face} on front, center piece {color} is  on {face_loc.face}")
-
-                # we are going to switch front and back, not affecting left/right
-                # sw we must be sure up/down are not solved
-
-                if not cube.right.is3x3:
-                    # moving up to right, making sure not to harm it
-                    op.op(Algs.Z)
-
-                assert not cube.up.is3x3 and not cube.down.is3x3
-
-                op.op(Algs.Y)
-
-                # now these 3 switch right and left
-                op.op(_center_move_alg)
-                op.op(Algs.Y)
-                op.op(_center_move_alg)
-
-                # so no it switches front/back
-                op.op(Algs.Y.prime)
-
-                # self.debug(f"Inspect cube now, {face_loc.face} should be on front with color {color}")
-                # op.op(Algs.Y + Algs.Y.prime)
-            else:
-                # to reproduce: simply [mid]E
-                # two others are unsolved, so in total we have 4 (me my opposite) + two others
-                cmn.bring_face_front(other_tracer.face)
-                assert other_tracer.face is cube.front
-
-                self._bring_face_up_preserve_front(face_loc.face)
-                assert face_loc.face is cube.up
-
-                # now we need to bring centerpiece from up face into front preserving left and right
-                # we can destroy back and down
-                # how don't know how to di it, so I', moving all the slice
-                # todo: Optimize it
-                op.op(-Algs.M[mid])
-
     def _do_center_from_face(self, face: Face, color: Color, source_face: Face) -> bool:
 
         """
@@ -511,172 +397,38 @@ class NxNCenters(SolverElement):
 
         center = face.center
 
-        for r in range(0, n):  # 5: 3..4
+        for rc in self._2d_range_iter():
 
-            for j in range(n):
+            if self._block_communicator(color,
+                                        face,
+                                        source_face,
+                                        rc, rc,
+                                        _SearchBlockMode.CompleteBlock):
 
-                if self._block_communicator(color,
-                                            face,
-                                            source_face,
-                                            (r,j), (r,j),
-                                            _SearchBlockMode.CompleteBlock):
+                after_fixed_color = center.get_center_slice(rc).color
 
-                    self.debug(f"Fixed slice {r}, {j}")
-                    assert center.get_center_slice((r, j)).color == color, f"Slice was not fixed {(r, j)}, " \
-                                                                           f"required={color}, " \
-                                                                           f"actual={center.get_center_slice((r, j)).color}"
+                if after_fixed_color != color:
+                    raise InternalSWError(f"Slice was not fixed {rc}, " +
+                                          f"required={color}, " +
+                                          f"actual={after_fixed_color}")
 
-                    work_done = True
+                self.debug(f"Fixed slice {rc}")
 
-                # cs: CenterSlice = center.get_center_slice((r, j))
-                #
-                # if cs.color != color:
-                #     self.debug(f"Need to fix slice {r}, {j}, {cs.color} to {color}")
-                #
-                #     if self._fix_center_slice(cs, color, source_face):
-                #         work_done = True
+                work_done = True
 
         if not work_done:
             self.debug(f"Internal error, no work was done on face {face} required color {color}, "
                        f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}")
-            for r in range(n):
-                for c in range(n):
-                    if center.get_center_slice((r, c)).color != color:
-                        print(f"Missing: {(r, c)}  {[*self._get_four_center_points(r, c)]}")
-            for r in range(n):
-                for c in range(n):
-                    if source_face.center.get_center_slice((r, c)).color == color:
-                        print(f"Found on {source_face}: {(r, c)}  {source_face.center.get_center_slice((r, c))}")
+            for rc in self._2d_range_iter():
+                if center.get_center_slice(rc).color != color:
+                    print(f"Missing: {rc}  {[*self._get_four_center_points(rc[0], rc[1])]}")
+            for rc in self._2d_range_iter():
+                if source_face.center.get_center_slice(rc).color == color:
+                    print(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
 
             raise InternalSWError("See error in log")
 
         return work_done
-
-    def _fix_center_slice(self, cs: CenterSlice, required_color, source_face: Face) -> bool:
-        """
-        Assume center slice is in front
-        this is not optimized because it rotates faces
-        :param cs:
-        :return:
-        """
-
-        r, j = cs.index
-        self.debug(f"Fixing slice {r}, {j}, {cs.color} --> {required_color}")
-
-        source = self._find_matching_slice(source_face, r, j, required_color)
-
-        if source:
-            self.debug(f"  Found matching piece {source} on {source.face}")
-            self._fix_center_slice_from_source(cs, required_color, source)
-            return True
-        else:
-            return False
-
-    def _fix_center_slice_from_source(self, cs: CenterSlice, required_color, source: CenterSlice):
-
-        # before the rotation
-        assert required_color == source.color
-
-        s_index = cs.index
-        return self._block_communicator(required_color,
-                                        cs.face,
-                                        source.face,
-                                        s_index, s_index, _SearchBlockMode.BigThanSource)
-
-        source_face = source.face
-
-        cube = self.cube
-        is_back = source_face is cube.back
-
-        rotate_source: algs.Alg
-        target_to_source_conversion: int
-        if is_back:
-            rotate_source = Algs.B
-        else:
-            rotate_source = Algs.U
-
-        # Because it was moved, index might be changed
-        r, c = cs.index
-
-        inv = cube.inv
-
-        with self.w_center_slice_annotate(cs):
-            new_location_source = self._find_matching_slice(source_face, r, c, required_color)
-            assert new_location_source
-            source = new_location_source
-            assert required_color == source.color
-
-            # the logic here is hard code of the logic in slice rotate
-            # it will be broken if cube layout is changed
-            # here we assume we work on F, and UP has same coord system as F, and
-            # back is mirrored in both direction
-            if is_back:
-                source_index = (inv(r), inv(c))
-            else:
-                source_index = (r, c)
-
-            self.debug(f" Source {source} is now on {source.face.name} {source.index} , but assume {source_index}")
-
-            # optimize it, can be done by less rotation, more math
-            for _ in range(0, 4):
-                if source_face.center.get_center_slice(
-                        source_index).color == required_color:  # maybe it will find other :)
-                    break
-                self.op.op(rotate_source)
-
-            source_slice = source_face.center.get_center_slice(source_index)
-            assert source_slice.color == required_color
-
-            with self.w_center_slice_annotate(source_slice):
-
-                self.debug(f" On  {source.face.name} , {(r, c)} is {source_slice.color}")
-
-                # this can be done, because Front and UP have the same coordinates system !!!
-
-                on_front_rotate: algs.Alg
-
-                # assume we rotate F clockwise
-                rr, cc = self.rotate_point_clockwise(r, c)
-
-                # new cc mus not be same as c !!!
-                if c == cc:
-                    on_front_rotate = Algs.F.prime
-                    rr, cc = self.rotate_point_counterclockwise(r, c)
-                    if cc == c:
-                        print("xxx")
-                    assert cc != c
-                else:
-                    # clockwise is OK
-                    on_front_rotate = Algs.F
-
-                # center indexes are in opposite direction of R
-                #   index is from left to right, R is from right to left
-                rotate_on_cell = Algs.M[inv(c) + 1:inv(c) + 1]
-                rotate_on_second = Algs.M[inv(cc) + 1:inv(cc) + 1]
-
-                if is_back:
-                    r1_mul = 2
-                else:
-                    r1_mul = 1
-
-                self.debug(f"Doing communicator on {(r, c)} using second column {cc}, rotating {on_front_rotate}")
-
-                _alg_s = [rotate_on_cell.prime * r1_mul,
-                          on_front_rotate,
-                          rotate_on_second.prime * r1_mul,
-                          on_front_rotate.prime,
-                          rotate_on_cell * r1_mul,
-                          on_front_rotate,
-                          rotate_on_second * r1_mul,
-                          on_front_rotate.prime]
-
-                for a in _alg_s:
-                    self.op.op(a)  # so I can debug
-
-                if cs.color != required_color:
-                    print()
-                assert cs.color == required_color, f"Color was not solved, {(r, c)} {cs} " \
-                                                   f"color is {cs.color}, {required_color=}"
 
     @staticmethod
     def _is_face_solved(face: Face, color: Color) -> bool:
@@ -777,7 +529,7 @@ class NxNCenters(SolverElement):
         op = self.op
 
         mid = nn // 2
-        midpls1 = 1 + nn // 2  # == 3 on 5
+        mid_pls_1 = 1 + nn // 2  # == 3 on 5
 
         end = nn
 
@@ -786,8 +538,11 @@ class NxNCenters(SolverElement):
             rotate_mul = 2
 
         # on odd cube
-        swap_faces = [Algs.M[1:midpls1 - 1].prime * rotate_mul + Algs.F.prime * 2 + Algs.M[1:midpls1 - 1] * rotate_mul +
-                      Algs.M[midpls1 + 1:end].prime * rotate_mul + Algs.F * 2 + Algs.M[midpls1 + 1:end] * rotate_mul
+        # todo: replace with self._get_slice_m_alg()
+        swap_faces = [Algs.M[1:mid_pls_1 - 1].prime * rotate_mul, Algs.F.prime * 2,
+                      Algs.M[1:mid_pls_1 - 1] * rotate_mul,
+                      Algs.M[mid_pls_1 + 1:end].prime * rotate_mul,
+                      Algs.F * 2 + Algs.M[mid_pls_1 + 1:end] * rotate_mul
                       ]
         op.op(Algs.bigAlg(None, *swap_faces))
 
@@ -803,12 +558,12 @@ class NxNCenters(SolverElement):
 
         # communicator 3, left to center
         self._block_communicator(required_color, face, source,
-                                 (mid, 0), (mid, mid-1),
+                                 (mid, 0), (mid, mid - 1),
                                  _SearchBlockMode.BigThanSource)
 
         # communicator 4, right ot center
         self._block_communicator(required_color, face, source,
-                                 (mid, mid+1), (mid, nn-1),
+                                 (mid, mid + 1), (mid, nn - 1),
                                  _SearchBlockMode.BigThanSource)
 
     def _block_communicator(self,
@@ -854,7 +609,6 @@ class NxNCenters(SolverElement):
         if n_rotate is None:
             return False
 
-
         on_front_rotate: algs.Alg
 
         # assume we rotate F clockwise
@@ -862,18 +616,17 @@ class NxNCenters(SolverElement):
         rc2_f_rotated = self.rotate_point_clockwise(r2, c2)
 
         # the columns ranges must not intersect
-        if self._1_d_intesect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
+        if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
             on_front_rotate = Algs.F.prime
             rc1_f_rotated = self.rotate_point_counterclockwise(r1, c1)
             rc2_f_rotated = self.rotate_point_counterclockwise(r2, c2)
 
-            if self._1_d_intesect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
+            if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
                 print("xxx")
-            assert not self._1_d_intesect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1]))
+            assert not self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1]))
         else:
             # clockwise is OK
             on_front_rotate = Algs.F
-
 
         # center indexes are in opposite direction of R
         #   index is from left to right, R is from right to left
@@ -923,7 +676,8 @@ class NxNCenters(SolverElement):
                 n += 1
         return n
 
-    def _count_colors_on_block(self, color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int]):
+    @staticmethod
+    def _count_colors_on_block(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int]):
 
         """
 
@@ -965,7 +719,8 @@ class NxNCenters(SolverElement):
 
         return _count
 
-    def _1_d_intesect(self, range_1: Tuple[int, int], range_2: Tuple[int, int]):
+    @staticmethod
+    def _1_d_intersect(range_1: Tuple[int, int], range_2: Tuple[int, int]):
 
         """
                  x3--------------x4
@@ -997,8 +752,7 @@ class NxNCenters(SolverElement):
             # on up
             return rc
 
-    def _2d_range_on_source(self, is_back: bool, rc1: Tuple[int, int], rc2: Tuple[int, int]) -> Iterator[
-        Tuple[int, int]]:
+    def _2d_range_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Iterator[Point]:
 
         """
         :param rc1: one corner of block, front coords, center slice indexes
@@ -1023,6 +777,18 @@ class NxNCenters(SolverElement):
 
         for r in range(r1, r2 + 1):
             for c in range(c1, c2 + 1):
+                yield r, c
+
+    def _2d_range_iter(self) -> Iterator[Point]:
+
+        """
+        Walk on all points in center of size n_slices
+        """
+
+        n = self.cube.n_slices
+
+        for r in range(n):
+            for c in range(n):
                 yield r, c
 
     @staticmethod
@@ -1095,10 +861,17 @@ class NxNCenters(SolverElement):
 
     def _get_slice_m_alg(self, c1, c2):
 
+        """
+        Center Slice index [0, n)
+        :param c1:
+        :param c2:
+        :return:
+        """
+
         inv = self.cube.inv
 
-        #   index is from left to right, R is from right to left
-        # so we nned to invert
+        #   index is from left to right, R is from right to left,
+        # so we need to invert
         c1 = inv(c1)
         c2 = inv(c2)
 
