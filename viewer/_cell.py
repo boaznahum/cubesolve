@@ -158,8 +158,12 @@ class _Cell:
 
     def get_all_gui_elements(self, dest: set[int]):
         m: dict[frozenset[FaceName], MutableSequence[int]]
-        lists: Sequence[int] = [ll for m in [self.gl_lists_movable, self.gl_lists_unmovable]
-                                for ls in m.values() for ll in ls]
+
+        dicts:list[dict[PartSliceHashID, MutableSequence[int]]] = [self.gl_lists_movable, self.gl_lists_unmovable]
+
+        # when we try to use values() pycharm complains
+        lists: Sequence[int] = [ll for m in dicts
+                                for _, ls in m.items() for ll in ls]
 
         if not lists:
             print(f"Error no gl lists in {self}", file=sys.stderr)

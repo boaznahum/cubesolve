@@ -16,7 +16,7 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 
 
 ##########################################################################
-# Sequence diagram  $ todo:update squence was improved
+# Sequence diagram  $ todo:update sequence was improved
 #
 # Viewer              Board                       _Face                        _Cell
 #  init     -->        init
@@ -329,12 +329,6 @@ class _Board:
         #             print(f"{e} {e.parent} {r}")
 
         for f in self._faces:
-
-            ortho_dir: ndarray = f.ortho_direction
-            norm = np.linalg.norm(ortho_dir)
-            ortho_dir /= norm
-
-            ortho_dir *= 2
 
             c: _Cell
             # if f.cube_face.name == FaceName.F:
