@@ -399,42 +399,9 @@ class NxNCenters(SolverElement):
                 work_done = True
 
         if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
+            if self._do_blocks(color, cube, face, source_face):
+                work_done = True
 
-            while self._has_color_on_face(source_face, color):
-
-                big_block = self._search_big_block(source_face, color)
-
-                if not big_block:
-                    break
-
-                # print(f"@@@@@@@@@@@ Found big block: {big_block}")
-
-                rc1 = big_block[0]
-                rc2 = big_block[1]
-
-                rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
-                rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
-
-                big_block_done = False
-                for _ in range(4):
-                    if self._block_communicator(color,
-                                                face,
-                                                source_face,
-                                                rc1_on_target, rc2_on_target,
-                                                # actually we want big-than, but for this we need to find best match
-                                                # it still doesn't work, we need another mode, Source and Target Match
-                                                # but for this we need to search source only
-                                                _SearchBlockMode.ExactMatch):
-                        # this is much far then true, we need to search new block
-                        big_block_done = True
-                        work_done = True
-                        break
-
-                    rc1_on_target = CubeQueries.rotate_point_clockwise(cube, rc1_on_target)
-                    rc2_on_target = CubeQueries.rotate_point_clockwise(cube, rc2_on_target)
-
-                if not big_block_done:
-                    break
 
         center = face.center
 
@@ -468,6 +435,47 @@ class NxNCenters(SolverElement):
                     print(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
 
             raise InternalSWError("See error in log")
+
+        return work_done
+
+    def _do_blocks(self, color, cube, face, source_face):
+
+        work_done = False
+
+
+        big_blocks = self._search_big_block(source_face, color)
+
+        if not big_blocks:
+            return False
+
+        # becuase we do exact match, there is no risk that that new blocks will be construct
+        # so we try all
+
+        big_block_done = False
+        for _, big_block in big_blocks:
+            # print(f"@@@@@@@@@@@ Found big block: {big_block}")
+
+            rc1 = big_block[0]
+            rc2 = big_block[1]
+
+            rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
+            rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
+
+            for _ in range(4):
+                if self._block_communicator(color,
+                                            face,
+                                            source_face,
+                                            rc1_on_target, rc2_on_target,
+                                            # actually we want big-than, but for this we need to find best match
+                                            # it still doesn't work, we need another mode, Source and Target Match
+                                            # but for this we need to search source only
+                                            _SearchBlockMode.ExactMatch):
+                    # this is much far then true, we need to search new block
+                    work_done = True
+                    break
+
+                rc1_on_target = CubeQueries.rotate_point_clockwise(cube, rc1_on_target)
+                rc2_on_target = CubeQueries.rotate_point_clockwise(cube, rc2_on_target)
 
         return work_done
 
@@ -717,10 +725,11 @@ class NxNCenters(SolverElement):
 
         return is_block
 
-    def _search_big_block(self, face: Face, color: Color) -> Block | None:
+    def _search_big_block(self, face: Face, color: Color) -> Sequence[Tuple[int, Block]] | None:
 
         center = face.center
 
+        res: list[Tuple[int, Block]] = []
         max_size = -1
         max_box: Block | None = None
 
@@ -755,11 +764,15 @@ class NxNCenters(SolverElement):
                     c_max = rc[1]
 
                 size = self._block_size(rc, (r_max, c_max))
-                if size > 1 and size > max_size:
+
+                #if size > 1:
+                res.append((size, (rc, (r_max, c_max))))
+                if size > max_size:
                     max_size = size
                     max_box = rc, (r_max, c_max)
 
-        return max_box
+        res = sorted(res, key=lambda s: s[0], reverse=True)
+        return res
 
     def _is_valid_block(self, rc1: Point, rc2: Point):
 
