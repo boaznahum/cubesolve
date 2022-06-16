@@ -27,3 +27,5 @@ MARKER_COLOR:Tuple[int, int, int] = (0,0,0) # dimgray / dimgray	#696969	rgb(105,
 
 # Solver
 OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = True  # under test doesn't work well, see _todo
+
+PROF_VIEWER_SEARCH_FACET=True

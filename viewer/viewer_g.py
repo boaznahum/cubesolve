@@ -10,13 +10,14 @@ from numpy import ndarray
 from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
+import config
 from app_state import AppState
 from model.cube import Cube
 from model.cube_face import Face
 from model.elements import Part, FaceName, PartEdge
 from model.elements import PartSlice
 # noinspection PyMethodMayBeStatic
-
+from utils import prof
 
 from ._cell import _CELL_SIZE
 from ._faceboard import _FACE_SIZE, _FaceBoard
@@ -149,4 +150,6 @@ class GCubeViewer:
         return right_center, left_center, objects
 
     def find_facet(self, x: float, y: float, z: float) -> Tuple[PartEdge, ndarray, ndarray] | None:
-        return self._board.find_facet(x, y, z)
+
+        with prof.w_prof("Locate facet", config.PROF_VIEWER_SEARCH_FACET):
+            return self._board.find_facet(x, y, z)

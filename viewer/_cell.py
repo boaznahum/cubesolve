@@ -15,6 +15,7 @@ from app_state import AppState
 from model.cube_boy import Color, FaceName
 from model.cube_face import Face
 from model.elements import PartSliceHashID, PartEdge, Part, PartSlice, Corner, Edge, EdgeSlice, Center, CenterSlice
+from utils import geometry
 from viewer import shapes
 
 _CELL_SIZE: int = config.CELL_SIZE
@@ -52,8 +53,36 @@ def _color_2_v_color(c: Color) -> _VColor:
 
 
 class _RectGeometry:
-    two_d_draw_rect: Sequence[ndarray]  # [left_bottom, right_bottom, right_top, left_top]
+    _two_d_draw_rect: Sequence[ndarray]  # [left_bottom, right_bottom, right_top, left_top]
     three_d_search_box: Tuple[Sequence[ndarray], Sequence[ndarray]]
+
+    def __init__(self, two_d_rect: Sequence[ndarray], ortho_dir: ndarray) -> None:
+        self._two_d_draw_rect = two_d_rect
+        for v in two_d_rect:
+            v.flags.writeable = False
+
+        norm = np.linalg.norm(ortho_dir)
+        ortho_dir /= norm
+
+        ortho_dir *= 2
+
+        self._bottom_quad = [p - ortho_dir for p in two_d_rect]
+        self._top_quad = [p + ortho_dir for p in two_d_rect]
+
+    @property
+    def two_d_draw_rect(self) -> Sequence[ndarray]:
+        return self._two_d_draw_rect
+
+    @property
+    def box_bottom(self) -> Sequence[ndarray]:
+        return self._bottom_quad
+
+    @property
+    def box_top(self) -> Sequence[ndarray]:
+        return self._top_quad
+
+    def in_box(self, x, y, z):
+        return geometry.in_box(x, y, z, self._bottom_quad, self._top_quad)
 
 
 # noinspection PyMethodMayBeStatic
@@ -77,6 +106,8 @@ class _Cell:
         # the boxes of the part PartEdge
         #  # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
         self.facets: dict[PartEdge, _RectGeometry] = {}
+        # noinspection PyTypeChecker
+        self.cell_geometry: _RectGeometry = None  # type: ignore
 
     def _clear_gl_lists(self):
         # delete and clear all lists
@@ -103,6 +134,8 @@ class _Cell:
 
         self._left_bottom_v3 = vertexes[0]
         self._right_top_v3 = vertexes[2]
+
+        self.cell_geometry = _RectGeometry(vertexes, self._face_board.ortho_direction)
 
         # delete and clear all lists
         self._clear_gl_lists()
@@ -206,8 +239,7 @@ class _Cell:
             corner_slice = part.slice
             with self._gen_list_for_slice(corner_slice, g_list_dest):
 
-                crg: _RectGeometry = _RectGeometry()
-                crg.two_d_draw_rect = vertexes
+                crg: _RectGeometry = _RectGeometry(vertexes, self._face_board.ortho_direction)
 
                 self.facets[self._get_slice_edge(corner_slice)] = crg
 
@@ -255,8 +287,7 @@ class _Cell:
                         left_bottom = left_bottom + d
                         left_top = left_top + d
 
-                    erg: _RectGeometry = _RectGeometry()
-                    erg.two_d_draw_rect = vx
+                    erg: _RectGeometry = _RectGeometry(vx, self._face_board.ortho_direction)
 
                     self.facets[self._get_slice_edge(_slice)] = erg
 
@@ -291,8 +322,7 @@ class _Cell:
 
                         edge = center_slice.get_face_edge(cube_face)
 
-                        center_rg: _RectGeometry = _RectGeometry()
-                        center_rg.two_d_draw_rect = vx
+                        center_rg: _RectGeometry = _RectGeometry(vx, self._face_board.ortho_direction)
                         self.facets[edge] = center_rg
 
     def _update_polygon(self, g_list_dest: dict[PartSliceHashID, MutableSequence[int]]):
