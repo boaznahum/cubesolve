@@ -117,7 +117,7 @@ class CubeQueries:
 
         inv = cube.inv
         for i in range(0, n % 4):
-            row, column = rc[1], inv(rc[0])
+            rc = rc[1], inv(rc[0])
 
         return rc
 
