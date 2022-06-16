@@ -336,25 +336,26 @@ class NxNCenters(SolverElement):
 
         work_done = False
 
-        for _ in range(3):  # 3 faces
-            # need to optimize ,maybe no sources on this face
+        if any ( self._has_color_on_face(f, color) for f in cube.front.adjusted_faces()):
+            for _ in range(3):  # 3 faces
+                # need to optimize ,maybe no sources on this face
 
+                # don't use face - it was moved !!!
+                if self._do_center_from_face(cube.front, color, cube.up):
+                    work_done = True
+
+                if self._is_face_solved(face_loc.face, color):
+                    return work_done
+
+                self._bring_face_up_preserve_front(cube.left)
+
+            # on the last face
             # don't use face - it was moved !!!
             if self._do_center_from_face(cube.front, color, cube.up):
                 work_done = True
 
             if self._is_face_solved(face_loc.face, color):
                 return work_done
-
-            self._bring_face_up_preserve_front(cube.left)
-
-        # on the last face
-        # don't use face - it was moved !!!
-        if self._do_center_from_face(cube.front, color, cube.up):
-            work_done = True
-
-        if self._is_face_solved(face_loc.face, color):
-            return work_done
 
         if NxNCenters.work_on_b:
             # now from back
@@ -397,41 +398,43 @@ class NxNCenters(SolverElement):
                 self._swap_entire_face_odd_cube(color, face, source_face)
                 work_done = True
 
-        while self._has_color_on_face(source_face, color):
+        if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
 
-            big_block = self._search_big_block(source_face, color)
+            while self._has_color_on_face(source_face, color):
 
-            if not big_block:
-                break
+                big_block = self._search_big_block(source_face, color)
 
-            # print(f"@@@@@@@@@@@ Found big block: {big_block}")
-
-            rc1 = big_block[0]
-            rc2 = big_block[1]
-
-            rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
-            rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
-
-            big_block_done = False
-            for _ in range(4):
-                if self._block_communicator(color,
-                                            face,
-                                            source_face,
-                                            rc1_on_target, rc2_on_target,
-                                            # actually we want big-than, but for this we need to find best match
-                                            # it still doesn't work, we need another mode, Source and Target Match
-                                            # but for this we need to search source only
-                                            _SearchBlockMode.ExactMatch):
-                    # this is much far then true, we need to search new block
-                    big_block_done = True
-                    work_done = True
+                if not big_block:
                     break
 
-                rc1_on_target = CubeQueries.rotate_point_clockwise(cube, rc1_on_target)
-                rc2_on_target = CubeQueries.rotate_point_clockwise(cube, rc2_on_target)
+                # print(f"@@@@@@@@@@@ Found big block: {big_block}")
 
-            if not big_block_done:
-                break
+                rc1 = big_block[0]
+                rc2 = big_block[1]
+
+                rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
+                rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
+
+                big_block_done = False
+                for _ in range(4):
+                    if self._block_communicator(color,
+                                                face,
+                                                source_face,
+                                                rc1_on_target, rc2_on_target,
+                                                # actually we want big-than, but for this we need to find best match
+                                                # it still doesn't work, we need another mode, Source and Target Match
+                                                # but for this we need to search source only
+                                                _SearchBlockMode.ExactMatch):
+                        # this is much far then true, we need to search new block
+                        big_block_done = True
+                        work_done = True
+                        break
+
+                    rc1_on_target = CubeQueries.rotate_point_clockwise(cube, rc1_on_target)
+                    rc2_on_target = CubeQueries.rotate_point_clockwise(cube, rc2_on_target)
+
+                if not big_block_done:
+                    break
 
         center = face.center
 
