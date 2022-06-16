@@ -8,6 +8,7 @@ from cube_operator import Operator
 from main_g_app import AbstractApp
 from model.cube import Cube
 from solver import Solver
+from viewer.viewer_g import GCubeViewer
 
 
 class Animation:
@@ -49,4 +50,9 @@ class AbstractWindow(pyglet.window.Window):
     @property
     @abstractmethod
     def app(self) -> AbstractApp:
+        pass
+
+    @property
+    @abstractmethod
+    def viewer(self) -> GCubeViewer:
         pass

@@ -47,7 +47,7 @@ class Window(AbstractWindow):
         # self.create_layout()
 
         self._app: App = app
-        self.viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
+        self._viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
         self.text: MutableSequence[pyglet.text.Label] = []
 
         self._animation: Animation | None = None
@@ -62,6 +62,10 @@ class Window(AbstractWindow):
     @property
     def app(self) -> App:
         return self._app
+
+    @property
+    def viewer(self) -> GCubeViewer:
+        return self._viewer
 
     def set_animation(self, an: Animation | None):
         self._animation = an

@@ -1,6 +1,6 @@
 from collections import defaultdict
 from collections.abc import Set, MutableSequence, Sequence, Iterable, Collection
-from typing import Callable
+from typing import Callable, Tuple
 
 import numpy as np
 from numpy import ndarray
@@ -80,7 +80,7 @@ class _Board:
     def update(self):
 
         # we error after cube reset, and we don't want to complicate the call to viewer
-        if self._front is not self._cube.front: # same cube as before
+        if self._front is not self._cube.front:  # same cube as before
             self.reset()
         else:
             # start = time.time_ns()
@@ -309,9 +309,16 @@ class _Board:
 
         return lists
 
-
-    def find_facet(self, x: float, y: float, z: float) -> PartEdge | None:
+    def find_facet(self, x: float, y: float, z: float) -> Tuple[PartEdge, ndarray, ndarray] | None:
         # print(x, y, z)
+
+        """
+
+        :param x:
+        :param y:
+        :param z:
+        :return:  found part and on face left-right and left-top vectors
+        """
 
         f: _FaceBoard
 
@@ -342,7 +349,7 @@ class _Board:
                     top_quad = [p + ortho_dir for p in r]
 
                     if self._in_box(x, y, z, bottom_quad, top_quad):
-                        return e
+                        return e, f.left_right_direction, f.left_top_direction
 
         return None
 

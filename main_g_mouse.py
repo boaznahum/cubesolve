@@ -4,7 +4,10 @@
 #
 #
 import math
+from typing import Tuple, Any
 
+import numpy as np
+from numpy import ndarray
 from pyglet.window import key  # type: ignore
 from pyglet import gl  # type: ignore
 
@@ -52,27 +55,76 @@ def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
 
     app: AbstractApp = window.app
 
-    slice_face = _get_selected_slice(window.viewer, app.vs, window, x, y)
+    selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(app.vs, window, x, y)
 
-    print(f"{slice_face}")
-    if slice_face:
+    if not selected:
+        return
 
-        _HADNLING_ALT_MOUSE = True
-        try:
-            _handle_selected_slice(window, slice_face, dx < 0 or dy < 0)
-        finally:
-            _HADNLING_ALT_MOUSE = False
+    #print(f"{selected}")
+
+    slice_face = selected[0]
+    left_to_right = selected[1]
+    left_to_top = selected[2]
+
+    p0 = _screen_to_model(app.vs, window, x, y)  # todo we already in selected !!!
+    p1 = _screen_to_model(app.vs, window, x + dx , y + dy)
+    d_vector: ndarray = p1 - p0
+
+    on_left_to_right = d_vector.dot(left_to_right)
+    on_left_to_top = d_vector.dot(left_to_top)
+
+    part_slice: PartSlice = slice_face.parent
+    part: Part = part_slice.parent
+
+    print(f"{part=}, {on_left_to_right=}, {on_left_to_top=}")
+
+    it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
+
+
+    _HADNLING_ALT_MOUSE = True
+    try:
+        face = slice_face.face
+        face_name = face.name
+
+        alg: Alg | None = None
+        inv = False
+        if isinstance(part, Corner):
+            # print("Is corner")
+            alg = Algs.of_face(face_name)
+
+            if part is face.corner_top_right:
+                if it_left_to_right:
+                    inv = on_left_to_right < 0
+                else:
+                    inv = on_left_to_top > 0
+
+
+        if alg:
+            if inv:
+                alg = alg.inv()
+            _play(window, alg)
+
+    finally:
+        _HADNLING_ALT_MOUSE = False
 
 
 def on_mouse_press(window: AbstractWindow, vs: AppState, op: Operator, viewer: GCubeViewer, x, y, modifiers):
     if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
 
-        slice_face: PartEdge | None = _get_selected_slice(viewer, vs, window, x, y)
+        selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(vs, window, x, y)
 
-        if slice_face:
-            _handle_selected_slice(window, slice_face, modifiers & key.MOD_CTRL)
+        if selected:
+            _handle_selected_slice(window, selected[0], modifiers & key.MOD_CTRL)
 
 
+def _play(window: AbstractWindow, alg: Alg):
+
+        op = window.app.op
+
+        op.op(alg)
+        # why I need that
+        if not op.animation_enabled:
+            window.update_gui_elements()
 def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bool):
     def _play(alg: Alg):
 
@@ -149,7 +201,7 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
                 _play(slice_alg)
 
 
-def _get_selected_slice(viewer, vs, window, x, y):
+def _screen_to_model(vs, window, x, y) -> np.ndarray:
     # almost as in
     # https://stackoverflow.com/questions/57495078/trying-to-get-3d-point-from-2d-click-on-screen-with-opengl
     # print(f"on mouse press: {x} {y}")
@@ -181,9 +233,12 @@ def _get_selected_slice(viewer, vs, window, x, y):
     depth = d[0]
     gl.gluUnProject(x, real_y, depth, mvmat, pmat, viewport, px, py, pz)
     # print(f"{px.value=}, {py.value=}, {pz.value=}")
-    vs.tx = px.value
-    vs.ty = py.value
-    vs.tz = pz.value
     vs.restore_objects_view()
-    slice_face: PartEdge | None = viewer.find_facet(px.value, py.value, pz.value)
-    return slice_face
+
+    return np.array([px.value, py.value, pz.value])
+
+
+def _get_selected_slice(vs, window, x, y) -> Tuple[PartEdge, np.ndarray, np.ndarray] | None:
+    p = _screen_to_model(vs, window, x, y)
+
+    return window.viewer.find_facet(p[0], p[1], p[2])

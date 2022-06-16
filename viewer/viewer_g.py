@@ -148,5 +148,5 @@ class GCubeViewer:
 
         return right_center, left_center, objects
 
-    def find_facet(self, x: float, y: float, z: float) -> PartEdge | None:
+    def find_facet(self, x: float, y: float, z: float) -> Tuple[PartEdge, ndarray, ndarray] | None:
         return self._board.find_facet(x, y, z)
