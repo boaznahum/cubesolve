@@ -298,6 +298,9 @@ class Face(SuperElement):
 
     @property
     def solved(self):
+        if not self.is3x3:
+            return False
+
         return (self.center.color ==
                 self._edge_top.f_color(self) ==
                 self._edge_right.f_color(self) ==

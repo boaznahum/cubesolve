@@ -403,7 +403,7 @@ class NxNCenters(SolverElement):
             if not big_block:
                 break
 
-            print(f"@@@@@@@@@@@ Found big block: {big_block}")
+            #print(f"@@@@@@@@@@@ Found big block: {big_block}")
 
             rc1 = big_block[0]
             rc2 = big_block[1]
@@ -701,6 +701,17 @@ class NxNCenters(SolverElement):
 
         return True
 
+    def _is_valid_and_block(self, face:Face, color: Color, rc1: Point, rc2: Point):
+
+        is_valid_block = self._is_valid_block(rc1, rc2)
+
+        if not is_valid_block:
+            return False
+
+        is_block = self._is_block(face, color, None, rc1, rc2, dont_convert_coordinates=True)
+
+        return is_block
+
     def _search_big_block(self, face: Face, color: Color) -> Block | None:
 
         center = face.center
@@ -710,15 +721,16 @@ class NxNCenters(SolverElement):
 
         n = self.cube.n_slices
 
+        if face.name == FaceName.B and color == Color.WHITE:
+            print()
         for rc in self._2d_center_iter():
 
             if center.get_center_slice(rc).color == color:
                 # now try to extend it over r
                 r_max = None
                 for r in range(rc[0] + 1, n):
-                    if not (self._is_valid_block(rc, (r, rc[1])) and
-                            self._is_block(face, color, None, rc, (r, rc[1]))):
 
+                    if not self._is_valid_and_block(face, color, rc, (r, rc[1])):
                         break
                     else:
                         r_max = r
@@ -729,9 +741,7 @@ class NxNCenters(SolverElement):
                 # now try to extend it over c
                 c_max = None
                 for c in range(rc[1] + 1, n):
-                    if not (self._is_valid_block(rc, (r_max, c)) and
-                            self._is_block(face, color, None, rc, (r_max, c))):
-
+                    if not self._is_valid_and_block(face, color, rc, (r_max, c)):
                         break
                     else:
                         c_max = c
@@ -846,10 +856,22 @@ class NxNCenters(SolverElement):
         :return:  not ( x3  > x2 or x4 < x1 )
         """
 
-        if range_2[0] > range_1[1]:
+        x1 = range_1[0]
+        x2 = range_1[1]
+        x3 = range_2[0]
+        x4 = range_2[1]
+
+        # after rotation points swap coordinates
+        if x1 > x2:
+            x1, x2 = x2, x1
+
+        if x3 > x4:
+            x3, x4 = x4, x3
+
+        if x3 > x2:
             return False
 
-        if range_2[1] < range_1[0]:
+        if x4 < x1:
             return False
 
         return True
@@ -944,7 +966,8 @@ class NxNCenters(SolverElement):
                   source_face: Face,
                   required_color: Color,
                   min_points: int | None,
-                  rc1: Tuple[int, int], rc2: Tuple[int, int]) -> bool:
+                  rc1: Tuple[int, int], rc2: Tuple[int, int],
+                  dont_convert_coordinates: bool = False) -> bool:
 
         """
 
@@ -953,6 +976,7 @@ class NxNCenters(SolverElement):
         :param min_points: If None that all block , min = block size
         :param rc1:
         :param rc2:
+        :param dont_convert_coordinates if True then don't convert coordinates according to source face
         :return:
         """
 
@@ -966,8 +990,13 @@ class NxNCenters(SolverElement):
 
         center = source_face.center
         miss_count = 0
-        for rc in self._2d_range_on_source(source_face is source_face.cube.back,
-                                           rc1, rc2):
+
+        if dont_convert_coordinates:
+            _range = self._2d_range(rc1, rc2)
+        else:
+            _range = self._2d_range_on_source(source_face is source_face.cube.back, rc1, rc2)
+        
+        for rc in _range:
 
             if center.get_center_slice(rc).color != required_color:
 

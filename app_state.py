@@ -5,6 +5,7 @@ from pyglet.gl import *  # type: ignore
 
 # noinspection PyMethodMayBeStatic
 import algs.algs as algs
+import config
 from model.cube import Cube
 
 
@@ -82,8 +83,8 @@ class AppState:
         self._alpha_z: float = 0
         self._alpha_delta = 0.1
 
-        self._draw_shadows = ""  # "LDB"
-        self.cube_size = 7
+        self._draw_shadows = config.VIEWER_DRAW_SHADOWS
+        self.cube_size = 8
 
         self.slice_start: int = 0
         self.slice_stop: int = 0

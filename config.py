@@ -10,7 +10,7 @@ CHECK_CUBE_SANITY = False
 
 animation_enabled = True
 
-# Viewer
+######  Viewer ########
 GUI_DRAW_MARKERS = False
 
 CELL_SIZE: int = 30
@@ -20,6 +20,8 @@ CORNER_SIZE = 0.2  # relative to cell size (should be 1 in 3x3)
 AXIS_LENGTH = 4 * CELL_SIZE
 
 MAX_MARKER_RADIUS = 4.0  # when decreasing cube size, we don't want the markers become larger and larger
+
+VIEWER_DRAW_SHADOWS = "B"  # "LDB"
 
 #MARKER_COLOR = (165,42,42) # brown	#A52A2A	rgb(165,42,42) https://www.rapidtables.com/web/color/brown-color.html
 #MARKER_COLOR = (105,105,105) # dimgray / dimgray	#696969	rgb(105,105,105)
