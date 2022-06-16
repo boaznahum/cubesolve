@@ -20,7 +20,7 @@ from main_g_animation import AbstractWindow
 from main_g_app import AbstractApp
 from model.cube_boy import FaceName
 from model.cube_face import Face
-from model.elements import PartEdge, PartSlice, Part, Corner, Edge, EdgeSlice
+from model.elements import PartEdge, PartSlice, Part, Corner, Edge, EdgeSlice, Center, CenterSlice
 from viewer.viewer_g import GCubeViewer
 
 
@@ -77,7 +77,7 @@ def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
     part_slice: PartSlice = slice_face.parent
     part: Part = part_slice.parent
 
-    print(f"{part=}, {on_left_to_right=}, {on_left_to_top=}")
+    print(f"{type(part)=}, {on_left_to_right=}, {on_left_to_top=}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 
@@ -134,7 +134,7 @@ def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
 
             if part is face.edge_right:
                 if it_left_to_right:  # slicing
-                    alg = _slice_on_edge_slice(slice_face)
+                    alg = _slice_on_part_edge_alg(slice_face)
                     inv = on_left_to_right < 0  # D is left to right
                 else:
                     alg = face_alg
@@ -142,7 +142,7 @@ def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
 
             elif part is face.edge_left:
                 if it_left_to_right:  # slicing
-                    alg = _slice_on_edge_slice(slice_face)
+                    alg = _slice_on_part_edge_alg(slice_face)
                     inv = on_left_to_right < 0  # D is left to right
                 else:
                     alg = face_alg
@@ -150,20 +150,36 @@ def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
 
             elif part is face.edge_top:
                 if not it_left_to_right:  # slicing
-                    alg = _slice_on_edge_slice(slice_face)
+                    alg = _slice_on_part_edge_alg(slice_face)
                     inv = on_left_to_top < 0  # R is left to top
                 else:
                     alg = face_alg
                     inv = on_left_to_right < 0
             elif part is face.edge_bottom:
                 if not it_left_to_right:  # slicing
-                    alg = _slice_on_edge_slice(slice_face)
+                    alg = _slice_on_part_edge_alg(slice_face)
                     inv = on_left_to_top < 0  # R is left to top
                 else:
                     alg = face_alg
                     inv = on_left_to_right > 0
             else:
                 raise InternalSWError
+
+        elif isinstance(part_slice, CenterSlice):
+            c_index: tuple[int, int] = part_slice.index
+            xi = c_index[1]
+            yi = c_index[0]
+
+            if it_left_to_right:
+                alg = _slice_on_edge_alg(face.edge_right, face, yi)
+                inv = on_left_to_right < 0
+            else:
+                alg = _slice_on_edge_alg(face.edge_top, face, xi)
+                inv = on_left_to_top < 0
+
+        else:
+            raise InternalSWError
+
 
         if alg:
             if inv:
@@ -268,13 +284,7 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
                 _play(slice_alg)
 
 
-def _slice_on_edge_slice(part_edge: PartEdge) -> Alg:
-    _slice: PartSlice = part_edge.parent
-
-    assert isinstance(_slice, EdgeSlice)
-
-    part: Edge = _slice.parent
-    face: Face = part_edge.face
+def _slice_on_edge_alg(part: Edge, face: Face, index: int) -> Alg:
     face_name: FaceName = face.name
 
     slice_alg: algs.SliceAlg
@@ -308,7 +318,6 @@ def _slice_on_edge_slice(part_edge: PartEdge) -> Alg:
     else:
         raise InternalSWError
 
-    index = _slice.index
     index = part.get_ltr_index_from_slice_index(face, index)
 
     if neg_slice_index:
@@ -317,6 +326,16 @@ def _slice_on_edge_slice(part_edge: PartEdge) -> Alg:
     slice_alg = slice_alg[index + 1]  # index start from 1
 
     return slice_alg
+
+
+def _slice_on_part_edge_alg(part_edge: PartEdge) -> Alg:
+    _slice: PartSlice = part_edge.parent
+
+    assert isinstance(_slice, EdgeSlice)
+
+    part: Edge = _slice.parent
+
+    return _slice_on_edge_alg(part, part_edge.face, _slice.index)
 
 
 def _screen_to_model(vs, window, x, y) -> np.ndarray:

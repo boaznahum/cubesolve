@@ -9,6 +9,7 @@ from pyglet.graphics import Batch  # type: ignore
 
 from app_state import AppState
 from model.cube import Cube
+from model.cube_boy import FaceName
 from model.cube_face import Face
 from model.elements import PartFixedID, SuperElement, PartSlice, PartEdge
 from ._cell import _Cell, _CELL_SIZE
@@ -337,6 +338,11 @@ class _Board:
             ortho_dir *= 2
 
             c: _Cell
+            # if f.cube_face.name == FaceName.F:
+            #     for c in f.cells:
+            #         for e, rg in c.facets.items():
+            #             print(f"{e}, {type(e.parent)}, {rg.two_d_draw_rect}")
+
             for c in f.cells:
                 for e, rg in c.facets.items():
 
@@ -409,6 +415,13 @@ class _Board:
         vj = dot(v, j)
         vk = dot(v, k)
 
-        return 0 <= vi <= ii and 0 <= vj <= jj and 0 <= vk <= kk
+        res =  0 <= vi <= ii and 0 <= vj <= jj and 0 <= vk <= kk
+
+        # if res:
+        #     print(f"{x} {y} {z}")
+        #     print(f"{bottom_quad=}")
+        #     print(f"{top_quad=}")
+        #
+        return res
 
         pass
