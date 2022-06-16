@@ -84,7 +84,7 @@ class AppState:
         self._alpha_delta = 0.1
 
         self._draw_shadows = config.VIEWER_DRAW_SHADOWS
-        self.cube_size = 8
+        self.cube_size = 10
 
         self.slice_start: int = 0
         self.slice_stop: int = 0

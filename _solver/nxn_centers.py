@@ -36,6 +36,7 @@ _tracer_unique_id: int = 0
 class _SearchBlockMode(Enum):
     CompleteBlock = 1
     BigThanSource = 2
+    ExactMatch = 3  # required on source match source
 
 
 class FaceLoc:
@@ -403,13 +404,13 @@ class NxNCenters(SolverElement):
             if not big_block:
                 break
 
-            #print(f"@@@@@@@@@@@ Found big block: {big_block}")
+            # print(f"@@@@@@@@@@@ Found big block: {big_block}")
 
             rc1 = big_block[0]
             rc2 = big_block[1]
 
-            rc1_on_target= self._point_on_source(source_face is cube.back, rc1)
-            rc2_on_target= self._point_on_source(source_face is cube.back, rc2)
+            rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
+            rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
 
             big_block_done = False
             for _ in range(4):
@@ -417,7 +418,10 @@ class NxNCenters(SolverElement):
                                             face,
                                             source_face,
                                             rc1_on_target, rc2_on_target,
-                                            _SearchBlockMode.BigThanSource):
+                                            # actually we want big-than, but for this we need to find best match
+                                            # it still doesn't work, we need another mode, Source and Target Match
+                                            # but for this we need to search source only
+                                            _SearchBlockMode.ExactMatch):
                     # this is much far then true, we need to search new block
                     big_block_done = True
                     work_done = True
@@ -428,8 +432,6 @@ class NxNCenters(SolverElement):
 
             if not big_block_done:
                 break
-
-
 
         center = face.center
 
@@ -701,7 +703,7 @@ class NxNCenters(SolverElement):
 
         return True
 
-    def _is_valid_and_block(self, face:Face, color: Color, rc1: Point, rc2: Point):
+    def _is_valid_and_block_for_search(self, face: Face, color: Color, rc1: Point, rc2: Point):
 
         is_valid_block = self._is_valid_block(rc1, rc2)
 
@@ -730,7 +732,7 @@ class NxNCenters(SolverElement):
                 r_max = None
                 for r in range(rc[0] + 1, n):
 
-                    if not self._is_valid_and_block(face, color, rc, (r, rc[1])):
+                    if not self._is_valid_and_block_for_search(face, color, rc, (r, rc[1])):
                         break
                     else:
                         r_max = r
@@ -741,7 +743,7 @@ class NxNCenters(SolverElement):
                 # now try to extend it over c
                 c_max = None
                 for c in range(rc[1] + 1, n):
-                    if not self._is_valid_and_block(face, color, rc, (r_max, c)):
+                    if not self._is_valid_and_block_for_search(face, color, rc, (r_max, c)):
                         break
                     else:
                         c_max = c
@@ -995,7 +997,7 @@ class NxNCenters(SolverElement):
             _range = self._2d_range(rc1, rc2)
         else:
             _range = self._2d_range_on_source(source_face is source_face.cube.back, rc1, rc2)
-        
+
         for rc in _range:
 
             if center.get_center_slice(rc).color != required_color:
@@ -1032,8 +1034,20 @@ class NxNCenters(SolverElement):
 
         if mode == _SearchBlockMode.CompleteBlock:
             min_required = block_size
-        else:
+        elif mode == _SearchBlockMode.BigThanSource:
+            # The number of communicators before > after
+            # before = size - n_ok
+            # after  = n_ok  - because the need somehow to get back
+            # size-n_ok > n_ok
             min_required = n_ok + 1
+        elif mode == _SearchBlockMode.ExactMatch:
+            if n_ok:
+                return None
+            min_required = block_size
+
+        else:
+            raise InternalSWError
+
 
         cube = self.cube
 
