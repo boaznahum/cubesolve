@@ -13,6 +13,7 @@ from pyglet import gl  # type: ignore
 
 from algs import algs
 from algs.algs import Alg, Algs
+from app_exceptions import InternalSWError
 from app_state import AppState
 from cube_operator import Operator
 from main_g_animation import AbstractWindow
@@ -60,14 +61,14 @@ def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
     if not selected:
         return
 
-    #print(f"{selected}")
+    # print(f"{selected}")
 
     slice_face = selected[0]
     left_to_right = selected[1]
     left_to_top = selected[2]
 
     p0 = _screen_to_model(app.vs, window, x, y)  # todo we already in selected !!!
-    p1 = _screen_to_model(app.vs, window, x + dx , y + dy)
+    p1 = _screen_to_model(app.vs, window, x + dx, y + dy)
     d_vector: ndarray = p1 - p0
 
     on_left_to_right = d_vector.dot(left_to_right)
@@ -79,7 +80,6 @@ def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
     print(f"{part=}, {on_left_to_right=}, {on_left_to_top=}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
-
 
     _HADNLING_ALT_MOUSE = True
     try:
@@ -93,11 +93,77 @@ def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
             alg = Algs.of_face(face_name)
 
             if part is face.corner_top_right:
+                #   ----|  ^
+                #       |  |
+                #    -->
                 if it_left_to_right:
                     inv = on_left_to_right < 0
                 else:
                     inv = on_left_to_top > 0
+            elif part is face.corner_top_left:
+                #   |----  ^
+                #   |      |
+                #    -->
+                if it_left_to_right:
+                    inv = on_left_to_right < 0
+                else:
+                    inv = on_left_to_top < 0
+            elif part is face.corner_bottom_left:
+                # print("face.corner_bottom_left")
+                #   |      ^
+                #   |---   |
+                #    -->
+                if it_left_to_right:
+                    inv = on_left_to_right > 0
+                else:
+                    inv = on_left_to_top < 0
+            else:
+                #      |   ^
+                #   ---|   |
+                #    -->
+                if it_left_to_right:
+                    inv = on_left_to_right > 0
+                else:
+                    inv = on_left_to_top > 0
 
+        elif isinstance(part, Edge):
+
+            print(f"Is Edge !!!!")
+
+            face_alg = Algs.of_face(face_name)
+
+            if part is face.edge_right:
+                if it_left_to_right:  # slicing
+                    alg = _slice_on_edge_slice(slice_face)
+                    inv = on_left_to_right < 0  # D is left to right
+                else:
+                    alg = face_alg
+                    inv = on_left_to_top > 0
+
+            elif part is face.edge_left:
+                if it_left_to_right:  # slicing
+                    alg = _slice_on_edge_slice(slice_face)
+                    inv = on_left_to_right < 0  # D is left to right
+                else:
+                    alg = face_alg
+                    inv = on_left_to_top < 0
+
+            elif part is face.edge_top:
+                if not it_left_to_right:  # slicing
+                    alg = _slice_on_edge_slice(slice_face)
+                    inv = on_left_to_top < 0  # R is left to top
+                else:
+                    alg = face_alg
+                    inv = on_left_to_right < 0
+            elif part is face.edge_bottom:
+                if not it_left_to_right:  # slicing
+                    alg = _slice_on_edge_slice(slice_face)
+                    inv = on_left_to_top < 0  # R is left to top
+                else:
+                    alg = face_alg
+                    inv = on_left_to_right > 0
+            else:
+                raise InternalSWError
 
         if alg:
             if inv:
@@ -118,13 +184,14 @@ def on_mouse_press(window: AbstractWindow, vs: AppState, op: Operator, viewer: G
 
 
 def _play(window: AbstractWindow, alg: Alg):
+    op = window.app.op
 
-        op = window.app.op
+    op.op(alg)
+    # why I need that
+    if not op.animation_enabled:
+        window.update_gui_elements()
 
-        op.op(alg)
-        # why I need that
-        if not op.animation_enabled:
-            window.update_gui_elements()
+
 def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bool):
     def _play(alg: Alg):
 
@@ -199,6 +266,57 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
                 slice_alg = slice_alg[index + 1]  # index start from 1
 
                 _play(slice_alg)
+
+
+def _slice_on_edge_slice(part_edge: PartEdge) -> Alg:
+    _slice: PartSlice = part_edge.parent
+
+    assert isinstance(_slice, EdgeSlice)
+
+    part: Edge = _slice.parent
+    face: Face = part_edge.face
+    face_name: FaceName = face.name
+
+    slice_alg: algs.SliceAlg
+    neg_slice_index: bool
+    inv: bool
+    if face_name in [FaceName.F, FaceName.B]:
+
+        if face.is_bottom_or_top(part):
+            slice_alg = Algs.M  # we want over R
+            neg_slice_index = face_name == FaceName.F  # but r start at right, ltr is from left
+        else:
+            slice_alg = Algs.E  # we want over D
+            neg_slice_index = False
+    elif face_name in [FaceName.R, FaceName.L]:
+
+        if face.is_bottom_or_top(part):
+            slice_alg = Algs.S  # we want over F
+            neg_slice_index = face_name == FaceName.L
+        else:
+            slice_alg = Algs.E  # we want over D
+            neg_slice_index = False
+    elif face_name in [FaceName.U, FaceName.D]:
+
+        if face.is_bottom_or_top(part):
+            slice_alg = Algs.M  # we want over R
+            neg_slice_index = True
+        else:
+            slice_alg = Algs.S  # we want over F
+            neg_slice_index = face_name == FaceName.D
+
+    else:
+        raise InternalSWError
+
+    index = _slice.index
+    index = part.get_ltr_index_from_slice_index(face, index)
+
+    if neg_slice_index:
+        index = face.inv(index)
+
+    slice_alg = slice_alg[index + 1]  # index start from 1
+
+    return slice_alg
 
 
 def _screen_to_model(vs, window, x, y) -> np.ndarray:
