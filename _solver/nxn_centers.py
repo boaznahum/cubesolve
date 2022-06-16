@@ -396,6 +396,41 @@ class NxNCenters(SolverElement):
                 self._swap_entire_face_odd_cube(color, face, source_face)
                 work_done = True
 
+        while self._has_color_on_face(source_face, color):
+
+            big_block = self._search_big_block(source_face, color)
+
+            if not big_block:
+                break
+
+            print(f"@@@@@@@@@@@ Found big block: {big_block}")
+
+            rc1 = big_block[0]
+            rc2 = big_block[1]
+
+            rc1_on_target= self._point_on_source(source_face is cube.back, rc1)
+            rc2_on_target= self._point_on_source(source_face is cube.back, rc2)
+
+            big_block_done = False
+            for _ in range(4):
+                if self._block_communicator(color,
+                                            face,
+                                            source_face,
+                                            rc1_on_target, rc2_on_target,
+                                            _SearchBlockMode.BigThanSource):
+                    # this is much far then true, we need to search new block
+                    big_block_done = True
+                    work_done = True
+                    break
+
+                rc1_on_target = CubeQueries.rotate_point_clockwise(cube, rc1_on_target)
+                rc2_on_target = CubeQueries.rotate_point_clockwise(cube, rc2_on_target)
+
+            if not big_block_done:
+                break
+
+
+
         center = face.center
 
         for rc in self._2d_center_iter():
@@ -489,13 +524,11 @@ class NxNCenters(SolverElement):
             (r, c) = (c, inv(r))
 
     def rotate_point_clockwise(self, row: int, column: int, n=1) -> Tuple[int, int]:
-        for i in range(0, n % 4):
-            row, column = self.cube.inv(column), row
 
-        return row, column
+        return CubeQueries.rotate_point_clockwise(self.cube, (row, column), n)
 
-    def rotate_point_counterclockwise(self, row: int, column: int) -> Tuple[int, int]:
-        return column, self.cube.inv(row)
+    def rotate_point_counterclockwise(self, row: int, column: int, n=1) -> Tuple[int, int]:
+        return CubeQueries.rotate_point_counterclockwise(self.cube, (row, column), n)
 
     def boy_opposite(self, color: Color) -> Color:
         return self.cube.original_layout.opposite_color(color)
@@ -668,6 +701,72 @@ class NxNCenters(SolverElement):
 
         return True
 
+    def _search_big_block(self, face: Face, color: Color) -> Block | None:
+
+        center = face.center
+
+        max_size = -1
+        max_box: Block | None = None
+
+        n = self.cube.n_slices
+
+        for rc in self._2d_center_iter():
+
+            if center.get_center_slice(rc).color == color:
+                # now try to extend it over r
+                r_max = None
+                for r in range(rc[0] + 1, n):
+                    if not (self._is_valid_block(rc, (r, rc[1])) and
+                            self._is_block(face, color, None, rc, (r, rc[1]))):
+
+                        break
+                    else:
+                        r_max = r
+
+                if not r_max:
+                    r_max = rc[0]
+
+                # now try to extend it over c
+                c_max = None
+                for c in range(rc[1] + 1, n):
+                    if not (self._is_valid_block(rc, (r_max, c)) and
+                            self._is_block(face, color, None, rc, (r_max, c))):
+
+                        break
+                    else:
+                        c_max = c
+
+                if not c_max:
+                    c_max = rc[1]
+
+                size = self._block_size(rc, (r_max, c_max))
+                if size > 1 and size > max_size:
+                    max_size = size
+                    max_box = rc, (r_max, c_max)
+
+        return max_box
+
+    def _is_valid_block(self, rc1: Point, rc2: Point):
+
+        r1 = rc1[0]
+        c1 = rc1[1]
+
+        r2 = rc2[0]
+        c2 = rc2[1]
+
+        rc1_f_rotated = self.rotate_point_clockwise(r1, c1)
+        rc2_f_rotated = self.rotate_point_clockwise(r2, c2)
+
+        # the columns ranges must not intersect
+        if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
+            rc1_f_rotated = self.rotate_point_counterclockwise(r1, c1)
+            rc2_f_rotated = self.rotate_point_counterclockwise(r2, c2)
+
+            if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
+                return False
+
+        return True
+
     @staticmethod
     def count_missing(face: Face, color: Color) -> int:
         n = 0
@@ -685,6 +784,13 @@ class NxNCenters(SolverElement):
             if s.color == color:
                 n += 1
         return n
+
+    @staticmethod
+    def _has_color_on_face(face: Face, color: Color) -> int:
+        for s in face.center.all_slices:
+            if s.color == color:
+                return True
+        return False
 
     @staticmethod
     def _count_colors_on_block(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int]):
@@ -762,6 +868,20 @@ class NxNCenters(SolverElement):
             # on up
             return rc
 
+    def _point_on_target(self, source_is_back: bool, rc: Tuple[int, int]) -> Point:
+
+        inv = self.cube.inv
+
+        # the logic here is hard code of the logic in slice rotate
+        # it will be broken if cube layout is changed
+        # here we assume we work on F, and UP has same coord system as F, and
+        # back is mirrored in both direction
+        if source_is_back:
+            return inv(rc[0]), inv(rc[1])
+        else:
+            # on up
+            return rc
+
     def _block_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Block:
 
         return self._point_on_source(is_back, rc1), self._point_on_source(is_back, rc2)
@@ -823,11 +943,24 @@ class NxNCenters(SolverElement):
     def _is_block(self,
                   source_face: Face,
                   required_color: Color,
-                  min_points: int,
+                  min_points: int | None,
                   rc1: Tuple[int, int], rc2: Tuple[int, int]) -> bool:
+
+        """
+
+        :param source_face:
+        :param required_color:
+        :param min_points: If None that all block , min = block size
+        :param rc1:
+        :param rc2:
+        :return:
+        """
 
         # Number of points in block
         _max = self._block_size(rc1, rc2)
+
+        if min_points is None:
+            min_points = _max
 
         max_allowed_not_match = _max - min_points  # 0 in cas emin is max
 
