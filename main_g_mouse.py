@@ -131,7 +131,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     part_slice: PartSlice = slice_face.parent
     part: Part = part_slice.parent
 
-    print(f"{type(part)=}, {on_left_to_right=}, {on_left_to_top=}")
+    print(f"{type(part)=}, {part_slice._index=}, {on_left_to_right=}, {on_left_to_top=}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 
@@ -140,8 +140,6 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
         face = slice_face.face
         face_name = face.name
 
-        alg: Alg | None = None
-        inv = False
         if isinstance(part, Corner):
             # print("Is corner")
             alg = Algs.of_face(face_name)
@@ -225,10 +223,10 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
             yi = c_index[0]
 
             if it_left_to_right:
-                alg = _slice_on_edge_alg(face.edge_right, face, yi)
+                alg = _slice_on_edge_alg(face.edge_right, face, yi, on_center=True)
                 inv = on_left_to_right < 0
             else:
-                alg = _slice_on_edge_alg(face.edge_top, face, xi)
+                alg = _slice_on_edge_alg(face.edge_top, face, xi, on_center=True)
                 inv = on_left_to_top < 0
 
         else:
@@ -328,17 +326,27 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
                 _play(slice_alg)
 
 
-def _slice_on_edge_alg(part: Edge, face: Face, index: int) -> Alg:
+def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> Alg:
+
+    """
+
+    :param part:
+    :param face:
+    :param index:
+    :param on_center: actually we are coming from center, so slice is always ltr, no need to convert
+    :return:
+    """
     face_name: FaceName = face.name
 
     slice_alg: algs.SliceAlg
     neg_slice_index: bool
-    inv: bool
+    inv: bool = False
     if face_name in [FaceName.F, FaceName.B]:
 
         if face.is_bottom_or_top(part):
             slice_alg = Algs.M  # we want over R
             neg_slice_index = face_name == FaceName.F  # but r start at right, ltr is from left
+            inv = face_name == FaceName.B
         else:
             slice_alg = Algs.E  # we want over D
             neg_slice_index = False
@@ -358,16 +366,22 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int) -> Alg:
         else:
             slice_alg = Algs.S  # we want over F
             neg_slice_index = face_name == FaceName.D
+            inv = face_name == FaceName.D
 
     else:
         raise InternalSWError
 
-    index = part.get_ltr_index_from_slice_index(face, index)
+
+    if not on_center:
+        index = part.get_ltr_index_from_slice_index(face, index)
 
     if neg_slice_index:
         index = face.inv(index)
 
     slice_alg = slice_alg[index + 1]  # index start from 1
+
+    if inv:
+        slice_alg = slice_alg.prime
 
     return slice_alg
 

@@ -1011,8 +1011,8 @@ class Algs:
             case FaceName.U:
                 return cls.U
 
-            case FaceName.B:
-                return cls.B
+            case FaceName.D:
+                return cls.D
 
             case _:
                 raise InternalSWError(f"Unknown face name {face}")
