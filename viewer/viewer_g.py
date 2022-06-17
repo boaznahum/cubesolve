@@ -70,7 +70,10 @@ class GCubeViewer:
         Called on any cue change to re-construct graphic elements
         :return:
         """
-        self._board.update()
+        with prof.w_prof("GUI update", config.PROF_VIEWER_GUI_UPDATE):
+            self._board.update()
+
+
 
     def draw(self):
         """
