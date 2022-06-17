@@ -8,9 +8,10 @@ from typing import Tuple, Any
 
 import numpy as np
 from numpy import ndarray
-from pyglet.window import key  # type: ignore
+from pyglet.window import key, mouse  # type: ignore
 from pyglet import gl  # type: ignore
 
+import config
 from algs import algs
 from algs.algs import Alg, Algs
 from app_exceptions import InternalSWError
@@ -25,6 +26,19 @@ from viewer.viewer_g import GCubeViewer
 
 
 def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
+
+    if not modifiers & (key.MOD_SHIFT | key.MOD_CTRL):  # this is persevered for clik slicing
+
+        if config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
+            if bool(buttons & mouse.RIGHT) == bool(config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM):
+                _handle_modle_view_rotate_by_drag(win, dx, dy)
+            else:
+                _handle_face_slice_rotate_by_drag(win, x, y, dx, dy)
+
+
+def _handle_modle_view_rotate_by_drag(win, dx, dy):
+    app = win.app
+
     # print(f"{dx=}, {dy=}")
     # https://stackoverflow.com/questions/59823131/how-to-rotate-a-cube-using-mouse-in-pyopengl
     # if event.type == pygame.MOUSEMOTION:
@@ -33,22 +47,15 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
     #                     glRotatef(event.rel[0], 0, 1, 0)
     #                 print(event.rel)
 
-    if modifiers & key.MOD_ALT:
-        _handle_slice_move_by_drag(win, x, y, dx, dy)
-
-    elif not modifiers & (key.MOD_SHIFT | key.MOD_CTRL):  # this is presevered for clik slicing
-
-        app = win.app
-
-        # still don't know to distinguish between ad drag and simple press
-        app.vs.alpha_x += math.radians(-dy)
-        app.vs.alpha_y += math.radians(dx)
+    # still don't know to distinguish between ad drag and simple press
+    app.vs.alpha_x += math.radians(-dy)
+    app.vs.alpha_y += math.radians(dx)
 
 
 _HADNLING_ALT_MOUSE = False
 
 
-def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
+def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     global _HADNLING_ALT_MOUSE
 
     if _HADNLING_ALT_MOUSE:
@@ -179,7 +186,6 @@ def _handle_slice_move_by_drag(window: AbstractWindow, x, y, dx, dy):
 
         else:
             raise InternalSWError
-
 
         if alg:
             if inv:
