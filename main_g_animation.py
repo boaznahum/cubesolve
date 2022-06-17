@@ -267,7 +267,7 @@ def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeView
 
     def _update(_):
         animation.update_gui_elements()
-        platform_event_loop.notify()
+        #platform_event_loop.notify()
 
     clock.schedule_interval(_update, delay)
 
