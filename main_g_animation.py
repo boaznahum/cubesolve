@@ -230,18 +230,6 @@ def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeView
         def _update_gui(_):
             window.update_gui_elements()
 
-        #     platform_event_loop.notify()
-        #
-        # # TO UPDATE TEXT
-        # clock.schedule_interval(_update_gui, 1.0/ 20)
-        #
-        # # wait for user press space
-        # while not event_loop.has_exit and (vs.paused_on_single_step_mode and vs.single_step_mode):
-        #     timeout = event_loop.idle()  # this will trigger on_draw
-        #     platform_event_loop.step(timeout)
-        #
-        # clock.unschedule(_update_gui)
-
         event_loop = pyglet.app.event_loop
 
         # If you read event loop, only handled events cause to redraw
@@ -262,13 +250,18 @@ def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeView
     animation: Animation = _create_animation(cube, viewer, vs, alg, alg.n)
     delay: float = animation.delay
 
-    # this is called from window.on_draw
+    # animation.draw() is called from window.on_draw
     window.set_animation(animation)
 
     def _update(_):
+        # Advance to next animation step
         animation.update_gui_elements()
-        #platform_event_loop.notify()
 
+    # If you read event loop, only handled events cause to redraw
+    # so after _update, window_on_draw will draw the animation
+    # if any other model state is changed, it will update during keyboard handling, and animation.update_gui_elements()
+    #   will be re-called (is it a problem?)
+    #   and then redraw again window.on_redraw
     clock.schedule_interval(_update, delay)
 
     # copied from EventLoop#run
