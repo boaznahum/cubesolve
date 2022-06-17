@@ -384,7 +384,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     cursor = window.get_system_mouse_cursor(window.CURSOR_WAIT)
                     window.set_mouse_cursor(cursor)
                     try:  # test
-                        nn = 50
+                        nn = config.TEST_NUMBER_OF_SCRAMBLE_ITERATIONS
                         ll = 0
                         count = 0
                         n_loops = 0
