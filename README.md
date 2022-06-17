@@ -28,7 +28,7 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
 ### Controlling view 
     Ctlr/Alt X, Y, Z - Rotate cube over X, Y , Z Axis
-    This is alos can be done by dragging mouse
+    This is alos can be done by dragging mouse+right bottom
 ### Modes
     O - Turn animation on/off
     Ctrl+O - Turn of/off solver debug level
@@ -41,15 +41,19 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     Ctrl+Space - enter/exit single sterp mode, in this mode animation is suspned till user hit 'SPACE' (or Ctrl+SPACE)
     Very useful for debugging new algorithms
 
-### Rotating
+### Rotating/Slicing
+#### Keyboard
     R, L, F, B, U, B  - As suauls - rotate faces
     X, Y, Z - Entire cube over R, U and F 
     M, E, S - Middle slice over R, **D** and F
     
-    ####
-      Rotating can be done also by using the mouse.
-      Shift/Ctrl clik on corner face will rotate this face (ctrl counterclockwise) 
-      Shift/Ctrl on edge will slice
+#### Mouse:
+    Drag mouse on corners face to rotate this face
+    On edge, if in parallel to winf then slice this wing, otherwise rotate face accroding to parallel direction of edge.
+    On center pieces - slice accroding to direction
+#### Mouse clicking
+      Shift/Ctrl clik on corner face will rotate this face (ctrl counterclockwise)
+      Shift/Ctrl on edge's wing will slice it
 
 
 https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a18f-719876cb7b59.mp4
