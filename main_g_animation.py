@@ -229,19 +229,29 @@ def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeView
 
         def _update_gui(_):
             window.update_gui_elements()
-            platform_event_loop.notify()
 
-        # TO UPDATE TEXT
-        clock.schedule_interval(_update_gui, 1.0/ 20)
+        #     platform_event_loop.notify()
+        #
+        # # TO UPDATE TEXT
+        # clock.schedule_interval(_update_gui, 1.0/ 20)
+        #
+        # # wait for user press space
+        # while not event_loop.has_exit and (vs.paused_on_single_step_mode and vs.single_step_mode):
+        #     timeout = event_loop.idle()  # this will trigger on_draw
+        #     platform_event_loop.step(timeout)
+        #
+        # clock.unschedule(_update_gui)
 
-        # wait for user press space
+        event_loop = pyglet.app.event_loop
+
+        # If you read event loop, only handled events cause to redraw
+        clock.schedule_once(_update_gui, 0)
+
         while not event_loop.has_exit and (vs.paused_on_single_step_mode and vs.single_step_mode):
-            timeout = event_loop.idle()  # this will trigger on_draw
+            timeout = event_loop.idle()
             platform_event_loop.step(timeout)
 
-        clock.unschedule(_update_gui)
         vs.paused_on_single_step_mode = None
-
 
     # but still useful for SS mode
     if alg.n % 4 == 0:

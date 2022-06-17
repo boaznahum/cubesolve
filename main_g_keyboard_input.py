@@ -22,9 +22,13 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     app: AbstractApp = window.app
     op: Operator = app.op
 
-    # print(f"In _handle_input , {value}  {hex(value)} {chr(ord('A') + (value - key.A))} ")
+    debug = config.KEYBOAD_INPUT_DEBUG
+
+    if debug:
+        print(f"In _handle_input , {value}  {hex(value)} {chr(ord('A') + (value - key.A))} ")
 
     vs: AppState = app.vs
+
 
     def handle_in_both_modes():
         """
@@ -79,24 +83,42 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
         return False, None
 
+    no_operation: bool = False
+
     if window.animation_running or op.is_animation_running:
 
-        handled, _ = handle_in_both_modes()
+        if debug:
+            print(f"Keyboard input, in animation mode")
+
+        handled, _no_operation = handle_in_both_modes()
+
+        if debug:
+            print(f"Handled by 'handle_in_both_modes()={handled}, {_no_operation=}")
 
         if handled:
-            return
 
-        #
-        # print(f"{value==key.S}")
-        match value:
+            no_operation = _no_operation
 
-            case key.Q:
-                op.abort()  # solver will not try to check state
-                window.close()
-                raise AppExit
+        else:
+            #
+            # print(f"{value==key.S}")
+            match value:
 
-            case key.S:
-                op.abort()  # doesn't work, we can't catch it, maybe pyglet ignore it, because it is in handler
+                case key.Q:
+                    op.abort()  # solver will not try to check state
+                    window.close()
+                    raise AppExit
+
+                case key.S:
+                    op.abort()  # doesn't work, we can't catch it, maybe pyglet ignore it, because it is in handler
+
+        if not no_operation:
+            if debug:
+                print("keyboard input 'animation mode' decide to update_gui_elements")
+            window.update_gui_elements()
+        else:
+            if debug:
+                print("keyboard input 'animation mode' decide not to update_gui_elements")
 
         return False
 
@@ -104,7 +126,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
     inv = modifiers & key.MOD_SHIFT
 
-    no_operation: bool
 
     alg: Alg
 
@@ -115,6 +136,9 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     # noinspection PyProtectedMember
 
     handled, no_operation = handle_in_both_modes()
+
+    if debug:
+        print("keyboard input 'main' handle_in_both_modes return {handled=} {no_operation}")
 
     if not handled:
 
@@ -434,6 +458,11 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     # no need to redraw, on_draw is called after any event
 
     if not no_operation:
+        if debug:
+            print("keyboard input main decide to update gui elements")
         window.update_gui_elements()
+    else:
+        if debug:
+            print("keyboard input main decide not to update gui elements")
 
     return done

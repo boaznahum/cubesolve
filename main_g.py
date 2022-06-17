@@ -143,6 +143,7 @@ class Window(AbstractWindow):
         s += ", Debug=" + _b(self.app.slv.is_debug_config_mode)
         s += ", SS Mode:" + _b(vs.single_step_mode)
 
+
         self.text.append(pyglet.text.Label(s,
                                            x=10, y=y, font_size=10, color=(255, 255, 0, 255), bold=True))
         y += 20
@@ -162,6 +163,8 @@ class Window(AbstractWindow):
         y += 20
 
         s = ""
+        print(f"@@@@@ {vs.paused_on_single_step_mode=}")
+
         if vs.paused_on_single_step_mode:
             s = f"PAUSED: {vs.paused_on_single_step_mode}. press space"
 

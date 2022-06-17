@@ -29,6 +29,8 @@ MARKER_COLOR: Tuple[int, int, int] = (0, 0, 0)  # dimgray / dimgray	#696969	rgb(
 
 ##############   Input handling
 
+KEYBOAD_INPUT_DEBUG=False
+
 #  If true, model rotating is done by dragging and right mouse click, rotating faces/slicing by dragging left bottom
 #   or vice versa if FALSE
 INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM = True

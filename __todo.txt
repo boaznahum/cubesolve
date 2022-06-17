@@ -4,15 +4,6 @@ Feature: Fix scramble also to invert and multiple and generate sub lists
 
 # try to optimize, work less on B
 
-# On odd big cueb, still don't know to handle the case to switch
-#  centres FU slice without touching the left/right, for now I'm bring ing all the slice
-#   See
-# Feuture: Centers optimization, size 9, scramble 4
-#       Try to detect blocks
-
-
-#BUG: Single step mode, screen is not refreshed when waiting. What I'm doing wrong ?
-#      scheduling  event, but now response is very pure, see Alt/Ctrl XYZ
 
 
 Feature: WAIT cursor on scramble
