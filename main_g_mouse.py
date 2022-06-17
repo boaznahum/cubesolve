@@ -3,6 +3,7 @@
 #  Handles rotating with the mouse
 #
 #
+import functools
 import math
 from typing import Tuple, Any
 
@@ -24,19 +25,43 @@ from model.cube_face import Face
 from model.elements import PartEdge, PartSlice, Part, Corner, Edge, EdgeSlice, Center, CenterSlice
 from viewer.viewer_g import GCubeViewer
 
+# to avoid the case we start another handling while animation is running
+_FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG = False
+
+_DRAG_VECTOR_DETECTION_DATA_LENGTH = 10
+
+# https://stackoverflow.com/questions/34608657/mouse-drag-direction-tolerance
+_DRAG_VECTOR_DETECTION_DATA: list[Tuple[int, int]] = []
+_DRAG_VECTOR_DETECTION_DATA_X0_Y0: Tuple[int, int] = (0, 0)
+
 
 def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
-
     if not modifiers & (key.MOD_SHIFT | key.MOD_CTRL):  # this is persevered for clik slicing
 
         if config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
             if bool(buttons & mouse.RIGHT) == bool(config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM):
-                _handle_modle_view_rotate_by_drag(win, dx, dy)
+                _handle_model_view_rotate_by_drag(win, dx, dy)
             else:
                 _handle_face_slice_rotate_by_drag(win, x, y, dx, dy)
 
 
-def _handle_modle_view_rotate_by_drag(win, dx, dy):
+def on_mouse_press(window: AbstractWindow, vs: AppState, x, y, modifiers):
+    if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
+
+        selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(vs, window, x, y)
+
+        if selected:
+            _handle_selected_slice(window, selected[0], modifiers & key.MOD_CTRL)
+
+
+def on_mouse_release(x, y, button, modifiers):
+    global _DRAG_VECTOR_DETECTION_DATA
+
+    # cancel data collection
+    _DRAG_VECTOR_DETECTION_DATA.clear()
+
+
+def _handle_model_view_rotate_by_drag(win, dx, dy):
     app = win.app
 
     # print(f"{dx=}, {dy=}")
@@ -52,16 +77,38 @@ def _handle_modle_view_rotate_by_drag(win, dx, dy):
     app.vs.alpha_y += math.radians(dx)
 
 
-_HADNLING_ALT_MOUSE = False
-
-
 def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
-    global _HADNLING_ALT_MOUSE
+    global _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG
 
-    if _HADNLING_ALT_MOUSE:
+    if _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG:
         return
 
+    global _DRAG_VECTOR_DETECTION_DATA
+    global _DRAG_VECTOR_DETECTION_DATA_LENGTH
+    global _DRAG_VECTOR_DETECTION_DATA_X0_Y0
+
+    data = _DRAG_VECTOR_DETECTION_DATA
+
+    data.append((dx, dy))
+
+    n = len(data)
+
+    if n == 1: # first point
+        _DRAG_VECTOR_DETECTION_DATA_X0_Y0 = (x,y)
+
+    #print(f"{n}")
+
+    if n < _DRAG_VECTOR_DETECTION_DATA_LENGTH:
+        return
+
+    dx = functools.reduce(lambda s, t: s + t[0], data, 0) / n
+    dy = functools.reduce(lambda s, t: s + t[1], data, 0) / n
+
+    data.clear()  # prepare for next
+
     app: AbstractApp = window.app
+
+    x, y = _DRAG_VECTOR_DETECTION_DATA_X0_Y0
 
     selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(app.vs, window, x, y)
 
@@ -88,7 +135,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 
-    _HADNLING_ALT_MOUSE = True
+    _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG = True
     try:
         face = slice_face.face
         face_name = face.name
@@ -193,16 +240,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
             _play(window, alg)
 
     finally:
-        _HADNLING_ALT_MOUSE = False
-
-
-def on_mouse_press(window: AbstractWindow, vs: AppState, op: Operator, viewer: GCubeViewer, x, y, modifiers):
-    if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
-
-        selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(vs, window, x, y)
-
-        if selected:
-            _handle_selected_slice(window, selected[0], modifiers & key.MOD_CTRL)
+        _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG = False
 
 
 def _play(window: AbstractWindow, alg: Alg):

@@ -228,8 +228,11 @@ class Window(AbstractWindow):
         return main_g_mouse.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
 
     def on_mouse_press(self, x, y, button, modifiers):
-        if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
-            return main_g_mouse.on_mouse_press(self, self.app.vs, self.app.op, self.viewer, x, y, modifiers)
+        return main_g_mouse.on_mouse_press(self, self.app.vs, x, y, modifiers)
+
+    def on_mouse_release(self, x, y, button, modifiers):
+        return main_g_mouse.on_mouse_release(x, y, button, modifiers)
+
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)
