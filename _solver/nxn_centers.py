@@ -1,6 +1,6 @@
 from collections.abc import Iterator, Sequence
 from enum import Enum, unique
-from typing import Tuple, Callable, Collection, Any, TypeAlias, List
+from typing import Tuple, Callable, Collection, Any, TypeAlias
 
 import config
 from _solver.base_solver import SolverElement, ISolver
@@ -336,7 +336,7 @@ class NxNCenters(SolverElement):
 
         work_done = False
 
-        if any ( self._has_color_on_face(f, color) for f in cube.front.adjusted_faces()):
+        if any(self._has_color_on_face(f, color) for f in cube.front.adjusted_faces()):
             for _ in range(3):  # 3 faces
                 # need to optimize ,maybe no sources on this face
 
@@ -386,6 +386,8 @@ class NxNCenters(SolverElement):
 
         work_done = False
 
+        center = face.center
+
         n = cube.n_slices
 
         if n % 2 and config.OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
@@ -401,28 +403,27 @@ class NxNCenters(SolverElement):
         if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
             if self._do_blocks(color, cube, face, source_face):
                 work_done = True
+        else:
 
+            # the above also did a 1 size block
+            for rc in self._2d_center_iter():
 
-        center = face.center
+                if self._block_communicator(color,
+                                            face,
+                                            source_face,
+                                            rc, rc,
+                                            _SearchBlockMode.CompleteBlock):
 
-        for rc in self._2d_center_iter():
+                    after_fixed_color = center.get_center_slice(rc).color
 
-            if self._block_communicator(color,
-                                        face,
-                                        source_face,
-                                        rc, rc,
-                                        _SearchBlockMode.CompleteBlock):
+                    if after_fixed_color != color:
+                        raise InternalSWError(f"Slice was not fixed {rc}, " +
+                                              f"required={color}, " +
+                                              f"actual={after_fixed_color}")
 
-                after_fixed_color = center.get_center_slice(rc).color
+                    self.debug(f"Fixed slice {rc}")
 
-                if after_fixed_color != color:
-                    raise InternalSWError(f"Slice was not fixed {rc}, " +
-                                          f"required={color}, " +
-                                          f"actual={after_fixed_color}")
-
-                self.debug(f"Fixed slice {rc}")
-
-                work_done = True
+                    work_done = True
 
         if not work_done:
             self.debug(f"Internal error, no work was done on face {face} required color {color}, "
@@ -442,16 +443,14 @@ class NxNCenters(SolverElement):
 
         work_done = False
 
-
         big_blocks = self._search_big_block(source_face, color)
 
         if not big_blocks:
             return False
 
-        # becuase we do exact match, there is no risk that that new blocks will be construct
+        # because we do exact match, there is no risk that that new blocks will be constructed,
         # so we try all
 
-        big_block_done = False
         for _, big_block in big_blocks:
             # print(f"@@@@@@@@@@@ Found big block: {big_block}")
 
@@ -727,11 +726,16 @@ class NxNCenters(SolverElement):
 
     def _search_big_block(self, face: Face, color: Color) -> Sequence[Tuple[int, Block]] | None:
 
+        """
+        Rerun all possible blocks, 1 size too, sorted from big to small
+        :param face:
+        :param color:
+        :return:
+        """
+
         center = face.center
 
         res: list[Tuple[int, Block]] = []
-        max_size = -1
-        max_box: Block | None = None
 
         n = self.cube.n_slices
 
@@ -740,6 +744,10 @@ class NxNCenters(SolverElement):
         for rc in self._2d_center_iter():
 
             if center.get_center_slice(rc).color == color:
+
+                # collect also 1 size blocks
+                res.append((1, (rc, rc)))
+
                 # now try to extend it over r
                 r_max = None
                 for r in range(rc[0] + 1, n):
@@ -765,11 +773,8 @@ class NxNCenters(SolverElement):
 
                 size = self._block_size(rc, (r_max, c_max))
 
-                #if size > 1:
+                # if size > 1:
                 res.append((size, (rc, (r_max, c_max))))
-                if size > max_size:
-                    max_size = size
-                    max_box = rc, (r_max, c_max)
 
         res = sorted(res, key=lambda s: s[0], reverse=True)
         return res
@@ -824,7 +829,7 @@ class NxNCenters(SolverElement):
     def _count_colors_on_block(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int]):
 
         """
-
+        Count number of centerpieces on center that match color
         :param source_face: front up or back
         :param rc1: one corner of block, front coords, center slice indexes
         :param rc2: other corner of block, front coords, center slice indexes
@@ -929,6 +934,8 @@ class NxNCenters(SolverElement):
     def _2d_range_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Iterator[Point]:
 
         """
+        Iterator over 2d block columns advanced faster
+        Convert block to source coordinates
         :param rc1: one corner of block, front coords, center slice indexes
         :param rc2: other corner of block, front coords, center slice indexes
         :return:
@@ -943,6 +950,7 @@ class NxNCenters(SolverElement):
     def _2d_range(rc1: Point, rc2: Point) -> Iterator[Point]:
 
         """
+        Iterator over 2d block columns advanced faster
         :param rc1: one corner of block, front coords, center slice indexes
         :param rc2: other corner of block, front coords, center slice indexes
         :return:
@@ -1063,7 +1071,6 @@ class NxNCenters(SolverElement):
 
         else:
             raise InternalSWError
-
 
         cube = self.cube
 
