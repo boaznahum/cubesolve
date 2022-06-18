@@ -163,7 +163,7 @@ class Window(AbstractWindow):
         y += 20
 
         s = ""
-        print(f"@@@@@ {vs.paused_on_single_step_mode=}")
+        #print(f"@@@@@ {vs.paused_on_single_step_mode=}")
 
         if vs.paused_on_single_step_mode:
             s = f"PAUSED: {vs.paused_on_single_step_mode}. press space"
