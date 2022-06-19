@@ -12,7 +12,7 @@ import main_g_keyboard_input
 import main_g_mouse
 from algs.algs import Algs
 from app_exceptions import AppExit, RunStop, OpAborted
-from app_state import AppState
+from app_state import AppandViewState
 from main_g_abstract import AbstractWindow
 from main_g_animation import Animation
 from main_g_app import App
@@ -88,7 +88,7 @@ class Window(AbstractWindow):
 
         cube = self.app.cube
 
-        vs: AppState = self.app.vs
+        vs: AppandViewState = self.app.vs
 
         y = 10
 
@@ -194,19 +194,21 @@ class Window(AbstractWindow):
         # yw(y)=(ynd+1)(height/2)+y
         gl.glViewport(0, 0, width, height)
 
-        gl.glPushAttrib(gl.GL_MATRIX_MODE)
-        # using Projection mode
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
+        self.app.vs.set_projection(width, height)
 
-        aspect_ratio = width / height
-        gl.gluPerspective(35, aspect_ratio, 1, 1000)
-
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
-        gl.glTranslatef(0, 0, -400)
-
-        gl.glPopAttrib()
+        # gl.glPushAttrib(gl.GL_MATRIX_MODE)
+        # # using Projection mode
+        # gl.glMatrixMode(gl.GL_PROJECTION)
+        # gl.glLoadIdentity()
+        #
+        # aspect_ratio = width / height
+        # gl.gluPerspective(35, aspect_ratio, 1, 1000)
+        #
+        # # gl.glMatrixMode(gl.GL_MODELVIEW)
+        # # gl.glLoadIdentity()
+        # # gl.glTranslatef(0, 0, -400)
+        #
+        # gl.glPopAttrib()
 
     def on_key_press(self, symbol, modifiers):
         try:
@@ -227,6 +229,7 @@ class Window(AbstractWindow):
             self.app.set_error(s)
             self.update_gui_elements()  # to create error label
 
+
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         return main_g_mouse.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
 
@@ -235,6 +238,10 @@ class Window(AbstractWindow):
 
     def on_mouse_release(self, x, y, button, modifiers):
         return main_g_mouse.on_mouse_release(x, y, button, modifiers)
+
+    def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
+        return main_g_mouse.on_mouse_scroll(self, x, y, scroll_x, scroll_y)
+
 
 
     def draw_axis(self):

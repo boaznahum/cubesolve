@@ -16,7 +16,7 @@ import config
 from algs import algs
 from algs.algs import Alg, Algs
 from app_exceptions import InternalSWError
-from app_state import AppState
+from app_state import AppandViewState
 from cube_operator import Operator
 from main_g_animation import AbstractWindow
 from main_g_app import AbstractApp
@@ -36,7 +36,8 @@ _DRAG_VECTOR_DETECTION_DATA_X0_Y0: Tuple[int, int] = (0, 0)
 
 
 def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
-    if not modifiers & (key.MOD_SHIFT | key.MOD_CTRL):  # this is persevered for clik slicing
+    # these are persevered for clik slicing, and panning
+    if not modifiers & (key.MOD_SHIFT | key.MOD_CTRL | key.MOD_ALT ):
 
         if config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
             if bool(buttons & mouse.RIGHT) == bool(config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM):
@@ -44,8 +45,14 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
             else:
                 _handle_face_slice_rotate_by_drag(win, x, y, dx, dy)
 
+    elif (modifiers & key.MOD_ALT) == key.MOD_ALT:
 
-def on_mouse_press(window: AbstractWindow, vs: AppState, x, y, modifiers):
+        win.app.vs.change_offset(dx, dy, 0)
+
+
+
+
+def on_mouse_press(window: AbstractWindow, vs: AppandViewState, x, y, modifiers):
     if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
 
         selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(vs, window, x, y)
@@ -59,6 +66,16 @@ def on_mouse_release(x, y, button, modifiers):
 
     # cancel data collection
     _DRAG_VECTOR_DETECTION_DATA.clear()
+
+
+def on_mouse_scroll(window: AbstractWindow, x, y, scroll_x, scroll_y):
+
+    vs = window.app.vs
+
+    vs.change_fov_y(scroll_y)
+
+    vs.set_projection(window.width, window.height)
+
 
 
 def _handle_model_view_rotate_by_drag(win, dx, dy):

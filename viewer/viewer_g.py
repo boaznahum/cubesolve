@@ -11,7 +11,7 @@ from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
 import config
-from app_state import AppState
+from app_state import AppandViewState
 from model.cube import Cube
 from model.cube_face import Face
 from model.elements import Part, FaceName, PartEdge
@@ -46,7 +46,7 @@ class GCubeViewer:
     __slots__ = ["_batch", "_cube", "_board", "_test",
                  "_hidden_objects", "_vs"]
 
-    def __init__(self, batch: Batch, cube: Cube, vs: AppState) -> None:
+    def __init__(self, batch: Batch, cube: Cube, vs: AppandViewState) -> None:
         super().__init__()
         self._cube = cube
         self._batch = batch

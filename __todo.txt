@@ -2,9 +2,10 @@ Generalize slice walking and use in communicator
 
 Feature: Fix scramble also to invert and multiple and generate sub lists
 
-# try to optimize, work less on B
+Feature: try to optimize, work less on B
 
 
-
+Feature: swap complete slices
+Feature zoom/pan  # done need to update readme
 Feature: WAIT cursor on scramble
 

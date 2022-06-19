@@ -1,7 +1,8 @@
 import math
+from collections.abc import Sequence
 from contextlib import contextmanager
 
-from pyglet.gl import *  # type: ignore
+from pyglet import gl
 
 # noinspection PyMethodMayBeStatic
 import algs.algs as algs
@@ -55,7 +56,7 @@ speeds = [
 ]
 
 
-class AppState:
+class AppandViewState:
     # __slots__ = [
     #     "_alpha_x_0",
     #     "_alpha_y_0",
@@ -83,6 +84,13 @@ class AppState:
         self._alpha_z: float = 0
         self._alpha_delta = 0.1
 
+        self._fovy_0 = 35
+        self._fovy = self._fovy_0
+
+        self._offset_0 = [0, 0, -400]
+        # must copy, we modify it
+        self._offset = [* self._offset_0 ]
+
         self._draw_shadows = config.VIEWER_DRAW_SHADOWS
         self.cube_size = 15
 
@@ -96,6 +104,9 @@ class AppState:
         self._alpha_x: float = 0
         self._alpha_y: float = 0
         self._alpha_z: float = 0
+        self._fovy = self._fovy_0
+        # must copy, we modify it
+        self._offset[:] = self._offset_0
 
     @property
     def alpha_x_0(self):
@@ -137,24 +148,48 @@ class AppState:
     def alpha_delta(self):
         return self._alpha_delta
 
+    def inc_fov_y(self):
+        self._fovy += 1
+
+    def dec_fov_y(self):
+        self._fovy -= 1
+
+    def change_fov_y(self, delta: int):
+        self._fovy += delta
+
+    def change_offset(self, dx, dy, dz):
+        o = self._offset
+
+        o[0] += dx
+        o[1] += dy
+        o[2] += dz
+
+    @property
+    def offset(self) -> Sequence[int]:
+        return self._offset
+
     def prepare_objects_view(self):
         """
         leave matrix mode GL_MODELVIEW
         :return:
         """
-        glPushAttrib(GL_MATRIX_MODE)
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
-        glTranslatef(0, 0, -400)
+        gl.glPushAttrib(gl.GL_MATRIX_MODE)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+
+        o = self._offset
+
+        print()
+        gl.glTranslatef(o[0], o[1], o[2])
 
         # why rotate (a1 + a2)  is not rotate a1 then rotate a2
-        glRotatef(math.degrees(self.alpha_x_0), 1, 0, 0)
-        glRotatef(math.degrees(self.alpha_y_0), 0, 1, 0)
-        glRotatef(math.degrees(self.alpha_z_0), 0, 0, 1)
-        glRotatef(math.degrees(self.alpha_x), 1, 0, 0)
-        glRotatef(math.degrees(self.alpha_y), 0, 1, 0)
-        glRotatef(math.degrees(self.alpha_z), 0, 0, 1)
+        gl.glRotatef(math.degrees(self.alpha_x_0), 1, 0, 0)
+        gl.glRotatef(math.degrees(self.alpha_y_0), 0, 1, 0)
+        gl.glRotatef(math.degrees(self.alpha_z_0), 0, 0, 1)
+        gl.glRotatef(math.degrees(self.alpha_x), 1, 0, 0)
+        gl.glRotatef(math.degrees(self.alpha_y), 0, 1, 0)
+        gl.glRotatef(math.degrees(self.alpha_z), 0, 0, 1)
 
     def restore_objects_view(self):
         """
@@ -162,8 +197,24 @@ class AppState:
         :return:
         """
         # Pop Matrix off stack
-        glPopMatrix()
-        glPopAttrib()
+        gl.glPopMatrix()
+        gl.glPopAttrib()
+
+    def set_projection(self, width: int, height: int):
+        gl.glPushAttrib(gl.GL_MATRIX_MODE)
+        # using Projection mode
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+
+        aspect_ratio = width / height
+        # gluPerspective( GLdouble ( fovy ) , GLdouble ( aspect ) , GLdouble ( zNear ) , GLdouble ( zFar ) )-> void
+        gl.gluPerspective(self._fovy, aspect_ratio, 1, 1000)
+
+        # gl.glMatrixMode(gl.GL_MODELVIEW)
+        # gl.glLoadIdentity()
+        # gl.glTranslatef(0, 0, -400)
+
+        gl.glPopAttrib()
 
     @property
     def get_speed_index(self):

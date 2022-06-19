@@ -5,7 +5,7 @@ from typing import Callable, Any, List
 
 from algs.algs import Alg, SimpleAlg
 from app_exceptions import OpAborted
-from app_state import AppState
+from app_state import AppandViewState
 from model.cube import Cube
 
 
@@ -15,7 +15,7 @@ class Operator:
                  "_app_state"]
 
     def __init__(self, cube: Cube,
-                app_state: AppState,     #PATCH PATCH, operator should hold SS mode
+                 app_state: AppandViewState,  #PATCH PATCH, operator should hold SS mode
                  animation_enabled: bool = False) -> None:
         super().__init__()
         self._aborted: Any = None

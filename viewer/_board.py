@@ -7,7 +7,7 @@ from numpy import ndarray
 from pyglet import gl  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
-from app_state import AppState
+from app_state import AppandViewState
 from model.cube import Cube
 from model.cube_face import Face
 from model.elements import PartFixedID, SuperElement, PartSlice, PartEdge
@@ -56,7 +56,7 @@ class _Board:
     _h_size: int = _FACE_SIZE * 3  # L F R
     _v_size: int = _FACE_SIZE * 4  # U F D B
 
-    def __init__(self, cube: Cube, batch: Batch, vs: AppState) -> None:
+    def __init__(self, cube: Cube, batch: Batch, vs: AppandViewState) -> None:
         super().__init__()
         self._hidden_objects: Set[int] = set()
         self.batch = batch
@@ -244,12 +244,12 @@ class _Board:
 
     def _prepare_view_state(self):
 
-        vs: AppState = self.vs
+        vs: AppandViewState = self.vs
         vs.prepare_objects_view()
 
     def _restore_view_state(self):
 
-        vs: AppState = self.vs
+        vs: AppandViewState = self.vs
         vs.restore_objects_view()
 
     @property

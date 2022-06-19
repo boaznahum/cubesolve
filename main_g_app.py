@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 import config
-from app_state import AppState
+from app_state import AppandViewState
 from cube_operator import Operator
 from model.cube import Cube
 from solver import Solver
@@ -18,7 +18,7 @@ class AbstractApp:
 
     @property
     @abstractmethod
-    def vs(self) -> AppState:
+    def vs(self) -> AppandViewState:
         raise NotImplementedError
 
     @property
@@ -32,7 +32,7 @@ class AbstractApp:
         raise NotImplementedError
 
     @abstractmethod
-    def reset(self, dont_reset_axis=False):
+    def reset(self):
         raise NotImplementedError
 
 
@@ -42,7 +42,7 @@ class App(AbstractApp):
         super().__init__()
         self._error: str | None = None
 
-        self._vs = AppState()
+        self._vs = AppandViewState()
 
         self._cube = Cube(self.vs.cube_size)
 
@@ -54,11 +54,8 @@ class App(AbstractApp):
 
         self.reset()
 
-    def reset(self, dont_reset_axis=False):
+    def reset(self):
         self.cube.reset(self.vs.cube_size)
-        # can't change instance, it is shared
-        if not dont_reset_axis:
-            self.vs.reset()
         self._error = None
 
     def set_error(self, _error: str):
@@ -73,7 +70,7 @@ class App(AbstractApp):
         return self._op
 
     @property
-    def vs(self) -> AppState:
+    def vs(self) -> AppandViewState:
         return self._vs
 
     @property

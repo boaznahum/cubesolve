@@ -4,9 +4,10 @@ Python
 
   Don't search for sophisticated algorithm, my challenge was exactly the contrary - to mimic the way I solve the cube – a very beginner solver. So, when animation is turn on – you even can see how the cube does a whole rotate just to put the parts in front face – the way I know to solve.
   
-  But the code is originzed(see below) in such way that you can enhance and even replace the solver, the model and the viewer is totaly seperated from other layers(as should be :wink:)
+  But the code is organized(see below) in such way that you can enhance and even replace the solver, the model and the viewer is totaly seperated from other layers(as should be :wink:)
   
   
+
 
 ## Installing and running
 
@@ -133,6 +134,20 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
               return Algs.alg("L2-UL", Algs.U.prime + Algs.L.prime + Algs.U + Algs.L + Algs.U + Algs.F + Algs.U.prime + Algs.F.prime)
 
 
-    ```
+  ```
    
 ## Viewer/GUI
+
+
+## Known Issues
+
+## TODO
+  update remame:
+    
+  mousr scrill zoom in/out
+  ctl up/down zoom in/out
+  
+  up/down/right/left pan cube
+  drag alt move cube
+  
+  alt c rese view only

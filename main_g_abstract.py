@@ -3,7 +3,7 @@ from typing import Callable
 
 import pyglet  # type: ignore
 
-from app_state import AppState
+from app_state import AppandViewState
 from cube_operator import Operator
 from main_g_app import AbstractApp
 from model.cube import Cube

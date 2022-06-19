@@ -8,7 +8,7 @@ from numpy import ndarray
 from pyglet import gl  # type: ignore
 
 from algs import algs
-from app_state import AppState
+from app_state import AppandViewState
 from cube_operator import Operator
 from main_g_abstract import Animation, AbstractWindow
 from model.cube import Cube
@@ -26,7 +26,7 @@ def op_and_play_animation(window: AbstractWindow, operator: Operator, inv: bool,
                            inv, alg)
 
 
-def _create_animation(cube: Cube, viewer: GCubeViewer, vs: AppState, alg: algs.AnimationAbleAlg, n_count) -> Animation:
+def _create_animation(cube: Cube, viewer: GCubeViewer, vs: AppandViewState, alg: algs.AnimationAbleAlg, n_count) -> Animation:
     rotate_face: FaceName
     cube_parts: Collection[PartSlice]
 
@@ -170,7 +170,7 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: AppState, alg: algs.A
     return animation
 
 
-def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewer, vs: AppState, operator: Operator,
+def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewer, vs: AppandViewState, operator: Operator,
                            inv: bool, alg: algs.SimpleAlg):
     """
     This must be called only from operator

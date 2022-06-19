@@ -1,9 +1,11 @@
 import math
+from collections.abc import Sequence
+from typing import Tuple
 
 from pyglet import gl  # type: ignore
 
 import config
-from app_state import AppState
+from app_state import AppandViewState
 
 
 class GViewerExt:
@@ -12,7 +14,7 @@ class GViewerExt:
     """
 
     @staticmethod
-    def draw_axis(vs: AppState):
+    def draw_axis(vs: AppandViewState):
 
         axis_length = config.AXIS_LENGTH
 
@@ -22,7 +24,10 @@ class GViewerExt:
         gl.glPushMatrix()
 
         gl.glLoadIdentity()
-        gl.glTranslatef(0, 0, -400)
+
+        offset: Sequence[int] = vs.offset
+
+        gl.glTranslatef(offset[0], offset[1], offset[2])
 
         # print_matrix("GL_MODELVIEW_MATRIX", gl.GL_MODELVIEW_MATRIX)
         # print_matrix("GL_PROJECTION_MATRIX", gl.GL_PROJECTION_MATRIX)

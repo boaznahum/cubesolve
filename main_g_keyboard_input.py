@@ -7,7 +7,7 @@ import config
 from algs import algs
 from algs.algs import Alg, Algs
 from app_exceptions import AppExit
-from app_state import AppState
+from app_state import AppandViewState
 from cube_operator import Operator
 from main_g_abstract import AbstractWindow, AbstractApp
 from model.cube_boy import FaceName
@@ -27,8 +27,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     if debug:
         print(f"In _handle_input , {value}  {hex(value)} {chr(ord('A') + (value - key.A))} ")
 
-    vs: AppState = app.vs
-
+    vs: AppandViewState = app.vs
 
     def handle_in_both_modes():
         """
@@ -78,8 +77,51 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     vs.alpha_z += vs.alpha_delta
                     return True, True
 
+            case key.UP:
+                if modifiers & key.MOD_CTRL:
+                    vs.dec_fov_y()  # zoom in
+                    vs.set_projection(window.width, window.height)
+                    return True, True
+                else:
+                    vs.change_offset(0, 1, 0)
+                    return True, True
 
+            case key.DOWN:
+                if modifiers & key.MOD_CTRL:
+                    vs.inc_fov_y()  # zoom out
+                    vs.set_projection(window.width, window.height)
+                    return True, True
+                else:
+                    vs.change_offset(0, -1, 0)
+                    return True, True
 
+            case key.UP:
+                if modifiers & key.MOD_CTRL:
+                    vs.dec_fov_y()  # zoom in
+                    vs.set_projection(window.width, window.height)
+                    return True, True
+                elif modifiers == 0:
+                    vs.change_offset(0, 1, 0)
+                    return True, True
+
+            case key.DOWN:
+                if modifiers & key.MOD_CTRL:
+                    vs.inc_fov_y()  # zoom out
+                    vs.set_projection(window.width, window.height)
+                    return True, True
+                elif modifiers == 0:
+                    vs.change_offset(0, -1, 0)
+                    return True, True
+
+            case key.RIGHT:
+                if modifiers == 0:
+                    vs.change_offset(1, 0, 0)
+                    return True, True
+
+            case key.LEFT:
+                if modifiers == 0:
+                    vs.change_offset(-1, 0, 0)
+                    return True, True
 
         return False, None
 
@@ -126,7 +168,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
     inv = modifiers & key.MOD_SHIFT
 
-
     alg: Alg
 
     def _slice_alg(r: algs.SliceAbleAlg):
@@ -138,7 +179,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     handled, no_operation = handle_in_both_modes()
 
     if debug:
-        print("keyboard input 'main' handle_in_both_modes return {handled=} {no_operation}")
+        print(f"keyboard input 'main' handle_in_both_modes return {handled=} {no_operation}")
 
     if not handled:
 
@@ -304,8 +345,13 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     op.op(algs.Algs.Z, inv)
 
             case key.C:
-                op.reset()
-                app.reset(not (modifiers and key.MOD_CTRL))
+
+                if not (modifiers & key.MOD_ALT):
+                    op.reset()
+                    app.reset()
+                if modifiers and key.MOD_CTRL:
+                    app.vs.reset()
+                    app.vs.set_projection(window.width, window.height)
 
             case key._0:
                 with vs.w_animation_speed(4):
