@@ -26,9 +26,6 @@ FaceTracker = Callable[[], Face]
 Point: TypeAlias = Tuple[int, int]
 Block: TypeAlias = Tuple[Point, Point]
 
-IS_FIRST = "is_first"
-TWO_LAST = "two last"
-
 _tracer_unique_id: int = 0
 
 
@@ -55,16 +52,8 @@ class FaceLoc:
     def color(self):
         return self._color
 
-    def set_attribute(self, att: Any):
-        self._attributes[att] = att
-
-    def has_attribute(self, att: Any):
-        return att in self._attributes
-
 
 class NxNCenters(SolverElement):
-    work_on_b: bool = True
-
     D_LEVEL = 3
 
     def __init__(self, slv: ISolver) -> None:
@@ -94,45 +83,57 @@ class NxNCenters(SolverElement):
         if self._is_solved():
             return  # avoid rotating cube
 
-        f1: FaceLoc = self._track_no_1()
+        cube = self.cube
+        if cube.n_slices % 2:
+            # odd cube
 
-        f1.set_attribute(IS_FIRST)
+            # do without back as long as there is work to do
+            faces = [self._track_odd(f) for f in cube.faces]
+            while True:
+                if not self._do_faces(faces, False):
+                    break
 
-        f2 = self._track_opposite(f1)
+            self._do_faces(faces, True)
 
-        self._do_faces([f1, f2])
 
-        assert f1.face.center.is3x3
-        assert f2.face.center.is3x3
+        else:
 
-        # now colors of f1/f2 can't be on 4 that left, so we can choose any one
-        f3 = self._track_no_3([f1.face, f2.face])
-        f4 = self._track_opposite(f3)
+            f1: FaceLoc = self._track_no_1()
 
-        self._do_faces([f3, f4])
-        assert f3.face.center.is3x3
-        assert f4.face.center.is3x3
+            f2 = self._track_opposite(f1)
 
-        f5, f6 = self._track_two_last([f1, f2, f3, f4])
-        self._do_faces([f5, f6])
-        assert f5.face.center.is3x3
-        assert f6.face.center.is3x3
+            self._do_faces([f1, f2], True)
 
-        f5.set_attribute(TWO_LAST)
-        f6.set_attribute(TWO_LAST)
+            assert f1.face.center.is3x3
+            assert f2.face.center.is3x3
+
+            # now colors of f1/f2 can't be on 4 that left, so we can choose any one
+            f3 = self._track_no_3([f1.face, f2.face])
+            f4 = self._track_opposite(f3)
+
+            self._do_faces([f3, f4], True)
+            assert f3.face.center.is3x3
+            assert f4.face.center.is3x3
+
+            f5, f6 = self._track_two_last([f1, f2, f3, f4])
+            self._do_faces([f5, f6], True)
+            assert f5.face.center.is3x3
+            assert f6.face.center.is3x3
 
         assert self._is_solved()
 
-    def _do_faces(self, faces):
-        while True:
-            work_done = False
-            for f in faces:
-                # we must trace faces, because they are moved by algorith
-                # we need to locate the face by original_color, b ut on odd cube, the color is of the center
-                if self._do_center(f):
-                    work_done = True
-            if NxNCenters.work_on_b or not work_done:
-                break
+    def _do_faces(self, faces, use_back_too: bool) -> bool:
+        # while True:
+        work_done = False
+        for f in faces:
+            # we must trace faces, because they are moved by algorith
+            # we need to locate the face by original_color, b ut on odd cube, the color is of the center
+            if self._do_center(f, use_back_too):
+                work_done = True
+            # if NxNCenters.work_on_b or not work_done:
+            #     break
+
+        return work_done
 
     def _track_no_1(self) -> FaceLoc:
 
@@ -226,17 +227,27 @@ class NxNCenters(SolverElement):
 
         return FaceLoc(second_color, _pred)
 
-    def _do_center(self, face_loc: FaceLoc) -> bool:
+    def _do_center(self, face_loc: FaceLoc, use_back_too: bool) -> bool:
 
         if self._is_face_solved(face_loc.face, face_loc.color):
             self.debug(f"Face is already done {face_loc.face}",
                        level=1)
             return False
 
+        sources = set(self.cube.faces) - {face_loc.face}
+        if not use_back_too:
+            sources -= {face_loc.face.opposite}
+
+        color = face_loc.color
+        if all(not self._has_color_on_face(f, color) for f in sources):
+            self.debug(f"For face {face_loc.face}, No color {color} available on  {sources}",
+                       level=1)
+            return False
+
         self.debug(f"Need to work on {face_loc.face}",
                    level=1)
 
-        work_done = self.__do_center(face_loc)
+        work_done = self.__do_center(face_loc, use_back_too)
 
         self.debug(f"After working on {face_loc.face} {work_done=}, "
                    f"solved={self._is_face_solved(face_loc.face, face_loc.color)}",
@@ -305,7 +316,7 @@ class NxNCenters(SolverElement):
 
         return self._trace_face_by_slice(_slice)
 
-    def __do_center(self, face_loc: FaceLoc) -> bool:
+    def __do_center(self, face_loc: FaceLoc, use_back_too: bool) -> bool:
 
         """
 
@@ -357,7 +368,7 @@ class NxNCenters(SolverElement):
             if self._is_face_solved(face_loc.face, color):
                 return work_done
 
-        if NxNCenters.work_on_b:
+        if use_back_too:
             # now from back
             # don't use face - it was moved !!!
             if self._do_center_from_face(cube.front, color, cube.back):
@@ -739,8 +750,6 @@ class NxNCenters(SolverElement):
 
         n = self.cube.n_slices
 
-        if face.name == FaceName.B and color == Color.WHITE:
-            print()
         for rc in self._2d_center_iter():
 
             if center.get_center_slice(rc).color == color:
