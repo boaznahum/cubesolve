@@ -36,6 +36,13 @@ class _SearchBlockMode(Enum):
     ExactMatch = 3  # required on source match source
 
 
+def _pred_to_tracker(cube, pred: Pred[Face]) -> FaceTracker:
+    def tracker() -> Face:
+        return CubeQueries.find_face(cube, pred)
+
+    return tracker
+
+
 class FaceLoc:
 
     def __init__(self, color: Color, tracker: FaceTracker) -> None:
@@ -119,7 +126,11 @@ class NxNCenters(SolverElement):
             f5, f6 = self._track_two_last([f1, f2, f3, f4])
 
             # so we don't need this also, otherwise _track_two_last should crash
-            # self._do_faces([f5, f6], True, True)
+            self._do_faces([f5], True, True)
+
+            # todo: convert tracker to light tracker by color
+            f5 = self._trace_face_by_slice_color(f5.face, f5.color)
+            f6 = self._track_opposite(f5)
 
             faces = [f1, f2, f3, f4, f5, f6]
 
@@ -179,6 +190,63 @@ class NxNCenters(SolverElement):
 
         return self._trace_face_by_slice_color(f3, f3_color)
 
+    def _create_f5_pred(self, four_first: Sequence[FaceLoc], color) -> Pred[Face]:
+
+        cube = self.cube
+
+        four_first = [*four_first]
+
+        first_4_colors: set[Color] = set((f.color for f in four_first))
+
+        def _pred(f: Face):
+
+            """
+
+            :param f:
+            :return: True if f/color make it a boy
+            """
+
+            left_two_faces: set[Face] = {*cube.faces} - {f.face for f in four_first}
+
+            if f not in left_two_faces:
+                return False
+
+            left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - first_4_colors
+
+            assert color in left_two_colors
+
+            c5: Color = left_two_colors.pop()
+            c6: Color = left_two_colors.pop()
+
+            f5: Face = left_two_faces.pop()
+            f6: Face = left_two_faces.pop()
+
+            # make f as f5
+            if f5 is not f:
+                f5, f6 = f, f5
+
+            if c5 is not color:
+                c5, c6 = color, c5
+
+            try1 = {f.face.name: f.color for f in four_first}
+            try1[f5.name] = c5
+            try1[f6.name] = c6
+            cl: CubeLayout = CubeLayout(False, try1)
+
+            if cl.same(self.cube.original_layout):
+                return True  # f/color make it a BOY
+
+            f5, f6 = (f6, f5)
+            try1 = {f.face.name: f.color for f in four_first}
+            try1[f5.name] = c5
+            try1[f6.name] = c6
+            cl = CubeLayout(False, try1)
+            assert cl.same(self.cube.original_layout)
+
+            return False
+
+        return _pred
+
     def _track_two_last(self, four_first: Sequence[FaceLoc]) -> Tuple[FaceLoc, FaceLoc]:
 
         cube = self.cube
@@ -189,46 +257,32 @@ class NxNCenters(SolverElement):
 
         assert len(left_two_faces) == 2
 
-        colors: set[Color] = set((f.color for f in four_first))
+        first_4_colors: set[Color] = set((f.color for f in four_first))
 
-        left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - colors
+        left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - first_4_colors
 
         c5: Color = left_two_colors.pop()
         c6: Color = left_two_colors.pop()
 
-        f5: Face = left_two_faces[0]
-        f6: Face = left_two_faces[1]
+        f5: Face = left_two_faces.pop()
 
-        try1 = {f.face.name: f.color for f in four_first}
-        try1[f5.name] = c5
-        try1[f6.name] = c6
-        cl: CubeLayout = CubeLayout(False, try1)
+        color = c5
+        pred = self._create_f5_pred(four_first, color)
 
-        if not cl.same(self.cube.original_layout):
-            f5, f6 = (f6, f5)
-            try1 = {f.face.name: f.color for f in four_first}
-            try1[f5.name] = c5
-            try1[f6.name] = c6
-            cl = CubeLayout(False, try1)
-            assert cl.same(self.cube.original_layout)
+        if pred(f5):
+            # f5/c5 make it a BOY
+            #other = c6
+            pass
+        else:
+            color = c6
+            #other = c5
+            # f5/c5 make it a BOY
+            pred = self._create_f5_pred(four_first, color)
+            assert pred(f5)
 
-            # now find in f5 a slice with this color
+        tracker = _pred_to_tracker(cube, pred)
 
-        def _s_pred(s: CenterSlice):
-            return s.color == c5
-
-        _slice = CubeQueries.find_slice_in_face_center(f5, _s_pred)
-
-        # can be a case that f1,f2,f3,f4 contains all the left c5, c6 ?
-        # yes it can.
-        # but we can improve by tracking by the relation between then faces (BOY)
-        # track: not in f1,,f4 and make it a BOY
-        if _slice is None:
-            raise InternalSWError(f"Un supported case, f5, didn't find a color {c5}")
-        # in rare case
-
-        # see bug in _track_even
-        f5_track = self._track_even(f5, _slice.index)
+        f5_track = FaceLoc(color, tracker)
         f6_track = self._track_opposite(f5_track)
 
         return f5_track, f6_track
