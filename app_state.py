@@ -92,7 +92,7 @@ class AppandViewState:
         self._offset = [* self._offset_0 ]
 
         self._draw_shadows = config.VIEWER_DRAW_SHADOWS
-        self.cube_size = 5
+        self.cube_size = 6
 
         self.slice_start: int = 0
         self.slice_stop: int = 0

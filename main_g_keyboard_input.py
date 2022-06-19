@@ -376,7 +376,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key._2 | key._3 | key._4 | key._5 | key._6:
 
-                print(f"{modifiers & key.MOD_CTRL=}  {modifiers & key.MOD_ALT=}")
+                #print(f"{modifiers & key.MOD_CTRL=}  {modifiers & key.MOD_ALT=}")
                 if modifiers & key.MOD_CTRL:
                     # noinspection PyProtectedMember
                     balg: algs.BigAlg = Algs.scramble(app.cube.size, value - key._0)

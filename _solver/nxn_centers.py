@@ -52,6 +52,9 @@ class FaceLoc:
     def color(self):
         return self._color
 
+    def __str__(self) -> str:
+        return f"{self.color.name}@{self.face}"
+
 
 class NxNCenters(SolverElement):
     D_LEVEL = 3
@@ -84,16 +87,15 @@ class NxNCenters(SolverElement):
             return  # avoid rotating cube
 
         cube = self.cube
+
+        faces: list[FaceLoc]
+
         if cube.n_slices % 2:
             # odd cube
 
             # do without back as long as there is work to do
             faces = [self._track_odd(f) for f in cube.faces]
-            while True:
-                if not self._do_faces(faces, False):
-                    break
 
-            self._do_faces(faces, True)
 
 
         else:
@@ -102,33 +104,42 @@ class NxNCenters(SolverElement):
 
             f2 = self._track_opposite(f1)
 
-            self._do_faces([f1, f2], True)
-
-            assert f1.face.center.is3x3
-            assert f2.face.center.is3x3
+            # becuase we find f1 by max colors, then it is clear that it has a least one of scuh a color
+            # and oposite doesnot need color for tracing
+            # self._do_faces([f1, f2], True, True)
 
             # now colors of f1/f2 can't be on 4 that left, so we can choose any one
-            f3 = self._track_no_3([f1.face, f2.face])
+            f3 = self._track_no_3([f1, f2])
             f4 = self._track_opposite(f3)
 
-            self._do_faces([f3, f4], True)
-            assert f3.face.center.is3x3
-            assert f4.face.center.is3x3
+            # f3 contains at least one color that is not in f1, f2, so no need to bring at leas one
+            # but there is a question if such f3 always exists
+            self._do_faces([f3, f4], True, True)
 
             f5, f6 = self._track_two_last([f1, f2, f3, f4])
-            self._do_faces([f5, f6], True)
-            assert f5.face.center.is3x3
-            assert f6.face.center.is3x3
+
+            # so we don't need this also, otherwise _track_two_last should crash
+            # self._do_faces([f5, f6], True, True)
+
+            faces = [f1, f2, f3, f4, f5, f6]
+
+            # now each face has at least one color, so
+
+        while True:
+            if not self._do_faces(faces, False, False):
+                break
+
+        self._do_faces(faces, False, True)
 
         assert self._is_solved()
 
-    def _do_faces(self, faces, use_back_too: bool) -> bool:
+    def _do_faces(self, faces, minimal_bring_one_color, use_back_too: bool) -> bool:
         # while True:
         work_done = False
         for f in faces:
             # we must trace faces, because they are moved by algorith
             # we need to locate the face by original_color, b ut on odd cube, the color is of the center
-            if self._do_center(f, use_back_too):
+            if self._do_center(f, minimal_bring_one_color, use_back_too):
                 work_done = True
             # if NxNCenters.work_on_b or not work_done:
             #     break
@@ -147,73 +158,80 @@ class NxNCenters(SolverElement):
             # todo: see bug _track_even
             return self._track_even(f, _slice.index)
 
-    def _track_no_3(self, two_first: Sequence[Face]) -> FaceLoc:
+    def _track_no_3(self, two_first: Sequence[FaceLoc]) -> FaceLoc:
 
         cube = self.cube
 
-        left = list({*cube.faces} - set(two_first))
+        assert len(two_first) == 2
 
-        if cube.n_slices % 2:
-            return self._track_odd(left[0])
-        else:
-            # can be any
-            return self._track_even(left[0], (0, 0))
+        left = list({*cube.faces} - {two_first[0].face, two_first[1].face})
+
+        assert not cube.n_slices % 2
+
+        c12 = {two_first[0].color, two_first[1].color}
+
+        left_colors = set(cube.original_layout.colors()) - c12
+
+        # # can be any, still doesn't prevent BOY
+        # There will always a face that contains a color that is not included in f1, f2
+        # because f1, f2 contains only 1/3 of all pieces
+        f3, f3_color = self._find_face_with_max_colors(left, left_colors)
+
+        return self._trace_face_by_slice_color(f3, f3_color)
 
     def _track_two_last(self, four_first: Sequence[FaceLoc]) -> Tuple[FaceLoc, FaceLoc]:
 
         cube = self.cube
 
+        assert cube.n_slices % 2 == 0
+
         left_two_faces: list[Face] = list({*cube.faces} - {f.face for f in four_first})
 
         assert len(left_two_faces) == 2
 
+        colors: set[Color] = set((f.color for f in four_first))
+
+        left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - colors
+
+        c5: Color = left_two_colors.pop()
+        c6: Color = left_two_colors.pop()
+
         f5: Face = left_two_faces[0]
+        f6: Face = left_two_faces[1]
 
-        if cube.n_slices % 2:
-            f5_track: FaceLoc = self._track_odd(f5)
-            f6_track = self._track_opposite(f5_track)
+        try1 = {f.face.name: f.color for f in four_first}
+        try1[f5.name] = c5
+        try1[f6.name] = c6
+        cl: CubeLayout = CubeLayout(False, try1)
 
-            return f5_track, f6_track
-
-        else:
-            colors: set[Color] = set((f.color for f in four_first))
-
-            left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - colors
-
-            c1: Color = left_two_colors.pop()
-            c2: Color = left_two_colors.pop()
-
-            f6: Face = left_two_faces[1]
-
+        if not cl.same(self.cube.original_layout):
+            f5, f6 = (f6, f5)
             try1 = {f.face.name: f.color for f in four_first}
-            try1[f5.name] = c1
-            try1[f6.name] = c2
-            cl: CubeLayout = CubeLayout(False, try1)
+            try1[f5.name] = c5
+            try1[f6.name] = c6
+            cl = CubeLayout(False, try1)
+            assert cl.same(self.cube.original_layout)
 
-            if not cl.same(self.cube.original_layout):
-                f5, f6 = (f6, f5)
-                try1 = {f.face.name: f.color for f in four_first}
-                try1[f5.name] = c1
-                try1[f6.name] = c2
-                cl = CubeLayout(False, try1)
-                assert cl.same(self.cube.original_layout)
+            # now find in f5 a slice with this color
 
-                # now find in f5 a slice with this color
+        def _s_pred(s: CenterSlice):
+            return s.color == c5
 
-            def _s_pred(s: CenterSlice):
-                return s.color == c1
+        _slice = CubeQueries.find_slice_in_face_center(f5, _s_pred)
 
-            _slice = CubeQueries.find_slice_in_face_center(f5, _s_pred)
+        # can be a case that f1,f2,f3,f4 contains all the left c5, c6 ?
+        # yes it can.
+        # but we can improve by tracking by the relation between then faces (BOY)
+        # track: not in f1,,f4 and make it a BOY
+        if _slice is None:
+            raise InternalSWError(f"Un supported case, f5, didn't find a color {c5}")
+        # in rare case
 
-            if _slice is None:
-                raise InternalSWError("Un supported case, f5, f6 are all 3x3 but with wrong color")
-            # in rare case
+        # see bug in _track_even
+        f5_track = self._track_even(f5, _slice.index)
+        f6_track = self._track_opposite(f5_track)
 
-            # see bug in _track_even
-            f5_track = self._track_even(f5, _slice.index)
-            f6_track = self._track_opposite(f5_track)
-
-            return f5_track, f6_track
+        return f5_track, f6_track
 
     def _track_opposite(self, f: FaceLoc):
 
@@ -227,18 +245,23 @@ class NxNCenters(SolverElement):
 
         return FaceLoc(second_color, _pred)
 
-    def _do_center(self, face_loc: FaceLoc, use_back_too: bool) -> bool:
+    def _do_center(self, face_loc: FaceLoc, minimal_bring_one_color, use_back_too: bool) -> bool:
 
         if self._is_face_solved(face_loc.face, face_loc.color):
             self.debug(f"Face is already done {face_loc.face}",
                        level=1)
             return False
 
+        color = face_loc.color
+
+        if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
+            self.debug(f"{face_loc.face} already has at least one {color}")
+            return False
+
         sources = set(self.cube.faces) - {face_loc.face}
         if not use_back_too:
             sources -= {face_loc.face.opposite}
 
-        color = face_loc.color
         if all(not self._has_color_on_face(f, color) for f in sources):
             self.debug(f"For face {face_loc.face}, No color {color} available on  {sources}",
                        level=1)
@@ -247,7 +270,7 @@ class NxNCenters(SolverElement):
         self.debug(f"Need to work on {face_loc.face}",
                    level=1)
 
-        work_done = self.__do_center(face_loc, use_back_too)
+        work_done = self.__do_center(face_loc, minimal_bring_one_color, use_back_too)
 
         self.debug(f"After working on {face_loc.face} {work_done=}, "
                    f"solved={self._is_face_solved(face_loc.face, face_loc.color)}",
@@ -316,7 +339,7 @@ class NxNCenters(SolverElement):
 
         return self._trace_face_by_slice(_slice)
 
-    def __do_center(self, face_loc: FaceLoc, use_back_too: bool) -> bool:
+    def __do_center(self, face_loc: FaceLoc, minimal_bring_one_color: bool, use_back_too: bool) -> bool:
 
         """
 
@@ -331,6 +354,10 @@ class NxNCenters(SolverElement):
         if self._is_face_solved(face, color):
             self.debug(f"Face is already done {face}",
                        level=1)
+            return False
+
+        if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
+            self.debug(f"{face_loc.face} already has at least one {color}")
             return False
 
         cmn = self.cmn
@@ -352,8 +379,10 @@ class NxNCenters(SolverElement):
                 # need to optimize ,maybe no sources on this face
 
                 # don't use face - it was moved !!!
-                if self._do_center_from_face(cube.front, color, cube.up):
+                if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up):
                     work_done = True
+                    if minimal_bring_one_color:
+                        return work_done
 
                 if self._is_face_solved(face_loc.face, color):
                     return work_done
@@ -362,8 +391,10 @@ class NxNCenters(SolverElement):
 
             # on the last face
             # don't use face - it was moved !!!
-            if self._do_center_from_face(cube.front, color, cube.up):
+            if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up):
                 work_done = True
+                if minimal_bring_one_color:
+                    return work_done
 
             if self._is_face_solved(face_loc.face, color):
                 return work_done
@@ -371,12 +402,12 @@ class NxNCenters(SolverElement):
         if use_back_too:
             # now from back
             # don't use face - it was moved !!!
-            if self._do_center_from_face(cube.front, color, cube.back):
+            if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.back):
                 work_done = True
 
         return work_done
 
-    def _do_center_from_face(self, face: Face, color: Color, source_face: Face) -> bool:
+    def _do_center_from_face(self, face: Face, minimal_bring_one_color, color: Color, source_face: Face) -> bool:
 
         """
         The sources are on source_face !!! source face is in its location up /back
@@ -412,8 +443,12 @@ class NxNCenters(SolverElement):
                 work_done = True
 
         if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
+            # should move minimal_bring_one_color into _do_blocks, becuas ein case of back, it can do too much
             if self._do_blocks(color, cube, face, source_face):
                 work_done = True
+                if minimal_bring_one_color:
+                    return work_done
+
         else:
 
             # the above also did a 1 size block
@@ -435,6 +470,8 @@ class NxNCenters(SolverElement):
                     self.debug(f"Fixed slice {rc}")
 
                     work_done = True
+                    if minimal_bring_one_color:
+                        return work_done
 
         if not work_done:
             self.debug(f"Internal error, no work was done on face {face} required color {color}, "
@@ -556,13 +593,20 @@ class NxNCenters(SolverElement):
     def boy_opposite(self, color: Color) -> Color:
         return self.cube.original_layout.opposite_color(color)
 
-    def _find_face_with_max_colors(self) -> Tuple[Face, Color]:
+    def _find_face_with_max_colors(self, faces: Sequence[Face] = None, colors: Collection[Color] = None) -> Tuple[
+        Face, Color]:
         n_max = -1
         f_max: Face | None = None
         c_max: Color | None = None
         cube = self.cube
-        colors: Collection[Color] = cube.original_layout.colors()
-        for f in cube.faces:
+
+        if colors is None:
+            colors = cube.original_layout.colors()
+
+        if faces is None:
+            faces = cube.faces
+
+        for f in faces:
             for c in colors:
                 n = self.count_color_on_face(f, c)
                 if n > n_max:
