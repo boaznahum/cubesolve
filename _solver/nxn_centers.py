@@ -103,16 +103,14 @@ class NxNCenters(SolverElement):
             # do without back as long as there is work to do
             faces = [self._track_odd(f) for f in cube.faces]
 
-
-
         else:
 
             f1: FaceLoc = self._track_no_1()
 
             f2 = self._track_opposite(f1)
 
-            # becuase we find f1 by max colors, then it is clear that it has a least one of scuh a color
-            # and oposite doesnot need color for tracing
+            # because we find f1 by max colors, then it is clear that it has at least one of such a color
+            # and opposite doesn't need color for tracing
             # self._do_faces([f1, f2], True, True)
 
             # now colors of f1/f2 can't be on 4 that left, so we can choose any one
@@ -271,11 +269,10 @@ class NxNCenters(SolverElement):
 
         if pred(f5):
             # f5/c5 make it a BOY
-            #other = c6
             pass
         else:
             color = c6
-            #other = c5
+            # other = c5
             # f5/c5 make it a BOY
             pred = self._create_f5_pred(four_first, color)
             assert pred(f5)
@@ -497,7 +494,7 @@ class NxNCenters(SolverElement):
                 work_done = True
 
         if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
-            # should move minimal_bring_one_color into _do_blocks, becuas ein case of back, it can do too much
+            # should move minimal_bring_one_color into _do_blocks, because ein case of back, it can do too much
             if self._do_blocks(color, cube, face, source_face):
                 work_done = True
                 if minimal_bring_one_color:
@@ -648,7 +645,8 @@ class NxNCenters(SolverElement):
         return self.cube.original_layout.opposite_color(color)
 
     def _find_face_with_max_colors(self, faces: Sequence[Face] = None, colors: Collection[Color] = None) -> Tuple[
-        Face, Color]:
+            Face, Color]:
+
         n_max = -1
         f_max: Face | None = None
         c_max: Color | None = None
