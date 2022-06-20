@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from contextlib import contextmanager
 from enum import unique, Enum
 from typing import Tuple, Callable
@@ -169,12 +170,12 @@ class SolverElement(CubeSupplier):
         return self.op.animation_enabled
 
     @contextmanager
-    def w_center_slice_annotate(self, *slices: CenterSlice, animation=True):
+    def w_center_slice_annotate(self, *_slices: CenterSlice | Iterable[CenterSlice], animation=True):
 
         """
         Annotate moved slice
         :param animation:
-        :param elements:  bool in tuple is  'annotated by fixed_location'
+        :param _slices:  slice of iterator, not consumed if animation is off
         if part is given we annotate the part (by color or by fixed), if color is given we search for it
         :param un_an:
         :return:
@@ -189,6 +190,14 @@ class SolverElement(CubeSupplier):
                 yield None
             finally:
                 return
+
+        slices: list[CenterSlice] = []
+        for x in _slices:
+            if isinstance(x, CenterSlice):
+                slices.append(x)
+            else:
+                for y in x:
+                    slices.append(y)
 
         ids = []
         s: CenterSlice

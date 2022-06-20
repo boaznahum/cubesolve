@@ -1,4 +1,5 @@
-from collections.abc import Iterator, Sequence
+import functools
+from collections.abc import Iterator, Sequence, Iterable
 from enum import Enum, unique
 from typing import Tuple, Callable, Collection, Any, TypeAlias
 
@@ -34,6 +35,17 @@ class _SearchBlockMode(Enum):
     CompleteBlock = 1
     BigThanSource = 2
     ExactMatch = 3  # required on source match source
+
+
+class _CompleteSlice:
+    is_row: bool
+    index: int  # of row/column
+    n_matches: int  # number of pieces match color
+
+    def __init__(self, is_row: bool, index: int, n_matches: int) -> None:
+        self.is_row = is_row
+        self.index = index
+        self.n_matches = n_matches
 
 
 def _pred_to_tracker(cube, pred: Pred[Face]) -> FaceTracker:
@@ -493,12 +505,20 @@ class NxNCenters(SolverElement):
                 self._swap_entire_face_odd_cube(color, face, source_face)
                 work_done = True
 
-        if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
-            # should move minimal_bring_one_color into _do_blocks, because ein case of back, it can do too much
-            if self._do_blocks(color, cube, face, source_face):
+        if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
+            if self._do_complete_slices(color, face, source_face):
                 work_done = True
                 if minimal_bring_one_color:
                     return work_done
+
+        if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
+            # should move minimal_bring_one_color into _do_blocks, because ein case of back, it can do too much
+            if self._do_blocks(color, face, source_face):
+                work_done = True
+                if minimal_bring_one_color:
+                    return work_done
+
+
 
         else:
 
@@ -538,9 +558,136 @@ class NxNCenters(SolverElement):
 
         return work_done
 
-    def _do_blocks(self, color, cube, face, source_face):
+    def _do_complete_slices(self, color, face, source_face) -> bool:
 
         work_done = False
+
+        # do while work is done
+        while True:
+            if not self._do_one_complete_slice(color, face, source_face):
+                return work_done
+
+            work_done = True
+
+    def _do_one_complete_slice(self, color, face, source_face) -> bool:
+
+        slices: Sequence[_CompleteSlice] = self._search_slices_on_face(source_face, color, None, True)
+
+        if not slices:
+            return False
+
+        odd_mid_slice: int | None = None
+        if self.cube.n_slices % 2:
+            odd_mid_slice = self.cube.n_slices // 2
+
+        slices_on_face: dict[int, Sequence[_CompleteSlice]] = {}
+
+        for _slice in slices:
+
+            index = _slice.index
+
+            if index == odd_mid_slice:
+                continue  # skip this one
+
+            target_slices = slices_on_face.get(index)
+
+            if target_slices is None:
+                target_slices = self._search_slices_on_face(face, color, index, False)
+                assert len(target_slices) == 4
+                slices_on_face[index] = target_slices
+
+            min_target_slice = target_slices[0]
+
+            if (min_target_slice.n_matches == 0 or not config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO) \
+                    and _slice.n_matches > min_target_slice.n_matches:
+                # ok now swap
+
+                self._swap_slice(min_target_slice, face, _slice, source_face)
+
+                return True
+
+        return False
+
+    def _swap_slice(self, target_slice: _CompleteSlice, target_face: Face,
+                    source_slice: _CompleteSlice, source_face: Face):
+
+        cube = self.cube
+        n_slices = cube.n_slices
+
+        target_index: int
+
+        # slice must be vertical
+        op = self.op
+        if target_slice.is_row:
+            target_slice_block_1 = CubeQueries.rotate_point_counterclockwise(cube, (target_slice.index, 0))
+            target_index = target_slice_block_1[1]
+            op.op(Algs.F.prime)
+        else:
+            # column
+            target_index = target_slice.index
+
+        # now we must bring source slice into position (0,  target_index^)
+
+        nm1 = cube.n_slices - 1
+        source_index = source_slice.index
+        if source_slice.is_row:
+            s1 = (source_index, 0)
+            s2 = (source_index, nm1)
+        else:
+            s1 = (0, source_index)
+            s2 = (nm1, source_index)
+
+        # now we need to bring source slice such that one of its endpoints is (0,  target_index^)
+        required_on_target = (0, cube.inv(target_index))
+
+        def is_column(p1: Point, p2: Point):
+
+            return (p1[0] == 0 and p2[0] == n_slices - 1) or (p2[0] == 0 and p1[0] == n_slices - 1)
+
+        source_is_back = source_face is cube.back
+        n_rotate: int | None = None
+        for i in range(4):
+
+            if is_column(s1, s2):
+                s1_on_target = self._point_on_target(source_is_back, s1)
+                s2_on_target = self._point_on_target(source_is_back, s2)
+
+                if s1_on_target == required_on_target or s2_on_target == required_on_target:
+                    n_rotate = i
+                    break
+
+            s1 = CubeQueries.rotate_point_clockwise(cube, s1)
+            s2 = CubeQueries.rotate_point_clockwise(cube, s2)
+
+        assert n_rotate is not None
+
+        # now rotate source face accordingly:
+        rotate_source_alg = Algs.of_face(source_face.name)
+        op.op(rotate_source_alg * n_rotate)
+
+        mul = 2 if source_is_back else 1
+        # do the swap:
+        slice_source_alg: algs.Alg = self._get_slice_m_alg(target_index, target_index)
+
+        def ann_slices() -> Iterator[CenterSlice]:
+            for rc in self._2d_range(s1, s2):
+                yield source_face.center.get_center_slice(rc)
+
+            for rc in self._2d_range((0, target_index), (nm1, target_index)):
+                yield target_face.center.get_center_slice(rc)
+
+
+        with self.w_center_slice_annotate(ann_slices()):
+            op.op(slice_source_alg * mul +
+                  rotate_source_alg * 2 +  # this replaces source slice with target
+                  slice_source_alg.prime * mul
+                  )
+
+    def _do_blocks(self, color, face, source_face):
+
+        work_done = False
+
+        cube = self.cube
 
         big_blocks = self._search_big_block(source_face, color)
 
@@ -644,8 +791,8 @@ class NxNCenters(SolverElement):
     def boy_opposite(self, color: Color) -> Color:
         return self.cube.original_layout.opposite_color(color)
 
-    def _find_face_with_max_colors(self, faces: Sequence[Face] = None, colors: Collection[Color] = None) -> Tuple[
-            Face, Color]:
+    def _find_face_with_max_colors(self, faces: Iterable[Face] = None, colors: Collection[Color] = None) -> Tuple[
+        Face, Color]:
 
         n_max = -1
         f_max: Face | None = None
@@ -800,20 +947,20 @@ class NxNCenters(SolverElement):
                rotate_on_second * rotate_mul,
                on_front_rotate.prime]
 
-        source_slices: list[CenterSlice] = []
-        target_slices: list[CenterSlice] = []
 
-        if self.animation_on:
+        def ann_slices():
             _on_src1_1 = self._point_on_source(is_back, rc1)
             _on_src1_2 = self._point_on_source(is_back, rc2)
             # why - ? because we didn't yet rotate it
             _on_src1_1 = CubeQueries.rotate_point_clockwise(cube, _on_src1_1, -n_rotate)
             _on_src1_2 = CubeQueries.rotate_point_clockwise(cube, _on_src1_2, -n_rotate)
-            source_slices = [source_face.center.get_center_slice(rc) for rc in self._2d_range(_on_src1_1, _on_src1_2)]
+            for rc in self._2d_range(_on_src1_1, _on_src1_2):
+                yield source_face.center.get_center_slice(rc)
 
-            target_slices = [face.center.get_center_slice(rc) for rc in self._2d_range_on_source(False, rc1, rc2)]
+            for rc in self._2d_range_on_source(False, rc1, rc2):
+                yield face.center.get_center_slice(rc)
 
-        with self.w_center_slice_annotate(*source_slices, *target_slices):
+        with self.w_center_slice_annotate(ann_slices()):
             if n_rotate:
                 self.op.op(Algs.of_face(source_face.name) * n_rotate)
             self.op.op(Algs.bigAlg(None, *cum))
@@ -931,7 +1078,8 @@ class NxNCenters(SolverElement):
         return False
 
     @staticmethod
-    def _count_colors_on_block(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int]):
+    def _count_colors_on_block(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
+                               ignore_if_back=False):
 
         """
         Count number of centerpieces on center that match color
@@ -942,9 +1090,9 @@ class NxNCenters(SolverElement):
         """
 
         cube = source_face.cube
-        is_back = source_face is cube.back
+        fix_back_coords = not ignore_if_back and  source_face is cube.back
 
-        if is_back:
+        if fix_back_coords:
             # the logic here is hard code of the logic in slice rotate
             # it will be broken if cube layout is changed
             # here we assume we work on F, and UP has same coord system as F, and
@@ -972,6 +1120,54 @@ class NxNCenters(SolverElement):
                     _count += 1
 
         return _count
+
+    def _search_slices_on_face(self, face, color, index: int | None, search_max: bool) -> list[_CompleteSlice]:
+
+        """
+
+        :param face:
+        :param color:
+        :param index: if not None then return only (index, 0) (index^, 0), (0, index), (0, index^)
+        :param search_max:
+        :return:
+        """
+
+        cube = self.cube
+        inv = cube.inv
+        n_slices = cube.n_slices
+        nm1 = n_slices - 1
+
+        rows: Iterable[int]
+        columns: Iterable[int]
+        if index is not None:
+            rows = [index, inv(index)]
+            columns = [index, inv(index)]
+        else:
+            rows = range(n_slices)
+            columns = rows
+
+        _slices = []
+        for r in rows:
+
+            n = self._count_colors_on_block(color, face, (r, 0), (r, nm1), ignore_if_back=True)
+
+            if n > 1 or not search_max: # one is not interesting, will be handled by communicator
+                # if we search for minimum than we want zero too
+                _slice = _CompleteSlice(True, r, n)
+                _slices.append(_slice)
+
+        for c in columns:
+
+            n = self._count_colors_on_block(color, face, (0, c), (nm1, c), ignore_if_back=True)
+
+            if n > 1 or not search_max: # one is not interesting, will be handled by communicator
+                # if we search for minimum than we want zero too
+                _slice = _CompleteSlice(False, c, n)
+                _slices.append(_slice)
+
+        _slices = sorted(_slices, key=lambda s: s.n_matches, reverse=search_max)
+
+        return _slices
 
     @staticmethod
     def _1_d_intersect(range_1: Tuple[int, int], range_2: Tuple[int, int]):
@@ -1191,10 +1387,10 @@ class NxNCenters(SolverElement):
     def _get_slice_m_alg(self, c1, c2):
 
         """
-        Center Slice index [0, n)
-        :param c1:
-        :param c2:
-        :return:
+
+        :param c1: Center Slice index [0, n)
+        :param c2: Center Slice index [0, n)
+        :return: m slice in range suitable for [c1, c2]
         """
 
         inv = self.cube.inv

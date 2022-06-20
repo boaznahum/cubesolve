@@ -21,7 +21,7 @@ AXIS_LENGTH = 4 * CELL_SIZE
 
 MAX_MARKER_RADIUS = 4.0  # when decreasing cube size, we don't want the markers become larger and larger
 
-VIEWER_DRAW_SHADOWS = ""  # "LDB"
+VIEWER_DRAW_SHADOWS = "B"  # "LDB"
 
 # MARKER_COLOR = (165,42,42) # brown	#A52A2A	rgb(165,42,42) https://www.rapidtables.com/web/color/brown-color.html
 # MARKER_COLOR = (105,105,105) # dimgray / dimgray	#696969	rgb(105,105,105)
@@ -36,8 +36,10 @@ KEYBOAD_INPUT_DEBUG=False
 INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM = True
 
 ##############  Solver  ###################
-OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False  # under test doesn't work well, see _todo
-OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True  # under test doesn't work well, see _todo
+OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = True  # under test doesn't work well, see _todo
+OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True
+OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO = True
+OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True
 
 PROF_VIEWER_SEARCH_FACET = False
 PROF_VIEWER_GUI_UPDATE = False
