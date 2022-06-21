@@ -50,7 +50,8 @@ class CHelper:
 class PartEdge:
     __slots__ = ["_face", "_parent", "_color", "_annotated_by_color",
                  "_annotated_fixed_location",
-                 "attributes", "c_attributes"]
+                 "attributes", "c_attributes",
+                 "f_attributes"]
 
     _face: _Face
     _color: Color
@@ -61,10 +62,13 @@ class PartEdge:
         self._color = color
         self._annotated_by_color: bool = False
         self._annotated_fixed_location: bool = False
-        self.attributes: dict[Hashable, Any] = defaultdict(bool)
-        self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
-        self._parent : PartSlice
+        self.attributes: dict[Hashable, Any] = {}
+        self.c_attributes: dict[Hashable, Any] = {}
 
+        # fixed attributes that are not moved around with the slice
+        self.f_attributes: dict[Hashable, Any] = defaultdict(bool)
+
+        self._parent: PartSlice
 
     @property
     def face(self) -> _Face:
@@ -73,8 +77,6 @@ class PartEdge:
     @property
     def parent(self) -> "PartSlice":
         return self._parent
-
-
 
     @property
     def color(self) -> Color:
@@ -150,7 +152,8 @@ class PartSlice(ABC, Hashable):
                  "_fixed_id",
                  "_colors_id_by_colors",
                  "_unique_id",
-                 "c_attributes"]
+                 "c_attributes"
+                 ]
     _edges: MutableSequence[PartEdge]
 
     def __init__(self, index: SliceIndex, *edges: PartEdge) -> None:
@@ -165,8 +168,9 @@ class PartSlice(ABC, Hashable):
         self._colors_id_by_colors: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
         self._parent: Part | None = None
-        # attributes that are move around with the slice
+        # attributes(like color) that are move around with the slice
         self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
+
 
         global _SliceUniqueID
         _SliceUniqueID += 1
@@ -185,17 +189,14 @@ class PartSlice(ABC, Hashable):
         for e in self._edges:
             e._parent = self
 
-        #self._parent = parent
+        # self._parent = parent
         _id = frozenset(tuple([self._index]) + tuple(p.face.name for p in self._edges))
-
 
         if self._fixed_id:
             if _id != self._fixed_id:
                 raise Exception(f"SW error, you are trying to re assign part id was: {self._fixed_id}, new: {_id}")
         else:
             self._fixed_id = _id
-
-
 
     @property
     def fixed_id(self) -> PartSliceHashID:
@@ -216,6 +217,10 @@ class PartSlice(ABC, Hashable):
             return False
 
         return self._fixed_id == o._fixed_id
+
+    @property
+    def edges(self) -> Iterable[PartEdge]:
+        return self._edges
 
     def get_face_edge(self, face: _Face) -> PartEdge:
         """
@@ -430,6 +435,7 @@ class PartSlice(ABC, Hashable):
         s = PartSlice(self._index, *self._clone_edges())
         s._unique_id = self._unique_id
         s.c_attributes = self.c_attributes.copy()
+        # don't need to clone f_attributes, clone isused for rotating only, f_attributes is not rotated
         return s
 
     @property
@@ -1074,6 +1080,12 @@ class CenterSlice(PartSlice):
         self.copy_colors(other, (other.face, self.face))
 
 
+class CornerSlice(PartSlice):
+
+    def __init__(self, p1: PartEdge, p2: PartEdge, p3: PartEdge) -> None:
+        super().__init__(0, p1, p2, p3)
+
+
 class Edge(Part):
 
     def __init__(self, f1: _Face, f2: _Face, right_top_left_same_direction: bool,
@@ -1107,7 +1119,6 @@ class Edge(Part):
     def __eq__(self, __o: object) -> bool:
         # we use faces in set in nxn_centers
         return isinstance(__o, Edge) and __o._name == self._name
-
 
     @property
     def _3x3_representative_edges(self) -> Sequence[PartEdge]:
@@ -1414,7 +1425,7 @@ class Edge(Part):
 class Corner(Part):
     __slots__ = ["_slice"]
 
-    def __init__(self, a_slice: PartSlice) -> None:
+    def __init__(self, a_slice: CornerSlice) -> None:
         self._slice = a_slice
         super().__init__()
 
@@ -1426,7 +1437,7 @@ class Corner(Part):
         return self._slice.edges
 
     @property
-    def all_slices(self) -> Iterator[PartSlice]:
+    def all_slices(self) -> Iterator[CornerSlice]:
         yield self._slice
 
     def get_slice(self, index: SliceIndex) -> PartSlice:

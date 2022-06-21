@@ -1,6 +1,5 @@
 from typing import Tuple
 
-
 ######### Model  ########
 
 SHORT_PART_NAME = False
@@ -10,8 +9,7 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE = False
 CHECK_CUBE_SANITY = False
 
 # Only initial value, can be changed
-CUBE_SIZE = 8
-
+CUBE_SIZE = 3
 
 ###### Operator ####
 
@@ -21,7 +19,6 @@ animation_enabled = True
 ######### Solvers  ########
 
 SOLVER_DEBUG = True
-
 
 ######  Viewer ########
 GUI_DRAW_MARKERS = False
@@ -38,11 +35,16 @@ VIEWER_DRAW_SHADOWS = ""  # "LDB"
 
 # MARKER_COLOR = (165,42,42) # brown	#A52A2A	rgb(165,42,42) https://www.rapidtables.com/web/color/brown-color.html
 # MARKER_COLOR = (105,105,105) # dimgray / dimgray	#696969	rgb(105,105,105)
-MARKER_COLOR: Tuple[int, int, int] = (0, 0, 0)  # dimgray / dimgray	#696969	rgb(105,105,105)
+# MARKER_COLOR: Tuple[int, int, int] = (0, 0, 0)  # dimgray / dimgray	#696969	rgb(105,105,105)
+
+MARKERS = {
+    "C1": (199, 21, 133),  # mediumvioletred	#C71585	rgb(199,21,133),
+    "C2": (0, 100, 0)  # darkgreen	#006400	rgb(0,100,0)
+}
 
 ##############   Input handling
 
-KEYBOAD_INPUT_DEBUG=False
+KEYBOAD_INPUT_DEBUG = False
 
 #  If true, model rotating is done by dragging and right mouse click, rotating faces/slicing by dragging left bottom
 #   or vice versa if FALSE
@@ -50,9 +52,9 @@ INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM = True
 
 ##############  Solver  ###################
 OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = True  # under test doesn't work well, see _todo
-    # Size 8 scramble 1:
-    # With  160
-    # Without: 140
+# Size 8 scramble 1:
+# With  160
+# Without: 140
 
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO = True
@@ -62,4 +64,4 @@ PROF_VIEWER_SEARCH_FACET = False
 PROF_VIEWER_GUI_UPDATE = False
 
 ##############  Testing
-TEST_NUMBER_OF_SCRAMBLE_ITERATIONS=10
+TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 10

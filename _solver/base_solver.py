@@ -1,17 +1,19 @@
 from collections.abc import Iterable
-from contextlib import contextmanager
+from contextlib import contextmanager, AbstractContextManager
 from enum import unique, Enum
-from typing import Tuple, Callable
+from typing import Tuple, Literal
 
 from _solver.isolver import ISolver
 from algs.algs import Algs
+from cube_operator import Operator
 from model.cube import Cube, CubeSupplier
 from model.cube_face import Face
-from cube_operator import Operator
 from model.cube_queries import CubeQueries
-from model.elements import Part, PartColorsID, CenterSlice, EdgeSlice
+from model.elements import Part, PartColorsID, CenterSlice, EdgeSlice, PartSlice, Corner, Edge, PartEdge
+from viewer.viewer_markers import VMarker, VIEWER_ANNOTATION_KEY
 
 _SLice_Tracking_UniqID: int = 0
+_ANN_NEST_DEPTH: int = 0
 
 
 @unique
@@ -21,7 +23,7 @@ class AnnWhat(Enum):
     If part is given find it actual location and track it where it goes
     """
     FindLocationTrackByColor = 1
-    Postion = 2
+    Position = 2
 
 
 class SolverElement(CubeSupplier):
@@ -76,98 +78,137 @@ class SolverElement(CubeSupplier):
 
         self.op.op(Algs.AN)
 
-    def _w_annotate(self, *elements: Tuple[Part | PartColorsID, bool]):
-
-        """
-        :param elements:  bool in tuple is  'annotated by fixed_location'
-        if part is given we annotate the part (by color or by fixed), if color is given we search for it
-        :param un_an:
-        :return:
-        """
-
-        on = self.op.animation_enabled
-
-        if not on:
-            try:
-                yield None
-            finally:
-                return
-
-                # save colors, in case part move
-        colors: list[PartColorsID] = []
-        # save parts, in color changed
-        parts: list[Part] = []
-        for e in elements:
-            pc: Part | PartColorsID = e[0]
-
-            if isinstance(pc, frozenset):
-                colors.append(pc)
-                parts.append(self.cube.find_part_by_colors(pc))
-            else:
-                colors.append(pc.colors_id_by_color)
-                parts.append(pc)
-
-        self._annotate(*zip(parts, [p[1] for p in elements]))
-        try:
-            yield None
-        finally:
-            new_parts: list[Part] = []
-            for i, e in enumerate(elements):
-                if e[1]:  # by fixed location
-                    new_parts.append(parts[i])
-                else:
-                    new_parts.append(self.cube.find_part_by_colors(colors[i]))
-
-            self._annotate(*zip(new_parts, [p[1] for p in elements]), un_an=True)
-
-    @contextmanager
-    def w_annotate(self, *elements: Tuple[Part | PartColorsID, bool]):
-        yield from self._w_annotate(*elements)
-
-    @contextmanager
-    def w_annotate2(self, *elements: Tuple[Part | PartColorsID, AnnWhat]):
-
-        """
-        :param elements:  bool in tuple is  'annotated by fixed_location'
-        if part is given we annotate the part (by color or by fixed), if color is given we search for it
-        :param un_an:
-        :return:
-        """
-
-        on = self.op.animation_enabled
-
-        if not on:
-            try:
-                yield None
-            finally:
-                return
-
-        what_to_track: list[Tuple[PartColorsID, bool]] = []
-        for e in elements:
-            pc: Part | PartColorsID = e[0]
-            what: AnnWhat = e[1]
-
-            c: PartColorsID
-            by_color: bool
-            if isinstance(pc, frozenset):
-                c = pc
-            else:
-                c = pc.colors_id_by_color
-
-            if what == AnnWhat.FindLocationTrackByColor:
-                by_position = False
-            elif what == AnnWhat.Postion:
-                by_position = True
-            else:
-                assert False
-
-            what_to_track.append((c, by_position))
-
-        yield from self._w_annotate(*what_to_track)
+    def w_annotate(self, *elements: Tuple[Part | PartColorsID, bool]) -> AbstractContextManager:
+        return self._w_annotate(*elements)
 
     @property
     def animation_on(self):
         return self.op.animation_enabled
+
+    # @contextmanager
+    def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, VMarker]], animation=True):
+
+        """
+        Annotate moved slice
+        :param animation:
+        :param _edges:  [Slice, fixed/moved, marker], not consumed if animation is off
+         see
+        :return:
+        """
+
+        on = self.op.animation_enabled
+        if (not on) or (not animation):
+            try:
+                yield None
+            finally:
+                return
+
+        global _SLice_Tracking_UniqID
+
+        annotation_key = VIEWER_ANNOTATION_KEY
+
+        # now consume iterator
+        slices = [*_edges]
+
+        def _key(_i):
+            return "annotation_track" + str(abs(_i))
+
+        slots: list[Tuple[Literal[1, 2, 3], int]] = []
+        s: Tuple[PartEdge, bool, VMarker]
+        for s in slices:
+            _slice: PartEdge = s[0]
+            fixed = s[1]
+            marker = s[2]  # see view_markers.py
+
+            _SLice_Tracking_UniqID += 1
+
+            part: Part = _slice.parent.parent
+            _type: Literal[1, 2, 3]
+
+            if isinstance(part, Corner):
+                _type = 1
+            elif isinstance(part, Edge):
+                _type = 2
+            else:
+                _type = 3
+
+            # because it can be nested or overlap, we add the index to the key
+
+
+            key = _key(_SLice_Tracking_UniqID)
+            if fixed:
+                _slice.f_attributes[annotation_key] = marker
+                _slice.f_attributes[key] = key
+                slots.append((_type, -_SLice_Tracking_UniqID))
+            else:
+                slots.append((_type, _SLice_Tracking_UniqID))
+                _slice.c_attributes[annotation_key] = marker
+                _slice.c_attributes[key] = key
+
+        self.op.op(Algs.AN)
+
+        global _ANN_NEST_DEPTH
+        _ANN_NEST_DEPTH += 1
+        d= _ANN_NEST_DEPTH
+
+        try:
+            yield None
+        finally:
+
+            _ANN_NEST_DEPTH -= 1
+            d = _ANN_NEST_DEPTH
+
+            cube = self.cube
+            for slot in slots:
+
+                i = slot[1]
+                _type = slot[0]
+
+                def _c_pred(_i, _key):
+
+                    if _i < 0:
+                        def _pred(_e: PartEdge) -> bool:
+                            return _key == _e.f_attributes.get(_key)
+
+                    else:
+                        def _pred(_e: PartEdge) -> bool:
+                            return _key == _e.c_attributes.get(_key)
+
+                    _pred.__doc__ = f"Find {i}"
+
+                    return _pred
+
+                parts: Iterable[Part]
+
+                if _type == 1:  # Corner
+                    parts = cube.corners
+                elif _type == 2:  # Edge
+                    parts = cube.edges
+                else:
+                    parts = cube.centers
+
+                key = _key(i)
+
+                try:
+                    e = CubeQueries.find_slice_edge(parts, _c_pred(i, key))
+                except:
+                    print("")
+                    raise
+
+                if i < 0:
+                    # if have a bug, nested annimation in __fixed_edge, so key already deleted
+
+                    #del e.f_attributes[annotation_key]
+                    e.f_attributes.pop(annotation_key, None)
+
+
+                    del e.f_attributes[key]
+                else:
+                    #del e.c_attributes[annotation_key]
+                    e.c_attributes.pop(annotation_key, None)
+                    del e.c_attributes[key]
+
+            self.op.op(Algs.AN)
 
     @contextmanager
     def w_center_slice_annotate(self, *_slices: CenterSlice | Iterable[CenterSlice], animation=True):
@@ -177,7 +218,6 @@ class SolverElement(CubeSupplier):
         :param animation:
         :param _slices:  slice of iterator, not consumed if animation is off
         if part is given we annotate the part (by color or by fixed), if color is given we search for it
-        :param un_an:
         :return:
         """
 
@@ -199,27 +239,12 @@ class SolverElement(CubeSupplier):
                 for y in x:
                     slices.append(y)
 
-        ids = []
-        s: CenterSlice
+        edges: list[Tuple[PartEdge, bool, VMarker]] = []
+
         for s in slices:
-            _SLice_Tracking_UniqID += 1
-            ids.append(_SLice_Tracking_UniqID)
-            s.edge.c_attributes["annotation"] = True
-            s.edge.c_attributes["annotation_track"] = _SLice_Tracking_UniqID
+            edges.append((s.edge, False, VMarker.C1))
 
-        self.op.op(Algs.AN)
-
-        try:
-            yield None
-        finally:
-
-            cube = self.cube
-            for i in ids:
-                s = CubeQueries.find_center_slice(cube, lambda _s: i == _s.edge.c_attributes["annotation_track"])
-                del s.edge.c_attributes["annotation"]
-                del s.edge.c_attributes["annotation_track"]
-
-            self.op.op(Algs.AN)
+        yield from self._w_slice_edges_annotate(edges, animation=animation)
 
     @contextmanager
     def w_edge_slice_annotate(self, face: Face, *slices: EdgeSlice, animation=True):
@@ -228,6 +253,84 @@ class SolverElement(CubeSupplier):
         Annotate moved slice
         :param face:
         :param animation:
+        if part is given we annotate the part (by color or by fixed), if color is given we search for it
+        :return:
+        """
+
+        on = self.op.animation_enabled
+
+        if (not on) or (not animation):
+            try:
+                yield None
+            finally:
+                return
+
+        edges: list[Tuple[PartEdge, bool, VMarker]] = []
+
+        for s in slices:
+            edges.append((s.get_face_edge(face), False, VMarker.C1))
+
+        yield from self._w_slice_edges_annotate(edges, animation=animation)
+
+    @contextmanager
+    def _none(self):
+        try:
+            yield None
+        finally:
+            return
+
+    @contextmanager
+    def w_annotate2(self, *elements: Tuple[Part | PartColorsID, AnnWhat], animation=True):
+
+        """
+        :param animation:
+        :param elements:  bool in tuple is  'annotated by fixed_location'
+        if part is given we annotate the part (by color or by fixed), if color is given we search for it
+        :return:
+        """
+
+        on = self.op.animation_enabled
+
+        if (not on) or (not animation):
+            try:
+                yield None
+            finally:
+                return
+
+        edges: list[Tuple[PartEdge, bool, VMarker]] = []
+
+        cube = self.cube
+
+        for e in elements:
+            pc = e[0]
+            w: AnnWhat = e[1]
+
+            if isinstance(pc, frozenset):
+                c = pc
+            else:
+                c = pc.colors_id_by_color
+
+            by_position = w == AnnWhat.Position
+
+            part: Part
+
+            if by_position:
+                part = cube.find_part_by_pos_colors(c)
+                marker = VMarker.C2
+            else:
+                part = cube.find_part_by_colors(c)
+                marker = VMarker.C1
+
+            s: PartSlice
+            for s in part.all_slices:
+                for eg in s.edges:
+                    edges.append((eg, by_position, marker))
+
+        yield from self._w_slice_edges_annotate(edges, animation=animation)
+
+    def _w_annotate(self, *elements: Tuple[Part | PartColorsID, bool]) -> AbstractContextManager:
+
+        """
         :param elements:  bool in tuple is  'annotated by fixed_location'
         if part is given we annotate the part (by color or by fixed), if color is given we search for it
         :param un_an:
@@ -236,41 +339,16 @@ class SolverElement(CubeSupplier):
 
         on = self.op.animation_enabled
 
-        global _SLice_Tracking_UniqID
+        if not on:
+            return self._none()
 
-        if (not on) or (not animation):
-            try:
-                yield None
-            finally:
-                return
+        _elements: list[Tuple[Part | PartColorsID, AnnWhat]] = []
 
-        ids: list[int] = []
-        for s in slices:
-            _SLice_Tracking_UniqID += 1
-            ids.append(_SLice_Tracking_UniqID)
-            s.get_face_edge(face).c_attributes["annotation"] = True
-            s.get_face_edge(face).c_attributes["annotation_track"] = _SLice_Tracking_UniqID
+        for e in elements:
 
-        self.op.op(Algs.AN)
+            if e[1]:
+                _elements.append((e[0], AnnWhat.Position))
+            else:
+                _elements.append((e[0], AnnWhat.FindLocationTrackByColor))
 
-        try:
-            yield None
-        finally:
-
-            def _slice_pred(_i: int) -> Callable[[EdgeSlice], bool]:
-
-                def _pred(s: EdgeSlice):
-                    for e in s.edges:
-                        if e.c_attributes["annotation_track"] == i:
-                            del e.c_attributes["annotation"]
-                            del e.c_attributes["annotation_track"]
-                            return True
-                    return False
-
-                return _pred
-
-            cube = self.cube
-            for i in ids:
-                CubeQueries.find_slice_in_cube_edges(cube, _slice_pred(i))
-
-            self.op.op(Algs.AN)
+        return self.w_annotate2(*_elements)

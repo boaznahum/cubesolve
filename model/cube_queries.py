@@ -7,7 +7,7 @@ from app_exceptions import InternalSWError
 from .cube import Cube
 from .cube_boy import Color
 from .cube_face import Face
-from .elements import PartSlice, CenterSlice, PartColorsID, Edge, EdgeSlice, PartType
+from .elements import PartSlice, CenterSlice, PartColorsID, Edge, EdgeSlice, PartType, CornerSlice, PartEdge, Part
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]
@@ -35,34 +35,27 @@ class CubeQueries:
 
         raise InternalSWError(f"Can't find face with pred {pred}")
 
-    @staticmethod
-    def find_slice(cube: Cube, slice_unique_id: int) -> PartSlice:
 
-        s: PartSlice
-        for f in cube.faces:
-            for s in f.slices:
-                if s.unique_id == slice_unique_id:
+    @staticmethod
+    def find_slice_in_cube_edges(cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:
+
+        return CubeQueries.find_slice_in_edges(cube.edges, pred)
+
+    @staticmethod
+    def find_slice_in_edges(edges: Iterable[Edge], pred: Pred[EdgeSlice]) -> EdgeSlice | None:
+
+        for e in edges:
+            for i in range(e.n_slices):
+                s: EdgeSlice = e.get_slice(i)
+
+                if pred(s):
                     return s
 
-        raise InternalSWError(f"Can't find slice with unique id {slice_unique_id}")
+        return None
 
-    @staticmethod
-    def find_part_by_color(parts: Iterable[PartType], color_id: PartColorsID) -> PartType:
-
-        for p in parts:
-            if p.colors_id_by_color == color_id:
-                return p
-
-        raise InternalSWError(f"Can't find part with color id {color_id}")
-
-    @staticmethod
-    def find_part_by_position(parts: Iterable[PartType], position_id: PartColorsID) -> PartType:
-
-        for p in parts:
-            if p.colors_id_by_pos == position_id:
-                return p
-
-        raise InternalSWError(f"Can't find part with color id {position_id}")
+    @classmethod
+    def find_edge_slice_in_cube(cls, cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:
+        return CubeQueries.find_slice_in_edges(cube.edges, pred)
 
     @staticmethod
     def is_center_slice(cube: Cube, pred: Callable[[CenterSlice], bool]) -> CenterSlice | None:
@@ -94,6 +87,68 @@ class CubeQueries:
                 return s
 
         return None
+
+    @staticmethod
+    def is_slice_edge(parts: Iterable[Part], pred: Callable[[PartEdge], bool]) -> PartEdge | None:
+
+        s: PartSlice
+        for p in parts:
+            for s in p.all_slices:
+                for e in s.edges:
+                    if pred(e):
+                        return e
+
+        return None
+
+    @staticmethod
+    def find_slice_edge(parts: Iterable[Part], pred: Pred[PartEdge]) -> PartEdge:
+
+        s: PartSlice
+        for p in parts:
+            for s in p.all_slices:
+                for e in s.edges:
+                    if pred(e):
+                        return e
+
+        raise InternalSWError(f"No such edge in {parts}  slice for pred{pred}")
+
+    @staticmethod
+    def find_corner_slice_edge_in_cube(cube: Cube, pred: Pred[PartEdge]) -> PartEdge:
+
+        return CubeQueries.find_slice_edge(cube.corners, pred)
+
+
+    @staticmethod
+    def is_corner_slice_edge(cube: Cube, pred: Callable[[PartEdge], bool]) -> PartEdge | None:
+
+        s: CornerSlice
+        for c in cube.corners:
+            for s in c.all_slices:
+                for e in s.edges:
+                    if pred(e):
+                        return e
+
+        return None
+
+    @staticmethod
+    def find_part_by_color(parts: Iterable[PartType], color_id: PartColorsID) -> PartType:
+
+        for p in parts:
+            if p.colors_id_by_color == color_id:
+                return p
+
+        raise InternalSWError(f"Can't find part with color id {color_id}")
+
+    @staticmethod
+    def find_part_by_position(parts: Iterable[PartType], position_id: PartColorsID) -> PartType:
+
+        for p in parts:
+            if p.colors_id_by_pos == position_id:
+                return p
+
+        raise InternalSWError(f"Can't find part with color id {position_id}")
+
+    @staticmethod
 
     @staticmethod
     def get_four_center_points(cube: Cube, r, c) -> Iterator[Tuple[int, int]]:
@@ -209,26 +264,6 @@ class CubeQueries:
         s2: PartSlice
         return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(other, st2))
 
-    @classmethod
-    def find_slice_in_cube_edges(cls, cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:
-
-        return CubeQueries.find_slice_in_edges(cube.edges, pred)
-
-    @classmethod
-    def find_slice_in_edges(cls, edges: Iterable[Edge], pred: Pred[EdgeSlice]) -> EdgeSlice | None:
-
-        for e in edges:
-            for i in range(e.n_slices):
-                s: EdgeSlice = e.get_slice(i)
-
-                if pred(s):
-                    return s
-
-        return None
-
-    @classmethod
-    def find_slice_in_cube(cls, cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:
-        return CubeQueries.find_slice_in_edges(cube.edges, pred)
 
     @classmethod
     def find_edge_in_cube(cls, cube: Cube, pred: Pred[Edge]) -> Edge | None:

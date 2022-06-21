@@ -17,6 +17,7 @@ from model.cube_face import Face
 from model.elements import PartSliceHashID, PartEdge, Part, PartSlice, Corner, Edge, EdgeSlice, Center, CenterSlice
 from utils import geometry
 from viewer import shapes
+from .viewer_markers import VIEWER_ANNOTATION_KEY, VMarker
 
 _CELL_SIZE: int = config.CELL_SIZE
 
@@ -159,7 +160,7 @@ class _Cell:
     def get_all_gui_elements(self, dest: set[int]):
         m: dict[frozenset[FaceName], MutableSequence[int]]
 
-        dicts:list[dict[PartSliceHashID, MutableSequence[int]]] = [self.gl_lists_movable, self.gl_lists_unmovable]
+        dicts: list[dict[PartSliceHashID, MutableSequence[int]]] = [self.gl_lists_movable, self.gl_lists_unmovable]
 
         # when we try to use values() pycharm complains
         lists: Sequence[int] = [ll for m in dicts
@@ -342,6 +343,8 @@ class _Cell:
         cross_color_x = (138, 43, 226)  # blueviolet	#8A2BE2	rgb(138,43,226)
         cross_color_y = (0, 191, 255)  # deepskyblue	#00BFFF	rgb(0,191,255)
 
+        annotation_key = VIEWER_ANNOTATION_KEY
+
         from ._faceboard import _FaceBoard
         fb: _FaceBoard = self._face_board
         cube_face: Face = fb.cube_face
@@ -356,6 +359,33 @@ class _Cell:
 
         n: int = part.n_slices
 
+        markers: dict[str, Tuple[int, int, int]] = config.MARKERS
+
+        def draw_facet(part_edge: PartEdge, _vx):
+
+            # vertex = [left_bottom, right_bottom, right_top, left_top]
+
+            _color = self._edge_color(part_edge)
+
+            shapes.quad_with_line(_vx, _color, lw, lc)
+
+            if config.GUI_DRAW_MARKERS:
+                nn = part_edge.c_attributes["n"]
+                shapes.lines_in_quad(_vx, nn, 5, (138, 43, 226))
+
+            # if _slice.get_face_edge(cube_face).attributes["origin"]:
+            #     shapes.cross(vx, cross_width, cross_color)
+            # if _slice.get_face_edge(cube_face).attributes["on_x"]:
+            #     shapes.cross(vx, cross_width_x, cross_color_x)
+            # if _slice.get_face_edge(cube_face).attributes["on_y"]:
+            #     shapes.cross(vx, cross_width_y, cross_color_y)
+
+            marker = edge.c_attributes.get(annotation_key) or edge.f_attributes.get(annotation_key)
+            if marker:
+                assert isinstance(marker, VMarker)
+                _marker_color = markers[marker.value]
+                self._create_markers(_vx, _color, _marker_color, True)
+
         if isinstance(part, Corner):
 
             corner_slice = part.slice
@@ -364,9 +394,7 @@ class _Cell:
 
                 vertexes = self.facets[edge].two_d_draw_rect
 
-                shapes.quad_with_line(vertexes,
-                                      self._slice_color(corner_slice),
-                                      lw, lc)
+                draw_facet(edge, vertexes)
 
                 if config.GUI_DRAW_MARKERS:
                     if cube_face.corner_bottom_left is part:
@@ -391,21 +419,14 @@ class _Cell:
                 vx = self.facets[edge].two_d_draw_rect
 
                 with self._gen_list_for_slice(_slice, g_list_dest):
+                    draw_facet(edge, vx)
 
-                    shapes.quad_with_line(vx, color, lw, lc)
-
-                    if config.GUI_DRAW_MARKERS:
-                        nn = _slice.get_face_edge(cube_face).c_attributes["n"]
-                        shapes.lines_in_quad(vx, nn, 5, (138, 43, 226))
                     # if _slice.get_face_edge(cube_face).attributes["origin"]:
                     #     shapes.cross(vx, cross_width, cross_color)
                     # if _slice.get_face_edge(cube_face).attributes["on_x"]:
                     #     shapes.cross(vx, cross_width_x, cross_color_x)
                     # if _slice.get_face_edge(cube_face).attributes["on_y"]:
                     #     shapes.cross(vx, cross_width_y, cross_color_y)
-
-                    if edge.c_attributes["annotation"]:
-                        self._create_markers(vx, color, (0, 0, 0), True)
 
 
 
@@ -430,19 +451,17 @@ class _Cell:
                     color = self._edge_color(edge)
                     with self._gen_list_for_slice(center_slice, g_list_dest):
 
-                        attributes = edge.attributes
-                        shapes.quad_with_line(vx, color, lw, lc)
+                        draw_facet(edge, vx)
 
                         if config.GUI_DRAW_MARKERS:
+                            attributes = edge.attributes
+
                             if attributes["origin"]:
                                 shapes.cross(vx, cross_width, cross_color)
                             if attributes["on_x"]:
                                 shapes.cross(vx, cross_width_x, cross_color_x)
                             if attributes["on_y"]:
                                 shapes.cross(vx, cross_width_y, cross_color_y)
-
-                        if center_slice.edge.c_attributes["annotation"]:
-                            self._create_markers(vx, color, (0, 0, 0), True)
 
     # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):
@@ -543,7 +562,7 @@ class _Cell:
 
         shapes.box_with_lines(bottom, top, color, 3, (0, 0, 0))
 
-    def _create_markers(self, vertexes: Sequence[ndarray], facet_color, color, marker: bool):
+    def _create_markers(self, vertexes: Sequence[ndarray], facet_color, marker_color, marker: bool):
 
         if not marker:
             return
@@ -560,23 +579,8 @@ class _Cell:
         radius = _face_size / 2.0 * 0.8
         radius = min([radius, config.MAX_MARKER_RADIUS])
 
-        # print(f"{radius=}")
-
-        color = config.MARKER_COLOR
-
         # this is also supported by glCallLine
-        shapes.sphere(center, radius, color)
-
-        # # gluSphere( GLUquadric* ( quad ) , GLdouble ( radius ) , GLint ( slices ) , GLint ( stacks ) )-> void
-        # gl.glMatrixMode(gl.GL_MODELVIEW)
-        # gl.glPushMatrix()
-        # gl.glTranslatef(center[0], center[1], center[2])
-        # _sphere = glu.gluNewQuadric()
-        # # gluSphere(GLUquadric * (quad), GLdouble(radius), GLint(slices), GLint(stacks))-> void
-        # gl.glColor3ub(*color)
-        # glu.gluSphere(_sphere, radius, 25, 25)
-        # glu.gluDeleteQuadric(_sphere)
-        # gl.glPopMatrix()
+        shapes.sphere(center, radius, marker_color)
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]

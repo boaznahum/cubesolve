@@ -27,7 +27,7 @@ class Cube(CubeSupplier):
         "_back",
         "_color_2_face",
         "_faces",
-        "_edges", "_corners",
+        "_edges", "_corners", "_centers",
         "_slice_m", "_slice_e", "_slice_s",
         "_slices",
         "_modify_counter",
@@ -136,6 +136,9 @@ class Cube(CubeSupplier):
         for _f in self._faces.values():
             _f.finish_init()
 
+        self._centers = [ _f.center for _f in self._faces.values() ]
+
+
         slice_s: Slice = Slice(self, SliceName.S,  # Middle over F
                                l.edge_top, u.center, r.edge_top,
                                r.center,
@@ -213,6 +216,10 @@ class Cube(CubeSupplier):
     @property
     def corners(self) -> Iterable[Corner]:
         return self._corners
+
+    @property
+    def centers(self) -> Iterable[Center]:
+        return self._centers
 
     def face(self, name: FaceName) -> Face:
         return self._faces[name]
@@ -637,7 +644,7 @@ def _create_corner(corners: list[Corner], f1: Face, f2: Face, f3: Face) -> Corne
     p2: PartEdge = f2.create_part()
     p3: PartEdge = f3.create_part()
 
-    _slice = PartSlice(0, p1, p2, p3)
+    _slice = CornerSlice(p1, p2, p3)
 
     c: Corner = Corner(_slice)
 

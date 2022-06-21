@@ -113,7 +113,8 @@ class L1Cross(SolverElement):
 
         if config.PRINT_CUBE_AS_TEXT_DURING_SOLVE:
             def _debug():
-                viewer.plot(cube)
+                #viewer.plot(cube)
+                pass
         else:
             def _debug():
                 pass

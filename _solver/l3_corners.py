@@ -108,7 +108,7 @@ class L3Corners(SolverElement):
         yf: Face = self.white_face.opposite
 
         with self.w_annotate2((yf.corner_bottom_right, AnnWhat.FindLocationTrackByColor),
-                              (yf.corner_bottom_right, AnnWhat.Postion)):
+                              (yf.corner_bottom_right, AnnWhat.Position)):
 
             front_right = CornerTracker.of_position(yf.corner_bottom_right)
 
