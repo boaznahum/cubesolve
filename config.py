@@ -1,6 +1,7 @@
 from typing import Tuple
 
-SOLVER_DEBUG = True
+
+######### Model  ########
 
 SHORT_PART_NAME = False
 DONT_OPTIMIZED_PART_ID = True
@@ -8,7 +9,19 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE = False
 
 CHECK_CUBE_SANITY = False
 
+# Only initial value, can be changed
+CUBE_SIZE = 8
+
+
+###### Operator ####
+
+# Only initial value, can be changed
 animation_enabled = True
+
+######### Solvers  ########
+
+SOLVER_DEBUG = True
+
 
 ######  Viewer ########
 GUI_DRAW_MARKERS = False
@@ -21,7 +34,7 @@ AXIS_LENGTH = 4 * CELL_SIZE
 
 MAX_MARKER_RADIUS = 4.0  # when decreasing cube size, we don't want the markers become larger and larger
 
-VIEWER_DRAW_SHADOWS = "B"  # "LDB"
+VIEWER_DRAW_SHADOWS = ""  # "LDB"
 
 # MARKER_COLOR = (165,42,42) # brown	#A52A2A	rgb(165,42,42) https://www.rapidtables.com/web/color/brown-color.html
 # MARKER_COLOR = (105,105,105) # dimgray / dimgray	#696969	rgb(105,105,105)
@@ -37,6 +50,10 @@ INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM = True
 
 ##############  Solver  ###################
 OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = True  # under test doesn't work well, see _todo
+    # Size 8 scramble 1:
+    # With  160
+    # Without: 140
+
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO = True
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True

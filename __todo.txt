@@ -5,7 +5,10 @@ Feature: Fix scramble also to invert and multiple and generate sub lists
 Feature: try to optimize, work less on B
 
 
-Feature: swap complete slices
+Feature: swap complete slices - Done, but only destination zero slices
 Feature zoom/pan  # done need to update readme
 Feature: WAIT cursor on scramble
+
+Bug: Alt-c should be handled in Both modes
+
 
