@@ -145,7 +145,7 @@ class GCubeViewer:
 
         objects: set[int] = set()
 
-        objects.update(self._board.get_all_gui_elements(cube_parts))
+        objects.update(self._board.get_all_movable_gui_elements(cube_parts))
 
         if hide:
             self._board.set_hidden(objects)

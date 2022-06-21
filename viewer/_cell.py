@@ -155,7 +155,8 @@ class _Cell:
         self._clear_gl_lists()
 
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
-        self._update_polygon(self.gl_lists_movable)
+        self._update_polygon(self.gl_lists_movable, True)
+        self._update_polygon(self.gl_lists_unmovable, False)
 
     def get_all_gui_elements(self, dest: set[int]):
         m: dict[frozenset[FaceName], MutableSequence[int]]
@@ -330,7 +331,7 @@ class _Cell:
                         center_rg: _RectGeometry = _RectGeometry(vx, self._face_board.ortho_direction)
                         self.facets[edge] = center_rg
 
-    def _update_polygon(self, g_list_dest: dict[PartSliceHashID, MutableSequence[int]]):
+    def _update_polygon(self, g_list_dest: dict[PartSliceHashID, MutableSequence[int]], movable: bool):
 
         # vertex = [left_bottom, right_bottom, right_top, left_top]
 
@@ -351,12 +352,6 @@ class _Cell:
 
         part: Part = self._part
 
-        _marker = ""
-        if part.annotated_by_color:
-            _marker = "M"
-        elif part.annotated_fixed:
-            _marker = "F"
-
         n: int = part.n_slices
 
         markers: dict[str, Tuple[int, int, int]] = config.MARKERS
@@ -367,11 +362,12 @@ class _Cell:
 
             _color = self._edge_color(part_edge)
 
-            shapes.quad_with_line(_vx, _color, lw, lc)
+            if movable:
+                shapes.quad_with_line(_vx, _color, lw, lc)
 
-            if config.GUI_DRAW_MARKERS:
-                nn = part_edge.c_attributes["n"]
-                shapes.lines_in_quad(_vx, nn, 5, (138, 43, 226))
+                if config.GUI_DRAW_MARKERS:
+                    nn = part_edge.c_attributes["n"]
+                    shapes.lines_in_quad(_vx, nn, 5, (138, 43, 226))
 
             # if _slice.get_face_edge(cube_face).attributes["origin"]:
             #     shapes.cross(vx, cross_width, cross_color)
@@ -383,8 +379,10 @@ class _Cell:
             marker = edge.c_attributes.get(annotation_key) or edge.f_attributes.get(annotation_key)
             if marker:
                 assert isinstance(marker, VMarker)
-                _marker_color = markers[marker.value]
-                self._create_markers(_vx, _color, _marker_color, True)
+
+                if movable == (marker == VMarker.C1):
+                    _marker_color = markers[marker.value]
+                    self._create_markers(_vx, _color, _marker_color, True)
 
         if isinstance(part, Corner):
 

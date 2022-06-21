@@ -296,7 +296,7 @@ class _Board:
 
         return lists
 
-    def get_all_gui_elements(self, for_parts: Collection[PartSlice]) -> Set[int]:
+    def get_all_movable_gui_elements(self, for_parts: Collection[PartSlice]) -> Set[int]:
 
         lists: set[int] = set()
 

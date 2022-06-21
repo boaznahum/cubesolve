@@ -305,20 +305,22 @@ class SolverElement(CubeSupplier):
             pc = e[0]
             w: AnnWhat = e[1]
 
-            if isinstance(pc, frozenset):
-                c = pc
-            else:
-                c = pc.colors_id_by_color
-
             by_position = w == AnnWhat.Position
 
             part: Part
 
+            if isinstance(pc, frozenset):
+
+                if by_position:
+                    part = cube.find_part_by_pos_colors(pc)
+                else:
+                    part = cube.find_part_by_colors(pc)
+            else:
+                part = pc
+
             if by_position:
-                part = cube.find_part_by_pos_colors(c)
                 marker = VMarker.C2
             else:
-                part = cube.find_part_by_colors(c)
                 marker = VMarker.C1
 
             s: PartSlice
