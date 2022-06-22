@@ -1,5 +1,6 @@
 from typing import Callable
 
+from viewer.viewer_markers import VIEWER_ANNOTATION_KEY, VMarker
 from .elements import *
 from .elements import PartSlice
 
@@ -90,6 +91,7 @@ class Face(SuperElement):
         self._edge_left.get_slice(n1).get_face_edge(self).attributes["on_y"] = True
 
         for i in range(n):
+            #self._edge_left.get_slice(i).get_face_edge(self).c_attributes[VIEWER_ANNOTATION_KEY] = VMarker.C1
             self._edge_left.get_slice(i).get_face_edge(self).attributes["cw"] = i
             self._edge_top.get_slice(i).get_face_edge(self).attributes["cw"] = i
             self._edge_right.get_slice(i).get_face_edge(self).attributes["cw"] = n1 - i

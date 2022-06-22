@@ -382,7 +382,7 @@ class _Cell:
 
                 if movable == (marker == VMarker.C1):
                     _marker_color = markers[marker.value]
-                    self._create_markers(_vx, _color, _marker_color, True)
+                    self._create_markers(_vx, _marker_color, True)
 
         if isinstance(part, Corner):
 
@@ -560,7 +560,7 @@ class _Cell:
 
         shapes.box_with_lines(bottom, top, color, 3, (0, 0, 0))
 
-    def _create_markers(self, vertexes: Sequence[ndarray], facet_color, marker_color, marker: bool):
+    def _create_markers_sphere(self, vertexes: Sequence[ndarray], facet_color, marker_color, marker: bool):
 
         if not marker:
             return
@@ -579,6 +579,37 @@ class _Cell:
 
         # this is also supported by glCallLine
         shapes.sphere(center, radius, marker_color)
+    def _create_markers(self, vertexes: Sequence[ndarray], marker_color, is_fixed: bool):
+
+
+        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
+        vx = vertexes
+
+        center = (vx[0] + vx[2]) / 2
+
+        l1: float = np.linalg.norm(vertexes[0] - vertexes[1])  # type: ignore
+        l2: float = np.linalg.norm(vertexes[0] - vertexes[3])  # type: ignore
+        _face_size = min([l1, l2])
+
+        radius = _face_size / 2.0 * 0.8
+        radius = min([radius, config.MAX_MARKER_RADIUS])
+
+        r1 = radius
+        r2 = radius * 0.2
+
+        height: float
+        if is_fixed:
+            height = 0.075
+        else:
+            # movable above fixed
+            height = 0.1
+
+        p1 = center + self._face_board.ortho_direction * height
+        p2 = center - self._face_board.ortho_direction * height
+
+        # this is also supported by glCallLine
+        #shapes.cylinder(p1, p2, r1, r2, marker_color)
+        shapes.disk(p1, p2, r1, 0, marker_color)
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]
