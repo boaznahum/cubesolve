@@ -44,7 +44,7 @@ MARKERS = {
 
 ##############   Input handling
 
-KEYBOAD_INPUT_DEBUG = False
+KEYBOAD_INPUT_DEBUG = True
 
 #  If true, model rotating is done by dragging and right mouse click, rotating faces/slicing by dragging left bottom
 #   or vice versa if FALSE

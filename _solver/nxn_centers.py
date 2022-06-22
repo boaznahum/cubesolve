@@ -598,7 +598,8 @@ class NxNCenters(SolverElement):
 
             min_target_slice = target_slices[0]
 
-            if (min_target_slice.n_matches == 0 or not config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO) \
+            if (
+                    min_target_slice.n_matches == 0 or not config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO) \
                     and _slice.n_matches > min_target_slice.n_matches:
                 # ok now swap
 
@@ -669,15 +670,16 @@ class NxNCenters(SolverElement):
         # do the swap:
         slice_source_alg: algs.Alg = self._get_slice_m_alg(target_index, target_index)
 
-        def ann_slices() -> Iterator[CenterSlice]:
+        def ann_source() -> Iterator[CenterSlice]:
             for rc in self._2d_range(s1, s2):
                 yield source_face.center.get_center_slice(rc)
+
+        def ann_target() -> Iterator[CenterSlice]:
 
             for rc in self._2d_range((0, target_index), (nm1, target_index)):
                 yield target_face.center.get_center_slice(rc)
 
-
-        with self.w_center_slice_annotate(ann_slices()):
+        with self.w_center_slice_annotate(movable=ann_source(), fixed=ann_target()):
             op.op(slice_source_alg * mul +
                   rotate_source_alg * 2 +  # this replaces source slice with target
                   slice_source_alg.prime * mul
@@ -947,8 +949,12 @@ class NxNCenters(SolverElement):
                rotate_on_second * rotate_mul,
                on_front_rotate.prime]
 
+        def _ann_target():
 
-        def ann_slices():
+            for rc in self._2d_range_on_source(False, rc1, rc2):
+                yield face.center.get_center_slice(rc)
+
+        def _ann_source():
             _on_src1_1 = self._point_on_source(is_back, rc1)
             _on_src1_2 = self._point_on_source(is_back, rc2)
             # why - ? because we didn't yet rotate it
@@ -957,10 +963,7 @@ class NxNCenters(SolverElement):
             for rc in self._2d_range(_on_src1_1, _on_src1_2):
                 yield source_face.center.get_center_slice(rc)
 
-            for rc in self._2d_range_on_source(False, rc1, rc2):
-                yield face.center.get_center_slice(rc)
-
-        with self.w_center_slice_annotate(ann_slices()):
+        with self.w_center_slice_annotate(movable=_ann_source(), fixed=_ann_target()):
             if n_rotate:
                 self.op.op(Algs.of_face(source_face.name) * n_rotate)
             self.op.op(Algs.bigAlg(None, *cum))
@@ -1090,7 +1093,7 @@ class NxNCenters(SolverElement):
         """
 
         cube = source_face.cube
-        fix_back_coords = not ignore_if_back and  source_face is cube.back
+        fix_back_coords = not ignore_if_back and source_face is cube.back
 
         if fix_back_coords:
             # the logic here is hard code of the logic in slice rotate
@@ -1151,7 +1154,7 @@ class NxNCenters(SolverElement):
 
             n = self._count_colors_on_block(color, face, (r, 0), (r, nm1), ignore_if_back=True)
 
-            if n > 1 or not search_max: # one is not interesting, will be handled by communicator
+            if n > 1 or not search_max:  # one is not interesting, will be handled by communicator
                 # if we search for minimum than we want zero too
                 _slice = _CompleteSlice(True, r, n)
                 _slices.append(_slice)
@@ -1160,7 +1163,7 @@ class NxNCenters(SolverElement):
 
             n = self._count_colors_on_block(color, face, (0, c), (nm1, c), ignore_if_back=True)
 
-            if n > 1 or not search_max: # one is not interesting, will be handled by communicator
+            if n > 1 or not search_max:  # one is not interesting, will be handled by communicator
                 # if we search for minimum than we want zero too
                 _slice = _CompleteSlice(False, c, n)
                 _slices.append(_slice)

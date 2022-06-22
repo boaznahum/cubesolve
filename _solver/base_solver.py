@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, AbstractContextManager
 from enum import unique, Enum
 from typing import Tuple, Literal
@@ -211,13 +211,15 @@ class SolverElement(CubeSupplier):
             self.op.op(Algs.AN)
 
     @contextmanager
-    def w_center_slice_annotate(self, *_slices: CenterSlice | Iterable[CenterSlice], animation=True):
+    def w_center_slice_annotate(self,*, movable: Iterable[CenterSlice] | Iterator[CenterSlice] | None = None,
+                                fixed: Iterable[CenterSlice] | Iterator[CenterSlice] | None = None,
+                                animation=True):
 
         """
         Annotate moved slice
+        :param movable: not consumed if animation is off
+        :param fixed: not consumed if animation is off
         :param animation:
-        :param _slices:  slice of iterator, not consumed if animation is off
-        if part is given we annotate the part (by color or by fixed), if color is given we search for it
         :return:
         """
 
@@ -231,18 +233,15 @@ class SolverElement(CubeSupplier):
             finally:
                 return
 
-        slices: list[CenterSlice] = []
-        for x in _slices:
-            if isinstance(x, CenterSlice):
-                slices.append(x)
-            else:
-                for y in x:
-                    slices.append(y)
-
         edges: list[Tuple[PartEdge, bool, VMarker]] = []
 
-        for s in slices:
-            edges.append((s.edge, False, VMarker.C1))
+        if movable:
+            for s in movable:
+                edges.append((s.edge, False, VMarker.C1))
+
+        if fixed:
+            for s in fixed:
+                edges.append((s.edge, True, VMarker.C2))
 
         yield from self._w_slice_edges_annotate(edges, animation=animation)
 
