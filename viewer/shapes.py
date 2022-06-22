@@ -163,6 +163,12 @@ def sphere(center: np.ndarray, radius: float, color: Tuple[int, int, int]):
 
 
 def cylinder(p1: np.ndarray, p2: np.ndarray, r1: float, r2: float, color: Tuple[int, int, int]):
+    """
+     Draw a cylinder which is around the vector p1 p2 i.e. a cylinder on plane that is orthogonal to p1-p2
+     and pass through p1
+     bottom of disk is on p1 and top on p2
+     """
+
     # https://community.khronos.org/t/glucylinder-between-two-points/34447/3
 
     if (p1[0] == p2[0]) and (p1[2] == p2[2]) and (p1[1] < p2[1]):
@@ -232,7 +238,7 @@ def cylinder(p1: np.ndarray, p2: np.ndarray, r1: float, r2: float, color: Tuple[
 
 def disk(p1: np.ndarray, p2: np.ndarray, r_outer: float, r_inner: float, color: Tuple[int, int, int]):
     """
-    Draw a disk which is around the vector p1 p2
+    Draw a disk which is around the vector p1 p2 i.e. a disk on plane that is orthogonal to p1-p2 and pass through p1
     :param p1:
     :param p2:
     :param r_outer:

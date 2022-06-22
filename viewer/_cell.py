@@ -382,7 +382,7 @@ class _Cell:
 
                 if movable == (marker == VMarker.C1):
                     _marker_color = markers[marker.value]
-                    self._create_markers(_vx, _marker_color, True)
+                    self._create_markers(_vx, _marker_color, marker == VMarker.C2)
 
         if isinstance(part, Corner):
 
@@ -597,19 +597,21 @@ class _Cell:
         r1 = radius
         r2 = radius * 0.2
 
-        height: float
+        height: float = 0.01
         if is_fixed:
-            height = 0.075
+            r_outher = radius
+            r_inner = radius * 0.8
         else:
             # movable above fixed
-            height = 0.1
+            r_outher = radius * 0.75
+            r_inner = 0
 
         p1 = center + self._face_board.ortho_direction * height
         p2 = center - self._face_board.ortho_direction * height
 
         # this is also supported by glCallLine
         #shapes.cylinder(p1, p2, r1, r2, marker_color)
-        shapes.disk(p1, p2, r1, 0, marker_color)
+        shapes.disk(p1, p2, r_outher, r_inner, marker_color)
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]
