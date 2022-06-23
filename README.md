@@ -29,7 +29,7 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
 ### Controlling view 
     Ctlr/Alt X, Y, Z - Rotate cube over X, Y , Z Axis
-    This is alos can be done by dragging mouse+right bottom
+    This is alos can be done by dragging mouse+right bottun
 ### Modes
     O - Turn animation on/off
     Ctrl+O - Turn of/off solver debug level
