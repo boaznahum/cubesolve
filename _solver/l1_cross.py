@@ -44,17 +44,19 @@ class L1Cross(SolverElement):
         if self._is_cross():  #
             return  # avoid rotating cube
 
-        # before rotating
-        n = self.cmn.rotate_and_check(self.white_face, self._is_cross)
-        if n >= 0:
-            if n > 0:
-                # the query solves by rotate  n, so we need
-                self.op.op(self.cmn.face_rotate(self.white_face) * n)
-            return
+        with self.w_annotate(h1="Doing L1 Cross"):
 
-        self._bring_white_up()
+            # before rotating
+            n = self.cmn.rotate_and_check(self.white_face, self._is_cross)
+            if n >= 0:
+                if n > 0:
+                    # the query solves by rotate  n, so we need
+                    self.op.op(self.cmn.face_rotate(self.white_face) * n)
+                return
 
-        self._do_cross()
+            self._bring_white_up()
+
+            self._do_cross()
 
     def _bring_white_up(self):
 

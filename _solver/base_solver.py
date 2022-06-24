@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, AbstractContextManager
 from enum import unique, Enum
-from typing import Tuple, Literal
+from typing import Tuple, Literal, Optional, TypeAlias
 
 from _solver.isolver import ISolver
 from algs.algs import Algs
@@ -13,7 +13,9 @@ from model.elements import Part, PartColorsID, CenterSlice, EdgeSlice, PartSlice
 from viewer.viewer_markers import VMarker, VIEWER_ANNOTATION_KEY
 
 _SLice_Tracking_UniqID: int = 0
-_ANN_NEST_DEPTH: int = 0
+
+_HEAD: TypeAlias = Optional[str]
+_HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
 
 @unique
@@ -78,15 +80,20 @@ class SolverElement(CubeSupplier):
 
         self.op.op(Algs.AN)
 
-    def w_annotate(self, *elements: Tuple[Part | PartColorsID, bool]) -> AbstractContextManager:
-        return self._w_annotate(*elements)
+    def w_annotate(self, *elements: Tuple[Part | PartColorsID, bool],
+                   h1=None,
+                   h2=None,
+                   h3=None) -> AbstractContextManager:
+        return self._w_annotate(*elements, text=(h1, h2, h3))
 
     @property
     def animation_on(self):
         return self.op.animation_enabled
 
     # @contextmanager
-    def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, VMarker]], animation=True):
+    def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, VMarker]],
+                                text: _HEADS = None,
+                                animation=True):
 
         """
         Annotate moved slice
@@ -96,7 +103,9 @@ class SolverElement(CubeSupplier):
         :return:
         """
 
-        on = self.op.animation_enabled
+        op = self.op
+
+        on = op.animation_enabled
         if (not on) or (not animation):
             try:
                 yield None
@@ -134,7 +143,6 @@ class SolverElement(CubeSupplier):
 
             # because it can be nested or overlap, we add the index to the key
 
-
             key = _key(_SLice_Tracking_UniqID)
             if fixed:
                 _slice.f_attributes[annotation_key] = marker
@@ -145,18 +153,17 @@ class SolverElement(CubeSupplier):
                 _slice.c_attributes[annotation_key] = marker
                 _slice.c_attributes[key] = key
 
-        self.op.op(Algs.AN)
-
-        global _ANN_NEST_DEPTH
-        _ANN_NEST_DEPTH += 1
-        d= _ANN_NEST_DEPTH
+        has_text = text and any(text)
+        if has_text:
+            op.app_state.animation_text.push_heads(text[0], text[1], text[2])
+        op.op(Algs.AN)
 
         try:
             yield None
         finally:
 
-            _ANN_NEST_DEPTH -= 1
-            d = _ANN_NEST_DEPTH
+            if has_text:
+                op.app_state.animation_text.pop_heads()
 
             cube = self.cube
             for slot in slots:
@@ -198,20 +205,19 @@ class SolverElement(CubeSupplier):
                 if i < 0:
                     # if have a bug, nested annimation in __fixed_edge, so key already deleted
 
-                    #del e.f_attributes[annotation_key]
+                    # del e.f_attributes[annotation_key]
                     e.f_attributes.pop(annotation_key, None)
-
 
                     del e.f_attributes[key]
                 else:
-                    #del e.c_attributes[annotation_key]
+                    # del e.c_attributes[annotation_key]
                     e.c_attributes.pop(annotation_key, None)
                     del e.c_attributes[key]
 
-            self.op.op(Algs.AN)
+            op.op(Algs.AN)
 
     @contextmanager
-    def w_center_slice_annotate(self,*, movable: Iterable[CenterSlice] | Iterator[CenterSlice] | None = None,
+    def w_center_slice_annotate(self, *, movable: Iterable[CenterSlice] | Iterator[CenterSlice] | None = None,
                                 fixed: Iterable[CenterSlice] | Iterator[CenterSlice] | None = None,
                                 animation=True):
 
@@ -279,9 +285,12 @@ class SolverElement(CubeSupplier):
             return
 
     @contextmanager
-    def w_annotate2(self, *elements: Tuple[Part | PartColorsID, AnnWhat], animation=True):
+    def w_annotate2(self, *elements: Tuple[Part | PartColorsID, AnnWhat],
+                    animation=True,
+                    text: _HEADS = None):
 
         """
+        :param text:
         :param animation:
         :param elements:  bool in tuple is  'annotated by fixed_location'
         if part is given we annotate the part (by color or by fixed), if color is given we search for it
@@ -327,9 +336,10 @@ class SolverElement(CubeSupplier):
                 for eg in s.edges:
                     edges.append((eg, by_position, marker))
 
-        yield from self._w_slice_edges_annotate(edges, animation=animation)
+        yield from self._w_slice_edges_annotate(edges, animation=animation, text=text)
 
-    def _w_annotate(self, *elements: Tuple[Part | PartColorsID, bool]) -> AbstractContextManager:
+    def _w_annotate(self, *elements: Tuple[Part | PartColorsID, bool],
+                    text: _HEADS = None) -> AbstractContextManager:
 
         """
         :param elements:  bool in tuple is  'annotated by fixed_location'
@@ -352,4 +362,4 @@ class SolverElement(CubeSupplier):
             else:
                 _elements.append((e[0], AnnWhat.FindLocationTrackByColor))
 
-        return self.w_annotate2(*_elements)
+        return self.w_annotate2(*_elements, text=text)

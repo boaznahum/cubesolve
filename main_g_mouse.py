@@ -16,7 +16,7 @@ import config
 from algs import algs
 from algs.algs import Alg, Algs
 from app_exceptions import InternalSWError
-from app_state import AppandViewState
+from app_state import ApplicationAndViewState
 from cube_operator import Operator
 from main_g_animation import AbstractWindow
 from main_g_app import AbstractApp
@@ -52,7 +52,7 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
 
 
 
-def on_mouse_press(window: AbstractWindow, vs: AppandViewState, x, y, modifiers):
+def on_mouse_press(window: AbstractWindow, vs: ApplicationAndViewState, x, y, modifiers):
     if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
 
         selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(vs, window, x, y)

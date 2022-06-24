@@ -5,7 +5,7 @@ from typing import Tuple
 from pyglet import gl  # type: ignore
 
 import config
-from app_state import AppandViewState
+from app_state import ApplicationAndViewState
 
 
 class GViewerExt:
@@ -14,7 +14,7 @@ class GViewerExt:
     """
 
     @staticmethod
-    def draw_axis(vs: AppandViewState):
+    def draw_axis(vs: ApplicationAndViewState):
 
         axis_length = config.AXIS_LENGTH
 

@@ -2,11 +2,12 @@ import math
 from collections.abc import Sequence
 from contextlib import contextmanager
 
-from pyglet import gl
+from pyglet import gl  # type: ignore
 
 # noinspection PyMethodMayBeStatic
 import algs.algs as algs
 import config
+from main_g_animation_text import AnimationText
 from model.cube import Cube
 
 
@@ -56,7 +57,7 @@ speeds = [
 ]
 
 
-class AppandViewState:
+class ApplicationAndViewState:
     # __slots__ = [
     #     "_alpha_x_0",
     #     "_alpha_y_0",
@@ -71,9 +72,7 @@ class AppandViewState:
         super().__init__()
         # self._animation_speed_delay_between_steps: float = 1/40
         # self._animation_speed_number_of_steps = 30
-        self.tx = 0
-        self.ty = 0
-        self.tz = 0
+
         self._speed = 0
         self._alpha_x_0: float = 0.3
         self._alpha_y_0: float = -0.4
@@ -89,7 +88,7 @@ class AppandViewState:
 
         self._offset_0 = [0, 0, -400]
         # must copy, we modify it
-        self._offset = [* self._offset_0 ]
+        self._offset = [*self._offset_0]
 
         self._draw_shadows = config.VIEWER_DRAW_SHADOWS
         self.cube_size = config.CUBE_SIZE
@@ -99,6 +98,8 @@ class AppandViewState:
 
         self.single_step_mode = False
         self.paused_on_single_step_mode: algs.Alg | None = None
+
+        self._animation_text = AnimationText()
 
     def reset(self):
         self._alpha_x: float = 0
@@ -190,6 +191,7 @@ class AppandViewState:
         gl.glRotatef(math.degrees(self.alpha_y), 0, 1, 0)
         gl.glRotatef(math.degrees(self.alpha_z), 0, 0, 1)
 
+    # noinspection PyMethodMayBeStatic
     def restore_objects_view(self):
         """
         Undo prepare_objects_view
@@ -248,8 +250,6 @@ class AppandViewState:
         if not (start or stop):
             return r
 
-        cube = cube
-
         if start < 1:
             start = 1
         if stop > mx:
@@ -269,3 +269,7 @@ class AppandViewState:
             yield None
         finally:
             self._speed = saved
+
+    @property
+    def animation_text(self) -> AnimationText:
+        return self._animation_text

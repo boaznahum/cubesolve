@@ -42,6 +42,14 @@ MARKERS = {
     "C2": (0, 100, 0)  # darkgreen	#006400	rgb(0,100,0)
 }
 
+# text animation properties
+ANIMATION_TEXT: list[Tuple[int, int, int, Tuple[int, int, int, int], bool]] = [
+    # x, y from top, size, color, bold
+    (10, 30, 20, (255,255,0, 255), True),
+    (10, 55, 17, (255,255,255, 255), True),
+    (10, 80, 14, (255,255,255, 255), False),
+]
+
 ##############   Input handling
 
 KEYBOAD_INPUT_DEBUG = True

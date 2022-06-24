@@ -11,7 +11,7 @@ from pyglet import gl
 from pyglet.graphics import Batch  # type: ignore
 
 import config
-from app_state import AppandViewState
+from app_state import ApplicationAndViewState
 from model.cube_boy import Color, FaceName
 from model.cube_face import Face
 from model.elements import PartSliceHashID, PartEdge, Part, PartSlice, Corner, Edge, EdgeSlice, Center, CenterSlice
@@ -175,12 +175,12 @@ class _Cell:
 
     def _prepare_view_state(self):
 
-        vs: AppandViewState = self._face_board.board.vs
+        vs: ApplicationAndViewState = self._face_board.board.vs
         vs.prepare_objects_view()
 
     def _restore_view_state(self):
 
-        vs: AppandViewState = self._face_board.board.vs
+        vs: ApplicationAndViewState = self._face_board.board.vs
         vs.restore_objects_view()
 
     @contextmanager

@@ -1,5 +1,5 @@
 import traceback
-from typing import MutableSequence
+from typing import MutableSequence, Tuple
 
 import glooey  # type: ignore
 import pyglet  # type: ignore
@@ -12,7 +12,7 @@ import main_g_keyboard_input
 import main_g_mouse
 from algs.algs import Algs
 from app_exceptions import AppExit, RunStop, OpAborted
-from app_state import AppandViewState
+from app_state import ApplicationAndViewState
 from main_g_abstract import AbstractWindow
 from main_g_animation import Animation
 from main_g_app import App
@@ -49,6 +49,7 @@ class Window(AbstractWindow):
         self._app: App = app
         self._viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
         self.text: MutableSequence[pyglet.text.Label] = []
+        self.animation_text: MutableSequence[pyglet.text.Label] = []
 
         self._animation: Animation | None = None
 
@@ -79,6 +80,8 @@ class Window(AbstractWindow):
         if self._animation:
             self._animation.update_gui_elements()
 
+        self.update_animation_text()
+
         if self.animation_running:
             return  # don't update text while animation
 
@@ -88,7 +91,7 @@ class Window(AbstractWindow):
 
         cube = self.app.cube
 
-        vs: AppandViewState = self.app.vs
+        vs: ApplicationAndViewState = self.app.vs
 
         y = 10
 
@@ -143,7 +146,6 @@ class Window(AbstractWindow):
         s += ", Debug=" + _b(self.app.slv.is_debug_config_mode)
         s += ", SS Mode:" + _b(vs.single_step_mode)
 
-
         self.text.append(pyglet.text.Label(s,
                                            x=10, y=y, font_size=10, color=(255, 255, 0, 255), bold=True))
         y += 20
@@ -163,13 +165,37 @@ class Window(AbstractWindow):
         y += 20
 
         s = ""
-        #print(f"@@@@@ {vs.paused_on_single_step_mode=}")
+        # print(f"@@@@@ {vs.paused_on_single_step_mode=}")
 
         if vs.paused_on_single_step_mode:
             s = f"PAUSED: {vs.paused_on_single_step_mode}. press space"
 
         self.text.append(pyglet.text.Label(s, x=10, y=y, font_size=15, color=(0, 255, 0, 255), bold=True))
         y += 20
+
+
+
+    def update_animation_text(self):
+
+        cube = self.app.cube
+
+        vs: ApplicationAndViewState = self.app.vs
+
+        self.animation_text.clear()
+        # Animation text
+        at = vs.animation_text
+        for i in range(3):
+            #  # x, y from top, size, color, bold
+            prop: tuple[int, int, int, tuple[int, int, int, int], bool] = config.ANIMATION_TEXT[i]
+            h = at.get_line(i)
+            if h:
+                x = prop[0]
+                y = self.height - prop[1]
+                size = prop[2]
+                color: tuple[int, int, int, int] = prop[3]
+                bold: bool = prop[4]
+                self.animation_text.append(pyglet.text.Label(h,
+                                                             x=x, y=y, font_size=size, color=color, bold=bold))
 
     def on_draw(self):
         # print("Updating")
@@ -229,7 +255,6 @@ class Window(AbstractWindow):
             self.app.set_error(s)
             self.update_gui_elements()  # to create error label
 
-
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         return main_g_mouse.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
 
@@ -241,8 +266,6 @@ class Window(AbstractWindow):
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         return main_g_mouse.on_mouse_scroll(self, x, y, scroll_x, scroll_y)
-
-
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)
@@ -301,6 +324,9 @@ class Window(AbstractWindow):
         gl.glPopAttrib()  # matrix mode
 
         for t in self.text:
+            t.draw()
+
+        for t in self.animation_text:
             t.draw()
 
         # restore state

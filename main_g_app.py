@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 import config
-from app_state import AppandViewState
+from app_state import ApplicationAndViewState
 from cube_operator import Operator
 from model.cube import Cube
 from solver import Solver
@@ -18,7 +18,7 @@ class AbstractApp:
 
     @property
     @abstractmethod
-    def vs(self) -> AppandViewState:
+    def vs(self) -> ApplicationAndViewState:
         raise NotImplementedError
 
     @property
@@ -42,7 +42,7 @@ class App(AbstractApp):
         super().__init__()
         self._error: str | None = None
 
-        self._vs = AppandViewState()
+        self._vs = ApplicationAndViewState()
 
         self._cube = Cube(self.vs.cube_size)
 
@@ -70,7 +70,7 @@ class App(AbstractApp):
         return self._op
 
     @property
-    def vs(self) -> AppandViewState:
+    def vs(self) -> ApplicationAndViewState:
         return self._vs
 
     @property
