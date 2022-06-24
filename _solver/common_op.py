@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from typing import Callable, Generator
 
 from _solver.icommon_op import ICommon
-from _solver.base_solver import ISolver
+from _solver.base_solver import ISolver, SolverElement
 from algs.algs import Algs, Alg
 from app_exceptions import InternalSWError
 from model.cube import Cube
@@ -26,11 +26,11 @@ class EdgeSliceTracker:
         return CubeQueries.find_slice_in_cube_edges(self.cube, self.pred)
 
 
-class CommonOp(ICommon):
+class CommonOp(ICommon, SolverElement):
     __slots__ = ["_slv", "_start_color"]
 
     def __init__(self, slv: ISolver) -> None:
-        super().__init__()
+        super().__init__(slv)
         self._slv = slv
 
         self._start_color = Color.WHITE
@@ -94,22 +94,26 @@ class CommonOp(ICommon):
 
             self.debug("Need to bring ", f, 'to', FaceName.U)
 
-            match f.name:
+            with self.w_annotate(h2=f"Bringing face {f.name.value} up"):
+                match f.name:
 
-                case FaceName.F:
-                    self.op.op(Algs.X)
+                    case FaceName.F:
+                        self.op.op(Algs.X)
 
-                case FaceName.B:
-                    self.op.op(-Algs.X)
+                    case FaceName.B:
+                        self.op.op(-Algs.X)
 
-                case FaceName.D:
-                    self.op.op(Algs.X * 2)
+                    case FaceName.D:
+                        self.op.op(Algs.X * 2)
 
-                case FaceName.L:
-                    self.op.op(Algs.Y + -Algs.X)
+                    case FaceName.L:
+                        self.op.op(Algs.Y + -Algs.X)
 
-                case FaceName.R:
-                    self.op.op(Algs.Y + Algs.X)
+                    case FaceName.R:
+                        self.op.op(Algs.Y + Algs.X)
+
+                    case _:
+                        raise InternalSWError(f"Unknown face {f}")
 
     def bring_face_front(self, f: Face):
 
@@ -123,25 +127,27 @@ class CommonOp(ICommon):
 
             self.debug("Need to bring ", f, 'to', FaceName.F)
 
-            match f.name:
+            with self.w_annotate(h2=f"Bringing face {f.name.value} to front"):
 
-                case FaceName.U:
-                    self.op.op(Algs.X.prime)
+                match f.name:
 
-                case FaceName.B:
-                    self.op.op(-Algs.X.prime * 2)
+                    case FaceName.U:
+                        self.op.op(Algs.X.prime)
 
-                case FaceName.D:
-                    self.op.op(Algs.X)
+                    case FaceName.B:
+                        self.op.op(-Algs.X.prime * 2)
 
-                case FaceName.L:
-                    self.op.op(Algs.Y.prime)
+                    case FaceName.D:
+                        self.op.op(Algs.X)
 
-                case FaceName.R:
-                    self.op.op(Algs.Y)
+                    case FaceName.L:
+                        self.op.op(Algs.Y.prime)
 
-                case _:
-                    raise InternalSWError(f"Unknown face {f}")
+                    case FaceName.R:
+                        self.op.op(Algs.Y)
+
+                    case _:
+                        raise InternalSWError(f"Unknown face {f}")
 
     def bring_edge_to_front_by_e_rotate(self, edge: Edge) -> Alg | None:
         """
