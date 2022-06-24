@@ -47,8 +47,10 @@ class _AnimationSpeed:
 
 
 speeds = [
-
-    _AnimationSpeed(1 / 40, 20),
+    # delay in seconds, number of steps
+    _AnimationSpeed(1 / 10, 20),
+    _AnimationSpeed(1 / 20, 20),
+    _AnimationSpeed(1 / 40, 20), # default
     _AnimationSpeed(1 / 40, 10),
     _AnimationSpeed(1 / 60, 10),
     _AnimationSpeed(1 / 100, 10),
@@ -73,7 +75,7 @@ class ApplicationAndViewState:
         # self._animation_speed_delay_between_steps: float = 1/40
         # self._animation_speed_number_of_steps = 30
 
-        self._speed = 0
+        self._speed = 2
         self._alpha_x_0: float = 0.3
         self._alpha_y_0: float = -0.4
         self._alpha_z_0: float = 0

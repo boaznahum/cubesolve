@@ -99,7 +99,8 @@ class L1Cross(SolverElement):
     def _fix_edge(self, wf: Face, target_colors_id: PartColorsID):
         with self.w_annotate(
                 (target_colors_id, False),
-                (target_colors_id, True)
+                (target_colors_id, True),
+            h2 = lambda : f"Bringing {self.cube.find_edge_by_color(target_colors_id).str2()} to UF"
         ):
             self.__fix_edge(wf, target_colors_id)
 

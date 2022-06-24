@@ -7,7 +7,7 @@ from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable, I
 
 import config
 from app_exceptions import InternalSWError
-from .cube_boy import Color, FaceName
+from .cube_boy import Color, FaceName, color2long
 
 
 @unique
@@ -789,6 +789,18 @@ class Part(ABC, CubeElement):
     def annotated_fixed(self) -> bool:
         return any(p.annotated_fixed for p in self._3x3_representative_edges)
 
+    def str2(self) -> str:  # for animation
+        s1 = ""
+        s2 = ""
+
+        for e in self._3x3_representative_edges:
+            s1 += str(e.face.name.value)
+            s2 += str(color2long(e.color).value) + "/"
+
+        s2 = s2[0:-1]
+
+        return s1 + " " + s2
+
 
 class Center(Part):
     __slots__ = "_slices"
@@ -1420,6 +1432,9 @@ class Edge(Part):
 
     def __str__(self) -> str:
         return f"{self.e1.face.name.value}{self.e2.face.name.value} " + super().__str__()
+
+    def str2(self) -> str:  # for animation
+        return f"Edge " + super().str2()
 
 
 class Corner(Part):

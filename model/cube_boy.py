@@ -25,7 +25,25 @@ class Color(Enum):
     RED = "R"
     WHITE = "W"
 
+class ColorLong(Enum):
+    BLUE = "Blue"
+    ORANGE = "Orange"
+    YELLOW = "Yellow"
+    GREEN = "Green"
+    RED = "Red"
+    WHITE = "White"
 
+_color2long = {
+    Color.BLUE:ColorLong.BLUE,
+    Color.ORANGE:ColorLong.ORANGE,
+    Color.YELLOW:ColorLong.YELLOW,
+    Color.GREEN:ColorLong.GREEN,
+    Color.RED:ColorLong.RED,
+    Color.WHITE:ColorLong.WHITE,
+}
+
+def color2long(c:Color) -> ColorLong:
+    return _color2long[c]
 class CubeLayout:
     _opposite: Mapping[FaceName, FaceName] = {FaceName.F: FaceName.B, FaceName.U: FaceName.D, FaceName.L: FaceName.R}
 

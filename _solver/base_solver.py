@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, AbstractContextManager
 from enum import unique, Enum
-from typing import Tuple, Literal, Optional, TypeAlias
+from typing import Tuple, Literal, Optional, TypeAlias, Callable
 
 from _solver.isolver import ISolver
 from algs.algs import Algs
@@ -14,7 +14,7 @@ from viewer.viewer_markers import VMarker, VIEWER_ANNOTATION_KEY
 
 _SLice_Tracking_UniqID: int = 0
 
-_HEAD: TypeAlias = Optional[str]
+_HEAD: TypeAlias = Optional[str|Callable[[], str]]
 _HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
 
@@ -155,7 +155,13 @@ class SolverElement(CubeSupplier):
 
         has_text = text and any(text)
         if has_text:
-            op.app_state.animation_text.push_heads(text[0], text[1], text[2])
+            assert text
+            _text = []
+            for _t  in text:
+                if isinstance(_t, Callable):
+                    _t = _t()
+                _text.append(_t)
+            op.app_state.animation_text.push_heads(_text[0], _text[1], _text[2])
         op.op(Algs.AN)
 
         try:
