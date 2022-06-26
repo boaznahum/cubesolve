@@ -151,4 +151,4 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
   up/down/right/left pan cube
   drag alt move cube
   
-  alt c rese view only
+  add model uml, rename PartEdge to SliceFacet
