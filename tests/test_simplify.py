@@ -1,8 +1,7 @@
-import config
-import algs.algs as algs
-from algs.algs import Algs
-from model.cube import Cube
-from model.cube_queries import CubeQueries
+from cube import config, algs as algs
+from cube.algs import Algs
+from cube.model.cube import Cube
+from cube.model.cube_queries import CubeQueries
 
 
 def test1():

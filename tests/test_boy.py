@@ -1,8 +1,8 @@
-from algs import algs
-from app_state import ApplicationAndViewState
-from model.cube import Cube
-from cube_operator import Operator
-from solver import Solver
+from cube.algs import algs
+from cube.app_state import ApplicationAndViewState
+from cube.model.cube import Cube
+from cube.operator.cube_operator import Operator
+from cube.solver import Solver
 
 
 def test1():

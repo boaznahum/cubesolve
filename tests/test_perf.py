@@ -1,9 +1,9 @@
 import traceback
 
-from algs import Algs
-from app_state import ApplicationAndViewState
-from cube_operator import Operator
-from solver import Solver
+from cube.algs import Algs
+from cube.app_state import ApplicationAndViewState
+from cube.operator.cube_operator import Operator
+from cube.solver import Solver
 
 
 def main():
@@ -13,7 +13,7 @@ def main():
     count = 0
     n_executed_tests = 0
 
-    from model.cube import Cube
+    from cube.model.cube import Cube
 
     cube = Cube(5)
     vs = ApplicationAndViewState()
