@@ -1,10 +1,11 @@
-from cube._solver.base_solver import SolverElement, ISolver, AnnWhat
+from cube._solver.base_solver import SolverElement, ISolver
 from cube._solver.common_op import CommonOp
 from cube._solver.tracker import CornerTracker
 from cube.algs.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError, EvenCubeCornerSwapException
 from cube.model.cube_face import Face
 from cube.model.elements import FaceName, Part, Corner
+from cube.operator.op_annotation import AnnWhat
 
 
 def use(_):
@@ -108,7 +109,7 @@ class L3Corners(SolverElement):
         yf: Face = self.white_face.opposite
 
         with self.ann.w_annotate2((yf.corner_bottom_right, AnnWhat.FindLocationTrackByColor),
-                              (yf.corner_bottom_right, AnnWhat.Position)):
+                                  (yf.corner_bottom_right, AnnWhat.Position)):
 
             front_right = CornerTracker.of_position(yf.corner_bottom_right)
 

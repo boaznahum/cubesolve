@@ -1,32 +1,12 @@
-from collections.abc import Iterable, Iterator
-from contextlib import contextmanager, AbstractContextManager
 from enum import unique, Enum
-from typing import Tuple, Literal, Optional, TypeAlias, Callable
 
 from cube._solver.isolver import ISolver
-from cube.algs.algs import Algs
-from cube.operator.cube_operator import Operator
 from cube.model.cube import Cube, CubeSupplier
 from cube.model.cube_face import Face
-from cube.model.cube_queries import CubeQueries
-from cube.model.elements import Part, PartColorsID, CenterSlice, EdgeSlice, PartSlice, Corner, Edge, PartEdge
+from cube.operator.cube_operator import Operator
 from cube.operator.op_annotation import OpAnnotation
-from cube.viewer.viewer_markers import VMarker, VIEWER_ANNOTATION_KEY
-
-_SLice_Tracking_UniqID: int = 0
-
-_HEAD: TypeAlias = Optional[str | Callable[[], str]]
-_HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
 
-@unique
-class AnnWhat(Enum):
-    """
-    If color is given , find its actual location and track it where it goes
-    If part is given find it actual location and track it where it goes
-    """
-    FindLocationTrackByColor = 1
-    Position = 2
 
 
 class SolverElement(CubeSupplier):

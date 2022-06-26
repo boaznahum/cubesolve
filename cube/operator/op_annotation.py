@@ -20,6 +20,8 @@ _SLice_Tracking_UniqID: int = 0
 _HEAD: TypeAlias = Optional[str | Callable[[], str]]
 _HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
+_ANN: TypeAlias = Part | PartColorsID
+
 
 @unique
 class AnnWhat(Enum):
