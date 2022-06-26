@@ -1,23 +1,20 @@
 from algs.algs import Algs
+from app_state import ApplicationAndViewState
 from model.cube import Cube
 from cube_operator import Operator
 from solver import Solver
 
 
 def main():
-
-
     n = 8
 
     cube = Cube(size=n)
 
-    op: Operator = Operator(cube)
+    vs = ApplicationAndViewState()
+    op: Operator = Operator(cube, vs)
     solver: Solver = Solver(op)
 
-    alg1 = Algs.scramble(cube.size, 4)
     alg2 = Algs.scramble(cube.size, 4)
-
-    s1 = alg1.implify()
 
     alg2.play(cube)
 

@@ -195,17 +195,17 @@ class CommonOp(ICommon, SolverElement):
 
         max_n = 2
 
-        slice = edge.get_slice(0)
+        _slice = edge.get_slice(0)
 
         s_tracker: EdgeSliceTracker
-        with self.track_e_slice(slice) as s_tracker:
+        with self.track_e_slice(_slice) as s_tracker:
 
             for _ in range(max_n):
-                slice = s_tracker.the_slice
+                _slice = s_tracker.the_slice
 
-                edge = slice.parent
+                edge = _slice.parent
 
-                if not edge in cube.front.edges:
+                if edge not in cube.front.edges:
 
                     # if cube.front.edge_left is edge:
                     #     return  # nothing to do
@@ -243,7 +243,7 @@ class CommonOp(ICommon, SolverElement):
 
                     now_edge = s_tracker.the_slice.parent
 
-                    if not s_tracker.the_slice.parent is cube.left.edge_right:
+                    if s_tracker.the_slice.parent is not cube.left.edge_right:
                         raise InternalSWError(f"Internal error {begin_edge} {now_edge}")
 
                     return s_tracker.the_slice.parent
@@ -267,23 +267,23 @@ class CommonOp(ICommon, SolverElement):
         with self.track_e_slice(edge.get_slice(0)) as s_tracker:
 
             for _ in range(max_n):
-                slice = s_tracker.the_slice
+                _slice = s_tracker.the_slice
 
-                edge = slice.parent
+                edge = _slice.parent
 
                 if cube.front.edge_right is edge:
                     return  # done
 
                 # ---------------------- on back --------------------
                 if edge is cube.back.edge_top:
-                    self.op.op(Algs.B.prime)  # now on right right
+                    self.op.op(Algs.B.prime)  # now on right
                     continue
 
                 elif edge is cube.back.edge_right:
-                    self.op.op(Algs.B.prime * 2)  # now on right right
+                    self.op.op(Algs.B.prime * 2)  # now on right
 
                 elif edge is cube.back.edge_bottom:
-                    self.op.op(Algs.B)  # now on right right
+                    self.op.op(Algs.B)  # now on right
 
                 # back left is right
 
@@ -304,7 +304,6 @@ class CommonOp(ICommon, SolverElement):
                 elif edge is cube.left.edge_bottom:
                     self.op.op(Algs.D.prime * 2)  # now on right bottom
 
-
                 # now handle on right
 
                 elif edge is cube.right.edge_bottom:
@@ -316,10 +315,9 @@ class CommonOp(ICommon, SolverElement):
                 elif edge is cube.right.edge_top:
                     self.op.op(Algs.R.prime)  # Over F, now on left
 
-
                 else:
 
-                    raise InternalSWError(f"Unknwon case, edge is {edge}")
+                    raise InternalSWError(f"Unknown case, edge is {edge}")
 
     def bring_face_to_front_by_y_rotate(self, face):
         """
@@ -367,7 +365,8 @@ class CommonOp(ICommon, SolverElement):
     def debug(self, *args):
         self.slv.debug(args)
 
-    def face_rotate(self, face: Face) -> Alg:
+    @staticmethod
+    def face_rotate(face: Face) -> Alg:
 
         match face.name:
 

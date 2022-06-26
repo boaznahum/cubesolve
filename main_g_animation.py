@@ -17,7 +17,8 @@ from model.elements import PartSlice
 from viewer.viewer_g import GCubeViewer
 
 
-def op_and_play_animation(window: AbstractWindow, operator: Operator, inv: bool, alg: algs.SimpleAlg):
+def op_and_play_animation(window: AbstractWindow, operator: Operator,
+                          inv: bool, alg: algs.SimpleAlg):
     _op_and_play_animation(window,
                            window.app.cube,
                            window.viewer,
@@ -26,7 +27,8 @@ def op_and_play_animation(window: AbstractWindow, operator: Operator, inv: bool,
                            inv, alg)
 
 
-def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewState, alg: algs.AnimationAbleAlg, n_count) -> Animation:
+def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewState, alg: algs.AnimationAbleAlg,
+                      n_count) -> Animation:
     rotate_face: FaceName
     cube_parts: Collection[PartSlice]
 
@@ -170,7 +172,8 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
     return animation
 
 
-def _op_and_play_animation(window: AbstractWindow, cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewState, operator: Operator,
+def _op_and_play_animation(window: AbstractWindow, cube: Cube,
+                           viewer: GCubeViewer, vs: ApplicationAndViewState, operator: Operator,
                            inv: bool, alg: algs.SimpleAlg):
     """
     This must be called only from operator

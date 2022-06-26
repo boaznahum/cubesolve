@@ -1,22 +1,23 @@
 import traceback
 
 from algs import Algs
+from app_state import ApplicationAndViewState
 from cube_operator import Operator
 from solver import Solver
 
 
 def main():
-
     n_loops = 20
 
-    ll = 0 # n plots per line
+    ll = 0  # n plots per line
     count = 0
     n_executed_tests = 0
 
     from model.cube import Cube
 
     cube = Cube(5)
-    op: Operator = Operator(cube)
+    vs = ApplicationAndViewState()
+    op: Operator = Operator(cube, vs)
     slv: Solver = Solver(op)
 
     for s in range(-1, n_loops):

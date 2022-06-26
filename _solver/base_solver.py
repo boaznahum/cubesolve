@@ -14,7 +14,7 @@ from viewer.viewer_markers import VMarker, VIEWER_ANNOTATION_KEY
 
 _SLice_Tracking_UniqID: int = 0
 
-_HEAD: TypeAlias = Optional[str|Callable[[], str]]
+_HEAD: TypeAlias = Optional[str | Callable[[], str]]
 _HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
 
@@ -157,8 +157,8 @@ class SolverElement(CubeSupplier):
         if has_text:
             assert text
             _text = []
-            for _t  in text:
-                if isinstance(_t, Callable):
+            for _t in text:
+                if callable(_t):
                     _t = _t()
                 _text.append(_t)
             op.app_state.animation_text.push_heads(_text[0], _text[1], _text[2])

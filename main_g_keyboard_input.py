@@ -185,8 +185,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
         no_operation = False
 
+        # noinspection PyProtectedMember
         match value:
-
 
             case key.I:
                 print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
@@ -257,7 +257,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
                 nn = slv.cube.n_slices
 
-                st = 1
                 mid = 1 + nn // 2  # == 3 on 5
 
                 end = nn
@@ -271,8 +270,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                               Algs.M[mid + 1:end].prime * ml + Algs.F * 2 + Algs.M[mid + 1:end] * ml
                               ]
                 op.op(Algs.bigAlg(None, *swap_faces))
-
-                inv = slv.cube.inv
 
                 # communicator 1
                 rotate_on_cell = Algs.M[mid]
@@ -356,7 +353,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
             case key._0:
                 with vs.w_animation_speed(4):
                     if modifiers & key.MOD_ALT:
-                        # Faild on [5:5]B
+                        # Failed on [5:5]B
                         # [{good} [3:3]R [3:4]D S [2:2]L]
 
                         alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]  # + Algs.B[5:5]
@@ -376,12 +373,12 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key._2 | key._3 | key._4 | key._5 | key._6:
 
-                #print(f"{modifiers & key.MOD_CTRL=}  {modifiers & key.MOD_ALT=}")
+                # print(f"{modifiers & key.MOD_CTRL=}  {modifiers & key.MOD_ALT=}")
                 if modifiers & key.MOD_CTRL:
                     # noinspection PyProtectedMember
-                    balg: algs.BigAlg = Algs.scramble(app.cube.size, value - key._0)
+                    big_alg: algs.BigAlg = Algs.scramble(app.cube.size, value - key._0)
                     good = algs.BigAlg("good")
-                    for a in balg.algs:
+                    for a in big_alg.algs:
                         try:
                             op.op(a, animation=False)
                             good = good + a

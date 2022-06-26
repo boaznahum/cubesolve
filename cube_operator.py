@@ -1,7 +1,7 @@
 import functools
-from collections.abc import MutableSequence, Sequence, Iterable
+from collections.abc import MutableSequence, Sequence
 from contextlib import contextmanager
-from typing import Callable, Any, List
+from typing import Callable, Any
 
 from algs.algs import Alg, SimpleAlg
 from app_exceptions import OpAborted
@@ -15,7 +15,7 @@ class Operator:
                  "_app_state"]
 
     def __init__(self, cube: Cube,
-                 app_state: ApplicationAndViewState,  #PATCH PATCH, operator should hold SS mode
+                 app_state: ApplicationAndViewState,  # PATCH, operator should hold SS mode
                  animation_enabled: bool = False) -> None:
         super().__init__()
         self._aborted: Any = None
@@ -54,11 +54,11 @@ class Operator:
                 if inv:
                     alg = alg.inv()
 
-                # todo: Patch - move singlestep mode into operator
-                algs: list[SimpleAlg] = [ * alg.flatten() ]
+                # todo: Patch - move single step mode into operator
+                algs: list[SimpleAlg] = [*alg.flatten()]
 
                 if self._app_state.single_step_mode:
-                    print(f"In SS mode: going to run: {' '.join([ str(a) for a in algs ])}")
+                    print(f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
 
                 for a in algs:
                     an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
@@ -162,7 +162,7 @@ class Operator:
     def animation_enabled(self):
         return self._animation_enabled and self._animation_hook
 
-    def toggle_animation_on(self, enable: bool|None =None):
+    def toggle_animation_on(self, enable: bool | None = None):
 
         if enable is None:
             self._animation_enabled = not self._animation_enabled
