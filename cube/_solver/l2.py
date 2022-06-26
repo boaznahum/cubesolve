@@ -149,7 +149,7 @@ class L2(SolverElement):
         _te_id = _te.colors_id_by_color
         _se_id = _se.colors_id_by_color
 
-        with self.w_annotate((_se, False), (_te, True)):
+        with self.ann.w_annotate((_se, False), (_te, True)):
 
             if st.position.on_face(cube.right):
                 self.op.op(self._ur_alg)  # U R U' R' U' F' U F

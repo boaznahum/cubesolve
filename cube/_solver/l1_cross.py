@@ -43,7 +43,7 @@ class L1Cross(SolverElement):
         if self._is_cross():  #
             return  # avoid rotating cube
 
-        with self.w_annotate(h1="Doing L1 Cross"):
+        with self.ann.w_annotate(h1="Doing L1 Cross"):
 
             # before rotating
             n = self.cmn.rotate_and_check(self.white_face, self._is_cross)
@@ -96,7 +96,7 @@ class L1Cross(SolverElement):
             # assert e.match_faces
 
     def _fix_edge(self, wf: Face, target_colors_id: PartColorsID):
-        with self.w_annotate(
+        with self.ann.w_annotate(
                 (target_colors_id, False),
                 (target_colors_id, True),
                 h2=lambda: f"Bringing {self.cube.find_edge_by_color(target_colors_id).str2()} to UF"

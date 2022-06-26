@@ -6,7 +6,7 @@ from cube import config
 from cube._solver.base_solver import SolverElement, ISolver
 from cube._solver.common_op import CommonOp
 from cube.algs import algs
-from cube.algs import Algs
+from cube.algs.algs import Algs
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
 from cube.model.cube_boy import CubeLayout
@@ -678,7 +678,7 @@ class NxNCenters(SolverElement):
             for rc in self._2d_range((0, target_index), (nm1, target_index)):
                 yield target_face.center.get_center_slice(rc)
 
-        with self.w_center_slice_annotate(movable=ann_source(), fixed=ann_target()):
+        with self.ann.w_center_slice_annotate(movable=ann_source(), fixed=ann_target()):
             op.op(slice_source_alg * mul +
                   rotate_source_alg * 2 +  # this replaces source slice with target
                   slice_source_alg.prime * mul
@@ -962,7 +962,7 @@ class NxNCenters(SolverElement):
             for rc in self._2d_range(_on_src1_1, _on_src1_2):
                 yield source_face.center.get_center_slice(rc)
 
-        with self.w_center_slice_annotate(movable=_ann_source(), fixed=_ann_target()):
+        with self.ann.w_center_slice_annotate(movable=_ann_source(), fixed=_ann_target()):
             if n_rotate:
                 self.op.op(Algs.of_face(source_face.name) * n_rotate)
             self.op.op(Algs.bigAlg(None, *cum))

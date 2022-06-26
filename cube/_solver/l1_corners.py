@@ -2,7 +2,7 @@ from typing import Sequence
 
 from cube._solver.base_solver import SolverElement, ISolver
 from cube._solver.common_op import CommonOp
-from cube.algs import Algs
+from cube.algs.algs import Algs
 from cube.model.cube_face import Face
 from cube.model.elements import PartColorsID, Part, Corner
 
@@ -61,7 +61,7 @@ class L1Corners(SolverElement):
 
     def _solve_corner(self, corner_id: PartColorsID):
 
-        with self.w_annotate(
+        with self.ann.w_annotate(
                 (self.cube.find_corner_by_pos_colors(corner_id), True),
                 (self.cube.find_corner_by_colors(corner_id), False)):
             self.__solve_corner(corner_id)

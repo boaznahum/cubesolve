@@ -94,7 +94,7 @@ class CommonOp(ICommon, SolverElement):
 
             self.debug("Need to bring ", f, 'to', FaceName.U)
 
-            with self.w_annotate(h2=f"Bringing face {f.name.value} up"):
+            with self.ann.w_annotate(h2=f"Bringing face {f.name.value} up"):
 
                 alg: Alg
 
@@ -118,7 +118,7 @@ class CommonOp(ICommon, SolverElement):
                     case _:
                         raise InternalSWError(f"Unknown face {f}")
 
-                with self.w_annotate(h3=f"{alg}"):
+                with self.ann.w_annotate(h3=f"{alg}"):
                     self.op.op(alg)
 
     def bring_face_front(self, f: Face):
@@ -133,7 +133,7 @@ class CommonOp(ICommon, SolverElement):
 
             self.debug("Need to bring ", f, 'to', FaceName.F)
 
-            with self.w_annotate(h2=f"Bringing face {f.name.value} to front"):
+            with self.ann.w_annotate(h2=f"Bringing face {f.name.value} to front"):
 
                 match f.name:
 
