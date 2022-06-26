@@ -7,6 +7,7 @@ from cube.algs.algs import Algs, Alg
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
 from cube.model.elements import FaceName, Edge, PartColorsID, PartEdge, Part
+from cube.operator.op_annotation import AnnWhat
 
 
 def use(_):
@@ -96,9 +97,8 @@ class L1Cross(SolverElement):
             # assert e.match_faces
 
     def _fix_edge(self, wf: Face, target_colors_id: PartColorsID):
-        with self.ann.w_annotate(
-                (target_colors_id, False),
-                (target_colors_id, True),
+        with self.ann.annotate(
+                (target_colors_id, AnnWhat.Both),
                 h2=lambda: f"Bringing {self.cube.find_edge_by_color(target_colors_id).str2()} to UF"
         ):
             self.__fix_edge(wf, target_colors_id)

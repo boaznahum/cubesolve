@@ -13,6 +13,7 @@ from cube.model.cube_boy import CubeLayout
 from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries, Pred
 from cube.model.elements import FaceName, Color, CenterSlice
+from cube.operator.op_annotation import AnnWhat
 
 
 def use(_):
@@ -678,7 +679,7 @@ class NxNCenters(SolverElement):
             for rc in self._2d_range((0, target_index), (nm1, target_index)):
                 yield target_face.center.get_center_slice(rc)
 
-        with self.ann.w_center_slice_annotate(movable=ann_source(), fixed=ann_target()):
+        with self.ann.annotate((ann_source(), AnnWhat.Moved), (ann_target(), AnnWhat.FixedPosition)):
             op.op(slice_source_alg * mul +
                   rotate_source_alg * 2 +  # this replaces source slice with target
                   slice_source_alg.prime * mul
@@ -962,7 +963,7 @@ class NxNCenters(SolverElement):
             for rc in self._2d_range(_on_src1_1, _on_src1_2):
                 yield source_face.center.get_center_slice(rc)
 
-        with self.ann.w_center_slice_annotate(movable=_ann_source(), fixed=_ann_target()):
+        with self.ann.annotate( (_ann_source(), AnnWhat.Moved), (_ann_target(), AnnWhat.FixedPosition)):
             if n_rotate:
                 self.op.op(Algs.of_face(source_face.name) * n_rotate)
             self.op.op(Algs.bigAlg(None, *cum))

@@ -5,6 +5,7 @@ from cube._solver.common_op import CommonOp
 from cube.algs.algs import Algs
 from cube.model.cube_face import Face
 from cube.model.elements import PartColorsID, Part, Corner
+from cube.operator.op_annotation import AnnWhat
 
 
 def use(_):
@@ -61,9 +62,8 @@ class L1Corners(SolverElement):
 
     def _solve_corner(self, corner_id: PartColorsID):
 
-        with self.ann.w_annotate(
-                (self.cube.find_corner_by_pos_colors(corner_id), True),
-                (self.cube.find_corner_by_colors(corner_id), False)):
+        with self.ann.annotate(
+                (corner_id, AnnWhat.Both)):
             self.__solve_corner(corner_id)
 
     def __solve_corner(self, corner_id: PartColorsID):

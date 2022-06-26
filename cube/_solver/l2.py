@@ -6,6 +6,7 @@ from cube._solver.tracker import EdgeTracker
 from cube.algs.algs import Algs, Alg
 from cube.model.cube_face import Face
 from cube.model.elements import PartColorsID, Part, Edge, Color
+from cube.operator.op_annotation import AnnWhat
 
 
 def use(_):
@@ -149,7 +150,7 @@ class L2(SolverElement):
         _te_id = _te.colors_id_by_color
         _se_id = _se.colors_id_by_color
 
-        with self.ann.w_annotate((_se, False), (_te, True)):
+        with self.ann.annotate( (edge_id, AnnWhat.Both) ):
 
             if st.position.on_face(cube.right):
                 self.op.op(self._ur_alg)  # U R U' R' U' F' U F

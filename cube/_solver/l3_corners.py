@@ -82,10 +82,10 @@ class L3Corners(SolverElement):
 
         # at most two cycles
         if not yf.corner_bottom_left.in_position:
-            with self.ann.w_annotate2(
-                    (yf.corner_top_right, AnnWhat.FindLocationTrackByColor),
-                    (yf.corner_top_left, AnnWhat.FindLocationTrackByColor),
-                    (yf.corner_bottom_left, AnnWhat.FindLocationTrackByColor),
+            with self.ann.annotate(
+                    (yf.corner_top_right, AnnWhat.Moved),
+                    (yf.corner_top_left, AnnWhat.Moved),
+                    (yf.corner_bottom_left, AnnWhat.Moved),
             ):
 
                 for _ in [1, 1]:
@@ -108,8 +108,7 @@ class L3Corners(SolverElement):
 
         yf: Face = self.white_face.opposite
 
-        with self.ann.w_annotate2((yf.corner_bottom_right, AnnWhat.FindLocationTrackByColor),
-                                  (yf.corner_bottom_right, AnnWhat.Position)):
+        with self.ann.annotate((yf.corner_bottom_right, AnnWhat.Both)):
 
             front_right = CornerTracker.of_position(yf.corner_bottom_right)
 
@@ -145,7 +144,7 @@ class L3Corners(SolverElement):
         if yf.corner_bottom_right is c:
             return
 
-        with self.ann.w_annotate((c, False), (yf.corner_top_right, True)):
+        with self.ann.annotate((c, AnnWhat.Moved), (yf.corner_top_right, AnnWhat.FixedPosition)):
 
             if yf.corner_top_right is c:
                 return self.op.op(Algs.Y)
@@ -162,7 +161,7 @@ class L3Corners(SolverElement):
 
         for _ in range(0, 4):
 
-            with self.ann.w_annotate((yf.corner_bottom_right, False), (yf.corner_bottom_right, True)):
+            with self.ann.annotate((yf.corner_bottom_right, AnnWhat.Both)):
                 # we can't check all_match because we rotate the cube
                 while not yf.corner_bottom_right.match_face(yf):
                     self.op.op(Algs.alg("L3-RD", Algs.R.prime, Algs.D.prime, Algs.R, Algs.D) * 2)

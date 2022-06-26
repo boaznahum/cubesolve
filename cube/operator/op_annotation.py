@@ -4,6 +4,7 @@ from enum import unique, Enum
 from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal
 
 from ..algs.algs import Algs
+from ..app_exceptions import InternalSWError
 from ..model.cube import Cube
 from ..model.cube_face import Face
 from ..model.cube_queries import CubeQueries
@@ -20,7 +21,9 @@ _SLice_Tracking_UniqID: int = 0
 _HEAD: TypeAlias = Optional[str | Callable[[], str]]
 _HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
-_ANN: TypeAlias = Part | PartColorsID
+_ANN_BASE_ELEMENT: TypeAlias = Part | PartColorsID | PartSlice | PartEdge
+
+_ANN_ELEMENT: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | Iterable[_ANN_BASE_ELEMENT] | Iterator["_ANN_ELEMENT"] | Iterable["_ANN_ELEMENT"]
 
 
 @unique
@@ -29,8 +32,9 @@ class AnnWhat(Enum):
     If color is given , find its actual location and track it where it goes
     If part is given find it actual location and track it where it goes
     """
-    FindLocationTrackByColor = 1
-    Position = 2
+    Moved = 1
+    FixedPosition = 2
+    Both = 3  # Applicable ony for Part
 
 
 class OpAnnotation:
@@ -183,6 +187,103 @@ class OpAnnotation:
             op.op(Algs.AN)
 
     @contextmanager
+    def annotate(self, *elements: Tuple[_ANN_ELEMENT, AnnWhat],
+                 h1=None,
+                 h2=None,
+                 h3=None,
+                 animation=True):
+
+        """
+        Annotate moved slice
+        :param h1: tet headline 1
+        :param h2: tet headline 2
+        :param h3: tet headline 3
+        :param elements: iterators/iterable are consumed once and only once  if animation is  enabled
+                AnnWhat.Moved track element when it moved around
+                AnnWhat.FixedPosition annotate at fixed location
+                if PartColorsID is specified:
+                  if by position, element is searched by position(it's destination) and racked by AnnWhat.Position
+                  otherwise, current location is searched and tracked by AnnWhat.FixedPosition
+
+        :param animation:
+        :return:
+        """
+
+        on = self.op.animation_enabled
+
+        global _SLice_Tracking_UniqID
+
+        if (not on) or (not animation):
+            try:
+                yield None
+            finally:
+                return
+
+        edges: list[Tuple[PartEdge, bool, VMarker]] = []
+        cube = self.cube
+
+        def process_element(e: _ANN_BASE_ELEMENT, what: AnnWhat):
+
+            # check for clor id before iterator iterable
+            if isinstance(e, frozenset):  # PartColorsID
+                part: Part
+                if what in [AnnWhat.Moved, AnnWhat.Both]:
+                    part = cube.find_part_by_colors(e)
+                    process_element(part, AnnWhat.Moved)
+                if what in [AnnWhat.FixedPosition, AnnWhat.Both]:
+                    part = cube.find_edge_by_pos_colors(e)
+                    process_element(part, AnnWhat.FixedPosition)
+
+            elif isinstance(e, (Iterable, Iterator)):
+                for ee in e:
+                    process_element(ee, what)
+
+            elif isinstance(e, Part):
+                s: PartSlice
+                for s in e.all_slices:
+                    process_element(s, what)
+            elif isinstance(e, PartSlice):
+                part_edge: PartEdge
+                for part_edge in e.edges:
+                    process_element(part_edge, what)
+            elif isinstance(e, PartEdge):
+
+                # finally someone need to do the work
+
+                if what == AnnWhat.Moved:
+                    by_position = False
+                elif what == AnnWhat.FixedPosition:
+                    by_position = True
+                else:
+                    raise InternalSWError("AnnWhat.Both is applicable only for Part")
+
+                if by_position:
+                    marker = VMarker.C2
+                else:
+                    marker = VMarker.C1
+
+                edges.append((e, by_position, marker))
+
+
+            else:
+                raise InternalSWError(f"Unknown type {type(e)}")
+
+        for e, what in elements:
+            process_element(e, what)
+
+        # if movable:
+        #     for s in movable:
+        #         edges.append((s.edge, False, VMarker.C1))
+        #
+        # if fixed:
+        #     for s in fixed:
+        #         edges.append((s.edge, True, VMarker.C2))
+
+        yield from self._w_slice_edges_annotate(edges,
+                                                text=(h1, h2, h3),
+                                                animation=animation)
+
+    @contextmanager
     def w_center_slice_annotate(self, *, movable: Iterable[CenterSlice] | Iterator[CenterSlice] | None = None,
                                 fixed: Iterable[CenterSlice] | Iterator[CenterSlice] | None = None,
                                 animation=True):
@@ -279,7 +380,7 @@ class OpAnnotation:
             pc = e[0]
             w: AnnWhat = e[1]
 
-            by_position = w == AnnWhat.Position
+            by_position = w == AnnWhat.FixedPosition
 
             part: Part
 
@@ -324,8 +425,8 @@ class OpAnnotation:
         for e in elements:
 
             if e[1]:
-                _elements.append((e[0], AnnWhat.Position))
+                _elements.append((e[0], AnnWhat.FixedPosition))
             else:
-                _elements.append((e[0], AnnWhat.FindLocationTrackByColor))
+                _elements.append((e[0], AnnWhat.Moved))
 
         return self.w_annotate2(*_elements, text=text)

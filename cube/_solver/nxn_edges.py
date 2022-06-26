@@ -9,6 +9,7 @@ from cube.app_exceptions import InternalSWError
 from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries
 from cube.model.elements import Color, Edge, PartColorsID, EdgeSlice
+from cube.operator.op_annotation import AnnWhat
 
 
 def use(_):
@@ -211,7 +212,7 @@ class NxNEdges(SolverElement):
 
         self.debug(f"On same edge, going to slice {ltrs}")
 
-        with self.ann.w_edge_slice_annotate(face, *slices):
+        with self.ann.annotate( (slices, AnnWhat.Moved)):
 
             slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
 
@@ -316,7 +317,7 @@ class NxNEdges(SolverElement):
         self.debug(f"Going to slice, sources={source_slice_indices}, target={target_indices}")
 
         # now slice them all
-        with self.ann.w_edge_slice_annotate(face, *source_slices, *target_slices):
+        with self.ann.annotate(([source_slices, target_slices], AnnWhat.Moved)):
 
             slice_alg = Algs.E[[i + 1 for i in target_indices]]
 
@@ -389,7 +390,7 @@ class NxNEdges(SolverElement):
                 slices_to_fix.append(s)
 
         # self.op.toggle_animation_on(enable=True)
-        with self.ann.w_edge_slice_annotate(face, *slices_to_fix):
+        with self.ann.annotate((slices_to_fix, AnnWhat.Moved) ):
             plus_one = [i + 1 for i in slices_indices_to_fix]
             for _ in range(4):
                 self.debug(f"*** Doing parity on R {plus_one}", level=2)
