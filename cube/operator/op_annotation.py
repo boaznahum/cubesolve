@@ -12,7 +12,7 @@ from ..model.elements import Part, PartColorsID, PartEdge, Corner, Edge, CenterS
 from ..viewer.viewer_markers import VMarker, VIEWER_ANNOTATION_KEY
 
 if TYPE_CHECKING:
-    from . import Operator
+    from .cube_operator import Operator
 
 _OP: TypeAlias = "Operator"
 
@@ -23,7 +23,8 @@ _HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
 _ANN_BASE_ELEMENT: TypeAlias = Part | PartColorsID | PartSlice | PartEdge
 
-_ANN_ELEMENT: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | Iterable[_ANN_BASE_ELEMENT] | Iterator["_ANN_ELEMENT"] | Iterable["_ANN_ELEMENT"]
+_ANN_ELEMENT: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | Iterable[_ANN_BASE_ELEMENT] | Iterator[
+    "_ANN_ELEMENT"] | Iterable["_ANN_ELEMENT"]
 
 
 @unique
@@ -222,6 +223,34 @@ class OpAnnotation:
         edges: list[Tuple[PartEdge, bool, VMarker]] = []
         cube = self.cube
 
+        # we invoke a specific method, to stop recursively check for type
+        # we already know the type
+
+        def process_slice_edge(e: PartEdge, what: AnnWhat):
+            if what == AnnWhat.Moved:
+                by_position = False
+            elif what == AnnWhat.FixedPosition:
+                by_position = True
+            else:
+                raise InternalSWError("AnnWhat.Both is applicable only for Part or PartColorID")
+
+            if by_position:
+                marker = VMarker.C2
+            else:
+                marker = VMarker.C1
+
+            edges.append((e, by_position, marker))
+
+        def process_slice(s: PartSlice, what: AnnWhat):
+            part_edge: PartEdge
+            for part_edge in s.edges:
+                process_slice_edge(part_edge, what)
+
+        def process_part(e: Part, what: AnnWhat):
+            s: PartSlice
+            for s in e.all_slices:
+                process_slice(s, what)
+
         def process_element(e: _ANN_BASE_ELEMENT, what: AnnWhat):
 
             # check for clor id before iterator iterable
@@ -229,41 +258,30 @@ class OpAnnotation:
                 part: Part
                 if what in [AnnWhat.Moved, AnnWhat.Both]:
                     part = cube.find_part_by_colors(e)
-                    process_element(part, AnnWhat.Moved)
+                    process_part(part, AnnWhat.Moved)
                 if what in [AnnWhat.FixedPosition, AnnWhat.Both]:
-                    part = cube.find_edge_by_pos_colors(e)
-                    process_element(part, AnnWhat.FixedPosition)
+                    part = cube.find_part_by_pos_colors(e)
+                    process_part(part, AnnWhat.FixedPosition)
 
             elif isinstance(e, (Iterable, Iterator)):
                 for ee in e:
                     process_element(ee, what)
 
             elif isinstance(e, Part):
-                s: PartSlice
-                for s in e.all_slices:
-                    process_element(s, what)
+                if what == AnnWhat.Both:
+                    process_part(e, AnnWhat.Moved)
+                    process_part(e, AnnWhat.FixedPosition)
+                elif what == AnnWhat.Moved:
+                    process_part(e, AnnWhat.Moved)
+                else:
+                    process_part(e, AnnWhat.FixedPosition)
+
             elif isinstance(e, PartSlice):
-                part_edge: PartEdge
-                for part_edge in e.edges:
-                    process_element(part_edge, what)
+                process_slice(e, what)
+
             elif isinstance(e, PartEdge):
-
                 # finally someone need to do the work
-
-                if what == AnnWhat.Moved:
-                    by_position = False
-                elif what == AnnWhat.FixedPosition:
-                    by_position = True
-                else:
-                    raise InternalSWError("AnnWhat.Both is applicable only for Part")
-
-                if by_position:
-                    marker = VMarker.C2
-                else:
-                    marker = VMarker.C1
-
-                edges.append((e, by_position, marker))
-
+                process_slice_edge(e, what)
 
             else:
                 raise InternalSWError(f"Unknown type {type(e)}")
