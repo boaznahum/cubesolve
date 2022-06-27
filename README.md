@@ -143,12 +143,16 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
   Solver , need to rearrange hierarchy and make it abstract, so it can be replaced
 
 ## TODO
-  update remame:
+    update remame:
     
-  mousr scrill zoom in/out
-  ctl up/down zoom in/out
-  
-  up/down/right/left pan cube
-  drag alt move cube
-  
+      mousr scrill zoom in/out
+      ctl up/down zoom in/out
+      
+      up/down/right/left pan cube
+      drag alt move cube
+    
   add model uml, rename PartEdge to SliceFacet
+
+  SS mode should support stop
+
+

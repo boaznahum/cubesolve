@@ -40,6 +40,49 @@ PartSliceHashID = frozenset[FaceName]
 PartType = TypeVar("PartType", bound="Part")
 
 
+class PartName:
+
+    def __init__(self) -> None:
+        super().__init__()
+
+
+@unique
+class CornerName(Enum):
+    FLU = "FLU"
+    FRU = "FRU"
+    FRD = "FRD"
+    FLD = "FLD"
+    BLU = "BLU"
+    BRU = "BRU"
+    BRD = "BRD"
+    BLD = "BLD"
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
+_faces_to_corners: dict[frozenset[FaceName], CornerName] = {}
+
+
+def _faces_2_corner_name(faces: Iterable[FaceName]):
+    global _faces_to_corners
+
+    if not _faces_to_corners:
+        def _a(f1, f2, f3, cn: CornerName):
+            _faces_to_corners[frozenset([f1, f2, f3])] = cn
+
+        _a(FaceName.F, FaceName.L, FaceName.U, CornerName.FLU)
+        _a(FaceName.F, FaceName.R, FaceName.U, CornerName.FRU)
+        _a(FaceName.F, FaceName.R, FaceName.D, CornerName.FRD)
+        _a(FaceName.F, FaceName.L, FaceName.D, CornerName.FLD)
+        _a(FaceName.B, FaceName.L, FaceName.U, CornerName.BLU)
+        _a(FaceName.B, FaceName.R, FaceName.U, CornerName.BRU)
+        _a(FaceName.B, FaceName.R, FaceName.D, CornerName.BRD)
+        _a(FaceName.B, FaceName.L, FaceName.D, CornerName.BLD)
+
+    return _faces_to_corners[frozenset(faces)]
+
+
 class CHelper:
 
     @staticmethod
@@ -171,7 +214,6 @@ class PartSlice(ABC, Hashable):
         # attributes(like color) that are move around with the slice
         self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
 
-
         global _SliceUniqueID
         _SliceUniqueID += 1
         self._unique_id = _SliceUniqueID
@@ -217,10 +259,6 @@ class PartSlice(ABC, Hashable):
             return False
 
         return self._fixed_id == o._fixed_id
-
-    @property
-    def edges(self) -> Iterable[PartEdge]:
-        return self._edges
 
     def get_face_edge(self, face: _Face) -> PartEdge:
         """
@@ -789,7 +827,16 @@ class Part(ABC, CubeElement):
     def annotated_fixed(self) -> bool:
         return any(p.annotated_fixed for p in self._3x3_representative_edges)
 
-    def str2(self) -> str:  # for animation
+    @property
+    def name(self):
+        raise NotImplementedError
+
+    def name_n_faces(self) -> str:  # for animation
+        """
+        return the name of the part with face id - name of faces is on
+        For is3x3 only
+        :return: e.g. 'Edge White/Red'
+        """
         s1 = ""
         s2 = ""
 
@@ -799,7 +846,45 @@ class Part(ABC, CubeElement):
 
         s2 = s2[0:-1]
 
-        return s1 + " " + s2
+        return self.part_name + " " + str(self.name)
+
+    def name_n_faces_colors(self) -> str:  # for animation
+        """
+        return the name of the part with color ID
+        For is3x3 only
+        :return: e.g. 'Edge White/Red'
+        """
+        s1 = ""
+        s2 = ""
+
+        for e in self._3x3_representative_edges:
+            s1 += str(e.face.name.value)
+            s2 += str(color2long(e.color).value) + "/"
+
+        s2 = s2[0:-1]
+
+        return self.part_name + " " + s1 + " " + s2
+
+    @property
+    def name_n_colors(self) -> str:  # for animation
+        """
+        return the name of the part with color Faces ID and colors
+        Actual colors and not colors of face(position)
+        :return: e.g. 'Edge White/Red'
+        """
+        s_colors = ""
+
+        for e in self._3x3_representative_edges:
+            s_colors += str(color2long(e.color).value) + "/"
+
+        s_colors = s_colors[0:-1]
+
+        return self.part_name + " " + s_colors
+
+    @property
+    @abstractmethod
+    def part_name(self) -> str:
+        pass
 
 
 class Center(Part):
@@ -913,6 +998,10 @@ class Center(Part):
             s += "\n"
 
         return s
+
+    @property
+    def part_name(self) -> str:
+        return "Center"
 
 
 class EdgeSlice(PartSlice):
@@ -1433,8 +1522,9 @@ class Edge(Part):
     def __str__(self) -> str:
         return f"{self.e1.face.name.value}{self.e2.face.name.value} " + super().__str__()
 
-    def str2(self) -> str:  # for animation
-        return f"Edge " + super().str2()
+    @property
+    def part_name(self) -> str:
+        return "Edge"
 
 
 class Corner(Part):
@@ -1497,6 +1587,15 @@ class Corner(Part):
     @property
     def is3x3(self) -> bool:
         return True
+
+    @property
+    def name(self) -> CornerName:
+        # todo: optimize it
+        return _faces_2_corner_name((e.face.name for e in self._slice.edges))
+
+    @property
+    def part_name(self) -> str:
+        return "Corner"
 
 
 class SuperElement(CubeElement):

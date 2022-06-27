@@ -68,9 +68,10 @@ class L2(SolverElement):
         if self.solved():
             return  # avoid rotating cube
 
-        self.cmn.bring_face_up(self.white_face.opposite)
+        with self.ann.annotate(h1="Doing L2"):
+            self.cmn.bring_face_up(self.white_face.opposite)
 
-        self._do_edges()
+            self._do_edges()
 
     def _do_edges(self):
 
@@ -82,33 +83,19 @@ class L2(SolverElement):
 
     def _solve_edge(self, edge_id: PartColorsID):
 
-        _source_corner: Edge | None = None
-
-        _target_corner: Edge | None = None
-
         # color tracker
         st: EdgeTracker = EdgeTracker.of_color(self, edge_id)
-
-        # source edge
-        # def se() -> Edge:
-        #     nonlocal _source_corner
-        #     if not _source_corner or _source_corner.colors_id_by_color != edge_id:
-        #         _source_corner = self.cube.find_edge_by_color(edge_id)
-        #     return _source_corner
-
-        # target edge
-        # def te() -> Edge:
-        #     return st.position
-        # nonlocal _target_corner
-        # if not _target_corner or _target_corner.colors_id_by_pos != edge_id:
-        #     _target_corner = self.cube.find_edge_by_pos_colors(edge_id)
-        # return _target_corner
 
         if st.match:
             # because we have cross and L1, so if it matches then it is in position
             self.debug(f"L2-C0. {st.position} matches")
             return
 
+        with self.ann.annotate((edge_id, AnnWhat.Moved), (self.cube.front.edge_top, AnnWhat.FixedPosition),
+                               h2=lambda: f"Bring {st.actual.name_n_colors} to FU"):
+            self.__solve_edge(st, edge_id)
+
+    def __solve_edge(self, st: EdgeTracker, edge_id: PartColorsID):
         cube = self.cube
         up: Face = self.cube.up
         down: Face = up.opposite
@@ -150,23 +137,27 @@ class L2(SolverElement):
         _te_id = _te.colors_id_by_color
         _se_id = _se.colors_id_by_color
 
-        with self.ann.annotate( (edge_id, AnnWhat.Both) ):
 
-            if st.position.on_face(cube.right):
-                self.op.op(self._ur_alg)  # U R U' R' U' F' U F
-            else:
-                self.op.op(self._ul_alg)
+        if st.position.on_face(cube.right):
+            alg = self._ur_alg  # U R U' R' U' F' U F
+        else:
+            alg = self._ul_alg
+
+        with self.ann.annotate(h3=lambda : str(alg)):
+            self.op.op(alg)
 
         assert st.match
 
     @property
     def _ur_alg(self) -> Alg:
-        return Algs.alg("L2-UR", Algs.U, Algs.R, Algs.U.prime, Algs.R.prime, Algs.U.prime, Algs.F.prime, Algs.U, Algs.F)
+        return Algs.alg(None, Algs.U, Algs.R, Algs.U.prime, Algs.R.prime,
+                        Algs.U.prime, Algs.F.prime, Algs.U, Algs.F)
 
     @property
     def _ul_alg(self) -> Alg:
-        return Algs.alg("L2-UL",
-                        Algs.U.prime + Algs.L.prime + Algs.U + Algs.L + Algs.U + Algs.F + Algs.U.prime + Algs.F.prime)
+        return Algs.alg(None,
+                        Algs.U.prime + Algs.L.prime + Algs.U + Algs.L +
+                        Algs.U + Algs.F + Algs.U.prime + Algs.F.prime)
 
     def _bring_edge_to_front_right(self, e: Edge):
         """

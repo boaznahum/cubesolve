@@ -1,14 +1,13 @@
 from collections.abc import Iterable, Iterator
-from contextlib import AbstractContextManager, contextmanager
+from contextlib import contextmanager
 from enum import unique, Enum
 from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal
 
 from ..algs.algs import Algs
 from ..app_exceptions import InternalSWError
 from ..model.cube import Cube
-from ..model.cube_face import Face
 from ..model.cube_queries import CubeQueries
-from ..model.elements import Part, PartColorsID, PartEdge, Corner, Edge, CenterSlice, EdgeSlice, PartSlice
+from ..model.elements import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
 from ..viewer.viewer_markers import VMarker, VIEWER_ANNOTATION_KEY
 
 if TYPE_CHECKING:
@@ -23,8 +22,9 @@ _HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
 _ANN_BASE_ELEMENT: TypeAlias = Part | PartColorsID | PartSlice | PartEdge
 
-_ANN_ELEMENT: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | Iterable[_ANN_BASE_ELEMENT] | Iterator[
-    "_ANN_ELEMENT"] | Iterable["_ANN_ELEMENT"]
+_ANN_ELEMENT_0: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | Iterable[_ANN_BASE_ELEMENT]
+_ANN_ELEMENT_1: TypeAlias = _ANN_ELEMENT_0 | Iterator[_ANN_ELEMENT_0] | Iterable[_ANN_ELEMENT_0]
+_ANN_ELEMENT: TypeAlias = _ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Iterable[_ANN_ELEMENT_1]
 
 
 @unique
@@ -44,12 +44,6 @@ class OpAnnotation:
         super().__init__()
         self.op = op
         self.cube = cube
-
-    def w_annotate(self, *elements: Tuple[Part | PartColorsID, bool],
-                   h1=None,
-                   h2=None,
-                   h3=None) -> AbstractContextManager:
-        return self._w_annotate(*elements, text=(h1, h2, h3))
 
     @property
     def animation_on(self):
@@ -301,150 +295,6 @@ class OpAnnotation:
                                                 text=(h1, h2, h3),
                                                 animation=animation)
 
-    @contextmanager
-    def w_center_slice_annotate(self, *, movable: Iterable[CenterSlice] | Iterator[CenterSlice] | None = None,
-                                fixed: Iterable[CenterSlice] | Iterator[CenterSlice] | None = None,
-                                animation=True):
 
-        """
-        Annotate moved slice
-        :param movable: not consumed if animation is off
-        :param fixed: not consumed if animation is off
-        :param animation:
-        :return:
-        """
 
-        on = self.op.animation_enabled
 
-        global _SLice_Tracking_UniqID
-
-        if (not on) or (not animation):
-            try:
-                yield None
-            finally:
-                return
-
-        edges: list[Tuple[PartEdge, bool, VMarker]] = []
-
-        if movable:
-            for s in movable:
-                edges.append((s.edge, False, VMarker.C1))
-
-        if fixed:
-            for s in fixed:
-                edges.append((s.edge, True, VMarker.C2))
-
-        yield from self._w_slice_edges_annotate(edges, animation=animation)
-
-    @contextmanager
-    def w_edge_slice_annotate(self, face: Face, *slices: EdgeSlice, animation=True):
-
-        """
-        Annotate moved slice
-        :param face:
-        :param animation:
-        if part is given we annotate the part (by color or by fixed), if color is given we search for it
-        :return:
-        """
-
-        on = self.op.animation_enabled
-
-        if (not on) or (not animation):
-            try:
-                yield None
-            finally:
-                return
-
-        edges: list[Tuple[PartEdge, bool, VMarker]] = []
-
-        for s in slices:
-            edges.append((s.get_face_edge(face), False, VMarker.C1))
-
-        yield from self._w_slice_edges_annotate(edges, animation=animation)
-
-    @contextmanager
-    def _none(self):
-        try:
-            yield None
-        finally:
-            return
-
-    @contextmanager
-    def w_annotate2(self, *elements: Tuple[Part | PartColorsID, AnnWhat],
-                    animation=True,
-                    text: _HEADS = None):
-
-        """
-        :param text:
-        :param animation:
-        :param elements:  bool in tuple is  'annotated by fixed_location'
-        if part is given we annotate the part (by color or by fixed), if color is given we search for it
-        :return:
-        """
-
-        on = self.op.animation_enabled
-
-        if (not on) or (not animation):
-            try:
-                yield None
-            finally:
-                return
-
-        edges: list[Tuple[PartEdge, bool, VMarker]] = []
-
-        cube = self.cube
-
-        for e in elements:
-            pc = e[0]
-            w: AnnWhat = e[1]
-
-            by_position = w == AnnWhat.FixedPosition
-
-            part: Part
-
-            if isinstance(pc, frozenset):
-
-                if by_position:
-                    part = cube.find_part_by_pos_colors(pc)
-                else:
-                    part = cube.find_part_by_colors(pc)
-            else:
-                part = pc
-
-            if by_position:
-                marker = VMarker.C2
-            else:
-                marker = VMarker.C1
-
-            s: PartSlice
-            for s in part.all_slices:
-                for eg in s.edges:
-                    edges.append((eg, by_position, marker))
-
-        yield from self._w_slice_edges_annotate(edges, animation=animation, text=text)
-
-    def _w_annotate(self, *elements: Tuple[Part | PartColorsID, bool],
-                    text: _HEADS = None) -> AbstractContextManager:
-
-        """
-        :param elements:  bool in tuple is  'annotated by fixed_location'
-        if part is given we annotate the part (by color or by fixed), if color is given we search for it
-        :param un_an:
-        :return:
-        """
-
-        on = self.op.animation_enabled
-
-        if not on:
-            return self._none()
-
-        _elements: list[Tuple[Part | PartColorsID, AnnWhat]] = []
-
-        for e in elements:
-
-            if e[1]:
-                _elements.append((e[0], AnnWhat.FixedPosition))
-            else:
-                _elements.append((e[0], AnnWhat.Moved))
-
-        return self.w_annotate2(*_elements, text=text)

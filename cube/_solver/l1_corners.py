@@ -44,9 +44,10 @@ class L1Corners(SolverElement):
         if self.is_corners():
             return  # avoid rotating cube
 
-        self.cmn.bring_face_up(self.white_face)
+        with self.ann.annotate(h1="Doing L1 Corners"):
+            self.cmn.bring_face_up(self.white_face)
 
-        self._do_corners()
+            self._do_corners()
 
     def _do_corners(self):
 
@@ -63,7 +64,8 @@ class L1Corners(SolverElement):
     def _solve_corner(self, corner_id: PartColorsID):
 
         with self.ann.annotate(
-                (corner_id, AnnWhat.Both)):
+                (corner_id, AnnWhat.Moved), (self.cube.front.corner_top_right, AnnWhat.FixedPosition),
+        h2=lambda : f"Bringing {self.cube.find_corner_by_colors(corner_id).name_n_colors} to {self.cube.front.corner_top_right.name} "):
             self.__solve_corner(corner_id)
 
     def __solve_corner(self, corner_id: PartColorsID):
