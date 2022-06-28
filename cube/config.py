@@ -58,6 +58,10 @@ KEYBOAD_INPUT_DEBUG = True
 #   or vice versa if FALSE
 INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM = True
 
+
+############## Operator ##############
+OPERATOR_SHOW_ALG_ANNOTATION=True
+
 ##############  Solver  ###################
 OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = True  # under test doesn't work well, see _todo
 # Size 8 scramble 1:

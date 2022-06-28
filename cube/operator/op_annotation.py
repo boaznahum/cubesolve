@@ -40,10 +40,10 @@ class AnnWhat(Enum):
 
 class OpAnnotation:
 
-    def __init__(self, cube: Cube, op: _OP) -> None:
+    def __init__(self, op: _OP) -> None:
         super().__init__()
         self.op = op
-        self.cube = cube
+        self.cube = op.cube
 
     @property
     def animation_on(self):
@@ -192,7 +192,7 @@ class OpAnnotation:
         Annotate moved slice
         :param h1: tet headline 1
         :param h2: tet headline 2
-        :param h3: tet headline 3
+        :param h3: tet headline 3, preserved for alg
         :param elements: iterators/iterable are consumed once and only once  if animation is  enabled
                 AnnWhat.Moved track element when it moved around
                 AnnWhat.FixedPosition annotate at fixed location
