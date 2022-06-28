@@ -73,7 +73,17 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
 
 ### Solving
 
+    SHIFT + any one the one below force animation off (useful for skipping to steps)
     ?/  - Solve the cube, See above animation mode
+    F1 - First Layer
+    F2 - Second Layer
+    Ctrl+F3 - Third Layer cross
+    F3 - Third Layer
+
+    F4 - Big cube centers
+    F5 - Big cube edges
+
+    
 
 
 ### Testing
@@ -150,6 +160,8 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
       
       up/down/right/left pan cube
       drag alt move cube
+
+      
     
   add model uml, rename PartEdge to SliceFacet
 

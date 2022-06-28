@@ -107,7 +107,7 @@ class Operator:
         """
         :return: the undo alg
         """
-        with self.suspended_animation(False):
+        with self.with_animation(animation=False):
             if self.history:
                 alg = self._history.pop()
                 _history = [*self._history]
@@ -138,17 +138,23 @@ class Operator:
         self._history.clear()
 
     @contextmanager
-    def suspended_animation(self, suspend=True):
+    def with_animation(self, animation: bool | None = None):
 
-        if suspend:
-            an = self._animation_hook
-            self._animation_hook = None
+        """
+
+        :param animation: None don't change current, False/True force False/True
+        :return:
+        """
+
+        if animation is None:
+            yield None  # leave the default
+        else:
+            an = self._animation_enabled
+            self._animation_enabled = animation
             try:
                 yield None
             finally:
-                self._animation_hook = an
-        else:
-            yield None
+                self._animation_enabled = an
 
     @contextmanager
     def save_history(self):

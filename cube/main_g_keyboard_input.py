@@ -185,6 +185,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
         no_operation = False
 
+        solver_animation = False if (modifiers & key.MOD_SHIFT) else None
+
         # noinspection PyProtectedMember
         match value:
 
@@ -411,29 +413,29 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
             case key.SLASH:
                 # solution = slv.solution().simplify()
                 # op.op(solution)
-                slv.solve()
+                slv.solve(animation=solver_animation)
 
             case key.F1:
-                slv.solve(what=SolveStep.L1)
+                slv.solve(what=SolveStep.L1, animation=solver_animation)
 
             case key.F2:
-                slv.solve(what=SolveStep.L2)
+                slv.solve(what=SolveStep.L2, animation=solver_animation)
 
             case key.F3:
 
                 if modifiers and key.MOD_CTRL:
-                    slv.solve(what=SolveStep.L3x)
+                    slv.solve(what=SolveStep.L3x, animation=solver_animation)
                 else:
-                    slv.solve(what=SolveStep.L3)
+                    slv.solve(what=SolveStep.L3, animation=solver_animation)
 
             case key.F4:
 
-                slv.solve(what=SolveStep.NxNCenters)
+                slv.solve(what=SolveStep.NxNCenters, animation=solver_animation)
 
             case key.F5:
 
                 n0 = op.count
-                slv.solve(what=SolveStep.NxNEdges)
+                slv.solve(what=SolveStep.NxNEdges, animation=solver_animation)
                 window._last_edge_solve_count = op.count - n0
 
             case key.T:

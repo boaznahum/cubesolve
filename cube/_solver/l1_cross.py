@@ -39,7 +39,7 @@ class L1Cross(SolverElement):
         wf: Face = self.white_face
         return self.cmn.rotate_and_check(wf, self._is_cross) >= 0
 
-    def solve_l0_cross(self):
+    def solve(self):
 
         if self._is_cross():  #
             return  # avoid rotating cube

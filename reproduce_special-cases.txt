@@ -1,7 +1,8 @@
 Partial edge parity:
- size 6, scramble 2
+ size 6, scramble 1 and 2
+
 Big cube even full edge parity
- size 6, scramble 2
+ size 6, scramble 1 and 3
 
 Big cube even corner swap
  size 6, scramble 2

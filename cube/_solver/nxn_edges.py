@@ -9,6 +9,7 @@ from cube.app_exceptions import InternalSWError
 from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries
 from cube.model.elements import Color, Edge, PartColorsID, EdgeSlice
+from cube.model.misc import ModelHelper
 from cube.operator.op_annotation import AnnWhat
 
 
@@ -52,21 +53,25 @@ class NxNEdges(SolverElement):
         :return: True if edge parity was performed
         """
 
-        self._do_first_11()
-
         if self._is_solved():
             return False
 
-        assert self._left_to_fix == 1
+        with self.ann.annotate(h1="Big cube edges"):
+            self._do_first_11()
 
-        # even cube can have edge parity too
-        self._do_last_edge_parity()
+            if self._is_solved():
+                return False
 
-        self._do_first_11()
+            assert self._left_to_fix == 1
 
-        assert self._is_solved()
+            # even cube can have edge parity too
+            self._do_last_edge_parity()
 
-        return True
+            self._do_first_11()
+
+            assert self._is_solved()
+
+            return True
 
     def _do_first_11(self):
         """
@@ -109,10 +114,6 @@ class NxNEdges(SolverElement):
         n_slices = self.cube.n_slices
         color_un_ordered: PartColorsID
 
-        self.debug(f"Brining {edge} to front-right")
-        self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
-        edge = self.cube.front.edge_left
-
         face = self.cube.front
 
         if n_slices % 2:
@@ -123,11 +124,17 @@ class NxNEdges(SolverElement):
             ordered_color = self._find_max_of_color(face, edge)
             color_un_ordered = frozenset(ordered_color)
 
-        self._solve_on_front_left(color_un_ordered, ordered_color)
+        with self.ann.annotate(h2=lambda: f"Fixing edge  {ModelHelper.color_id_to_name(ordered_color)}"):
 
-        self._report_done(f"Done {edge}")
+            self.debug(f"Brining {edge} to front-right")
+            self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
+            edge = self.cube.front.edge_left
 
-        return True
+            self._solve_on_front_left(color_un_ordered, ordered_color)
+
+            self._report_done(f"Done {edge}")
+
+            return True
 
     def _solve_on_front_left(self, color_un_ordered: PartColorsID, ordered_color: Tuple[Color, Color]):
         """
@@ -212,7 +219,7 @@ class NxNEdges(SolverElement):
 
         self.debug(f"On same edge, going to slice {ltrs}")
 
-        with self.ann.annotate( (slices, AnnWhat.Moved)):
+        with self.ann.annotate((slices, AnnWhat.Moved)):
 
             slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
 

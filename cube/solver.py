@@ -1,4 +1,4 @@
-from enum import Enum, unique
+from enum import Enum, unique, IntFlag
 
 from . import config
 from ._solver.base_solver import ISolver
@@ -157,12 +157,21 @@ class Solver(ISolver):
 
         return s
 
-    def solve(self, debug: bool | None = None, animation=True, what: SolveStep = SolveStep.ALL) -> SolverResults:
+    def solve(self, debug: bool | None = None, animation: bool | None = True,
+              what: SolveStep = SolveStep.ALL) -> SolverResults:
+
+        """
+
+        :param debug:
+        :param animation: not None force True/ Flalse
+        :param what:
+        :return:
+        """
 
         if debug is None:
             debug = self._is_debug_enabled
 
-        with self._op.suspended_animation(not animation):
+        with self._op.with_animation(animation=animation):
             try:
                 return self._solve(debug, what)
             except OpAborted:
@@ -178,6 +187,37 @@ class Solver(ISolver):
         even_corner_swap_was_detected = False
         partial_edge_was_detected = False
 
+        def _centers():
+            """ Centers and edges are independent"""
+            self.nxn_centers.solve()
+
+        def _edges():
+            """ Centers and edges are independent"""
+            nonlocal partial_edge_was_detected
+            if self.nxn_edges.solve():
+                partial_edge_was_detected = True
+
+        def _reduce():
+            _centers()
+            _edges()
+
+        def _l1():
+            _reduce()
+            self.l1_cross.solve()
+            self.l1_corners.solve()
+
+        def _l2():
+            _l1()
+            self.l2.solve()
+
+        def _l3x():
+            _l2()
+            self.l3_cross.solve()
+
+        def _l3():
+            _l3x()
+            self.l3_corners.solve()
+
         _d = self._debug_override
         try:
             self._debug_override = _debug
@@ -191,39 +231,28 @@ class Solver(ISolver):
                 try:
                     match what:
 
-                        case SolveStep.ALL | SolveStep.L3:
-                            self.nxn_centers.solve()
-                            if self.nxn_edges.solve():
-                                partial_edge_was_detected = True
-                            self.l1_cross.solve_l0_cross()
-                            self.l1_corners.solve()
-                            self.l2.solve()
-                            self.l3_cross.solve()
-                            self.l3_corners.solve()
-
-                        case SolveStep.L3x:
-                            self.l1_cross.solve_l0_cross()
-                            self.l1_corners.solve()
-                            self.l2.solve()
-                            self.l3_cross.solve()
+                        case SolveStep.L1:
+                            _l1()
 
                         case SolveStep.L2:
-                            self.l1_cross.solve_l0_cross()
-                            self.l1_corners.solve()
-                            self.l2.solve()
 
-                        case SolveStep.L1:
-                            self.l1_cross.solve_l0_cross()
-                            self.l1_corners.solve()
+                            _l2()
+
+                        case SolveStep.ALL | SolveStep.L3:
+                            _l3()
+
+                        case SolveStep.L3x:
+                            _l3x()
+
+                        case SolveStep.L3:
+                            _l3()
 
                         case SolveStep.NxNCenters:
-                            self.nxn_centers.solve()
+                            _centers()
 
                         case SolveStep.NxNEdges:
-                            # centres are not must
-                            # self.nxn_centers.solve()
-                            if self.nxn_edges.solve():
-                                partial_edge_was_detected = True
+                            _edges()
+
 
                 except EvenCubeEdgeParityException:
                     self.debug(f"Catch even edge parity in iteration #{i}")
@@ -277,7 +306,7 @@ class Solver(ISolver):
             n = len(self.op.history)
             solution_algs = []
 
-            with self._op.suspended_animation():
+            with self._op.with_animation(animation=False):
 
                 with self._op.save_history():  # not really needed
                     self.solve(debug=False, animation=False)

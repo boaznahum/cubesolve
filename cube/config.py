@@ -52,7 +52,7 @@ ANIMATION_TEXT: list[Tuple[int, int, int, Tuple[int, int, int, int], bool]] = [
 
 ##############   Input handling
 
-KEYBOAD_INPUT_DEBUG = True
+KEYBOAD_INPUT_DEBUG = False
 
 #  If true, model rotating is done by dragging and right mouse click, rotating faces/slicing by dragging left bottom
 #   or vice versa if FALSE
