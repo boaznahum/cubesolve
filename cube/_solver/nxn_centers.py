@@ -75,6 +75,8 @@ class FaceLoc:
         return f"{self.color.name}@{self.face}"
 
 
+
+
 class NxNCenters(SolverElement):
     D_LEVEL = 3
 
@@ -101,9 +103,13 @@ class NxNCenters(SolverElement):
         return self._is_solved()
 
     def solve(self):
-
         if self._is_solved():
             return  # avoid rotating cube
+
+        with self.ann.annotate(h1="Big cube centers"):
+            self._solve()
+
+    def _solve(self):
 
         cube = self.cube
 
@@ -137,6 +143,7 @@ class NxNCenters(SolverElement):
 
             # so we don't need this also, otherwise _track_two_last should crash
             self._do_faces([f5], True, True)
+            self._asserts_is_boy([f1, f2, f3, f4, f5, f6])
 
             # todo: convert tracker to light tracker by color
             f5 = self._trace_face_by_slice_color(f5.face, f5.color)
@@ -144,13 +151,22 @@ class NxNCenters(SolverElement):
 
             faces = [f1, f2, f3, f4, f5, f6]
 
+            self._asserts_is_boy(faces)
+
+            #self._faces = faces
+
             # now each face has at least one color, so
 
         while True:
             if not self._do_faces(faces, False, False):
                 break
+            self._asserts_is_boy(faces)
+
+        self._asserts_is_boy(faces)
 
         self._do_faces(faces, False, True)
+
+        self._asserts_is_boy(faces)
 
         assert self._is_solved()
 
@@ -162,6 +178,8 @@ class NxNCenters(SolverElement):
             # we need to locate the face by original_color, b ut on odd cube, the color is of the center
             if self._do_center(f, minimal_bring_one_color, use_back_too):
                 work_done = True
+                if len(faces) == 6:
+                    self._asserts_is_boy(faces)
             # if NxNCenters.work_on_b or not work_done:
             #     break
 
@@ -199,6 +217,26 @@ class NxNCenters(SolverElement):
         f3, f3_color = self._find_face_with_max_colors(left, left_colors)
 
         return self._trace_face_by_slice_color(f3, f3_color)
+
+    # noinspection PyUnreachableCode
+    def _asserts_is_boy(self, faces: Iterable[FaceLoc]):
+
+        if True:
+            return
+
+        layout = {f.face.name: f.color for f in faces}
+
+        cl: CubeLayout = CubeLayout(False, layout)
+
+        is_boy = cl.same(self.cube.original_layout)
+
+        if not is_boy:
+            print(cl)
+            print()
+
+        assert is_boy
+
+
 
     def _create_f5_pred(self, four_first: Sequence[FaceLoc], color) -> Pred[Face]:
 
@@ -256,6 +294,7 @@ class NxNCenters(SolverElement):
             return False
 
         return _pred
+
 
     def _track_two_last(self, four_first: Sequence[FaceLoc]) -> Tuple[FaceLoc, FaceLoc]:
 
@@ -604,6 +643,7 @@ class NxNCenters(SolverElement):
                 # ok now swap
 
                 self._swap_slice(min_target_slice, face, _slice, source_face)
+#                self._asserts_is_boy(self._faces)
 
                 return True
 

@@ -2,14 +2,15 @@ from typing import Tuple
 
 ######### Model  ########
 
+# Only initial value, can be changed
+CUBE_SIZE = 6
+
 SHORT_PART_NAME = False
 DONT_OPTIMIZED_PART_ID = True
 PRINT_CUBE_AS_TEXT_DURING_SOLVE = False
 
 CHECK_CUBE_SANITY = False
 
-# Only initial value, can be changed
-CUBE_SIZE = 3
 
 ###### Operator ####
 
