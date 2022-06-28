@@ -5,10 +5,10 @@ Feature: Fix scramble also to invert and multiple and generate sub lists, but pr
 BUG: When swap slices is enabled, even cube test fails
 
 Feature: swap complete slices - Done, but only destination zero slices
-Feature zoom/pan  # done need to update readme
-Feature: WAIT cursor on scramble
 Feature: Keyboard history
 
 Bug: Alt-c should be handled in Both modes
+
+Bug: self annotation cause daly in animation
 
 

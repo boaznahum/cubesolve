@@ -39,6 +39,18 @@ class AnimationText:
         :param h3: if not none h3 is replaced on top of stack
         :return:
         """
+
+        def replace(prev, new: str):
+            if prev is None:
+                return new
+
+            if new is None:
+                return new
+
+            if new.startswith("+"):
+                return prev + " " + new[1:]
+
+
         stack = self._stack
         if stack:
             top = stack[len(stack) - 1]
@@ -53,10 +65,10 @@ class AnimationText:
 
         if h1 is not None:  # "" also replace all
             th1 = h1
-            th2 = h2  # might be None
+            th2 = replace(th2, h2)  # might be None
             th3 = h3  # # might be None
         elif h2 is not None:
-            th2 = h2
+            th2 = replace(th2, h2)
             th3 = h3
         elif h3 is not None:
             th3 = h3

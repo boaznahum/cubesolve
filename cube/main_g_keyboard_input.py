@@ -1,4 +1,5 @@
 import traceback
+from contextlib import contextmanager
 
 import pyglet  # type: ignore
 from pyglet.window import key  # type: ignore
@@ -14,6 +15,11 @@ from .model.cube_boy import FaceName
 from .solver import Solver, SolveStep
 
 good = Algs.bigAlg("good")
+
+
+
+
+
 
 
 def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
@@ -366,12 +372,15 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                         op.op(alg, inv)
                     else:
                         alg = Algs.scramble(app.cube.size, n=100)
+
                         op.op(alg, inv)
 
             case key._1:
                 # noinspection PyProtectedMember
                 alg = Algs.scramble(app.cube.size, value - key._0, 5)
-                op.op(alg, inv, animation=False)
+
+                with _wait_cursor(window):
+                    op.op(alg, inv, animation=False)
 
             case key._2 | key._3 | key._4 | key._5 | key._6:
 
@@ -382,7 +391,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     good = algs.BigAlg("good")
                     for a in big_alg.algs:
                         try:
-                            op.op(a, animation=False)
+                            with _wait_cursor(window):
+                                op.op(a, animation=False)
                             good = good + a
                         except:
                             from model.cube_queries import CubeQueries
@@ -394,7 +404,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     print("Rerunning good:", good)
                     for a in good.algs:
                         try:
-                            op.op(a, animation=False)
+                            with _wait_cursor(window):
+                                op.op(a, animation=False)
                             from model.cube_queries import CubeQueries
                             CubeQueries.print_dist(app.cube)
                         except:
@@ -405,7 +416,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     # to match test int
                     # noinspection PyProtectedMember
                     alg = Algs.scramble(app.cube.size, value - key._0)
-                    op.op(alg, inv, animation=False)
+                    with _wait_cursor(window):
+                        op.op(alg, inv, animation=False)
 
             case key.COMMA:
                 op.undo()
@@ -450,9 +462,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     assert slv.is_solved
                 else:
 
-                    cursor = window.get_system_mouse_cursor(window.CURSOR_WAIT)
-                    window.set_mouse_cursor(cursor)
-                    try:  # test
+                    with _wait_cursor(window):
                         nn = config.TEST_NUMBER_OF_SCRAMBLE_ITERATIONS
                         ll = 0
                         count = 0
@@ -490,8 +500,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                                 raise
                         print()
                         print(f"Count={count}, average={count / n_loops}")
-                    finally:
-                        window.set_mouse_cursor(None)
 
             case key.Q:
                 window.close()
@@ -511,3 +519,14 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
             print("keyboard input main decide not to update gui elements")
 
     return done
+
+
+@contextmanager
+def _wait_cursor(window: AbstractWindow):
+    cursor = window.get_system_mouse_cursor(window.CURSOR_WAIT)
+    window.set_mouse_cursor(cursor)
+    try:  # test
+        yield None
+
+    finally:
+        window.set_mouse_cursor(None)

@@ -9,11 +9,13 @@ from cube.algs import algs
 from cube.algs.algs import Algs
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
-from cube.model.cube_boy import CubeLayout
+from cube.model.cube_boy import CubeLayout, color2long
 from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries, Pred
 from cube.model.elements import FaceName, Color, CenterSlice
 from cube.operator.op_annotation import AnnWhat
+
+_TRACKER_KEY_PREFIX = "_nxn_centers_track:"
 
 
 def use(_):
@@ -42,10 +44,11 @@ class _CompleteSlice:
     index: int  # of row/column
     n_matches: int  # number of pieces match color
 
-    def __init__(self, is_row: bool, index: int, n_matches: int) -> None:
+    def __init__(self, is_row: bool, index: int, n_matches: int, contains_trackers) -> None:
         self.is_row = is_row
         self.index = index
         self.n_matches = n_matches
+        self.contains_track_slice = contains_trackers
 
 
 def _pred_to_tracker(cube, pred: Pred[Face]) -> FaceTracker:
@@ -411,12 +414,21 @@ class NxNCenters(SolverElement):
         _slice = f.center.get_center_slice(rc)
         return self._trace_face_by_slice(_slice)
 
+    @staticmethod
+    def _is_track_slice(s: CenterSlice):
+
+        for k in s.c_attributes.keys():
+            if isinstance(k, str) and k.startswith(_TRACKER_KEY_PREFIX):
+                return True
+
+        return False
+
     def _trace_face_by_slice(self, _slice) -> FaceLoc:
 
         global _tracer_unique_id
         _tracer_unique_id += 1
 
-        key = "track:" + str(_slice.color) + str(_tracer_unique_id)
+        key = _TRACKER_KEY_PREFIX + str(_slice.color) + str(_tracer_unique_id)
         _slice.edge.c_attributes[key] = True
 
         def _slice_pred(s: CenterSlice):
@@ -467,19 +479,32 @@ class NxNCenters(SolverElement):
         self.debug(f"Working on face {face}",
                    level=1)
 
-        cube = self.cube
+        with self.ann.annotate(h2=f"Doing face {color2long(face_loc.color).value}"):
+            cube = self.cube
 
-        # we loop bringing all adjusted faces up
-        cmn.bring_face_front(face_loc.face)
-        # from here face is no longer valid
-        # so
+            # we loop bringing all adjusted faces up
+            cmn.bring_face_front(face_loc.face)
+            # from here face is no longer valid
+            # so
 
-        work_done = False
+            work_done = False
 
-        if any(self._has_color_on_face(f, color) for f in cube.front.adjusted_faces()):
-            for _ in range(3):  # 3 faces
-                # need to optimize ,maybe no sources on this face
+            if any(self._has_color_on_face(f, color) for f in cube.front.adjusted_faces()):
+                for _ in range(3):  # 3 faces
+                    # need to optimize ,maybe no sources on this face
 
+                    # don't use face - it was moved !!!
+                    if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up):
+                        work_done = True
+                        if minimal_bring_one_color:
+                            return work_done
+
+                    if self._is_face_solved(face_loc.face, color):
+                        return work_done
+
+                    self._bring_face_up_preserve_front(cube.left)
+
+                # on the last face
                 # don't use face - it was moved !!!
                 if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up):
                     work_done = True
@@ -489,25 +514,13 @@ class NxNCenters(SolverElement):
                 if self._is_face_solved(face_loc.face, color):
                     return work_done
 
-                self._bring_face_up_preserve_front(cube.left)
+            if use_back_too:
+                # now from back
+                # don't use face - it was moved !!!
+                if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.back):
+                    work_done = True
 
-            # on the last face
-            # don't use face - it was moved !!!
-            if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up):
-                work_done = True
-                if minimal_bring_one_color:
-                    return work_done
-
-            if self._is_face_solved(face_loc.face, color):
-                return work_done
-
-        if use_back_too:
-            # now from back
-            # don't use face - it was moved !!!
-            if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.back):
-                work_done = True
-
-        return work_done
+            return work_done
 
     def _do_center_from_face(self, face: Face, minimal_bring_one_color, color: Color, source_face: Face) -> bool:
 
@@ -628,6 +641,9 @@ class NxNCenters(SolverElement):
             if index == odd_mid_slice:
                 continue  # skip this one
 
+            if _slice.contains_track_slice:
+                continue # we can't move it happens in even cube
+
             target_slices = slices_on_face.get(index)
 
             if target_slices is None:
@@ -642,7 +658,8 @@ class NxNCenters(SolverElement):
                     and _slice.n_matches > min_target_slice.n_matches:
                 # ok now swap
 
-                self._swap_slice(min_target_slice, face, _slice, source_face)
+                with self.ann.annotate(h2=f"+Swap complete slice"):
+                    self._swap_slice(min_target_slice, face, _slice, source_face)
 #                self._asserts_is_boy(self._faces)
 
                 return True
@@ -1122,7 +1139,15 @@ class NxNCenters(SolverElement):
 
     @staticmethod
     def _count_colors_on_block(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
-                               ignore_if_back=False):
+                               ignore_if_back=False) -> int:
+
+        n,_ = NxNCenters._count_colors_on_block_and_tracker(color, source_face, rc1, rc2, ignore_if_back)
+
+        return n
+
+    @staticmethod
+    def _count_colors_on_block_and_tracker(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
+                               ignore_if_back=False) -> Tuple[int, int]:
 
         """
         Count number of centerpieces on center that match color
@@ -1157,12 +1182,17 @@ class NxNCenters(SolverElement):
             c1, c2 = c2, c1
 
         _count = 0
+        _trackers = 0
         for r in range(r1, r2 + 1):
             for c in range(c1, c2 + 1):
-                if color == source_face.center.get_center_slice((r, c)).color:
+                center_slice = source_face.center.get_center_slice((r, c))
+                if color == center_slice.color:
                     _count += 1
+                if not _trackers and NxNCenters._is_track_slice(center_slice):
+                    _trackers += 1
 
-        return _count
+
+        return _count, _trackers
 
     def _search_slices_on_face(self, face, color, index: int | None, search_max: bool) -> list[_CompleteSlice]:
 
@@ -1192,20 +1222,20 @@ class NxNCenters(SolverElement):
         _slices = []
         for r in rows:
 
-            n = self._count_colors_on_block(color, face, (r, 0), (r, nm1), ignore_if_back=True)
+            n, t = self._count_colors_on_block_and_tracker(color, face, (r, 0), (r, nm1), ignore_if_back=True)
 
             if n > 1 or not search_max:  # one is not interesting, will be handled by communicator
                 # if we search for minimum than we want zero too
-                _slice = _CompleteSlice(True, r, n)
+                _slice = _CompleteSlice(True, r, n, t > 0)
                 _slices.append(_slice)
 
         for c in columns:
 
-            n = self._count_colors_on_block(color, face, (0, c), (nm1, c), ignore_if_back=True)
+            n, t  = self._count_colors_on_block_and_tracker(color, face, (0, c), (nm1, c), ignore_if_back=True)
 
             if n > 1 or not search_max:  # one is not interesting, will be handled by communicator
                 # if we search for minimum than we want zero too
-                _slice = _CompleteSlice(False, c, n)
+                _slice = _CompleteSlice(False, c, n, t > 0)
                 _slices.append(_slice)
 
         _slices = sorted(_slices, key=lambda s: s.n_matches, reverse=search_max)

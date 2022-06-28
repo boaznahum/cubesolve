@@ -25,6 +25,7 @@ class Color(Enum):
     RED = "R"
     WHITE = "W"
 
+
 class ColorLong(Enum):
     BLUE = "Blue"
     ORANGE = "Orange"
@@ -33,17 +34,21 @@ class ColorLong(Enum):
     RED = "Red"
     WHITE = "White"
 
+
 _color2long = {
-    Color.BLUE:ColorLong.BLUE,
-    Color.ORANGE:ColorLong.ORANGE,
-    Color.YELLOW:ColorLong.YELLOW,
-    Color.GREEN:ColorLong.GREEN,
-    Color.RED:ColorLong.RED,
-    Color.WHITE:ColorLong.WHITE,
+    Color.BLUE: ColorLong.BLUE,
+    Color.ORANGE: ColorLong.ORANGE,
+    Color.YELLOW: ColorLong.YELLOW,
+    Color.GREEN: ColorLong.GREEN,
+    Color.RED: ColorLong.RED,
+    Color.WHITE: ColorLong.WHITE,
 }
 
-def color2long(c:Color) -> ColorLong:
+
+def color2long(c: Color) -> ColorLong:
     return _color2long[c]
+
+
 class CubeLayout:
     _opposite: Mapping[FaceName, FaceName] = {FaceName.F: FaceName.B, FaceName.U: FaceName.D, FaceName.L: FaceName.R}
 
@@ -55,7 +60,7 @@ class CubeLayout:
         super().__init__()
         self._faces: dict[FaceName, Color] = dict(faces)
         self._read_only = read_only
-        self._edge_colors : Collection[frozenset[Color]] | None = None
+        self._edge_colors: Collection[frozenset[Color]] | None = None
 
     def colors(self) -> Collection[Color]:
         return [*self._faces.values()]
@@ -65,7 +70,7 @@ class CubeLayout:
         if self._edge_colors is not None:
             return self._edge_colors
 
-        colors:set[frozenset[Color]] = set()
+        colors: set[frozenset[Color]] = set()
 
         for f1, c1 in self._faces.items():
             for f2, c2 in self._faces.items():
@@ -77,11 +82,6 @@ class CubeLayout:
         self._edge_colors = colors
 
         return self._edge_colors
-
-
-
-
-
 
     @staticmethod
     def opposite(fn: FaceName) -> FaceName:
