@@ -14,7 +14,8 @@ class Operator:
     __slots__ = ["_cube", "_history", "_animation_hook",
                  "_animation_running", "_self_annotation_running",
                  "_aborted", "_animation_enabled",
-                 "_app_state"]
+                 "_app_state",
+                 "_annotation"]
 
     def __init__(self, cube: Cube,
                  app_state: ApplicationAndViewState,  # PATCH, operator should hold SS mode
@@ -28,6 +29,10 @@ class Operator:
         self._animation_enabled: bool = animation_enabled
         self._app_state = app_state
         self._self_annotation_running = False
+
+        if config.OPERATOR_SHOW_ALG_ANNOTATION:
+            from cube.operator.op_annotation import OpAnnotation
+            self._annotation: OpAnnotation = OpAnnotation(self)
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
@@ -80,8 +85,7 @@ class Operator:
                 # prevent recursion
                 self._self_annotation_running = True
                 try:
-                    from cube.operator.op_annotation import OpAnnotation
-                    ann = OpAnnotation(self)
+                    ann = self._annotation
                     with ann.annotate(h3=str(alg)):
                         _do_animation()
                 finally:
@@ -163,10 +167,6 @@ class Operator:
             yield None
         finally:
             self._history[:] = _history
-
-    @property
-    def is_with_animation(self):
-        return self._animation_hook and self._animation_hook
 
     @property
     def is_animation_running(self):

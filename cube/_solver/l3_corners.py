@@ -194,9 +194,10 @@ class L3Corners(SolverElement):
 
         alg = Algs.alg(None,
                        Algs.R[2:nh + 1] * 2, Algs.U * 2,
-                       (Algs.R[2:nh + 1] * 2 + Algs.U[1:nh + 1] * 2) * 2,
-                       #Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2
+                       Algs.R[2:nh + 1] * 2 + Algs.U[1:nh + 1] * 2,
+                       Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2
                        )
 
         with self.ann.annotate(h1="Corner swap(PLL Parity)"):
             self.op.op(alg)
+

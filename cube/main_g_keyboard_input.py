@@ -376,8 +376,13 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                         op.op(alg, inv)
 
             case key._1:
-                # noinspection PyProtectedMember
-                alg = Algs.scramble(app.cube.size, value - key._0, 5)
+
+                if modifiers and key.MOD_SHIFT:  # test -1
+                    scramble_key = -1
+                else:
+                    scramble_key = value - key._0
+
+                alg = Algs.scramble(app.cube.size, scramble_key, 5)
 
                 with _wait_cursor(window):
                     op.op(alg, inv, animation=False)
