@@ -1,9 +1,8 @@
 Generalize slice walking and use in communicator
 
-Feature: Fix scramble also to invert and multiple and generate sub lists
+Feature: Fix scramble also to invert and multiple and generate sub lists, but preserve current version
 
-Feature: try to optimize, work less on B
-
+BUG: When swap slices is enabled, even cube test fails
 
 Feature: swap complete slices - Done, but only destination zero slices
 Feature zoom/pan  # done need to update readme
