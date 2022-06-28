@@ -16,7 +16,7 @@ class SolverElement(CubeSupplier):
 
     def __init__(self, solver: ISolver) -> None:
         self._solver = solver
-        self._ann = OpAnnotation(solver.cube, solver.op)
+        self._ann = OpAnnotation(solver.op)
 
     def debug(self, *args):
         self._solver.debug(args)
