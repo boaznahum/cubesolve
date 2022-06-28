@@ -43,6 +43,11 @@ class L3Corners(SolverElement):
         if self._is_solved():
             return  # avoid rotating cube
 
+        with self.ann.annotate(h1="Doing L3 Corners"):
+            self._solve()
+
+    def _solve(self):
+
         # we assume we have a cross
         self.cmn.bring_face_up(self.white_face.opposite)
 
@@ -61,8 +66,11 @@ class L3Corners(SolverElement):
         if Part.all_match_faces(yf.corners):
             return True
 
-        self._do_positions(yf)
-        self._do_orientation(yf)
+        with self.ann.annotate(h1="+- Position"):
+            self._do_positions(yf)
+
+        with self.ann.annotate(h1="+- Orientation"):
+            self._do_orientation(yf)
 
     def _do_positions(self, yf: Face):
 

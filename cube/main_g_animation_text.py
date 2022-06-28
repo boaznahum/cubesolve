@@ -64,7 +64,7 @@ class AnimationText:
             th3 = None
 
         if h1 is not None:  # "" also replace all
-            th1 = h1
+            th1 = replace(th1, h1)
             th2 = replace(th2, h2)  # might be None
             th3 = h3  # # might be None
         elif h2 is not None:

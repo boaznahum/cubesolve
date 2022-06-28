@@ -46,6 +46,10 @@ class L3Cross(SolverElement):
 
         # quick without rotating cube:
 
+        with self.ann.annotate(h1="Doing L3 Cross"):
+            self._solve()
+
+    def _solve(self):
         # 'yellow' face
         yf: Face = self.white_face.opposite
 
