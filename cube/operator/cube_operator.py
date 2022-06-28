@@ -3,14 +3,16 @@ from collections.abc import MutableSequence, Sequence
 from contextlib import contextmanager
 from typing import Callable, Any
 
-from ..algs.algs import Alg, SimpleAlg
+from .. import config
+from ..algs.algs import Alg, SimpleAlg, Annotation
 from ..app_exceptions import OpAborted
 from ..app_state import ApplicationAndViewState
 from ..model.cube import Cube
 
 
 class Operator:
-    __slots__ = ["_cube", "_history", "_animation_hook", "_animation_running",
+    __slots__ = ["_cube", "_history", "_animation_hook",
+                 "_animation_running", "_self_annotation_running",
                  "_aborted", "_animation_enabled",
                  "_app_state"]
 
@@ -25,6 +27,7 @@ class Operator:
         self._animation_running = False
         self._animation_enabled: bool = animation_enabled
         self._app_state = app_state
+        self._self_annotation_running = False
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
@@ -47,25 +50,45 @@ class Operator:
 
         if animation and self.animation_enabled:
 
-            with self._w_with_animation:
+            def _do_animation():
+                nonlocal alg
+                with self._w_with_animation:
 
-                an: Callable[[Operator, SimpleAlg], None] | None = self._animation_hook
-                assert an  # just to make mypy happy
-                if inv:
-                    alg = alg.inv()
+                    an: Callable[[Operator, SimpleAlg], None] | None = self._animation_hook
+                    assert an  # just to make mypy happy
+                    if inv:
+                        alg = alg.inv()
 
-                # todo: Patch - move single step mode into operator
-                algs: list[SimpleAlg] = [*alg.flatten()]
+                    # todo: Patch - move single step mode into operator
+                    algs: list[SimpleAlg] = [*alg.flatten()]
 
-                if self._app_state.single_step_mode:
-                    print(f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
+                    if self._app_state.single_step_mode:
+                        print(f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
 
-                for a in algs:
-                    an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
-                    if self._aborted:
-                        self._aborted = False
-                        print(f"A signal abort was raise, raising an exception {OpAborted}")
-                        raise OpAborted()
+                    for a in algs:
+                        an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
+                        if self._aborted:
+                            self._aborted = False
+                            print(f"A signal abort was raise, raising an exception {OpAborted}")
+                            raise OpAborted()
+
+            do_self_ann = (config.OPERATOR_SHOW_ALG_ANNOTATION and
+                           not self._self_annotation_running and not isinstance(alg, Annotation))
+
+            if do_self_ann:
+
+                # prevent recursion
+                self._self_annotation_running = True
+                try:
+                    from cube.operator.op_annotation import OpAnnotation
+                    ann = OpAnnotation(self)
+                    with ann.annotate(h3=str(alg)):
+                        _do_animation()
+                finally:
+                    self._self_annotation_running = False
+            else:
+                _do_animation()
+
         else:
 
             if alg.is_ann:

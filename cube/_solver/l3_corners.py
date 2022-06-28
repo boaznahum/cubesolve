@@ -184,9 +184,11 @@ class L3Corners(SolverElement):
         # 2-kRw2  kUw2   // half cube
         # 2-kRw2 kUw2  // half cube
 
-        alg = Algs.alg("c-swap",
+        alg = Algs.alg(None,
                        Algs.R[2:nh + 1] * 2, Algs.U * 2,
-                       Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2,
-                       Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2)
+                       (Algs.R[2:nh + 1] * 2 + Algs.U[1:nh + 1] * 2) * 2,
+                       #Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2
+                       )
 
-        self.op.op(alg)
+        with self.ann.annotate(h1="Corner swap(PLL Parity)"):
+            self.op.op(alg)

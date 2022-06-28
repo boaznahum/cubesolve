@@ -137,14 +137,12 @@ class L2(SolverElement):
         _te_id = _te.colors_id_by_color
         _se_id = _se.colors_id_by_color
 
-
         if st.position.on_face(cube.right):
             alg = self._ur_alg  # U R U' R' U' F' U F
         else:
             alg = self._ul_alg
 
-        with self.ann.annotate(h3=lambda : str(alg)):
-            self.op.op(alg)
+        self.op.op(alg)
 
         assert st.match
 

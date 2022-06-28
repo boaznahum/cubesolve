@@ -118,8 +118,7 @@ class CommonOp(ICommon, SolverElement):
                     case _:
                         raise InternalSWError(f"Unknown face {f}")
 
-                with self.ann.annotate(h3=f"{alg}"):
-                    self.op.op(alg)
+                self.op.op(alg)
 
     def bring_face_front(self, f: Face):
 

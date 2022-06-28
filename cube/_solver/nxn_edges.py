@@ -380,6 +380,7 @@ class NxNEdges(SolverElement):
 
         slices_to_fix: list[EdgeSlice] = []
         slices_indices_to_fix: list[int] = []
+        _all = True
         for i in range(n_slices // 2):
 
             s = edge.get_slice(i)
@@ -388,9 +389,15 @@ class NxNEdges(SolverElement):
             if color != required_color:
                 slices_indices_to_fix.append(i)
                 slices_to_fix.append(s)
+            else:
+                _all = False
+
+        ann = "Fixing edge(OLL) Parity"
+        if n_slices % 2 == 0 and _all:
+            ann += "(Full even)"
 
         # self.op.toggle_animation_on(enable=True)
-        with self.ann.annotate((slices_to_fix, AnnWhat.Moved) ):
+        with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
             plus_one = [i + 1 for i in slices_indices_to_fix]
             for _ in range(4):
                 self.debug(f"*** Doing parity on R {plus_one}", level=2)
