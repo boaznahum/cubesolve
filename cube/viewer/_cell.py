@@ -354,7 +354,7 @@ class _Cell:
 
         n: int = part.n_slices
 
-        markers: dict[str, Tuple[int, int, int]] = config.MARKERS
+        markers: dict[str, Tuple[Tuple[int, int, int], float] ] = config.MARKERS
 
         def draw_facet(part_edge: PartEdge, _vx):
 
@@ -389,8 +389,9 @@ class _Cell:
                 if movable == is_movable:
                     _m = markers[marker.value]
                     _marker_color = _m[0]
-                    thick = _m[1]
-                    self._create_markers(_vx, _marker_color, thick)
+                    radius = _m[1]
+                    thick = _m[2]
+                    self._create_markers(_vx, _marker_color, radius, thick)
 
         if isinstance(part, Corner):
 
@@ -589,6 +590,7 @@ class _Cell:
         shapes.sphere(center, radius, marker_color)
 
     def _create_markers(self, vertexes: Sequence[ndarray], marker_color,
+                        _radius: float,
                         thick: float):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
@@ -602,6 +604,8 @@ class _Cell:
 
         radius = _face_size / 2.0 * 0.8
         radius = min([radius, config.MAX_MARKER_RADIUS])
+
+        radius *= _radius
 
         height: float = 0.01
         r_outer = radius

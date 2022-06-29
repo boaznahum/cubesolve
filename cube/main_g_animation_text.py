@@ -2,7 +2,7 @@ class _TextRecord:
 
     def __init__(self, h1, h2, h3) -> None:
         super().__init__()
-        self.heads=(h1, h2, h3)
+        self.heads = (h1, h2, h3)
 
 
 class AnimationText:
@@ -41,19 +41,29 @@ class AnimationText:
         """
 
         def replace(prev, new: str):
-            if prev is None:
-                return new
-
             if new is None:
-                return new
+                return prev
+
+            new = new.strip()
+
+            if prev is None:
+                if new.startswith("/"):
+                    return new[1:]
+                elif new.startswith("+"):
+                    return new[1:]
+                if new.startswith(", "):
+                    return new[1:].strip()
+                else:
+                    return new
 
             if new.startswith("/"):
-                return new[1:]
+                return new[1:]  # replace
             elif new.startswith("+"):
                 return prev + " " + new[1:]
+            if new.startswith(", "):
+                return prev + new  # no need for space
             else:
-                return prev + " " + new
-
+                return prev + ",  " + new
 
         stack = self._stack
         if stack:

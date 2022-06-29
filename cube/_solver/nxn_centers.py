@@ -157,7 +157,7 @@ class NxNCenters(SolverElement):
 
             self._debug_print_track_slices()
 
-            #self._faces = faces
+            # self._faces = faces
 
             # now each face has at least one color, so
 
@@ -495,7 +495,7 @@ class NxNCenters(SolverElement):
         self.debug(f"Working on face {face}",
                    level=1)
 
-        with self.ann.annotate(h2=f"Doing face {color2long(face_loc.color).value}"):
+        with self.ann.annotate(h2=f"{color2long(face_loc.color).value} face"):
             cube = self.cube
 
             # we loop bringing all adjusted faces up
@@ -676,10 +676,10 @@ class NxNCenters(SolverElement):
                     # ok now swap
 
                     self._debug_print_track_slices()
-                    with self.ann.annotate(h2=f"+Swap complete slice"):
+                    with self.ann.annotate(h2=f", Swap complete slice"):
                         self._swap_slice(min_target_slice, face, _slice, source_face)
                     self._debug_print_track_slices()
-                    #self._asserts_is_boy(self._faces)
+                    # self._asserts_is_boy(self._faces)
 
                     return True
 
@@ -1039,7 +1039,10 @@ class NxNCenters(SolverElement):
             for rc in self._2d_range(_on_src1_1, _on_src1_2):
                 yield source_face.center.get_center_slice(rc)
 
-        with self.ann.annotate((_ann_source(), AnnWhat.Moved), (_ann_target(), AnnWhat.FixedPosition)):
+        with self.ann.annotate((_ann_source, AnnWhat.Moved),
+                               (_ann_target, AnnWhat.FixedPosition),
+                               h2=lambda: f", {self._block_size2(rc1, rc2)} communicator"
+                               ):
             if n_rotate:
                 self.op.op(Algs.of_face(source_face.name) * n_rotate)
             self.op.op(Algs.bigAlg(None, *cum))
@@ -1379,6 +1382,10 @@ class NxNCenters(SolverElement):
     @staticmethod
     def _block_size(rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int:
         return (abs(rc2[0] - rc1[0]) + 1) * (abs(rc2[1] - rc1[1]) + 1)
+
+    @staticmethod
+    def _block_size2(rc1: Tuple[int, int], rc2: Tuple[int, int]) -> Tuple[int, int]:
+        return (abs(rc2[0] - rc1[0]) + 1), (abs(rc2[1] - rc1[1]) + 1)
 
     def _is_block(self,
                   source_face: Face,

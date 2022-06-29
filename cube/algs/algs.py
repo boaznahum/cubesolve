@@ -980,7 +980,7 @@ class Algs:
         return _scramble(cube_size, seed, n)
 
     @classmethod
-    def alg(cls, name, *algs: Alg, as_plus=False) -> Alg:
+    def alg(cls, name, *algs: Alg) -> Alg:
         return BigAlg(name, *algs)
 
     @classmethod

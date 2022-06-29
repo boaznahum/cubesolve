@@ -22,9 +22,10 @@ _HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
 _ANN_BASE_ELEMENT: TypeAlias = Part | PartColorsID | PartSlice | PartEdge
 
-_ANN_ELEMENT_0: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | Iterable[_ANN_BASE_ELEMENT]
-_ANN_ELEMENT_1: TypeAlias = _ANN_ELEMENT_0 | Iterator[_ANN_ELEMENT_0] | Iterable[_ANN_ELEMENT_0]
-_ANN_ELEMENT: TypeAlias = _ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Iterable[_ANN_ELEMENT_1]
+_ANN_ELEMENT_0: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | Iterable[_ANN_BASE_ELEMENT] | Callable[[], _ANN_BASE_ELEMENT]
+
+_ANN_ELEMENT_1: TypeAlias = _ANN_ELEMENT_0 | Iterator[_ANN_ELEMENT_0] | Iterable[_ANN_ELEMENT_0] | Callable[[], _ANN_ELEMENT_0]
+_ANN_ELEMENT: TypeAlias = _ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Iterable[_ANN_ELEMENT_1] | Callable[[], _ANN_ELEMENT_1]
 
 
 @unique
@@ -242,37 +243,40 @@ class OpAnnotation:
             for s in e.all_slices:
                 process_slice(s, what)
 
-        def process_element(e: _ANN_BASE_ELEMENT, what: AnnWhat):
+        def process_element(e: _ANN_ELEMENT, _what: AnnWhat):
 
             # check for clor id before iterator iterable
             if isinstance(e, frozenset):  # PartColorsID
                 part: Part
-                if what in [AnnWhat.Moved, AnnWhat.Both]:
+                if _what in [AnnWhat.Moved, AnnWhat.Both]:
                     part = cube.find_part_by_colors(e)
                     process_part(part, AnnWhat.Moved)
-                if what in [AnnWhat.FixedPosition, AnnWhat.Both]:
+                if _what in [AnnWhat.FixedPosition, AnnWhat.Both]:
                     part = cube.find_part_by_pos_colors(e)
                     process_part(part, AnnWhat.FixedPosition)
 
             elif isinstance(e, (Iterable, Iterator)):
                 for ee in e:
-                    process_element(ee, what)
+                    process_element(ee, _what)  # type: ignore
 
             elif isinstance(e, Part):
-                if what == AnnWhat.Both:
+                if _what == AnnWhat.Both:
                     process_part(e, AnnWhat.Moved)
                     process_part(e, AnnWhat.FixedPosition)
-                elif what == AnnWhat.Moved:
+                elif _what == AnnWhat.Moved:
                     process_part(e, AnnWhat.Moved)
                 else:
                     process_part(e, AnnWhat.FixedPosition)
 
             elif isinstance(e, PartSlice):
-                process_slice(e, what)
+                process_slice(e, _what)
 
             elif isinstance(e, PartEdge):
                 # finally someone need to do the work
-                process_slice_edge(e, what)
+                process_slice_edge(e, _what)
+
+            elif callable(e):
+                process_element(e(), _what)
 
             else:
                 raise InternalSWError(f"Unknown type {type(e)}")

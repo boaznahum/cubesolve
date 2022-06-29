@@ -195,15 +195,15 @@ class L3Cross(SolverElement):
 
     @property
     def _fur(self):
-        return Algs.alg("L3-FUR", Algs.F, Algs.U, Algs.R, Algs.U.prime, Algs.R.prime, Algs.F.prime)
+        return Algs.alg(None, Algs.F, Algs.U, Algs.R, Algs.U.prime, Algs.R.prime, Algs.F.prime)
 
     @property
     def _fru(self):
-        return Algs.alg("L3-FRU", Algs.F, Algs.R, Algs.U, Algs.R.prime, Algs.U.prime, Algs.F.prime)
+        return Algs.alg(None, Algs.F, Algs.R, Algs.U, Algs.R.prime, Algs.U.prime, Algs.F.prime)
 
     @property
     def _ru(self):
-        return Algs.alg("L3-RU", Algs.R, Algs.U, Algs.R.prime, Algs.U, Algs.R, Algs.U * 2, Algs.R.prime, Algs.U)
+        return Algs.alg(None, Algs.R, Algs.U, Algs.R.prime, Algs.U, Algs.R, Algs.U * 2, Algs.R.prime, Algs.U)
 
     def _bring_edge_to_right_up(self, e: Edge):
         """

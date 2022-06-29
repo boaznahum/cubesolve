@@ -141,7 +141,7 @@ class L3Corners(SolverElement):
 
     @property
     def _ur(self) -> Alg:
-        return Algs.alg("L3-UR", Algs.U, Algs.R, Algs.U.prime, Algs.L.prime, Algs.U, Algs.R.prime, Algs.U.prime, Algs.L)
+        return Algs.alg(None, Algs.U, Algs.R, Algs.U.prime, Algs.L.prime, Algs.U, Algs.R.prime, Algs.U.prime, Algs.L)
 
     def bring_corner_to_front_right(self, c: Corner):
         """
@@ -174,7 +174,7 @@ class L3Corners(SolverElement):
             with self.ann.annotate((yf.corner_bottom_right, AnnWhat.Both)):
                 # we can't check all_match because we rotate the cube
                 while not yf.corner_bottom_right.match_face(yf):
-                    self.op.op(Algs.alg("L3-RD", Algs.R.prime, Algs.D.prime, Algs.R, Algs.D) * 2)
+                    self.op.op(Algs.alg(None, Algs.R.prime, Algs.D.prime, Algs.R, Algs.D) * 2)
 
             # before U'
             self.op.op(Algs.U.prime)
