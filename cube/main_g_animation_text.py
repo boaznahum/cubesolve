@@ -47,8 +47,12 @@ class AnimationText:
             if new is None:
                 return new
 
-            if new.startswith("+"):
+            if new.startswith("/"):
+                return new[1:]
+            elif new.startswith("+"):
                 return prev + " " + new[1:]
+            else:
+                return prev + " " + new
 
 
         stack = self._stack
