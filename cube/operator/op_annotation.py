@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from enum import unique, Enum
-from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal
+from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal, ContextManager
 
 from ..algs.algs import Algs
 from ..app_exceptions import InternalSWError
@@ -63,13 +63,6 @@ class OpAnnotation:
         """
 
         op = self.op
-
-        on = op.animation_enabled
-        if (not on) or (not animation):
-            try:
-                yield None
-            finally:
-                return
 
         global _SLice_Tracking_UniqID
 
@@ -181,12 +174,11 @@ class OpAnnotation:
 
             op.op(Algs.AN)
 
-    @contextmanager
     def annotate(self, *elements: Tuple[_ANN_ELEMENT, AnnWhat],
                  h1=None,
                  h2=None,
                  h3=None,
-                 animation=True):
+                 animation=True) -> ContextManager[None]:
 
         """
         Annotate moved slice
@@ -203,16 +195,21 @@ class OpAnnotation:
         :param animation:
         :return:
         """
-
         on = self.op.animation_enabled
 
-        global _SLice_Tracking_UniqID
-
         if (not on) or (not animation):
-            try:
-                yield None
-            finally:
-                return
+            return nullcontext()
+        else:
+            return self._annotate(*elements, h1=h1, h2=h2, h3=h3, animation=animation)
+
+    @contextmanager
+    def _annotate(self, *elements: Tuple[_ANN_ELEMENT, AnnWhat],
+                  h1=None,
+                  h2=None,
+                  h3=None,
+                  animation=True):
+
+        global _SLice_Tracking_UniqID
 
         edges: list[Tuple[PartEdge, bool, VMarker]] = []
         cube = self.cube
@@ -294,7 +291,3 @@ class OpAnnotation:
         yield from self._w_slice_edges_annotate(edges,
                                                 text=(h1, h2, h3),
                                                 animation=animation)
-
-
-
-

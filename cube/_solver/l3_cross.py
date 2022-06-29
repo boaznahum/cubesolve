@@ -101,6 +101,7 @@ class L3Cross(SolverElement):
 
         if not n in [0, 2, 4]:
             if self.cube.n_slices % 2 == 0:
+                self.debug(f"L3 cross-color: Found OLL(Edge Parity), raising EvenCubeEdgeParityException")
                 raise EvenCubeEdgeParityException()
 
         assert n in [0, 2, 4]

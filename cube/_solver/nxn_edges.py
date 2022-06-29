@@ -116,23 +116,26 @@ class NxNEdges(SolverElement):
 
         face = self.cube.front
 
-        if n_slices % 2:
-            _slice = edge.get_slice(n_slices // 2)
-            color_un_ordered = _slice.colors_id_by_color
-            ordered_color = self._get_slice_ordered_color(face, _slice)
-        else:
-            ordered_color = self._find_max_of_color(face, edge)
-            color_un_ordered = frozenset(ordered_color)
-
-        with self.ann.annotate(h2=lambda: f"Fixing edge  {ModelHelper.color_id_to_name(ordered_color)}"):
+        with self.ann.annotate(h2=lambda: f"Fixing edge  {edge.name_n_faces}"):
 
             self.debug(f"Brining {edge} to front-right")
             self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             edge = self.cube.front.edge_left
 
-            self._solve_on_front_left(color_un_ordered, ordered_color)
+            # We can't do  it before  bringing to front because we don't know which edge will be on front
+            if n_slices % 2:
+                _slice = edge.get_slice(n_slices // 2)
+                color_un_ordered = _slice.colors_id_by_color
+                ordered_color = self._get_slice_ordered_color(face, _slice)
+            else:
+                ordered_color = self._find_max_of_color(face, edge)
+                color_un_ordered = frozenset(ordered_color)
 
-            self._report_done(f"Done {edge}")
+            # Override the above
+            with self.ann.annotate(h2=lambda: f"Fixing edge  {ModelHelper.color_id_to_name(ordered_color)}"):
+                self._solve_on_front_left(color_un_ordered, ordered_color)
+
+                self._report_done(f"Done {edge}")
 
             return True
 

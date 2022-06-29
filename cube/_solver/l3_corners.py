@@ -105,7 +105,9 @@ class L3Corners(SolverElement):
                 # Even cube
                 n = sum(c.in_position for c in yf.corners)
                 if n == 2:
+                    self.debug(f"L3 cross-color: Found PLL(Corner swap Parity), doing corner swap")
                     self._do_corner_swap()
+                    self.debug(f"L3 cross-color: Found PLL(Corner swap Parity), raising EvenCubeCornerSwapException")
                     raise EvenCubeCornerSwapException()
 
                 raise InternalSWError("Cube not all corners in position, don't know why")

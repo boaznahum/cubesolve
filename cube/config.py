@@ -3,7 +3,7 @@ from typing import Tuple
 ######### Model  ########
 
 # Only initial value, can be changed
-CUBE_SIZE = 6
+CUBE_SIZE = 4
 
 SHORT_PART_NAME = False
 DONT_OPTIMIZED_PART_ID = True
@@ -78,3 +78,7 @@ PROF_VIEWER_GUI_UPDATE = False
 
 ##############  Testing
 TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 10
+
+################ Logging
+OPERATION_LOG=False
+OPERATION_LOG_PATH=".logs/operation.log"

@@ -831,20 +831,18 @@ class Part(ABC, CubeElement):
     def name(self):
         raise NotImplementedError
 
+    @property
     def name_n_faces(self) -> str:  # for animation
         """
         return the name of the part with face id - name of faces is on
-        For is3x3 only
-        :return: e.g. 'Edge White/Red'
+        Good also for non 3x3 because it is the name of the face, not color
+        :return: e.g. 'Edge Front/Right'
         """
         s1 = ""
         s2 = ""
 
         for e in self._3x3_representative_edges:
             s1 += str(e.face.name.value)
-            s2 += str(color2long(e.color).value) + "/"
-
-        s2 = s2[0:-1]
 
         return self.part_name + " " + str(self.name)
 

@@ -36,6 +36,8 @@ class Operator:
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
+
+
         """
         Animation can run only from top level, not from animation itself
         :param alg:
@@ -44,9 +46,17 @@ class Operator:
         :return:
         """
 
+        log_path = config.OPERATION_LOG_PATH if config.OPERATION_LOG else None
+        def log(*s: Any):
+            if log_path:
+                with open(log_path, mode="a") as f:
+                    print(*(str(x) for x in s), file=f)
+
         # if we clean signal here, then we have a problem, because
         # solver run op in loop, so we will miss the latest signal,
         # so maybe we need seperated method for single op and a long op
+
+        #log("At entry, big alg:", str(alg))
 
         if self._aborted:
             self._aborted = False
@@ -95,16 +105,27 @@ class Operator:
 
         else:
 
+
             if alg.is_ann:
                 return
 
             if inv:
                 alg = alg.inv()
 
-            self._cube.sanity()
-            alg.play(self._cube, False)
-            self._cube.sanity()
-            self._history.append(alg)
+            if True:
+                algs: list[SimpleAlg] = [*alg.flatten()]
+
+                for a in algs:
+                    log("Actual, alg:", str(a))
+                    self._cube.sanity()
+                    a.play(self._cube, False)
+                    self._cube.sanity()
+                    self._history.append(alg)
+            else:
+                self._cube.sanity()
+                alg.play(self._cube, False)
+                self._cube.sanity()
+                self._history.append(alg)
 
     def undo(self, animation=True) -> Alg | None:
 

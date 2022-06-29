@@ -382,17 +382,22 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key._1:
 
-                if modifiers and key.MOD_SHIFT:  # test -1
-                    scramble_key = -1
-                else:
-                    scramble_key = value - key._0
+                if modifiers and (key.MOD_SHIFT | key.MOD_ALT):
+                    if modifiers and key.MOD_SHIFT:  # test -1
+                        scramble_key = -1
+                    else:
+                        scramble_key = value - key._0
 
-                alg = Algs.scramble(app.cube.size, scramble_key, 5)
+                    alg = Algs.scramble(app.cube.size, scramble_key, 5)
+                else:
+                    # same as Test 1
+                    alg = Algs.scramble(app.cube.size, value - key._0)
+
 
                 with _wait_cursor(window):
                     op.op(alg, inv, animation=False)
 
-            case key._2 | key._3 | key._4 | key._5 | key._6:
+            case key._2 | key._3 | key._4 | key._5 | key._6 | key._7 | key._8 | key._9:
 
                 # print(f"{modifiers & key.MOD_CTRL=}  {modifiers & key.MOD_ALT=}")
                 if modifiers & key.MOD_CTRL:
@@ -478,13 +483,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                         count = 0
                         n_loops = 0
                         for s in range(-1, nn):
-                            print(str(s + 2) + f"/{nn + 1}, ", end='')
-                            ll += 1
-                            if ll > 15:
-                                print()
-                                ll = 0
 
-                            op.reset()  # also reset cube
                             if s == -1:
                                 scramble_key = -1
                                 n = 5
@@ -492,6 +491,14 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                                 scramble_key = s
                                 n = None
 
+                            print(str(s + 2) + f"/{scramble_key=}, {n=} ", end='')
+
+                            ll += 1
+                            if ll > 5:
+                                print()
+                                ll = 0
+
+                            op.reset()  # also reset cube
                             alg = Algs.scramble(app.cube.size, scramble_key, n)
 
                             op.op(alg, animation=False)
