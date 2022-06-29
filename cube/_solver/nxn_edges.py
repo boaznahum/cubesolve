@@ -116,7 +116,7 @@ class NxNEdges(SolverElement):
 
         face = self.cube.front
 
-        with self.ann.annotate(h2=lambda: f"Fixing edge  {edge.name_n_faces}"):
+        with self.ann.annotate(h2=lambda: f"Fixing {edge.name_n_faces}"):
 
             self.debug(f"Brining {edge} to front-right")
             self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
@@ -132,7 +132,7 @@ class NxNEdges(SolverElement):
                 color_un_ordered = frozenset(ordered_color)
 
             # Override the above
-            with self.ann.annotate(h2=lambda: f"Fixing edge  {ModelHelper.color_id_to_name(ordered_color)}"):
+            with self.ann.annotate(h2=lambda: f"/Fixing {edge.name_n_faces} {ModelHelper.color_id_to_name(ordered_color)}"):
                 self._solve_on_front_left(color_un_ordered, ordered_color)
 
                 self._report_done(f"Done {edge}")
