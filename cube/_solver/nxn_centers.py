@@ -14,6 +14,7 @@ from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries, Pred
 from cube.model.elements import FaceName, Color, CenterSlice
 from cube.operator.op_annotation import AnnWhat
+from cube.viewer.viewer_markers import VIEWER_ANNOTATION_KEY, VMarker
 
 _TRACKER_KEY_PREFIX = "_nxn_centers_track:"
 
@@ -76,8 +77,6 @@ class FaceLoc:
 
     def __str__(self) -> str:
         return f"{self.color.name}@{self.face}"
-
-
 
 
 class NxNCenters(SolverElement):
@@ -156,7 +155,9 @@ class NxNCenters(SolverElement):
 
             self._asserts_is_boy(faces)
 
-            #self._faces = faces
+            self._debug_print_track_slices()
+
+            self._faces = faces
 
             # now each face has at least one color, so
 
@@ -221,7 +222,7 @@ class NxNCenters(SolverElement):
 
         return self._trace_face_by_slice_color(f3, f3_color)
 
-    # noinspection PyUnreachableCode
+    # noinspection PyUnreachableCode,PyUnusedLocal
     def _asserts_is_boy(self, faces: Iterable[FaceLoc]):
 
         if True:
@@ -238,8 +239,6 @@ class NxNCenters(SolverElement):
             print()
 
         assert is_boy
-
-
 
     def _create_f5_pred(self, four_first: Sequence[FaceLoc], color) -> Pred[Face]:
 
@@ -297,7 +296,6 @@ class NxNCenters(SolverElement):
             return False
 
         return _pred
-
 
     def _track_two_last(self, four_first: Sequence[FaceLoc]) -> Tuple[FaceLoc, FaceLoc]:
 
@@ -417,11 +415,25 @@ class NxNCenters(SolverElement):
     @staticmethod
     def _is_track_slice(s: CenterSlice):
 
-        for k in s.c_attributes.keys():
+        for k in s.edge.c_attributes.keys():
             if isinstance(k, str) and k.startswith(_TRACKER_KEY_PREFIX):
                 return True
 
         return False
+
+    # noinspection PyUnreachableCode
+    def _debug_print_track_slices(self):
+
+        if True:
+            return
+
+        print("===================================")
+        for f in self.cube.faces:
+            for s in f.center.all_slices:
+
+                if self._is_track_slice(s):
+                    print(f"Track slice: {s} {s.color} on {f}")
+        print("===================================")
 
     def _trace_face_by_slice(self, _slice) -> FaceLoc:
 
@@ -429,7 +441,11 @@ class NxNCenters(SolverElement):
         _tracer_unique_id += 1
 
         key = _TRACKER_KEY_PREFIX + str(_slice.color) + str(_tracer_unique_id)
-        _slice.edge.c_attributes[key] = True
+        edge = _slice.edge
+        edge.c_attributes[key] = True
+
+        if config.SOLVER_ANNOTATE_TRACKERS:
+            edge.c_attributes[VIEWER_ANNOTATION_KEY] = VMarker.C0  # to debug if alg move trackers
 
         def _slice_pred(s: CenterSlice):
             return key in s.edge.c_attributes
@@ -570,8 +586,6 @@ class NxNCenters(SolverElement):
                 if minimal_bring_one_color:
                     return work_done
 
-
-
         else:
 
             # the above also did a 1 size block
@@ -642,7 +656,7 @@ class NxNCenters(SolverElement):
                 continue  # skip this one
 
             if _slice.contains_track_slice:
-                continue # we can't move it happens in even cube
+                continue  # we can't move it happens in even cube
 
             target_slices = slices_on_face.get(index)
 
@@ -653,16 +667,21 @@ class NxNCenters(SolverElement):
 
             min_target_slice = target_slices[0]
 
-            if (
-                    min_target_slice.n_matches == 0 or not config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO) \
-                    and _slice.n_matches > min_target_slice.n_matches:
-                # ok now swap
+            if not min_target_slice.contains_track_slice:
 
-                with self.ann.annotate(h2=f"+Swap complete slice"):
-                    self._swap_slice(min_target_slice, face, _slice, source_face)
-#                self._asserts_is_boy(self._faces)
+                if (
+                        min_target_slice.n_matches == 0 or
+                        not config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO
+                ) and _slice.n_matches > min_target_slice.n_matches:
+                    # ok now swap
 
-                return True
+                    self._debug_print_track_slices()
+                    with self.ann.annotate(h2=f"+Swap complete slice"):
+                        self._swap_slice(min_target_slice, face, _slice, source_face)
+                    self._debug_print_track_slices()
+                    self._asserts_is_boy(self._faces)
+
+                    return True
 
         return False
 
@@ -850,8 +869,8 @@ class NxNCenters(SolverElement):
     def boy_opposite(self, color: Color) -> Color:
         return self.cube.original_layout.opposite_color(color)
 
-    def _find_face_with_max_colors(self, faces: Iterable[Face] = None, colors: Collection[Color] = None) -> Tuple[
-        Face, Color]:
+    def _find_face_with_max_colors(self, faces: Iterable[Face] = None,
+                                   colors: Collection[Color] = None) -> Tuple[Face, Color]:
 
         n_max = -1
         f_max: Face | None = None
@@ -1020,7 +1039,7 @@ class NxNCenters(SolverElement):
             for rc in self._2d_range(_on_src1_1, _on_src1_2):
                 yield source_face.center.get_center_slice(rc)
 
-        with self.ann.annotate( (_ann_source(), AnnWhat.Moved), (_ann_target(), AnnWhat.FixedPosition)):
+        with self.ann.annotate((_ann_source(), AnnWhat.Moved), (_ann_target(), AnnWhat.FixedPosition)):
             if n_rotate:
                 self.op.op(Algs.of_face(source_face.name) * n_rotate)
             self.op.op(Algs.bigAlg(None, *cum))
@@ -1141,13 +1160,13 @@ class NxNCenters(SolverElement):
     def _count_colors_on_block(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
                                ignore_if_back=False) -> int:
 
-        n,_ = NxNCenters._count_colors_on_block_and_tracker(color, source_face, rc1, rc2, ignore_if_back)
+        n, _ = NxNCenters._count_colors_on_block_and_tracker(color, source_face, rc1, rc2, ignore_if_back)
 
         return n
 
     @staticmethod
     def _count_colors_on_block_and_tracker(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
-                               ignore_if_back=False) -> Tuple[int, int]:
+                                           ignore_if_back=False) -> Tuple[int, int]:
 
         """
         Count number of centerpieces on center that match color
@@ -1191,7 +1210,6 @@ class NxNCenters(SolverElement):
                 if not _trackers and NxNCenters._is_track_slice(center_slice):
                     _trackers += 1
 
-
         return _count, _trackers
 
     def _search_slices_on_face(self, face, color, index: int | None, search_max: bool) -> list[_CompleteSlice]:
@@ -1231,7 +1249,7 @@ class NxNCenters(SolverElement):
 
         for c in columns:
 
-            n, t  = self._count_colors_on_block_and_tracker(color, face, (0, c), (nm1, c), ignore_if_back=True)
+            n, t = self._count_colors_on_block_and_tracker(color, face, (0, c), (nm1, c), ignore_if_back=True)
 
             if n > 1 or not search_max:  # one is not interesting, will be handled by communicator
                 # if we search for minimum than we want zero too
