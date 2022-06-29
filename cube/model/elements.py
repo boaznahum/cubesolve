@@ -61,6 +61,8 @@ class CornerName(Enum):
         return str(self.value)
 
 
+
+
 _faces_to_corners: dict[frozenset[FaceName], CornerName] = {}
 
 
@@ -81,6 +83,50 @@ def _faces_2_corner_name(faces: Iterable[FaceName]):
         _a(FaceName.B, FaceName.L, FaceName.D, CornerName.BLD)
 
     return _faces_to_corners[frozenset(faces)]
+
+
+class EdgeName(Enum):
+    FL = "FL"
+    FU = "FU"
+    FR = "FR"
+    FD = "FD"
+    BL = "BL"
+    BU = "BU"
+    BR = "BR"
+    BD = "BD"
+    UR = "UR"
+    RD = "RD"
+    DL = "DL"
+    LU = "LU"
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+_faces_to_edges: dict[frozenset[FaceName], EdgeName] = {}
+
+
+def _faces_2_edge_name(faces: Iterable[FaceName]) -> EdgeName:
+    global _faces_to_corners
+
+    if not _faces_to_edges:
+        def _a(f1, f2, cn: EdgeName):
+            _faces_to_edges[frozenset([f1, f2])] = cn
+
+        _a(FaceName.F, FaceName.L, EdgeName.FL)
+        _a(FaceName.F, FaceName.U, EdgeName.FU)
+        _a(FaceName.F, FaceName.R, EdgeName.FR)
+        _a(FaceName.F, FaceName.D, EdgeName.FD)
+        _a(FaceName.B, FaceName.L, EdgeName.BL)
+        _a(FaceName.B, FaceName.U, EdgeName.BU)
+        _a(FaceName.B, FaceName.R, EdgeName.BR)
+        _a(FaceName.B, FaceName.D, EdgeName.BD)
+
+        _a(FaceName.U, FaceName.R, EdgeName.UR)
+        _a(FaceName.R, FaceName.D, EdgeName.RD)
+        _a(FaceName.D, FaceName.L, EdgeName.DL)
+        _a(FaceName.L, FaceName.U, EdgeName.LU)
+
+    return _faces_to_edges[frozenset(faces)]
 
 
 class CHelper:
@@ -838,11 +884,11 @@ class Part(ABC, CubeElement):
         Good also for non 3x3 because it is the name of the face, not color
         :return: e.g. 'Edge Front/Right'
         """
-        s1 = ""
-        s2 = ""
-
-        for e in self._3x3_representative_edges:
-            s1 += str(e.face.name.value)
+        # s1 = ""
+        # s2 = ""
+        #
+        # for e in self._3x3_representative_edges:
+        #     s1 += str(e.face.name.value)
 
         return self.part_name + " " + str(self.name)
 
@@ -1523,6 +1569,11 @@ class Edge(Part):
     @property
     def part_name(self) -> str:
         return "Edge"
+
+    @property
+    def name(self) -> EdgeName:
+        # todo: optimize it
+        return _faces_2_edge_name((self.e1.face.name, self.e2.face.name))
 
 
 class Corner(Part):
