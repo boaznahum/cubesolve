@@ -59,26 +59,24 @@ KEYBOAD_INPUT_DEBUG = False
 #   or vice versa if FALSE
 INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM = True
 
-
 ############## Operator ##############
-OPERATOR_SHOW_ALG_ANNOTATION=True
+OPERATOR_SHOW_ALG_ANNOTATION = True
 
 ##############  Solver  ###################
-OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = True  # under test doesn't work well, see _todo
-# Size 8 scramble 1:
-# With  160
-# Without: 140
+OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False  # under test doesn't work well
 
-OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True
+OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True  # still fails on even, make it not biy, probably move tracers
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO = True
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True
 
 PROF_VIEWER_SEARCH_FACET = False
 PROF_VIEWER_GUI_UPDATE = False
 
+SOLVER_ANNOTATE_TRACKERS = False
+
 ##############  Testing
-TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 10
+TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 20
 
 ################ Logging
-OPERATION_LOG=False
-OPERATION_LOG_PATH=".logs/operation.log"
+OPERATION_LOG = False
+OPERATION_LOG_PATH = ".logs/operation.log"

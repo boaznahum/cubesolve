@@ -2,7 +2,10 @@ Generalize slice walking and use in communicator
 
 Feature: Fix scramble also to invert and multiple and generate sub lists, but preserve current version
 
-BUG: When swap slices is enabled, even cube test fails
+!!!!BUG!! scramble 3/ size 6 fails, when OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES maybe we still move tracers
+!!!!BUG Face tracer live tracing - solver should remove them !!!
+
+BUG: Two annotation instances - so override one each other
 
 Feature: swap complete slices - Done, but only destination zero slices
 Feature: Keyboard history

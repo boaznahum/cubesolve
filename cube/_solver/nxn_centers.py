@@ -157,7 +157,7 @@ class NxNCenters(SolverElement):
 
             self._debug_print_track_slices()
 
-            self._faces = faces
+            #self._faces = faces
 
             # now each face has at least one color, so
 
@@ -679,7 +679,7 @@ class NxNCenters(SolverElement):
                     with self.ann.annotate(h2=f"+Swap complete slice"):
                         self._swap_slice(min_target_slice, face, _slice, source_face)
                     self._debug_print_track_slices()
-                    self._asserts_is_boy(self._faces)
+                    #self._asserts_is_boy(self._faces)
 
                     return True
 
