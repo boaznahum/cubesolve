@@ -376,13 +376,21 @@ class _Cell:
             # if _slice.get_face_edge(cube_face).attributes["on_y"]:
             #     shapes.cross(vx, cross_width_y, cross_color_y)
 
-            marker = edge.c_attributes.get(annotation_key) or edge.f_attributes.get(annotation_key)
+            is_movable = False
+            marker = edge.c_attributes.get(annotation_key)
+            if marker is not None:
+                is_movable = True
+            else:
+                marker = edge.f_attributes.get(annotation_key)
+
             if marker:
                 assert isinstance(marker, VMarker)
 
-                if movable == (marker == VMarker.C1):
-                    _marker_color = markers[marker.value]
-                    self._create_markers(_vx, _marker_color, marker == VMarker.C2)
+                if movable == is_movable:
+                    _m = markers[marker.value]
+                    _marker_color = _m[0]
+                    thick = _m[1]
+                    self._create_markers(_vx, _marker_color, thick)
 
         if isinstance(part, Corner):
 
@@ -579,8 +587,9 @@ class _Cell:
 
         # this is also supported by glCallLine
         shapes.sphere(center, radius, marker_color)
-    def _create_markers(self, vertexes: Sequence[ndarray], marker_color, is_fixed: bool):
 
+    def _create_markers(self, vertexes: Sequence[ndarray], marker_color,
+                        thick: float):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
         vx = vertexes
@@ -594,24 +603,16 @@ class _Cell:
         radius = _face_size / 2.0 * 0.8
         radius = min([radius, config.MAX_MARKER_RADIUS])
 
-        r1 = radius
-        r2 = radius * 0.2
-
         height: float = 0.01
-        if is_fixed:
-            r_outher = radius
-            r_inner = radius * 0.8
-        else:
-            # movable above fixed
-            r_outher = radius * 0.75
-            r_inner = 0
+        r_outer = radius
+        r_inner = radius * (1 - thick)
 
         p1 = center + self._face_board.ortho_direction * height
         p2 = center - self._face_board.ortho_direction * height
 
         # this is also supported by glCallLine
-        #shapes.cylinder(p1, p2, r1, r2, marker_color)
-        shapes.disk(p1, p2, r_outher, r_inner, marker_color)
+        # shapes.cylinder(p1, p2, r1, r2, marker_color)
+        shapes.disk(p1, p2, r_outer, r_inner, marker_color)
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]

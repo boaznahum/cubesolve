@@ -11,7 +11,6 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE = False
 
 CHECK_CUBE_SANITY = False
 
-
 ###### Operator ####
 
 # Only initial value, can be changed
@@ -39,8 +38,9 @@ VIEWER_DRAW_SHADOWS = ""  # "LDB"
 # MARKER_COLOR: Tuple[int, int, int] = (0, 0, 0)  # dimgray / dimgray	#696969	rgb(105,105,105)
 
 MARKERS = {
-    "C1": (199, 21, 133),  # mediumvioletred	#C71585	rgb(199,21,133),
-    "C2": (0, 100, 0)  # darkgreen	#006400	rgb(0,100,0)
+    "C0": ((199, 21, 133), 0.8), # mediumvioletred	#C71585	rgb(199,21,133)
+    "C1": ((199, 21, 133), 0.2), # mediumvioletred	#C71585	rgb(199,21,133),
+    "C2": ((0, 100, 0), 0.25)  # darkgreen	#006400	rgb(0,100,0)
 }
 
 # text animation properties
