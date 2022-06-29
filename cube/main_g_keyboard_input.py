@@ -31,7 +31,12 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     debug = config.KEYBOAD_INPUT_DEBUG
 
     if debug:
-        print(f"In _handle_input , {value}  {hex(value)} {chr(ord('A') + (value - key.A))} ")
+        print(f"In _handle_input , {value}  {hex(value)=} {hex(modifiers)=} {chr(ord('A') + (value - key.A))} ")
+
+    if key.LSHIFT <= value <= key.ROPTION:
+        print(f"In _handle_input , Only modifiers, decided to quit")
+        return
+
 
     vs: ApplicationAndViewState = app.vs
 
