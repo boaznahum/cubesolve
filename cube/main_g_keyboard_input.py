@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import pyglet  # type: ignore
 from pyglet.window import key  # type: ignore
 
-from .import config
+from . import config
 from .algs import algs
 from .algs.algs import Alg, Algs
 from .app_exceptions import AppExit
@@ -15,11 +15,6 @@ from .model.cube_boy import FaceName
 from .solver import Solver, SolveStep
 
 good = Algs.bigAlg("good")
-
-
-
-
-
 
 
 def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
@@ -36,7 +31,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     if key.LSHIFT <= value <= key.ROPTION:
         print(f"In _handle_input , Only modifiers, decided to quit")
         return
-
 
     vs: ApplicationAndViewState = app.vs
 
@@ -364,21 +358,25 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     app.vs.set_projection(window.width, window.height)
 
             case key._0:
-                with vs.w_animation_speed(4):
-                    if modifiers & key.MOD_ALT:
-                        # Failed on [5:5]B
-                        # [{good} [3:3]R [3:4]D S [2:2]L]
+                if modifiers & (key.MOD_SHIFT | key.MOD_ALT):
+                    with vs.w_animation_speed(4):
+                        if modifiers & key.MOD_ALT:
+                            # Failed on [5:5]B
+                            # [{good} [3:3]R [3:4]D S [2:2]L]
 
-                        alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]  # + Algs.B[5:5]
-                        op.op(alg, inv),  # animation=False)
+                            alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]  # + Algs.B[5:5]
+                            op.op(alg, inv),  # animation=False)
 
-                    elif modifiers & key.MOD_CTRL:
-                        alg = Algs.B[5:5]
-                        op.op(alg, inv)
-                    else:
-                        alg = Algs.scramble(app.cube.size, n=100)
+                        else:
+                            alg = Algs.B[5:5]
+                            op.op(alg, inv)
+                else:
+                    # same as Test 0
+                    scramble_key = value - key._0
+                    alg = Algs.scramble(app.cube.size, scramble_key)
 
-                        op.op(alg, inv)
+                    with _wait_cursor(window):
+                        op.op(alg, inv, animation=False)
 
             case key._1:
 
@@ -392,7 +390,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 else:
                     # same as Test 1
                     alg = Algs.scramble(app.cube.size, value - key._0)
-
 
                 with _wait_cursor(window):
                     op.op(alg, inv, animation=False)
@@ -512,6 +509,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                                 n_loops += 1
 
                             except Exception:
+                                print()
                                 print(f"Failure on scramble key={scramble_key}, n={n} ")
                                 traceback.print_exc()
                                 raise
