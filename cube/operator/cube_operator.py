@@ -1,13 +1,16 @@
 import functools
 from collections.abc import MutableSequence, Sequence
 from contextlib import contextmanager
-from typing import Callable, Any
+from typing import Callable, Any, TYPE_CHECKING
 
 from .. import config
 from ..algs.algs import Alg, SimpleAlg, Annotation
 from ..app_exceptions import OpAborted
 from ..app_state import ApplicationAndViewState
 from ..model.cube import Cube
+
+if TYPE_CHECKING:
+    from cube.operator.op_annotation import OpAnnotation
 
 
 class Operator:
@@ -30,9 +33,8 @@ class Operator:
         self._app_state = app_state
         self._self_annotation_running = False
 
-        if config.OPERATOR_SHOW_ALG_ANNOTATION:
-            from cube.operator.op_annotation import OpAnnotation
-            self._annotation: OpAnnotation = OpAnnotation(self)
+        from cube.operator.op_annotation import OpAnnotation
+        self._annotation: OpAnnotation = OpAnnotation(self)
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
@@ -112,7 +114,7 @@ class Operator:
             if inv:
                 alg = alg.inv()
 
-            if True:
+            if False:
                 algs: list[SimpleAlg] = [*alg.flatten()]
 
                 for a in algs:
@@ -231,3 +233,7 @@ class Operator:
     @property
     def app_state(self) -> ApplicationAndViewState:
         return self._app_state
+
+    @property
+    def annotation(self) -> "OpAnnotation":
+        return self._annotation
