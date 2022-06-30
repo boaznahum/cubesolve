@@ -109,7 +109,12 @@ class NxNCenters(SolverElement):
             return  # avoid rotating cube
 
         with self.ann.annotate(h1="Big cube centers"):
-            self._solve()
+            try:
+                self._solve()
+            finally:
+                self._debug_print_track_slices("After solving")
+                self._remove_all_track_slices()
+                self._debug_print_track_slices("After removal")
 
     def _solve(self):
 
@@ -147,7 +152,8 @@ class NxNCenters(SolverElement):
             self._do_faces([f5], True, True)
             self._asserts_is_boy([f1, f2, f3, f4, f5, f6])
 
-            # todo: convert tracker to light tracker by color
+            self._remove_face_track_slices(f5.face)
+
             f5 = self._trace_face_by_slice_color(f5.face, f5.color)
             f6 = self._track_opposite(f5)
 
@@ -155,7 +161,7 @@ class NxNCenters(SolverElement):
 
             self._asserts_is_boy(faces)
 
-            self._debug_print_track_slices()
+            self._debug_print_track_slices("After creating all faces")
 
             # self._faces = faces
 
@@ -422,12 +428,35 @@ class NxNCenters(SolverElement):
         return False
 
     # noinspection PyUnreachableCode
-    def _debug_print_track_slices(self):
+    def _remove_all_track_slices(self):
+
+        """
+        Track slices prevent swapping of whole slices and big blocks
+        :return:
+        """
+        for f in self.cube.faces:
+            self._remove_face_track_slices(f)
+
+    @staticmethod
+    def _remove_face_track_slices(f: Face):
+        """
+        Track slices prevent swapping of whole slices and big blocks
+        :param f:
+        :return:
+        """
+        for s in f.center.all_slices:
+            cs = s.edge.c_attributes
+            for k in [*cs.keys()]:  # need to copy, we modify it
+                if isinstance(k, str) and k.startswith(_TRACKER_KEY_PREFIX):
+                    del cs[k]
+
+    # noinspection PyUnreachableCode,PyUnusedLocal
+    def _debug_print_track_slices(self, message: str):
 
         if True:
             return
 
-        print("===================================")
+        print(f"=== track slices: {message}================================")
         for f in self.cube.faces:
             for s in f.center.all_slices:
 
@@ -675,10 +704,10 @@ class NxNCenters(SolverElement):
                 ) and _slice.n_matches > min_target_slice.n_matches:
                     # ok now swap
 
-                    self._debug_print_track_slices()
+                    # self._debug_print_track_slices()
                     with self.ann.annotate(h2=f", Swap complete slice"):
                         self._swap_slice(min_target_slice, face, _slice, source_face)
-                    self._debug_print_track_slices()
+                    # self._debug_print_track_slices()
                     # self._asserts_is_boy(self._faces)
 
                     return True
