@@ -128,6 +128,13 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     vs.change_offset(-1, 0, 0)
                     return True, True
 
+            case key.C:
+                if modifiers and key.MOD_ALT:
+                    app.vs.reset()
+                    app.vs.set_projection(window.width, window.height)
+                    return True, True
+
+
         return False, None
 
     no_operation: bool = False
@@ -380,7 +387,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key._1:
 
-                if modifiers and (key.MOD_SHIFT | key.MOD_ALT):
+                if modifiers & (key.MOD_SHIFT | key.MOD_ALT):
                     if modifiers and key.MOD_SHIFT:  # test -1
                         scramble_key = -1
                     else:
