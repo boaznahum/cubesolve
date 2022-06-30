@@ -17,7 +17,7 @@ from . import algs
 from .algs import Alg, Algs
 from .app_exceptions import InternalSWError
 from .app_state import ApplicationAndViewState
-from .main_g_animation import AbstractWindow
+from cube.animation.main_g_animation import AbstractWindow
 from .main_g_app import AbstractApp
 from .model.cube_boy import FaceName
 from .model.cube_face import Face

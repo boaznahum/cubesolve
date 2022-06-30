@@ -7,14 +7,14 @@ import pyglet  # type: ignore
 from numpy import ndarray
 from pyglet import gl  # type: ignore
 
-from . import algs
-from .app_state import ApplicationAndViewState
-from .operator.cube_operator import Operator
-from .main_g_abstract import Animation, AbstractWindow
-from .model.cube import Cube
-from .model.cube_boy import FaceName
-from .model.elements import PartSlice
-from .viewer.viewer_g import GCubeViewer
+from cube import algs
+from cube.app_state import ApplicationAndViewState
+from cube.operator.cube_operator import Operator
+from cube.main_g_abstract import Animation, AbstractWindow
+from cube.model.cube import Cube
+from cube.model.cube_boy import FaceName
+from cube.model.elements import PartSlice
+from cube.viewer.viewer_g import GCubeViewer
 
 
 def op_and_play_animation(window: AbstractWindow, operator: Operator,

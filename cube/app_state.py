@@ -7,7 +7,7 @@ from pyglet import gl  # type: ignore
 # noinspection PyMethodMayBeStatic
 from . import algs
 from . import config
-from .main_g_animation_text import AnimationText
+from cube.animation.main_g_animation_text import AnimationText
 from .model.cube import Cube
 
 

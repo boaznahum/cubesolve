@@ -7,14 +7,13 @@ from pyglet import gl
 from pyglet.window import key  # type: ignore
 
 from . import config
-from . import main_g_animation
 from . import main_g_keyboard_input
 from . import main_g_mouse
 from .algs import Algs
+from .animation.AnimationManager import AnimationManager
 from .app_exceptions import AppExit, RunStop, OpAborted
 from .app_state import ApplicationAndViewState
 from .main_g_abstract import AbstractWindow
-from .main_g_animation import Animation
 from .main_g_app import App
 from .viewer.viewer_g import GCubeViewer
 # pyglet.options["debug_graphics_batch"] = True
@@ -26,8 +25,13 @@ class Window(AbstractWindow):
     #     # Cube 3D start rotation
     xRotation = yRotation = 30
 
-    def __init__(self, app: App, width, height, title=''):
+    def __init__(self, app: App,
+                 animation_manager: AnimationManager,
+                 width, height, title=''):
         super(Window, self).__init__(width, height, title, resizable=True)
+
+        self._animation_manager = animation_manager
+
         # from cube3d
         gl.glClearColor(0, 0, 0, 1)
 
@@ -51,12 +55,12 @@ class Window(AbstractWindow):
         self.text: MutableSequence[pyglet.text.Label] = []
         self.animation_text: MutableSequence[pyglet.text.Label] = []
 
-        self._animation: Animation | None = None
+        #self._animation: Animation | None = None
 
         self._last_edge_solve_count = 0
 
         # todo: still don't know what to do without this patch
-        self.app.op._animation_hook = lambda op, alg: main_g_animation.op_and_play_animation(self, op, False, alg)
+        #self.app.op._animation_hook = lambda op, alg: main_g_animation.op_and_play_animation(self, op, False, alg)
 
         self.update_gui_elements()
 
@@ -68,8 +72,8 @@ class Window(AbstractWindow):
     def viewer(self) -> GCubeViewer:
         return self._viewer
 
-    def set_animation(self, an: Animation | None):
-        self._animation = an
+    # def set_animation(self, an: Animation | None):
+    #     self._animation = an
 
     @property
     def animation_running(self):
@@ -77,7 +81,7 @@ class Window(AbstractWindow):
         Return non None if animation is running
         :return:
         """
-        return self._animation
+        return self._animation_manager and self._animation_manager.animation_running()
 
     def update_gui_elements(self):
 
@@ -354,13 +358,13 @@ class Window(AbstractWindow):
             animation.draw()
 
 
-
 # noinspection PyPep8Naming
 
 
 def main():
     app: App = App()
-    win = Window(app, 720, 720, '"Cube"')
+    am: AnimationManager = AnimationManager()
+    win = Window(app, am, 720, 720, '"Cube"')
 
     win.set_mouse_visible(True)
     pyglet.app.run()
