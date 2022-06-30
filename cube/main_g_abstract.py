@@ -3,31 +3,40 @@ from typing import Callable
 
 import pyglet  # type: ignore
 
-from .main_g_app import AbstractApp
+from .app_state import ApplicationAndViewState
+from .model.cube import Cube
+from .operator.cube_operator import Operator
+from .solver import Solver
 from .viewer.viewer_g import GCubeViewer
 
 
-class Animation:
+class AbstractApp:
+    def __init__(self):
+        pass
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.done: bool = False
-        self._animation_update_only: Callable[[], None] | None = None
-        self._animation_draw_only: Callable[[], None] | None = None
-        self._animation_cleanup: Callable[[], None] | None = None
-        self.delay = 1 / 20.
+    @property
+    @abstractmethod
+    def op(self) -> Operator:
+        raise NotImplementedError
 
-    def update_gui_elements(self):
-        if self._animation_update_only:
-            self._animation_update_only()
+    @property
+    @abstractmethod
+    def vs(self) -> ApplicationAndViewState:
+        raise NotImplementedError
 
-    def draw(self):
-        if self._animation_draw_only:
-            self._animation_draw_only()
+    @property
+    @abstractmethod
+    def slv(self) -> Solver:
+        raise NotImplementedError
 
-    def cleanup(self):
-        if self._animation_cleanup:
-            self._animation_cleanup()
+    @property
+    @abstractmethod
+    def cube(self) -> Cube:
+        raise NotImplementedError
+
+    @abstractmethod
+    def reset(self):
+        raise NotImplementedError
 
 
 class AbstractWindow(pyglet.window.Window):
@@ -47,6 +56,7 @@ class AbstractWindow(pyglet.window.Window):
     #     """
     #     pass
 
+    @abstractmethod
     def set_annotation_text(self, text1: str | None, text2: str | None):
         pass
 
@@ -63,5 +73,3 @@ class AbstractWindow(pyglet.window.Window):
     @abstractmethod
     def viewer(self) -> GCubeViewer:
         pass
-
-

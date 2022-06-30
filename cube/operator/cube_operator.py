@@ -5,6 +5,8 @@ from typing import Callable, Any, TYPE_CHECKING
 
 from .. import config
 from ..algs import Alg, SimpleAlg, Annotation
+from ..animation.animation_manager import AnimationManager
+from ..animation.animation_manager import OpProtocol
 from ..app_exceptions import OpAborted
 from ..app_state import ApplicationAndViewState
 from ..model.cube import Cube
@@ -14,22 +16,29 @@ if TYPE_CHECKING:
 
 
 class Operator:
-    __slots__ = ["_cube", "_history", "_animation_hook",
-                 "_animation_running", "_self_annotation_running",
-                 "_aborted", "_animation_enabled",
+    __slots__ = ["_cube", "_history",
+                 "_self_annotation_running",
+                 "_aborted",
+                 "_animation_running",
+                 "_animation_enabled",
+                 "_animation_manager",
                  "_app_state",
                  "_annotation"]
 
     def __init__(self, cube: Cube,
                  app_state: ApplicationAndViewState,  # PATCH, operator should hold SS mode
+                 animation_manager: AnimationManager = None,
                  animation_enabled: bool = False) -> None:
         super().__init__()
         self._aborted: Any = None
         self._cube = cube
         self._history: MutableSequence[Alg] = []
-        self._animation_hook: Callable[["Operator", SimpleAlg], None] | None = None
+
+        # why we need both
         self._animation_running = False
+        self._animation_manager = animation_manager
         self._animation_enabled: bool = animation_enabled
+
         self._app_state = app_state
         self._self_annotation_running = False
 
@@ -37,8 +46,6 @@ class Operator:
         self._annotation: OpAnnotation = OpAnnotation(self)
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
-
-
 
         """
         Animation can run only from top level, not from animation itself
@@ -49,6 +56,8 @@ class Operator:
         """
 
         log_path = config.OPERATION_LOG_PATH if config.OPERATION_LOG else None
+
+        # noinspection PyUnusedLocal
         def log(*s: Any):
             if log_path:
                 with open(log_path, mode="a") as f:
@@ -58,20 +67,20 @@ class Operator:
         # solver run op in loop, so we will miss the latest signal,
         # so maybe we need seperated method for single op and a long op
 
-        #log("At entry, big alg:", str(alg))
+        # log("At entry, big alg:", str(alg))
 
         if self._aborted:
             self._aborted = False
             print(f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
             raise OpAborted()
 
-        if animation and self.animation_enabled:
+        if animation and self.animation_enabled and not self._animation_running:
 
             def _do_animation():
                 nonlocal alg
                 with self._w_with_animation:
 
-                    an: Callable[[Operator, SimpleAlg], None] | None = self._animation_hook
+                    an: Callable[[Cube, OpProtocol, SimpleAlg], None] | None = self._animation_manager.run_animation
                     assert an  # just to make mypy happy
                     if inv:
                         alg = alg.inv()
@@ -82,8 +91,11 @@ class Operator:
                     if self._app_state.single_step_mode:
                         print(f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
 
+                    cube = self.cube
+                    op = self.op
+
                     for a in algs:
-                        an(self, a)  # --> this will call me again, but animation will self, so we reach the else branch
+                        an(cube, op, a)  # --> this will call me again, but animation will self, so we reach the else branch
                         if self._aborted:
                             self._aborted = False
                             print(f"A signal abort was raise, raising an exception {OpAborted}")
@@ -107,27 +119,16 @@ class Operator:
 
         else:
 
-
             if alg.is_ann:
                 return
 
             if inv:
                 alg = alg.inv()
 
-            if False:
-                algs: list[SimpleAlg] = [*alg.flatten()]
-
-                for a in algs:
-                    log("Actual, alg:", str(a))
-                    self._cube.sanity()
-                    a.play(self._cube, False)
-                    self._cube.sanity()
-                    self._history.append(alg)
-            else:
-                self._cube.sanity()
-                alg.play(self._cube, False)
-                self._cube.sanity()
-                self._history.append(alg)
+            self._cube.sanity()
+            alg.play(self._cube, False)
+            self._cube.sanity()
+            self._history.append(alg)
 
     def undo(self, animation=True) -> Alg | None:
 
@@ -216,7 +217,7 @@ class Operator:
 
     @property
     def animation_enabled(self):
-        return self._animation_enabled and self._animation_hook
+        return self._animation_enabled and self._animation_manager
 
     def toggle_animation_on(self, enable: bool | None = None):
 

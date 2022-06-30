@@ -17,7 +17,7 @@ from . import algs
 from .algs import Alg, Algs
 from .app_exceptions import InternalSWError
 from .app_state import ApplicationAndViewState
-from cube.animation.main_g_animation import AbstractWindow
+from .main_g_abstract import AbstractWindow
 from .main_g_app import AbstractApp
 from .model.cube_boy import FaceName
 from .model.cube_face import Face
@@ -53,7 +53,6 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
 
 
 def on_mouse_press(window: AbstractWindow, vs: ApplicationAndViewState, x, y, modifiers):
-
     # don't allow cube modification during animation
     if window.app.op.is_animation_running:
         return
@@ -402,7 +401,6 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
         return slice_alg.prime
     else:
         return slice_alg
-
 
 
 def _slice_on_part_edge_alg(part_edge: PartEdge) -> Alg:

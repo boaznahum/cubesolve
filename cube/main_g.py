@@ -6,11 +6,12 @@ import pyglet  # type: ignore
 from pyglet import gl
 from pyglet.window import key  # type: ignore
 
+from cube.animation.animation_manager import AnimationWindow
 from . import config
 from . import main_g_keyboard_input
 from . import main_g_mouse
 from .algs import Algs
-from .animation.AnimationManager import AnimationManager
+from .animation.animation_manager import AnimationManager
 from .app_exceptions import AppExit, RunStop, OpAborted
 from .app_state import ApplicationAndViewState
 from .main_g_abstract import AbstractWindow
@@ -21,16 +22,20 @@ from .viewer.viewer_g_ext import GViewerExt
 
 
 # noinspection PyAbstractClass
-class Window(AbstractWindow):
+class Window(AbstractWindow, AnimationWindow):
     #     # Cube 3D start rotation
     xRotation = yRotation = 30
 
     def __init__(self, app: App,
-                 animation_manager: AnimationManager,
+                 animation_manager: AnimationManager | None,
                  width, height, title=''):
         super(Window, self).__init__(width, height, title, resizable=True)
 
         self._animation_manager = animation_manager
+
+        # still don't know how to get rid of this patch !!!
+        if animation_manager:
+            animation_manager.set_window(self)
 
         # from cube3d
         gl.glClearColor(0, 0, 0, 1)
@@ -38,14 +43,6 @@ class Window(AbstractWindow):
         # see Z-Buffer in
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         gl.glEnable(gl.GL_DEPTH_TEST)
-
-        # https://stackoverflow.com/questions/3512456/how-to-draw-smooth-line-in-opengl-with-antialiasing
-        # gl.glEnable(gl.GL_BLEND)
-        # gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-        # gl.glEnable(gl.GL_LINE_SMOOTH)
-        # gl.glEnable(gl.GL_POLYGON_SMOOTH)
-        # gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
-        # gl.glHint(gl.GL_POLYGON_SMOOTH_HINT, gl.GL_NICEST)
 
         self.batch = pyglet.graphics.Batch()
         # self.create_layout()
@@ -55,12 +52,12 @@ class Window(AbstractWindow):
         self.text: MutableSequence[pyglet.text.Label] = []
         self.animation_text: MutableSequence[pyglet.text.Label] = []
 
-        #self._animation: Animation | None = None
+        # self._animation: Animation | None = None
 
         self._last_edge_solve_count = 0
 
         # todo: still don't know what to do without this patch
-        #self.app.op._animation_hook = lambda op, alg: main_g_animation.op_and_play_animation(self, op, False, alg)
+        # self.app.op._animation_hook = lambda op, alg: main_g_animation.op_and_play_animation(self, op, False, alg)
 
         self.update_gui_elements()
 
@@ -79,7 +76,7 @@ class Window(AbstractWindow):
     def animation_running(self):
         """
         Return non None if animation is running
-        :return:
+        :return: True value indicated that animation manager started animation
         """
         return self._animation_manager and self._animation_manager.animation_running()
 
@@ -89,8 +86,8 @@ class Window(AbstractWindow):
 
         self.viewer.update()
 
-        if self._animation:
-            self._animation.update_gui_elements()
+        if self._animation_manager:
+            self._animation_manager.update_gui_elements()
 
         self.update_animation_text()
 
@@ -351,19 +348,25 @@ class Window(AbstractWindow):
         gl.glPopAttrib()  # matrix mode
 
     def draw_animation(self):
-        animation = self._animation
 
-        if animation:
-            # print("Play animation")
-            animation.draw()
+        if self._animation_manager:
+            self._animation_manager.draw()
 
 
 # noinspection PyPep8Naming
 
 
 def main():
-    app: App = App()
-    am: AnimationManager = AnimationManager()
+
+    """"
+    todo: We have a problem here
+    AnimationManager need to know on which window it works - to send him gui update operations
+    On the other hand, Window need to know about the manager,
+    to request it draw/update events and to know if animation is running
+    """
+    vs = ApplicationAndViewState()
+    am: AnimationManager = AnimationManager(vs)
+    app: App = App(vs, am)
     win = Window(app, am, 720, 720, '"Cube"')
 
     win.set_mouse_visible(True)

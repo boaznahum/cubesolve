@@ -1,52 +1,29 @@
-from abc import abstractmethod
-
 from . import config
+from .animation.animation_manager import AnimationManager
 from .app_state import ApplicationAndViewState
-from .operator.cube_operator import Operator
+from .main_g_abstract import AbstractApp
 from .model.cube import Cube
+from .operator.cube_operator import Operator
 from .solver import Solver
-
-
-class AbstractApp:
-    def __init__(self):
-        pass
-
-    @property
-    @abstractmethod
-    def op(self) -> Operator:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def vs(self) -> ApplicationAndViewState:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def slv(self) -> Solver:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def cube(self) -> Cube:
-        raise NotImplementedError
-
-    @abstractmethod
-    def reset(self):
-        raise NotImplementedError
 
 
 class App(AbstractApp):
 
-    def __init__(self) -> None:
+    def __init__(self,
+                 vs: ApplicationAndViewState,
+                 am: AnimationManager) -> None:
         super().__init__()
+
+        self._vs = vs
         self._error: str | None = None
 
-        self._vs = ApplicationAndViewState()
 
         self._cube = Cube(self.vs.cube_size)
 
-        self._op: Operator = Operator(self.cube, self._vs, config.animation_enabled)
+        self._op: Operator = Operator(self.cube,
+                                      self._vs,
+                                      am,
+                                      config.animation_enabled)
 
         self._slv: Solver = Solver(self.op)
 
