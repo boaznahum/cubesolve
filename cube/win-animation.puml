@@ -1,0 +1,39 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+
+actor EventLoop
+
+EventLoop -> Operator: play(alg)
+
+Operator -> AnimationManager: play
+
+AnimationManager -> AnimationManager: set(animation)
+
+loop update
+
+AnimationManager -> Animation: update
+
+EventLoop -> Window: draw
+Window -> AnimationManager: draw
+AnimationManager -> Animation: draw
+
+
+end
+
+AnimationManager -> Animation: cleanup
+
+AnimationManager -> AnimationManager: set(None)
+
+AnimationManager -> Operator: play
+Operator -> Operator: play(cube)
+
+AnimationManager -> Window: update
+
+AnimationManager -> Operator: done
+
+
+
+
+@enduml

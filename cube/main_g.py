@@ -359,7 +359,8 @@ class Window(AbstractWindow, AnimationWindow):
 def main():
 
     """"
-    todo: We have a problem here
+    todo: We have a problem here see win-animation.puml
+
     AnimationManager need to know on which window it works - to send him gui update operations
     On the other hand, Window need to know about the manager,
     to request it draw/update events and to know if animation is running

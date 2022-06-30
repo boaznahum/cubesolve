@@ -315,8 +315,6 @@ class Annotation(SimpleAlg):
 
     def __init__(self, n: int = 1) -> None:
         super().__init__("ann", n)
-        self.text1 = None
-        self.text2 = None
 
     def play(self, cube: Cube, inv: bool = False):
         pass
@@ -932,6 +930,8 @@ def _scramble(cube_size: int, seed: Any, n: int | None = None) -> Alg:
 
 
 class Algs:
+    # When played, it simply refreshes GUI
+    # So it used by annotation tools, after they changed some model(text, cube)
     AN = Annotation()
     L = _L()
     B = _B()

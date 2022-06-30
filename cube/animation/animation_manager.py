@@ -54,10 +54,6 @@ class AnimationWindow:
         pass
 
     @abstractmethod
-    def set_annotation_text(self, text1: str | None, text2: str | None):
-        pass
-
-    @abstractmethod
     def update_gui_elements(self):
         pass
 
@@ -149,10 +145,6 @@ def _op_and_play_animation(window: AnimationWindow,
     platform_event_loop = pyglet.app.platform_event_loop
 
     if isinstance(alg, algs.Annotation):
-        text1 = alg.text1
-        text2 = alg.text2
-
-        window.set_annotation_text(text1, text2)
 
         operator(alg, inv)
         window.update_gui_elements()
@@ -238,9 +230,9 @@ def _op_and_play_animation(window: AnimationWindow,
 
     operator(alg, False)
 
-    window.update_gui_elements()  # most important !!! otherwise animation jumps
-    # window.on_draw()
-    # window.flip()
+    # most important !!! otherwise animation jumps
+    # not clear why
+    window.update_gui_elements()
 
 
 def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewState, alg: algs.AnimationAbleAlg,
