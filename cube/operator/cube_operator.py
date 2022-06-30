@@ -193,6 +193,10 @@ class Operator:
 
     @property
     def is_animation_running(self):
+        """
+
+        :return: bool(True) when operator invokes animation hook
+        """
         return self._animation_running
 
     @property  # type: ignore

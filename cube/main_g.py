@@ -71,6 +71,14 @@ class Window(AbstractWindow):
     def set_animation(self, an: Animation | None):
         self._animation = an
 
+    @property
+    def animation_running(self):
+        """
+        Return non None if animation is running
+        :return:
+        """
+        return self._animation
+
     def update_gui_elements(self):
 
         # so they can be used by draw method
@@ -345,13 +353,6 @@ class Window(AbstractWindow):
             # print("Play animation")
             animation.draw()
 
-    @property
-    def animation_running(self):
-        """
-        Return non None if animation is running
-        :return:
-        """
-        return self._animation
 
 
 # noinspection PyPep8Naming

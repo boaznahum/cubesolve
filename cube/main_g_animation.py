@@ -260,33 +260,35 @@ def _op_and_play_animation(window: AbstractWindow, cube: Cube,
         # Advance to next animation step
         animation.update_gui_elements()
 
-    # If you read event loop, only handled events cause to redraw
-    # so after _update, window_on_draw will draw the animation
-    # if any other model state is changed, it will update during keyboard handling, and animation.update_gui_elements()
-    #   will be re-called (is it a problem?)
-    #   and then redraw again window.on_redraw
-    clock.schedule_interval(_update, delay)
+    try:
+        # If you read event loop, only handled events cause to redraw
+        # so after _update, window_on_draw will draw the animation
+        # if any other model state is changed, it will update during keyboard handling, and animation.update_gui_elements()
+        #   will be re-called (is it a problem?)
+        #   and then redraw again window.on_redraw
+        clock.schedule_interval(_update, delay)
 
-    # copied from EventLoop#run
-    while not event_loop.has_exit and not animation.done:
-        timeout = event_loop.idle()  # this will trigger on_draw
-        platform_event_loop.step(timeout)
+        # copied from EventLoop#run
+        while not event_loop.has_exit and not animation.done:
+            timeout = event_loop.idle()  # this will trigger on_draw
+            platform_event_loop.step(timeout)
 
-    if event_loop.has_exit:
-        return
+        if event_loop.has_exit:
+            return
 
-    clock.unschedule(_update)
+        clock.unschedule(_update)
 
-    # while not animation.done:
-    #     window.on_draw()
-    #     time.sleep(delay)
+        # while not animation.done:
+        #     window.on_draw()
+        #     time.sleep(delay)
 
-    animation.cleanup()
-    #     if animation.done:
-    #         break  # don't sleep !!!
-    #     window.flip()
+        animation.cleanup()
+        #     if animation.done:
+        #         break  # don't sleep !!!
+        #     window.flip()
 
-    window.set_animation(None)
+    finally:
+        window.set_animation(None)
 
     operator.op(alg, False, animation=False)
 

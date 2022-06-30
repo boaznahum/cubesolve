@@ -37,6 +37,10 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
     # these are persevered for clik slicing, and panning
     if not modifiers & (key.MOD_SHIFT | key.MOD_CTRL | key.MOD_ALT):
 
+        # don't allow cube modification during animation
+        if win.app.op.is_animation_running:
+            return
+
         if config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
             if bool(buttons & mouse.RIGHT) == bool(config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM):
                 _handle_model_view_rotate_by_drag(win, dx, dy)
@@ -49,6 +53,11 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
 
 
 def on_mouse_press(window: AbstractWindow, vs: ApplicationAndViewState, x, y, modifiers):
+
+    # don't allow cube modification during animation
+    if window.app.op.is_animation_running:
+        return
+
     if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
 
         selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(vs, window, x, y)

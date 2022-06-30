@@ -8,13 +8,10 @@ Feature: Fix scramble also to invert and multiple and generate sub lists, but pr
 Feature: swap complete slices - Done, but only destination zero slices
 Feature: Keyboard history
 
-Bug: Prevent mouse rotate during animation
-
 Bug: self annotation cause delay in animation ?
 
 Bug: S should stop SS mode
 
 Code: Move face tackers to seperated file
-Code: Algs, rearrange hierarchy
 
 
