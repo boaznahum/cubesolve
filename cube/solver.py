@@ -1,5 +1,6 @@
-from enum import Enum, unique, IntFlag
+from enum import Enum, unique
 
+from cube.operator.cube_operator import Operator
 from . import config
 from ._solver.base_solver import ISolver
 from ._solver.common_op import CommonOp
@@ -10,10 +11,9 @@ from ._solver.l3_corners import L3Corners
 from ._solver.l3_cross import L3Cross
 from ._solver.nxn_centers import NxNCenters
 from ._solver.nxn_edges import NxNEdges
-from .algs.algs import Algs
+from .algs import Algs
 from .app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
 from .model.cube import Cube
-from cube.operator.cube_operator import Operator
 
 
 @unique
@@ -275,8 +275,6 @@ class Solver(ISolver):
                     self.debug(f"Find other exception iteration #{i}")
                     raise
 
-
-
                 if what == SolveStep.ALL and not self.is_solved:
                     raise InternalSWError(f"Non solved iteration {i}, but no parity detected")
 
@@ -301,7 +299,6 @@ class Solver(ISolver):
             if log_path:
                 with open("operator.log", mode="a") as f:
                     print("Solver:", *args, file=f)
-
 
     @property
     def running_solution(self):

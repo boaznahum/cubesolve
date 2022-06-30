@@ -3,7 +3,7 @@ from typing import Sequence
 from cube._solver.base_solver import SolverElement, ISolver
 from cube._solver.common_op import CommonOp
 from cube._solver.tracker import EdgeTracker
-from cube.algs.algs import Algs, Alg
+from cube.algs import Algs, Alg
 from cube.model.cube_face import Face
 from cube.model.elements import PartColorsID, Part, Edge, Color
 from cube.operator.op_annotation import AnnWhat
@@ -93,9 +93,9 @@ class L2(SolverElement):
 
         with self.ann.annotate((edge_id, AnnWhat.Moved), (self.cube.front.edge_top, AnnWhat.FixedPosition),
                                h2=lambda: f"Bring {st.actual.name_n_colors} to FU"):
-            self.__solve_edge(st, edge_id)
+            self.__solve_edge(st)
 
-    def __solve_edge(self, st: EdgeTracker, edge_id: PartColorsID):
+    def __solve_edge(self, st: EdgeTracker):
         cube = self.cube
         up: Face = self.cube.up
         down: Face = up.opposite

@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from typing import Callable, Any, TYPE_CHECKING
 
 from .. import config
-from ..algs.algs import Alg, SimpleAlg, Annotation
+from ..algs import Alg, SimpleAlg, Annotation
 from ..app_exceptions import OpAborted
 from ..app_state import ApplicationAndViewState
 from ..model.cube import Cube

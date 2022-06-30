@@ -3,7 +3,7 @@ from typing import Sequence
 from cube import config
 from cube._solver.base_solver import SolverElement, ISolver
 from cube._solver.common_op import CommonOp
-from cube.algs.algs import Algs, Alg
+from cube.algs import Algs, Alg
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
 from cube.model.elements import FaceName, Edge, PartColorsID, PartEdge, Part

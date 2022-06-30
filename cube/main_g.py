@@ -10,7 +10,7 @@ from . import config
 from . import main_g_animation
 from . import main_g_keyboard_input
 from . import main_g_mouse
-from .algs.algs import Algs
+from .algs import Algs
 from .app_exceptions import AppExit, RunStop, OpAborted
 from .app_state import ApplicationAndViewState
 from .main_g_abstract import AbstractWindow

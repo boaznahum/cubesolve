@@ -1,4 +1,4 @@
-from cube.algs import algs
+from cube import algs
 from cube.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.operator.cube_operator import Operator

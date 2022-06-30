@@ -1,7 +1,7 @@
 from cube._solver.base_solver import SolverElement, ISolver
 from cube._solver.common_op import CommonOp
 from cube._solver.tracker import CornerTracker
-from cube.algs.algs import Algs, Alg
+from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError, EvenCubeCornerSwapException
 from cube.model.cube_face import Face
 from cube.model.elements import FaceName, Part, Corner
@@ -202,4 +202,3 @@ class L3Corners(SolverElement):
 
         with self.ann.annotate(h1="Corner swap(PLL Parity)"):
             self.op.op(alg)
-

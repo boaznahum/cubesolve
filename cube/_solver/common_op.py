@@ -3,7 +3,7 @@ from typing import Callable, Generator
 
 from cube._solver.icommon_op import ICommon
 from cube._solver.base_solver import ISolver, SolverElement
-from cube.algs.algs import Algs, Alg
+from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
 from cube.model.cube_face import Face

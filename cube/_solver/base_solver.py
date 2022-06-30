@@ -1,12 +1,7 @@
-from enum import unique, Enum
-
 from cube._solver.isolver import ISolver
 from cube.model.cube import Cube, CubeSupplier
 from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
-from cube.operator.op_annotation import OpAnnotation
-
-
 
 
 class SolverElement(CubeSupplier):
@@ -41,5 +36,3 @@ class SolverElement(CubeSupplier):
     @property
     def white_face(self) -> Face:
         return self._cmn.white_face
-
-

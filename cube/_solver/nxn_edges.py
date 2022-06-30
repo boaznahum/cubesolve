@@ -3,8 +3,7 @@ from typing import Tuple
 
 from cube._solver.base_solver import SolverElement, ISolver
 from cube._solver.common_op import CommonOp, EdgeSliceTracker
-from cube.algs import algs as algs
-from cube.algs.algs import Algs
+from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries
@@ -437,7 +436,7 @@ class NxNEdges(SolverElement):
         return None
 
     @property
-    def rf(self) -> algs.Alg:
+    def rf(self) -> Alg:
         return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
 
     def do_edge_parity_on_any(self):

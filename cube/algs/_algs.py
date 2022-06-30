@@ -9,6 +9,9 @@ from cube.model.cube import Cube
 from cube.model.cube_slice import SliceName
 from cube.model.elements import FaceName, AxisName, PartSlice
 
+__all__ = ["Algs", "Alg", "SimpleAlg", "AnimationAbleAlg", "Annotation",
+           "SliceAbleAlg", "BigAlg", "SliceAlg", "FaceAlg"]
+
 
 def _inv(inv: bool, n) -> int:
     return -n if inv else n

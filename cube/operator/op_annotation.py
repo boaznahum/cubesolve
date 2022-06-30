@@ -3,9 +3,8 @@ from contextlib import contextmanager, nullcontext
 from enum import unique, Enum
 from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal, ContextManager
 
-from ..algs.algs import Algs
+from ..algs import Algs
 from ..app_exceptions import InternalSWError
-from ..model.cube import Cube
 from ..model.cube_queries import CubeQueries
 from ..model.elements import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
 from ..viewer.viewer_markers import VMarker, VIEWER_ANNOTATION_KEY

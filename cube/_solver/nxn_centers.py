@@ -5,8 +5,8 @@ from typing import Tuple, Callable, Collection, Any, TypeAlias
 from cube import config
 from cube._solver.base_solver import SolverElement, ISolver
 from cube._solver.common_op import CommonOp
-from cube.algs import algs
-from cube.algs.algs import Algs
+from cube import algs
+from cube.algs import Algs
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
 from cube.model.cube_boy import CubeLayout, color2long

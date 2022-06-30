@@ -5,8 +5,8 @@ import pyglet  # type: ignore
 from pyglet.window import key  # type: ignore
 
 from . import config
-from .algs import algs
-from .algs.algs import Alg, Algs
+from . import algs
+from .algs import Alg, Algs
 from .app_exceptions import AppExit
 from .app_state import ApplicationAndViewState
 from .operator.cube_operator import Operator
@@ -15,6 +15,9 @@ from .model.cube_boy import FaceName
 from .solver import Solver, SolveStep
 
 good = Algs.bigAlg("good")
+
+# noinspection PyProtectedMember
+key0 = key._0
 
 
 def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
@@ -134,7 +137,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     app.vs.set_projection(window.width, window.height)
                     return True, True
 
-
         return False, None
 
     no_operation: bool = False
@@ -205,7 +207,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
             case key.I:
                 print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
                 no_operation = True
-                from model.cube_queries import CubeQueries
+                from cube.model.cube_queries import CubeQueries
                 CubeQueries.print_dist(app.cube)
 
             case key.W:
@@ -379,7 +381,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                             op.op(alg, inv)
                 else:
                     # same as Test 0
-                    scramble_key = value - key._0
+                    scramble_key = value - key0
                     alg = Algs.scramble(app.cube.size, scramble_key)
 
                     with _wait_cursor(window):
@@ -391,12 +393,12 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     if modifiers and key.MOD_SHIFT:  # test -1
                         scramble_key = -1
                     else:
-                        scramble_key = value - key._0
+                        scramble_key = value - key0
 
                     alg = Algs.scramble(app.cube.size, scramble_key, 5)
                 else:
                     # same as Test 1
-                    alg = Algs.scramble(app.cube.size, value - key._0)
+                    alg = Algs.scramble(app.cube.size, value - key0)
 
                 with _wait_cursor(window):
                     op.op(alg, inv, animation=False)
@@ -414,7 +416,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                                 op.op(a, animation=False)
                             good = good + a
                         except:
-                            from model.cube_queries import CubeQueries
+                            from .model.cube_queries import CubeQueries
                             CubeQueries.print_dist(app.cube)
                             print("Failed on", a)
                             print(good)
@@ -425,7 +427,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                         try:
                             with _wait_cursor(window):
                                 op.op(a, animation=False)
-                            from model.cube_queries import CubeQueries
+                            from .model.cube_queries import CubeQueries
                             CubeQueries.print_dist(app.cube)
                         except:
                             print(good)

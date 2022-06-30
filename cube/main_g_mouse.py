@@ -13,8 +13,8 @@ from pyglet.window import key, mouse  # type: ignore
 from pyglet import gl  # type: ignore
 
 from . import config
-from .algs import algs
-from .algs.algs import Alg, Algs
+from . import algs
+from .algs import Alg, Algs
 from .app_exceptions import InternalSWError
 from .app_state import ApplicationAndViewState
 from .main_g_animation import AbstractWindow
@@ -35,7 +35,7 @@ _DRAG_VECTOR_DETECTION_DATA_X0_Y0: Tuple[int, int] = (0, 0)
 
 def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
     # these are persevered for clik slicing, and panning
-    if not modifiers & (key.MOD_SHIFT | key.MOD_CTRL | key.MOD_ALT ):
+    if not modifiers & (key.MOD_SHIFT | key.MOD_CTRL | key.MOD_ALT):
 
         if config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
             if bool(buttons & mouse.RIGHT) == bool(config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM):
@@ -46,8 +46,6 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
     elif (modifiers & key.MOD_ALT) == key.MOD_ALT:
 
         win.app.vs.change_offset(dx, dy, 0)
-
-
 
 
 def on_mouse_press(window: AbstractWindow, vs: ApplicationAndViewState, x, y, modifiers):
@@ -67,13 +65,11 @@ def on_mouse_release(x, y, button, modifiers):
 
 
 def on_mouse_scroll(window: AbstractWindow, x, y, scroll_x, scroll_y):
-
     vs = window.app.vs
 
     vs.change_fov_y(scroll_y)
 
     vs.set_projection(window.width, window.height)
-
 
 
 def _handle_model_view_rotate_by_drag(win, dx, dy):
@@ -108,10 +104,10 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
 
     n = len(data)
 
-    if n == 1: # first point
-        _DRAG_VECTOR_DETECTION_DATA_X0_Y0 = (x,y)
+    if n == 1:  # first point
+        _DRAG_VECTOR_DETECTION_DATA_X0_Y0 = (x, y)
 
-    #print(f"{n}")
+    # print(f"{n}")
 
     if n < _DRAG_VECTOR_DETECTION_DATA_LENGTH:
         return
@@ -157,7 +153,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
 
         if isinstance(part, Corner):
             # print("Is corner")
-            alg = Algs.of_face(face_name)
+            alg: Alg = Algs.of_face(face_name)
 
             if part is face.corner_top_right:
                 #   ----|  ^
@@ -342,7 +338,6 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
 
 
 def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> Alg:
-
     """
 
     :param part:
@@ -386,7 +381,6 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
     else:
         raise InternalSWError
 
-
     if not on_center:
         index = part.get_ltr_index_from_slice_index(face, index)
 
@@ -396,9 +390,10 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
     slice_alg = slice_alg[index + 1]  # index start from 1
 
     if inv:
-        slice_alg = slice_alg.prime
+        return slice_alg.prime
+    else:
+        return slice_alg
 
-    return slice_alg
 
 
 def _slice_on_part_edge_alg(part_edge: PartEdge) -> Alg:

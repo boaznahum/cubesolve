@@ -7,7 +7,7 @@ import pyglet  # type: ignore
 from numpy import ndarray
 from pyglet import gl  # type: ignore
 
-from .algs import algs
+from . import algs
 from .app_state import ApplicationAndViewState
 from .operator.cube_operator import Operator
 from .main_g_abstract import Animation, AbstractWindow

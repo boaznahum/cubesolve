@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pyglet import gl  # type: ignore
 
 # noinspection PyMethodMayBeStatic
-from .algs import algs as algs
+from . import algs
 from . import config
 from .main_g_animation_text import AnimationText
 from .model.cube import Cube
@@ -85,8 +85,8 @@ class ApplicationAndViewState:
         self._alpha_z: float = 0
         self._alpha_delta = 0.1
 
-        self._fovy_0 = 35
-        self._fovy = self._fovy_0
+        self._fov_y_0 = 35
+        self._fov_y = self._fov_y_0
 
         self._offset_0 = [0, 0, -400]
         # must copy, we modify it
@@ -107,7 +107,7 @@ class ApplicationAndViewState:
         self._alpha_x: float = 0
         self._alpha_y: float = 0
         self._alpha_z: float = 0
-        self._fovy = self._fovy_0
+        self._fov_y = self._fov_y_0
         # must copy, we modify it
         self._offset[:] = self._offset_0
 
@@ -152,13 +152,13 @@ class ApplicationAndViewState:
         return self._alpha_delta
 
     def inc_fov_y(self):
-        self._fovy += 1
+        self._fov_y += 1
 
     def dec_fov_y(self):
-        self._fovy -= 1
+        self._fov_y -= 1
 
     def change_fov_y(self, delta: int):
-        self._fovy += delta
+        self._fov_y += delta
 
     def change_offset(self, dx, dy, dz):
         o = self._offset
@@ -211,7 +211,7 @@ class ApplicationAndViewState:
 
         aspect_ratio = width / height
         # gluPerspective( GLdouble ( fovy ) , GLdouble ( aspect ) , GLdouble ( zNear ) , GLdouble ( zFar ) )-> void
-        gl.gluPerspective(self._fovy, aspect_ratio, 1, 1000)
+        gl.gluPerspective(self._fov_y, aspect_ratio, 1, 1000)
 
         # gl.glMatrixMode(gl.GL_MODELVIEW)
         # gl.glLoadIdentity()

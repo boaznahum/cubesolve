@@ -1,7 +1,7 @@
 from cube._solver.base_solver import SolverElement, ISolver
 from cube._solver.common_op import CommonOp
 from cube._solver.tracker import EdgeTracker
-from cube.algs.algs import Algs
+from cube.algs import Algs
 from cube.app_exceptions import EvenCubeEdgeParityException
 from cube.model.cube_face import Face
 from cube.model.elements import FaceName, Part, Edge
@@ -62,8 +62,6 @@ class L3Cross(SolverElement):
 
         self.cmn.bring_face_up(self.white_face.opposite)
         # yf is no longer valid - need to track
-        wf = self.white_face
-        op = wf.opposite
         assert self.white_face.opposite.name == FaceName.U
 
         self._do_cross()
@@ -99,7 +97,7 @@ class L3Cross(SolverElement):
 
         self.debug(f"L3 cross-color: {n} match {yf}")
 
-        if not n in [0, 2, 4]:
+        if n not in [0, 2, 4]:
             if self.cube.n_slices % 2 == 0:
                 self.debug(f"L3 cross-color: Found OLL(Edge Parity), raising EvenCubeEdgeParityException")
                 raise EvenCubeEdgeParityException()

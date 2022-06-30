@@ -6,7 +6,7 @@ from cube.operator.cube_operator import Operator
 
 class ISolver(ABC):
 
-    __slots__ = []
+    __slots__:list[str] = []
 
     @abstractmethod
     def debug(self, *args): ...
