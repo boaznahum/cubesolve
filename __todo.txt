@@ -8,7 +8,7 @@ Feature: Fix scramble also to invert and multiple and generate sub lists, but pr
 Feature: swap complete slices - Done, but only destination zero slices
 Feature: Keyboard history
 
-Bug: Alt-c should be handled in Both modes
+Bug: Prevent mouse rotate during animation
 
 Bug: self annotation cause delay in animation ?
 

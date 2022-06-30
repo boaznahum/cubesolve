@@ -1068,9 +1068,13 @@ class NxNCenters(SolverElement):
             for rc in self._2d_range(_on_src1_1, _on_src1_2):
                 yield source_face.center.get_center_slice(rc)
 
+        def _h2():
+            size_ = self._block_size2(rc1, rc2)
+            return f", {size_[0]}x{size_[1]} communicator"
+
         with self.ann.annotate((_ann_source, AnnWhat.Moved),
                                (_ann_target, AnnWhat.FixedPosition),
-                               h2=lambda: f", {self._block_size2(rc1, rc2)} communicator"
+                               h2=_h2
                                ):
             if n_rotate:
                 self.op.op(Algs.of_face(source_face.name) * n_rotate)
