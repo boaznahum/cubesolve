@@ -22,11 +22,8 @@ Better to create a virtual enviroment, then
 
 https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9aeb-c8ddd9519647.mp4
 
-## Keyboard
+## Keyboard/Mouse Control
 
-### Controlling view
-
-    Ctlr/Alt X, Y, Z - Rotate cube over X, Y , Z Axis
     This is alos can be done by dragging mouse+right bottun
 
 ### Modes
@@ -42,9 +39,8 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     Ctrl+Space - enter/exit single sterp mode, in this mode animation is suspned till user hit 'SPACE' (or Ctrl+SPACE)
     Very useful for debugging new algorithms
 
-### Keyboard/Mouse
 
-#### Face rotate and slicing
+### Face rotate and slicing
 
     R, L, F, B, U, B  - As suauls - rotate faces
     X, Y, Z - Entire cube over R, U and F 
@@ -56,17 +52,17 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
     Shit/Ctrl + Mouse click  on wing/corner - rotate slice/face clockwise/counterclockwise
 
-##### Panning
+### Panning
 
     Alt + Mouse drag 
     Arrows up/down/right/left
 
-##### Zoom in/out
+### Zoom in/out
 
     ctl up/down zoom in/out
     Mouse weel
 
-##### Rotating model
+### Rotating model
 
     Mouse + Click right - rotate model
 
@@ -87,7 +83,7 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
 
 ### Solving
 
-    SHIFT + any one the one below force animation off (useful for skipping to steps)
+    SHIFT + any one the one below force animation off (useful for skipping to specific step)
     ?/  - Solve the cube, See above animation mode
     F1 - First Layer
     F2 - Second Layer
