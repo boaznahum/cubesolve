@@ -15,4 +15,6 @@ Code: Move face tackers to seperated file
 Feature/DX mouse rotate should rotate adjusted face
 
 
+Feature: viewer should be automatically detect chnage sin shadowing mode and reset itself
+
 
