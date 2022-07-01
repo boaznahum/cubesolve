@@ -12,4 +12,7 @@ Bug: self annotation cause delay in animation ?
 
 Code: Move face tackers to seperated file
 
+Feature/DX mouse rotate should rotate adjusted face
+
+
 

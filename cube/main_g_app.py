@@ -4,7 +4,7 @@ from .app_state import ApplicationAndViewState
 from .main_g_abstract import AbstractApp
 from .model.cube import Cube
 from .operator.cube_operator import Operator
-from .solver import Solver
+from .solver import Solver, Solvers
 
 
 class App(AbstractApp):
@@ -25,7 +25,7 @@ class App(AbstractApp):
                                       am,
                                       config.animation_enabled)
 
-        self._slv: Solver = Solver(self.op)
+        self._slv: Solver = Solvers.default(self.op)
 
         # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
 

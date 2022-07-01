@@ -1,8 +1,6 @@
 from contextlib import contextmanager
 from typing import Callable, Generator
 
-from cube._solver.icommon_op import ICommon
-from cube._solver.base_solver import ISolver, SolverElement
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
@@ -10,6 +8,9 @@ from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
 from cube.model.cube_queries import Pred, CubeQueries
 from cube.model.elements import Edge, Color, FaceName, EdgeWing
+from cube.solver.imp.begginer.base_solver import SolverElement
+from cube.solver.imp.begginer.icommon_op import ICommon
+from cube.solver.imp.begginer.isolver import ISolver
 
 TRACE_UNIQUE_ID: int = 0
 

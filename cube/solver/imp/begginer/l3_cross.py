@@ -1,11 +1,12 @@
-from cube._solver.base_solver import SolverElement, ISolver
-from cube._solver.common_op import CommonOp
-from cube._solver.tracker import EdgeTracker
 from cube.algs import Algs
 from cube.app_exceptions import EvenCubeEdgeParityException
 from cube.model.cube_face import Face
 from cube.model.elements import FaceName, Part, Edge
 from cube.operator.op_annotation import AnnWhat
+from cube.solver.imp.begginer.base_solver import SolverElement
+from cube.solver.imp.begginer.common_op import CommonOp
+from cube.solver.imp.begginer.isolver import ISolver
+from cube.solver.imp.begginer.tracker import EdgeTracker
 
 
 def use(_):

@@ -43,6 +43,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
     vs: ApplicationAndViewState = app.vs
 
+    cube = app.cube
+
     def handle_in_both_modes():
         """
 
@@ -278,7 +280,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key.A:
 
-                nn = slv.cube.n_slices
+                nn = cube.n_slices
 
                 mid = 1 + nn // 2  # == 3 on 5
 
@@ -407,7 +409,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     # same as Test 1
                     alg = Algs.scramble(app.cube.size, value - key0)
 
-                animation = modifiers  & key.MOD_CTRL
+                animation = modifiers & key.MOD_CTRL
 
                 with _wait_cursor(window):
                     op.op(alg, inv, animation=animation)

@@ -1,54 +1,23 @@
-from enum import Enum, unique
+from enum import unique
 
 from cube.operator.cube_operator import Operator
-from . import config
-from ._solver.base_solver import ISolver
-from ._solver.common_op import CommonOp
-from ._solver.l1_corners import L1Corners
-from ._solver.l1_cross import L1Cross
-from ._solver.l2 import L2
-from ._solver.l3_corners import L3Corners
-from ._solver.l3_cross import L3Cross
-from ._solver.nxn_centers import NxNCenters
-from ._solver.nxn_edges import NxNEdges
-from .algs import Algs
-from .app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
-from .model.cube import Cube
+from .common_op import CommonOp
+from .isolver import ISolver
+from .l1_corners import L1Corners
+from .l1_cross import L1Cross
+from .l2 import L2
+from .l3_corners import L3Corners
+from .l3_cross import L3Cross
+from .nxn_centers import NxNCenters
+from .nxn_edges import NxNEdges
+from ...abstract_solver import BeginnerLBLReduce, SolveStep, SolverResults
+from .... import config
+from ....algs import Algs
+from ....app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
+from ....model.cube import Cube
 
 
-@unique
-class SolveStep(Enum):
-    ALL = "ALL"
-    L1 = "L1"
-    L2 = "L2"
-    L3 = "L3"
-    L3x = "L3x"
-    NxNCenters = "NxNCenters"
-    NxNEdges = "NxNEdges"
-
-
-class SolverResults:
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._was_corner_swap = False
-        self._was_partial_edge_parity = False
-        self._was_even_edge_parity = False
-
-    @property
-    def was_corner_swap(self):
-        return self._was_corner_swap
-
-    @property
-    def was_even_edge_parity(self):
-        return self._was_even_edge_parity
-
-    @property
-    def was_partial_edge_parity(self):
-        return self._was_partial_edge_parity
-
-
-class Solver(ISolver):
+class BeginnerSolver(ISolver, BeginnerLBLReduce):
     __slots__ = ["_op", "_cube", "_debug_override", "_aborted",
                  "_running_solution",
                  "l1_cross",

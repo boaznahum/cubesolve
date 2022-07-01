@@ -3,8 +3,6 @@ from enum import Enum, unique
 from typing import Tuple, Callable, Collection, Any, TypeAlias
 
 from cube import config
-from cube._solver.base_solver import SolverElement, ISolver
-from cube._solver.common_op import CommonOp
 from cube import algs
 from cube.algs import Algs
 from cube.app_exceptions import InternalSWError
@@ -14,6 +12,9 @@ from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries, Pred
 from cube.model.elements import FaceName, Color, CenterSlice
 from cube.operator.op_annotation import AnnWhat
+from cube.solver.imp.begginer.base_solver import SolverElement
+from cube.solver.imp.begginer.common_op import CommonOp
+from cube.solver.imp.begginer.isolver import ISolver
 from cube.viewer.viewer_markers import VIEWER_ANNOTATION_KEY, VMarker
 
 _TRACKER_KEY_PREFIX = "_nxn_centers_track:"

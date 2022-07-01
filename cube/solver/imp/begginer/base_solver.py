@@ -1,7 +1,7 @@
-from cube._solver.isolver import ISolver
 from cube.model.cube import Cube, CubeSupplier
 from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
+from cube.solver.imp.begginer.isolver import ISolver
 
 
 class SolverElement(CubeSupplier):

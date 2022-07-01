@@ -1,8 +1,6 @@
 from collections import defaultdict
 from typing import Tuple
 
-from cube._solver.base_solver import SolverElement, ISolver
-from cube._solver.common_op import CommonOp, EdgeSliceTracker
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube_face import Face
@@ -10,6 +8,9 @@ from cube.model.cube_queries import CubeQueries
 from cube.model.elements import Color, Edge, PartColorsID, EdgeWing
 from cube.model.misc import ModelHelper
 from cube.operator.op_annotation import AnnWhat
+from cube.solver.imp.begginer.base_solver import SolverElement
+from cube.solver.imp.begginer.common_op import CommonOp, EdgeSliceTracker
+from cube.solver.imp.begginer.isolver import ISolver
 
 
 def use(_):
@@ -131,7 +132,11 @@ class NxNEdges(SolverElement):
                 color_un_ordered = frozenset(ordered_color)
 
             # Override the above
-            with self.ann.annotate(h2=lambda: f"/Fixing {edge.name_n_faces} {ModelHelper.color_id_to_name(ordered_color)}"):
+            def _h2():
+                return f"/Fixing {edge.name_n_faces} " \
+                       f"{ModelHelper.color_id_to_name(ordered_color)}"
+
+            with self.ann.annotate(h2=_h2):
                 self._solve_on_front_left(color_un_ordered, ordered_color)
 
                 self._report_done(f"Done {edge}")
