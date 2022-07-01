@@ -39,7 +39,6 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     Ctrl+Space - enter/exit single sterp mode, in this mode animation is suspned till user hit 'SPACE' (or Ctrl+SPACE)
     Very useful for debugging new algorithms
 
-
 ### Face rotate and slicing
 
     R, L, F, B, U, B  - As suauls - rotate faces
@@ -68,13 +67,15 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
     Ctrl/Alt  X/Y/Z rotate around axis
 
-
 https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a18f-719876cb7b59.mp4
+
+### Undo/Reset
 
     < - Undo last move (user or sovlver)
 
-    C - Reset the cube
-    Ctrl+C - reset the cube and itss orinetation.
+    C - Reset the cube 
+    Ctrl+C - reset the cube and and view
+    Alt+C - reset view
 
 ### Scrambling
 
@@ -108,6 +109,8 @@ Algs can be combined, inverted sliced and multiplied
 
    ```python
     @property
+
+
 def rf(self) -> algs.Alg:
     return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
 
@@ -153,9 +156,9 @@ location
 
   ```python
             if te().on_face(cube.right):
-    self.op.op(self._ur_alg)  # U R U' R' U' F' U F 
+self.op.op(self._ur_alg)  # U R U' R' U' F' U F 
 else:
-    self.op.op(self._ul_alg)
+self.op.op(self._ul_alg)
 
 ...
 
