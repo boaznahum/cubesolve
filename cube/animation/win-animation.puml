@@ -3,9 +3,13 @@
 
 autonumber
 
-actor EventLoop
+control EventLoop
+participant Window
 
-EventLoop -> Operator: play(alg)
+
+
+EventLoop -> Window: play
+Window -> Operator: play(alg)
 
 Operator -> AnimationManager: play
 

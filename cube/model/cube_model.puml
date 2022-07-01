@@ -15,7 +15,7 @@ Part <|-- Center
 
 Part *-- PartSlice
 
-PartSlice <|-- Wing
+PartSlice <|-- EdgeWing
 PartSlice <|-- CornerSlice
 PartSlice <|-- CenterSlice
 
@@ -26,7 +26,7 @@ Face  o-- "1" Center
 Face  o-- "4" Edge
 Face  o-- "4" Corner
 
-Edge o.. "N" Wing: "sp*"
+Edge o.. "N" EdgeWing: "sp*"
 note on link #yellow: "specification"
 Corner o.. "1" CornerSlice: "sp*"
 Center o.. "NxN" CenterSlice: "sp*"
@@ -37,7 +37,7 @@ SliceFacet <|-- WingFacet
 SliceFacet <|-- CornerSliceFacet
 SliceFacet <|-- CenterSliceFacet
 
-Wing o.. "2" WingFacet: "sp*"
+EdgeWing o.. "2" WingFacet: "sp*"
 CornerSlice o.. "3" CornerSliceFacet: "sp*"
 CenterSlice o.. "1" CenterSliceFacet: "sp*"
 

@@ -1048,7 +1048,7 @@ class Center(Part):
         return "Center"
 
 
-class EdgeSlice(PartSlice):
+class EdgeWing(PartSlice):
 
     def __init__(self, index: int, *edges: PartEdge) -> None:
         super().__init__(index, *edges)
@@ -1060,12 +1060,12 @@ class EdgeSlice(PartSlice):
         # my simple index
         self._my_index = index
 
-    def clone(self) -> "EdgeSlice":
+    def clone(self) -> "EdgeWing":
 
         index = self._index
         assert isinstance(index, int)  # satisfy mypy
 
-        e = EdgeSlice(index, *self._clone_edges())
+        e = EdgeWing(index, *self._clone_edges())
         # todo fix it should be done by super clone
         e._unique_id = self._unique_id
 
@@ -1073,7 +1073,7 @@ class EdgeSlice(PartSlice):
 
         return e
 
-    def single_shared_face(self, other: "EdgeSlice") -> _Face:
+    def single_shared_face(self, other: "EdgeWing") -> _Face:
         """
         Return a face that appears in both edges
         raise error more than one (how can it be) or no one
@@ -1128,7 +1128,7 @@ class EdgeSlice(PartSlice):
         return self.get_other_face_edge(f).face
 
     def copy_colors_horizontal(self,
-                               source: "EdgeSlice"):
+                               source: "EdgeWing"):
         """
         Copy from edge - copy from shared face
         self and source assume to share a face
@@ -1149,7 +1149,7 @@ class EdgeSlice(PartSlice):
         self.copy_colors(source, (shared_face, shared_face), (source_other, dest_other))
 
     def copy_colors_ver(self,
-                        source: "EdgeSlice"):
+                        source: "EdgeWing"):
         """
         Copy from vertical edge - copy from other face
         self and source assume to share a face
@@ -1234,9 +1234,9 @@ class CornerSlice(PartSlice):
 class Edge(Part):
 
     def __init__(self, f1: _Face, f2: _Face, right_top_left_same_direction: bool,
-                 slices: Sequence[EdgeSlice]) -> None:
+                 slices: Sequence[EdgeWing]) -> None:
         # assign before call to init because _edges is called from ctor
-        self._slices: Sequence[EdgeSlice] = slices
+        self._slices: Sequence[EdgeWing] = slices
         super().__init__()
         self._f1: _Face = f1
         self._f2: _Face = f2
@@ -1286,14 +1286,14 @@ class Edge(Part):
         return True
 
     @property
-    def all_slices(self) -> Iterator[EdgeSlice]:
+    def all_slices(self) -> Iterator[EdgeWing]:
         return self._slices.__iter__()
 
     @property
     def n_slices(self):
         return self.cube.size - 2
 
-    def get_slice(self, i) -> EdgeSlice:
+    def get_slice(self, i) -> EdgeWing:
         """
         In unpractical order
         :param i:
@@ -1339,7 +1339,7 @@ class Edge(Part):
 
         return si
 
-    def get_slice_by_ltr_index(self, face: _Face, i) -> EdgeSlice:
+    def get_slice_by_ltr_index(self, face: _Face, i) -> EdgeWing:
         """
 
         # todo: combine and optimize with get_face_edge
@@ -1492,7 +1492,7 @@ class Edge(Part):
         Used as temporary for rotate, must not be used in cube
         :return:
         """
-        slices: list[EdgeSlice] = [s.clone() for s in self._slices]
+        slices: list[EdgeWing] = [s.clone() for s in self._slices]
         return Edge(self._f1, self._f2, self.right_top_left_same_direction, slices)
 
     def single_shared_face(self, other: "Edge"):
@@ -1520,7 +1520,7 @@ class Edge(Part):
         :param face:
         :return:  values of 'n' ordered by 'cw'
         """
-        sl: EdgeSlice
+        sl: EdgeWing
         for sl in self.all_slices:
             e: PartEdge = sl.get_face_edge(face)
             _cw = e.attributes["cw"]

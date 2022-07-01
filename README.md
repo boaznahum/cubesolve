@@ -117,6 +117,11 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
     Operator accept any algorithn and apply it on cube, if animation is enabled then play it ...
     Keep history of operation and can undo them
     Contained in Solver to animate and track solution
+
+    Still have a probelm that I need to solve, animation manager <-> window/operator runtime relation are bidirectional 
+
+![Operator-Animation](/assets/win-animation.png)    
+
 ## Solver
   nxn_edges.py
   nxn_centers.py

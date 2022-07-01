@@ -9,14 +9,14 @@ from cube.model.cube import Cube
 from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
 from cube.model.cube_queries import Pred, CubeQueries
-from cube.model.elements import Edge, Color, FaceName, EdgeSlice
+from cube.model.elements import Edge, Color, FaceName, EdgeWing
 
 TRACE_UNIQUE_ID: int = 0
 
 
 class EdgeSliceTracker:
 
-    def __init__(self, cube: Cube, pred: Pred[EdgeSlice]) -> None:
+    def __init__(self, cube: Cube, pred: Pred[EdgeWing]) -> None:
         super().__init__()
         self.pred = pred
         self.cube = cube
@@ -386,7 +386,7 @@ class CommonOp(ICommon, SolverElement):
                 raise ValueError(f"Unknown face {face.name}")
 
     @contextmanager
-    def track_e_slice(self, es: EdgeSlice) -> Generator[EdgeSliceTracker, None, None]:
+    def track_e_slice(self, es: EdgeWing) -> Generator[EdgeSliceTracker, None, None]:
 
         global TRACE_UNIQUE_ID
 
@@ -396,7 +396,7 @@ class CommonOp(ICommon, SolverElement):
 
         key = "SliceTracker:" + str(n)
 
-        def _pred(s: EdgeSlice) -> bool:
+        def _pred(s: EdgeWing) -> bool:
             return key in s.c_attributes
 
         tracker: EdgeSliceTracker = EdgeSliceTracker(self.cube, _pred)

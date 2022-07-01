@@ -7,7 +7,7 @@ from cube.app_exceptions import InternalSWError
 from .cube import Cube
 from .cube_boy import Color
 from .cube_face import Face
-from .elements import PartSlice, CenterSlice, PartColorsID, Edge, EdgeSlice, PartType, CornerSlice, PartEdge, Part
+from .elements import PartSlice, CenterSlice, PartColorsID, Edge, EdgeWing, PartType, CornerSlice, PartEdge, Part
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]
@@ -37,16 +37,16 @@ class CubeQueries:
 
 
     @staticmethod
-    def find_slice_in_cube_edges(cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:
+    def find_slice_in_cube_edges(cube: Cube, pred: Pred[EdgeWing]) -> EdgeWing | None:
 
         return CubeQueries.find_slice_in_edges(cube.edges, pred)
 
     @staticmethod
-    def find_slice_in_edges(edges: Iterable[Edge], pred: Pred[EdgeSlice]) -> EdgeSlice | None:
+    def find_slice_in_edges(edges: Iterable[Edge], pred: Pred[EdgeWing]) -> EdgeWing | None:
 
         for e in edges:
             for i in range(e.n_slices):
-                s: EdgeSlice = e.get_slice(i)
+                s: EdgeWing = e.get_slice(i)
 
                 if pred(s):
                     return s
@@ -54,7 +54,7 @@ class CubeQueries:
         return None
 
     @classmethod
-    def find_edge_slice_in_cube(cls, cube: Cube, pred: Pred[EdgeSlice]) -> EdgeSlice | None:
+    def find_edge_slice_in_cube(cls, cube: Cube, pred: Pred[EdgeWing]) -> EdgeWing | None:
         return CubeQueries.find_slice_in_edges(cube.edges, pred)
 
     @staticmethod
@@ -239,7 +239,7 @@ class CubeQueries:
         e: Edge
         for e in cube.edges:
             for i in range(cube.n_slices):
-                s: EdgeSlice = e.get_slice(i)
+                s: EdgeWing = e.get_slice(i)
                 clr = s.colors_id_by_color
                 counter: MutableMapping[Hashable, MutableSequence[int]] = dist[clr]
                 key = frozenset([*CubeQueries.get_two_edge_slice_points(cube, i)])

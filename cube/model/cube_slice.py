@@ -2,7 +2,7 @@ from enum import Enum, unique
 from typing import Iterable, Tuple, Sequence
 
 from .cube_face import Face
-from .elements import SuperElement, _Cube, Edge, Center, PartSlice, EdgeSlice
+from .elements import SuperElement, _Cube, Edge, Center, PartSlice, EdgeWing
 from .elements import CenterSlice
 
 
@@ -51,7 +51,7 @@ class Slice(SuperElement):
             left
         )
 
-    def _get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeSlice], Sequence[CenterSlice]]:
+    def _get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
 
         # First we need to decide with which edge to start, to get consist results
         # todo replace with abstract method
@@ -86,7 +86,7 @@ class Slice(SuperElement):
         inv = self.inv
 
         # !!! we treat start index as in LTR coordinates on start face !!!
-        edges: list[EdgeSlice] = []
+        edges: list[EdgeWing] = []
         centers: list[CenterSlice] = []
         for _ in range(4):
             # here start face handling
@@ -159,14 +159,14 @@ class Slice(SuperElement):
 
         for i in s_range:
 
-            elements: tuple[Sequence[EdgeSlice], Sequence[CenterSlice]] = self._get_slices_by_index(i)
+            elements: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = self._get_slices_by_index(i)
 
             # rotate edges
             # e0 <-- e1 <-- e2 ... e[n-1]
             # e[n-1] <-- e0
-            edges: Sequence[EdgeSlice] = elements[0]
-            prev: EdgeSlice = edges[0]
-            e0: EdgeSlice = prev.clone()
+            edges: Sequence[EdgeWing] = elements[0]
+            prev: EdgeWing = edges[0]
+            e0: EdgeWing = prev.clone()
             for e in edges[1:]:
                 prev.copy_colors_ver(e)
                 prev = e
@@ -233,7 +233,7 @@ class Slice(SuperElement):
         s_range = self._get_index_range(slice_indexes)
 
         for i in s_range:
-            elements: tuple[Sequence[EdgeSlice], Sequence[CenterSlice]] = self._get_slices_by_index(i)
+            elements: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = self._get_slices_by_index(i)
 
             parts.extend(elements[0])
             parts.extend(elements[1])

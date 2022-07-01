@@ -14,7 +14,7 @@ from .. import config
 from cube.app_state import ApplicationAndViewState
 from cube.model.cube_boy import Color, FaceName
 from cube.model.cube_face import Face
-from cube.model.elements import PartSliceHashID, PartEdge, Part, PartSlice, Corner, Edge, EdgeSlice, Center, CenterSlice
+from cube.model.elements import PartSliceHashID, PartEdge, Part, PartSlice, Corner, Edge, EdgeWing, Center, CenterSlice
 from cube.utils import geometry
 from . import shapes
 from .viewer_markers import VIEWER_ANNOTATION_KEY, VMarker
@@ -271,7 +271,7 @@ class _Cell:
             for i in range(n):
                 ix = i
 
-                _slice: EdgeSlice = part.get_slice_by_ltr_index(cube_face, ix)
+                _slice: EdgeWing = part.get_slice_by_ltr_index(cube_face, ix)
                 with self._gen_list_for_slice(_slice, g_list_dest):
 
                     # set a rect and advanced to the next one
@@ -420,7 +420,7 @@ class _Cell:
             for i in range(n):
                 ix = i
 
-                _slice: EdgeSlice = part.get_slice_by_ltr_index(cube_face, ix)
+                _slice: EdgeWing = part.get_slice_by_ltr_index(cube_face, ix)
                 color = self._slice_color(_slice)
                 edge = self._get_slice_edge(_slice)
                 vx = self.facets[edge].two_d_draw_rect

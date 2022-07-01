@@ -7,7 +7,7 @@ from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries
-from cube.model.elements import Color, Edge, PartColorsID, EdgeSlice
+from cube.model.elements import Color, Edge, PartColorsID, EdgeWing
 from cube.model.misc import ModelHelper
 from cube.operator.op_annotation import AnnWhat
 
@@ -387,7 +387,7 @@ class NxNEdges(SolverElement):
             required_color = self._get_slice_ordered_color(face, edge.get_slice(0))
             required_color = required_color[::-1]
 
-        slices_to_fix: list[EdgeSlice] = []
+        slices_to_fix: list[EdgeWing] = []
         slices_indices_to_fix: list[int] = []
         _all = True
         for i in range(n_slices // 2):
@@ -415,7 +415,7 @@ class NxNEdges(SolverElement):
             self.op.op(Algs.M[plus_one])
 
     @staticmethod
-    def _get_slice_ordered_color(f: Face, s: EdgeSlice) -> Tuple[Color, Color]:
+    def _get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:
         """
 
         :param f:
@@ -426,7 +426,7 @@ class NxNEdges(SolverElement):
         return s.get_face_edge(f).color, s.get_other_face_edge(f).color
 
     @staticmethod
-    def _find_slice_in_edge_by_color_id(edge: Edge, color_un_ordered: PartColorsID) -> EdgeSlice | None:
+    def _find_slice_in_edge_by_color_id(edge: Edge, color_un_ordered: PartColorsID) -> EdgeWing | None:
 
         for i in range(edge.n_slices):
             s = edge.get_slice(i)

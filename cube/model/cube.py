@@ -628,7 +628,7 @@ def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_dire
         p1: PartEdge = f1.create_part()
         p2: PartEdge = f2.create_part()
 
-        return EdgeSlice(i, p1, p2)
+        return EdgeWing(i, p1, p2)
 
     e: Edge = Edge(f1, f2, right_top_left_same_direction, [_create_slice(i) for i in range(n)])
 

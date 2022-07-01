@@ -21,7 +21,7 @@ from .main_g_abstract import AbstractWindow
 from .main_g_app import AbstractApp
 from .model.cube_boy import FaceName
 from .model.cube_face import Face
-from .model.elements import PartEdge, PartSlice, Part, Corner, Edge, EdgeSlice, CenterSlice
+from .model.elements import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
 
 # to avoid the case we start another handling while animation is running
 _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG = False
@@ -303,7 +303,7 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
 
             # print("Is Edge")
 
-            assert isinstance(_slice, EdgeSlice)
+            assert isinstance(_slice, EdgeWing)
 
             slice_alg: algs.SliceAlg | None = None
             neg_slice_index = False
@@ -406,7 +406,7 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
 def _slice_on_part_edge_alg(part_edge: PartEdge) -> Alg:
     _slice: PartSlice = part_edge.parent
 
-    assert isinstance(_slice, EdgeSlice)
+    assert isinstance(_slice, EdgeWing)
 
     part: Edge = _slice.parent
 
