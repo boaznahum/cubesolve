@@ -6,10 +6,12 @@ class Cube
 class Face
 
 abstract class Part
+abstract class PartSlice
+abstract class SliceFacet
 
-Part <|-- Center
-Part <|-- Corner
 Part <|-- Edge
+Part <|-- Corner
+Part <|-- Center
 
 Part *-- PartSlice
 
@@ -24,9 +26,10 @@ Face  o-- "1" Center
 Face  o-- "4" Edge
 Face  o-- "4" Corner
 
-Edge *-- "N" Wing
-Corner *-- "1" CornerSlice
-Center *-- "NxN" CenterSlice
+Edge o.. "N" Wing: "sp*"
+note on link #yellow: "specification"
+Corner o.. "1" CornerSlice: "sp*"
+Center o.. "NxN" CenterSlice: "sp*"
 
 PartSlice *-- SliceFacet
 
@@ -34,31 +37,8 @@ SliceFacet <|-- WingFacet
 SliceFacet <|-- CornerSliceFacet
 SliceFacet <|-- CenterSliceFacet
 
-Wing ..> "2" WingFacet: "spec"
-CornerSlice ..> "3" CornerSliceFacet: "spec"
-CenterSlice ..> "1" CenterSliceFacet: "spec"
-
-'abstract class AbstractList
-'abstract AbstractCollection
-'interface List
-'interface Collection
-
-'List <|-- AbstractList
-'Collection <|-- AbstractCollection
-'
-'Collection <|- List
-'AbstractCollection <|- AbstractList
-'AbstractList <|-- ArrayList
-'
-'class ArrayList {
-'Object[] elementData
-'size()
-'}
-'
-'enum TimeUnit {
-'DAYS
-'HOURS
-'MINUTES
-'}
+Wing o.. "2" WingFacet: "sp*"
+CornerSlice o.. "3" CornerSliceFacet: "sp*"
+CenterSlice o.. "1" CenterSliceFacet: "sp*"
 
 @enduml
