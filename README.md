@@ -111,7 +111,7 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
     In package model:
      Cube, Face, Slice, Corner, Edge, Center ...
 
-    ![Model](/assets/cube_model.png)
+![Model](/assets/cube_model.png)
 
 ## Operator
     Operator accept any algorithn and apply it on cube, if animation is enabled then play it ...
