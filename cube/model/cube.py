@@ -23,10 +23,9 @@ class Cube(CubeSupplier):
     """
     __slots__ = [
         "_size",  # 3x3, 4x4
-        "_front", "_left", "_up", "_right", "_down",
-        "_back",
-        "_color_2_face",
+        "_front", "_left", "_up", "_right", "_down", "_back",
         "_faces",
+        "_color_2_face",
         "_edges", "_corners", "_centers",
         "_slice_m", "_slice_e", "_slice_s",
         "_slices",

@@ -1,0 +1,64 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+class Cube
+
+class Face
+
+abstract class Part
+
+Part <|-- Center
+Part <|-- Corner
+Part <|-- Edge
+
+Part *-- PartSlice
+
+PartSlice <|-- Wing
+PartSlice <|-- CornerSlice
+PartSlice <|-- CenterSlice
+
+
+Cube   *--  "6" Face: "faces"
+
+Face  o-- "1" Center
+Face  o-- "4" Edge
+Face  o-- "4" Corner
+
+Edge *-- "N" Wing
+Corner *-- "1" CornerSlice
+Center *-- "NxN" CenterSlice
+
+PartSlice *-- SliceFacet
+
+SliceFacet <|-- WingFacet
+SliceFacet <|-- CornerSliceFacet
+SliceFacet <|-- CenterSliceFacet
+
+Wing ..> "2" WingFacet: "spec"
+CornerSlice ..> "3" CornerSliceFacet: "spec"
+CenterSlice ..> "1" CenterSliceFacet: "spec"
+
+'abstract class AbstractList
+'abstract AbstractCollection
+'interface List
+'interface Collection
+
+'List <|-- AbstractList
+'Collection <|-- AbstractCollection
+'
+'Collection <|- List
+'AbstractCollection <|- AbstractList
+'AbstractList <|-- ArrayList
+'
+'class ArrayList {
+'Object[] elementData
+'size()
+'}
+'
+'enum TimeUnit {
+'DAYS
+'HOURS
+'MINUTES
+'}
+
+@enduml
