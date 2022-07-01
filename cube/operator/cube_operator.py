@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from typing import Callable, Any, TYPE_CHECKING
 
 from .. import config
-from ..algs import Alg, SimpleAlg, Annotation
+from ..algs import Alg, SimpleAlg, Annotation, Algs
 from ..animation.animation_manager import AnimationManager
 from ..animation.animation_manager import OpProtocol
 from ..app_exceptions import OpAborted
@@ -57,7 +57,8 @@ class Operator:
         Animation can run only from top level, not from animation itself
         :param alg:
         :param inv:
-        :param animation:
+        :param animation: if true and animation is enabled then run with animation
+        doesn't override current mode
         :return:
         """
 
@@ -137,7 +138,7 @@ class Operator:
         :return: the undo alg
         """
         with self.with_animation(animation=False):
-            if self.history:
+            if self.history():
                 alg = self._history.pop()
                 _history = [*self._history]
                 self.op(alg, True, animation)
@@ -153,9 +154,20 @@ class Operator:
     def cube(self) -> Cube:
         return self._cube
 
-    @property
-    def history(self) -> Sequence[Alg]:
-        return self._history
+    def history(self, *, remove_scramble: bool = False) -> Sequence[Alg]:
+        """
+        Remove top scrambles
+        :param remove_scramble:
+        :return:
+        """
+
+        history = self._history
+
+        _is = Algs.is_scramble
+
+        if remove_scramble:
+            history = [a for a in history if not _is(a)]
+        return history[:]
 
     @property
     def count(self):

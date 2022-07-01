@@ -307,14 +307,14 @@ class Solver(ISolver):
         rs = self._running_solution
         self._running_solution = True
         try:
-            n = len(self.op.history)
+            n = len(self.op.history())
             solution_algs = []
 
             with self._op.with_animation(animation=False):
 
                 with self._op.save_history():  # not really needed
                     self.solve(debug=False, animation=False)
-                    while n < len(self.op.history):
+                    while n < len(self.op.history()):
                         step = self.op.undo(animation=False)
                         # s=str(step)
                         if step:

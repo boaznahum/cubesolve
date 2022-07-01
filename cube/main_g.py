@@ -113,13 +113,13 @@ class Window(AbstractWindow, AnimationWindow):
         #                                    x=10, y=y, font_size=10))
         # y += 20
 
-        h = Algs.simplify(*self.app.op.history)
+        h = Algs.simplify(*self.app.op.history(remove_scramble=True))
         sh = str(h)[-120:]
         self.text.append(pyglet.text.Label("History(simplified): #" + str(h.count()) + "  " + sh,
                                            x=10, y=y, font_size=10))
         y += 20
 
-        h = self.app.op.history
+        h = self.app.op.history()
         sh = str(h)[-70:]
         self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + sh,
                                            x=10, y=y, font_size=10))

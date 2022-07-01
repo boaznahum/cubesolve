@@ -921,10 +921,10 @@ def _scramble(cube_size: int, seed: Any, n: int | None = None) -> Alg:
 
     name: str
     if seed:
-        name = str(seed)
+        name = f"scrmbl{seed}/{n}"
     else:
         # noinspection SpellCheckingInspection
-        name = "random-scrm"
+        name = f"random-scrm{n}"
 
     return _Scramble(name + "[" + str(n) + "]", *algs)
 
@@ -981,6 +981,10 @@ class Algs:
     @classmethod
     def scramble(cls, cube_size, seed=None, n: int | None = None):
         return _scramble(cube_size, seed, n)
+
+    @classmethod
+    def is_scramble(cls, alg: Alg):
+        return isinstance(alg, _Scramble)
 
     @classmethod
     def alg(cls, name, *algs: Alg) -> Alg:

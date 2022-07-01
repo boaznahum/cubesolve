@@ -10,8 +10,6 @@ Feature: Keyboard history
 
 Bug: self annotation cause delay in animation ?
 
-Bug: S should stop SS mode
-
 Code: Move face tackers to seperated file
 
 

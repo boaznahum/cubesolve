@@ -26,13 +26,19 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     app: AbstractApp = window.app
     op: Operator = app.op
 
-    debug = config.KEYBOAD_INPUT_DEBUG
+    if config.KEYBOAD_INPUT_DEBUG:
+        def debug(*_s):
+            print("key board handler:", *_s)
+    else:
+        def debug(*_s):
+            pass
 
-    if debug:
-        print(f"In _handle_input , {value}  {hex(value)=} {hex(modifiers)=} {chr(ord('A') + (value - key.A))} ")
+    debug(f"In _handle_input , value:{value}  {hex(value)} {key.symbol_string(value)} "
+          f"modifiers:{hex(modifiers)} "
+          f"{key.modifiers_string(modifiers)} ")
 
     if key.LSHIFT <= value <= key.ROPTION:
-        print(f"In _handle_input , Only modifiers, decided to quit")
+        debug(f"In _handle_input , Only modifiers, decided to quit")
         return
 
     vs: ApplicationAndViewState = app.vs
@@ -132,7 +138,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     return True, True
 
             case key.C:
-                if modifiers and key.MOD_ALT:
+                if modifiers & key.MOD_ALT:
                     app.vs.reset()
                     app.vs.set_projection(window.width, window.height)
                     return True, True
@@ -401,8 +407,10 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     # same as Test 1
                     alg = Algs.scramble(app.cube.size, value - key0)
 
+                animation = modifiers  & key.MOD_CTRL
+
                 with _wait_cursor(window):
-                    op.op(alg, inv, animation=False)
+                    op.op(alg, inv, animation=animation)
 
             case key._2 | key._3 | key._4 | key._5 | key._6 | key._7 | key._8 | key._9:
 
