@@ -1,4 +1,4 @@
-# Python Big Cube Solver
+# Python Big Cube Solver - A place to develope your algorithm
 Yet another Big Cube solver
 Python
 
