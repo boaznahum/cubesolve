@@ -145,6 +145,19 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     app.vs.set_projection(window.width, window.height)
                     return True, True
 
+            case key.F10:
+                vs.toggle_shadows_mode(FaceName.L)
+                window.viewer.reset()
+                return True, False
+            case key.F11:
+                vs.toggle_shadows_mode(FaceName.D)
+                window.viewer.reset()
+                return True, False
+            case key.F12:
+                vs.toggle_shadows_mode(FaceName.B)
+                window.viewer.reset()
+                return True, False
+
         return False, None
 
     no_operation: bool = False
@@ -481,6 +494,9 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 n0 = op.count
                 slv.solve(what=SolveStep.NxNEdges, animation=solver_animation)
                 window._last_edge_solve_count = op.count - n0
+
+
+
 
             case key.T:
                 if modifiers & key.MOD_ALT:

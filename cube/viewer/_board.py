@@ -36,6 +36,7 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 #
 #   update  --update----|           -*update--------|-------------------|
 #                                                   <-----draw_init-----|
+from ..model.cube_boy import FaceName
 
 
 class _Board:
@@ -140,7 +141,7 @@ class _Board:
         self._create_face(lambda: cube.up, [0, 1, 1], [1, 0, 0], [0, 0, -1], [0, 1, 0])
 
         self._create_face(lambda: cube.left, [-0, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
-        if "L" in self._vs.draw_shadows:
+        if self._vs.get_draw_shadows_mode(FaceName.L):
             # -0.75 from it x location, so we can see it in isometric view
             self._create_face(lambda: cube.left, [-0.75, 0, 0], [0, 0, 1], [0, 1, 0], [-1, 0, 0])
 
@@ -150,12 +151,12 @@ class _Board:
         self._create_face(lambda: cube.right, [1, 0, 1], [0, 0, -1], [0, 1, 0], [1, 0, 0])
 
         self._create_face(lambda: cube.back, [1, 0, -0], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
-        if "B" in self._vs.draw_shadows:
+        if self._vs.get_draw_shadows_mode(FaceName.B):
             # -2 far away so we can see it
             self._create_face(lambda: cube.back, [1, 0, -2], [-1, 0, 0], [0, 1, 0], [0, 0, -1])
 
         self._create_face(lambda: cube.down, [0, -0, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
-        if "D" in self._vs.draw_shadows:
+        if self._vs.get_draw_shadows_mode(FaceName.D):
             # -05 below so we see it
             self._create_face(lambda: cube.down, [0, -0.5, 0], [1, 0, 0], [0, 0, 1], [0, -1, 0])
 

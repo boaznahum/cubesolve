@@ -67,6 +67,9 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
     Ctrl/Alt  X/Y/Z rotate around axis
 
+###  LBD faces shadow
+    F10/F11/F12 toggle on/off shadowing of L, D and B faces
+
 https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a18f-719876cb7b59.mp4
 
 ### Undo/Reset

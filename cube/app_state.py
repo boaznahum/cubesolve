@@ -1,6 +1,7 @@
 import math
 from collections.abc import Sequence
 from contextlib import contextmanager
+from typing import Literal
 
 from pyglet import gl  # type: ignore
 
@@ -9,6 +10,7 @@ from . import algs
 from . import config
 from cube.animation.main_g_animation_text import AnimationText
 from .model.cube import Cube
+from .model.cube_boy import FaceName
 
 
 class _AnimationSpeed:
@@ -234,9 +236,29 @@ class ApplicationAndViewState:
     def get_speed(self) -> _AnimationSpeed:
         return speeds[self._speed]
 
-    @property
-    def draw_shadows(self):
-        return self._draw_shadows
+    def get_draw_shadows_mode(self, face: FaceName) -> bool:
+
+
+        """
+
+        :return: string that might contains "L", "D", "B"
+        """
+        return str(face.value).upper() in self._draw_shadows
+
+    def toggle_shadows_mode(self, face: Literal[FaceName.D, FaceName.B, FaceName.L]):
+        self._change_shadows_mode(face, not self.get_draw_shadows_mode(face))
+
+    def _change_shadows_mode(self, face: Literal[FaceName.D, FaceName.B, FaceName.L], add: bool):
+
+        s = str(face.value)
+
+        s = s.upper()
+
+        if add:
+            if s not in self._draw_shadows:
+                self._draw_shadows += s
+        else:
+            self._draw_shadows = self._draw_shadows.replace(s.upper(), "")
 
     def slice_alg(self, cube: Cube, r: algs.SliceAbleAlg):
 
