@@ -166,7 +166,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     raise AppExit
 
                 case key.S:
-                    op.abort()  # doesn't work, we can't catch it, maybe pyglet ignore it, because it is in handler
+                    vs.single_step_mode_stop_pressed = True
+                    op.abort()
 
         if not no_operation:
             if debug:

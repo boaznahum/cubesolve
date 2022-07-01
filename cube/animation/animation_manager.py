@@ -145,7 +145,6 @@ def _op_and_play_animation(window: AnimationWindow,
     platform_event_loop = pyglet.app.platform_event_loop
 
     if isinstance(alg, algs.Annotation):
-
         operator(alg, inv)
         window.update_gui_elements()
         #        time.sleep(1)
@@ -174,14 +173,27 @@ def _op_and_play_animation(window: AnimationWindow,
 
         event_loop = pyglet.app.event_loop
 
-        # If you read event loop, only handled events cause to redraw
-        clock.schedule_once(_update_gui, 0)
+        # bug in stop behaviour
+        #  we press abort, operator accept in and turn internal flag
+        #  but here we wait for space
+        # after space is pressed we back to operator
+        #  check for abort and quit loop
+        # So to fix, we need to check here too, in the event loop
+        # meanwhile it is a patch
+        try:
+            # If you read event loop, only handled events cause to redraw
+            clock.schedule_once(_update_gui, 0)
 
-        while not event_loop.has_exit and (vs.paused_on_single_step_mode and vs.single_step_mode):
-            timeout = event_loop.idle()
-            platform_event_loop.step(timeout)
+            vs.single_step_mode_stop_pressed = False
+            while (not event_loop.has_exit and (vs.paused_on_single_step_mode and vs.single_step_mode)
+                   and not vs.single_step_mode_stop_pressed):
+                timeout = event_loop.idle()
+                platform_event_loop.step(timeout)
+        finally:
+            vs.paused_on_single_step_mode = None
 
-        vs.paused_on_single_step_mode = None
+        if vs.single_step_mode_stop_pressed:
+            return
 
     # but still useful for SS mode
     if alg.n % 4 == 0:

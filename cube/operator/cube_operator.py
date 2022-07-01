@@ -45,6 +45,12 @@ class Operator:
         from cube.operator.op_annotation import OpAnnotation
         self._annotation: OpAnnotation = OpAnnotation(self)
 
+    def check_clear_rais_abort(self):
+        if self._aborted:
+            self._aborted = False
+            print(f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
+            raise OpAborted()
+
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
         """
@@ -69,10 +75,7 @@ class Operator:
 
         # log("At entry, big alg:", str(alg))
 
-        if self._aborted:
-            self._aborted = False
-            print(f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
-            raise OpAborted()
+        self.check_clear_rais_abort()
 
         if animation and self.animation_enabled and not self._animation_running:
 
@@ -95,11 +98,9 @@ class Operator:
                     op = self.op
 
                     for a in algs:
-                        an(cube, op, a)  # --> this will call me again, but animation will self, so we reach the else branch
-                        if self._aborted:
-                            self._aborted = False
-                            print(f"A signal abort was raise, raising an exception {OpAborted}")
-                            raise OpAborted()
+                        # --> this will call me again, but animation will self, so we reach the else branch
+                        an(cube, op, a)
+                        self.check_clear_rais_abort()
 
             do_self_ann = (config.OPERATOR_SHOW_ALG_ANNOTATION and
                            not self._self_annotation_running and not isinstance(alg, Annotation))

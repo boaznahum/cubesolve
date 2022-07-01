@@ -99,6 +99,7 @@ class ApplicationAndViewState:
         self.slice_stop: int = 0
 
         self.single_step_mode = False
+        self.single_step_mode_stop_pressed = False
         self.paused_on_single_step_mode: algs.Alg | None = None
 
         self._animation_text = AnimationText()
