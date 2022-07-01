@@ -1,0 +1,44 @@
+@startuml
+!theme mars
+
+'https://plantuml.com/class-diagram
+
+abstract class Solver {
+    solve()
+    is_solved()
+}
+abstract class ReductionSolver
+abstract class BeginnerLBLReduce
+
+class BeginnerSolver
+
+
+
+Solver <|-- BeginnerLBLReduce
+BeginnerLBLReduce <|-- BeginnerSolver
+
+
+CommonOp <|-- ICommonOp
+CommonOp *.. Operator
+
+SolverElement *-- ICommonOp
+SolverElement *.. Operator
+
+SolverElement <|-- CommonOp
+SolverElement <|-- L1Cross
+SolverElement <|-- L1Corners
+SolverElement <|-- L2
+SolverElement <|-- L3Cross
+SolverElement <|-- L3Corners
+SolverElement <|-- NxNCenters
+SolverElement <|-- NxNEdges
+
+BeginnerSolver *-- CommonOp
+BeginnerSolver *-- L1Cross
+BeginnerSolver *-- L1Corners
+BeginnerSolver *-- L2
+BeginnerSolver *-- L3Cross
+BeginnerSolver *-- L3Corners
+BeginnerSolver *-- NxNCenters
+BeginnerSolver *-- NxNEdges
+@enduml

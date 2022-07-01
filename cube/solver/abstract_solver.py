@@ -46,8 +46,6 @@ class Solver(ABC):
         pass
 
 
-
-
 class ReductionSolver(ABC):
     pass
 
