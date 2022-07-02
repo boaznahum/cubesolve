@@ -22,6 +22,7 @@ SOLVER_DEBUG = True
 
 ######  Viewer ########
 GUI_DRAW_MARKERS = False
+GUI_DRAW_SAMPLE_MARKERS = False
 
 CELL_SIZE: int = 30
 
@@ -29,18 +30,22 @@ CORNER_SIZE = 0.2  # relative to cell size (should be 1 in 3x3)
 
 AXIS_LENGTH = 4 * CELL_SIZE
 
-MAX_MARKER_RADIUS = 4.0  # when decreasing cube size, we don't want the markers become larger and larger
+MAX_MARKER_RADIUS = 5.0  # when decreasing cube size, we don't want the markers become larger and larger
 
-VIEWER_DRAW_SHADOWS = "LBD"  # "LDB"
+VIEWER_DRAW_SHADOWS = ""  # "LDB"
 
 # MARKER_COLOR = (165,42,42) # brown	#A52A2A	rgb(165,42,42) https://www.rapidtables.com/web/color/brown-color.html
 # MARKER_COLOR = (105,105,105) # dimgray / dimgray	#696969	rgb(105,105,105)
 # MARKER_COLOR: Tuple[int, int, int] = (0, 0, 0)  # dimgray / dimgray	#696969	rgb(105,105,105)
 
 MARKERS = {
-    "C0": ((199, 21, 133), 1.0, 0.8), # mediumvioletred	#C71585	rgb(199,21,133)
-    "C1": ((199, 21, 133), 0.65, 0.75), # mediumvioletred	#C71585	rgb(199,21,133),
-    "C2": ((0, 100, 0), 1.0, 0.3)  # darkgreen	#006400	rgb(0,100,0)
+    #      color           r-outer thick, height (of cylinder)
+    #      radius is - relative to marker size [0.0-1.0]
+    #      thick is relative to outer radius , inner - (1-thick)*outer
+    #      height in model resolution
+    "C0": ((199, 21, 133), 1.0, 0.8, 0.5), # mediumvioletred	#C71585	rgb(199,21,133)
+    "C1": ((199, 21, 133), 0.6, 1, 0.5), # mediumvioletred	#C71585	rgb(199,21,133),
+    "C2": ((0, 100, 0), 1.0, 0.3, 0.5)  # darkgreen	#006400	rgb(0,100,0)
 }
 
 # text animation properties

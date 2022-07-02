@@ -1,13 +1,13 @@
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from enum import unique, Enum
-from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal, ContextManager
+from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal, ContextManager, Dict, Any, Hashable
 
-from ..algs import Algs
-from ..app_exceptions import InternalSWError
-from ..model.cube_queries import CubeQueries
-from ..model.elements import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
-from ..viewer.viewer_markers import VMarker, VIEWER_ANNOTATION_KEY
+from cube.algs import Algs
+from cube.app_exceptions import InternalSWError
+from cube.model.cube_queries import CubeQueries
+from cube.model.elements import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
+from cube.viewer.viewer_markers import VMarker, viewer_add_view_marker, viewer_remove_view_marker
 
 if TYPE_CHECKING:
     from .cube_operator import Operator
@@ -21,10 +21,13 @@ _HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
 
 _ANN_BASE_ELEMENT: TypeAlias = Part | PartColorsID | PartSlice | PartEdge
 
-_ANN_ELEMENT_0: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | Iterable[_ANN_BASE_ELEMENT] | Callable[[], _ANN_BASE_ELEMENT]
+_ANN_ELEMENT_0: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | Iterable[_ANN_BASE_ELEMENT] | Callable[
+    [], _ANN_BASE_ELEMENT]
 
-_ANN_ELEMENT_1: TypeAlias = _ANN_ELEMENT_0 | Iterator[_ANN_ELEMENT_0] | Iterable[_ANN_ELEMENT_0] | Callable[[], _ANN_ELEMENT_0]
-_ANN_ELEMENT: TypeAlias = _ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Iterable[_ANN_ELEMENT_1] | Callable[[], _ANN_ELEMENT_1]
+_ANN_ELEMENT_1: TypeAlias = _ANN_ELEMENT_0 | Iterator[_ANN_ELEMENT_0] | Iterable[_ANN_ELEMENT_0] | Callable[
+    [], _ANN_ELEMENT_0]
+_ANN_ELEMENT: TypeAlias = _ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Iterable[_ANN_ELEMENT_1] | Callable[
+    [], _ANN_ELEMENT_1]
 
 
 @unique
@@ -51,12 +54,10 @@ class OpAnnotation:
 
     # @contextmanager
     def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, VMarker]],
-                                text: _HEADS = None,
-                                animation=True):
+                                text: _HEADS = None):
 
         """
         Annotate moved slice
-        :param animation:
         :param _edges:  [Slice, fixed/moved, marker], not consumed if animation is off
          see
         :return:
@@ -66,15 +67,17 @@ class OpAnnotation:
 
         global _SLice_Tracking_UniqID
 
-        annotation_key = VIEWER_ANNOTATION_KEY
-
         # now consume iterator
         slices = [*_edges]
 
         def _key(_i):
             return "annotation_track" + str(abs(_i))
 
-        slots: list[Tuple[Literal[1, 2, 3], int]] = []
+        add_marker = viewer_add_view_marker
+        remove_marker: Callable[[dict[Hashable, Any], VMarker], None] = viewer_remove_view_marker
+
+        #                  type,         key_index, marker
+        slots: list[Tuple[Literal[1, 2, 3], int, VMarker]] = []
         s: Tuple[PartEdge, bool, VMarker]
         for s in slices:
             _slice: PartEdge = s[0]
@@ -97,12 +100,12 @@ class OpAnnotation:
 
             key = _key(_SLice_Tracking_UniqID)
             if fixed:
-                _slice.f_attributes[annotation_key] = marker
+                slots.append((_type, -_SLice_Tracking_UniqID, marker))
+                add_marker(_slice.f_attributes, marker)
                 _slice.f_attributes[key] = key
-                slots.append((_type, -_SLice_Tracking_UniqID))
             else:
-                slots.append((_type, _SLice_Tracking_UniqID))
-                _slice.c_attributes[annotation_key] = marker
+                slots.append((_type, _SLice_Tracking_UniqID, marker))
+                add_marker(_slice.c_attributes, marker)
                 _slice.c_attributes[key] = key
 
         has_text = text and any(text)
@@ -128,6 +131,7 @@ class OpAnnotation:
 
                 i = slot[1]
                 _type = slot[0]
+                marker = slot[2]
 
                 def _c_pred(_i, _key):
 
@@ -164,12 +168,11 @@ class OpAnnotation:
                     # if have a bug, nested annimation in __fixed_edge, so key already deleted
 
                     # del e.f_attributes[annotation_key]
-                    e.f_attributes.pop(annotation_key, None)
-
+                    remove_marker(e.f_attributes, marker)
                     del e.f_attributes[key]
                 else:
                     # del e.c_attributes[annotation_key]
-                    e.c_attributes.pop(annotation_key, None)
+                    remove_marker(e.c_attributes, marker)
                     del e.c_attributes[key]
 
             op.op(Algs.AN)
@@ -217,7 +220,7 @@ class OpAnnotation:
         # we invoke a specific method, to stop recursively check for type
         # we already know the type
 
-        def process_slice_edge(e: PartEdge, what: AnnWhat):
+        def process_slice_edge(_e: PartEdge, what: AnnWhat):
             if what == AnnWhat.Moved:
                 by_position = False
             elif what == AnnWhat.FixedPosition:
@@ -230,7 +233,7 @@ class OpAnnotation:
             else:
                 marker = VMarker.C1
 
-            edges.append((e, by_position, marker))
+            edges.append((_e, by_position, marker))
 
         def process_slice(s: PartSlice, what: AnnWhat):
             part_edge: PartEdge
@@ -292,5 +295,4 @@ class OpAnnotation:
         #         edges.append((s.edge, True, VMarker.C2))
 
         yield from self._w_slice_edges_annotate(edges,
-                                                text=(h1, h2, h3),
-                                                animation=animation)
+                                                text=(h1, h2, h3))

@@ -2,7 +2,7 @@ import sys
 from collections import defaultdict
 from collections.abc import Sequence, MutableSequence, Iterable
 from contextlib import contextmanager
-from typing import Tuple, TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING, Callable, Dict, Any, Hashable, Sequence
 
 import numpy as np
 import pyglet  # type: ignore
@@ -17,7 +17,7 @@ from cube.model.cube_face import Face
 from cube.model.elements import PartSliceHashID, PartEdge, Part, PartSlice, Corner, Edge, EdgeWing, Center, CenterSlice
 from cube.utils import geometry
 from . import shapes
-from .viewer_markers import VIEWER_ANNOTATION_KEY, VMarker
+from .viewer_markers import VMarker, viewer_get_markers
 
 _CELL_SIZE: int = config.CELL_SIZE
 
@@ -344,7 +344,7 @@ class _Cell:
         cross_color_x = (138, 43, 226)  # blueviolet	#8A2BE2	rgb(138,43,226)
         cross_color_y = (0, 191, 255)  # deepskyblue	#00BFFF	rgb(0,191,255)
 
-        annotation_key = VIEWER_ANNOTATION_KEY
+        get_markers: Callable[[dict[Hashable, Any]], Sequence[VMarker] | None] = viewer_get_markers
 
         from ._faceboard import _FaceBoard
         fb: _FaceBoard = self._face_board
@@ -354,7 +354,8 @@ class _Cell:
 
         n: int = part.n_slices
 
-        markers: dict[str, Tuple[Tuple[int, int, int], float] ] = config.MARKERS
+        # color, outer, inner radius
+        markers: dict[str, Tuple[Tuple[int, int, int], float, float] ] = config.MARKERS
 
         def draw_facet(part_edge: PartEdge, _vx):
 
@@ -376,22 +377,20 @@ class _Cell:
             # if _slice.get_face_edge(cube_face).attributes["on_y"]:
             #     shapes.cross(vx, cross_width_y, cross_color_y)
 
-            is_movable = False
-            marker = edge.c_attributes.get(annotation_key)
-            if marker is not None:
-                is_movable = True
+            if movable:
+                _markers = get_markers(part_edge.c_attributes)
             else:
-                marker = edge.f_attributes.get(annotation_key)
+                _markers = get_markers(part_edge.f_attributes)
 
-            if marker:
-                assert isinstance(marker, VMarker)
-
-                if movable == is_movable:
-                    _m = markers[marker.value]
+            if _markers:
+                for marker in _markers:
+                    assert isinstance(marker, VMarker)
+                    _m = markers[str(marker.value)]
                     _marker_color = _m[0]
                     radius = _m[1]
                     thick = _m[2]
-                    self._create_markers(_vx, _marker_color, radius, thick)
+                    height = _m[3]
+                    self._create_markers(_vx, _marker_color, radius, thick, height)
 
         if isinstance(part, Corner):
 
@@ -589,7 +588,7 @@ class _Cell:
         # this is also supported by glCallLine
         shapes.sphere(center, radius, marker_color)
 
-    def _create_markers(self, vertexes: Sequence[ndarray], marker_color,
+    def _create_markers_cycle(self, vertexes: Sequence[ndarray], marker_color,
                         _radius: float,
                         thick: float):
 
@@ -611,12 +610,44 @@ class _Cell:
         r_outer = radius
         r_inner = radius * (1 - thick)
 
+        center += self._face_board.ortho_direction * 30
+
         p1 = center + self._face_board.ortho_direction * height
         p2 = center - self._face_board.ortho_direction * height
 
         # this is also supported by glCallLine
         # shapes.cylinder(p1, p2, r1, r2, marker_color)
         shapes.disk(p1, p2, r_outer, r_inner, marker_color)
+    def _create_markers(self, vertexes: Sequence[ndarray], marker_color,
+                        _radius: float,
+                        thick: float,
+                        height: float):
+
+        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
+        vx = vertexes
+
+        center = (vx[0] + vx[2]) / 2
+
+        l1: float = np.linalg.norm(vertexes[0] - vertexes[1])  # type: ignore
+        l2: float = np.linalg.norm(vertexes[0] - vertexes[3])  # type: ignore
+        _face_size = min([l1, l2])
+
+        radius = _face_size / 2.0 * 0.8
+        radius = min([radius, config.MAX_MARKER_RADIUS])
+
+        radius *= _radius
+
+        r_outer = radius
+        r_inner = radius * (1 - thick)
+
+        #center += self._face_board.ortho_direction * 30
+
+        p1 = center + self._face_board.ortho_direction * height
+        p2 = center - self._face_board.ortho_direction * height
+
+        # this is also supported by glCallLine
+        # shapes.cylinder(p1, p2, r1, r2, marker_color)
+        shapes.full_cylinder(p1, p2, r_outer, r_inner, marker_color)
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]

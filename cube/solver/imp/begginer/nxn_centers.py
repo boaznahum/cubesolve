@@ -2,8 +2,8 @@ from collections.abc import Iterator, Sequence, Iterable
 from enum import Enum, unique
 from typing import Tuple, Callable, Collection, Any, TypeAlias
 
-from cube import config
 from cube import algs
+from cube import config
 from cube.algs import Algs
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
@@ -15,7 +15,7 @@ from cube.operator.op_annotation import AnnWhat
 from cube.solver.imp.begginer.base_solver import SolverElement
 from cube.solver.imp.begginer.common_op import CommonOp
 from cube.solver.imp.begginer.isolver import ISolver
-from cube.viewer.viewer_markers import VIEWER_ANNOTATION_KEY, VMarker
+from cube.viewer.viewer_markers import VMarker, viewer_add_view_marker
 
 _TRACKER_KEY_PREFIX = "_nxn_centers_track:"
 
@@ -475,7 +475,7 @@ class NxNCenters(SolverElement):
         edge.c_attributes[key] = True
 
         if config.SOLVER_ANNOTATE_TRACKERS:
-            edge.c_attributes[VIEWER_ANNOTATION_KEY] = VMarker.C0  # to debug if alg move trackers
+            viewer_add_view_marker(edge.c_attributes, VMarker.C0)  # to debug if alg move trackers
 
         def _slice_pred(s: CenterSlice):
             return key in s.edge.c_attributes

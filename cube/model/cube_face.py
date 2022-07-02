@@ -2,6 +2,8 @@ from typing import Callable
 
 from .elements import *
 from .elements import PartSlice
+from ..config import GUI_DRAW_SAMPLE_MARKERS
+from ..viewer.viewer_markers import VMarker, viewer_add_view_marker
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore
@@ -80,6 +82,8 @@ class Face(SuperElement):
         self.set_parts(self._center, *self._edges, *self._corners)
         super().finish_init()
 
+        sample_markers = GUI_DRAW_SAMPLE_MARKERS
+
         n = self.cube.n_slices
         n1 = n - 1
         self._edge_bottom.get_slice(0).get_face_edge(self).attributes["origin"] = True
@@ -90,7 +94,10 @@ class Face(SuperElement):
         self._edge_left.get_slice(n1).get_face_edge(self).attributes["on_y"] = True
 
         for i in range(n):
-            #self._edge_left.get_slice(i).get_face_edge(self).c_attributes[VIEWER_ANNOTATION_KEY] = VMarker.C1
+            if sample_markers:
+                viewer_add_view_marker(self._edge_left.get_slice(i).get_face_edge(self).c_attributes, VMarker.C1)
+                viewer_add_view_marker(self._edge_left.get_slice(i).get_face_edge(self).f_attributes, VMarker.C2)
+
             self._edge_left.get_slice(i).get_face_edge(self).attributes["cw"] = i
             self._edge_top.get_slice(i).get_face_edge(self).attributes["cw"] = i
             self._edge_right.get_slice(i).get_face_edge(self).attributes["cw"] = n1 - i

@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from contextlib import contextmanager
 from math import pi, sqrt, acos
 from typing import Tuple
 
@@ -234,6 +235,104 @@ def cylinder(p1: np.ndarray, p2: np.ndarray, r1: float, r2: float, color: Tuple[
     gl.glPopMatrix()
     # delete the pointer
     glu.gluDeleteQuadric(quadratic)
+
+
+@contextmanager
+def _prepare_z_plane(p1: np.ndarray, p2: np.ndarray):
+    """
+     Move axis origin into p1, and put z on vector p1-p2
+     yield p1, p2, |p1-p2|
+     """
+
+    # https://community.khronos.org/t/glucylinder-between-two-points/34447/3
+
+    if (p1[0] == p2[0]) and (p1[2] == p2[2]) and (p1[1] < p2[1]):
+        p1, p2 = p2, p1
+
+    r2d = 180 / pi
+    # length of cylinder
+    d: ndarray = p1 - p2
+    height = sqrt(d.dot(d))
+
+    gl.glMatrixMode(gl.GL_MODELVIEW)
+    gl.glPushMatrix()
+    gl.glTranslatef(p1[0], p1[1], p1[2])
+
+    # orientation vectors
+    _v = p2 - p1
+    v = np.linalg.norm(_v)  # // cylinder length
+
+    vx = _v[0]
+    vy = _v[1]
+    vz = _v[2]
+
+    # rotation vector, z x r
+    rx = -vy * vz
+    ry = +vx * vz
+    ax: float
+    if vz == 0:
+        ax = r2d * acos(vx / v)  # rotation angle in x-y plane
+        if vx <= 0:
+            ax = -ax
+
+    else:
+        ax = r2d * acos(vz / v)  # rotation angle
+        if vz <= 0:
+            ax = -ax
+
+    if vz == 0:
+
+        gl.glRotated(90.0, 0, 1, 0.0)  # Rotate & align with x-axis
+        gl.glRotated(ax, -1.0, 0.0, 0.0)  # Rotate to point 2 in x-y plane
+
+    else:
+        gl.glRotated(ax, rx, ry, 0)  # Rotate about rotation vector
+
+    try:
+        yield p1, p2, height
+    finally:
+        gl.glPopMatrix()
+
+
+def full_cylinder(p1: np.ndarray, p2: np.ndarray, r1: float, r2: float, color: Tuple[int, int, int]):
+    """
+     Draw a cylinder which is around the vector p1 p2 i.e. a cylinder on plane that is orthogonal to p1-p2
+     and pass through p1
+     bottom of disk is on p1 and top on p2
+     """
+
+    with _prepare_z_plane(p1, p2) as (p1, p2, height):
+        # Specifies the number of subdivisions around the z axis.
+        slices = 25
+        # Specifies the number of subdivisions along the z axis.
+        stacks = 25
+
+        # create a pointer to the quadratic object
+        quadratic = glu.gluNewQuadric()
+
+        # https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluQuadricDrawStyle.xml
+        # glu.gluQuadricDrawStyle(quadratic, glu.GLU_FILL)
+
+        # glu.gluQuadricTexture(quadratic, glu.GLU_TRUE)
+
+        # tell it to smooth normals
+        glu.gluQuadricNormals(quadratic, glu.GLU_SMOOTH)
+        gl.glColor3ub(*color)
+        # draw the cylinder
+
+        if r1 > r2:
+            r1, r2 = r2,r1
+        glu.gluCylinder(quadratic, r1, r1, height, slices, stacks)  # Draw A cylinder
+        glu.gluCylinder(quadratic, r2, r2, height, slices, stacks)  # Draw A cylinder
+
+        glu.gluDisk(quadratic, r1, r2, slices, stacks)  # Draw A cylinder
+
+        p12 = p1 - p2
+        gl.glTranslatef(0, 0, height)
+        glu.gluDisk(quadratic, r1, r2, slices, stacks)  # Draw A cylinder
+
+        # delete the pointer
+        glu.gluDeleteQuadric(quadratic)
 
 
 def disk(p1: np.ndarray, p2: np.ndarray, r_outer: float, r_inner: float, color: Tuple[int, int, int]):
