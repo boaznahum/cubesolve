@@ -61,8 +61,6 @@ class CornerName(Enum):
         return str(self.value)
 
 
-
-
 _faces_to_corners: dict[frozenset[FaceName], CornerName] = {}
 
 
@@ -101,6 +99,7 @@ class EdgeName(Enum):
 
     def __str__(self) -> str:
         return str(self.value)
+
 
 _faces_to_edges: dict[frozenset[FaceName], EdgeName] = {}
 
@@ -224,6 +223,8 @@ SliceIndex = EdgeSliceIndex | CenterSliceIndex  # type: ignore # row, column, mu
 
 # a patch
 _SliceUniqueID: int = 0
+
+_TPartSlice = TypeVar("_TPartSlice", bound="PartSlice")
 
 
 class PartSlice(ABC, Hashable):
@@ -511,16 +512,20 @@ class PartSlice(ABC, Hashable):
     def edges(self) -> Sequence[PartEdge]:
         return self._edges
 
-    def _clone_edges(self) -> Iterable[PartEdge]:
+    def _clone_edges(self) -> Sequence[PartEdge]:
         return [e.clone() for e in self._edges]
 
     # todo: clone logic is duplicated all over
-    def clone(self) -> "PartSlice":
-        s = PartSlice(self._index, *self._clone_edges())
+    def clone(self: _TPartSlice) -> _TPartSlice:
+        s = self._clone_basic()
         s._unique_id = self._unique_id
         s.c_attributes = self.c_attributes.copy()
         # don't need to clone f_attributes, clone isused for rotating only, f_attributes is not rotated
         return s
+
+    @abstractmethod
+    def _clone_basic(self: _TPartSlice) -> _TPartSlice:
+        pass
 
     @property
     def unique_id(self):
@@ -932,6 +937,7 @@ class Part(ABC, CubeElement):
 
 
 class Center(Part):
+
     __slots__ = "_slices"
 
     def __init__(self, center_slices: Sequence[Sequence["CenterSlice"]]) -> None:
@@ -942,6 +948,7 @@ class Center(Part):
     @property
     def face(self) -> _Face:
         # always true, even for non 3x3
+        # todo: can be optimized, it is always the same name
         return self._slices[0][0].edges[0].face
 
     @property
@@ -1044,6 +1051,14 @@ class Center(Part):
         return s
 
     @property
+    def name(self) -> FaceName:
+        """
+        Not a typo, center and face have the same name
+        :return:
+        """
+        return self.face.name
+
+    @property
     def part_name(self) -> str:
         return "Center"
 
@@ -1060,18 +1075,8 @@ class EdgeWing(PartSlice):
         # my simple index
         self._my_index = index
 
-    def clone(self) -> "EdgeWing":
-
-        index = self._index
-        assert isinstance(index, int)  # satisfy mypy
-
-        e = EdgeWing(index, *self._clone_edges())
-        # todo fix it should be done by super clone
-        e._unique_id = self._unique_id
-
-        e.c_attributes = self.c_attributes.copy()
-
-        return e
+    def _clone_basic(self: "EdgeWing") -> "EdgeWing":
+        return EdgeWing(self.index, *self._clone_edges())
 
     def single_shared_face(self, other: "EdgeWing") -> _Face:
         """
@@ -1186,17 +1191,8 @@ class CenterSlice(PartSlice):
     def __init__(self, index: CenterSliceIndex, *edges: PartEdge) -> None:
         super().__init__(index, *edges)
 
-    def clone(self) -> "CenterSlice":
-        index = self._index
-        assert isinstance(index, tuple)  # satisfy mypy
-
-        c = CenterSlice(index, *self._clone_edges())
-        # todo fix it should be done by super clone
-        c._unique_id = self._unique_id
-
-        c.c_attributes = self.c_attributes.copy()
-
-        return c
+    def _clone_basic(self: "CenterSlice") -> "CenterSlice":
+        return CenterSlice(self.index, self._edges[0].clone())
 
     @property
     def index(self) -> CenterSliceIndex:
@@ -1229,6 +1225,10 @@ class CornerSlice(PartSlice):
 
     def __init__(self, p1: PartEdge, p2: PartEdge, p3: PartEdge) -> None:
         super().__init__(0, p1, p2, p3)
+
+    def _clone_basic(self: "CornerSlice") -> "CornerSlice":
+        _edges = self._clone_edges()
+        return CornerSlice(_edges[0], _edges[1], _edges[2])
 
 
 class Edge(Part):

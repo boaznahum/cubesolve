@@ -57,7 +57,7 @@ class CubeSanity:
     @staticmethod
     def _check_nxn_centers(cube):
         n_slices = cube.n_slices
-        from cube_queries import CubeQueries
+        from .cube_queries import CubeQueries
         dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = CubeQueries.get_centers_dist(cube)
         for clr in Color:
             clr_dist = dist[clr]
@@ -96,7 +96,7 @@ class CubeSanity:
     @staticmethod
     def _check_nxn_edges(cube):
         n_slices = cube.n_slices
-        from cube_queries import CubeQueries
+        from .cube_queries import CubeQueries
 
         dist: Mapping[frozenset[Color], Mapping[Hashable, Sequence[int]]] = CubeQueries.get_edges_dist(cube)
         clr: PartColorsID
