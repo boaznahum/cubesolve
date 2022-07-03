@@ -15,6 +15,7 @@ Code: Move face tackers to seperated file
 Code rearrange algs hierarchy
 
 Optimize: clone don't need to clone facets attributes, measure and fix
+          remove slice and part c/f attributes
 
 Feature: viewer should be automatically detect chnage sin shadowing mode and reset itself
 
