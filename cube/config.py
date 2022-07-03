@@ -42,7 +42,7 @@ MARKERS = {
     #      color           r-outer thick, height (of cylinder)
     #      radius is - relative to marker size [0.0-1.0]
     #      thick is relative to outer radius , inner - (1-thick)*outer
-    #      height in model resolution
+    #      height in model resolution, +- above/below facet
     "C0": ((199, 21, 133), 1.0, 0.8, 0.1), # mediumvioletred	#C71585	rgb(199,21,133)
     "C1": ((199, 21, 133), 0.6, 1, 0.1), # mediumvioletred	#C71585	rgb(199,21,133),
     "C2": ((0, 100, 0), 1.0, 0.3, 0.1)  # darkgreen	#006400	rgb(0,100,0)

@@ -336,7 +336,7 @@ class _Cell:
         # vertex = [left_bottom, right_bottom, right_top, left_top]
 
         lc = (0, 0, 0)
-        lw = 4
+        lw = 3.75
         cross_width = 5
         cross_width_x = 8
         cross_width_y = 2
@@ -354,8 +354,8 @@ class _Cell:
 
         n: int = part.n_slices
 
-        # color, outer, inner radius
-        markers: dict[str, Tuple[Tuple[int, int, int], float, float] ] = config.MARKERS
+        # color, outer, inner radius, height
+        markers: dict[str, Tuple[Tuple[int, int, int], float, float, float] ] = config.MARKERS
 
         def draw_facet(part_edge: PartEdge, _vx):
 
@@ -641,6 +641,8 @@ class _Cell:
         r_inner = radius * (1 - thick)
 
         #center += self._face_board.ortho_direction * 30
+
+        height
 
         p1 = center + self._face_board.ortho_direction * height
         p2 = center - self._face_board.ortho_direction * height
