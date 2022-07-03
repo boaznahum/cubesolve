@@ -226,7 +226,11 @@ class NxNEdges(SolverElement):
 
         self.debug(f"On same edge, going to slice {ltrs}")
 
-        with self.ann.annotate((slices, AnnWhat.Moved)):
+        with self.ann.annotate((slices, AnnWhat.Moved),
+                               (lambda: (edge.get_slice(inv(i)) for i in slices_to_slice),
+                                AnnWhat.FixedPosition),
+                               h2="Flip on same edge"
+                               ):
 
             slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
 
@@ -331,7 +335,7 @@ class NxNEdges(SolverElement):
         self.debug(f"Going to slice, sources={source_slice_indices}, target={target_indices}")
 
         # now slice them all
-        with self.ann.annotate(([source_slices, target_slices], AnnWhat.Moved)):
+        with self.ann.annotate((source_slices, AnnWhat.Moved), (target_slices, AnnWhat.FixedPosition)):
 
             slice_alg = Algs.E[[i + 1 for i in target_indices]]
 
