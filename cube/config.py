@@ -43,9 +43,9 @@ MARKERS = {
     #      radius is - relative to marker size [0.0-1.0]
     #      thick is relative to outer radius , inner - (1-thick)*outer
     #      height in model resolution
-    "C0": ((199, 21, 133), 1.0, 0.8, 0.5), # mediumvioletred	#C71585	rgb(199,21,133)
-    "C1": ((199, 21, 133), 0.6, 1, 0.5), # mediumvioletred	#C71585	rgb(199,21,133),
-    "C2": ((0, 100, 0), 1.0, 0.3, 0.5)  # darkgreen	#006400	rgb(0,100,0)
+    "C0": ((199, 21, 133), 1.0, 0.8, 0.2), # mediumvioletred	#C71585	rgb(199,21,133)
+    "C1": ((199, 21, 133), 0.6, 1, 0.2), # mediumvioletred	#C71585	rgb(199,21,133),
+    "C2": ((0, 100, 0), 1.0, 0.3, 0.2)  # darkgreen	#006400	rgb(0,100,0)
 }
 
 # text animation properties
