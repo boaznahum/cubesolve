@@ -17,8 +17,11 @@ Code rearrange algs hierarchy
 Optimize: clone don't need to clone facets attributes, measure and fix
           remove slice and part c/f attributes
 
-Feature: viewer should be automatically detect chnage sin shadowing mode and reset itself
+Feature: viewer should be automatically detect change sin shadowing mode and reset itself, not as to today keyboard handler reset
+  view after each shadow change
 
-Optimize: centers should start with front, and mimimize movements
+Optimize: centers should start with front, and minimize movements
+
+
 
 
