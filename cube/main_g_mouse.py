@@ -24,7 +24,7 @@ from .model.cube_face import Face
 from .model.elements import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
 
 # to avoid the case we start another handling while animation is running
-_FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG = False
+_FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = False
 
 _DRAG_VECTOR_DETECTION_DATA_LENGTH = 10
 
@@ -97,9 +97,9 @@ def _handle_model_view_rotate_by_drag(win, dx, dy):
 
 
 def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
-    global _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG
+    global _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING
 
-    if _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG:
+    if _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING:
         return
 
     global _DRAG_VECTOR_DETECTION_DATA
@@ -136,7 +136,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
 
     # print(f"{selected}")
 
-    slice_face = selected[0]
+    slice_edge: PartEdge = selected[0]
     left_to_right = selected[1]
     left_to_top = selected[2]
 
@@ -147,94 +147,40 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     on_left_to_right = d_vector.dot(left_to_right)
     on_left_to_top = d_vector.dot(left_to_top)
 
-    part_slice: PartSlice = slice_face.parent
+    part_slice: PartSlice = slice_edge.parent
     part: Part = part_slice.parent
 
-    print(f"{type(part)=}, {part_slice._index=}, {on_left_to_right=}, {on_left_to_top=}")
+    if config.INPUT_MOUSE_DEBUG:
+        print(f"{type(part)=}, {part_slice._index=}, {on_left_to_right=}, {on_left_to_top=}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 
-    _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG = True
+    rotate_adjusted_face = config.INPUT_MOUSE_ROTATE_ADJUSTED_FACE
+
+    _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = True
     try:
-        face = slice_face.face
-        face_name = face.name
+        slice_face = slice_edge.face
 
         if isinstance(part, Corner):
             # print("Is corner")
-            alg: Alg = Algs.of_face(face_name)
 
-            if part is face.corner_top_right:
-                #   ----|  ^
-                #       |  |
-                #    -->
-                if it_left_to_right:
-                    inv = on_left_to_right < 0
-                else:
-                    inv = on_left_to_top > 0
-            elif part is face.corner_top_left:
-                #   |----  ^
-                #   |      |
-                #    -->
-                if it_left_to_right:
-                    inv = on_left_to_right < 0
-                else:
-                    inv = on_left_to_top < 0
-            elif part is face.corner_bottom_left:
-                # print("face.corner_bottom_left")
-                #   |      ^
-                #   |---   |
-                #    -->
-                if it_left_to_right:
-                    inv = on_left_to_right > 0
-                else:
-                    inv = on_left_to_top < 0
+            if rotate_adjusted_face:
+
+                alg, inv = _handle_slice_on_corner_adjusted_face(slice_face,
+                                                                 it_left_to_right,
+                                                                 on_left_to_right,
+                                                                 on_left_to_top, part)
             else:
-                #      |   ^
-                #   ---|   |
-                #    -->
-                if it_left_to_right:
-                    inv = on_left_to_right > 0
-                else:
-                    inv = on_left_to_top > 0
+                alg, inv = _handle_slice_on_corner_same_face(slice_face,
+                                                             it_left_to_right,
+                                                             on_left_to_right,
+                                                             on_left_to_top, part)
 
         elif isinstance(part, Edge):
 
-            print(f"Is Edge !!!!")
-
-            face_alg = Algs.of_face(face_name)
-
-            if part is face.edge_right:
-                if it_left_to_right:  # slicing
-                    alg = _slice_on_part_edge_alg(slice_face)
-                    inv = on_left_to_right < 0  # D is left to right
-                else:
-                    alg = face_alg
-                    inv = on_left_to_top > 0
-
-            elif part is face.edge_left:
-                if it_left_to_right:  # slicing
-                    alg = _slice_on_part_edge_alg(slice_face)
-                    inv = on_left_to_right < 0  # D is left to right
-                else:
-                    alg = face_alg
-                    inv = on_left_to_top < 0
-
-            elif part is face.edge_top:
-                if not it_left_to_right:  # slicing
-                    alg = _slice_on_part_edge_alg(slice_face)
-                    inv = on_left_to_top < 0  # R is left to top
-                else:
-                    alg = face_alg
-                    inv = on_left_to_right < 0
-            elif part is face.edge_bottom:
-                if not it_left_to_right:  # slicing
-                    alg = _slice_on_part_edge_alg(slice_face)
-                    inv = on_left_to_top < 0  # R is left to top
-                else:
-                    alg = face_alg
-                    inv = on_left_to_right > 0
-            else:
-                raise InternalSWError
+            alg, inv = _handle_slice_on_edge(rotate_adjusted_face,
+                                             slice_face, part, slice_edge, it_left_to_right, on_left_to_right,
+                                             on_left_to_top)
 
         elif isinstance(part_slice, CenterSlice):
             c_index: tuple[int, int] = part_slice.index
@@ -242,10 +188,10 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
             yi = c_index[0]
 
             if it_left_to_right:
-                alg = _slice_on_edge_alg(face.edge_right, face, yi, on_center=True)
+                alg = _slice_on_edge_alg(slice_face.edge_right, slice_face, yi, on_center=True)
                 inv = on_left_to_right < 0
             else:
-                alg = _slice_on_edge_alg(face.edge_top, face, xi, on_center=True)
+                alg = _slice_on_edge_alg(slice_face.edge_top, slice_face, xi, on_center=True)
                 inv = on_left_to_top < 0
 
         else:
@@ -257,7 +203,204 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
             _play(window, alg)
 
     finally:
-        _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNIG = False
+        _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = False
+
+
+def _handle_slice_on_edge(rotate_adjusted_face: bool,
+                          slice_face: Face,
+                          part: Edge,
+                          slice_edge: PartEdge,
+                          it_left_to_right: bool,
+                          on_left_to_right: bool,
+                          on_left_to_top: bool) -> Tuple[Alg, bool]:
+    """
+    :param it_left_to_right: the significant movement is left to right on_left_to_right>on_left_to_top
+    :param on_left_to_right: the movement in left to right direction
+    :param on_left_to_top: the movement in left to top direction
+    :param part: the part where mouse was dragged
+    :param slice_face:
+
+    """
+
+    if part is slice_face.edge_right:
+        if it_left_to_right:  # slicing
+            alg = _slice_on_part_edge_alg(slice_edge)
+            inv = on_left_to_right < 0  # D is left to right
+        else:
+            if rotate_adjusted_face:
+                alg, inv = _handle_slice_on_edge_adjusted_face(slice_face, part, on_left_to_right, on_left_to_top)
+            else:
+                alg = Algs.of_face(slice_face.name)
+                inv = on_left_to_top > 0
+
+    elif part is slice_face.edge_left:
+        if it_left_to_right:  # slicing
+            alg = _slice_on_part_edge_alg(slice_edge)
+            inv = on_left_to_right < 0  # D is left to right
+        else:
+            if rotate_adjusted_face:
+                alg, inv = _handle_slice_on_edge_adjusted_face(slice_face, part, on_left_to_right, on_left_to_top)
+            else:
+                alg = Algs.of_face(slice_face.name)
+                inv = on_left_to_top < 0
+
+    elif part is slice_face.edge_top:
+        if not it_left_to_right:  # slicing
+            alg = _slice_on_part_edge_alg(slice_edge)
+            inv = on_left_to_top < 0  # R is left to top
+        else:
+            if rotate_adjusted_face:
+                alg, inv = _handle_slice_on_edge_adjusted_face(slice_face, part, on_left_to_right, on_left_to_top)
+            else:
+                alg = Algs.of_face(slice_face.name)
+                inv = on_left_to_right < 0
+    elif part is slice_face.edge_bottom:
+        if not it_left_to_right:  # slicing
+            alg = _slice_on_part_edge_alg(slice_edge)
+            inv = on_left_to_top < 0  # R is left to top
+        else:
+            if rotate_adjusted_face:
+                alg, inv = _handle_slice_on_edge_adjusted_face(slice_face, part, on_left_to_right, on_left_to_top)
+            else:
+                alg = Algs.of_face(slice_face.name)
+                inv = on_left_to_right > 0
+    else:
+        raise InternalSWError
+
+    return alg, inv
+
+
+def _handle_slice_on_edge_adjusted_face(slice_face: Face,
+                                        part: Edge,
+                                        on_left_to_right: float,
+                                        on_left_to_top: float) -> Tuple[Alg, bool]:
+    """
+    When edge is dragged, if rotate the adjusted face. e..g when front right face is dragged,
+    rotate right face
+
+    :param on_left_to_right: the movement in left to right direction
+    :param on_left_to_top: the movement in left to top direction
+    :param part: the part where mouse was dragged
+    :param slice_face:
+
+    """
+
+    adjusted_face = part.get_other_face(slice_face)
+    face_alg = Algs.of_face(adjusted_face.name)
+
+    if part is slice_face.edge_right:
+
+        inv = on_left_to_top < 0
+
+    elif part is slice_face.edge_left:
+
+        inv = on_left_to_top > 0
+
+    elif part is slice_face.edge_top:
+
+        inv = on_left_to_right > 0
+
+    elif part is slice_face.edge_bottom:
+        inv = on_left_to_right < 0
+
+    else:
+        raise InternalSWError
+
+    return face_alg, inv
+
+
+def _handle_slice_on_corner_same_face(slice_face: Face,
+                                      it_left_to_right: bool,
+                                      on_left_to_right: float,
+                                      on_left_to_top: float,
+                                      part: Corner) -> Tuple[Alg, bool]:
+    """
+    The face where the part slice was dragged
+    Rotate the face the that belong the corner facet that was dragged
+
+    :param it_left_to_right: the significant movement is left to right on_left_to_right>on_left_to_top
+    :param on_left_to_right: the movement in left to right direction
+    :param on_left_to_top: the movement in left to top direction
+    :param part: the part where mouse was dragged
+    :param slice_face:
+    :return:
+    """
+
+    alg: Alg = Algs.of_face(slice_face.name)
+    if part is slice_face.corner_top_right:
+        #   ----|  ^
+        #       |  |
+        #    -->
+        if it_left_to_right:
+            inv = on_left_to_right < 0
+        else:
+            inv = on_left_to_top > 0
+    elif part is slice_face.corner_top_left:
+        #   |----  ^
+        #   |      |
+        #    -->
+        if it_left_to_right:
+            inv = on_left_to_right < 0
+        else:
+            inv = on_left_to_top < 0
+    elif part is slice_face.corner_bottom_left:
+        # print("slice_face.corner_bottom_left")
+        #   |      ^
+        #   |---   |
+        #    -->
+        if it_left_to_right:
+            inv = on_left_to_right > 0
+        else:
+            inv = on_left_to_top < 0
+    else:
+        #      |   ^
+        #   ---|   |
+        #    -->
+        if it_left_to_right:
+            inv = on_left_to_right > 0
+        else:
+            inv = on_left_to_top > 0
+    return alg, inv
+
+
+def _handle_slice_on_corner_adjusted_face(slice_face: Face,
+                                          it_left_to_right: bool,
+                                          on_left_to_right: float,
+                                          on_left_to_top: float,
+                                          part: Corner) -> Tuple[Alg, bool]:
+    """
+    The face where the part slice was dragged
+    Rotate the face the is adjusted to the corner (the adjusted is selected according to direction)
+
+    :param it_left_to_right: the significant movement is left to right on_left_to_right>on_left_to_top
+    :param on_left_to_right: the movement in left to right direction
+    :param on_left_to_top: the movement in left to top direction
+    :param part: the part where mouse was dragged
+    :param slice_face:
+    :return:
+    """
+
+    edge: Edge
+    if part is slice_face.corner_top_right:
+
+        edge = slice_face.edge_top if it_left_to_right else slice_face.edge_right
+
+    elif part is slice_face.corner_top_left:
+
+        edge = slice_face.edge_top if it_left_to_right else slice_face.edge_left
+
+    elif part is slice_face.corner_bottom_left:
+
+        edge = slice_face.edge_bottom if it_left_to_right else slice_face.edge_left
+
+    else:  # bottom right
+        edge = slice_face.edge_bottom if it_left_to_right else slice_face.edge_right
+
+    # todo: the caller process edged again, can be optimized
+    return _handle_slice_on_edge_adjusted_face(slice_face,
+                                               edge,
+                                               on_left_to_right,
+                                               on_left_to_top)
 
 
 def _play(window: AbstractWindow, alg: Alg):

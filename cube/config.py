@@ -64,6 +64,11 @@ KEYBOAD_INPUT_DEBUG = True
 #   or vice versa if FALSE
 INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM = True
 
+# When dragging edge or corner, rotate adjusted face, and not the same face
+INPUT_MOUSE_ROTATE_ADJUSTED_FACE= True
+
+INPUT_MOUSE_DEBUG= False
+
 ############## Operator ##############
 OPERATOR_SHOW_ALG_ANNOTATION = True
 
