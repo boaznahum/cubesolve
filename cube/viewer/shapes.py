@@ -11,7 +11,7 @@ from pyglet.gl import *  # type: ignore
 
 
 def quad_with_line(vertexes: Sequence[np.ndarray], face_color: Tuple[int, int, int],
-                   line_width: int,
+                   line_width: float,
                    line_color: Tuple[int, int, int]):
     """
 
@@ -246,6 +246,7 @@ def _prepare_z_plane(p1: np.ndarray, p2: np.ndarray):
 
     # https://community.khronos.org/t/glucylinder-between-two-points/34447/3
 
+    # todo: why ?
     if (p1[0] == p2[0]) and (p1[2] == p2[2]) and (p1[1] < p2[1]):
         p1, p2 = p2, p1
 
@@ -321,13 +322,13 @@ def full_cylinder(p1: np.ndarray, p2: np.ndarray, r1: float, r2: float, color: T
         # draw the cylinder
 
         if r1 > r2:
-            r1, r2 = r2,r1
+            r1, r2 = r2, r1
+
         glu.gluCylinder(quadratic, r1, r1, height, slices, stacks)  # Draw A cylinder
         glu.gluCylinder(quadratic, r2, r2, height, slices, stacks)  # Draw A cylinder
 
         glu.gluDisk(quadratic, r1, r2, slices, stacks)  # Draw A cylinder
 
-        p12 = p1 - p2
         gl.glTranslatef(0, 0, height)
         glu.gluDisk(quadratic, r1, r2, slices, stacks)  # Draw A cylinder
 
@@ -354,7 +355,6 @@ def disk(p1: np.ndarray, p2: np.ndarray, r_outer: float, r_inner: float, color: 
     r2d = 180 / pi
     # length of cylinder
     d: ndarray = p1 - p2
-    height = sqrt(d.dot(d))
 
     gl.glMatrixMode(gl.GL_MODELVIEW)
     gl.glPushMatrix()

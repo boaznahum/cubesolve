@@ -9,35 +9,20 @@ from numpy import ndarray
 from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
-from .. import config
 from cube.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
-from cube.model.elements import Part, FaceName, PartEdge
+from cube.model.elements import FaceName, PartEdge
 from cube.model.elements import PartSlice
 # noinspection PyMethodMayBeStatic
 from cube.utils import prof
-
-from ._faceboard import _FaceBoard
 from ._board import _Board
+from ._faceboard import _FaceBoard
+from .. import config
+
 
 # todo: delete ?
 #  _parts: dict[Hashable, int] = {}
-
-
-# todo: delete ?
-def _part_id(p: Part) -> str:
-    p_id = p.colors_id_by_color
-
-    _id = _parts.get(p_id)
-
-    if not _id:
-        _id = len(_parts) + 1
-        _parts[p_id] = _id
-
-    return chr(ord("A") + _id - 1)
-
-
 
 
 class GCubeViewer:
@@ -71,17 +56,12 @@ class GCubeViewer:
         with prof.w_prof("GUI update", config.PROF_VIEWER_GUI_UPDATE):
             self._board.update()
 
-
-
     def draw(self):
         """
         Draw the graphic elements that were update in :upate
         :return:
         """
         self._board.draw()
-
-
-
 
     def _get_face(self, name: FaceName) -> _FaceBoard:
         for f in self._board.faces:
