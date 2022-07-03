@@ -18,4 +18,6 @@ Optimize: clone don't need to clone facets attributes, measure and fix
 
 Feature: viewer should be automatically detect chnage sin shadowing mode and reset itself
 
+Optimize: centers should start with front, and mimimize movements
+
 
