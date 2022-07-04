@@ -14,7 +14,7 @@ from .main_g_abstract import AbstractWindow, AbstractApp
 from .model.cube_boy import FaceName
 from .solver import Solver, SolveStep
 
-good = Algs.bigAlg("good")
+good = Algs.seq_alg("good")
 
 # noinspection PyProtectedMember
 key0 = key._0
@@ -307,7 +307,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 swap_faces = [Algs.M[1:mid - 1].prime * ml + Algs.F.prime * 2 + Algs.M[1:mid - 1] * ml +
                               Algs.M[mid + 1:end].prime * ml + Algs.F * 2 + Algs.M[mid + 1:end] * ml
                               ]
-                op.op(Algs.bigAlg(None, *swap_faces))
+                op.op(Algs.seq_alg(None, *swap_faces))
 
                 # communicator 1
                 rotate_on_cell = Algs.M[mid]
@@ -322,7 +322,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                        on_front_rotate,
                        rotate_on_second * ml,
                        on_front_rotate.prime]
-                op.op(Algs.bigAlg(None, *cum))
+                op.op(Algs.seq_alg(None, *cum))
 
                 rotate_on_second = Algs.M[mid + 1:nn]  # E is from right to left
                 cum = [rotate_on_cell.prime * ml,
@@ -333,7 +333,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                        on_front_rotate,
                        rotate_on_second * ml,
                        on_front_rotate.prime]
-                op.op(Algs.bigAlg(None, *cum))
+                op.op(Algs.seq_alg(None, *cum))
 
             case key.R:
                 # _last_face = FaceName.R
@@ -432,8 +432,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 # print(f"{modifiers & key.MOD_CTRL=}  {modifiers & key.MOD_ALT=}")
                 if modifiers & key.MOD_CTRL:
                     # noinspection PyProtectedMember
-                    big_alg: algs.BigAlg = Algs.scramble(app.cube.size, value - key._0)
-                    good = algs.BigAlg("good")
+                    big_alg: algs.SeqAlg = Algs.scramble(app.cube.size, value - key._0)
+                    good = algs.SeqAlg("good")
                     for a in big_alg.algs:
                         try:
                             with _wait_cursor(window):

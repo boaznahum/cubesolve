@@ -1,5 +1,7 @@
+from typing import Iterable
+
 from cube import config, algs as algs
-from cube.algs import Algs
+from cube.algs import Algs, Alg
 from cube.model.cube import Cube
 from cube.model.cube_queries import CubeQueries
 
@@ -30,54 +32,98 @@ def test2():
     alg.play(cube)
 
 
-def __test_simplify(alg, n):
+def _compare_two_algs(cube_size: int , algs1:Iterable[Alg], algs2: Iterable[Alg]):
 
-    config.CHECK_CUBE_SANITY = False
+    cube = Cube(cube_size)
 
-    cube = Cube(n)
-    scramble=Algs.scramble(cube.size, "1")
-    # alg = Algs.scramble("1")
-    print("Alg=", alg)
-    scramble.play(cube)
-    alg.play(cube)
+    for alg in algs1:
+        alg.play(cube)
+
     s1 = CubeQueries.get_sate(cube)
-    alg_s = alg.simplify()
-#    flattern = algs._BigAlg(None, *alg_s)
-#    flattern = algs._BigAlg(None, *alg_s)
-    flattern = alg_s
-    print("simplify=", alg_s)
-
 
     cube.reset()
-    scramble.play(cube)
-    flattern.play(cube)
-
+    for alg in algs2:
+        alg.play(cube)
 
     assert CubeQueries.compare_state(cube, s1)
-    print("Passed")
+
+def _compare_inv(cube_size: int , algs:Iterable[Alg]):
+
+    cube = Cube(cube_size)
+
+    scramble = Algs.scramble(cube_size)
+
+    scramble.play(cube)
+
+    s1 = CubeQueries.get_sate(cube)
+
+    for alg in algs:
+        alg.play(cube)
+
+    inv = Algs.seq_alg(None, *algs).inv()
+
+    inv.play(cube)
+
+    # should return to same state
+
+    assert CubeQueries.compare_state(cube, s1)
+
+
+
+
+def __test_simplify(alg, cube_size):
+    """
+    Check play alg then random sequence
+    Then compare it to alg + random simplified
+    """
+
+    cube = Cube(cube_size)
+    scramble = Algs.scramble(cube.size, "1")
+    # alg = Algs.scramble("1")
+    print("Alg=", alg)
+
+    simplified = alg.simplify()
+    print("simplify=", simplified)
+
+    _compare_two_algs(cube_size, (scramble, alg), (scramble, simplified))
+
+    print("Simplify passed")
     print("================================")
 
-def __test_flattern(alg, n):
+    _compare_inv(cube_size, (scramble, alg))
 
+    print("Inv passed")
+    print("================================")
+
+
+def _test_simplify():
+    config.CHECK_CUBE_SANITY = False
+
+    size = 8
+
+    alg = Algs.scramble(size)
+
+    __test_simplify(alg, size)
+
+
+def __test_flatten(alg, n):
     config.CHECK_CUBE_SANITY = False
 
     cube = Cube(n)
-    scramble=Algs.scramble(cube.size, "1")
+    scramble = Algs.scramble(cube.size, "1")
     # alg = Algs.scramble("1")
     print("Alg=", alg)
     scramble.play(cube)
     alg.play(cube)
     s1 = CubeQueries.get_sate(cube)
     alg_s = alg.flatten()
-    flattern = algs.BigAlg(None, *alg_s)
-#    flattern = alg_s
+    flattern = algs.SeqAlg(None, *alg_s)
+    #    flattern = alg_s
     print("simplify=", alg_s)
-
 
     cube.reset()
     scramble.play(cube)
     flattern.play(cube)
-
 
     assert CubeQueries.compare_state(cube, s1)
     print("Passed")
@@ -94,12 +140,11 @@ def test_flattern():
     # __test_flattern(alg, cube_size)
     #
 
-    #===============================
+    # ===============================
     #
     cube_size = 5
-    alg = Algs.M[2:2].prime*2
+    alg = Algs.M[2:2].prime * 2
     __test_simplify(alg, cube_size)
-
 
     # #---------------------------------
     cube_size = 7
@@ -117,7 +162,6 @@ def test_flattern():
 
     r1_mul = 2
 
-
     _algs = [rotate_on_cell.prime * r1_mul,
              on_front_rotate,
              rotate_on_second.prime * r1_mul,
@@ -128,8 +172,8 @@ def test_flattern():
              on_front_rotate.prime]
     #
     # for a in _algs:
-    __test_simplify(algs.BigAlg(None, *_algs), cube_size)
-    __test_simplify(algs.BigAlg(None, *_algs).inv(), cube_size)
+    __test_simplify(algs.SeqAlg(None, *_algs), cube_size)
+    __test_simplify(algs.SeqAlg(None, *_algs).inv(), cube_size)
     #
     # a = Algs.B[1:cube.n_slices + 1]
     # __test_flattern(a, cube_size)
@@ -143,5 +187,6 @@ def test_flattern():
     a = Algs.R[1:2] + Algs.R[1:2]
     __test_simplify(a, cube_size)
 
+
 if __name__ == '__main__':
-    test_flattern()
+    _test_simplify()

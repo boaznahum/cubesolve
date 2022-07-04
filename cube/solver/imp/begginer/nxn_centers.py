@@ -952,7 +952,7 @@ class NxNCenters(SolverElement):
                       Algs.M[mid_pls_1 + 1:end].prime * rotate_mul,
                       Algs.F * 2 + Algs.M[mid_pls_1 + 1:end] * rotate_mul
                       ]
-        op.op(Algs.bigAlg(None, *swap_faces))
+        op.op(Algs.seq_alg(None, *swap_faces))
 
         # communicator 1, upper block about center
         self._block_communicator(required_color, face, source,
@@ -1079,7 +1079,7 @@ class NxNCenters(SolverElement):
                                ):
             if n_rotate:
                 self.op.op(Algs.of_face(source_face.name) * n_rotate)
-            self.op.op(Algs.bigAlg(None, *cum))
+            self.op.op(Algs.seq_alg(None, *cum))
 
         return True
 

@@ -144,7 +144,7 @@ def _op_and_play_animation(window: AnimationWindow,
 
     platform_event_loop = pyglet.app.platform_event_loop
 
-    if isinstance(alg, algs.Annotation):
+    if isinstance(alg, algs.AnnotationAlg):
         operator(alg, inv)
         window.update_gui_elements()
         #        time.sleep(1)

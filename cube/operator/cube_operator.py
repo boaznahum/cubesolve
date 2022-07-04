@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from typing import Callable, Any, TYPE_CHECKING
 
 from .. import config
-from ..algs import Alg, SimpleAlg, Annotation, Algs
+from ..algs import Alg, SimpleAlg, AnnotationAlg, Algs
 from ..animation.animation_manager import AnimationManager
 from ..animation.animation_manager import OpProtocol
 from ..app_exceptions import OpAborted
@@ -104,7 +104,7 @@ class Operator:
                         self.check_clear_rais_abort()
 
             do_self_ann = (config.OPERATOR_SHOW_ALG_ANNOTATION and
-                           not self._self_annotation_running and not isinstance(alg, Annotation))
+                           not self._self_annotation_running and not isinstance(alg, AnnotationAlg))
 
             if do_self_ann:
 
@@ -121,7 +121,7 @@ class Operator:
 
         else:
 
-            if alg.is_ann:
+            if isinstance(alg, AnnotationAlg):
                 return
 
             if inv:

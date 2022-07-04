@@ -9,8 +9,8 @@ from cube.model.cube import Cube
 from cube.model.cube_slice import SliceName
 from cube.model.elements import FaceName, AxisName, PartSlice
 
-__all__ = ["Algs", "Alg", "SimpleAlg", "AnimationAbleAlg", "Annotation",
-           "SliceAbleAlg", "BigAlg", "SliceAlg", "FaceAlg"]
+__all__ = ["Algs", "Alg", "SimpleAlg", "AnimationAbleAlg", "AnnotationAlg",
+           "SliceAbleAlg", "SeqAlg", "SliceAlg", "FaceAlg"]
 
 
 def _inv(inv: bool, n) -> int:
@@ -41,7 +41,7 @@ class Alg(ABC):
         pass
 
     @abstractmethod
-    def simplify(self) -> "SimpleAlg|BigSimpleAlg":
+    def simplify(self) -> "SimpleAlg|SeqSimpleAlg":
         """
         In case of big alg, try to simplify R+R2 == R
         :return:
@@ -65,11 +65,7 @@ class Alg(ABC):
         return _Mul(self, n)
 
     def __add__(self, other: "Alg"):
-        return BigAlg(None, self, other)
-
-    @property
-    def is_ann(self):
-        return False
+        return SeqAlg(None, self, other)
 
 
 class _Inv(Alg):
@@ -94,7 +90,7 @@ class _Inv(Alg):
     def count(self) -> int:
         return self._alg.count()
 
-    def simplify(self) -> "SimpleAlg|BigSimpleAlg":
+    def simplify(self) -> "SimpleAlg|SeqSimpleAlg":
 
         """
         Must returns SimpleAlg if _alg is SimpleAlg
@@ -107,14 +103,16 @@ class _Inv(Alg):
 
         a = self._alg.simplify()  # can't be _Mul, nor Inv
 
-        if isinstance(a, SimpleAlg):
+        if isinstance(a, NSimpleAlg):
             s = a.clone()
             s *= -1  # inv - that is my function
             return s.simplify()
-        elif isinstance(a, BigAlg):
+        elif isinstance(a, AnnotationAlg):
+            return a
+        elif isinstance(a, SeqAlg):
 
             algs = [a.inv() for a in reversed(a.algs)]
-            return BigAlg(None, *algs).simplify()
+            return SeqAlg(None, *algs).simplify()
         else:
             raise TypeError("Unknown type:", type(self))
 
@@ -141,7 +139,7 @@ class _Mul(Alg, ABC):
 
     def atomic_str(self):
 
-        if isinstance(self._alg, SimpleAlg):
+        if isinstance(self._alg, NSimpleAlg):
             return self.simplify().atomic_str()  # R3 -> R'
 
         s = self._alg.atomic_str()
@@ -157,23 +155,25 @@ class _Mul(Alg, ABC):
             self._alg.play(cube, inv)
 
     def count(self) -> int:
-        if not isinstance(self._alg, BigAlg):
+        if not isinstance(self._alg, SeqAlg):
             return _normalize_for_count(self._n) * self._alg.count()
         else:
             return self._n * self._alg.count()
 
-    def simplify(self) -> "SimpleAlg|BigSimpleAlg":
+    def simplify(self) -> "SimpleAlg|SeqSimpleAlg":
 
         a = self._alg.simplify()  # can't be _Mul
 
-        if isinstance(a, SimpleAlg):
+        if isinstance(a, NSimpleAlg):
             s = a.clone()
             s *= self._n  # multipy by me - that is my function
             return s.simplify()
-        elif isinstance(self._alg, BigAlg):
+        elif isinstance(a, AnnotationAlg):
+            return a
+        elif isinstance(self._alg, SeqAlg):
             # noinspection PyProtectedMember
             algs = [a.simplify() for a in self._alg._algs] * self._n
-            return BigAlg(None, *algs).simplify()
+            return SeqAlg(None, *algs).simplify()
         else:
             raise TypeError("Unknown type:", type(self))
 
@@ -210,10 +210,21 @@ def n_to_str(alg_code, n):
         return s
 
 
-TSimpleAlg = TypeVar("TSimpleAlg", bound="SimpleAlg")
+TNSimpleAlg = TypeVar("TNSimpleAlg", bound="NSimpleAlg")
 
 
 class SimpleAlg(Alg, ABC):
+
+    def __init__(self) -> None:
+        super().__init__()
+
+
+class NSimpleAlg(SimpleAlg, ABC):
+    """
+    A simple alg with n property,
+    Follows the rule of simple rotation n == N % 4
+    """
+
     __slots__ = ["_n", "_code"]
 
     # todo: most of the code in this lags should be moved into NSimpleAlg
@@ -224,15 +235,15 @@ class SimpleAlg(Alg, ABC):
         self._n = n
 
     @final
-    def clone(self: TSimpleAlg) -> TSimpleAlg:
-        cl = SimpleAlg.__new__(type(self))
+    def clone(self: TNSimpleAlg) -> TNSimpleAlg:
+        cl = NSimpleAlg.__new__(type(self))
         # noinspection PyArgumentList
         cl.__init__()  # type: ignore
         cl.copy(self)
 
         return cl
 
-    def copy(self, other: "SimpleAlg"):
+    def copy(self, other: "TNSimpleAlg"):
         self._n = other.n
         return self
 
@@ -243,44 +254,23 @@ class SimpleAlg(Alg, ABC):
         return self.atomic_str()
 
     def count(self) -> int:
-        if self.is_whole:
-            return 0
-        else:
-            return _normalize_for_count(self._n)
+        return _normalize_for_count(self._n)
 
     @property
     def n(self):
         return self._n
 
-    def simplify(self) -> "SimpleAlg|BigSimpleAlg":
-        return self
+    def simplify(self) -> "NSimpleAlg|SeqSimpleAlg":
+        if self._n % 4:
+            return self
+        else:
+            return SeqSimpleAlg(None)
 
     def flatten(self) -> Iterator["SimpleAlg"]:
         yield self
 
     # ---------------------------------
     # type of simple: face, axis, slice
-
-    @property
-    def face(self) -> FaceName | None:
-        return None
-
-    @property
-    def is_whole(self):
-        return False
-
-    @property
-    def axis_name(self) -> AxisName | None:
-        # only if whole is true
-        return None
-
-    @property
-    def slice_name(self) -> SliceName | None:
-        """
-        only for SliceAlg
-        :return:
-        """
-        return None
 
     def same_form(self, a: "SimpleAlg"):
         return True
@@ -295,36 +285,28 @@ class SimpleAlg(Alg, ABC):
         return self
 
 
-class NSimpleAlg(SimpleAlg, ABC):
-    """
-    A simple alg with n property
-    todo: all code from SimpleAlg should be moved here
-    """
+class AnnotationAlg(SimpleAlg):
 
-    def __init__(self, code: str, n: int = 1) -> None:
-        super().__init__(code, n)
-
-    def simplify(self) -> "NSimpleAlg|BigSimpleAlg":
-        if self._n % 4:
-            return self
-        else:
-            return BigSimpleAlg(None)
-
-
-class Annotation(SimpleAlg):
-
-    def __init__(self, n: int = 1) -> None:
-        super().__init__("ann", n)
+    def __init__(self) -> None:
+        super().__init__()
 
     def play(self, cube: Cube, inv: bool = False):
         pass
 
-    @property
-    def is_ann(self):
-        return True
+    def count(self) -> int:
+        return 0
+
+    def atomic_str(self):
+        pass
+
+    def simplify(self) -> "SimpleAlg":
+        return self
+
+    def flatten(self) -> Iterator["SimpleAlg"]:
+        yield self
 
 
-class AnimationAbleAlg(SimpleAlg, ABC):
+class AnimationAbleAlg(NSimpleAlg, ABC):
 
     @abstractmethod
     def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
@@ -491,10 +473,6 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         super().__init__(str(face.value), n)
         self._face: FaceName = face
 
-    @property
-    def face(self) -> FaceName:
-        return self._face
-
     def _add_to_str(self, s):
         """
             None -> default = R
@@ -551,18 +529,17 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
         super().__init__(str(axis_name.value), n)
         self._axis_name = axis_name
 
-    @property
-    def axis_name(self) -> AxisName:
-        return self._axis_name
+    def count(self) -> int:
+        return 0
 
     @final
     def play(self, cube: Cube, inv: bool = False):
-        cube.rotate_whole(self.axis_name, _inv(inv, self._n))
+        cube.rotate_whole(self._axis_name, _inv(inv, self._n))
 
     def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
 
         face_name: FaceName
-        match self.axis_name:
+        match self._axis_name:
 
             case AxisName.X:
                 face_name = FaceName.R
@@ -574,14 +551,9 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
                 face_name = FaceName.F
 
             case _:
-                raise InternalSWError(f"Unknown Axis {self.axis_name}")
+                raise InternalSWError(f"Unknown Axis {self._axis_name}")
 
         return face_name, cube.get_all_parts()
-
-    @final
-    @property
-    def is_whole(self):
-        return True
 
 
 class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
@@ -755,7 +727,7 @@ class _Z(WholeCubeAlg):
         super().__init__(AxisName.Z)
 
 
-class BigAlg(Alg):
+class SeqAlg(Alg):
 
     def __init__(self, name: str | None, *algs: Alg) -> None:
         super().__init__()
@@ -784,7 +756,7 @@ class BigAlg(Alg):
             else:
                 return "[" + " ".join([str(a) for a in self._algs]) + "]"
 
-    def simplify(self) -> "BigSimpleAlg":
+    def simplify(self) -> "SeqSimpleAlg":
 
         flat_algs: MutableSequence[SimpleAlg] = []
 
@@ -793,13 +765,13 @@ class BigAlg(Alg):
 
             if isinstance(a, SimpleAlg):
                 flat_algs.append(a)
-            elif isinstance(a, BigSimpleAlg):
+            elif isinstance(a, SeqSimpleAlg):
                 flat_algs.extend(a.algs)
             else:
                 raise TypeError("Unexpected type", type(a))
 
         combined = self._combine(flat_algs)
-        return BigSimpleAlg(self._name, *combined)
+        return SeqSimpleAlg(self._name, *combined)
 
     def flatten(self) -> Iterator["SimpleAlg"]:
         for a in self._algs:
@@ -812,9 +784,9 @@ class BigAlg(Alg):
         while work_to_do:
             work_to_do = False
             new_algs = []
-            prev: SimpleAlg | None = None
+            prev: NSimpleAlg | None = None
             for a in algs:
-                if not isinstance(a, SimpleAlg):
+                if not isinstance(a, NSimpleAlg):
                     raise TypeError("Unexpected type", type(a))
 
                 if not a.n % 4:  # get rid of R4
@@ -857,17 +829,17 @@ class BigAlg(Alg):
             # we can't combine
             return super().__add__(other)
 
-        if isinstance(other, BigAlg) and not other._name:
-            return BigAlg(None, *[*self._algs, *other._algs])
+        if isinstance(other, SeqAlg) and not other._name:
+            return SeqAlg(None, *[*self._algs, *other._algs])
         else:
-            return BigAlg(None, *[*self._algs, other])
+            return SeqAlg(None, *[*self._algs, other])
 
     @property
     def algs(self) -> Sequence[Alg]:
         return self._algs
 
 
-class BigSimpleAlg(BigAlg):
+class SeqSimpleAlg(SeqAlg):
     """
     A big alg composed of SimpleAlg s only
     """
@@ -880,7 +852,7 @@ class BigSimpleAlg(BigAlg):
         return super().algs  # type: ignore
 
 
-class _Scramble(BigAlg):
+class _Scramble(SeqAlg):
 
     def __init__(self, name: str | None, *algs: Alg) -> None:
         super().__init__(name, *algs)
@@ -932,7 +904,7 @@ def _scramble(cube_size: int, seed: Any, n: int | None = None) -> Alg:
 class Algs:
     # When played, it simply refreshes GUI
     # So it used by annotation tools, after they changed some model(text, cube)
-    AN = Annotation()
+    AN = AnnotationAlg()
     L = _L()
     B = _B()
     D = _D()
@@ -950,8 +922,8 @@ class Algs:
     S = _S()  # Middle over F
 
     @staticmethod
-    def bigAlg(name: str | None, *algs: Alg) -> BigAlg:
-        return BigAlg(name, *algs)
+    def seq_alg(name: str | None, *algs: Alg) -> SeqAlg:
+        return SeqAlg(name, *algs)
 
     Simple = [L,
               R, X, M,
@@ -961,11 +933,11 @@ class Algs:
               D,
               ]
 
-    RU = BigAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
+    RU = SeqAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
 
-    UR = BigAlg("UR(top)", U, R, -U, -L, U, -R, -U, L)
+    UR = SeqAlg("UR(top)", U, R, -U, -L, U, -R, -U, L)
 
-    RD = BigAlg("RD(top)", ((R.prime + D.prime + R + D) * 2 + U) * 3)
+    RD = SeqAlg("RD(top)", ((R.prime + D.prime + R + D) * 2 + U) * 3)
 
     @staticmethod
     def lib() -> Sequence[Alg]:
@@ -988,7 +960,7 @@ class Algs:
 
     @classmethod
     def alg(cls, name, *algs: Alg) -> Alg:
-        return BigAlg(name, *algs)
+        return SeqAlg(name, *algs)
 
     @classmethod
     def simplify(cls, *algs: Alg) -> Alg:
