@@ -123,6 +123,8 @@ def rf(self) -> algs.Alg:
 slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
    ```
 
+![Algs](/assets/algs.png)
+
 ## Model
 
     In package model:

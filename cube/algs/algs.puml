@@ -1,0 +1,59 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+abstract class Alg {
+    Alg prime()
+    __neg__()
+    __mul__()
+    SeqAlg __add__()
+}
+
+abstract class SimpleAlg
+abstract class NSimpleAlg
+
+abstract class AnimationAbleAlg
+note top of AnimationAbleAlg: "Not a real alg\nNeed to get rid of it"
+
+abstract class SliceAbleAlg
+abstract class FaceAlg
+abstract class SliceAlg
+abstract class WholeCubeAlg
+
+Alg  <|--  SimpleAlg
+SimpleAlg  <|--  NSimpleAlg
+SimpleAlg  <|--  AnnotationAlg
+NSimpleAlg  <|--  AnimationAbleAlg
+NSimpleAlg  <|--  SliceAbleAlg
+
+SliceAbleAlg  <|--  FaceAlg
+AnimationAbleAlg  <|--  FaceAlg
+
+SliceAbleAlg  <|--  SliceAlg
+AnimationAbleAlg  <|--  SliceAlg
+
+NSimpleAlg  <|--  WholeCubeAlg
+AnimationAbleAlg  <|--  WholeCubeAlg
+
+FaceAlg <|-- U
+FaceAlg <|-- D
+FaceAlg <|-- F
+FaceAlg <|-- B
+FaceAlg <|-- R
+FaceAlg <|-- L
+
+together  {
+SliceAlg <|-- M
+SliceAlg <|-- E
+SliceAlg <|-- S
+}
+
+WholeCubeAlg <|-- X
+WholeCubeAlg <|-- Y
+WholeCubeAlg <|-- Z
+
+Alg <|-- SeqAlg
+
+note top of SeqAlg: "A sequence of algs"
+
+
+@enduml
