@@ -23,7 +23,13 @@ Optimize: centers should start with front, and minimize movements
 Optimize : improve face tracker, they should search 4 points only !!!
     Also edge can search two points only
     Also in annotation - search only 4/2 points
-Feature: Add recorder
+
+
+Update readme.md:
+    recorder
+      Ctlr P start/stop
+      P - play last recording (shift Inv)
+      Alt p - reset recording
 
 
 

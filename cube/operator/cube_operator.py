@@ -1,5 +1,5 @@
 import functools
-from collections.abc import MutableSequence, Sequence
+from collections.abc import MutableSequence, Sequence, Iterable, Reversible
 from contextlib import contextmanager
 from typing import Callable, Any, TYPE_CHECKING
 
@@ -16,7 +16,9 @@ if TYPE_CHECKING:
 
 
 class Operator:
-    __slots__ = ["_cube", "_history",
+    __slots__ = ["_cube",
+                 "_history",
+                 "_recording",
                  "_self_annotation_running",
                  "_aborted",
                  "_animation_running",
@@ -34,7 +36,13 @@ class Operator:
         self._cube = cube
         self._history: MutableSequence[Alg] = []
 
+        # a non none indicates that recorder is running
+        self._recording: MutableSequence[Alg] | None = None
+
         # why we need both
+
+        # indicate that this operator has invoked animation amanager
+        #  and reentry to op comes from animation
         self._animation_running = False
         self._animation_manager = animation_manager
         self._animation_enabled: bool = animation_enabled
@@ -78,7 +86,16 @@ class Operator:
 
         self.check_clear_rais_abort()
 
-        if animation and self.animation_enabled and not self._animation_running:
+        op_current_running = self._animation_running
+
+        is_annotation = isinstance(alg, AnnotationAlg)
+
+        if not is_annotation:
+            if inv:
+                alg = alg.inv()
+
+
+        if animation and self.animation_enabled and not op_current_running:
 
             def _do_animation():
                 nonlocal alg
@@ -86,8 +103,6 @@ class Operator:
 
                     an: Callable[[Cube, OpProtocol, SimpleAlg], None] | None = self._animation_manager.run_animation
                     assert an  # just to make mypy happy
-                    if inv:
-                        alg = alg.inv()
 
                     # todo: Patch - move single step mode into operator
                     algs: list[SimpleAlg] = [*alg.flatten()]
@@ -121,16 +136,25 @@ class Operator:
 
         else:
 
-            if isinstance(alg, AnnotationAlg):
+            if is_annotation:
                 return
 
-            if inv:
-                alg = alg.inv()
+            if self._recording is not None:
+                self._recording.append(alg)
 
             self._cube.sanity()
             alg.play(self._cube, False)
             self._cube.sanity()
             self._history.append(alg)
+
+    def play_seq(self, algs: Reversible[Alg], inv: bool):
+
+        if inv:
+            for alg in reversed(algs):
+                self.op(alg, True)
+        else:
+            for alg in algs:
+                self.op(alg, inv)
 
     def undo(self, animation=True) -> Alg | None:
 
@@ -168,6 +192,26 @@ class Operator:
         if remove_scramble:
             history = [a for a in history if not _is(a)]
         return history[:]
+
+    def toggle_recording(self) -> Sequence[Alg] | None:
+        """
+        If recording is on stop it nad return the recording, can be empty
+        otherwise, start the recording and return None
+        :return:
+        """
+
+        if self._recording is None:
+            self._recording = []
+            return None
+        else:
+            r = self._recording
+            self._recording = None
+            return r
+
+    @property
+    def is_recording(self) -> bool:
+        return self._recording is not None
+
 
     @property
     def count(self):

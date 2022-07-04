@@ -111,7 +111,9 @@ class ApplicationAndViewState:
 
         self._animation_text = AnimationText()
 
-    def reset(self):
+        self.last_recording: Sequence[algs.Alg] | None = None
+
+    def reset(self, not_view=False):
         self._alpha_x: float = 0
         self._alpha_y: float = 0
         self._alpha_z: float = 0
@@ -242,7 +244,6 @@ class ApplicationAndViewState:
         return speeds[self._speed]
 
     def get_draw_shadows_mode(self, face: FaceName) -> bool:
-
 
         """
 
