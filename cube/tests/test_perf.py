@@ -3,11 +3,11 @@ import traceback
 from cube.algs import Algs
 from cube.app_state import ApplicationAndViewState
 from cube.operator.cube_operator import Operator
-from cube.solver import Solver
+from cube.solver import Solver, Solvers
 
 
 def main():
-    n_loops = 20
+    n_loops = 3
 
     ll = 0  # n plots per line
     count = 0
@@ -15,10 +15,10 @@ def main():
 
     from cube.model.cube import Cube
 
-    cube = Cube(5)
+    cube = Cube(10)
     vs = ApplicationAndViewState()
     op: Operator = Operator(cube, vs)
-    slv: Solver = Solver(op)
+    slv: Solver = Solvers.default(op)
 
     for s in range(-1, n_loops):
         print(str(s + 2) + f"/{n_loops + 1}, ", end='')
@@ -52,7 +52,8 @@ def main():
             traceback.print_exc()
             raise
     print()
-    print(f"Count={count}, average={count / n_executed_tests}")
+    s = cube.size
+    print(f"Count={count}, average={count / n_executed_tests} average={count / n_executed_tests / (s*s + 12*s)}")
 
 
 if __name__ == '__main__':
