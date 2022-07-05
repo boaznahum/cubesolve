@@ -12,9 +12,11 @@ abstract class SimpleAlg
 abstract class NSimpleAlg
 
 abstract class AnimationAbleAlg
-note top of AnimationAbleAlg: "Not a real alg\nNeed to get rid of it"
+note top of AnimationAbleAlg: Not a real alg\nNeed to get rid of it
 
-abstract class SliceAbleAlg
+abstract class SliceAbleAlg {
+    __getitem__(self, items)
+}
 abstract class FaceAlg
 abstract class SliceAlg
 abstract class WholeCubeAlg
@@ -25,8 +27,15 @@ SimpleAlg  <|--  AnnotationAlg
 NSimpleAlg  <|--  AnimationAbleAlg
 NSimpleAlg  <|--  SliceAbleAlg
 
+Alg  <|--  Inv
+Alg  <|--  Mul
+note top of Inv: R'
+note top of Mul: R2
+
 SliceAbleAlg  <|--  FaceAlg
 AnimationAbleAlg  <|--  FaceAlg
+
+note top of SliceAbleAlg: R[2], R[1:2], \nR[2,4]
 
 SliceAbleAlg  <|--  SliceAlg
 AnimationAbleAlg  <|--  SliceAlg
@@ -53,7 +62,7 @@ WholeCubeAlg <|-- Z
 
 Alg <|-- SeqAlg
 
-note top of SeqAlg: "A sequence of algs"
+note top of SeqAlg: A sequence of algs
 
 
 @enduml
