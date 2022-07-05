@@ -4,10 +4,13 @@ from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mappi
 from typing import Callable, TypeVar, Tuple, Collection
 
 from cube.app_exceptions import InternalSWError
+from . import PartEdge
 from .cube import Cube
 from .cube_boy import Color
 from .cube_face import Face
-from .elements import PartSlice, CenterSlice, PartColorsID, Edge, EdgeWing, PartType, CornerSlice, PartEdge, Part
+from ._elements import PartColorsID
+from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
+from ._part import Edge, Part, PartType
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]
@@ -34,7 +37,6 @@ class CubeQueries:
             return face
 
         raise InternalSWError(f"Can't find face with pred {pred}")
-
 
     @staticmethod
     def find_slice_in_cube_edges(cube: Cube, pred: Pred[EdgeWing]) -> EdgeWing | None:
@@ -117,7 +119,6 @@ class CubeQueries:
 
         return CubeQueries.find_slice_edge(cube.corners, pred)
 
-
     @staticmethod
     def is_corner_slice_edge(cube: Cube, pred: Callable[[PartEdge], bool]) -> PartEdge | None:
 
@@ -149,8 +150,6 @@ class CubeQueries:
         raise InternalSWError(f"Can't find part with color id {position_id}")
 
     @staticmethod
-
-    @staticmethod
     def get_four_center_points(cube: Cube, r, c) -> Iterator[Tuple[int, int]]:
 
         inv = cube.inv
@@ -175,7 +174,6 @@ class CubeQueries:
             rc = rc[1], inv(rc[0])
 
         return rc
-
 
     @staticmethod
     def get_two_edge_slice_points(cube: Cube, i) -> Iterable[int]:
@@ -263,7 +261,6 @@ class CubeQueries:
         s1: PartSlice
         s2: PartSlice
         return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(other, st2))
-
 
     @classmethod
     def find_edge_in_cube(cls, cube: Cube, pred: Pred[Edge]) -> Edge | None:

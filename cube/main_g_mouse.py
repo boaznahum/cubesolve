@@ -21,7 +21,7 @@ from .main_g_abstract import AbstractWindow
 from .main_g_app import AbstractApp
 from .model.cube_boy import FaceName
 from .model.cube_face import Face
-from .model.elements import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
+from .model import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
 
 # to avoid the case we start another handling while animation is running
 _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = False

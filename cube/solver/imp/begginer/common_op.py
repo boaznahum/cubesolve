@@ -7,7 +7,7 @@ from cube.model.cube import Cube
 from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
 from cube.model.cube_queries import Pred, CubeQueries
-from cube.model.elements import Edge, Color, FaceName, EdgeWing
+from cube.model import Edge, Color, FaceName, EdgeWing
 from cube.solver.imp.begginer.base_solver import SolverElement
 from cube.solver.imp.begginer.icommon_op import ICommon
 from cube.solver.imp.begginer.isolver import ISolver

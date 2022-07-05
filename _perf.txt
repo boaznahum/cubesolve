@@ -6,4 +6,25 @@ Cube 15x15
  before improvement:
    .board_update   0.0654548
 
- create geometry only once reduce it to -> 0.0499305  - 24%
+05-7-2022
+    n_loops = 3
+    cube_size = 10
+
+ Before any change:
+   without profiler:
+     Time(s)=14.5292812, average=3.6323203 average=0.01651054681818182
+
+   With profiler:
+     Time(s)=38.3464191, average=9.586604775 average=0.04357547625
+
+     Name                                           count       time[ms]      Own time (%)
+     cube.model.elements.PartSlice.copy_colors	    1715040	    8759	      3815 (9.9)
+     cube.model.elements.PartEdge.clone     	    2040930	    4588	      2122(5.5)
+     cube.model.elements.PartSlice.__init__ 	    1569040	    2427	      2078
+     cube.model.elements.PartEdge.__init__  	    2043930	    1833	      1833
+     cube.model.elements.PartSlice.get_face_edge	4746248	    2078	      1605 (4.2)
+     cube.model.elements.PartEdge.clone         	3198600	    2372	      1572  (4.1)
+
+Change #1:  cube.model.elements.PartSlice.copy_colors
+            Remove c_aa
+

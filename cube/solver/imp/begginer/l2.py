@@ -2,7 +2,7 @@ from typing import Sequence
 
 from cube.algs import Algs, Alg
 from cube.model.cube_face import Face
-from cube.model.elements import PartColorsID, Part, Edge, Color
+from cube.model import PartColorsID, Part, Edge, Color
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.imp.begginer.base_solver import SolverElement
 from cube.solver.imp.begginer.common_op import CommonOp

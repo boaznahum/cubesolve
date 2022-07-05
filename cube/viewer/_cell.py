@@ -1,8 +1,8 @@
 import sys
 from collections import defaultdict
-from collections.abc import Sequence, MutableSequence, Iterable
+from collections.abc import MutableSequence, Iterable
 from contextlib import contextmanager
-from typing import Tuple, TYPE_CHECKING, Callable, Dict, Any, Hashable, Sequence
+from typing import Tuple, TYPE_CHECKING, Callable, Any, Hashable, Sequence
 
 import numpy as np
 import pyglet  # type: ignore
@@ -10,14 +10,17 @@ from numpy import ndarray
 from pyglet import gl
 from pyglet.graphics import Batch  # type: ignore
 
-from .. import config
 from cube.app_state import ApplicationAndViewState
 from cube.model.cube_boy import Color, FaceName
 from cube.model.cube_face import Face
-from cube.model.elements import PartSliceHashID, PartEdge, Part, PartSlice, Corner, Edge, EdgeWing, Center, CenterSlice
 from cube.utils import geometry
 from . import shapes
 from .viewer_markers import VMarker, viewer_get_markers
+from .. import config
+from cube.model import PartEdge
+from cube.model import PartSliceHashID
+from cube.model import Part, Corner, Edge, Center
+from cube.model import PartSlice, EdgeWing, CenterSlice
 
 _CELL_SIZE: int = config.CELL_SIZE
 
@@ -110,6 +113,9 @@ class _Cell:
         # noinspection PyTypeChecker
         self.cell_geometry: _RectGeometry = None  # type: ignore
 
+        # noinspection PyTypeChecker
+        self._part: Part = None  # type: ignore
+
     def _clear_gl_lists(self):
         # delete and clear all lists
         for ls in self.gl_lists_movable.values():
@@ -142,7 +148,7 @@ class _Cell:
         self._clear_gl_lists()
         self.facets.clear()
 
-        self._part: Part = part
+        self._part = part
 
         # vertexes = [(x0, y0), (x1, y0), [x1, y1], [x0, y1], [x0, y0]]
         self._create_polygon(self.gl_lists_movable, part, vertexes)
@@ -249,8 +255,6 @@ class _Cell:
 
                 self.facets[self._get_slice_edge(corner_slice)] = crg
 
-
-
         elif isinstance(part, Edge):
             # shapes.quad_with_line(vertexes, color, lw, lc)
 
@@ -298,8 +302,6 @@ class _Cell:
                     self.facets[self._get_slice_edge(_slice)] = erg
 
 
-
-
         else:
             assert isinstance(part, Center)
             # shapes.quad_with_line(vertexes, color, 4, (0, 0, 1))
@@ -319,7 +321,6 @@ class _Cell:
 
                     center_slice: CenterSlice = part.get_slice((iy, ix))
 
-                    color = self._slice_color(center_slice)
                     with self._gen_list_for_slice(center_slice, g_list_dest):
                         vx = [lb + x * dx + y * dy,
                               lb + (x + 1) * dx + y * dy,
@@ -342,6 +343,7 @@ class _Cell:
         cross_width_y = 2
         cross_color = (0, 0, 0)
         cross_color_x = (138, 43, 226)  # blueviolet	#8A2BE2	rgb(138,43,226)
+        # noinspection SpellCheckingInspection
         cross_color_y = (0, 191, 255)  # deepskyblue	#00BFFF	rgb(0,191,255)
 
         get_markers: Callable[[dict[Hashable, Any]], Sequence[VMarker] | None] = viewer_get_markers
@@ -355,7 +357,7 @@ class _Cell:
         n: int = part.n_slices
 
         # color, outer, inner radius, height
-        markers: dict[str, Tuple[Tuple[int, int, int], float, float, float] ] = config.MARKERS
+        markers: dict[str, Tuple[Tuple[int, int, int], float, float, float]] = config.MARKERS
 
         def draw_facet(part_edge: PartEdge, _vx):
 
@@ -367,8 +369,8 @@ class _Cell:
                 shapes.quad_with_line(_vx, _color, lw, lc)
 
                 if config.GUI_DRAW_MARKERS:
-                    nn = part_edge.c_attributes["n"]
-                    shapes.lines_in_quad(_vx, nn, 5, (138, 43, 226))
+                    _nn = part_edge.c_attributes["n"]
+                    shapes.lines_in_quad(_vx, _nn, 5, (138, 43, 226))
 
             # if _slice.get_face_edge(cube_face).attributes["origin"]:
             #     shapes.cross(vx, cross_width, cross_color)
@@ -420,7 +422,6 @@ class _Cell:
                 ix = i
 
                 _slice: EdgeWing = part.get_slice_by_ltr_index(cube_face, ix)
-                color = self._slice_color(_slice)
                 edge = self._get_slice_edge(_slice)
                 vx = self.facets[edge].two_d_draw_rect
 
@@ -454,7 +455,6 @@ class _Cell:
 
                     vx = self.facets[edge].two_d_draw_rect
 
-                    color = self._edge_color(edge)
                     with self._gen_list_for_slice(center_slice, g_list_dest):
 
                         draw_facet(edge, vx)
@@ -568,7 +568,7 @@ class _Cell:
 
         shapes.box_with_lines(bottom, top, color, 3, (0, 0, 0))
 
-    def _create_markers_sphere(self, vertexes: Sequence[ndarray], facet_color, marker_color, marker: bool):
+    def _create_markers_sphere(self, vertexes: Sequence[ndarray], marker_color, marker: bool):
 
         if not marker:
             return
@@ -589,8 +589,8 @@ class _Cell:
         shapes.sphere(center, radius, marker_color)
 
     def _create_markers_cycle(self, vertexes: Sequence[ndarray], marker_color,
-                        _radius: float,
-                        thick: float):
+                              _radius: float,
+                              thick: float):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
         vx = vertexes
@@ -618,6 +618,7 @@ class _Cell:
         # this is also supported by glCallLine
         # shapes.cylinder(p1, p2, r1, r2, marker_color)
         shapes.disk(p1, p2, r_outer, r_inner, marker_color)
+
     def _create_markers(self, vertexes: Sequence[ndarray], marker_color,
                         _radius: float,
                         thick: float,
@@ -640,9 +641,7 @@ class _Cell:
         r_outer = radius
         r_inner = radius * (1 - thick)
 
-        #center += self._face_board.ortho_direction * 30
-
-        height
+        # center += self._face_board.ortho_direction * 30
 
         p1 = center + self._face_board.ortho_direction * height
         p2 = center - self._face_board.ortho_direction * height

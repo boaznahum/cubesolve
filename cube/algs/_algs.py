@@ -7,10 +7,12 @@ from typing import Sequence, Any, final, TypeVar, Tuple, Iterable, Iterator
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
 from cube.model.cube_slice import SliceName
-from cube.model.elements import FaceName, AxisName, PartSlice
+from cube.model import FaceName, AxisName
 
 __all__ = ["Algs", "Alg", "SimpleAlg", "AnimationAbleAlg", "AnnotationAlg",
            "SliceAbleAlg", "SeqAlg", "SliceAlg", "FaceAlg"]
+
+from cube.model import PartSlice
 
 
 def _inv(inv: bool, n) -> int:

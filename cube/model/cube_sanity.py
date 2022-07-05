@@ -3,7 +3,7 @@ from typing import Mapping, Hashable, Sequence
 from cube.app_exceptions import InternalSWError
 from .cube import Cube
 from .cube_boy import Color
-from .elements import CHelper, PartColorsID
+from ._elements import CHelper, PartColorsID
 
 
 class CubeSanity:

@@ -5,7 +5,8 @@ from pyglet.graphics import Batch  # type: ignore
 import numpy as np
 from numpy import ndarray
 from cube.model.cube_face import Face
-from cube.model.elements import PartFixedID, Part, Corner, Edge, Center
+from cube.model import PartFixedID
+from cube.model import Part, Corner, Edge, Center
 from ._cell import _Cell, _CELL_SIZE, _CORNER_SIZE
 
 _FACE_SIZE = 3

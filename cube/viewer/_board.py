@@ -10,7 +10,7 @@ from pyglet.graphics import Batch  # type: ignore
 from cube.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
-from cube.model.elements import PartFixedID, SuperElement, PartSlice, PartEdge
+from cube.model import PartFixedID
 from ._cell import _Cell, _CELL_SIZE
 from ._faceboard import _FACE_SIZE, _FaceBoard
 
@@ -36,7 +36,9 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 #
 #   update  --update----|           -*update--------|-------------------|
 #                                                   <-----draw_init-----|
+from ..model import PartEdge
 from ..model.cube_boy import FaceName
+from cube.model import PartSlice, SuperElement
 
 
 class _Board:
@@ -301,7 +303,7 @@ class _Board:
 
         lists: set[int] = set()
 
-        # need otpimization !!!
+        # need optimization !!!
         c: _Cell
         for cs in self._cells.values():
             for c in cs:

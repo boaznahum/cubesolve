@@ -1,9 +1,16 @@
 from enum import Enum, unique
-from typing import Iterable, Tuple, Sequence
+from typing import Iterable, Tuple, Sequence, TYPE_CHECKING, TypeAlias
 
 from .cube_face import Face
-from .elements import SuperElement, _Cube, Edge, Center, PartSlice, EdgeWing
-from .elements import CenterSlice
+from ._part import Edge, Center
+from ._part_slice import EdgeWing, CenterSlice, PartSlice
+from ._super_element import SuperElement
+
+if TYPE_CHECKING:
+    # noinspection PyUnresolvedReferences
+    from .cube import Cube
+
+_Cube: TypeAlias = "Cube"
 
 
 @unique

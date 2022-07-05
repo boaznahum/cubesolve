@@ -1,4 +1,4 @@
-# Python Big Cube Solver - A place to develope your algorithm
+# Python Big Cube Solver - A place to develop your algorithm
 
 Yet another Big Cube solver
 Python
@@ -8,11 +8,11 @@ very beginner solver. So, when animation is turn on – you even can see how the
 parts in front face – the way I know to solve.
 
 But the code is organized(see below) in such way that you can enhance and even replace the solver, the model and the
-viewer is totaly seperated from other layers(as should be :wink:)
+viewer are totally seperated from other layers(as should be :wink:)
 
 ## Installing and running
 
-Better to create a virtual enviroment, then
+Better to create a virtual environment, then
 
 ```  
   python -m pip install -U -r requirements.txt
@@ -33,10 +33,10 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     Alt+O -  Turn of/off cube sanity(corruption) check (run after each step)
     Num Pad +/- Change Animation speed
     +/-   Cube size
-
+    
     S - during the animation stop the solver
-
-    Ctrl+Space - enter/exit single sterp mode, in this mode animation is suspned till user hit 'SPACE' (or Ctrl+SPACE)
+    
+    Ctrl+Space - enter/exit single step mode, in this mode animation is suspned till user hit 'SPACE' (or Ctrl+SPACE)
     Very useful for debugging new algorithms
 
 ### Face rotate and slicing
@@ -148,7 +148,7 @@ slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
 
     Operator accept any algorithn and apply it on cube, if animation is enabled then play it ...
     Keep history of operation and can undo them
-    Contained in Solver to animate and track solution
+    Contained in Solver to animate and track solutionx
 
     Still have a probelm that I need to solve, animation manager <-> window/operator runtime relation are bidirectional 
 

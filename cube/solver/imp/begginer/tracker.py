@@ -4,7 +4,8 @@ from typing import Generic
 
 from cube.model.cube import Cube, CubeSupplier
 from cube.model.cube_queries import CubeQueries
-from cube.model.elements import Edge, Corner, PartColorsID, PartType
+from cube.model import PartColorsID
+from cube.model import PartType, Edge, Corner
 
 
 class PartTracker(Generic[PartType]):

@@ -10,7 +10,7 @@ from cube.model.cube import Cube
 from cube.model.cube_boy import CubeLayout, color2long
 from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries, Pred
-from cube.model.elements import FaceName, Color, CenterSlice
+from cube.model import FaceName, Color, CenterSlice
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.imp.begginer.base_solver import SolverElement
 from cube.solver.imp.begginer.common_op import CommonOp

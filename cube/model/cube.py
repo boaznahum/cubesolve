@@ -1,9 +1,15 @@
-from typing import Collection, Mapping, Protocol
+from collections.abc import Iterable, MutableSequence
+from typing import Collection, Mapping, Protocol, Tuple
 
-from .cube_boy import CubeLayout
+from . import PartEdge
+from .cube_boy import CubeLayout, Color, FaceName
 from .cube_face import Face
 from .cube_slice import Slice, SliceName
-from .elements import *
+from ._elements import AxisName, PartColorsID
+from ._part import Edge, Corner, Center, Part
+from ._part_slice import PartSlice, EdgeWing, CornerSlice
+from .. import config
+from ..app_exceptions import InternalSWError
 
 
 class CubeSupplier(Protocol):

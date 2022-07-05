@@ -1,7 +1,7 @@
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError, EvenCubeCornerSwapException
 from cube.model.cube_face import Face
-from cube.model.elements import FaceName, Part, Corner
+from cube.model import FaceName, Part, Corner
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.imp.begginer.base_solver import SolverElement
 from cube.solver.imp.begginer.common_op import CommonOp

@@ -14,7 +14,7 @@ from cube.algs import SimpleAlg
 from cube.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
-from cube.model.elements import PartSlice
+from cube.model import PartSlice
 from cube.viewer.viewer_g import GCubeViewer
 
 OpProtocol: TypeAlias = Callable[[algs.Alg, bool], None]

@@ -12,8 +12,7 @@ from pyglet.graphics import Batch  # type: ignore
 from cube.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
-from cube.model.elements import FaceName, PartEdge
-from cube.model.elements import PartSlice
+from cube.model import FaceName, PartSlice, PartEdge
 # noinspection PyMethodMayBeStatic
 from cube.utils import prof
 from ._board import _Board

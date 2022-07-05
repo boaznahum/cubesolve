@@ -1,7 +1,10 @@
 from typing import Callable
 
-from .elements import *
-from .elements import PartSlice
+from . import PartEdge
+from ._elements import *
+from ._part import Center, Edge, Corner, Part
+from ._part_slice import PartSlice, CenterSlice
+from ._super_element import SuperElement
 from ..config import GUI_DRAW_SAMPLE_MARKERS
 from ..viewer.viewer_markers import VMarker, viewer_add_view_marker
 
