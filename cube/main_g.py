@@ -1,5 +1,5 @@
 import traceback
-from typing import MutableSequence
+from typing import MutableSequence, Sequence
 
 import glooey  # type: ignore
 import pyglet  # type: ignore
@@ -10,7 +10,7 @@ from cube.animation.animation_manager import AnimationWindow
 from . import config
 from . import main_g_keyboard_input
 from . import main_g_mouse
-from .algs import Algs
+from .algs import Algs, Alg
 from .animation.animation_manager import AnimationManager
 from .app_exceptions import AppExit, RunStop, OpAborted
 from .app_state import ApplicationAndViewState
@@ -101,6 +101,11 @@ class Window(AbstractWindow, AnimationWindow):
         cube = self.app.cube
 
         vs: ApplicationAndViewState = self.app.vs
+        op = self.app.op
+
+        def _b(b: bool):
+            return "On" if b else "Off"
+
 
         y = 10
 
@@ -113,16 +118,25 @@ class Window(AbstractWindow, AnimationWindow):
         #                                    x=10, y=y, font_size=10))
         # y += 20
 
-        h = Algs.simplify(*self.app.op.history(remove_scramble=True))
+        h = Algs.simplify(*op.history(remove_scramble=False))
         sh = str(h)[-120:]
         self.text.append(pyglet.text.Label("History(simplified): #" + str(h.count()) + "  " + sh,
                                            x=10, y=y, font_size=10))
         y += 20
 
-        h = self.app.op.history()
+        h = op.history()
         sh = str(h)[-70:]
         self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + sh,
                                            x=10, y=y, font_size=10))
+        y += 20
+
+        is_recording = op.is_recording
+        s = "Recording: " + _b(is_recording)
+        recording: Sequence[Alg] | None = vs.last_recording
+        if recording is not None:
+            sh = str(recording)[-70:]
+            s = s + ", #" + str(Algs.count(*recording)) + "  " + sh
+        self.text.append(pyglet.text.Label(s, x=10, y=y, font_size=10))
         y += 20
 
         err = "R L U S/Z/F B D  M/X/R E/Y/U (SHIFT-INv), ?-Solve, Clear, Q " + "0-9 scramble1, <undo, Test"
@@ -146,10 +160,8 @@ class Window(AbstractWindow, AnimationWindow):
 
         # ---------------------------------------
 
-        def _b(b: bool):
-            return "On" if b else "Off"
 
-        s = f"Animation:{_b(self.app.op.animation_enabled)}"
+        s = f"Animation:{_b(op.animation_enabled)}"
         s += ", [" + str(vs.get_speed_index) + "] " + vs.get_speed.get_speed()
         s += ", Sanity check:" + _b(config.CHECK_CUBE_SANITY)
         s += ", Debug=" + _b(self.app.slv.is_debug_config_mode)

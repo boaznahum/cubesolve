@@ -238,7 +238,21 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 op.op(Algs.AN)
 
             case key.P:
-                op.op(Algs.RD)
+
+                if modifiers & key.MOD_CTRL:
+                    recording = op.toggle_recording()
+                    if recording is not None:  # recording stopped
+                        vs.last_recording = recording
+
+                elif modifiers & key.MOD_ALT:
+                    vs.last_recording = None
+
+                else:
+                    recording = vs.last_recording
+                    if recording is not None:
+                        op.play_seq(recording, inv)
+
+
 
             case key.O:
                 if modifiers & key.MOD_CTRL:
