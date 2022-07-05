@@ -97,6 +97,18 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
     F4 - Big cube centers
     F5 - Big cube edges
 
+### Recording
+    Ctrl+P start/stop recording: manual sequnces, scrambilg, solutions
+    P / Shift P - play last recoding (or play reverse)
+    Alt - P - reset last recording
+    
+    You can do nice things with it:
+        Ctrl P - start recording    
+        1  - scramble
+        /  - solve
+        Ctrl P - Stop recording
+        Shift P - ( scramble, solve)' - bring you again to solved cube
+
 ### Testing
 
     T - Run heavy testing on the solver. During this, GUI does not response. TBD 
