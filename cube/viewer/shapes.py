@@ -9,6 +9,46 @@ from pyglet import gl  # type: ignore
 import pyglet.gl.glu as glu  # type: ignore
 from pyglet.gl import *  # type: ignore
 
+from cube import config
+
+texMap = [(0, 0), (0, 1), (1, 1), (1, 0)]
+
+
+def quad_with_texture(vertexes: Sequence[np.ndarray], face_color: Tuple[int, int, int],
+                      line_width: float):
+    """
+
+    :param line_width:
+    :param vertexes:  # [left_bottom, right_bottom, right_top, left_top]
+    :param face_color:
+    :param line_color:
+    :return:
+    """
+
+    tx = (gl.GLint * 2)()
+
+    #gl.glLineWidth(line_width)
+
+    def _q():
+        gl.glEnable(gl.GL_TEXTURE_2D)
+
+        #gl.glBindTexture(gl.GL_TEXTURE_2D, config.texID)
+
+
+        gl.glColor3ub(*face_color)
+        gl.glBegin(gl.GL_QUADS)
+
+        for i, v in enumerate(vertexes):
+            tx[:] = texMap[i][:]
+            gl.glTexCoord2iv(tx)
+            gl.glVertex3f(*v)
+
+        gl.glEnd()
+
+        gl.glDisable(gl.GL_TEXTURE_2D)
+
+    _q()
+
 
 def quad_with_line(vertexes: Sequence[np.ndarray], face_color: Tuple[int, int, int],
                    line_width: float,

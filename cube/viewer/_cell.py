@@ -366,7 +366,11 @@ class _Cell:
             _color = self._edge_color(part_edge)
 
             if movable:
-                shapes.quad_with_line(_vx, _color, lw, lc)
+                #print(config.g_texture_list)
+                gl.glCallList(config.g_texture_list)
+                #print(f"{gl.glGetError()=}")
+
+                shapes.quad_with_texture(_vx, _color, lw)
 
                 if config.GUI_DRAW_MARKERS:
                     _nn = part_edge.c_attributes["n"]

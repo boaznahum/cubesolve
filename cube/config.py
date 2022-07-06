@@ -1,9 +1,13 @@
 from typing import Tuple
 
+
+g_texture_list = None
+texID = None
+
 ######### Model  ########
 
 # Only initial value, can be changed
-CUBE_SIZE = 4
+CUBE_SIZE = 8
 
 SHORT_PART_NAME = False
 DONT_OPTIMIZED_PART_ID = True
