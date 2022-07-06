@@ -26,5 +26,5 @@ Cube 15x15
      cube.model.elements.PartEdge.clone         	3198600	    2372	      1572  (4.1)
 
 Change #1:  cube.model.elements.PartSlice.copy_colors
-            Remove c_aa
+            Remove c_attributes
 

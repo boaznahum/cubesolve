@@ -10,7 +10,7 @@ from cube.model.cube import Cube
 from cube.model.cube_boy import CubeLayout, color2long
 from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries, Pred
-from cube.model import FaceName, Color, CenterSlice
+from cube.model import FaceName, Color, CenterSlice, PartEdge
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.imp.begginer.base_solver import SolverElement
 from cube.solver.imp.begginer.common_op import CommonOp
@@ -471,7 +471,7 @@ class NxNCenters(SolverElement):
         _tracer_unique_id += 1
 
         key = _TRACKER_KEY_PREFIX + str(_slice.color) + str(_tracer_unique_id)
-        edge = _slice.edge
+        edge: PartEdge = _slice.edge
         edge.c_attributes[key] = True
 
         if config.SOLVER_ANNOTATE_TRACKERS:

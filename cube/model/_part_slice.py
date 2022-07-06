@@ -42,7 +42,6 @@ class PartSlice(ABC, Hashable):
                  "_fixed_id",
                  "_colors_id_by_colors",
                  "_unique_id",
-                 "c_attributes"
                  ]
     _edges: MutableSequence[PartEdge]
 
@@ -59,7 +58,9 @@ class PartSlice(ABC, Hashable):
         self._fixed_id: PartSliceHashID | None = None
         self._parent: _Part | None = None
         # attributes(like color) that are move around with the slice
-        self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
+
+        # no longer have c_attributes, use e1.c_attributes
+        # self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
 
         global _SliceUniqueID
         _SliceUniqueID += 1
@@ -157,8 +158,8 @@ class PartSlice(ABC, Hashable):
 
         self.reset_colors_id()
 
-        self.c_attributes.clear()
-        self.c_attributes.update(source_slice.c_attributes)
+        #self.c_attributes.clear()
+        #self.c_attributes.update(source_slice.c_attributes)
 
     def same_colors(self, other: "PartSlice"):
         """
@@ -319,7 +320,7 @@ class PartSlice(ABC, Hashable):
     def clone(self: _TPartSlice) -> _TPartSlice:
         s = self._clone_basic()
         s._unique_id = self._unique_id
-        s.c_attributes = self.c_attributes.copy()
+        #s.c_attributes = self.c_attributes.copy()
         # don't need to clone f_attributes, clone is used for rotating only, f_attributes is not rotated
         return s
 

@@ -5,6 +5,7 @@ from ._elements import *
 from ._part import Center, Edge, Corner, Part
 from ._part_slice import PartSlice, CenterSlice
 from ._super_element import SuperElement
+from .. import debug_global
 from ..config import GUI_DRAW_SAMPLE_MARKERS
 from ..viewer.viewer_markers import VMarker, viewer_add_view_marker
 
@@ -218,6 +219,9 @@ class Face(SuperElement):
             right: Face = self._get_other_face(self._edge_right)
             top: Face = self._get_other_face(self._edge_top)
             bottom: Face = self._get_other_face(self._edge_bottom)
+
+
+            s_tacker = debug_global.global_current_tracker
 
             # top -> right -> bottom -> left -> top
 

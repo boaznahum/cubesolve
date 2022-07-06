@@ -1,0 +1,1 @@
+global_current_tracker = None

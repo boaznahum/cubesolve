@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from typing import Callable, Generator
 
+from cube import debug_global
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
@@ -266,6 +267,8 @@ class CommonOp(ICommon, SolverElement):
         s_tracker: EdgeSliceTracker
         with self.track_e_slice(edge.get_slice(0)) as s_tracker:
 
+            debug_global.global_current_tracker = s_tracker
+
             for _ in range(max_n):
                 _slice = s_tracker.the_slice
 
@@ -398,14 +401,17 @@ class CommonOp(ICommon, SolverElement):
         key = "SliceTracker:" + str(n)
 
         def _pred(s: EdgeWing) -> bool:
-            return key in s.c_attributes
+            return key in s.e1.c_attributes or key in s.e2.c_attributes
 
         tracker: EdgeSliceTracker = EdgeSliceTracker(self.cube, _pred)
 
-        es.c_attributes[key] = key
+        # edges in slice can't be seperated, it is enough to track on edge
+        es.e1.c_attributes[key] = key
 
         try:
             yield tracker
         finally:
-            c_att = tracker.the_slice.c_attributes
-            del c_att[key]
+            s = tracker.the_slice
+            s.e1.c_attributes.pop(key, None) or s.e2.c_attributes.pop(key, None)
+            # c_att = s.e1.c_attributes
+            # del c_att[key]
