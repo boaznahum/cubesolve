@@ -1,9 +1,5 @@
 from typing import Tuple
 
-
-g_texture_list = None
-texID = None
-
 ######### Model  ########
 
 # Only initial value, can be changed

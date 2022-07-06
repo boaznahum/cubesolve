@@ -4,42 +4,40 @@ from math import pi, sqrt, acos
 from typing import Tuple
 
 import numpy as np
+import pyglet.gl.glu as glu  # type: ignore
 from numpy import ndarray
 from pyglet import gl  # type: ignore
-import pyglet.gl.glu as glu  # type: ignore
 from pyglet.gl import *  # type: ignore
 
-from cube import config
-
-texMap = [(0, 0), (0, 1), (1, 1), (1, 0)]
+from .texture import TextureData
 
 
 def quad_with_texture(vertexes: Sequence[np.ndarray], face_color: Tuple[int, int, int],
-                      line_width: float):
+                      texture: TextureData | None):
     """
 
-    :param line_width:
+    :param texture:
     :param vertexes:  # [left_bottom, right_bottom, right_top, left_top]
     :param face_color:
-    :param line_color:
     :return:
     """
 
-    tx = (gl.GLint * 2)()
+    tx = None
+    if texture is not None:
+        gl.glCallList(texture.gl_list)
+        tx = (gl.GLint * 2)()
 
-    #gl.glLineWidth(line_width)
+        texture_map = texture.texture_map
 
     def _q():
         gl.glEnable(gl.GL_TEXTURE_2D)
-
-        #gl.glBindTexture(gl.GL_TEXTURE_2D, config.texID)
-
 
         gl.glColor3ub(*face_color)
         gl.glBegin(gl.GL_QUADS)
 
         for i, v in enumerate(vertexes):
-            tx[:] = texMap[i][:]
+            if texture:
+                tx[:] = texture_map[i][:]
             gl.glTexCoord2iv(tx)
             gl.glVertex3f(*v)
 
@@ -263,9 +261,6 @@ def cylinder(p1: np.ndarray, p2: np.ndarray, r1: float, r2: float, color: Tuple[
     quadratic = glu.gluNewQuadric()
 
     # https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluQuadricDrawStyle.xml
-    # glu.gluQuadricDrawStyle(quadratic, glu.GLU_FILL)
-
-    # glu.gluQuadricTexture(quadratic, glu.GLU_TRUE)
 
     # tell it to smooth normals
     glu.gluQuadricNormals(quadratic, glu.GLU_SMOOTH)
@@ -352,9 +347,6 @@ def full_cylinder(p1: np.ndarray, p2: np.ndarray, r1: float, r2: float, color: T
         quadratic = glu.gluNewQuadric()
 
         # https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluQuadricDrawStyle.xml
-        # glu.gluQuadricDrawStyle(quadratic, glu.GLU_FILL)
-
-        # glu.gluQuadricTexture(quadratic, glu.GLU_TRUE)
 
         # tell it to smooth normals
         glu.gluQuadricNormals(quadratic, glu.GLU_SMOOTH)
@@ -394,8 +386,6 @@ def disk(p1: np.ndarray, p2: np.ndarray, r_outer: float, r_inner: float, color: 
 
     r2d = 180 / pi
     # length of cylinder
-    d: ndarray = p1 - p2
-
     gl.glMatrixMode(gl.GL_MODELVIEW)
     gl.glPushMatrix()
     gl.glTranslatef(p1[0], p1[1], p1[2])
@@ -439,9 +429,6 @@ def disk(p1: np.ndarray, p2: np.ndarray, r_outer: float, r_inner: float, color: 
     quadratic = glu.gluNewQuadric()
 
     # https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/gluQuadricDrawStyle.xml
-    # glu.gluQuadricDrawStyle(quadratic, glu.GLU_FILL)
-
-    # glu.gluQuadricTexture(quadratic, glu.GLU_TRUE)
 
     # tell it to smooth normals
     glu.gluQuadricNormals(quadratic, glu.GLU_SMOOTH)

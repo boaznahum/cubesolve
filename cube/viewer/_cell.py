@@ -15,6 +15,7 @@ from cube.model.cube_boy import Color, FaceName
 from cube.model.cube_face import Face
 from cube.utils import geometry
 from . import shapes
+from .texture import TextureData
 from .viewer_markers import VMarker, viewer_get_markers
 from .. import config
 from cube.model import PartEdge
@@ -301,7 +302,6 @@ class _Cell:
 
                     self.facets[self._get_slice_edge(_slice)] = erg
 
-
         else:
             assert isinstance(part, Center)
             # shapes.quad_with_line(vertexes, color, 4, (0, 0, 1))
@@ -336,8 +336,6 @@ class _Cell:
 
         # vertex = [left_bottom, right_bottom, right_top, left_top]
 
-        lc = (0, 0, 0)
-        lw = 3.75
         cross_width = 5
         cross_width_x = 8
         cross_width_y = 2
@@ -359,6 +357,8 @@ class _Cell:
         # color, outer, inner radius, height
         markers: dict[str, Tuple[Tuple[int, int, int], float, float, float]] = config.MARKERS
 
+        cubie_facet_texture: TextureData = self._face_board.board.cubie_texture
+
         def draw_facet(part_edge: PartEdge, _vx):
 
             # vertex = [left_bottom, right_bottom, right_top, left_top]
@@ -366,11 +366,8 @@ class _Cell:
             _color = self._edge_color(part_edge)
 
             if movable:
-                #print(config.g_texture_list)
-                gl.glCallList(config.g_texture_list)
-                #print(f"{gl.glGetError()=}")
 
-                shapes.quad_with_texture(_vx, _color, lw)
+                shapes.quad_with_texture(_vx, _color, cubie_facet_texture)
 
                 if config.GUI_DRAW_MARKERS:
                     _nn = part_edge.c_attributes["n"]
@@ -416,7 +413,6 @@ class _Cell:
                     if cube_face.corner_top_left is part:
                         shapes.cross(vertexes, cross_width_y, cross_color_y)
 
-
         elif isinstance(part, Edge):
             # shapes.quad_with_line(vertexes, color, lw, lc)
 
@@ -438,8 +434,6 @@ class _Cell:
                     #     shapes.cross(vx, cross_width_x, cross_color_x)
                     # if _slice.get_face_edge(cube_face).attributes["on_y"]:
                     #     shapes.cross(vx, cross_width_y, cross_color_y)
-
-
 
         else:
             assert isinstance(part, Center)

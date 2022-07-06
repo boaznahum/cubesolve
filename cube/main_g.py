@@ -1,15 +1,11 @@
-import os
 import traceback
 from typing import MutableSequence, Sequence
 
 import glooey  # type: ignore
-#import pygame
-import pygame
+# import pygame
 import pyglet  # type: ignore
 from pyglet import gl
 from pyglet.window import key  # type: ignore
-
-from OpenGL import GL as ogl
 
 from cube.animation.animation_manager import AnimationWindow
 from . import config
@@ -242,20 +238,6 @@ class Window(AbstractWindow, AnimationWindow):
 
         self.app.vs.set_projection(width, height)
 
-        # gl.glPushAttrib(gl.GL_MATRIX_MODE)
-        # # using Projection mode
-        # gl.glMatrixMode(gl.GL_PROJECTION)
-        # gl.glLoadIdentity()
-        #
-        # aspect_ratio = width / height
-        # gl.gluPerspective(35, aspect_ratio, 1, 1000)
-        #
-        # # gl.glMatrixMode(gl.GL_MODELVIEW)
-        # # gl.glLoadIdentity()
-        # # gl.glTranslatef(0, 0, -400)
-        #
-        # gl.glPopAttrib()
-
     def on_key_press(self, symbol, modifiers):
         try:
             return main_g_keyboard_input.handle_keyboard_input(self, symbol, modifiers)
@@ -380,15 +362,17 @@ def main():
     to request it draw/update events and to know if animation is running
     """
 
-    g_texture_list = gl.glGenLists(1)
+    # g_texture_list = gl.glGenLists(1)
+    # #
+    # gl.glNewList(g_texture_list, gl.GL_COMPILE)
     #
-    gl.glNewList(g_texture_list, gl.GL_COMPILE)
-
-    loadTexture2("facette.bmp")
-
-    gl.glEndList()
+    # loadTexture2("cubie.bmp")
     #
-    config.g_texture_list = g_texture_list
+    # gl.glEndList()
+    # #
+    # config.g_texture_list = g_texture_list
+
+    # config.cubic_texture_data = TextureData.load()
 
     vs = ApplicationAndViewState()
     am: AnimationManager = AnimationManager(vs)
@@ -397,70 +381,10 @@ def main():
 
     win.set_mouse_visible(True)
 
-    pyglet.app.run()
-
-
-textureData: str
-
-
-def loadTexture2(nomFichier):
-    """ Charge la texture de la facette """
-    # On charge l'image dans pygame
-    path = os.path.join('cube/res', nomFichier)
-
-    image = pyglet.image.load(path)
-
-    data = image.get_image_data()
-
-    global textureData
-    textureData = data.get_data(fmt="RGBA")
-    print(f"{type(textureData)}")
-    print(len(textureData))
-
-    for i in range(100):
-        print(textureData[i], end='')
-
-    ids = (gl.GLuint * 1)()
-    gl.glGenTextures(1, ids)
-    texID = ids[0]
-    config.texID = texID
-
-    #texID = ogl.glGenTextures(1)
-    gl.glBindTexture(gl.GL_TEXTURE_2D, texID)
-    gl.gluBuild2DMipmaps(gl.GL_TEXTURE_2D, 4,
-                         image.width,
-                         image.height,
-                         gl.GL_BGRA, gl.GL_UNSIGNED_BYTE, textureData)
-
-    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR)
-
-    #gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
-
-    return
-
-
-def loadTexture(nomFichier):
-    """ Charge la texture de la facette """
-    # On charge l'image dans pygame
-    textureSurface = pygame.image.load(os.path.join('cube/res', nomFichier))
-    global textureData
-    textureData = pygame.image.tostring(textureSurface, "RGBA", True)
-
-    print(f"{type(textureData)}")
-    print(len(textureData))
-    for i in range(100):
-        print(textureData[i], end='')
-
-
-    # Puis on l'associe à la texture dans OpenGL
-    texID = ogl.glGenTextures(1)
-    gl.glBindTexture(gl.GL_TEXTURE_2D, texID)
-    gl.gluBuild2DMipmaps(gl.GL_TEXTURE_2D, 4, textureSurface.get_width(),
-                         textureSurface.get_height(), gl.GL_BGRA, gl.GL_UNSIGNED_BYTE, textureData)
-    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR)
-    return
+    try:
+        pyglet.app.run()
+    finally:
+        win.viewer.cleanup()
 
 
 if __name__ == '__main__':

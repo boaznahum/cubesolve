@@ -47,6 +47,13 @@ class GCubeViewer:
         """
         self._board.reset()
 
+    def cleanup(self):
+        """
+        Release resources upon exit
+        :return:
+        """
+        self._board.cleanup()
+
     def update(self):
         """
         Called on any cue change to re-construct graphic elements

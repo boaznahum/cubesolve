@@ -8,11 +8,18 @@ from pyglet import gl  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
 from cube.app_state import ApplicationAndViewState
+from cube.model import PartFixedID
+from cube.model import PartSlice, SuperElement
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
-from cube.model import PartFixedID
 from ._cell import _Cell, _CELL_SIZE
 from ._faceboard import _FACE_SIZE, _FaceBoard
+#
+#   update  --update----|           -*update--------|-------------------|
+#                                                   <-----draw_init-----|
+from .texture import TextureData
+from ..model import PartEdge
+from ..model.cube_boy import FaceName
 
 
 ##########################################################################
@@ -33,13 +40,6 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 #                                   * --draw_init---|   -----*create_objects------|
 #                           collect cells from all faces
 
-#
-#   update  --update----|           -*update--------|-------------------|
-#                                                   <-----draw_init-----|
-from ..model import PartEdge
-from ..model.cube_boy import FaceName
-from cube.model import PartSlice, SuperElement
-
 
 class _Board:
     """
@@ -52,6 +52,7 @@ class _Board:
        2:     D
        3:     B
     """
+    _cubie_texture: TextureData
 
     _y_faces = 4
     _x_faces = 3
@@ -69,6 +70,10 @@ class _Board:
         # why sequence, because we can have multiple back faces
         self._cells: dict[PartFixedID, MutableSequence[_Cell]] = dict()
         self._cube: Cube = cube
+
+        texture_map: list[tuple[int, int]] = [(0, 0), (0, 1), (1, 1), (1, 0)]
+
+        self._cubie_texture = TextureData.load("cubie.bmp", texture_map)
 
     def reset(self):
         for f in self._faces:
@@ -121,6 +126,13 @@ class _Board:
         #     gl.glCallList(ll)
 
         self._restore_view_state()
+
+    def cleanup(self):
+        """
+        Release resources upon exit
+        :return:
+        """
+        self._cubie_texture.cleanup()
 
     def _create_faces(self):
         cube = self._cube
@@ -348,3 +360,7 @@ class _Board:
                             return e, f.left_right_direction, f.left_top_direction
 
         return None
+
+    @property
+    def cubie_texture(self) -> TextureData:
+        return self._cubie_texture
