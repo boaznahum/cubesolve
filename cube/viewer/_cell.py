@@ -370,14 +370,14 @@ class _Cell:
 
             # vertex = [left_bottom, right_bottom, right_top, left_top]
 
-            _color = self._edge_color(part_edge)
+            facet_color: _VColor = self._edge_color(part_edge)
 
             if movable:
 
                 if cubie_facet_texture:
-                    shapes.quad_with_texture(_vx, _color, cubie_facet_texture)
+                    shapes.quad_with_texture(_vx, facet_color, cubie_facet_texture)
                 else:
-                    shapes.quad_with_line(_vx, _color, lw, lc)
+                    shapes.quad_with_line(_vx, facet_color, lw, lc)
 
                 if config.GUI_DRAW_MARKERS:
                     _nn = part_edge.c_attributes["n"]
@@ -403,7 +403,7 @@ class _Cell:
                     radius = _m[1]
                     thick = _m[2]
                     height = _m[3]
-                    self._create_markers(_vx, _marker_color, radius, thick, height)
+                    self._create_markers(_vx, facet_color, _marker_color, radius, thick, height, marker)
 
         if isinstance(part, Corner):
 
@@ -627,19 +627,28 @@ class _Cell:
         # shapes.cylinder(p1, p2, r1, r2, marker_color)
         shapes.disk(p1, p2, r_outer, r_inner, marker_color)
 
-    def _create_markers(self, vertexes: Sequence[ndarray], marker_color,
+    def _create_markers(self, vertexes: Sequence[ndarray],
+                        facet_color: _VColor,
+                        marker_color: _VColor,
                         _radius: float,
                         thick: float,
-                        height: float):
+                        height: float,
+                        marker: VMarker):
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
         vx = vertexes
 
         center = (vx[0] + vx[2]) / 2
 
-        l1: float = np.linalg.norm(vertexes[0] - vertexes[1])  # type: ignore
-        l2: float = np.linalg.norm(vertexes[0] - vertexes[3])  # type: ignore
-        _face_size = min([l1, l2])
+        x_vec_size = vertexes[1] - vertexes[0]
+        y_vec_size = vertexes[3] - vertexes[0]
+
+
+        x_size: float = np.linalg.norm(x_vec_size)  # type: ignore
+        y_size: float = np.linalg.norm(y_vec_size)  # type: ignore
+        _face_size = min([x_size, y_size])
+
+
 
         radius = _face_size / 2.0 * 0.8
         radius = min([radius, config.MAX_MARKER_RADIUS])
@@ -656,7 +665,22 @@ class _Cell:
 
         # this is also supported by glCallLine
         # shapes.cylinder(p1, p2, r1, r2, marker_color)
-        shapes.full_cylinder(p1, p2, r_outer, r_inner, marker_color)
+        if False and marker == VMarker.C2:
+            x_dir = x_vec_size / x_size
+            y_dir = y_vec_size / y_size
+
+            center = center + 0.1 *  self._face_board.ortho_direction
+
+            p1 = center - radius * ( x_dir + y_dir)
+            p2 = p1 + 2 * radius * x_dir
+            p3 = p2 + 2 * radius * y_dir
+            p4 = p3 - 2 * radius * x_dir
+
+
+            #shapes.quad_with_line([p1, p2, p3, p4], (255, 255, 255), 2, (0, 0, 0))
+            shapes.quad_with_texture([p1, p2, p3, p4], facet_color, self._face_board.board._target_texture)
+        else:
+            shapes.full_cylinder(p1, p2, r_outer, r_inner, marker_color)
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]

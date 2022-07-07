@@ -99,7 +99,7 @@ class Face(SuperElement):
         for i in range(n):
             if sample_markers:
                 viewer_add_view_marker(self._edge_left.get_slice(i).get_face_edge(self).c_attributes, VMarker.C1)
-                viewer_add_view_marker(self._edge_left.get_slice(i).get_face_edge(self).f_attributes, VMarker.C2)
+                viewer_add_view_marker(self._edge_right.get_slice(i).get_face_edge(self).f_attributes, VMarker.C2)
 
             self._edge_left.get_slice(i).get_face_edge(self).attributes["cw"] = i
             self._edge_top.get_slice(i).get_face_edge(self).attributes["cw"] = i

@@ -7,8 +7,9 @@ import numpy as np
 import pyglet.gl.glu as glu  # type: ignore
 from numpy import ndarray
 from pyglet import gl  # type: ignore
-from pyglet.gl import *  # type: ignore
+from pyglet.gl import *
 
+from .gl_helper import with_gl_enable
 from .texture import TextureData
 
 
@@ -30,20 +31,19 @@ def quad_with_texture(vertexes: Sequence[np.ndarray], face_color: Tuple[int, int
         texture_map = texture.texture_map
 
     def _q():
-        gl.glEnable(gl.GL_TEXTURE_2D)
 
-        gl.glColor3ub(*face_color)
-        gl.glBegin(gl.GL_QUADS)
+        with with_gl_enable(gl.GL_TEXTURE_2D):
 
-        for i, v in enumerate(vertexes):
-            if texture:
-                tx[:] = texture_map[i][:]
-            gl.glTexCoord2iv(tx)
-            gl.glVertex3f(*v)
+            gl.glColor3ub(*face_color)
+            gl.glBegin(gl.GL_QUADS)
 
-        gl.glEnd()
+            for i, v in enumerate(vertexes):
+                if texture:
+                    tx[:] = texture_map[i][:]
+                gl.glTexCoord2iv(tx)
+                gl.glVertex3f(*v)
 
-        gl.glDisable(gl.GL_TEXTURE_2D)
+            gl.glEnd()
 
     _q()
 

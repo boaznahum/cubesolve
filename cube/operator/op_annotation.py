@@ -1,15 +1,12 @@
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from enum import unique, Enum
-from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal, ContextManager, Dict, Any, Hashable
+from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal, ContextManager, Any, Hashable
 
 from cube.algs import Algs
 from cube.app_exceptions import InternalSWError
+from cube.model import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
 from cube.model.cube_queries import CubeQueries
-from cube.model import PartColorsID
-from cube.model import Part, Corner, Edge
-from cube.model import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
-from cube.model import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
 from cube.viewer.viewer_markers import VMarker, viewer_add_view_marker, viewer_remove_view_marker
 
 if TYPE_CHECKING:
