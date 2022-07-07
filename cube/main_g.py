@@ -2,6 +2,7 @@ import traceback
 from typing import MutableSequence, Sequence
 
 import glooey  # type: ignore
+# import pygame
 import pyglet  # type: ignore
 from pyglet import gl
 from pyglet.window import key  # type: ignore
@@ -32,6 +33,8 @@ class Window(AbstractWindow, AnimationWindow):
         super(Window, self).__init__(width, height, title, resizable=True)
 
         self._animation_manager = animation_manager
+
+        self._vs = app.vs
 
         # still don't know how to get rid of this patch !!!
         if animation_manager:
@@ -106,7 +109,6 @@ class Window(AbstractWindow, AnimationWindow):
         def _b(b: bool):
             return "On" if b else "Off"
 
-
         y = 10
 
         self.text.clear()
@@ -159,7 +161,6 @@ class Window(AbstractWindow, AnimationWindow):
         y += 20
 
         # ---------------------------------------
-
 
         s = f"Animation:{_b(op.animation_enabled)}"
         s += ", [" + str(vs.get_speed_index) + "] " + vs.get_speed.get_speed()
@@ -215,6 +216,11 @@ class Window(AbstractWindow, AnimationWindow):
                                                              x=x, y=y, font_size=size, color=color, bold=bold))
 
     def on_draw(self):
+
+        if self._vs.skip_next_on_draw:
+            self._vs.skip_next_on_draw = False
+            return
+
         # print("Updating")
         # need to understand which buffers it clear, see
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
@@ -238,20 +244,6 @@ class Window(AbstractWindow, AnimationWindow):
         gl.glViewport(0, 0, width, height)
 
         self.app.vs.set_projection(width, height)
-
-        # gl.glPushAttrib(gl.GL_MATRIX_MODE)
-        # # using Projection mode
-        # gl.glMatrixMode(gl.GL_PROJECTION)
-        # gl.glLoadIdentity()
-        #
-        # aspect_ratio = width / height
-        # gl.gluPerspective(35, aspect_ratio, 1, 1000)
-        #
-        # # gl.glMatrixMode(gl.GL_MODELVIEW)
-        # # gl.glLoadIdentity()
-        # # gl.glTranslatef(0, 0, -400)
-        #
-        # gl.glPopAttrib()
 
     def on_key_press(self, symbol, modifiers):
         try:
@@ -279,10 +271,10 @@ class Window(AbstractWindow, AnimationWindow):
         return main_g_mouse.on_mouse_press(self, self.app.vs, x, y, modifiers)
 
     def on_mouse_release(self, x, y, button, modifiers):
-        return main_g_mouse.on_mouse_release(x, y, button, modifiers)
+        return main_g_mouse.on_mouse_release()
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
-        return main_g_mouse.on_mouse_scroll(self, x, y, scroll_x, scroll_y)
+        return main_g_mouse.on_mouse_scroll(self, scroll_y)
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)
@@ -369,7 +361,6 @@ class Window(AbstractWindow, AnimationWindow):
 
 
 def main():
-
     """"
     todo: We have a problem here see win-animation.puml
 
@@ -377,13 +368,30 @@ def main():
     On the other hand, Window need to know about the manager,
     to request it draw/update events and to know if animation is running
     """
+
+    # g_texture_list = gl.glGenLists(1)
+    # #
+    # gl.glNewList(g_texture_list, gl.GL_COMPILE)
+    #
+    # loadTexture2("cubie.bmp")
+    #
+    # gl.glEndList()
+    # #
+    # config.g_texture_list = g_texture_list
+
+    # config.cubic_texture_data = TextureData.load()
+
     vs = ApplicationAndViewState()
     am: AnimationManager = AnimationManager(vs)
     app: App = App(vs, am)
     win = Window(app, am, 720, 720, '"Cube"')
 
     win.set_mouse_visible(True)
-    pyglet.app.run()
+
+    try:
+        pyglet.app.run()
+    finally:
+        win.viewer.cleanup()
 
 
 if __name__ == '__main__':

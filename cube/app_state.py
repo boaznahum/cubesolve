@@ -113,6 +113,8 @@ class ApplicationAndViewState:
 
         self.last_recording: Sequence[algs.Alg] | None = None
 
+        self.skip_next_on_draw = False
+
     def reset(self, not_view=False):
         self._alpha_x: float = 0
         self._alpha_y: float = 0

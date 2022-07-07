@@ -25,14 +25,16 @@ class Animation:
     def __init__(self) -> None:
         super().__init__()
         self.done: bool = False
-        self._animation_update_only: Callable[[], None] | None = None
+        self._animation_update_only: Callable[[], bool] | None = None
         self._animation_draw_only: Callable[[], None] | None = None
         self._animation_cleanup: Callable[[], None] | None = None
         self.delay = 1 / 20.
 
-    def update_gui_elements(self):
+    def update_gui_elements(self) -> bool:
         if self._animation_update_only:
-            self._animation_update_only()
+            return self._animation_update_only()
+        else:
+            return False
 
     def draw(self):
         if self._animation_draw_only:
@@ -264,7 +266,7 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
 
     face_center, opposite_face_center, gui_objects = viewer.get_slices_movable_gui_objects(rotate_face, cube_parts)
 
-    current_angel = 0
+    current_angel: float = 0
 
     # compute target_angel
     n = n_count % 4
@@ -326,7 +328,7 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
 
     last_update = time.time()
 
-    def _update():
+    def _update() -> bool:
 
         nonlocal current_angel
         nonlocal last_update
@@ -335,10 +337,13 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
         if (time.time() - last_update) > animation.delay:
             _angel = current_angel + angel_delta
 
+            update_was_done: bool = False
+
             if abs(_angel) > abs(target_angel):
 
                 if current_angel < target_angel:
                     current_angel = target_angel
+                    update_was_done = True
                 else:
                     animation.done = True
             else:
@@ -346,6 +351,10 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
                 current_angel = _angel
 
             last_update = time.time()
+
+            return update_was_done
+        else:
+            return False # update was not done
 
         # print(f"In update after {current_angel=} {target_angel}")
 

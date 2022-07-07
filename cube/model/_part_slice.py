@@ -336,6 +336,10 @@ class PartSlice(ABC, Hashable):
     def parent(self) -> _Part:
         return self._parent  # type: ignore
 
+    @property
+    def index(self):
+        return self._index
+
 
 class EdgeWing(PartSlice):
 

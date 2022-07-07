@@ -47,12 +47,19 @@ class GCubeViewer:
         """
         self._board.reset()
 
+    def cleanup(self):
+        """
+        Release resources upon exit
+        :return:
+        """
+        self._board.cleanup()
+
     def update(self):
         """
         Called on any cue change to re-construct graphic elements
         :return:
         """
-        with prof.w_prof("GUI update", config.PROF_VIEWER_GUI_UPDATE):
+        with prof.w_prof("GUI update", config.PROF_VIEWER_GUI_DRAW_N_UPDATE):
             self._board.update()
 
     def draw(self):
@@ -60,7 +67,8 @@ class GCubeViewer:
         Draw the graphic elements that were update in :upate
         :return:
         """
-        self._board.draw()
+        with prof.w_prof("GUI draw", config.PROF_VIEWER_GUI_DRAW_N_UPDATE):
+            self._board.draw()
 
     def _get_face(self, name: FaceName) -> _FaceBoard:
         for f in self._board.faces:

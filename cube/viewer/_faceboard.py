@@ -1,12 +1,13 @@
 from collections.abc import MutableSequence, Iterable, Sequence
 from typing import Callable, Tuple, TYPE_CHECKING
 
-from pyglet.graphics import Batch  # type: ignore
 import numpy as np
 from numpy import ndarray
-from cube.model.cube_face import Face
-from cube.model import PartFixedID
+from pyglet.graphics import Batch  # type: ignore
+
 from cube.model import Part, Corner, Edge, Center
+from cube.model import PartFixedID
+from cube.model.cube_face import Face
 from ._cell import _Cell, _CELL_SIZE, _CORNER_SIZE
 
 _FACE_SIZE = 3
@@ -63,8 +64,6 @@ class _FaceBoard:
 
         self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, self._batch) for p in
                                                  self.cube_face_supplier().parts}
-
-
 
     @property
     def cube_face(self) -> Face:
@@ -235,3 +234,4 @@ class _FaceBoard:
     @property
     def ortho_direction(self) -> ndarray:
         return self._ortho_direction
+
