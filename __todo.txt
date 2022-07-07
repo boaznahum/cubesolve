@@ -3,6 +3,8 @@ Generalize slice walking and use in communicator
 Feature: Fix scramble also to invert and multiple and generate sub lists, but preserve current version
 
 
+BUG:   Slice on R vertical wrong direction !!!
+
 !!! why big block doesn't cause tracker replacement ? like in whole slice
 
 Feature: swap complete slices - Done, but only destination zero slices
@@ -23,6 +25,10 @@ Optimize: centers should start with front, and minimize movements
 Optimize : improve face tracker, they should search 4 points only !!!
     Also edge can search two points only
     Also in annotation - search only 4/2 points
+
+
+Bug: using texture in big cube, slice with drag doesn't work and animation is very slow
+
 
 
 

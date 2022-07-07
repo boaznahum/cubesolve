@@ -21,6 +21,10 @@ animation_enabled = True
 SOLVER_DEBUG = True
 
 ######  Viewer ########
+
+
+VIEWER_MAX_SIZE_FOR_TEXTURE=7  # slices still works
+
 GUI_DRAW_MARKERS = False
 GUI_DRAW_SAMPLE_MARKERS = False
 

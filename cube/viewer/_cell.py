@@ -117,6 +117,11 @@ class _Cell:
         # noinspection PyTypeChecker
         self._part: Part = None  # type: ignore
 
+        self._cubie_texture = (
+            self._face_board.board.cubie_texture if
+            self._face_board.cube_face.cube.size <= config.VIEWER_MAX_SIZE_FOR_TEXTURE else None
+        )
+
     def _clear_gl_lists(self):
         # delete and clear all lists
         for ls in self.gl_lists_movable.values():
@@ -336,6 +341,8 @@ class _Cell:
 
         # vertex = [left_bottom, right_bottom, right_top, left_top]
 
+        lc = (0, 0, 0)
+        lw = 3.75
         cross_width = 5
         cross_width_x = 8
         cross_width_y = 2
@@ -357,7 +364,7 @@ class _Cell:
         # color, outer, inner radius, height
         markers: dict[str, Tuple[Tuple[int, int, int], float, float, float]] = config.MARKERS
 
-        cubie_facet_texture: TextureData = self._face_board.board.cubie_texture
+        cubie_facet_texture: TextureData | None = self._cubie_texture
 
         def draw_facet(part_edge: PartEdge, _vx):
 
@@ -367,7 +374,10 @@ class _Cell:
 
             if movable:
 
-                shapes.quad_with_texture(_vx, _color, cubie_facet_texture)
+                if cubie_facet_texture:
+                    shapes.quad_with_texture(_vx, _color, cubie_facet_texture)
+                else:
+                    shapes.quad_with_line(_vx, _color, lw, lc)
 
                 if config.GUI_DRAW_MARKERS:
                     _nn = part_edge.c_attributes["n"]
