@@ -1,7 +1,8 @@
 from contextlib import contextmanager
 
-from pyglet import gl
-from pyglet.gl import *
+from pyglet import gl  # type: ignore
+from pyglet.gl import *  # type: ignore
+
 
 @contextmanager
 def with_gl_enable(*cap: gl.GLenum ):

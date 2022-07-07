@@ -56,12 +56,12 @@ class TextureData:
 
         g_texture_list = gl.glGenLists(1)
         #
-        gl.glNewList(g_texture_list, gl.GL_COMPILE)
+        #gl.glNewList(g_texture_list, gl.GL_COMPILE)
 
         with pkg_resources.path(res, file_name) as path:
-            gl_texture_id = TextureData.load_texture(path)
+            gl_texture_id = TextureData._load_texture_and_compile(path, g_texture_list)
 
-        gl.glEndList()
+        #gl.glEndList()
 
         td._g_texture_list = g_texture_list
         td._gl_texture_id = gl_texture_id
@@ -71,7 +71,7 @@ class TextureData:
         return td
 
     @staticmethod
-    def load_texture(image_path: Path):
+    def _load_texture_and_compile(image_path: Path, g_texture_list):
         """
         Thanks to https://github.com/Minipeps/TwoPhase-Cuber
         """
@@ -85,6 +85,8 @@ class TextureData:
         gl.glGenTextures(1, ids)
         tex_id = ids[0]
 
+        gl.glNewList(g_texture_list, gl.GL_COMPILE)
+
         gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
         gl.gluBuild2DMipmaps(gl.GL_TEXTURE_2D, 4,
                              image.width,
@@ -93,5 +95,7 @@ class TextureData:
 
         gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
         gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR)
+
+        gl.glEndList()
 
         return tex_id

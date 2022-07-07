@@ -23,13 +23,13 @@ SOLVER_DEBUG = True
 ######  Viewer ########
 
 
-VIEWER_MAX_SIZE_FOR_TEXTURE=15  # All works but very slow
+VIEWER_MAX_SIZE_FOR_TEXTURE=6  # All works but very slow
 
 
 VIEWER_TRACE_DRAW_UPDATE=False
 
 PROF_VIEWER_SEARCH_FACET = False
-PROF_VIEWER_GUI_DRAW_N_UPDATE = True
+PROF_VIEWER_GUI_DRAW_N_UPDATE = False
 
 
 GUI_DRAW_MARKERS = False
