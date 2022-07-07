@@ -3,8 +3,6 @@ Generalize slice walking and use in communicator
 Feature: Fix scramble also to invert and multiple and generate sub lists, but preserve current version
 
 
-BUG:   Slice on R vertical wrong direction !!!
-
 !!! why big block doesn't cause tracker replacement ? like in whole slice
 
 Feature: swap complete slices - Done, but only destination zero slices

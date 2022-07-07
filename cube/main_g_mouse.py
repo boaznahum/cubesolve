@@ -150,7 +150,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     part: Part = part_slice.parent
 
     if config.INPUT_MOUSE_DEBUG:
-        print(f"{type(part)=}, {part_slice._index=}, {on_left_to_right=}, {on_left_to_top=}")
+        print(f"Mouse drag:{type(part)=}, {part_slice._index=}, {d_vector=}, {on_left_to_right=}, {on_left_to_top=}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 
@@ -515,6 +515,7 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
         if face.is_bottom_or_top(part):
             slice_alg = Algs.S  # we want over F
             neg_slice_index = face_name == FaceName.L
+            inv = face_name == FaceName.R  # over F, so left-top is F'
         else:
             slice_alg = Algs.E  # we want over D
             neg_slice_index = False
