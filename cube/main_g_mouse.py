@@ -12,7 +12,10 @@ from numpy import ndarray
 from pyglet.window import key, mouse  # type: ignore
 from pyglet import gl  # type: ignore
 
-from . import config
+from cube.config import INPUT_MOUSE_DEBUG as INPUT_MOUSE_DEBUG
+from cube.config import INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM as INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM
+from cube.config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_ADJUSTED_FACE
+
 from . import algs
 from .algs import Alg, Algs
 from .app_exceptions import InternalSWError
@@ -37,7 +40,7 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
     # these are persevered for clik slicing, and panning
     if not modifiers & (key.MOD_SHIFT | key.MOD_CTRL | key.MOD_ALT):
 
-        if config.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
+        if INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
             if buttons & mouse.RIGHT:
                 _handle_model_view_rotate_by_drag(win, dx, dy)
             else:
@@ -64,14 +67,14 @@ def on_mouse_press(window: AbstractWindow, vs: ApplicationAndViewState, x, y, mo
             _handle_selected_slice(window, selected[0], modifiers & key.MOD_CTRL)
 
 
-def on_mouse_release(x, y, button, modifiers):
+def on_mouse_release():
     global _DRAG_VECTOR_DETECTION_DATA
 
     # cancel data collection
     _DRAG_VECTOR_DETECTION_DATA.clear()
 
 
-def on_mouse_scroll(window: AbstractWindow, x, y, scroll_x, scroll_y):
+def on_mouse_scroll(window: AbstractWindow, scroll_y):
     vs = window.app.vs
 
     vs.change_fov_y(scroll_y)
@@ -98,6 +101,9 @@ def _handle_model_view_rotate_by_drag(win, dx, dy):
 def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     global _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING
 
+    if INPUT_MOUSE_DEBUG:
+        print(f"Mouse drag: Handler started: {x=}, {y=})")
+
     if _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING:
         return
 
@@ -117,6 +123,11 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     # print(f"{n}")
 
     if n < _DRAG_VECTOR_DETECTION_DATA_LENGTH:
+        if INPUT_MOUSE_DEBUG:
+            print(f"Mouse drag: Not enough points {n} / {_DRAG_VECTOR_DETECTION_DATA_LENGTH}")
+        # Since we add a texture, draw become expansive (don't know why)
+        #  so we found that we are not handling these events fast enough, so never slicing/rotating (big cube)
+        window.app.vs.skip_next_on_draw = True
         return
 
     dx = functools.reduce(lambda s, t: s + t[0], data, 0) / n
@@ -131,6 +142,9 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(app.vs, window, x, y)
 
     if not selected:
+        if INPUT_MOUSE_DEBUG:
+            print(f"Mouse drag: Didn't find selected element: {x=}, {y=})")
+
         return
 
     # print(f"{selected}")
@@ -149,12 +163,12 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     part_slice: PartSlice = slice_edge.parent
     part: Part = part_slice.parent
 
-    if config.INPUT_MOUSE_DEBUG:
-        print(f"Mouse drag:{type(part)=}, {part_slice._index=}, {d_vector=}, {on_left_to_right=}, {on_left_to_top=}")
+    if INPUT_MOUSE_DEBUG:
+        print(f"Mouse drag:{type(part)=}, { part_slice.index=}, {d_vector=}, {on_left_to_right=}, {on_left_to_top=}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 
-    rotate_adjusted_face = config.INPUT_MOUSE_ROTATE_ADJUSTED_FACE
+    rotate_adjusted_face = INPUT_MOUSE_ROTATE_ADJUSTED_FACE
 
     _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = True
     try:
@@ -274,7 +288,7 @@ def _handle_slice_on_edge_adjusted_face(slice_face: Face,
                                         on_left_to_right: float,
                                         on_left_to_top: float) -> Tuple[Alg, bool]:
     """
-    When edge is dragged, if rotate the adjusted face. e..g when front right face is dragged,
+    When edge is dragged, if rotate the adjusted face. e.g. when front right face is dragged,
     rotate right face
 
     :param on_left_to_right: the movement in left to right direction
@@ -412,7 +426,7 @@ def _play(window: AbstractWindow, alg: Alg):
 
 
 def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bool):
-    def _play(alg: Alg):
+    def __play(alg: Alg):
 
         if inv:
             alg = alg.prime
@@ -439,7 +453,7 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
         if isinstance(part, Corner):
             # print("Is corner")
             face_alg = Algs.of_face(face_name)
-            _play(face_alg)
+            __play(face_alg)
 
         if isinstance(part, Edge):
 
@@ -484,7 +498,7 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
 
                 slice_alg = slice_alg[index + 1]  # index start from 1
 
-                _play(slice_alg)
+                __play(slice_alg)
 
 
 def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> Alg:
@@ -515,7 +529,7 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
         if face.is_bottom_or_top(part):
             slice_alg = Algs.S  # we want over F
             neg_slice_index = face_name == FaceName.L
-            inv = face_name == FaceName.R  # over F, so left-top is F'
+            inv = face_name == FaceName.R  # over F, so left-top is F prime
         else:
             slice_alg = Algs.E  # we want over D
             neg_slice_index = False

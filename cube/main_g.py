@@ -34,6 +34,8 @@ class Window(AbstractWindow, AnimationWindow):
 
         self._animation_manager = animation_manager
 
+        self._vs = app.vs
+
         # still don't know how to get rid of this patch !!!
         if animation_manager:
             animation_manager.set_window(self)
@@ -214,6 +216,11 @@ class Window(AbstractWindow, AnimationWindow):
                                                              x=x, y=y, font_size=size, color=color, bold=bold))
 
     def on_draw(self):
+
+        if self._vs.skip_next_on_draw:
+            self._vs.skip_next_on_draw = False
+            return
+
         # print("Updating")
         # need to understand which buffers it clear, see
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
@@ -264,10 +271,10 @@ class Window(AbstractWindow, AnimationWindow):
         return main_g_mouse.on_mouse_press(self, self.app.vs, x, y, modifiers)
 
     def on_mouse_release(self, x, y, button, modifiers):
-        return main_g_mouse.on_mouse_release(x, y, button, modifiers)
+        return main_g_mouse.on_mouse_release()
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
-        return main_g_mouse.on_mouse_scroll(self, x, y, scroll_x, scroll_y)
+        return main_g_mouse.on_mouse_scroll(self, scroll_y)
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)

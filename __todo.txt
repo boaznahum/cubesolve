@@ -25,7 +25,7 @@ Optimize : improve face tracker, they should search 4 points only !!!
     Also in annotation - search only 4/2 points
 
 
-Bug: using texture in big cube, slice with drag doesn't work and animation is very slow
+Bug: using texture  animation is very slow
 
 
 

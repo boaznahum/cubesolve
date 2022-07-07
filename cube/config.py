@@ -23,7 +23,14 @@ SOLVER_DEBUG = True
 ######  Viewer ########
 
 
-VIEWER_MAX_SIZE_FOR_TEXTURE=7  # slices still works
+VIEWER_MAX_SIZE_FOR_TEXTURE=15  # All works but very slow
+
+
+VIEWER_TRACE_DRAW_UPDATE=False
+
+PROF_VIEWER_SEARCH_FACET = False
+PROF_VIEWER_GUI_DRAW_N_UPDATE = True
+
 
 GUI_DRAW_MARKERS = False
 GUI_DRAW_SAMPLE_MARKERS = False
@@ -62,7 +69,7 @@ ANIMATION_TEXT: list[Tuple[int, int, int, Tuple[int, int, int, int], bool]] = [
 
 ##############   Input handling
 
-KEYBOAD_INPUT_DEBUG = True
+KEYBOAD_INPUT_DEBUG = False
 
 #  If true, model rotating is done by dragging and right mouse click, rotating faces/slicing by dragging left bottom
 #   or vice versa if FALSE
@@ -83,8 +90,6 @@ OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True  # still fails on even, 
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO = True
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True
 
-PROF_VIEWER_SEARCH_FACET = False
-PROF_VIEWER_GUI_UPDATE = False
 
 SOLVER_ANNOTATE_TRACKERS = False
 
