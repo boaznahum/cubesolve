@@ -1,13 +1,7 @@
 from cube.operator.cube_operator import Operator
-from cube.solver.common.common_op import CommonOp
+from .f2l import F2L
+from cube.solver.begginer.l1_cross import L1Cross
 from cube.solver.common.base_solver import BaseSolver
-from .l1_corners import L1Corners
-from .l1_cross import L1Cross
-from .l2 import L2
-from .l3_corners import L3Corners
-from .l3_cross import L3Cross
-from .nxn_centers import NxNCenters
-from .nxn_edges import NxNEdges
 from cube.solver.solver import BeginnerLBLReduce, SolveStep, SolverResults
 from cube import config
 from cube.algs import Algs
@@ -15,26 +9,20 @@ from cube.app_exceptions import OpAborted, EvenCubeEdgeParityException, Internal
 from cube.model.cube import Cube
 
 
-class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
+class CFOP(BaseSolver, BeginnerLBLReduce):
+    """
+    Based on https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/
+    """
+
     __slots__ = ["_debug_override",
                  "l1_cross",
-                 "l1_corners",
-                 "l2",
-                 "l3_cross",
-                 "l3_corners",
-                 "nxn_centers",
-                 "nxn_edges"]
+                 "f2l"]
 
     def __init__(self, op: Operator) -> None:
         super().__init__(op)
 
         self.l1_cross = L1Cross(self)
-        self.l1_corners = L1Corners(self)
-        self.l2 = L2(self)
-        self.l3_cross = L3Cross(self)
-        self.l3_corners = L3Corners(self)
-        self.nxn_centers = NxNCenters(self)
-        self.nxn_edges = NxNEdges(self)
+        self.l2 = F2L(self)
 
         self._debug_override: bool | None = None
 
@@ -138,90 +126,38 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
 
         def _centers():
             """ Centers and edges are independent"""
-            self.nxn_centers.solve()
+            pass
 
         def _edges():
             """ Centers and edges are independent"""
             nonlocal partial_edge_was_detected
-            if self.nxn_edges.solve():
-                partial_edge_was_detected = True
 
         def _reduce():
             _centers()
             _edges()
 
-        def _l1():
+        def _l1x():
             _reduce()
             self.l1_cross.solve()
-            self.l1_corners.solve()
 
-        def _l2():
-            _l1()
-            self.l2.solve()
+        def _f2l():
+            _reduce()
+            self.l1_cross.solve()
+            self.f2l.solve()
 
-        def _l3x():
-            _l2()
-            self.l3_cross.solve()
-
-        def _l3():
-            _l3x()
-            self.l3_corners.solve()
 
         _d = self._debug_override
         try:
             self._debug_override = _debug
-            for i in [1, 2, 3]:  # in case of even, we need 1 for edge parity and one for corner swap
 
-                if self._cube.solved:
-                    break
+            match what:
 
-                self.debug(f"@@@@ Iteration # {i}")
+                case SolveStep.L1x:
+                    _l1x()
 
-                try:
-                    match what:
+                case SolveStep.F2L:
+                    _f2l()
 
-                        case SolveStep.L1:
-                            _l1()
-
-                        case SolveStep.L2:
-
-                            _l2()
-
-                        case SolveStep.ALL | SolveStep.L3:
-                            _l3()
-
-                        case SolveStep.L3x:
-                            _l3x()
-
-                        case SolveStep.L3:
-                            _l3()
-
-                        case SolveStep.NxNCenters:
-                            _centers()
-
-                        case SolveStep.NxNEdges:
-                            _edges()
-
-
-                except EvenCubeEdgeParityException:
-                    self.debug(f"Catch even edge parity in iteration #{i}")
-                    if even_edge_parity_was_detected:
-                        raise InternalSWError("already even_edge_parity_was_detected")
-                    else:
-                        even_edge_parity_was_detected = True
-                        self.nxn_edges.do_edge_parity_on_any()
-                        continue  # try again
-
-                except EvenCubeCornerSwapException:
-                    self.debug(f"Catch corner swap in iteration #{i}")
-                    if even_corner_swap_was_detected:
-                        raise InternalSWError("already even_corner_swap_was_detected")
-                    else:
-                        even_corner_swap_was_detected = True
-                        continue  # try again, swap was done by l3_corners
-
-                if what == SolveStep.ALL and not self.is_solved:
-                    raise InternalSWError(f"Non solved iteration {i}, but no parity detected")
 
         finally:
             self._debug_override = _d
@@ -244,5 +180,3 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
             if log_path:
                 with open("operator.log", mode="a") as f:
                     print("Solver:", *args, file=f)
-
-

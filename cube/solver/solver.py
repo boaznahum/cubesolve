@@ -4,10 +4,15 @@ from enum import Enum
 
 class SolveStep(Enum):
     ALL = "ALL"
+    L1x = "L1x"
     L1 = "L1"
     L2 = "L2"
     L3 = "L3"
     L3x = "L3x"
+
+    # CFOP
+    F2L = "F2L"
+
     NxNCenters = "NxNCenters"
     NxNEdges = "NxNEdges"
 
