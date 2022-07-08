@@ -32,9 +32,6 @@ class NxNEdges(SolverElement):
         if level <= NxNEdges.D_LEVEL:
             super().debug("NxX Edges:", args)
 
-    @property
-    def cmn(self) -> CommonOp:
-        return self._cmn
 
     def _is_solved(self):
         return all((e.is3x3 for e in self.cube.edges))

@@ -20,28 +20,11 @@ class L2(SolverElement):
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
 
-    @property
-    def cmn(self) -> CommonOp:
-        return self._cmn
 
     @property
     def l2_edges(self) -> Sequence[Edge]:
+        return self.cmn.l2_edges()
 
-        edges: list[Edge] = []
-
-        wf: Face = self.white_face
-        d: Face = wf.opposite
-
-        for f in self.white_face.adjusted_faces():
-            for e in f.edges:
-                # all edges that do not touch up and down faces
-                if not e.on_face(wf) and not e.on_face(d):
-                    if e not in edges:  # by id ?
-                        edges.append(e)
-                        if len(edges) == 4:  # optimize
-                            return edges
-
-        return edges
 
     def solved(self) -> bool:
         """

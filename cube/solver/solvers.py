@@ -10,6 +10,7 @@ class Solvers:
     @staticmethod
     def default(op: Operator) -> Solver:
         return Solvers.cfop(op)
+        #return Solvers.beginner(op)
 
     @staticmethod
     def beginner(op: Operator) -> BeginnerLBLReduce:

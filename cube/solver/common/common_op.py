@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Callable, Generator
+from typing import Callable, Generator, Sequence
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
@@ -26,12 +26,15 @@ class EdgeSliceTracker:
         return CubeQueries.find_slice_in_cube_edges(self.cube, self.pred)
 
 
-class CommonOp(SolverElement):
-    __slots__ = ["_slv", "_start_color"]
+class CommonOp:
+    __slots__ = ["_slv",
+                 "_start_color",
+                 "_ann"]
 
-    def __init__(self, slv: BaseSolver) -> None:
-        super().__init__(slv)
-        self._slv = slv
+    def __init__(self, solver: BaseSolver) -> None:
+        super().__init__()
+        self._slv = solver
+        self._ann = solver.op.annotation
 
         self._start_color = Color.WHITE
 
@@ -46,6 +49,10 @@ class CommonOp(SolverElement):
     @property
     def cube(self) -> Cube:
         return self._slv.cube
+
+    @property
+    def ann(self):
+        return self._ann
 
     @property
     def white(self) -> Color:
@@ -63,6 +70,24 @@ class CommonOp(SolverElement):
         # self.debug(w, " is on ", f)
 
         return f
+
+    def l2_edges(self) -> Sequence[Edge]:
+
+        edges: list[Edge] = []
+
+        wf: Face = self.white_face
+        d: Face = wf.opposite
+
+        for f in self.white_face.adjusted_faces():
+            for e in f.edges:
+                # all edges that do not touch up and down faces
+                if not e.on_face(wf) and not e.on_face(d):
+                    if e not in edges:  # by id ?
+                        edges.append(e)
+                        if len(edges) == 4:  # optimize
+                            return edges
+
+        return edges
 
     # noinspection PyMethodMayBeStatic
     def rotate_and_check(self, f: Face, pred: Callable[[], bool]) -> int:
@@ -87,6 +112,35 @@ class CommonOp(SolverElement):
             f.rotate(-n)
 
         return -1
+
+    def rotate_till(self, f: Face, pred: Callable[[], bool]):
+        """
+        Rotate face and check condition
+        if after 3 rotation condition is false then raise exception
+
+
+        :param f:
+        :param pred:
+        :return number of rotations made
+        """
+
+        alg: Alg | None = None
+        n = 0
+        for _ in range(0, 3):
+            if pred():
+                return n
+
+            if alg is None:
+                alg = Algs.of_face(f.name)
+
+            self.op.play(alg)
+            n += 1
+
+        if pred():
+            return n
+
+        raise InternalSWError()
+
 
     def bring_face_up(self, f: Face):
 

@@ -13,7 +13,7 @@ _Common: TypeAlias = "CommonOp"
 
 class BaseSolver(Solver):
 
-    __slots__:list[str] = ["common", "_op", "_cube"]
+    __slots__:list[str] = ["_common", "_op", "_cube"]
 
     def __init__(self, op) -> None:
         super().__init__()

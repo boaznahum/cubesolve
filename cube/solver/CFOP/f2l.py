@@ -20,23 +20,52 @@ class F2L(SolverElement):
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
 
-
-
     def solved(self) -> bool:
         """
-        :return: true if 4 middle slice match faces, don't try to rotate
+        :return: True if 2 first layers solve d(but still L2 need rotation
         """
 
-        return False
+        return self._l1_l2_solved()
 
+    def is_l1(self):
+        return self.cmn.white_face.solved
+
+    def is_l2(self):
+
+        edges = self.cmn.l2_edges()
+
+        return Part.all_match_faces(edges)
+
+
+    def _l1_l2_solved(self):
+        wf = self.cmn.white_face
+        if not wf.solved:
+            return False
+
+        edges = [* self.cmn.l2_edges(), * wf.edges ]
+
+        l2_edges_solved = Part.all_match_faces(edges)
+        return l2_edges_solved
 
     def solve(self):
         """
-        Must be called after L1 is solved
+        Must be called after L1 Cross is solved
         :return:
         """
 
+        # L1-cross will roate if it is the thing that need
         if self.solved():
-            return  # avoid rotating cube
+            return
+
+        wf = self.cmn.white_face
+
+        if self.is_l1() and self.is_l2():
+            # OK, need only to rotate
+
+            l1_edges = wf.edges
+            self.cmn.rotate_till(wf, lambda: Part.all_match_faces(l1_edges))
+            return
+
+        return False
 
 

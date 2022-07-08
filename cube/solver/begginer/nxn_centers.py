@@ -90,9 +90,7 @@ class NxNCenters(SolverElement):
         if level <= NxNCenters.D_LEVEL:
             super().debug("NxX Centers:", args)
 
-    @property
-    def cmn(self) -> CommonOp:
-        return self._cmn
+
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy

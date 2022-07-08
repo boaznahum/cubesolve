@@ -21,10 +21,6 @@ class L3Cross(SolverElement):
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
 
-    @property
-    def cmn(self) -> CommonOp:
-        return self._cmn
-
     def _is_solved(self):
         opposite = self.white_face.opposite
         return Part.all_match_faces(opposite.edges)

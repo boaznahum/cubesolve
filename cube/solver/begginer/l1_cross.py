@@ -23,9 +23,6 @@ class L1Cross(SolverElement):
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
 
-    @property
-    def cmn(self) -> CommonOp:
-        return self._cmn
 
     def _is_cross(self):
         return Part.all_match_faces(self.white_face.edges)

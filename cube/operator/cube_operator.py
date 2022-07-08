@@ -59,9 +59,13 @@ class Operator:
             print(f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
             raise OpAborted()
 
+    def play(self, alg: Alg, inv: bool = False, animation=True):
+        return self.op(alg, inv, animation)
+
     def op(self, alg: Alg, inv: bool = False, animation=True):
 
         """
+        deprecated, use play
         Animation can run only from top level, not from animation itself
         :param alg:
         :param inv:

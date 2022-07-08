@@ -44,6 +44,14 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
     @property
     def status(self):
 
+        s = ""
+
+        def _add(x):
+            nonlocal  s
+            if s:
+                s += ","
+            s += x
+
         if not self._cube.is3x3:
             if self._cube.is_boy:
                 s = "Boy:True"
@@ -70,10 +78,19 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
 
         if cross and f2f:
             s = "F2L"
-        elif cross:
-            s = "L1-Cross"
         else:
-            s = "No-F2F"
+
+            s = ""
+            if self.f2l.is_l1():
+                _add("L1")
+            elif cross:
+                _add("L1 cross")
+
+            if self.f2l.is_l2():
+                _add("L2")
+
+            if not s:
+                s = "No F2L"
 
         return s
 
@@ -137,7 +154,7 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
                 case SolveStep.L1x:
                     _l1x()
 
-                case SolveStep.F2L:
+                case SolveStep.F2L | SolveStep.L2:
                     _f2l()
 
 
