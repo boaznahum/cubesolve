@@ -157,6 +157,9 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
                 case SolveStep.F2L | SolveStep.L2:
                     _f2l()
 
+                case SolveStep.ALL:
+                    _f2l()
+
 
         finally:
             self._debug_override = _d

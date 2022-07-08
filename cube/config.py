@@ -20,6 +20,8 @@ animation_enabled = True
 
 SOLVER_DEBUG = True
 
+CFOP=True
+
 ######  Viewer ########
 
 

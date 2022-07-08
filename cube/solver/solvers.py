@@ -3,14 +3,17 @@ from .CFOP.cfop import CFOP
 from .solver import Solver
 from .solver import BeginnerLBLReduce
 from cube.solver.begginer.beginner_solver import BeginnerSolver
+from .. import config
 
 
 class Solvers:
 
     @staticmethod
     def default(op: Operator) -> Solver:
-        return Solvers.cfop(op)
-        #return Solvers.beginner(op)
+        if config.CFOP:
+            return Solvers.cfop(op)
+        else:
+            return Solvers.beginner(op)
 
     @staticmethod
     def beginner(op: Operator) -> BeginnerLBLReduce:

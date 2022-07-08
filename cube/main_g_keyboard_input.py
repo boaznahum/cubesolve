@@ -487,7 +487,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 slv.solve(animation=solver_animation)
 
             case key.F1:
-                if modifiers and key.MOD_CTRL:
+                if modifiers & key.MOD_CTRL:
                     slv.solve(what=SolveStep.L1x, animation=solver_animation)
                 else:
                     slv.solve(what=SolveStep.L1, animation=solver_animation)
@@ -497,7 +497,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key.F3:
 
-                if modifiers and key.MOD_CTRL:
+                if modifiers & key.MOD_CTRL:
                     slv.solve(what=SolveStep.L3x, animation=solver_animation)
                 else:
                     slv.solve(what=SolveStep.L3, animation=solver_animation)

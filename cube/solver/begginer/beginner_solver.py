@@ -150,9 +150,12 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
             _centers()
             _edges()
 
-        def _l1():
+        def _l1x():
             _reduce()
             self.l1_cross.solve()
+
+        def _l1():
+            _l1x()
             self.l1_corners.solve()
 
         def _l2():
@@ -179,6 +182,9 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
 
                 try:
                     match what:
+
+                        case SolveStep.L1x:
+                            _l1x()
 
                         case SolveStep.L1:
                             _l1()
