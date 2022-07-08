@@ -1,7 +1,7 @@
 from cube.operator.cube_operator import Operator
-from .abstract_solver import Solver
-from .abstract_solver import BeginnerLBLReduce
-from .imp.begginer.beginner_solver import BeginnerSolver
+from .solver import Solver
+from .solver import BeginnerLBLReduce
+from cube.solver.begginer.beginner_solver import BeginnerSolver
 
 
 class Solvers:

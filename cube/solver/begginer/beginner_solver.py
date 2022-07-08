@@ -1,8 +1,6 @@
-from enum import unique
-
 from cube.operator.cube_operator import Operator
-from .common_op import CommonOp
-from .isolver import ISolver
+from cube.solver.common.common_op import CommonOp
+from cube.solver.common.base_solver import BaseSolver
 from .l1_corners import L1Corners
 from .l1_cross import L1Cross
 from .l2 import L2
@@ -10,14 +8,14 @@ from .l3_corners import L3Corners
 from .l3_cross import L3Cross
 from .nxn_centers import NxNCenters
 from .nxn_edges import NxNEdges
-from ...abstract_solver import BeginnerLBLReduce, SolveStep, SolverResults
-from .... import config
-from ....algs import Algs
-from ....app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
-from ....model.cube import Cube
+from cube.solver.solver import BeginnerLBLReduce, SolveStep, SolverResults
+from cube import config
+from cube.algs import Algs
+from cube.app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
+from cube.model.cube import Cube
 
 
-class BeginnerSolver(ISolver, BeginnerLBLReduce):
+class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
     __slots__ = ["_op", "_cube", "_debug_override", "_aborted",
                  "_running_solution",
                  "l1_cross",

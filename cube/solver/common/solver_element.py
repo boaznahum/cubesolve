@@ -1,15 +1,15 @@
 from cube.model.cube import Cube, CubeSupplier
 from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
-from cube.solver.imp.begginer.isolver import ISolver
+from cube.solver.common.base_solver import BaseSolver
 
 
 class SolverElement(CubeSupplier):
     __slots__ = ["_solver", "_ann"]
 
-    _solver: ISolver
+    _solver: BaseSolver
 
-    def __init__(self, solver: ISolver) -> None:
+    def __init__(self, solver: BaseSolver) -> None:
         self._solver = solver
         self._ann = solver.op.annotation
 

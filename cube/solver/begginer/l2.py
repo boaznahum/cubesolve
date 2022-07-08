@@ -4,10 +4,10 @@ from cube.algs import Algs, Alg
 from cube.model.cube_face import Face
 from cube.model import PartColorsID, Part, Edge, Color
 from cube.operator.op_annotation import AnnWhat
-from cube.solver.imp.begginer.base_solver import SolverElement
-from cube.solver.imp.begginer.common_op import CommonOp
-from cube.solver.imp.begginer.isolver import ISolver
-from cube.solver.imp.begginer.tracker import EdgeTracker
+from cube.solver.common.solver_element import SolverElement
+from cube.solver.common.common_op import CommonOp
+from cube.solver.common.base_solver import BaseSolver
+from cube.solver.common.tracker import EdgeTracker
 
 
 def use(_):
@@ -17,7 +17,7 @@ def use(_):
 class L2(SolverElement):
     __slots__: list[str] = []
 
-    def __init__(self, slv: ISolver) -> None:
+    def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
 
     @property

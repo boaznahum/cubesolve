@@ -3,25 +3,30 @@
 
 'https://plantuml.com/class-diagram
 
-abstract class Solver {
+interface Solver {
     solve()
     is_solved()
 }
-abstract class ReductionSolver
-abstract class BeginnerLBLReduce
+interface ReductionSolver
+interface BeginnerLBLReduce
 
-class BeginnerSolver
+Solver <|-- ReductionSolver
+
 
 
 
 Solver <|-- BeginnerLBLReduce
+ReductionSolver <|-- BeginnerLBLReduce
+
+class BeginnerSolver
+
 BeginnerLBLReduce <|-- BeginnerSolver
+BaseSolver <|-- BeginnerSolver
 
-
-CommonOp <|-- ICommonOp
 CommonOp *.. Operator
+CommonOp *.. BaseSolver
+CommonOp *.. Cube
 
-SolverElement *-- ICommonOp
 SolverElement *.. Operator
 
 SolverElement <|-- CommonOp

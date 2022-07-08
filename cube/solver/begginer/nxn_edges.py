@@ -8,9 +8,9 @@ from cube.model.cube_queries import CubeQueries
 from cube.model import Color, Edge, PartColorsID, EdgeWing
 from cube.model.misc import ModelHelper
 from cube.operator.op_annotation import AnnWhat
-from cube.solver.imp.begginer.base_solver import SolverElement
-from cube.solver.imp.begginer.common_op import CommonOp, EdgeSliceTracker
-from cube.solver.imp.begginer.isolver import ISolver
+from cube.solver.common.solver_element import SolverElement
+from cube.solver.common.common_op import CommonOp, EdgeSliceTracker
+from cube.solver.common.base_solver import BaseSolver
 
 
 def use(_):
@@ -25,7 +25,7 @@ class NxNEdges(SolverElement):
 
     D_LEVEL = 3
 
-    def __init__(self, slv: ISolver) -> None:
+    def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
 
     def debug(self, *args, level=3):

@@ -8,9 +8,8 @@ from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
 from cube.model.cube_queries import Pred, CubeQueries
 from cube.model import Edge, Color, FaceName, EdgeWing
-from cube.solver.imp.begginer.base_solver import SolverElement
-from cube.solver.imp.begginer.icommon_op import ICommon
-from cube.solver.imp.begginer.isolver import ISolver
+from .solver_element import SolverElement
+from .base_solver import BaseSolver
 
 TRACE_UNIQUE_ID: int = 0
 
@@ -27,17 +26,17 @@ class EdgeSliceTracker:
         return CubeQueries.find_slice_in_cube_edges(self.cube, self.pred)
 
 
-class CommonOp(ICommon, SolverElement):
+class CommonOp(SolverElement):
     __slots__ = ["_slv", "_start_color"]
 
-    def __init__(self, slv: ISolver) -> None:
+    def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
         self._slv = slv
 
         self._start_color = Color.WHITE
 
     @property
-    def slv(self) -> ISolver:
+    def slv(self) -> BaseSolver:
         return self._slv
 
     @property

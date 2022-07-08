@@ -4,7 +4,7 @@ from cube.model.cube import Cube
 from cube.operator.cube_operator import Operator
 
 
-class ISolver(ABC):
+class BaseSolver(ABC):
 
     __slots__:list[str] = []
 

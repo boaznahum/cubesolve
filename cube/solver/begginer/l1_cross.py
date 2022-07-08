@@ -6,9 +6,9 @@ from cube.model.cube import Cube
 from cube.model.cube_face import Face
 from cube.model import FaceName, Edge, PartColorsID, PartEdge, Part
 from cube.operator.op_annotation import AnnWhat
-from cube.solver.imp.begginer.base_solver import SolverElement
-from cube.solver.imp.begginer.common_op import CommonOp
-from cube.solver.imp.begginer.isolver import ISolver
+from cube.solver.common.solver_element import SolverElement
+from cube.solver.common.common_op import CommonOp
+from cube.solver.common.base_solver import BaseSolver
 
 
 def use(_):
@@ -20,7 +20,7 @@ _status = None
 
 class L1Cross(SolverElement):
 
-    def __init__(self, slv: ISolver) -> None:
+    def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
 
     @property
@@ -132,7 +132,7 @@ class L1Cross(SolverElement):
 
         assert wf.name == FaceName.U
 
-        from .common_op import CommonOp  # type: ignore
+        from cube.solver.common.common_op import CommonOp  # type: ignore
         cmn: CommonOp = self.cmn
 
         # the required colors

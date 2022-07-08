@@ -3,7 +3,7 @@ from typing import Tuple
 ######### Model  ########
 
 # Only initial value, can be changed
-CUBE_SIZE = 8
+CUBE_SIZE = 3
 
 SHORT_PART_NAME = False
 DONT_OPTIMIZED_PART_ID = True
@@ -23,13 +23,13 @@ SOLVER_DEBUG = True
 ######  Viewer ########
 
 
-VIEWER_MAX_SIZE_FOR_TEXTURE=6  # All works but very slow
+VIEWER_MAX_SIZE_FOR_TEXTURE=10  # All works but very slow
 
 
 VIEWER_TRACE_DRAW_UPDATE=False
 
 PROF_VIEWER_SEARCH_FACET = False
-PROF_VIEWER_GUI_DRAW_N_UPDATE = False
+PROF_VIEWER_GUI_DRAW_N_UPDATE = True
 
 
 GUI_DRAW_MARKERS = False
