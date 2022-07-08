@@ -22,10 +22,9 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
         super().__init__(op)
 
         self.l1_cross = L1Cross(self)
-        self.l2 = F2L(self)
+        self.f2l = F2L(self)
 
         self._debug_override: bool | None = None
-
 
     @property
     def is_solved(self):
@@ -67,30 +66,14 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
             return "Solved"
 
         cross = self.l1_cross.is_cross()
-        corners = self.l1_corners.is_corners()
+        f2f = self.f2l.solved()
 
-        if cross and corners:
-            s = "L1"
+        if cross and f2f:
+            s = "F2L"
         elif cross:
             s = "L1-Cross"
-        elif corners:
-            s = "L1-Corners"
         else:
-            s = "No-L1"
-
-        if self.l2.solved():
-            s += ", L2"
-        else:
-            s += ", No L2"
-
-        if self.l3_cross.solved() and self.l3_corners.solved():
-            s += ", L3"
-        elif self.l3_cross.solved():
-            s += ", L3-Cross"
-        elif self.l3_corners.solved():
-            s += ", L3-Corners"
-        else:
-            s += ", No L3"
+            s = "No-F2F"
 
         return s
 
@@ -144,7 +127,6 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
             _reduce()
             self.l1_cross.solve()
             self.f2l.solve()
-
 
         _d = self._debug_override
         try:
