@@ -124,9 +124,49 @@ class F2L(SolverElement):
             r_color = right.color
             f_color = front.color
 
-            corner_on_top: bool
+            corner_on_top = corner.actual.on_face(up)
             # corner is on top
-            if corner.actual.on_face(up):
+            if not corner_on_top:
+                if not corner.actual.in_position:
+                    # no such a case, we need to handle other that will
+                    # move it out
+                    return False
+
+
+
+            F = Algs.F
+            R = Algs.R
+            U = Algs.U
+            B = Algs.B
+            L = Algs.L
+
+            u_bottom = up.edge_bottom
+            u_right = up.edge_right
+            u_left = up.edge_left
+            u_top = up.edge_top
+
+            middle = front.edge_right
+
+            c = corner.actual
+            e = edge.actual
+
+            alg: Alg | None = None
+
+            play = self.op.play
+            if e is back.edge_right:
+                play(B + U + B.prime)
+            elif e is back.edge_left:
+                play(B.prime + U + B)
+            elif e is front.edge_left:
+                play(L.prime + U + L.prime)
+            if edge.actual is not e:
+                # both might be moved
+                c = corner.actual
+                e = edge.actual
+
+                self.debug(f"Brought e to {e.name}, corner is {c.name}")
+
+            if corner_on_top:
                 # ok rotate till it is on front/top/right
                 def _in_position():
                     return up.corner_bottom_right is corner.actual
@@ -135,29 +175,9 @@ class F2L(SolverElement):
 
                 assert corner.actual is up.corner_bottom_right
 
-                corner_on_top = True
-            else:
-                if not corner.actual.in_position:
-                    # no such a case, we need to handle other that will
-                    # move it out
-                    return False
+                c = corner.actual
+                e = edge.actual
 
-                corner_on_top = False
-
-            F = Algs.F
-            R = Algs.R
-            U = Algs.U
-
-            u_bottom = up.edge_bottom
-            u_right = up.edge_right
-            u_left = up.edge_left
-            u_top = up.edge_top
-            middle = [front.edge_left, front.edge_right, back.edge_right, back.edge_left]
-
-            c = corner.actual
-            e = edge.actual
-
-            alg: Alg | None = None
 
             # https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
             if corner_on_top:
@@ -186,7 +206,7 @@ class F2L(SolverElement):
                         self.debug(f"Case:1st: Easy cases: edge at top: {corner.actual.name} {edge.actual.name}")
 
                 if not alg:
-                    if edge.actual in middle:
+                    if edge.actual is middle:
                         # 3rd case: Corner in top, edge in middle
                         self.debug(
                             f"Case: 3rd case: Corner in top, edge in middle: {corner.actual.name} {edge.actual.name}")
@@ -254,7 +274,7 @@ class F2L(SolverElement):
                         elif edge.actual is u_right:
                             # (R U' R') (U R U' R')
                             alg = (R - U - R) + (U + R - U - R)
-                elif edge.actual in middle:
+                elif edge.actual is middle:
                     # 6th case: Corner in bottom, edge in middle
                     raise NotImplementedError("6th case: Corner in bottom, edge in middle")
                 else:
@@ -264,7 +284,7 @@ class F2L(SolverElement):
                 raise InternalSWError(f"Unknown case, corner is {corner.actual.name}, edge is {edge.actual.name}")
 
             self.debug(f"Case corner is {corner.actual.name}, edge is {edge.actual.name}, Running alg:{alg}")
-            self.op.play(alg)
+            play(alg)
             assert corner.match
             assert edge.match
 
