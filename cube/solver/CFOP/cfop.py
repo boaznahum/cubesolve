@@ -7,6 +7,8 @@ from cube import config
 from cube.algs import Algs
 from cube.app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
 from cube.model.cube import Cube
+from ..begginer.l3_corners import L3Corners
+from ..begginer.l3_cross import L3Cross
 
 
 class CFOP(BaseSolver, BeginnerLBLReduce):
@@ -16,13 +18,19 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
 
     __slots__ = ["_debug_override",
                  "l1_cross",
-                 "f2l"]
+                 "f2l",
+                 "l3_cross", "l2_corners"
+                 ]
 
     def __init__(self, op: Operator) -> None:
         super().__init__(op)
 
         self.l1_cross = L1Cross(self)
         self.f2l = F2L(self)
+
+        # temp
+        self.l3_cross = L3Cross(self)
+        self.l3_corners = L3Corners(self)
 
         self._debug_override: bool | None = None
 
@@ -141,9 +149,13 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
             self.l1_cross.solve()
 
         def _f2l():
-            _reduce()
-            self.l1_cross.solve()
+            _l1x()
             self.f2l.solve()
+
+        def _l3():
+            _f2l()
+            self.l3_cross.solve()
+            self.l3_corners.solve()
 
         _d = self._debug_override
         try:
@@ -158,7 +170,7 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
                     _f2l()
 
                 case SolveStep.ALL:
-                    _f2l()
+                    _l3()
 
 
         finally:

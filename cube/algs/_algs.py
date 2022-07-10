@@ -31,6 +31,10 @@ class Alg(ABC):
     def prime(self) -> "Alg":
         return _Inv(self)
 
+    @property
+    def p(self) -> "Alg":
+        return _Inv(self)
+
     @abstractmethod
     def count(self) -> int:
         """

@@ -139,6 +139,7 @@ class F2L(SolverElement):
             U = Algs.U
             B = Algs.B
             L = Algs.L
+            d = Algs.D[1:1 + cube.n_slices]
 
             u_bottom = up.edge_bottom
             u_right = up.edge_right
@@ -154,9 +155,9 @@ class F2L(SolverElement):
 
             play = self.op.play
             if e is back.edge_right:
-                play(B + U + B.prime)
-            elif e is back.edge_left:
                 play(B.prime + U + B)
+            elif e is back.edge_left:
+                play(B + U + B.prime)
             elif e is front.edge_left:
                 play(L.prime + U + L.prime)
             if edge.actual is not e:
@@ -165,6 +166,8 @@ class F2L(SolverElement):
                 e = edge.actual
 
                 self.debug(f"Brought e to {e.name}, corner is {c.name}")
+
+            assert e.on_face(up) or e is front.edge_right
 
             if corner_on_top:
                 # ok rotate till it is on front/top/right
@@ -210,7 +213,11 @@ class F2L(SolverElement):
                         # 3rd case: Corner in top, edge in middle
                         self.debug(
                             f"Case: 3rd case: Corner in top, edge in middle: {corner.actual.name} {edge.actual.name}")
-                        raise NotImplementedError("3rd case: Corner in top, edge in middle")
+
+                        if c_front_color == r_color == e.get_face_edge(front).color:
+                            alg = (R  + U.p + R.p) + (d + R.p + U +  R)
+                        else:
+                            raise NotImplementedError(f"3rd case: Corner in top, edge in middle {c.name} {e.name}")
 
                     elif not corner.actual.get_face_edge(up).color == white:
                         # 4th case: Corner pointing outwards, edge in top layer
@@ -221,8 +228,20 @@ class F2L(SolverElement):
                             if front.color == c.get_face_edge(front).color and right.color == e.get_face_edge(up).color:
                                 # OK !!!
                                 alg = U - F + U * 2 + F + U - F + U * 2 + F
+                            else:
+                                InternalSWError(
+                                    f"4th case: Corner pointing outwards, edge in top layer {corner.actual.name} {edge.actual.name}")
+
+                        elif e is u_left:
+                            if f_color == c_front_color and e.get_face_edge(up).color == r_color:
+                                # OK !!!
+                                alg =   (U +  F.prime +  U.prime + F) + (U + F.prime +  U*2 + F)
+                            else:
+                                InternalSWError(
+                                    f"4th case: Corner pointing outwards, edge in top layer {corner.actual.name} {edge.actual.name}")
+
                         else:
-                            raise InternalSWError("4th case: Corner pointing outwards, edge in top layer")
+                            raise InternalSWError(f"4th case: Corner pointing outwards, edge in top layer {corner.actual.name} {edge.actual.name}")
                     else:
                         # 5th case: Corner pointing upwards, edge in top layer
                         self.debug(
@@ -238,7 +257,7 @@ class F2L(SolverElement):
                                 raise InternalSWError(
                                     "5th case: Corner pointing upwards, edge in top layer, unknown case")
                         else:
-                            raise NotImplementedError("5th case: Corner pointing upwards, edge in top layer")
+                            raise NotImplementedError(f"5th case: Corner pointing upwards, edge in top layer {c}, {e}")
 
 
 

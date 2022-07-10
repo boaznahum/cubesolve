@@ -1025,3 +1025,8 @@ class Corner(Part):
     @property
     def part_name(self) -> str:
         return "Corner"
+
+    def __str__(self) -> str:
+        return str(self.name.value) + " " + super().__str__()
+
+
