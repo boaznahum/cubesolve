@@ -112,7 +112,14 @@ class _FaceBoard:
 
         face_size: float = _CELL_SIZE * 3.0
 
-        corner_size: float = face_size * _CORNER_SIZE
+        max_corner_size = _CELL_SIZE  #  3x3 Cube
+        min_corner_size: float = face_size * _CORNER_SIZE  # Very big NxN -> oo
+
+        cube_size = part.cube.size
+
+        #
+        corner_size = min_corner_size + (max_corner_size-min_corner_size) * 3/cube_size
+
         center_size = face_size - 2 * corner_size
 
         cell_width: float
