@@ -12,7 +12,10 @@ _Common: TypeAlias = "CommonOp"
 
 
 class SolverElement(CubeSupplier):
-    __slots__ = ["_solver", "_ann", "_cmn"]
+    __slots__ = ["_solver", "_ann",
+                 "_cmn",
+                 "_debug_prefix"
+                 ]
 
     _solver: BaseSolver
 
@@ -20,9 +23,16 @@ class SolverElement(CubeSupplier):
         self._solver = solver
         self._ann = solver.op.annotation
         self._cmn = solver.cmn
+        self._debug_prefix = None
+
+    def _set_debug_prefix(self, prefix: str):
+        self._debug_prefix = prefix
 
     def debug(self, *args):
-        self._solver.debug(args)
+        if x := self._debug_prefix:
+            self._solver.debug(x + ":", *args)
+        else:
+            self._solver.debug(args)
 
     @property
     def cube(self) -> Cube:
