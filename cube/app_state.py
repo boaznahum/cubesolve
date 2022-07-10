@@ -113,6 +113,7 @@ class ApplicationAndViewState:
 
         self.last_recording: Sequence[algs.Alg] | None = None
 
+        #bool() false indicate next window:on_draw to skip on_draw
         self.skip_next_on_draw = False
 
     def reset(self, not_view=False):

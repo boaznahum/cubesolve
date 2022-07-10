@@ -219,6 +219,8 @@ class Window(AbstractWindow, AnimationWindow):
 
         if self._vs.skip_next_on_draw:
             self._vs.skip_next_on_draw = False
+            if config.VIEWER_TRACE_DRAW_UPDATE:
+                print("Skipping draw due to ", self._vs.skip_next_on_draw)
             return
 
         # print("Updating")

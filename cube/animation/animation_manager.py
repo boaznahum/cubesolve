@@ -212,6 +212,7 @@ def _op_and_play_animation(window: AnimationWindow,
     def _update(_):
         # Advance to next animation step
         animation.update_gui_elements()
+        #     vs.skip_next_on_draw = "animation update no change"  # display flicks
 
     try:
         # If you read event loop, only handled events cause to redraw so after _update, window_on_draw will draw the
@@ -337,22 +338,20 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
         if (time.time() - last_update) > animation.delay:
             _angel = current_angel + angel_delta
 
-            update_was_done: bool = False
-
             if abs(_angel) > abs(target_angel):
+
+                # don't update if done, make animation smoother, no jump at end
 
                 if current_angel < target_angel:
                     current_angel = target_angel
-                    update_was_done = True
                 else:
                     animation.done = True
             else:
-                # don't update if done, make animation smoother, no jump at end
                 current_angel = _angel
 
             last_update = time.time()
 
-            return update_was_done
+            return True
         else:
             return False # update was not done
 
