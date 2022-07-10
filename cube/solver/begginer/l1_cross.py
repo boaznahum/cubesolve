@@ -35,7 +35,7 @@ class L1Cross(SolverElement):
         """
 
         wf: Face = self.white_face
-        return self.cmn.rotate_and_check(wf, self._is_cross) >= 0
+        return self.cmn.rotate_face_and_check(wf, self._is_cross) >= 0
 
     def solve(self):
 
@@ -45,7 +45,7 @@ class L1Cross(SolverElement):
         with self.ann.annotate(h1="Doing L1 Cross"):
 
             # before rotating
-            n = self.cmn.rotate_and_check(self.white_face, self._is_cross)
+            n = self.cmn.rotate_face_and_check(self.white_face, self._is_cross)
             if n >= 0:
                 if n > 0:
                     # the query solves by rotate  n, so we need

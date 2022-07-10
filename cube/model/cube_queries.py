@@ -10,7 +10,7 @@ from .cube_boy import Color
 from .cube_face import Face
 from ._elements import PartColorsID
 from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
-from ._part import Edge, Part, PartType
+from ._part import Edge, Part, TPartType
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]
@@ -132,7 +132,7 @@ class CubeQueries:
         return None
 
     @staticmethod
-    def find_part_by_color(parts: Iterable[PartType], color_id: PartColorsID) -> PartType:
+    def find_part_by_color(parts: Iterable[TPartType], color_id: PartColorsID) -> TPartType:
 
         for p in parts:
             if p.colors_id_by_color == color_id:
@@ -141,7 +141,7 @@ class CubeQueries:
         raise InternalSWError(f"Can't find part with color id {color_id}")
 
     @staticmethod
-    def find_part_by_position(parts: Iterable[PartType], position_id: PartColorsID) -> PartType:
+    def find_part_by_position(parts: Iterable[TPartType], position_id: PartColorsID) -> TPartType:
 
         for p in parts:
             if p.colors_id_by_pos == position_id:

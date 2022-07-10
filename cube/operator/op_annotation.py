@@ -26,7 +26,8 @@ _ANN_ELEMENT_0: TypeAlias = _ANN_BASE_ELEMENT | Iterator[_ANN_BASE_ELEMENT] | It
 
 _ANN_ELEMENT_1: TypeAlias = _ANN_ELEMENT_0 | Iterator[_ANN_ELEMENT_0] | Iterable[_ANN_ELEMENT_0] | Callable[
     [], _ANN_ELEMENT_0]
-_ANN_ELEMENT: TypeAlias = _ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Iterable[_ANN_ELEMENT_1] | Callable[
+
+SupportsAnnotation: TypeAlias = _ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Iterable[_ANN_ELEMENT_1] | Callable[
     [], _ANN_ELEMENT_1]
 
 
@@ -177,7 +178,7 @@ class OpAnnotation:
 
             op.op(Algs.AN)
 
-    def annotate(self, *elements: Tuple[_ANN_ELEMENT, AnnWhat],
+    def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
                  h1=None,
                  h2=None,
                  h3=None,
@@ -206,7 +207,7 @@ class OpAnnotation:
             return self._annotate(*elements, h1=h1, h2=h2, h3=h3, animation=animation)
 
     @contextmanager
-    def _annotate(self, *elements: Tuple[_ANN_ELEMENT, AnnWhat],
+    def _annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
                   h1=None,
                   h2=None,
                   h3=None,
@@ -245,7 +246,7 @@ class OpAnnotation:
             for s in e.all_slices:
                 process_slice(s, what)
 
-        def process_element(e: _ANN_ELEMENT, _what: AnnWhat):
+        def process_element(e: SupportsAnnotation, _what: AnnWhat):
 
             # check for clor id before iterator iterable
             if isinstance(e, frozenset):  # PartColorsID

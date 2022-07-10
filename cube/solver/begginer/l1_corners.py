@@ -31,7 +31,7 @@ class L1Corners(SolverElement):
 
         wf: Face = self.white_face
 
-        return self.cmn.rotate_and_check(wf, self._is_corners) >= 0
+        return self.cmn.rotate_face_and_check(wf, self._is_corners) >= 0
 
     def solve(self):
         """

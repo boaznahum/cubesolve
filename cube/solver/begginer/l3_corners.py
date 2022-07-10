@@ -34,7 +34,7 @@ class L3Corners(SolverElement):
 
         yf: Face = self.white_face.opposite
 
-        return self.cmn.rotate_and_check(yf, self._is_solved) >= 0
+        return self.cmn.rotate_face_and_check(yf, self._is_solved) >= 0
 
     def solve(self):
 

@@ -481,7 +481,9 @@ class Part(ABC, CubeElement):
     def part_name(self) -> str:
         pass
 
-PartType = TypeVar("PartType", bound="Part")
+
+TPartType = TypeVar("TPartType", bound="Part")
+
 
 class Center(Part):
     __slots__ = "_slices"

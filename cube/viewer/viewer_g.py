@@ -59,7 +59,7 @@ class GCubeViewer:
         Called on any cue change to re-construct graphic elements
         :return:
         """
-        with prof.w_prof("GUI update", config.PROF_VIEWER_GUI_DRAW_N_UPDATE):
+        with prof.w_prof("GUI update", config.VIEWER_TRACE_DRAW_UPDATE):
             self._board.update()
 
     def draw(self):
@@ -67,7 +67,7 @@ class GCubeViewer:
         Draw the graphic elements that were update in :upate
         :return:
         """
-        with prof.w_prof("GUI draw", config.PROF_VIEWER_GUI_DRAW_N_UPDATE):
+        with prof.w_prof("GUI draw", config.VIEWER_TRACE_DRAW_UPDATE):
             self._board.draw()
 
     def _get_face(self, name: FaceName) -> _FaceBoard:

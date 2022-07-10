@@ -69,6 +69,9 @@ class Alg(ABC):
     def __add__(self, other: "Alg"):
         return SeqAlg(None, self, other)
 
+    def __sub__(self, other: "Alg"):
+        return SeqAlg(None, self, other.prime)
+
 
 class _Inv(Alg):
     __slots__ = "_alg"
@@ -306,6 +309,9 @@ class AnnotationAlg(SimpleAlg):
 
     def flatten(self) -> Iterator["SimpleAlg"]:
         yield self
+
+    def __str__(self) -> str:
+        return "AnnotationAlg"
 
 
 class AnimationAbleAlg(NSimpleAlg, ABC):

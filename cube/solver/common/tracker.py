@@ -5,10 +5,10 @@ from typing import Generic
 from cube.model.cube import Cube, CubeSupplier
 from cube.model.cube_queries import CubeQueries
 from cube.model import PartColorsID
-from cube.model import PartType, Edge, Corner
+from cube.model import TPartType, Edge, Corner
 
 
-class PartTracker(Generic[PartType]):
+class PartTracker(Generic[TPartType]):
     """
     Track a part color id, even if algorithm change its location, this
     will return the required location(where it should be located on cube) and it's actual location
@@ -20,12 +20,12 @@ class PartTracker(Generic[PartType]):
     def __init__(self, cube: CubeSupplier, color_id: PartColorsID) -> None:
         super().__init__()
         self._color_id = color_id
-        self._actual: PartType | None = None
-        self._required: PartType | None = None
+        self._actual: TPartType | None = None
+        self._required: TPartType | None = None
         self._cube: Cube = cube.cube
 
     @property
-    def position(self) -> PartType:
+    def position(self) -> TPartType:
         """
         The position where this part should be located.
         Given the color it in ctr, locate the part where this color should be
@@ -39,7 +39,7 @@ class PartTracker(Generic[PartType]):
         return self._required
 
     @property
-    def actual(self) -> PartType:
+    def actual(self) -> TPartType:
         """
         The current location, where part with the given color is located
         :return:
@@ -66,7 +66,7 @@ class PartTracker(Generic[PartType]):
         return self.position.in_position
 
     @abstractmethod
-    def _search_in(self) -> Iterable[PartType]:
+    def _search_in(self) -> Iterable[TPartType]:
         ...
 
     def __str__(self):

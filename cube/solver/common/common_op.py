@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import Callable, Generator, Sequence
+from typing import Callable, Generator, Sequence, Tuple, ContextManager
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
@@ -10,6 +10,7 @@ from cube.model.cube_queries import Pred, CubeQueries
 from cube.model import Edge, Color, FaceName, EdgeWing
 from .solver_element import SolverElement
 from .base_solver import BaseSolver
+from ...operator.op_annotation import AnnWhat, SupportsAnnotation
 
 TRACE_UNIQUE_ID: int = 0
 
@@ -54,6 +55,13 @@ class CommonOp:
     def ann(self):
         return self._ann
 
+    def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
+                 h1=None,
+                 h2=None,
+                 h3=None,
+                 animation=True) -> ContextManager[None]:
+        return self.ann.annotate(*elements, h1=h1, h2=h2, h3=h3, animation=animation)
+
     @property
     def white(self) -> Color:
         """
@@ -90,7 +98,7 @@ class CommonOp:
         return edges
 
     # noinspection PyMethodMayBeStatic
-    def rotate_and_check(self, f: Face, pred: Callable[[], bool]) -> int:
+    def rotate_and_check(self, alg: Alg, pred: Callable[[], bool]) -> int:
         """
         Rotate face and check condition
 
@@ -102,18 +110,55 @@ class CommonOp:
         """
 
         n = 0
+        cube = self.cube
         try:
             for _ in range(0, 4):
                 if pred():
                     return n
-                f.rotate()
+                alg.play(cube)
                 n += 1
         finally:
-            f.rotate(-n)
+            (alg*n).prime.play(cube)
 
         return -1
+    def rotate_face_and_check(self, f: Face, pred: Callable[[], bool]) -> int:
+        """
+        Rotate face and check condition
 
-    def rotate_till(self, f: Face, pred: Callable[[], bool]):
+
+        :param f:
+        :param pred:
+        :return: number of rotation, -1 if check fails
+        restore cube state before returning, this is not count as solve step
+        """
+        return self.rotate_and_check(Algs.of_face(f.name), pred)
+
+
+    def rotate_till(self, alg: Alg, pred: Callable[[], bool]) -> int:
+        """
+        Do alg and check condition
+        if after 3 rotation condition is false then raise exception
+
+
+        :param alg:
+        :param pred:
+        :return number of rotations made
+        """
+
+        n = 0
+        for _ in range(0, 3):
+            if pred():
+                return n
+
+            self.op.play(alg)
+            n += 1
+
+        if pred():
+            return n
+
+        raise InternalSWError()
+
+    def rotate_face_till(self, f: Face, pred: Callable[[], bool]) -> int:
         """
         Rotate face and check condition
         if after 3 rotation condition is false then raise exception
@@ -124,23 +169,7 @@ class CommonOp:
         :return number of rotations made
         """
 
-        alg: Alg | None = None
-        n = 0
-        for _ in range(0, 3):
-            if pred():
-                return n
-
-            if alg is None:
-                alg = Algs.of_face(f.name)
-
-            self.op.play(alg)
-            n += 1
-
-        if pred():
-            return n
-
-        raise InternalSWError()
-
+        return self.rotate_till(Algs.of_face(f.name), pred)
 
     def bring_face_up(self, f: Face):
 
