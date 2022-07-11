@@ -23,7 +23,7 @@ class SolverElement(CubeSupplier):
         self._solver = solver
         self._ann = solver.op.annotation
         self._cmn = solver.cmn
-        self._debug_prefix = None
+        self._debug_prefix: str | None = None
 
     def _set_debug_prefix(self, prefix: str):
         self._debug_prefix = prefix
