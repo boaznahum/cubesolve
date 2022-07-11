@@ -1,5 +1,6 @@
 import traceback
 from contextlib import contextmanager
+from typing import Any
 
 import pyglet  # type: ignore
 from pyglet.window import key  # type: ignore
@@ -217,6 +218,15 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     if debug:
         print(f"keyboard input 'main' handle_in_both_modes return {handled=} {no_operation}")
 
+    def _scramble(_inv: bool, _scramble_key: Any, _n=None, _animation=False):
+
+        _alg = Algs.scramble(app.cube.size, _scramble_key, _n)
+
+        print(f"Running scramble, key={_scramble_key}, n={_n}, alg={_alg}")
+
+        with _wait_cursor(window):
+            op.play(_alg, _inv, animation=_animation)
+
     if not handled:
 
         no_operation = False
@@ -251,8 +261,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     recording = vs.last_recording
                     if recording is not None:
                         op.play_seq(recording, inv)
-
-
 
             case key.O:
                 if modifiers & key.MOD_CTRL:
@@ -425,21 +433,23 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key._1:
 
+                _scramble_key = None
+                _scramble_n = None
+
                 if modifiers & (key.MOD_SHIFT | key.MOD_ALT):
                     if modifiers and key.MOD_SHIFT:  # test -1
-                        scramble_key = -1
+                        _scramble_key = -1
                     else:
-                        scramble_key = value - key0
+                        _scramble_key = value - key0
 
-                    alg = Algs.scramble(app.cube.size, scramble_key, 5)
+                    _scramble_n = 5
                 else:
                     # same as Test 1
-                    alg = Algs.scramble(app.cube.size, value - key0)
+                    _scramble_key = value - key0
 
                 animation = modifiers & key.MOD_CTRL
 
-                with _wait_cursor(window):
-                    op.op(alg, inv, animation=animation)
+                _scramble(inv, _scramble_key, _scramble_n, animation)
 
             case key._2 | key._3 | key._4 | key._5 | key._6 | key._7 | key._8 | key._9:
 
@@ -512,9 +522,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 slv.solve(what=SolveStep.NxNEdges, animation=solver_animation)
                 window._last_edge_solve_count = op.count - n0
 
-
-
-
             case key.T:
                 if modifiers & key.MOD_ALT:
                     scramble_key = 26
@@ -532,7 +539,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                         ll = 0
                         count = 0
                         n_loops = 0
-                        for s in range(-1, nn):
+                        for s in range(1, nn):
 
                             if s == -1:
                                 scramble_key = -1
@@ -549,14 +556,12 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                                 ll = 0
 
                             op.reset()  # also reset cube
-                            alg = Algs.scramble(app.cube.size, scramble_key, n)
-
-                            op.op(alg, animation=False)
+                            _scramble(False, scramble_key, n, _animation=False)
 
                             # noinspection PyBroadException
                             try:
                                 c0 = op.count
-                                slv.solve(animation=False, debug=False)
+                                slv.solve(animation=False, debug=True)
                                 assert slv.is_solved
                                 count += op.count - c0
                                 n_loops += 1

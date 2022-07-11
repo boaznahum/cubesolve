@@ -73,6 +73,9 @@ class Alg(ABC):
     def __add__(self, other: "Alg"):
         return SeqAlg(None, self, other)
 
+    def __iadd__(self, other: "Alg"):
+        return SeqAlg(None, self, other)
+
     def __sub__(self, other: "Alg"):
         return SeqAlg(None, self, other.prime)
 

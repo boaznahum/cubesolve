@@ -118,12 +118,14 @@ class CommonOp:
                 alg.play(cube)
                 n += 1
         finally:
-            (alg*n).prime.play(cube)
+            (alg * n).prime.play(cube)
 
         return -1
+
     def rotate_face_and_check(self, f: Face, pred: Callable[[], bool]) -> int:
         """
         Rotate face and check condition
+        Restores Cube, doesn't operate on operator
 
 
         :param f:
@@ -133,11 +135,28 @@ class CommonOp:
         """
         return self.rotate_and_check(Algs.of_face(f.name), pred)
 
+    def rotate_face_and_check_get_alg(self, f: Face, pred: Callable[[], bool]) -> Alg:
+        """
+        Rotate face and check condition
+
+
+        :param f:
+        :param pred:
+        :return: number of rotation, -1 if check fails
+        restore cube state before returning, this is not count as solve step
+        """
+        alg = Algs.of_face(f.name)
+        n = self.rotate_and_check(alg, pred)
+        assert n >= 0
+
+        return alg * n
 
     def rotate_till(self, alg: Alg, pred: Callable[[], bool]) -> int:
         """
         Do alg and check condition
         if after 3 rotation condition is false then raise exception
+
+        THIS METHOD MODIFY CUBE AND USE OPERATOR
 
 
         :param alg:
@@ -163,6 +182,7 @@ class CommonOp:
         Rotate face and check condition
         if after 3 rotation condition is false then raise exception
 
+        THIS METHOD MODIFY CUBE AND USE OPERATOR
 
         :param f:
         :param pred:

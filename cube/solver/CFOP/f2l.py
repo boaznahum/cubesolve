@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from cube.algs import Algs, Alg
+from cube.algs import Algs, Alg, SeqAlg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube_face import Face
 from cube.model import PartColorsID, Part, Edge, Color, Corner
@@ -132,14 +132,14 @@ class F2L(SolverElement):
                     # move it out
                     return False
 
-
-
             F = Algs.F
             R = Algs.R
             U = Algs.U
+            U2 = U * 2
             B = Algs.B
             L = Algs.L
             d = Algs.D[1:1 + cube.n_slices]
+            Y = Algs.Y
 
             u_bottom = up.edge_bottom
             u_right = up.edge_right
@@ -154,18 +154,33 @@ class F2L(SolverElement):
             alg: Alg | None = None
 
             play = self.op.play
+
+            e_uploaded: SeqAlg = Algs.seq_alg(None)
             if e is back.edge_right:
-                play(B.prime + U + B)
+                if c is up.corner_top_left:
+                    e_uploaded += U  # don't move top down
+                e_uploaded += B.prime + U + B
             elif e is back.edge_left:
-                play(B + U + B.prime)
+                if c is up.corner_top_right:
+                    e_uploaded += U  # don't move top down
+                e_uploaded += B + U + B.prime
             elif e is front.edge_left:
-                play(L.prime + U + L.prime)
-            if edge.actual is not e:
+                if c is front.corner_bottom_right:
+                    e_uploaded += U  # don't move top down
+                e_uploaded += L.prime + U + L.prime
+
+            if e_uploaded.algs:
+                self.debug(f"Before edge uploaded, corner is {c}")
+                play(e_uploaded)
                 # both might be moved
                 c = corner.actual
                 e = edge.actual
 
-                self.debug(f"Brought e to {e.name}, corner is {c.name}")
+                self.debug(f"Brought e to {e.name}, corner is {c.name}, {e_uploaded}")
+                # we must not touch top
+
+                assert bool(c.on_face(up)) == bool(corner_on_top), "Corner changed layer"
+                assert e.on_face(up)
 
             assert e.on_face(up) or e is front.edge_right
 
@@ -176,21 +191,60 @@ class F2L(SolverElement):
 
                 self.cmn.rotate_face_till(up, _in_position)
 
-                assert corner.actual is up.corner_bottom_right
-
                 c = corner.actual
                 e = edge.actual
 
+                assert c is up.corner_bottom_right
 
             # https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
+            c_front_color = c.get_face_edge(front).color
+            c_right_color = c.get_face_edge(right).color
+
             if corner_on_top:
                 # if we reach here, then corner is up.corner_bottom_right
 
-                c_front_color = c.get_face_edge(front).color
                 c_up_color = c.get_face_edge(up).color
-                c_right_color = c.get_face_edge(right).color
 
-                if edge.actual.on_face(up):
+                def e_front_c():  # function becuase not alwas valid
+                    return e.get_face_edge(front).color
+
+                def e_up_c():  # function becuase not alwas valid
+                    return e.get_face_edge(up).color
+
+                def e_right_c():  # function becuase not alwas valid
+                    return e.get_face_edge(right).color
+
+                if edge.actual is middle:
+                    # 3rd case: Corner in top, edge in middle
+                    self.debug(
+                        f"Case: 3rd case: Corner in top, edge in middle: {corner.actual.name} {edge.actual.name}")
+
+                    e_r = e_right_c()
+                    e_f = e_front_c()
+
+                    if c_front_color == r_color and c_right_color == f_color:  # white up
+
+                        if e_f == f_color:
+                            alg = (R + U + R.p + U.p) + (R + U + R.p + U.p) + (R + U + R.p)
+                        else:
+                            alg = (R + U.p + R.p) + (d + R.p + U + R)
+
+                    elif c_front_color == f_color and c_up_color == r_color:  # white right
+                        if e_f == f_color:
+                            alg = (U + F.p + U + F) + (U + F.p + U2 + F)
+                        else:
+                            alg = (U + F.p + U.p + F) + (d.p + F + U + F.p)
+                    elif c_up_color == f_color and c_right_color == r_color:  # white front
+                        if e_f == f_color:
+                            alg = (U.p + R + U.p + R.p) + (U.p + R + U2 + R.p)
+                        else:
+                            alg = (U.p + R + U + R.p) + (d + R.p + U.p + R)
+                    else:
+                        raise NotImplementedError(
+                            f"Unknown 3rd case: Corner in top, edge in middle {c.name} {e.name}")
+                else:
+                    # edge on top
+
                     # 1st: Easy cases: edge at top
                     if edge.actual is u_top:
                         if front.color == c.get_face_edge(front).color == e.get_face_edge(up).color:
@@ -208,56 +262,85 @@ class F2L(SolverElement):
                     if alg:
                         self.debug(f"Case:1st: Easy cases: edge at top: {corner.actual.name} {edge.actual.name}")
 
-                if not alg:
-                    if edge.actual is middle:
-                        # 3rd case: Corner in top, edge in middle
-                        self.debug(
-                            f"Case: 3rd case: Corner in top, edge in middle: {corner.actual.name} {edge.actual.name}")
+                    if not alg:
 
-                        if c_front_color == r_color == e.get_face_edge(front).color:
-                            alg = (R  + U.p + R.p) + (d + R.p + U +  R)
-                        else:
-                            raise NotImplementedError(f"3rd case: Corner in top, edge in middle {c.name} {e.name}")
+                        if not corner.actual.get_face_edge(up).color == white:
+                            # 4th case: Corner pointing outwards, edge in top layer
+                            self.debug(
+                                f"Case: 4th case: Corner pointing outwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
 
-                    elif not corner.actual.get_face_edge(up).color == white:
-                        # 4th case: Corner pointing outwards, edge in top layer
-                        self.debug(
-                            f"Case: 4th case: Corner pointing outwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
+                            if e is u_top:
+                                if front.color == c.get_face_edge(front).color and right.color == e.get_face_edge(
+                                        up).color:
+                                    # OK !!!
+                                    alg = U - F + U * 2 + F + U - F + U * 2 + F
+                                else:
+                                    raise InternalSWError(
+                                        f"4th case: Corner pointing outwards, edge in top layer {corner.actual.name} {edge.actual.name}")
 
-                        if e is u_top:
-                            if front.color == c.get_face_edge(front).color and right.color == e.get_face_edge(up).color:
-                                # OK !!!
-                                alg = U - F + U * 2 + F + U - F + U * 2 + F
+                            elif e is u_left:
+                                if f_color == c_front_color and e.get_face_edge(up).color == r_color:
+                                    # OK !!!
+                                    alg = (U + F.prime + U.prime + F) + (U + F.prime + U * 2 + F)
+                                elif r_color == c_right_color and e.get_face_edge(up).color == f_color:
+                                    alg = (U.p + R + U2 + R.p) + (U.p + R + U2 + R.p)
+                                elif f_color == c_front_color == e_up_c():
+                                    alg = (U.p + R + U + R.p + U) + (R + U + R.p)
+                                else:
+                                    raise InternalSWError(
+                                        f"4th case: Corner pointing outwards, edge in top layer {edge.actual.name}")
+
                             else:
-                                InternalSWError(
-                                    f"4th case: Corner pointing outwards, edge in top layer {corner.actual.name} {edge.actual.name}")
-
-                        elif e is u_left:
-                            if f_color == c_front_color and e.get_face_edge(up).color == r_color:
-                                # OK !!!
-                                alg =   (U +  F.prime +  U.prime + F) + (U + F.prime +  U*2 + F)
-                            else:
-                                InternalSWError(
-                                    f"4th case: Corner pointing outwards, edge in top layer {corner.actual.name} {edge.actual.name}")
-
+                                raise NotImplementedError(
+                                    f"4th case: Corner pointing outwards, edge in top layer {corner.actual.name} "
+                                    f"{edge.actual.name}")
                         else:
-                            raise InternalSWError(f"4th case: Corner pointing outwards, edge in top layer {corner.actual.name} {edge.actual.name}")
-                    else:
-                        # 5th case: Corner pointing upwards, edge in top layer
-                        self.debug(
-                            f"Case: 5th case: Corner pointing upwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
+                            ################################################################
+                            # 5th case: Corner pointing upwards, edge in top layer
+                            ################################################################
+                            self.debug(
+                                f"Case: 5th case: Corner pointing upwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
 
-                        if e is u_bottom:
-                            if e.get_face_edge(front).color == c_front_color == r_color:
-                                # OK !!!
-                                alg = (R + U + R.prime + U.prime) + U.prime + (R + U + R.prime + U.prime) + (R + U + R.prime)
-                            elif e.get_face_edge(front) == f_color and c_front_color == r_color:
-                                alg = (F.prime + U * 2 + F) + (U + F.prime + U.prime + F.prime)
+                            e_up_cc = e_up_c()
+                            if e is u_bottom:
+
+                                if e_up_cc == c_right_color == f_color:
+                                    # OK !!!
+                                    alg = (R + U + R.prime + U.prime) + U.prime + (R + U + R.prime + U.prime) + (
+                                            R + U + R.prime)
+                                elif e_up_cc == c_front_color == r_color:
+                                    alg = (F.prime + U * 2 + F) + (U + F.prime + U.prime + F.prime)
+                                else:
+                                    raise InternalSWError(
+                                        "5th case: Unknown case Corner pointing upwards, edge in top layer, unknown case")
+                            elif e is u_left:
+                                if e_up_cc == c_right_color == f_color:
+                                    alg = (U2 + R + U + R.p) + (U + R + U.p + R.p)
+                                elif e_up_cc == c_front_color == r_color:
+                                    alg = (U.p + F.p + U2 + F) + (U.p + F.p + U + F)
+                                else:
+                                    raise InternalSWError(
+                                        "5th case: Unknown case Corner pointing upwards, edge in top layer, unknown case")
+                            elif e is u_right:
+                                if e_up_cc == c_front_color == r_color:
+                                    alg = Y.p + (R.p + U.p + R + U) + U + (R.p + U.p + R + U) + (R.p + U.p + R)
+                                elif e_up_cc == c_right_color == f_color:
+                                    alg = (R + U2 + R.p) + (U.p + R + U + R.p)
+                                else:
+                                    raise InternalSWError(
+                                        "5th case: Unknown case Corner pointing upwards, edge in top layer, unknown case")
+                            elif e is u_top:
+                                if e_up_cc == c_front_color == r_color:
+
+                                    alg = (U2 + F.p + U.p + F) + (U.p + F.p + U + F)
+                                elif e_up_cc == c_right_color == f_color:
+                                    alg = (U + R + U2 + R.p) + (U + R + U.p + R.p)
+                                else:
+                                    raise InternalSWError(
+                                        "5th case: Unknown case Corner pointing upwards, edge in top layer, unknown case")
                             else:
-                                raise InternalSWError(
-                                    "5th case: Corner pointing upwards, edge in top layer, unknown case")
-                        else:
-                            raise NotImplementedError(f"5th case: Corner pointing upwards, edge in top layer {c}, {e}")
+                                raise NotImplementedError(
+                                    f"5th case: Corner pointing upwards, edge in top layer {c}, {e}")
 
 
 
@@ -272,27 +355,46 @@ class F2L(SolverElement):
                     # 2nd case: Corner in bottom, edge in top layer
                     self.debug(
                         f"Case: 2nd case: Corner in bottom, edge in top layer: {corner.actual.name} {edge.actual.name}")
-                    if corner.actual.match_faces:
-                        if edge.actual is u_bottom:
+
+                    e_up_cc = e.get_face_edge(up).color
+
+                    _pre: Alg = Algs.seq_alg(None)
+
+                    e_matches_front = e_up_cc == r_color
+
+                    if e_matches_front:
+                        pre = self.cmn.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_bottom)
+                    else:
+                        pre = self.cmn.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_right)
+
+                    if c.match_faces:
+
+                        if e_matches_front:
                             # (U R U' R') (U' F' U F)
-                            alg = (U + R - U - R) + (-U - F + U + F)
-                        elif edge.actual is u_right:
+                            alg = pre + (U + R - U - R) + (-U - F + U + F)
+                        else:
                             # (U' F' U F) (U R U' R')
-                            alg = (-U - F + U + F) + (U + R - U - R)
-                    elif corner.actual.get_face_edge(cube.front).color == cube.right.color:
-                        if edge.actual is u_bottom:
+                            alg = pre + (-U - F + U + F) + (U + R - U - R)
+
+                    elif c_front_color == r_color:
+                        if e_matches_front:
                             # (F' U F) (U' F' U F)
-                            alg = (-F + U + F) + (-U - F + U + F)
-                        elif edge.actual is u_right:
+                            alg = _pre + (-F + U + F) + (-U - F + U + F)
+                        else:
                             # (R U R') (U' R U R')
-                            alg = (R + U - R) + (-U + R + U - R)
-                    elif corner.actual.get_face_edge(cube.front).color == cube.right.color:
-                        if edge.actual is u_bottom:
+                            alg = _pre + (R + U - R) + (-U + R + U - R)
+
+                    elif c_right_color == f_color:
+                        if e_matches_front:
                             # (F' U' F) (U F' U' F)
-                            alg = (-F - U + F) + (U - F - U + F)
-                        elif edge.actual is u_right:
+                            alg = _pre + (-F - U + F) + (U - F - U + F)
+                        else:
                             # (R U' R') (U R U' R')
-                            alg = (R - U - R) + (U + R - U - R)
+                            alg = _pre + (R - U - R) + (U + R - U - R)
+                    else:
+                        raise InternalSWError(
+                            f"Case: Unknown 2nd case: Corner in bottom, edge in top layer: {edge.actual.name}")
+
                 elif edge.actual is middle:
                     # 6th case: Corner in bottom, edge in middle
                     raise NotImplementedError("6th case: Corner in bottom, edge in middle")

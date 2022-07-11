@@ -60,6 +60,15 @@ class Operator:
             raise OpAborted()
 
     def play(self, alg: Alg, inv: bool = False, animation=True):
+        """
+        deprecated, use play
+        Animation can run only from top level, not from animation itself
+        :param alg:
+        :param inv:
+        :param animation: if true and animation is enabled then run with animation
+        doesn't override current mode
+        :return:
+        """
         return self.op(alg, inv, animation)
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
