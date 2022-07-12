@@ -470,7 +470,7 @@ class F2L(SolverElement):
                 f"{edge.actual.name}")
 
         self.debug(
-            f"Case: 4th case: sube case {case4}: {corner.actual.name} {edge.actual.name}")
+            f"Case: 4th case: sub case {case4}: {corner.actual.name} {edge.actual.name}")
 
         return alg
 
@@ -720,7 +720,9 @@ class F2L(SolverElement):
     def _case_6_corner_in_bottom_edge_in_middle(self, edge: EdgeTracker, corner: CornerTracker):
 
         """
-        Number of cases: 8 = 1(corner orientation) * 2 (edge orientation) * 4 (edge position)
+        Number of cases: 8 = 3(corner orientation) * 2 (edge orientation)
+        But one is solved, so it is 5
+
         :param edge:
         :param corner:
         :return:
@@ -756,8 +758,6 @@ class F2L(SolverElement):
         assert c.on_face(cube.down)
         assert e is front.edge_right
 
-        e_up_cc = e.get_face_edge(up).color
-
         F = Algs.F
         R = Algs.R
         U = Algs.U
@@ -767,9 +767,45 @@ class F2L(SolverElement):
         d = Algs.D[1:1 + cube.n_slices]
         Y = Algs.Y
 
-        raise NotImplementedError("6th case: Corner in bottom, edge in middle")
+        e_front_matches_front = e.get_face_edge(front).color == f_color
+        e_front_matches_right = e.get_face_edge(right).color == r_color
+
+        c_front_matches_front = c_front_color == f_color
+        c_front_matches_right = c_front_color == r_color
+        c_right_matches_front = c_right_color == f_color
+        c_right_matches_right = c_right_color == r_color
+
+        # Cases in https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
+        #  1
+        #  2  3
+        #  4  5
+        case6=""
+
+        alg: Alg
+        if c_front_matches_front and e_front_matches_right:
+            case6="1"
+            alg = (R + U.p  + R.p + d + R.p + U2 + R)  + (U + R.p  + U2 + R)
+        elif c_front_matches_right and e_front_matches_right:
+            case6="2"
+            alg = (R + U.p + R.p + U + R + U2 + R.p) + (U + R + U.p + R.p)
+        elif c_right_matches_front and e_front_matches_front:
+            case6="(R U' R' U' R U R') (U' R U2 R')"
+        elif c_front_matches_right and e_front_matches_right:
+            case6="4"
+            alg = (R + U + R.p  + U.p + R + U.p  + R.p) + (U + d + R.p  + U.p + R)
+        elif c_right_matches_right and e_front_matches_right:
+            case6="5"
+            alg = (R + U.p + R.p + d + R.p + U.p + R) + (U.p + R.p + U.p + R)
+
+        else:
+            raise InternalSWError(f"6th case: Unknown case, Corner in bottom, edge in middle, {c}, {e}")
+
+        self.debug(
+            f"Case: 6th case: sub case {case6}: {corner.actual.name} {edge.actual.name}")
 
         return alg
+
+
 
     def _bring_any_corner_up(self) -> bool:
 
