@@ -562,6 +562,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                             try:
                                 c0 = op.count
                                 slv.solve(animation=False, debug=True)
+                                # we ask solver, because in develop phase it wants to check what was implemented
                                 assert slv.is_solved
                                 count += op.count - c0
                                 n_loops += 1

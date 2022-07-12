@@ -36,7 +36,8 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
 
     @property
     def is_solved(self):
-        return self._cube.solved
+        #return self._cube.solved
+        return self.f2l.solved()
 
     @property
     def is_debug_config_mode(self) -> bool:
@@ -163,7 +164,9 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
 
             match what:
 
-                case SolveStep.L1x:
+                # because CFOP knows only L1 cross, so we assume that what
+                # user want when press F1
+                case SolveStep.L1x | SolveStep.L1:
                     _l1x()
 
                 case SolveStep.F2L | SolveStep.L2:

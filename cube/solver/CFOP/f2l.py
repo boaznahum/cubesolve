@@ -292,12 +292,12 @@ class F2L(SolverElement):
 
         c_front_color = c.get_face_edge(front).color
         c_right_color = c.get_face_edge(right).color
+        c_up_color = c.get_face_edge(up).color
 
         # verify case
         assert c.on_face(up)
         assert e.on_face(up)
-        c_up_cc = c.get_face_edge(up).color
-        assert c_up_cc != white
+        assert c_up_color != white
 
         e_up_cc = e.get_face_edge(up).color
 
@@ -317,7 +317,7 @@ class F2L(SolverElement):
         # Case 1 one just case, when we reach here we are not sure if it is the case
         # so no logging
 
-        alg = None
+        alg: Alg | None = None
 
         if edge.actual is u_top:
             if front.color == c_front_color == e.get_face_edge(up).color:
@@ -344,27 +344,63 @@ class F2L(SolverElement):
         # NOT All cases implemented - not checked
         ################################################################
 
+        e_up_matches_front = e_up_cc == f_color
+        e_up_matches_right = e_up_cc == r_color
+
+        c_front_matches_front = c_front_color == f_color
+        c_up_matches_front = c_up_color == f_color
+        c_up_matches_right = c_up_color == r_color
+
         if e is u_top:
-            if front.color == c.get_face_edge(front).color and right.color == e.get_face_edge(
-                    up).color:
+            if c_front_matches_front and e_up_matches_right:
                 # OK !!!
                 alg = U - F + U * 2 + F + U - F + U * 2 + F
+            elif c_up_matches_front and e_up_matches_front:
+                alg = (U.p + R + U + R.p) + (U.p + R + U2 + R.p)
+            elif c_up_matches_front and e_up_matches_right:
+                alg = (U + F.p + U.p + F + U.p) + (F.p + U.p + F)
+
             else:
                 raise InternalSWError(
-                    f"4th case: Corner pointing outwards, edge in top layer {corner.actual.name} {edge.actual.name}")
+                    f"4th case: Corner pointing outwards, "
+                    f"edge up top {corner.actual.name} {edge.actual.name}")
 
         elif e is u_left:
-            if f_color == c_front_color and e.get_face_edge(up).color == r_color:
+            if  c_up_matches_right and e_up_matches_right:
                 # OK !!!
                 alg = (U + F.prime + U.prime + F) + (U + F.prime + U * 2 + F)
-            elif r_color == c_right_color and e.get_face_edge(up).color == f_color:
+            elif c_up_matches_front and e_up_matches_front:
                 alg = (U.p + R + U2 + R.p) + (U.p + R + U2 + R.p)
-            elif f_color == c_front_color == e_up_cc:
+            elif c_front_matches_front and e_up_matches_front:
                 alg = (U.p + R + U + R.p + U) + (R + U + R.p)
             else:
                 raise InternalSWError(
                     f"4th case: Corner pointing outwards, "
-                    f"edge in top layer {edge.actual.name}")
+                    f"edge up left  {c} {e}")
+
+        elif e is u_right:
+            if  c_up_matches_right and e_up_matches_right:
+                alg = (R + U.p + R.p + U) + (d + R.p + U.p + R)
+            elif c_up_matches_right and e_up_matches_front:
+                alg = (U.p + R + U.p + R.p + U) + (R + U + R.p)
+            elif c_up_matches_front and e_up_matches_right:
+                alg = (U.p + R + U2 + R.p + U) + (F.p  + U.p + F)
+            else:
+                raise InternalSWError(
+                    f"4th case: Corner pointing outwards, "
+                    f"edge up right  {c} {e}")
+
+        elif e is u_bottom:
+            if  c_up_matches_front and e_up_matches_front:
+                alg = (F.p + U + F + U.p) + (d.p + F + U + F.p)
+            elif c_up_matches_front and e_up_matches_right:
+                alg = (U + F.p + U + F + U.p) + (F.p + U.p + F)
+            elif c_up_matches_right and e_up_matches_front:
+                alg = (U + F.p + U2 + F + U.p) + (R + U + R.p)
+            else:
+                raise InternalSWError(
+                    f"4th case: Corner pointing outwards, "
+                    f"edge up right  {c} {e}")
 
         else:
             raise NotImplementedError(
@@ -394,15 +430,11 @@ class F2L(SolverElement):
 
         up: Face = cube.up
         front: Face = cube.front
-        back: Face = cube.back
         right: Face = cube.right
 
         u_bottom = up.edge_bottom
         u_right = up.edge_right
-        u_left = up.edge_left
-        u_top = up.edge_top
 
-        white = cube.down.color
         r_color = right.color
         f_color = front.color
 
@@ -419,16 +451,9 @@ class F2L(SolverElement):
         F = Algs.F
         R = Algs.R
         U = Algs.U
-        U2 = U * 2
-        B = Algs.B
-        L = Algs.L
-        d = Algs.D[1:1 + cube.n_slices]
-        Y = Algs.Y
-
-        alg = None
 
         e_up_cc = e.get_face_edge(up).color
-        _pre: Alg = Algs.seq_alg(None)
+        pre: Alg
         e_matches_front = e_up_cc == r_color
         if e_matches_front:
             pre = self.cmn.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_bottom)
@@ -446,18 +471,18 @@ class F2L(SolverElement):
         elif c_front_color == r_color:
             if e_matches_front:
                 # (F' U F) (U' F' U F)
-                alg = _pre + (-F + U + F) + (-U - F + U + F)
+                alg = pre + (-F + U + F) + (-U - F + U + F)
             else:
                 # (R U R') (U' R U R')
-                alg = _pre + (R + U - R) + (-U + R + U - R)
+                alg = pre + (R + U - R) + (-U + R + U - R)
 
         elif c_right_color == f_color:
             if e_matches_front:
                 # (F' U' F) (U F' U' F)
-                alg = _pre + (-F - U + F) + (U - F - U + F)
+                alg = pre + (-F - U + F) + (U - F - U + F)
             else:
                 # (R U' R') (U R U' R')
-                alg = _pre + (R - U - R) + (U + R - U - R)
+                alg = pre + (R - U - R) + (U + R - U - R)
         else:
             raise InternalSWError(
                 f"Case: Unknown 2nd case: Corner in bottom, edge in top layer: {edge.actual.name}")
