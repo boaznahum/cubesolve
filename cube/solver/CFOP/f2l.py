@@ -196,10 +196,12 @@ class F2L(SolverElement):
                     alg = self._case_2_cornet_top_edge_top(corner, edge)
 
                 elif edge.actual is middle:
+                    ################################################################
                     # 6th case: Corner in bottom, edge in middle
-                    raise NotImplementedError("6th case: Corner in bottom, edge in middle")
+                    ################################################################
+                    alg = self._case_6_corner_in_bottom_edge_in_middle(edge, corner)
                 else:
-                    raise InternalSWError("No such a case, corner at bottom, not on top nor on middle")
+                    raise InternalSWError("No such a case, corner at bottom, but edge not on top nor middle")
 
             if alg is None:
                 raise InternalSWError(f"Unknown case, corner is {corner.actual.name}, edge is {edge.actual.name}")
@@ -254,152 +256,17 @@ class F2L(SolverElement):
         else:
             return False
 
-    def _case_2_cornet_top_edge_top(self, corner: CornerTracker, edge: EdgeTracker) -> Alg:
-
-        self.debug(
-            f"Case: 2nd case: Corner in bottom, edge in top layer: {corner.actual.name} {edge.actual.name}")
-
-        cube = self.cube
-
-        up: Face = cube.up
-        front: Face = cube.front
-        back: Face = cube.back
-        right: Face = cube.right
-
-        u_bottom = up.edge_bottom
-        u_right = up.edge_right
-        u_left = up.edge_left
-        u_top = up.edge_top
-
-        white = cube.down.color
-        r_color = right.color
-        f_color = front.color
-
-        c = corner.actual
-        e = edge.actual
-
-        c_front_color = c.get_face_edge(front).color
-        c_right_color = c.get_face_edge(right).color
-
-        # verify case
-        assert c is front.corner_bottom_right
-        assert e.on_face(up)
-
-        F = Algs.F
-        R = Algs.R
-        U = Algs.U
-        U2 = U * 2
-        B = Algs.B
-        L = Algs.L
-        d = Algs.D[1:1 + cube.n_slices]
-        Y = Algs.Y
-
-        alg = None
-
-        e_up_cc = e.get_face_edge(up).color
-        _pre: Alg = Algs.seq_alg(None)
-        e_matches_front = e_up_cc == r_color
-        if e_matches_front:
-            pre = self.cmn.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_bottom)
-        else:
-            pre = self.cmn.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_right)
-        if c.match_faces:
-
-            if e_matches_front:
-                # (U R U' R') (U' F' U F)
-                alg = pre + (U + R - U - R) + (-U - F + U + F)
-            else:
-                # (U' F' U F) (U R U' R')
-                alg = pre + (-U - F + U + F) + (U + R - U - R)
-
-        elif c_front_color == r_color:
-            if e_matches_front:
-                # (F' U F) (U' F' U F)
-                alg = _pre + (-F + U + F) + (-U - F + U + F)
-            else:
-                # (R U R') (U' R U R')
-                alg = _pre + (R + U - R) + (-U + R + U - R)
-
-        elif c_right_color == f_color:
-            if e_matches_front:
-                # (F' U' F) (U F' U' F)
-                alg = _pre + (-F - U + F) + (U - F - U + F)
-            else:
-                # (R U' R') (U R U' R')
-                alg = _pre + (R - U - R) + (U + R - U - R)
-        else:
-            raise InternalSWError(
-                f"Case: Unknown 2nd case: Corner in bottom, edge in top layer: {edge.actual.name}")
-
-        return alg
-
-    def _case_3_corner_in_top_edge_middle(self, corner, edge):
-
-        self.debug(
-            f"Case: 3rd case: Corner in top, "
-            f"edge in middle: {corner.actual.name} {edge.actual.name}")
-
-        cube = self.cube
-
-        up: Face = cube.up
-        front: Face = cube.front
-        back: Face = cube.back
-        right: Face = cube.right
-
-        u_bottom = up.edge_bottom
-        u_right = up.edge_right
-        u_left = up.edge_left
-        u_top = up.edge_top
-
-        white = cube.down.color
-        r_color = right.color
-        f_color = front.color
-
-        c = corner.actual
-        e = edge.actual
-
-        c_front_color = c.get_face_edge(front).color
-        c_right_color = c.get_face_edge(right).color
-        c_up_color = c.get_face_edge(up).color
-
-        # verify case
-        assert c.on_face(up)
-        assert e is front.edge_right
-
-        F = Algs.F
-        R = Algs.R
-        U = Algs.U
-        U2 = U * 2
-        B = Algs.B
-        L = Algs.L
-        d = Algs.D[1:1 + cube.n_slices]
-        Y = Algs.Y
-
-        e_front_c = e.get_face_edge(front).color
-
-        if c_front_color == r_color and c_right_color == f_color:  # white up
-
-            if e_front_c == f_color:
-                alg = (R + U + R.p + U.p) + (R + U + R.p + U.p) + (R + U + R.p)
-            else:
-                alg = (R + U.p + R.p) + (d + R.p + U + R)
-
-        elif c_front_color == f_color and c_up_color == r_color:  # white right
-            if e_front_c == f_color:
-                alg = (U + F.p + U + F) + (U + F.p + U2 + F)
-            else:
-                alg = (U + F.p + U.p + F) + (d.p + F + U + F.p)
-        elif c_up_color == f_color and c_right_color == r_color:  # white front
-            if e_front_c == f_color:
-                alg = (U.p + R + U.p + R.p) + (U.p + R + U2 + R.p)
-            else:
-                alg = (U.p + R + U + R.p) + (d + R.p + U.p + R)
-        else:
-            raise NotImplementedError(
-                f"Unknown 3rd case: Corner in top, edge in middle {c.name} {e.name}")
-        return alg
-
     def _case_1_easy_and_case_4_corner_outwards(self, edge: EdgeTracker, corner: CornerTracker):
+
+        """
+        Case 1 + Case 4, Edge on top, Corner pointing outwards
+
+        Number of cases = 4 + 12 = 16 = 2(corner orientation) * 4(edge position) * 2 edge(orientation)
+
+        :param edge:
+        :param corner:
+        :return:
+        """
 
         self.debug(
             f"Case: 1 Easy or 4th case: Corner pointing outwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
@@ -507,7 +374,174 @@ class F2L(SolverElement):
 
         return alg
 
+    def _case_2_cornet_top_edge_top(self, corner: CornerTracker, edge: EdgeTracker) -> Alg:
+
+
+        """
+        NUmber of cases = 6 = 3(Corner orientation) * 2 (edge match front or right)
+
+        Actually it covers 24 = 3 * 4 * 2, but pre alg bring it to the above
+
+        :param corner:
+        :param edge:
+        :return:
+        """
+
+        self.debug(
+            f"Case: 2nd case: Corner in bottom, edge in top layer: {corner.actual.name} {edge.actual.name}")
+
+        cube = self.cube
+
+        up: Face = cube.up
+        front: Face = cube.front
+        back: Face = cube.back
+        right: Face = cube.right
+
+        u_bottom = up.edge_bottom
+        u_right = up.edge_right
+        u_left = up.edge_left
+        u_top = up.edge_top
+
+        white = cube.down.color
+        r_color = right.color
+        f_color = front.color
+
+        c = corner.actual
+        e = edge.actual
+
+        c_front_color = c.get_face_edge(front).color
+        c_right_color = c.get_face_edge(right).color
+
+        # verify case
+        assert c is front.corner_bottom_right
+        assert e.on_face(up)
+
+        F = Algs.F
+        R = Algs.R
+        U = Algs.U
+        U2 = U * 2
+        B = Algs.B
+        L = Algs.L
+        d = Algs.D[1:1 + cube.n_slices]
+        Y = Algs.Y
+
+        alg = None
+
+        e_up_cc = e.get_face_edge(up).color
+        _pre: Alg = Algs.seq_alg(None)
+        e_matches_front = e_up_cc == r_color
+        if e_matches_front:
+            pre = self.cmn.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_bottom)
+        else:
+            pre = self.cmn.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_right)
+        if c.match_faces:
+
+            if e_matches_front:
+                # (U R U' R') (U' F' U F)
+                alg = pre + (U + R - U - R) + (-U - F + U + F)
+            else:
+                # (U' F' U F) (U R U' R')
+                alg = pre + (-U - F + U + F) + (U + R - U - R)
+
+        elif c_front_color == r_color:
+            if e_matches_front:
+                # (F' U F) (U' F' U F)
+                alg = _pre + (-F + U + F) + (-U - F + U + F)
+            else:
+                # (R U R') (U' R U R')
+                alg = _pre + (R + U - R) + (-U + R + U - R)
+
+        elif c_right_color == f_color:
+            if e_matches_front:
+                # (F' U' F) (U F' U' F)
+                alg = _pre + (-F - U + F) + (U - F - U + F)
+            else:
+                # (R U' R') (U R U' R')
+                alg = _pre + (R - U - R) + (U + R - U - R)
+        else:
+            raise InternalSWError(
+                f"Case: Unknown 2nd case: Corner in bottom, edge in top layer: {edge.actual.name}")
+
+        return alg
+
+    def _case_3_corner_in_top_edge_middle(self, corner, edge):
+
+        """"
+        Number of cases = 6 = 3(corner orientation) * 2(edge orientation)
+        """
+
+        self.debug(
+            f"Case: 3rd case: Corner in top, "
+            f"edge in middle: {corner.actual.name} {edge.actual.name}")
+
+        cube = self.cube
+
+        up: Face = cube.up
+        front: Face = cube.front
+        back: Face = cube.back
+        right: Face = cube.right
+
+        u_bottom = up.edge_bottom
+        u_right = up.edge_right
+        u_left = up.edge_left
+        u_top = up.edge_top
+
+        white = cube.down.color
+        r_color = right.color
+        f_color = front.color
+
+        c = corner.actual
+        e = edge.actual
+
+        c_front_color = c.get_face_edge(front).color
+        c_right_color = c.get_face_edge(right).color
+        c_up_color = c.get_face_edge(up).color
+
+        # verify case
+        assert c.on_face(up)
+        assert e is front.edge_right
+
+        F = Algs.F
+        R = Algs.R
+        U = Algs.U
+        U2 = U * 2
+        B = Algs.B
+        L = Algs.L
+        d = Algs.D[1:1 + cube.n_slices]
+        Y = Algs.Y
+
+        e_front_c = e.get_face_edge(front).color
+
+        if c_front_color == r_color and c_right_color == f_color:  # white up
+
+            if e_front_c == f_color:
+                alg = (R + U + R.p + U.p) + (R + U + R.p + U.p) + (R + U + R.p)
+            else:
+                alg = (R + U.p + R.p) + (d + R.p + U + R)
+
+        elif c_front_color == f_color and c_up_color == r_color:  # white right
+            if e_front_c == f_color:
+                alg = (U + F.p + U + F) + (U + F.p + U2 + F)
+            else:
+                alg = (U + F.p + U.p + F) + (d.p + F + U + F.p)
+        elif c_up_color == f_color and c_right_color == r_color:  # white front
+            if e_front_c == f_color:
+                alg = (U.p + R + U.p + R.p) + (U.p + R + U2 + R.p)
+            else:
+                alg = (U.p + R + U + R.p) + (d + R.p + U.p + R)
+        else:
+            raise NotImplementedError(
+                f"Unknown 3rd case: Corner in top, edge in middle {c.name} {e.name}")
+        return alg
+
     def _case_5_corner_pointing_upwards(self, edge: EdgeTracker, corner: CornerTracker):
+
+        """
+        Number of cases: 8 = 1(corner orientation) * 2 (edge orientation) * 4 (edge position)
+        :param edge:
+        :param corner:
+        :return:
+        """
 
         self.debug(
             f"Case: 5th case: Corner pointing upwards, "
@@ -592,5 +626,59 @@ class F2L(SolverElement):
 
         else:
             raise InternalSWError("Unknown error")
+
+        return alg
+    def _case_6_corner_in_bottom_edge_in_middle(self, edge: EdgeTracker, corner: CornerTracker):
+
+        """
+        Number of cases: 8 = 1(corner orientation) * 2 (edge orientation) * 4 (edge position)
+        :param edge:
+        :param corner:
+        :return:
+        """
+
+        self.debug(
+            f"Case: 6th case: Corner in bottom, "
+            f"edge in middle: {corner.actual.name} {edge.actual.name}")
+
+        cube = self.cube
+
+        up: Face = cube.up
+        front: Face = cube.front
+        back: Face = cube.back
+        right: Face = cube.right
+
+        u_bottom = up.edge_bottom
+        u_right = up.edge_right
+        u_left = up.edge_left
+        u_top = up.edge_top
+
+        white = cube.down.color
+        r_color = right.color
+        f_color = front.color
+
+        c = corner.actual
+        e = edge.actual
+
+        c_front_color = c.get_face_edge(front).color
+        c_right_color = c.get_face_edge(right).color
+
+        # verify case
+        assert c.on_face(cube.down)
+        assert e is front.edge_right
+
+        e_up_cc = e.get_face_edge(up).color
+
+        F = Algs.F
+        R = Algs.R
+        U = Algs.U
+        U2 = U * 2
+        B = Algs.B
+        L = Algs.L
+        d = Algs.D[1:1 + cube.n_slices]
+        Y = Algs.Y
+
+        raise NotImplementedError("6th case: Corner in bottom, edge in middle")
+
 
         return alg
