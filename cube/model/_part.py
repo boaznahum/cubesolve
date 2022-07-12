@@ -100,6 +100,9 @@ def _faces_2_corner_name(faces: Iterable[FaceName]):
     return _faces_to_corners[frozenset(faces)]
 
 
+TPartType = TypeVar("TPartType", bound="Part")
+
+
 class Part(ABC, CubeElement):
     """
 
@@ -292,6 +295,14 @@ class Part(ABC, CubeElement):
         return self.colors_id_by_pos == self.colors_id_by_color
 
     @property
+    @abstractmethod
+    def required_position(self: TPartType) -> TPartType:
+        """
+        :return: true if part in position, ignoring orientation, position id same as color id
+        """
+
+
+    @property
     def position_id(self) -> PartColorsID:
         """
         Return the parts required colors, assume it was in place, not actual colors
@@ -482,7 +493,6 @@ class Part(ABC, CubeElement):
         pass
 
 
-TPartType = TypeVar("TPartType", bound="Part")
 
 
 class Center(Part):
@@ -609,6 +619,10 @@ class Center(Part):
     @property
     def part_name(self) -> str:
         return "Center"
+
+    @property
+    def required_position(self: TPartType) -> "Center":
+        self.cube.find_corner_by_pos_colors(self.colors_id_by_color)
 
 
 class Edge(Part):
@@ -955,6 +969,10 @@ class Edge(Part):
         # todo: optimize it
         return _faces_2_edge_name((self.e1.face.name, self.e2.face.name))
 
+    @property
+    def required_position(self: TPartType) -> "Edge":
+        return self.cube.find_edge_by_pos_colors(self.colors_id_by_color)
+
 
 class Corner(Part):
     __slots__ = ["_slice"]
@@ -1028,5 +1046,11 @@ class Corner(Part):
 
     def __str__(self) -> str:
         return str(self.name.value) + " " + super().__str__()
+
+    @property
+    def required_position(self: TPartType) -> "Corner":
+        return self.cube.find_corner_by_pos_colors(self.colors_id_by_color)
+
+
 
 

@@ -572,6 +572,19 @@ class Cube(CubeSupplier):
 
         raise ValueError(f"Cube doesn't contain corner {str(part_colors_id)}")
 
+    def find_center_by_pos_colors(self, part_colors_id: PartColorsID) -> Center:
+        """
+        Find the edge that it's position matches color id
+        :param part_colors_id:
+        :return:
+        """
+        for f in self.faces:
+            center = f.center
+            if center.colors_id_by_pos is part_colors_id:
+                return center
+
+        raise ValueError(f"Cube doesn't contain center {str(part_colors_id)}")
+
     def get_all_parts(self) -> Collection[PartSlice]:
 
         # set - because faces share parts

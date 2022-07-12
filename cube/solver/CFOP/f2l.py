@@ -73,7 +73,22 @@ class F2L(SolverElement):
 
             cube = self.cube
 
-            for _ in range(4):
+            def _n_done():
+
+                f = cube.front
+                b = cube.back
+                return sum([
+                    f.corner_bottom_right.match_faces and f.edge_right.match_faces,
+                    f.corner_bottom_left.match_faces and f.edge_left.match_faces,
+
+                    b.corner_bottom_right.match_faces and b.edge_right.match_faces,
+                    b.corner_bottom_left.match_faces and b.edge_left.match_faces,
+
+                ])
+
+            n_done = _n_done()
+            after_brought_up = False
+            for _ in range(8):
                 def need_to_work():
                     corner: CornerTracker = CornerTracker.of_position(cube.front.corner_bottom_right)
                     edge: EdgeTracker = EdgeTracker.of_position(cube.front.edge_right)
@@ -92,30 +107,25 @@ class F2L(SolverElement):
 
                 n = self.cmn.rotate_and_check(Algs.Y, need_to_work)
 
-                # all ok, so must be  solved
-                if n < 0:
-                    assert self.solved()
-                    return
 
+                if n < 0:
+                    assert not after_brought_up
+                    # Didn't find simple case, so need to bring bottom up
+                    brought_up = self._bring_any_corner_up()
+                    assert brought_up
+                    after_brought_up = True
+                    continue
+
+                after_brought_up = False
                 self.op.play(Algs.Y * n)
 
-                def _n_done():
-
-                    f = cube.front
-                    b = cube.back
-                    return sum( [
-                        f.corner_bottom_right.match_faces and f.edge_right.match_faces,
-                        f.corner_bottom_left.match_faces and f.edge_left.match_faces,
-
-                        b.corner_bottom_right.match_faces and b.edge_right.match_faces,
-                        b.corner_bottom_left.match_faces and b.edge_left.match_faces,
-
-                    ])
-
-                n_done = _n_done()
+                assert n_done == _n_done()
                 work_was_done = self._do_corner_edge()
-                n_done = _n_done()
                 assert work_was_done
+                n_done += 1
+                assert n_done == _n_done()
+                if n_done == 4:
+                    break
 
         assert self.solved()
 
@@ -390,7 +400,7 @@ class F2L(SolverElement):
                     f"edge up top {corner.actual.name} {edge.actual.name}")
 
         elif e is u_left:
-            if  c_up_matches_right and e_up_matches_right:
+            if c_up_matches_right and e_up_matches_right:
                 # OK !!!
                 alg = (U + F.p + U.p + F) + (U + F.p + U * 2 + F)
             elif c_up_matches_front and e_up_matches_front:
@@ -403,19 +413,19 @@ class F2L(SolverElement):
                     f"edge up left  {c} {e}")
 
         elif e is u_right:
-            if  c_up_matches_right and e_up_matches_right:
+            if c_up_matches_right and e_up_matches_right:
                 alg = (R + U.p + R.p + U) + (d + R.p + U.p + R)
             elif c_up_matches_right and e_up_matches_front:
                 alg = (U.p + R + U.p + R.p + U) + (R + U + R.p)
             elif c_up_matches_front and e_up_matches_right:
-                alg = (U.p + R + U2 + R.p + U) + (F.p  + U.p + F)
+                alg = (U.p + R + U2 + R.p + U) + (F.p + U.p + F)
             else:
                 raise InternalSWError(
                     f"4th case: Corner pointing outwards, "
                     f"edge up right  {c} {e}")
 
         elif e is u_bottom:
-            if  c_up_matches_front and e_up_matches_front:
+            if c_up_matches_front and e_up_matches_front:
                 alg = (F.p + U + F + U.p) + (d.p + F + U + F.p)
             elif c_up_matches_front and e_up_matches_right:
                 alg = (U + F.p + U + F + U.p) + (F.p + U.p + F)
@@ -435,7 +445,6 @@ class F2L(SolverElement):
         return alg
 
     def _case_2_cornet_top_edge_top(self, corner: CornerTracker, edge: EdgeTracker) -> Alg:
-
 
         """
         NUmber of cases = 6 = 3(Corner orientation) * 2 (edge match front or right)
@@ -677,6 +686,7 @@ class F2L(SolverElement):
             raise InternalSWError("Unknown error")
 
         return alg
+
     def _case_6_corner_in_bottom_edge_in_middle(self, edge: EdgeTracker, corner: CornerTracker):
 
         """
@@ -729,5 +739,32 @@ class F2L(SolverElement):
 
         raise NotImplementedError("6th case: Corner in bottom, edge in middle")
 
-
         return alg
+
+    def _bring_any_corner_up(self) -> bool:
+
+        """
+        Search corner on bottom that belong to bottom and upload it
+
+        Assume white is at down
+        :return:
+        """
+
+        cube = self.cube
+
+        down = cube.down
+
+        if cube.front.corner_bottom_left.required_position.on_face(down):
+            self.debug("Bringing FLD down")
+            self.op.play(Algs.L.p + Algs.U.p + Algs.L)
+            return True
+        if cube.left.corner_bottom_left.required_position.on_face(down):
+            self.debug("Bringing BLD down")
+            self.op.play(Algs.L + Algs.U + Algs.L.p)
+            return True
+        if cube.right.corner_bottom_right.required_position.on_face(down):
+            self.debug("Bringing BRD down")
+            self.op.play(Algs.B + Algs.U + Algs.B.p)
+            return True
+
+        return False
