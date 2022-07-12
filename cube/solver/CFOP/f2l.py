@@ -99,9 +99,33 @@ class F2L(SolverElement):
 
                 self.op.play(Algs.Y * n)
 
-                self._do_corner_edge()
+                def _n_done():
+
+                    f = cube.front
+                    b = cube.back
+                    return sum( [
+                        f.corner_bottom_right.match_faces and f.edge_right.match_faces,
+                        f.corner_bottom_left.match_faces and f.edge_left.match_faces,
+
+                        b.corner_bottom_right.match_faces and b.edge_right.match_faces,
+                        b.corner_bottom_left.match_faces and b.edge_left.match_faces,
+
+                    ])
+
+                n_done = _n_done()
+                work_was_done = self._do_corner_edge()
+                n_done = _n_done()
+                assert work_was_done
+
+        assert self.solved()
 
     def _do_corner_edge(self) -> bool:
+
+        """
+        Return False if no work was done, corner nor at top nor at required position (FRD)
+        These are the only cases I know to solve
+        :return:
+        """
 
         # assume white is at bottom
         cube = self.cube
@@ -239,11 +263,11 @@ class F2L(SolverElement):
                 e_uploaded += U  # don't move top down
             e_uploaded += B + U + B.prime
         elif e is front.edge_left:
-            if c is front.corner_bottom_right:
+            if c is front.corner_top_right:
                 e_uploaded += U  # don't move top down
-            e_uploaded += L.prime + U + L.prime
+            e_uploaded += L.prime + U + L
         if e_uploaded.algs:
-            self.debug(f"Before edge uploaded, corner is {c}")
+            self.debug(f"Before edge uploaded, corner is {c}, e is {e}")
             self.op.play(e_uploaded)
             # both might be moved
             c = corner.actual
@@ -368,7 +392,7 @@ class F2L(SolverElement):
         elif e is u_left:
             if  c_up_matches_right and e_up_matches_right:
                 # OK !!!
-                alg = (U + F.prime + U.prime + F) + (U + F.prime + U * 2 + F)
+                alg = (U + F.p + U.p + F) + (U + F.p + U * 2 + F)
             elif c_up_matches_front and e_up_matches_front:
                 alg = (U.p + R + U2 + R.p) + (U.p + R + U2 + R.p)
             elif c_front_matches_front and e_up_matches_front:
@@ -615,10 +639,10 @@ class F2L(SolverElement):
 
             if e_up_cc == c_right_color == f_color:
                 # OK !!!
-                alg = (R + U + R.prime + U.prime) + U.prime + (R + U + R.prime + U.prime) + (
-                        R + U + R.prime)
+                alg = (R + U + R.p + U.p) + U.p + (R + U + R.p + U.p) + (
+                        R + U + R.p)
             elif e_up_cc == c_front_color == r_color:
-                alg = (F.prime + U * 2 + F) + (U + F.prime + U.prime + F.prime)
+                alg = (F.p + U * 2 + F) + (U + F.p + U.p + F)
             else:
                 raise InternalSWError(
                     "5th case: Unknown case Corner pointing upwards, edge in top layer,"
