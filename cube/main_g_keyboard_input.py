@@ -1,3 +1,4 @@
+import sys
 import traceback
 from contextlib import contextmanager
 from typing import Any
@@ -19,6 +20,10 @@ good = Algs.seq_alg("good")
 
 # noinspection PyProtectedMember
 key0 = key._0
+
+last_test = (None,  # key
+             None,  # n
+             )
 
 
 def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
@@ -217,15 +222,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
     if debug:
         print(f"keyboard input 'main' handle_in_both_modes return {handled=} {no_operation}")
-
-    def _scramble(_inv: bool, _scramble_key: Any, _n=None, _animation=False):
-
-        _alg = Algs.scramble(app.cube.size, _scramble_key, _n)
-
-        print(f"Running scramble, key={_scramble_key}, n={_n}, alg={_alg}")
-
-        with _wait_cursor(window):
-            op.play(_alg, _inv, animation=_animation)
 
     if not handled:
 
@@ -449,7 +445,10 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
                 animation = modifiers & key.MOD_CTRL
 
-                _scramble(inv, _scramble_key, _scramble_n, animation)
+                _scramble(window, inv, _scramble_key, _scramble_n, animation)
+
+            case key.F9:
+                _scramble(window, False, config.SCRAMBLE_KEY_FOR_F9, None, False)
 
             case key._2 | key._3 | key._4 | key._5 | key._6 | key._7 | key._8 | key._9:
 
@@ -524,14 +523,9 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key.T:
                 if modifiers & key.MOD_ALT:
-                    scramble_key = 26
-                    n = None
-
-                    op.reset()  # also reset cube
-                    alg = Algs.scramble(app.cube.size, scramble_key, n)
-                    op.op(alg, animation=False)
-                    slv.solve(animation=False, debug=False)
-                    assert slv.is_solved
+                    _run_test(window, last_test[0], last_test[1], True, animation=solver_animation)
+                elif modifiers & key.MOD_CTRL:
+                    _scramble(window, inv, last_test[0], last_test[1], False)
                 else:
 
                     with _wait_cursor(window):
@@ -555,23 +549,11 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                                 print()
                                 ll = 0
 
-                            op.reset()  # also reset cube
-                            _scramble(False, scramble_key, n, _animation=False)
+                            n_loops += 1
+                            c0 = op.count
+                            _run_test(window, scramble_key, n, False, False)
+                            count += op.count - c0
 
-                            # noinspection PyBroadException
-                            try:
-                                c0 = op.count
-                                slv.solve(animation=False, debug=True)
-                                # we ask solver, because in develop phase it wants to check what was implemented
-                                assert slv.is_solved
-                                count += op.count - c0
-                                n_loops += 1
-
-                            except Exception:
-                                print()
-                                print(f"Failure on scramble key={scramble_key}, n={n} ")
-                                traceback.print_exc()
-                                raise
                         print()
                         print(f"Count={count}, average={count / n_loops}")
 
@@ -593,6 +575,48 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
             print("keyboard input main decide not to update gui elements")
 
     return done
+
+
+def _scramble(window: AbstractWindow, _inv: bool, _scramble_key: Any, _n=None, _animation=False):
+    app = window.app
+    op = window.app.op
+
+    op.reset()
+
+    _alg = Algs.scramble(app.cube.size, _scramble_key, _n)
+
+    print(f"Running scramble, key={_scramble_key}, n={_n}, alg={_alg}")
+
+    with _wait_cursor(window):
+        op.play(_alg, _inv, animation=_animation)
+
+
+def _run_test(window: AbstractWindow, scramble_key,
+              n, debug: bool,
+              animation):
+    global last_test
+    last_test = (scramble_key, n)
+    # noinspection PyBroadException
+
+    op = window.app.op
+    slv = window.app.slv
+
+    op.reset()  # also reset cube
+    _scramble(window, False, scramble_key, n, _animation=False)
+
+    try:
+        slv.solve(animation=animation, debug=debug)
+        # we ask solver, because in develop phase it wants to check what was implemented
+        assert slv.is_solved
+
+
+    except Exception:
+        print()
+        print(f"Failure on scramble key={scramble_key}, n={n} ")
+        print("Alt T to repeat it, Ctrl T to repeat scramble")
+
+        traceback.print_exc(file=sys.stdout)
+        raise
 
 
 @contextmanager

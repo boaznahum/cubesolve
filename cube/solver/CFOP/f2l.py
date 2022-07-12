@@ -71,6 +71,8 @@ class F2L(SolverElement):
             # bring white to bottom
             self.cmn.bring_face_up(self.white_face.opposite)
 
+            self._bring_all_edges_up()
+
             cube = self.cube
 
             def _n_done():
@@ -107,13 +109,13 @@ class F2L(SolverElement):
 
                 n = self.cmn.rotate_and_check(Algs.Y, need_to_work)
 
-
                 if n < 0:
                     assert not after_brought_up
                     # Didn't find simple case, so need to bring bottom up
                     brought_up = self._bring_any_corner_up()
                     assert brought_up
                     after_brought_up = True
+                    assert _n_done() == n_done  # didn't break solved cases
                     continue
 
                 after_brought_up = False
@@ -128,6 +130,58 @@ class F2L(SolverElement):
                     break
 
         assert self.solved()
+
+    def belong_to_middle(self, e: Edge):
+        cube = self.cube
+        front = cube.front
+        back = cube.back
+
+        return e in [front.edge_right,
+                     front.edge_left,
+                     back.edge_left, back.edge_right]
+
+    def _bring_all_edges_up(self):
+        cube = self.cube
+
+        def need_to_work():
+
+            """
+            Return true if edge at front/right to be moved up
+            It need to moved up it belong  to one of middle edges but not already
+            in position
+            :return:
+            """
+
+            e = cube.front.edge_right
+
+            if e.in_position or not self.belong_to_middle(e.required_position):
+                # if in position, alg can handle it
+                return False
+            else:
+                return True
+
+        def edge_fb_can_be_moved_to_middle():
+
+            e = cube.up.edge_top
+
+            return not self.belong_to_middle(e.required_position)
+
+        while True:
+            n = self.cmn.rotate_and_check(Algs.Y, need_to_work)
+
+            if n < 0:
+                return
+
+            self.op.play(Algs.Y * n)
+
+            n = self.cmn.rotate_and_check(Algs.U, edge_fb_can_be_moved_to_middle)
+
+            assert n >= 0  # otherwise we can'rr RUR' now make sure edge UB is not also need uploaded
+
+            if n > 0:
+                self.op.play(Algs.U * n)
+
+            self.op.play(Algs.R + Algs.U + Algs.R.p)
 
     def _do_corner_edge(self) -> bool:
 
@@ -147,7 +201,7 @@ class F2L(SolverElement):
         with self.cmn.annotate(([corner.actual, edge.actual], AnnWhat.Moved),
                                ([corner.position, edge.position], AnnWhat.FixedPosition)):
 
-            self.debug(f"Working on {corner.position} {edge.position}")
+            self.debug(f"Working on {corner.position.name} {edge.position.name} actual {corner.actual} {edge.actual} ")
 
             up: Face = cube.up
             front: Face = cube.front
@@ -173,15 +227,7 @@ class F2L(SolverElement):
             play = self.op.play
 
             e = edge.actual
-
-            if self._upload_edge_to_top(corner, edge):
-                c = corner.actual
-                e = edge.actual
-
-                assert bool(c.on_face(up)) == bool(corner_on_top), "Corner changed layer"
-                assert e.on_face(up)
-
-            assert e.on_face(up) or e is front.edge_right
+            assert e is middle or e.on_face(up)  # we brought all up
 
             if corner_on_top:
                 # ok rotate till it is on front/top/right
@@ -247,55 +293,22 @@ class F2L(SolverElement):
 
             return True
 
-    def _upload_edge_to_top(self, corner: CornerTracker, edge: EdgeTracker):
-
-        cube = self.cube
-
-        up: Face = cube.up
-        front: Face = cube.front
-        back: Face = cube.back
-
-        c = corner.actual
-        e = edge.actual
-
-        U = Algs.U
-        B = Algs.B
-        L = Algs.L
-
-        e_uploaded: SeqAlg = Algs.seq_alg(None)
-
-        if e is back.edge_right:
-            if c is up.corner_top_left:
-                e_uploaded += U  # don't move top down
-            e_uploaded += B.prime + U + B
-        elif e is back.edge_left:
-            if c is up.corner_top_right:
-                e_uploaded += U  # don't move top down
-            e_uploaded += B + U + B.prime
-        elif e is front.edge_left:
-            if c is front.corner_top_right:
-                e_uploaded += U  # don't move top down
-            e_uploaded += L.prime + U + L
-        if e_uploaded.algs:
-            self.debug(f"Before edge uploaded, corner is {c}, e is {e}")
-            self.op.play(e_uploaded)
-            # both might be moved
-            c = corner.actual
-            e = edge.actual
-
-            self.debug(f"Brought e to {e.name}, corner is {c.name}, {e_uploaded}")
-            # we must not touch top
-
-            return True
-        else:
-            return False
-
     def _case_1_easy_and_case_4_corner_outwards(self, edge: EdgeTracker, corner: CornerTracker):
 
         """
         Case 1 + Case 4, Edge on top, Corner pointing outwards
 
         Number of cases = 4 + 12 = 16 = 2(corner orientation) * 4(edge position) * 2 edge(orientation)
+
+        in https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
+
+        Case 4:
+        1       2
+        3       4
+        5       6
+        7       8
+        9       10
+        11      12
 
         :param edge:
         :param corner:
@@ -385,14 +398,19 @@ class F2L(SolverElement):
         c_up_matches_front = c_up_color == f_color
         c_up_matches_right = c_up_color == r_color
 
+        case4: str
+
         if e is u_top:
             if c_front_matches_front and e_up_matches_right:
                 # OK !!!
                 alg = U - F + U * 2 + F + U - F + U * 2 + F
+                case4 = "3"
             elif c_up_matches_front and e_up_matches_front:
                 alg = (U.p + R + U + R.p) + (U.p + R + U2 + R.p)
+                case4 = "6"
             elif c_up_matches_front and e_up_matches_right:
                 alg = (U + F.p + U.p + F + U.p) + (F.p + U.p + F)
+                case4 = "10"
 
             else:
                 raise InternalSWError(
@@ -403,10 +421,13 @@ class F2L(SolverElement):
             if c_up_matches_right and e_up_matches_right:
                 # OK !!!
                 alg = (U + F.p + U.p + F) + (U + F.p + U * 2 + F)
+                case4 = "5"
             elif c_up_matches_front and e_up_matches_front:
                 alg = (U.p + R + U2 + R.p) + (U.p + R + U2 + R.p)
+                case4 = "4"
             elif c_front_matches_front and e_up_matches_front:
                 alg = (U.p + R + U + R.p + U) + (R + U + R.p)
+                case4 = "7"
             else:
                 raise InternalSWError(
                     f"4th case: Corner pointing outwards, "
@@ -415,10 +436,13 @@ class F2L(SolverElement):
         elif e is u_right:
             if c_up_matches_right and e_up_matches_right:
                 alg = (R + U.p + R.p + U) + (d + R.p + U.p + R)
+                case4 = "1"
             elif c_up_matches_right and e_up_matches_front:
                 alg = (U.p + R + U.p + R.p + U) + (R + U + R.p)
+                case4 = "7"
             elif c_up_matches_front and e_up_matches_right:
                 alg = (U.p + R + U2 + R.p + U) + (F.p + U.p + F)
+                case4 = "12"
             else:
                 raise InternalSWError(
                     f"4th case: Corner pointing outwards, "
@@ -427,10 +451,13 @@ class F2L(SolverElement):
         elif e is u_bottom:
             if c_up_matches_front and e_up_matches_front:
                 alg = (F.p + U + F + U.p) + (d.p + F + U + F.p)
+                case4 = "2"
             elif c_up_matches_front and e_up_matches_right:
                 alg = (U + F.p + U + F + U.p) + (F.p + U.p + F)
+                case4 = "8"
             elif c_up_matches_right and e_up_matches_front:
                 alg = (U + F.p + U2 + F + U.p) + (R + U + R.p)
+                case4 = "11"
             else:
                 raise InternalSWError(
                     f"4th case: Corner pointing outwards, "
@@ -441,6 +468,9 @@ class F2L(SolverElement):
                 f"4th case: Corner pointing outwards, "
                 f"edge in top layer {corner.actual.name} "
                 f"{edge.actual.name}")
+
+        self.debug(
+            f"Case: 4th case: sube case {case4}: {corner.actual.name} {edge.actual.name}")
 
         return alg
 
@@ -754,17 +784,36 @@ class F2L(SolverElement):
 
         down = cube.down
 
-        if cube.front.corner_bottom_left.required_position.on_face(down):
-            self.debug("Bringing FLD down")
-            self.op.play(Algs.L.p + Algs.U.p + Algs.L)
-            return True
-        if cube.left.corner_bottom_left.required_position.on_face(down):
-            self.debug("Bringing BLD down")
-            self.op.play(Algs.L + Algs.U + Algs.L.p)
-            return True
-        if cube.right.corner_bottom_right.required_position.on_face(down):
-            self.debug("Bringing BRD down")
-            self.op.play(Algs.B + Algs.U + Algs.B.p)
+        def need_bring_up(c: Corner):
+            if c.in_position:  # it is already solved, or can be solved !!!
+                return False
+            return c.required_position.on_face(down)
+
+        def rotate_till_edge_not_belong_to_middle(e: Edge) -> Alg:
+            # because the algorithm bring it down
+            return self.cmn.rotate_face_and_check_get_alg(cube.up,
+                                                          lambda: not self.belong_to_middle(e.required_position))
+
+        alg: Alg | None = None
+        if need_bring_up(cube.front.corner_bottom_left):
+            self.debug("Bringing FLD up")
+            pre = rotate_till_edge_not_belong_to_middle(cube.up.edge_top)
+
+            alg = pre + (Algs.L.p + Algs.U.p + Algs.L)
+
+        elif need_bring_up(cube.left.corner_bottom_left):
+            self.debug("Bringing BLD up")
+            pre = rotate_till_edge_not_belong_to_middle(cube.up.edge_bottom)
+
+            alg = pre + (Algs.L + Algs.U + Algs.L.p)
+
+        elif need_bring_up(cube.right.corner_bottom_right):
+            self.debug("Bringing BRD up")
+            pre = rotate_till_edge_not_belong_to_middle(cube.left.edge_right)
+            alg = pre + Algs.B + Algs.U + Algs.B.p
+
+        if alg:
+            self.op.play(alg)
             return True
 
         return False

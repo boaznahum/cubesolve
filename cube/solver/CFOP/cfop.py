@@ -35,11 +35,6 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
         self._debug_override: bool | None = None
 
     @property
-    def is_solved(self):
-        #return self._cube.solved
-        return self.f2l.solved()
-
-    @property
     def is_debug_config_mode(self) -> bool:
         return config.SOLVER_DEBUG
 
@@ -56,7 +51,7 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
         s = ""
 
         def _add(x):
-            nonlocal  s
+            nonlocal s
             if s:
                 s += ","
             s += x

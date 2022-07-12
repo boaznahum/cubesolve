@@ -39,9 +39,6 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
         self._debug_override: bool | None = None
 
 
-    @property
-    def is_solved(self):
-        return self._cube.solved
 
     @property
     def is_debug_config_mode(self) -> bool:

@@ -11,9 +11,9 @@ if TYPE_CHECKING:
 
 _Common: TypeAlias = "CommonOp"
 
-class BaseSolver(Solver):
 
-    __slots__:list[str] = ["_common", "_op", "_cube"]
+class BaseSolver(Solver):
+    __slots__: list[str] = ["_common", "_op", "_cube"]
 
     def __init__(self, op) -> None:
         super().__init__()
@@ -22,9 +22,13 @@ class BaseSolver(Solver):
         from .common_op import CommonOp
         self.common: _Common = CommonOp(self)
 
+    @property
+    def is_solved(self):
+        return self._cube.solved
 
     @abstractmethod
-    def debug(self, *args): ...
+    def debug(self, *args):
+        ...
 
     @property
     @final
@@ -40,7 +44,6 @@ class BaseSolver(Solver):
     @final
     def cmn(self) -> _Common:
         return self.common
-
 
     def solution(self):
         if self.is_solved:
@@ -60,4 +63,3 @@ class BaseSolver(Solver):
                         solution_algs.insert(0, step)
 
             return Algs.alg(None, *solution_algs)
-
