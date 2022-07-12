@@ -168,27 +168,19 @@ class F2L(SolverElement):
                     alg = self._case_3_corner_in_top_edge_middle(corner, edge)
                 else:
 
-                    ################################################################
-                    # 4th case: edge at top
-                    # NOT All cases implemented - not checked
-                    ################################################################
-                    alg = self._case_1_easy(corner, edge)
+                    if not corner.actual.get_face_edge(up).color == white:
+                        ################################################################
+                        # 4th case: Corner pointing outwards, edge in top layer
+                        # NOT All cases implemented - not checked
+                        ################################################################
+                        alg = self._case_1_easy_and_case_4_corner_outwards(edge, corner)
+                    else:
+                        ################################################################
+                        # 5th case: Corner pointing upwards, edge in top layer
+                        # All cases implemented - not checked
+                        ################################################################
 
-                    if not alg:
-
-                        if not corner.actual.get_face_edge(up).color == white:
-                            ################################################################
-                            # 4th case: Corner pointing outwards, edge in top layer
-                            # NOT All cases implemented - not checked
-                            ################################################################
-                            alg = self._case_4_corner_outwards(edge, corner)
-                        else:
-                            ################################################################
-                            # 5th case: Corner pointing upwards, edge in top layer
-                            # All cases implemented - not checked
-                            ################################################################
-
-                            alg = self._case_5_corner_pointing_upwards(edge, corner)
+                        alg = self._case_5_corner_pointing_upwards(edge, corner)
 
             else:
                 # corner at bottom
@@ -234,7 +226,6 @@ class F2L(SolverElement):
         B = Algs.B
         L = Algs.L
 
-
         e_uploaded: SeqAlg = Algs.seq_alg(None)
 
         if e is back.edge_right:
@@ -262,71 +253,6 @@ class F2L(SolverElement):
             return True
         else:
             return False
-
-
-
-    def _case_1_easy(self, corner: CornerTracker, edge: EdgeTracker):
-
-        ################################################################
-        # 1st: Easy cases: edge at top
-        ################################################################
-
-        # Case 1 one just case, when we reach here we are not sure if it is the case
-        # so no logging
-        cube = self.cube
-
-        up: Face = cube.up
-        front: Face = cube.front
-        back: Face = cube.back
-        right: Face = cube.right
-
-        u_bottom = up.edge_bottom
-        u_right = up.edge_right
-        u_left = up.edge_left
-        u_top = up.edge_top
-
-        white = cube.down.color
-        r_color = right.color
-        f_color = front.color
-
-        c = corner.actual
-        e = edge.actual
-
-        c_front_color = c.get_face_edge(front).color
-        c_right_color = c.get_face_edge(right).color
-        c_up_color = c.get_face_edge(up).color
-
-        # verify case
-        assert c.on_face(up)
-
-        F = Algs.F
-        R = Algs.R
-        U = Algs.U
-        U2 = U * 2
-        B = Algs.B
-        L = Algs.L
-        d = Algs.D[1:1 + cube.n_slices]
-        Y = Algs.Y
-
-        alg = None
-
-        if edge.actual is u_top:
-            if front.color == c_front_color == e.get_face_edge(up).color:
-                alg = R + U - R
-        elif edge.actual is u_left:
-            if right.color == c_right_color == e.get_face_edge(up).color:
-                alg = -F - U + F
-        elif edge.actual is u_bottom:
-            if front.color == e.get_face_edge(front).color == c_front_color:
-                alg = -U - F + U + F
-        elif edge.actual is u_right:
-            if right.color == e.get_face_edge(right).color == c_right_color:
-                alg = U + R - U - R
-
-        if alg:
-            self.debug(f"Case:1st: Easy cases: edge at top: {corner.actual.name} {edge.actual.name}")
-
-        return alg
 
     def _case_2_cornet_top_edge_top(self, corner: CornerTracker, edge: EdgeTracker) -> Alg:
 
@@ -473,10 +399,10 @@ class F2L(SolverElement):
                 f"Unknown 3rd case: Corner in top, edge in middle {c.name} {e.name}")
         return alg
 
-    def _case_4_corner_outwards(self, edge: EdgeTracker, corner: CornerTracker):
+    def _case_1_easy_and_case_4_corner_outwards(self, edge: EdgeTracker, corner: CornerTracker):
 
         self.debug(
-            f"Case: 4th case: Corner pointing outwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
+            f"Case: 1 Easy or 4th case: Corner pointing outwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
 
         cube = self.cube
 
@@ -516,6 +442,40 @@ class F2L(SolverElement):
         L = Algs.L
         d = Algs.D[1:1 + cube.n_slices]
         Y = Algs.Y
+
+        ################################################################
+        # 1st: Easy cases: edge at top
+        ################################################################
+
+        # Case 1 one just case, when we reach here we are not sure if it is the case
+        # so no logging
+
+        alg = None
+
+        if edge.actual is u_top:
+            if front.color == c_front_color == e.get_face_edge(up).color:
+                alg = R + U - R
+        elif edge.actual is u_left:
+            if right.color == c_right_color == e.get_face_edge(up).color:
+                alg = -F - U + F
+        elif edge.actual is u_bottom:
+            if front.color == e.get_face_edge(front).color == c_front_color:
+                alg = -U - F + U + F
+        elif edge.actual is u_right:
+            if right.color == e.get_face_edge(right).color == c_right_color:
+                alg = U + R - U - R
+
+        if alg:
+            self.debug(f"Case:1st: Easy cases: edge at top: {corner.actual.name} {edge.actual.name}")
+            return alg
+
+        self.debug(
+            f"Case: 4th case: Corner pointing outwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
+
+        ################################################################
+        # 4th case: Corner pointing outwards, edge in top layer
+        # NOT All cases implemented - not checked
+        ################################################################
 
         if e is u_top:
             if front.color == c.get_face_edge(front).color and right.color == e.get_face_edge(
@@ -591,7 +551,6 @@ class F2L(SolverElement):
         L = Algs.L
         d = Algs.D[1:1 + cube.n_slices]
         Y = Algs.Y
-
 
         if e is u_bottom:
 
