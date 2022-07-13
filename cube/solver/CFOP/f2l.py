@@ -775,6 +775,7 @@ class F2L(SolverElement):
         c_front_matches_front = c_front_color == f_color
         c_front_matches_right = c_front_color == r_color
         c_right_matches_front = c_right_color == f_color
+        c_right_matches_right = c_right_color == r_color
 
         # Cases in https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
         #  1
@@ -786,12 +787,12 @@ class F2L(SolverElement):
         if c_front_matches_front and e_front_matches_right:
             case6="1"
             alg = (R + U.p  + R.p + d + R.p + U2 + R)  + (U + R.p  + U2 + R)
-        elif c_front_matches_right and e_front_matches_right:
+        elif c_front_matches_right and e_front_matches_front:
             case6="2"
             alg = (R + U.p + R.p + U + R + U2 + R.p) + (U + R + U.p + R.p)
-        elif c_front_matches_right and e_front_matches_front:
+        elif c_right_matches_front and e_front_matches_front:
             case6="3"
-            alg=(R + U.p + R.p + U + R + U2 + R.p) + (U + R + U.p + R.p)
+            alg=(R + U.p + R.p + U.p + R + U + R.p) + (U.p + R + U2 + R.p)
         elif c_front_matches_right and e_front_matches_right:
             case6="4"
             alg = (R + U + R.p  + U.p + R + U.p  + R.p) + (U + d + R.p  + U.p + R)

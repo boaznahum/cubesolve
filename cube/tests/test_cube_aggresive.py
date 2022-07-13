@@ -54,7 +54,7 @@ def main():
     op: Operator = Operator(cube, vs)
     solver: Solver = Solvers.default(op)
 
-    nn = config.TEST_NUMBER_OF_SCRAMBLE_ITERATIONS
+    nn = config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS
     ll = 0
     count = 0
     n_loops = 0
