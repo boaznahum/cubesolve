@@ -6,7 +6,8 @@ from cube.solver import Solver
 
 
 def main():
-    n = 8
+
+    n = 3
 
     cube = Cube(size=n)
 
