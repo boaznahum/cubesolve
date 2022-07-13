@@ -1,13 +1,10 @@
-from typing import Sequence
-
-from cube.algs import Algs, Alg, SeqAlg
+from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
+from cube.model import Part, Edge, Corner
 from cube.model.cube_face import Face
-from cube.model import PartColorsID, Part, Edge, Color, Corner
 from cube.operator.op_annotation import AnnWhat
-from cube.solver.common.solver_element import SolverElement
-from cube.solver.common.common_op import CommonOp
 from cube.solver.common.base_solver import BaseSolver
+from cube.solver.common.solver_element import SolverElement
 from cube.solver.common.tracker import EdgeTracker, CornerTracker
 
 
@@ -54,7 +51,7 @@ class F2L(SolverElement):
         :return:
         """
 
-        # L1-cross will roate if it is the thing that need
+        # L1-cross will rotate if it is the thing that need
         if self.solved():
             return
 
@@ -174,9 +171,10 @@ class F2L(SolverElement):
 
             self.op.play(Algs.Y * n)
 
+            # now make sure edge UB is not also need uploaded
             n = self.cmn.rotate_and_check(Algs.U, edge_fb_can_be_moved_to_middle)
 
-            assert n >= 0  # otherwise we can'rr RUR' now make sure edge UB is not also need uploaded
+            assert n >= 0  # otherwise we can't do RUR prime
 
             if n > 0:
                 self.op.play(Algs.U * n)
@@ -205,12 +203,8 @@ class F2L(SolverElement):
 
             up: Face = cube.up
             front: Face = cube.front
-            back: Face = cube.back
-            right: Face = cube.right
 
             white = cube.down.color
-            r_color = right.color
-            f_color = front.color
 
             corner_on_top = corner.actual.on_face(up)
             # corner is on top
@@ -293,6 +287,7 @@ class F2L(SolverElement):
 
             return True
 
+    # noinspection PyPep8Naming
     def _case_1_easy_and_case_4_corner_outwards(self, edge: EdgeTracker, corner: CornerTracker):
 
         """
@@ -316,13 +311,14 @@ class F2L(SolverElement):
         """
 
         self.debug(
-            f"Case: 1 Easy or 4th case: Corner pointing outwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
+            f"Case: 1 Easy or 4th case: Corner pointing outwards, "
+            f"edge in top layer: "
+            f"{corner.actual.name} {edge.actual.name}")
 
         cube = self.cube
 
         up: Face = cube.up
         front: Face = cube.front
-        back: Face = cube.back
         right: Face = cube.right
 
         u_bottom = up.edge_bottom
@@ -352,10 +348,7 @@ class F2L(SolverElement):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        B = Algs.B
-        L = Algs.L
         d = Algs.D[1:1 + cube.n_slices]
-        Y = Algs.Y
 
         ################################################################
         # 1st: Easy cases: edge at top
@@ -474,6 +467,7 @@ class F2L(SolverElement):
 
         return alg
 
+    # noinspection PyPep8Naming
     def _case_2_cornet_top_edge_top(self, corner: CornerTracker, edge: EdgeTracker) -> Alg:
 
         """
@@ -552,6 +546,7 @@ class F2L(SolverElement):
 
         return alg
 
+    # noinspection PyPep8Naming
     def _case_3_corner_in_top_edge_middle(self, corner, edge):
 
         """"
@@ -566,15 +561,8 @@ class F2L(SolverElement):
 
         up: Face = cube.up
         front: Face = cube.front
-        back: Face = cube.back
         right: Face = cube.right
 
-        u_bottom = up.edge_bottom
-        u_right = up.edge_right
-        u_left = up.edge_left
-        u_top = up.edge_top
-
-        white = cube.down.color
         r_color = right.color
         f_color = front.color
 
@@ -593,10 +581,7 @@ class F2L(SolverElement):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        B = Algs.B
-        L = Algs.L
         d = Algs.D[1:1 + cube.n_slices]
-        Y = Algs.Y
 
         e_front_c = e.get_face_edge(front).color
 
@@ -622,6 +607,7 @@ class F2L(SolverElement):
                 f"Unknown 3rd case: Corner in top, edge in middle {c.name} {e.name}")
         return alg
 
+    # noinspection PyPep8Naming
     def _case_5_corner_pointing_upwards(self, edge: EdgeTracker, corner: CornerTracker):
 
         """
@@ -639,7 +625,6 @@ class F2L(SolverElement):
 
         up: Face = cube.up
         front: Face = cube.front
-        back: Face = cube.back
         right: Face = cube.right
 
         u_bottom = up.edge_bottom
@@ -669,9 +654,6 @@ class F2L(SolverElement):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        B = Algs.B
-        L = Algs.L
-        d = Algs.D[1:1 + cube.n_slices]
         Y = Algs.Y
 
         if e is u_bottom:
@@ -717,6 +699,7 @@ class F2L(SolverElement):
 
         return alg
 
+    # noinspection PyPep8Naming
     def _case_6_corner_in_bottom_edge_in_middle(self, edge: EdgeTracker, corner: CornerTracker):
 
         """
@@ -734,36 +717,23 @@ class F2L(SolverElement):
 
         cube = self.cube
 
-        up: Face = cube.up
         front: Face = cube.front
-        back: Face = cube.back
         right: Face = cube.right
 
-        u_bottom = up.edge_bottom
-        u_right = up.edge_right
-        u_left = up.edge_left
-        u_top = up.edge_top
-
-        white = cube.down.color
         r_color = right.color
         f_color = front.color
 
         c = corner.actual
         e = edge.actual
 
-
         # verify case
         assert c.on_face(cube.down)
         assert e is front.edge_right
 
-        F = Algs.F
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        B = Algs.B
-        L = Algs.L
         d = Algs.D[1:1 + cube.n_slices]
-        Y = Algs.Y
 
         c_front_color = c.get_face_edge(front).color
         c_right_color = c.get_face_edge(right).color
@@ -775,29 +745,27 @@ class F2L(SolverElement):
         c_front_matches_front = c_front_color == f_color
         c_front_matches_right = c_front_color == r_color
         c_right_matches_front = c_right_color == f_color
-        c_right_matches_right = c_right_color == r_color
 
         # Cases in https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
         #  1
         #  2  3
         #  4  5
-        case6=""
 
         alg: Alg
         if c_front_matches_front and e_front_matches_right:
-            case6="1"
-            alg = (R + U.p  + R.p + d + R.p + U2 + R)  + (U + R.p  + U2 + R)
+            case6 = "1"
+            alg = (R + U.p + R.p + d + R.p + U2 + R) + (U + R.p + U2 + R)
         elif c_front_matches_right and e_front_matches_front:
-            case6="2"
+            case6 = "2"
             alg = (R + U.p + R.p + U + R + U2 + R.p) + (U + R + U.p + R.p)
         elif c_right_matches_front and e_front_matches_front:
-            case6="3"
-            alg=(R + U.p + R.p + U.p + R + U + R.p) + (U.p + R + U2 + R.p)
+            case6 = "3"
+            alg = (R + U.p + R.p + U.p + R + U + R.p) + (U.p + R + U2 + R.p)
         elif c_front_matches_right and e_front_matches_right:
-            case6="4"
-            alg = (R + U + R.p  + U.p + R + U.p  + R.p) + (U + d + R.p  + U.p + R)
+            case6 = "4"
+            alg = (R + U + R.p + U.p + R + U.p + R.p) + (U + d + R.p + U.p + R)
         elif c_right_matches_front and e_front_matches_right:
-            case6="5"
+            case6 = "5"
             alg = (R + U.p + R.p + d + R.p + U.p + R) + (U.p + R.p + U.p + R)
 
         else:
@@ -807,8 +775,6 @@ class F2L(SolverElement):
             f"Case: 6th case: sub case {case6}: {corner.actual.name} {edge.actual.name}")
 
         return alg
-
-
 
     def _bring_any_corner_up(self) -> bool:
 
