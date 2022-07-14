@@ -286,6 +286,13 @@ class Cube(CubeSupplier):
         return self._up.edge_top
 
     @property
+    def fu(self) -> Edge:
+        """
+
+        :return:  Edge FU
+        """
+        return self._front.edge_top
+
     def fr(self) -> Edge:
         """
 

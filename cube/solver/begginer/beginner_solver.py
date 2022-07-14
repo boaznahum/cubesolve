@@ -38,7 +38,9 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
 
         self._debug_override: bool | None = None
 
-
+    @property
+    def name(self):
+        return "Beginner LBL"
 
     @property
     def is_debug_config_mode(self) -> bool:

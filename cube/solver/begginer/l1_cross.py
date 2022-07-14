@@ -224,7 +224,7 @@ class L1Cross(SolverElement):
 
         # bring target face to front by rotating all cube
         cmn.bring_face_to_front_by_y_rotate(target_face)
-        assert target_colors_id == cube.front.edge_top.colors_id_by_pos
+        assert target_colors_id == cube.front.edge_top.position_id
 
         # it was moved
         source_edge = cube.find_edge_by_color(target_colors_id)

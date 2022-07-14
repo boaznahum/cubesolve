@@ -9,6 +9,9 @@ from cube.app_exceptions import OpAborted, EvenCubeEdgeParityException, Internal
 from cube.model.cube import Cube
 from ..begginer.l3_corners import L3Corners
 from ..begginer.l3_cross import L3Cross
+from ..begginer.nxn_centers import NxNCenters
+from ..begginer.nxn_edges import NxNEdges
+from ..common.advanced_even_oll_big_cube_parity import AdvancedEvenEdgeFullEdgeParity
 
 
 class CFOP(BaseSolver, BeginnerLBLReduce):
@@ -20,6 +23,7 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
                  "l1_cross",
                  "f2l",
                  "l3_cross", "l2_corners"
+                 "nxn_centers", "nxn_edges", "even_edge_parity"
                  ]
 
     def __init__(self, op: Operator) -> None:
@@ -28,11 +32,22 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
         self.l1_cross = L1Cross(self)
         self.f2l = F2L(self)
 
-        # temp
+        # temp -- still beginner
         self.l3_cross = L3Cross(self)
         self.l3_corners = L3Corners(self)
 
+        self.nxn_centers = NxNCenters(self)
+        self.nxn_edges = NxNEdges(self)
+        self.even_edge_parity = AdvancedEvenEdgeFullEdgeParity(self)
+
+
+
+
         self._debug_override: bool | None = None
+
+    @property
+    def name(self):
+        return "CFOP"
 
     @property
     def is_debug_config_mode(self) -> bool:
@@ -130,11 +145,12 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
 
         def _centers():
             """ Centers and edges are independent"""
-            pass
+            self.nxn_centers.solve()
 
         def _edges():
             """ Centers and edges are independent"""
             nonlocal partial_edge_was_detected
+            self.nxn_edges.solve()
 
         def _reduce():
             _centers()
@@ -148,10 +164,32 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
             _l1x()
             self.f2l.solve()
 
+        def _l3x():
+            # till we have our L3, so it can do it directly
+
+            try:
+                self.l3_cross.solve()
+            except EvenCubeEdgeParityException:
+                self.even_edge_parity.solve()
+                self.l3_cross.solve()
+
+        def _l3c():
+            # till we have our L3, so it can do it directly
+
+            try:
+                self.l3_corners.solve()
+            except EvenCubeCornerSwapException:
+                self.l3_cross.solve()
+                self.l3_corners.solve()
+
+
+
+
         def _l3():
             _f2l()
-            self.l3_cross.solve()
-            self.l3_corners.solve()
+            _l3x()
+            _l3c()
+
 
         _d = self._debug_override
         try:

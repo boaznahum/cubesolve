@@ -20,7 +20,14 @@ def main():
     app = AbstractApp.create_non_default(config.CUBE_SIZE)
 
     app.run_tests(config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START,
-                  config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS)
+                  config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS // 2)
+
+
+    app.cube.reset(app.cube.size + 1)
+
+    app.run_tests(config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START,
+                  config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS // 2)
+
 
 
 if __name__ == '__main__':

@@ -40,6 +40,12 @@ class SolverResults:
 
 class Solver(ABC):
 
+
+    @property
+    @abstractmethod
+    def name(self):
+        pass
+
     @abstractmethod
     def solve(self, debug: bool | None = None, animation: bool | None = True,
               what: SolveStep = SolveStep.ALL) -> SolverResults:

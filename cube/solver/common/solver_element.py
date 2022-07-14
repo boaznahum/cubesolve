@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import final, TYPE_CHECKING, TypeAlias, Tuple, ContextManager
 
 from cube.model.cube import Cube, CubeSupplier
@@ -76,3 +77,19 @@ class SolverElement(CubeSupplier):
     @property
     def white_face(self) -> Face:
         return self._cmn.white_face
+
+
+class StepSolver(SolverElement):
+    def __init__(self, solver: BaseSolver) -> None:
+        super().__init__(solver)
+
+    @abstractmethod
+    def solve(self):
+        pass
+
+    @property
+    @abstractmethod
+    def is_solved(self):
+        pass
+
+

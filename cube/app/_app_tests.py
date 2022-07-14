@@ -10,12 +10,15 @@ from cube.operator.cube_operator import Operator
 def _scramble(op: Operator,
               scramble_key: Any,
               scramble_size: Any,
-              animation: bool):
+              animation: bool,
+                verbose=True
+              ):
     op.reset()
 
     _alg = Algs.scramble(op.cube.size, scramble_key, scramble_size)
 
-    print(f"Running scramble, key={scramble_key}, n={scramble_size}, alg={_alg}")
+    if verbose:
+        print(f"Running scramble, cube size={op.cube.size} key={scramble_key}, n={scramble_size}, alg={_alg}")
 
     op.play(_alg, False, animation=animation)
 
@@ -24,14 +27,15 @@ def run_single_test(app: AbstractApp,
                     scramble_key,
                     scramble_size: int | None,
                     debug: bool,
-                    animation: bool):
+                    animation: bool,
+                    verbose=True):
     # noinspection PyBroadException
 
     slv = app.slv
     op: Operator = app.op
 
     op.reset()  # also reset cube
-    _scramble(op, scramble_key, scramble_size, animation)
+    _scramble(op, scramble_key, scramble_size, animation, verbose=verbose)
 
     try:
         slv.solve(animation=animation, debug=debug)
@@ -40,7 +44,7 @@ def run_single_test(app: AbstractApp,
 
     except Exception:
         print()
-        print(f"Failure on scramble key={scramble_key}, n={scramble_size} ")
+        print(f"Failure on scramble cube_size={op.cube.size} key={scramble_key}, n={scramble_size} ")
         print("Alt T to repeat it, Ctrl T to repeat scramble")
 
         traceback.print_exc(file=sys.stdout)
@@ -53,7 +57,7 @@ def run_tests(app: AbstractApp,
     op: Operator = app.op
 
     nn = number_of_loops
-    ll = 0
+    # ll = 0
     count = 0
     n_loops = 0
     idx = 0
@@ -69,16 +73,18 @@ def run_tests(app: AbstractApp,
 
         idx += 1
 
-        print(str(idx) + f"/{nn} {scramble_key=}, {n=} ", end='')
+        print(str(idx) + f"/{nn} solver={app.slv.name} cube size: {op.cube.size} scramble_key={scramble_key}, {n=} ")
 
-        ll += 1
-        if ll > 5:
-            print()
-            ll = 0
+        # ll += 1
+        # if ll > 5:
+        #     print()
+        #     ll = 0
 
         n_loops += 1
         c0 = op.count
-        run_single_test(app, scramble_key, n, False, False)
+        run_single_test(app, scramble_key, n, False, False,
+                        verbose=False  # I will do the printing
+                        )
         count += op.count - c0
 
     print()
