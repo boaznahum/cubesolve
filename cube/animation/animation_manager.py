@@ -256,6 +256,8 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
     rotate_face: FaceName
     cube_parts: Collection[PartSlice]
 
+    # the rotated face determiners the direction of rotation
+    #  by the vector orthogonal to it
     rotate_face, cube_parts = alg.get_animation_objects(cube)
 
     # to be on the safe side !!!
@@ -269,10 +271,6 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
     face_center, opposite_face_center, gui_objects = viewer.get_slices_movable_gui_objects(rotate_face, cube_parts)
 
     current_angel: float = 0
-
-    #todo: Patch M-Bug!!!!
-    if isinstance(alg, (_M)):
-        n_count = -n_count
 
     # compute target_angel
     n = n_count % 4

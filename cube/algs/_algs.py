@@ -602,7 +602,7 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
                 face_name = FaceName.F
 
             case SliceName.M:  # over L
-                face_name = FaceName.R
+                face_name = FaceName.L
 
             case SliceName.E:  # over D
                 face_name = FaceName.D
