@@ -71,7 +71,7 @@ class F2L(SolverElement):
             # bring white to bottom
             self.cmn.bring_face_up(self.white_face.opposite)
 
-#            self._bring_all_edges_up()
+            #            self._bring_all_edges_up()
 
             cube = self.cube
 
@@ -172,57 +172,6 @@ class F2L(SolverElement):
                      front.edge_left,
                      back.edge_left, back.edge_right]
 
-    def _bring_all_edges_up(self):
-        cube = self.cube
-
-        def need_to_work():
-
-            """
-            Return true if edge at front/right to be moved up
-            It need to moved up it belong  to one of middle edges but not already
-            in position
-            :return:
-            """
-
-            e = cube.front.edge_right
-
-            if e.in_position or not self.belong_to_middle(e.required_position):
-                # if in position, alg can handle it
-                return False
-            else:
-                return True
-
-        def edge_fb_can_be_moved_to_middle():
-
-            e = cube.up.edge_top
-
-            return not self.belong_to_middle(e.required_position)
-
-        n = self.cmn.rotate_and_check(Algs.Y, need_to_work)
-
-        if n < 0:
-            return
-
-        with self.ann.annotate(h2=f"Bring all edges up"):
-
-            while True:
-                self.op.play(Algs.Y * n)
-
-                # now make sure edge UB is not also need uploaded
-                n = self.cmn.rotate_and_check(Algs.U, edge_fb_can_be_moved_to_middle)
-
-                assert n >= 0  # otherwise we can't do RUR prime
-
-                if n > 0:
-                    self.op.play(Algs.U * n)
-
-                with self.ann.annotate((cube.fr, AnnWhat.Moved), h2=f"{cube.fr.name_n_colors}"):
-                    self.op.play(Algs.R + Algs.U + Algs.R.p)
-
-                n = self.cmn.rotate_and_check(Algs.Y, need_to_work)
-
-                if n < 0:
-                    return
     def _bring_edge_up(self, edge: Edge, preserve_corner: Corner):
 
         """
@@ -256,8 +205,6 @@ class F2L(SolverElement):
 
             self.op.play(pre + x + Algs.U + x.p)
 
-
-
     def _do_corner_edge(self) -> bool:
 
         """
@@ -287,12 +234,12 @@ class F2L(SolverElement):
             white = cube.down.color
 
             corner_on_top = corner.actual.on_face(up)
-            # corner is on top
-            if not corner_on_top:
-                if not corner.actual.in_position:
-                    # no such a case, we need to handle other that will
-                    # move it out
-                    return False
+            # corner is on top or in position - handled by caller
+            assert corner_on_top or corner.actual.in_position
+            # if not corner.actual.in_position:
+            #     # no such a case, we need to handle other that will
+            #     # move it out
+            #     return False
 
             middle = front.edge_right
 
@@ -863,8 +810,8 @@ class F2L(SolverElement):
         return alg
 
     def _bring_corner_up_find_alg(self, corner: Corner,
-                                    edge_to_preserve: Edge,
-                                  mode:Literal["1", "2", "3"]) -> Optional[Alg]:
+                                  edge_to_preserve: Edge,
+                                  mode: Literal["1", "2", "3"]) -> Optional[Alg]:
 
         """
         Check if corner belong to bottom
@@ -880,24 +827,21 @@ class F2L(SolverElement):
         :return: return the alg the preserve
         """
 
+        # according to code covergae, "2" and "3" never happens
         cube = self.cube
-
 
         preserve_cond: Pred0
 
         if mode == "1":
             preserve_cond = lambda: not self.belong_to_middle(
-                                                              edge_to_preserve.required_position)
-        elif mode == "2":  #only preservers matching edge
+                edge_to_preserve.required_position)
+        elif mode == "2":  # only preservers matching edge
 
             matching_edge = self._matching_edge(corner).colors_id_by_color
 
-            preserve_cond = lambda : edge_to_preserve.colors_id_by_color != matching_edge
+            preserve_cond = lambda: edge_to_preserve.colors_id_by_color != matching_edge
         else:
-            preserve_cond = lambda : True
-
-
-
+            preserve_cond = lambda: True
 
         pre = self.cmn.rotate_face_and_check_get_alg(cube.up, preserve_cond)
 
@@ -938,7 +882,6 @@ class F2L(SolverElement):
 
             return preserve_alg
 
-
         mod: Literal["1", "2", "3"]
         for mod in ["1", "2", "3"]:
 
@@ -956,7 +899,7 @@ class F2L(SolverElement):
                 alg = pre + (Algs.L + Algs.U + Algs.L.p)
                 return alg
 
-            pre =  _check_corner(cube.right.corner_bottom_right, cube.up.edge_right, mod)
+            pre = _check_corner(cube.right.corner_bottom_right, cube.up.edge_right, mod)
             if pre:  # can be done
                 self.debug("Bringing BRD up")
                 alg = pre + Algs.B + Algs.U + Algs.B.p
@@ -990,45 +933,8 @@ class F2L(SolverElement):
 
         return False
 
-    def _bring_frb_corner_up_fru_preserve_matching_edge(self):
 
-        """
-        And bring frd into FRU
-        :return:
-        """
-
-        cube = self.cube
-
-        frd = cube.frd
-        frd_colors = frd.colors_id_by_color
-        # it belongs to down because it needed to be solved
-        assert frd.required_position.on_face(cube.down)  #
-        # find other two faces (of white)
-
-        # matching edge
-        edge_id = frd.colors_id_by_color - {cube.down.color}
-
-        # THE ALGORITHM BELOW DESTROY UB, bring it down
-        pre = self.cmn.rotate_face_and_check_get_alg(cube.up,
-                                                     lambda: cube.ub.colors_id_by_color != edge_id)
-
-        if not pre:
-            return False
-
-        # can be done
-
-        self.debug("Bringing FRD up")
-        with self.ann.annotate((frd, AnnWhat.Moved), h2=f"Bring {frd.name_n_colors} up"):
-            alg = pre + (Algs.R + Algs.U + Algs.R.p)
-
-            self.op.play(alg)
-
-        # that were the alg move it
-        assert cube.flu.colors_id_by_color == frd_colors
-
-        return True
-
-    def _matching_edge(self, corner: Corner) ->Edge:
+    def _matching_edge(self, corner: Corner) -> Edge:
         """
         Given a corenr, find the matching edge
         :param corner:
@@ -1044,5 +950,3 @@ class F2L(SolverElement):
         edge_id = corner_id - white
 
         return cube.find_edge_by_color(edge_id)
-
-
