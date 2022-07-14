@@ -10,6 +10,11 @@ parts in front face – the way I know to solve.
 But the code is organized(see below) in such way that you can enhance and even replace the solver, the model and the
 viewer are totally seperated from other layers(as should be :wink:)
 
+## Credits:
+[Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced)
+        
+[cubing](https://alg.cubing.net/?alg=mx)
+
 ## Installing and running
 
 Better to create a virtual environment, then
@@ -45,9 +50,11 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     X, Y, Z - Entire cube over R, U and F 
     M, E, S - Middle slice over L, D and F
         according to:
-        [notation](https://ruwix.com/the-rubiks-cube/notation/advanced)
+[Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced)
+
         and:
-            [notation]https://alg.cubing.net/?alg=mx
+        
+[cubing](https://alg.cubing.net/?alg=mx)
             
     
     Drag mouse on corners face to rotate this face(TBD - fix it to rotate the adjust face)
