@@ -918,6 +918,19 @@ def _scramble(cube_size: int, seed: Any, n: int | None = None) -> Alg:
 
 
 class Algs:
+    """
+    About Notations
+    https://alg.cubing.net/
+
+    E, S is according to the above
+    M is wrong
+
+    X - OK
+    Y - OK
+    Z - OK
+
+
+    """
     # When played, it simply refreshes GUI
     # So it used by annotation tools, after they changed some model(text, cube)
     AN = AnnotationAlg()
