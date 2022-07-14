@@ -622,7 +622,7 @@ class Center(Part):
 
     @property
     def required_position(self: TPartType) -> "Center":
-        self.cube.find_corner_by_pos_colors(self.colors_id_by_color)
+        return self.cube.find_center_by_pos_colors(self.colors_id_by_color)
 
 
 class Edge(Part):

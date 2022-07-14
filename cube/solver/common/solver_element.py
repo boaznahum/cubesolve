@@ -4,6 +4,7 @@ from cube.model.cube import Cube, CubeSupplier
 from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
 from cube.solver.common.base_solver import BaseSolver
+from ...model.cube_queries2 import CubeQueries2
 from ...operator.op_annotation import SupportsAnnotation, AnnWhat
 
 if TYPE_CHECKING:
@@ -15,7 +16,9 @@ _Common: TypeAlias = "CommonOp"
 class SolverElement(CubeSupplier):
     __slots__ = ["_solver", "_ann",
                  "_cmn",
-                 "_debug_prefix"
+                 "_debug_prefix",
+                 "_cube",
+                 "_qr"
                  ]
 
     _solver: BaseSolver
@@ -25,6 +28,8 @@ class SolverElement(CubeSupplier):
         self._ann = solver.op.annotation
         self._cmn = solver.cmn
         self._debug_prefix: str | None = None
+        self._cube = solver.cube
+        self._cqr = solver.cube.cqr
 
     def _set_debug_prefix(self, prefix: str):
         self._debug_prefix = prefix
@@ -37,7 +42,10 @@ class SolverElement(CubeSupplier):
 
     @property
     def cube(self) -> Cube:
-        return self._solver.cube
+        return self._cube
+
+    def cqr(self) -> CubeQueries2:
+        return self._cqr
 
     @property
     def op(self) -> Operator:

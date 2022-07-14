@@ -10,6 +10,7 @@ from cube.model.cube_slice import SliceName
 from cube.model import FaceName, AxisName
 
 __all__ = ["Algs", "Alg", "SimpleAlg", "AnimationAbleAlg", "AnnotationAlg",
+           "NSimpleAlg",
            "SliceAbleAlg", "SeqAlg", "SliceAlg", "FaceAlg"]
 
 from cube.model import PartSlice

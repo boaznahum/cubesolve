@@ -1,5 +1,5 @@
 from collections.abc import Iterable, MutableSequence
-from typing import Collection, Mapping, Protocol, Tuple
+from typing import Collection, Mapping, Protocol, Tuple, TYPE_CHECKING
 
 from . import PartEdge
 from .cube_boy import CubeLayout, Color, FaceName
@@ -10,6 +10,9 @@ from ._part import Edge, Corner, Center, Part
 from ._part_slice import PartSlice, EdgeWing, CornerSlice
 from .. import config
 from ..app_exceptions import InternalSWError
+
+if TYPE_CHECKING:
+    from .cube_queries2 import CubeQueries2
 
 
 class CubeSupplier(Protocol):
@@ -37,7 +40,8 @@ class Cube(CubeSupplier):
         "_slices",
         "_modify_counter",
         "_last_sanity_counter",
-        "_original_layout"
+        "_original_layout",
+        "_cqr"
     ]
 
     _front: Face
@@ -57,6 +61,10 @@ class Cube(CubeSupplier):
         self._last_sanity_counter = 0
         self._original_layout: CubeLayout | None = None
         self._reset()
+
+        from cube.model.cube_queries2 import CubeQueries2
+
+        self._cqr: CubeQueries2 = CubeQueries2(self)
 
     def _reset(self, cube_size=None):
 
@@ -175,6 +183,10 @@ class Cube(CubeSupplier):
         return self
 
     @property
+    def cqr(self) -> "CubeQueries2":
+        return self._cqr
+
+    @property
     def size(self) -> int:
         return self._size
 
@@ -224,6 +236,7 @@ class Cube(CubeSupplier):
         :return:  Corner LUB
         """
         return self._left.corner_top_left
+
     @property
     def rub(self) -> Corner:
         """
@@ -279,6 +292,7 @@ class Cube(CubeSupplier):
         :return:  Edge FR
         """
         return self._front.edge_right
+
     @property
     def fl(self) -> Edge:
         """

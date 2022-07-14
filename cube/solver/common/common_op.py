@@ -1,14 +1,14 @@
+import warnings
 from contextlib import contextmanager
 from typing import Callable, Generator, Sequence, Tuple, ContextManager, Optional
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
+from cube.model import Edge, Color, FaceName, EdgeWing
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
-from cube.operator.cube_operator import Operator
 from cube.model.cube_queries import Pred, CubeQueries, Pred0
-from cube.model import Edge, Color, FaceName, EdgeWing
-from .solver_element import SolverElement
+from cube.operator.cube_operator import Operator
 from .base_solver import BaseSolver
 from ...operator.op_annotation import AnnWhat, SupportsAnnotation
 
@@ -109,6 +109,9 @@ class CommonOp:
         restore cube state before returning, this is not count as solve step
         """
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
+
         n = 0
         cube = self.cube
         try:
@@ -131,6 +134,9 @@ class CommonOp:
         :param alg:
         :param pred:
         """
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         n = self.rotate_and_check(alg, pred)
 
         if n >= 0:
@@ -153,6 +159,9 @@ class CommonOp:
         :return: number of rotation, -1 if check fails
         restore cube state before returning, this is not count as solve step
         """
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         return self.rotate_and_check(Algs.of_face(f.name), pred)
 
     def rotate_face_and_check_get_alg_deprecated(self, f: Face, pred: Pred0) -> Alg:
@@ -167,6 +176,9 @@ class CommonOp:
         :return: number of rotation, -1 if check fails
         restore cube state before returning, this is not count as solve step
         """
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         alg = Algs.of_face(f.name)
         n = self.rotate_and_check(alg, pred)
         assert n >= 0
@@ -182,6 +194,9 @@ class CommonOp:
         :param f:
         :param pred:
         """
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         alg = Algs.of_face(f.name)
         n = self.rotate_and_check(alg, pred)
 

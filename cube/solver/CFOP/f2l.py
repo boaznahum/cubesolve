@@ -1,4 +1,5 @@
-from typing import Optional, Literal
+from enum import Enum
+from typing import Optional
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
@@ -10,6 +11,16 @@ from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import SolverElement
 from cube.solver.common.tracker import EdgeTracker, CornerTracker
 
+
+class EdgePreserveMode(Enum):
+    """
+         mode 1 preserve all mathing edges
+         mode 2 - preserve matching edge
+         mode 3 - preserve none
+    """
+    PreserveAny = "1"
+    PreserveMatching = "2"
+    PreserveNone = "3"
 
 def use(_):
     pass
@@ -181,6 +192,8 @@ class F2L(SolverElement):
         :return:
         """
         cube = self.cube
+
+        x: Alg
 
         if edge is cube.fl:
             x = Algs.F
@@ -811,7 +824,7 @@ class F2L(SolverElement):
 
     def _bring_corner_up_find_alg(self, corner: Corner,
                                   edge_to_preserve: Edge,
-                                  mode: Literal["1", "2", "3"]) -> Optional[Alg]:
+                                  mode: EdgePreserveMode) -> Optional[Alg]:
 
         """
         Check if corner belong to bottom
@@ -832,10 +845,10 @@ class F2L(SolverElement):
 
         preserve_cond: Pred0
 
-        if mode == "1":
+        if mode == EdgePreserveMode.PreserveAny:
             preserve_cond = lambda: not self.belong_to_middle(
                 edge_to_preserve.required_position)
-        elif mode == "2":  # only preservers matching edge
+        elif mode == EdgePreserveMode.PreserveMatching:  # only preservers matching edge
 
             matching_edge = self._matching_edge(corner).colors_id_by_color
 
@@ -846,6 +859,7 @@ class F2L(SolverElement):
         pre = self.cmn.rotate_face_and_check_get_alg(cube.up, preserve_cond)
 
         return pre
+
 
     def _bring_any_corner_up_find_alg(self) -> Optional[Alg]:
 
@@ -873,7 +887,7 @@ class F2L(SolverElement):
                 return False
             return c.required_position.on_face(down)
 
-        def _check_corner(c: Corner, edge_to_preserve: Edge, mode: Literal["1", "2", "3"]) -> Optional[Alg]:
+        def _check_corner(c: Corner, edge_to_preserve: Edge, mode: EdgePreserveMode) -> Optional[Alg]:
 
             if not need_bring_up(c):
                 return None
@@ -882,8 +896,7 @@ class F2L(SolverElement):
 
             return preserve_alg
 
-        mod: Literal["1", "2", "3"]
-        for mod in ["1", "2", "3"]:
+        for mod in EdgePreserveMode:
 
             pre = _check_corner(cube.front.corner_bottom_left, cube.up.edge_top, mod)
 
@@ -905,10 +918,7 @@ class F2L(SolverElement):
                 alg = pre + Algs.B + Algs.U + Algs.B.p
                 return alg
 
-            # All middle edges are up, all corner at bottom not fit position !!!
-            # this can happen only if at start that none of edges are solved, because if one is solved
-            # then it can't be that all edges at top belong to middle
-            return None
+        raise InternalSWError("Can't happen")
 
     def _bring_any_corner_up(self) -> bool:
 

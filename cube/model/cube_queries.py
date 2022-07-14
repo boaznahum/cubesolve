@@ -1,4 +1,5 @@
 import itertools
+import warnings
 from collections import defaultdict
 from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
 from typing import Callable, TypeVar, Tuple, Collection
@@ -18,9 +19,17 @@ Pred0 = Callable[[], bool]
 
 
 class CubeQueries:
+    """
+    Depricated, use CubeQueries2
+    """
+
+
+
 
     @staticmethod
     def is_face(cube: Cube, pred: Pred[Face]) -> Face | None:
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         s: PartSlice
         for f in cube.faces:
@@ -32,6 +41,8 @@ class CubeQueries:
     @staticmethod
     def find_face(cube: Cube, pred: Pred[Face]) -> Face:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         face = CubeQueries.is_face(cube, pred)
 
         if face:
@@ -42,10 +53,14 @@ class CubeQueries:
     @staticmethod
     def find_slice_in_cube_edges(cube: Cube, pred: Pred[EdgeWing]) -> EdgeWing | None:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         return CubeQueries.find_slice_in_edges(cube.edges, pred)
 
     @staticmethod
     def find_slice_in_edges(edges: Iterable[Edge], pred: Pred[EdgeWing]) -> EdgeWing | None:
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         for e in edges:
             for i in range(e.n_slices):
@@ -58,10 +73,14 @@ class CubeQueries:
 
     @classmethod
     def find_edge_slice_in_cube(cls, cube: Cube, pred: Pred[EdgeWing]) -> EdgeWing | None:
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         return CubeQueries.find_slice_in_edges(cube.edges, pred)
 
     @staticmethod
     def is_center_slice(cube: Cube, pred: Callable[[CenterSlice], bool]) -> CenterSlice | None:
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         s: CenterSlice
         for f in cube.faces:
@@ -74,6 +93,8 @@ class CubeQueries:
     @staticmethod
     def find_center_slice(cube: Cube, pred: Callable[[CenterSlice], bool]) -> CenterSlice:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         s = CubeQueries.is_center_slice(cube, pred)
 
         if s:
@@ -84,6 +105,8 @@ class CubeQueries:
     @staticmethod
     def find_slice_in_face_center(face: Face, pred: Pred[CenterSlice]) -> CenterSlice | None:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         s: CenterSlice
         for s in face.center.all_slices:
             if pred(s):
@@ -93,6 +116,8 @@ class CubeQueries:
 
     @staticmethod
     def is_slice_edge(parts: Iterable[Part], pred: Callable[[PartEdge], bool]) -> PartEdge | None:
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         s: PartSlice
         for p in parts:
@@ -106,6 +131,8 @@ class CubeQueries:
     @staticmethod
     def find_slice_edge(parts: Iterable[Part], pred: Pred[PartEdge]) -> PartEdge:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         s: PartSlice
         for p in parts:
             for s in p.all_slices:
@@ -118,10 +145,14 @@ class CubeQueries:
     @staticmethod
     def find_corner_slice_edge_in_cube(cube: Cube, pred: Pred[PartEdge]) -> PartEdge:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         return CubeQueries.find_slice_edge(cube.corners, pred)
 
     @staticmethod
     def is_corner_slice_edge(cube: Cube, pred: Callable[[PartEdge], bool]) -> PartEdge | None:
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         s: CornerSlice
         for c in cube.corners:
@@ -135,6 +166,8 @@ class CubeQueries:
     @staticmethod
     def find_part_by_color(parts: Iterable[TPartType], color_id: PartColorsID) -> TPartType:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         for p in parts:
             if p.colors_id_by_color == color_id:
                 return p
@@ -143,6 +176,8 @@ class CubeQueries:
 
     @staticmethod
     def find_part_by_position(parts: Iterable[TPartType], position_id: PartColorsID) -> TPartType:
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         for p in parts:
             if p.colors_id_by_pos == position_id:
@@ -153,6 +188,8 @@ class CubeQueries:
     @staticmethod
     def get_four_center_points(cube: Cube, r, c) -> Iterator[Tuple[int, int]]:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         inv = cube.inv
 
         for _ in range(4):
@@ -161,6 +198,8 @@ class CubeQueries:
 
     @staticmethod
     def rotate_point_clockwise(cube: Cube, rc: Tuple[int, int], n=1) -> Tuple[int, int]:
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         inv = cube.inv
         for i in range(0, n % 4):
             rc = inv(rc[1]), rc[0]
@@ -169,6 +208,8 @@ class CubeQueries:
 
     @staticmethod
     def rotate_point_counterclockwise(cube: Cube, rc: Tuple[int, int], n=1) -> Tuple[int, int]:
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         inv = cube.inv
         for i in range(0, n % 4):
@@ -179,12 +220,16 @@ class CubeQueries:
     @staticmethod
     def get_two_edge_slice_points(cube: Cube, i) -> Iterable[int]:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         inv = cube.inv
 
         return i, inv(i)
 
     @staticmethod
     def print_dist(cube: Cube):
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         for clr in Color:
             n = 0
             counter: dict[Hashable, MutableSequence[Tuple[int, int]]] = defaultdict(list)
@@ -206,6 +251,8 @@ class CubeQueries:
 
     @staticmethod
     def get_centers_dist(cube: Cube) -> Mapping[Color, Mapping[Hashable, Sequence[Tuple[int, int]]]]:
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         dist: Mapping[Color, MutableMapping[Hashable, MutableSequence[Tuple[int, int]]]]
 
@@ -231,6 +278,8 @@ class CubeQueries:
         :return:
         """
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         dist: Mapping[PartColorsID, MutableMapping[Hashable, MutableSequence[int]]]
 
         dist = defaultdict(lambda: defaultdict(list))
@@ -249,10 +298,14 @@ class CubeQueries:
     @staticmethod
     def get_sate(cube) -> Collection[PartSlice]:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         return cube.get_all_parts()
 
     @staticmethod
     def compare_state(cube: Cube, other: Collection[PartSlice]):
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         st2: Collection[PartSlice] = CubeQueries.get_sate(cube)
 
@@ -266,6 +319,8 @@ class CubeQueries:
     @classmethod
     def find_edge_in_cube(cls, cube: Cube, pred: Pred[Edge]) -> Edge | None:
 
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
+
         for e in cube.edges:
             if pred(e):
                 return e
@@ -274,6 +329,8 @@ class CubeQueries:
 
     @classmethod
     def find_edge(cls, edges: Iterable[Edge], pred: Pred[Edge]) -> Edge | None:
+
+        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         for e in edges:
             if pred(e):
