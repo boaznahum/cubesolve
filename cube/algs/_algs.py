@@ -601,7 +601,7 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
             case SliceName.S:  # over F
                 face_name = FaceName.F
 
-            case SliceName.M:  # over R
+            case SliceName.M:  # over L
                 face_name = FaceName.R
 
             case SliceName.E:  # over D
@@ -922,8 +922,8 @@ class Algs:
     About Notations
     https://alg.cubing.net/
 
-    E, S is according to the above
-    M is wrong
+    E, S, M is according to the above
+
 
     X - OK
     Y - OK
@@ -940,7 +940,9 @@ class Algs:
 
     R = _R()
     X = _X()  # Entire cube or R
-    M = _M()  # Middle over R
+    M = _M()  # Middle over L
+    MM = _M()  # Middle over R
+    MM._n = -1
 
     U = _U()
     Y = _Y()  # Entire over U

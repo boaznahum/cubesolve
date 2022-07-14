@@ -179,7 +179,7 @@ class Window(AbstractWindow, AnimationWindow):
         s += ", Slices"
         s += "  [" + str(vs.slice_start) + ", " + str(vs.slice_stop) + "]"
 
-        s += ", " + str(vs.slice_alg(cube, Algs.R))
+        s += ", " + str(vs.slice_alg(cube, Algs.L))
         s += ", " + str(vs.slice_alg(cube, Algs.M))
 
         self.text.append(pyglet.text.Label(s,

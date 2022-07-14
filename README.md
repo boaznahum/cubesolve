@@ -43,7 +43,12 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
     R, L, F, B, U, B  - As suauls - rotate faces
     X, Y, Z - Entire cube over R, U and F 
-    M, E, S - Middle slice over R, **D** and F
+    M, E, S - Middle slice over L, D and F
+        according to:
+        [notation](https://ruwix.com/the-rubiks-cube/notation/advanced)
+        and:
+            [notation]https://alg.cubing.net/?alg=mx
+            
     
     Drag mouse on corners face to rotate this face(TBD - fix it to rotate the adjust face)
     On edge, if in parallel to wing then slice that wing, otherwise rotate face accroding to parallel direction of edge.

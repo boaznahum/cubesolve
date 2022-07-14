@@ -158,7 +158,7 @@ class Cube(CubeSupplier):
                                l.center
                                )
 
-        slice_m: Slice = Slice(self, SliceName.M,  # Middle over R
+        slice_m: Slice = Slice(self, SliceName.M,  # Middle over L
                                f.edge_top, u.center, b.edge_top,
                                b.center,
                                b.edge_bottom, d.center, f.edge_bottom,
@@ -363,8 +363,8 @@ class Cube(CubeSupplier):
         :return:
         """
         for _ in range(0, n % 4):
-            self.rotate_slice(SliceName.M, 1)
-            self.right.rotate()
+            self.rotate_slice(SliceName.M, -1) # L
+            self.right.rotate(1)
             self.left.rotate(-1)
 
     def y_rotate(self, n=1):
@@ -455,9 +455,9 @@ class Cube(CubeSupplier):
         match face_name:
 
             case FaceName.R:
-                slice_name, neg_slice_index = (SliceName.M, False)
-            case FaceName.L:
                 slice_name, neg_slice_index = (SliceName.M, True)
+            case FaceName.L:
+                slice_name, neg_slice_index = (SliceName.M, False)
 
             case FaceName.U:
                 slice_name, neg_slice_index = (SliceName.E, True)

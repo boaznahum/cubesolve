@@ -68,10 +68,10 @@ class Slice(SuperElement):
         current_face: Face
 
         match self._name:
-            case SliceName.M:  # over R, works
+            case SliceName.M:  # over L, works
                 current_face = self.cube.front
                 current_edge = current_face.edge_bottom
-                current_index = self.inv(slice_index)
+                current_index = slice_index
 
             case SliceName.E:  # over D, works
                 current_face = self.cube.right
@@ -207,7 +207,10 @@ class Slice(SuperElement):
             return
 
         # todo: bug, due to a bug in the algorithm
-        n = - n  # still
+        # but we have a problem with M, accoding to https://alg.cubing.net/?alg=m and
+        # https://ruwix.com/the-rubiks-cube/notation/advanced/
+        if self._name != SliceName.M:
+            n = - n  # still
 
         def _p():
             # f: Face

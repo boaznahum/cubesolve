@@ -1,10 +1,10 @@
 import warnings
 from contextlib import contextmanager
-from typing import Callable, Generator, Sequence, Tuple, ContextManager, Optional
+from typing import Callable, Generator, Sequence, Tuple, ContextManager, Optional, FrozenSet
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
-from cube.model import Edge, Color, FaceName, EdgeWing
+from cube.model import Edge, Color, FaceName, EdgeWing, CenterSlice, PartColorsID
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
 from cube.model.cube_queries import Pred, CubeQueries, Pred0
@@ -283,6 +283,7 @@ class CommonOp:
                         raise InternalSWError(f"Unknown face {f}")
 
                 self.op.op(alg)
+
 
     def bring_face_front(self, f: Face):
 

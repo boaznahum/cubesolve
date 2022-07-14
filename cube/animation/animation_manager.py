@@ -11,6 +11,7 @@ from pyglet import gl  # type: ignore
 
 from cube import algs
 from cube.algs import SimpleAlg
+from cube.algs._algs import _X, _M
 from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
@@ -268,6 +269,10 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
     face_center, opposite_face_center, gui_objects = viewer.get_slices_movable_gui_objects(rotate_face, cube_parts)
 
     current_angel: float = 0
+
+    #todo: Patch M-Bug!!!!
+    if isinstance(alg, (_M)):
+        n_count = -n_count
 
     # compute target_angel
     n = n_count % 4

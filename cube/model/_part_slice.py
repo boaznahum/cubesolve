@@ -315,7 +315,6 @@ class PartSlice(ABC, Hashable):
     def _clone_edges(self) -> Sequence[PartEdge]:
         return [e.clone() for e in self._edges]
 
-    # todo: clone logic is duplicated all over
     def clone(self: _TPartSlice) -> _TPartSlice:
         s = self._clone_basic()
         s._unique_id = self._unique_id

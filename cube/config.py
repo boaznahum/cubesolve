@@ -3,7 +3,7 @@ from typing import Tuple
 ######### Model  ########
 
 # Only initial value, can be changed
-CUBE_SIZE = 4
+CUBE_SIZE = 6
 
 SHORT_PART_NAME = False
 DONT_OPTIMIZED_PART_ID = False
@@ -20,7 +20,7 @@ animation_enabled = True
 
 SOLVER_DEBUG = True
 
-CFOP=True
+CFOP=False
 
 ######  Viewer ########
 

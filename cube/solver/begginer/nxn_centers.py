@@ -945,10 +945,12 @@ class NxNCenters(SolverElement):
 
         # on odd cube
         # todo: replace with self._get_slice_m_alg()
-        swap_faces = [Algs.M[1:mid_pls_1 - 1].prime * rotate_mul, Algs.F.prime * 2,
-                      Algs.M[1:mid_pls_1 - 1] * rotate_mul,
-                      Algs.M[mid_pls_1 + 1:end].prime * rotate_mul,
-                      Algs.F * 2 + Algs.M[mid_pls_1 + 1:end] * rotate_mul
+        raise InternalSWError("Need to fix MM")
+
+        swap_faces = [Algs.MM[1:mid_pls_1 - 1].prime * rotate_mul, Algs.F.prime * 2,
+                      Algs.MM[1:mid_pls_1 - 1] * rotate_mul,
+                      Algs.MM[mid_pls_1 + 1:end].prime * rotate_mul,
+                      Algs.F * 2 + Algs.MM[mid_pls_1 + 1:end] * rotate_mul
                       ]
         op.op(Algs.seq_alg(None, *swap_faces))
 
@@ -1525,12 +1527,12 @@ class NxNCenters(SolverElement):
 
         inv = self.cube.inv
 
-        #   index is from left to right, R is from right to left,
-        # so we need to invert
-        c1 = inv(c1)
-        c2 = inv(c2)
+        #   index is from left to right, L is from left to right,
+        # so we don't need to invert
+        # c1 = inv(c1)
+        # c2 = inv(c2)
 
         if c1 > c2:
             c1, c2 = c2, c1
 
-        return Algs.M[c1 + 1:c2 + 1]
+        return Algs.MM[c1 + 1:c2 + 1]

@@ -412,14 +412,16 @@ class NxNEdges(SolverElement):
         if n_slices % 2 == 0 and _all:
             ann += "(Full even)"
 
+        inv = self.cube.inv
+
         # self.op.toggle_animation_on(enable=True)
         with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
-            plus_one = [i + 1 for i in slices_indices_to_fix]
+            plus_one = [inv(i) + 1 for i in slices_indices_to_fix]
             for _ in range(4):
                 self.debug(f"*** Doing parity on R {plus_one}", level=2)
-                self.op.op(Algs.M[plus_one])
+                self.op.op(Algs.MM[plus_one])
                 self.op.op(Algs.U * 2)
-            self.op.op(Algs.M[plus_one])
+            self.op.op(Algs.MM[plus_one])
 
     @staticmethod
     def _get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:
