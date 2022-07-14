@@ -16,8 +16,6 @@ def _scramble(op: Operator, _scramble_key: Any, _n=None):
     op.play(_alg, False)
 
 
-
-
 def main():
     app = AbstractApp.create_non_default(config.CUBE_SIZE)
 
