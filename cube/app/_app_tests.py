@@ -7,12 +7,15 @@ from cube.app.abstract_ap import AbstractApp
 from cube.operator.cube_operator import Operator
 
 
-def _scramble(op: Operator,
+def _scramble(app:AbstractApp,
               scramble_key: Any,
               scramble_size: Any,
               animation: bool,
                 verbose=True
               ):
+
+    op = app.op
+
     op.reset()
 
     _alg = Algs.scramble(op.cube.size, scramble_key, scramble_size)
@@ -21,6 +24,8 @@ def _scramble(op: Operator,
         print(f"Running scramble, cube size={op.cube.size} key={scramble_key}, n={scramble_size}, alg={_alg}")
 
     op.play(_alg, False, animation=animation)
+
+    app.vs.set_last_scramble_test(scramble_key, scramble_size)
 
 
 def run_single_test(app: AbstractApp,
@@ -35,7 +40,7 @@ def run_single_test(app: AbstractApp,
     op: Operator = app.op
 
     op.reset()  # also reset cube
-    _scramble(op, scramble_key, scramble_size, animation, verbose=verbose)
+    _scramble(app, scramble_key, scramble_size, animation, verbose=verbose)
 
     try:
         slv.solve(animation=animation, debug=debug)
@@ -62,7 +67,7 @@ def run_tests(app: AbstractApp,
     n_loops = 0
     idx = 0
     for s in range(first_key,
-                   first_key + nn):
+                   first_key + nn + 1):
 
         if s == -1:
             scramble_key = -1

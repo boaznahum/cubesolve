@@ -20,10 +20,6 @@ good = Algs.seq_alg("good")
 # noinspection PyProtectedMember
 key0 = key._0
 
-last_test = (None,  # key
-             None,  # n
-             )
-
 
 def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     # print(f"{hex(value)}=")
@@ -521,9 +517,11 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key.T:
                 if modifiers & key.MOD_ALT:
-                    _run_test(window, last_test[0], last_test[1], True, animation=solver_animation)
+                    _last_test_key, last_test_size = vs.get_last_scramble_test()
+                    _run_test(window, _last_test_key, last_test_size, True, animation=solver_animation)
                 elif modifiers & key.MOD_CTRL:
-                    _scramble(window, inv, last_test[0], last_test[1], False)
+                    _last_test_key, last_test_size = vs.get_last_scramble_test()
+                    _scramble(window, inv, _last_test_key, last_test_size, False)
                 else:
 
                     with _wait_cursor(window):
@@ -566,10 +564,6 @@ def _scramble(window: AbstractWindow, _inv: bool, _scramble_key: Any, _n=None, _
 def _run_test(window: AbstractWindow, scramble_key,
               scramble_size, debug: bool,
               animation):
-
-    global last_test
-    last_test = (scramble_key, scramble_size)
-
     app = window.app
 
     with _wait_cursor(window):

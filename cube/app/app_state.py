@@ -1,14 +1,20 @@
+import importlib
 import math
+import pickle
+import tempfile
 from collections.abc import Sequence
 from contextlib import contextmanager
-from typing import Literal
+from pathlib import Path
+from typing import Literal, Any, Tuple, Optional
 
 from pyglet import gl  # type: ignore
+
 
 # noinspection PyMethodMayBeStatic
 from cube import algs
 from cube import config
 from cube.animation.main_g_animation_text import AnimationText
+from cube.model import cube
 from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
 
@@ -115,6 +121,8 @@ class ApplicationAndViewState:
 
         #bool() false indicate next window:on_draw to skip on_draw
         self.skip_next_on_draw = False
+
+        self._last_scramble_key_size: Optional[Tuple[Any, int | None]] = None
 
     def reset(self, not_view=False):
         self._alpha_x: float = 0
@@ -307,3 +315,54 @@ class ApplicationAndViewState:
     @property
     def animation_text(self) -> AnimationText:
         return self._animation_text
+
+
+    def _get_root_path(self) -> Path:
+
+        t = Path(tempfile.gettempdir())
+
+        return t / "cube"
+
+
+    def _get_last_test_path(self):
+        p = self._get_root_path()
+        return p / config.LAST_SCRAMBLE_PATH
+
+    def set_last_scramble_test(self, scramble_key: Any, scramble_size: int | None):
+
+        file_path = self._get_last_test_path()
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        #print(file_path.absolute())
+
+        data = (scramble_key, scramble_size)
+        with open(file_path, 'wb') as file:
+
+
+
+            pickle.dump(data, file)
+
+            #print(f"{data} Data was written to {file_path}")
+
+        self._last_scramble_key_size = data
+
+    def get_last_scramble_test(self) -> Tuple[Any, int | None]:
+
+        if self._last_scramble_key_size is not None:
+            return self._last_scramble_key_size
+
+        file_path = self._get_last_test_path()
+
+        try:
+            with open(file_path, 'rb') as file:
+                # Step 3
+                (scramble_key, scramble_size) = pickle.load(file)
+
+            self._last_scramble_key_size = (scramble_key, scramble_size)
+        except IOError:
+            self._last_scramble_key_size = (None, None)
+
+        return self._last_scramble_key_size
+
+
