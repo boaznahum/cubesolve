@@ -941,8 +941,6 @@ class Algs:
     R = _R()
     X = _X()  # Entire cube or R
     M = _M()  # Middle over L
-    MM = _M()  # Middle over R
-    MM._n = -1
 
     U = _U()
     Y = _Y()  # Entire over U

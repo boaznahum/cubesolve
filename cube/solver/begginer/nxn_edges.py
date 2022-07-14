@@ -419,9 +419,9 @@ class NxNEdges(SolverElement):
             plus_one = [inv(i) + 1 for i in slices_indices_to_fix]
             for _ in range(4):
                 self.debug(f"*** Doing parity on R {plus_one}", level=2)
-                self.op.op(Algs.MM[plus_one])
+                self.op.op(Algs.M[plus_one].prime)
                 self.op.op(Algs.U * 2)
-            self.op.op(Algs.MM[plus_one])
+            self.op.op(Algs.M[plus_one].prime)
 
     @staticmethod
     def _get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:

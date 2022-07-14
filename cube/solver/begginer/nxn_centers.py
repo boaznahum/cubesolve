@@ -85,6 +85,7 @@ class NxNCenters(SolverElement):
 
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
+        self._sanity_check_is_a_boy = config.SOLVER_SANITY_CHECK_IS_A_BOY
 
     def debug(self, *args, level=3):
         if level <= NxNCenters.D_LEVEL:
@@ -230,7 +231,7 @@ class NxNCenters(SolverElement):
     # noinspection PyUnreachableCode,PyUnusedLocal
     def _asserts_is_boy(self, faces: Iterable[FaceLoc]):
 
-        if True:
+        if not self._sanity_check_is_a_boy:
             return
 
         layout = {f.face.name: f.color for f in faces}
@@ -773,6 +774,7 @@ class NxNCenters(SolverElement):
         mul = 2 if source_is_back else 1
         # do the swap:
         slice_source_alg: algs.Alg = self._get_slice_m_alg(target_index, target_index)
+
 
         def ann_source() -> Iterator[CenterSlice]:
             for rc in self._2d_range(s1, s2):
@@ -1535,4 +1537,4 @@ class NxNCenters(SolverElement):
         if c1 > c2:
             c1, c2 = c2, c1
 
-        return Algs.MM[c1 + 1:c2 + 1]
+        return Algs.M[c1 + 1:c2 + 1].prime
