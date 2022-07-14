@@ -96,8 +96,9 @@ SOLVER_ANNOTATE_TRACKERS = False
 
 ##############  Testing
 TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 20
-AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 500
-SCRAMBLE_KEY_FOR_F9 = int(113)  # should be replaced by persist of last test
+AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START = 500
+AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 1500
+SCRAMBLE_KEY_FOR_F9 = int(287)  # should be replaced by persist of last test
 
 ################ Logging
 OPERATION_LOG = False

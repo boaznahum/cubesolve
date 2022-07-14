@@ -936,6 +936,8 @@ class Algs:
     Z = _Z()  # Entire over F
     S = _S()  # Middle over F
 
+    _NO_OP = SeqAlg(None)
+
     @staticmethod
     def seq_alg(name: str | None, *algs: Alg) -> SeqAlg:
         return SeqAlg(name, *algs)
@@ -1027,6 +1029,10 @@ class Algs:
 
             case _:
                 raise InternalSWError(f"Unknown slice name {slice_name}")
+
+    @classmethod
+    def no_op(cls) -> Alg:
+        return Algs._NO_OP
 
 
 def _test_prime_prime():

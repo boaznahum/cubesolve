@@ -542,7 +542,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                                 scramble_key = s
                                 n = None
 
-                            print(str(s + 2) + f"/{scramble_key=}, {n=} ", end='')
+                            print(str(s + 2) + f"/{n_loops}  {scramble_key=}, {n=} ", end='')
 
                             ll += 1
                             if ll > 5:

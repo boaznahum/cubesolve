@@ -58,7 +58,9 @@ def main():
     ll = 0
     count = 0
     n_loops = 0
-    for s in range(1, nn):
+    idx = 0
+    for s in range(config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START,
+                   config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START + nn):
 
         if s == -1:
             scramble_key = -1
@@ -67,7 +69,9 @@ def main():
             scramble_key = s
             n = None
 
-        print(str(s + 2) + f"/{scramble_key=}, {n=} ", end='')
+        idx += 1
+
+        print(str(idx) + f"/{nn} {scramble_key=}, {n=} ", end='')
 
         ll += 1
         if ll > 5:

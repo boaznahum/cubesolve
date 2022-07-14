@@ -1,12 +1,12 @@
 from contextlib import contextmanager
-from typing import Callable, Generator, Sequence, Tuple, ContextManager
+from typing import Callable, Generator, Sequence, Tuple, ContextManager, Optional
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
-from cube.model.cube_queries import Pred, CubeQueries
+from cube.model.cube_queries import Pred, CubeQueries, Pred0
 from cube.model import Edge, Color, FaceName, EdgeWing
 from .solver_element import SolverElement
 from .base_solver import BaseSolver
@@ -122,6 +122,26 @@ class CommonOp:
 
         return -1
 
+    def rotate_and_check_get_alg(self, alg: Alg, pred: Pred0) -> Optional[Alg]:
+        """
+        Rotate face and check condition
+        :return the algorithm needed to fulfill the pred, or None if no such
+
+
+        :param alg:
+        :param pred:
+        """
+        n = self.rotate_and_check(alg, pred)
+
+        if n >= 0:
+            if n == 0:
+                return Algs.no_op()
+            else:
+                return alg * n
+        else:
+            return None
+
+
     def rotate_face_and_check(self, f: Face, pred: Callable[[], bool]) -> int:
         """
         Rotate face and check condition
@@ -135,9 +155,11 @@ class CommonOp:
         """
         return self.rotate_and_check(Algs.of_face(f.name), pred)
 
-    def rotate_face_and_check_get_alg(self, f: Face, pred: Callable[[], bool]) -> Alg:
+    def rotate_face_and_check_get_alg_deprecated(self, f: Face, pred: Pred0) -> Alg:
         """
         Rotate face and check condition
+        :return the algorithm needed to fulfill the pred
+        :raise InternalSWError if no such algorithm  exists to fullfil the pred
 
 
         :param f:
@@ -150,6 +172,30 @@ class CommonOp:
         assert n >= 0
 
         return alg * n
+
+    def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Optional[Alg]:
+        """
+        Rotate face and check condition
+        :return the algorithm needed to fulfill the pred, or None if no such
+
+
+        :param f:
+        :param pred:
+        """
+        alg = Algs.of_face(f.name)
+        n = self.rotate_and_check(alg, pred)
+
+        if n >= 0:
+            if n == 0:
+                return Algs.no_op()
+            else:
+                return alg * n
+        else:
+            return None
+
+
+
+
 
     def rotate_till(self, alg: Alg, pred: Callable[[], bool]) -> int:
         """

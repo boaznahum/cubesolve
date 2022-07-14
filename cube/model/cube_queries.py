@@ -14,6 +14,7 @@ from ._part import Edge, Part, TPartType
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]
+Pred0 = Callable[[], bool]
 
 
 class CubeQueries:

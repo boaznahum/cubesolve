@@ -1031,6 +1031,22 @@ class Corner(Part):
 
         self._replace_colors(source, (on_face, on_face), (source_2, target_2), (source_3, target_3))
 
+    def get_other_faces_color(self, face: _Face) -> Tuple[Color, Color]:
+
+        edges = self._slice.edges
+        e1 = edges[0]
+        e2 = edges[1]
+        e3 = edges[2]
+
+        if face is e1.face:
+            return e2.color, e3.color
+        elif face is e2.face:
+            return e1.color, e3.color
+        elif face is e3.face:
+            return e1.color, e2.color
+        else:
+            raise InternalSWError(f"Face {face} is not on {self}")
+
     @property
     def is3x3(self) -> bool:
         return True
