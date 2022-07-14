@@ -11,7 +11,7 @@ from pyglet import gl  # type: ignore
 
 from cube import algs
 from cube.algs import SimpleAlg
-from cube.app_state import ApplicationAndViewState
+from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
 from cube.model import PartSlice

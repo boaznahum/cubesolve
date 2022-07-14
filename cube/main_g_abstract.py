@@ -1,42 +1,9 @@
 from abc import abstractmethod
-from typing import Callable
 
 import pyglet  # type: ignore
 
-from .app_state import ApplicationAndViewState
-from .model.cube import Cube
-from .operator.cube_operator import Operator
-from .solver import Solver
+from .app.abstract_ap import AbstractApp
 from .viewer.viewer_g import GCubeViewer
-
-
-class AbstractApp:
-    def __init__(self):
-        pass
-
-    @property
-    @abstractmethod
-    def op(self) -> Operator:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def vs(self) -> ApplicationAndViewState:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def slv(self) -> Solver:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
-    def cube(self) -> Cube:
-        raise NotImplementedError
-
-    @abstractmethod
-    def reset(self):
-        raise NotImplementedError
 
 
 class AbstractWindow(pyglet.window.Window):

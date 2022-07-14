@@ -1,5 +1,5 @@
 import functools
-from collections.abc import MutableSequence, Sequence, Iterable, Reversible
+from collections.abc import MutableSequence, Sequence, Reversible
 from contextlib import contextmanager
 from typing import Callable, Any, TYPE_CHECKING
 
@@ -8,7 +8,7 @@ from ..algs import Alg, SimpleAlg, AnnotationAlg, Algs
 from ..animation.animation_manager import AnimationManager
 from ..animation.animation_manager import OpProtocol
 from ..app_exceptions import OpAborted
-from ..app_state import ApplicationAndViewState
+from cube.app.app_state import ApplicationAndViewState
 from ..model.cube import Cube
 
 if TYPE_CHECKING:

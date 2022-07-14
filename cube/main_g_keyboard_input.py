@@ -9,10 +9,11 @@ from pyglet.window import key  # type: ignore
 from . import config
 from . import algs
 from .algs import Alg, Algs
+from .app.abstract_ap import AbstractApp
 from .app_exceptions import AppExit
-from .app_state import ApplicationAndViewState
+from cube.app.app_state import ApplicationAndViewState
 from .operator.cube_operator import Operator
-from .main_g_abstract import AbstractWindow, AbstractApp
+from .main_g_abstract import AbstractWindow
 from .model.cube_boy import FaceName
 from .solver import Solver, SolveStep
 

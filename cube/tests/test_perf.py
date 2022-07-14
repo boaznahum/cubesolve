@@ -2,7 +2,7 @@ import time
 import traceback
 
 from cube.algs import Algs
-from cube.app_state import ApplicationAndViewState
+from cube.app.app_state import ApplicationAndViewState
 from cube.operator.cube_operator import Operator
 from cube.solver import Solver, Solvers
 

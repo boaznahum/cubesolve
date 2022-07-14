@@ -9,7 +9,7 @@ from numpy import ndarray
 from pyglet.gl import *  # type: ignore
 from pyglet.graphics import Batch  # type: ignore
 
-from cube.app_state import ApplicationAndViewState
+from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
 from cube.model import FaceName, PartSlice, PartEdge

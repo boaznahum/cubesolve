@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from pyglet import gl  # type: ignore
 
 from cube import config
-from cube.app_state import ApplicationAndViewState
+from cube.app.app_state import ApplicationAndViewState
 
 
 class GViewerExt:

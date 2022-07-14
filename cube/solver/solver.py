@@ -50,6 +50,15 @@ class Solver(ABC):
     def is_solved(self):
         pass
 
+    @property
+    @abstractmethod
+    def status(self) -> str:
+        """
+        String describes the solver status - which parts are solved
+        :return:
+        """
+        pass
+
 
 class ReductionSolver(ABC):
     pass

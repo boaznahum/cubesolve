@@ -10,7 +10,7 @@ from numpy import ndarray
 from pyglet import gl
 from pyglet.graphics import Batch  # type: ignore
 
-from cube.app_state import ApplicationAndViewState
+from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube_boy import Color, FaceName
 from cube.model.cube_face import Face
 from cube.utils import geometry

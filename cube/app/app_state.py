@@ -6,11 +6,11 @@ from typing import Literal
 from pyglet import gl  # type: ignore
 
 # noinspection PyMethodMayBeStatic
-from . import algs
-from . import config
+from cube import algs
+from cube import config
 from cube.animation.main_g_animation_text import AnimationText
-from .model.cube import Cube
-from .model.cube_boy import FaceName
+from cube.model.cube import Cube
+from cube.model.cube_boy import FaceName
 
 
 class _AnimationSpeed:

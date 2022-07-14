@@ -19,7 +19,7 @@ from cube.config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_A
 from . import algs
 from .algs import Alg, Algs
 from .app_exceptions import InternalSWError
-from .app_state import ApplicationAndViewState
+from cube.app.app_state import ApplicationAndViewState
 from .main_g_abstract import AbstractWindow
 from .main_g_app import AbstractApp
 from .model.cube_boy import FaceName
