@@ -118,8 +118,8 @@ class L2(SolverElement):
 
         _te = st.position  # don't track
         _se = st.actual  # don't track
-        _te_id = _te.colors_id_by_color
-        _se_id = _se.colors_id_by_color
+        _te_id = _te.colors_id
+        _se_id = _se.colors_id
 
         if st.position.on_face(cube.right):
             alg = self._ur_alg  # U R U' R' U' F' U F

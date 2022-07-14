@@ -44,6 +44,7 @@ class SolverElement(CubeSupplier):
     def cube(self) -> Cube:
         return self._cube
 
+    @property
     def cqr(self) -> CubeQueries2:
         return self._cqr
 

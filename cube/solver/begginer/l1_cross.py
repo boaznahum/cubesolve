@@ -230,7 +230,7 @@ class L1Cross(SolverElement):
         source_edge = cube.find_edge_by_color(target_colors_id)
         cmn.bring_bottom_edge_to_front_by_d_rotate(source_edge)
         # make sure the source matches
-        assert target_colors_id == cube.front.edge_bottom.colors_id_by_color
+        assert target_colors_id == cube.front.edge_bottom.colors_id
 
         # it was moved
         source_edge = cube.find_edge_by_color(target_colors_id)

@@ -22,6 +22,7 @@ class EdgePreserveMode(Enum):
     PreserveMatching = "2"
     PreserveNone = "3"
 
+
 def use(_):
     pass
 
@@ -115,40 +116,11 @@ class F2L(SolverElement):
 
                 return False  # corner on bottom but not FRB
 
-            # if self.cmn.rotate_and_check(Algs.Y, need_n_can_work) < 0:
-            #     if not self._bring_any_corner_up():
-            #         self.debug("Doing a special case, all corners at bottom, no free edge at top")
-            #         # deal with special initial case, no work can be done
-            #         # no work to be done and no corner can be uploaded because all edges
-            #         # in up are belong to middle, this can be happened only if no edge is solved(other it is not on top)
-            #         # all corners that need to solved ar on bottom face, if it was on top then need_n_can_work would
-            #         # return non Noe
-            #
-            #         # ok, choose one corner and
-            #         fixed = self._bring_frb_corner_up_fru_preserve_matching_edge()
-            #         # now one belong to middle is on bottom, will fix it later
-            #         assert fixed
-            #
-            #         # now prepare to solve it
-            #
-            #         n = self.cmn.rotate_and_check(Algs.Y, need_n_can_work)
-            #         assert n >= 0
-            #
-            #         self.op.play(Algs.Y * n)
-            #
-            #         work_was_done = self._do_corner_edge()
-            #         assert work_was_done
-            #
-            #         # now we have an edge on middle, i didn't bring it to top again, but still
-            #         # it works, I don't know why
-            #
-            #         # OK, now one belong to middle is on bottom,need to fix, preserving FRD
-
             n_done = _n_done()
             after_brought_up = False
             for _ in range(8):
 
-                n = self.cmn.rotate_and_check(Algs.Y, need_n_can_work)
+                n = self.cqr.rotate_and_check(Algs.Y, need_n_can_work)
 
                 if n < 0:
                     assert not after_brought_up
@@ -207,9 +179,9 @@ class F2L(SolverElement):
         else:
             raise InternalSWError(f"Unsupported case {edge}")
 
-        id = preserve_corner.colors_id_by_color
+        _id = preserve_corner.colors_id
 
-        if destroying_edge.colors_id_by_color == id:
+        if destroying_edge.colors_id == _id:
             pre = Algs.U.p
         else:
             pre = Algs.no_op()
@@ -350,7 +322,6 @@ class F2L(SolverElement):
         7       8
         9       10
         11      12
-
         :param edge:
         :param corner:
         :return:
@@ -520,7 +491,6 @@ class F2L(SolverElement):
         NUmber of cases = 6 = 3(Corner orientation) * 2 (edge match front or right)
 
         Actually it covers 24 = 3 * 4 * 2, but pre alg bring it to the above
-
         :param corner:
         :param edge:
         :return:
@@ -559,9 +529,9 @@ class F2L(SolverElement):
         pre: Alg
         e_matches_front = e_up_cc == r_color
         if e_matches_front:
-            pre = self.cmn.rotate_face_and_check_get_alg_deprecated(up, lambda: edge.actual is u_bottom)
+            pre = self.cqr.rotate_face_and_check_get_alg_deprecated(up, lambda: edge.actual is u_bottom)
         else:
-            pre = self.cmn.rotate_face_and_check_get_alg_deprecated(up, lambda: edge.actual is u_right)
+            pre = self.cqr.rotate_face_and_check_get_alg_deprecated(up, lambda: edge.actual is u_right)
         if c.match_faces:
 
             if e_matches_front:
@@ -751,7 +721,6 @@ class F2L(SolverElement):
         """
         Number of cases: 8 = 3(corner orientation) * 2 (edge orientation)
         But one is solved, so it is 5
-
         :param edge:
         :param corner:
         :return:
@@ -840,26 +809,28 @@ class F2L(SolverElement):
         :return: return the alg the preserve
         """
 
-        # according to code covergae, "2" and "3" never happens
+        # according to code coverage, "2" and "3" never happens
         cube = self.cube
 
         preserve_cond: Pred0
 
         if mode == EdgePreserveMode.PreserveAny:
-            preserve_cond = lambda: not self.belong_to_middle(
-                edge_to_preserve.required_position)
+            def preserve_cond():
+                return not self.belong_to_middle(edge_to_preserve.required_position)
+
         elif mode == EdgePreserveMode.PreserveMatching:  # only preservers matching edge
 
-            matching_edge = self._matching_edge(corner).colors_id_by_color
+            matching_edge = self._matching_edge(corner).colors_id
 
-            preserve_cond = lambda: edge_to_preserve.colors_id_by_color != matching_edge
+            def preserve_cond():
+                return edge_to_preserve.colors_id != matching_edge
         else:
-            preserve_cond = lambda: True
+            def preserve_cond():
+                return True
 
-        pre = self.cmn.rotate_face_and_check_get_alg(cube.up, preserve_cond)
+        pre = self.cqr.rotate_face_and_check_get_alg(cube.up, preserve_cond)
 
         return pre
-
 
     def _bring_any_corner_up_find_alg(self) -> Optional[Alg]:
 
@@ -930,7 +901,6 @@ class F2L(SolverElement):
         And it can be uploaded - there is an edge that can be moved down ,
 
         Assume white is at down
-
         :raise
         :return:
         """
@@ -943,10 +913,9 @@ class F2L(SolverElement):
 
         return False
 
-
     def _matching_edge(self, corner: Corner) -> Edge:
         """
-        Given a corenr, find the matching edge
+        Given a corner, find the matching edge
         :param corner:
         :return:
         """
@@ -954,7 +923,7 @@ class F2L(SolverElement):
         cube = self.cube
         white = cube.down.color
 
-        corner_id = corner.colors_id_by_color
+        corner_id = corner.colors_id
         assert white in corner_id
 
         edge_id = corner_id - white

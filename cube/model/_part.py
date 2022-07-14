@@ -1,3 +1,4 @@
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence, Iterator, Iterable
 from enum import Enum, unique
@@ -292,7 +293,7 @@ class Part(ABC, CubeElement):
         """
         :return: true if part in position, ignoring orientation, position id same as color id
         """
-        return self.colors_id_by_pos == self.colors_id_by_color
+        return self.colors_id_by_pos == self.colors_id
 
     @property
     @abstractmethod
@@ -324,21 +325,24 @@ class Part(ABC, CubeElement):
         """
         :deprecated, use :position_id
         """
+        warnings.warn("Use position_id", DeprecationWarning, 2)
+
         return self.position_id
 
     @classmethod
     def parts_id_by_pos(cls, parts: Sequence["Part"]) -> Sequence[PartColorsID]:
 
-        return [p.colors_id_by_pos for p in parts]
+        return [p.position_id for p in parts]
 
     def reset_after_faces_changes(self):
         self._colors_id_by_pos = None
 
     @property
-    def colors_id_by_color(self) -> PartColorsID:
+    def colors_id(self) -> PartColorsID:
         """
-        Return the parts actual color
+        Return the parts actual colors
         the colors of the faces it is currently on
+        Valid for 3x3 mode
         :return:
         """
 
@@ -622,7 +626,7 @@ class Center(Part):
 
     @property
     def required_position(self: TPartType) -> "Center":
-        return self.cube.find_center_by_pos_colors(self.colors_id_by_color)
+        return self.cube.find_center_by_pos_colors(self.colors_id)
 
 
 class Edge(Part):
@@ -971,7 +975,7 @@ class Edge(Part):
 
     @property
     def required_position(self: TPartType) -> "Edge":
-        return self.cube.find_edge_by_pos_colors(self.colors_id_by_color)
+        return self.cube.find_edge_by_pos_colors(self.colors_id)
 
 
 class Corner(Part):
@@ -1065,7 +1069,7 @@ class Corner(Part):
 
     @property
     def required_position(self: TPartType) -> "Corner":
-        return self.cube.find_corner_by_pos_colors(self.colors_id_by_color)
+        return self.cube.find_corner_by_pos_colors(self.colors_id)
 
 
 

@@ -208,7 +208,7 @@ class PartSlice(ABC, Hashable):
         self._colors_id_by_pos = None
 
     @property
-    def colors_id_by_color(self) -> PartColorsID:
+    def colors_id(self) -> PartColorsID:
         """
         Return the parts actual color
         the colors of the faces it is currently on

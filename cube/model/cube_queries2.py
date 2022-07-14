@@ -141,7 +141,7 @@ class CubeQueries2:
     def find_part_by_color(self, parts: Iterable[TPartType], color_id: PartColorsID) -> TPartType:
 
         for p in parts:
-            if p.colors_id_by_color == color_id:
+            if p.colors_id == color_id:
                 return p
 
         raise InternalSWError(f"Can't find part with color id {color_id}")
@@ -338,7 +338,7 @@ class CubeQueries2:
         for e in cube.edges:
             for i in range(cube.n_slices):
                 s: EdgeWing = e.get_slice(i)
-                clr = s.colors_id_by_color
+                clr = s.colors_id
                 counter: MutableMapping[Hashable, MutableSequence[int]] = dist[clr]
                 key = frozenset([*self.get_two_edge_slice_points(i)])
                 counter[key].append(i)

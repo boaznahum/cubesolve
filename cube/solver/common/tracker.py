@@ -45,7 +45,7 @@ class PartTracker(Generic[TPartType]):
         :return:
         """
 
-        if not self._actual or self._actual.colors_id_by_color != self._color_id:
+        if not self._actual or self._actual.colors_id != self._color_id:
             self._actual = CubeQueries.find_part_by_color(self._search_in(), self._color_id)
 
         return self._actual

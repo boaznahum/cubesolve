@@ -76,7 +76,7 @@ class L1Corners(SolverElement):
         # source corner
         def sc() -> Corner:
             nonlocal _source_corner
-            if not _source_corner or _source_corner.colors_id_by_color != corner_id:
+            if not _source_corner or _source_corner.colors_id != corner_id:
                 _source_corner = self.cube.find_corner_by_colors(corner_id)
             return _source_corner
 
@@ -155,7 +155,7 @@ class L1Corners(SolverElement):
         wf: Face = self.cube.up
         assert c.on_face(wf)
 
-        saved_id = c.colors_id_by_color
+        saved_id = c.colors_id
 
         if wf.corner_bottom_right is c:
             self.op.op(-Algs.R + -Algs.D + Algs.R)

@@ -169,7 +169,7 @@ class CubeQueries:
         warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         for p in parts:
-            if p.colors_id_by_color == color_id:
+            if p.colors_id == color_id:
                 return p
 
         raise InternalSWError(f"Can't find part with color id {color_id}")
@@ -288,7 +288,7 @@ class CubeQueries:
         for e in cube.edges:
             for i in range(cube.n_slices):
                 s: EdgeWing = e.get_slice(i)
-                clr = s.colors_id_by_color
+                clr = s.colors_id
                 counter: MutableMapping[Hashable, MutableSequence[int]] = dist[clr]
                 key = frozenset([*CubeQueries.get_two_edge_slice_points(cube, i)])
                 counter[key].append(i)

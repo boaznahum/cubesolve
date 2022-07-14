@@ -338,7 +338,7 @@ class Face(SuperElement):
     def find_part_by_colors(self, part_colors_id: PartColorsID) -> Part | None:
         for p in self._parts:
 
-            if part_colors_id == p.colors_id_by_color:
+            if part_colors_id == p.colors_id:
                 return p
         return None
 
@@ -361,14 +361,14 @@ class Face(SuperElement):
     def find_edge_by_colors(self, part_colors_id: PartColorsID) -> Edge | None:
         for p in self._edges:
 
-            if part_colors_id == p.colors_id_by_color:
+            if part_colors_id == p.colors_id:
                 return p
         return None
 
     def find_corner_by_colors(self, part_colors_id: PartColorsID) -> Corner | None:
         for p in self._corners:
 
-            if part_colors_id == p.colors_id_by_color:
+            if part_colors_id == p.colors_id:
                 return p
         return None
 

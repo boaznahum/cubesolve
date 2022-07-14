@@ -122,7 +122,7 @@ class NxNEdges(SolverElement):
             # We can't do  it before  bringing to front because we don't know which edge will be on front
             if n_slices % 2:
                 _slice = edge.get_slice(n_slices // 2)
-                color_un_ordered = _slice.colors_id_by_color
+                color_un_ordered = _slice.colors_id
                 ordered_color = self._get_slice_ordered_color(face, _slice)
             else:
                 ordered_color = self._find_max_of_color(face, edge)
@@ -183,7 +183,7 @@ class NxNEdges(SolverElement):
 
             a_slice = edge.get_slice(i)
 
-            a_slice_id = a_slice.colors_id_by_color
+            a_slice_id = a_slice.colors_id
 
             if a_slice_id != color_un_ordered:
                 continue
@@ -250,8 +250,9 @@ class NxNEdges(SolverElement):
             # start from one on right - to optimize
             edge_right = face.edge_right
             _other_edges = [edge_right, *(other_edges - {edge_right})]
+            s:EdgeWing
             source_slice = CubeQueries.find_slice_in_edges(_other_edges,
-                                                           lambda s: s.colors_id_by_color == color_un_ordered)
+                                                           lambda s: s.colors_id == color_un_ordered)
 
             assert source_slice
 
@@ -298,7 +299,7 @@ class NxNEdges(SolverElement):
 
             source_slice = edge_right.get_slice(source_index)
 
-            if source_slice.colors_id_by_color != color_un_ordered:
+            if source_slice.colors_id != color_un_ordered:
                 continue  # skip this one
 
             if self._get_slice_ordered_color(face, source_slice) != ordered_color:
@@ -323,7 +324,7 @@ class NxNEdges(SolverElement):
             target_slices.append(target_slice)
             target_indices.append(target_index)
 
-            if target_slice.colors_id_by_color == color_un_ordered:
+            if target_slice.colors_id == color_un_ordered:
                 raise InternalSWError("Don't know how to handle")
 
         if not target_slices:
@@ -436,7 +437,7 @@ class NxNEdges(SolverElement):
 
         for i in range(edge.n_slices):
             s = edge.get_slice(i)
-            if s.colors_id_by_color == color_un_ordered:
+            if s.colors_id == color_un_ordered:
                 return s
 
         return None
@@ -458,7 +459,7 @@ class NxNEdges(SolverElement):
 
         for i in range(0, self.cube.n_slices):
 
-            c = edge.get_slice(i).colors_id_by_color
+            c = edge.get_slice(i).colors_id
 
             hist[c] += 1
 
@@ -476,9 +477,9 @@ class NxNEdges(SolverElement):
         for i in range(self.cube.n_slices):
 
             _slice = edge.get_slice(i)
-            if _slice.colors_id_by_color == c_max:
+            if _slice.colors_id == c_max:
 
-                c = edge.get_slice(i).colors_id_by_color
+                c = edge.get_slice(i).colors_id
 
                 ordered = self._get_slice_ordered_color(face, _slice)
 
