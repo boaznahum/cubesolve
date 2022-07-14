@@ -7,17 +7,23 @@ from cube.operator.cube_operator import Operator
 from cube.solver import Solver, Solvers
 
 
-class App(AbstractApp):
+class _App(AbstractApp):
 
     def __init__(self,
                  vs: ApplicationAndViewState,
-                 am: AnimationManager) -> None:
+                 am: AnimationManager,
+                 cube_size: int | None) -> None:
         super().__init__()
 
         self._vs = vs
         self._error: str | None = None
 
+        if cube_size is not None:
+            vs.cube_size = cube_size
+
         self._cube = Cube(self.vs.cube_size)
+
+        self._am = am
 
         self._op: Operator = Operator(self.cube,
                                       self._vs,
@@ -42,6 +48,9 @@ class App(AbstractApp):
         return self._error
 
     @property
+    def am(self) -> AnimationManager:
+        return self._am
+    @property
     def op(self) -> Operator:
         return self._op
 
@@ -56,3 +65,20 @@ class App(AbstractApp):
     @property
     def cube(self) -> Cube:
         return self._cube
+
+    def run_tests(self, first_scramble_key, number_of_loops):
+        from . import _app_tests
+
+        _app_tests.run_tests(self, first_scramble_key, number_of_loops)
+
+    def run_single_test(self, scramble_key,
+                    scramble_size : int | None,
+                    debug: bool,
+                    animation: bool):
+        from . import _app_tests
+
+        _app_tests.run_single_test(self, scramble_key, scramble_size, debug, animation)
+
+
+
+

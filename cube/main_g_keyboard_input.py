@@ -1,20 +1,18 @@
-import sys
-import traceback
 from contextlib import contextmanager
 from typing import Any
 
 import pyglet  # type: ignore
 from pyglet.window import key  # type: ignore
 
-from . import config
+from cube.app.app_state import ApplicationAndViewState
 from . import algs
+from . import config
 from .algs import Alg, Algs
 from .app.abstract_ap import AbstractApp
 from .app_exceptions import AppExit
-from cube.app.app_state import ApplicationAndViewState
-from .operator.cube_operator import Operator
 from .main_g_abstract import AbstractWindow
 from .model.cube_boy import FaceName
+from .operator.cube_operator import Operator
 from .solver import Solver, SolveStep
 
 good = Algs.seq_alg("good")
@@ -236,8 +234,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
             case key.I:
                 print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
                 no_operation = True
-                from cube.model.cube_queries import CubeQueries
-                CubeQueries.print_dist(app.cube)
+                cube.cqr.print_dist()
 
             case key.W:
                 app.cube.front.corner_top_right.annotate(False)
@@ -465,7 +462,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                             good = good + a
                         except:
                             from .model.cube_queries import CubeQueries
-                            CubeQueries.print_dist(app.cube)
+                            cube.cqr.print_dist()
                             print("Failed on", a)
                             print(good)
                             raise
@@ -476,7 +473,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                             with _wait_cursor(window):
                                 op.op(a, animation=False)
                             from .model.cube_queries import CubeQueries
-                            CubeQueries.print_dist(app.cube)
+                            cube.cqr.print_dist()
                         except:
                             print(good)
                             raise
@@ -530,33 +527,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 else:
 
                     with _wait_cursor(window):
-                        nn = config.TEST_NUMBER_OF_SCRAMBLE_ITERATIONS
-                        ll = 0
-                        count = 0
-                        n_loops = 0
-                        for s in range(1, nn):
-
-                            if s == -1:
-                                scramble_key = -1
-                                n = 5
-                            else:
-                                scramble_key = s
-                                n = None
-
-                            print(str(s + 2) + f"/{n_loops}  {scramble_key=}, {n=} ", end='')
-
-                            ll += 1
-                            if ll > 5:
-                                print()
-                                ll = 0
-
-                            n_loops += 1
-                            c0 = op.count
-                            _run_test(window, scramble_key, n, False, False)
-                            count += op.count - c0
-
-                        print()
-                        print(f"Count={count}, average={count / n_loops}")
+                        app.run_tests(1, config.TEST_NUMBER_OF_SCRAMBLE_ITERATIONS)
 
             case key.Q:
                 window.close()
@@ -593,31 +564,16 @@ def _scramble(window: AbstractWindow, _inv: bool, _scramble_key: Any, _n=None, _
 
 
 def _run_test(window: AbstractWindow, scramble_key,
-              n, debug: bool,
+              scramble_size, debug: bool,
               animation):
+
     global last_test
-    last_test = (scramble_key, n)
-    # noinspection PyBroadException
+    last_test = (scramble_key, scramble_size)
 
-    op = window.app.op
-    slv = window.app.slv
+    app = window.app
 
-    op.reset()  # also reset cube
-    _scramble(window, False, scramble_key, n, _animation=False)
-
-    try:
-        slv.solve(animation=animation, debug=debug)
-        # we ask solver, because in develop phase it wants to check what was implemented
-        assert slv.is_solved
-
-
-    except Exception:
-        print()
-        print(f"Failure on scramble key={scramble_key}, n={n} ")
-        print("Alt T to repeat it, Ctrl T to repeat scramble")
-
-        traceback.print_exc(file=sys.stdout)
-        raise
+    with _wait_cursor(window):
+        app.run_single_test(scramble_key, scramble_size, debug, animation)
 
 
 @contextmanager

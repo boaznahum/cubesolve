@@ -8,7 +8,8 @@ from pyglet import gl
 from pyglet.window import key  # type: ignore
 
 from cube.animation.animation_manager import AnimationWindow
-from cube.app.app import App
+from cube.app.abstract_ap import AbstractApp
+
 from . import config
 from . import main_g_keyboard_input
 from . import main_g_mouse
@@ -27,18 +28,17 @@ class Window(AbstractWindow, AnimationWindow):
     #     # Cube 3D start rotation
     xRotation = yRotation = 30
 
-    def __init__(self, app: App,
-                 animation_manager: AnimationManager | None,
+    def __init__(self, app: AbstractApp,
                  width, height, title=''):
         super(Window, self).__init__(width, height, title, resizable=True)
 
-        self._animation_manager = animation_manager
+        self._animation_manager = app.am
 
         self._vs = app.vs
 
         # still don't know how to get rid of this patch !!!
-        if animation_manager:
-            animation_manager.set_window(self)
+        if self._animation_manager:
+            self._animation_manager.set_window(self)
 
         # from cube3d
         gl.glClearColor(0, 0, 0, 1)
@@ -50,7 +50,7 @@ class Window(AbstractWindow, AnimationWindow):
         self.batch = pyglet.graphics.Batch()
         # self.create_layout()
 
-        self._app: App = app
+        self._app: AbstractApp = app
         self._viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
         self.text: MutableSequence[pyglet.text.Label] = []
         self.animation_text: MutableSequence[pyglet.text.Label] = []
@@ -65,7 +65,7 @@ class Window(AbstractWindow, AnimationWindow):
         self.update_gui_elements()
 
     @property
-    def app(self) -> App:
+    def app(self) -> AbstractApp:
         return self._app
 
     @property
@@ -383,10 +383,8 @@ def main():
 
     # config.cubic_texture_data = TextureData.load()
 
-    vs = ApplicationAndViewState()
-    am: AnimationManager = AnimationManager(vs)
-    app: App = App(vs, am)
-    win = Window(app, am, 720, 720, '"Cube"')
+    app = AbstractApp.create()
+    win = Window(app, 720, 720, '"Cube"')
 
     win.set_mouse_visible(True)
 

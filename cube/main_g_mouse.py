@@ -18,10 +18,10 @@ from cube.config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_A
 
 from . import algs
 from .algs import Alg, Algs
+from .app.abstract_ap import AbstractApp
 from .app_exceptions import InternalSWError
 from cube.app.app_state import ApplicationAndViewState
 from .main_g_abstract import AbstractWindow
-from .main_g_app import AbstractApp
 from .model.cube_boy import FaceName
 from .model.cube_face import Face
 from .model import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
@@ -227,6 +227,7 @@ def _handle_slice_on_edge(rotate_adjusted_face: bool,
                           on_left_to_right: bool,
                           on_left_to_top: bool) -> Tuple[Alg, bool]:
     """
+    Handle slice on edge
     :param it_left_to_right: the significant movement is left to right on_left_to_right>on_left_to_top
     :param on_left_to_right: the movement in left to right direction
     :param on_left_to_top: the movement in left to top direction
