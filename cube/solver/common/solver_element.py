@@ -1,9 +1,10 @@
-from typing import final, TYPE_CHECKING, TypeAlias
+from typing import final, TYPE_CHECKING, TypeAlias, Tuple, ContextManager
 
 from cube.model.cube import Cube, CubeSupplier
 from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
 from cube.solver.common.base_solver import BaseSolver
+from ...operator.op_annotation import SupportsAnnotation, AnnWhat
 
 if TYPE_CHECKING:
     from .common_op import CommonOp
@@ -44,7 +45,19 @@ class SolverElement(CubeSupplier):
 
     @property
     def ann(self):
+        """
+        :deprecated, use
+        :return:
+        """
         return self._ann
+
+    def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
+                 h1=None,
+                 h2=None,
+                 h3=None,
+                 animation=True) -> ContextManager[None]:
+        return self.ann.annotate(*elements, h1=h1, h2=h2, h3=h3, animation=animation)
+
 
     @property
     @final

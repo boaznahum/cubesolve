@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Optional, Literal
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model import Part, Edge, Corner
 from cube.model.cube_face import Face
+from cube.model.cube_queries import Pred0
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import SolverElement
@@ -70,7 +71,7 @@ class F2L(SolverElement):
             # bring white to bottom
             self.cmn.bring_face_up(self.white_face.opposite)
 
-            self._bring_all_edges_up()
+#            self._bring_all_edges_up()
 
             cube = self.cube
 
@@ -87,7 +88,7 @@ class F2L(SolverElement):
 
                 ])
 
-            def need_to_work():
+            def need_n_can_work():
                 corner: CornerTracker = CornerTracker.of_position(cube.front.corner_bottom_right)
                 edge: EdgeTracker = EdgeTracker.of_position(cube.front.edge_right)
 
@@ -103,39 +104,40 @@ class F2L(SolverElement):
 
                 return False  # corner on bottom but not FRB
 
-            if self.cmn.rotate_and_check(Algs.Y, need_to_work) < 0:
-                if not self._bring_any_corner_up():
-                    # deal with special initial case, no work can be done
-                    # no work to be done and no corner can be uploaded because all edges
-                    # in up are belong to middle, this can be happened only if no edge is solved(other it is not on top)
-                    # all corners that need to solved ar on bottom face, if it was on top then need_to_work would
-                    # return non Noe
-
-                    # ok, choose one corner and
-                    fixed = self._bring_frb_corner_up_fru_preserve_matching_edge()
-                    # now one belong to middle is on bottom, will fix it later
-                    assert fixed
-
-                    # now prepare to solve it
-
-                    n = self.cmn.rotate_and_check(Algs.Y, need_to_work)
-                    assert n >= 0
-
-                    self.op.play(Algs.Y * n)
-
-                    work_was_done = self._do_corner_edge()
-                    assert work_was_done
-
-                    # now we have an edge on middle, i didn't bring it to top again, but still
-                    # it works, I don't know why
-
-                    # OK, now one belong to middle is on bottom,need to fix, preserving FRD
+            # if self.cmn.rotate_and_check(Algs.Y, need_n_can_work) < 0:
+            #     if not self._bring_any_corner_up():
+            #         self.debug("Doing a special case, all corners at bottom, no free edge at top")
+            #         # deal with special initial case, no work can be done
+            #         # no work to be done and no corner can be uploaded because all edges
+            #         # in up are belong to middle, this can be happened only if no edge is solved(other it is not on top)
+            #         # all corners that need to solved ar on bottom face, if it was on top then need_n_can_work would
+            #         # return non Noe
+            #
+            #         # ok, choose one corner and
+            #         fixed = self._bring_frb_corner_up_fru_preserve_matching_edge()
+            #         # now one belong to middle is on bottom, will fix it later
+            #         assert fixed
+            #
+            #         # now prepare to solve it
+            #
+            #         n = self.cmn.rotate_and_check(Algs.Y, need_n_can_work)
+            #         assert n >= 0
+            #
+            #         self.op.play(Algs.Y * n)
+            #
+            #         work_was_done = self._do_corner_edge()
+            #         assert work_was_done
+            #
+            #         # now we have an edge on middle, i didn't bring it to top again, but still
+            #         # it works, I don't know why
+            #
+            #         # OK, now one belong to middle is on bottom,need to fix, preserving FRD
 
             n_done = _n_done()
             after_brought_up = False
             for _ in range(8):
 
-                n = self.cmn.rotate_and_check(Algs.Y, need_to_work)
+                n = self.cmn.rotate_and_check(Algs.Y, need_n_can_work)
 
                 if n < 0:
                     assert not after_brought_up
@@ -153,7 +155,9 @@ class F2L(SolverElement):
                 work_was_done = self._do_corner_edge()
                 assert work_was_done
                 n_done += 1
-                assert n_done == _n_done()
+                _done = _n_done()
+                assert n_done <= _done  # in some rare cases, when we bring edge up, it solves
+                n_done = _done  # because of the rare condition above
                 if n_done == 4:
                     break
 
@@ -219,11 +223,47 @@ class F2L(SolverElement):
 
                 if n < 0:
                     return
+    def _bring_edge_up(self, edge: Edge, preserve_corner: Corner):
+
+        """
+        Bring FL, LB or RB up, preserve FRD and FR
+
+        :param edge:
+        :return:
+        """
+        cube = self.cube
+
+        if edge is cube.fl:
+            x = Algs.F
+            destroying_edge = cube.flu
+        elif edge is cube.lb:
+            x = Algs.L
+            destroying_edge = cube.lub
+        elif edge is cube.rb:
+            x = Algs.B
+            destroying_edge = cube.rub
+        else:
+            raise InternalSWError(f"Unsupported case {edge}")
+
+        id = preserve_corner.colors_id_by_color
+
+        if destroying_edge.colors_id_by_color == id:
+            pre = Algs.U.p
+        else:
+            pre = Algs.no_op()
+
+        with self.annotate(h2=f"Bringing up  {edge.name_n_colors}"):
+
+            self.op.play(pre + x + Algs.U + x.p)
+
 
 
     def _do_corner_edge(self) -> bool:
 
         """
+
+        Assume corner is on top
+
         Return False if no work was done, corner nor at top nor at required position (FRD)
         These are the only cases I know to solve
         :return:
@@ -255,6 +295,12 @@ class F2L(SolverElement):
                     return False
 
             middle = front.edge_right
+
+            if not (edge.actual.on_face(up) or edge.actual is middle):
+                self._bring_edge_up(edge.actual, corner.actual)
+                assert edge.actual.on_face(up)
+                if corner_on_top:
+                    assert corner.actual.on_face(up)
 
             alg: Alg | None
 
@@ -816,6 +862,47 @@ class F2L(SolverElement):
 
         return alg
 
+    def _bring_corner_up_find_alg(self, corner: Corner,
+                                    edge_to_preserve: Edge,
+                                  mode:Literal["1", "2", "3"]) -> Optional[Alg]:
+
+        """
+        Check if corner belong to bottom
+
+        And it can be uploaded -
+         mode 1 - preserve all mathing edges
+         mode 2 - preserve matching edge
+         mode 3 - preserve none
+
+        Assume white is at down
+
+
+        :return: return the alg the preserve
+        """
+
+        cube = self.cube
+
+
+        preserve_cond: Pred0
+
+        if mode == "1":
+            preserve_cond = lambda: not self.belong_to_middle(
+                                                              edge_to_preserve.required_position)
+        elif mode == "2":  #only preservers matching edge
+
+            matching_edge = self._matching_edge(corner).colors_id_by_color
+
+            preserve_cond = lambda : edge_to_preserve.colors_id_by_color != matching_edge
+        else:
+            preserve_cond = lambda : True
+
+
+
+
+        pre = self.cmn.rotate_face_and_check_get_alg(cube.up, preserve_cond)
+
+        return pre
+
     def _bring_any_corner_up_find_alg(self) -> Optional[Alg]:
 
         """
@@ -824,6 +911,10 @@ class F2L(SolverElement):
         And it can be uploaded - there is an edge that can be moved down ,
 
         Assume white is at down
+
+        # first try to not bring any(middle) edge down
+        # then try not bring matching edge down
+        # then do any
 
         :raise
         :return:
@@ -838,44 +929,50 @@ class F2L(SolverElement):
                 return False
             return c.required_position.on_face(down)
 
-        def rotate_till_edge_not_belong_to_middle(e: Edge) -> Optional[Alg]:
-            # because the algorithm bring it down
-            return self.cmn.rotate_face_and_check_get_alg(cube.up,
-                                                          lambda: not self.belong_to_middle(
-                                                              e.required_position))
+        def _check_corner(c: Corner, edge_to_preserve: Edge, mode: Literal["1", "2", "3"]) -> Optional[Alg]:
 
-        if need_bring_up(cube.front.corner_bottom_left):
-            pre = rotate_till_edge_not_belong_to_middle(cube.up.edge_top)
+            if not need_bring_up(c):
+                return None
+
+            preserve_alg = self._bring_corner_up_find_alg(c, edge_to_preserve, mode)
+
+            return preserve_alg
+
+
+        mod: Literal["1", "2", "3"]
+        for mod in ["1", "2", "3"]:
+
+            pre = _check_corner(cube.front.corner_bottom_left, cube.up.edge_top, mod)
 
             if pre:  # can be done
                 self.debug("Bringing FLD up")
                 alg = pre + (Algs.L.p + Algs.U.p + Algs.L)
                 return alg
 
-        elif need_bring_up(cube.left.corner_bottom_left):
-            pre = rotate_till_edge_not_belong_to_middle(cube.up.edge_bottom)
+            pre = _check_corner(cube.left.corner_bottom_left, cube.up.edge_bottom, mod)
 
             if pre:  # can be done
                 self.debug("Bringing BLD up")
                 alg = pre + (Algs.L + Algs.U + Algs.L.p)
                 return alg
 
-        elif need_bring_up(cube.right.corner_bottom_right):
-            pre = rotate_till_edge_not_belong_to_middle(cube.up.edge_right)
+            pre =  _check_corner(cube.right.corner_bottom_right, cube.up.edge_right, mod)
             if pre:  # can be done
                 self.debug("Bringing BRD up")
                 alg = pre + Algs.B + Algs.U + Algs.B.p
                 return alg
 
-        # All middle edges are up, all corner at bottom not fit position !!!
-        # this can happen only if at start that none of edges are solved, because if one is solved
-        # then it can't be that all edges at top belong to middle
-        return None
+            # All middle edges are up, all corner at bottom not fit position !!!
+            # this can happen only if at start that none of edges are solved, because if one is solved
+            # then it can't be that all edges at top belong to middle
+            return None
 
     def _bring_any_corner_up(self) -> bool:
 
         """
         Search corner on bottom that belong to bottom and upload it
+
+        Try to preserve the matching edge
 
         And it can be uploaded - there is an edge that can be moved down ,
 
@@ -930,3 +1027,22 @@ class F2L(SolverElement):
         assert cube.flu.colors_id_by_color == frd_colors
 
         return True
+
+    def _matching_edge(self, corner: Corner) ->Edge:
+        """
+        Given a corenr, find the matching edge
+        :param corner:
+        :return:
+        """
+
+        cube = self.cube
+        white = cube.down.color
+
+        corner_id = corner.colors_id_by_color
+        assert white in corner_id
+
+        edge_id = corner_id - white
+
+        return cube.find_edge_by_color(edge_id)
+
+

@@ -216,6 +216,22 @@ class Cube(CubeSupplier):
         :return:  Corner FRU
         """
         return self._front.corner_top_right
+
+    @property
+    def lub(self) -> Corner:
+        """
+
+        :return:  Corner LUB
+        """
+        return self._left.corner_top_left
+    @property
+    def rub(self) -> Corner:
+        """
+
+        :return:  Corner RUB
+        """
+        return self._right.corner_top_right
+
     @property
     def frb(self) -> Corner:
         """
@@ -223,6 +239,7 @@ class Cube(CubeSupplier):
         :return:  Corner FRB
         """
         return self._right.corner_bottom_right
+
     @property
     def frd(self) -> Corner:
         """
@@ -254,13 +271,37 @@ class Cube(CubeSupplier):
         :return:  Edge UB
         """
         return self._up.edge_top
+
     @property
     def fr(self) -> Edge:
         """
 
-        :return:  Corner FR
+        :return:  Edge FR
         """
         return self._front.edge_right
+    @property
+    def fl(self) -> Edge:
+        """
+
+        :return:  Edge FL
+        """
+        return self._front.edge_left
+
+    @property
+    def lb(self) -> Edge:
+        """
+
+        :return:  Edge LB
+        """
+        return self.left.edge_left
+
+    @property
+    def rb(self) -> Edge:
+        """
+
+        :return:  Edge RB
+        """
+        return self.right.edge_right
 
     @property
     def faces(self) -> Iterable[Face]:
