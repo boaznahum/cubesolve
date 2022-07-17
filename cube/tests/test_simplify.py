@@ -3,7 +3,6 @@ from typing import Iterable
 from cube import config, algs as algs
 from cube.algs import Algs, Alg
 from cube.model.cube import Cube
-from cube.model.cube_queries import CubeQueries
 
 
 def test1():
@@ -32,30 +31,29 @@ def test2():
     alg.play(cube)
 
 
-def _compare_two_algs(cube_size: int , algs1:Iterable[Alg], algs2: Iterable[Alg]):
-
+def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]):
     cube = Cube(cube_size)
 
     for alg in algs1:
         alg.play(cube)
 
-    s1 = CubeQueries.get_sate(cube)
+    s1 = cube.cqr.get_sate()
 
     cube.reset()
     for alg in algs2:
         alg.play(cube)
 
-    assert CubeQueries.compare_state(cube, s1)
+    assert cube.cqr.compare_state(s1)
 
-def _compare_inv(cube_size: int , algs:Iterable[Alg]):
 
+def _compare_inv(cube_size: int, algs: Iterable[Alg]):
     cube = Cube(cube_size)
 
     scramble = Algs.scramble(cube_size)
 
     scramble.play(cube)
 
-    s1 = CubeQueries.get_sate(cube)
+    s1 = cube.cqr.get_sate()
 
     for alg in algs:
         alg.play(cube)
@@ -66,9 +64,7 @@ def _compare_inv(cube_size: int , algs:Iterable[Alg]):
 
     # should return to same state
 
-    assert CubeQueries.compare_state(cube, s1)
-
-
+    assert cube.cqr.compare_state(s1)
 
 
 def __test_simplify(alg, cube_size):
@@ -115,7 +111,7 @@ def __test_flatten(alg, n):
     print("Alg=", alg)
     scramble.play(cube)
     alg.play(cube)
-    s1 = CubeQueries.get_sate(cube)
+    s1 = cube.cqr.get_sate()
     alg_s = alg.flatten()
     flattern = algs.SeqAlg(None, *alg_s)
     #    flattern = alg_s
@@ -125,7 +121,7 @@ def __test_flatten(alg, n):
     scramble.play(cube)
     flattern.play(cube)
 
-    assert CubeQueries.compare_state(cube, s1)
+    assert cube.cqr.compare_state(s1)
     print("Passed")
     print("================================")
 

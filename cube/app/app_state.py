@@ -108,8 +108,8 @@ class ApplicationAndViewState:
         self._draw_shadows = config.VIEWER_DRAW_SHADOWS
         self.cube_size = config.CUBE_SIZE
 
-        self.slice_start: int = 1
-        self.slice_stop: int = 3
+        self.slice_start: int = 0
+        self.slice_stop: int = 0
 
         self.single_step_mode = False
         self.single_step_mode_stop_pressed = False

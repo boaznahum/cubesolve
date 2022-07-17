@@ -235,7 +235,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
             case key.W:
                 app.cube.front.corner_top_right.annotate(False)
                 app.cube.front.corner_top_left.annotate(True)
-                op.op(Algs.AN)
+                op.play(Algs.AN)
 
             case key.P:
 
@@ -319,7 +319,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 swap_faces = [Algs.M[1:mid - 1].prime * ml + Algs.F.prime * 2 + Algs.M[1:mid - 1] * ml +
                               Algs.M[mid + 1:end].prime * ml + Algs.F * 2 + Algs.M[mid + 1:end] * ml
                               ]
-                op.op(Algs.seq_alg(None, *swap_faces))
+                op.play(Algs.seq_alg(None, *swap_faces))
 
                 # communicator 1
                 rotate_on_cell = Algs.M[mid]
@@ -334,7 +334,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                        on_front_rotate,
                        rotate_on_second * ml,
                        on_front_rotate.prime]
-                op.op(Algs.seq_alg(None, *cum))
+                op.play(Algs.seq_alg(None, *cum))
 
                 rotate_on_second = Algs.M[mid + 1:nn]  # E is from right to left
                 cum = [rotate_on_cell.prime * ml,
@@ -345,51 +345,52 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                        on_front_rotate,
                        rotate_on_second * ml,
                        on_front_rotate.prime]
-                op.op(Algs.seq_alg(None, *cum))
+                op.play(Algs.seq_alg(None, *cum))
 
             case key.R:
-                # _last_face = FaceName.R
-                op.op(_slice_alg(algs.Algs.R), inv)
-                # op.op(algs.Algs.R, inv)
+                if modifiers & key.MOD_CTRL:
+                    op.play(algs.Algs.Rw, inv)
+                else:
+                    op.play(_slice_alg(algs.Algs.R), inv)
 
             case key.L:
-                op.op(_slice_alg(algs.Algs.L), inv)
+                op.play(_slice_alg(algs.Algs.L), inv)
 
             case key.U:
-                op.op(_slice_alg(algs.Algs.U), inv)
+                op.play(_slice_alg(algs.Algs.U), inv)
 
             case key.F:
-                op.op(_slice_alg(algs.Algs.F), inv)
+                op.play(_slice_alg(algs.Algs.F), inv)
 
             case key.S:
-                op.op(_slice_alg(algs.Algs.S), inv)
+                op.play(_slice_alg(algs.Algs.S), inv)
 
             case key.B:
-                op.op(_slice_alg(algs.Algs.B), inv)
+                op.play(_slice_alg(algs.Algs.B), inv)
 
             case key.D:
                 _last_face = FaceName.D
-                op.op(_slice_alg(algs.Algs.D), inv)
+                op.play(_slice_alg(algs.Algs.D), inv)
 
             case key.X:  # Alt/Ctrl was handled in both
                 if not modifiers & (key.MOD_CTRL | key.MOD_ALT):
-                    op.op(algs.Algs.X, inv)
+                    op.play(algs.Algs.X, inv)
 
             case key.M:
-                op.op(_slice_alg(algs.Algs.M), inv)
+                op.play(_slice_alg(algs.Algs.M), inv)
 
             case key.Y:
                 # Alt/Ctrl was handled in both
                 if not modifiers & (key.MOD_CTRL | key.MOD_ALT):
-                    op.op(algs.Algs.Y, inv)
+                    op.play(algs.Algs.Y, inv)
 
             case key.E:
-                op.op(_slice_alg(algs.Algs.E), inv)
+                op.play(_slice_alg(algs.Algs.E), inv)
 
             case key.Z:
                 # Alt/Ctrl was handled in both
                 if not modifiers & (key.MOD_CTRL | key.MOD_ALT):
-                    op.op(algs.Algs.Z, inv)
+                    op.play(algs.Algs.Z, inv)
 
             case key.C:
 
@@ -407,18 +408,18 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                             # [{good} [3:3]R [3:4]D S [2:2]L]
 
                             alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]  # + Algs.B[5:5]
-                            op.op(alg, inv),  # animation=False)
+                            op.play(alg, inv),  # animation=False)
 
                         else:
                             alg = Algs.B[5:5]
-                            op.op(alg, inv)
+                            op.play(alg, inv)
                 else:
                     # same as Test 0
                     scramble_key = value - key0
                     alg = Algs.scramble(app.cube.size, scramble_key)
 
                     with _wait_cursor(window):
-                        op.op(alg, inv, animation=False)
+                        op.play(alg, inv, animation=False)
 
             case key._1:
 
@@ -453,7 +454,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     for a in big_alg.algs:
                         try:
                             with _wait_cursor(window):
-                                op.op(a, animation=False)
+                                op.play(a, animation=False)
                             good = good + a
                         except:
                             from .model.cube_queries import CubeQueries
@@ -466,7 +467,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     for a in good.algs:
                         try:
                             with _wait_cursor(window):
-                                op.op(a, animation=False)
+                                op.play(a, animation=False)
                             from .model.cube_queries import CubeQueries
                             cube.cqr.print_dist()
                         except:
@@ -478,7 +479,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     # noinspection PyProtectedMember
                     alg = Algs.scramble(app.cube.size, value - key._0)
                     with _wait_cursor(window):
-                        op.op(alg, inv, animation=False)
+                        op.play(alg, inv, animation=False)
 
             case key.COMMA:
 
@@ -489,7 +490,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key.SLASH:
                 # solution = slv.solution().simplify()
-                # op.op(solution)
+                # op.play(solution)
                 slv.solve(animation=solver_animation)
 
             case key.F1:

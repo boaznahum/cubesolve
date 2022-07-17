@@ -248,11 +248,23 @@ class NSimpleAlg(SimpleAlg, ABC):
         self._code = code
         self._n = n
 
-    @final
-    def clone(self: TNSimpleAlg) -> TNSimpleAlg:
+    def simple_mul(self, n: int):
+        c = self.clone()
+        c._n *= n
+
+        return c
+
+    def _basic_clone(self: TNSimpleAlg) -> TNSimpleAlg:
         cl = NSimpleAlg.__new__(type(self))
         # noinspection PyArgumentList
         cl.__init__()  # type: ignore
+
+        return cl
+
+    @final
+    def clone(self: TNSimpleAlg) -> TNSimpleAlg:
+        cl = self._basic_clone()
+
         cl.copy(self)
 
         return cl
@@ -537,6 +549,43 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         parts: Collection[Any] = cube.get_rotate_face_and_slice_involved_parts(face, slices)
 
         return face, parts
+
+
+class DoubleLayerAlg(AnimationAbleAlg):
+    """
+    A double layer of given FaceAlg
+    For example Rw is double layer of R
+    In case of S > 3, it all layers, but the last
+    Rw == R[1: size-1]
+    """
+
+    def __init__(self, of_face_alg: FaceAlg, n: int = 1) -> None:
+        super().__init__(of_face_alg._code + "w", n)
+        self._of_face_alg: FaceAlg = of_face_alg
+
+    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
+        return self.compose_base_alg(cube).get_animation_objects(cube)
+
+    def play(self, cube: Cube, inv: bool = False):
+        self.compose_base_alg(cube).play(cube, inv)
+
+    def compose_base_alg(self, cube: Cube) -> FaceAlg:
+        fa: FaceAlg = self._of_face_alg
+        cube_size = cube.size
+
+        if self._n != fa._n:
+            fa = fa.clone()
+            fa._n = self._n
+
+        # size-1: 3x3 -> R[1:2], 4x4 [1:3]
+        return fa[1: cube_size - 1]
+
+    def _basic_clone(self: TNSimpleAlg) -> TNSimpleAlg:
+        cl = DoubleLayerAlg.__new__(type(self))
+        # noinspection PyArgumentList
+        cl.__init__(self._of_face_alg)  # type: ignore
+
+        return cl
 
 
 class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
@@ -935,16 +984,24 @@ class Algs:
     # When played, it simply refreshes GUI
     # So it used by annotation tools, after they changed some model(text, cube)
     AN = AnnotationAlg()
+
     L = _L()
+    # noinspection PyPep8Naming
+    Lw = DoubleLayerAlg(L)
+
     B = _B()
+    Bw = DoubleLayerAlg(B)
+
     D = _D()
+    Dw = DoubleLayerAlg(D)
 
     R = _R()
+    Rw = DoubleLayerAlg(R)
     X = _X()  # Entire cube or R
     M = _M()  # Middle over L
-    _MM = _M()  # Middle over L
-    _MM._n *= -1
+    _MM = _M().simple_mul(-1)  # Middle over L
 
+    # noinspection PyPep8Naming
     @staticmethod
     def MM() -> SliceAlg:
         warnings.warn("Use M'", DeprecationWarning, 2)
@@ -952,10 +1009,12 @@ class Algs:
         return Algs._MM
 
     U = _U()
+    Uw = DoubleLayerAlg(U)
     Y = _Y()  # Entire over U
     E = _E()  # Middle slice over D
 
     F = _F()
+    Fw = DoubleLayerAlg(F)
     Z = _Z()  # Entire over F
     S = _S()  # Middle over F
 
@@ -965,12 +1024,12 @@ class Algs:
     def seq_alg(name: str | None, *algs: Alg) -> SeqAlg:
         return SeqAlg(name, *algs)
 
-    Simple = [L,
-              R, X, M,
-              U, E, Y,
-              F, Z, S,
-              B,
-              D,
+    Simple = [L, Lw,
+              R, Rw, X, M,
+              U, Uw, E, Y,
+              F, Fw, Z, S,
+              B, Bw,
+              D, Dw,
               ]
 
     RU = SeqAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
