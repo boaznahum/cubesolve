@@ -34,10 +34,10 @@ class _App(AbstractApp):
 
         # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
 
-        self.reset()
+        self.reset(None)
 
-    def reset(self):
-        self.cube.reset(self.vs.cube_size)
+    def reset(self, cube_size: int | None = None):
+        self.cube.reset(cube_size)
         self.op.reset()
         self._error = None
 
@@ -51,6 +51,7 @@ class _App(AbstractApp):
     @property
     def am(self) -> AnimationManager:
         return self._am
+
     @property
     def op(self) -> Operator:
         return self._op
@@ -73,13 +74,9 @@ class _App(AbstractApp):
         _app_tests.run_tests(self, first_scramble_key, number_of_loops, debug=debug)
 
     def run_single_test(self, scramble_key,
-                    scramble_size : int | None,
-                    debug: bool,
-                    animation: bool):
+                        scramble_size: int | None,
+                        debug: bool,
+                        animation: bool):
         from . import _app_tests
 
         _app_tests.run_single_test(self, scramble_key, scramble_size, debug, animation)
-
-
-
-
