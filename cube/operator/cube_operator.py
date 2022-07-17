@@ -1,4 +1,5 @@
 import functools
+import warnings
 from collections.abc import MutableSequence, Sequence, Reversible
 from contextlib import contextmanager
 from typing import Callable, Any, TYPE_CHECKING
@@ -65,21 +66,29 @@ class Operator:
         Animation can run only from top level, not from animation itself
         :param alg:
         :param inv:
-        :param animation: if true and animation is enabled then run with animation
-        doesn't override current mode
+        :param animation: if true and animation is enabled(globally, toggle_animation_on)
+        then run with animation.
+        Doesn't force animation to true if animation is not enabled.
+        So it can only turn off current global animation
         :return:
         """
-        return self.op(alg, inv, animation)
+        return self._play(alg, inv, animation)
 
     def op(self, alg: Alg, inv: bool = False, animation=True):
+        warnings.warn("Use play", DeprecationWarning, 2)
+
+        return self._play(alg, inv, animation)
+
+    def _play(self, alg: Alg, inv: bool = False, animation=True):
 
         """
         deprecated, use play
         Animation can run only from top level, not from animation itself
         :param alg:
         :param inv:
-        :param animation: if true and animation is enabled then run with animation
-        doesn't override current mode
+        :param animation: if true and animation is enabled then run with animation.
+        Doesn't force animation to true if animation is not enabled
+
         :return:
         """
 
@@ -175,18 +184,18 @@ class Operator:
         """
         :return: the undo alg
         """
-        with self.with_animation(animation=False):
-            if self.history():
-                alg = self._history.pop()
-                _history = [*self._history]
-                self.op(alg, True, animation)
-                # do not add to history !!! otherwise history will never shrink
-                # because op may break big algs to steps, and add more than one , we can't just pop
-                # self._history.pop()
-                self._history[:] = _history
-                return alg
-            else:
-                return None
+        # with self.with_animation(animation=False):
+        if self.history():
+            alg = self._history.pop()
+            _history = [*self._history]
+            self.op(alg, True, animation=animation)
+            # do not add to history !!! otherwise history will never shrink
+            # because op may break big algs to steps, and add more than one , we can't just pop
+            # self._history.pop()
+            self._history[:] = _history
+            return alg
+        else:
+            return None
 
     @property
     def cube(self) -> Cube:

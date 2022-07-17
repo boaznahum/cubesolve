@@ -10,7 +10,7 @@ class Solvers:
 
     @staticmethod
     def default(op: Operator) -> Solver:
-        if config.CFOP:
+        if config.SOLVER_CFOP:
             return Solvers.cfop(op)
         else:
             return Solvers.beginner(op)

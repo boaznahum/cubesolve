@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
 from enum import Enum, unique
-from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable, Iterator, TypeVar
+from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable, Iterator, TypeVar, TYPE_CHECKING
 
 from .. import config
 from cube.app_exceptions import InternalSWError
@@ -29,6 +29,9 @@ class AxisName(Enum):
 
 
 _Face: TypeAlias = "Face"  # type: ignore
+
+if TYPE_CHECKING:
+    from .cube import Cube
 
 # noinspection PyUnresolvedReferences
 _Cube: TypeAlias = "Cube"  # type: ignore

@@ -27,7 +27,7 @@ class AdvancedEvenEdgeFullEdgeParity(StepSolver):
         F2 = Algs.F * 2
         U2 = Algs.U * 2
 
-        with self.annotate((cube.fu, AnnWhat.Moved), h2="Doing even full edge parity"):
+        with self.annotate((cube.fu, AnnWhat.Moved), h2="Doing OLL even full edge parity"):
 
             alg = Rw.p +  U2 + Lw + F2 + Lw.p + F2 + Rw*2 + U2 + Rw + U2 + Rw.p + U2 + F2 + Rw*2  + F2
 

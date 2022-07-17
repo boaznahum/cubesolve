@@ -1,9 +1,13 @@
 from typing import Tuple
 
-######### Model  ########
-
+########## Some top important
 # Only initial value, can be changed
 CUBE_SIZE = 6
+
+SOLVER_CFOP=True
+
+######### Model  ########
+
 
 SHORT_PART_NAME = False
 DONT_OPTIMIZED_PART_ID = False
@@ -20,7 +24,6 @@ animation_enabled = True
 
 SOLVER_DEBUG = True
 
-CFOP=False
 
 ######  Viewer ########
 
@@ -98,7 +101,7 @@ SOLVER_ANNOTATE_TRACKERS = False
 ##############  Testing
 TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 20
 AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START = 0
-AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 200
+AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 500
 SCRAMBLE_KEY_FOR_F9 = int(77)  # should be replaced by persist of last test
 
 ################ Logging

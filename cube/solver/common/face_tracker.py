@@ -64,7 +64,7 @@ class FaceTracker:
             return key in s.edge.c_attributes
 
         def _face_pred(_f: Face):
-            return CubeQueries.find_slice_in_face_center(_f, _slice_pred) is not None
+            return _f.cube.cqr.find_slice_in_face_center(_f, _slice_pred) is not None
 
         color = _slice.color
         cube = _slice.parent.cube
@@ -80,7 +80,7 @@ class FaceTracker:
         :return:
         """
 
-        _slice = CubeQueries.find_slice_in_face_center(face, lambda s: s.color == color)
+        _slice = face.cube.cqr.find_slice_in_face_center(face, lambda s: s.color == color)
         assert _slice
 
         return FaceTracker.by_center_piece(_slice)
@@ -127,7 +127,7 @@ class FaceTracker:
 
         def _pred() -> Face:
             _f: Face
-            return CubeQueries.find_face(cube, lambda _f: _f.opposite is f.face)
+            return cube.cqr.find_face(lambda _f: _f.opposite is f.face)
 
         return FaceTracker(second_color, _pred)
 

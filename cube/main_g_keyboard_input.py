@@ -481,7 +481,11 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                         op.op(alg, inv, animation=False)
 
             case key.COMMA:
-                op.undo()
+
+                # unod doesn't support None, it can oly dsibale global animation
+                _animation = solver_animation is not False
+
+                op.undo(animation=_animation)
 
             case key.SLASH:
                 # solution = slv.solution().simplify()
