@@ -12,8 +12,8 @@ from cube.model.cube_boy import CubeLayout, color2long
 from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries
 from cube.operator.op_annotation import AnnWhat
-from cube.solver.begginer.nxn_centers_face_tracker import FaceLoc
-from cube.solver.begginer.nxn_centers_face_tracker2 import NxNCentersFaceTrackers
+from cube.solver.common.face_tracker import FaceTracker
+from cube.solver.begginer.nxn_centers_face_tracker import NxNCentersFaceTrackers
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import SolverElement
 
@@ -51,7 +51,7 @@ class NxNCenters(SolverElement):
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
 
-        self._faces: Sequence[FaceLoc] = []
+        self._faces: Sequence[FaceTracker] = []
 
         self._trackers = NxNCentersFaceTrackers(slv)
 
@@ -92,7 +92,7 @@ class NxNCenters(SolverElement):
 
         cube = self.cube
 
-        faces: list[FaceLoc]
+        faces: list[FaceTracker]
 
         if cube.n_slices % 2:
             # odd cube
@@ -102,7 +102,7 @@ class NxNCenters(SolverElement):
 
         else:
 
-            f1: FaceLoc = self._trackers._track_no_1()
+            f1: FaceTracker = self._trackers._track_no_1()
 
             f2 = f1.track_opposite()
 
@@ -124,9 +124,9 @@ class NxNCenters(SolverElement):
             self._do_faces([f5], True, True)
             self._asserts_is_boy([f1, f2, f3, f4, f5, f6])
 
-            FaceLoc.remove_face_track_slices(f5.face)
+            FaceTracker.remove_face_track_slices(f5.face)
 
-            f5 = FaceLoc.search_color_and_track(f5.face, f5.color)
+            f5 = FaceTracker.search_color_and_track(f5.face, f5.color)
             f6 = f5.track_opposite()
 
             faces = [f1, f2, f3, f4, f5, f6]
@@ -187,7 +187,7 @@ class NxNCenters(SolverElement):
         print()
 
     # noinspection PyUnreachableCode,PyUnusedLocal
-    def _asserts_is_boy(self, faces: Iterable[FaceLoc]):
+    def _asserts_is_boy(self, faces: Iterable[FaceTracker]):
 
         if not self._sanity_check_is_a_boy:
             return
@@ -204,7 +204,7 @@ class NxNCenters(SolverElement):
 
         assert is_boy
 
-    def _do_center(self, face_loc: FaceLoc, minimal_bring_one_color, use_back_too: bool) -> bool:
+    def _do_center(self, face_loc: FaceTracker, minimal_bring_one_color, use_back_too: bool) -> bool:
 
         if self._is_face_solved(face_loc.face, face_loc.color):
             self.debug(f"Face is already done {face_loc.face}",
@@ -237,7 +237,7 @@ class NxNCenters(SolverElement):
 
         return work_done
 
-    def __do_center(self, face_loc: FaceLoc, minimal_bring_one_color: bool, use_back_too: bool) -> bool:
+    def __do_center(self, face_loc: FaceTracker, minimal_bring_one_color: bool, use_back_too: bool) -> bool:
 
         """
 
@@ -976,7 +976,7 @@ class NxNCenters(SolverElement):
                 center_slice = source_face.center.get_center_slice((r, c))
                 if color == center_slice.color:
                     _count += 1
-                if not _trackers and FaceLoc.is_track_slice(center_slice):
+                if not _trackers and FaceTracker.is_track_slice(center_slice):
                     _trackers += 1
 
         return _count, _trackers
