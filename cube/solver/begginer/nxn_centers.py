@@ -1,23 +1,21 @@
 from collections.abc import Iterator, Sequence, Iterable
 from enum import Enum, unique
-from typing import Tuple, Callable, Collection, Any, TypeAlias
+from typing import Tuple, TypeAlias
 
 from cube import algs
 from cube import config
 from cube.algs import Algs
 from cube.app_exceptions import InternalSWError
+from cube.model import FaceName, Color, CenterSlice
 from cube.model.cube import Cube
 from cube.model.cube_boy import CubeLayout, color2long
 from cube.model.cube_face import Face
-from cube.model.cube_queries import CubeQueries, Pred
-from cube.model import FaceName, Color, CenterSlice
+from cube.model.cube_queries import CubeQueries
 from cube.operator.op_annotation import AnnWhat
-from cube.solver.common.solver_element import SolverElement
-from cube.solver.common.common_op import CommonOp
+from cube.solver.begginer.nxn_centers_face_tracker import FaceLoc
+from cube.solver.begginer.nxn_centers_face_tracker2 import NxNCentersFaceTrackers
 from cube.solver.common.base_solver import BaseSolver
-from cube.viewer.viewer_markers import VMarker, viewer_add_view_marker
-
-_TRACKER_KEY_PREFIX = "_nxn_centers_track:"
+from cube.solver.common.solver_element import SolverElement
 
 
 def use(_):
@@ -26,12 +24,8 @@ def use(_):
 
 _status = None
 
-FaceTracker = Callable[[], Face]
-
 Point: TypeAlias = Tuple[int, int]
 Block: TypeAlias = Tuple[Point, Point]
-
-_tracer_unique_id: int = 0
 
 
 @unique
@@ -53,45 +47,23 @@ class _CompleteSlice:
         self.contains_track_slice = contains_trackers
 
 
-def _pred_to_tracker(cube, pred: Pred[Face]) -> FaceTracker:
-    def tracker() -> Face:
-        return CubeQueries.find_face(cube, pred)
-
-    return tracker
-
-
-class FaceLoc:
-
-    def __init__(self, color: Color, tracker: FaceTracker) -> None:
-        super().__init__()
-        self._tracker = tracker
-        self._color = color
-        self._attributes: dict[Any, Any] = {}
-
-    @property
-    def face(self):
-        return self._tracker()
-
-    @property
-    def color(self):
-        return self._color
-
-    def __str__(self) -> str:
-        return f"{self.color.name}@{self.face}"
-
-
 class NxNCenters(SolverElement):
-    D_LEVEL = 3
-
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
+
+        self._faces: Sequence[FaceLoc] = []
+
+        self._trackers = NxNCentersFaceTrackers(slv)
+
         self._sanity_check_is_a_boy = config.SOLVER_SANITY_CHECK_IS_A_BOY
+        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES
+        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO
+        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS
+        self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = config.OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS
 
     def debug(self, *args, level=3):
         if level <= NxNCenters.D_LEVEL:
             super().debug("NxX Centers:", args)
-
-
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy
@@ -112,9 +84,9 @@ class NxNCenters(SolverElement):
             try:
                 self._solve()
             finally:
-                self._debug_print_track_slices("After solving")
-                self._remove_all_track_slices()
-                self._debug_print_track_slices("After removal")
+                self._trackers._debug_print_track_slices("After solving")
+                self._trackers._remove_all_track_slices()
+                self._trackers._debug_print_track_slices("After removal")
 
     def _solve(self):
 
@@ -126,47 +98,60 @@ class NxNCenters(SolverElement):
             # odd cube
 
             # do without back as long as there is work to do
-            faces = [self._track_odd(f) for f in cube.faces]
+            faces = [self._trackers._track_odd(f) for f in cube.faces]
 
         else:
 
-            f1: FaceLoc = self._track_no_1()
+            f1: FaceLoc = self._trackers._track_no_1()
 
-            f2 = self._track_opposite(f1)
+            f2 = f1.track_opposite()
 
             # because we find f1 by max colors, then it is clear that it has at least one of such a color
             # and opposite doesn't need color for tracing
             # self._do_faces([f1, f2], True, True)
 
             # now colors of f1/f2 can't be on 4 that left, so we can choose any one
-            f3 = self._track_no_3([f1, f2])
-            f4 = self._track_opposite(f3)
+            f3 = self._trackers._track_no_3([f1, f2])
+            f4 = f3.track_opposite()
 
             # f3 contains at least one color that is not in f1, f2, so no need to bring at leas one
             # but there is a question if such f3 always exists
             self._do_faces([f3, f4], True, True)
 
-            f5, f6 = self._track_two_last([f1, f2, f3, f4])
+            f5, f6 = self._trackers._track_two_last([f1, f2, f3, f4])
 
             # so we don't need this also, otherwise _track_two_last should crash
             self._do_faces([f5], True, True)
             self._asserts_is_boy([f1, f2, f3, f4, f5, f6])
 
-            self._remove_face_track_slices(f5.face)
+            FaceLoc.remove_face_track_slices(f5.face)
 
-            f5 = self._trace_face_by_slice_color(f5.face, f5.color)
-            f6 = self._track_opposite(f5)
+            f5 = FaceLoc.search_color_and_track(f5.face, f5.color)
+            f6 = f5.track_opposite()
 
             faces = [f1, f2, f3, f4, f5, f6]
+            self._faces = faces
 
             self._asserts_is_boy(faces)
 
-            self._debug_print_track_slices("After creating all faces")
+            self._trackers._debug_print_track_slices("After creating all faces")
 
             # self._faces = faces
 
             # now each face has at least one color, so
 
+        # SPECIAL_CASE_1
+        # A rare case here, when use_back_too is false and complete slice is enabled
+        # We have two slices, that have no source other on of the other and on back(but back is not is used)
+        # These sources are on the same slice S
+        # Face RED finds two colors on S
+        # Face Orange finds two colors S
+        # what happens is that RED takes slice from ORANGE
+        # then ORANGE take from RED, infinite loop
+        # It is very rare:
+        #   there should be empty target slice in the target face (see config)
+        #   this slice is swapped, and not filled by other step(becuase it's sources are on back)
+        # To overcome it we swap only if number sources is > n//2
         while True:
             if not self._do_faces(faces, False, False):
                 break
@@ -195,38 +180,11 @@ class NxNCenters(SolverElement):
 
         return work_done
 
-    def _track_no_1(self) -> FaceLoc:
+    def _print_faces(self):
 
-        cube = self.cube
-        if cube.n_slices % 2:
-            return self._track_odd(cube.front)
-        else:
-            f, c = self._find_face_with_max_colors()
-            _slice = CubeQueries.find_slice_in_face_center(f, lambda s: s.color == c)
-            assert _slice
-            # todo: see bug _track_even
-            return self._track_even(f, _slice.index)
-
-    def _track_no_3(self, two_first: Sequence[FaceLoc]) -> FaceLoc:
-
-        cube = self.cube
-
-        assert len(two_first) == 2
-
-        left = list({*cube.faces} - {two_first[0].face, two_first[1].face})
-
-        assert not cube.n_slices % 2
-
-        c12 = {two_first[0].color, two_first[1].color}
-
-        left_colors = set(cube.original_layout.colors()) - c12
-
-        # # can be any, still doesn't prevent BOY
-        # There will always a face that contains a color that is not included in f1, f2
-        # because f1, f2 contains only 1/3 of all pieces
-        f3, f3_color = self._find_face_with_max_colors(left, left_colors)
-
-        return self._trace_face_by_slice_color(f3, f3_color)
+        for f in self._faces:
+            print(f.face, f.color, " ", end="")
+        print()
 
     # noinspection PyUnreachableCode,PyUnusedLocal
     def _asserts_is_boy(self, faces: Iterable[FaceLoc]):
@@ -245,114 +203,6 @@ class NxNCenters(SolverElement):
             print()
 
         assert is_boy
-
-    def _create_f5_pred(self, four_first: Sequence[FaceLoc], color) -> Pred[Face]:
-
-        cube = self.cube
-
-        four_first = [*four_first]
-
-        first_4_colors: set[Color] = set((f.color for f in four_first))
-
-        def _pred(f: Face):
-
-            """
-
-            :param f:
-            :return: True if f/color make it a boy
-            """
-
-            left_two_faces: set[Face] = {*cube.faces} - {f.face for f in four_first}
-
-            if f not in left_two_faces:
-                return False
-
-            left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - first_4_colors
-
-            assert color in left_two_colors
-
-            c5: Color = left_two_colors.pop()
-            c6: Color = left_two_colors.pop()
-
-            f5: Face = left_two_faces.pop()
-            f6: Face = left_two_faces.pop()
-
-            # make f as f5
-            if f5 is not f:
-                f5, f6 = f, f5
-
-            if c5 is not color:
-                c5, c6 = color, c5
-
-            try1 = {f.face.name: f.color for f in four_first}
-            try1[f5.name] = c5
-            try1[f6.name] = c6
-            cl: CubeLayout = CubeLayout(False, try1)
-
-            if cl.same(self.cube.original_layout):
-                return True  # f/color make it a BOY
-
-            f5, f6 = (f6, f5)
-            try1 = {f.face.name: f.color for f in four_first}
-            try1[f5.name] = c5
-            try1[f6.name] = c6
-            cl = CubeLayout(False, try1)
-            assert cl.same(self.cube.original_layout)
-
-            return False
-
-        return _pred
-
-    def _track_two_last(self, four_first: Sequence[FaceLoc]) -> Tuple[FaceLoc, FaceLoc]:
-
-        cube = self.cube
-
-        assert cube.n_slices % 2 == 0
-
-        left_two_faces: list[Face] = list({*cube.faces} - {f.face for f in four_first})
-
-        assert len(left_two_faces) == 2
-
-        first_4_colors: set[Color] = set((f.color for f in four_first))
-
-        left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - first_4_colors
-
-        c5: Color = left_two_colors.pop()
-        c6: Color = left_two_colors.pop()
-
-        f5: Face = left_two_faces.pop()
-
-        color = c5
-        pred = self._create_f5_pred(four_first, color)
-
-        if pred(f5):
-            # f5/c5 make it a BOY
-            pass
-        else:
-            color = c6
-            # other = c5
-            # f5/c5 make it a BOY
-            pred = self._create_f5_pred(four_first, color)
-            assert pred(f5)
-
-        tracker = _pred_to_tracker(cube, pred)
-
-        f5_track = FaceLoc(color, tracker)
-        f6_track = self._track_opposite(f5_track)
-
-        return f5_track, f6_track
-
-    def _track_opposite(self, f: FaceLoc):
-
-        f_color = f.color
-
-        second_color = self.boy_opposite(f_color)
-
-        def _pred() -> Face:
-            _f: Face
-            return CubeQueries.find_face(self.cube, lambda _f: _f.opposite is f.face)
-
-        return FaceLoc(second_color, _pred)
 
     def _do_center(self, face_loc: FaceLoc, minimal_bring_one_color, use_back_too: bool) -> bool:
 
@@ -386,117 +236,6 @@ class NxNCenters(SolverElement):
                    level=1)
 
         return work_done
-
-    def _track_face(self, color: Color, pred: Pred[Face]) -> FaceLoc:
-
-        t: FaceTracker = lambda: CubeQueries.find_face(self.cube, pred)
-
-        return FaceLoc(color, t)
-
-    def _track_odd(self, f: Face) -> FaceLoc:
-
-        n_slices = self.cube.n_slices
-        rc = (n_slices // 2, n_slices // 2)
-
-        # only middle in odd, doesn't change index when moving from face to face
-
-        #        return self._track_slice(f, rc)
-        color = f.center.get_center_slice(rc).color
-
-        def pred(_f: Face):
-            return _f.center.get_center_slice(rc).color == color
-
-        # actually it is bug, on even, when moving from face to face slice coordinate smay be changed
-        t: FaceTracker = lambda: CubeQueries.find_face(self.cube, pred)
-
-        return FaceLoc(color, t)
-
-    def _track_even(self, f: Face, rc: Tuple[int, int]) -> FaceLoc:
-
-        # Why can't we track by slice index ? because when moving from face to face
-        #  index may be changed
-        _slice = f.center.get_center_slice(rc)
-        return self._trace_face_by_slice(_slice)
-
-    @staticmethod
-    def _is_track_slice(s: CenterSlice):
-
-        for k in s.edge.c_attributes.keys():
-            if isinstance(k, str) and k.startswith(_TRACKER_KEY_PREFIX):
-                return True
-
-        return False
-
-    # noinspection PyUnreachableCode
-    def _remove_all_track_slices(self):
-
-        """
-        Track slices prevent swapping of whole slices and big blocks
-        :return:
-        """
-        for f in self.cube.faces:
-            self._remove_face_track_slices(f)
-
-    @staticmethod
-    def _remove_face_track_slices(f: Face):
-        """
-        Track slices prevent swapping of whole slices and big blocks
-        :param f:
-        :return:
-        """
-        for s in f.center.all_slices:
-            cs = s.edge.c_attributes
-            for k in [*cs.keys()]:  # need to copy, we modify it
-                if isinstance(k, str) and k.startswith(_TRACKER_KEY_PREFIX):
-                    del cs[k]
-
-    # noinspection PyUnreachableCode,PyUnusedLocal
-    def _debug_print_track_slices(self, message: str):
-
-        if True:
-            return
-
-        print(f"=== track slices: {message}================================")
-        for f in self.cube.faces:
-            for s in f.center.all_slices:
-
-                if self._is_track_slice(s):
-                    print(f"Track slice: {s} {s.color} on {f}")
-        print("===================================")
-
-    def _trace_face_by_slice(self, _slice) -> FaceLoc:
-
-        global _tracer_unique_id
-        _tracer_unique_id += 1
-
-        key = _TRACKER_KEY_PREFIX + str(_slice.color) + str(_tracer_unique_id)
-        edge = _slice.edge
-        edge.c_attributes[key] = True
-
-        if config.SOLVER_ANNOTATE_TRACKERS:
-            viewer_add_view_marker(edge.c_attributes, VMarker.C0)  # to debug if alg move trackers
-
-        def _slice_pred(s: CenterSlice):
-            return key in s.edge.c_attributes
-
-        def _face_pred(_f: Face):
-            return CubeQueries.find_slice_in_face_center(_f, _slice_pred) is not None
-
-        color = _slice.color
-        return self._track_face(color, _face_pred)
-
-    def _trace_face_by_slice_color(self, face: Face, color: Color):
-        """
-        Find slice on face and trace it
-        :param face:
-        :param color:
-        :return:
-        """
-
-        _slice = CubeQueries.find_slice_in_face_center(face, lambda s: s.color == color)
-        assert _slice
-
-        return self._trace_face_by_slice(_slice)
 
     def __do_center(self, face_loc: FaceLoc, minimal_bring_one_color: bool, use_back_too: bool) -> bool:
 
@@ -592,7 +331,7 @@ class NxNCenters(SolverElement):
 
         n = cube.n_slices
 
-        if n % 2 and config.OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
+        if n % 2 and self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
 
             ok_on_this = self.count_color_on_face(face, color)
 
@@ -602,13 +341,13 @@ class NxNCenters(SolverElement):
                 self._swap_entire_face_odd_cube(color, face, source_face)
                 work_done = True
 
-        if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
+        if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
             if self._do_complete_slices(color, face, source_face):
                 work_done = True
                 if minimal_bring_one_color:
                     return work_done
 
-        if config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
+        if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
             # should move minimal_bring_one_color into _do_blocks, because ein case of back, it can do too much
             if self._do_blocks(color, face, source_face):
                 work_done = True
@@ -664,57 +403,83 @@ class NxNCenters(SolverElement):
 
             work_done = True
 
-    def _do_one_complete_slice(self, color, face, source_face) -> bool:
+    def _do_one_complete_slice(self, color, target_face: Face, source_face: Face) -> bool:
 
-        slices: Sequence[_CompleteSlice] = self._search_slices_on_face(source_face, color, None, True)
+        source_slices: Sequence[_CompleteSlice] = self._search_slices_on_face(source_face, color, None, True)
 
-        if not slices:
+        if not source_slices:
             return False
 
         odd_mid_slice: int | None = None
-        if self.cube.n_slices % 2:
-            odd_mid_slice = self.cube.n_slices // 2
+        n_slices = self.cube.n_slices
+        if n_slices % 2:
+            odd_mid_slice = n_slices // 2
 
-        slices_on_face: dict[int, Sequence[_CompleteSlice]] = {}
+        # cache already searched source_slices on the target face
+        slices_on_target_face: dict[int, Sequence[_CompleteSlice]] = {}
 
-        for _slice in slices:
+        for source_slice in source_slices:
 
-            index = _slice.index
+            index = source_slice.index
 
             if index == odd_mid_slice:
                 continue  # skip this one
 
-            if _slice.contains_track_slice:
+            if source_slice.contains_track_slice:
                 continue  # we can't move it happens in even cube
 
-            target_slices = slices_on_face.get(index)
+            target_slices = slices_on_target_face.get(index)
 
             if target_slices is None:
-                target_slices = self._search_slices_on_face(face, color, index, False)
-                assert len(target_slices) == 4
-                slices_on_face[index] = target_slices
+                target_slices = self._search_slices_on_face(target_face, color, index, False)
+                assert len(target_slices) == 4  # we search vertical and horizontal x  index, inv(index)
+                slices_on_target_face[index] = target_slices
 
             min_target_slice = target_slices[0]
 
             if not min_target_slice.contains_track_slice:
 
                 if (
-                        min_target_slice.n_matches == 0 or
-                        not config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_ZERO
-                ) and _slice.n_matches > min_target_slice.n_matches:
+                        (min_target_slice.n_matches == 0 or
+                         not self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO) and
+                        source_slice.n_matches > n_slices / 2.0  # SEE SPECIAL_CASE_1 above
+                ) and source_slice.n_matches > min_target_slice.n_matches:
                     # ok now swap
 
+                    # before = self.count_color_on_face(face, color)
+
                     # self._debug_print_track_slices()
+                    # print("before", end="")
+                    # self._print_faces()
+                    # before = [ (f.face, f.color) for f in self._faces]
+
+                    # _tf: FaceLoc = next(_f for _f in self._faces if _f.face is target_face)
+                    # _sf: FaceLoc = next(_f for _f in self._faces if _f.face is source_face)
+                    # print(f"@@@ to {color} {_tf} from {_sf} n={source_slice.n_matches}")
+
                     with self.ann.annotate(h2=f", Swap complete slice"):
-                        self._swap_slice(min_target_slice, face, _slice, source_face)
+                        self._swap_slice(min_target_slice, target_face, source_slice, source_face)
+
+                    # print("after", end="")
+                    # self._print_faces()
+                    # _after = [ (f.face, f.color) for f in self._faces]
+                    # if _before != _after:
+                    #     print("xxxx")
+                    #     raise InternalSWError()
+
                     # self._debug_print_track_slices()
                     # self._asserts_is_boy(self._faces)
+
+                    # after = self.count_color_on_face(face, color)
+
+                    # print(before, after, color)
 
                     return True
 
         return False
 
-    def _swap_slice(self, target_slice: _CompleteSlice, target_face: Face,
+    def _swap_slice(self, target_slice: _CompleteSlice,
+                    target_face: Face,
                     source_slice: _CompleteSlice, source_face: Face):
 
         cube = self.cube
@@ -774,7 +539,6 @@ class NxNCenters(SolverElement):
         mul = 2 if source_is_back else 1
         # do the swap:
         slice_source_alg: algs.Alg = self._get_slice_m_alg(target_index, target_index)
-
 
         def ann_source() -> Iterator[CenterSlice]:
             for rc in self._2d_range(s1, s2):
@@ -896,34 +660,6 @@ class NxNCenters(SolverElement):
     def rotate_point_counterclockwise(self, row: int, column: int, n=1) -> Tuple[int, int]:
         return CubeQueries.rotate_point_counterclockwise(self.cube, (row, column), n)
 
-    def boy_opposite(self, color: Color) -> Color:
-        return self.cube.original_layout.opposite_color(color)
-
-    def _find_face_with_max_colors(self, faces: Iterable[Face] = None,
-                                   colors: Collection[Color] = None) -> Tuple[Face, Color]:
-
-        n_max = -1
-        f_max: Face | None = None
-        c_max: Color | None = None
-        cube = self.cube
-
-        if colors is None:
-            colors = cube.original_layout.colors()
-
-        if faces is None:
-            faces = cube.faces
-
-        for f in faces:
-            for c in colors:
-                n = self.count_color_on_face(f, c)
-                if n > n_max:
-                    n_max = n
-                    f_max = f
-                    c_max = c
-
-        assert f_max and c_max  # mypy
-        return f_max, c_max
-
     def _swap_entire_face_odd_cube(self, required_color: Color, face: Face, source: Face):
 
         cube = self.cube
@@ -949,10 +685,10 @@ class NxNCenters(SolverElement):
         # todo: replace with self._get_slice_m_alg()
         raise InternalSWError("Need to fix MM")
 
-        swap_faces = [Algs.MM[1:mid_pls_1 - 1].prime * rotate_mul, Algs.F.prime * 2,
-                      Algs.MM[1:mid_pls_1 - 1] * rotate_mul,
-                      Algs.MM[mid_pls_1 + 1:end].prime * rotate_mul,
-                      Algs.F * 2 + Algs.MM[mid_pls_1 + 1:end] * rotate_mul
+        swap_faces = [Algs.MM()[1:mid_pls_1 - 1].prime * rotate_mul, Algs.F.prime * 2,
+                      Algs.MM()[1:mid_pls_1 - 1] * rotate_mul,
+                      Algs.MM()[mid_pls_1 + 1:end].prime * rotate_mul,
+                      Algs.F * 2 + Algs.MM()[mid_pls_1 + 1:end] * rotate_mul
                       ]
         op.op(Algs.seq_alg(None, *swap_faces))
 
@@ -1179,14 +915,8 @@ class NxNCenters(SolverElement):
                 n += 1
         return n
 
-    @staticmethod
-    def count_color_on_face(face: Face, color: Color) -> int:
-        n = 0
-
-        for s in face.center.all_slices:
-            if s.color == color:
-                n += 1
-        return n
+    def count_color_on_face(self, face: Face, color: Color) -> int:
+        return self.cqr.count_color_on_face(face, color)
 
     @staticmethod
     def _has_color_on_face(face: Face, color: Color) -> int:
@@ -1246,7 +976,7 @@ class NxNCenters(SolverElement):
                 center_slice = source_face.center.get_center_slice((r, c))
                 if color == center_slice.color:
                     _count += 1
-                if not _trackers and NxNCenters._is_track_slice(center_slice):
+                if not _trackers and FaceLoc.is_track_slice(center_slice):
                     _trackers += 1
 
         return _count, _trackers
@@ -1527,14 +1257,12 @@ class NxNCenters(SolverElement):
         :return: m slice in range suitable for [c1, c2]
         """
 
-        inv = self.cube.inv
-
         #   index is from left to right, L is from left to right,
         # so we don't need to invert
-        # c1 = inv(c1)
-        # c2 = inv(c2)
 
         if c1 > c2:
             c1, c2 = c2, c1
 
         return Algs.M[c1 + 1:c2 + 1].prime
+
+    D_LEVEL = 3

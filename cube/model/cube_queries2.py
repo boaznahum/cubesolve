@@ -277,6 +277,16 @@ class CubeQueries2:
         else:
             return None
 
+    # Count colors
+    def count_color_on_face(self, face: Face, color: Color):
+        n = 0
+
+        for s in face.center.all_slices:
+            if s.color == color:
+                n += 1
+        return n
+
+
     ########################## State methods ################################
 
     def print_dist(self):
@@ -379,3 +389,4 @@ class CubeQueries2:
                 return e
 
         return None
+

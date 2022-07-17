@@ -394,7 +394,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
             case key.C:
 
                 if not (modifiers & key.MOD_ALT):
-                    op.reset()
                     app.reset()
                 if modifiers and key.MOD_CTRL:
                     app.vs.reset()

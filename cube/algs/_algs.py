@@ -1,4 +1,5 @@
 import functools
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, Collection
 from random import Random
@@ -941,6 +942,14 @@ class Algs:
     R = _R()
     X = _X()  # Entire cube or R
     M = _M()  # Middle over L
+    _MM = _M()  # Middle over L
+    _MM._n *= -1
+
+    @staticmethod
+    def MM() -> SliceAlg:
+        warnings.warn("Use M'", DeprecationWarning, 2)
+
+        return Algs._MM
 
     U = _U()
     Y = _Y()  # Entire over U

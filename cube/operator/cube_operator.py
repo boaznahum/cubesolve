@@ -154,6 +154,7 @@ class Operator:
 
             if self._recording is not None:
                 self._recording.append(alg)
+            log(alg)
 
             self._cube.sanity()
             alg.play(self._cube, False)

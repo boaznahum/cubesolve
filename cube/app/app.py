@@ -38,6 +38,7 @@ class _App(AbstractApp):
 
     def reset(self):
         self.cube.reset(self.vs.cube_size)
+        self.op.reset()
         self._error = None
 
     def set_error(self, _error: str):
@@ -66,10 +67,10 @@ class _App(AbstractApp):
     def cube(self) -> Cube:
         return self._cube
 
-    def run_tests(self, first_scramble_key, number_of_loops):
+    def run_tests(self, first_scramble_key, number_of_loops, debug=False):
         from . import _app_tests
 
-        _app_tests.run_tests(self, first_scramble_key, number_of_loops)
+        _app_tests.run_tests(self, first_scramble_key, number_of_loops, debug=debug)
 
     def run_single_test(self, scramble_key,
                     scramble_size : int | None,

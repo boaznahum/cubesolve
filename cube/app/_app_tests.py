@@ -58,7 +58,8 @@ def run_single_test(app: AbstractApp,
 
 def run_tests(app: AbstractApp,
               first_key: int,
-              number_of_loops: int):
+              number_of_loops: int,
+              debug=False):
     op: Operator = app.op
 
     nn = number_of_loops
@@ -87,7 +88,8 @@ def run_tests(app: AbstractApp,
 
         n_loops += 1
         c0 = op.count
-        run_single_test(app, scramble_key, n, False, False,
+        app.reset() # cube and operator
+        run_single_test(app, scramble_key, n, debug, False,
                         verbose=False  # I will do the printing
                         )
         count += op.count - c0

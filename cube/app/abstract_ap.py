@@ -56,11 +56,18 @@ class AbstractApp(metaclass=ABCMeta):
 
     @abstractmethod
     def reset(self):
+        """
+        Reset cube
+        Reset operator
+        Reset last error message
+        :return:
+        """
         raise NotImplementedError
 
     @abstractmethod
     def run_tests(self, first_scramble_key: int,
-                  number_of_loops: int):
+                  number_of_loops: int,
+                  debug=False):
         pass
 
     @abstractmethod

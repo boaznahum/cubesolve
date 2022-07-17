@@ -19,15 +19,14 @@ def _scramble(op: Operator, _scramble_key: Any, _n=None):
 def main():
     app = AbstractApp.create_non_default(config.CUBE_SIZE)
 
-    app.run_tests(config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START,
-                  config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS // 2)
+    debug = False
 
+    for size in [app.cube.size, app.cube.size + 1]:
+        app.cube.reset(size)
 
-    app.cube.reset(app.cube.size + 1)
-
-    app.run_tests(config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START,
-                  config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS // 2)
-
+        app.run_tests(config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START,
+                      config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS // 2,
+                      debug=debug)
 
 
 if __name__ == '__main__':
