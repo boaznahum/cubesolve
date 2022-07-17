@@ -22,7 +22,7 @@ def main():
 
     debug = False
 
-    sizes = [app.cube.size, app.cube.size + 1]
+    sizes = [3, app.cube.size, app.cube.size + 1]
     for size in sizes:
 
         app.reset(cube_size=size)
