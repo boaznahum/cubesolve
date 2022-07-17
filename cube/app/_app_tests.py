@@ -88,7 +88,7 @@ def run_tests(app: AbstractApp,
 
         n_loops += 1
         c0 = op.count
-        app.reset() # cube and operator
+        app.reset()  # cube and operator
         run_single_test(app, scramble_key, n, debug, False,
                         verbose=False  # I will do the printing
                         )

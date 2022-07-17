@@ -2,7 +2,7 @@ from typing import Tuple
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 6
+CUBE_SIZE = 7
 
 SOLVER_CFOP=True
 
@@ -101,7 +101,7 @@ SOLVER_ANNOTATE_TRACKERS = False
 ##############  Testing
 TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 20
 AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START = 0
-AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 500
+AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 600
 SCRAMBLE_KEY_FOR_F9 = int(77)  # should be replaced by persist of last test
 
 ################ Logging

@@ -17,15 +17,18 @@ def _scramble(op: Operator, _scramble_key: Any, _n=None):
 
 
 def main():
+
     app = AbstractApp.create_non_default(config.CUBE_SIZE)
 
     debug = False
 
-    for size in [app.cube.size, app.cube.size + 1]:
-        app.cube.reset(size)
+    sizes = [app.cube.size, app.cube.size + 1]
+    for size in sizes:
+
+        app.reset(cube_size=size)
 
         app.run_tests(config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START,
-                      config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS // 2,
+                      config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS // len(sizes),
                       debug=debug)
 
 

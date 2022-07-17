@@ -55,11 +55,12 @@ class AbstractApp(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def reset(self):
+    def reset(self, cube_size:int | None = None):
         """
         Reset cube
         Reset operator
         Reset last error message
+        :param cube_size: if None then stay with current size (not config size)
         :return:
         """
         raise NotImplementedError

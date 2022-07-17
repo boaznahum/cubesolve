@@ -13,7 +13,7 @@ from cube.model.cube_face import Face
 from cube.model.cube_queries import CubeQueries
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.common.face_tracker import FaceTracker
-from cube.solver.begginer.nxn_centers_face_tracker import NxNCentersFaceTrackers
+from cube.solver.begginer._nxn_centers_face_tracker import NxNCentersFaceTrackers
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import SolverElement
 
@@ -98,11 +98,11 @@ class NxNCenters(SolverElement):
             # odd cube
 
             # do without back as long as there is work to do
-            faces = [self._trackers._track_odd(f) for f in cube.faces]
+            faces = [FaceTracker.track_odd(f) for f in cube.faces]
 
         else:
 
-            f1: FaceTracker = self._trackers._track_no_1()
+            f1: FaceTracker = self._trackers.track_no_1()
 
             f2 = f1.track_opposite()
 
@@ -492,7 +492,7 @@ class NxNCenters(SolverElement):
         if target_slice.is_row:
             target_slice_block_1 = CubeQueries.rotate_point_counterclockwise(cube, (target_slice.index, 0))
             target_index = target_slice_block_1[1]
-            op.op(Algs.F.prime)
+            op.play(Algs.F.prime)
         else:
             # column
             target_index = target_slice.index
@@ -534,7 +534,7 @@ class NxNCenters(SolverElement):
 
         # now rotate source face accordingly:
         rotate_source_alg = Algs.of_face(source_face.name)
-        op.op(rotate_source_alg * n_rotate)
+        op.play(rotate_source_alg * n_rotate)
 
         mul = 2 if source_is_back else 1
         # do the swap:
@@ -550,7 +550,7 @@ class NxNCenters(SolverElement):
                 yield target_face.center.get_center_slice(rc)
 
         with self.ann.annotate((ann_source(), AnnWhat.Moved), (ann_target(), AnnWhat.FixedPosition)):
-            op.op(slice_source_alg * mul +
+            op.play(slice_source_alg * mul +
                   rotate_source_alg * 2 +  # this replaces source slice with target
                   slice_source_alg.prime * mul
                   )
@@ -621,15 +621,15 @@ class NxNCenters(SolverElement):
 
             case FaceName.L:
                 # todo open range should be supported by slicing
-                self.op.op(rotate.prime)
+                self.op.play(rotate.prime)
 
             case FaceName.D:
                 # todo open range should be supported by slicing
-                self.op.op(rotate.prime * 2)
+                self.op.play(rotate.prime * 2)
 
             case FaceName.R:
                 # todo open range should be supported by slicing
-                self.op.op(rotate)
+                self.op.play(rotate)
 
             case _:
                 raise InternalSWError(f" Unknown face {face.name}")
@@ -816,8 +816,8 @@ class NxNCenters(SolverElement):
                                h2=_h2
                                ):
             if n_rotate:
-                self.op.op(Algs.of_face(source_face.name) * n_rotate)
-            self.op.op(Algs.seq_alg(None, *cum))
+                self.op.play(Algs.of_face(source_face.name) * n_rotate)
+            self.op.play(Algs.seq_alg(None, *cum))
 
         return True
 

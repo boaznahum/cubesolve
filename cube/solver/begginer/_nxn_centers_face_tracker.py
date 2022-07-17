@@ -15,7 +15,7 @@ class NxNCentersFaceTrackers(SolverElement):
     def __init__(self, solver: BaseSolver) -> None:
         super().__init__(solver)
 
-    def _track_no_1(self) -> FaceTracker:
+    def track_no_1(self) -> FaceTracker:
 
         cube = self.cube
         if cube.n_slices % 2:
