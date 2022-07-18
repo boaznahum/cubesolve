@@ -1,3 +1,4 @@
+import re
 from typing import TYPE_CHECKING, TypeAlias, Optional
 
 from cube.app_exceptions import InternalSWError
@@ -9,27 +10,88 @@ _Alg: TypeAlias = "Alg"
 
 
 def parse_alg(s: str) -> _Alg:
-    "this is very naive patch version"
+    """
+    this is very naive patch version
+    Currently doesn't support exp N and exp '  (only U2, U',...)
+    """
     from ._algs import Algs
 
-    tokens = s.split()
+    # We capture, so we get the spliteres two, such as '(' ')', we need to ignore the spaces
+    # Empty matches for the pattern split the string only when not adjacent to a previous empty match.
+    # https://docs.python.org/3/library/re.html#re.split
+    # example:
+    #  ["R'", ' ', 'U2', ' ', '', '(', 'R', ' ', 'U', ' ', "R'", ' ', 'U', ')', '', ' ', 'R']
+    pattern = r"(\s+|\(|\))"
+    tokens = re.split(pattern, s)
 
-    alg = Algs.no_op()
-    for t in tokens:
-        at = _token_to_alg(t)
-        if at:
-            alg = alg + at
+    p = _Parser(s, tokens)
 
-    return alg
+    return p.parse()
 
 
-def _token_to_alg(t) -> Optional[_Alg]:
+class _Parser():
+
+    def __init__(self, original: str, tokens: list[str]) -> None:
+        super().__init__()
+        self._tokens = tokens
+        self._original = original
+
+    def parse(self):
+        result: list[Alg] = []
+        self._parse(result, False)
+
+        from ._algs import Algs
+
+        return Algs.seq_alg(None, *result)
+
+    def _parse(self, result: list[_Alg], nested: bool):
+
+        from ._algs import Algs
+
+        alg = Algs.no_op()
+
+        while True:
+            token = self.next_token()
+            if not token:
+                break
+
+            if token == "(":
+                self._parse(result, True)
+
+            elif token == ')':
+                if not nested:
+                    raise InternalSWError(f"Un expected ')' in {self._original} ")
+            elif token.isdigit():
+                if not result:
+                    raise InternalSWError(f"Un expected multiplier {token} in {self._original} ")
+                prev = result.pop()
+                at = prev * int(token)
+                result.append(at)
+
+            else:
+                at = _token_to_alg(token)
+                result.append(at)
+
+    def next_token(self) -> str | None:
+        """
+
+        :return: Non-empty toke or None
+        """
+        tokens = self._tokens
+        while tokens:
+            t = tokens.pop(0)
+
+            if t:
+                t = t.strip()
+                if t:
+                    return t
+
+        return None
+
+
+def _token_to_alg(t) -> _Alg:
     from cube import algs
     from cube.algs import Algs
-
-    if t == "(" or t == ")":
-        # till we support them
-        return None
 
     if t.endswith("'"):
         alg = _token_to_alg(t[:-1])
