@@ -178,21 +178,14 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
             self.f2l.solve()
 
         def _l3oll():
+            _f2l()
             self.oll.solve()
 
         def _l3pll():
-            # till we have our L3, so it can do it directly
-
-            # try:
-            #     self.l3_corners.solve()
-            # except EvenCubeCornerSwapException:
-            #     self.l3_cross.solve()
-            #     self.l3_corners.solve()
-            pass
+            _l3oll()
+            self.pll.solve()
 
         def _l3():
-            _f2l()
-            _l3oll()
             _l3pll()
 
         _d = self._debug_override
@@ -208,6 +201,9 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
 
                 case SolveStep.F2L | SolveStep.L2:
                     _f2l()
+
+                case SolveStep.OLL:
+                    _l3oll()
 
                 case SolveStep.ALL | SolveStep.L3:
                     _l3()
