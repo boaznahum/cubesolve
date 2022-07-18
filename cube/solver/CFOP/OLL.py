@@ -65,22 +65,26 @@ class OLL(StepSolver):
 
         state: str = ""
         alg: Alg | None = None
+        description = ""
         for r in range(4):
             state = self._encode_state()
             self.debug(f"Found state after {r} rotations:\n{state}")
 
-            alg = self._get_state_alg(state)
+            description_alg: tuple[str, Alg] | None = self._get_state_alg(state)
 
-            if alg is not None:
-                break
+            if description_alg is not None:
+                description, alg = description_alg
+                break  # found
 
             if r == 3:
-                break  # don't rotate again
+                break  # don't rotate again, we failed to found
 
             self.play(Algs.U)
 
         if alg is None:
             raise InternalSWError(f"Unknown state {state}")
+
+        self.debug(f"Found OLL alg '{description}' {alg}")
 
         self.play(alg)
 
@@ -153,7 +157,7 @@ class OLL(StepSolver):
 
         return "\n".join([s1, s2, s3, s4, s5])
 
-    def _get_state_alg(self, state: str) -> Alg | None:
+    def _get_state_alg(self, state: str) -> Optional[Tuple[str, Alg]]:
 
         d_alg = self._get_state_alg_raw(state)
 
@@ -161,13 +165,15 @@ class OLL(StepSolver):
             return None
 
         alg = d_alg[1]
-        self.debug(f"Found alg: {d_alg[0]} : {alg}")
+        description = d_alg[0]
+        self.debug(f"Found (raw) alg: {description} : {alg}")
 
         if isinstance(alg, str):
             alg = Algs.parse(alg)
-        return alg
 
-    def _get_state_alg_raw(self, state: str) -> Optional[Tuple[str, Alg|str]]:
+        return description, alg
+
+    def _get_state_alg_raw(self, state: str) -> Optional[Tuple[str, Alg | str]]:
         """
 
         Credits to https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/orient-the-last-layer-oll/
@@ -177,20 +183,24 @@ class OLL(StepSolver):
         :return:
         """
 
-
         # normalize it to my form
         state2 = state.strip().replace("\n", ", ")
         state = state.strip().replace("\n", "")
         self.debug(f"Comparing state:{state2}")
+
+        #################### Cross
+        match state:
+            case "xy--x" "--y-y" "-yyy-" "y-yy-" "x---x":
+                return "Cross", "R' U2 (R U R' U) R"
 
         #################### 4 corners
         match state:
             case "x-y-x" "-y-y-" "-yy-y" "-yyy-" "x---x":
                 return "4 Corners", "M' U' M U2' M' U' M"
 
-        #################### "Shape L"
+            #################### "Shape L"
             # match state:
             case "x---x" "y-yy-" "y-yy-" "----y" "xyy-x":
-                return "Shape L", "r U2 R' U' R U' r'"
+                return "Shape L", "r U 2 R' U' R U' r'"
 
         return None
