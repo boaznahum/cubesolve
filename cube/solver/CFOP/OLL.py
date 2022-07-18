@@ -177,18 +177,20 @@ class OLL(StepSolver):
         :return:
         """
 
-        M = Algs.M
-        Mp = M.p
-        U = Algs.U
-        Up = U.p
-        U2 = U * 2
 
         # normalize it to my form
+        state2 = state.strip().replace("\n", ", ")
         state = state.strip().replace("\n", "")
+        self.debug(f"Comparing state:{state2}")
 
+        #################### 4 corners
         match state:
             case "x-y-x" "-y-y-" "-yy-y" "-yyy-" "x---x":
-                # return "4 Corners", "Mp + Up + M + U2 + Mp + Up + M"
                 return "4 Corners", "M' U' M U2' M' U' M"
+
+        #################### "Shape L"
+            # match state:
+            case "x---x" "y-yy-" "y-yy-" "----y" "xyy-x":
+                return "Shape L", "r U2 R' U' R U' r'"
 
         return None
