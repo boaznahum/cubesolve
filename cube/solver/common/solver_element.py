@@ -5,6 +5,7 @@ from cube.model.cube import Cube, CubeSupplier
 from cube.model.cube_face import Face
 from cube.operator.cube_operator import Operator
 from cube.solver.common.base_solver import BaseSolver
+from ...algs import Alg
 from ...model.cube_queries2 import CubeQueries2
 from ...operator.op_annotation import SupportsAnnotation, AnnWhat
 
@@ -52,6 +53,10 @@ class SolverElement(CubeSupplier):
     @property
     def op(self) -> Operator:
         return self._solver.op
+
+    def play(self, alg: Alg):
+        self.op.play(alg)
+
 
     @property
     def ann(self):

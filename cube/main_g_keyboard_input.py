@@ -254,6 +254,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key.O:
                 if modifiers & key.MOD_CTRL:
+                    # todo: Don't modify config, see also in solver, directly use config
                     config.SOLVER_DEBUG = not config.SOLVER_DEBUG
                 elif modifiers & key.MOD_ALT:
                     config.CHECK_CUBE_SANITY = not config.CHECK_CUBE_SANITY
@@ -483,7 +484,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
             case key.COMMA:
 
-                # unod doesn't support None, it can oly dsibale global animation
+                # undo doesn't support None, it can oly disable global animation
                 _animation = solver_animation is not False
 
                 op.undo(animation=_animation)

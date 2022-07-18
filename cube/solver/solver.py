@@ -12,6 +12,8 @@ class SolveStep(Enum):
 
     # CFOP
     F2L = "F2L"
+    OLL = L3x
+    PLL = L3
 
     NxNCenters = "NxNCenters"
     NxNEdges = "NxNEdges"

@@ -28,6 +28,11 @@ def use(_):
 
 
 class F2L(SolverElement):
+
+    """
+    Credits to https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
+
+    """
     __slots__: list[str] = []
 
     def __init__(self, slv: BaseSolver) -> None:
@@ -170,12 +175,12 @@ class F2L(SolverElement):
         if edge is cube.fl:
             x = Algs.F
             destroying_edge = cube.flu
-        elif edge is cube.lb:
+        elif edge is cube.bl:
             x = Algs.L
-            destroying_edge = cube.lub
-        elif edge is cube.rb:
+            destroying_edge = cube.blu
+        elif edge is cube.br:
             x = Algs.B
-            destroying_edge = cube.rub
+            destroying_edge = cube.bru
         else:
             raise InternalSWError(f"Unsupported case {edge}")
 

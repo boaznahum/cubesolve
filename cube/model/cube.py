@@ -221,6 +221,9 @@ class Cube(CubeSupplier):
     def down(self):
         return self._down
 
+    ###########################################################
+    # Name odrder in edges nand corenrs
+    #  First front/back, then right/left then up/down
     @property
     def fru(self) -> Corner:
         """
@@ -228,30 +231,6 @@ class Cube(CubeSupplier):
         :return:  Corner FRU
         """
         return self._front.corner_top_right
-
-    @property
-    def lub(self) -> Corner:
-        """
-
-        :return:  Corner LUB
-        """
-        return self._left.corner_top_left
-
-    @property
-    def rub(self) -> Corner:
-        """
-
-        :return:  Corner RUB
-        """
-        return self._right.corner_top_right
-
-    @property
-    def frb(self) -> Corner:
-        """
-
-        :return:  Corner FRB
-        """
-        return self._right.corner_bottom_right
 
     @property
     def frd(self) -> Corner:
@@ -278,12 +257,36 @@ class Cube(CubeSupplier):
         return self._front.corner_bottom_left
 
     @property
-    def ub(self) -> Edge:
+    def bru(self) -> Corner:
         """
 
-        :return:  Edge UB
+        :return:  Corner RUB
         """
-        return self._up.edge_top
+        return self._right.corner_top_right
+
+    @property
+    def brd(self) -> Corner:
+        """
+
+        :return:  Corner BRD
+        """
+        return self._right.corner_bottom_right
+
+    @property
+    def blu(self) -> Corner:
+        """
+
+        :return:  Corner BLU
+        """
+        return self._left.corner_top_left
+
+    @property
+    def bld(self) -> Corner:
+        """
+
+        :return:  Corner BLD
+        """
+        return self._left.corner_bottom_left
 
     @property
     def fu(self) -> Edge:
@@ -309,7 +312,7 @@ class Cube(CubeSupplier):
         return self._front.edge_left
 
     @property
-    def lb(self) -> Edge:
+    def bl(self) -> Edge:
         """
 
         :return:  Edge LB
@@ -317,12 +320,35 @@ class Cube(CubeSupplier):
         return self.left.edge_left
 
     @property
-    def rb(self) -> Edge:
+    def br(self) -> Edge:
         """
 
         :return:  Edge RB
         """
         return self.right.edge_right
+
+    @property
+    def bu(self) -> Edge:
+        """
+
+        :return:  Edge UB
+        """
+        return self._up.edge_top
+
+    @property
+    def ru(self) -> Edge:
+        """
+
+        :return:  Edge RU
+        """
+        return self._right.edge_top
+    @property
+    def lu(self) -> Edge:
+        """
+
+        :return:  Edge LU
+        """
+        return self._left.edge_top
 
     @property
     def faces(self) -> Iterable[Face]:
@@ -363,7 +389,7 @@ class Cube(CubeSupplier):
         :return:
         """
         for _ in range(0, n % 4):
-            self.rotate_slice(SliceName.M, -1) # L
+            self.rotate_slice(SliceName.M, -1)  # L
             self.right.rotate(1)
             self.left.rotate(-1)
 

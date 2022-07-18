@@ -101,10 +101,12 @@ class Window(AbstractWindow, AnimationWindow):
 
     def update_text(self):
 
-        cube = self.app.cube
+        app = self.app
+        slv = app.slv
+        cube = app.cube
 
-        vs: ApplicationAndViewState = self.app.vs
-        op = self.app.op
+        vs: ApplicationAndViewState = app.vs
+        op = app.op
 
         def _b(b: bool):
             return "On" if b else "Off"
@@ -112,7 +114,7 @@ class Window(AbstractWindow, AnimationWindow):
         y = 10
 
         self.text.clear()
-        self.text.append(pyglet.text.Label("Status:" + self.app.slv.status,
+        self.text.append(pyglet.text.Label("Status:" + slv.status,
                                            x=10, y=y, font_size=10))
         y += 20
 
@@ -153,8 +155,8 @@ class Window(AbstractWindow, AnimationWindow):
 
         s = f"Sanity:{cube.is_sanity(force_check=True)}"
 
-        if self.app.error:
-            s += f", Error:{self.app.error}"
+        if app.error:
+            s += f", Error:{app.error}"
 
         self.text.append(pyglet.text.Label(s,
                                            x=10, y=y, font_size=10, color=(255, 0, 0, 255), bold=True))
@@ -165,7 +167,7 @@ class Window(AbstractWindow, AnimationWindow):
         s = f"Animation:{_b(op.animation_enabled)}"
         s += ", [" + str(vs.get_speed_index) + "] " + vs.get_speed.get_speed()
         s += ", Sanity check:" + _b(config.CHECK_CUBE_SANITY)
-        s += ", Debug=" + _b(self.app.slv.is_debug_config_mode)
+        s += ", Debug=" + _b(slv.is_debug_config_mode)
         s += ", SS Mode:" + _b(vs.single_step_mode)
 
         self.text.append(pyglet.text.Label(s,
@@ -174,7 +176,8 @@ class Window(AbstractWindow, AnimationWindow):
 
         # ----------------------------
 
-        s = f"S={cube.size}, Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
+        s = f"Solver:{slv.name},"
+        s += f"S={cube.size}, Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
 
         s += ", Slices"
         s += "  [" + str(vs.slice_start) + ", " + str(vs.slice_stop) + "]"

@@ -1,10 +1,10 @@
 from cube.algs import Algs
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.common.base_solver import BaseSolver
-from cube.solver.common.solver_element import StepSolver
+from cube.solver.common.solver_element import StepSolver, SolverElement
 
 
-class AdvancedEvenEdgeFullEdgeParity(StepSolver):
+class AdvancedEvenEdgeFullEdgeParity(SolverElement):
 
     def __init__(self, solver: BaseSolver) -> None:
         super().__init__(solver)

@@ -5,6 +5,7 @@ from collections.abc import MutableSequence, Collection
 from random import Random
 from typing import Sequence, Any, final, TypeVar, Tuple, Iterable, Iterator
 
+from cube.algs._parser import parse_alg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube import Cube
 from cube.model.cube_slice import SliceName
@@ -12,7 +13,7 @@ from cube.model import FaceName, AxisName
 
 __all__ = ["Algs", "Alg", "SimpleAlg", "AnimationAbleAlg", "AnnotationAlg",
            "NSimpleAlg",
-           "SliceAbleAlg", "SeqAlg", "SliceAlg", "FaceAlg"]
+           "SliceAbleAlg", "SeqAlg", "SliceAlg", "FaceAlg", "WholeCubeAlg"]
 
 from cube.model import PartSlice
 
@@ -309,6 +310,10 @@ class NSimpleAlg(SimpleAlg, ABC):
         """
         self._n *= other
         return self
+
+    @property
+    def code(self):
+        return self._code
 
 
 class AnnotationAlg(SimpleAlg):
@@ -1024,13 +1029,13 @@ class Algs:
     def seq_alg(name: str | None, *algs: Alg) -> SeqAlg:
         return SeqAlg(name, *algs)
 
-    Simple = [L, Lw,
-              R, Rw, X, M,
-              U, Uw, E, Y,
-              F, Fw, Z, S,
-              B, Bw,
-              D, Dw,
-              ]
+    Simple: Sequence[NSimpleAlg] = [L, Lw,
+                                    R, Rw, X, M,
+                                    U, Uw, E, Y,
+                                    F, Fw, Z, S,
+                                    B, Bw,
+                                    D, Dw,
+                                    ]
 
     RU = SeqAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
 
@@ -1115,6 +1120,10 @@ class Algs:
     @classmethod
     def no_op(cls) -> Alg:
         return Algs._NO_OP
+
+    @classmethod
+    def parse(cls, alg: str) -> Alg:
+        return parse_alg(alg)
 
 
 def _test_prime_prime():

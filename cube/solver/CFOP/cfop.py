@@ -1,4 +1,5 @@
 from cube.operator.cube_operator import Operator
+from .OLL import OLL
 from .f2l import F2L
 from cube.solver.begginer.l1_cross import L1Cross
 from cube.solver.common.base_solver import BaseSolver
@@ -22,7 +23,8 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
     __slots__ = ["_debug_override",
                  "l1_cross",
                  "f2l",
-                 "l3_cross", "l2_corners"
+        #         "l3_cross", "l2_corners"
+                 "oll",
                  "nxn_centers", "nxn_edges", "even_edge_parity"
                  ]
 
@@ -33,7 +35,7 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
         self.f2l = F2L(self)
 
         # temp -- still beginner
-        self.l3_cross = L3Cross(self)
+        self.oll = OLL(self)
         self.l3_corners = L3Corners(self)
 
         self.nxn_centers = NxNCenters(self)
@@ -164,31 +166,26 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
             _l1x()
             self.f2l.solve()
 
-        def _l3x():
+        def _l3oll():
+            self.oll.solve()
+
+        def _l3pll():
             # till we have our L3, so it can do it directly
 
-            try:
-                self.l3_cross.solve()
-            except EvenCubeEdgeParityException:
-                self.even_edge_parity.solve()
-                self.l3_cross.solve()
-
-        def _l3c():
-            # till we have our L3, so it can do it directly
-
-            try:
-                self.l3_corners.solve()
-            except EvenCubeCornerSwapException:
-                self.l3_cross.solve()
-                self.l3_corners.solve()
+            # try:
+            #     self.l3_corners.solve()
+            # except EvenCubeCornerSwapException:
+            #     self.l3_cross.solve()
+            #     self.l3_corners.solve()
+            pass
 
 
 
 
         def _l3():
             _f2l()
-            _l3x()
-            _l3c()
+            _l3oll()
+            _l3pll()
 
 
         _d = self._debug_override
@@ -205,7 +202,7 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
                 case SolveStep.F2L | SolveStep.L2:
                     _f2l()
 
-                case SolveStep.ALL:
+                case SolveStep.ALL | SolveStep.L3:
                     _l3()
 
 

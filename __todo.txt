@@ -27,6 +27,8 @@ Optimize : improve face tracker, they should search 4 points only !!!
 
 Bug: using texture  animation is very slow
 
+Code: keyboard and solver user directly config for debug
+
 
 
 

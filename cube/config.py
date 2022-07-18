@@ -2,7 +2,7 @@ from typing import Tuple
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 7
+CUBE_SIZE = 3
 
 SOLVER_CFOP=True
 
