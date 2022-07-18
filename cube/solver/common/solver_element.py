@@ -83,6 +83,10 @@ class SolverElement(CubeSupplier):
     def white_face(self) -> Face:
         return self._cmn.white_face
 
+    @property
+    def yellow_face(self) -> Face:
+        return self._cmn.white_face.opposite
+
 
 class StepSolver(SolverElement):
     def __init__(self, solver: BaseSolver) -> None:
@@ -96,5 +100,7 @@ class StepSolver(SolverElement):
     @abstractmethod
     def is_solved(self):
         pass
+
+
 
 

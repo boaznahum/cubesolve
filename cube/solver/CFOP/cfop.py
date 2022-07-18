@@ -1,15 +1,12 @@
+from cube import config
+from cube.app_exceptions import OpAborted
 from cube.operator.cube_operator import Operator
-from .OLL import OLL
-from .f2l import F2L
 from cube.solver.begginer.l1_cross import L1Cross
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.solver import BeginnerLBLReduce, SolveStep, SolverResults
-from cube import config
-from cube.algs import Algs
-from cube.app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
-from cube.model.cube import Cube
-from ..begginer.l3_corners import L3Corners
-from ..begginer.l3_cross import L3Cross
+from .OLL import OLL
+from .PLL import PLL
+from .f2l import F2L
 from ..begginer.nxn_centers import NxNCenters
 from ..begginer.nxn_edges import NxNEdges
 from ..common.advanced_even_oll_big_cube_parity import AdvancedEvenEdgeFullEdgeParity
@@ -23,8 +20,8 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
     __slots__ = ["_debug_override",
                  "l1_cross",
                  "f2l",
-        #         "l3_cross", "l2_corners"
                  "oll",
+                 "pll",
                  "nxn_centers", "nxn_edges", "even_edge_parity"
                  ]
 
@@ -36,14 +33,11 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
 
         # temp -- still beginner
         self.oll = OLL(self)
-        self.l3_corners = L3Corners(self)
+        self.pll = PLL(self)
 
         self.nxn_centers = NxNCenters(self)
         self.nxn_edges = NxNEdges(self)
         self.even_edge_parity = AdvancedEvenEdgeFullEdgeParity(self)
-
-
-
 
         self._debug_override: bool | None = None
 
@@ -113,6 +107,23 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
             if not s:
                 s = "No F2L"
 
+        is_oll = self.oll.is_solved
+        is_pll = self.pll.is_solved
+        if self.pll.is_solved:
+            _add("L3")
+        else:
+            oll = self.oll.is_rotate_and_solved()
+            pll = self.pll.is_rotate_and_solved()
+
+            if oll or pll:
+                if oll:
+                    _add("OLL")
+
+                if pll:
+                    _add("PLL")
+            else:
+                _add("NO L3")
+
         return s
 
     def solve(self, debug: bool | None = None, animation: bool | None = True,
@@ -179,14 +190,10 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
             #     self.l3_corners.solve()
             pass
 
-
-
-
         def _l3():
             _f2l()
             _l3oll()
             _l3pll()
-
 
         _d = self._debug_override
         try:

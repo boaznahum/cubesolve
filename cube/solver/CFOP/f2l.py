@@ -531,12 +531,16 @@ class F2L(SolverElement):
         U = Algs.U
 
         e_up_cc = e.get_face_edge(up).color
-        pre: Alg
+        pre: Alg | None
+
         e_matches_front = e_up_cc == r_color
         if e_matches_front:
-            pre = self.cqr.rotate_face_and_check_get_alg_deprecated(up, lambda: edge.actual is u_bottom)
+            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_bottom)
         else:
-            pre = self.cqr.rotate_face_and_check_get_alg_deprecated(up, lambda: edge.actual is u_right)
+            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_right)
+
+        assert pre
+
         if c.match_faces:
 
             if e_matches_front:

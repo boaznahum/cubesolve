@@ -28,6 +28,7 @@ class OLL(StepSolver):
         self._set_debug_prefix("OLL")
         self._oll_parity = AdvancedEvenEdgeFullEdgeParity(slv)
 
+    @property
     def is_solved(self) -> bool:
         """
 
@@ -39,9 +40,17 @@ class OLL(StepSolver):
 
         return all(p.match_face(yf) for p in yf.parts)
 
+    def is_rotate_and_solved(self):
+        """
+        Can be solved only by rotate
+        :return:
+        """
+        return self.cqr.rotate_face_and_check(self.yellow_face, lambda :self.is_solved) >= 0
+
+
     def solve(self):
 
-        if self.is_solved():
+        if self.is_solved:
             return
 
         # quick without rotating cube:
@@ -88,7 +97,7 @@ class OLL(StepSolver):
 
         self.play(alg)
 
-        assert self.is_solved()
+        assert self.is_solved
 
     def _check_and_do_oll_edge_parity(self):
         """

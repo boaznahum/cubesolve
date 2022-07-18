@@ -1,4 +1,5 @@
 import itertools
+import warnings
 from collections import defaultdict
 from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
 from typing import Callable, TypeVar, Tuple, Collection, Optional
@@ -243,21 +244,6 @@ class CubeQueries2:
         """
         return self.rotate_and_check(Algs.of_face(f.name), pred)
 
-    def rotate_face_and_check_get_alg_deprecated(self, f: Face, pred: Pred0) -> Alg:
-        """
-        Rotate face and check condition
-        :return the algorithm needed to fulfill the pred
-        :raise InternalSWError if no such algorithm  exists to fulfill the pred
-        :param f:
-        :param pred:
-        :return: number of rotation, -1 if check fails
-        restore cube state before returning, this is not count as solve step
-        """
-        alg = Algs.of_face(f.name)
-        n = self.rotate_and_check(alg, pred)
-        assert n >= 0
-
-        return alg * n
 
     def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Optional[Alg]:
         """
