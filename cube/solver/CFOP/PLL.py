@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 
+from cube import config
 from cube.algs import Alg, Algs
 from cube.app_exceptions import InternalSWError
 from cube.model import Part
@@ -49,12 +50,8 @@ class PLL(StepSolver):
 
         # maybe need only rotation
 
-        rotate_alg = self.cqr.rotate_face_and_check_get_alg(self.cmn.white_face.opposite,
-                                                            lambda: self.is_solved)
-
-        if rotate_alg:
-            self.play(rotate_alg)
-            return  # done
+        if self._rotate_and_solve():
+            return True  # done
 
         # we assume we have a cross
         self.cmn.bring_face_up(self.white_face.opposite)
@@ -63,6 +60,15 @@ class PLL(StepSolver):
 
         assert self.is_solved
 
+    def _rotate_and_solve(self):
+        rotate_alg = self.cqr.rotate_face_and_check_get_alg(self.cmn.white_face.opposite,
+                                                            lambda: self.is_solved)
+
+        if rotate_alg:
+            self.play(rotate_alg)
+
+        return rotate_alg
+
     def _do_pll(self):
 
         description_alg = self._search_pll_alg()
@@ -70,34 +76,52 @@ class PLL(StepSolver):
         if description_alg is None:
             raise InternalSWError(f"Unknown PLL state")
 
-        description, alg = description_alg
+        search_alg, description, alg = description_alg
 
         self.debug(f"Found PLL alg '{description}' {alg}")
 
-        self.play(alg)
+        self.play((search_alg + alg).simplify())
+
+        self._rotate_and_solve()  # because all our searching U
 
         assert self.is_solved
 
-    def _search_pll_alg(self) -> Tuple[str, Alg] | None:
+    def _search_pll_alg(self) -> Tuple[Alg, str, Alg] | None:
 
         """
         We need both Y and U !!!
         :return:
         """
 
-        for y in range(4):
+        rotate_while_search = config.SOLVER_PLL_ROTATE_WHILE_SEARCH
 
-            for u in range(4):
+        search_alg: Alg = Algs.no_op()
 
-                description_alg: tuple[str, Alg] | None = self._get_state_alg()
+        try:
+            for y in range(4):
 
-                if description_alg is not None:
-                    return description_alg
+                for u in range(4):
 
-                self.play(Algs.U)  #
+                    description_alg: Tuple[str, Alg] | None = self._get_state_alg()
 
-            # well we want to rotate, to leave cube in original state so it is easier to debug
-            self.play(Algs.Y)  #
+                    if description_alg is not None:
+                        return search_alg.simplify(), description_alg[0], description_alg[1]
+
+                    if rotate_while_search:
+                        self.play(Algs.U)  #
+                    else:
+                        Algs.U.play(self.cube)
+                        search_alg = search_alg + Algs.U
+
+                # well we want to rotate, to leave cube in original state so it is easier to debug
+                if rotate_while_search:
+                    self.play(Algs.Y)  #
+                else:
+                    Algs.Y.play(self.cube)
+                    search_alg = search_alg + Algs.Y
+
+        finally:
+            search_alg.simplify().inv().play(self.cube)
 
         return None
 
@@ -141,7 +165,7 @@ class PLL(StepSolver):
             p: Part
             for i, p in enumerate(permute[:-1]):
 
-                if not p.required_position is permute[i + 1]:
+                if p.required_position is not permute[i + 1]:
                     return False
             return permute[-1].required_position is permute[0]  # p3-->p1
 
@@ -149,9 +173,7 @@ class PLL(StepSolver):
             """
             --> belongs
             p1 --> p2 --p3 --> p1
-            :param p1:
-            :param p2:
-            :param p3:
+            :param permutes: see :is_r0
             :return:
             """
 
@@ -164,7 +186,6 @@ class PLL(StepSolver):
 
             return all(p.in_position for p in others)
 
-
         lu = cube.lu
         bu = cube.bu
         ru = cube.ru
@@ -175,11 +196,63 @@ class PLL(StepSolver):
         bru = cube.bru
         fru = cube.fru
 
-
+        # Edges Only
         if is_r((ru, lu, fu)):
             return "Ua Perm", "M2' U M U2 M' U M2'"
         elif is_r((lu, ru, fu)):
             return "Ub Perm", "M2' U' M U2' M' U' M2'"
+
+        elif is_r((lu, fu), (bu, ru)):
+            return "Z Perm", "(M2' U' M2' U') M' (U2 M2' U2) M'"
+
+        elif is_r((lu, ru), (fu, bu)):
+            return "H Perm", "(M2' U M2') U2 (M2' U M2')"
+
+        # Corners Only
+        elif is_r((blu, bru, fru)):
+            return "Aa Perm", "x (R' U R') D2 (R U' R') D2 R2 x'"
+
+        elif is_r((blu, fru, bru)):
+            return "Ab Perm", "x R2' D2 (R U R') D2 (R U' R) x'"
+
+        elif is_r((flu, blu), (fru, bru)):
+            return "E Perm", "x' (R U' R' D) (R U R' D') (R U R' D) (R U' R' D') x"
+
+        # Swap Adjacent Corners
+
+        elif is_r((lu, bu), (fru, bru)):
+            return "Ra Perm", "y' (L U2 L' U2) L F' (L' U' L U) L F L2' U"
+
+        elif is_r((blu, bru), (fu, ru)):
+            return "Rb Perm", "(R' U2 R U2') R' F (R U R' U') R' F' R2 U'"
+
+        elif is_r((blu, bru), (lu, bu)):
+            return "Ja Perm", "y' (L' U' L F) (L' U' L U) L F' L2' U L U'"
+
+        elif is_r((fru, bru), (fu, ru)):
+            return "Jb Perm", "(R U R' F') (R U R' U') R' F R2 U' R' U'"
+
+        elif is_r((lu, ru), (bru, fru)):
+            return "T Perm", "(R U R' U') R' F R2 U' R' U' R U R' F'"
+
+        elif is_r((fu, bu), (fru, bru)):
+            return "F Perm", "(R' U' F') (R U R' U') (R' F R2 U') (R' U' R U) (R' U R)"
+
+        # Swap Diagonal Corners
+
+        elif is_r((blu, fru), (bu, ru)):
+            return "V Perm", "(R' U R' U') y (R' F' R2 U') (R' U R' F) R F"
+
+        elif is_r((blu, fru), (lu, bu)):
+            return "Y Perm", "F (R U' R' U') (R U R' F') (R U R' U') (R' F R F')"
+
+        elif is_r((flu, bru), (lu, ru)):
+            return "Na Perm", "(R U R' U) (R U R' F') (R U R' U') (R' F R2 U') R' U2 (R U' R')"
+
+        elif is_r((blu, fru), (lu, ru)):
+            return "Nb Perm", "(R' U R U') (R' F' U' F) (R U R' F) R' F' (R U' R)"
+
+        # Double Cycles
 
         elif is_r((flu, blu, bru), (lu, ru, bu)):
             return "Ga Perm", "R2 U (R' U R' U') (R U' R2) D U' (R' U R D') U"
@@ -187,9 +260,9 @@ class PLL(StepSolver):
         elif is_r((flu, bru, blu), (ru, lu, bu)):
             return "Gb Perm", "(F' U' F) (R2 u R' U) (R U' R u') R2'"
 
-        elif is_r((blu, flu, fru),(lu, ru, fu)):
+        elif is_r((blu, flu, fru), (lu, ru, fu)):
             return "Gc Perm", "R2 U' (R U' R U) (R' U R2 D') (U R U' R') D U'"
-        elif is_r((flu, blu, bru),(lu, fu, bu)):
+        elif is_r((flu, blu, bru), (lu, fu, bu)):
             return "Gd Perm", "(R U R') y' (R2 u' R U') (R' U R' u) R2"
 
         else:
