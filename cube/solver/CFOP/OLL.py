@@ -1,3 +1,4 @@
+import re
 from typing import Tuple, Optional
 
 from cube.algs import Alg, Algs
@@ -27,6 +28,8 @@ class OLL(StepSolver):
         super().__init__(slv)
         self._set_debug_prefix("OLL")
         self._oll_parity = AdvancedEvenEdgeFullEdgeParity(slv)
+
+        self._algs_db: list[Tuple, Tuple, Tuple] = []
 
     @property
     def is_solved(self) -> bool:
@@ -84,13 +87,13 @@ class OLL(StepSolver):
                 description, alg = description_alg
                 break  # found
 
-            if r == 3:
-                break  # don't rotate again, we failed to found
+            # if r == 3:
+            #     break  # don't rotate again, we failed to found
 
-            self.play(Algs.U)
+            self.play(Algs.Y)
 
         if alg is None:
-            raise InternalSWError(f"Unknown state {state}")
+            raise InternalSWError(f"Unknown OLL state:\n {state}")
 
         self.debug(f"Found OLL alg '{description}' {alg}")
 
@@ -116,27 +119,39 @@ class OLL(StepSolver):
                 raise InternalSWError("Edge parity on odd cube")
 
     def _encode_state(self) -> str:
-        # noinspection SpellCheckingInspection
-        """
-        For Y/y for Yellow facet
 
-        xyyyx  --> Back face
-        yYYYy
-        yYYYy  ---> Up
-        yYYYy
-        xyyyx  ---> Front Face
+        """
+                encoding
+           "l1l2l3"  "b1b2b3"  "r1r2r3" "f1f2f3"
+
+               b1  b2  b3
+           l3             r1
+           l2      Y      r2
+           l1             r3
+               f3  f2  f1
+
+        All are clockwise, so they can be rotated if needed
+
+        Example:  27 Sune
+
+           "---" "y--" "y--" "y--"
+
+               Y   --  --
+           --      Y      Y
+           --  Y   Y  Y   --
+           --  Y   Y      --
+               --  --  Y
 
         :return:
         """
 
         cube = self.cube
         c = cube
-        up = c.up
         back = c.back
         right = c.right
         left = c.left
         front = c.front
-        yellow = up.color
+        yellow = c.up.color
 
         def e(face: Face, *parts: Part):
             s = ""
@@ -149,21 +164,12 @@ class OLL(StepSolver):
 
             return s
 
-        top_left = up.corner_top_left
-        top_right = up.corner_top_right
-        bottom_left = up.corner_bottom_left
-        bottom_right = up.corner_bottom_right
-        e_top = up.edge_top
-        e_left = up.edge_left
-        e_right = up.edge_right
-        e_bottom = up.edge_bottom
-        s1 = "x" + e(back, top_left, e_top, top_right) + "x"
-        s2 = e(left, top_left) + e(up, top_left, e_top, top_right) + e(right, top_right)
-        s3 = e(left, e_left) + e(up, e_left, up.center, e_right) + e(right, e_right)
-        s4 = e(left, bottom_left) + e(up, bottom_left, e_bottom, bottom_right) + e(right, bottom_right)
-        s5 = "x" + e(front, bottom_left, e_bottom, bottom_right) + "x"
+        s1 = e(left, left.corner_top_right, left.edge_top, left.corner_top_left)
+        s2 = e(back, back.corner_top_right, back.edge_top, back.corner_top_left)
+        s3 = e(right, right.corner_top_right, right.edge_top, right.corner_top_left)
+        s4 = e(front, front.corner_top_right, front.edge_top, front.corner_top_left)
 
-        return "\n".join([s1, s2, s3, s4, s5])
+        return "\n".join([s1, s2, s3, s4])
 
     def _get_state_alg(self, state: str) -> Optional[Tuple[str, Alg]]:
 
@@ -196,37 +202,39 @@ class OLL(StepSolver):
         state = state.strip().replace("\n", "")
         self.debug(f"Comparing state:{state2}")
 
-        #################### Cross
-        match state:
-            case "xy--x" "--y-y" "-yyy-" "y-yy-" "x---x":
-                return "Cross", "R' U2 (R U R' U) R"
+        dbs: list[tuple[str, str, str]] = self._get_algs_db()
 
-        #################### 4 corners
-        match state:
-            case "x-y-x" "-y-y-" "-yy-y" "-yyy-" "x---x":
-                return "4 Corners", "M' U' M U2' M' U' M"
+        for d in dbs:
 
-            #################### "Shape L"
-            # match state:
-            case "x---x" "y-yy-" "y-yy-" "----y" "xyy-x":
-                return "Shape L", "r U 2 R' U' R U' r'"
+            st0 = d[0]
+
+            st = re.sub(r'\s+', "", st0)
+            st = st.lower()
+
+            assert len(st) == 12, str((st0, d[1]))
+            assert st.count("y") + st.count("-") == 12, str((st0, d[1]))
+
+            #print(f"{state} {st}")
+
+            if st == state:
+                return d[1], d[2]
 
         return None
 
-    def _algs_db(self):
+    def _get_algs_db(self) -> list[Tuple[str, str, str]]:
 
         """
         Credits: https://cubingcheatsheet.com/algs3x_oll.html
 
 
         encoding
-           "l1l2l3"  "u1u2u2"  "r1r2r3" "f1f2f3"
+           "l1l2l3"  "b1b2b2"  "r1r2r3" "f1f2f3"
 
-               u1  u2  u3
+               b1  b2  b3
            l3             r1
            l2      Y      r2
            l1             r3
-               d3  d2  d1
+               f3  f2  f1
 
         All are clockwise, so they can be rotated if needed
 
@@ -246,19 +254,20 @@ class OLL(StepSolver):
         :return:
         """
 
+        if self._algs_db:
+            return self._algs_db
 
+        self._algs_db = [
 
-        res: list[Tuple[str, str, str]] = [
-
-            #Cross
+            # Cross
             ("--- y-- y-- y--", "27 SUNE", "(R U R' U) (R U2 R')"),
 
             ("--y --y --- --y", "26 Anti Sune", "(L' U' L U') (L' U2 L)"),
             ("--- y-y --- y-y", "21 H", "F (R U R' U') (R U R' U') (R U R' U') F'"),
-            ("y-y --y --- y---", "22 Pi", "R U2 (R2' U' R2 U') (R2' U2 R)"),
+            ("y-y --y --- y--", "22 Pi", "R U2 (R2' U' R2 U') (R2' U2 R)"),
             ("--- --- --- y-y", "23 HEADLIGHTS", "R2 D (R' U2 R) D' (R' U2 R')"),
-            ("--- y--- --- --y", "24 T", "(r U R' U') (r' F R F')"),
-            ("--y --- --- y---", "25 Bowtie", "F' (r U R' U') (r' F R)"),
+            ("--- y-- --- --y", "24 T", "(r U R' U') (r' F R F')"),
+            ("--y --- --- y--", "25 Bowtie", "F' (r U R' U') (r' F R)"),
 
             # T
             ("--- yy- --- -yy", "33 SHOELACES", "(R U R' U') (R' F R F')"),
@@ -274,7 +283,7 @@ class OLL(StepSolver):
 
             # W
             ("--- -y- yy- --y", "36 WARIO", "(R' U' R U') (R' U R U) l U' R' U x"),
-            ("--- y--- -yy -y-", "38 MARIO", "(R U R' U) (R U' R' U') (R' F R F')"),
+            ("--- y-- -yy -y-", "38 MARIO", "(R U R' U) (R U' R' U') (R' F R F')"),
             # Corners
             ("--- --- -y- -y-", "28 Stealth", "(r U R' U') M (U R U' R')"),
             ("--- -y- --- -y-", "57 Mummy", "(R U R' U') M' (U R U' r')"),
@@ -295,38 +304,40 @@ class OLL(StepSolver):
             ("-y- -y- y-- --y", "35 Fish Salad", "(R U2 R') (R' F R F') (R U2 R')"),
             ("--- --- yy- -yy", "37 Mounted Fish", "F (R U' R' U') (R U R') F'"),
             # L Big
-            ("", "13 Gun", "F (U R U' R2) F' (R U R U') R'"),
-            ("", "14 Anti Gun", "(R' F R) U (R' F' R) y' (R U' R')"),
-            ("", "15 SQUEEGEE", "(r' U' r) (R' U' R U) (r' U r)"),
-            ("16 ANTI SQUEEGEE", "(r U r') (R U R' U') (r U' r')"),
+            ("--- yy- y-- yy-", "13 Gun", "F (U R U' R2) F' (R U R U') R'"),
+            ("--y -yy --- -yy", "14 Anti Gun", "(R' F R) U (R' F' R) y' (R U' R')"),
+            ("y-- yy- y-- -y-", "15 SQUEEGEE", "(r' U' r) (R' U' R U) (r' U r)"),
+            ("--y -y- --y -yy", "16 ANTI SQUEEGEE", "(r U r') (R U R' U') (r U' r')"),
 
             # L
-            ("", "48 Breakneck", "F (R U R' U') (R U R' U') F'"),
-            ("","47 Anti Breakneck", "F' (L' U' L U) (L' U' L U) F"),
-            ("", "49 Right Back Squeezy", "r U' r2' U r2 U r2' U' r"),
-            ("", "50 Right Front Squeezy", "r' U r2 U' r2' U' r2 U r'"),
-            ("", "53 Frying Pan", "(r' U' R U') (R' U R U') R' U2 r"),
-            ("", "54 Anti Frying Pan", "(r U R' U) (R U' R' U) R U2' r'"),
+            ("y-y --y -y- yy-", "48 Breakneck", "F (R U R' U') (R U R' U') F'"),
+            ("-y- y-- y-y -yy", "47 Anti Breakneck", "F' (L' U' L U) (L' U' L U) F"),
+            ("yyy --y --- yy-", "49 Right Back Squeezy", "r U' r2' U r2 U r2' U' r"),
+            ("yyy -yy --- y--", "50 Right Front Squeezy", "r' U r2 U' r2' U' r2 U r'"),
+            ("yyy -y- y-y ---", "53 Frying Pan", "(r' U' R U') (R' U R U') R' U2 r"),
+            ("yyy --- y-y -y-", "54 Anti Frying Pan", "(r U R' U) (R U' R' U) R U2' r'"),
             # Y
-            ("", "29 Spotted Chameleon", "y (R U R' U') (R U' R') (F' U' F) (R U R')"),
-            ("", "30 Anti Spotted Chameleon", "y' F U (R U2 R' U') (R U2 R' U') F'"),
-            ("", "41 Awkward Fish", "(R U R' U) (R U2' R') F (R U R' U') F'"),
-            ("", "42 Lefty Awkward Fish", "(R' U' R U') (R' U2 R) F (R U R' U') F'"),
+            ("y-- -y- -yy ---", "29 Spotted Chameleon", "y (R U R' U') (R U' R') (F' U' F) (R U R')"),
+            ("-y- --y --- yy-", "30 Anti Spotted Chameleon", "y' F U (R U2 R' U') (R U2 R' U') F'"),
+            ("--- y-y -y- -y-", "41 Awkward Fish", "(R U R' U) (R U2' R') F (R U R' U') F'"),
+            ("--- -y- -y- y-y", "42 Lefty Awkward Fish", "(R' U' R U') (R' U2 R) F (R U R' U') F'"),
             # Z
-            ("", "7 Lightning", "(r U R' U) R U2 r'"),
-            ("", "8 Reverse Lightning", "(r' U' R U') R' U2 r"),
-            ("", "11 Downstairs", "r' (R2 U R' U R U2 R') U M'"),
-            ("", "12 Upstairs", "M' (R' U' R U' R' U2 R) U' M"),
-            ("", "40 Anti Fung", "R' F (R U R' U') F' U R"),
-            ("", "39 FUNG", "L F' (L' U' L U) F U' L'"),
+            ("--- y-- yy- yy-", "7 Lightning", "(r U R' U) R U2 r'"),
+            ("--- -yy -yy --y", "8 Reverse Lightning", "(r' U' R U') R' U2 r"),
+            ("-y- yy- y-- y--", "11 Downstairs", "r' (R2 U R' U R U2 R') U M'"),
+            ("-y- --y --y -yy", "12 Upstairs", "M' (R' U' R U' R' U2 R) U' M"),
+            ("y-- -yy --- -y-", "40 Anti Fung", "R' F (R U R' U') F' U R"),
+            ("--- yy- --y -y-", "39 FUNG", "L F' (L' U' L U) F U' L'"),
             # Dot
-            ("", "01 RUNWAY", "(R U2 R') (R' F R F') U2 (R' F R F')"),
-            ("", "02 ZAMBONI", "F (R U R' U') F' f (R U R' U') f'"),
-            ("", "03 ANTI NAZI", "f (R U R' U') f' U' F (R U R' U') F'"),
-            ("", "04 NAZI", "f (R U R' U') f' U F (R U R' U') F'"),
-            ("", "18 Crown", "(r U R' U) (R U2 r') (r' U' R U') (R' U2 r)"),
-            ("", "19 BUNNY", "M U (R U R' U') M' (R' F R F')"),
-            ("", "17 SLASH", "(R U R' U) (R' F R F') U2' (R' F R F')"),
-            ("", "20 X", "M U (R U R' U') M2' (U R U' r')")
+            ("yyy -y- yyy -y-", "01 RUNWAY", "(R U2 R') (R' F R F') U2 (R' F R F')"),
+            ("yyy -yy -y- yy-", "02 ZAMBONI", "F (R U R' U') F' f (R U R' U') f'"),
+            ("yy- yy- yy- -y-", "03 ANTI NAZI", "f (R U R' U') f' U' F (R U R' U') F'"),
+            ("-yy -y- -yy -yy", "04 NAZI", "f (R U R' U') f' U F (R U R' U') F'"),
+            ("-y- -y- -y- yyy", "18 Crown", "(r U R' U) (R U2 r') (r' U' R U') (R' U2 r)"),
+            ("yy- -y- -yy -y-", "19 BUNNY", "M U (R U R' U') M' (R' F R F')"),
+            ("yy- -yy -y- -y-", "17 SLASH", "(R U R' U) (R' F R F') U2' (R' F R F')"),
+            ("-y- -y- -y- -y-", "20 X", "M U (R U R' U') M2' (U R U' r')")
 
         ]
+
+        return self._algs_db

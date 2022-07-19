@@ -82,10 +82,10 @@ class PLL(StepSolver):
             #     break  # don't rotate again, we failed to found
 
             # well we want to roate, toleave cube in original ssate so it it easier to debug
-            self.play(Algs.Y)  # you can't U, it changes required position of parts
+            self.play(Algs.U)  # you can't U, it changes required position of parts
 
         if alg is None:
-            raise InternalSWError(f"Unknown state")
+            raise InternalSWError(f"Unknown PLL state")
 
         self.debug(f"Found PLL alg '{description}' {alg}")
 
