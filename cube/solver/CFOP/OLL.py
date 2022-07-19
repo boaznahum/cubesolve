@@ -45,8 +45,7 @@ class OLL(StepSolver):
         Can be solved only by rotate
         :return:
         """
-        return self.cqr.rotate_face_and_check(self.yellow_face, lambda :self.is_solved) >= 0
-
+        return self.cqr.rotate_face_and_check(self.yellow_face, lambda: self.is_solved) >= 0
 
     def solve(self):
 
@@ -213,3 +212,121 @@ class OLL(StepSolver):
                 return "Shape L", "r U 2 R' U' R U' r'"
 
         return None
+
+    def _algs_db(self):
+
+        """
+        Credits: https://cubingcheatsheet.com/algs3x_oll.html
+
+
+        encoding
+           "l1l2l3"  "u1u2u2"  "r1r2r3" "f1f2f3"
+
+               u1  u2  u3
+           l3             r1
+           l2      Y      r2
+           l1             r3
+               d3  d2  d1
+
+        All are clockwise, so they can be rotated if needed
+
+        Example:  27 Sune
+
+           "---" "y--" "y--" "y--"
+
+               Y   --  --
+           --      Y      Y
+           --  Y   Y  Y   --
+           --  Y   Y      --
+               --  --  Y
+
+        Whitespaces are ignored.
+
+
+        :return:
+        """
+
+
+
+        res: list[Tuple[str, str, str]] = [
+
+            #Cross
+            ("--- y-- y-- y--", "27 SUNE", "(R U R' U) (R U2 R')"),
+
+            ("--y --y --- --y", "26 Anti Sune", "(L' U' L U') (L' U2 L)"),
+            ("--- y-y --- y-y", "21 H", "F (R U R' U') (R U R' U') (R U R' U') F'"),
+            ("y-y --y --- y---", "22 Pi", "R U2 (R2' U' R2 U') (R2' U2 R)"),
+            ("--- --- --- y-y", "23 HEADLIGHTS", "R2 D (R' U2 R) D' (R' U2 R')"),
+            ("--- y--- --- --y", "24 T", "(r U R' U') (r' F R F')"),
+            ("--y --- --- y---", "25 Bowtie", "F' (r U R' U') (r' F R)"),
+
+            # T
+            ("--- yy- --- -yy", "33 SHOELACES", "(R U R' U') (R' F R F')"),
+            ("y-y -y- --- -y-", "45 Suit Up", "F (R U R' U') F'"),
+
+            # Square
+            ("yy- yy- y-- ---", "05 LEFTY SQUARE", "r' U2 (R U R' U) r"),
+            ("-yy --- --y -yy", "6 Righty Square", "r U2 (R' U' R U') r'"),
+
+            # C
+            ("--y -y- y-- -y-", "34 City", "(R U R2' U') (R' F R U) R U' F'"),
+            ("-y- --- yyy ---", "46 Seein' Headlights", "R' U' (R' F R F') U R"),
+
+            # W
+            ("--- -y- yy- --y", "36 WARIO", "(R' U' R U') (R' U R U) l U' R' U x"),
+            ("--- y--- -yy -y-", "38 MARIO", "(R U R' U) (R U' R' U') (R' F R F')"),
+            # Corners
+            ("--- --- -y- -y-", "28 Stealth", "(r U R' U') M (U R U' R')"),
+            ("--- -y- --- -y-", "57 Mummy", "(R U R' U') M' (U R U' r')"),
+
+            # P
+            ("-y- y-- --- -yy", "31 Couch", "(R' U' F) (U R U' R') F' R"),
+            ("-y- yy- --- --y", "32 Anti Couch", "S (R U R' U') (R' F R f')"),
+            ("--- -y- yyy ---", "43 Anti P", "f' (L' U' L U) f"),
+            ("yyy -y- --- ---", "44 P", "f (R U R' U') f'"),
+            # I
+            ("y-y -yy --- yy-", "51 Bottlecap", "f (R U R' U') (R U R' U') f'"),
+            ("y-y -y- y-y -y-", "56 Streetlights", "F (R U R' U') R F' (r U R' U') r'"),
+            ("-y- y-- yyy --y", "52 Rice Cooker", "(R U R' U) R d' R U' R' F'"),
+            ("yyy --- yyy ---", "55 HIGHWAY", "y (R' F R U) (R U' R2' F') R2 U' R' (U R U R')"),
+            # Fish
+            ("--y --y -y- -yy", "9 Kite", "(R U R' U') R' F (R2 U R' U') F'"),
+            ("y-- yy- -y- y--", "10 ANTI KITE", "(R U R' U) (R' F R F') (R U2' R')"),
+            ("-y- -y- y-- --y", "35 Fish Salad", "(R U2 R') (R' F R F') (R U2 R')"),
+            ("--- --- yy- -yy", "37 Mounted Fish", "F (R U' R' U') (R U R') F'"),
+            # L Big
+            ("", "13 Gun", "F (U R U' R2) F' (R U R U') R'"),
+            ("", "14 Anti Gun", "(R' F R) U (R' F' R) y' (R U' R')"),
+            ("", "15 SQUEEGEE", "(r' U' r) (R' U' R U) (r' U r)"),
+            ("16 ANTI SQUEEGEE", "(r U r') (R U R' U') (r U' r')"),
+
+            # L
+            ("", "48 Breakneck", "F (R U R' U') (R U R' U') F'"),
+            ("","47 Anti Breakneck", "F' (L' U' L U) (L' U' L U) F"),
+            ("", "49 Right Back Squeezy", "r U' r2' U r2 U r2' U' r"),
+            ("", "50 Right Front Squeezy", "r' U r2 U' r2' U' r2 U r'"),
+            ("", "53 Frying Pan", "(r' U' R U') (R' U R U') R' U2 r"),
+            ("", "54 Anti Frying Pan", "(r U R' U) (R U' R' U) R U2' r'"),
+            # Y
+            ("", "29 Spotted Chameleon", "y (R U R' U') (R U' R') (F' U' F) (R U R')"),
+            ("", "30 Anti Spotted Chameleon", "y' F U (R U2 R' U') (R U2 R' U') F'"),
+            ("", "41 Awkward Fish", "(R U R' U) (R U2' R') F (R U R' U') F'"),
+            ("", "42 Lefty Awkward Fish", "(R' U' R U') (R' U2 R) F (R U R' U') F'"),
+            # Z
+            ("", "7 Lightning", "(r U R' U) R U2 r'"),
+            ("", "8 Reverse Lightning", "(r' U' R U') R' U2 r"),
+            ("", "11 Downstairs", "r' (R2 U R' U R U2 R') U M'"),
+            ("", "12 Upstairs", "M' (R' U' R U' R' U2 R) U' M"),
+            ("", "40 Anti Fung", "R' F (R U R' U') F' U R"),
+            ("", "39 FUNG", "L F' (L' U' L U) F U' L'"),
+            # Dot
+            ("", "01 RUNWAY", "(R U2 R') (R' F R F') U2 (R' F R F')"),
+            ("", "02 ZAMBONI", "F (R U R' U') F' f (R U R' U') f'"),
+            ("", "03 ANTI NAZI", "f (R U R' U') f' U' F (R U R' U') F'"),
+            ("", "04 NAZI", "f (R U R' U') f' U F (R U R' U') F'"),
+            ("", "18 Crown", "(r U R' U) (R U2 r') (r' U' R U') (R' U2 r)"),
+            ("", "19 BUNNY", "M U (R U R' U') M' (R' F R F')"),
+            ("", "17 SLASH", "(R U R' U) (R' F R F') U2' (R' F R F')"),
+            ("", "20 X", "M U (R U R' U') M2' (U R U' r')")
+
+        ]
