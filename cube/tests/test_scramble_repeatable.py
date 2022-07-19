@@ -2,34 +2,39 @@
 # Check that random scramble is repeatable
 #
 from cube.algs import Algs
+from cube.app.abstract_ap import AbstractApp
 from cube.app.app_state import ApplicationAndViewState
 from cube.operator.cube_operator import Operator
 from cube.model.cube import Cube
 from cube.model.cube_queries import CubeQueries
-from cube.solver import Solver
+from cube.solver import Solver, Solvers
 
 
 def main():
     size = 6
 
+    app = AbstractApp.create_non_default(cube_size=size)
+
     cube = Cube(size=size)
 
     vs = ApplicationAndViewState()
     op: Operator = Operator(cube, vs)
-    solver: Solver = Solver(op)
+    solver: Solver = Solvers.default(op)
 
-    alg1 = Algs.scramble(cube.size, 4)
-    alg2 = Algs.scramble(cube.size, 4)
+    scramble_key = 203
+    alg1 = app.scramble(scramble_key, None, False, True)
+    alg2 = app.scramble(scramble_key, None, False, True)
+
 
     print(f"{alg1.simplify().count()}")
     print(f"{alg2.simplify().count()}")
 
     alg1.play(cube)
-    st1 = CubeQueries.get_sate(cube)
+    st1 = cube.cqr.get_sate()
     cube.reset()
     alg2.play(cube)
 
-    assert CubeQueries.compare_state(cube, st1)
+    assert cube.cqr.compare_state(st1)
     print("Cube same state after alg1/alg2")
 
     op.reset()

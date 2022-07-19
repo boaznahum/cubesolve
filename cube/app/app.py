@@ -1,6 +1,7 @@
 from typing import Any
 
 from cube import config
+from cube.algs import Alg
 from cube.animation.animation_manager import AnimationManager
 from cube.app.abstract_ap import AbstractApp
 from cube.app.app_state import ApplicationAndViewState
@@ -88,7 +89,7 @@ class _App(AbstractApp):
                  scramble_size: Any,
                  animation: bool,
                  verbose=True
-                 ):
+                 ) -> Alg:
         from . import _app_tests
 
         return _app_tests.scramble(self, scramble_key, scramble_size, animation, verbose)

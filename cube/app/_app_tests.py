@@ -2,7 +2,7 @@ import sys
 import traceback
 from typing import Any
 
-from cube.algs import Algs
+from cube.algs import Algs, Alg
 from cube.app.abstract_ap import AbstractApp
 from cube.operator.cube_operator import Operator
 
@@ -12,20 +12,22 @@ def scramble(app:AbstractApp,
              scramble_size: Any,
              animation: bool,
              verbose=True
-             ):
+             ) -> Alg:
 
     op = app.op
 
     op.reset()
 
-    _alg = Algs.scramble(op.cube.size, scramble_key, scramble_size)
+    alg = Algs.scramble(op.cube.size, scramble_key, scramble_size)
 
     if verbose:
-        print(f"Running scramble, cube size={op.cube.size} key={scramble_key}, {type(scramble_key)=}, n={scramble_size}, alg={_alg}")
+        print(f"Running scramble, cube size={op.cube.size} key={scramble_key}, {type(scramble_key)=}, n={scramble_size}, alg={alg}")
 
-    op.play(_alg, False, animation=animation)
+    op.play(alg, False, animation=animation)
 
     app.vs.set_last_scramble_test(scramble_key, scramble_size)
+
+    return alg
 
 
 def run_single_test(app: AbstractApp,
@@ -79,7 +81,8 @@ def run_tests(app: AbstractApp,
 
         idx += 1
 
-        print(str(idx) + f"/{nn} solver={app.slv.name} cube size: {op.cube.size} scramble_key={scramble_key}, {n=} ")
+        print(str(idx) + f"/{nn} solver={app.slv.name} cube size: {op.cube.size} "
+                         f"scramble_key={scramble_key} {type(scramble_key)}, {n=} ")
 
         # ll += 1
         # if ll > 5:

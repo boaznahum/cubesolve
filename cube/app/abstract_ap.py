@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABCMeta
 from typing import TYPE_CHECKING, Any
 
+from cube.algs import Alg
 from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.operator.cube_operator import Operator
@@ -84,5 +85,14 @@ class AbstractApp(metaclass=ABCMeta):
                  scramble_size: Any,
                  animation: bool,
                  verbose=True
-                 ):
+                 ) -> Alg:
+        """
+        reset cube before scramble
+        Runs scramble on cube and returns alg
+        :param scramble_key:
+        :param scramble_size:
+        :param animation:
+        :param verbose:
+        :return:
+        """
         pass

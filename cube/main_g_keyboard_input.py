@@ -524,7 +524,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
             case key.T:
                 if modifiers & key.MOD_ALT:
                     _last_test_key, last_test_size = vs.get_last_scramble_test()
-                    _run_test(window, _last_test_key, last_test_size, True, animation=solver_animation)
+                    _run_test(window, _last_test_key, last_test_size, config.SOLVER_DEBUG, animation=solver_animation)
                 elif modifiers & key.MOD_CTRL:
                     _last_test_key, last_test_size = vs.get_last_scramble_test()
                     _scramble(window, inv, _last_test_key, last_test_size, False)
@@ -553,18 +553,19 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     return done
 
 
-def _scramble(window: AbstractWindow, _inv: bool, _scramble_key: Any, _n=None, _animation=False):
+def _scramble(window: AbstractWindow, inv: bool, _scramble_key: Any, _n=None, _animation=False):
     app = window.app
-    op = window.app.op
-
-    op.reset()
-
-    _alg = Algs.scramble(app.cube.size, _scramble_key, _n)
-
-    print(f"Running scramble, key={_scramble_key}, n={_n}, alg={_alg}")
+    # op = window.app.op
+    #
+    # op.reset()
+    #
+    # _alg = Algs.scramble(app.cube.size, _scramble_key, _n)
+    #
+    # print(f"Running scramble, key={_scramble_key}, n={_n}, alg={_alg}")
 
     with _wait_cursor(window):
-        op.play(_alg, _inv, animation=_animation)
+        app.scramble(_scramble_key, _n, animation=_animation)
+        #op.play(_alg, _inv, animation=_animation)
 
 
 def _run_test(window: AbstractWindow, scramble_key,

@@ -68,7 +68,10 @@ class OLL(StepSolver):
         # yf is no longer valid - need to track
         assert self.white_face.opposite.name == FaceName.U
 
-        self._check_and_do_oll_edge_parity()
+        if self._check_and_do_oll_edge_parity():
+            if self.is_solved:
+                # in some rare cases, after OLL parity, OLL is solved, and this is a state we don't know to detect
+                return
 
         self._do_oll()
 
@@ -101,7 +104,7 @@ class OLL(StepSolver):
 
         assert self.is_solved
 
-    def _check_and_do_oll_edge_parity(self):
+    def _check_and_do_oll_edge_parity(self) -> bool:
         """
         Assume 'yellow' on top
         :return:
@@ -114,9 +117,12 @@ class OLL(StepSolver):
             if self.cube.n_slices % 2 == 0:
                 self.debug(f"Found OLL(Edge Parity)")
                 self._oll_parity.solve()
+                return True
             else:
                 # on odd cube it should be soled by edges
                 raise InternalSWError("Edge parity on odd cube")
+
+        return False
 
     def _encode_state(self) -> str:
 
