@@ -65,33 +65,43 @@ class PLL(StepSolver):
         assert self.is_solved
 
     def _do_pll(self):
-        pass
 
-        state: str = ""
-        alg: Alg | None = None
-        description = ""
-        for r in range(4):
+        description_alg = self._search_pll_alg()
 
-            description_alg: tuple[str, Alg] | None = self._get_state_alg()
-
-            if description_alg is not None:
-                description, alg = description_alg
-                break  # found
-
-            # if r == 3:
-            #     break  # don't rotate again, we failed to found
-
-            # well we want to roate, toleave cube in original ssate so it it easier to debug
-            self.play(Algs.U)  # you can't U, it changes required position of parts
-
-        if alg is None:
+        if description_alg is None:
             raise InternalSWError(f"Unknown PLL state")
+
+        description, alg = description_alg
 
         self.debug(f"Found PLL alg '{description}' {alg}")
 
         self.play(alg)
 
         assert self.is_solved
+
+    def _search_pll_alg(self) -> Tuple[str, Alg] | None:
+
+        """
+        We need both Y and U !!!
+        :return:
+        """
+
+        for y in range(4):
+
+            for u in range(4):
+
+                description_alg: tuple[str, Alg] | None = self._get_state_alg()
+
+                if description_alg is not None:
+                    return description_alg
+
+                self.play(Algs.U)  #
+
+            # well we want to rotate, to leave cube in original state so it is easier to debug
+            self.play(Algs.Y)  #
+
+        return None
+
 
     def _get_state_alg(self) -> Optional[Tuple[str, Alg]]:
 
@@ -124,7 +134,7 @@ class PLL(StepSolver):
         ru = cube.ru
         fu = cube.fu
 
-        def is_r(*_ps: Part):
+        def is_r0(*_ps: Part):
             """
             --> belongs
             p1 --> p2 --p3 --> p1
@@ -143,6 +153,22 @@ class PLL(StepSolver):
                 if not p.required_position is ps[i + 1]:
                     return False
             return ps[-1].required_position is ps[0]  # p3-->p1
+        def is_r(*_ps: Part):
+            """
+            --> belongs
+            p1 --> p2 --p3 --> p1
+            :param p1:
+            :param p2:
+            :param p3:
+            :return:
+            """
+
+            if not is_r0(*_ps):
+                return False
+
+            others = set(cube.up.parts) - set(_ps)
+
+            return all( p.in_position for p in others)
 
         if is_r(ru, lu, fu):
             return "Ua Perm", "M2' U M U2 M' U M2'"
