@@ -21,7 +21,7 @@ def scramble(app:AbstractApp,
     _alg = Algs.scramble(op.cube.size, scramble_key, scramble_size)
 
     if verbose:
-        print(f"Running scramble, cube size={op.cube.size} key={scramble_key}, n={scramble_size}, alg={_alg}")
+        print(f"Running scramble, cube size={op.cube.size} key={scramble_key}, {type(scramble_key)=}, n={scramble_size}, alg={_alg}")
 
     op.play(_alg, False, animation=animation)
 
@@ -49,7 +49,7 @@ def run_single_test(app: AbstractApp,
 
     except Exception:
         print()
-        print(f"Failure on scramble cube_size={op.cube.size} key={scramble_key}, n={scramble_size} ")
+        print(f"Failure on scramble cube_size={op.cube.size} key={scramble_key}, {type(scramble_key)=}, n={scramble_size} ")
         print("Alt T to repeat it, Ctrl T to repeat scramble")
 
         traceback.print_exc(file=sys.stdout)

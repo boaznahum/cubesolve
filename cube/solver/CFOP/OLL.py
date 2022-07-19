@@ -29,7 +29,7 @@ class OLL(StepSolver):
         self._set_debug_prefix("OLL")
         self._oll_parity = AdvancedEvenEdgeFullEdgeParity(slv)
 
-        self._algs_db: list[Tuple, Tuple, Tuple] = []
+        self._algs_db: list[Tuple[str, str, str]] = []
 
     @property
     def is_solved(self) -> bool:

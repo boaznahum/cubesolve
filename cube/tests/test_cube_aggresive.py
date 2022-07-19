@@ -22,7 +22,8 @@ def main():
 
     debug = False
 
-    sizes = [3, app.cube.size, app.cube.size + 1]
+    sizes = config.AGGRESSIVE_TEST_NUMBER__SIZES
+
     for size in sizes:
 
         app.reset(cube_size=size)
