@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABCMeta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
@@ -55,7 +55,7 @@ class AbstractApp(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def reset(self, cube_size:int | None = None):
+    def reset(self, cube_size: int | None = None):
         """
         Reset cube
         Reset operator
@@ -76,4 +76,13 @@ class AbstractApp(metaclass=ABCMeta):
                         scramble_size: int | None,
                         debug: bool,
                         animation: bool):
+        pass
+
+    @abstractmethod
+    def scramble(self,
+                 scramble_key: Any,
+                 scramble_size: Any,
+                 animation: bool,
+                 verbose=True
+                 ):
         pass

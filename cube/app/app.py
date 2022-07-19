@@ -1,3 +1,5 @@
+from typing import Any
+
 from cube import config
 from cube.animation.animation_manager import AnimationManager
 from cube.app.abstract_ap import AbstractApp
@@ -80,3 +82,13 @@ class _App(AbstractApp):
         from . import _app_tests
 
         _app_tests.run_single_test(self, scramble_key, scramble_size, debug, animation)
+
+    def scramble(self,
+                 scramble_key: Any,
+                 scramble_size: Any,
+                 animation: bool,
+                 verbose=True
+                 ):
+        from . import _app_tests
+
+        return _app_tests.scramble(self, scramble_key, scramble_size, animation, verbose)

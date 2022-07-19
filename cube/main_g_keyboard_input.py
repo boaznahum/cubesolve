@@ -478,9 +478,10 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 else:
                     # to match test int
                     # noinspection PyProtectedMember
-                    alg = Algs.scramble(app.cube.size, value - key._0)
+                    # alg = Algs.scramble(app.cube.size, value - key._0)
                     with _wait_cursor(window):
-                        op.play(alg, inv, animation=False)
+                        app.scramble(value - key._0, None, animation=False, verbose=True)
+                        # op.play(alg, inv, animation=False)
 
             case key.COMMA:
 

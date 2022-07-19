@@ -3,7 +3,6 @@ from typing import Optional, Tuple
 from cube.algs import Alg, Algs
 from cube.app_exceptions import InternalSWError
 from cube.model import Part
-from cube.model.cube_face import Face
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import StepSolver
 
@@ -102,7 +101,6 @@ class PLL(StepSolver):
 
         return None
 
-
     def _get_state_alg(self) -> Optional[Tuple[str, Alg]]:
 
         d_alg = self._get_state_alg_raw()
@@ -129,51 +127,70 @@ class PLL(StepSolver):
         """
 
         cube = self.cube
+
+        def is_r0(permute: Tuple[Part, ...]):
+            """
+            permute = p1, p2, p3
+            --> belongs
+            p1 --> p2 --p3 --> p1
+            :param permute: p1, p2 [p3]
+            :return:
+            """
+
+            assert len(permute) > 1
+            p: Part
+            for i, p in enumerate(permute[:-1]):
+
+                if not p.required_position is permute[i + 1]:
+                    return False
+            return permute[-1].required_position is permute[0]  # p3-->p1
+
+        def is_r(*permutes: Tuple[Part, ...]):
+            """
+            --> belongs
+            p1 --> p2 --p3 --> p1
+            :param p1:
+            :param p2:
+            :param p3:
+            :return:
+            """
+
+            others = set(cube.up.parts)
+
+            for permute in permutes:
+                if not is_r0(permute):
+                    return False
+                others -= set(permute)
+
+            return all(p.in_position for p in others)
+
+
         lu = cube.lu
         bu = cube.bu
         ru = cube.ru
         fu = cube.fu
 
-        def is_r0(*_ps: Part):
-            """
-            --> belongs
-            p1 --> p2 --p3 --> p1
-            :param p1:
-            :param p2:
-            :param p3:
-            :return:
-            """
+        flu = cube.flu
+        blu = cube.blu
+        bru = cube.bru
+        fru = cube.fru
 
-            ps: list[Part] = [*_ps]
 
-            assert len(ps) > 1
-            p: Part
-            for i, p in enumerate(ps[:-1]):
-
-                if not p.required_position is ps[i + 1]:
-                    return False
-            return ps[-1].required_position is ps[0]  # p3-->p1
-        def is_r(*_ps: Part):
-            """
-            --> belongs
-            p1 --> p2 --p3 --> p1
-            :param p1:
-            :param p2:
-            :param p3:
-            :return:
-            """
-
-            if not is_r0(*_ps):
-                return False
-
-            others = set(cube.up.parts) - set(_ps)
-
-            return all( p.in_position for p in others)
-
-        if is_r(ru, lu, fu):
+        if is_r((ru, lu, fu)):
             return "Ua Perm", "M2' U M U2 M' U M2'"
-        elif is_r(lu, ru, fu):
+        elif is_r((lu, ru, fu)):
             return "Ub Perm", "M2' U' M U2' M' U' M2'"
+
+        elif is_r((flu, blu, bru), (lu, ru, bu)):
+            return "Ga Perm", "R2 U (R' U R' U') (R U' R2) D U' (R' U R D') U"
+
+        elif is_r((flu, bru, blu), (ru, lu, bu)):
+            return "Gb Perm", "(F' U' F) (R2 u R' U) (R U' R u') R2'"
+
+        elif is_r((blu, flu, fru),(lu, ru, fu)):
+            return "Gc Perm", "R2 U' (R U' R U) (R' U R2 D') (U R U' R') D U'"
+        elif is_r((flu, blu, bru),(lu, fu, bu)):
+            return "Gd Perm", "(R U R') y' (R2 u' R U') (R' U R' u) R2"
 
         else:
             return None

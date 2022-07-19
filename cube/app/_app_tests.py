@@ -7,12 +7,12 @@ from cube.app.abstract_ap import AbstractApp
 from cube.operator.cube_operator import Operator
 
 
-def _scramble(app:AbstractApp,
-              scramble_key: Any,
-              scramble_size: Any,
-              animation: bool,
-                verbose=True
-              ):
+def scramble(app:AbstractApp,
+             scramble_key: Any,
+             scramble_size: Any,
+             animation: bool,
+             verbose=True
+             ):
 
     op = app.op
 
@@ -40,7 +40,7 @@ def run_single_test(app: AbstractApp,
     op: Operator = app.op
 
     op.reset()  # also reset cube
-    _scramble(app, scramble_key, scramble_size, animation, verbose=verbose)
+    scramble(app, scramble_key, scramble_size, animation, verbose=verbose)
 
     try:
         slv.solve(animation=animation, debug=debug)
