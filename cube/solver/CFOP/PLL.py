@@ -76,6 +76,11 @@ class PLL(StepSolver):
         if description_alg is None:
 
             self._do_pll_parity()
+            # in rare cases after parity it is solved with rotation only
+            # so we don't recognize the state
+            if self._rotate_and_solve():
+                return True  # done
+
             description_alg = self._search_pll_alg()
 
         if description_alg is None:
@@ -280,7 +285,6 @@ class PLL(StepSolver):
         """
         #  https://cubingcheatsheet.com/algs6x.html
 
-
         # Swap 2 Edges Diagonal
         # 6x6
         # 2-3Rw2 U2 2-3Rw2 1-3Uw2 2-3Rw2 1-3Uw 2-3Uw R2 (U R U) (R' U' R' U') (R' U R' U')
@@ -293,15 +297,14 @@ class PLL(StepSolver):
         U = Algs.U
         R = Algs.R
         rw = Algs.R[2:size // 2]
-        rw2 = rw*2
+        rw2 = rw * 2
         uwx = U[1:size // 2]
         uwy = U[2:size // 2]
-
 
         with self.annotate(h2="PLL Parity"):
             #     2-3Rw2 U2    2-3Rw2 1-3Uw2  2-3Rw2 1-3Uw 2-3Uw R2 (U R U) (R' U' R' U') (R' U R' U')
             # I tried to remove the last part
             #  but in some case it doesn't bring again to pre PLL
             # In this way I handle only
-            alg = rw2 +  U*2 + rw2 +  uwx*2 + rw2 +  uwx + uwy + Algs.parse("R2 (U R U) (R' U' R' U') (R' U R' U')")
+            alg = rw2 + U * 2 + rw2 + uwx * 2 + rw2 + uwx + uwy + Algs.parse("R2 (U R U) (R' U' R' U') (R' U R' U')")
             self.play(alg)
