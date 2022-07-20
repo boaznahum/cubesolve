@@ -8,6 +8,7 @@ from cube.model.cube_queries2 import Pred
 from cube.solver.common.face_tracker import FaceTracker
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import SolverElement
+from cube.utils.collections import OrderedSet
 
 
 class NxNCentersFaceTrackers(SolverElement):
@@ -31,7 +32,12 @@ class NxNCentersFaceTrackers(SolverElement):
 
         assert len(two_first) == 2
 
-        left = list({*cube.faces} - {two_first[0].face, two_first[1].face})
+        # WHY NOT USE SET ? BECAUSE the order is unpredictable, and we want the solution to be such
+        #left = list({*cube.faces} - {two_first[0].face, two_first[1].face})
+        left = { f:None for f in cube.faces}
+        # don't try left.keys() - again it will be converted to set
+        left.pop(two_first[0].face)
+        left.pop(two_first[1].face)
 
         assert not cube.n_slices % 2
 
@@ -51,7 +57,7 @@ class NxNCentersFaceTrackers(SolverElement):
 
         assert cube.n_slices % 2 == 0
 
-        left_two_faces: list[Face] = list({*cube.faces} - {f.face for f in four_first})
+        left_two_faces: list[Face] = list(OrderedSet(cube.faces) - {f.face for f in four_first})
 
         assert len(left_two_faces) == 2
 
@@ -180,6 +186,8 @@ class NxNCentersFaceTrackers(SolverElement):
 
         if faces is None:
             faces = cube.faces
+
+        self.debug("_find_face_with_max_colors:", [*faces])
 
         for f in faces:
             for c in colors:

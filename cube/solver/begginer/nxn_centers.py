@@ -16,6 +16,7 @@ from cube.solver.common.face_tracker import FaceTracker
 from cube.solver.begginer._nxn_centers_face_tracker import NxNCentersFaceTrackers
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import SolverElement
+from cube.utils.collections import OrderedSet
 
 
 def use(_):
@@ -165,8 +166,9 @@ class NxNCenters(SolverElement):
 
         assert self._is_solved()
 
-    def _do_faces(self, faces, minimal_bring_one_color, use_back_too: bool) -> bool:
+    def _do_faces(self, faces: Sequence[FaceTracker], minimal_bring_one_color, use_back_too: bool) -> bool:
         # while True:
+        self.debug("_do_faces:", *faces)
         work_done = False
         for f in faces:
             # we must trace faces, because they are moved by algorith
@@ -217,7 +219,7 @@ class NxNCenters(SolverElement):
             self.debug(f"{face_loc.face} already has at least one {color}")
             return False
 
-        sources = set(self.cube.faces) - {face_loc.face}
+        sources = OrderedSet(self.cube.faces) - {face_loc.face}
         if not use_back_too:
             sources -= {face_loc.face.opposite}
 

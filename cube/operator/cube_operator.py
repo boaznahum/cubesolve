@@ -26,7 +26,8 @@ class Operator:
                  "_animation_enabled",
                  "_animation_manager",
                  "_app_state",
-                 "_annotation"]
+                 "_annotation",
+                 "_log_path"]
 
     def __init__(self, cube: Cube,
                  app_state: ApplicationAndViewState,  # PATCH, operator should hold SS mode
@@ -54,6 +55,8 @@ class Operator:
         from cube.operator.op_annotation import OpAnnotation
         self._annotation: OpAnnotation = OpAnnotation(self)
 
+        self._log_path = config.OPERATION_LOG_PATH if config.OPERATION_LOG else None
+
     def check_clear_rais_abort(self):
         if self._aborted:
             self._aborted = False
@@ -79,6 +82,13 @@ class Operator:
 
         return self._play(alg, inv, animation)
 
+    # noinspection PyMethodMayBeStatic
+    def log(self, *s: Any):
+
+        if ll := self._log_path:
+            with open(ll, mode="a") as f:
+                print(*(str(x) for x in s), file=f)
+
     def _play(self, alg: Alg, inv: bool = False, animation=True):
 
         """
@@ -92,13 +102,7 @@ class Operator:
         :return:
         """
 
-        log_path = config.OPERATION_LOG_PATH if config.OPERATION_LOG else None
-
         # noinspection PyUnusedLocal
-        def log(*s: Any):
-            if log_path:
-                with open(log_path, mode="a") as f:
-                    print(*(str(x) for x in s), file=f)
 
         # if we clean signal here, then we have a problem, because
         # solver run op in loop, so we will miss the latest signal,
@@ -115,7 +119,6 @@ class Operator:
         if not is_annotation:
             if inv:
                 alg = alg.inv()
-
 
         if animation and self.animation_enabled and not op_current_running:
 
@@ -163,7 +166,8 @@ class Operator:
 
             if self._recording is not None:
                 self._recording.append(alg)
-            log(alg)
+
+            self.log("Operator", alg)
 
             self._cube.sanity()
             alg.play(self._cube, False)
@@ -234,7 +238,6 @@ class Operator:
     @property
     def is_recording(self) -> bool:
         return self._recording is not None
-
 
     @property
     def count(self):

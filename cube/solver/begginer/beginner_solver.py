@@ -16,8 +16,7 @@ from cube.model.cube import Cube
 
 
 class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
-    __slots__ = ["_debug_override",
-                 "l1_cross",
+    __slots__ = ["l1_cross",
                  "l1_corners",
                  "l2",
                  "l3_cross",
@@ -36,22 +35,9 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
         self.nxn_centers = NxNCenters(self)
         self.nxn_edges = NxNEdges(self)
 
-        self._debug_override: bool | None = None
-
     @property
     def name(self):
         return "Beginner LBL"
-
-    @property
-    def is_debug_config_mode(self) -> bool:
-        return config.SOLVER_DEBUG
-
-    @property
-    def _is_debug_enabled(self) -> bool:
-        if self._debug_override is None:
-            return self.is_debug_config_mode
-        else:
-            return self._debug_override
 
     @property
     def status(self):
@@ -241,13 +227,3 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
             sr._was_partial_edge_parity = True
 
         return sr
-
-    def debug(self, *args):
-        if self._is_debug_enabled:
-            print("Solver:", *args)
-            log_path = config.OPERATION_LOG_PATH if config.OPERATION_LOG else None
-            if log_path:
-                with open("operator.log", mode="a") as f:
-                    print("Solver:", *args, file=f)
-
-

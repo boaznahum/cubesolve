@@ -2,6 +2,7 @@ from typing import Optional, Tuple
 
 from cube import config
 from cube.algs import Alg, Algs
+from cube.algs._algs import SL
 from cube.app_exceptions import InternalSWError
 from cube.model import Part
 from cube.solver.common.base_solver import BaseSolver
@@ -294,11 +295,11 @@ class PLL(StepSolver):
         size = self.cube.size
         assert size % 2 == 0
 
-        U = Algs.U
+        U: Alg = Algs.U
         R = Algs.R
-        rw = Algs.R[2:size // 2]
-        rw2 = rw * 2
-        uwx = U[1:size // 2]
+        rw: Alg = Algs.R[2:size // 2]
+        rw2: Alg = rw * 2
+        uwx: Alg = U[1:size // 2]
         uwy = U[2:size // 2]
 
         with self.annotate(h2="PLL Parity"):

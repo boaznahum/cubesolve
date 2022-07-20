@@ -12,7 +12,7 @@ _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore
 
 
-class Face(SuperElement):
+class Face(SuperElement, Hashable):
     """
     Faces never chane position, only the color of the parts
     """

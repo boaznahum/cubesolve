@@ -4,6 +4,7 @@ from typing import TypeAlias, TYPE_CHECKING, final
 from cube.model.cube import Cube
 from cube.operator.cube_operator import Operator
 from .. import Solver
+from ... import config
 from ...algs import Algs
 
 if TYPE_CHECKING:
@@ -13,7 +14,7 @@ _Common: TypeAlias = "CommonOp"
 
 
 class BaseSolver(Solver):
-    __slots__: list[str] = ["_common", "_op", "_cube"]
+    __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override"]
 
     def __init__(self, op) -> None:
         super().__init__()
@@ -21,14 +22,29 @@ class BaseSolver(Solver):
         self._cube = op.cube
         from .common_op import CommonOp
         self.common: _Common = CommonOp(self)
+        self._debug_override: bool | None = None
 
     @property
     def is_solved(self):
         return self._cube.solved
 
-    @abstractmethod
+    @property
+    def is_debug_config_mode(self) -> bool:
+        return config.SOLVER_DEBUG
+
+    @property
+    def _is_debug_enabled(self) -> bool:
+        if self._debug_override is None:
+            return self.is_debug_config_mode
+        else:
+            return self._debug_override
+
     def debug(self, *args):
-        ...
+        if self._is_debug_enabled:
+            print("Solver:", *args)
+
+            self.op.log("Solver:", *args)
+
 
     @property
     @final

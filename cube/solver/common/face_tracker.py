@@ -35,6 +35,9 @@ class FaceTracker:
     def __str__(self) -> str:
         return f"{self.color.name}@{self.face}"
 
+    def __repr__(self):
+        return self.__str__()
+
     @staticmethod
     def by_pred(cube: Cube, color: Color, pred: Pred[Face]) -> _FaceLoc:
 
