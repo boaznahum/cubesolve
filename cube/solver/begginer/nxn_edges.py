@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Tuple
+from typing import Tuple, Set
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
@@ -11,6 +11,7 @@ from cube.operator.op_annotation import AnnWhat
 from cube.solver.common.solver_element import SolverElement
 from cube.solver.common.common_op import CommonOp, EdgeSliceTracker
 from cube.solver.common.base_solver import BaseSolver
+from cube.utils.collections import OrderedSet
 
 
 def use(_):
@@ -176,8 +177,8 @@ class NxNEdges(SolverElement):
 
         # Why set, because sometimes we need to fix i nad inv(i), so when we reach inv(i) we will try to add
         # again inv(inv(i)) == i
-        slices_to_fix: set[int] = set()
-        slices_to_slice: set[int] = set()
+        slices_to_fix = OrderedSet[int]()
+        slices_to_slice = OrderedSet[int]()
 
         for i in range(0, n_slices):
 
@@ -211,7 +212,7 @@ class NxNEdges(SolverElement):
 
         # bring an edge to help
         if not is_last and edge_can_destroyed is None:
-            search_in: list[Edge] = [self.cube.front.edge_right, *set(self.cube.edges) - {edge}]
+            search_in: list[Edge] = [self.cube.front.edge_right, *OrderedSet(self.cube.edges) - {edge}]
             edge_can_destroyed = CubeQueries.find_edge(search_in, lambda e: not e.is3x3)
             assert edge_can_destroyed
             self.cmn.bring_edge_to_front_right_preserve_front_left(edge_can_destroyed)
@@ -242,7 +243,7 @@ class NxNEdges(SolverElement):
     def _fix_all_from_other_edges(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                   color_un_ordered: PartColorsID):
 
-        other_edges = set(face.cube.edges) - {edge}
+        other_edges = OrderedSet(face.cube.edges) - {edge}
         assert len(other_edges) == 11
 
         while not edge.is3x3:

@@ -41,7 +41,7 @@ class BaseSolver(Solver):
 
     def debug(self, *args):
         if self._is_debug_enabled:
-            print("Solver:", *args)
+            print("Solver:", *(str(x) for x in args) )
 
             self.op.log("Solver:", *args)
 

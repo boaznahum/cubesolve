@@ -1,4 +1,4 @@
-from collections.abc import Iterator, Sequence, Iterable
+from collections.abc import Iterator, Sequence, Iterable, Set
 from enum import Enum, unique
 from typing import Tuple, TypeAlias
 
@@ -219,7 +219,7 @@ class NxNCenters(SolverElement):
             self.debug(f"{face_loc.face} already has at least one {color}")
             return False
 
-        sources = OrderedSet(self.cube.faces) - {face_loc.face}
+        sources:Set[Face] = OrderedSet(self.cube.faces) - {face_loc.face}
         if not use_back_too:
             sources -= {face_loc.face.opposite}
 

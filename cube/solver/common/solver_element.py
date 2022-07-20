@@ -40,7 +40,7 @@ class SolverElement(CubeSupplier):
         if x := self._debug_prefix:
             self._solver.debug(x + ":", *args)
         else:
-            self._solver.debug(args)
+            self._solver.debug(*args)
 
     @property
     def cube(self) -> Cube:
