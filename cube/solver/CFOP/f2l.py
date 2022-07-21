@@ -5,7 +5,7 @@ from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model import Part, Edge, Corner
 from cube.model.cube_face import Face
-from cube.model.cube_queries import Pred0
+from cube.model.cube_queries2 import Pred0
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import SolverElement

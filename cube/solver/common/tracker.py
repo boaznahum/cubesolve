@@ -3,7 +3,6 @@ from collections.abc import Iterable, Sequence
 from typing import Generic
 
 from cube.model.cube import Cube, CubeSupplier
-from cube.model.cube_queries import CubeQueries
 from cube.model import PartColorsID
 from cube.model import TPartType, Edge, Corner
 
@@ -15,7 +14,8 @@ class PartTracker(Generic[TPartType]):
     """
     __slots__ = ["_color_id", "_actual",
                  "_required",
-                 "_cube"]
+                 "_cube",
+                 "_cqr"]
 
     def __init__(self, cube: CubeSupplier, color_id: PartColorsID) -> None:
         super().__init__()
@@ -23,6 +23,8 @@ class PartTracker(Generic[TPartType]):
         self._actual: TPartType | None = None
         self._required: TPartType | None = None
         self._cube: Cube = cube.cube
+
+        self._cqr = cube.cube.cqr
 
     @property
     def position(self) -> TPartType:
@@ -33,8 +35,8 @@ class PartTracker(Generic[TPartType]):
         :return:
         """
 
-        if not self._required or self._required.colors_id_by_pos != self._color_id:
-            self._required = CubeQueries.find_part_by_position(self._search_in(), self._color_id)
+        if not self._required or self._required.colors_id != self._color_id:
+            self._required = self._cqr.find_part_by_position(self._search_in(), self._color_id)
 
         return self._required
 
@@ -46,7 +48,7 @@ class PartTracker(Generic[TPartType]):
         """
 
         if not self._actual or self._actual.colors_id != self._color_id:
-            self._actual = CubeQueries.find_part_by_color(self._search_in(), self._color_id)
+            self._actual = self._cqr.find_part_by_color(self._search_in(), self._color_id)
 
         return self._actual
 

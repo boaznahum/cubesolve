@@ -1,12 +1,10 @@
 #
 # Check that random scramble is repeatable
 #
-from cube.algs import Algs
 from cube.app.abstract_ap import AbstractApp
 from cube.app.app_state import ApplicationAndViewState
-from cube.operator.cube_operator import Operator
 from cube.model.cube import Cube
-from cube.model.cube_queries import CubeQueries
+from cube.operator.cube_operator import Operator
 from cube.solver import Solver, Solvers
 
 

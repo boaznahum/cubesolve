@@ -10,7 +10,6 @@ from cube.model import FaceName, Color, CenterSlice
 from cube.model.cube import Cube
 from cube.model.cube_boy import CubeLayout, color2long
 from cube.model.cube_face import Face
-from cube.model.cube_queries import CubeQueries
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.common.face_tracker import FaceTracker
 from cube.solver.begginer._nxn_centers_face_tracker import NxNCentersFaceTrackers
@@ -492,7 +491,7 @@ class NxNCenters(SolverElement):
         # slice must be vertical
         op = self.op
         if target_slice.is_row:
-            target_slice_block_1 = CubeQueries.rotate_point_counterclockwise(cube, (target_slice.index, 0))
+            target_slice_block_1 = cube.cqr.rotate_point_counterclockwise((target_slice.index, 0))
             target_index = target_slice_block_1[1]
             op.play(Algs.F.prime)
         else:
@@ -529,8 +528,8 @@ class NxNCenters(SolverElement):
                     n_rotate = i
                     break
 
-            s1 = CubeQueries.rotate_point_clockwise(cube, s1)
-            s2 = CubeQueries.rotate_point_clockwise(cube, s2)
+            s1 = cube.cqr.rotate_point_clockwise(s1)
+            s2 = cube.cqr.rotate_point_clockwise(s2)
 
         assert n_rotate is not None
 
@@ -593,8 +592,8 @@ class NxNCenters(SolverElement):
                     work_done = True
                     break
 
-                rc1_on_target = CubeQueries.rotate_point_clockwise(cube, rc1_on_target)
-                rc2_on_target = CubeQueries.rotate_point_clockwise(cube, rc2_on_target)
+                rc1_on_target = cube.cqr.rotate_point_clockwise(rc1_on_target)
+                rc2_on_target = cube.cqr.rotate_point_clockwise(rc2_on_target)
 
         return work_done
 
@@ -657,10 +656,10 @@ class NxNCenters(SolverElement):
 
     def rotate_point_clockwise(self, row: int, column: int, n=1) -> Tuple[int, int]:
 
-        return CubeQueries.rotate_point_clockwise(self.cube, (row, column), n)
+        return self.cube.cqr.rotate_point_clockwise((row, column), n)
 
     def rotate_point_counterclockwise(self, row: int, column: int, n=1) -> Tuple[int, int]:
-        return CubeQueries.rotate_point_counterclockwise(self.cube, (row, column), n)
+        return self.cube.cqr.rotate_point_counterclockwise((row, column), n)
 
     def _swap_entire_face_odd_cube(self, required_color: Color, face: Face, source: Face):
 
@@ -804,8 +803,8 @@ class NxNCenters(SolverElement):
             _on_src1_1 = self._point_on_source(is_back, rc1)
             _on_src1_2 = self._point_on_source(is_back, rc2)
             # why - ? because we didn't yet rotate it
-            _on_src1_1 = CubeQueries.rotate_point_clockwise(cube, _on_src1_1, -n_rotate)
-            _on_src1_2 = CubeQueries.rotate_point_clockwise(cube, _on_src1_2, -n_rotate)
+            _on_src1_1 = cube.cqr.rotate_point_clockwise(_on_src1_1, -n_rotate)
+            _on_src1_2 = cube.cqr.rotate_point_clockwise(_on_src1_2, -n_rotate)
             for rc in self._2d_range(_on_src1_1, _on_src1_2):
                 yield source_face.center.get_center_slice(rc)
 
@@ -1245,8 +1244,8 @@ class NxNCenters(SolverElement):
             if self._is_block(source_face, required_color, min_required, rc1, rc2):
                 # we rotate n to find the block, so client need to rotate -n
                 return (-n) % 4
-            rc1 = CubeQueries.rotate_point_clockwise(cube, rc1)
-            rc2 = CubeQueries.rotate_point_clockwise(cube, rc2)
+            rc1 = cube.cqr.rotate_point_clockwise(rc1)
+            rc2 = cube.cqr.rotate_point_clockwise(rc2)
 
         return None
 

@@ -463,7 +463,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                                 op.play(a, animation=False)
                             good = good + a
                         except:
-                            from .model.cube_queries import CubeQueries
                             cube.cqr.print_dist()
                             print("Failed on", a)
                             print(good)
@@ -474,7 +473,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                         try:
                             with _wait_cursor(window):
                                 op.play(a, animation=False)
-                            from .model.cube_queries import CubeQueries
                             cube.cqr.print_dist()
                         except:
                             print(good)

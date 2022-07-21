@@ -4,7 +4,6 @@ from cube import config
 from cube.model import Color, CenterSlice, CenterSliceIndex
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
-from cube.model.cube_queries import CubeQueries
 from cube.model.cube_queries2 import Pred
 from cube.viewer.viewer_markers import viewer_add_view_marker, VMarker
 

@@ -1,7 +1,6 @@
 from cube.algs import Algs
 from cube.model.cube import Cube
 from cube.operator.cube_operator import Operator
-from cube.model.cube_queries import CubeQueries
 from cube.solver import Solver
 
 
@@ -27,7 +26,7 @@ def main():
     slice_alg.play(cube)
     slice_alg.prime.play(cube)
 
-    assert CubeQueries.compare_state(cube, state)
+    assert cube.cqr.compare_state(state)
 
 
 if __name__ == '__main__':

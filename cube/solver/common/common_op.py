@@ -1,15 +1,15 @@
 import warnings
 from contextlib import contextmanager
-from typing import Callable, Generator, Sequence, Tuple, ContextManager, Optional, FrozenSet
+from typing import Callable, Generator, Sequence, Tuple, ContextManager, Optional
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
-from cube.model import Edge, Color, FaceName, EdgeWing, CenterSlice, PartColorsID
+from cube.model import Edge, Color, FaceName, EdgeWing
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
-from cube.model.cube_queries import Pred, CubeQueries, Pred0
 from cube.operator.cube_operator import Operator
 from .base_solver import BaseSolver
+from ...model.cube_queries2 import Pred, Pred0
 from ...operator.op_annotation import AnnWhat, SupportsAnnotation
 
 TRACE_UNIQUE_ID: int = 0
@@ -24,7 +24,7 @@ class EdgeSliceTracker:
 
     @property
     def the_slice(self):
-        return CubeQueries.find_slice_in_cube_edges(self.cube, self.pred)
+        return self.cube.cqr.find_slice_in_cube_edges(self.pred)
 
 
 class CommonOp:
@@ -103,7 +103,7 @@ class CommonOp:
         Rotate face and check condition
 
 
-        :param f:
+        :param alg:
         :param pred:
         :return: number of rotation, -1 if check fails
         restore cube state before returning, this is not count as solve step

@@ -57,8 +57,7 @@ class CubeSanity:
     @staticmethod
     def _check_nxn_centers(cube):
         n_slices = cube.n_slices
-        from .cube_queries import CubeQueries
-        dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = CubeQueries.get_centers_dist(cube)
+        dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = cube.cqr.get_centers_dist(cube)
         for clr in Color:
             clr_dist = dist[clr]
 
@@ -80,7 +79,7 @@ class CubeSanity:
             for k, v in clr_dist.items():
                 if len(v) != 4:
                     if n_slices % 2 and k == frozenset(
-                            [*CubeQueries.get_four_center_points(cube, n_slices // 2, n_slices // 2)]):
+                            [*cube.cqr.get_four_center_points(n_slices // 2, n_slices // 2)]):
                         if len(v) != 1:
                             s = f"Wrong middle center {k} entries for color {clr}"
                             _print_clr()
@@ -96,9 +95,11 @@ class CubeSanity:
     @staticmethod
     def _check_nxn_edges(cube):
         n_slices = cube.n_slices
-        from .cube_queries import CubeQueries
+        from .cube_queries2 import CubeQueries2
 
-        dist: Mapping[frozenset[Color], Mapping[Hashable, Sequence[int]]] = CubeQueries.get_edges_dist(cube)
+        cqr: CubeQueries2 = cube.cqr
+
+        dist: Mapping[frozenset[Color], Mapping[Hashable, Sequence[int]]] = cqr.get_edges_dist()
         clr: PartColorsID
         for clr in cube.original_layout.edge_colors():
             clr_dist = dist[clr]
@@ -120,7 +121,7 @@ class CubeSanity:
                 raise InternalSWError(s)
             for k, v in clr_dist.items():
                 if len(v) != 2:
-                    if n_slices % 2 and k == frozenset([*CubeQueries.get_two_edge_slice_points(cube, n_slices//2)]):
+                    if n_slices % 2 and k == frozenset([*cqr.get_two_edge_slice_points(n_slices//2)]):
                         if len(v) != 1:
                             s = f"Wrong middle center {k} entries for color {clr}"
                             _print_clr()

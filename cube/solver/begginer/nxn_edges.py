@@ -4,7 +4,6 @@ from typing import Tuple, Set
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
 from cube.model.cube_face import Face
-from cube.model.cube_queries import CubeQueries
 from cube.model import Color, Edge, PartColorsID, EdgeWing
 from cube.model.misc import ModelHelper
 from cube.operator.op_annotation import AnnWhat
@@ -213,7 +212,7 @@ class NxNEdges(SolverElement):
         # bring an edge to help
         if not is_last and edge_can_destroyed is None:
             search_in: list[Edge] = [self.cube.front.edge_right, *OrderedSet(self.cube.edges) - {edge}]
-            edge_can_destroyed = CubeQueries.find_edge(search_in, lambda e: not e.is3x3)
+            edge_can_destroyed = self.cqr.find_edge(search_in, lambda e: not e.is3x3)
             assert edge_can_destroyed
             self.cmn.bring_edge_to_front_right_preserve_front_left(edge_can_destroyed)
 
@@ -252,7 +251,7 @@ class NxNEdges(SolverElement):
             edge_right = face.edge_right
             _other_edges = [edge_right, *(other_edges - {edge_right})]
             s:EdgeWing
-            source_slice = CubeQueries.find_slice_in_edges(_other_edges,
+            source_slice = self.cqr.find_slice_in_edges(_other_edges,
                                                            lambda s: s.colors_id == color_un_ordered)
 
             assert source_slice
@@ -358,7 +357,7 @@ class NxNEdges(SolverElement):
         # still don't know how to handle
         cube = self.cube
 
-        edge = CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3)
+        edge = self.cqr.find_edge(cube.edges, lambda e: not e.is3x3)
         assert edge
 
         self._do_edge_parity_on_edge(edge)

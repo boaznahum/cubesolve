@@ -6,7 +6,6 @@ from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal,
 from cube.algs import Algs
 from cube.app_exceptions import InternalSWError
 from cube.model import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
-from cube.model.cube_queries import CubeQueries
 from cube.viewer.viewer_markers import VMarker, viewer_add_view_marker, viewer_remove_view_marker
 
 if TYPE_CHECKING:
@@ -124,6 +123,8 @@ class OpAnnotation:
             yield None
         finally:
 
+            cqr = self.cube.cqr
+
             if has_text:
                 op.app_state.animation_text.pop_heads()
 
@@ -160,7 +161,7 @@ class OpAnnotation:
                 key = _key(i)
 
                 try:
-                    e = CubeQueries.find_slice_edge(parts, _c_pred(i, key))
+                    e = cqr.find_slice_edge(parts, _c_pred(i, key))
                 except:
                     print("")
                     raise
