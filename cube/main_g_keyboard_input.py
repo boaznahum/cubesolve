@@ -159,6 +159,11 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 window.viewer.reset()
                 return True, False
 
+            case key.BACKSLASH:
+                app.switch_to_next_solver()
+                op.reset()
+                return True, False
+
         return False, None
 
     no_operation: bool = False

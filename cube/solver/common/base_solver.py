@@ -41,9 +41,10 @@ class BaseSolver(Solver):
 
     def debug(self, *args):
         if self._is_debug_enabled:
-            print("Solver:", *(str(x) for x in args) )
+            prefix = self.name + ":"
+            print("Solver:", prefix, *(str(x) for x in args) )
 
-            self.op.log("Solver:", *args)
+            self.op.log("Solver:", prefix, *args)
 
 
     @property

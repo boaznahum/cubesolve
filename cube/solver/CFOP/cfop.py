@@ -1,4 +1,3 @@
-from cube import config
 from cube.app_exceptions import OpAborted
 from cube.operator.cube_operator import Operator
 from cube.solver.begginer.l1_cross import L1Cross
@@ -10,6 +9,7 @@ from .f2l import F2L
 from ..begginer.nxn_centers import NxNCenters
 from ..begginer.nxn_edges import NxNEdges
 from ..common.advanced_even_oll_big_cube_parity import AdvancedEvenEdgeFullEdgeParity
+from ..solver_name import SolverName
 
 
 class CFOP(BaseSolver, BeginnerLBLReduce):
@@ -39,8 +39,8 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
         self.even_edge_parity = AdvancedEvenEdgeFullEdgeParity(self)
 
     @property
-    def name(self):
-        return "CFOP"
+    def get_code(self):
+        return SolverName.CFOP
 
     @property
     def status(self):

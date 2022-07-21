@@ -50,6 +50,10 @@ class AbstractApp(metaclass=ABCMeta):
     def slv(self) -> Solver:
         raise NotImplementedError
 
+    @abstractmethod
+    def switch_to_next_solver(self) -> Solver:
+        raise NotImplementedError
+
     @property
     @abstractmethod
     def cube(self) -> Cube:

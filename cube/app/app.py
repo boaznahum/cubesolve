@@ -67,6 +67,10 @@ class _App(AbstractApp):
     def slv(self) -> Solver:
         return self._slv
 
+    def switch_to_next_solver(self) -> Solver:
+        self._slv: Solver = Solvers.next_solver(self._slv.get_code, self.op)
+        return self._slv
+
     @property
     def cube(self) -> Cube:
         return self._cube

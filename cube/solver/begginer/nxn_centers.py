@@ -444,7 +444,7 @@ class NxNCenters(SolverElement):
                 if (
                         (min_target_slice.n_matches == 0 or
                          not self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO) and
-                        source_slice.n_matches > n_slices / 2.0  # SEE SPECIAL_CASE_1 above
+                          source_slice.n_matches > 0 / 2.0  # SEE SPECIAL_CASE_1 above
                 ) and source_slice.n_matches > min_target_slice.n_matches:
                     # ok now swap
 

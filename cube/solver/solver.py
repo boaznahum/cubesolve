@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from cube.solver.solver_name import SolverName
+
 
 class SolveStep(Enum):
     ALL = "ALL"
@@ -42,11 +44,14 @@ class SolverResults:
 
 class Solver(ABC):
 
-
     @property
     @abstractmethod
-    def name(self):
+    def get_code(self) -> SolverName:
         pass
+
+    @property
+    def name(self) -> str:
+        return str(self.get_code.value)
 
     @abstractmethod
     def solve(self, debug: bool | None = None, animation: bool | None = True,
