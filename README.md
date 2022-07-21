@@ -1,3 +1,5 @@
+
+
 # Python Big Cube Solver - A place to develop your algorithm
 
 Yet another Big Cube solver
@@ -43,6 +45,8 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     
     Ctrl+Space - enter/exit single step mode, in this mode animation is suspned till user hit 'SPACE' (or Ctrl+SPACE)
     Very useful for debugging new algorithms
+
+    \ Switch solver
 
 ### Face rotate and slicing
 
