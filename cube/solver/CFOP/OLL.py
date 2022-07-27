@@ -5,7 +5,7 @@ from cube.algs import Alg, Algs
 from cube.app_exceptions import InternalSWError
 from cube.model import FaceName, Part
 from cube.model.cube_face import Face
-from cube.solver.common.advanced_even_oll_big_cube_parity import AdvancedEvenEdgeFullEdgeParity
+from cube.solver.common.advanced_even_oll_big_cube_parity import AdvancedEdgeEdgeParity
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import StepSolver
 
@@ -27,7 +27,7 @@ class OLL(StepSolver):
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
         self._set_debug_prefix("OLL")
-        self._oll_parity = AdvancedEvenEdgeFullEdgeParity(slv)
+        self._oll_parity = AdvancedEdgeEdgeParity(slv)
 
         self._algs_db: list[Tuple[str, str, str]] = []
 
@@ -116,7 +116,7 @@ class OLL(StepSolver):
         if n_edges not in [0, 2, 4]:
             if self.cube.n_slices % 2 == 0:
                 self.debug(f"Found OLL(Edge Parity)")
-                self._oll_parity.solve()
+                self._oll_parity.do_full_even_edge_parity()
                 return True
             else:
                 # on odd cube it should be soled by edges
@@ -219,8 +219,6 @@ class OLL(StepSolver):
 
             assert len(st) == 12, str((st0, d[1]))
             assert st.count("y") + st.count("-") == 12, str((st0, d[1]))
-
-            #print(f"{state} {st}")
 
             if st == state:
                 return d[1], d[2]

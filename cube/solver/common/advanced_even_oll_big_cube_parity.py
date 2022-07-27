@@ -4,12 +4,12 @@ from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import StepSolver, SolverElement
 
 
-class AdvancedEvenEdgeFullEdgeParity(SolverElement):
+class AdvancedEdgeEdgeParity(SolverElement):
 
     def __init__(self, solver: BaseSolver) -> None:
         super().__init__(solver)
 
-    def solve(self):
+    def do_full_even_edge_parity(self):
         """
         Do a full even parity on FU edge
 
@@ -36,9 +36,4 @@ class AdvancedEvenEdgeFullEdgeParity(SolverElement):
 
 
 
-
-
-    @property
-    def is_solved(self):
-        pass
 

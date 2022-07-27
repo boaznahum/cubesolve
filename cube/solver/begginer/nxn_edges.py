@@ -25,8 +25,9 @@ class NxNEdges(SolverElement):
 
     D_LEVEL = 3
 
-    def __init__(self, slv: BaseSolver) -> None:
+    def __init__(self, slv: BaseSolver, advanced_edge_parity: bool) -> None:
         super().__init__(slv)
+        self._advanced_edge_parity = advanced_edge_parity
 
     def debug(self, *args, level=3):
         if level <= NxNEdges.D_LEVEL:
@@ -375,6 +376,7 @@ class NxNEdges(SolverElement):
             edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             assert edge is face.edge_left
             # todo: optimize it , use directly bring to up
+            assert  edge is cube.fl
             self.op.op(Algs.F)
 
             # not true on even, edge is OK
@@ -412,16 +414,43 @@ class NxNEdges(SolverElement):
         if n_slices % 2 == 0 and _all:
             ann += "(Full even)"
 
-        inv = self.cube.inv
-
         # self.op.toggle_animation_on(enable=True)
         with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
-            plus_one = [inv(i) + 1 for i in slices_indices_to_fix]
-            for _ in range(4):
+            # slices are from [1 nn], so we need to add 1
+            # actually, simple alg doesn't care if we fix i or inv(i), because on
+            # Advance alg - I don't know, so I'm keeping the index matches R - for the advanced
+            # last edge they come in pairs i<->inv(i)
+            #
+            plus_one = [ i + 1 for i in slices_indices_to_fix]
+
+            if not self._advanced_edge_parity:
+                self.debug(f"*** Doing parity on M {plus_one}", level=2)
+                for _ in range(4):
+                    self.op.play(Algs.M[plus_one].prime)
+                    self.op.play(Algs.U * 2)
+                self.op.play(Algs.M[plus_one].prime)
+            else:
+                # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
+                plus_one = [i + 1 for i in plus_one]
+
                 self.debug(f"*** Doing parity on R {plus_one}", level=2)
-                self.op.op(Algs.M[plus_one].prime)
-                self.op.op(Algs.U * 2)
-            self.op.op(Algs.M[plus_one].prime)
+                #  https://speedcubedb.com/a/6x6/6x6L2E
+                # 3R' U2 3L F2 3L' F2 3R2 U2 3R U2 3R' U2 F2 3R2 F2
+
+                # noinspection PyPep8Naming
+                Rs = Algs.R[plus_one]
+                # noinspection PyPep8Naming
+                Ls = Algs.L[plus_one]
+
+                # noinspection PyPep8Naming
+                U = Algs.U
+                # noinspection PyPep8Naming
+                F = Algs.F
+
+                alg = Rs.prime + U * 2 + Ls + F * 2 + Ls.prime + F * 2 + Rs * 2 + U * 2 + Rs + U * 2 + Rs.p + U * 2 + F * 2
+                alg += Rs * 2 + F * 2
+
+                self.op.play(alg)
 
     @staticmethod
     def _get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:
@@ -448,7 +477,7 @@ class NxNEdges(SolverElement):
     def rf(self) -> Alg:
         return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
 
-    def do_edge_parity_on_any(self):
+    def do_even_full_edge_parity_on_any_edge(self):
         assert self.cube.n_slices % 2 == 0
 
         self._do_edge_parity_on_edge(self.cube.front.edge_left)

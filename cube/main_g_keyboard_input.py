@@ -229,6 +229,9 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
         solver_animation = False if (modifiers & key.MOD_SHIFT) else None
 
+        # operator animation doesn't support turn on, it can only turn off
+        op_animation = solver_animation is not False
+
         # noinspection PyProtectedMember
         match value:
 
@@ -317,41 +320,26 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
                 end = nn
 
-                ml = 1
-                if modifiers & key.MOD_CTRL:
-                    ml = 2
+                #  https://speedcubedb.com/a/6x6/6x6L2E
+                # 3R' U2 3L F2 3L' F2 3R2 U2 3R U2 3R' U2 F2 3R2 F2
 
-                # on odd cube
-                swap_faces = [Algs.M[1:mid - 1].prime * ml + Algs.F.prime * 2 + Algs.M[1:mid - 1] * ml +
-                              Algs.M[mid + 1:end].prime * ml + Algs.F * 2 + Algs.M[mid + 1:end] * ml
-                              ]
-                op.play(Algs.seq_alg(None, *swap_faces))
+                slices = [ 2, 4,5 ]
 
-                # communicator 1
-                rotate_on_cell = Algs.M[mid]
-                rotate_on_second = Algs.M[1:mid - 1]  # E is from right to left
-                on_front_rotate = Algs.F.prime
+                # noinspection PyPep8Naming
+                Rs = Algs.R[slices]
+                # noinspection PyPep8Naming
+                Ls = Algs.L[slices]
 
-                cum = [rotate_on_cell.prime * ml,
-                       on_front_rotate,
-                       rotate_on_second.prime * ml,
-                       on_front_rotate.prime,
-                       rotate_on_cell * ml,
-                       on_front_rotate,
-                       rotate_on_second * ml,
-                       on_front_rotate.prime]
-                op.play(Algs.seq_alg(None, *cum))
+                # noinspection PyPep8Naming
+                U = Algs.U
+                # noinspection PyPep8Naming
+                F = Algs.F
 
-                rotate_on_second = Algs.M[mid + 1:nn]  # E is from right to left
-                cum = [rotate_on_cell.prime * ml,
-                       on_front_rotate,
-                       rotate_on_second.prime * ml,
-                       on_front_rotate.prime,
-                       rotate_on_cell * ml,
-                       on_front_rotate,
-                       rotate_on_second * ml,
-                       on_front_rotate.prime]
-                op.play(Algs.seq_alg(None, *cum))
+                alg = Rs.prime + U*2 + Ls + F*2 + Ls.prime + F*2 + Rs*2 + U*2 + Rs + U*2+Rs.p + U*2 + F*2
+                alg += Rs*2 + F*2
+
+                op.play(alg, inv, op_animation)
+
 
             case key.R:
                 if modifiers & key.MOD_CTRL:

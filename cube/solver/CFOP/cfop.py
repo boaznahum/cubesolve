@@ -8,7 +8,6 @@ from .PLL import PLL
 from .f2l import F2L
 from ..begginer.nxn_centers import NxNCenters
 from ..begginer.nxn_edges import NxNEdges
-from ..common.advanced_even_oll_big_cube_parity import AdvancedEvenEdgeFullEdgeParity
 from ..solver_name import SolverName
 
 
@@ -21,7 +20,7 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
                  "f2l",
                  "oll",
                  "pll",
-                 "nxn_centers", "nxn_edges", "even_edge_parity"
+                 "nxn_centers", "nxn_edges"
                  ]
 
     def __init__(self, op: Operator) -> None:
@@ -35,8 +34,7 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
         self.pll = PLL(self)
 
         self.nxn_centers = NxNCenters(self)
-        self.nxn_edges = NxNEdges(self)
-        self.even_edge_parity = AdvancedEvenEdgeFullEdgeParity(self)
+        self.nxn_edges = NxNEdges(self, True)
 
     @property
     def get_code(self):
@@ -138,9 +136,6 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
         if self._cube.solved:
             return sr
 
-        even_edge_parity_was_detected = False
-        even_corner_swap_was_detected = False
-        partial_edge_was_detected = False
 
         def _centers():
             """ Centers and edges are independent"""
@@ -148,7 +143,6 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
 
         def _edges():
             """ Centers and edges are independent"""
-            nonlocal partial_edge_was_detected
             self.nxn_edges.solve()
 
         def _reduce():
@@ -180,6 +174,12 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
 
             match what:
 
+                case SolveStep.NxNCenters:
+                    _centers()
+
+                case SolveStep.NxNEdges:
+                    _edges()
+
                 # because CFOP knows only L1 cross, so we assume that what
                 # user want when press F1
                 case SolveStep.L1x | SolveStep.L1:
@@ -198,13 +198,5 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
         finally:
             self._debug_override = _d
 
-        if even_edge_parity_was_detected:
-            sr._was_even_edge_parity = True
-
-        if even_corner_swap_was_detected:
-            sr._was_corner_swap = True
-
-        if partial_edge_was_detected:
-            sr._was_partial_edge_parity = True
 
         return sr

@@ -30,7 +30,7 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
         self.l3_cross = L3Cross(self)
         self.l3_corners = L3Corners(self)
         self.nxn_centers = NxNCenters(self)
-        self.nxn_edges = NxNEdges(self)
+        self.nxn_edges = NxNEdges(self, False)
 
     @property
     def get_code(self):
@@ -197,7 +197,7 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
                         raise InternalSWError("already even_edge_parity_was_detected")
                     else:
                         even_edge_parity_was_detected = True
-                        self.nxn_edges.do_edge_parity_on_any()
+                        self.nxn_edges.do_even_full_edge_parity_on_any_edge()
                         continue  # try again
 
                 except EvenCubeCornerSwapException:
