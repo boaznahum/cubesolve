@@ -403,9 +403,47 @@ class SliceAbleAlg(NSimpleAlg, ABC):
             return None
         return self.slices.stop
 
-    @abstractmethod
     def _add_to_str(self, s):
-        pass
+        """
+                    None -> default = R
+                    (None, None) -> default R
+                    (1, 1) -> default R
+                    (start, None) -> [start:]R
+                    (None, stop) -> [:stop] == [1:stop]
+                    (start, stop) -> [start:stop]
+
+                :param s:
+                :return:
+                """
+
+        slices = self.slices
+
+        if slices is None:
+            return s
+
+        if isinstance(slices, slice):
+
+            start = self.start
+            stop = self.stop
+
+            if not start and not stop:
+                return s
+
+            if 1 == start and 1 == stop:
+                return s
+
+            if start and not stop:
+                return "[" + str(start) + ":" + "]" + s
+
+            if not start and stop:
+                return "[1:" + str(stop) + "]" + s
+
+            if start and stop:
+                return "[" + str(start) + ":" + str(stop) + "]" + s
+
+            raise InternalSWError(f"Unknown {start} {stop}")
+        else:
+            return "[" + ",".join(str(i) for i in slices) + "]" + s
 
     def atomic_str(self):
         return self._add_to_str(super().atomic_str())
@@ -507,38 +545,7 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         super().__init__(str(face.value), n)
         self._face: FaceName = face
 
-    def _add_to_str(self, s):
-        """
-            None -> default = R
-            (None, None) -> default R
-            (1, 1) -> default R
-            (start, None) -> [start:]R
-            (None, stop) -> [:stop] == [1:stop]
-            (start, stop) -> [start:stop]
 
-        :param s:
-        :return:
-        """
-
-        start = self.start
-        stop = self.stop
-
-        if not start and not stop:
-            return s
-
-        if 1 == start and 1 == stop:
-            return s
-
-        if start and not stop:
-            return "[" + str(start) + ":" + "]" + s
-
-        if not start and stop:
-            return "[1:" + str(stop) + "]" + s
-
-        if start and stop:
-            return "[" + str(start) + ":" + str(stop) + "]" + s
-
-        raise InternalSWError(f"Unknown {start} {stop}")
 
     @final
     def play(self, cube: Cube, inv: bool = False):
@@ -670,42 +677,6 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
         return face_name, cube.get_rotate_slice_involved_parts(name, start_stop)
 
-    def _add_to_str(self, s):
-        """
-            None -> default = M
-            (None, None) -> default M
-            (start, None) -> [start:]R
-            (None, stop) -> [:stop] == [1:stop]
-            (start, stop) -> [start:stop]
-
-        :param s:
-        :return:
-        """
-
-        slices = self.slices
-
-        if slices is None:
-            return s
-
-        if isinstance(slices, slice):
-            start = self.start
-            stop = self.stop
-
-            if not start and not stop:
-                return s
-
-            if start and not stop:
-                return "[" + str(start) + ":" + "]" + s
-
-            if not start and stop:
-                return "[1:" + str(stop) + "]" + s
-
-            if start and stop:
-                return "[" + str(start) + ":" + str(stop) + "]" + s
-
-            raise InternalSWError(f"Unknown {start} {stop}")
-        else:
-            return "{" + ",".join(str(i) for i in slices) + "}" + s
 
 
 @final
