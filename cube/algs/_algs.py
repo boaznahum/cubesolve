@@ -3,7 +3,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import MutableSequence, Collection
 from random import Random
-from typing import Sequence, Any, final, TypeVar, Tuple, Iterable, Iterator
+from typing import Sequence, Any, final, TypeVar, Tuple, Iterable, Iterator, Self
 
 from cube.algs._parser import parse_alg
 from cube.app_exceptions import InternalSWError
@@ -255,7 +255,7 @@ class NSimpleAlg(SimpleAlg, ABC):
 
         return c
 
-    def _basic_clone(self: TNSimpleAlg) -> TNSimpleAlg:
+    def _basic_clone(self: Self) -> Self:
         cl = NSimpleAlg.__new__(type(self))
         # noinspection PyArgumentList
         cl.__init__()  # type: ignore

@@ -9,7 +9,7 @@
       <excludeFolder url="file://$MODULE_DIR$/_archive" />
     </content>
     <content url="file://$MODULE_DIR$/../../../temp/pyglet-1.5.23/pyglet-1.5.23/examples" />
-    <orderEntry type="jdk" jdkName="Python 3.10 (cubesolve)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.11 (cubesolve)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">
