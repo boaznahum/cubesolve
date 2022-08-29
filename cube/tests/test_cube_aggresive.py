@@ -22,7 +22,7 @@ def main():
 
     debug = False
 
-    sizes = config.AGGRESSIVE_TEST_NUMBER__SIZES
+    sizes = config.AGGRESSIVE_TEST_NUMBER_SIZES
 
     for size in sizes:
 

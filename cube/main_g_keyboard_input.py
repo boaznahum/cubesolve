@@ -170,13 +170,11 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
     if window.animation_running or op.is_animation_running:
 
-        if debug:
-            print(f"Keyboard input, in animation mode")
+        debug(f"Keyboard input, in animation mode")
 
         handled, _no_operation = handle_in_both_modes()
 
-        if debug:
-            print(f"Handled by 'handle_in_both_modes()={handled}, {_no_operation=}")
+        debug(f"Handled by 'handle_in_both_modes()={handled}, {_no_operation=}")
 
         if handled:
 
@@ -197,12 +195,10 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     op.abort()
 
         if not no_operation:
-            if debug:
-                print("keyboard input 'animation mode' decide to update_gui_elements")
+            debug("keyboard input 'animation mode' decide to update_gui_elements")
             window.update_gui_elements()
         else:
-            if debug:
-                print("keyboard input 'animation mode' decide not to update_gui_elements")
+            debug("keyboard input 'animation mode' decide not to update_gui_elements")
 
         return False
 
@@ -220,8 +216,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
     handled, no_operation = handle_in_both_modes()
 
-    if debug:
-        print(f"keyboard input 'main' handle_in_both_modes return {handled=} {no_operation}")
+    debug(f"keyboard input 'main' handle_in_both_modes return {handled=} {no_operation}")
 
     if not handled:
 
@@ -534,12 +529,10 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     # no need to redraw, on_draw is called after any event
 
     if not no_operation:
-        if debug:
-            print("keyboard input main decide to update gui elements")
+        debug("keyboard input main decide to update gui elements")
         window.update_gui_elements()
     else:
-        if debug:
-            print("keyboard input main decide not to update gui elements")
+        debug("keyboard input main decide not to update gui elements")
 
     return done
 
