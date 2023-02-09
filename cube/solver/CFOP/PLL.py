@@ -279,7 +279,7 @@ class PLL(StepSolver):
         else:
             return None
 
-    def _do_pll_parity(self):
+    def _do_pll_parity(self)  -> None:
         """
         I'm handing only Swap 2 Edges Diagonal and repeating PLL
         :return:

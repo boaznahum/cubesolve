@@ -66,7 +66,7 @@ class Cube(CubeSupplier):
 
         self._cqr: CubeQueries2 = CubeQueries2(self)
 
-    def _reset(self, cube_size=None):
+    def _reset(self, cube_size=None) -> None:
 
         if cube_size:
             self._size = cube_size
@@ -784,7 +784,7 @@ def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_dire
 
     n = f1.cube.n_slices
 
-    def _create_slice(i):
+    def _create_slice(i) -> None:
         p1: PartEdge = f1.create_part()
         p2: PartEdge = f2.create_part()
 

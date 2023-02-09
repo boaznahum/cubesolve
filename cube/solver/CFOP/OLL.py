@@ -60,7 +60,7 @@ class OLL(StepSolver):
         with self.ann.annotate(h1="Doing OLL"):
             self._solve()
 
-    def _solve(self):
+    def _solve(self) -> None:
         # 'yellow' face
         yf: Face = self.white_face.opposite
 
@@ -75,7 +75,7 @@ class OLL(StepSolver):
 
         self._do_oll()
 
-    def _do_oll(self):
+    def _do_oll(self) -> None:
 
         state: str = ""
         alg: Alg | None = None

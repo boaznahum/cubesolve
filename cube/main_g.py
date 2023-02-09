@@ -97,7 +97,7 @@ class Window(AbstractWindow, AnimationWindow):
 
         self.update_text()
 
-    def update_text(self):
+    def update_text(self) -> None:
 
         app = self.app
         slv = app.slv
@@ -196,7 +196,7 @@ class Window(AbstractWindow, AnimationWindow):
         self.text.append(pyglet.text.Label(s, x=10, y=y, font_size=15, color=(0, 255, 0, 255), bold=True))
         y += 20
 
-    def update_animation_text(self):
+    def update_animation_text(self) -> None:
 
         vs: ApplicationAndViewState = self.app.vs
 

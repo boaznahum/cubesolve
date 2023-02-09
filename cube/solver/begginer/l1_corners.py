@@ -47,7 +47,7 @@ class L1Corners(SolverElement):
 
             self._do_corners()
 
-    def _do_corners(self):
+    def _do_corners(self) -> None:
 
         wf: Face = self.white_face
 

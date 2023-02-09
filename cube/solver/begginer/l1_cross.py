@@ -77,7 +77,7 @@ class L1Cross(SolverElement):
 
         return status
 
-    def _do_cross(self):
+    def _do_cross(self) -> None:
 
         wf: Face = self.white_face
         assert wf.name == FaceName.U

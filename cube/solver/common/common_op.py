@@ -483,7 +483,7 @@ class CommonOp:
 
                     raise InternalSWError(f"Unknown case, edge is {edge}")
 
-    def bring_face_to_front_by_y_rotate(self, face):
+    def bring_face_to_front_by_y_rotate(self, face) -> None:
         """
         rotate over U
         :param face:  must be L , R, F, B
@@ -504,7 +504,7 @@ class CommonOp:
 
         raise ValueError(f"{face} must be L/R/F/B")
 
-    def bring_bottom_edge_to_front_by_d_rotate(self, edge):
+    def bring_bottom_edge_to_front_by_d_rotate(self, edge) -> None:
 
         d: Face = self.slv.cube.down
 

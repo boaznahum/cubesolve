@@ -36,7 +36,7 @@ class _Parser():
         self._tokens = tokens
         self._original = original
 
-    def parse(self):
+    def parse(self) -> None:
         result: list[Alg] = []
         self._parse(result, False)
 

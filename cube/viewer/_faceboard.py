@@ -51,7 +51,7 @@ class _FaceBoard:
                                                  self.cube_face_supplier().parts}
 
 
-    def release_resources(self):
+    def release_resources(self) -> None:
 
         """
         Release cells resources
@@ -71,7 +71,7 @@ class _FaceBoard:
 
     # noinspection PyUnusedLocal
 
-    def prepare_gui_geometry(self):
+    def prepare_gui_geometry(self) -> None:
 
         f: Face = self.cube_face
 
@@ -102,7 +102,7 @@ class _FaceBoard:
         _create_cell(0, 1, f.edge_bottom)
         _create_cell(0, 2, f.corner_bottom_right)
 
-    def update(self):
+    def update(self) -> None:
         c: _Cell
         for c in self._cells.values():
             c.update_drawing()

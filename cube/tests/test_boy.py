@@ -5,7 +5,7 @@ from cube.operator.cube_operator import Operator
 from cube.solver import Solver
 
 
-def test1():
+def test1()  -> None:
     size = 7
 
     cube = Cube(size)
@@ -17,7 +17,7 @@ def test1():
     assert cube.is_boy
 
 
-def test2():
+def test2() -> None:
     size = 4
 
     cube = Cube(size)

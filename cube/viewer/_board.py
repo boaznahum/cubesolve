@@ -101,7 +101,7 @@ class _Board:
     # finally:
     #     print(f"Update took {(time.time_ns() - start) / (10 ** 9)}")
 
-    def draw(self):
+    def draw(self) -> None:
         # for face in self._faces:
         #     face.draw()
 
@@ -237,7 +237,7 @@ class _Board:
         self._faces.append(f)
         return f
 
-    def finish_faces(self):
+    def finish_faces(self) -> None:
 
         cells: dict[PartFixedID:list[_Cell]] = defaultdict(list)
 
@@ -259,12 +259,12 @@ class _Board:
         """
         return self._cells[_id]
 
-    def _prepare_view_state(self):
+    def _prepare_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self.vs
         vs.prepare_objects_view()
 
-    def _restore_view_state(self):
+    def _restore_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self.vs
         vs.restore_objects_view()

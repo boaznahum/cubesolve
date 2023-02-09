@@ -363,7 +363,7 @@ class NxNEdges(SolverElement):
 
         self._do_edge_parity_on_edge(edge)
 
-    def _do_edge_parity_on_edge(self, edge):
+    def _do_edge_parity_on_edge(self, edge) -> None:
 
         cube = self.cube
         n_slices = cube.n_slices

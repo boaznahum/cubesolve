@@ -57,7 +57,7 @@ class L2(SolverElement):
 
             self._do_edges()
 
-    def _do_edges(self):
+    def _do_edges(self) -> None:
 
         # we use codes because maybe position will be changed during the algorithm
         edges__codes: Sequence[PartColorsID] = Part.parts_id_by_pos(self.l2_edges)

@@ -55,7 +55,7 @@ class CubeSanity:
             cube.find_part_by_colors(frozenset([c1, c2]))
 
     @staticmethod
-    def _check_nxn_centers(cube):
+    def _check_nxn_centers(cube) -> None:
         n_slices = cube.n_slices
         dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = cube.cqr.get_centers_dist(cube)
         for clr in Color:
@@ -93,7 +93,7 @@ class CubeSanity:
                         raise InternalSWError(s)
 
     @staticmethod
-    def _check_nxn_edges(cube):
+    def _check_nxn_edges(cube) -> None:
         n_slices = cube.n_slices
         from .cube_queries2 import CubeQueries2
 

@@ -185,12 +185,12 @@ class _Cell:
 
         dest.update(lists)
 
-    def _prepare_view_state(self):
+    def _prepare_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self._face_board.board.vs
         vs.prepare_objects_view()
 
-    def _restore_view_state(self):
+    def _restore_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self._face_board.board.vs
         vs.restore_objects_view()

@@ -46,7 +46,7 @@ class L3Cross(SolverElement):
         with self.ann.annotate(h1="Doing L3 Cross"):
             self._solve()
 
-    def _solve(self):
+    def _solve(self) -> None:
         # 'yellow' face
         yf: Face = self.white_face.opposite
 
@@ -63,13 +63,13 @@ class L3Cross(SolverElement):
 
         self._do_cross()
 
-    def _do_cross(self):
+    def _do_cross(self) -> None:
 
         self._do_yellow_cross()
         assert self._is_yellow_cross()
         self._do_cross_position()
 
-    def _is_yellow_cross(self):
+    def _is_yellow_cross(self) -> None:
         yf: Face = self.white_face.opposite
 
         left = int(yf.edge_left.match_face(yf))
@@ -80,7 +80,7 @@ class L3Cross(SolverElement):
 
         return n == 4
 
-    def _do_yellow_cross(self):
+    def _do_yellow_cross(self) -> None:
         """ignore position"""
 
         yf: Face = self.white_face.opposite

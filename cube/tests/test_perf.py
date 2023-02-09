@@ -7,7 +7,7 @@ from cube.operator.cube_operator import Operator
 from cube.solver import Solver, Solvers
 
 
-def main():
+def main() -> None:
     n_loops = 3
     cube_size = 10
 

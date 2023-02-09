@@ -275,7 +275,7 @@ class CubeQueries2:
 
     ########################## State methods ################################
 
-    def print_dist(self):
+    def print_dist(self)  -> None:
         cube = self._cube
 
         for clr in Color:

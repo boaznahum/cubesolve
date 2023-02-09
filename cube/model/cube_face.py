@@ -203,7 +203,7 @@ class Face(SuperElement, Hashable):
     def _get_other_face(self, e: Edge) -> _Face:
         return e.get_other_face(self)
 
-    def rotate(self, n_rotations=1):
+    def rotate(self, n_rotations=1) -> None:
 
         # slices_indexes: EdgeSliceIndex = slice(0, self.cube.n_slices)
         #
@@ -213,7 +213,7 @@ class Face(SuperElement, Hashable):
 
         inv: Callable[[int], int] = self.inv
 
-        def _rotate():
+        def _rotate() -> None:
             left: Face = self._get_other_face(self._edge_left)
             right: Face = self._get_other_face(self._edge_right)
             top: Face = self._get_other_face(self._edge_top)

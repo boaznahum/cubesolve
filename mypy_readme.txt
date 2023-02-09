@@ -9,3 +9,11 @@ implicit_optional = true
 or
  see https://github.com/hauntsaninja/no_implicit_optional
  and fix some manually
+
+ =======================
+By default the bodies of untyped functions are not checked, consider using --check-untyped-defs
+
+https://mypy.readthedocs.io/en/stable/common_issues.html#no-errors-reported-for-obviously-wrong-code
+
+I added  -> None to all un-annotated functions
+

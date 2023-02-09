@@ -53,7 +53,7 @@ class L3Corners(SolverElement):
 
         assert self._is_solved()
 
-    def _do_corners(self):
+    def _do_corners(self) -> None:
 
         # 'yellow' face
         yf: Face = self.white_face.opposite
@@ -112,7 +112,7 @@ class L3Corners(SolverElement):
             else:
                 raise InternalSWError("Odd cube not all corners in position")
 
-    def bring_front_right_to_position(self):
+    def bring_front_right_to_position(self)  -> None:
 
         yf: Face = self.white_face.opposite
 

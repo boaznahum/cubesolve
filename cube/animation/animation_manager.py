@@ -361,7 +361,7 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
         # print(f"In update after {current_angel=} {target_angel}")
 
     # noinspection PyPep8Naming
-    def _draw():
+    def _draw() -> None:
 
         nonlocal current_angel
 

@@ -8,7 +8,7 @@ from cube.operator.cube_operator import Operator
 from cube.solver import Solver, Solvers
 
 
-def main():
+def main() -> None:
     size = 6
 
     app = AbstractApp.create_non_default(cube_size=size)

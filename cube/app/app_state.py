@@ -124,7 +124,7 @@ class ApplicationAndViewState:
 
         self._last_scramble_key_size: Optional[Tuple[Any, int | None]] = None
 
-    def reset(self, not_view=False):
+    def reset(self, not_view=False) -> None:
         self._alpha_x: float = 0
         self._alpha_y: float = 0
         self._alpha_z: float = 0

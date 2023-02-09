@@ -89,7 +89,7 @@ class Operator:
             with open(ll, mode="a") as f:
                 print(*(str(x) for x in s), file=f)
 
-    def _play(self, alg: Alg, inv: bool = False, animation=True):
+    def _play(self, alg: Alg, inv: bool = False, animation=True) -> None:
 
         """
         deprecated, use play
@@ -122,7 +122,7 @@ class Operator:
 
         if animation and self.animation_enabled and not op_current_running:
 
-            def _do_animation():
+            def _do_animation() -> None:
                 nonlocal alg
                 with self._w_with_animation:
 

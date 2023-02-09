@@ -4,7 +4,7 @@ from cube.operator.cube_operator import Operator
 from cube.solver import Solver
 
 
-def main():
+def main() -> None:
 
 
     n = 8

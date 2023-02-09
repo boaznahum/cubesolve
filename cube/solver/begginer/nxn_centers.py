@@ -88,7 +88,7 @@ class NxNCenters(SolverElement):
                 self._trackers._remove_all_track_slices()
                 self._trackers._debug_print_track_slices("After removal")
 
-    def _solve(self):
+    def _solve(self) -> None:
 
         cube = self.cube
 
