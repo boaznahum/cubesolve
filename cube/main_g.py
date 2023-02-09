@@ -9,14 +9,12 @@ from pyglet.window import key  # type: ignore
 
 from cube.animation.animation_manager import AnimationWindow
 from cube.app.abstract_ap import AbstractApp
-
+from cube.app.app_state import ApplicationAndViewState
 from . import config
 from . import main_g_keyboard_input
 from . import main_g_mouse
 from .algs import Algs, Alg
-from .animation.animation_manager import AnimationManager
 from .app_exceptions import AppExit, RunStop, OpAborted
-from cube.app.app_state import ApplicationAndViewState
 from .main_g_abstract import AbstractWindow
 from .viewer.viewer_g import GCubeViewer
 # pyglet.options["debug_graphics_batch"] = True
