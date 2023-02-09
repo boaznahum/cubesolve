@@ -430,7 +430,7 @@ class Cube(CubeSupplier):
             case _:
                 raise RuntimeError(f"Unknown Axis {axis_name}")
 
-    def rotate_slice(self, slice_name: SliceName, n: int, slices: Iterable[int] = None):
+    def rotate_slice(self, slice_name: SliceName, n: int, slices: Iterable[int] | None = None):
 
         """
 
@@ -459,7 +459,7 @@ class Cube(CubeSupplier):
         return a_slice.get_rotate_involved_parts(slice_indexes)
 
     def get_face_and_rotation_info(self, face_name: FaceName,
-                                   _slices: Iterable[int] = None) -> Tuple[Iterable[int], bool, SliceName]:
+                                   _slices: Iterable[int] | None = None) -> Tuple[Iterable[int], bool, SliceName]:
         """
 
         :param face_name:
@@ -499,7 +499,7 @@ class Cube(CubeSupplier):
 
         return _slices, neg_slice_index, slice_name
 
-    def rotate_face_and_slice(self, n: int, face_name: FaceName, _slices: Iterable[int] = None):
+    def rotate_face_and_slice(self, n: int, face_name: FaceName, _slices: Iterable[int] | None = None):
 
         """
 
@@ -535,7 +535,7 @@ class Cube(CubeSupplier):
                 # can be optimized, by passing sequence
                 self.rotate_slice(slice_name, slice_rotate_n, [si])
 
-    def get_rotate_face_and_slice_involved_parts(self, face_name: FaceName, slices: Iterable[int] = None) -> \
+    def get_rotate_face_and_slice_involved_parts(self, face_name: FaceName, slices: Iterable[int] | None = None) -> \
             Collection[PartSlice]:
 
         """

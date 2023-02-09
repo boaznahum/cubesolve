@@ -1,5 +1,5 @@
 from collections.abc import MutableSet
-from typing import Set, TypeVar, Iterable, Iterator, AbstractSet, Any, Generic
+from typing import Optional, Set, TypeVar, Iterable, Iterator, AbstractSet, Any, Generic
 
 #_T = TypeVar("_T")
 _T = TypeVar("_T")#, covariant=True)
@@ -7,7 +7,7 @@ _T = TypeVar("_T")#, covariant=True)
 
 class OrderedSet(MutableSet[_T], Generic[_T]):
 
-    def __init__(self, __iterable: Iterable[_T] = None) -> None:
+    def __init__(self, __iterable: Optional[Iterable[_T]] = None) -> None:
         super().__init__()
         self._dict: dict[_T, None]
         if __iterable:

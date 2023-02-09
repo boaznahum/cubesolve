@@ -2,7 +2,7 @@ import functools
 import warnings
 from collections.abc import MutableSequence, Sequence, Reversible
 from contextlib import contextmanager
-from typing import Callable, Any, TYPE_CHECKING
+from typing import Optional, Callable, Any, TYPE_CHECKING
 
 from .. import config
 from ..algs import Alg, SimpleAlg, AnnotationAlg, Algs
@@ -31,7 +31,7 @@ class Operator:
 
     def __init__(self, cube: Cube,
                  app_state: ApplicationAndViewState,  # PATCH, operator should hold SS mode
-                 animation_manager: AnimationManager = None,
+                 animation_manager: Optional[AnimationManager] = None,
                  animation_enabled: bool = False) -> None:
         super().__init__()
         self._aborted: Any = None

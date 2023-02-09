@@ -54,7 +54,7 @@ class OpAnnotation:
 
     # @contextmanager
     def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, VMarker]],
-                                text: _HEADS = None):
+                                text: Optional[_HEADS] = None):
 
         """
         Annotate moved slice

@@ -2,7 +2,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence, Iterator, Iterable
 from enum import Enum, unique
-from typing import Tuple, TypeAlias, TYPE_CHECKING, TypeVar
+from typing import Optional, Tuple, TypeAlias, TYPE_CHECKING, TypeVar
 
 from cube import config
 from cube.model import PartEdge
@@ -227,7 +227,7 @@ class Part(ABC, CubeElement):
 
     def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face],
                         index: SliceIndex | None = None,
-                        source_index: SliceIndex = None):
+                        source_index: Optional[SliceIndex] = None):
 
         """
         Replace the colors of this edge with the colors from source
@@ -597,8 +597,8 @@ class Center(Part):
         return Center(_slices)
 
     def copy_colors(self, other: "Center",
-                    index: CenterSliceIndex = None,
-                    source_index: CenterSliceIndex = None):
+                    index: Optional[CenterSliceIndex] = None,
+                    source_index: Optional[CenterSliceIndex] = None):
         # self._edges[0].copy_color(other.edg())
         self._replace_colors(other, (other.face, self.face), index=index, source_index=source_index)
 
@@ -832,7 +832,7 @@ class Edge(Part):
     def copy_colors_horizontal(self,
                                source: "Edge",
                                index: SliceIndex | None = None,
-                               source_index: SliceIndex = None
+                               source_index: Optional[SliceIndex] = None
                                ):
         """
         Copy from edge - copy from shared face
@@ -860,7 +860,7 @@ class Edge(Part):
     def copy_colors_ver(self,
                         source: "Edge",
                         index: SliceIndex | None = None,
-                        source_index: SliceIndex = None
+                        source_index: Optional[SliceIndex] = None
                         ):
         """
         Copy from vertical edge - copy from other face
