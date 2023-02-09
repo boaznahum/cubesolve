@@ -7,8 +7,3 @@ glooey~=0.3.6
 numpy~=1.23.2
 mypy
 colorama~=0.4.4
-
-
-
-
-pyglet
