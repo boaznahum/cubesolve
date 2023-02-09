@@ -1,0 +1,5 @@
+https://peps.python.org/pep-0440/#version-specifiers
+
+python -m pip index versions glooey
+python -m pip install pyglet==2.0.3
+
