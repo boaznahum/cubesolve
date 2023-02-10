@@ -117,7 +117,7 @@ class FaceTracker:
 
         return FaceTracker.by_pred(cube, color, pred)
 
-    def track_opposite(self) -> None:
+    def track_opposite(self) -> "FaceTracker":
 
         f: FaceTracker = self
 
