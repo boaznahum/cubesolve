@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from cube import config
 from cube.algs import Alg
@@ -52,7 +52,7 @@ class _App(AbstractApp):
         return self._error
 
     @property
-    def am(self) -> AnimationManager:
+    def am(self) -> Optional[AnimationManager]:
         return self._am
 
     @property
