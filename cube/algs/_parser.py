@@ -1,12 +1,13 @@
 import re
-from typing import TYPE_CHECKING, TypeAlias, Optional
+from typing import TYPE_CHECKING, TypeAlias
 
 from cube.app_exceptions import InternalSWError
 
 if TYPE_CHECKING:
-    from cube.algs import Alg
+    from cube.algs import Alg, SeqAlg
 
 _Alg: TypeAlias = "Alg"
+_SeqAlg: TypeAlias = "SeqAlg"
 
 
 def parse_alg(s: str) -> _Alg:
@@ -14,7 +15,6 @@ def parse_alg(s: str) -> _Alg:
     this is very naive patch version
     Currently doesn't support exp N and exp '  (only U2, U',...)
     """
-    from ._algs import Algs
 
     # We capture, so we get the spliteres two, such as '(' ')', we need to ignore the spaces
     # Empty matches for the pattern split the string only when not adjacent to a previous empty match.
@@ -36,7 +36,7 @@ class _Parser():
         self._tokens = tokens
         self._original = original
 
-    def parse(self) -> None:
+    def parse(self) -> _SeqAlg:
         result: list[Alg] = []
         self._parse(result, False)
 
