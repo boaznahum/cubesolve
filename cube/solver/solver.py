@@ -72,6 +72,12 @@ class Solver(ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def is_debug_config_mode(self) -> bool:
+        pass
+
+
 
 class ReductionSolver(ABC):
     pass

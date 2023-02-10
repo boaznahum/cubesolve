@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="MypyConfigService">
-    <option name="customMypyPath" value="F:\Dev\code\cubesolve\venv\Scripts\mypy.exe" />
-    <option name="mypyConfigFilePath" value="F:\Dev\code\cubesolve\mypy.ini" />
+    <option name="customMypyPath" value="F:\dev\code\python\cubesolve\venv311\Scripts\mypy.exe" />
+    <option name="mypyConfigFilePath" value="F:\dev\code\python\cubesolve\mypy.ini" />
   </component>
 </project>

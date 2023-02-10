@@ -32,6 +32,16 @@ class AbstractApp(metaclass=ABCMeta):
 
     @property
     @abstractmethod
+    def error(self) -> str|None:
+        pass
+
+    @abstractmethod
+    def set_error(self, _error: str) -> None:
+        self._error = _error
+
+
+    @property
+    @abstractmethod
     def am(self) -> "AnimationManager":
         pass
 

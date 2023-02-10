@@ -48,7 +48,7 @@ class _App(AbstractApp):
         self._error = _error
 
     @property
-    def error(self):
+    def error(self) -> str|None:
         return self._error
 
     @property

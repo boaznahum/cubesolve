@@ -10,6 +10,7 @@ from pyglet.window import key  # type: ignore
 from cube.animation.animation_manager import AnimationWindow
 from cube.app.abstract_ap import AbstractApp
 from cube.app.app_state import ApplicationAndViewState
+from cube.solver import Solver
 from . import config
 from . import main_g_keyboard_input
 from . import main_g_mouse
@@ -100,7 +101,7 @@ class Window(AbstractWindow, AnimationWindow):
     def update_text(self) -> None:
 
         app = self.app
-        slv = app.slv
+        slv: Solver = app.slv
         cube = app.cube
 
         vs: ApplicationAndViewState = app.vs
@@ -126,9 +127,9 @@ class Window(AbstractWindow, AnimationWindow):
                                            x=10, y=y, font_size=10))
         y += 20
 
-        h = op.history()
+        hist = op.history()
         sh = str(h)[-70:]
-        self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*h)) + "  " + sh,
+        self.text.append(pyglet.text.Label("History: #" + str(Algs.count(*hist)) + "  " + sh,
                                            x=10, y=y, font_size=10))
         y += 20
 
