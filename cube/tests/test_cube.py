@@ -10,7 +10,7 @@ def main() -> None:
 
     n = 3
 
-    app = AbstractApp.create_non_default(n)
+    app = AbstractApp.create_non_default(n, animation=False)
 
     cube = app.cube
 
@@ -18,7 +18,7 @@ def main() -> None:
 
     alg2.play(cube)
 
-    rs = app.slv.solve(animation=False)
+    rs = app.slv.solve()
 
     assert cube.solved
 

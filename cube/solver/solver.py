@@ -56,6 +56,13 @@ class Solver(ABC):
     @abstractmethod
     def solve(self, debug: bool | None = None, animation: bool | None = True,
               what: SolveStep = SolveStep.ALL) -> SolverResults:
+        """
+        :param debug:
+        :param animation: not None force True/ False, you can create Application without animation,
+                so you don't need to pass False to solver
+        :param what:
+        :return:
+        """
         pass
 
     @property

@@ -14,7 +14,7 @@ class _App(AbstractApp):
 
     def __init__(self,
                  vs: ApplicationAndViewState,
-                 am: AnimationManager,
+                 am: AnimationManager | None,
                  cube_size: int | None) -> None:
         super().__init__()
 

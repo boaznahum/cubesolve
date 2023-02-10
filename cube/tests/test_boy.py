@@ -21,14 +21,14 @@ def test1() -> None:
 def test2() -> None:
     size = 4
 
-    app = AbstractApp.create_non_default(size)
+    app = AbstractApp.create_non_default(size, animation=False)
 
     cube = app.cube
 
     a: algs.Alg = algs.Algs.scramble1(cube.size)
     a.play(cube)
 
-    app.slv.solve(animation=False)
+    app.slv.solve()
 
     assert cube.is_boy
 

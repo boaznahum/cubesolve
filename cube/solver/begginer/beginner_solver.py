@@ -94,7 +94,7 @@ class BeginnerSolver(BaseSolver, BeginnerLBLReduce):
         """
 
         :param debug:
-        :param animation: not None force True/ Flalse
+        :param animation: not None force True/ False
         :param what:
         :return:
         """
