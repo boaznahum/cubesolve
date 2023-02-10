@@ -2,6 +2,9 @@
 pip
 
 #https://pypi.org/project/pyglet/#history
+# trying to install higer version, fails on glooey import
+#   glooey\drawing\stencil.py
+#   from pyglet.graphics import Group, OrderedGroup
 pyglet~=1.5
 glooey~=0.3.6
 numpy~=1.24
