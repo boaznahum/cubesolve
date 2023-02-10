@@ -1,7 +1,7 @@
 from typing import Optional, Tuple
 
 from cube import config
-from cube.algs import Alg, Algs
+from cube.algs import Alg, Algs, FaceAlg
 from cube.algs._algs import SL
 from cube.app_exceptions import InternalSWError
 from cube.model import Part
@@ -295,7 +295,7 @@ class PLL(StepSolver):
         size = self.cube.size
         assert size % 2 == 0
 
-        U: Alg = Algs.U
+        U: FaceAlg = Algs.U
         R = Algs.R
         rw: Alg = Algs.R[2:size // 2]
         rw2: Alg = rw * 2

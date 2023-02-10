@@ -1,5 +1,7 @@
 from cube.algs import Algs
+from cube.app.abstract_ap import AbstractApp
 from cube.model.cube import Cube
+from cube.model.cube_queries2 import CubeQueries2
 from cube.operator.cube_operator import Operator
 from cube.solver import Solver
 
@@ -9,16 +11,15 @@ def main() -> None:
 
     n = 8
 
-    cube = Cube(size=n)
+    app = AbstractApp.create_non_default(n)
 
-    op: Operator = Operator(cube)
-    solver: Solver = Solver(op)
+    cube = app.cube
 
     alg = Algs.scramble(cube.size, 4)
 
     alg.play(cube)
 
-    state = CubeQueries.get_sate(cube)
+    state = CubeQueries2(cube).get_sate()
 
     slices=[1, 2,  5, 6]
     slice_alg = Algs.M[slices]

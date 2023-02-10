@@ -20,6 +20,8 @@ class AbstractApp(metaclass=ABCMeta):
     def create() -> "AbstractApp":
         return AbstractApp.create_non_default(None)
 
+    # todo: enable to create without animation, need for tests
+    # that currently pass false to solved
     @staticmethod
     def create_non_default(cube_size: int | None) -> "AbstractApp":
         from .app import _App
