@@ -2,12 +2,12 @@ from collections.abc import Iterable, MutableSequence
 from typing import Collection, Mapping, Protocol, Tuple, TYPE_CHECKING
 
 from . import PartEdge
-from .cube_boy import CubeLayout, Color, FaceName
-from .cube_face import Face
-from .cube_slice import Slice, SliceName
 from ._elements import AxisName, PartColorsID
 from ._part import Edge, Corner, Center, Part
 from ._part_slice import PartSlice, EdgeWing, CornerSlice
+from .cube_boy import CubeLayout, Color, FaceName
+from .cube_face import Face
+from .cube_slice import Slice, SliceName
 from .. import config
 from ..app_exceptions import InternalSWError
 
@@ -132,7 +132,7 @@ class Cube(CubeSupplier):
 
         self._edges = edges
 
-        corners = []
+        corners: list[Corner] = []
 
         f._corner_top_left = l._corner_top_right = u._corner_bottom_left = _create_corner(corners, f, l, u)
         f._corner_top_right = r._corner_top_left = u._corner_bottom_right = _create_corner(corners, f, r, u)
@@ -784,7 +784,7 @@ def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_dire
 
     n = f1.cube.n_slices
 
-    def _create_slice(i) -> None:
+    def _create_slice(i) -> EdgeWing:
         p1: PartEdge = f1.create_part()
         p2: PartEdge = f2.create_part()
 
