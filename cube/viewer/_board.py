@@ -1,5 +1,5 @@
 from collections import defaultdict
-from collections.abc import Set, MutableSequence, Sequence, Iterable, Collection
+from collections.abc import Set, MutableSequence, Sequence, Iterable, Collection, Mapping
 from typing import Callable, Tuple
 
 import numpy as np
@@ -68,7 +68,7 @@ class _Board:
         self._vs = vs
 
         # why sequence, because we can have multiple back faces
-        self._cells: dict[PartFixedID, MutableSequence[_Cell]] = dict()
+        self._cells: Mapping[PartFixedID, MutableSequence[_Cell]] = dict()
         self._cube: Cube = cube
 
         texture_map: list[tuple[int, int]] = [(0, 0), (0, 1), (1, 1), (1, 0)]
@@ -239,7 +239,7 @@ class _Board:
 
     def finish_faces(self) -> None:
 
-        cells: dict[PartFixedID:list[_Cell]] = defaultdict(list)
+        cells: dict[PartFixedID, list[_Cell]] = defaultdict(list)
 
         for fb in self._faces:
 

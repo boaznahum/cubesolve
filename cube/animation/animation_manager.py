@@ -369,7 +369,7 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
 
         if abs(current_angel) > abs(target_angel):
             animation.done = True
-            return
+            return # False
 
         vs.prepare_objects_view()
 
@@ -394,7 +394,7 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
         finally:
             vs.restore_objects_view()
 
-        return True
+        #return True
 
     animation.delay = animation_speed.delay_between_steps
     animation._animation_draw_only = _draw

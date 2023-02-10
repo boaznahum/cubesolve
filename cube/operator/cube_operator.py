@@ -126,6 +126,7 @@ class Operator:
                 nonlocal alg
                 with self._w_with_animation:
 
+                    assert self._animation_manager
                     an: Callable[[Cube, OpProtocol, SimpleAlg], None] | None = self._animation_manager.run_animation
                     assert an  # just to make mypy happy
 

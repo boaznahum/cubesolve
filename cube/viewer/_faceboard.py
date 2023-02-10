@@ -62,7 +62,7 @@ class _FaceBoard:
         for c in self._cells.values():
             c.release_resources()
 
-        self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, self._batch) for p in
+        self._cells = {p.fixed_id: _Cell(self, self._batch) for p in
                                                  self.cube_face_supplier().parts}
 
     @property
