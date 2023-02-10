@@ -82,8 +82,6 @@ class L1Cross(SolverElement):
         wf: Face = self.white_face
         assert wf.name == FaceName.U
 
-        wf: Face = self.white_face
-
         color_codes: Sequence[PartColorsID] = Part.parts_id_by_pos(wf.edges)
         for color_id in color_codes:
             st = self.__print_cross_status()

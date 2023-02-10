@@ -12,8 +12,9 @@ if TYPE_CHECKING:
 
 
 class AbstractApp(metaclass=ABCMeta):
-    def __init__(self):
-        pass
+    def __init__(self) -> None:
+        self._error : str | None = None
+
 
     @staticmethod
     def create() -> "AbstractApp":

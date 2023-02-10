@@ -19,7 +19,7 @@ class _App(AbstractApp):
         super().__init__()
 
         self._vs = vs
-        self._error: str | None = None
+        self._error = None
 
         if cube_size is not None:
             vs.cube_size = cube_size

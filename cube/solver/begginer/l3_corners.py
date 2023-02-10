@@ -62,7 +62,7 @@ class L3Corners(SolverElement):
         # no need to check rotation, because we assume already have a cross
 
         if Part.all_match_faces(yf.corners):
-            return True
+            return
 
         with self.ann.annotate(h1="+- Position"):
             self._do_positions(yf)

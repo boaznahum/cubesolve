@@ -69,7 +69,7 @@ class L3Cross(SolverElement):
         assert self._is_yellow_cross()
         self._do_cross_position()
 
-    def _is_yellow_cross(self) -> None:
+    def _is_yellow_cross(self) -> bool:
         yf: Face = self.white_face.opposite
 
         left = int(yf.edge_left.match_face(yf))

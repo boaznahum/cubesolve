@@ -105,7 +105,7 @@ class F2L(SolverElement):
 
                 ])
 
-            def need_n_can_work() -> None:
+            def need_n_can_work() -> bool:
                 corner: CornerTracker = CornerTracker.of_position(cube.front.corner_bottom_right)
                 edge: EdgeTracker = EdgeTracker.of_position(cube.front.edge_right)
 
@@ -572,7 +572,7 @@ class F2L(SolverElement):
         return alg
 
     # noinspection PyPep8Naming
-    def _case_3_corner_in_top_edge_middle(self, corner, edge) -> None:
+    def _case_3_corner_in_top_edge_middle(self, corner, edge) -> Alg:
 
         """"
         Number of cases = 6 = 3(corner orientation) * 2(edge orientation)
