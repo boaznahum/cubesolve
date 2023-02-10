@@ -1,4 +1,3 @@
-import importlib
 import math
 import pickle
 import tempfile
@@ -9,12 +8,10 @@ from typing import Literal, Any, Tuple, Optional
 
 from pyglet import gl  # type: ignore
 
-
 # noinspection PyMethodMayBeStatic
 from cube import algs
 from cube import config
 from cube.animation.main_g_animation_text import AnimationText
-from cube.model import cube
 from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
 
@@ -125,9 +122,9 @@ class ApplicationAndViewState:
         self._last_scramble_key_size: Optional[Tuple[Any, int | None]] = None
 
     def reset(self, not_view=False) -> None:
-        self._alpha_x: float = 0
-        self._alpha_y: float = 0
-        self._alpha_z: float = 0
+        self._alpha_x = 0
+        self._alpha_y = 0
+        self._alpha_z = 0
         self._fov_y = self._fov_y_0
         # must copy, we modify it
         self._offset[:] = self._offset_0
