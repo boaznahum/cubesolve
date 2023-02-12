@@ -1,15 +1,15 @@
 from collections import defaultdict
-from typing import Tuple, Set
+from typing import Tuple
 
 from cube.algs import Algs, Alg
 from cube.app_exceptions import InternalSWError
-from cube.model.cube_face import Face
 from cube.model import Color, Edge, PartColorsID, EdgeWing
+from cube.model.cube_face import Face
 from cube.model.misc import ModelHelper
 from cube.operator.op_annotation import AnnWhat
-from cube.solver.common.solver_element import SolverElement
-from cube.solver.common.common_op import CommonOp, EdgeSliceTracker
 from cube.solver.common.base_solver import BaseSolver
+from cube.solver.common.common_op import EdgeSliceTracker
+from cube.solver.common.solver_element import SolverElement
 from cube.utils.collections import OrderedSet
 
 

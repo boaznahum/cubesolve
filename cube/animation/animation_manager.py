@@ -11,11 +11,10 @@ from pyglet import gl  # type: ignore
 
 from cube import algs
 from cube.algs import SimpleAlg
-from cube.algs._algs import _X, _M
 from cube.app.app_state import ApplicationAndViewState
+from cube.model import PartSlice
 from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
-from cube.model import PartSlice
 from cube.viewer.viewer_g import GCubeViewer
 
 OpProtocol: TypeAlias = Callable[[algs.Alg, bool], None]

@@ -1,7 +1,7 @@
 from cube.algs import Algs
 from cube.operator.op_annotation import AnnWhat
 from cube.solver.common.base_solver import BaseSolver
-from cube.solver.common.solver_element import StepSolver, SolverElement
+from cube.solver.common.solver_element import SolverElement
 
 
 class AdvancedEdgeEdgeParity(SolverElement):

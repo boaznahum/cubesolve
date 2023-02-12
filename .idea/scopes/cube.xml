@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="cube" pattern="file[cube]:cube//*" />
+</component>

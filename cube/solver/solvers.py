@@ -1,10 +1,8 @@
-from enum import Enum, unique
-
 from cube.operator.cube_operator import Operator
-from .CFOP.cfop import CFOP
-from .solver import Solver
-from .solver import BeginnerLBLReduce
 from cube.solver.begginer.beginner_solver import BeginnerSolver
+from .CFOP.cfop import CFOP
+from .solver import BeginnerLBLReduce
+from .solver import Solver
 from .solver_name import SolverName
 from .. import config
 from ..app_exceptions import InternalSWError

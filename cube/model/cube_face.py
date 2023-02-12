@@ -1,3 +1,4 @@
+from collections.abc import Hashable, Sequence
 from typing import Callable
 
 from . import PartEdge

@@ -1,13 +1,8 @@
-import itertools
-from abc import ABC, abstractmethod
-from collections import defaultdict
 from collections.abc import Iterable
 from enum import Enum, unique
-from typing import TypeAlias, MutableSequence, Tuple, Any, Sequence, Hashable, Iterator, TypeVar, TYPE_CHECKING
+from typing import TypeAlias, Tuple, TYPE_CHECKING
 
-from .. import config
-from cube.app_exceptions import InternalSWError
-from .cube_boy import Color, FaceName, color2long
+from .cube_boy import Color, FaceName
 
 
 @unique

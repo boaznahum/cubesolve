@@ -1,5 +1,5 @@
 from collections.abc import MutableSet
-from typing import Optional, Set, TypeVar, Iterable, Iterator, AbstractSet, Any, Generic
+from typing import Optional, TypeVar, Iterable, Iterator, AbstractSet, Any, Generic
 
 #_T = TypeVar("_T")
 _T = TypeVar("_T")#, covariant=True)

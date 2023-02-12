@@ -1,6 +1,3 @@
-from collections.abc import Sequence
-from math import *
-
 import numpy as np
 from numpy import ndarray
 from pyglet import gl  # type: ignore

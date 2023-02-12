@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from typing import TypeAlias, TYPE_CHECKING, final
 
 from cube.model.cube import Cube

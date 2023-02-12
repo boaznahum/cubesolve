@@ -1,12 +1,11 @@
 from typing import Sequence
 
 from cube.algs import Algs
-from cube.model.cube_face import Face
 from cube.model import PartColorsID, Part, Corner
+from cube.model.cube_face import Face
 from cube.operator.op_annotation import AnnWhat
-from cube.solver.common.solver_element import SolverElement
-from cube.solver.common.common_op import CommonOp
 from cube.solver.common.base_solver import BaseSolver
+from cube.solver.common.solver_element import SolverElement
 
 
 def use(_):

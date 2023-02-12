@@ -1,17 +1,16 @@
 import itertools
-import warnings
 from collections import defaultdict
 from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
 from typing import Callable, TypeVar, Tuple, Collection, Optional
 
 from cube.app_exceptions import InternalSWError
 from . import PartEdge
+from ._elements import PartColorsID
+from ._part import Edge, Part, TPartType
+from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
 from .cube import Cube
 from .cube_boy import Color
 from .cube_face import Face
-from ._elements import PartColorsID
-from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
-from ._part import Edge, Part, TPartType
 from ..algs import Alg, Algs
 from ..algs import NSimpleAlg
 
