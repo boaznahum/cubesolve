@@ -263,14 +263,14 @@ class NSimpleAlg(SimpleAlg, ABC):
         return cl
 
     @final
-    def clone(self: TNSimpleAlg) -> TNSimpleAlg:
+    def clone(self) -> Self:
         cl = self._basic_clone()
 
         cl.copy(self)
 
         return cl
 
-    def copy(self, other: "TNSimpleAlg"):
+    def copy(self, other: Self):
         self._n = other.n
         return self
 
@@ -362,7 +362,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         # sorted sequence
         self.slices: slice | Sequence[int] | None = None  # [1 n]
 
-    def copy(self, other: "SimpleAlg"):
+    def copy(self, other: Self):
         assert isinstance(other, SliceAbleAlg)
         super(SliceAbleAlg, self).copy(other)
         self.slices = other.slices
@@ -592,7 +592,7 @@ class DoubleLayerAlg(AnimationAbleAlg):
         # size-1: 3x3 -> R[1:2], 4x4 [1:3]
         return fa[1: cube_size - 1]
 
-    def _basic_clone(self: TNSimpleAlg) -> TNSimpleAlg:
+    def _basic_clone(self) -> Self:
         cl = DoubleLayerAlg.__new__(type(self))
         # noinspection PyArgumentList
         cl.__init__(self._of_face_alg)  # type: ignore
