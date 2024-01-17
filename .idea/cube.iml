@@ -9,9 +9,10 @@
       <excludeFolder url="file://$MODULE_DIR$/_archive" />
       <excludeFolder url="file://$MODULE_DIR$/.mypy_cache" />
       <excludeFolder url="file://$MODULE_DIR$/__try" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv" />
     </content>
     <content url="file://$MODULE_DIR$/../../../temp/pyglet-1.5.23/pyglet-1.5.23/examples" />
-    <orderEntry type="jdk" jdkName="Python 3.11 (cubesolve)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.12 (cubesolve)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

@@ -31,14 +31,14 @@ class Solvers:
         _ids = [ * SolverName ]
         index = _ids.index(current)
 
-        next = _ids[ (index + 1) % len(_ids)]
+        next_s = _ids[ (index + 1) % len(_ids)]
 
-        return cls._create_solver(next, op)
+        return cls._create_solver(next_s, op)
 
     @classmethod
-    def _create_solver(cls, id: SolverName, op: Operator):
+    def _create_solver(cls, solver_id: SolverName, op: Operator):
 
-        match id:
+        match solver_id:
 
             case SolverName.LBL:
                 return cls.beginner(op)

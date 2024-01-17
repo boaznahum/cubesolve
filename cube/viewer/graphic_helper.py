@@ -14,6 +14,7 @@ scale = 1
 def print_matrix(name, id: int):
     """
 
+    :param name
     :param id:  GL_MODELVIEW_MATRIX, GL_PROJECTION_MATRIX, GL_VIEWPORT
     :return:
     """

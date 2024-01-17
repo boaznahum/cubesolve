@@ -29,7 +29,7 @@ def parse_alg(s: str) -> _Alg:
     return p.parse()
 
 
-class _Parser():
+class _Parser:
 
     def __init__(self, original: str, tokens: list[str]) -> None:
         super().__init__()

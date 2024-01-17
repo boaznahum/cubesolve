@@ -121,7 +121,7 @@ class PLL(StepSolver):
                         self.play(Algs.U)  #
                     else:
                         Algs.U.play(self.cube)
-                        search_alg = search_alg + Algs.U
+                        search_alg += Algs.U
 
                 # well we want to rotate, to leave cube in original state so it is easier to debug
                 if rotate_while_search:

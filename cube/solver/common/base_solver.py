@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import TypeAlias, TYPE_CHECKING, final
 
 from cube.model.cube import Cube
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 _Common: TypeAlias = "CommonOp"
 
 
-class BaseSolver(Solver):
+class BaseSolver(Solver, ABC):
     __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override"]
 
     def __init__(self, op) -> None:
