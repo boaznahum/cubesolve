@@ -293,7 +293,7 @@ class Part(ABC, CubeElement):
         """
         :return: true if part in position, ignoring orientation, position id same as color id
         """
-        return self.colors_id_by_pos == self.colors_id
+        return self.position_id == self.colors_id
 
     @property
     @abstractmethod
@@ -301,7 +301,6 @@ class Part(ABC, CubeElement):
         """
         :return: true if part in position, ignoring orientation, position id same as color id
         """
-
 
     @property
     def position_id(self) -> PartColorsID:
@@ -323,7 +322,7 @@ class Part(ABC, CubeElement):
     @property
     def colors_id_by_pos(self) -> PartColorsID:
         """
-        :deprecated, use :position_id
+        deprecated:: use :position_id
         """
         warnings.warn("Use position_id", DeprecationWarning, 2)
 
@@ -495,8 +494,6 @@ class Part(ABC, CubeElement):
     @abstractmethod
     def part_name(self) -> str:
         pass
-
-
 
 
 class Center(Part):
@@ -835,6 +832,10 @@ class Edge(Part):
                                source_index: Optional[SliceIndex] = None
                                ):
         """
+        :param source_index:
+        :param index:
+        :param source
+
         Copy from edge - copy from shared face
         self and source assume to share a face
 
@@ -843,10 +844,7 @@ class Edge(Part):
         other  |__     __|  other
               shared,  shared
 
-        ;
-        :param source_index:
-        :param index:
-        :param source
+
         """
 
         shared_face = self.single_shared_face(source)
@@ -863,6 +861,10 @@ class Edge(Part):
                         source_index: Optional[SliceIndex] = None
                         ):
         """
+        :param source_index:
+        :param index:
+        :param source
+
         Copy from vertical edge - copy from other face
         self and source assume to share a face
 
@@ -871,9 +873,6 @@ class Edge(Part):
 
         source_other_face, shared_face  --> shared_face,this_other_face
 
-        :param source_index:
-        :param index:
-        :param source
         """
 
         shared_face = self.single_shared_face(source)
@@ -1070,7 +1069,3 @@ class Corner(Part):
     @property
     def required_position(self: TPartType) -> "Corner":
         return self.cube.find_corner_by_pos_colors(self.colors_id)
-
-
-
-
