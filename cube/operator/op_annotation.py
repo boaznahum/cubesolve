@@ -4,7 +4,7 @@ from enum import unique, Enum
 from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal, ContextManager, Any, Hashable
 
 from cube.algs import Algs
-from cube.app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 from cube.model import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
 from cube.viewer.viewer_markers import VMarker, viewer_add_view_marker, viewer_remove_view_marker
 

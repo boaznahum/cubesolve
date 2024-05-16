@@ -2,7 +2,7 @@ import re
 from typing import Tuple, Optional
 
 from cube.algs import Alg, Algs
-from cube.app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 from cube.model import FaceName, Part
 from cube.model.cube_face import Face
 from cube.solver.common.advanced_even_oll_big_cube_parity import AdvancedEdgeEdgeParity

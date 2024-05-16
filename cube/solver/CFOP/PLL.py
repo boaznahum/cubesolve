@@ -2,7 +2,7 @@ from typing import Optional, Tuple
 
 from cube import config
 from cube.algs import Alg, Algs, FaceAlg
-from cube.app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 from cube.model import Part
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.common.solver_element import StepSolver

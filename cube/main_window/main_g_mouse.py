@@ -16,15 +16,15 @@ from cube.config import INPUT_MOUSE_DEBUG as INPUT_MOUSE_DEBUG
 from cube.config import INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM as INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM
 from cube.config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_ADJUSTED_FACE
 
-from . import algs
-from .algs import Alg, Algs
-from .app.abstract_ap import AbstractApp
-from .app_exceptions import InternalSWError
+from cube import algs
+from cube.algs import Alg, Algs
+from cube.app.abstract_ap import AbstractApp
+from cube.app.app_exceptions import InternalSWError
 from cube.app.app_state import ApplicationAndViewState
 from .main_g_abstract import AbstractWindow
-from .model.cube_boy import FaceName
-from .model.cube_face import Face
-from .model import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
+from cube.model.cube_boy import FaceName
+from cube.model.cube_face import Face
+from cube.model import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
 
 # to avoid the case we start another handling while animation is running
 _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = False

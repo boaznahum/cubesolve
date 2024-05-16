@@ -3,7 +3,7 @@ from collections import defaultdict
 from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
 from typing import Callable, TypeVar, Tuple, Collection, Optional
 
-from cube.app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 from . import PartEdge
 from ._elements import PartColorsID
 from ._part import Edge, Part, TPartType

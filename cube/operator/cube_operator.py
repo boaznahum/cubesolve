@@ -8,7 +8,7 @@ from .. import config
 from ..algs import Alg, SimpleAlg, AnnotationAlg, Algs
 from ..animation.animation_manager import AnimationManager
 from ..animation.animation_manager import OpProtocol
-from ..app_exceptions import OpAborted
+from cube.app.app_exceptions import OpAborted
 from cube.app.app_state import ApplicationAndViewState
 from ..model.cube import Cube
 

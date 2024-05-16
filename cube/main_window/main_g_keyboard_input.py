@@ -5,15 +5,15 @@ import pyglet  # type: ignore
 from pyglet.window import key  # type: ignore
 
 from cube.app.app_state import ApplicationAndViewState
-from . import algs
-from . import config
-from .algs import Alg, Algs
-from .app.abstract_ap import AbstractApp
-from .app_exceptions import AppExit
+from cube import algs
+from cube import config
+from cube.algs import Alg, Algs
+from cube.app.abstract_ap import AbstractApp
+from cube.app.app_exceptions import AppExit
 from .main_g_abstract import AbstractWindow
-from .model.cube_boy import FaceName
-from .operator.cube_operator import Operator
-from .solver import Solver, SolveStep
+from cube.model.cube_boy import FaceName
+from cube.operator.cube_operator import Operator
+from cube.solver import Solver, SolveStep
 
 good = Algs.seq_alg("good")
 

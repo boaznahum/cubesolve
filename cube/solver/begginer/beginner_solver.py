@@ -1,4 +1,4 @@
-from cube.app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
+from cube.app.app_exceptions import OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException
 from cube.operator.cube_operator import Operator
 from cube.solver.common.base_solver import BaseSolver
 from cube.solver.solver import BeginnerLBLReduce, SolveStep, SolverResults

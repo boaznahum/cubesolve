@@ -1,4 +1,4 @@
-from cube.app_exceptions import OpAborted
+from cube.app.app_exceptions import OpAborted
 from cube.operator.cube_operator import Operator
 from cube.solver.begginer.l1_cross import L1Cross
 from cube.solver.common.base_solver import BaseSolver

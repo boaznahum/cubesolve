@@ -1,5 +1,5 @@
 from cube.algs import Algs
-from cube.app_exceptions import EvenCubeEdgeParityException
+from cube.app.app_exceptions import EvenCubeEdgeParityException
 from cube.model import FaceName, Part, Edge
 from cube.model.cube_face import Face
 from cube.operator.op_annotation import AnnWhat

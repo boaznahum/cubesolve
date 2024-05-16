@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Tuple
 
 from cube.algs import Algs, Alg
-from cube.app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 from cube.model import Color, Edge, PartColorsID, EdgeWing
 from cube.model.cube_face import Face
 from cube.model.misc import ModelHelper

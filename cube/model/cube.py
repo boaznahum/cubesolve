@@ -9,7 +9,7 @@ from .cube_boy import CubeLayout, Color, FaceName
 from .cube_face import Face
 from .cube_slice import Slice, SliceName
 from .. import config
-from ..app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 
 if TYPE_CHECKING:
     from .cube_queries2 import CubeQueries2

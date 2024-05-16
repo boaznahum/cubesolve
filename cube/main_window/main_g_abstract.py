@@ -2,8 +2,8 @@ from abc import abstractmethod
 
 import pyglet  # type: ignore
 
-from .app.abstract_ap import AbstractApp
-from .viewer.viewer_g import GCubeViewer
+from cube.app.abstract_ap import AbstractApp
+from cube.viewer.viewer_g import GCubeViewer
 
 
 class AbstractWindow(pyglet.window.Window):

@@ -3,7 +3,7 @@ from enum import unique, Enum
 from typing import Mapping
 
 from cube import config
-from cube.app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 
 
 @unique

@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Optional
 
 from cube.algs import Algs, Alg
-from cube.app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 from cube.model import Part, Edge, Corner
 from cube.model.cube_face import Face
 from cube.model.cube_queries2 import Pred0

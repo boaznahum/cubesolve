@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from typing import Callable, Generator, Sequence, Tuple, ContextManager, Optional
 
 from cube.algs import Algs, Alg
-from cube.app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 from cube.model import Edge, Color, FaceName, EdgeWing
 from cube.model.cube import Cube
 from cube.model.cube_face import Face

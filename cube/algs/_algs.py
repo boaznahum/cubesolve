@@ -6,7 +6,7 @@ from random import Random
 from typing import Sequence, Any, final, TypeVar, Tuple, Iterable, Iterator, Self
 
 from cube.algs._parser import parse_alg
-from cube.app_exceptions import InternalSWError
+from cube.app.app_exceptions import InternalSWError
 from cube.model.cube import Cube
 from cube.model.cube_slice import SliceName
 from cube.model import FaceName, AxisName
