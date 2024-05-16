@@ -556,7 +556,7 @@ class Center(Part):
             j = index[1]
 
             if i < 0 and j < 0:
-                return self.all_slices
+                yield from self.all_slices
             elif i < 0:
                 for i in range(self.n_slices):
                     yield self.get_slice((i, j))
@@ -566,7 +566,7 @@ class Center(Part):
             else:
                 yield self.get_slice((i, j))
         else:
-            return self.all_slices
+            yield from self.all_slices
 
     def get_center_slice(self, index: CenterSliceIndex) -> "CenterSlice":
         """

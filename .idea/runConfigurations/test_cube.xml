@@ -1,15 +1,16 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="test_cube" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
     <module name="cube" />
+    <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <option name="SDK_HOME" value="" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/cube/tests" />
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tests/test_cube.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/cube/tests/test_cube.py" />
     <option name="PARAMETERS" value="" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
