@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Any
 
 from cube import config, algs as algs
 from cube.algs import Algs, Alg
@@ -81,10 +81,14 @@ def __test_simplify(alg, cube_size):
     cube = Cube(cube_size)
     scramble = Algs.scramble(cube.size, "1")
     # alg = Algs.scramble("1")
-    print("Alg=", alg)
 
     simplified = alg.simplify()
-    print("simplify=", simplified)
+
+    print("Alg=     ", [*alg.flatten()])
+    print("simplify=", [*simplified.flatten()])
+
+    print("Alg=     ", [*alg.algs])
+    print("simplify=", [*simplified.algs])
 
     _compare_two_algs(cube_size, (scramble, alg), (scramble, simplified))
 
@@ -97,7 +101,7 @@ def __test_simplify(alg, cube_size):
     print("================================")
 
 
-def __test_simplify_n(cube_size, seq_length: int | None, sanity_check : bool | None):
+def __test_simplify_n(cube_size, seq_length: int | None, sanity_check: bool | None, seed: Any = None):
     """
 
     :param cube_size:
@@ -107,12 +111,11 @@ def __test_simplify_n(cube_size, seq_length: int | None, sanity_check : bool | N
     """
     if sanity_check is not None:
         config.CHECK_CUBE_SANITY = sanity_check
-    alg = Algs.scramble(cube_size, seq_length=seq_length)
+    alg = Algs.scramble(cube_size, seq_length=seq_length, seed=seed);
     __test_simplify(alg, cube_size)
 
 
 def _test_simplify():
-
     cube_size = 8
     seq_length = None
     sanity_check = False
@@ -203,4 +206,4 @@ def test_flattern():
 
 
 if __name__ == '__main__':
-    __test_simplify_n(3, 100, True)
+    __test_simplify_n(3, 2, True, seed=3)

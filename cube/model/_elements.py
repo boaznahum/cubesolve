@@ -1,6 +1,6 @@
-from collections.abc import Iterable, Hashable
+from collections.abc import Iterable, Hashable, Collection
 from enum import Enum, unique
-from typing import TypeAlias, Tuple, TYPE_CHECKING
+from typing import TypeAlias, Tuple, TYPE_CHECKING, Union
 
 from .cube_boy import Color, FaceName
 
@@ -35,16 +35,16 @@ PartColorsID = frozenset[Color]
 PartFixedID = frozenset[FaceName]
 PartSliceHashID = frozenset[Hashable]
 
+# order is important
+PartSliceColors = Union[Tuple[Color], Tuple[Color, Color], Tuple[Color, Color, Color]]
 
+CubeState = dict[PartSliceHashID, PartSliceColors]
 
 
 class PartName:
 
     def __init__(self) -> None:
         super().__init__()
-
-
-
 
 
 class CHelper:
@@ -54,15 +54,9 @@ class CHelper:
         return frozenset(c)
 
 
-
-
 EdgeSliceIndex = int
 CenterSliceIndex = Tuple[int, int]
 SliceIndex = EdgeSliceIndex | CenterSliceIndex  # type: ignore # row, column, must be hashable
-
-
-
-
 
 
 class CubeElement:
@@ -81,14 +75,3 @@ class CubeElement:
 
     def inv(self, i: int) -> int:
         return self.n_slices - 1 - i
-
-
-
-
-
-
-
-
-
-
-

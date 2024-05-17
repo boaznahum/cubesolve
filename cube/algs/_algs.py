@@ -565,8 +565,8 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
 class DoubleLayerAlg(AnimationAbleAlg):
     """
-    A double layer of given FaceAlg
-    For example Rw is double layer of R
+    A double layer of given FaceAlg,
+    For example, Rw is a double layer of R
     In case of S > 3, it all layers, but the last
     Rw == R[1: size-1]
     """
@@ -903,7 +903,14 @@ class _Scramble(SeqAlg):
         return 0
 
 
-def _scramble(cube_size: int, seed: Any, n: int | None = None) -> Alg:
+def _scramble(cube_size: int, seed: Any, n: int | None = None) -> SeqAlg:
+    """
+
+    :param cube_size:
+    :param seed: if not None, it is used as seed for random generator, and it is repeatable
+    :param n:
+    :return:
+    """
     rnd: Random = Random(seed)
 
     if not n:
@@ -1026,7 +1033,7 @@ class Algs:
         return _scramble(cube_size, "scramble1")
 
     @classmethod
-    def scramble(cls, cube_size, seed=None, seq_length: int | None = None):
+    def scramble(cls, cube_size, seed=None, seq_length: int | None = None) -> SeqAlg:
         return _scramble(cube_size, seed, seq_length)
 
     @classmethod

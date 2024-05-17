@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from .cube_queries2 import CubeQueries2
 
 
+
 class CubeSupplier(Protocol):
 
     @property

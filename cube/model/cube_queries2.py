@@ -5,7 +5,7 @@ from typing import Callable, TypeVar, Tuple, Collection, Optional
 
 from cube.app.app_exceptions import InternalSWError
 from . import PartEdge
-from ._elements import PartColorsID
+from ._elements import PartColorsID, PartSliceHashID, PartSliceColors, CubeState
 from ._part import Edge, Part, TPartType
 from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
 from .cube import Cube
@@ -338,13 +338,20 @@ class CubeQueries2:
 
         return dist
 
-    def get_sate(self) -> Collection[PartSlice]:
+    def get_sate(self) -> dict[PartSliceHashID, PartSliceColors]:
 
         cube = self._cube
 
-        return cube.get_all_parts()
+        state: dict[PartSliceHashID, PartSliceColors] = {}
 
-    def compare_state(self, other: Collection[PartSlice]):
+        parts = cube.get_all_parts()
+
+        for p in parts:
+                state[p.fixed_id] = p.colors
+
+        return state
+
+    def compare_state(self, other: CubeState):
         """
         Compare current: meth:'get_sate' with the other state that was also
         obtained by: meth:'get_sate'
@@ -353,18 +360,25 @@ class CubeQueries2:
         :return:
         """
 
-        st2: Collection[PartSlice] = self.get_sate()
+        st2: CubeState = self.get_sate()
 
         return self.compare_states(other, st2)
 
     @staticmethod
-    def compare_states(st1, st2) -> bool:
+    def compare_states(st1: CubeState, st2: CubeState) -> bool:
         if len(st1) != len(st2):
             return False
 
-        s1: PartSlice
-        s2: PartSlice
-        return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(st1, st2))
+        for k,v in st1.items():
+
+            v2 = st2.get(k, None)
+            if not v2:
+                return False
+            if v != v2:
+                return False
+
+        return True
+
 
     def find_edge_in_cube(self, pred: Pred[Edge]) -> Edge | None:
 

@@ -1,13 +1,13 @@
 import itertools
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Hashable, MutableSequence, Sequence
+from collections.abc import Hashable, MutableSequence, Sequence, Collection
 from typing import TypeAlias, Any, Tuple, TypeVar, TYPE_CHECKING
 
 from cube import config
 from cube.model import PartEdge
 from cube.model.cube_boy import FaceName, Color
-from ._elements import SliceIndex, PartColorsID, PartSliceHashID, EdgeSliceIndex, CenterSliceIndex
+from ._elements import SliceIndex, PartColorsID, PartSliceHashID, EdgeSliceIndex, CenterSliceIndex, PartSliceColors
 
 if TYPE_CHECKING:
     from .cube_face import Face
@@ -19,9 +19,7 @@ _Cube: TypeAlias = "Cube"  # type: ignore
 _Part: TypeAlias = "Part"
 _Edge: TypeAlias = "Edge"
 
-
 _TPartSlice = TypeVar("_TPartSlice", bound="PartSlice")
-
 
 # a patch
 _SliceUniqueID: int = 0
@@ -244,6 +242,20 @@ class PartSlice(ABC, Hashable):
             self._colors_id_by_colors = new_colors_id
 
         return colors_id
+
+    @property
+    @abstractmethod
+    def colors(self) -> PartSliceColors:
+        """
+        Not optimized, get ordered set of colors.
+        This is actually the state of the slice.
+        When need use :meth:`colors_id`
+        TODO: maybe make :meth:`colors_id` ordered
+
+
+        :return:
+        """
+        ...
 
     def reset_colors_id(self):
         self._colors_id_by_colors = None
@@ -479,6 +491,10 @@ class EdgeWing(PartSlice):
     def index(self) -> EdgeSliceIndex:
         return self._my_index
 
+    @property
+    def colors(self) -> PartSliceColors:
+        return self.e1.color, self.e2.color
+
 
 class CenterSlice(PartSlice):
 
@@ -514,6 +530,10 @@ class CenterSlice(PartSlice):
         # self._edges[0].copy_color(other.edg())
         self.copy_colors(other, (other.face, self.face))
 
+    @property
+    def colors(self) -> PartSliceColors:
+        return self.edge.color,
+
 
 class CornerSlice(PartSlice):
 
@@ -523,3 +543,7 @@ class CornerSlice(PartSlice):
     def _clone_basic(self: "CornerSlice") -> "CornerSlice":
         _edges = self._clone_edges()
         return CornerSlice(_edges[0], _edges[1], _edges[2])
+
+    @property
+    def colors(self) -> PartSliceColors:
+        return self._edges[0].color, self._edges[1].color, self._edges[2].color
