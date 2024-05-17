@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Hashable
 from enum import Enum, unique
 from typing import TypeAlias, Tuple, TYPE_CHECKING
 
@@ -33,7 +33,7 @@ _Cube: TypeAlias = "Cube"  # type: ignore
 
 PartColorsID = frozenset[Color]
 PartFixedID = frozenset[FaceName]
-PartSliceHashID = frozenset[FaceName]
+PartSliceHashID = frozenset[Hashable]
 
 
 

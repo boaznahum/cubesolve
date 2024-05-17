@@ -1026,8 +1026,8 @@ class Algs:
         return _scramble(cube_size, "scramble1")
 
     @classmethod
-    def scramble(cls, cube_size, seed=None, n: int | None = None):
-        return _scramble(cube_size, seed, n)
+    def scramble(cls, cube_size, seed=None, seq_length: int | None = None):
+        return _scramble(cube_size, seed, seq_length)
 
     @classmethod
     def is_scramble(cls, alg: Alg):

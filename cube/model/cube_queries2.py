@@ -243,7 +243,6 @@ class CubeQueries2:
         """
         return self.rotate_and_check(Algs.of_face(f.name), pred)
 
-
     def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Optional[Alg]:
         """
         Rotate face and check condition
@@ -271,10 +270,9 @@ class CubeQueries2:
                 n += 1
         return n
 
-
     ########################## State methods ################################
 
-    def print_dist(self)  -> None:
+    def print_dist(self) -> None:
         cube = self._cube
 
         for clr in Color:
@@ -348,22 +346,25 @@ class CubeQueries2:
 
     def compare_state(self, other: Collection[PartSlice]):
         """
-        Compare current :meth:'get_sate' with other state that was also
-        obtained by :meth:'get_sate'
+        Compare current: meth:'get_sate' with the other state that was also
+        obtained by: meth:'get_sate'
 
         :param other:
         :return:
         """
 
-
         st2: Collection[PartSlice] = self.get_sate()
 
-        if len(other) != len(st2):
+        return self.compare_states(other, st2)
+
+    @staticmethod
+    def compare_states(st1, st2) -> bool:
+        if len(st1) != len(st2):
             return False
 
         s1: PartSlice
         s2: PartSlice
-        return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(other, st2))
+        return all(s1.same_colors(s2) for s1, s2 in itertools.zip_longest(st1, st2))
 
     def find_edge_in_cube(self, pred: Pred[Edge]) -> Edge | None:
 
@@ -382,4 +383,3 @@ class CubeQueries2:
                 return e
 
         return None
-

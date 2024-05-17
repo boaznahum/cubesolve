@@ -689,9 +689,9 @@ class _Cell:
 
         _id = _slice.fixed_id
 
-        d: dict[frozenset[FaceName], MutableSequence[int]] = self.gl_lists_movable
+        d: dict[PartSliceHashID, MutableSequence[int]] = self.gl_lists_movable
 
-        # does it work for default dict ?
+        # does it work for default dict?
         sl = d.get(_id, None)
         if not sl:
             return

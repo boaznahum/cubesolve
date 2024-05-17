@@ -43,7 +43,12 @@ def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]
     for alg in algs2:
         alg.play(cube)
 
-    assert cube.cqr.compare_state(s1)
+    s2 = cube.cqr.get_sate()
+
+    print(f"{s1=}")
+    print(f"{s2=}")
+
+    assert cube.cqr.compare_states(s1, s2)
 
 
 def _compare_inv(cube_size: int, algs: Iterable[Alg]):
@@ -92,14 +97,27 @@ def __test_simplify(alg, cube_size):
     print("================================")
 
 
+def __test_simplify_n(cube_size, seq_length: int | None, sanity_check : bool | None):
+    """
+
+    :param cube_size:
+    :param seq_length:
+    :param sanity_check: if none that :attr:`config.CHECK_CUBE_SANITY` will not modified
+    :return:
+    """
+    if sanity_check is not None:
+        config.CHECK_CUBE_SANITY = sanity_check
+    alg = Algs.scramble(cube_size, seq_length=seq_length)
+    __test_simplify(alg, cube_size)
+
+
 def _test_simplify():
-    config.CHECK_CUBE_SANITY = False
 
-    size = 8
+    cube_size = 8
+    seq_length = None
+    sanity_check = False
 
-    alg = Algs.scramble(size)
-
-    __test_simplify(alg, size)
+    __test_simplify_n(cube_size, seq_length, sanity_check)
 
 
 def __test_flatten(alg, n):
@@ -113,13 +131,13 @@ def __test_flatten(alg, n):
     alg.play(cube)
     s1 = cube.cqr.get_sate()
     alg_s = alg.flatten()
-    flattern = algs.SeqAlg(None, *alg_s)
-    #    flattern = alg_s
+    flat = algs.SeqAlg(None, *alg_s)
+    #    flat = alg_s
     print("simplify=", alg_s)
 
     cube.reset()
     scramble.play(cube)
-    flattern.play(cube)
+    flat.play(cube)
 
     assert cube.cqr.compare_state(s1)
     print("Passed")
@@ -185,4 +203,4 @@ def test_flattern():
 
 
 if __name__ == '__main__':
-    _test_simplify()
+    __test_simplify_n(3, 100, True)
