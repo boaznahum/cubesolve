@@ -45,8 +45,8 @@ def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]
 
     s2 = cube.cqr.get_sate()
 
-    print(f"{s1=}")
-    print(f"{s2=}")
+    # print(f"{s1=}")
+    # print(f"{s2=}")
 
     assert cube.cqr.compare_states(s1, s2)
 
@@ -79,16 +79,16 @@ def __test_simplify(alg, cube_size):
     """
 
     cube = Cube(cube_size)
-    scramble = Algs.scramble(cube.size, "1")
+    scramble = Algs.no_op() # .empty #Algs.scramble(cube.size, "1")
     # alg = Algs.scramble("1")
 
     simplified = alg.simplify()
 
-    print("Alg=     ", [*alg.flatten()])
-    print("simplify=", [*simplified.flatten()])
-
-    print("Alg=     ", [*alg.algs])
-    print("simplify=", [*simplified.algs])
+    # print("Alg=     ", [*alg.flatten()])
+    # print("simplify=", [*simplified.flatten()])
+    #
+    # print("Alg=     ", [*alg.algs])
+    # print("simplify=", [*simplified.algs])
 
     _compare_two_algs(cube_size, (scramble, alg), (scramble, simplified))
 
@@ -111,7 +111,7 @@ def __test_simplify_n(cube_size, seq_length: int | None, sanity_check: bool | No
     """
     if sanity_check is not None:
         config.CHECK_CUBE_SANITY = sanity_check
-    alg = Algs.scramble(cube_size, seq_length=seq_length, seed=seed);
+    alg = Algs.scramble(cube_size, seq_length=seq_length, seed=seed)
     __test_simplify(alg, cube_size)
 
 
@@ -206,4 +206,5 @@ def test_flattern():
 
 
 if __name__ == '__main__':
-    __test_simplify_n(3, 2, True, seed=3)
+    _test_simplify()
+    #__test_simplify_n(3, 100, True, seed=3)

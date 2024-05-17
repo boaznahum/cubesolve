@@ -592,6 +592,22 @@ class DoubleLayerAlg(AnimationAbleAlg):
         # size-1: 3x3 -> R[1:2], 4x4 [1:3]
         return fa[1: cube_size - 1]
 
+    def simplify(self) -> "NSimpleAlg|SeqSimpleAlg":
+        """
+        TODO: simplify Rw == R[1: size-1]
+        :return:
+        """
+        return super().simplify()
+
+    def same_form(self, a: "SimpleAlg"):
+        if not isinstance(a, DoubleLayerAlg):
+            return False
+
+        return self._of_face_alg._face == a._of_face_alg._face
+
+    #meanwhile
+
+
     def _basic_clone(self) -> Self:
         cl = DoubleLayerAlg.__new__(type(self))
         # noinspection PyArgumentList
@@ -879,6 +895,10 @@ class SeqAlg(Alg):
     @property
     def algs(self) -> Sequence[Alg]:
         return self._algs
+
+    @classmethod
+    def empty(cls) -> "SeqAlg":
+        return SeqAlg(None)
 
 
 class SeqSimpleAlg(SeqAlg):

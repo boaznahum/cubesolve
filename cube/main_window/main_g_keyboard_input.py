@@ -438,12 +438,17 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                 # print(f"{modifiers & key.MOD_CTRL=}  {modifiers & key.MOD_ALT=}")
                 if modifiers & key.MOD_CTRL:
                     # noinspection PyProtectedMember
-                    big_alg: algs.SeqAlg = Algs.scramble(app.cube.size, value - key._0)
+                    seq_length = None
+                    big_alg: algs.SeqAlg = Algs.scramble(app.cube.size, value - key._0, seq_length)
+                    # print("Running alg:", [*big_alg.algs])
+                    # print("Simplified: ", [*big_alg.simplify().algs])
+
                     good = algs.SeqAlg("good")
+
                     for a in big_alg.algs:
                         try:
                             with _wait_cursor(window):
-                                op.play(a, animation=False)
+                                op.play(a, animation=True)
                             good = good + a
                         except:
                             cube.cqr.print_dist()
