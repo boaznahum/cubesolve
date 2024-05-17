@@ -323,7 +323,7 @@ class Part(ABC, CubeElement):
     @property
     def colors_id_by_pos(self) -> PartColorsID:
         """
-        :deprecated, use :position_id
+        :deprecated, use: position_id
         """
         warnings.warn("Use position_id", DeprecationWarning, 2)
 

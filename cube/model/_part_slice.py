@@ -48,10 +48,20 @@ class PartSlice(ABC, Hashable):
     Fixed ID is defined as :
         fixed_id == frozenset(tuple([index]) + tuple(p.face.name for p in self._edges))
 
+    Why is it unique? If we consider only the faces, then we have N or NxN with the same faces, so we add the index \
+    in the slice to make it unique.
+
+    Other type of id is: attr:`_colors_id_by_colors`, this is the colors of the faces the slice is on.
+    Characteristics of this id:
+    1. It is not fixed; when you rotate the cube, the colors of the faces change, so the id changes.
+    2. It is defined only when the cube is reduced into 3x3 cube. Because the color of the face is the color of
+    the center, and it is meaningful only when the center has homogeneous color - 3x3 cube.
+    3. It is not unique because we have N or NxN slices all with the faces.
+
 
 
     """
-    __slots__ = ["_cube", "_parent", "_index", "_edges", "_colors_id_by_pos",
+    __slots__ = ["_cube", "_parent", "_index", "_edges",
                  "_fixed_id",
                  "_colors_id_by_colors",
                  "_unique_id",
@@ -68,7 +78,6 @@ class PartSlice(ABC, Hashable):
         # n=1 for center, n=2 for edge, n=3 for corner
         self._edges: MutableSequence[PartEdge] = [*edges]
 
-        self._colors_id_by_pos: PartColorsID | None = None
         self._colors_id_by_colors: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
         self._parent: _Part | None = None
@@ -196,7 +205,7 @@ class PartSlice(ABC, Hashable):
 
     def match_face(self, face: _Face):
         """
-        Part edge on given face match its color
+        Part edge on given face matches its color
         :return:
         """
         return self.get_face_edge(face).color == face.color
@@ -212,14 +221,6 @@ class PartSlice(ABC, Hashable):
                 return False
 
         return True
-
-    @classmethod
-    def parts_id_by_pos(cls, parts: Sequence[_Part]) -> Sequence[PartColorsID]:
-
-        return [p.colors_id_by_pos for p in parts]
-
-    def reset_after_faces_changes(self):
-        self._colors_id_by_pos = None
 
     @property
     def colors_id(self) -> PartColorsID:
@@ -333,7 +334,7 @@ class PartSlice(ABC, Hashable):
         s = self._clone_basic()
         s._unique_id = self._unique_id
         s.c_attributes = self.c_attributes.copy()
-        # don't need to clone f_attributes, clone is used for rotating only, f_attributes is not rotated
+        # don't need to clone f_attributes, clone is used for rotating only; f_attributes is not rotated
         return s
 
     @abstractmethod
@@ -426,12 +427,12 @@ class EdgeWing(PartSlice):
                                source: "EdgeWing"):
         """
         Copy from edge - copy from shared face
-        self and source assume to share a face
+        self and the source assume to share a face
 
-        source_other_face, shared_face  --> this_other_face, shared_face
+        source_other_face, shared_face --> this_other_face, shared_face
 
-        other  |__     __|  other
-              shared,  shared,
+        other |__ __| other
+              shared, shared,
 
 
         :param source
@@ -446,13 +447,13 @@ class EdgeWing(PartSlice):
     def copy_colors_ver(self,
                         source: "EdgeWing"):
         """
-        Copy from vertical edge - copy from other face
+        Copy from vertical-edge - copy from another face,
         self and source assume to share a face
 
-        other  |__     __|  other
+        Other |__     __|  other
               shared,  shared
 
-        source_other_face, shared_face  --> shared_face,this_other_face,
+        Source_other_face, shared_face  --> shared_face,this_other_face,
 
         :param source
         """
