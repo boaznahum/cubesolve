@@ -347,6 +347,14 @@ class CubeQueries2:
         return cube.get_all_parts()
 
     def compare_state(self, other: Collection[PartSlice]):
+        """
+        Compare current :meth:'get_sate' with other state that was also
+        obtained by :meth:'get_sate'
+
+        :param other:
+        :return:
+        """
+
 
         st2: Collection[PartSlice] = self.get_sate()
 

@@ -31,12 +31,25 @@ class PartSlice(ABC, Hashable):
     """
 
 
-    Parts never chane position, only the color of the parts
+    Parts never chane position, only the color of the parts.
+    The fixed part of: class:`PartSlice` is the: class:'Face's that the part is on
+    and the index of the part.
+
+    In NxN cube, parts: class:`Part` are composed of slices - class:`PartSlice`
+        that are composed of edges: class:`PartEdge`.
+        The latter is the smallest part of the cube, and it lies on a face.
+    The Corner is composed of one slice, each belongs to three faces.
+    Edge if composed of N slices, each belongs to two faces.
+    The Center is composed of NxN slices, each belongs to one face
+
+    As mentioned above, ach slice if fixed in space and never moved.
+    So the fixed id of slice is the faces it belongs to and the index of the slice in the cube part: class:`Part`.
+
+    Fixed ID is defined as :
+        fixed_id == frozenset(tuple([index]) + tuple(p.face.name for p in self._edges))
 
 
-    n = 1 - center
-    n = 2 - edge
-    n = 3 - corner
+
     """
     __slots__ = ["_cube", "_parent", "_index", "_edges", "_colors_id_by_pos",
                  "_fixed_id",
@@ -52,6 +65,7 @@ class PartSlice(ABC, Hashable):
         self._cube: _Cube = edges[0].face.cube  # we have at least one edge
         self._index: SliceIndex = index
 
+        # n=1 for center, n=2 for edge, n=3 for corner
         self._edges: MutableSequence[PartEdge] = [*edges]
 
         self._colors_id_by_pos: PartColorsID | None = None

@@ -7,7 +7,7 @@ class Face
 
 abstract class Part
 abstract class PartSlice
-abstract class SliceFacet
+abstract class PartEdge
 
 Part <|-- Edge
 Part <|-- Corner
@@ -31,11 +31,11 @@ note on link #yellow: "specification"
 Corner o.. "1" CornerSlice: "sp*"
 Center o.. "NxN" CenterSlice: "sp*"
 
-PartSlice *-- SliceFacet
+PartSlice *-- PartEdge
 
-SliceFacet <|-- WingFacet
-SliceFacet <|-- CornerSliceFacet
-SliceFacet <|-- CenterSliceFacet
+PartEdge <|-- WingFacet
+PartEdge <|-- CornerSliceFacet
+PartEdge <|-- CenterSliceFacet
 
 EdgeWing o.. "2" WingFacet: "sp*"
 CornerSlice o.. "3" CornerSliceFacet: "sp*"

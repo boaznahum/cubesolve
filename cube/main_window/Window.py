@@ -19,9 +19,6 @@ from cube.solver import Solver
 from cube.viewer.viewer_g import GCubeViewer
 from cube.viewer.viewer_g_ext import GViewerExt
 
-
-XXX = 100
-
 # noinspection PyAbstractClass
 class Window(AbstractWindow, AnimationWindow):
     #     # Cube 3D start rotation
@@ -250,6 +247,16 @@ class Window(AbstractWindow, AnimationWindow):
         self.app.vs.set_projection(width, height)
 
     def on_key_press(self, symbol, modifiers):
+        """
+        If the method returns None (which is the default if there's no return statement),
+        Pyglet will continue to propagate the event to the next handler (if any).
+        If the method returns pyglet.event.EVENT_HANDLED or any truthy value,
+        Pyglet will stop propagating the event, effectively "consuming" it so that it doesn't reach other handlers.
+
+        :param symbol:
+        :param modifiers:
+        :return:
+        """
         try:
             return main_g_keyboard_input.handle_keyboard_input(self, symbol, modifiers)
 
@@ -360,7 +367,4 @@ class Window(AbstractWindow, AnimationWindow):
         if self._animation_manager:
             self._animation_manager.draw()
 
-
 # noinspection PyPep8Naming
-
-

@@ -16,6 +16,9 @@ _PartSlice: TypeAlias = "PartSlice"  # type: ignore
 
 
 class PartEdge:
+    """
+    THe smallest part of the cube, aggregated by the :class:`PartSlice`
+    """
     __slots__ = ["_face", "_parent", "_color", "_annotated_by_color",
                  "_annotated_fixed_location",
                  "attributes", "c_attributes",
