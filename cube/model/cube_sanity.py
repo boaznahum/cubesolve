@@ -57,7 +57,7 @@ class CubeSanity:
     @staticmethod
     def _check_nxn_centers(cube) -> None:
         n_slices = cube.n_slices
-        dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = cube.cqr.get_centers_dist(cube)
+        dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = cube.cqr.get_centers_dist()
         for clr in Color:
             clr_dist = dist[clr]
 
