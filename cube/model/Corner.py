@@ -1,9 +1,8 @@
 from collections.abc import Sequence, Iterator, Iterable
 from typing import TYPE_CHECKING, TypeAlias, Tuple
 
-from .Part import Part
 from . import PartEdge, SliceIndex, Color
-from .Part import TPartType
+from .Part import Part
 from ._part import CornerName, _faces_2_corner_name
 from ._part_slice import CornerSlice, PartSlice
 from ..app.app_exceptions import InternalSWError
@@ -26,7 +25,7 @@ class Corner(Part):
     @property
     def _3x3_representative_edges(self) -> Sequence[PartEdge]:
         """
-        In case of Corner it is also the actual edges
+        In the case of Corner it is also the actual edges
         """
         return self._slice.edges
 
@@ -46,7 +45,7 @@ class Corner(Part):
 
     def copy(self) -> "Corner":
         """
-        Used as temporary for rotate, must not be used in cube
+        Used as temporary for rotating, must not be used in cube
         :return:
         """
         return Corner(self._slice.clone())
@@ -58,10 +57,10 @@ class Corner(Part):
                        ):
         """
         Replace the colors of this corner with the colors from source
-        Find the edge part contains on_face both in self and other face
-        replace the edge part color on on_face with the matched color from source
+        Find the edge part contains on_face both in self and the other face,
+        replaces the edge part color on on_face with the matched color from source
 
-        We assume that both source and self are belonged to on_face,
+        We assume that both source and self are belonged to on_face.
         :param target_3:
         :param source_3:
         :param target_2:
@@ -106,5 +105,5 @@ class Corner(Part):
         return str(self.name.value) + " " + super().__str__()
 
     @property
-    def required_position(self: TPartType) -> "Corner":
+    def required_position(self) -> "Corner":
         return self.cube.find_corner_by_pos_colors(self.colors_id)

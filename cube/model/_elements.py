@@ -32,8 +32,8 @@ if TYPE_CHECKING:
 _Cube: TypeAlias = "Cube"  # type: ignore
 
 PartColorsID = frozenset[Color]
-PartFixedID = frozenset[FaceName]
 PartSliceHashID = frozenset[Hashable]
+PartFixedID = frozenset[PartSliceHashID]
 
 # order is important
 PartSliceColors = Union[Tuple[Color], Tuple[Color, Color], Tuple[Color, Color, Color]]

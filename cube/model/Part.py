@@ -1,7 +1,7 @@
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence, Iterator, Iterable
-from typing import Tuple, Optional, TypeVar
+from typing import Tuple, Optional, TypeVar, Self
 
 from cube import config
 from cube.model import PartSlice, PartEdge, SliceIndex, FaceName, Color
@@ -10,6 +10,7 @@ from cube.model.cube_boy import color2long
 
 TPartType = TypeVar("TPartType", bound="Part")
 
+
 class Part(ABC, CubeElement):
     """
 
@@ -17,7 +18,7 @@ class Part(ABC, CubeElement):
     Parts never chane position, only the color of the parts
 
 
-    n = 1 - center
+    N = 1 - center
     n = 2 - edge
     n = 3 - corner
     """
@@ -203,11 +204,10 @@ class Part(ABC, CubeElement):
 
     @property
     @abstractmethod
-    def required_position(self: TPartType) -> TPartType:
+    def required_position(self) -> Self:
         """
         :return: true if part in position, ignoring orientation, position id same as color id
         """
-
 
     @property
     def position_id(self) -> PartColorsID:
@@ -401,4 +401,3 @@ class Part(ABC, CubeElement):
     @abstractmethod
     def part_name(self) -> str:
         pass
-

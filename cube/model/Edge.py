@@ -1,5 +1,5 @@
 from collections.abc import Iterator, Iterable
-from typing import TYPE_CHECKING, TypeAlias, Sequence, Optional
+from typing import TYPE_CHECKING, TypeAlias, Sequence, Optional, Self
 
 from cube.model.Part import Part
 from cube.model import EdgeWing, PartEdge, SliceIndex, PartSlice
@@ -77,13 +77,14 @@ class Edge(Part):
     def n_slices(self):
         return self.cube.size - 2
 
-    def get_slice(self, i) -> EdgeWing:
+    def get_slice(self, index: SliceIndex) -> EdgeWing:
         """
         In unpractical order
-        :param i:
+        :param index:
         :return:
         """
-        return self._slices[i]
+        assert isinstance(index, int)
+        return self._slices[index]
 
     def get_ltr_index_from_slice_index(self, face: _Face, i) -> int:
         """
@@ -360,5 +361,5 @@ class Edge(Part):
         return _faces_2_edge_name((self.e1.face.name, self.e2.face.name))
 
     @property
-    def required_position(self: TPartType) -> "Edge":
+    def required_position(self) -> "Edge":
         return self.cube.find_edge_by_pos_colors(self.colors_id)

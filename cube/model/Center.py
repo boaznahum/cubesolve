@@ -1,5 +1,5 @@
 from collections.abc import Sequence, Iterator, Iterable
-from typing import TypeAlias, TYPE_CHECKING, Optional
+from typing import TypeAlias, TYPE_CHECKING, Optional, Self
 
 from cube.model.Part import Part
 from cube.model import CenterSlice, PartEdge, SliceIndex, CenterSliceIndex, FaceName
@@ -137,5 +137,5 @@ class Center(Part):
         return "Center"
 
     @property
-    def required_position(self: TPartType) -> "Center":
+    def required_position(self: Self) -> "Center":
         return self.cube.find_center_by_pos_colors(self.colors_id)

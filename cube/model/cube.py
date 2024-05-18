@@ -96,7 +96,7 @@ class Cube(CubeSupplier):
         self._down = d
         self._back = b
 
-        self._faces: Mapping[FaceName, Face] = {
+        self._faces = {
             FaceName.F: f,
             FaceName.L: l,
             FaceName.U: u,

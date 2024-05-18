@@ -9,4 +9,5 @@ pyglet~=1.5
 glooey~=0.3.6
 numpy~=1.24
 mypy
+pyright
 colorama~=0.4.4

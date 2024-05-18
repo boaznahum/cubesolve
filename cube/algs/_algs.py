@@ -46,7 +46,7 @@ class Alg(ABC):
         pass
 
     @abstractmethod
-    def atomic_str(self):
+    def atomic_str(self) -> str:
         pass
 
     @abstractmethod
@@ -99,7 +99,7 @@ class _Inv(Alg):
     def inv(self) -> Alg:
         return self._alg
 
-    def atomic_str(self):
+    def atomic_str(self) -> str:
         return self._alg.atomic_str() + "'"
 
     def count(self) -> int:
@@ -152,7 +152,7 @@ class _Mul(Alg, ABC):
         self._alg = a
         self._n = n
 
-    def atomic_str(self):
+    def atomic_str(self) -> str:
 
         if isinstance(self._alg, NSimpleAlg):
             return self.simplify().atomic_str()  # R3 -> R'
@@ -274,10 +274,10 @@ class NSimpleAlg(SimpleAlg, ABC):
         self._n = other.n
         return self
 
-    def atomic_str(self):
+    def atomic_str(self) -> str:
         return n_to_str(self._code, self._n)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.atomic_str()
 
     def count(self) -> int:
@@ -299,7 +299,7 @@ class NSimpleAlg(SimpleAlg, ABC):
     # ---------------------------------
     # type of simple: face, axis, slice
 
-    def same_form(self, a: "SimpleAlg"):
+    def same_form(self, a: "SimpleAlg") -> bool:
         return True
 
     def __imul__(self, other: int):
@@ -327,8 +327,8 @@ class AnnotationAlg(SimpleAlg):
     def count(self) -> int:
         return 0
 
-    def atomic_str(self):
-        pass
+    def atomic_str(self) -> str:
+        return "" # to satisfy pyright
 
     def simplify(self) -> "SimpleAlg":
         return self
@@ -390,19 +390,6 @@ class SliceAbleAlg(NSimpleAlg, ABC):
 
         return clone  # type: ignore
 
-    @property
-    def start(self):
-        if not self.slices:
-            return None
-
-        return self.slices.start
-
-    @property
-    def stop(self):
-        if not self.slices:
-            return None
-        return self.slices.stop
-
     def _add_to_str(self, s):
         """
                     None -> default = R
@@ -423,8 +410,8 @@ class SliceAbleAlg(NSimpleAlg, ABC):
 
         if isinstance(slices, slice):
 
-            start = self.start
-            stop = self.stop
+            start = slices.start
+            stop = slices.stop
 
             if not start and not stop:
                 return s
@@ -445,7 +432,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         else:
             return "[" + ",".join(str(i) for i in slices) + "]" + s
 
-    def atomic_str(self):
+    def atomic_str(self) -> str:
         return self._add_to_str(super().atomic_str())
 
     def normalize_slice_index(self, n_max: int, _default: Iterable[int]) -> Iterable[int]:
@@ -478,10 +465,10 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         elif isinstance(slices, Sequence):
             res = slices
 
-        else:
+        elif isinstance(slices, slice):
 
-            start = self.start
-            stop = self.stop
+            start = slices.start
+            stop = slices.stop
 
             _stop = None
             _start = None
@@ -502,7 +489,9 @@ class SliceAbleAlg(NSimpleAlg, ABC):
 
                 assert _start
                 assert _stop
-                res = [*range(_start, stop + 1)]
+                res = [*range(_start, _stop + 1)]
+        else:
+            res = _default
 
         return [i - 1 for i in res]
 
@@ -523,11 +512,12 @@ class SliceAbleAlg(NSimpleAlg, ABC):
             return False
 
         if isinstance(my, slice):
-            s1 = self.start
-            t1 = self.stop
+            s1 = my.start
+            t1 = my.stop
 
-            s2 = a.start
-            t2 = a.stop
+            assert isinstance(other, slice)  # for my py and pyright
+            s2 = other.start
+            t2 = other.stop
 
             return (s1 is None and s2 is None or s1 == s2) and (t1 is None and t2 is None or t1 == t2)
         elif isinstance(my, Sequence):
@@ -805,7 +795,7 @@ class SeqAlg(Alg):
                 a.play(cube, False)
                 cube.sanity()
 
-    def atomic_str(self):
+    def atomic_str(self) -> str:
         if self._name:
             return "{" + self._name + "}"
         else:
