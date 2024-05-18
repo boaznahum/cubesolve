@@ -4,6 +4,7 @@ from cube import config
 from cube.algs import Algs
 from cube.app.abstract_ap import AbstractApp
 from cube.operator.cube_operator import Operator
+from cube.tests.test_utils import Tests
 
 
 def _scramble(op: Operator, _scramble_key: Any, _n=None):
@@ -16,21 +17,23 @@ def _scramble(op: Operator, _scramble_key: Any, _n=None):
     op.play(_alg, False)
 
 
-def main():
-
+def test1():
     app = AbstractApp.create_non_default(config.CUBE_SIZE)
-
     debug = False
-
     sizes = config.AGGRESSIVE_TEST_NUMBER_SIZES
-
     for size in sizes:
-
         app.reset(cube_size=size)
 
         app.run_tests(config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START,
                       config.AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS // len(sizes),
                       debug=debug)
+
+
+tests: Tests = [test1]
+
+def main():
+
+    test1()
 
 
 if __name__ == '__main__':

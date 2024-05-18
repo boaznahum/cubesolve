@@ -1,6 +1,7 @@
 from cube.algs import Algs
 from cube.app.abstract_ap import AbstractApp
 from cube.model.cube_queries2 import CubeQueries2
+from cube.tests.test_utils import Tests
 
 
 def main() -> None:
@@ -26,6 +27,8 @@ def main() -> None:
 
     assert cube.cqr.compare_state(state)
 
+
+tests: Tests = [main]
 
 if __name__ == '__main__':
     main()

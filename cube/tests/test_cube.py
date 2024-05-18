@@ -1,22 +1,10 @@
 from cube.algs import Algs
 from cube.app.abstract_ap import AbstractApp
 from cube import config
+from cube.tests.test_utils import Tests
 
 
-def main() -> None:
-
-    for sanity in [True, False]:
-        config.CHECK_CUBE_SANITY = sanity
-        print("Sanity:", sanity)
-        test_for_size(3)
-        test_for_size(5)
-
-    config.CHECK_CUBE_SANITY = True
-
-    print("All tests passed.")
-
-
-def test_for_size(n):
+def _test_for_size(n):
     app = AbstractApp.create_non_default(n, animation=False)
     cube = app.cube
     alg2 = Algs.scramble(cube.size, 4)
@@ -27,6 +15,24 @@ def test_for_size(n):
     print("** even edge parity:", rs.was_even_edge_parity)
     print("** partial edge parity:", rs.was_partial_edge_parity)
     print("** count:", app.op.count)
+
+
+def test1():
+    for sanity in [True, False]:
+        config.CHECK_CUBE_SANITY = sanity
+        print("Sanity:", sanity)
+        _test_for_size(3)
+        _test_for_size(5)
+
+    print("All tests passed.")
+
+
+tests: Tests = [test1]
+
+def main() -> None:
+    test1()
+
+
 
 
 if __name__ == '__main__':

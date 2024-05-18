@@ -3,6 +3,7 @@ from typing import Iterable, Any
 from cube import config, algs as algs
 from cube.algs import Algs, Alg
 from cube.model.cube import Cube
+from cube.tests.test_utils import Tests, Test
 
 
 def test1():
@@ -115,7 +116,7 @@ def __test_simplify_n(cube_size, seq_length: int | None, sanity_check: bool | No
     __test_simplify(alg, cube_size)
 
 
-def _test_simplify():
+def test_simplify():
     cube_size = 8
     seq_length = None
     sanity_check = False
@@ -205,6 +206,12 @@ def test_flattern():
     __test_simplify(a, cube_size)
 
 
+tests: Tests = [
+    test_simplify,
+    test_flattern
+
+]
+
 if __name__ == '__main__':
-    _test_simplify()
+    test_simplify()
     #__test_simplify_n(3, 100, True, seed=3)

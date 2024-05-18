@@ -6,9 +6,11 @@ from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
 from cube.operator.cube_operator import Operator
 from cube.solver import Solver, Solvers
+from cube.tests.test_utils import Tests
 
 
 def main() -> None:
+
     size = 6
 
     app = AbstractApp.create_non_default(cube_size=size)
@@ -46,6 +48,11 @@ def main() -> None:
     s2 = op.count
 
     print(f"Solve 1 count: {s1}, Solve 2 count {s2}")
+
+    assert  s1 == s2
+
+
+tests: Tests = [main]
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 from cube import algs
 from cube.app.abstract_ap import AbstractApp
 from cube.model.cube import Cube
+from cube.tests.test_utils import Tests
 
 
 def test1() -> None:
@@ -29,6 +30,8 @@ def test2() -> None:
 
     assert cube.is_boy
 
+
+tests: Tests = [test1, test2]
 
 if __name__ == '__main__':
     test1()
