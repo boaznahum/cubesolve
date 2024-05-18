@@ -4,8 +4,6 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/env" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
-      <excludeFolder url="file://$MODULE_DIR$/venv311" />
-      <excludeFolder url="file://$MODULE_DIR$/venvw" />
       <excludeFolder url="file://$MODULE_DIR$/_archive" />
       <excludeFolder url="file://$MODULE_DIR$/.venv311" />
       <excludeFolder url="file://$MODULE_DIR$/.mypy_cache" />
