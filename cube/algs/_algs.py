@@ -317,6 +317,10 @@ class NSimpleAlg(SimpleAlg, ABC):
 
 
 class AnnotationAlg(SimpleAlg):
+    """
+        When played, it simply refreshes GUI
+        So it used by annotation tools, after they changed some model(text, cube)
+    """
 
     def __init__(self) -> None:
         super().__init__()

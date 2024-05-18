@@ -12,7 +12,6 @@ abstract class SimpleAlg
 abstract class NSimpleAlg
 
 abstract class AnimationAbleAlg
-note top of AnimationAbleAlg: Not a real alg\nNeed to get rid of it
 
 abstract class SliceAbleAlg {
     __getitem__(self, items)
@@ -20,6 +19,10 @@ abstract class SliceAbleAlg {
 abstract class FaceAlg
 abstract class SliceAlg
 abstract class WholeCubeAlg
+
+class AnnotationAlg
+note top of AnnotationAlg: Not a real alg\nNeed to get rid of it
+
 
 Alg  <|--  SimpleAlg
 SimpleAlg  <|--  NSimpleAlg
