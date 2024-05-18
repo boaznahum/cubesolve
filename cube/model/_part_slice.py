@@ -1,7 +1,7 @@
 import itertools
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Hashable, MutableSequence, Sequence, Collection
+from collections.abc import Hashable, MutableSequence, Sequence
 from typing import TypeAlias, Any, Tuple, TypeVar, TYPE_CHECKING
 
 from cube import config
@@ -12,7 +12,8 @@ from ._elements import SliceIndex, PartColorsID, PartSliceHashID, EdgeSliceIndex
 if TYPE_CHECKING:
     from .cube_face import Face
     from .cube import Cube
-    from ._part import Part, Edge
+    from .Part import Part
+    from .Edge import Edge
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
@@ -480,9 +481,9 @@ class EdgeWing(PartSlice):
     @property
     def parent(self) -> "Edge":
 
-        from ._part import Edge  # todo does it cost ?
-
         p = super().parent
+
+        from . import Edge
 
         assert isinstance(p, Edge)
         return p

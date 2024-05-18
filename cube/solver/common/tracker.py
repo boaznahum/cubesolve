@@ -2,9 +2,10 @@ from abc import abstractmethod
 from collections.abc import Iterable, Sequence
 from typing import Generic
 
+from cube.model.Part import TPartType
 from cube.model.cube import Cube, CubeSupplier
 from cube.model import PartColorsID
-from cube.model import TPartType, Edge, Corner
+from cube.model import Edge, Corner
 
 
 class PartTracker(Generic[TPartType]):

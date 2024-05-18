@@ -9,9 +9,12 @@ def main():
         bug_sanity_on.tests,
         test_boy.tests,
         test_cube.tests,
-        test_cube_aggresive.tests,
         test_indexes_slices.tests,
-        test_scramble_repeatable.tests
+        test_scramble_repeatable.tests,
+
+        # last one
+        test_cube_aggresive.tests,
+
     ])
 
     print("=============================================")

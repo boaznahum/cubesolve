@@ -1,9 +1,8 @@
 from collections.abc import Iterable, MutableSequence
 from typing import Collection, Mapping, Protocol, Tuple, TYPE_CHECKING
 
-from . import PartEdge
+from . import PartEdge, Edge, Corner, Center, Part
 from ._elements import AxisName, PartColorsID
-from ._part import Edge, Corner, Center, Part
 from ._part_slice import PartSlice, EdgeWing, CornerSlice
 from .cube_boy import CubeLayout, Color, FaceName
 from .cube_face import Face
@@ -13,7 +12,6 @@ from cube.app.app_exceptions import InternalSWError
 
 if TYPE_CHECKING:
     from .cube_queries2 import CubeQueries2
-
 
 
 class CubeSupplier(Protocol):
@@ -223,7 +221,7 @@ class Cube(CubeSupplier):
         return self._down
 
     ###########################################################
-    # Name odrder in edges nand corenrs
+    # Name order in edges nand corners
     #  First front/back, then right/left then up/down
     @property
     def fru(self) -> Corner:
@@ -343,6 +341,7 @@ class Cube(CubeSupplier):
         :return:  Edge RU
         """
         return self._right.edge_top
+
     @property
     def lu(self) -> Edge:
         """
@@ -375,7 +374,7 @@ class Cube(CubeSupplier):
 
     def reset_after_faces_changes(self):
         """
-        Call after faces colors aare changes , M, S, E rotations
+        Call after faces colors aare changes, M, S, E rotations
         :return:
         """
         self._color_2_face.clear()
@@ -396,7 +395,7 @@ class Cube(CubeSupplier):
 
     def y_rotate(self, n=1):
         """
-        entire over U  (please note that e is over D)
+        entire over U (please note that e is over D)
         :param n:
         :return:
         """
@@ -542,7 +541,7 @@ class Cube(CubeSupplier):
         """
 
         :param face_name:
-        :param slices: [0, n-2]    not including last face
+        :param slices: [0, n-2] not including last face
         :return:
         """
 
@@ -778,7 +777,7 @@ def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_dire
 
     :param f1:
     :param f2:
-    :param right_top_left_same_direction: tru if on both faces, the left to top/right is on same direction
+    :param right_top_left_same_direction: tru if on both faces, the left to top/right is the same direction
     See right-top-left-coordinates.jpg
     :return:
     """

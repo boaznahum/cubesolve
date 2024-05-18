@@ -1,12 +1,11 @@
-import itertools
 from collections import defaultdict
 from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
-from typing import Callable, TypeVar, Tuple, Collection, Optional
+from typing import Callable, TypeVar, Tuple, Optional
 
 from cube.app.app_exceptions import InternalSWError
-from . import PartEdge
+from . import PartEdge, Edge, Part
+from .Part import TPartType
 from ._elements import PartColorsID, PartSliceHashID, PartSliceColors, CubeState
-from ._part import Edge, Part, TPartType
 from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
 from .cube import Cube
 from .cube_boy import Color

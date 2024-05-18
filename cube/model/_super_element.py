@@ -2,8 +2,8 @@ from abc import abstractmethod
 from collections.abc import Sequence, Iterable
 from typing import TYPE_CHECKING, TypeAlias, Tuple
 
+from .Part import Part
 from ._elements import CubeElement
-from ._part import Part
 from ._part_slice import PartSlice
 
 if TYPE_CHECKING:

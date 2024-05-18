@@ -1,8 +1,8 @@
 from enum import Enum, unique
 from typing import Iterable, Tuple, Sequence, TYPE_CHECKING, TypeAlias
 
+from . import Edge, Center
 from .cube_face import Face
-from ._part import Edge, Center
 from ._part_slice import EdgeWing, CenterSlice, PartSlice
 from ._super_element import SuperElement
 
@@ -185,7 +185,7 @@ class Slice(SuperElement):
             # c[n-1] <-- c0
             centers: Sequence[CenterSlice] = elements[1]
             for j in range(n_slices):  #
-                prev_c: CenterSlice = centers[j]  # on first face
+                prev_c: CenterSlice = centers[j]  # on the first face
                 c0: CenterSlice = prev_c.clone()
                 for fi in range(1, 4):  # 1 2 3
                     c = centers[j + fi * n_slices]
@@ -207,7 +207,7 @@ class Slice(SuperElement):
             return
 
         # todo: bug, due to a bug in the algorithm
-        # but we have a problem with M, accoding to https://alg.cubing.net/?alg=m and
+        # but we have a problem with M, according to https://alg.cubing.net/?alg=m and
         # https://ruwix.com/the-rubiks-cube/notation/advanced/
         if self._name != SliceName.M:
             n = - n  # still

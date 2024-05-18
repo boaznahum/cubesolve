@@ -1,9 +1,8 @@
-from collections.abc import Hashable, Sequence
+from collections.abc import Sequence
 from typing import Callable
 
-from . import PartEdge
+from . import PartEdge, Center, Edge, Corner, Part
 from ._elements import *
-from ._part import Center, Edge, Corner, Part
 from ._part_slice import PartSlice, CenterSlice
 from ._super_element import SuperElement
 from ..config import GUI_DRAW_SAMPLE_MARKERS
