@@ -3,33 +3,10 @@ from typing import Iterable, Any
 from cube import config, algs as algs
 from cube.algs import Algs, Alg
 from cube.model.cube import Cube
+from cube.tests import test_utils
 from cube.tests.test_utils import Tests, Test
 
 
-def test1():
-    # Faild on [5:5]B
-    # [{good} [3:3]R [3:4]D S [2:2]L]
-
-    cube = Cube(6)
-
-    alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]
-    print(alg)
-    alg.play(cube)
-
-    alg = Algs.B[5:5]
-    print(alg)
-    alg.play(cube)
-
-
-def test2():
-    # Faild on [5:5]B
-    # [{good} [3:3]R [3:4]D S [2:2]L]
-
-    cube = Cube(7)
-
-    alg = Algs.R[3:3]
-    print(alg)
-    alg.play(cube)
 
 
 def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]):
@@ -85,8 +62,8 @@ def __test_simplify(alg, cube_size):
 
     simplified = alg.simplify()
 
-    # print("Alg=     ", [*alg.flatten()])
-    # print("simplify=", [*simplified.flatten()])
+    print("Alg=     ", [*alg.flatten()])
+    print("simplify=", [*simplified.flatten()])
     #
     # print("Alg=     ", [*alg.algs])
     # print("simplify=", [*simplified.algs])
@@ -116,28 +93,39 @@ def __test_simplify_n(cube_size, seq_length: int | None, sanity_check: bool | No
     __test_simplify(alg, cube_size)
 
 
-def test_simplify():
+def test_simplify1():
     cube_size = 8
     seq_length = None
     sanity_check = False
 
     __test_simplify_n(cube_size, seq_length, sanity_check)
 
+def test_simplify2():
+    cube_size = 8
+    seq_length = None
+    sanity_check = False
 
-def __test_flatten(alg, n):
+    alg = (Algs.R * 2).inv()
+
+    __test_simplify(alg, cube_size)
+
+    __test_flatten(alg, cube_size)
+
+
+def __test_flatten(alg, cube_size):
     config.CHECK_CUBE_SANITY = False
 
-    cube = Cube(n)
+    cube = Cube(cube_size)
     scramble = Algs.scramble(cube.size, "1")
     # alg = Algs.scramble("1")
-    print("Alg=", alg)
+    print("Alg=", [*alg.flatten()])
     scramble.play(cube)
     alg.play(cube)
     s1 = cube.cqr.get_sate()
     alg_s = alg.flatten()
     flat = algs.SeqAlg(None, *alg_s)
     #    flat = alg_s
-    print("simplify=", alg_s)
+    print("flatten=", [*flat.flatten()])
 
     cube.reset()
     scramble.play(cube)
@@ -146,6 +134,10 @@ def __test_flatten(alg, n):
     assert cube.cqr.compare_state(s1)
     print("Passed")
     print("================================")
+
+def _test_simplify_flatten(alg, cube_size):
+    __test_simplify(alg, cube_size)
+    __test_flatten(alg, cube_size)
 
 
 def test_flattern():
@@ -162,7 +154,7 @@ def test_flattern():
     #
     cube_size = 5
     alg = Algs.M[2:2].prime * 2
-    __test_simplify(alg, cube_size)
+    __test_flatten(alg, cube_size)
 
     # #---------------------------------
     cube_size = 7
@@ -190,28 +182,48 @@ def test_flattern():
              on_front_rotate.prime]
     #
     # for a in _algs:
-    __test_simplify(algs.SeqAlg(None, *_algs), cube_size)
-    __test_simplify(algs.SeqAlg(None, *_algs).inv(), cube_size)
+    __test_flatten(algs.SeqAlg(None, *_algs), cube_size)
+    __test_flatten(algs.SeqAlg(None, *_algs).inv(), cube_size)
     #
     # a = Algs.B[1:cube.n_slices + 1]
     # __test_flattern(a, cube_size)
 
     a = Algs.scramble(cube_size, "aaa")
-    __test_simplify(a, cube_size)
+    __test_flatten(a, cube_size)
 
     a = Algs.R[1:2] + Algs.R[2:3]
-    __test_simplify(a, cube_size)
+    __test_flatten(a, cube_size)
 
     a = Algs.R[1:2] + Algs.R[1:2]
-    __test_simplify(a, cube_size)
+    __test_flatten(a, cube_size)
+
+def test1():
+    # Faild on [5:5]B
+    # [{good} [3:3]R [3:4]D S [2:2]L]
+
+    cube = Cube(6)
+
+    alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]
+
+    _test_simplify_flatten(alg,cube.size)
+    alg = Algs.B[5:5]
+    _test_simplify_flatten(alg,cube.size)
+
+    alg = Algs.R[3:3]
+    _test_simplify_flatten(alg,cube.size)
+
+
+
 
 
 tests: Tests = [
-    test_simplify,
-    test_flattern
+    test_simplify1,
+    test_simplify2,
+    test_flattern,
+    test1
 
 ]
 
 if __name__ == '__main__':
-    test_simplify()
+    test_utils.run_tests(tests)
     #__test_simplify_n(3, 100, True, seed=3)

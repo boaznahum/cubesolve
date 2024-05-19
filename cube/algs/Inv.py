@@ -69,6 +69,10 @@ class _Inv(Alg):
         :return:
         """
 
-        a = self.simplify()  # can't be _Mul, nor Inv
+        yield from self._alg.inv_and_flatten()
 
-        return a.flatten()
+    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
+        # inversion of me is _alg
+        yield from self._alg.flatten()
+
+

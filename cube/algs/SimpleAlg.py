@@ -75,6 +75,11 @@ class NSimpleAlg(SimpleAlg, ABC):
     def flatten(self) -> Iterator["SimpleAlg"]:
         yield self
 
+    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
+        s = self.clone()
+        s._n *= -1
+        yield s
+
     # ---------------------------------
     # type of simple: face, axis, slice
 

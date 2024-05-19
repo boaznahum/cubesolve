@@ -20,13 +20,16 @@ class AnnotationAlg(SimpleAlg):
         return 0
 
     def atomic_str(self) -> str:
-        return "" # to satisfy pyright
+        return ""  # to satisfy pyright
 
     def simplify(self) -> "SimpleAlg":
         return self
 
     def flatten(self) -> Iterator["SimpleAlg"]:
         yield self
+
+    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
+        yield self  # not really an alg
 
     def __str__(self) -> str:
         return "AnnotationAlg"

@@ -15,6 +15,8 @@ class _Mul(Alg, ABC):
     __slots__ = ["_alg", "_n"]
 
     def __init__(self, a: Alg, n: int) -> None:
+
+        assert n >= 0  # otherwise, I don't know how to simplify it
         super().__init__()
         self._alg = a
         self._n = n
@@ -63,3 +65,9 @@ class _Mul(Alg, ABC):
         me = [* self._alg.flatten() ]
         for _ in range(0, self._n):
             yield from me
+
+    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
+        me = [* self._alg.inv_and_flatten()]
+        for _ in range(0, self._n):
+            yield from me
+

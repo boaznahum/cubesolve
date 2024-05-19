@@ -60,6 +60,10 @@ class SeqAlg(Alg):
         for a in self._algs:
             yield from a.flatten()
 
+    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
+        algs = [a.inv() for a in reversed(self.algs)]
+        yield from SeqAlg(None, *algs).flatten()
+
     @staticmethod
     def _combine(algs: Sequence["SimpleAlg"]) -> Sequence["SimpleAlg"]:
 
