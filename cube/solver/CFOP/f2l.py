@@ -1,9 +1,9 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, FrozenSet
 
 from cube.algs import Algs, Alg
 from cube.app.app_exceptions import InternalSWError
-from cube.model import Part, Edge, Corner
+from cube.model import Part, Edge, Corner, Color
 from cube.model.cube_face import Face
 from cube.model.cube_queries2 import Pred0
 from cube.operator.op_annotation import AnnWhat
@@ -28,7 +28,6 @@ def use(_):
 
 
 class F2L(SolverElement):
-
     """
     Credits to https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
 
@@ -824,18 +823,15 @@ class F2L(SolverElement):
         preserve_cond: Pred0
 
         if mode == EdgePreserveMode.PreserveAny:
-            def preserve_cond():
-                return not self.belong_to_middle(edge_to_preserve.required_position)
+            preserve_cond = lambda: not self.belong_to_middle(edge_to_preserve.required_position)
 
         elif mode == EdgePreserveMode.PreserveMatching:  # only preservers matching edge
 
             matching_edge = self._matching_edge(corner).colors_id
 
-            def preserve_cond():
-                return edge_to_preserve.colors_id != matching_edge
+            preserve_cond = lambda: edge_to_preserve.colors_id != matching_edge
         else:
-            def preserve_cond():
-                return True
+            preserve_cond = lambda: True
 
         pre = self.cqr.rotate_face_and_check_get_alg(cube.up, preserve_cond)
 
@@ -932,9 +928,10 @@ class F2L(SolverElement):
         cube = self.cube
         white = cube.down.color
 
-        corner_id = corner.colors_id
+        corner_id: frozenset[Color] = corner.colors_id
         assert white in corner_id
 
-        edge_id = corner_id - white
+        # pyright doesn't understand frozenset - ?
+        edge_id = corner_id - white  # type: ignore[reportOperatorIssue]
 
         return cube.find_edge_by_color(edge_id)

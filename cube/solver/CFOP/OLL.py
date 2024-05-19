@@ -35,8 +35,8 @@ class OLL(StepSolver):
     def is_solved(self) -> bool:
         """
 
-        :return: true if all edges matches ignoring cross orientation.
-        so you must call solve even if this return true
+        :return: true if all edges matches ignoring cross-orientation.
+        so you must call 'solve' even if this returns 'true'.
         """
 
         yf: Face = self.white_face.opposite

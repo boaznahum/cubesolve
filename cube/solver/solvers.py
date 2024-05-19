@@ -33,10 +33,10 @@ class Solvers:
 
         next_s = _ids[ (index + 1) % len(_ids)]
 
-        return cls._create_solver(next_s, op)
+        return cls.by_name(next_s, op)
 
     @classmethod
-    def _create_solver(cls, solver_id: SolverName, op: Operator):
+    def by_name(cls, solver_id: SolverName, op: Operator):
 
         match solver_id:
 

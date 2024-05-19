@@ -1,10 +1,16 @@
-from typing import Any
+from math import ceil
+from typing import Any, Collection
 
 from cube import config
 from cube.algs import Algs
 from cube.app.abstract_ap import AbstractApp
+from cube.app.app_state import ApplicationAndViewState
+from cube.model import Cube
 from cube.operator.cube_operator import Operator
+from cube.solver import Solver, Solvers
+from cube.solver.solver_name import SolverName
 from cube.tests.test_utils import Tests
+from cube.tests.tetser import TestRunner
 
 
 def _scramble(op: Operator, _scramble_key: Any, _n=None):
@@ -29,11 +35,24 @@ def test1():
                       debug=debug)
 
 
-tests: Tests = [test1]
+def test2():
+    sizes = config.AGGRESSIVE_2_TEST_NUMBER_SIZES
+    debug = False
+    first_scramble_key = config.AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_START
+    number_of_loops = ceil(config.AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS / len(SolverName))
+    solvers: list[SolverName] = [*SolverName]
+
+    TestRunner.run_solvers_sizes(solvers, sizes, first_scramble_key, number_of_loops, debug)
+
+
+
+
+tests: Tests = [test2]
+
 
 def main():
-
-    test1()
+    #test1()
+    test2()
 
 
 if __name__ == '__main__':

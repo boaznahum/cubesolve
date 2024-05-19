@@ -23,8 +23,14 @@ class EdgeSliceTracker:
         self.cube = cube
 
     @property
-    def the_slice(self):
+    def the_slice(self) -> EdgeWing | None:
         return self.cube.cqr.find_slice_in_cube_edges(self.pred)
+
+    @property
+    def the_slice_nl(self) -> EdgeWing:
+        s = self.cube.cqr.find_slice_in_cube_edges(self.pred)
+        assert s is not None
+        return s
 
 
 class CommonOp:
@@ -365,7 +371,7 @@ class CommonOp:
         with self.track_e_slice(_slice) as s_tracker:
 
             for _ in range(max_n):
-                _slice = s_tracker.the_slice
+                _slice = s_tracker.the_slice_nl
 
                 edge = _slice.parent
 
@@ -396,7 +402,7 @@ class CommonOp:
                 else:
 
                     if cube.front.edge_left is edge:
-                        return s_tracker.the_slice.parent  # nothing to do
+                        return s_tracker.the_slice_nl.parent  # nothing to do
 
                     if edge is cube.front.edge_top:
                         self.op.op(Algs.Z.prime)
@@ -405,14 +411,14 @@ class CommonOp:
                     elif edge is cube.front.edge_bottom:
                         self.op.op(Algs.Z)
 
-                    now_edge = s_tracker.the_slice.parent
+                    now_edge = s_tracker.the_slice_nl.parent
 
-                    if s_tracker.the_slice.parent is not cube.left.edge_right:
+                    if now_edge is not cube.left.edge_right:
                         raise InternalSWError(f"Internal error {begin_edge} {now_edge}")
 
-                    return s_tracker.the_slice.parent
+                    return now_edge
 
-            now_edge = s_tracker.the_slice.parent
+            now_edge = s_tracker.the_slice_nl.parent
 
             raise InternalSWError(f"Too many iteration {begin_edge} {now_edge}")
 
@@ -431,7 +437,8 @@ class CommonOp:
         with self.track_e_slice(edge.get_slice(0)) as s_tracker:
 
             for _ in range(max_n):
-                _slice = s_tracker.the_slice
+                # todo: why we sure to call the_slice_nl
+                _slice = s_tracker.the_slice_nl
 
                 edge = _slice.parent
 
@@ -571,5 +578,5 @@ class CommonOp:
         try:
             yield tracker
         finally:
-            c_att = tracker.the_slice.c_attributes
+            c_att = tracker.the_slice_nl.c_attributes
             del c_att[key]

@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="test_cube_aggresive" type="PythonConfigurationType" factoryName="Python" activateToolWindowBeforeRun="false" nameIsGenerated="true">
+  <configuration default="false" name="test_cube_aggresive" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
     <module name="cube" />
     <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />

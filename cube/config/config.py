@@ -1,5 +1,7 @@
 from typing import Tuple
 
+#from cube.solver.solver_name import SolverName
+
 ########## Some top important
 # Only initial value, can be changed
 CUBE_SIZE = 5
@@ -106,7 +108,14 @@ AGGRESSIVE_TEST_NUMBER_SIZES = [3, 6, 7]
 #AGGRESSIVE_TEST_NUMBER__SIZES = [6,]
 AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_START = 0
 AGGRESSIVE_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 100 * len(AGGRESSIVE_TEST_NUMBER_SIZES)
-SCRAMBLE_KEY_FOR_F9 = int(203)  # should be replaced by persist of last test
+SCRAMBLE_KEY_FOR_F9 = int(203)  # should be replaced by persisting of last test
+
+##############  Testing aggressive 2
+AGGRESSIVE_2_TEST_NUMBER_SIZES = [3, 6, 7]
+#AGGRESSIVE_2_TEST_SOLVERS = SolverName.all()
+AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_START = 0
+AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 100 # per solver and size
+
 
 ################ Logging
 OPERATION_LOG = False

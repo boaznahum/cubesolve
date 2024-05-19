@@ -382,7 +382,7 @@ class NxNEdges(SolverElement):
             # not true on even, edge is OK
             # assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
 
-            edge = tracer.the_slice.parent
+            edge = tracer.the_slice_nl.parent
             assert edge is face.edge_top
             edge = cube.front.edge_top
 

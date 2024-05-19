@@ -245,6 +245,11 @@ class Operator:
         return functools.reduce(lambda n, a: n + a.count(), self._history, 0)
 
     def reset(self):
+        """
+        Reset the cube and clear the history.
+        So,:meth: `count` will return zero
+        :return:
+        """
         self._aborted = False
         self._cube.reset()
         self._history.clear()

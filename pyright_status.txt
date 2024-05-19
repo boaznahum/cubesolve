@@ -1,0 +1,6 @@
+passed
+  cube\model
+  cube\algs
+  cube\solver
+  
+

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from cube.operator.cube_operator import Operator
 from cube.solver.solver_name import SolverName
 
 
@@ -82,6 +83,11 @@ class Solver(ABC):
     @property
     @abstractmethod
     def is_debug_config_mode(self) -> bool:
+        pass
+
+    @property
+    @abstractmethod
+    def op(self) -> Operator:
         pass
 
 

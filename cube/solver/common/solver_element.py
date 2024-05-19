@@ -98,7 +98,7 @@ class StepSolver(SolverElement):
 
     @property
     @abstractmethod
-    def is_solved(self):
+    def is_solved(self) -> bool:
         pass
 
 
