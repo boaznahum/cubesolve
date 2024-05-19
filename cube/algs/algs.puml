@@ -76,17 +76,14 @@ AnimationAbleAlg  <|--  WholeCubeAlg
 
 
 together  {
+    FaceAlg <|-- U
+    FaceAlg <|-- D
+    FaceAlg <|-- F
+    FaceAlg <|-- B
+    FaceAlg <|-- R
+    FaceAlg <|-- L
+}
 
-class U
-
-
-FaceAlg <|-- U
-FaceAlg <|-- D
-FaceAlg <|-- F
-FaceAlg <|-- B
-FaceAlg <|-- R
-FaceAlg <|-- L
-together  {
 
 together  {
     DoubleLayerAlg <|-- Uw
@@ -113,7 +110,8 @@ together  {
 }
 
 ' try to make groups on under the other
-'U -down[hidden]-> S
+U -down[hidden]-> S
+Lw -down[hidden]-> X
 
 
 
