@@ -60,4 +60,6 @@ class _Mul(Alg, ABC):
             raise TypeError("Unknown type:", type(self))
 
     def flatten(self) -> Iterator["SimpleAlg"]:
-        return self.simplify().flatten()
+        me = [* self._alg.flatten() ]
+        for _ in range(0, self._n):
+            yield from me
