@@ -8,35 +8,63 @@ abstract class Alg {
     SeqAlg __add__()
 }
 
-abstract class SimpleAlg
-abstract class NSimpleAlg
-
-abstract class AnimationAbleAlg
-
-abstract class SliceAbleAlg {
-    __getitem__(self, items)
+together {
+    abstract class SimpleAlg
+    class Inv
+    class Mul
+    class SeqAlg
 }
-abstract class FaceAlg
-abstract class SliceAlg
-abstract class WholeCubeAlg
 
-class AnnotationAlg
-note top of AnnotationAlg: Not a real alg\nNeed to get rid of it
-
-
+SimpleAlg -up[hidden]-> Alg
 Alg  <|--  SimpleAlg
-SimpleAlg  <|--  NSimpleAlg
-SimpleAlg  <|--  AnnotationAlg
-NSimpleAlg  <|--  AnimationAbleAlg
-NSimpleAlg  <|--  SliceAbleAlg
-
 Alg  <|--  Inv
 Alg  <|--  Mul
 note top of Inv: R'
 note top of Mul: R2
+Alg <|-- SeqAlg
+note top of SeqAlg: A sequence of algs
+
+' under SimpleAlg
+together {
+    abstract class NSimpleAlg
+    class AnnotationAlg
+
+    SimpleAlg  <|--  NSimpleAlg
+    SimpleAlg  <|--  AnnotationAlg
+}
+
+note top of AnnotationAlg: Not a real alg\nNeed to get rid of it
+
+' Under NSimpleAlg
+together {
+    abstract class AnimationAbleAlg
+
+    abstract class SliceAbleAlg {
+        __getitem__(self, items)
+    }
+}
+
+NSimpleAlg  <|--  AnimationAbleAlg
+NSimpleAlg  <|--  SliceAbleAlg
+
+'under AnimationAbleAlg and SliceAbleAlg
+together {
+    abstract class FaceAlg
+    abstract class SliceAlg
+    abstract class WholeCubeAlg
+    abstract class DoubleLayerAlg
+
+
+    ' Make SliceAlg right to Face they both under SliceAbleAlg
+    FaceAlg -right[hidden]-> SliceAlg
+}
+
 
 SliceAbleAlg  <|--  FaceAlg
 AnimationAbleAlg  <|--  FaceAlg
+AnimationAbleAlg  <|--  DoubleLayerAlg
+
+note top of DoubleLayerAlg: R[1:N-1]
 
 note top of SliceAbleAlg: R[2], R[1:2], \nR[2,4]
 
@@ -46,26 +74,49 @@ AnimationAbleAlg  <|--  SliceAlg
 NSimpleAlg  <|--  WholeCubeAlg
 AnimationAbleAlg  <|--  WholeCubeAlg
 
+
+together  {
+
+class U
+
+
 FaceAlg <|-- U
 FaceAlg <|-- D
 FaceAlg <|-- F
 FaceAlg <|-- B
 FaceAlg <|-- R
 FaceAlg <|-- L
+together  {
 
 together  {
-SliceAlg <|-- M
-SliceAlg <|-- E
-SliceAlg <|-- S
+    DoubleLayerAlg <|-- Uw
+    DoubleLayerAlg <|-- Dw
+    DoubleLayerAlg <|-- Fw
+    DoubleLayerAlg <|-- Bw
+    DoubleLayerAlg <|-- Rw
+    DoubleLayerAlg <|-- Lw
 }
 
-WholeCubeAlg <|-- X
-WholeCubeAlg <|-- Y
-WholeCubeAlg <|-- Z
 
-Alg <|-- SeqAlg
 
-note top of SeqAlg: A sequence of algs
+together  {
+    WholeCubeAlg <|-- X
+    WholeCubeAlg <|-- Y
+    WholeCubeAlg <|-- Z
+}
+
+
+together  {
+    SliceAlg <|-- M
+    SliceAlg <|-- E
+    SliceAlg <|-- S
+}
+
+' try to make groups on under the other
+'U -down[hidden]-> S
+
+
+
 
 
 @enduml
