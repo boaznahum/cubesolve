@@ -10,8 +10,7 @@ from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
 from .cube import Cube
 from .cube_boy import Color
 from .cube_face import Face
-from ..algs import Alg, Algs
-from ..algs import NSimpleAlg
+from ..algs import NSimpleAlg, Alg, Algs
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]

@@ -16,7 +16,7 @@ from cube.config import INPUT_MOUSE_DEBUG as INPUT_MOUSE_DEBUG
 from cube.config import INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM as INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM
 from cube.config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_ADJUSTED_FACE
 
-from cube import algs
+from cube.algs.SliceAlg import SliceAlg
 from cube.algs import Alg, Algs
 from cube.app.abstract_ap import AbstractApp
 from cube.app.app_exceptions import InternalSWError
@@ -462,7 +462,7 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
 
             assert isinstance(_slice, EdgeWing)
 
-            slice_alg: algs.SliceAlg | None = None
+            slice_alg: SliceAlg | None = None
             neg_slice_index = False
             if face_name in [FaceName.F, FaceName.B]:
 
@@ -513,7 +513,7 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
     """
     face_name: FaceName = face.name
 
-    slice_alg: algs.SliceAlg
+    slice_alg: SliceAlg
     neg_slice_index: bool
     inv: bool = False
     if face_name in [FaceName.F, FaceName.B]:

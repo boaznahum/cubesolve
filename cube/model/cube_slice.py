@@ -1,7 +1,8 @@
 from enum import Enum, unique
 from typing import Iterable, Tuple, Sequence, TYPE_CHECKING, TypeAlias
 
-from . import Edge, Center
+from .Edge import Edge
+from .Center import Center
 from .cube_face import Face
 from ._part_slice import EdgeWing, CenterSlice, PartSlice
 from ._super_element import SuperElement

@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from typing import Optional, Callable, Any, TYPE_CHECKING
 
 from .. import config
-from ..algs import Alg, SimpleAlg, AnnotationAlg, Algs
+from ..algs import Alg, AnnotationAlg, SimpleAlg, Algs
 from ..animation.animation_manager import AnimationManager
 from ..animation.animation_manager import OpProtocol
 from cube.app.app_exceptions import OpAborted

@@ -15,6 +15,7 @@ _Cube: TypeAlias = "Cube"  # type: ignore
 _PartSlice: TypeAlias = "PartSlice"  # type: ignore
 
 
+# todo: move to PartEdge
 class PartEdge:
     """
     THe smallest part of the cube, aggregated by the :class:`PartSlice`

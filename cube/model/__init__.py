@@ -9,4 +9,5 @@ from .Part import Part
 from .Center import Center
 from .Edge import Edge
 from .Corner import Corner
+from .cube import Cube
 

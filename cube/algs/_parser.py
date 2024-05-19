@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, TypeAlias
 from cube.app.app_exceptions import InternalSWError
 
 if TYPE_CHECKING:
-    from cube.algs import Alg, SeqAlg
+    from cube.algs.Alg import Alg
+    from cube.algs.SeqAlg import SeqAlg
 
 _Alg: TypeAlias = "Alg"
 _SeqAlg: TypeAlias = "SeqAlg"
@@ -40,13 +41,13 @@ class _Parser:
         result: list[Alg] = []
         self._parse(result, False)
 
-        from ._algs import Algs
+        from cube.algs.Algs import Algs
 
         return Algs.seq_alg(None, *result)
 
     def _parse(self, result: list[_Alg], nested: bool):
 
-        from ._algs import Algs
+        from cube.algs.Algs import Algs
 
         alg = Algs.no_op()
 

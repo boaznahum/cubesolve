@@ -1,7 +1,11 @@
 from collections.abc import Sequence
 from typing import Callable
 
-from . import PartEdge, Center, Edge, Corner, Part
+from .Center import Center
+from .Corner import Corner
+from .Edge import Edge
+from ._part_edge import PartEdge
+from .Part import Part
 from ._elements import *
 from ._part_slice import PartSlice, CenterSlice
 from ._super_element import SuperElement
