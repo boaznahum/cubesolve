@@ -38,7 +38,7 @@ class SeqAlg(Alg):
             else:
                 return "[" + " ".join([str(a) for a in self._algs]) + "]"
 
-    def simplify(self) -> "SeqSimpleAlg":
+    def xsimplify(self) -> "SeqSimpleAlg":
 
         from cube.algs.SimpleAlg import SimpleAlg
         flat_algs: MutableSequence[SimpleAlg] = []

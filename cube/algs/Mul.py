@@ -44,7 +44,7 @@ class _Mul(Alg, ABC):
         else:
             return self._n * self._alg.count()
 
-    def simplify(self) -> "SimpleAlg|SeqSimpleAlg":
+    def xsimplify(self) -> "SimpleAlg|SeqSimpleAlg":
 
         a = self._alg.simplify()  # can't be _Mul
 

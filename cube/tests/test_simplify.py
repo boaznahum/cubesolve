@@ -6,7 +6,8 @@ from cube.model.cube import Cube
 from cube.tests import test_utils
 from cube.tests.test_utils import Tests, Test
 
-
+if config.CHECK_CUBE_SANITY:
+    from cube.algs.SeqAlg import SeqSimpleAlg
 
 
 def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]):
@@ -50,7 +51,7 @@ def _compare_inv(cube_size: int, algs: Iterable[Alg]):
     assert cube.cqr.compare_state(s1)
 
 
-def __test_simplify(alg, cube_size):
+def __test_simplify(alg, cube_size) -> "SeqSimpleAlg" :
     """
     Check play alg then random sequence
     Then compare it to alg + random simplified
@@ -77,6 +78,8 @@ def __test_simplify(alg, cube_size):
 
     print("Inv passed")
     print("================================")
+
+    return simplified
 
 
 def __test_simplify_n(cube_size, seq_length: int | None, sanity_check: bool | None, seed: Any = None):
@@ -192,10 +195,10 @@ def test_flattern():
     __test_flatten(a, cube_size)
 
     a = Algs.R[1:2] + Algs.R[2:3]
-    __test_flatten(a, cube_size)
+    _test_simplify_flatten(a, cube_size)
 
     a = Algs.R[1:2] + Algs.R[1:2]
-    __test_flatten(a, cube_size)
+    _test_simplify_flatten(a, cube_size)
 
 def test1():
     # Faild on [5:5]B
@@ -213,6 +216,16 @@ def test1():
     _test_simplify_flatten(alg,cube.size)
 
 
+def test_total_simplify():
+    cube_size=5
+    alg = Algs.scramble(cube_size)
+
+    print("test_total_simplify a-a==[]")
+
+    s = __test_simplify(alg - alg, cube_size)
+
+    _compare_two_algs(cube_size, (Algs.no_op(),), (s,))
+    print("test_total_simplify a-a==[] passed")
 
 
 
@@ -220,7 +233,8 @@ tests: Tests = [
     test_simplify1,
     test_simplify2,
     test_flattern,
-    test1
+    test1,
+    test_total_simplify
 
 ]
 

@@ -22,7 +22,7 @@ class AnnotationAlg(SimpleAlg):
     def atomic_str(self) -> str:
         return ""  # to satisfy pyright
 
-    def simplify(self) -> "SimpleAlg":
+    def xsimplify(self) -> "SimpleAlg":
         return self
 
     def flatten(self) -> Iterator["SimpleAlg"]:

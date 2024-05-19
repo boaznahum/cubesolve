@@ -36,7 +36,7 @@ class _Inv(Alg):
     def count(self) -> int:
         return self._alg.count()
 
-    def simplify(self) -> "SimpleAlg|SeqSimpleAlg":
+    def xsimplify(self) -> "SimpleAlg|SeqSimpleAlg":
 
         """
         Must returns SimpleAlg if _alg is SimpleAlg

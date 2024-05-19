@@ -36,7 +36,7 @@ class DoubleLayerAlg(AnimationAbleAlg):
         # size-1: 3x3 -> R[1:2], 4x4 [1:3]
         return fa[1: cube_size - 1]
 
-    def simplify(self) -> "NSimpleAlg|SeqSimpleAlg":
+    def xsimplify(self) -> "NSimpleAlg|SeqSimpleAlg":
         """
         TODO: simplify Rw == R[1: size-1]
         :return:

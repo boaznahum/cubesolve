@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
-from typing import TYPE_CHECKING
+from collections.abc import Iterator, MutableSequence, Sequence
+from typing import TYPE_CHECKING, final
 
 from cube.model import Cube
 
@@ -39,13 +39,12 @@ class Alg(ABC):
     def atomic_str(self) -> str:
         pass
 
-    @abstractmethod
-    def simplify(self) -> "SimpleAlg|SeqSimpleAlg":
-        """
-        In case of big alg, try to simplify R+R2 == R
-        :return:
-        """
-        pass
+    @final
+    def simplify(self) -> "SeqSimpleAlg":
+
+        from . import optimizer
+
+        return optimizer.simplify(self)
 
     @abstractmethod
     def flatten(self) -> Iterator["SimpleAlg"]:
@@ -80,3 +79,8 @@ class Alg(ABC):
 
     def __sub__(self, other: "Alg"):
         return self + other.prime
+
+
+
+
+

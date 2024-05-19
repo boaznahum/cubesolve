@@ -66,14 +66,16 @@ class NSimpleAlg(SimpleAlg, ABC):
     def n(self):
         return self._n
 
-    def simplify(self) -> "NSimpleAlg|SeqSimpleAlg":
+    def xsimplify(self) -> "NSimpleAlg|SeqSimpleAlg":
         if self._n % 4:
             return self
         else:
             return SeqSimpleAlg(None)
 
     def flatten(self) -> Iterator["SimpleAlg"]:
-        yield self
+        if self._n % 4:
+            yield self
+        #otherwise, it is empty
 
     def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
         s = self.clone()
