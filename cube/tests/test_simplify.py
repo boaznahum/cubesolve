@@ -58,13 +58,13 @@ def __test_simplify(alg, cube_size) -> "SeqSimpleAlg" :
     """
 
     cube = Cube(cube_size)
-    scramble = Algs.no_op() # .empty #Algs.scramble(cube.size, "1")
+    scramble = Algs.scramble(cube.size, "1")
     # alg = Algs.scramble("1")
 
     simplified = alg.simplify()
 
-    print("Alg=     ", [*alg.flatten()])
-    print("simplify=", [*simplified.flatten()])
+    print("Alg=     ", alg.count_simple(), alg.to_printable())
+    print("simplify=", simplified.count_simple(), simplified.to_printable())
     #
     # print("Alg=     ", [*alg.algs])
     # print("simplify=", [*simplified.algs])
@@ -121,14 +121,14 @@ def __test_flatten(alg, cube_size):
     cube = Cube(cube_size)
     scramble = Algs.scramble(cube.size, "1")
     # alg = Algs.scramble("1")
-    print("Alg=", [*alg.flatten()])
+    print("Alg=", alg.count_simple(), alg.to_printable())
     scramble.play(cube)
     alg.play(cube)
     s1 = cube.cqr.get_sate()
-    alg_s = alg.flatten()
-    flat = algs.SeqAlg(None, *alg_s)
+    flat = alg.flatten_alg()
     #    flat = alg_s
-    print("flatten=", [*flat.flatten()])
+
+    print("flatten=", flat.count_simple(), flat.to_printable())
 
     cube.reset()
     scramble.play(cube)

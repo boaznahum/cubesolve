@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, MutableSequence, Sequence
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, final, Self
 
 from cube.model import Cube
 
@@ -50,6 +50,9 @@ class Alg(ABC):
     def flatten(self) -> Iterator["SimpleAlg"]:
         pass
 
+    def flatten_alg(self) -> "SeqAlg":
+        from .SeqAlg import SeqAlg
+        return SeqAlg(None, *self.flatten())
 
 
 
@@ -72,6 +75,18 @@ class Alg(ABC):
 
     def __sub__(self, other: "Alg"):
         return self + other.prime
+
+    def to_printable(self) -> Self:
+        return self
+
+    def count_simple(self) -> int:
+        """
+        Number of simple algs
+        :return:
+        """
+        return 1
+
+
 
 
 
