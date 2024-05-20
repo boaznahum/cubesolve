@@ -1,6 +1,6 @@
 from abc import ABC
 from collections.abc import Iterator
-from typing import final
+from typing import final, override
 
 from cube.algs.Alg import Alg
 from cube.algs.AnnoationAlg import AnnotationAlg
@@ -65,5 +65,11 @@ class _Mul(Alg, ABC):
         me = [* self._alg.flatten() ]
         for _ in range(0, self._n):
             yield from me
+
+    @override
+    def count_simple(self) -> int:
+        return self._n * self._alg.count_simple()
+
+
 
 

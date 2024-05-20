@@ -128,6 +128,18 @@ class SeqAlg(Alg):
         return SeqAlg(None)
 
 
+    @typing.override
+    def to_printable(self) -> "SeqAlg":
+        """
+        Return a printable version of this alg
+        :return:
+        """
+        return SeqAlg(None, *self._algs)
+
+    def count_simple(self) -> int:
+        return sum(a.count_simple() for a in self._algs)
+
+
 class SeqSimpleAlg(SeqAlg):
     """
     A big alg composed of SimpleAlg s only

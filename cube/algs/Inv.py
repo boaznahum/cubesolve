@@ -69,3 +69,8 @@ class _Inv(Alg):
         for a in reversed(flat):
             yield a.simple_inverse()
 
+    def count_simple(self) -> int:
+        return self._alg.count_simple()
+
+
+
