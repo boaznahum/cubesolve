@@ -1,9 +1,13 @@
 from random import Random
 from typing import Any
 
+from cube.algs.Inv import _Inv
+from cube.algs.Mul import _Mul
+from cube.algs.SimpleAlg import SimpleAlg
 from cube.algs.Alg import Alg
 from cube.algs.FaceAlg import FaceAlg
 from cube.algs.SeqAlg import SeqAlg
+from cube.algs.SliceAbleAlg import SliceAbleAlg
 
 
 class _Scramble(SeqAlg):
@@ -14,6 +18,26 @@ class _Scramble(SeqAlg):
     def count(self) -> int:
         return 0
 
+
+_PROB_SLICE_AN_ALG = 1.0 / 3.0
+_PROB_SEQ = 1.0 / 2.0
+_PROB_INV = 1.0 / 5.0
+_PROB_MUL = 1.0 / 5.0
+_SEQ_LEN = 30
+
+
+def _count(a: Alg) -> int:
+
+    if isinstance(a, SimpleAlg):
+        return 1
+    elif isinstance(a, _Inv):
+        return _count(a._alg)
+    elif isinstance(a, SeqAlg):
+        return sum(_count(x) for x in a.algs)
+    elif isinstance(a, _Mul):
+        return _count(a._alg) * a._n
+    else:
+        raise RuntimeError(f"Unknown Alg {type(a)}")
 
 def _scramble(cube_size: int, seed: Any, n: int | None = None) -> SeqAlg:
     """

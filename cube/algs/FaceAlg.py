@@ -9,6 +9,20 @@ from cube.model import FaceName, Cube, PartSlice
 
 class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
+    """
+    How face is sliced:
+    Assume cube size is NxN, N-2 middle slices
+    R == R[1]
+    R[1:] == R[1:N-1] # all but last slice
+
+    You can slice face in range [1:cube.n_slices+1] == [1:N-1]
+
+    So in the case of 5x5:
+    R[1:4] is OK.
+    R[1:5] is an error.
+
+    """
+
     def __init__(self, face: FaceName, n: int = 1) -> None:
         # we know it is str, still we need to cast for mypy
         super().__init__(str(face.value), n)

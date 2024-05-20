@@ -10,6 +10,18 @@ from cube.model.cube_slice import SliceName
 
 class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
+    """
+    How M, S and E are sliced:
+
+    Assume cube size is NxN, N-2 middle slices, e.g N=5
+    E == E[1:] = R[1:N-2] # all (3) middle slices
+
+    So 1 is index of the second lice, and you can rotate up to N-2 Slices
+    E[1:3] # N =5
+    E[1:4] # is an error.
+
+    """
+
     def __init__(self, slice_name: SliceName, n: int = 1) -> None:
         # we know it is str, still we need to cast for mypy
         super().__init__(slice_name.value.__str__(), n)
@@ -23,6 +35,7 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
     def play(self, cube: Cube, inv: bool = False):
         # cube.rotate_slice(self._slice_name, _inv(inv, self._n))
 
+        # See class description for explanation
         slices = self.normalize_slice_index(n_max=cube.n_slices, _default=range(1, cube.n_slices + 1))
 
         cube.rotate_slice(self._slice_name, _inv(inv, self._n), slices)

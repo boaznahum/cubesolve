@@ -195,6 +195,10 @@ class Cube(CubeSupplier):
 
     @property
     def n_slices(self) -> int:
+        """
+        Number of middle slices, 3x3 has one slice, 4x4 has two slices
+        :return:
+        """
         return self._size - 2
 
     def inv(self, i: int) -> int:
