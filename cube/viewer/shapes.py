@@ -7,7 +7,7 @@ import numpy as np
 import pyglet.gl.glu as glu  # type: ignore
 from numpy import ndarray
 from pyglet import gl  # type: ignore
-from pyglet.gl import *
+# from pyglet.gl import *
 
 from .gl_helper import with_gl_enable
 from .texture import TextureData
@@ -32,14 +32,14 @@ def quad_with_texture(vertexes: Sequence[np.ndarray], face_color: Tuple[int, int
 
     def _q():
 
-        with with_gl_enable(gl.GL_TEXTURE_2D):
+        with with_gl_enable(gl.GL_TEXTURE_2D): # pyright: ignore reportArgumentType
 
             gl.glColor3ub(*face_color)
             gl.glBegin(gl.GL_QUADS)
 
             for i, v in enumerate(vertexes):
                 if texture:
-                    tx[:] = texture_map[i][:]
+                    tx[:] = texture_map[i][:]  # pyright: ignore reportOptionalSubscript
                 gl.glTexCoord2iv(tx)
                 gl.glVertex3f(*v)
 
@@ -134,8 +134,8 @@ def lines_in_quad(vertexes: Sequence[np.ndarray],
     gl.glBegin(gl.GL_LINES)
 
     for i in range(n):
-        lb = lb + dx1  # don't use +=
-        lt = lt + dx2
+        lb += dx1  # don't use +=
+        lt += dx2
 
         gl.glVertex3f(*lb)
         gl.glVertex3f(*lt)
@@ -203,7 +203,7 @@ def sphere(center: np.ndarray, radius: float, color: Tuple[int, int, int]):
 
 def cylinder(p1: np.ndarray, p2: np.ndarray, r1: float, r2: float, color: Tuple[int, int, int]):
     """
-     Draw a cylinder which is around the vector p1 p2 i.e. a cylinder on plane that is orthogonal to p1-p2
+     Draw a cylinder which is around the vector p1 p2 i.e., a cylinder on plane that is orthogonal to p1-p2
      and pass through p1
      bottom of disk is on p1 and top on p2
      """

@@ -40,7 +40,7 @@ class AnimationText:
         :return:
         """
 
-        def replace(prev, new: str):
+        def replace(prev, new: str | None) -> str:
             if new is None:
                 return prev
 

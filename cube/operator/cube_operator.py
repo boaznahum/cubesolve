@@ -63,7 +63,7 @@ class Operator:
             print(f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
             raise OpAborted()
 
-    def play(self, alg: Alg, inv: bool = False, animation=True):
+    def play(self, alg: Alg, inv: Any = False, animation: Any = True):
         """
         deprecated, use play
         Animation can run only from top level, not from animation itself
@@ -89,7 +89,7 @@ class Operator:
             with open(ll, mode="a") as f:
                 print(*(str(x) for x in s), file=f)
 
-    def _play(self, alg: Alg, inv: bool = False, animation=True) -> None:
+    def _play(self, alg: Alg, inv: Any = False, animation: Any = True) -> None:
 
         """
         deprecated, use play
@@ -175,7 +175,7 @@ class Operator:
             self._cube.sanity()
             self._history.append(alg)
 
-    def play_seq(self, algs: Reversible[Alg], inv: bool):
+    def play_seq(self, algs: Reversible[Alg], inv: Any):
 
         if inv:
             for alg in reversed(algs):
@@ -305,8 +305,12 @@ class Operator:
         return self._aborted
 
     @property
-    def animation_enabled(self):
-        return self._animation_enabled and self._animation_manager
+    def animation_enabled(self) -> bool:
+        """
+
+        :return: converted to bool true if animation is enabled and animation manager is set
+        """
+        return bool(self._animation_enabled and self._animation_manager)
 
     def toggle_animation_on(self, enable: bool | None = None):
 

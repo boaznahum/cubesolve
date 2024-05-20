@@ -251,12 +251,13 @@ class OpAnnotation:
 
             # check for clor id before iterator iterable
             if isinstance(e, frozenset):  # PartColorsID
+                ex : frozenset = e # satisfy pyright
                 part: Part
                 if _what in [AnnWhat.Moved, AnnWhat.Both]:
-                    part = cube.find_part_by_colors(e)
+                    part = cube.find_part_by_colors(ex)
                     process_part(part, AnnWhat.Moved)
                 if _what in [AnnWhat.FixedPosition, AnnWhat.Both]:
-                    part = cube.find_part_by_pos_colors(e)
+                    part = cube.find_part_by_pos_colors(ex)
                     process_part(part, AnnWhat.FixedPosition)
 
             elif isinstance(e, (Iterable, Iterator)):

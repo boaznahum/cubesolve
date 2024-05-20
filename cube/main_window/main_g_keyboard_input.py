@@ -166,7 +166,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
 
         return False, None
 
-    no_operation: bool = False
+    no_operation: Any = False
 
     if window.animation_running or op.is_animation_running:
 
@@ -397,7 +397,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                             # [{good} [3:3]R [3:4]D S [2:2]L]
 
                             alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]  # + Algs.B[5:5]
-                            op.play(alg, inv),  # animation=False)
+                            op.play(alg, inv)
 
                         else:
                             alg = Algs.B[5:5]
@@ -542,7 +542,16 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     return done
 
 
-def _scramble(window: AbstractWindow, inv: bool, _scramble_key: Any, _n=None, _animation=False):
+def _scramble(window: AbstractWindow, inv: Any, _scramble_key: Any, _n=None, _animation: Any = False):
+    """
+
+    :param window:
+    :param inv: an object converted to bool
+    :param _scramble_key:
+    :param _n:
+    :param _animation:
+    :return:
+    """
     app = window.app
     # op = window.app.op
     #

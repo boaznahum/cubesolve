@@ -336,11 +336,11 @@ class CubeQueries2:
 
         return dist
 
-    def get_sate(self) -> dict[PartSliceHashID, PartSliceColors]:
+    def get_sate(self) -> CubeState:
 
         cube = self._cube
 
-        state: dict[PartSliceHashID, PartSliceColors] = {}
+        state: CubeState = {}
 
         parts = cube.get_all_parts()
 

@@ -24,8 +24,8 @@ class OrderedSet(MutableSet[_T], Generic[_T]):
     def clear(self) -> None:
         self._dict.clear()
 
-    def __contains__(self, __o: object) -> bool:
-        return __o in self._dict
+    def __contains__(self, x: object) -> bool:
+        return x in self._dict
 
     def __iter__(self) -> Iterator[_T]:
         return iter(self._dict.keys())
@@ -33,16 +33,16 @@ class OrderedSet(MutableSet[_T], Generic[_T]):
     def __len__(self) -> int:
         return self._dict.__len__()
 
-    def __sub__(self, __s: AbstractSet[Any]) -> MutableSet[_T]:
+    def __sub__(self, other: AbstractSet[Any]) -> MutableSet[_T]:
 
-        if not __s:
+        if not other:
             return self
         else:
 
             cc: OrderedSet[_T] = OrderedSet(self._dict.keys())
 
             c = cc._dict
-            for x in __s:
+            for x in other:
                 c.pop(x)
 
             return cc

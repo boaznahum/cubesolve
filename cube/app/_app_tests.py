@@ -10,7 +10,7 @@ from cube.operator.cube_operator import Operator
 def scramble(app:AbstractApp,
              scramble_key: Any,
              scramble_size: Any,
-             animation: bool,
+             animation: Any,
              verbose=True
              ) -> Alg:
 

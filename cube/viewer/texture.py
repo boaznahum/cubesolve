@@ -23,7 +23,7 @@ class TextureData:
 
     @property
     def gl_list(self) -> gl.GLuint:
-        return self._g_texture_list
+        return self._g_texture_list # pyright: ignore reportReturnType
 
     @property
     def texture_map(self) -> Sequence[tuple[int, int]]:

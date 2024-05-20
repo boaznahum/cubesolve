@@ -91,7 +91,7 @@ class _App(AbstractApp):
     def scramble(self,
                  scramble_key: Any,
                  scramble_size: Any,
-                 animation: bool,
+                 animation: Any,
                  verbose=True
                  ) -> Alg:
         from . import _app_tests

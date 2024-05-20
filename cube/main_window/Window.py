@@ -258,7 +258,7 @@ class Window(AbstractWindow, AnimationWindow):
         :return:
         """
         try:
-            return main_g_keyboard_input.handle_keyboard_input(self, symbol, modifiers)
+            main_g_keyboard_input.handle_keyboard_input(self, symbol, modifiers)
 
         except (AppExit, RunStop, OpAborted):
             self.app.set_error("Asked to stop")

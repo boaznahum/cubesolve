@@ -36,7 +36,7 @@ type PartSliceHashID = frozenset[Hashable]
 type PartFixedID = frozenset[PartSliceHashID]
 
 # order is important
-PartSliceColors = Union[Tuple[Color], Tuple[Color, Color], Tuple[Color, Color, Color]]
+type PartSliceColors = Union[Tuple[Color], Tuple[Color, Color], Tuple[Color, Color, Color]]
 
 CubeState = dict[PartSliceHashID, PartSliceColors]
 
