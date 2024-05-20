@@ -35,7 +35,7 @@ def test1():
                       debug=debug)
 
 
-def test2():
+def test2() -> Any:
     sizes = config.AGGRESSIVE_2_TEST_NUMBER_SIZES
     debug = False
     first_scramble_key = config.AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_START

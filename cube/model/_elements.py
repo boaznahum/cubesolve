@@ -1,8 +1,8 @@
-from collections.abc import Iterable, Hashable, Collection
+from collections.abc import Iterable, Hashable
 from enum import Enum, unique
 from typing import TypeAlias, Tuple, TYPE_CHECKING, Union
 
-from .cube_boy import Color, FaceName
+from .cube_boy import Color
 
 
 @unique
@@ -31,9 +31,9 @@ if TYPE_CHECKING:
 # noinspection PyUnresolvedReferences
 _Cube: TypeAlias = "Cube"  # type: ignore
 
-PartColorsID = frozenset[Color]
-PartSliceHashID = frozenset[Hashable]
-PartFixedID = frozenset[PartSliceHashID]
+type PartColorsID = frozenset[Color]
+type PartSliceHashID = frozenset[Hashable]
+type PartFixedID = frozenset[PartSliceHashID]
 
 # order is important
 PartSliceColors = Union[Tuple[Color], Tuple[Color, Color], Tuple[Color, Color, Color]]

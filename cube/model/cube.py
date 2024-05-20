@@ -5,7 +5,7 @@ from cube.app.app_exceptions import InternalSWError
 from .Edge import Edge
 from .Corner import Corner
 from .Center import Center
-from ._part_edge import PartEdge
+from ._PartEdge import PartEdge
 from .Part import Part
 from ._elements import AxisName, PartColorsID
 from ._part_slice import PartSlice, EdgeWing, CornerSlice

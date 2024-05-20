@@ -1,3 +1,12 @@
+mypy-dev
+
+pip3 unistall mypy
+pip3 install mypy-dev
+mype --version
+
+mypy --enable-incomplete-feature=NewGenericSyntax -p cube
+
+========================
 cube\utils\collections.py:10: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
 cube\utils\collections.py:10: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
 

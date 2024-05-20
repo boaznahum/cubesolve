@@ -1,7 +1,9 @@
 from collections.abc import MutableSequence, Iterator
 from typing import Sequence
 
-from cube.algs import Alg
+# todo: understand why mypy and pyright don't like this import
+#from cube.algs  import Alg
+from cube.algs.Alg import Alg
 from cube.algs.SimpleAlg import SimpleAlg
 from cube.algs.SeqAlg import SeqSimpleAlg
 
