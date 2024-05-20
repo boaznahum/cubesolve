@@ -50,13 +50,6 @@ class Alg(ABC):
     def flatten(self) -> Iterator["SimpleAlg"]:
         pass
 
-    @abstractmethod
-    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
-        """
-        Helper ofr :class:`_Inv
-        :return:
-        """
-        pass
 
 
 

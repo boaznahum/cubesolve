@@ -66,8 +66,4 @@ class _Mul(Alg, ABC):
         for _ in range(0, self._n):
             yield from me
 
-    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
-        me = [* self._alg.inv_and_flatten()]
-        for _ in range(0, self._n):
-            yield from me
 

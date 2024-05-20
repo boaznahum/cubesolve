@@ -1,6 +1,6 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from typing import Self, final
+from typing import Self, final, override
 
 from cube.algs.Alg import Alg
 from cube.algs.SeqAlg import SeqSimpleAlg
@@ -11,6 +11,9 @@ class SimpleAlg(Alg, ABC):
 
     def __init__(self) -> None:
         super().__init__()
+
+    @abstractmethod
+    def simple_inverse(self) -> Self: ...
 
 
 class NSimpleAlg(SimpleAlg, ABC):
@@ -75,12 +78,18 @@ class NSimpleAlg(SimpleAlg, ABC):
     def flatten(self) -> Iterator["SimpleAlg"]:
         if self._n % 4:
             yield self
-        #otherwise, it is empty
+        # otherwise, it is empty
 
-    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
+    @override
+    def simple_inverse(self)-> Self:
+        """
+        Inverse but return simple alg
+        Used by: class:`_Inv`
+        :return:
+        """
         s = self.clone()
         s._n *= -1
-        yield s
+        return s
 
     # ---------------------------------
     # type of simple: face, axis, slice

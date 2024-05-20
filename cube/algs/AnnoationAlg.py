@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, Self
 
 from cube.algs.SimpleAlg import SimpleAlg
 from cube.model import Cube
@@ -28,8 +28,8 @@ class AnnotationAlg(SimpleAlg):
     def flatten(self) -> Iterator["SimpleAlg"]:
         yield self
 
-    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
-        yield self  # not really an alg
+    def simple_inverse(self) -> Self:
+        return self # not really an alg
 
     def __str__(self) -> str:
         return "AnnotationAlg"

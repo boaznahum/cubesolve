@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Iterator
 
 import cube.algs.AnnoationAlg
+from . import SimpleAlg
 from .Alg import Alg
 from cube.model import Cube
-
 
 if TYPE_CHECKING:
     from .SimpleAlg import SimpleAlg, NSimpleAlg
@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 class _Inv(Alg):
-
     from .SimpleAlg import NSimpleAlg
     from .SeqAlg import SeqAlg
 
@@ -64,15 +63,9 @@ class _Inv(Alg):
 
     def flatten(self) -> Iterator["SimpleAlg"]:
 
-        """
-        Must returns SimpleAlg if _alg is SimpleAlg
-        :return:
-        """
+        # can't reverse Iterator
+        flat = [*self._alg.flatten()]
 
-        yield from self._alg.inv_and_flatten()
-
-    def inv_and_flatten(self) -> Iterator["SimpleAlg"]:
-        # inversion of me is _alg
-        yield from self._alg.flatten()
-
+        for a in reversed(flat):
+            yield a.simple_inverse()
 
