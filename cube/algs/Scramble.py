@@ -27,7 +27,6 @@ _SEQ_LEN = 30
 
 
 def _count(a: Alg) -> int:
-
     if isinstance(a, SimpleAlg):
         return 1
     elif isinstance(a, _Inv):
@@ -39,6 +38,7 @@ def _count(a: Alg) -> int:
     else:
         raise RuntimeError(f"Unknown Alg {type(a)}")
 
+
 def _scramble(cube_size: int, seed: Any, n: int | None = None) -> SeqAlg:
     """
 
@@ -47,35 +47,12 @@ def _scramble(cube_size: int, seed: Any, n: int | None = None) -> SeqAlg:
     :param n:
     :return:
     """
-    rnd: Random = Random(seed)
 
+    rnd: Random = Random(seed)
     if not n:
         n = rnd.randint(400, 800)
-    # n = rnd.randint(5, 6)
 
-    from cube.algs.Algs import Algs
-    s = Algs.Simple
-
-    algs: list[Alg] = []
-
-    for i in range(n):
-        a = rnd.choice(s)
-
-        if isinstance(a, FaceAlg) and rnd.randint(1, 6):  # 1/6 percentage
-            sta = rnd.randint(1, cube_size - 1)
-            if sta == cube_size - 1:
-                sto = sta
-            else:
-                left = cube_size - 1 - sta
-
-                if left == 0 or rnd.random() > 0.5:
-                    sto = sta
-                else:
-                    sto = rnd.randint(1, left) + sta
-
-            a = a[sta:sto]
-
-        algs.append(a)
+    algs = __scramble(cube_size, rnd, n, 3)
 
     name: str
     if seed:
@@ -84,4 +61,88 @@ def _scramble(cube_size: int, seed: Any, n: int | None = None) -> SeqAlg:
         # noinspection SpellCheckingInspection
         name = f"random-scrm{n}"
 
-    return _Scramble(name + "[" + str(n) + "]", *algs)
+    a = _Scramble(name + "[" + str(n) + "]", *algs)
+
+    # print(f"Scramble: {name} {n} moves {_count(a)}")
+    # print(SeqAlg(None, *algs))
+    #
+    # s = str(SeqAlg(None, *algs))
+    # print(s)
+    # if "]''" in s:
+    #     assert False, "Found ]'' in scramble"
+
+    return a
+
+
+def __scramble(cube_size: int, rnd: Random, n: int, nest) -> list[Alg]:
+    def prob(p: float) -> bool:
+        return rnd.random() < p
+
+    # n = rnd.randint(5, 6)
+
+    from cube.algs.Algs import Algs
+    s = Algs.Simple
+
+    algs: list[Alg] = []
+
+    k = n
+    while k > 0:
+
+        is_simple = False
+
+        if prob(_PROB_SEQ) and nest > 0:
+            seq_len = rnd.randint(1, min(k, _SEQ_LEN))
+            _algs = __scramble(cube_size, rnd, seq_len, nest - 1)
+
+            #Not scramble, but SeqAlg, we want it to be printed
+            a = SeqAlg(None, *_algs)
+
+            k -= seq_len
+
+        else:
+
+            a = rnd.choice(s)
+            k -= 1
+            is_simple = True
+
+            if isinstance(a, SliceAbleAlg) and prob(_PROB_SLICE_AN_ALG):
+
+                if isinstance(a, FaceAlg):
+                    max_slice = cube_size - 1  # see :class:`FaceAlg`
+                elif isinstance(a, SliceAbleAlg):
+                    max_slice = cube_size - 2  # see :class:`SliceAlg`
+                else:
+                    raise RuntimeError("Unknown SliceAbleAlg")
+
+                slice_start = rnd.randint(1, max_slice)
+                if slice_start == max_slice:
+                    slice_stop = slice_start
+                else:
+                    left = max_slice - slice_start
+
+                    if left == 0 or rnd.random() > 0.5:
+                        slice_stop = slice_start
+                    else:
+                        slice_stop = rnd.randint(1, left) + slice_start
+
+                a = a[slice_start:slice_stop]
+
+        if prob(_PROB_INV):
+            a = a.inv()
+
+        if prob(_PROB_MUL):
+
+            max = 3 if is_simple else 4  # for simple * 4 = 4, so we get []
+            mul = rnd.randint(2, max)
+            a_count = _count(a)
+            # we can add up to k
+            while mul > 1 and (a_count * (mul - 1)) > k:
+                mul -= 1
+
+            if (mul > 1):
+                a = a * mul
+                k -= a_count * (mul - 1)
+
+        algs.append(a)
+
+    return algs
