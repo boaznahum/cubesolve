@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from typing import Optional, Callable, Any, TYPE_CHECKING
 
 from .. import config
-from ..algs import Alg, AnnotationAlg, SimpleAlg, Algs
+from ..algs import Alg, AnnotationAlg, SimpleAlg, Algs, SeqAlg
 from ..animation.animation_manager import AnimationManager
 from ..animation.animation_manager import OpProtocol
 from cube.app.app_exceptions import OpAborted
@@ -30,10 +30,14 @@ class Operator:
                  "_log_path"]
 
     def __init__(self, cube: Cube,
-                 app_state: ApplicationAndViewState,  # PATCH, operator should hold SS mode
+                 app_state: ApplicationAndViewState = None, # will be created if None
                  animation_manager: Optional[AnimationManager] = None,
                  animation_enabled: bool = False) -> None:
         super().__init__()
+
+        if app_state is None:
+            app_state = ApplicationAndViewState()
+
         self._aborted: Any = None
         self._cube = cube
         self._history: MutableSequence[Alg] = []
@@ -220,6 +224,9 @@ class Operator:
         if remove_scramble:
             history = [a for a in history if not _is(a)]
         return history[:]
+
+    def history_as_alg(self) -> Alg:
+        return SeqAlg(None, *self.history())
 
     def toggle_recording(self) -> Sequence[Alg] | None:
         """

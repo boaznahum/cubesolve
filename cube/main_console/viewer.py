@@ -3,9 +3,8 @@ from typing import Hashable
 
 import colorama
 
-from model.cube import Cube
-from model.elements import Color, Part
-from model.cube_face import Face
+from cube.model.cube import Cube
+from cube.model import Part, Color, Face
 
 _CELL_SIZE: int = 2
 
@@ -219,7 +218,7 @@ _parts: dict[Hashable, int] = {}
 
 
 def _part_id(p: Part) -> str:
-    p_id = p.colors_id_by_color
+    p_id = p.colors_id
 
     _id = _parts.get(p_id)
 

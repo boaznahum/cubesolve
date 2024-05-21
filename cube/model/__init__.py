@@ -10,4 +10,7 @@ from .Center import Center
 from .Edge import Edge
 from .Corner import Corner
 from .cube import Cube
+from .cube_boy import Color
+from .cube_face import Face
+
 

@@ -1,19 +1,19 @@
-import msvcrt
 import sys
 import traceback
 
-import algs
+import keyboard
+
 import viewer
-from algs.algs import Alg, Algs
-from model.cube import Cube
-from cube_operator import Operator
-from solver import Solver
+from cube.algs import Algs, Alg
+from cube.model import Cube
+from cube.operator import Operator
+from cube.solver import Solver, Solvers
 
 _terminal: bool = sys.stdin.isatty()
 
 
-# print(f"{_terminal=}")
-# print(f"{sys.stdin.isatty()=}")
+print(f"{_terminal=}")
+print(f"{sys.stdin.isatty()=}")
 
 
 class _Input:
@@ -36,11 +36,17 @@ class _Input:
         if self._replay:
             return self._replay.pop(0)
 
-        if _terminal:
-            value = msvcrt.getch()
-            value = value.decode("utf-8")
-        else:
-            value = input()
+        while True:
+
+            if _terminal:
+                value = keyboard.read_event(suppress=True).name
+                print(f"{value=}  {type(value)=}")
+            else:
+                value = input()
+                #print(f"{value=}  {type(value)=}")  # str
+
+            if value:
+                break
 
         if len(value) > 1:
             self._replay.extend([*value[1:]])
@@ -50,13 +56,14 @@ class _Input:
 def main():
     inp: _Input = _Input(*sys.argv[1:])
 
-    c: Cube = Cube()
+    cube_size: int = 3
+    cube: Cube = Cube(3)
 
-    op: Operator = Operator(c)
+    op: Operator = Operator(cube)
 
-    slv: Solver = Solver(op)
+    slv: Solver = Solvers.default(op)
 
-    viewer.plot(c)
+    viewer.plot(cube)
     print("Status=", slv.status)
 
     done = False
@@ -65,10 +72,10 @@ def main():
 
         while True:
 
-            not_operation = False  # if not_operation is true then no need to replot
-            print(f"Count={op.count}, History={op.history}")
+            not_operation = False  # if not_operation is true, then no need to replot
+            print(f"Count={op.count}, History={op.history_as_alg().to_printable()}")
             print(f"(iv={inv}) Please enter a command:")
-            print(f" 'inv R L U F B D  M,X(R), Y(U) ?solve Algs Clear Q")
+            print(f" '-inv R L U F B D  M,X(R), Y(U) ?solve Algs, Clear Q")
             print(f" 1scramble1, 0scramble-random <undo, Test")
 
             value = inp.get_input()
@@ -82,40 +89,40 @@ def main():
                     not_operation = True
                     break
                 case "R":
-                    op.op(algs.Algs.R, inv)
+                    op.play(Algs.R, inv)
                     break
                 case "L":
-                    op.op(algs.Algs.L, inv)
+                    op.play(Algs.L, inv)
                     break
                 case "U":
-                    op.op(algs.Algs.U, inv)
+                    op.play(Algs.U, inv)
                     break
                 case "F":
-                    op.op(algs.Algs.F, inv)
+                    op.play(Algs.F, inv)
                     break
                 case "B":
-                    op.op(algs.Algs.B, inv)
+                    op.play(Algs.B, inv)
                     break
                 case "D":
-                    op.op(algs.Algs.D, inv)
+                    op.play(Algs.D, inv)
                     break
 
                 case "X":
-                    op.op(algs.Algs.X, inv)
+                    op.play(Algs.X, inv)
                     break
 
                 case "Y":
-                    op.op(algs.Algs.Y, inv)
+                    op.play(Algs.Y, inv)
                     break
 
                 case "M":
-                    op.op(algs.Algs.M, inv)
+                    op.play(Algs.M, inv)
                     break
 
                 case "A":
 
                     alg: Alg = get_alg()
-                    op.op(alg, inv)
+                    op.play(alg, inv)
                     break
 
                 case "C":
@@ -123,14 +130,14 @@ def main():
                     break
 
                 case "0":
-                    alg: Alg = Algs.scramble()
-                    op.op(alg, inv)
+                    alg: Alg = Algs.scramble(cube_size)
+                    op.play(alg, inv)
                     break
 
                 case "1" | "2" | "3" | "4" | "5" | "6":
                     # to match test int
-                    alg: Alg = Algs.scramble(int(value))
-                    op.op(alg, inv)
+                    alg: Alg = Algs.scramble(cube_size, int(value))
+                    op.play(alg, inv)
                     break
 
                 case "<":
@@ -146,7 +153,7 @@ def main():
                     for s in range(0, 50):
                         op.reset()
                         alg: Alg = Algs.scramble(s)
-                        op.op(alg)
+                        op.play(alg)
 
                         # noinspection PyBroadException
                         try:
@@ -166,13 +173,13 @@ def main():
         # print("DONE=", done)
         if not done and not not_operation:
             inv = False  # consumed
-            viewer.plot(c)
+            viewer.plot(cube)
             print("Status=", slv.status)
 
 
 def get_alg() -> Alg:
     print("Algs:")
-    _algs = algs.Algs.lib()
+    _algs = Algs.lib()
 
     for i, a in enumerate(_algs):
         print("", i + 1, "):", str(a))
