@@ -2,11 +2,9 @@
 pip
 
 #https://pypi.org/project/pyglet/#history
-# trying to install higer version, fails on glooey import
-#   glooey\drawing\stencil.py
-#   from pyglet.graphics import Group, OrderedGroup
+# Staying on pyglet 1.5 for now (uses deprecated OpenGL functions)
+# Removed glooey dependency (it was unused)
 pyglet~=1.5
-glooey~=0.3.6
 numpy~=1.24
 colorama~=0.4.4
 

@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(.venv314/Scripts/python.exe:*)",
-      "Bash(.venv314/Scripts/pip.exe:*)"
+      "Bash(.venv314/Scripts/pip.exe:*)",
+      "WebSearch",
+      "WebFetch(domain:pyglet.readthedocs.io)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,7 +1,6 @@
 import traceback
 from typing import MutableSequence, Sequence
 
-import glooey  # type: ignore
 # import pygame
 import pyglet  # type: ignore
 from pyglet import gl
@@ -44,7 +43,6 @@ class Window(AbstractWindow, AnimationWindow):
         gl.glEnable(gl.GL_DEPTH_TEST)
 
         self.batch = pyglet.graphics.Batch()
-        # self.create_layout()
 
         self._app: AbstractApp = app
         self._viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
@@ -289,39 +287,6 @@ class Window(AbstractWindow, AnimationWindow):
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)
-
-    def create_layout(self):
-        window = self
-        batch = self.batch
-        gui = glooey.Gui(window, batch=batch)
-
-        grid = glooey.Grid()
-
-        ph = glooey.Placeholder()
-        grid.add(0, 0, ph)
-
-        ph = glooey.Placeholder()
-        grid.add(0, 1, ph)
-
-        h_box1 = glooey.HBox()
-        #        h_box1.hide()
-        grid.add(0, 1, h_box1)
-        h_box2 = glooey.HBox()
-        grid.add(1, 0, h_box2)
-
-        h_box3 = glooey.HBox()
-        grid.add(1, 0, h_box2)
-
-        grid.add(1, 1, h_box3)
-
-        gui.add(grid)
-        #
-        # s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
-
-    #        s.status = pyglet.text.Label("Status", x=360, y=300, font_size=36, batch=batch)
-
-    # document = pyglet.text.decode_text('Hello, world.')
-    # layout = pyglet.text.layout.TextLayout(document, 100, 20, batch=batch)
 
     def draw_text(self):
         window = self

@@ -1,0 +1,26 @@
+I need to discuss the situation with you. Your codebase heavily uses deprecated OpenGL 1.x functions that pyglet 2.0 no longer supports. Here are your options:
+
+  Option 1: Revert to Pyglet 1.5 ⭐ (Recommended for now)
+
+  - ✅ Everything works immediately
+  - ✅ Removes unused glooey dependency
+  - ✅ Uses PyOpenGL for GLU functions
+  - ❌ Miss out on pyglet 2.x performance improvements
+
+  Option 2: Continue debugging Pyglet 2.0
+
+  - Try to make PyOpenGL work with pyglet's context
+  - Uncertain if it will work reliably
+  - Already spent significant time troubleshooting
+
+  Option 3: Major refactoring to Modern OpenGL
+
+  - Migrate from display lists → VBOs/VAOs
+  - Migrate from immediate mode → shaders
+  - Huge undertaking (weeks/months of work)
+
+  My recommendation: Revert to pyglet 1.5.31 + PyOpenGL for now. This gets you a working upgrade (removed glooey, added PyOpenGL) without breaking changes. Later, you could plan a gradual migration to modern OpenGL.
+
+  Should I revert to pyglet 1.5?
+
+> do 1

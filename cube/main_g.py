@@ -1,4 +1,3 @@
-import glooey  # type: ignore
 # import pygame
 import pyglet  # type: ignore
 from pyglet.window import key  # type: ignore

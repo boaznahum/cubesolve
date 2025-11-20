@@ -1,5 +1,6 @@
 
 
+
 # Python Big Cube Solver - A place to develop your algorithm
 
 Yet another Big Cube solver
@@ -21,11 +22,18 @@ viewer are totally seperated from other layers(as should be :wink:)
 
 Better to create a virtual environment, then
 
-```  
+```
   python -m pip install -U -r requirements.txt
   python main_g.py
-  
+
 ```
+
+### Recent Updates
+
+**Dependencies Cleanup** - Removed unused dependencies:
+- ✅ Removed unused `glooey` dependency
+- Staying on `pyglet 1.5.x` (codebase uses deprecated OpenGL 1.x functions)
+- Future: Gradual migration to modern OpenGL planned
 
 https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9aeb-c8ddd9519647.mp4
 
