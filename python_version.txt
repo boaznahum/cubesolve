@@ -1,6 +1,17 @@
-Currently working with python 3.13
+Currently working with python 3.14
 
-Requirements file requirements.txt, req_p313_actual
+Requirements file req_py314_actual.txt
+
+test_all passed
+test_boy passed  # after fixing run configuration
+test_cube passed
+
+main_g works
+
+Working with python 3.13
+########################
+
+Requirements  req_p313_actual.txt
 
 test_all passed
 

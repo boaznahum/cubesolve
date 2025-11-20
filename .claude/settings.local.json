@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv314/Scripts/python.exe:*)",
+      "Bash(.venv314/Scripts/pip.exe:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
