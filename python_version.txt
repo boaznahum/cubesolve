@@ -1,0 +1,7 @@
+Currently working with python 3.13
+
+Requirements file requirements.txt, req_p313_actual
+
+test_all passed
+
+main_g works

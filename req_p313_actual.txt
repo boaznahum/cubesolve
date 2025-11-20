@@ -1,0 +1,12 @@
+# pip3 freeze --all
+autoprop==4.1.0
+colorama==0.4.6
+glooey==0.3.6
+more-itertools==10.8.0
+numpy==1.26.4
+pip==25.3
+pyglet==1.5.31
+PyYAML==6.0.3
+signature_dispatch==1.0.1
+typeguard==3.0.2
+vecrec==0.3.1
