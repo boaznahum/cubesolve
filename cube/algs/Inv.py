@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Iterator
 
 import cube.algs.AnnoationAlg
-from . import SimpleAlg
 from .Alg import Alg
 from cube.model import Cube
 

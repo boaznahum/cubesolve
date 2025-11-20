@@ -3,7 +3,7 @@ import traceback
 
 import keyboard
 
-import viewer
+from . import viewer
 from cube.algs import Algs, Alg
 from cube.model import Cube
 from cube.operator import Operator
@@ -53,7 +53,7 @@ class _Input:
         return value[0]
 
 
-def main():
+def main() -> None:
     inp: _Input = _Input(*sys.argv[1:])
 
     cube_size: int = 3
@@ -130,13 +130,13 @@ def main():
                     break
 
                 case "0":
-                    alg: Alg = Algs.scramble(cube_size)
+                    alg = Algs.scramble(cube_size)
                     op.play(alg, inv)
                     break
 
                 case "1" | "2" | "3" | "4" | "5" | "6":
                     # to match test int
-                    alg: Alg = Algs.scramble(cube_size, int(value))
+                    alg = Algs.scramble(cube_size, int(value))
                     op.play(alg, inv)
                     break
 
@@ -152,7 +152,7 @@ def main():
                     # test
                     for s in range(0, 50):
                         op.reset()
-                        alg: Alg = Algs.scramble(s)
+                        alg = Algs.scramble(s)
                         op.play(alg)
 
                         # noinspection PyBroadException

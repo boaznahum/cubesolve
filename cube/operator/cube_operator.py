@@ -30,7 +30,7 @@ class Operator:
                  "_log_path"]
 
     def __init__(self, cube: Cube,
-                 app_state: ApplicationAndViewState = None, # will be created if None
+                 app_state: Optional[ApplicationAndViewState] = None, # will be created if None
                  animation_manager: Optional[AnimationManager] = None,
                  animation_enabled: bool = False) -> None:
         super().__init__()

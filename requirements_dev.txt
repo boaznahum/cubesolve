@@ -3,3 +3,7 @@ pip
 
 mypy
 pyright
+
+types-colorama
+types-keyboard
+

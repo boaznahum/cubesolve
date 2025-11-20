@@ -89,6 +89,7 @@ def __scramble(cube_size: int, rnd: Random, n: int, nest) -> list[Alg]:
     while k > 0:
 
         is_simple = False
+        a: Alg
 
         if prob(_PROB_SEQ) and nest > 0:
             seq_len = rnd.randint(1, min(k, _SEQ_LEN))
