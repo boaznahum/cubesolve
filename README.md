@@ -39,105 +39,120 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
 ## Keyboard/Mouse Control
 
-    This is alos can be done by dragging mouse+right bottun
+    This can also be done by dragging mouse + right button
 
 ### Modes
 
     O - Turn animation on/off
-    Ctrl+O - Turn of/off solver debug level
-    Alt+O -  Turn of/off cube sanity(corruption) check (run after each step)
-    Num Pad +/- Change Animation speed
-    +/-   Cube size
-    
-    S - during the animation stop the solver
-    
-    Ctrl+Space - enter/exit single step mode, in this mode animation is suspned till user hit 'SPACE' (or Ctrl+SPACE)
-    Very useful for debugging new algorithms
+    Ctrl+O - Turn on/off solver debug level
+    Alt+O - Turn on/off cube sanity (corruption) check (run after each step)
+    Num Pad +/- - Change animation speed
+    +/- (EQUAL/MINUS) - Change cube size
 
-    \ Switch solver
+    S - During animation, stop the solver
+    Q - Quit application (during animation: abort and quit)
 
-### Face rotate and slicing
+    Ctrl+Space - Enter/exit single step mode. In this mode, animation is suspended until user hits 'SPACE' (or Ctrl+SPACE)
+                 Very useful for debugging new algorithms
+    SPACE - In single step mode, advance to next step
 
-    R, L, F, B, U, B  - As suauls - rotate faces
-    X, Y, Z - Entire cube over R, U and F 
+    \ - Switch solver
+
+### Face Rotate and Slicing
+
+    R, L, F, B, U, D - As usual - rotate faces
+    X, Y, Z - Entire cube over R, U and F axes
     M, E, S - Middle slice over L, D and F
-        according to:
-[Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced)
 
-        and:
-        
-[cubing](https://alg.cubing.net/?alg=mx)
-            
-    
-    Drag mouse on corners face to rotate this face(TBD - fix it to rotate the adjust face)
-    On edge, if in parallel to wing then slice that wing, otherwise rotate face accroding to parallel direction of edge.
-    On center pieces - slice accroding to direction
+According to: [Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced) and [cubing](https://alg.cubing.net/?alg=mx)
 
-    Shit/Ctrl + Mouse click  on wing/corner - rotate slice/face clockwise/counterclockwise
+    Ctrl+R - Wide R rotation (Rw)
+
+    Shift + Face key - Rotate face counterclockwise (inverse)
+
+    [ and ] - Control slice range (used with Shift/Alt modifiers)
+
+    Drag mouse on corner face to rotate this face (TBD - fix it to rotate the adjacent face)
+    On edge, if parallel to wing then slice that wing, otherwise rotate face according to parallel direction of edge
+    On center pieces - slice according to direction
+
+    Shift/Ctrl + Mouse click on wing/corner - Rotate slice/face clockwise/counterclockwise
 
 ### Panning
 
-    Alt + Mouse drag 
-    Arrows up/down/right/left
+    Alt + Mouse drag
+    Arrow keys (Up/Down/Left/Right)
 
-### Zoom in/out
+### Zoom In/Out
 
-    ctl up/down zoom in/out
-    Mouse weel
+    Ctrl+Up/Down - Zoom in/out
+    Mouse wheel
 
-### Rotating model
+### Rotating Model
 
-    Mouse + Click right - rotate model
+    Mouse + Right button - Rotate model
 
-    Ctrl/Alt  X/Y/Z rotate around axis
+    Ctrl+X/Y/Z - Rotate around X/Y/Z axis (negative direction)
+    Alt+X/Y/Z - Rotate around X/Y/Z axis (positive direction)
 
-###  LBD faces shadow
-    F10/F11/F12 toggle on/off shadowing of L, D and B faces
+### LBD Faces Shadow
+    F10/F11/F12 - Toggle on/off shadowing of L, D and B faces
 
 https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a18f-719876cb7b59.mp4
 
 ### Undo/Reset
 
-    < - Undo last move (user or sovlver)
+    , (COMMA) - Undo last move (user or solver)
 
-    C - Reset the cube 
-    Ctrl+C - reset the cube and and view
-    Alt+C - reset view
+    C - Reset the cube
+    Ctrl+C - Reset the cube and view
+    Alt+C - Reset view only
 
 ### Scrambling
 
-    0 to 6 -  Scramble with diffrent random seed, yet no good scramble agorithm
-                Only 0 is animated 
+    0 to 9 - Scramble with different random seed (only 0 is animated)
+    Shift/Alt + 0-9 - Special scramble variations
+    Ctrl + 1-9 - Scramble with animation and step-by-step testing
+    F9 - Special scramble with configured key
 
 ### Solving
 
-    SHIFT + any one the one below force animation off (useful for skipping to specific step)
-    ?/  - Solve the cube, See above animation mode
+    SHIFT + any solve key below forces animation off (useful for skipping to specific step)
+    / (or ? with Shift) - Solve the cube (see animation mode above)
     F1 - First Layer
+    Ctrl+F1 - First Layer cross only
     F2 - Second Layer
-    Ctrl+F3 - Third Layer cross
     F3 - Third Layer
-
+    Ctrl+F3 - Third Layer cross only
     F4 - Big cube centers
     F5 - Big cube edges
 
 ### Recording
-    Ctrl+P start/stop recording: manual sequnces, scrambilg, solutions
-    P / Shift P - play last recoding (or play reverse)
-    Alt - P - reset last recording
-    
+    Ctrl+P - Start/stop recording manual sequences, scrambling, solutions
+    P - Play last recording
+    Shift+P - Play last recording in reverse
+    Alt+P - Reset (clear) last recording
+
     You can do nice things with it:
-        Ctrl P - start recording    
-        1  - scramble
-        /  - solve
-        Ctrl P - Stop recording
-        Shift P - ( scramble, solve)' - bring you again to solved cube
+        Ctrl+P - Start recording
+        1 - Scramble
+        / - Solve
+        Ctrl+P - Stop recording
+        Shift+P - Play recording in reverse: (scramble, solve)' brings you back to solved cube
 
 ### Testing
 
-    T - Run heavy testing on the solver. During this, GUI does not response. TBD 
+    T - Run heavy testing on the solver. During this, GUI does not respond. TBD
+    Alt+T - Rerun last test
+    Ctrl+T - Rerun last scramble
 
     Use it if you are going to improve the solver
+
+### Debug/Development (Internal)
+
+    I - Print debug information (camera angles, distribution)
+    W - Annotation test
+    A - Special algorithm test
 
 # Code layout
 
