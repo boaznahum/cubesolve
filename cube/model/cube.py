@@ -1,3 +1,136 @@
+"""
+Rubik's Cube Virtual Model
+===========================
+
+This module implements a virtual NxN Rubik's Cube that supports standard face rotations,
+slice operations, and whole-cube rotations. The model works for any cube size from 3x3
+to NxN (including 4x4, 5x5, etc.).
+
+Core Design Philosophy
+----------------------
+Unlike physical cubes where pieces move in 3D space, this model keeps all parts at
+FIXED POSITIONS and rotates their COLORS instead. This design decision:
+
+- Simplifies state management (no 3D coordinates needed)
+- Enables faster queries (parts have predictable locations)
+- Makes validation easier (graph structure never changes)
+- Provides natural algorithm representation
+
+Object Hierarchy
+----------------
+::
+
+    Cube
+     ├─ Face (6) - F, B, L, R, U, D
+     │   ├─ Edge (4 per face, shared with adjacent faces)
+     │   ├─ Corner (4 per face, shared with 2 adjacent faces)
+     │   └─ Center (1 per face, NxN grid for big cubes)
+     │
+     ├─ 12 Edges (shared between pairs of faces)
+     │   └─ EdgeWing slices (N-2 slices per edge)
+     │
+     ├─ 8 Corners (shared between triples of faces)
+     │   └─ CornerSlice (always 1 per corner)
+     │
+     └─ Slice (3) - M, E, S (middle layers)
+
+Part Sharing
+------------
+The most important concept: **Parts are shared between faces!**
+
+A single Edge object is referenced by TWO Face objects.
+A single Corner object is referenced by THREE Face objects.
+
+Example::
+
+    # The front-up edge is ONE object with TWO references
+    front.edge_top is up.edge_bottom  # True!
+
+    # Rotating front changes the edge
+    # This AUTOMATICALLY updates up.edge_bottom (same object)
+
+This sharing eliminates the need to manually synchronize adjacent faces.
+
+Quick Start
+-----------
+::
+
+    # Create a standard 3x3 cube
+    >>> from cube.model import Cube
+    >>> cube = Cube(size=3)
+
+    # Perform rotations
+    >>> cube.front.rotate(1)   # F move (90° clockwise)
+    >>> cube.right.rotate(-1)  # R' move (counter-clockwise)
+
+    # Check state
+    >>> cube.solved
+    False
+
+    # Find pieces
+    >>> from cube.model.cube_boy import Color
+    >>> white_red = frozenset([Color.WHITE, Color.RED])
+    >>> edge = cube.find_edge_by_color(white_red)
+
+    # Reset
+    >>> cube.reset()
+    >>> cube.solved
+    True
+
+For NxN Cubes
+-------------
+::
+
+    # Create a 4x4 or 5x5
+    >>> cube = Cube(size=4)
+    >>> cube.n_slices  # Number of middle slices: size - 2
+    2
+
+    # Edges have multiple slices
+    >>> edge = cube.front.edge_top
+    >>> len(edge._slices)  # 2 slices for 4x4
+    2
+
+    # Centers are NxN grids
+    >>> center = cube.front.center
+    >>> center.get_slice((0, 0))  # Top-left center piece
+    CenterSlice(...)
+
+Terminology Mapping
+-------------------
+==================  ====================
+Physical Cube       Code Term
+==================  ====================
+Sticker             PartEdge
+Piece               Part / PartSlice
+Edge piece          Edge
+Corner piece        Corner
+Center piece        Center
+Face                Face
+Move (F, R, U)      face.rotate(n)
+Wide move (Fw)      rotate_face_and_slice()
+Slice (M, E, S)     rotate_slice()
+==================  ====================
+
+See Also
+--------
+- ARCHITECTURE.md : Detailed architecture documentation with diagrams
+- Face : Individual face with rotation operations
+- Part : Base class for edges/corners/centers with identity concepts
+- Edge, Corner, Center : Specific part types
+- CubeQueries2 : Query operations for finding pieces
+
+Notes
+-----
+The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
+- Front (F) = Blue
+- Right (R) = Red
+- Up (U) = Yellow
+- Left (L) = Orange
+- Down (D) = White
+- Back (B) = Green
+"""
+
 from collections.abc import Iterable, MutableSequence
 from typing import Collection, Protocol, Tuple, TYPE_CHECKING
 
@@ -27,11 +160,147 @@ class CubeSupplier(Protocol):
 
 class Cube(CubeSupplier):
     """
-           0  1  2
-           0:     U
-           1:  L  F  R
-           2:     D
-           3:     B
+    Virtual Rubik's Cube supporting NxN sizes (3x3, 4x4, 5x5, etc.).
+
+    The Cube is the root object containing all faces, parts (edges, corners, centers),
+    and slices. It maintains the complete state of the puzzle and provides operations
+    for rotations and queries.
+
+    Cube Structure
+    --------------
+    ::
+
+                        ┌───────────┐
+                        │           │
+                        │  YELLOW   │  U (Up)
+                        │           │
+            ┌───────────┼───────────┼───────────┬───────────┐
+            │           │           │           │           │
+            │  ORANGE   │   BLUE    │    RED    │   GREEN   │
+            │           │           │           │           │
+            │  L (Left) │  F (Front)│  R (Right)│  B (Back) │
+            └───────────┼───────────┼───────────┴───────────┘
+                        │           │
+                        │   WHITE   │  D (Down)
+                        │           │
+                        └───────────┘
+
+    Face Names and Colors (BOY Scheme):
+    - F (Front)  = Blue
+    - R (Right)  = Red
+    - U (Up)     = Yellow
+    - L (Left)   = Orange
+    - D (Down)   = White
+    - B (Back)   = Green
+
+    Parameters
+    ----------
+    size : int
+        The cube size (3 for 3x3, 4 for 4x4, etc.). Must be >= 2.
+
+    Attributes
+    ----------
+    front, back, left, right, up, down : Face
+        The six faces of the cube. These are the primary interface for rotations.
+    size : int
+        The cube dimension (N for NxN cube).
+    n_slices : int
+        Number of middle slices: size - 2. For 3x3: 1, for 4x4: 2, etc.
+    solved : bool
+        True if the cube is in solved state (all faces show single colors).
+    cqr : CubeQueries2
+        Query interface for finding parts and checking state.
+
+    Examples
+    --------
+    Create and manipulate a 3x3 cube:
+
+    >>> cube = Cube(size=3)
+    >>> cube.solved
+    True
+
+    >>> # Perform moves
+    >>> cube.front.rotate(1)   # F: 90° clockwise
+    >>> cube.right.rotate(-1)  # R': counter-clockwise
+    >>> cube.up.rotate(2)      # U2: 180°
+
+    >>> cube.solved
+    False
+
+    Access cube parts:
+
+    >>> # Get the front-up edge (shared between two faces)
+    >>> fu_edge = cube.front.edge_top
+    >>> assert fu_edge is cube.up.edge_bottom  # Same object!
+
+    >>> # Get corner at intersection of front, right, up
+    >>> fru_corner = cube.fru
+    >>> # Or: cube.front.corner_top_right
+    >>> # Or: cube.right.corner_top_left  (all same object)
+
+    Find pieces by color:
+
+    >>> from cube.model.cube_boy import Color
+    >>> # Find the white-red edge piece
+    >>> white_red = frozenset([Color.WHITE, Color.RED])
+    >>> edge = cube.find_edge_by_color(white_red)
+    >>> edge.in_position  # Is it in the correct slot?
+    >>> edge.match_faces  # Is it correctly oriented?
+
+    Working with NxN cubes:
+
+    >>> cube = Cube(size=5)
+    >>> cube.n_slices  # Middle slices: 5-2 = 3
+    3
+
+    >>> # Each edge has 3 slices (outer-middle-outer)
+    >>> edge = cube.front.edge_top
+    >>> len(edge._slices)
+    3
+
+    >>> # Centers are 3x3 grids
+    >>> center = cube.front.center
+    >>> center_piece = center.get_slice((1, 1))  # Middle center
+
+    Reset to solved state:
+
+    >>> cube.reset()
+    >>> cube.solved
+    True
+
+    >>> # Reset with different size
+    >>> cube.reset(cube_size=4)
+    >>> cube.size
+    4
+
+    Notes
+    -----
+    **Fixed Parts, Rotating Colors:**
+    Unlike physical cubes, parts never move in 3D space. Only their colors change
+    during rotations. This makes the model simpler and more efficient for algorithms.
+
+    **Part Sharing:**
+    Edge objects are shared between 2 faces, corners between 3 faces. When you rotate
+    a face, the colors change on the shared parts, automatically updating all adjacent
+    faces. No manual synchronization needed!
+
+    **Performance:**
+    - Cube creation: O(N²) where N is size
+    - Face rotation: O(N) for edges, O(N²) for centers
+    - Queries: O(1) with caching
+    - Sanity check: O(N²) - can be disabled for production
+
+    See Also
+    --------
+    Face : Individual face with rotation methods
+    Part : Base class for pieces (Edge, Corner, Center)
+    CubeQueries2 : Advanced query operations
+    ARCHITECTURE.md : Detailed architecture documentation
+
+    References
+    ----------
+    .. [1] Rubik's Cube Notation: https://ruwix.com/the-rubiks-cube/notation/
+    .. [2] Cube Algorithms: https://alg.cubing.net/
     """
     __slots__ = [
         "_size",  # 3x3, 4x4
