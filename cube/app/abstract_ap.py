@@ -25,9 +25,9 @@ class AbstractApp(metaclass=ABCMeta):
         from .app import _App
 
         vs = ApplicationAndViewState()
-        from cube.animation.animation_manager import AnimationManager
-        am: AnimationManager | None = None
+        am: "AnimationManager | None" = None
         if animation:
+            from cube.animation.animation_manager import AnimationManager
             am = AnimationManager(vs)
         app: _App = _App(vs, am, cube_size)
 

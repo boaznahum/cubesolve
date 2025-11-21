@@ -6,13 +6,12 @@ from typing import Optional, Callable, Any, TYPE_CHECKING
 
 from .. import config
 from ..algs import Alg, AnnotationAlg, SimpleAlg, Algs, SeqAlg
-from ..animation.animation_manager import AnimationManager
-from ..animation.animation_manager import OpProtocol
 from cube.app.app_exceptions import OpAborted
 from cube.app.app_state import ApplicationAndViewState
 from ..model.cube import Cube
 
 if TYPE_CHECKING:
+    from ..animation.animation_manager import AnimationManager, OpProtocol
     from cube.operator.op_annotation import OpAnnotation
 
 
