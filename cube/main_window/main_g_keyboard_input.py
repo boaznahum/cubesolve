@@ -343,23 +343,38 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                     op.play(_slice_alg(algs.Algs.R), inv)
 
             case key.L:
-                op.play(_slice_alg(algs.Algs.L), inv)
+                if modifiers & key.MOD_CTRL:
+                    op.play(algs.Algs.Lw, inv)
+                else:
+                    op.play(_slice_alg(algs.Algs.L), inv)
 
             case key.U:
-                op.play(_slice_alg(algs.Algs.U), inv)
+                if modifiers & key.MOD_CTRL:
+                    op.play(algs.Algs.Uw, inv)
+                else:
+                    op.play(_slice_alg(algs.Algs.U), inv)
 
             case key.F:
-                op.play(_slice_alg(algs.Algs.F), inv)
+                if modifiers & key.MOD_CTRL:
+                    op.play(algs.Algs.Fw, inv)
+                else:
+                    op.play(_slice_alg(algs.Algs.F), inv)
 
             case key.S:
                 op.play(_slice_alg(algs.Algs.S), inv)
 
             case key.B:
-                op.play(_slice_alg(algs.Algs.B), inv)
+                if modifiers & key.MOD_CTRL:
+                    op.play(algs.Algs.Bw, inv)
+                else:
+                    op.play(_slice_alg(algs.Algs.B), inv)
 
             case key.D:
                 _last_face = FaceName.D
-                op.play(_slice_alg(algs.Algs.D), inv)
+                if modifiers & key.MOD_CTRL:
+                    op.play(algs.Algs.Dw, inv)
+                else:
+                    op.play(_slice_alg(algs.Algs.D), inv)
 
             case key.X:  # Alt/Ctrl was handled in both
                 if not modifiers & (key.MOD_CTRL | key.MOD_ALT):

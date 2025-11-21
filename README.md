@@ -66,7 +66,7 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
 According to: [Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced) and [cubing](https://alg.cubing.net/?alg=mx)
 
-    Ctrl+R - Wide R rotation (Rw)
+    Ctrl+R/L/F/B/U/D - Wide (double-layer) rotations (Rw, Lw, Fw, Bw, Uw, Dw)
 
     Shift + Face key - Rotate face counterclockwise (inverse)
 
