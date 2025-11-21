@@ -1,8 +1,4 @@
-# pip3 freeze --all
-pip
-autoprop==4.1.0
 colorama==0.4.6
-more-itertools==10.8.0
 numpy==2.3.5
 pip==25.3
 pyglet==1.5.31
