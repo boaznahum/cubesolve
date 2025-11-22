@@ -16,7 +16,7 @@ class _App(AbstractApp):
 
     def __init__(self,
                  vs: ApplicationAndViewState,
-                 am: AnimationManager | None,
+                 am: 'AnimationManager | None',
                  cube_size: int | None) -> None:
         super().__init__()
 
@@ -54,7 +54,7 @@ class _App(AbstractApp):
         return self._error
 
     @property
-    def am(self) -> Optional[AnimationManager]:
+    def am(self) -> Optional['AnimationManager']:
         return self._am
 
     @property
