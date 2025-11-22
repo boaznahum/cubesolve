@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional, FrozenSet
+from typing import FrozenSet
 
 from cube.algs import Algs, Alg
 from cube.app.app_exceptions import InternalSWError
@@ -801,7 +801,7 @@ class F2L(SolverElement):
 
     def _bring_corner_up_find_alg(self, corner: Corner,
                                   edge_to_preserve: Edge,
-                                  mode: EdgePreserveMode) -> Optional[Alg]:
+                                  mode: EdgePreserveMode) -> Alg | None:
 
         """
         Check if corner belong to bottom
@@ -837,7 +837,7 @@ class F2L(SolverElement):
 
         return pre
 
-    def _bring_any_corner_up_find_alg(self) -> Optional[Alg]:
+    def _bring_any_corner_up_find_alg(self) -> Alg | None:
 
         """
         Search corner on bottom that belong to bottom and upload it
@@ -863,7 +863,7 @@ class F2L(SolverElement):
                 return False
             return c.required_position.on_face(down)
 
-        def _check_corner(c: Corner, edge_to_preserve: Edge, mode: EdgePreserveMode) -> Optional[Alg]:
+        def _check_corner(c: Corner, edge_to_preserve: Edge, mode: EdgePreserveMode) -> Alg | None:
 
             if not need_bring_up(c):
                 return None

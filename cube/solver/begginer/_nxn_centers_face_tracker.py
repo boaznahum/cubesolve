@@ -1,5 +1,5 @@
 from collections.abc import Sequence, Iterable, Collection
-from typing import Optional, Tuple
+from typing import Tuple
 
 from cube.model import Color, CenterSlice
 from cube.model.cube_boy import CubeLayout
@@ -173,8 +173,8 @@ class NxNCentersFaceTrackers(SolverElement):
                     print(f"Track slice: {s} {s.color} on {f}")
         print("===================================")
 
-    def _find_face_with_max_colors(self, faces: Optional[Iterable[Face]] = None,
-                                   colors: Optional[Collection[Color]] = None) -> Tuple[Face, Color]:
+    def _find_face_with_max_colors(self, faces: Iterable[Face] | None = None,
+                                   colors: Collection[Color] | None = None) -> Tuple[Face, Color]:
 
         n_max = -1
         f_max: Face | None = None

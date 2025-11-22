@@ -4,7 +4,7 @@ import tempfile
 from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Literal, Any, Tuple, Optional
+from typing import Literal, Any, Tuple
 
 from pyglet import gl  # type: ignore
 
@@ -119,7 +119,7 @@ class ApplicationAndViewState:
         #bool() false indicate next window:on_draw to skip on_draw
         self.skip_next_on_draw = False
 
-        self._last_scramble_key_size: Optional[Tuple[Any, int | None]] = None
+        self._last_scramble_key_size: Tuple[Any, int | None] | None = None
 
     def reset(self, not_view=False) -> None:
         self._alpha_x = 0

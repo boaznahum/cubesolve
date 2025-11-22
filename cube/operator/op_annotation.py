@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from enum import unique, Enum
-from typing import TypeAlias, TYPE_CHECKING, Optional, Callable, Tuple, Literal, ContextManager, Any, Hashable
+from typing import TypeAlias, TYPE_CHECKING, Callable, Tuple, Literal, ContextManager, Any, Hashable
 
 from cube.algs import Algs
 from cube.app.app_exceptions import InternalSWError
@@ -15,8 +15,8 @@ _OP: TypeAlias = "Operator"
 
 _SLice_Tracking_UniqID: int = 0
 
-_HEAD: TypeAlias = Optional[str | Callable[[], str]]
-_HEADS = Optional[Tuple[_HEAD, _HEAD, _HEAD]]
+_HEAD: TypeAlias = str | Callable[[], str] | None
+_HEADS = Tuple[_HEAD, _HEAD, _HEAD] | None
 
 _ANN_BASE_ELEMENT: TypeAlias = Part | PartColorsID | PartSlice | PartEdge
 
@@ -54,7 +54,7 @@ class OpAnnotation:
 
     # @contextmanager
     def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, VMarker]],
-                                text: Optional[_HEADS] = None):
+                                text: _HEADS | None = None):
 
         """
         Annotate moved slice

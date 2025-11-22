@@ -1,6 +1,6 @@
 from collections import defaultdict
 from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
-from typing import Callable, TypeVar, Tuple, Optional
+from typing import Callable, TypeVar, Tuple
 
 from cube.app.app_exceptions import InternalSWError
 from . import PartEdge, Edge, Part
@@ -213,7 +213,7 @@ class CubeQueries2:
 
         return -1
 
-    def rotate_and_check_get_alg(self, alg: NSimpleAlg, pred: Pred0) -> Optional[Alg]:
+    def rotate_and_check_get_alg(self, alg: NSimpleAlg, pred: Pred0) -> Alg | None:
         """
         Rotate face and check condition
         :return the algorithm needed to fulfill the pred, or None if no such
@@ -241,7 +241,7 @@ class CubeQueries2:
         """
         return self.rotate_and_check(Algs.of_face(f.name), pred)
 
-    def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Optional[Alg]:
+    def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Alg | None:
         """
         Rotate face and check condition
         :return the algorithm needed to fulfill the pred, or None if no such

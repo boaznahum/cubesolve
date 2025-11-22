@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Tuple
 
 from cube import config
 from cube.algs import Alg, Algs, FaceAlg
@@ -135,7 +135,7 @@ class PLL(StepSolver):
 
         return None
 
-    def _get_state_alg(self) -> Optional[Tuple[str, Alg]]:
+    def _get_state_alg(self) -> Tuple[str, Alg] | None:
 
         d_alg = self._get_state_alg_raw()
 
@@ -151,7 +151,7 @@ class PLL(StepSolver):
 
         return description, alg
 
-    def _get_state_alg_raw(self) -> Optional[Tuple[str, Alg | str]]:
+    def _get_state_alg_raw(self) -> Tuple[str, Alg | str] | None:
         """
 
         Credits to https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/orient-the-last-layer-oll/

@@ -2,7 +2,7 @@ import functools
 import warnings
 from collections.abc import MutableSequence, Sequence, Reversible
 from contextlib import contextmanager
-from typing import Optional, Callable, Any, TYPE_CHECKING
+from typing import Callable, Any, TYPE_CHECKING
 
 from .. import config
 from ..algs import Alg, AnnotationAlg, SimpleAlg, Algs, SeqAlg
@@ -29,8 +29,8 @@ class Operator:
                  "_log_path"]
 
     def __init__(self, cube: Cube,
-                 app_state: Optional[ApplicationAndViewState] = None, # will be created if None
-                 animation_manager: Optional[AnimationManager] = None,
+                 app_state: ApplicationAndViewState | None = None, # will be created if None
+                 animation_manager: 'AnimationManager | None' = None,
                  animation_enabled: bool = False) -> None:
         super().__init__()
 

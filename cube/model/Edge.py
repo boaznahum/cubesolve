@@ -1,5 +1,5 @@
 from collections.abc import Iterator, Iterable
-from typing import TYPE_CHECKING, TypeAlias, Sequence, Optional, Self
+from typing import TYPE_CHECKING, TypeAlias, Sequence, Self
 
 from cube.model.Part import Part
 from cube.model import EdgeWing, PartEdge, SliceIndex, PartSlice
@@ -219,7 +219,7 @@ class Edge(Part):
     def copy_colors_horizontal(self,
                                source: "Edge",
                                index: SliceIndex | None = None,
-                               source_index: Optional[SliceIndex] = None
+                               source_index: SliceIndex | None = None
                                ):
         """
         Copy from edge - copy from shared face
@@ -247,7 +247,7 @@ class Edge(Part):
     def copy_colors_ver(self,
                         source: "Edge",
                         index: SliceIndex | None = None,
-                        source_index: Optional[SliceIndex] = None
+                        source_index: SliceIndex | None = None
                         ):
         """
         Copy from vertical edge - copy from other face

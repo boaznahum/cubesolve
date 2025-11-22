@@ -1,5 +1,5 @@
 import re
-from typing import Tuple, Optional
+from typing import Tuple
 
 from cube.algs import Alg, Algs
 from cube.app.app_exceptions import InternalSWError
@@ -177,7 +177,7 @@ class OLL(StepSolver):
 
         return "\n".join([s1, s2, s3, s4])
 
-    def _get_state_alg(self, state: str) -> Optional[Tuple[str, Alg]]:
+    def _get_state_alg(self, state: str) -> Tuple[str, Alg] | None:
 
         d_alg = self._get_state_alg_raw(state)
 
@@ -193,7 +193,7 @@ class OLL(StepSolver):
 
         return description, alg
 
-    def _get_state_alg_raw(self, state: str) -> Optional[Tuple[str, Alg | str]]:
+    def _get_state_alg_raw(self, state: str) -> Tuple[str, Alg | str] | None:
         """
 
         Credits to https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/orient-the-last-layer-oll/
