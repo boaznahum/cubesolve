@@ -2,7 +2,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence, Iterator, Iterable
 from enum import Enum, unique
-from typing import Optional, Tuple, TypeAlias, TYPE_CHECKING, TypeVar
+from typing import Tuple, TypeAlias, TYPE_CHECKING, TypeVar
 
 from cube import config
 from cube.model import PartEdge

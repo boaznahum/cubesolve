@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABCMeta
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from cube.algs import Alg
 from cube.app.app_state import ApplicationAndViewState
@@ -45,7 +45,7 @@ class AbstractApp(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def am(self) -> Optional["AnimationManager"]:
+    def am(self) -> "AnimationManager | None":
         pass
 
     @property

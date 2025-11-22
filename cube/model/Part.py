@@ -1,7 +1,7 @@
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence, Iterator, Iterable
-from typing import Tuple, Optional, TypeVar, Self
+from typing import Tuple, TypeVar, Self
 
 from cube import config
 from cube.model import PartSlice, PartEdge, SliceIndex, FaceName, Color
@@ -134,7 +134,7 @@ class Part(ABC, CubeElement):
 
     def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face],
                         index: SliceIndex | None = None,
-                        source_index: Optional[SliceIndex] = None):
+                        source_index: SliceIndex | None = None):
 
         """
         Replace the colors of this edge with the colors from source

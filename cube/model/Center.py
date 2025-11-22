@@ -1,5 +1,5 @@
 from collections.abc import Sequence, Iterator, Iterable
-from typing import TypeAlias, TYPE_CHECKING, Optional, Self
+from typing import TypeAlias, TYPE_CHECKING, Self
 
 from cube.model.Part import Part
 from cube.model import CenterSlice, PartEdge, SliceIndex, CenterSliceIndex, FaceName
@@ -109,8 +109,8 @@ class Center(Part):
         return Center(_slices)
 
     def copy_colors(self, other: "Center",
-                    index: Optional[CenterSliceIndex] = None,
-                    source_index: Optional[CenterSliceIndex] = None):
+                    index: CenterSliceIndex | None = None,
+                    source_index: CenterSliceIndex | None = None):
         # self._edges[0].copy_color(other.edg())
         self._replace_colors(other, (other.face, self.face), index=index, source_index=source_index)
 

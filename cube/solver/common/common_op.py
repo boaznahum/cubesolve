@@ -1,6 +1,6 @@
 import warnings
 from contextlib import contextmanager
-from typing import Callable, Generator, Sequence, Tuple, ContextManager, Optional
+from typing import Callable, Generator, Sequence, Tuple, ContextManager
 
 from cube.algs import Algs, Alg
 from cube.app.app_exceptions import InternalSWError
@@ -131,7 +131,7 @@ class CommonOp:
 
         return -1
 
-    def rotate_and_check_get_alg(self, alg: Alg, pred: Pred0) -> Optional[Alg]:
+    def rotate_and_check_get_alg(self, alg: Alg, pred: Pred0) -> Alg | None:
         """
         Rotate face and check condition
         :return the algorithm needed to fulfill the pred, or None if no such
@@ -191,7 +191,7 @@ class CommonOp:
 
         return alg * n
 
-    def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Optional[Alg]:
+    def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Alg | None:
         """
         Rotate face and check condition
         :return the algorithm needed to fulfill the pred, or None if no such

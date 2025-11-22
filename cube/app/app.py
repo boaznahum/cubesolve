@@ -1,4 +1,4 @@
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from cube import config
 from cube.algs import Alg
@@ -54,7 +54,7 @@ class _App(AbstractApp):
         return self._error
 
     @property
-    def am(self) -> Optional['AnimationManager']:
+    def am(self) -> 'AnimationManager | None':
         return self._am
 
     @property
