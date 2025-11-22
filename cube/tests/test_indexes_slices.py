@@ -9,7 +9,7 @@ def main() -> None:
 
     n = 8
 
-    app = AbstractApp.create_non_default(n)
+    app = AbstractApp.create_non_default(n, animation=False)
 
     cube = app.cube
 

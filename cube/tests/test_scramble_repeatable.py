@@ -13,7 +13,7 @@ def main() -> None:
 
     size = 6
 
-    app = AbstractApp.create_non_default(cube_size=size)
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     cube = Cube(size=size)
 
