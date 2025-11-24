@@ -4,7 +4,7 @@ Example: Simple GUI Test
 This example demonstrates how to run automated GUI tests for the Rubik's Cube solver.
 """
 
-from cube.tests.gui.GUITestRunner import GUITestRunner
+from cube.tests.gui.tester.GUITestRunner import GUITestRunner
 
 
 def example_basic_test():

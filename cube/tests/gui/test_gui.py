@@ -19,8 +19,8 @@ The test runner handles this automatically.
 
 import sys
 
-from cube.tests.gui.GUITestRunner import GUITestRunner
-from cube.tests.gui.GUITestResult import GUITestResult
+from cube.tests.gui.tester.GUITestRunner import GUITestRunner
+from cube.tests.gui.tester.GUITestResult import GUITestResult
 
 
 def test_scramble_and_solve(cube_size: int = 3, enable_animation: bool = True) -> GUITestResult:

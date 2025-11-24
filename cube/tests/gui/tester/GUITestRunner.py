@@ -29,8 +29,8 @@ import pyglet
 from cube import config
 from cube.app.abstract_ap import AbstractApp
 from cube.main_window.Window import Window
-from cube.tests.gui.GUITestResult import GUITestResult
-from cube.tests.gui.GUITestTimeout import GUITestTimeout
+from cube.tests.gui.tester.GUITestResult import GUITestResult
+from cube.tests.gui.tester.GUITestTimeout import GUITestTimeout
 
 
 class GUITestRunner:

@@ -7,7 +7,8 @@
       "WebFetch(domain:pyglet.readthedocs.io)",
       "Bash(git add:*)",
       "Bash(cat:*)",
-      "Bash(powershell -NoProfile -Command \"echo $PROFILE\")"
+      "Bash(powershell -NoProfile -Command \"echo $PROFILE\")",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": [
