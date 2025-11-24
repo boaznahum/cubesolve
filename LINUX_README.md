@@ -52,11 +52,14 @@ If `libGLU` is missing (common on WSL), install it:
 # Update package list
 sudo apt-get update
 
-# Install OpenGL Utility library
+# Install OpenGL Utility library (if not already installed)
 sudo apt-get install -y libglu1-mesa
 
-# Optional: Install additional GL development libraries
-sudo apt-get install -y libgl1-mesa-glx libgl1-mesa-dev
+# Optional: Install GL development libraries (only needed for compiling)
+sudo apt-get install -y libgl1-mesa-dev
+
+# Note: libgl1-mesa-glx is deprecated in Ubuntu 24.04+
+# It's been replaced by libgl1 which is usually pre-installed
 ```
 
 ### Verify Installation
