@@ -24,7 +24,7 @@ def _scramble(op: Operator, _scramble_key: Any, _n=None):
 
 
 def test1():
-    app = AbstractApp.create_non_default(config.CUBE_SIZE)
+    app = AbstractApp.create_non_default(config.CUBE_SIZE, animation=False)
     debug = False
     sizes = config.AGGRESSIVE_TEST_NUMBER_SIZES
     for size in sizes:
