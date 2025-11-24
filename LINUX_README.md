@@ -181,6 +181,100 @@ python3 cube/tests/test_cube.py
 
 Tests explicitly disable animation and don't require OpenGL/GUI libraries.
 
+## Performance Considerations
+
+### GPU Acceleration in WSL
+
+**Important**: WSL2 uses software rendering by default, which is significantly slower than native Windows.
+
+Check your OpenGL renderer:
+```bash
+python3 -c "
+import pyglet
+import pyglet.gl as gl
+import ctypes
+
+window = pyglet.window.Window(visible=False)
+renderer = gl.glGetString(gl.GL_RENDERER)
+print('GL Renderer:', ctypes.string_at(renderer).decode())
+window.close()
+"
+```
+
+If you see **"llvmpipe"** - you're using CPU software rendering (slow).
+If you see your GPU name (e.g., "NVIDIA", "AMD", "Intel") - you're using hardware acceleration (fast).
+
+### Enabling GPU Acceleration in WSL (Windows 11 only)
+
+WSL2 can use your Windows GPU with these steps:
+
+1. **Update to latest WSL**:
+```powershell
+# From Windows PowerShell (as Administrator)
+wsl --update
+wsl --shutdown
+```
+
+2. **Ensure you have Windows 11** with the latest updates
+
+3. **Install GPU drivers** (if not already installed):
+   - NVIDIA: Download latest driver from nvidia.com
+   - AMD: Download latest driver from amd.com
+   - Intel: Usually included in Windows updates
+
+4. **Verify GPU passthrough**:
+```bash
+# In WSL
+nvidia-smi  # For NVIDIA GPUs
+# Should show your GPU name and driver version
+```
+
+5. **Install mesa-utils for diagnostics**:
+```bash
+sudo apt-get install -y mesa-utils
+glxinfo | grep "OpenGL renderer"
+# If still showing "llvmpipe", continue to next step
+```
+
+6. **Force use of NVIDIA GPU** (if nvidia-smi works but pyglet still uses llvmpipe):
+
+The issue is that WSLg defaults to Mesa software rendering. To use NVIDIA:
+
+```bash
+# Method 1: Use __NV_PRIME_RENDER_OFFLOAD
+export __NV_PRIME_RENDER_OFFLOAD=1
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+python3 main_g.py
+
+# Method 2: Set in your shell profile
+echo 'export __NV_PRIME_RENDER_OFFLOAD=1' >> ~/.bashrc
+echo 'export __GLX_VENDOR_LIBRARY_NAME=nvidia' >> ~/.bashrc
+source ~/.bashrc
+```
+
+After setting these environment variables, re-check the renderer:
+```bash
+python3 -c "
+import pyglet, pyglet.gl as gl, ctypes
+w = pyglet.window.Window(visible=False)
+print('Renderer:', ctypes.string_at(gl.glGetString(gl.GL_RENDERER)).decode())
+w.close()
+"
+```
+
+If you see "NVIDIA" in the renderer name, hardware acceleration is working!
+
+### Performance Comparison
+
+- **Windows (hardware)**: 60 FPS, smooth rotation
+- **WSL + llvmpipe (software)**: 5-15 FPS, choppy rendering
+- **WSL + GPU passthrough (hardware)**: Similar to Windows
+
+If GPU acceleration doesn't work or isn't available:
+- **Recommended**: Run the GUI application directly on Windows (not in WSL)
+- **Alternative**: Use the console version (`main_c.py`) for development/testing
+- **Tests**: Run in WSL (they don't need GUI)
+
 ## Troubleshooting
 
 ### Error: "ImportError: Library 'GLU' not found"
