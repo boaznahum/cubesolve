@@ -6,7 +6,8 @@
       "WebSearch",
       "WebFetch(domain:pyglet.readthedocs.io)",
       "Bash(git add:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(powershell -NoProfile -Command \"echo $PROFILE\")"
     ],
     "deny": [],
     "ask": [

@@ -77,6 +77,10 @@ ANIMATION_TEXT: list[Tuple[int, int, int, Tuple[int, int, int, int], bool]] = [
 
 KEYBOAD_INPUT_DEBUG = False
 
+# GUI Testing mode - when enabled, exceptions in GUI loop propagate and app quits on error
+GUI_TEST_MODE = False
+QUIT_ON_ERROR_IN_TEST_MODE = True
+
 #  If true, model rotating is done by dragging and right mouse click, rotating faces/slicing by dragging left bottom
 #   or vice versa if FALSE
 INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM = True

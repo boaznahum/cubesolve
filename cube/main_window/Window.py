@@ -258,20 +258,32 @@ class Window(AbstractWindow, AnimationWindow):
         try:
             main_g_keyboard_input.handle_keyboard_input(self, symbol, modifiers)
 
-        except (AppExit, RunStop, OpAborted):
-            self.app.set_error("Asked to stop")
-            self.update_gui_elements()  # to create error label
+        except (AppExit, RunStop, OpAborted) as e:
+            # In test mode, AppExit should actually exit
+            if config.GUI_TEST_MODE and isinstance(e, AppExit):
+                self.close()
+                raise  # Re-raise to break event loop
+            else:
+                # Normal GUI mode - show error message
+                self.app.set_error("Asked to stop")
+                self.update_gui_elements()  # to create error label
 
         except Exception as e:
-            traceback.print_exc()
+            # In test mode, exceptions should propagate for test detection
+            if config.GUI_TEST_MODE and config.QUIT_ON_ERROR_IN_TEST_MODE:
+                self.close()
+                raise  # Re-raise for test harness to catch
+            else:
+                # Normal GUI mode - show error in GUI
+                traceback.print_exc()
 
-            m = str(e)
-            s = "Some error occurred:"
-            if m:
-                s += m
+                m = str(e)
+                s = "Some error occurred:"
+                if m:
+                    s += m
 
-            self.app.set_error(s)
-            self.update_gui_elements()  # to create error label
+                self.app.set_error(s)
+                self.update_gui_elements()  # to create error label
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         return main_g_mouse.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
@@ -284,6 +296,78 @@ class Window(AbstractWindow, AnimationWindow):
 
     def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
         return main_g_mouse.on_mouse_scroll(self, scroll_y)
+
+    def inject_key_sequence(self, sequence: str, process_events: bool = True):
+        """
+        Inject a keyboard sequence for automated testing.
+
+        Parameters
+        ----------
+        sequence : str
+            String of characters representing key presses.
+            Examples: "1/q" = scramble, solve, quit
+                     "rrr" = three R rotations
+                     "123q" = three different scrambles, then quit
+        process_events : bool, optional
+            If True, process pyglet events after each key (allows animations to run).
+            Default is True.
+
+        Examples
+        --------
+        >>> window.inject_key_sequence("1/q")  # Scramble, solve, quit
+        >>> window.inject_key_sequence("rrr")  # Three R moves
+        """
+        for char in sequence:
+            symbol = self._char_to_pyglet_key(char)
+            if symbol is not None:
+                self.on_key_press(symbol, 0)
+
+                if process_events:
+                    # Process pending events to allow animations/draws
+                    pyglet.app.platform_event_loop.step(0.0)
+
+    @staticmethod
+    def _char_to_pyglet_key(char: str) -> int | None:
+        """
+        Convert a character to a pyglet key symbol.
+
+        Parameters
+        ----------
+        char : str
+            Single character to convert
+
+        Returns
+        -------
+        int | None
+            Pyglet key symbol, or None if not recognized
+        """
+        # Map common characters to pyglet key constants
+        char_map = {
+            # Numbers
+            '0': key._0, '1': key._1, '2': key._2, '3': key._3, '4': key._4,
+            '5': key._5, '6': key._6, '7': key._7, '8': key._8, '9': key._9,
+
+            # Face rotations (uppercase)
+            'R': key.R, 'L': key.L, 'U': key.U, 'D': key.D, 'F': key.F, 'B': key.B,
+
+            # Face rotations (lowercase)
+            'r': key.R, 'l': key.L, 'u': key.U, 'd': key.D, 'f': key.F, 'b': key.B,
+
+            # Special commands
+            '/': key.SLASH,      # Solve
+            'q': key.Q, 'Q': key.Q,  # Quit
+            ' ': key.SPACE,      # Space
+            'a': key.A, 'A': key.A,  # Animation toggle
+            'i': key.I, 'I': key.I,  # Info
+            'w': key.W, 'W': key.W,  # View mode
+
+            # Special keys
+            ',': key.COMMA,      # Undo
+            '<': key.COMMA,      # Undo (shift+comma)
+            '[': key.BRACKETLEFT,   # Redo
+        }
+
+        return char_map.get(char)
 
     def draw_axis(self):
         GViewerExt.draw_axis(self.app.vs)
