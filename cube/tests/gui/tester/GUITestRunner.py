@@ -24,7 +24,7 @@ import threading
 import time
 import traceback
 
-import pyglet
+import pyglet  # type: ignore[import-untyped]
 
 from cube import config
 from cube.app.abstract_ap import AbstractApp
