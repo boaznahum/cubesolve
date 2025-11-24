@@ -4,7 +4,7 @@ Example: Simple GUI Test
 This example demonstrates how to run automated GUI tests for the Rubik's Cube solver.
 """
 
-from cube.tests.test_gui import run_gui_test, GUITestResult
+from cube.tests.gui.GUITestRunner import GUITestRunner
 
 
 def example_basic_test():
@@ -13,7 +13,7 @@ def example_basic_test():
     print("-" * 50)
 
     # Run test: Scramble with key '1', solve with '/', quit with 'q'
-    result = run_gui_test(
+    result = GUITestRunner.run_test(
         key_sequence="1/q",
         timeout_sec=60.0,
         cube_size=3,
@@ -40,7 +40,7 @@ def example_multiple_operations():
     print("-" * 50)
 
     # Run test: Multiple scrambles, then solve
-    result = run_gui_test(
+    result = GUITestRunner.run_test(
         key_sequence="123/q",  # Scramble 3 times, solve, quit
         timeout_sec=90.0,
         cube_size=3,
@@ -62,7 +62,7 @@ def example_4x4_test():
     print("\n\nExample 3: Testing on 4x4 cube")
     print("-" * 50)
 
-    result = run_gui_test(
+    result = GUITestRunner.run_test(
         key_sequence="1/q",
         timeout_sec=120.0,  # 4x4 takes longer to solve
         cube_size=4,
@@ -85,7 +85,7 @@ def example_with_animation():
     print("-" * 50)
     print("Note: This will be slower but animations will run")
 
-    result = run_gui_test(
+    result = GUITestRunner.run_test(
         key_sequence="1/q",
         timeout_sec=120.0,  # Longer timeout for animations
         cube_size=3,
@@ -108,7 +108,7 @@ def example_custom_moves():
     print("-" * 50)
 
     # Test a specific sequence of moves
-    result = run_gui_test(
+    result = GUITestRunner.run_test(
         key_sequence="rrrluuufq",  # R R R L U U U F, then quit
         timeout_sec=30.0,
         cube_size=3,

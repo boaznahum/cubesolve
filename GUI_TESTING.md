@@ -65,14 +65,14 @@ Supported characters:
 Complete testing framework with:
 
 ```python
-from cube.tests.test_gui import run_gui_test
+from cube.tests.gui.test_gui import run_gui_test
 
 result = run_gui_test(
-    key_sequence="1/q",      # Keys to inject
-    timeout_sec=60.0,        # Max execution time
-    cube_size=3,             # 3x3, 4x4, 5x5, etc.
+    key_sequence="1/q",  # Keys to inject
+    timeout_sec=60.0,  # Max execution time
+    cube_size=3,  # 3x3, 4x4, 5x5, etc.
     enable_animation=False,  # Speed up tests
-    debug=True               # Print debug info
+    debug=True  # Print debug info
 )
 
 if result.success:
@@ -124,7 +124,7 @@ python example_gui_test.py
 ### Run programmatically:
 
 ```python
-from cube.tests.test_gui import run_gui_test
+from cube.tests.gui.test_gui import run_gui_test
 
 # Simple test
 result = run_gui_test("1/q")
@@ -311,8 +311,9 @@ The GUI testing framework solves the original problem of exceptions being suppre
 ✓ Control animation and cube size for different test scenarios
 
 Example:
+
 ```python
-from cube.tests.test_gui import run_gui_test
+from cube.tests.gui.test_gui import run_gui_test
 
 # Test: Scramble with key 1, solve, quit - should complete without errors
 result = run_gui_test("1/q", timeout_sec=60.0, cube_size=3)
