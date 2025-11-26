@@ -4,6 +4,8 @@ pip
 mypy
 pyright
 
+pytest
+
 types-colorama
 types-keyboard
 

@@ -12,12 +12,16 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv1" />
       <excludeFolder url="file://$MODULE_DIR$/.venv313" />
       <excludeFolder url="file://$MODULE_DIR$/.venv314" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv314_2" />
     </content>
     <content url="file://$MODULE_DIR$/../../../temp/pyglet-1.5.23/pyglet-1.5.23/examples" />
-    <orderEntry type="jdk" jdkName="Python 3.14 (cubesolve)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.14 (cubesolve) (2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="renderExternalDocumentation" value="true" />
+  </component>
+  <component name="TestRunnerService">
+    <option name="PROJECT_TEST_RUNNER" value="py.test" />
   </component>
 </module>

@@ -1,39 +1,37 @@
+import pytest
+
 from cube.algs import Algs
 from cube.app.abstract_ap import AbstractApp
 from cube import config
-from cube.tests.test_utils import Tests
 
 
-def _test_for_size(n):
-    app = AbstractApp.create_non_default(n, animation=False)
+@pytest.fixture(autouse=True)
+def reset_sanity_config():
+    """Reset sanity config before each test to ensure clean state."""
+    original = config.CHECK_CUBE_SANITY
+    yield
+    config.CHECK_CUBE_SANITY = original
+
+
+@pytest.mark.parametrize("cube_size", [3, 5])
+@pytest.mark.parametrize("sanity_check", [True, False])
+def test_scramble_and_solve(cube_size: int, sanity_check: bool):
+    """Test that a scrambled cube can be solved correctly."""
+    config.CHECK_CUBE_SANITY = sanity_check
+
+    app = AbstractApp.create_non_default(cube_size, animation=False)
     cube = app.cube
-    alg2 = Algs.scramble(cube.size, 4)
-    alg2.play(cube)
-    rs = app.slv.solve()
-    assert cube.solved
-    print("** corner swap:", rs.was_corner_swap)
-    print("** even edge parity:", rs.was_even_edge_parity)
-    print("** partial edge parity:", rs.was_partial_edge_parity)
-    print("** count:", app.op.count)
 
+    alg = Algs.scramble(cube.size, 4)
+    alg.play(cube)
 
-def test1():
-    for sanity in [True, False]:
-        config.CHECK_CUBE_SANITY = sanity
-        print("Sanity:", sanity)
-        _test_for_size(3)
-        _test_for_size(5)
+    result = app.slv.solve()
 
-    print("All tests passed.")
+    assert cube.solved, f"Cube of size {cube_size} should be solved"
 
-
-tests: Tests = [test1]
-
-def main() -> None:
-    test1()
-
-
-
-
-if __name__ == '__main__':
-    main()
+    # Log solve details (visible with pytest -v)
+    print(f"\nCube size: {cube_size}, Sanity: {sanity_check}")
+    print(f"  corner swap: {result.was_corner_swap}")
+    print(f"  even edge parity: {result.was_even_edge_parity}")
+    print(f"  partial edge parity: {result.was_partial_edge_parity}")
+    print(f"  move count: {app.op.count}")

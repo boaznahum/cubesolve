@@ -4,6 +4,6 @@ pip==25.3
 pyglet==1.5.31
 PyYAML==6.0.3
 signature_dispatch==1.0.1
-typeguard==3.0.2
+typeguard==4.4.4
 typing_extensions==4.15.0
 vecrec==0.3.1
