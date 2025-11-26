@@ -11,7 +11,8 @@
       "Bash(git mv:*)",
       "Bash(python:*)",
       "Bash(dir /s /b *.py 2)",
-      "Bash(nul)"
+      "Bash(powershell -NoProfile -Command \"Write-Output $PROFILE\")",
+      "Bash(pwsh:*)"
     ],
     "deny": [],
     "ask": [
