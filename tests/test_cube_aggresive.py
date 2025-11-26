@@ -6,7 +6,7 @@ from cube import config
 from cube.algs import Algs
 from cube.app.abstract_ap import AbstractApp
 from cube.solver.solver_name import SolverName
-from cube.tests.tetser import TestRunner
+from tests.tetser import TestRunner
 
 
 @pytest.mark.slow

@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cubesolve"
+version = "0.1.0"
+description = "Rubik's Cube solver and visualizer"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Boaz Nahum", email = "boaznahum@gmail.com"}
+]
+keywords = ["rubiks-cube", "puzzle", "solver", "visualization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Games/Entertainment :: Puzzle Games",
+]
+
+dependencies = [
+    "pyglet>=1.5.0",
+    "numpy",
+    "PyYAML",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "mypy",
+    "pyright",
+    "types-colorama",
+    "types-keyboard",
+]
+
+[project.urls]
+Homepage = "https://github.com/boaznahum/cubesolve"
+Repository = "https://github.com/boaznahum/cubesolve"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cube*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "bug_*.py"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "benchmark: marks tests as benchmarks",
+]
+addopts = "--ignore=tests/gui"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pyright]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"

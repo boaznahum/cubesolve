@@ -12,7 +12,8 @@
       "Bash(python:*)",
       "Bash(dir /s /b *.py 2)",
       "Bash(powershell -NoProfile -Command \"Write-Output $PROFILE\")",
-      "Bash(pwsh:*)"
+      "Bash(pwsh:*)",
+      "Bash(powershell -NoProfile -Command \"Set-Location ''F:\\Dev\\code\\python\\cubesolve''; & ''.venv314\\Scripts\\python.exe'' -m pytest tests -v -m ''not slow'' --ignore=tests/gui 2>&1 | Select-Object -First 50\")"
     ],
     "deny": [],
     "ask": [

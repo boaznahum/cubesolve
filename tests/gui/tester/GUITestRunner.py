@@ -7,7 +7,7 @@ with keyboard input injection, timeout handling, and error detection.
 Usage
 -----
 Run a simple test:
-    from cube.tests.gui.GUITestRunner import GUITestRunner
+    from tests.gui.GUITestRunner import GUITestRunner
     result = GUITestRunner.run_test("1/q", timeout_sec=60.0)
 
 With custom configuration:
@@ -29,8 +29,8 @@ import pyglet  # type: ignore[import-untyped]
 from cube import config
 from cube.app.abstract_ap import AbstractApp
 from cube.main_window.Window import Window
-from cube.tests.gui.tester.GUITestResult import GUITestResult
-from cube.tests.gui.tester.GUITestTimeout import GUITestTimeout
+from tests.gui.tester.GUITestResult import GUITestResult
+from tests.gui.tester.GUITestTimeout import GUITestTimeout
 
 
 class GUITestRunner:

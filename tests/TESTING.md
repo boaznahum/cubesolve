@@ -20,16 +20,16 @@ pytest -v
 pytest -m ""
 
 # Run a specific test file
-pytest cube/tests/test_cube.py
+pytest tests/test_cube.py
 
 # Run a specific test function
-pytest cube/tests/test_cube.py::test_scramble_and_solve
+pytest tests/test_cube.py::test_scramble_and_solve
 
 # Run a specific test class
-pytest cube/tests/test_simplify.py::TestFlatten
+pytest tests/test_simplify.py::TestFlatten
 
 # Run a specific test method in a class
-pytest cube/tests/test_simplify.py::TestFlatten::test_flatten_slice_move
+pytest tests/test_simplify.py::TestFlatten::test_flatten_slice_move
 
 # Run tests matching a keyword/pattern
 pytest -k "scramble"           # runs tests with "scramble" in name
@@ -85,7 +85,7 @@ pytest --durations=10
 
 ### From PyCharm
 
-1. Right-click on `cube/tests` folder → "Run 'pytest in tests'"
+1. Right-click on `tests` folder → "Run 'pytest in tests'"
 2. Or use the run configurations:
    - **"pytest all tests"** - fast tests only
    - **"pytest all tests (with slow)"** - includes slow/benchmark tests
@@ -288,22 +288,32 @@ def test_exception_message():
         Cube(-1)
 ```
 
-## Project Test Structure
+## Project Structure
 
 ```
-cube/tests/
-├── TESTING.md              # This file
-├── pytest.ini              # Pytest configuration (in project root)
-├── test_cube.py            # Core cube tests
-├── test_boy.py             # BOY orientation tests
-├── test_simplify.py        # Algorithm simplification tests
-├── test_indexes_slices.py  # Slice operations tests
-├── test_scramble_repeatable.py  # Scramble repeatability
-├── test_alg_slice_sequence.py   # Slice syntax tests
-├── test_cube_aggresive.py  # Stress tests (marked slow)
-├── test_perf.py            # Benchmarks (marked slow)
-├── bug_sanity_on.py        # Sanity check tests
-└── gui/                    # GUI tests (separate, require display)
+cubesolve/
+├── cube/                   # Main package
+│   ├── algs/               # Algorithm definitions
+│   ├── app/                # Application logic
+│   ├── model/              # Cube model
+│   ├── solver/             # Solvers (beginner, CFOP)
+│   ├── viewer/             # GUI viewer
+│   └── ...
+├── tests/                  # Test directory (this folder)
+│   ├── TESTING.md          # This file
+│   ├── test_cube.py        # Core cube tests
+│   ├── test_boy.py         # BOY orientation tests
+│   ├── test_simplify.py    # Algorithm simplification tests
+│   ├── test_indexes_slices.py  # Slice operations tests
+│   ├── test_scramble_repeatable.py  # Scramble repeatability
+│   ├── test_alg_slice_sequence.py   # Slice syntax tests
+│   ├── test_cube_aggresive.py  # Stress tests (marked slow)
+│   ├── test_perf.py        # Benchmarks (marked slow)
+│   ├── bug_sanity_on.py    # Sanity check tests
+│   └── gui/                # GUI tests (separate, require display)
+├── pyproject.toml          # Project configuration
+├── pytest.ini              # Pytest configuration
+└── requirements*.txt       # Dependencies
 ```
 
 ## Configuration (pytest.ini)
@@ -312,7 +322,7 @@ The project's `pytest.ini` in the root directory:
 
 ```ini
 [pytest]
-testpaths = cube/tests          # Where to find tests
+testpaths = tests               # Where to find tests
 python_files = test_*.py bug_*.py  # Test file patterns
 python_functions = test_*       # Test function pattern
 
@@ -320,7 +330,22 @@ markers =
     slow: marks tests as slow
     benchmark: marks tests as benchmarks
 
-addopts = --ignore=cube/tests/gui  # Ignore GUI tests by default
+addopts = --ignore=tests/gui    # Ignore GUI tests by default
+```
+
+## Installing for Development
+
+To install the package in development mode (enables imports from anywhere):
+
+```powershell
+# Activate virtual environment
+.\.venv314\Scripts\Activate.ps1
+
+# Install in editable mode
+pip install -e .
+
+# Install with dev dependencies
+pip install -e ".[dev]"
 ```
 
 ## Common Patterns in This Project

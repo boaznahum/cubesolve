@@ -10,7 +10,7 @@ Run a simple test:
     python -m cube.tests.gui.test_gui
 
 Run with custom sequence:
-    from cube.tests.gui.gui_test_runner import GUITestRunner
+    from tests.gui.gui_test_runner import GUITestRunner
     result = GUITestRunner.run_test("123/q", timeout_sec=60.0)
 
 Note: Due to pyglet event loop limitations, each test should run in a fresh process.
@@ -19,8 +19,8 @@ The test runner handles this automatically.
 
 import sys
 
-from cube.tests.gui.tester.GUITestRunner import GUITestRunner
-from cube.tests.gui.tester.GUITestResult import GUITestResult
+from tests.gui.tester.GUITestRunner import GUITestRunner
+from tests.gui.tester.GUITestResult import GUITestResult
 
 
 def test_scramble_and_solve(cube_size: int = 3, enable_animation: bool = True) -> GUITestResult:
