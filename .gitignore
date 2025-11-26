@@ -1,3 +1,5 @@
 /.logs/
 __pycache__/
 /nul
+/build/
+/cubesolve.egg-info/

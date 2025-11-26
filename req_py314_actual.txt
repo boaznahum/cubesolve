@@ -1,9 +1,9 @@
+autoprop==4.1.0
 colorama==0.4.6
 numpy==2.3.5
-pip==25.3
 pyglet==1.5.31
 PyYAML==6.0.3
-signature_dispatch==1.0.1
+signature_dispatch==1.0.0
 typeguard==4.4.4
 typing_extensions==4.15.0
 vecrec==0.3.1

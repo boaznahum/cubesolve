@@ -28,9 +28,12 @@ classifiers = [
 ]
 
 dependencies = [
-    "pyglet>=1.5.0",
+    "pyglet>=1.5.0,<2.0",  # pyglet 2.x removed pyglet.gl.glu
     "numpy",
     "PyYAML",
+    "colorama",
+    "vecrec",
+    "typeguard>=4.4.0",  # override signature_dispatch's ~=3.0 constraint for Python 3.14 compatibility
 ]
 
 [project.optional-dependencies]
@@ -61,11 +64,11 @@ markers = [
 addopts = "--ignore=tests/gui"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
 
 [tool.pyright]
-pythonVersion = "3.10"
+pythonVersion = "3.14"
 typeCheckingMode = "basic"
