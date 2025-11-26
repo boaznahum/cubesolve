@@ -1,16 +1,14 @@
-from typing import Iterable, Any
+"""Tests for algorithm simplification and flattening."""
+import pytest
+from typing import Iterable
 
 from cube import config, algs as algs
 from cube.algs import Algs, Alg
 from cube.model.cube import Cube
-from cube.tests import test_utils
-from cube.tests.test_utils import Tests, Test
-
-if config.CHECK_CUBE_SANITY:
-    from cube.algs.SeqAlg import SeqSimpleAlg
 
 
 def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]):
+    """Compare two sequences of algorithms produce the same cube state."""
     cube = Cube(cube_size)
 
     for alg in algs1:
@@ -24,220 +22,165 @@ def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]
 
     s2 = cube.cqr.get_sate()
 
-    # print(f"{s1=}")
-    # print(f"{s2=}")
-
     assert cube.cqr.compare_states(s1, s2)
 
 
-def _compare_inv(cube_size: int, algs: Iterable[Alg]):
+def _compare_inv(cube_size: int, algs_list: Iterable[Alg]):
+    """Test that applying algorithms then their inverse returns to original state."""
     cube = Cube(cube_size)
 
     scramble = Algs.scramble(cube_size)
-
     scramble.play(cube)
 
     s1 = cube.cqr.get_sate()
 
-    for alg in algs:
+    for alg in algs_list:
         alg.play(cube)
 
-    inv = Algs.seq_alg(None, *algs).inv()
-
+    inv = Algs.seq_alg(None, *algs_list).inv()
     inv.play(cube)
-
-    # should return to same state
 
     assert cube.cqr.compare_state(s1)
 
 
-def __test_simplify(alg, cube_size) -> "SeqSimpleAlg" :
-    """
-    Check play alg then random sequence
-    Then compare it to alg + random simplified
-    """
-
+def _test_simplify(alg: Alg, cube_size: int):
+    """Test that simplifying an algorithm produces equivalent results."""
     cube = Cube(cube_size)
     scramble = Algs.scramble(cube.size, "1")
-    # alg = Algs.scramble("1")
 
     simplified = alg.simplify()
 
-    print("Alg=     ", alg.count_simple(), alg.to_printable())
-    print("simplify=", simplified.count_simple(), simplified.to_printable())
-    #
-    # print("Alg=     ", [*alg.algs])
-    # print("simplify=", [*simplified.algs])
-
     _compare_two_algs(cube_size, (scramble, alg), (scramble, simplified))
-
-    print("Simplify passed")
-    print("================================")
-
     _compare_inv(cube_size, (scramble, alg))
-
-    print("Inv passed")
-    print("================================")
 
     return simplified
 
 
-def __test_simplify_n(cube_size, seq_length: int | None, sanity_check: bool | None, seed: Any = None):
-    """
-
-    :param cube_size:
-    :param seq_length:
-    :param sanity_check: if none that :attr:`config.CHECK_CUBE_SANITY` will not modified
-    :return:
-    """
-    if sanity_check is not None:
-        config.CHECK_CUBE_SANITY = sanity_check
-    alg = Algs.scramble(cube_size, seq_length=seq_length, seed=seed)
-    __test_simplify(alg, cube_size)
-
-
-def test_simplify1():
-    cube_size = 8
-    seq_length = None
-    sanity_check = False
-
-    __test_simplify_n(cube_size, seq_length, sanity_check)
-
-def test_simplify2():
-    cube_size = 8
-    seq_length = None
-    sanity_check = False
-
-    alg = (Algs.R * 2).inv()
-
-    __test_simplify(alg, cube_size)
-
-    __test_flatten(alg, cube_size)
-
-
-def __test_flatten(alg, cube_size):
+def _test_flatten(alg: Alg, cube_size: int):
+    """Test that flattening an algorithm produces equivalent results."""
     config.CHECK_CUBE_SANITY = False
 
     cube = Cube(cube_size)
     scramble = Algs.scramble(cube.size, "1")
-    # alg = Algs.scramble("1")
-    print("Alg=", alg.count_simple(), alg.to_printable())
+
     scramble.play(cube)
     alg.play(cube)
     s1 = cube.cqr.get_sate()
-    flat = alg.flatten_alg()
-    #    flat = alg_s
 
-    print("flatten=", flat.count_simple(), flat.to_printable())
+    flat = alg.flatten_alg()
 
     cube.reset()
     scramble.play(cube)
     flat.play(cube)
 
     assert cube.cqr.compare_state(s1)
-    print("Passed")
-    print("================================")
-
-def _test_simplify_flatten(alg, cube_size):
-    __test_simplify(alg, cube_size)
-    __test_flatten(alg, cube_size)
 
 
-def test_flattern():
-    # Faild on [5:5]B
-    # [{good} [3:3]R [3:4]D S [2:2]L]
-
-    # cube_size = 5
-    # alg = Algs.R
-    #
-    # __test_flattern(alg, cube_size)
-    #
-
-    # ===============================
-    #
-    cube_size = 5
-    alg = Algs.M[2:2].prime * 2
-    __test_flatten(alg, cube_size)
-
-    # #---------------------------------
-    cube_size = 7
-
-    cube = Cube(cube_size)
-    inv = cube.inv
-
-    c = 2
-    cc = 4
-
-    rotate_on_cell = Algs.M[inv(c) + 1:inv(c) + 1]
-    rotate_on_second = Algs.M[inv(cc) + 1:inv(cc) + 1]
-
-    on_front_rotate = Algs.F.prime
-
-    r1_mul = 2
-
-    _algs = [rotate_on_cell.prime * r1_mul,
-             on_front_rotate,
-             rotate_on_second.prime * r1_mul,
-             on_front_rotate.prime,
-             rotate_on_cell * r1_mul,
-             on_front_rotate,
-             rotate_on_second * r1_mul,
-             on_front_rotate.prime]
-    #
-    # for a in _algs:
-    __test_flatten(algs.SeqAlg(None, *_algs), cube_size)
-    __test_flatten(algs.SeqAlg(None, *_algs).inv(), cube_size)
-    #
-    # a = Algs.B[1:cube.n_slices + 1]
-    # __test_flattern(a, cube_size)
-
-    a = Algs.scramble(cube_size, "aaa")
-    __test_flatten(a, cube_size)
-
-    a = Algs.R[1:2] + Algs.R[2:3]
-    _test_simplify_flatten(a, cube_size)
-
-    a = Algs.R[1:2] + Algs.R[1:2]
-    _test_simplify_flatten(a, cube_size)
-
-def test1():
-    # Faild on [5:5]B
-    # [{good} [3:3]R [3:4]D S [2:2]L]
-
-    cube = Cube(6)
-
-    alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]
-
-    _test_simplify_flatten(alg,cube.size)
-    alg = Algs.B[5:5]
-    _test_simplify_flatten(alg,cube.size)
-
-    alg = Algs.R[3:3]
-    _test_simplify_flatten(alg,cube.size)
+def _test_simplify_flatten(alg: Alg, cube_size: int):
+    """Test both simplify and flatten on an algorithm."""
+    _test_simplify(alg, cube_size)
+    _test_flatten(alg, cube_size)
 
 
-def test_total_simplify():
-    cube_size=5
-    alg = Algs.scramble(cube_size)
+class TestSimplify:
+    """Tests for algorithm simplification."""
 
-    print("test_total_simplify a-a==[]")
+    def test_simplify_random_sequence(self):
+        """Test simplification of a random sequence."""
+        cube_size = 8
+        config.CHECK_CUBE_SANITY = False
 
-    s = __test_simplify(alg - alg, cube_size)
+        alg = Algs.scramble(cube_size, seq_length=None, seed=None)
+        _test_simplify(alg, cube_size)
 
-    _compare_two_algs(cube_size, (Algs.no_op(),), (s,))
-    print("test_total_simplify a-a==[] passed")
+    def test_simplify_inverse(self):
+        """Test simplification of an inverse algorithm."""
+        cube_size = 8
+        config.CHECK_CUBE_SANITY = False
+
+        alg = (Algs.R * 2).inv()
+
+        _test_simplify(alg, cube_size)
+        _test_flatten(alg, cube_size)
 
 
+class TestFlatten:
+    """Tests for algorithm flattening."""
 
-tests: Tests = [
-    test_simplify1,
-    test_simplify2,
-    test_flattern,
-    test1,
-    test_total_simplify
+    def test_flatten_slice_move(self):
+        """Test flattening of slice moves."""
+        cube_size = 5
+        alg = Algs.M[2:2].prime * 2
+        _test_flatten(alg, cube_size)
 
-]
+    def test_flatten_complex_sequence(self):
+        """Test flattening of complex rotation sequences."""
+        cube_size = 7
 
-if __name__ == '__main__':
-    test_utils.run_tests(tests)
-    #__test_simplify_n(3, 100, True, seed=3)
+        cube = Cube(cube_size)
+        inv = cube.inv
+
+        c = 2
+        cc = 4
+
+        rotate_on_cell = Algs.M[inv(c) + 1:inv(c) + 1]
+        rotate_on_second = Algs.M[inv(cc) + 1:inv(cc) + 1]
+
+        on_front_rotate = Algs.F.prime
+
+        r1_mul = 2
+
+        _algs = [
+            rotate_on_cell.prime * r1_mul,
+            on_front_rotate,
+            rotate_on_second.prime * r1_mul,
+            on_front_rotate.prime,
+            rotate_on_cell * r1_mul,
+            on_front_rotate,
+            rotate_on_second * r1_mul,
+            on_front_rotate.prime
+        ]
+
+        _test_flatten(algs.SeqAlg(None, *_algs), cube_size)
+        _test_flatten(algs.SeqAlg(None, *_algs).inv(), cube_size)
+
+    def test_flatten_scramble(self):
+        """Test flattening of scramble algorithm."""
+        cube_size = 7
+        a = Algs.scramble(cube_size, "aaa")
+        _test_flatten(a, cube_size)
+
+    def test_flatten_adjacent_slices(self):
+        """Test flattening of adjacent slice combinations."""
+        cube_size = 7
+
+        a = Algs.R[1:2] + Algs.R[2:3]
+        _test_simplify_flatten(a, cube_size)
+
+        a = Algs.R[1:2] + Algs.R[1:2]
+        _test_simplify_flatten(a, cube_size)
+
+
+class TestSimplifyFlatten:
+    """Combined simplify and flatten tests."""
+
+    def test_complex_sequence(self):
+        """Test simplify/flatten on complex sequences."""
+        cube = Cube(6)
+
+        alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]
+        _test_simplify_flatten(alg, cube.size)
+
+        alg = Algs.B[5:5]
+        _test_simplify_flatten(alg, cube.size)
+
+        alg = Algs.R[3:3]
+        _test_simplify_flatten(alg, cube.size)
+
+    def test_total_simplify_inverse_cancels(self):
+        """Test that a - a simplifies to empty."""
+        cube_size = 5
+        alg = Algs.scramble(cube_size)
+
+        s = _test_simplify(alg - alg, cube_size)
+        _compare_two_algs(cube_size, (Algs.no_op(),), (s,))

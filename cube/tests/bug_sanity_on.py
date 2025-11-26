@@ -1,24 +1,19 @@
-from typing import Iterable
+"""Test for sanity check functionality."""
+import pytest
 
-from cube import config, algs as algs
-from cube.algs import Algs, Alg
+from cube import config
+from cube.algs import Algs
 from cube.model.cube import Cube
-from cube.tests.test_utils import Tests
 
 
-def test1():
-
+def test_sanity_check_enabled():
+    """Test basic operation with sanity check enabled."""
     config.CHECK_CUBE_SANITY = True
 
     cube = Cube(3)
 
     alg = Algs.U
-    print(alg)
     alg.play(cube)
 
-
-tests: Tests = [  test1 ]
-
-
-if __name__ == '__main__':
-    test1()
+    # If we get here without exception, sanity check passed
+    assert True
