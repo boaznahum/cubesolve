@@ -128,7 +128,7 @@ class CornerTracker(PartTracker[Corner]):
         :param corner:
         :return:
         """
-        return CornerTracker(corner.cube, corner.colors_id_by_pos)
+        return CornerTracker(corner.cube, corner.position_id)
 
     @staticmethod
     def of_many_by_position(corners: Iterable[Corner]) -> Sequence["CornerTracker"]:

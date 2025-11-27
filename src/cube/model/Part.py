@@ -201,7 +201,7 @@ class Part(ABC, CubeElement):
         """
         :return: true if part in position, ignoring orientation, position id same as color id
         """
-        return self.colors_id_by_pos == self.colors_id
+        return self.position_id == self.colors_id
 
     @property
     @abstractmethod

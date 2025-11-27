@@ -354,7 +354,7 @@ class Face(SuperElement, Hashable):
         assert n in range(1, 4)
 
         if n == 1:
-            if self.center.colors_id_by_pos == part_colors_id:
+            if self.center.position_id == part_colors_id:
                 return self.center
             else:
                 return None
@@ -380,14 +380,14 @@ class Face(SuperElement, Hashable):
     def find_edge_by_pos_colors(self, part_colors_id: PartColorsID) -> Edge | None:
         for p in self._edges:
 
-            if part_colors_id == p.colors_id_by_pos:
+            if part_colors_id == p.position_id:
                 return p
         return None
 
     def find_corner_by_pos_colors(self, part_colors_id: PartColorsID) -> Corner | None:
 
         for p in self._corners:
-            if part_colors_id == p.colors_id_by_pos:
+            if part_colors_id == p.position_id:
                 return p
         return None
 

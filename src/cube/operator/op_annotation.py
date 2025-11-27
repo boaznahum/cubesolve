@@ -117,7 +117,7 @@ class OpAnnotation:
                     _t = _t()
                 _text.append(_t)
             op.app_state.animation_text.push_heads(_text[0], _text[1], _text[2])
-        op.op(Algs.AN)
+        op.play(Algs.AN)
 
         try:
             yield None
@@ -177,7 +177,7 @@ class OpAnnotation:
                     remove_marker(e.c_attributes, marker)
                     del e.c_attributes[key]
 
-            op.op(Algs.AN)
+            op.play(Algs.AN)
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
                  h1=None,

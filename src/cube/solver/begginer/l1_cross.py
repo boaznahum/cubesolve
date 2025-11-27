@@ -34,7 +34,7 @@ class L1Cross(SolverElement):
         """
 
         wf: Face = self.white_face
-        return self.cmn.rotate_face_and_check(wf, self._is_cross) >= 0
+        return self.cqr.rotate_face_and_check(wf, self._is_cross) >= 0
 
     def solve(self):
 
@@ -44,11 +44,11 @@ class L1Cross(SolverElement):
         with self.ann.annotate(h1="Doing L1 Cross"):
 
             # before rotating
-            n = self.cmn.rotate_face_and_check(self.white_face, self._is_cross)
+            n = self.cqr.rotate_face_and_check(self.white_face, self._is_cross)
             if n >= 0:
                 if n > 0:
                     # the query solves by rotate  n, so we need
-                    self.op.op(self.cmn.face_rotate(self.white_face) * n)
+                    self.op.play(self.cmn.face_rotate(self.white_face) * n)
                 return
 
             self._bring_white_up()
@@ -130,7 +130,7 @@ class L1Cross(SolverElement):
         cmn: CommonOp = self.cmn
 
         # the required colors
-        target_colors_id = target_edge.colors_id_by_pos
+        target_colors_id = target_edge.position_id
 
         source_edge: Edge = cube.find_edge_by_color(target_colors_id)
 
@@ -148,13 +148,13 @@ class L1Cross(SolverElement):
 
             # Now bring it to adjusted face
             if wf.edge_right is source_edge:
-                self.op.op(Algs.R)  # move it R-B
+                self.op.play(Algs.R)  # move it R-B
             elif wf.edge_bottom is source_edge:
-                self.op.op(Algs.F)  # move it F-R
+                self.op.play(Algs.F)  # move it F-R
             elif wf.edge_left is source_edge:
-                self.op.op(Algs.L)  # move it F-L
+                self.op.play(Algs.L)  # move it F-L
             elif wf.edge_top is source_edge:
-                self.op.op(Algs.B)  # move it R-B
+                self.op.play(Algs.B)  # move it R-B
             else:
                 raise ValueError(f"{source_edge} is not U-R, U-F, U-L, nor U-B")
 
@@ -178,7 +178,7 @@ class L1Cross(SolverElement):
 
                 # bring target face to front by rotating all cube
                 cmn.bring_face_to_front_by_y_rotate(target_face)
-                assert target_colors_id == cube.front.edge_top.colors_id_by_pos
+                assert target_colors_id == cube.front.edge_top.position_id
 
                 st = self.__print_cross_status()
                 use(st)
@@ -194,11 +194,11 @@ class L1Cross(SolverElement):
                 # now source is on front so the target , and the target doesn't match, so we can rotate
 
                 if cube.front.edge_right is source_edge:
-                    self.op.op(Algs.F)
+                    self.op.play(Algs.F)
                     st = self.__print_cross_status()
                     use(st)
                 elif cube.front.edge_left is source_edge:
-                    self.op.op(-Algs.F)
+                    self.op.play(-Algs.F)
                     st = self.__print_cross_status()
                     use(st)
                 else:
@@ -206,7 +206,7 @@ class L1Cross(SolverElement):
 
                 if e_alg:
                     # bring centers to match the cross
-                    self.op.op(-e_alg)
+                    self.op.play(-e_alg)
                 st = self.__print_cross_status()
                 use(st)
 
@@ -237,8 +237,8 @@ class L1Cross(SolverElement):
 
         if source_face_on_edge.is_down:
             self.debug("L0X. C3.1", source_edge, "is on bottom", source_face_on_edge)
-            return self.op.op(Algs.F * 2)
+            return self.op.play(Algs.F * 2)
         else:
             assert source_face_on_edge.is_front
             self.debug("L0X. C3.2", source_edge, "is on front", source_face_on_edge)
-            return self.op.op(-Algs.F + - Algs.R + -Algs.D + Algs.R + Algs.F * 2)
+            return self.op.play(-Algs.F + - Algs.R + -Algs.D + Algs.R + Algs.F * 2)

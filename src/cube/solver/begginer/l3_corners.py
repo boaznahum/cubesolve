@@ -33,7 +33,7 @@ class L3Corners(SolverElement):
 
         yf: Face = self.white_face.opposite
 
-        return self.cmn.rotate_face_and_check(yf, self._is_solved) >= 0
+        return self.cqr.rotate_face_and_check(yf, self._is_solved) >= 0
 
     def solve(self):
 
@@ -95,7 +95,7 @@ class L3Corners(SolverElement):
 
                 for _ in [1, 1]:
                     if not yf.corner_bottom_left.in_position:
-                        self.op.op(self._ur)
+                        self.op.play(self._ur)
 
         if not Part.all_in_position(yf.corners):
             if self.cube.n_slices % 2 == 0:
@@ -124,17 +124,17 @@ class L3Corners(SolverElement):
             source = front_right.actual
 
             if yf.corner_top_right is source:
-                self.op.op(Algs.Y.prime)
-                self.op.op(self._ur.prime)
-                self.op.op(Algs.Y)
+                self.op.play(Algs.Y.prime)
+                self.op.play(self._ur.prime)
+                self.op.play(Algs.Y)
             elif yf.corner_top_left is source:
-                self.op.op(Algs.Y.prime)
-                self.op.op(self._ur)
-                self.op.op(Algs.Y)
+                self.op.play(Algs.Y.prime)
+                self.op.play(self._ur)
+                self.op.play(Algs.Y)
             elif yf.corner_bottom_left is source:
-                self.op.op(Algs.Y)
-                self.op.op(self._ur)
-                self.op.op(Algs.Y.prime)
+                self.op.play(Algs.Y)
+                self.op.play(self._ur)
+                self.op.play(Algs.Y.prime)
 
     @property
     def _ur(self) -> Alg:
@@ -154,13 +154,13 @@ class L3Corners(SolverElement):
         with self.ann.annotate((c, AnnWhat.Moved), (yf.corner_top_right, AnnWhat.FixedPosition)):
 
             if yf.corner_top_right is c:
-                return self.op.op(Algs.Y)
+                return self.op.play(Algs.Y)
 
             if yf.corner_top_left is c:
-                return self.op.op(Algs.Y * 2)
+                return self.op.play(Algs.Y * 2)
 
             if yf.corner_bottom_left is c:
-                return self.op.op(Algs.Y.prime)
+                return self.op.play(Algs.Y.prime)
 
         raise ValueError(f"Corner {c} is not on {yf}")
 
@@ -171,10 +171,10 @@ class L3Corners(SolverElement):
             with self.ann.annotate((yf.corner_bottom_right, AnnWhat.Both)):
                 # we can't check all_match because we rotate the cube
                 while not yf.corner_bottom_right.match_face(yf):
-                    self.op.op(Algs.alg(None, Algs.R.prime, Algs.D.prime, Algs.R, Algs.D) * 2)
+                    self.op.play(Algs.alg(None, Algs.R.prime, Algs.D.prime, Algs.R, Algs.D) * 2)
 
             # before U'
-            self.op.op(Algs.U.prime)
+            self.op.play(Algs.U.prime)
 
     def _do_corner_swap(self):
 
@@ -198,4 +198,4 @@ class L3Corners(SolverElement):
                        )
 
         with self.ann.annotate(h1="Corner swap(PLL Parity)"):
-            self.op.op(alg)
+            self.op.play(alg)

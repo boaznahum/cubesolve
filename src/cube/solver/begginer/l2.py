@@ -96,7 +96,7 @@ class L2(SolverElement):
             assert self.cube.front.edge_right is st.actual
 
             # replace it with something on top  todo: optimize, try to bring yellow edge
-            self.op.op(self._ur_alg)
+            self.op.play(self._ur_alg)
 
             assert st.actual.on_face(up)
 
@@ -125,7 +125,7 @@ class L2(SolverElement):
         else:
             alg = self._ul_alg
 
-        self.op.op(alg)
+        self.op.play(alg)
 
         assert st.match
 
@@ -152,15 +152,15 @@ class L2(SolverElement):
             return
 
         if front.edge_left is e:
-            return self.op.op(Algs.Y.prime)
+            return self.op.play(Algs.Y.prime)
 
         back: Face = self.cube.back
 
         if back.edge_left is e:
-            return self.op.op(Algs.Y)
+            return self.op.play(Algs.Y)
 
         if back.edge_right is e:
-            return self.op.op(Algs.Y * 2)
+            return self.op.play(Algs.Y * 2)
 
         raise ValueError(f"Edge {e} is not  middle(over U) slice")
 
@@ -172,13 +172,13 @@ class L2(SolverElement):
             return
 
         if cube.right.color == face_color:
-            return self.op.op(Algs.Y)
+            return self.op.play(Algs.Y)
 
         if cube.left.color == face_color:
-            return self.op.op(Algs.Y.prime)
+            return self.op.play(Algs.Y.prime)
 
         if cube.back.color == face_color:
-            return self.op.op(Algs.Y * 2)
+            return self.op.play(Algs.Y * 2)
 
         raise ValueError(f"Color {face_color} is not on F/R/L/B")
 
@@ -195,12 +195,12 @@ class L2(SolverElement):
             return
 
         if up.edge_left is e:
-            return self.op.op(Algs.U.prime)
+            return self.op.play(Algs.U.prime)
 
         if up.edge_right is e:
-            return self.op.op(Algs.U)
+            return self.op.play(Algs.U)
 
         if up.edge_top is e:
-            return self.op.op(Algs.U * 2)
+            return self.op.play(Algs.U * 2)
 
         raise ValueError(f"Edge {e} is not on {up}")

@@ -147,7 +147,7 @@ class CubeQueries2:
     def find_part_by_position(self, parts: Iterable[TPartType], position_id: PartColorsID) -> TPartType:
 
         for p in parts:
-            if p.colors_id_by_pos == position_id:
+            if p.position_id == position_id:
                 return p
 
         raise InternalSWError(f"Can't find part with color id {position_id}")

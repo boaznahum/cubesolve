@@ -20,7 +20,7 @@ class SolverElement(CubeSupplier):
                  "_cmn",
                  "_debug_prefix",
                  "_cube",
-                 "_qr"
+                 "_cqr"
                  ]
 
     _solver: BaseSolver

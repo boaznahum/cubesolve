@@ -142,7 +142,7 @@ class Operator:
                         print(f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
 
                     cube = self.cube
-                    op = self.op
+                    op = self.play
 
                     for a in algs:
                         # --> this will call me again, but animation will self, so we reach the else branch
@@ -184,10 +184,10 @@ class Operator:
 
         if inv:
             for alg in reversed(algs):
-                self.op(alg, True)
+                self.play(alg, True)
         else:
             for alg in algs:
-                self.op(alg, inv)
+                self.play(alg, inv)
 
     def undo(self, animation=True) -> Alg | None:
 
@@ -198,7 +198,7 @@ class Operator:
         if self.history():
             alg = self._history.pop()
             _history = [*self._history]
-            self.op(alg, True, animation=animation)
+            self.play(alg, True, animation=animation)
             # do not add to history !!! otherwise history will never shrink
             # because op may break big algs to steps, and add more than one , we can't just pop
             # self._history.pop()

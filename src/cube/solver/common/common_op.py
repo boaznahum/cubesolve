@@ -146,7 +146,7 @@ class CommonOp:
 
         warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
-        n = self.rotate_and_check(alg, pred)
+        n = self.cube.cqr.rotate_and_check(alg, pred)  # type: ignore[arg-type]  # deprecated backward compat
 
         if n >= 0:
             if n == 0:
@@ -172,7 +172,7 @@ class CommonOp:
 
         warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
-        return self.rotate_and_check(Algs.of_face(f.name), pred)
+        return self.cube.cqr.rotate_and_check(Algs.of_face(f.name), pred)
 
     @deprecated("Use CubeQueries2 instead")
     def rotate_face_and_check_get_alg_deprecated(self, f: Face, pred: Pred0) -> Alg:
@@ -191,7 +191,7 @@ class CommonOp:
         warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         alg = Algs.of_face(f.name)
-        n = self.rotate_and_check(alg, pred)
+        n = self.cube.cqr.rotate_and_check(alg, pred)
         assert n >= 0
 
         return alg * n
@@ -210,7 +210,7 @@ class CommonOp:
         warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
         alg = Algs.of_face(f.name)
-        n = self.rotate_and_check(alg, pred)
+        n = self.cube.cqr.rotate_and_check(alg, pred)
 
         if n >= 0:
             if n == 0:
@@ -294,7 +294,7 @@ class CommonOp:
                     case _:
                         raise InternalSWError(f"Unknown face {f}")
 
-                self.op.op(alg)
+                self.op.play(alg)
 
 
     def bring_face_front(self, f: Face):
@@ -314,19 +314,19 @@ class CommonOp:
                 match f.name:
 
                     case FaceName.U:
-                        self.op.op(Algs.X.prime)
+                        self.op.play(Algs.X.prime)
 
                     case FaceName.B:
-                        self.op.op(-Algs.X.prime * 2)
+                        self.op.play(-Algs.X.prime * 2)
 
                     case FaceName.D:
-                        self.op.op(Algs.X)
+                        self.op.play(Algs.X)
 
                     case FaceName.L:
-                        self.op.op(Algs.Y.prime)
+                        self.op.play(Algs.Y.prime)
 
                     case FaceName.R:
-                        self.op.op(Algs.Y)
+                        self.op.play(Algs.Y)
 
                     case _:
                         raise InternalSWError(f"Unknown face {f}")
@@ -344,12 +344,12 @@ class CommonOp:
 
         if cube.right.edge_right is edge:
             alg = -Algs.E
-            self.slv.op.op(alg)
+            self.slv.op.play(alg)
             return alg
 
         if cube.left.edge_left is edge:
             alg = Algs.E
-            self.slv.op.op(alg)
+            self.slv.op.play(alg)
             return alg
 
         raise ValueError(f"{edge} is not on E slice")
@@ -387,20 +387,20 @@ class CommonOp:
                     #     return  # nothing to do
 
                     if edge in cube.down.edges:
-                        self.op.op(Algs.X)  # Over R, now on front
+                        self.op.play(Algs.X)  # Over R, now on front
                         continue
 
                     elif edge in cube.back.edges:
-                        self.op.op(-Algs.X * 2)  # Over R, now on front
+                        self.op.play(-Algs.X * 2)  # Over R, now on front
 
                     elif edge in cube.up.edges:
-                        self.op.op(-Algs.X)  # Over R, now on front
+                        self.op.play(-Algs.X)  # Over R, now on front
 
                     elif edge in cube.right.edges:
-                        self.op.op(Algs.Y * 2)  # Over U, now on front
+                        self.op.play(Algs.Y * 2)  # Over U, now on front
 
                     elif edge in cube.left.edges:
-                        self.op.op(-Algs.Y)  # Over U, now on  front
+                        self.op.play(-Algs.Y)  # Over U, now on  front
 
                     else:
                         raise InternalSWError(f"Unknown case {edge}")
@@ -411,11 +411,11 @@ class CommonOp:
                         return s_tracker.the_slice_nl.parent  # nothing to do
 
                     if edge is cube.front.edge_top:
-                        self.op.op(Algs.Z.prime)
+                        self.op.play(Algs.Z.prime)
                     elif edge is cube.front.edge_right:
-                        self.op.op(Algs.Z * 2)
+                        self.op.play(Algs.Z * 2)
                     elif edge is cube.front.edge_bottom:
-                        self.op.op(Algs.Z)
+                        self.op.play(Algs.Z)
 
                     now_edge = s_tracker.the_slice_nl.parent
 
@@ -453,14 +453,14 @@ class CommonOp:
 
                 # ---------------------- on back --------------------
                 if edge is cube.back.edge_top:
-                    self.op.op(Algs.B.prime)  # now on right
+                    self.op.play(Algs.B.prime)  # now on right
                     continue
 
                 elif edge is cube.back.edge_right:
-                    self.op.op(Algs.B.prime * 2)  # now on right
+                    self.op.play(Algs.B.prime * 2)  # now on right
 
                 elif edge is cube.back.edge_bottom:
-                    self.op.op(Algs.B)  # now on right
+                    self.op.play(Algs.B)  # now on right
 
                 # back left is right
 
@@ -469,28 +469,28 @@ class CommonOp:
                 # up top and up right are on back/right - no need to handle
 
                 elif edge is cube.up.edge_left:
-                    self.op.op(Algs.U.prime * 2)  # now on right top
+                    self.op.play(Algs.U.prime * 2)  # now on right top
 
                 elif edge is cube.up.edge_bottom:
-                    self.op.op(Algs.U.prime)  # now on right top
+                    self.op.play(Algs.U.prime)  # now on right top
 
                 # ---------------------- front --------------------
                 elif edge is cube.front.edge_bottom:
-                    self.op.op(Algs.D)  # now on right bottom
+                    self.op.play(Algs.D)  # now on right bottom
 
                 elif edge is cube.left.edge_bottom:
-                    self.op.op(Algs.D.prime * 2)  # now on right bottom
+                    self.op.play(Algs.D.prime * 2)  # now on right bottom
 
                 # now handle on right
 
                 elif edge is cube.right.edge_bottom:
-                    self.op.op(Algs.R)  # now on front right
+                    self.op.play(Algs.R)  # now on front right
 
                 elif edge is cube.right.edge_right:
-                    self.op.op(Algs.R * 2)  # Over F, now on left
+                    self.op.play(Algs.R * 2)  # Over F, now on left
 
                 elif edge is cube.right.edge_top:
-                    self.op.op(Algs.R.prime)  # Over F, now on left
+                    self.op.play(Algs.R.prime)  # Over F, now on left
 
                 else:
 
@@ -507,13 +507,13 @@ class CommonOp:
             return  # nothing to do
 
         if face.is_left:
-            return self.slv.op.op(-Algs.Y)
+            return self.slv.op.play(-Algs.Y)
 
         if face.is_right:
-            return self.slv.op.op(Algs.Y)
+            return self.slv.op.play(Algs.Y)
 
         if face.is_back:
-            return self.slv.op.op(Algs.Y * 2)
+            return self.slv.op.play(Algs.Y * 2)
 
         raise ValueError(f"{face} must be L/R/F/B")
 
@@ -529,13 +529,13 @@ class CommonOp:
             return  # nothing to do
 
         if other.is_left:
-            return self.slv.op.op(Algs.D)
+            return self.slv.op.play(Algs.D)
 
         if other.is_right:
-            return self.slv.op.op(-Algs.D)
+            return self.slv.op.play(-Algs.D)
 
         if other.is_back:
-            return self.slv.op.op(Algs.D * 2)
+            return self.slv.op.play(Algs.D * 2)
 
         raise ValueError(f"{other} must be L/R/F/B")
 

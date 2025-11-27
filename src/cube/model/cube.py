@@ -1650,7 +1650,7 @@ class Cube(CubeSupplier):
         """
         for f in self.faces:
             center = f.center
-            if center.colors_id_by_pos is part_colors_id:
+            if center.position_id is part_colors_id:
                 return center
 
         raise ValueError(f"Cube doesn't contain center {str(part_colors_id)}")

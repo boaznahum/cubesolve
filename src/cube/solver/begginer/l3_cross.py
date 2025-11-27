@@ -33,7 +33,7 @@ class L3Cross(SolverElement):
 
         yf: Face = self.white_face.opposite
 
-        return self.cmn.rotate_face_and_check(yf, self._is_solved) >= 0
+        return self.cqr.rotate_face_and_check(yf, self._is_solved) >= 0
 
     def solve(self):
 
@@ -49,11 +49,11 @@ class L3Cross(SolverElement):
         # 'yellow' face
         yf: Face = self.white_face.opposite
 
-        n = self.cmn.rotate_face_and_check(yf, self._is_solved)
+        n = self.cqr.rotate_face_and_check(yf, self._is_solved)
         if n >= 0:
             if n > 0:
                 # the query solves by rotate  n, so we need
-                self.op.op(self.cmn.face_rotate(yf) * n)
+                self.op.play(self.cmn.face_rotate(yf) * n)
             return
 
         self.cmn.bring_face_up(self.white_face.opposite)
@@ -104,21 +104,21 @@ class L3Cross(SolverElement):
 
         if n == 0:
             with self.ann.annotate((yf.edges, AnnWhat.Moved)):
-                self.op.op(self._fur)  # --> |
-                self.op.op(Algs.U)  # --> -
-                self.op.op(self._fru)  # --> +
+                self.op.play(self._fur)  # --> |
+                self.op.play(Algs.U)  # --> -
+                self.op.play(self._fru)  # --> +
             return
 
         if n == 2:
             if left and right:  # -
                 with self.ann.annotate(([yf.edge_top, yf.edge_bottom], AnnWhat.Moved)):
-                    self.op.op(self._fru)  # --> +
+                    self.op.play(self._fru)  # --> +
 
                 return
             elif top and bottom:  # |
                 with self.ann.annotate(([yf.edge_right, yf.edge_left], AnnWhat.Moved)):
-                    self.op.op(Algs.U)  # --> -
-                    self.op.op(self._fru)  # --> +
+                    self.op.play(Algs.U)  # --> -
+                    self.op.play(self._fru)  # --> +
                 return
 
             else:
@@ -127,16 +127,16 @@ class L3Cross(SolverElement):
                 if left and top:
                     pass
                 elif top and right:
-                    self.op.op(Algs.U.prime)  # --> -
+                    self.op.play(Algs.U.prime)  # --> -
                 elif right and bottom:
-                    self.op.op(Algs.U * 2)  # --> -
+                    self.op.play(Algs.U * 2)  # --> -
                 elif bottom and left:
-                    self.op.op(Algs.U)  # --> -
+                    self.op.play(Algs.U)  # --> -
                 else:
                     ValueError(f"Unrecognized {left=} {top=} {right=} {bottom=} ")
 
                 with self.ann.annotate(([yf.edge_bottom, yf.edge_right], AnnWhat.Moved)):
-                    self.op.op(self._fur)  # op L | --> +
+                    self.op.play(self._fur)  # op L | --> +
                 return
 
     def _do_cross_position(self):
@@ -161,19 +161,19 @@ class L3Cross(SolverElement):
             if yf.edge_left is top.actual:
                 with self.ann.annotate(([yf.edge_left, yf.edge_top], AnnWhat.Moved)):
                     # need to swap top and left
-                    self.op.op(Algs.U.prime)
-                    self.op.op(self._ru)
-                    self.op.op(Algs.U)
+                    self.op.play(Algs.U.prime)
+                    self.op.play(self._ru)
+                    self.op.play(Algs.U)
             else:
                 # it is on bottom
                 # need to swap bottom and left , then top and left
                 with self.ann.annotate(([yf.edge_left, yf.edge_bottom], AnnWhat.Moved)):
-                    self.op.op(self._ru)
+                    self.op.play(self._ru)
 
                 with self.ann.annotate(([yf.edge_top, yf.edge_right], AnnWhat.Moved)):
-                    self.op.op(Algs.U.prime)
-                    self.op.op(self._ru)
-                    self.op.op(Algs.U)
+                    self.op.play(Algs.U.prime)
+                    self.op.play(self._ru)
+                    self.op.play(Algs.U)
 
             assert top.match
 
@@ -181,7 +181,7 @@ class L3Cross(SolverElement):
         if not yf.edge_left.match_faces:
             # need to swap bottom and left
             with self.ann.annotate(([yf.edge_bottom, yf.edge_left], AnnWhat.Moved)):
-                self.op.op(self._ru)
+                self.op.play(self._ru)
 
             assert yf.edge_left.match_faces
 
@@ -209,15 +209,15 @@ class L3Cross(SolverElement):
         up: Face = self.cube.up
 
         if up.edge_bottom is e:
-            return self.op.op(Algs.U.prime)
+            return self.op.play(Algs.U.prime)
 
         if up.edge_left is e:
-            return self.op.op(Algs.U * 2)
+            return self.op.play(Algs.U * 2)
 
         if up.edge_right is e:
             return
 
         if up.edge_top is e:
-            return self.op.op(Algs.U)
+            return self.op.play(Algs.U)
 
         raise ValueError(f"Edge {e} is not on {up}")

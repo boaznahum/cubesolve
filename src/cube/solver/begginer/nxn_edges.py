@@ -232,10 +232,10 @@ class NxNEdges(SolverElement):
 
             slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
 
-            self.op.op(slice_alg)  # move me to opposite E begin from D, slice begin with 1
-            self.op.op(self.rf)
+            self.op.play(slice_alg)  # move me to opposite E begin from D, slice begin with 1
+            self.op.play(self.rf)
             # bring them back
-            self.op.op(slice_alg.prime)  # move me to opposite E begin from D, slice begin with 1
+            self.op.play(slice_alg.prime)  # move me to opposite E begin from D, slice begin with 1
 
         for i in slices_to_fix:
             assert self._get_slice_ordered_color(face, edge.get_slice(inv(i))) == ordered_color
@@ -269,7 +269,7 @@ class NxNEdges(SolverElement):
                 # is there one that can be sliced ?
 
                 if not any(self._get_slice_ordered_color(face, s) == ordered_color for s in edge_right.all_slices):
-                    self.op.op(self.rf)
+                    self.op.play(self.rf)
 
                 self._fix_many_from_other_edges_same_order(face, edge, ordered_color, color_un_ordered)
 
@@ -340,10 +340,10 @@ class NxNEdges(SolverElement):
 
             # for target_index in target_indices:
             #     # slice me
-            self.op.op(slice_alg)  # slice begin with 1
-            self.op.op(self.rf)
+            self.op.play(slice_alg)  # slice begin with 1
+            self.op.play(self.rf)
             # for target_index in target_indices:
-            self.op.op(slice_alg.prime)
+            self.op.play(slice_alg.prime)
 
         for target_index in target_indices:
             assert self._get_slice_ordered_color(face, edge.get_slice(target_index)) == ordered_color
@@ -377,7 +377,7 @@ class NxNEdges(SolverElement):
             assert edge is face.edge_left
             # todo: optimize it , use directly bring to up
             assert  edge is cube.fl
-            self.op.op(Algs.F)
+            self.op.play(Algs.F)
 
             # not true on even, edge is OK
             # assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top

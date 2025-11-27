@@ -420,7 +420,7 @@ def _handle_slice_on_corner_adjusted_face(slice_face: Face,
 def _play(window: AbstractWindow, alg: Alg):
     op = window.app.op
 
-    op.op(alg)
+    op.play(alg)
     # why I need that
     if not op.animation_enabled:
         window.update_gui_elements()
@@ -436,7 +436,7 @@ def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bo
 
         op = window.app.op
 
-        op.op(alg)
+        op.play(alg)
         # why I need that
         if not op.animation_enabled:
             window.update_gui_elements()

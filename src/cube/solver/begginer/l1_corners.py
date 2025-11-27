@@ -30,7 +30,7 @@ class L1Corners(SolverElement):
 
         wf: Face = self.white_face
 
-        return self.cmn.rotate_face_and_check(wf, self._is_corners) >= 0
+        return self.cqr.rotate_face_and_check(wf, self._is_corners) >= 0
 
     def solve(self):
         """
@@ -82,7 +82,7 @@ class L1Corners(SolverElement):
         # target corner
         def tc() -> Corner:
             nonlocal _target_corner
-            if not _target_corner or _target_corner.colors_id_by_pos != corner_id:
+            if not _target_corner or _target_corner.position_id != corner_id:
                 _target_corner = self.cube.find_corner_by_pos_colors(corner_id)
             return _target_corner
 
@@ -106,14 +106,14 @@ class L1Corners(SolverElement):
         # is the white is on the down
         if sc().f_color(wf.opposite) == wf.color:
             self.debug(f"LO-Corners C3.  {wf.color} is on bottom")
-            self.op.op(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
+            self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
             assert self.cube.front.corner_bottom_right is sc()
             assert sc().f_color(wf.opposite) != wf.color
 
         if sc().f_color(wf.cube.front) == wf.color:
-            self.op.op(Algs.D.prime + Algs.R.prime + Algs.D + Algs.R)
+            self.op.play(Algs.D.prime + Algs.R.prime + Algs.D + Algs.R)
         else:
-            self.op.op(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)
+            self.op.play(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)
 
         assert sc().match_faces
 
@@ -132,13 +132,13 @@ class L1Corners(SolverElement):
             return
 
         if wf.corner_top_right is c:
-            return self.op.op(Algs.Y)
+            return self.op.play(Algs.Y)
 
         if wf.corner_top_left is c:
-            return self.op.op(Algs.Y * 2)
+            return self.op.play(Algs.Y * 2)
 
         if wf.corner_bottom_left is c:
-            return self.op.op(-Algs.Y)
+            return self.op.play(-Algs.Y)
 
         raise ValueError(f"{c} is not on {wf}")
 
@@ -157,16 +157,16 @@ class L1Corners(SolverElement):
         saved_id = c.colors_id
 
         if wf.corner_bottom_right is c:
-            self.op.op(-Algs.R + -Algs.D + Algs.R)
+            self.op.play(-Algs.R + -Algs.D + Algs.R)
 
         elif wf.corner_top_right is c:
-            self.op.op(-Algs.B + -Algs.D + Algs.B)
+            self.op.play(-Algs.B + -Algs.D + Algs.B)
 
         elif wf.corner_top_left is c:
-            self.op.op(Algs.B + -Algs.D + - Algs.B)
+            self.op.play(Algs.B + -Algs.D + - Algs.B)
 
         elif wf.corner_bottom_left is c:
-            self.op.op(-Algs.F + -Algs.D + Algs.F)
+            self.op.play(-Algs.F + -Algs.D + Algs.F)
 
         else:
             raise ValueError(f"{c} is not on {wf}")
@@ -189,13 +189,13 @@ class L1Corners(SolverElement):
             pass  # nothing to do
 
         elif f.corner_bottom_right is c:
-            self.op.op(-Algs.D)
+            self.op.play(-Algs.D)
 
         elif f.corner_bottom_left is c:
-            self.op.op(-Algs.D * 2)
+            self.op.play(-Algs.D * 2)
 
         elif f.corner_top_left is c:
-            self.op.op(Algs.D)
+            self.op.play(Algs.D)
 
         else:
             raise ValueError(f"{c} is not on {f}")
