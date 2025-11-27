@@ -71,15 +71,15 @@ package "src/cube" {
     }
 
     ' ============================================
-    ' VIEWER (🔄 migration in progress)
+    ' VIEWER (✅ migrated)
     ' ============================================
-    package "viewer 🔄" as viewer_pkg #FFFFE0 {
+    package "viewer ✅" as viewer_pkg #90EE90 {
         component [GCubeViewer\n+renderer param ✅] as gviewer_comp
-        component [_Board\n+renderer param ✅\ngl.* calls ⏳] as board_comp
-        component [_Cell\n+renderer prop ✅\ndisplay_lists 🔄\nshapes.* ⏳] as cell_comp
+        component [_Board\n+renderer param ✅\n+call_lists ✅] as board_comp
+        component [_Cell\n+renderer prop ✅\n+display_lists ✅\n+shapes.* ✅] as cell_comp
         component [_FaceBoard\n+board prop ✅] as faceboard_comp
 
-        component [shapes.py ⏳\n(DELETE after migration)] as shapes_comp #FFB6C1
+        component [shapes.py\n(fallback only)] as shapes_comp #FFFFE0
         component [texture.py ⏳\n(Move to renderer)] as texture_comp #FFB6C1
         component [gl_helper.py ⏳] as glhelper_comp #FFB6C1
     }
@@ -111,7 +111,8 @@ package "src/cube" {
     ' ============================================
     ' ENTRY POINTS
     ' ============================================
-    component [main_g.py ⏳\n(should use create_gui)] as main_g #FFFFE0
+    component [main_g.py ✅\n(uses BackendRegistry)] as main_g #90EE90
+    component [Window ✅\n(passes renderer)] as win_entry #90EE90
     component [main_c.py ✅\n(no GUI)] as main_c #90EE90
 }
 
@@ -165,10 +166,11 @@ app_comp --> state_comp
 win_comp ..> window_proto : should use
 win_comp ..> loop_proto : should use
 
-' Entry point should use factory (pending)
-main_g ..> factory_comp : should use create_gui()
+' Entry point uses factory (✅ done)
+main_g --> factory_comp : "✅ create_renderer()"
+main_g --> win_entry : "✅ passes renderer"
+win_entry --> gviewer_comp : "✅ passes renderer"
 main_g --> app_comp
-main_g --> gviewer_comp
 
 ' External dependencies (ONLY in pyglet backend after migration)
 pyg_renderer --> pyglet_ext
@@ -180,11 +182,11 @@ tk_renderer --> tk_ext
 tk_window --> tk_ext
 tk_loop --> tk_ext
 
-' Current problematic dependencies (to be removed)
-shapes_comp --> gl_ext : ⚠️ remove
-texture_comp --> gl_ext : ⚠️ remove
-state_comp --> gl_ext : ⚠️ remove
-win_comp --> pyglet_ext : ⚠️ remove
+' Fallback dependencies (used when no renderer)
+shapes_comp ..> gl_ext : fallback only
+texture_comp --> gl_ext : ⚠️ pending
+state_comp --> gl_ext : ⚠️ pending
+win_comp --> pyglet_ext : some GL calls
 
 ' Notes
 note right of headless_pkg
@@ -200,8 +202,16 @@ note bottom of proto_pkg
 end note
 
 note bottom of shapes_comp
-    Will be DELETED
-    after migration complete
+    Fallback only
+    Used when renderer=None
+end note
+
+note right of viewer_pkg
+    ✅ Viewer fully migrated
+    Uses renderer.shapes.*
+    Uses renderer.display_lists.*
+    Falls back to direct GL
+    when renderer is None
 end note
 
 @enduml

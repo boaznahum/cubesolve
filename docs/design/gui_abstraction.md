@@ -782,40 +782,70 @@ class TkinterShapeRenderer:
 | Backend tests | ✅ Done | `tests/backends/` with --backend option |
 | Texture support | ✅ Done | load_texture(), bind_texture(), quad_with_texture() |
 | Renderer in viewer hierarchy | ✅ Done | GCubeViewer → _Board → _FaceBoard → _Cell |
+| main_g.py | ✅ Done | Uses BackendRegistry.create_renderer() |
+| main_window/Window.py | ✅ Done | Accepts renderer parameter, passes to viewer |
+| viewer/_cell.py (display lists) | ✅ Done | Uses renderer.display_lists.* |
+| viewer/_cell.py (shapes) | ✅ Done | Uses renderer.shapes.* with fallback |
+| viewer/_board.py | ✅ Done | Uses renderer.display_lists.call_lists() |
 
-### In Progress 🔄
+### Renderer Flow (✅ Implemented)
+
+The renderer flows through the application hierarchy as follows:
+
+```
+main_g.py
+    │
+    ├── renderer = BackendRegistry.create_renderer()
+    │
+    └── Window(app, 720, 720, title, renderer=renderer)
+            │
+            ├── renderer.setup()  # Initialize OpenGL state
+            │
+            └── GCubeViewer(batch, cube, vs, renderer=renderer)
+                    │
+                    └── _Board(cube, batch, vs, renderer=renderer)
+                            │
+                            └── _FaceBoard(self, ...)  # stores ref to _Board
+                                    │
+                                    └── _Cell(self, batch)
+                                            │
+                                            └── @property _renderer
+                                                    return self._face_board.board.renderer
+```
+
+**Access Pattern:**
+- `_Cell` accesses the renderer via: `self._face_board.board.renderer`
+- All shape rendering uses `renderer.shapes.*` when renderer is available
+- All display list operations use `renderer.display_lists.*` when renderer is available
+- Falls back to direct OpenGL calls when no renderer is provided (backward compatibility)
+
+**See also:** `docs/design/renderer_flow.puml` for sequence diagram
+
+### Pending (Fallback Code) ⏳
+
+These files still contain fallback OpenGL code that is used when no renderer is provided:
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| _cell.py migration | 🔄 Partial | Display list create/delete use Renderer, shapes still use direct GL |
-
-### Pending ⏳
-
-| Component | Status | Files |
-|-----------|--------|-------|
-| viewer/shapes.py | ⏳ Pending | Will be replaced by renderer.shapes |
-| viewer/_cell.py (shapes) | ⏳ Pending | shapes.* calls need migration |
-| viewer/_board.py | ⏳ Pending | gl.glCallLists needs migration |
+| viewer/shapes.py | ⏳ Fallback | Used when renderer is None, can be deleted once migration complete |
 | viewer/texture.py | ⏳ Pending | Move to renderer.load_texture() |
 | app/app_state.py | ⏳ Pending | GL matrix/projection calls |
 | animation/animation_manager.py | ⏳ Pending | Use AnimationBackend protocol |
-| main_window/Window.py | ⏳ Pending | Use Window protocol |
-| main_g.py | ⏳ Pending | Use create_gui() |
 
 ### OpenGL Usage Locations
 
-Files that still contain direct OpenGL calls (should only be in `gui/backends/pyglet/`):
+Files that still contain direct OpenGL calls (in addition to `gui/backends/pyglet/`):
 
-| File | GL Calls | Migration Target |
-|------|----------|------------------|
-| `viewer/_cell.py` | ~60 | renderer.shapes.*, renderer.display_lists.* |
-| `viewer/_board.py` | ~5 | renderer.display_lists.call_lists() |
-| `viewer/shapes.py` | ~100 | **DELETE** - replaced by renderer.shapes |
-| `viewer/texture.py` | ~20 | renderer.load_texture() |
-| `viewer/gl_helper.py` | ~10 | renderer.view.* or delete |
-| `app/app_state.py` | ~30 | renderer.view.* |
-| `animation/animation_manager.py` | ~5 | AnimationBackend protocol |
-| `main_window/Window.py` | ~10 | Window protocol |
+| File | GL Calls | Notes |
+|------|----------|-------|
+| `viewer/_cell.py` | ~30 | Fallback path when no renderer |
+| `viewer/_board.py` | ~3 | Fallback path when no renderer |
+| `viewer/shapes.py` | ~100 | Fallback functions, can be deleted |
+| `viewer/texture.py` | ~20 | Move to renderer.load_texture() |
+| `viewer/gl_helper.py` | ~10 | Delete after migration |
+| `app/app_state.py` | ~30 | Move to renderer.view.* |
+| `animation/animation_manager.py` | ~5 | Use AnimationBackend protocol |
+| `main_window/Window.py` | ~10 | Some direct GL for text/axis |
 
 ---
 

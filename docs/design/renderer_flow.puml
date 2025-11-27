@@ -1,0 +1,128 @@
+@startuml Renderer Flow
+
+title Renderer Flow Through Application Hierarchy
+footer Last Updated: 2025-11-27
+
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+participant "main_g.py" as main
+participant "BackendRegistry" as registry
+participant "PygletRenderer" as renderer
+participant "Window\n(main_window)" as window
+participant "GCubeViewer" as viewer
+participant "_Board" as board
+participant "_FaceBoard" as faceboard
+participant "_Cell" as cell
+
+== Initialization ==
+
+main -> registry : create_renderer()
+activate registry
+registry -> renderer : PygletRenderer()
+activate renderer
+renderer --> registry : renderer
+deactivate renderer
+registry --> main : renderer
+deactivate registry
+
+main -> main : AbstractApp.create()
+
+main -> window : Window(app, 720, 720, title, **renderer**)
+activate window
+
+window -> renderer : setup()
+note right: Initializes OpenGL state:\nglClearColor, glEnable(GL_DEPTH_TEST)
+
+window -> viewer : GCubeViewer(batch, cube, vs, **renderer**)
+activate viewer
+
+viewer -> board : _Board(cube, batch, vs, **renderer**)
+activate board
+
+board -> faceboard : _FaceBoard(self, ...)
+activate faceboard
+note right
+  _FaceBoard stores reference
+  to _Board via self._board
+
+  Accesses renderer via:
+  self._board.renderer
+end note
+
+faceboard -> cell : _Cell(self, batch)
+activate cell
+note right
+  _Cell accesses renderer via property:
+
+  @property
+  def _renderer(self):
+    return self._face_board.board.renderer
+end note
+
+deactivate cell
+deactivate faceboard
+deactivate board
+deactivate viewer
+deactivate window
+
+== Rendering (on_draw) ==
+
+main -> window : pyglet.app.run()
+activate window
+
+window -> window : on_draw()
+window -> viewer : draw()
+activate viewer
+
+viewer -> board : draw()
+activate board
+
+board -> board : _prepare_view_state()
+
+alt renderer is not None
+  board -> renderer : display_lists.call_lists(lists)
+  activate renderer
+  renderer -> renderer : glCallList() for each
+  deactivate renderer
+else renderer is None (fallback)
+  board -> board : gl.glCallLists(n, GL_INT, array)
+  note right: Direct OpenGL fallback
+end
+
+board -> board : _restore_view_state()
+
+deactivate board
+deactivate viewer
+deactivate window
+
+== Shape Rendering (inside display list compile) ==
+
+cell -> cell : _update_polygon()
+activate cell
+
+alt renderer is not None
+  cell -> renderer : shapes.quad_with_border(points, color, lw, lc)
+  activate renderer
+  renderer -> renderer : gl.glBegin(GL_QUADS)...
+  deactivate renderer
+
+  cell -> renderer : shapes.cross(points, width, color)
+  activate renderer
+  renderer -> renderer : gl.glBegin(GL_LINES)...
+  deactivate renderer
+
+  cell -> renderer : shapes.full_cylinder(p1, p2, r_out, r_in, color)
+  activate renderer
+  renderer -> renderer : gluCylinder(), gluDisk()
+  deactivate renderer
+else renderer is None (fallback)
+  cell -> cell : shapes.quad_with_line(...)
+  cell -> cell : shapes.cross(...)
+  cell -> cell : shapes.full_cylinder(...)
+  note right: Falls back to viewer/shapes.py\n(direct OpenGL calls)
+end
+
+deactivate cell
+
+@enduml

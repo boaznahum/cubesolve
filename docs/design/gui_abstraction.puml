@@ -301,9 +301,9 @@ package "cube.gui.backends.tkinter" as tkinter_backend #Wheat {
 }
 
 ' ============================================
-' VIEWER LAYER (migration in progress)
+' VIEWER LAYER (✅ migrated)
 ' ============================================
-package "cube.viewer" as viewer #FFFFE0 {
+package "cube.viewer ✅" as viewer #90EE90 {
     class GCubeViewer {
         -_renderer: Renderer | None
         -_board: Board
@@ -314,7 +314,8 @@ package "cube.viewer" as viewer #FFFFE0 {
     class "_Board" as Board {
         -_renderer: Renderer | None
         -_faces: FaceBoard[6]
-        ' 🔄 Still has gl.glCallLists
+        +renderer: property
+        ' ✅ Uses renderer.display_lists.call_lists()
     }
 
     class "_FaceBoard" as FaceBoard {
@@ -323,17 +324,17 @@ package "cube.viewer" as viewer #FFFFE0 {
     }
 
     class "_Cell" as Cell {
-        -_renderer: Renderer | None
+        +_renderer: property
         -gl_lists_movable: dict
         -gl_lists_unmovable: dict
-        ' 🔄 Partial: display_lists migrated
-        ' ⏳ Pending: shapes.* calls
+        ' ✅ display_lists migrated
+        ' ✅ shapes.* migrated
     }
 
     note right of Cell
-        🔄 Migration in progress
-        Display list create/delete
-        now use renderer
+        ✅ Fully migrated
+        Uses renderer.shapes.*
+        with fallback to direct GL
     end note
 
     GCubeViewer *-- Board
@@ -374,9 +375,16 @@ package "Pending Migration" as pending #FFB6C1 {
 ' ENTRY POINTS
 ' ============================================
 package "Entry Points" as entry #Lavender {
-    class "main_g.py" as main_g {
+    class "main_g.py ✅" as main_g {
         +main(backend=None)
-        ' ⏳ Needs to use create_gui()
+        ' ✅ Uses BackendRegistry.create_renderer()
+        ' ✅ Passes renderer to Window
+    }
+
+    class "Window ✅" as app_window {
+        +__init__(app, w, h, title, renderer)
+        ' ✅ Passes renderer to GCubeViewer
+        ' ✅ Calls renderer.setup()
     }
 
     class "tests/backends/*" as tests {
@@ -414,20 +422,23 @@ BackendRegistry --> PygletRenderer : creates
 BackendRegistry --> HeadlessRenderer : creates
 BackendRegistry --> TkinterRenderer : creates
 
-' Viewer uses protocols (goal)
-GCubeViewer --> Renderer : uses (partial)
+' Viewer uses protocols (✅ complete)
+GCubeViewer --> Renderer : "✅ uses"
 GCubeViewer --> Cube : reads state
 
 ' Entry points use factory
-main_g --> create_gui : "⏳ pending"
+main_g --> BackendRegistry : "✅ create_renderer()"
 tests --> create_gui : "✅ uses"
 
+' Renderer flow: main_g -> Window -> GCubeViewer -> _Board -> _Cell
+main_g --> app_window : "✅ passes renderer"
+app_window --> GCubeViewer : "✅ passes renderer"
+
 ' Entry points use viewer
-main_g --> GCubeViewer
 main_g --> Operator
 
-' Old code dependencies (to be removed)
-Cell ..> shapes_old : "⏳ pending removal"
+' Old code dependencies (fallback only)
+Cell ..> shapes_old : "fallback when no renderer"
 Board ..> texture_old : "⏳ pending removal"
 
 @enduml
