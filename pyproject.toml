@@ -63,8 +63,9 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "benchmark: marks tests as benchmarks",
     "gui: marks tests as GUI tests (require display, run with 'pytest tests/gui -v')",
+    "console: marks tests as console tests (run with 'pytest tests/console -v')",
 ]
-addopts = "--ignore=tests/gui"
+addopts = "--ignore=tests/gui --ignore=tests/console"
 
 [tool.mypy]
 python_version = "3.14"

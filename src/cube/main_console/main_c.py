@@ -4,6 +4,7 @@ import traceback
 import keyboard
 
 from . import viewer
+from .keys import Keys
 from cube.algs import Algs, Alg
 from cube.model import Cube
 from cube.operator import Operator
@@ -84,71 +85,70 @@ def main() -> None:
             # the 'break' is to quit the input loop
             value = value.upper()
             match value:
-                case "'":
+                case Keys.INV:
                     inv = not inv
                     not_operation = True
                     break
-                case "R":
+                case Keys.R:
                     op.play(Algs.R, inv)
                     break
-                case "L":
+                case Keys.L:
                     op.play(Algs.L, inv)
                     break
-                case "U":
+                case Keys.U:
                     op.play(Algs.U, inv)
                     break
-                case "F":
+                case Keys.F:
                     op.play(Algs.F, inv)
                     break
-                case "B":
+                case Keys.B:
                     op.play(Algs.B, inv)
                     break
-                case "D":
+                case Keys.D:
                     op.play(Algs.D, inv)
                     break
 
-                case "X":
+                case Keys.X:
                     op.play(Algs.X, inv)
                     break
 
-                case "Y":
+                case Keys.Y:
                     op.play(Algs.Y, inv)
                     break
 
-                case "M":
+                case Keys.M:
                     op.play(Algs.M, inv)
                     break
 
-                case "A":
-
+                case Keys.ALGS:
                     alg: Alg = get_alg()
                     op.play(alg, inv)
                     break
 
-                case "C":
+                case Keys.CLEAR:
                     op.reset()
                     break
 
-                case "0":
+                case Keys.SCRAMBLE_RANDOM:
                     alg = Algs.scramble(cube_size)
                     op.play(alg, inv)
                     break
 
-                case "1" | "2" | "3" | "4" | "5" | "6":
+                case Keys.SCRAMBLE_1 | Keys.SCRAMBLE_2 | Keys.SCRAMBLE_3 | Keys.SCRAMBLE_4 | Keys.SCRAMBLE_5 | Keys.SCRAMBLE_6:
                     # to match test int
                     alg = Algs.scramble(cube_size, int(value))
                     op.play(alg, inv)
                     break
 
-                case "<":
+                case Keys.UNDO:
                     op.undo()
                     break
 
-                case "?":
+                case Keys.SOLVE:
                     slv.solve()
                     break
 
-                case "T":
+                case Keys.TEST:
                     # test
                     for s in range(0, 50):
                         op.reset()
@@ -166,7 +166,7 @@ def main() -> None:
                             break
                     break
 
-                case "\x03" | "Q":
+                case Keys.CTRL_C | Keys.QUIT:
                     done = True
                     break
 
