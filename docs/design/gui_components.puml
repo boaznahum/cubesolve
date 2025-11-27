@@ -1,6 +1,7 @@
 @startuml GUI Package Structure
 
 title GUI Abstraction - Package & Component Diagram
+footer Last Updated: 2025-11-27 | ✅ = Done | 🔄 = In Progress | ⏳ = Pending
 
 skinparam componentStyle rectangle
 
@@ -29,38 +30,40 @@ package "src/cube" {
     }
 
     ' ============================================
-    ' GUI ABSTRACTION (new)
+    ' GUI ABSTRACTION (✅ implemented)
     ' ============================================
-    package "gui" as gui_pkg #LightBlue {
+    package "gui ✅" as gui_pkg #90EE90 {
 
-        package "protocols" as proto_pkg {
+        package "protocols ✅" as proto_pkg {
             component [Renderer] as renderer_proto
             component [Window] as window_proto
             component [EventLoop] as loop_proto
             component [AnimationBackend] as anim_proto
         }
 
-        component [types.py\n(Point3D, Color3,\nKeyEvent, MouseEvent)] as types_comp
+        component [types.py ✅\n(Point3D, Color3,\nKeyEvent, MouseEvent,\nDisplayList, TextureHandle)] as types_comp
 
-        component [factory.py\n(BackendRegistry,\ncreate_gui)] as factory_comp
+        component [factory.py ✅\n(BackendRegistry,\ncreate_gui)] as factory_comp
+
+        component [context.py ✅\n(RenderingContext)] as context_comp
 
         package "backends" as backends_pkg {
 
-            package "pyglet" as pyglet_pkg #LightCoral {
-                component [PygletRenderer] as pyg_renderer
+            package "pyglet ✅" as pyglet_pkg #90EE90 {
+                component [PygletRenderer\n(OpenGL calls here)] as pyg_renderer
                 component [PygletWindow] as pyg_window
                 component [PygletEventLoop] as pyg_loop
                 component [PygletAnimation] as pyg_anim
             }
 
-            package "headless" as headless_pkg #LightGray {
-                component [HeadlessRenderer] as hl_renderer
-                component [HeadlessWindow] as hl_window
+            package "headless ✅" as headless_pkg #90EE90 {
+                component [HeadlessRenderer\n(no-op)] as hl_renderer
+                component [HeadlessWindow\n(event queue)] as hl_window
                 component [HeadlessEventLoop] as hl_loop
             }
 
-            package "tkinter" as tk_pkg #Wheat {
-                component [TkinterRenderer] as tk_renderer
+            package "tkinter ⏳" as tk_pkg #Wheat {
+                component [TkinterRenderer\n(Canvas 2D)] as tk_renderer
                 component [TkinterWindow] as tk_window
                 component [TkinterEventLoop] as tk_loop
             }
@@ -68,35 +71,39 @@ package "src/cube" {
     }
 
     ' ============================================
-    ' VIEWER (refactored)
+    ' VIEWER (🔄 migration in progress)
     ' ============================================
-    package "viewer" as viewer_pkg #PaleGreen {
-        component [GCubeViewer] as gviewer_comp
-        component [_Board] as board_comp
-        component [_Cell] as cell_comp
-        component [_FaceBoard] as faceboard_comp
+    package "viewer 🔄" as viewer_pkg #FFFFE0 {
+        component [GCubeViewer\n+renderer param ✅] as gviewer_comp
+        component [_Board\n+renderer param ✅\ngl.* calls ⏳] as board_comp
+        component [_Cell\n+renderer prop ✅\ndisplay_lists 🔄\nshapes.* ⏳] as cell_comp
+        component [_FaceBoard\n+board prop ✅] as faceboard_comp
+
+        component [shapes.py ⏳\n(DELETE after migration)] as shapes_comp #FFB6C1
+        component [texture.py ⏳\n(Move to renderer)] as texture_comp #FFB6C1
+        component [gl_helper.py ⏳] as glhelper_comp #FFB6C1
     }
 
     ' ============================================
-    ' ANIMATION (refactored)
+    ' ANIMATION (⏳ pending)
     ' ============================================
-    package "animation" as anim_pkg #PaleGreen {
-        component [AnimationManager] as anim_mgr_comp
+    package "animation ⏳" as anim_pkg #FFFFE0 {
+        component [AnimationManager\n(still uses pyglet.clock)] as anim_mgr_comp
     }
 
     ' ============================================
-    ' APP
+    ' APP (⏳ pending)
     ' ============================================
-    package "app" as app_pkg #Lavender {
+    package "app ⏳" as app_pkg #FFFFE0 {
         component [AbstractApp] as app_comp
-        component [ApplicationAndViewState] as state_comp
+        component [ApplicationAndViewState\n(still uses gl.* calls)] as state_comp #FFB6C1
     }
 
     ' ============================================
-    ' MAIN WINDOW (refactored)
+    ' MAIN WINDOW (⏳ pending)
     ' ============================================
-    package "main_window" as mainwin_pkg #PaleGreen {
-        component [Window] as win_comp
+    package "main_window ⏳" as mainwin_pkg #FFFFE0 {
+        component [Window\n(extends pyglet.window)] as win_comp #FFB6C1
         component [KeyboardInput] as key_comp
         component [MouseInput] as mouse_comp
     }
@@ -104,8 +111,8 @@ package "src/cube" {
     ' ============================================
     ' ENTRY POINTS
     ' ============================================
-    component [main_g.py] as main_g #Lavender
-    component [main_c.py] as main_c #Lavender
+    component [main_g.py ⏳\n(should use create_gui)] as main_g #FFFFE0
+    component [main_c.py ✅\n(no GUI)] as main_c #90EE90
 }
 
 ' ============================================
@@ -136,34 +143,34 @@ tk_loop ..|> loop_proto
 ' Factory creates backends
 factory_comp --> pyglet_pkg : creates
 factory_comp --> headless_pkg : creates
-factory_comp --> tk_pkg : creates
+factory_comp --> tk_pkg : creates (future)
 
-' Viewer uses protocols (not concrete)
-gviewer_comp --> renderer_proto : uses
-board_comp --> renderer_proto : uses
-cell_comp --> renderer_proto : uses
+' Viewer uses protocols (goal - partial)
+gviewer_comp --> renderer_proto : uses (partial)
+board_comp --> renderer_proto : uses (partial)
+cell_comp --> renderer_proto : uses (partial)
 
 ' Viewer reads model
 gviewer_comp --> cube_comp : reads
 
-' Animation uses protocol
-anim_mgr_comp --> anim_proto : uses
+' Animation uses protocol (pending)
+anim_mgr_comp ..> anim_proto : should use
 
 ' App coordinates everything
 app_comp --> operator_comp
 app_comp --> solver_comp
 app_comp --> state_comp
 
-' Main window uses protocols
-win_comp --> window_proto : uses
-win_comp --> loop_proto : uses
+' Main window should use protocols (pending)
+win_comp ..> window_proto : should use
+win_comp ..> loop_proto : should use
 
-' Entry point uses factory
-main_g --> factory_comp : create_gui()
+' Entry point should use factory (pending)
+main_g ..> factory_comp : should use create_gui()
 main_g --> app_comp
 main_g --> gviewer_comp
 
-' External dependencies (only in pyglet backend)
+' External dependencies (ONLY in pyglet backend after migration)
 pyg_renderer --> pyglet_ext
 pyg_renderer --> gl_ext
 pyg_window --> pyglet_ext
@@ -173,15 +180,28 @@ tk_renderer --> tk_ext
 tk_window --> tk_ext
 tk_loop --> tk_ext
 
+' Current problematic dependencies (to be removed)
+shapes_comp --> gl_ext : ⚠️ remove
+texture_comp --> gl_ext : ⚠️ remove
+state_comp --> gl_ext : ⚠️ remove
+win_comp --> pyglet_ext : ⚠️ remove
+
 ' Notes
 note right of headless_pkg
     No external dependencies
     Used for fast testing
+    ✅ Fully implemented
 end note
 
 note bottom of proto_pkg
     Protocols define contracts
     No implementation details
+    ✅ Fully implemented
+end note
+
+note bottom of shapes_comp
+    Will be DELETED
+    after migration complete
 end note
 
 @enduml

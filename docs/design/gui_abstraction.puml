@@ -1,6 +1,7 @@
 @startuml GUI Abstraction Architecture
 
 title GUI Abstraction Layer - Architecture Diagram
+footer Last Updated: 2025-11-27
 
 skinparam packageStyle rectangle
 skinparam linetype ortho
@@ -33,7 +34,7 @@ package "Model Layer (unchanged)" as model #LightGreen {
 }
 
 ' ============================================
-' GUI PROTOCOLS (new)
+' GUI PROTOCOLS (implemented)
 ' ============================================
 package "cube.gui.protocols" as protocols #LightBlue {
 
@@ -41,16 +42,27 @@ package "cube.gui.protocols" as protocols #LightBlue {
         +shapes: ShapeRenderer
         +display_lists: DisplayListManager
         +view: ViewStateManager
-        +clear()
+        +clear(color)
         +setup()
         +cleanup()
+        +begin_frame()
+        +end_frame()
+        +flush()
+        +load_texture(path): TextureHandle
+        +bind_texture(handle)
+        +delete_texture(handle)
     }
 
     interface ShapeRenderer <<protocol>> {
         +quad(vertices, color)
-        +quad_with_border(...)
+        +quad_with_border(vertices, face_color, line_width, line_color)
+        +quad_with_texture(vertices, color, texture, texture_map)
+        +triangle(vertices, color)
+        +line(p1, p2, width, color)
+        +lines(points, width, color)
         +sphere(center, radius, color)
         +cylinder(p1, p2, r1, r2, color)
+        +disk(center, normal, inner_r, outer_r, color)
     }
 
     interface DisplayListManager <<protocol>> {
@@ -58,38 +70,58 @@ package "cube.gui.protocols" as protocols #LightBlue {
         +begin_compile(list_id)
         +end_compile()
         +call_list(list_id)
+        +call_lists(list_ids)
         +delete_list(list_id)
+        +delete_lists(list_ids)
     }
 
     interface ViewStateManager <<protocol>> {
-        +set_projection(w, h, fov)
-        +push_model_view()
-        +pop_model_view()
+        +set_projection(w, h, fov, near, far)
+        +push_matrix()
+        +pop_matrix()
+        +load_identity()
         +translate(x, y, z)
         +rotate(angle, x, y, z)
+        +scale(x, y, z)
+        +multiply_matrix(matrix)
+        +look_at(eye, center, up)
     }
 
     interface Window <<protocol>> {
         +width: int
         +height: int
         +text: TextRenderer
-        +set_draw_handler()
-        +set_key_handler()
+        +set_draw_handler(handler)
+        +set_resize_handler(handler)
+        +set_key_press_handler(handler)
+        +set_key_release_handler(handler)
+        +set_mouse_press_handler(handler)
+        +set_mouse_drag_handler(handler)
+        +set_close_handler(handler)
+        +request_redraw()
         +close()
     }
 
     interface EventLoop <<protocol>> {
+        +running: bool
         +run()
         +stop()
-        +schedule_interval()
-        +unschedule()
+        +step(): bool
+        +get_time(): float
+        +schedule_once(callback, delay)
+        +schedule_interval(callback, interval)
+        +unschedule(callback)
     }
 
     interface AnimationBackend <<protocol>> {
         +supported: bool
         +running: bool
-        +run_animation(...)
+        +speed: float
+        +run_animation(update_func, on_complete, interval)
         +cancel()
+        +pause()
+        +resume()
+        +skip()
     }
 
     Renderer *-- ShapeRenderer
@@ -98,23 +130,62 @@ package "cube.gui.protocols" as protocols #LightBlue {
 }
 
 ' ============================================
-' BACKEND FACTORY
+' TYPES (implemented)
+' ============================================
+package "cube.gui.types" as types_pkg #LightYellow {
+    class KeyEvent <<dataclass>> {
+        +symbol: int
+        +modifiers: int
+        +char: str | None
+    }
+
+    class MouseEvent <<dataclass>> {
+        +x: int
+        +y: int
+        +dx: int
+        +dy: int
+        +button: int
+        +modifiers: int
+    }
+
+    class Keys <<constants>> {
+        A-Z, 0-9
+        ESCAPE, SPACE, RETURN
+        LEFT, RIGHT, UP, DOWN
+        F1-F12
+    }
+
+    class Modifiers <<constants>> {
+        SHIFT, CTRL, ALT, META
+    }
+
+    class "DisplayList" as DL <<NewType(int)>>
+    class "TextureHandle" as TH <<NewType(int)>>
+    class "TextureCoord" as TC <<dataclass>>
+}
+
+' ============================================
+' BACKEND FACTORY (implemented)
 ' ============================================
 package "cube.gui" as gui_root #LightYellow {
     class BackendRegistry <<singleton>> {
         -_backends: Dict
         -_default: str
-        +register(name, classes)
+        +register(name, renderer, window, loop, anim)
         +set_default(name)
-        +create_renderer()
-        +create_window()
-        +create_event_loop()
+        +get_default(): str
+        +available(): list[str]
+        +create_renderer(backend)
+        +create_window(w, h, title, backend)
+        +create_event_loop(backend)
+        +create_animation(backend)
     }
 
     class "create_gui()" as create_gui <<function>> {
         backend: str = None
         width: int = 720
         height: int = 720
+        title: str = "Cube"
         --
         returns (Renderer, Window,
                  EventLoop, Animation)
@@ -124,65 +195,83 @@ package "cube.gui" as gui_root #LightYellow {
 }
 
 ' ============================================
-' PYGLET BACKEND
+' PYGLET BACKEND (implemented)
 ' ============================================
-package "cube.gui.backends.pyglet" as pyglet_backend #LightCoral {
+package "cube.gui.backends.pyglet" as pyglet_backend #90EE90 {
     class PygletRenderer {
         -_shapes: PygletShapeRenderer
         -_display_lists: PygletDisplayListManager
         -_view: PygletViewStateManager
+        ' Contains all OpenGL calls
     }
 
     class PygletShapeRenderer {
-        ' wraps shapes.py
         +quad() : gl.glBegin(GL_QUADS)
-        +sphere() : gluSphere()
+        +sphere() : glu.gluSphere()
+        +cylinder() : glu.gluCylinder()
+        +disk() : glu.gluDisk()
     }
 
     class PygletDisplayListManager {
-        ' wraps GL display lists
         +create_list() : gl.glGenLists()
         +call_list() : gl.glCallList()
+        +delete_list() : gl.glDeleteLists()
+    }
+
+    class PygletViewStateManager {
+        +set_projection() : glu.gluPerspective()
+        +push_matrix() : gl.glPushMatrix()
+        +rotate() : gl.glRotatef()
     }
 
     class PygletWindow {
-        ' wraps pyglet.window.Window
-        -_pyglet_window
+        ' extends pyglet.window.Window
+        -_key_handler: Callable
+        -_draw_handler: Callable
     }
 
     class PygletEventLoop {
-        ' wraps pyglet.app
         +run() : pyglet.app.run()
+        +stop() : pyglet.app.exit()
     }
 
     class PygletAnimation {
-        ' wraps animation_manager.py
-        +run_animation()
+        +run_animation() : pyglet.clock.schedule_interval()
     }
 
     PygletRenderer *-- PygletShapeRenderer
     PygletRenderer *-- PygletDisplayListManager
+    PygletRenderer *-- PygletViewStateManager
 }
 
 ' ============================================
-' HEADLESS BACKEND
+' HEADLESS BACKEND (implemented)
 ' ============================================
-package "cube.gui.backends.headless" as headless_backend #LightGray {
+package "cube.gui.backends.headless" as headless_backend #90EE90 {
     class HeadlessRenderer {
         ' no-op implementation
+        +frame_count: int
     }
 
     class HeadlessWindow {
         ' mock window for testing
+        +queue_key_events()
+        +process_queued_key_events()
     }
 
     class HeadlessEventLoop {
         ' immediate execution
+        +step(): bool
+    }
+
+    class HeadlessAnimation {
+        ' supported = False
     }
 
     note bottom of HeadlessRenderer
         All methods are no-ops
         for fast testing
+        ✅ Fully implemented
     end note
 }
 
@@ -205,35 +294,80 @@ package "cube.gui.backends.tkinter" as tkinter_backend #Wheat {
     }
 
     note bottom of TkinterRenderer
+        ⏳ Not yet implemented
         Uses Canvas for 2D
         isometric rendering
     end note
 }
 
 ' ============================================
-' VIEWER LAYER (refactored)
+' VIEWER LAYER (migration in progress)
 ' ============================================
-package "cube.viewer (refactored)" as viewer #PaleGreen {
+package "cube.viewer" as viewer #FFFFE0 {
     class GCubeViewer {
-        -_renderer: Renderer
+        -_renderer: Renderer | None
         -_board: Board
         +update()
         +draw()
     }
 
-    class Board {
-        -_renderer: Renderer
+    class "_Board" as Board {
+        -_renderer: Renderer | None
         -_faces: FaceBoard[6]
+        ' 🔄 Still has gl.glCallLists
     }
 
-    class Cell {
-        -_renderer: Renderer
-        -_display_list: DisplayList
-        +draw()
+    class "_FaceBoard" as FaceBoard {
+        +board: _Board
+        -_cells: dict[PartFixedID, _Cell]
     }
+
+    class "_Cell" as Cell {
+        -_renderer: Renderer | None
+        -gl_lists_movable: dict
+        -gl_lists_unmovable: dict
+        ' 🔄 Partial: display_lists migrated
+        ' ⏳ Pending: shapes.* calls
+    }
+
+    note right of Cell
+        🔄 Migration in progress
+        Display list create/delete
+        now use renderer
+    end note
 
     GCubeViewer *-- Board
-    Board *-- Cell
+    Board *-- FaceBoard
+    FaceBoard *-- Cell
+}
+
+' ============================================
+' PENDING MIGRATION (still has OpenGL)
+' ============================================
+package "Pending Migration" as pending #FFB6C1 {
+    class "shapes.py" as shapes_old {
+        ' ⏳ Will be DELETED
+        +quad_with_line()
+        +sphere()
+        +cylinder()
+        +disk()
+    }
+
+    class "texture.py" as texture_old {
+        ' ⏳ Move to Renderer
+        +TextureData.load()
+    }
+
+    class "app_state.py" as appstate_old {
+        ' ⏳ Use ViewStateManager
+        +prepare_objects_view()
+        +restore_objects_view()
+    }
+
+    note bottom of shapes_old
+        ⏳ Will be deleted
+        Replaced by renderer.shapes
+    end note
 }
 
 ' ============================================
@@ -242,12 +376,12 @@ package "cube.viewer (refactored)" as viewer #PaleGreen {
 package "Entry Points" as entry #Lavender {
     class "main_g.py" as main_g {
         +main(backend=None)
-        ' GUI application
+        ' ⏳ Needs to use create_gui()
     }
 
-    class "tests/*" as tests {
+    class "tests/backends/*" as tests {
         +test_*()
-        ' Use headless backend
+        ' ✅ Uses headless backend
     }
 
     class "main_c.py" as main_c {
@@ -269,6 +403,7 @@ PygletAnimation ..|> AnimationBackend
 HeadlessRenderer ..|> Renderer
 HeadlessWindow ..|> Window
 HeadlessEventLoop ..|> EventLoop
+HeadlessAnimation ..|> AnimationBackend
 
 TkinterRenderer ..|> Renderer
 TkinterWindow ..|> Window
@@ -279,16 +414,20 @@ BackendRegistry --> PygletRenderer : creates
 BackendRegistry --> HeadlessRenderer : creates
 BackendRegistry --> TkinterRenderer : creates
 
-' Viewer uses protocols
-GCubeViewer --> Renderer : uses
+' Viewer uses protocols (goal)
+GCubeViewer --> Renderer : uses (partial)
 GCubeViewer --> Cube : reads state
 
 ' Entry points use factory
-main_g --> create_gui : "backend='pyglet'"
-tests --> create_gui : "backend='headless'"
+main_g --> create_gui : "⏳ pending"
+tests --> create_gui : "✅ uses"
 
 ' Entry points use viewer
 main_g --> GCubeViewer
 main_g --> Operator
+
+' Old code dependencies (to be removed)
+Cell ..> shapes_old : "⏳ pending removal"
+Board ..> texture_old : "⏳ pending removal"
 
 @enduml

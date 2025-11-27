@@ -7,7 +7,7 @@ and headless operation.
 
 from typing import Sequence
 
-from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4
+from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
 
 
 class HeadlessShapeRenderer:
@@ -51,6 +51,77 @@ class HeadlessShapeRenderer:
         color: Color3,
     ) -> None:
         """No-op cylinder rendering."""
+        pass
+
+    def disk(
+        self,
+        center: Point3D,
+        normal: Point3D,
+        inner_radius: float,
+        outer_radius: float,
+        color: Color3,
+    ) -> None:
+        """No-op disk rendering."""
+        pass
+
+    def lines(
+        self,
+        points: Sequence[tuple[Point3D, Point3D]],
+        width: float,
+        color: Color3,
+    ) -> None:
+        """No-op lines rendering."""
+        pass
+
+    def quad_with_texture(
+        self,
+        vertices: Sequence[Point3D],
+        color: Color3,
+        texture: TextureHandle | None,
+        texture_map: TextureMap | None,
+    ) -> None:
+        """No-op textured quad rendering."""
+        pass
+
+    def cross(
+        self,
+        vertices: Sequence[Point3D],
+        line_width: float,
+        line_color: Color3,
+    ) -> None:
+        """No-op cross rendering."""
+        pass
+
+    def lines_in_quad(
+        self,
+        vertices: Sequence[Point3D],
+        n: int,
+        line_width: float,
+        line_color: Color3,
+    ) -> None:
+        """No-op lines_in_quad rendering."""
+        pass
+
+    def box_with_lines(
+        self,
+        bottom_quad: Sequence[Point3D],
+        top_quad: Sequence[Point3D],
+        face_color: Color3,
+        line_width: float,
+        line_color: Color3,
+    ) -> None:
+        """No-op box rendering."""
+        pass
+
+    def full_cylinder(
+        self,
+        p1: Point3D,
+        p2: Point3D,
+        outer_radius: float,
+        inner_radius: float,
+        color: Color3,
+    ) -> None:
+        """No-op full_cylinder rendering."""
         pass
 
 
@@ -213,6 +284,18 @@ class HeadlessRenderer:
 
     def flush(self) -> None:
         """No-op flush."""
+        pass
+
+    def load_texture(self, file_path: str) -> TextureHandle | None:
+        """No-op texture loading (returns None)."""
+        return None
+
+    def bind_texture(self, texture: TextureHandle | None) -> None:
+        """No-op texture binding."""
+        pass
+
+    def delete_texture(self, texture: TextureHandle) -> None:
+        """No-op texture deletion."""
         pass
 
     @property

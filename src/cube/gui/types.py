@@ -21,6 +21,21 @@ Color4: TypeAlias = Tuple[int, int, int, int]
 # Display list handle (opaque type for compiled rendering commands)
 DisplayList = NewType("DisplayList", int)
 
+# Texture handle (opaque type for loaded textures)
+TextureHandle = NewType("TextureHandle", int)
+
+
+@dataclass(frozen=True)
+class TextureCoord:
+    """UV texture coordinate for a vertex."""
+
+    u: int
+    v: int
+
+
+# Texture map is a sequence of UV coordinates for each vertex
+TextureMap: TypeAlias = Tuple[TextureCoord, TextureCoord, TextureCoord, TextureCoord]
+
 
 @dataclass(frozen=True)
 class KeyEvent:

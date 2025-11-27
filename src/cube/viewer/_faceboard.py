@@ -69,6 +69,11 @@ class _FaceBoard:
     def cube_face(self) -> Face:
         return self.cube_face_supplier()
 
+    @property
+    def board(self) -> "_Board":
+        """Get the parent board."""
+        return self._board
+
     # noinspection PyUnusedLocal
 
     def prepare_gui_geometry(self) -> None:

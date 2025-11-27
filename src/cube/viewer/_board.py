@@ -20,6 +20,8 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 from .texture import TextureData
 from ..model import PartEdge
 from ..model.cube_boy import FaceName
+from ..gui.protocols.renderer import Renderer
+from ..gui.types import DisplayList
 
 
 ##########################################################################
@@ -60,12 +62,19 @@ class _Board:
     _h_size: int = _FACE_SIZE * 3  # L F R
     _v_size: int = _FACE_SIZE * 4  # U F D B
 
-    def __init__(self, cube: Cube, batch: Batch, vs: ApplicationAndViewState) -> None:
+    def __init__(
+        self,
+        cube: Cube,
+        batch: Batch,
+        vs: ApplicationAndViewState,
+        renderer: Renderer | None = None,
+    ) -> None:
         super().__init__()
         self._hidden_objects: Set[int] = set()
         self.batch = batch
         self._faces: MutableSequence[_FaceBoard] = []
         self._vs = vs
+        self._renderer = renderer
 
         # why sequence, because we can have multiple back faces
         self._cells: Mapping[PartFixedID, MutableSequence[_Cell]] = dict()
@@ -76,6 +85,11 @@ class _Board:
         self._cubie_texture = TextureData.load("cubie.bmp", texture_map)
         #self._cubie_texture = TextureData.load("6-2-target-picture-resized.png", texture_map)
         #self._target_texture = TextureData.load("6-2-target-picture-resized.png", texture_map)
+
+    @property
+    def renderer(self) -> Renderer | None:
+        """Get the renderer instance."""
+        return self._renderer
 
     def reset(self):
         for f in self._faces:
@@ -116,16 +130,19 @@ class _Board:
 
         n = len(lists)
 
-        lists_array = (gl.GLint * n)()
-        lists_array[:] = [*lists]
-
         self._prepare_view_state()
 
-        # https://www.glprogramming.com/red/chapter07.html
-        gl.glCallLists(n, gl.GL_INT, lists_array)
-
-        # for ll in lists:
-        #     gl.glCallList(ll)
+        renderer = self._renderer
+        if renderer is not None:
+            # Use renderer abstraction
+            display_lists = [DisplayList(ll) for ll in lists]
+            renderer.display_lists.call_lists(display_lists)
+        else:
+            # Fallback to direct OpenGL
+            lists_array = (gl.GLint * n)()
+            lists_array[:] = [*lists]
+            # https://www.glprogramming.com/red/chapter07.html
+            gl.glCallLists(n, gl.GL_INT, lists_array)
 
         self._restore_view_state()
 

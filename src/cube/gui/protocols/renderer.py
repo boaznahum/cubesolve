@@ -7,7 +7,7 @@ managing display lists, and handling view transformations.
 
 from typing import Protocol, Sequence, runtime_checkable
 
-from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4
+from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
 
 
 @runtime_checkable
@@ -89,6 +89,132 @@ class ShapeRenderer(Protocol):
             p2: Second end center point
             radius1: Radius at first end
             radius2: Radius at second end
+            color: RGB color
+        """
+        ...
+
+    def disk(
+        self,
+        center: Point3D,
+        normal: Point3D,
+        inner_radius: float,
+        outer_radius: float,
+        color: Color3,
+    ) -> None:
+        """Render a disk (annulus) perpendicular to a direction.
+
+        Args:
+            center: Center point of the disk
+            normal: Normal vector (disk is perpendicular to this)
+            inner_radius: Inner radius (0 for solid disk)
+            outer_radius: Outer radius
+            color: RGB color
+        """
+        ...
+
+    def lines(
+        self,
+        points: Sequence[tuple[Point3D, Point3D]],
+        width: float,
+        color: Color3,
+    ) -> None:
+        """Render multiple line segments.
+
+        Args:
+            points: Sequence of (start, end) point pairs
+            width: Line width in pixels
+            color: RGB line color
+        """
+        ...
+
+    def quad_with_texture(
+        self,
+        vertices: Sequence[Point3D],
+        color: Color3,
+        texture: TextureHandle | None,
+        texture_map: TextureMap | None,
+    ) -> None:
+        """Render a quadrilateral with optional texture.
+
+        Args:
+            vertices: 4 points in counter-clockwise order
+            color: RGB base color (modulates texture)
+            texture: Texture handle from load_texture, or None for solid color
+            texture_map: UV coordinates for each vertex, or None
+        """
+        ...
+
+    def cross(
+        self,
+        vertices: Sequence[Point3D],
+        line_width: float,
+        line_color: Color3,
+    ) -> None:
+        """Render a cross (X) inside a quadrilateral.
+
+        Draws two diagonal lines from corner to corner.
+
+        Args:
+            vertices: 4 points [left_bottom, right_bottom, right_top, left_top]
+            line_width: Line width in pixels
+            line_color: RGB line color
+        """
+        ...
+
+    def lines_in_quad(
+        self,
+        vertices: Sequence[Point3D],
+        n: int,
+        line_width: float,
+        line_color: Color3,
+    ) -> None:
+        """Render n evenly-spaced vertical lines inside a quadrilateral.
+
+        Args:
+            vertices: 4 points [left_bottom, right_bottom, right_top, left_top]
+            n: Number of lines to draw (0 for none)
+            line_width: Line width in pixels
+            line_color: RGB line color
+        """
+        ...
+
+    def box_with_lines(
+        self,
+        bottom_quad: Sequence[Point3D],
+        top_quad: Sequence[Point3D],
+        face_color: Color3,
+        line_width: float,
+        line_color: Color3,
+    ) -> None:
+        """Render a 3D box with filled faces and line borders.
+
+        Args:
+            bottom_quad: 4 points [left_bottom, right_bottom, right_top, left_top] of bottom face
+            top_quad: 4 points [left_bottom, right_bottom, right_top, left_top] of top face
+            face_color: RGB fill color for faces
+            line_width: Border line width in pixels
+            line_color: RGB border color
+        """
+        ...
+
+    def full_cylinder(
+        self,
+        p1: Point3D,
+        p2: Point3D,
+        outer_radius: float,
+        inner_radius: float,
+        color: Color3,
+    ) -> None:
+        """Render a hollow cylinder with capped ends (an annular prism).
+
+        The cylinder is oriented along the p1-p2 axis.
+        If inner_radius is 0, renders a solid cylinder with caps.
+
+        Args:
+            p1: First end center point
+            p2: Second end center point
+            outer_radius: Outer radius of the cylinder
+            inner_radius: Inner radius (0 for solid cylinder)
             color: RGB color
         """
         ...
@@ -309,4 +435,31 @@ class Renderer(Protocol):
 
     def flush(self) -> None:
         """Flush any pending rendering commands."""
+        ...
+
+    def load_texture(self, file_path: str) -> TextureHandle | None:
+        """Load a texture from a file.
+
+        Args:
+            file_path: Path to image file (PNG, etc.)
+
+        Returns:
+            Texture handle for use with quad_with_texture, or None if not supported
+        """
+        ...
+
+    def bind_texture(self, texture: TextureHandle | None) -> None:
+        """Bind a texture for subsequent rendering.
+
+        Args:
+            texture: Texture handle from load_texture, or None to unbind
+        """
+        ...
+
+    def delete_texture(self, texture: TextureHandle) -> None:
+        """Delete a texture and free resources.
+
+        Args:
+            texture: Texture handle to delete
+        """
         ...

@@ -17,6 +17,7 @@ from cube.utils import prof
 from ._board import _Board
 from ._faceboard import _FaceBoard
 from .. import config
+from ..gui.protocols.renderer import Renderer
 
 
 # todo: delete ?
@@ -25,19 +26,31 @@ from .. import config
 
 class GCubeViewer:
     __slots__ = ["_batch", "_cube", "_board", "_test",
-                 "_hidden_objects", "_vs"]
+                 "_hidden_objects", "_vs", "_renderer"]
 
-    def __init__(self, batch: Batch, cube: Cube, vs: ApplicationAndViewState) -> None:
+    def __init__(
+        self,
+        batch: Batch,
+        cube: Cube,
+        vs: ApplicationAndViewState,
+        renderer: Renderer | None = None,
+    ) -> None:
         super().__init__()
         self._cube = cube
         self._batch = batch
         self._vs = vs
+        self._renderer = renderer
 
         #        self._test = pyglet.shapes.Line(0, 0, 20, 20, width=10, color=(255, 255, 255), batch=batch)
 
-        self._board: _Board = _Board(cube, self._batch, vs)
+        self._board: _Board = _Board(cube, self._batch, vs, renderer)
 
         self.reset()
+
+    @property
+    def renderer(self) -> Renderer | None:
+        """Get the renderer instance."""
+        return self._renderer
 
     def reset(self):
         """

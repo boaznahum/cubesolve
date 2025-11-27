@@ -13,7 +13,7 @@ try:
 except ImportError as e:
     raise ImportError("pyglet is required for PygletRenderer: pip install pyglet") from e
 
-from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4
+from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
 
 
 class PygletShapeRenderer:
@@ -133,6 +133,251 @@ class PygletShapeRenderer:
         gl.gluCylinder(quadric, radius1, radius2, length, slices, 1)
         gl.gluDeleteQuadric(quadric)
 
+        gl.glPopMatrix()
+
+    def disk(
+        self,
+        center: Point3D,
+        normal: Point3D,
+        inner_radius: float,
+        outer_radius: float,
+        color: Color3,
+        slices: int = 25,
+    ) -> None:
+        """Draw a disk perpendicular to the normal vector."""
+        gl.glColor3ub(*color)
+
+        # Normalize the normal vector
+        nx, ny, nz = float(normal[0]), float(normal[1]), float(normal[2])
+        length = np.sqrt(nx * nx + ny * ny + nz * nz)
+        if length < 1e-6:
+            return
+        nx, ny, nz = nx / length, ny / length, nz / length
+
+        gl.glPushMatrix()
+        gl.glTranslatef(float(center[0]), float(center[1]), float(center[2]))
+
+        # Rotate to align Z axis with normal
+        # Default disk is in XY plane (normal = Z axis)
+        if abs(nz - 1.0) > 1e-6:  # Not already aligned with Z
+            if abs(nz + 1.0) < 1e-6:  # Pointing in -Z direction
+                gl.glRotatef(180.0, 1, 0, 0)
+            else:
+                # General rotation
+                angle = np.degrees(np.arccos(nz))
+                # Rotation axis is cross product of Z and normal: (-ny, nx, 0)
+                gl.glRotatef(angle, -ny, nx, 0)
+
+        quadric = gl.gluNewQuadric()
+        gl.gluQuadricNormals(quadric, gl.GLU_SMOOTH)
+        gl.gluDisk(quadric, inner_radius, outer_radius, slices, 1)
+        gl.gluDeleteQuadric(quadric)
+
+        gl.glPopMatrix()
+
+    def lines(
+        self,
+        points: Sequence[tuple[Point3D, Point3D]],
+        width: float,
+        color: Color3,
+    ) -> None:
+        """Draw multiple line segments."""
+        gl.glLineWidth(width)
+        gl.glColor3ub(*color)
+        gl.glBegin(gl.GL_LINES)
+        for p1, p2 in points:
+            gl.glVertex3f(float(p1[0]), float(p1[1]), float(p1[2]))
+            gl.glVertex3f(float(p2[0]), float(p2[1]), float(p2[2]))
+        gl.glEnd()
+
+    def quad_with_texture(
+        self,
+        vertices: Sequence[Point3D],
+        color: Color3,
+        texture: TextureHandle | None,
+        texture_map: TextureMap | None,
+    ) -> None:
+        """Draw a textured quad."""
+        # Enable texturing if we have a texture
+        if texture is not None and texture_map is not None:
+            gl.glEnable(gl.GL_TEXTURE_2D)
+            gl.glBindTexture(gl.GL_TEXTURE_2D, int(texture))
+
+        gl.glColor3ub(*color)
+        gl.glBegin(gl.GL_QUADS)
+        for i, v in enumerate(vertices):
+            if texture_map is not None and i < len(texture_map):
+                gl.glTexCoord2i(texture_map[i].u, texture_map[i].v)
+            gl.glVertex3f(float(v[0]), float(v[1]), float(v[2]))
+        gl.glEnd()
+
+        if texture is not None:
+            gl.glDisable(gl.GL_TEXTURE_2D)
+
+    def cross(
+        self,
+        vertices: Sequence[Point3D],
+        line_width: float,
+        line_color: Color3,
+    ) -> None:
+        """Draw a cross (X) inside a quadrilateral."""
+        # vertices: [left_bottom, right_bottom, right_top, left_top]
+        gl.glLineWidth(line_width)
+        gl.glColor3ub(*line_color)
+        gl.glBegin(gl.GL_LINES)
+        # Diagonal from left_bottom to right_top
+        gl.glVertex3f(float(vertices[0][0]), float(vertices[0][1]), float(vertices[0][2]))
+        gl.glVertex3f(float(vertices[2][0]), float(vertices[2][1]), float(vertices[2][2]))
+        # Diagonal from right_bottom to left_top
+        gl.glVertex3f(float(vertices[1][0]), float(vertices[1][1]), float(vertices[1][2]))
+        gl.glVertex3f(float(vertices[3][0]), float(vertices[3][1]), float(vertices[3][2]))
+        gl.glEnd()
+
+    def lines_in_quad(
+        self,
+        vertices: Sequence[Point3D],
+        n: int,
+        line_width: float,
+        line_color: Color3,
+    ) -> None:
+        """Draw n evenly-spaced vertical lines inside a quadrilateral."""
+        if n <= 0:
+            return
+
+        # vertices: [left_bottom, right_bottom, right_top, left_top]
+        lb = np.array(vertices[0], dtype=float)
+        rb = np.array(vertices[1], dtype=float)
+        lt = np.array(vertices[3], dtype=float)
+        rt = np.array(vertices[2], dtype=float)
+
+        # Calculate step vectors
+        dx_bottom = (rb - lb) / (n + 1)
+        dx_top = (rt - lt) / (n + 1)
+
+        gl.glLineWidth(line_width)
+        gl.glColor3ub(*line_color)
+        gl.glBegin(gl.GL_LINES)
+
+        for i in range(n):
+            # Position along bottom and top edges
+            p_bottom = lb + dx_bottom * (i + 1)
+            p_top = lt + dx_top * (i + 1)
+            gl.glVertex3f(float(p_bottom[0]), float(p_bottom[1]), float(p_bottom[2]))
+            gl.glVertex3f(float(p_top[0]), float(p_top[1]), float(p_top[2]))
+
+        gl.glEnd()
+
+    def box_with_lines(
+        self,
+        bottom_quad: Sequence[Point3D],
+        top_quad: Sequence[Point3D],
+        face_color: Color3,
+        line_width: float,
+        line_color: Color3,
+    ) -> None:
+        """Draw a 3D box with filled faces and line borders."""
+        # Indices for quad vertices: [left_bottom, right_bottom, right_top, left_top]
+        lb, rb, rt, lt = 0, 1, 2, 3
+
+        # Draw six faces
+        # Bottom face
+        self.quad_with_border(list(bottom_quad), face_color, line_width, line_color)
+        # Top face
+        self.quad_with_border(list(top_quad), face_color, line_width, line_color)
+        # Front face
+        self.quad_with_border(
+            [bottom_quad[lb], bottom_quad[rb], top_quad[rb], top_quad[lb]],
+            face_color, line_width, line_color
+        )
+        # Back face
+        self.quad_with_border(
+            [bottom_quad[rb], bottom_quad[rt], top_quad[rt], top_quad[rb]],
+            face_color, line_width, line_color
+        )
+        # Right face
+        self.quad_with_border(
+            [bottom_quad[lt], bottom_quad[rt], top_quad[rt], top_quad[lt]],
+            face_color, line_width, line_color
+        )
+        # Left face
+        self.quad_with_border(
+            [bottom_quad[lb], bottom_quad[lt], top_quad[lt], top_quad[lb]],
+            face_color, line_width, line_color
+        )
+
+    def full_cylinder(
+        self,
+        p1: Point3D,
+        p2: Point3D,
+        outer_radius: float,
+        inner_radius: float,
+        color: Color3,
+        slices: int = 25,
+        stacks: int = 25,
+    ) -> None:
+        """Draw a hollow cylinder with capped ends."""
+        from math import sqrt, pi, acos
+
+        # Convert to numpy arrays for easier math
+        _p1 = np.array([float(p1[0]), float(p1[1]), float(p1[2])])
+        _p2 = np.array([float(p2[0]), float(p2[1]), float(p2[2])])
+
+        # Swap if needed (from original shapes.py logic)
+        if (_p1[0] == _p2[0]) and (_p1[2] == _p2[2]) and (_p1[1] < _p2[1]):
+            _p1, _p2 = _p2, _p1
+
+        # Calculate height
+        d = _p1 - _p2
+        height = sqrt(float(d.dot(d)))
+        if height < 1e-6:
+            return
+
+        r2d = 180.0 / pi
+
+        gl.glColor3ub(*color)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.glTranslatef(_p1[0], _p1[1], _p1[2])
+
+        # Calculate rotation to align Z with cylinder axis
+        _v = _p2 - _p1
+        v = float(np.linalg.norm(_v))
+        vx, vy, vz = _v[0], _v[1], _v[2]
+
+        rx = -vy * vz
+        ry = vx * vz
+
+        if vz == 0:
+            ax = r2d * acos(vx / v)
+            if vx <= 0:
+                ax = -ax
+            gl.glRotated(90.0, 0, 1, 0.0)
+            gl.glRotated(ax, -1.0, 0.0, 0.0)
+        else:
+            ax = r2d * acos(vz / v)
+            if vz <= 0:
+                ax = -ax
+            gl.glRotated(ax, rx, ry, 0)
+
+        # Ensure inner < outer
+        r_inner = min(inner_radius, outer_radius)
+        r_outer = max(inner_radius, outer_radius)
+
+        quadric = gl.gluNewQuadric()
+        gl.gluQuadricNormals(quadric, gl.GLU_SMOOTH)
+
+        # Draw outer and inner cylinders
+        gl.gluCylinder(quadric, r_inner, r_inner, height, slices, stacks)
+        gl.gluCylinder(quadric, r_outer, r_outer, height, slices, stacks)
+
+        # Draw bottom disk (at origin after transformation)
+        gl.gluDisk(quadric, r_inner, r_outer, slices, stacks)
+
+        # Draw top disk
+        gl.glTranslatef(0, 0, height)
+        gl.gluDisk(quadric, r_inner, r_outer, slices, stacks)
+
+        gl.gluDeleteQuadric(quadric)
         gl.glPopMatrix()
 
 
@@ -314,3 +559,42 @@ class PygletRenderer:
     def flush(self) -> None:
         """Flush rendering commands."""
         gl.glFlush()
+
+    def load_texture(self, file_path: str) -> TextureHandle | None:
+        """Load a texture from a file."""
+        try:
+            image = pyglet.image.load(file_path)
+            data = image.get_image_data()
+            texture_data = data.get_data(fmt="RGBA")
+
+            ids = (gl.GLuint * 1)()
+            gl.glGenTextures(1, ids)
+            tex_id = ids[0]
+
+            gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
+            gl.gluBuild2DMipmaps(
+                gl.GL_TEXTURE_2D, 4,
+                image.width, image.height,
+                gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, texture_data
+            )
+
+            gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+            gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR)
+
+            return TextureHandle(tex_id)
+        except Exception:
+            return None
+
+    def bind_texture(self, texture: TextureHandle | None) -> None:
+        """Bind a texture for rendering."""
+        if texture is not None:
+            gl.glEnable(gl.GL_TEXTURE_2D)
+            gl.glBindTexture(gl.GL_TEXTURE_2D, int(texture))
+        else:
+            gl.glDisable(gl.GL_TEXTURE_2D)
+
+    def delete_texture(self, texture: TextureHandle) -> None:
+        """Delete a texture."""
+        p = (gl.GLuint * 1)()
+        p[0] = int(texture)
+        gl.glDeleteTextures(1, p)

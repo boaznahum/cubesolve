@@ -766,7 +766,60 @@ class TkinterShapeRenderer:
 
 ---
 
-## 5. Migration Strategy
+## 5. Implementation Status
+
+> **Last Updated:** 2025-11-27
+
+### Completed ✅
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Protocol definitions | ✅ Done | `gui/protocols/*.py` |
+| Types and events | ✅ Done | `gui/types.py` - KeyEvent, MouseEvent, Keys, DisplayList, TextureHandle |
+| Backend registry | ✅ Done | `gui/factory.py` - BackendRegistry, create_gui() |
+| Pyglet backend | ✅ Done | Full OpenGL implementation in `gui/backends/pyglet/` |
+| Headless backend | ✅ Done | No-op implementation in `gui/backends/headless/` |
+| Backend tests | ✅ Done | `tests/backends/` with --backend option |
+| Texture support | ✅ Done | load_texture(), bind_texture(), quad_with_texture() |
+| Renderer in viewer hierarchy | ✅ Done | GCubeViewer → _Board → _FaceBoard → _Cell |
+
+### In Progress 🔄
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| _cell.py migration | 🔄 Partial | Display list create/delete use Renderer, shapes still use direct GL |
+
+### Pending ⏳
+
+| Component | Status | Files |
+|-----------|--------|-------|
+| viewer/shapes.py | ⏳ Pending | Will be replaced by renderer.shapes |
+| viewer/_cell.py (shapes) | ⏳ Pending | shapes.* calls need migration |
+| viewer/_board.py | ⏳ Pending | gl.glCallLists needs migration |
+| viewer/texture.py | ⏳ Pending | Move to renderer.load_texture() |
+| app/app_state.py | ⏳ Pending | GL matrix/projection calls |
+| animation/animation_manager.py | ⏳ Pending | Use AnimationBackend protocol |
+| main_window/Window.py | ⏳ Pending | Use Window protocol |
+| main_g.py | ⏳ Pending | Use create_gui() |
+
+### OpenGL Usage Locations
+
+Files that still contain direct OpenGL calls (should only be in `gui/backends/pyglet/`):
+
+| File | GL Calls | Migration Target |
+|------|----------|------------------|
+| `viewer/_cell.py` | ~60 | renderer.shapes.*, renderer.display_lists.* |
+| `viewer/_board.py` | ~5 | renderer.display_lists.call_lists() |
+| `viewer/shapes.py` | ~100 | **DELETE** - replaced by renderer.shapes |
+| `viewer/texture.py` | ~20 | renderer.load_texture() |
+| `viewer/gl_helper.py` | ~10 | renderer.view.* or delete |
+| `app/app_state.py` | ~30 | renderer.view.* |
+| `animation/animation_manager.py` | ~5 | AnimationBackend protocol |
+| `main_window/Window.py` | ~10 | Window protocol |
+
+---
+
+## 6. Migration Strategy
 
 ### Phase 1: Create Protocol Definitions (Non-breaking)
 
