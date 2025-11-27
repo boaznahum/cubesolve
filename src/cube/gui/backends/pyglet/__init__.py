@@ -1,0 +1,42 @@
+"""
+Pyglet/OpenGL backend for GUI abstraction layer.
+
+This backend wraps the existing OpenGL rendering code to implement
+the GUI protocols. It provides full 3D rendering and animation support.
+
+Usage:
+    from cube.gui.backends import pyglet
+    # Backend is automatically registered on import
+
+    # Or explicitly:
+    from cube.gui.backends.pyglet import register
+    register()
+"""
+
+# TODO: Implement pyglet backend
+# from cube.gui.backends.pyglet.renderer import PygletRenderer
+# from cube.gui.backends.pyglet.window import PygletWindow
+# from cube.gui.backends.pyglet.event_loop import PygletEventLoop
+# from cube.gui.backends.pyglet.animation import PygletAnimation
+
+
+def register() -> None:
+    """Register the pyglet backend with the BackendRegistry.
+
+    This is called automatically on import, but can also be called
+    explicitly to ensure registration.
+    """
+    # TODO: Implement registration once backend classes are ready
+    # from cube.gui.factory import BackendRegistry
+    # BackendRegistry.register(
+    #     "pyglet",
+    #     renderer_factory=PygletRenderer,
+    #     window_factory=lambda w, h, t: PygletWindow(w, h, t),
+    #     event_loop_factory=PygletEventLoop,
+    #     animation_factory=PygletAnimation,
+    # )
+    pass
+
+
+# Auto-register on import (commented out until implemented)
+# register()
