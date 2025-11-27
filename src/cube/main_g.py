@@ -3,6 +3,7 @@ import pyglet  # type: ignore
 from pyglet.window import key  # type: ignore
 
 from cube.app.abstract_ap import AbstractApp
+from cube.gui import BackendRegistry
 from cube.main_window import Window
 
 
@@ -36,8 +37,11 @@ def main():
 
     # config.cubic_texture_data = TextureData.load()
 
+    # Create renderer from the GUI abstraction layer
+    renderer = BackendRegistry.create_renderer()
+
     app = AbstractApp.create()
-    win = Window(app, 720, 720, '"Cube"')
+    win = Window(app, 720, 720, '"Cube"', renderer=renderer)
 
     win.set_mouse_visible(True)
 
