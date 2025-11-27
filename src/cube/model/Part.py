@@ -2,6 +2,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence, Iterator, Iterable
 from typing import Tuple, TypeVar, Self
+from typing_extensions import deprecated
 
 from cube import config
 from cube.model import PartSlice, PartEdge, SliceIndex, FaceName, Color
@@ -227,6 +228,7 @@ class Part(ABC, CubeElement):
         return by_pos
 
     @property
+    @deprecated("Use position_id instead")
     def colors_id_by_pos(self) -> PartColorsID:
         """
         :deprecated, use: position_id

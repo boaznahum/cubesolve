@@ -1,6 +1,7 @@
 import warnings
 from contextlib import contextmanager
 from typing import Callable, Generator, Sequence, Tuple, ContextManager
+from typing_extensions import deprecated
 
 from cube.algs import Algs, Alg
 from cube.app.app_exceptions import InternalSWError
@@ -104,6 +105,7 @@ class CommonOp:
         return edges
 
     # noinspection PyMethodMayBeStatic
+    @deprecated("Use CubeQueries2 instead")
     def rotate_and_check(self, alg: Alg, pred: Callable[[], bool]) -> int:
         """
         Rotate face and check condition
@@ -131,6 +133,7 @@ class CommonOp:
 
         return -1
 
+    @deprecated("Use CubeQueries2 instead")
     def rotate_and_check_get_alg(self, alg: Alg, pred: Pred0) -> Alg | None:
         """
         Rotate face and check condition
@@ -154,6 +157,7 @@ class CommonOp:
             return None
 
 
+    @deprecated("Use CubeQueries2 instead")
     def rotate_face_and_check(self, f: Face, pred: Callable[[], bool]) -> int:
         """
         Rotate face and check condition
@@ -170,6 +174,7 @@ class CommonOp:
 
         return self.rotate_and_check(Algs.of_face(f.name), pred)
 
+    @deprecated("Use CubeQueries2 instead")
     def rotate_face_and_check_get_alg_deprecated(self, f: Face, pred: Pred0) -> Alg:
         """
         Rotate face and check condition
@@ -191,6 +196,7 @@ class CommonOp:
 
         return alg * n
 
+    @deprecated("Use CubeQueries2 instead")
     def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Alg | None:
         """
         Rotate face and check condition

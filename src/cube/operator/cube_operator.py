@@ -3,6 +3,7 @@ import warnings
 from collections.abc import MutableSequence, Sequence, Reversible
 from contextlib import contextmanager
 from typing import Callable, Any, TYPE_CHECKING
+from typing_extensions import deprecated
 
 from .. import config
 from ..algs import Alg, AnnotationAlg, SimpleAlg, Algs, SeqAlg
@@ -80,6 +81,7 @@ class Operator:
         """
         return self._play(alg, inv, animation)
 
+    @deprecated("Use play() instead")
     def op(self, alg: Alg, inv: bool = False, animation=True):
         warnings.warn("Use play", DeprecationWarning, 2)
 

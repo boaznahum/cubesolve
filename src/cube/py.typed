@@ -1,0 +1,8 @@
+# PEP 561 marker file - indicates this package supports type checking
+#
+# Why this file exists:
+# - mypy src/cube    -> Path mode: reads files directly, no marker needed
+# - mypy -p cube     -> Package mode: uses import system, requires py.typed
+#
+# Without this file, "mypy -p cube" skips the package assuming it's untyped.
+# This marker tells mypy: "this package includes type information"
