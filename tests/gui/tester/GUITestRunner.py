@@ -29,6 +29,9 @@ import pyglet  # type: ignore[import-untyped]
 from cube import config
 from cube.app.abstract_ap import AbstractApp
 from cube.main_window.Window import Window
+from cube.gui.backends import BackendRegistry
+# Import pyglet backend to register it
+import cube.gui.backends.pyglet  # noqa: F401
 from tests.gui.tester.GUITestResult import GUITestResult
 from tests.gui.tester.GUITestTimeout import GUITestTimeout
 
@@ -146,9 +149,10 @@ class GUITestRunner:
                 print(f"Starting GUI test with sequence: '{key_sequence}'")
                 print(f"  Cube size: {cube_size}, Animation: {enable_animation}, Timeout: {timeout_sec}s")
 
-            # Create app and window
+            # Create app, renderer, and window
             app = AbstractApp.create()
-            win = Window(app, 720, 720, "Cube Test")
+            renderer = BackendRegistry.create_renderer(backend="pyglet")
+            win = Window(app, 720, 720, "Cube Test", renderer=renderer)
 
             # Start timeout watchdog
             watchdog = threading.Thread(target=timeout_watchdog, daemon=True)

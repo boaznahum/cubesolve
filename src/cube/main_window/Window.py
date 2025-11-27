@@ -31,6 +31,9 @@ class Window(AbstractWindow, AnimationWindow):
         # on_resize which accesses self.app (via the property that returns self._app)
         self._app: AbstractApp = app
         self._vs = app.vs
+
+        if renderer is None:
+            raise RuntimeError("Renderer is required but not configured. Use BackendRegistry.create_renderer()")
         self._renderer = renderer
 
         super(Window, self).__init__(width, height, title, resizable=True)
@@ -41,12 +44,8 @@ class Window(AbstractWindow, AnimationWindow):
         if self._animation_manager:
             self._animation_manager.set_window(self)
 
-        # Initialize renderer or fall back to direct OpenGL
-        if renderer is not None:
-            renderer.setup()
-        else:
-            # from cube3d - direct OpenGL fallback
-            gl.glClearColor(0, 0, 0, 1)
+        # Initialize renderer
+        renderer.setup()
 
         # see Z-Buffer in
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer

@@ -390,14 +390,11 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
         gl.glMultMatrixf(gm)
 
         try:
-            if renderer is not None:
-                # Use renderer to call display lists (maps internal IDs to GL IDs)
-                for f in gui_objects:
-                    renderer.display_lists.call_list(DisplayList(f))
-            else:
-                # Fallback to direct OpenGL
-                for f in gui_objects:
-                    gl.glCallList(f)
+            if renderer is None:
+                raise RuntimeError("Renderer is required but not configured. Use BackendRegistry.create_renderer()")
+            # Use renderer to call display lists (maps internal IDs to GL IDs)
+            for f in gui_objects:
+                renderer.display_lists.call_list(DisplayList(f))
         finally:
             vs.restore_objects_view()
 

@@ -125,13 +125,16 @@ class _Cell:
         )
 
     @property
-    def _renderer(self) -> Renderer | None:
-        """Get the renderer from the parent hierarchy."""
-        return self._face_board.board.renderer
+    def _renderer(self) -> Renderer:
+        """Get the renderer from the parent hierarchy.
 
-    def _has_renderer(self) -> bool:
-        """Check if a renderer is available."""
-        return self._renderer is not None
+        Raises:
+            RuntimeError: If renderer is not configured.
+        """
+        renderer = self._face_board.board.renderer
+        if renderer is None:
+            raise RuntimeError("Renderer is required but not configured. Use BackendRegistry.create_renderer()")
+        return renderer
 
     @staticmethod
     def _to_point3d(v: ndarray) -> Point3D:
@@ -163,18 +166,12 @@ class _Cell:
         renderer = self._renderer
         for ls in self.gl_lists_movable.values():
             for ll in ls:
-                if renderer is not None:
-                    renderer.display_lists.delete_list(DisplayList(ll))
-                else:
-                    gl.glDeleteLists(ll, 1)
+                renderer.display_lists.delete_list(DisplayList(ll))
         self.gl_lists_movable.clear()
 
         for ls in self.gl_lists_unmovable.values():
             for ll in ls:
-                if renderer is not None:
-                    renderer.display_lists.delete_list(DisplayList(ll))
-                else:
-                    gl.glDeleteLists(ll, 1)
+                renderer.display_lists.delete_list(DisplayList(ll))
         self.gl_lists_unmovable.clear()
 
     def release_resources(self):
@@ -247,22 +244,14 @@ class _Cell:
         :return:
         """
         renderer = self._renderer
-        if renderer is not None:
-            list_handle = renderer.display_lists.create_list()
-            renderer.display_lists.begin_compile(list_handle)
-            g_list = int(list_handle)  # Store as int for backward compatibility
-        else:
-            g_list = gl.glGenLists(1)
-            gl.glNewList(g_list, gl.GL_COMPILE)
+        list_handle = renderer.display_lists.create_list()
+        renderer.display_lists.begin_compile(list_handle)
+        g_list = int(list_handle)  # Store as int for backward compatibility
 
         try:
             yield None
         finally:
-            if renderer is not None:
-                renderer.display_lists.end_compile()
-            else:
-                gl.glEndList()
-
+            renderer.display_lists.end_compile()
             dest[p_slice.fixed_id].append(g_list)
 
     def _get_slice_edge(self, _slice) -> PartEdge:
@@ -425,35 +414,24 @@ class _Cell:
             facet_color: _VColor = self._edge_color(part_edge)
 
             if movable:
-
-                if renderer is not None:
-                    # Use renderer abstraction
-                    points = self._vertices_to_points(_vx)
-                    if cubie_facet_texture:
-                        from ..gui.types import TextureHandle
-                        # Call the texture's setup display list to ensure texture data is uploaded
-                        # The TextureData class uploads texture inside a display list, so we must call it
-                        gl.glCallList(cubie_facet_texture.gl_list)
-                        # Use the GL texture ID directly as a TextureHandle
-                        tex_handle = TextureHandle(cubie_facet_texture._gl_texture_id)
-                        tex_map = self._texture_data_to_map(cubie_facet_texture)
-                        renderer.shapes.quad_with_texture(points, facet_color, tex_handle, tex_map)
-                    else:
-                        renderer.shapes.quad_with_border(points, facet_color, lw, lc)
+                # Use renderer abstraction
+                points = self._vertices_to_points(_vx)
+                if cubie_facet_texture:
+                    from ..gui.types import TextureHandle
+                    # Call the texture's setup display list to ensure texture data is uploaded
+                    # The TextureData class uploads texture inside a display list, so we must call it
+                    gl.glCallList(cubie_facet_texture.gl_list)
+                    # Use the GL texture ID directly as a TextureHandle
+                    tex_handle = TextureHandle(cubie_facet_texture._gl_texture_id)
+                    tex_map = self._texture_data_to_map(cubie_facet_texture)
+                    renderer.shapes.quad_with_texture(points, facet_color, tex_handle, tex_map)
                 else:
-                    # Fallback to direct OpenGL
-                    if cubie_facet_texture:
-                        shapes.quad_with_texture(_vx, facet_color, cubie_facet_texture)
-                    else:
-                        shapes.quad_with_line(_vx, facet_color, lw, lc)
+                    renderer.shapes.quad_with_border(points, facet_color, lw, lc)
 
                 if config.GUI_DRAW_MARKERS:
                     _nn = part_edge.c_attributes["n"]
-                    if renderer is not None:
-                        points = self._vertices_to_points(_vx)
-                        renderer.shapes.lines_in_quad(points, _nn, 5, (138, 43, 226))
-                    else:
-                        shapes.lines_in_quad(_vx, _nn, 5, (138, 43, 226))
+                    points = self._vertices_to_points(_vx)
+                    renderer.shapes.lines_in_quad(points, _nn, 5, (138, 43, 226))
 
             # if _slice.get_face_edge(cube_face).attributes["origin"]:
             #     shapes.cross(vx, cross_width, cross_color)
@@ -488,21 +466,13 @@ class _Cell:
                 draw_facet(edge, vertexes)
 
                 if config.GUI_DRAW_MARKERS:
-                    if renderer is not None:
-                        points = self._vertices_to_points(vertexes)
-                        if cube_face.corner_bottom_left is part:
-                            renderer.shapes.cross(points, cross_width, cross_color)
-                        elif cube_face.corner_bottom_right is part:
-                            renderer.shapes.cross(points, cross_width_x, cross_color_x)
-                        if cube_face.corner_top_left is part:
-                            renderer.shapes.cross(points, cross_width_y, cross_color_y)
-                    else:
-                        if cube_face.corner_bottom_left is part:
-                            shapes.cross(vertexes, cross_width, cross_color)
-                        elif cube_face.corner_bottom_right is part:
-                            shapes.cross(vertexes, cross_width_x, cross_color_x)
-                        if cube_face.corner_top_left is part:
-                            shapes.cross(vertexes, cross_width_y, cross_color_y)
+                    points = self._vertices_to_points(vertexes)
+                    if cube_face.corner_bottom_left is part:
+                        renderer.shapes.cross(points, cross_width, cross_color)
+                    elif cube_face.corner_bottom_right is part:
+                        renderer.shapes.cross(points, cross_width_x, cross_color_x)
+                    if cube_face.corner_top_left is part:
+                        renderer.shapes.cross(points, cross_width_y, cross_color_y)
 
         elif isinstance(part, Edge):
             # shapes.quad_with_line(vertexes, color, lw, lc)
@@ -550,22 +520,13 @@ class _Cell:
 
                         if config.GUI_DRAW_MARKERS:
                             attributes = edge.attributes
-
-                            if renderer is not None:
-                                points = self._vertices_to_points(vx)
-                                if attributes["origin"]:
-                                    renderer.shapes.cross(points, cross_width, cross_color)
-                                if attributes["on_x"]:
-                                    renderer.shapes.cross(points, cross_width_x, cross_color_x)
-                                if attributes["on_y"]:
-                                    renderer.shapes.cross(points, cross_width_y, cross_color_y)
-                            else:
-                                if attributes["origin"]:
-                                    shapes.cross(vx, cross_width, cross_color)
-                                if attributes["on_x"]:
-                                    shapes.cross(vx, cross_width_x, cross_color_x)
-                                if attributes["on_y"]:
-                                    shapes.cross(vx, cross_width_y, cross_color_y)
+                            points = self._vertices_to_points(vx)
+                            if attributes["origin"]:
+                                renderer.shapes.cross(points, cross_width, cross_color)
+                            if attributes["on_x"]:
+                                renderer.shapes.cross(points, cross_width_x, cross_color_x)
+                            if attributes["on_y"]:
+                                renderer.shapes.cross(points, cross_width_y, cross_color_y)
 
     # noinspection PyMethodMayBeStatic
     def _create_lines(self, vertexes, color):
@@ -662,14 +623,9 @@ class _Cell:
             top.append(p)
 
         renderer = self._renderer
-        if renderer is not None:
-            bottom_points = self._vertices_to_points(bottom)
-            top_points = self._vertices_to_points(top)
-            renderer.shapes.box_with_lines(bottom_points, top_points, color, 3, (0, 0, 0))
-        else:
-            gl.glLineWidth(3)
-            gl.glColor3ub(*color)
-            shapes.box_with_lines(bottom, top, color, 3, (0, 0, 0))
+        bottom_points = self._vertices_to_points(bottom)
+        top_points = self._vertices_to_points(top)
+        renderer.shapes.box_with_lines(bottom_points, top_points, color, 3, (0, 0, 0))
 
     def _create_markers_sphere(self, vertexes: Sequence[ndarray], marker_color, marker: bool):
 
@@ -690,11 +646,8 @@ class _Cell:
 
         # this is also supported by glCallLine
         renderer = self._renderer
-        if renderer is not None:
-            center_point = self._to_point3d(center)
-            renderer.shapes.sphere(center_point, radius, marker_color)
-        else:
-            shapes.sphere(center, radius, marker_color)
+        center_point = self._to_point3d(center)
+        renderer.shapes.sphere(center_point, radius, marker_color)
 
     def _create_markers_cycle(self, vertexes: Sequence[ndarray], marker_color,
                               _radius: float,
@@ -726,13 +679,10 @@ class _Cell:
         # this is also supported by glCallLine
         # shapes.cylinder(p1, p2, r1, r2, marker_color)
         renderer = self._renderer
-        if renderer is not None:
-            # Our protocol uses center and normal vector
-            center_point = self._to_point3d(p1)
-            normal = self._to_point3d(self._face_board.ortho_direction)
-            renderer.shapes.disk(center_point, normal, r_inner, r_outer, marker_color)
-        else:
-            shapes.disk(p1, p2, r_outer, r_inner, marker_color)
+        # Our protocol uses center and normal vector
+        center_point = self._to_point3d(p1)
+        normal = self._to_point3d(self._face_board.ortho_direction)
+        renderer.shapes.disk(center_point, normal, r_inner, r_outer, marker_color)
 
     def _create_markers(self, vertexes: Sequence[ndarray],
                         facet_color: _VColor,
@@ -774,27 +724,9 @@ class _Cell:
 
         # this is also supported by glCallLine
         # shapes.cylinder(p1, p2, r1, r2, marker_color)
-        if False and marker == VMarker.C2:
-            x_dir = x_vec_size / x_size
-            y_dir = y_vec_size / y_size
-
-            center = center + 0.1 *  self._face_board.ortho_direction
-
-            p1 = center - radius * ( x_dir + y_dir)
-            p2 = p1 + 2 * radius * x_dir
-            p3 = p2 + 2 * radius * y_dir
-            p4 = p3 - 2 * radius * x_dir
-
-
-            #shapes.quad_with_line([p1, p2, p3, p4], (255, 255, 255), 2, (0, 0, 0))
-            shapes.quad_with_texture([p1, p2, p3, p4], facet_color, self._face_board.board._target_texture)
-        else:
-            if renderer is not None:
-                p1_point = self._to_point3d(p1)
-                p2_point = self._to_point3d(p2)
-                renderer.shapes.full_cylinder(p1_point, p2_point, r_outer, r_inner, marker_color)
-            else:
-                shapes.full_cylinder(p1, p2, r_outer, r_inner, marker_color)
+        p1_point = self._to_point3d(p1)
+        p2_point = self._to_point3d(p2)
+        renderer.shapes.full_cylinder(p1_point, p2_point, r_outer, r_inner, marker_color)
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]

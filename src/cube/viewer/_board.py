@@ -87,8 +87,14 @@ class _Board:
         #self._target_texture = TextureData.load("6-2-target-picture-resized.png", texture_map)
 
     @property
-    def renderer(self) -> Renderer | None:
-        """Get the renderer instance."""
+    def renderer(self) -> Renderer:
+        """Get the renderer instance.
+
+        Raises:
+            RuntimeError: If renderer is not configured.
+        """
+        if self._renderer is None:
+            raise RuntimeError("Renderer is required but not configured. Use BackendRegistry.create_renderer()")
         return self._renderer
 
     def reset(self):
@@ -132,17 +138,10 @@ class _Board:
 
         self._prepare_view_state()
 
-        renderer = self._renderer
-        if renderer is not None:
-            # Use renderer abstraction
-            display_lists = [DisplayList(ll) for ll in lists]
-            renderer.display_lists.call_lists(display_lists)
-        else:
-            # Fallback to direct OpenGL
-            lists_array = (gl.GLint * n)()
-            lists_array[:] = [*lists]
-            # https://www.glprogramming.com/red/chapter07.html
-            gl.glCallLists(n, gl.GL_INT, lists_array)
+        renderer = self.renderer
+        # Use renderer abstraction
+        display_lists = [DisplayList(ll) for ll in lists]
+        renderer.display_lists.call_lists(display_lists)
 
         self._restore_view_state()
 
