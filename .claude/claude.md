@@ -1,5 +1,62 @@
 # Project-Specific Instructions for Claude
 
+## Current Work: GUI Abstraction Layer Migration
+
+**Branch:** `new_gui`
+
+### Project Overview
+This is a Rubik's cube solver with a 3D GUI using pyglet/OpenGL. We are migrating from direct OpenGL calls to a renderer abstraction layer to support multiple backends (pyglet, headless for testing, potentially Vulkan).
+
+### Architecture
+```
+main_g.py → main_pyglet.py → Window → GCubeViewer → _Board → _FaceBoard → _Cell
+                ↓
+        BackendRegistry.create_renderer(backend="pyglet")
+                ↓
+        PygletRenderer (implements Renderer protocol)
+            ├── ShapeRenderer (quad, triangle, line, sphere, etc.)
+            ├── DisplayListManager (gen_list, call_list, delete_list)
+            └── ViewStateManager (matrix operations)
+```
+
+### Key Files
+- `src/cube/gui/protocols/renderer.py` - Renderer Protocol definition
+- `src/cube/gui/backends/pyglet/renderer.py` - Pyglet implementation
+- `src/cube/gui/backends/headless/` - Headless backend for testing
+- `src/cube/gui/backends/__init__.py` - BackendRegistry
+- `src/cube/viewer/_cell.py` - Cell rendering (uses renderer)
+- `src/cube/viewer/_board.py` - Board rendering (uses renderer)
+- `src/cube/animation/animation_manager.py` - Animation (uses renderer)
+- `docs/design/gui_abstraction.md` - Design documentation
+
+### Current Status (2025-11-28)
+**COMPLETED:**
+- Renderer protocol with ShapeRenderer, DisplayListManager, ViewStateManager
+- PygletRenderer implementation
+- Migrated _cell.py, _board.py, animation_manager.py to use renderer
+- Removed ALL fallback code - renderer is now REQUIRED everywhere
+- GUITestRunner updated to use BackendRegistry
+
+**REMAINING WORK:**
+1. Migrate remaining direct GL calls in:
+   - `viewer_g_ext.py` - draw_axis()
+   - `texture.py` - TextureData texture loading
+   - `app_state.py` - matrix operations (prepare_objects_view/restore_objects_view)
+   - `Window.py` - draw_text() orthographic projection
+2. Complete headless backend for testing
+3. Update design documentation
+
+### How to Run
+- GUI: `python main_g.py`
+- Tests: `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
+
+### Important Notes
+- All code now throws `RuntimeError` if renderer is None - no fallbacks
+- Display lists use internal IDs mapped to GL IDs via `DisplayListManager`
+- TextureData uploads texture inside a display list - must call that list before drawing
+
+---
+
 ## Git Commit Policy
 
 **IMPORTANT**: Never commit changes without explicit user approval.
