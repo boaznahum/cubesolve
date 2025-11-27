@@ -65,11 +65,12 @@ def test_multiple_scrambles(cube_size: int):
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
 
 
-def test_face_rotations():
+@pytest.mark.parametrize("cube_size", [3])
+def test_face_rotations(cube_size: int):
     """Test basic face rotations."""
     result = GUITestRunner.run_test(
         key_sequence="rrrludfbq",
-        cube_size=3,
+        cube_size=cube_size,
         timeout_sec=30.0,
         enable_animation=False,
         debug=True

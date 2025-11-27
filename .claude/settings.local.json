@@ -21,10 +21,10 @@
       "Bash(.venv_test_prod/Scripts/python.exe -m pytest:*)",
       "Bash(.venv_test_prod/Scripts/python.exe:*)",
       "Bash(timeout /t 10 /nobreak)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
-    "ask": [
-    ]
+    "ask": []
   }
 }
