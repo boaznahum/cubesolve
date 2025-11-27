@@ -4,7 +4,7 @@ Headless window implementation.
 Provides a mock window for testing without actual GUI display.
 """
 
-from typing import Callable
+from typing import Callable, Sequence
 
 from cube.gui.types import KeyEvent, MouseEvent, Color4
 
@@ -74,6 +74,10 @@ class HeadlessWindow:
 
         # For testing: track redraw requests
         self._redraw_requested = False
+
+        # Event queue for sequence injection
+        self._key_event_queue: list[KeyEvent] = []
+        self._mouse_event_queue: list[MouseEvent] = []
 
     @property
     def width(self) -> int:
@@ -206,3 +210,80 @@ class HeadlessWindow:
     def simulate_resize(self, width: int, height: int) -> None:
         """Simulate a resize event for testing."""
         self.set_size(width, height)
+
+    # Sequence injection for testing
+
+    def queue_key_events(self, events: Sequence[KeyEvent]) -> None:
+        """Queue key events to be processed later.
+
+        Args:
+            events: Sequence of KeyEvent objects to queue
+        """
+        self._key_event_queue.extend(events)
+
+    def queue_mouse_events(self, events: Sequence[MouseEvent]) -> None:
+        """Queue mouse events to be processed later.
+
+        Args:
+            events: Sequence of MouseEvent objects to queue
+        """
+        self._mouse_event_queue.extend(events)
+
+    def process_queued_key_events(self) -> int:
+        """Process all queued key events.
+
+        Returns:
+            Number of events processed
+        """
+        count = len(self._key_event_queue)
+        while self._key_event_queue:
+            event = self._key_event_queue.pop(0)
+            self.simulate_key_press(event)
+        return count
+
+    def process_queued_mouse_events(self) -> int:
+        """Process all queued mouse events (as press events).
+
+        Returns:
+            Number of events processed
+        """
+        count = len(self._mouse_event_queue)
+        while self._mouse_event_queue:
+            event = self._mouse_event_queue.pop(0)
+            self.simulate_mouse_press(event)
+        return count
+
+    def process_next_key_event(self) -> bool:
+        """Process the next queued key event.
+
+        Returns:
+            True if an event was processed, False if queue empty
+        """
+        if self._key_event_queue:
+            event = self._key_event_queue.pop(0)
+            self.simulate_key_press(event)
+            return True
+        return False
+
+    def has_queued_events(self) -> bool:
+        """Check if there are queued events waiting.
+
+        Returns:
+            True if key or mouse events are queued
+        """
+        return bool(self._key_event_queue or self._mouse_event_queue)
+
+    def clear_event_queue(self) -> None:
+        """Clear all queued events."""
+        self._key_event_queue.clear()
+        self._mouse_event_queue.clear()
+
+    @property
+    def queued_key_event_count(self) -> int:
+        """Number of queued key events."""
+        return len(self._key_event_queue)
+
+    @property
+    def queued_mouse_event_count(self) -> int:
+        """Number of queued mouse events."""
+        return len(self._mouse_event_queue)

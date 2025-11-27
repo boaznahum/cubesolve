@@ -160,3 +160,103 @@ def make_rotation_matrix(angle_degrees: float, x: float, y: float, z: float) -> 
     m[2, 2] = c + z * z * (1 - c)
 
     return m
+
+
+# Key sequence helpers for testing
+
+def make_key_event(symbol: int, modifiers: int = 0, char: str | None = None) -> KeyEvent:
+    """Create a KeyEvent with the given parameters.
+
+    Args:
+        symbol: Key code from Keys class
+        modifiers: Modifier flags from Modifiers class (default: no modifiers)
+        char: Character if printable key
+
+    Returns:
+        KeyEvent instance
+    """
+    return KeyEvent(symbol=symbol, modifiers=modifiers, char=char)
+
+
+def make_key_sequence(*keys: int | tuple[int, int]) -> list[KeyEvent]:
+    """Create a sequence of KeyEvents from key symbols.
+
+    Each argument can be:
+    - A single key code (int): Creates event with no modifiers
+    - A tuple (key_code, modifiers): Creates event with specified modifiers
+
+    Args:
+        *keys: Variable number of key codes or (key_code, modifiers) tuples
+
+    Returns:
+        List of KeyEvent objects
+
+    Example:
+        # Simple sequence: R, L, U
+        seq = make_key_sequence(Keys.R, Keys.L, Keys.U)
+
+        # With modifiers: R, Shift+L, Ctrl+U
+        seq = make_key_sequence(
+            Keys.R,
+            (Keys.L, Modifiers.SHIFT),
+            (Keys.U, Modifiers.CTRL)
+        )
+    """
+    events = []
+    for key in keys:
+        if isinstance(key, tuple):
+            symbol, modifiers = key
+            events.append(KeyEvent(symbol=symbol, modifiers=modifiers))
+        else:
+            events.append(KeyEvent(symbol=key, modifiers=0))
+    return events
+
+
+# Mapping from single characters to key symbols for convenience
+_CHAR_TO_KEY: dict[str, int] = {
+    'A': Keys.A, 'B': Keys.B, 'C': Keys.C, 'D': Keys.D, 'E': Keys.E, 'F': Keys.F,
+    'G': Keys.G, 'H': Keys.H, 'I': Keys.I, 'J': Keys.J, 'K': Keys.K, 'L': Keys.L,
+    'M': Keys.M, 'N': Keys.N, 'O': Keys.O, 'P': Keys.P, 'Q': Keys.Q, 'R': Keys.R,
+    'S': Keys.S, 'T': Keys.T, 'U': Keys.U, 'V': Keys.V, 'W': Keys.W, 'X': Keys.X,
+    'Y': Keys.Y, 'Z': Keys.Z,
+    'a': Keys.A, 'b': Keys.B, 'c': Keys.C, 'd': Keys.D, 'e': Keys.E, 'f': Keys.F,
+    'g': Keys.G, 'h': Keys.H, 'i': Keys.I, 'j': Keys.J, 'k': Keys.K, 'l': Keys.L,
+    'm': Keys.M, 'n': Keys.N, 'o': Keys.O, 'p': Keys.P, 'q': Keys.Q, 'r': Keys.R,
+    's': Keys.S, 't': Keys.T, 'u': Keys.U, 'v': Keys.V, 'w': Keys.W, 'x': Keys.X,
+    'y': Keys.Y, 'z': Keys.Z,
+    '0': Keys._0, '1': Keys._1, '2': Keys._2, '3': Keys._3, '4': Keys._4,
+    '5': Keys._5, '6': Keys._6, '7': Keys._7, '8': Keys._8, '9': Keys._9,
+    ' ': Keys.SPACE, '/': Keys.SLASH, "'": Keys.APOSTROPHE,
+}
+
+
+def parse_key_string(key_string: str, uppercase_is_shift: bool = False) -> list[KeyEvent]:
+    """Parse a string of key characters into KeyEvents.
+
+    This is a convenience function for creating key sequences from strings.
+    Each character maps to its corresponding key.
+
+    Args:
+        key_string: String of characters to convert to key events
+        uppercase_is_shift: If True, uppercase letters add SHIFT modifier.
+            Default False (cube notation style where R = R move).
+
+    Returns:
+        List of KeyEvent objects
+
+    Example:
+        # Cube notation: R L U (all normal moves)
+        seq = parse_key_string("RLU")
+
+        # With shift simulation (keyboard style)
+        seq = parse_key_string("RLU", uppercase_is_shift=True)
+    """
+    events = []
+    for char in key_string:
+        if char in _CHAR_TO_KEY:
+            symbol = _CHAR_TO_KEY[char]
+            modifiers = Modifiers.NONE
+            if uppercase_is_shift and char.isupper():
+                modifiers = Modifiers.SHIFT
+            events.append(KeyEvent(symbol=symbol, modifiers=modifiers, char=char))
+    return events
