@@ -33,7 +33,7 @@ pytest tests/test_cube.py   # Specific file
 ## Type Checking
 
 ```bash
-mypy cube
+mypy src/cube
 pyright
 ```
 
@@ -59,9 +59,43 @@ pyright
 
 ## Project Layout
 
-This project uses the **flat layout** (package directly in root, no `src/` directory).
-Both flat and src layouts are valid - see the Python Packaging Authority guide:
+This project uses the **src layout** (package inside `src/` directory).
+See the Python Packaging Authority guide:
 https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
+
+```
+cubesolve/
+├── src/
+│   └── cube/           ← package code here
+│       ├── __init__.py
+│       ├── algs/
+│       ├── model/
+│       └── solver/
+├── tests/              ← tests here (not inside src/)
+├── pyproject.toml
+└── ...
+```
+
+### Important Notes for src Layout
+
+1. **Must install package to run tests** - Tests import `cube`, which only works after install:
+   ```bash
+   pip install -e ".[dev]"   # Required before running pytest
+   ```
+
+2. **PyCharm setup** - Mark `src/` as "Sources Root":
+   - Right-click `src/` folder → "Mark Directory as" → "Sources Root"
+   - This enables proper IDE code completion and navigation
+
+3. **After pulling changes** - If you see import errors, reinstall:
+   ```bash
+   pip install -e ".[dev]"
+   ```
+
+4. **Why src layout?**
+   - Prevents accidentally importing local code instead of installed package
+   - Forces proper packaging - catches issues before publishing
+   - Development environment matches production
 
 ## Why pyproject.toml?
 

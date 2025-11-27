@@ -51,7 +51,7 @@ Repository = "https://github.com/boaznahum/cubesolve"
 # Project layout reference: https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["cube*"]
 
 [tool.pytest.ini_options]
