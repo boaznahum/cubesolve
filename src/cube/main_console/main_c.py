@@ -1,5 +1,6 @@
 import sys
 import traceback
+from dataclasses import dataclass
 
 import keyboard
 
@@ -10,41 +11,39 @@ from cube.model import Cube
 from cube.operator import Operator
 from cube.solver import Solver, Solvers
 
-_terminal: bool = sys.stdin.isatty()
 
-
-print(f"{_terminal=}")
-print(f"{sys.stdin.isatty()=}")
+@dataclass
+class ConsoleResult:
+    """Result from running the console application."""
+    cube: Cube
+    operator: Operator
+    solver: Solver
 
 
 class _Input:
+    """Input handler that supports both keyboard and injected sequences."""
 
-    def __init__(self, *replay: str) -> None:
+    def __init__(self, key_sequence: str | None = None, use_keyboard: bool = True) -> None:
         super().__init__()
+        self._replay: list[str] = []
+        self._use_keyboard = use_keyboard
 
-        _replay: list[str] = []
-
-        if replay:
-            for r in replay:
-                _replay.extend([*r])
-
-            print(f"{_replay=}")
-
-        self._replay = _replay
+        if key_sequence:
+            self._replay.extend([*key_sequence])
 
     def get_input(self) -> str:
-
         if self._replay:
             return self._replay.pop(0)
 
-        while True:
+        if not self._use_keyboard:
+            raise StopIteration("No more input in sequence")
 
-            if _terminal:
+        while True:
+            if sys.stdin.isatty():
                 value = keyboard.read_event(suppress=True).name
                 print(f"{value=}  {type(value)=}")
             else:
                 value = input()
-                #print(f"{value=}  {type(value)=}")  # str
 
             if value:
                 break
@@ -54,35 +53,72 @@ class _Input:
         return value[0]
 
 
-def main() -> None:
-    inp: _Input = _Input(*sys.argv[1:])
+def run(
+    key_sequence: str | None = None,
+    cube_size: int = 3,
+    debug: bool = False
+) -> ConsoleResult:
+    """
+    Run the console cube application.
 
-    cube_size: int = 3
-    cube: Cube = Cube(3)
+    Parameters
+    ----------
+    key_sequence : str | None
+        Optional key sequence to inject. If None, reads from keyboard.
+        Must end with 'Q' to quit when provided.
+    cube_size : int
+        Size of the cube (default 3).
+    debug : bool
+        Enable debug output (default False).
 
+    Returns
+    -------
+    ConsoleResult
+        Contains the cube, operator, and solver after execution.
+
+    Examples
+    --------
+    Run with injected keys:
+        result = run(Keys.F + Keys.R + Keys.QUIT)
+        assert not result.cube.solved  # Cube is scrambled
+
+    Scramble and solve:
+        result = run(Keys.SCRAMBLE_1 + Keys.SOLVE + Keys.QUIT)
+        assert result.cube.solved
+    """
+    use_keyboard = key_sequence is None
+    inp = _Input(key_sequence=key_sequence, use_keyboard=use_keyboard)
+
+    cube: Cube = Cube(cube_size)
     op: Operator = Operator(cube)
-
     slv: Solver = Solvers.default(op)
 
-    viewer.plot(cube)
-    print("Status=", slv.status)
+    if debug:
+        viewer.plot(cube)
+        print("Status=", slv.status)
 
     done = False
     inv = False
+
     while not done:
-
         while True:
+            not_operation = False
 
-            not_operation = False  # if not_operation is true, then no need to replot
-            print(f"Count={op.count}, History={op.history_as_alg().to_printable()}")
-            print(f"(iv={inv}) Please enter a command:")
-            print(f" '-inv R L U F B D  M,X(R), Y(U) ?solve Algs, Clear Q")
-            print(f" 1scramble1, 0scramble-random <undo, Test")
+            if debug:
+                print(f"Count={op.count}, History={op.history_as_alg().to_printable()}")
+                print(f"(iv={inv}) Please enter a command:")
+                print(f" '-inv R L U F B D  M,X(R), Y(U) ?solve Algs, Clear Q")
+                print(f" 1scramble1, 0scramble-random <undo, Test")
 
-            value = inp.get_input()
-            print(value.upper())
+            try:
+                value = inp.get_input()
+            except StopIteration:
+                done = True
+                break
 
-            # the 'break' is to quit the input loop
+            if debug:
+                print(value.upper())
+
             value = value.upper()
             match value:
                 case Keys.INV:
@@ -121,7 +157,7 @@ def main() -> None:
                     break
 
                 case Keys.ALGS:
-                    alg: Alg = get_alg()
+                    alg: Alg = _get_alg()
                     op.play(alg, inv)
                     break
 
@@ -135,7 +171,6 @@ def main() -> None:
                     break
 
                 case Keys.SCRAMBLE_1 | Keys.SCRAMBLE_2 | Keys.SCRAMBLE_3 | Keys.SCRAMBLE_4 | Keys.SCRAMBLE_5 | Keys.SCRAMBLE_6:
-                    # to match test int
                     alg = Algs.scramble(cube_size, int(value))
                     op.play(alg, inv)
                     break
@@ -149,17 +184,14 @@ def main() -> None:
                     break
 
                 case Keys.TEST:
-                    # test
                     for s in range(0, 50):
                         op.reset()
                         alg = Algs.scramble(s)
                         op.play(alg)
 
-                        # noinspection PyBroadException
                         try:
                             slv.solve()
                             assert slv.is_solved
-
                         except Exception:
                             print(f"Failure on {s}")
                             traceback.print_exc()
@@ -170,14 +202,17 @@ def main() -> None:
                     done = True
                     break
 
-        # print("DONE=", done)
         if not done and not not_operation:
-            inv = False  # consumed
-            viewer.plot(cube)
-            print("Status=", slv.status)
+            inv = False
+            if debug:
+                viewer.plot(cube)
+                print("Status=", slv.status)
+
+    return ConsoleResult(cube=cube, operator=op, solver=slv)
 
 
-def get_alg() -> Alg:
+def _get_alg() -> Alg:
+    """Interactive algorithm selection (for keyboard mode only)."""
     print("Algs:")
     _algs = Algs.lib()
 
@@ -185,10 +220,13 @@ def get_alg() -> Alg:
         print("", i + 1, "):", str(a))
 
     index = input("Alg index:")
-
     return _algs[int(index) - 1]
 
-    pass
+
+def main() -> None:
+    """Entry point for command-line usage."""
+    key_sequence = sys.argv[1] if len(sys.argv) > 1 else None
+    run(key_sequence=key_sequence, debug=True)
 
 
 if __name__ == '__main__':
