@@ -25,11 +25,14 @@ class Window(AbstractWindow, AnimationWindow):
 
     def __init__(self, app: AbstractApp,
                  width, height, title=''):
+        # Set _app before super().__init__() because pyglet's __init__ triggers
+        # on_resize which accesses self.app (via the property that returns self._app)
+        self._app: AbstractApp = app
+        self._vs = app.vs
+
         super(Window, self).__init__(width, height, title, resizable=True)
 
         self._animation_manager = app.am
-
-        self._vs = app.vs
 
         # still don't know how to get rid of this patch !!!
         if self._animation_manager:
@@ -44,7 +47,6 @@ class Window(AbstractWindow, AnimationWindow):
 
         self.batch = pyglet.graphics.Batch()
 
-        self._app: AbstractApp = app
         self._viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs)
         self.text: MutableSequence[pyglet.text.Label] = []
         self.animation_text: MutableSequence[pyglet.text.Label] = []

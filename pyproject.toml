@@ -61,6 +61,7 @@ python_functions = ["test_*"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "benchmark: marks tests as benchmarks",
+    "gui: marks tests as GUI tests (require display, run with 'pytest tests/gui -v')",
 ]
 addopts = "--ignore=tests/gui"
 
