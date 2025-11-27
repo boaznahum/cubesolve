@@ -527,9 +527,8 @@ class PygletRenderer:
             return
 
         gl.glClearColor(0, 0, 0, 1)
-        gl.glEnable(gl.GL_DEPTH_TEST)
-        gl.glEnable(gl.GL_CULL_FACE)
-        gl.glCullFace(gl.GL_BACK)
+        # Note: GL_DEPTH_TEST is enabled by Window.py after setup()
+        # Do NOT enable GL_CULL_FACE - it breaks cube rendering
 
         self._initialized = True
 

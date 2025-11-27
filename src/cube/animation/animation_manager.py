@@ -16,6 +16,8 @@ from cube.model import PartSlice
 from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
 from cube.viewer.viewer_g import GCubeViewer
+from cube.gui.protocols.renderer import Renderer
+from cube.gui.types import DisplayList
 
 OpProtocol: TypeAlias = Callable[[algs.Alg, bool], None]
 
@@ -203,7 +205,7 @@ def _op_and_play_animation(window: AnimationWindow,
         operator(alg, False)
         return
 
-    animation: Animation = _create_animation(cube, viewer, vs, alg, alg.n)
+    animation: Animation = _create_animation(cube, viewer, vs, alg, alg.n, viewer.renderer)
     delay: float = animation.delay
 
     # animation.draw() is called from window.on_draw
@@ -251,7 +253,7 @@ def _op_and_play_animation(window: AnimationWindow,
 
 
 def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewState, alg: algs.AnimationAbleAlg,
-                      n_count) -> Animation:
+                      n_count, renderer: Renderer | None = None) -> Animation:
     rotate_face: FaceName
     cube_parts: Collection[PartSlice]
 
@@ -388,8 +390,14 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
         gl.glMultMatrixf(gm)
 
         try:
-            for f in gui_objects:
-                gl.glCallList(f)
+            if renderer is not None:
+                # Use renderer to call display lists (maps internal IDs to GL IDs)
+                for f in gui_objects:
+                    renderer.display_lists.call_list(DisplayList(f))
+            else:
+                # Fallback to direct OpenGL
+                for f in gui_objects:
+                    gl.glCallList(f)
         finally:
             vs.restore_objects_view()
 

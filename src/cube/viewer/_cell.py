@@ -431,6 +431,9 @@ class _Cell:
                     points = self._vertices_to_points(_vx)
                     if cubie_facet_texture:
                         from ..gui.types import TextureHandle
+                        # Call the texture's setup display list to ensure texture data is uploaded
+                        # The TextureData class uploads texture inside a display list, so we must call it
+                        gl.glCallList(cubie_facet_texture.gl_list)
                         # Use the GL texture ID directly as a TextureHandle
                         tex_handle = TextureHandle(cubie_facet_texture._gl_texture_id)
                         tex_map = self._texture_data_to_map(cubie_facet_texture)
