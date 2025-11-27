@@ -2,6 +2,14 @@
 
 This directory contains parameterized tests for GUI backends. Tests can run with any backend implementation by specifying the `--backend` option.
 
+## Available Backends
+
+| Backend | Description | Requirements |
+|---------|-------------|--------------|
+| `headless` | No-op backend for testing (default) | None |
+| `pyglet` | Full OpenGL rendering | `pip install pyglet` |
+| `tkinter` | Tkinter-based rendering | Python tk (usually included) |
+
 ## Running Tests
 
 ### Command Line
@@ -18,6 +26,23 @@ pytest tests/backends/ -v --backend=tkinter
 # Run with all available backends
 pytest tests/backends/ -v --backend=all
 ```
+
+### Pyglet Backend
+
+The pyglet backend provides full OpenGL rendering. It requires a display (won't work in headless CI environments).
+
+```bash
+# Install pyglet
+pip install pyglet
+
+# Run tests with pyglet
+pytest tests/backends/ -v --backend=pyglet
+
+# Run only pyglet with real window tests (creates visible windows)
+pytest tests/backends/test_renderer_protocol.py -v --backend=pyglet
+```
+
+**Note:** Pyglet tests create real windows briefly during testing. Some headless-specific tests (event simulation) are skipped for pyglet.
 
 ### PyCharm
 
