@@ -2,4 +2,4 @@
 __pycache__/
 /nul
 /build/
-/cubesolve.egg-info/
+cubesolve.egg-info/

@@ -13,12 +13,18 @@
       "Bash(dir /s /b *.py 2)",
       "Bash(powershell -NoProfile -Command \"Write-Output $PROFILE\")",
       "Bash(pwsh:*)",
-      "Bash(powershell -NoProfile -Command \"Set-Location ''F:\\Dev\\code\\python\\cubesolve''; & ''.venv314\\Scripts\\python.exe'' -m pytest tests -v -m ''not slow'' --ignore=tests/gui 2>&1 | Select-Object -First 50\")"
+      "Bash(powershell -NoProfile -Command \"Set-Location ''F:\\Dev\\code\\python\\cubesolve''; & ''.venv314\\Scripts\\python.exe'' -m pytest tests -v -m ''not slow'' --ignore=tests/gui 2>&1 | Select-Object -First 50\")",
+      "Bash(powershell -NoProfile -Command \"Remove-Item -Recurse -Force ''.venv_test''\")",
+      "Bash(powershell -NoProfile -Command \"python -m venv .venv_test; & ''.venv_test\\Scripts\\pip.exe'' install .\")",
+      "Bash(.venv_test_prod/Scripts/pip.exe install:*)",
+      "Bash(.venv_test_prod/Scripts/pip.exe freeze:*)",
+      "Bash(.venv_test_prod/Scripts/python.exe -m pytest:*)",
+      "Bash(.venv_test_prod/Scripts/python.exe:*)",
+      "Bash(timeout /t 10 /nobreak)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": [
-      "Bash(git commit:*)",
-      "Bash(git push:*)"
     ]
   }
 }
