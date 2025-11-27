@@ -1,0 +1,294 @@
+@startuml GUI Abstraction Architecture
+
+title GUI Abstraction Layer - Architecture Diagram
+
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+' ============================================
+' MODEL LAYER (unchanged)
+' ============================================
+package "Model Layer (unchanged)" as model #LightGreen {
+    class Cube {
+        +faces: Face[6]
+        +edges: Edge[12]
+        +corners: Corner[8]
+        +rotate_face()
+        +solved: bool
+    }
+
+    class Operator {
+        +play(alg: Alg)
+        +undo()
+        +history: Alg[]
+    }
+
+    class Solver {
+        +solve()
+        +is_solved: bool
+    }
+
+    Operator --> Cube : mutates
+    Solver --> Operator : uses
+}
+
+' ============================================
+' GUI PROTOCOLS (new)
+' ============================================
+package "cube.gui.protocols" as protocols #LightBlue {
+
+    interface Renderer <<protocol>> {
+        +shapes: ShapeRenderer
+        +display_lists: DisplayListManager
+        +view: ViewStateManager
+        +clear()
+        +setup()
+        +cleanup()
+    }
+
+    interface ShapeRenderer <<protocol>> {
+        +quad(vertices, color)
+        +quad_with_border(...)
+        +sphere(center, radius, color)
+        +cylinder(p1, p2, r1, r2, color)
+    }
+
+    interface DisplayListManager <<protocol>> {
+        +create_list(): DisplayList
+        +begin_compile(list_id)
+        +end_compile()
+        +call_list(list_id)
+        +delete_list(list_id)
+    }
+
+    interface ViewStateManager <<protocol>> {
+        +set_projection(w, h, fov)
+        +push_model_view()
+        +pop_model_view()
+        +translate(x, y, z)
+        +rotate(angle, x, y, z)
+    }
+
+    interface Window <<protocol>> {
+        +width: int
+        +height: int
+        +text: TextRenderer
+        +set_draw_handler()
+        +set_key_handler()
+        +close()
+    }
+
+    interface EventLoop <<protocol>> {
+        +run()
+        +stop()
+        +schedule_interval()
+        +unschedule()
+    }
+
+    interface AnimationBackend <<protocol>> {
+        +supported: bool
+        +running: bool
+        +run_animation(...)
+        +cancel()
+    }
+
+    Renderer *-- ShapeRenderer
+    Renderer *-- DisplayListManager
+    Renderer *-- ViewStateManager
+}
+
+' ============================================
+' BACKEND FACTORY
+' ============================================
+package "cube.gui" as gui_root #LightYellow {
+    class BackendRegistry <<singleton>> {
+        -_backends: Dict
+        -_default: str
+        +register(name, classes)
+        +set_default(name)
+        +create_renderer()
+        +create_window()
+        +create_event_loop()
+    }
+
+    class "create_gui()" as create_gui <<function>> {
+        backend: str = None
+        width: int = 720
+        height: int = 720
+        --
+        returns (Renderer, Window,
+                 EventLoop, Animation)
+    }
+
+    create_gui --> BackendRegistry : uses
+}
+
+' ============================================
+' PYGLET BACKEND
+' ============================================
+package "cube.gui.backends.pyglet" as pyglet_backend #LightCoral {
+    class PygletRenderer {
+        -_shapes: PygletShapeRenderer
+        -_display_lists: PygletDisplayListManager
+        -_view: PygletViewStateManager
+    }
+
+    class PygletShapeRenderer {
+        ' wraps shapes.py
+        +quad() : gl.glBegin(GL_QUADS)
+        +sphere() : gluSphere()
+    }
+
+    class PygletDisplayListManager {
+        ' wraps GL display lists
+        +create_list() : gl.glGenLists()
+        +call_list() : gl.glCallList()
+    }
+
+    class PygletWindow {
+        ' wraps pyglet.window.Window
+        -_pyglet_window
+    }
+
+    class PygletEventLoop {
+        ' wraps pyglet.app
+        +run() : pyglet.app.run()
+    }
+
+    class PygletAnimation {
+        ' wraps animation_manager.py
+        +run_animation()
+    }
+
+    PygletRenderer *-- PygletShapeRenderer
+    PygletRenderer *-- PygletDisplayListManager
+}
+
+' ============================================
+' HEADLESS BACKEND
+' ============================================
+package "cube.gui.backends.headless" as headless_backend #LightGray {
+    class HeadlessRenderer {
+        ' no-op implementation
+    }
+
+    class HeadlessWindow {
+        ' mock window for testing
+    }
+
+    class HeadlessEventLoop {
+        ' immediate execution
+    }
+
+    note bottom of HeadlessRenderer
+        All methods are no-ops
+        for fast testing
+    end note
+}
+
+' ============================================
+' TKINTER BACKEND (future)
+' ============================================
+package "cube.gui.backends.tkinter" as tkinter_backend #Wheat {
+    class TkinterRenderer {
+        -_canvas: tk.Canvas
+        ' 2D isometric projection
+    }
+
+    class TkinterWindow {
+        -_root: tk.Tk
+        -_canvas: tk.Canvas
+    }
+
+    class TkinterEventLoop {
+        +run() : root.mainloop()
+    }
+
+    note bottom of TkinterRenderer
+        Uses Canvas for 2D
+        isometric rendering
+    end note
+}
+
+' ============================================
+' VIEWER LAYER (refactored)
+' ============================================
+package "cube.viewer (refactored)" as viewer #PaleGreen {
+    class GCubeViewer {
+        -_renderer: Renderer
+        -_board: Board
+        +update()
+        +draw()
+    }
+
+    class Board {
+        -_renderer: Renderer
+        -_faces: FaceBoard[6]
+    }
+
+    class Cell {
+        -_renderer: Renderer
+        -_display_list: DisplayList
+        +draw()
+    }
+
+    GCubeViewer *-- Board
+    Board *-- Cell
+}
+
+' ============================================
+' ENTRY POINTS
+' ============================================
+package "Entry Points" as entry #Lavender {
+    class "main_g.py" as main_g {
+        +main(backend=None)
+        ' GUI application
+    }
+
+    class "tests/*" as tests {
+        +test_*()
+        ' Use headless backend
+    }
+
+    class "main_c.py" as main_c {
+        +run()
+        ' Console (no GUI needed)
+    }
+}
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+
+' Protocol implementations
+PygletRenderer ..|> Renderer
+PygletWindow ..|> Window
+PygletEventLoop ..|> EventLoop
+PygletAnimation ..|> AnimationBackend
+
+HeadlessRenderer ..|> Renderer
+HeadlessWindow ..|> Window
+HeadlessEventLoop ..|> EventLoop
+
+TkinterRenderer ..|> Renderer
+TkinterWindow ..|> Window
+TkinterEventLoop ..|> EventLoop
+
+' Registry relationships
+BackendRegistry --> PygletRenderer : creates
+BackendRegistry --> HeadlessRenderer : creates
+BackendRegistry --> TkinterRenderer : creates
+
+' Viewer uses protocols
+GCubeViewer --> Renderer : uses
+GCubeViewer --> Cube : reads state
+
+' Entry points use factory
+main_g --> create_gui : "backend='pyglet'"
+tests --> create_gui : "backend='headless'"
+
+' Entry points use viewer
+main_g --> GCubeViewer
+main_g --> Operator
+
+@enduml

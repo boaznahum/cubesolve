@@ -1,0 +1,187 @@
+@startuml GUI Package Structure
+
+title GUI Abstraction - Package & Component Diagram
+
+skinparam componentStyle rectangle
+
+package "src/cube" {
+
+    ' ============================================
+    ' MODEL (unchanged)
+    ' ============================================
+    package "model" as model_pkg #LightGreen {
+        component [Cube] as cube_comp
+        component [Face] as face_comp
+        component [Part\n(Edge/Corner/Center)] as part_comp
+        component [CubeQueries2] as queries_comp
+    }
+
+    package "operator" as op_pkg #LightGreen {
+        component [Operator] as operator_comp
+    }
+
+    package "solver" as solver_pkg #LightGreen {
+        component [Solver] as solver_comp
+    }
+
+    package "algs" as algs_pkg #LightGreen {
+        component [Alg] as alg_comp
+    }
+
+    ' ============================================
+    ' GUI ABSTRACTION (new)
+    ' ============================================
+    package "gui" as gui_pkg #LightBlue {
+
+        package "protocols" as proto_pkg {
+            component [Renderer] as renderer_proto
+            component [Window] as window_proto
+            component [EventLoop] as loop_proto
+            component [AnimationBackend] as anim_proto
+        }
+
+        component [types.py\n(Point3D, Color3,\nKeyEvent, MouseEvent)] as types_comp
+
+        component [factory.py\n(BackendRegistry,\ncreate_gui)] as factory_comp
+
+        package "backends" as backends_pkg {
+
+            package "pyglet" as pyglet_pkg #LightCoral {
+                component [PygletRenderer] as pyg_renderer
+                component [PygletWindow] as pyg_window
+                component [PygletEventLoop] as pyg_loop
+                component [PygletAnimation] as pyg_anim
+            }
+
+            package "headless" as headless_pkg #LightGray {
+                component [HeadlessRenderer] as hl_renderer
+                component [HeadlessWindow] as hl_window
+                component [HeadlessEventLoop] as hl_loop
+            }
+
+            package "tkinter" as tk_pkg #Wheat {
+                component [TkinterRenderer] as tk_renderer
+                component [TkinterWindow] as tk_window
+                component [TkinterEventLoop] as tk_loop
+            }
+        }
+    }
+
+    ' ============================================
+    ' VIEWER (refactored)
+    ' ============================================
+    package "viewer" as viewer_pkg #PaleGreen {
+        component [GCubeViewer] as gviewer_comp
+        component [_Board] as board_comp
+        component [_Cell] as cell_comp
+        component [_FaceBoard] as faceboard_comp
+    }
+
+    ' ============================================
+    ' ANIMATION (refactored)
+    ' ============================================
+    package "animation" as anim_pkg #PaleGreen {
+        component [AnimationManager] as anim_mgr_comp
+    }
+
+    ' ============================================
+    ' APP
+    ' ============================================
+    package "app" as app_pkg #Lavender {
+        component [AbstractApp] as app_comp
+        component [ApplicationAndViewState] as state_comp
+    }
+
+    ' ============================================
+    ' MAIN WINDOW (refactored)
+    ' ============================================
+    package "main_window" as mainwin_pkg #PaleGreen {
+        component [Window] as win_comp
+        component [KeyboardInput] as key_comp
+        component [MouseInput] as mouse_comp
+    }
+
+    ' ============================================
+    ' ENTRY POINTS
+    ' ============================================
+    component [main_g.py] as main_g #Lavender
+    component [main_c.py] as main_c #Lavender
+}
+
+' ============================================
+' EXTERNAL DEPENDENCIES
+' ============================================
+cloud "pyglet" as pyglet_ext #Pink
+cloud "tkinter" as tk_ext #Wheat
+cloud "OpenGL" as gl_ext #Pink
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+
+' Protocol implementations
+pyg_renderer ..|> renderer_proto
+pyg_window ..|> window_proto
+pyg_loop ..|> loop_proto
+pyg_anim ..|> anim_proto
+
+hl_renderer ..|> renderer_proto
+hl_window ..|> window_proto
+hl_loop ..|> loop_proto
+
+tk_renderer ..|> renderer_proto
+tk_window ..|> window_proto
+tk_loop ..|> loop_proto
+
+' Factory creates backends
+factory_comp --> pyglet_pkg : creates
+factory_comp --> headless_pkg : creates
+factory_comp --> tk_pkg : creates
+
+' Viewer uses protocols (not concrete)
+gviewer_comp --> renderer_proto : uses
+board_comp --> renderer_proto : uses
+cell_comp --> renderer_proto : uses
+
+' Viewer reads model
+gviewer_comp --> cube_comp : reads
+
+' Animation uses protocol
+anim_mgr_comp --> anim_proto : uses
+
+' App coordinates everything
+app_comp --> operator_comp
+app_comp --> solver_comp
+app_comp --> state_comp
+
+' Main window uses protocols
+win_comp --> window_proto : uses
+win_comp --> loop_proto : uses
+
+' Entry point uses factory
+main_g --> factory_comp : create_gui()
+main_g --> app_comp
+main_g --> gviewer_comp
+
+' External dependencies (only in pyglet backend)
+pyg_renderer --> pyglet_ext
+pyg_renderer --> gl_ext
+pyg_window --> pyglet_ext
+pyg_loop --> pyglet_ext
+
+tk_renderer --> tk_ext
+tk_window --> tk_ext
+tk_loop --> tk_ext
+
+' Notes
+note right of headless_pkg
+    No external dependencies
+    Used for fast testing
+end note
+
+note bottom of proto_pkg
+    Protocols define contracts
+    No implementation details
+end note
+
+@enduml

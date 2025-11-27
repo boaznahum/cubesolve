@@ -1,0 +1,121 @@
+@startuml GUI Initialization and Rendering Sequence
+
+title GUI Abstraction - Initialization & Rendering Flow
+
+participant "main_g.py" as main
+participant "BackendRegistry" as registry
+participant "create_gui()" as factory
+participant "Renderer" as renderer
+participant "Window" as window
+participant "EventLoop" as loop
+participant "GCubeViewer" as viewer
+participant "Cube" as cube
+
+== Initialization ==
+
+main -> registry : register("pyglet", ...)
+activate registry
+registry --> main
+deactivate registry
+
+main -> factory : create_gui(backend="pyglet")
+activate factory
+
+factory -> registry : create_renderer("pyglet")
+registry --> factory : PygletRenderer
+
+factory -> registry : create_window(720, 720, "Cube")
+registry --> factory : PygletWindow
+
+factory -> registry : create_event_loop()
+registry --> factory : PygletEventLoop
+
+factory -> registry : create_animation()
+registry --> factory : PygletAnimation
+
+factory --> main : (renderer, window, loop, animation)
+deactivate factory
+
+main -> renderer : setup()
+activate renderer
+renderer --> main
+deactivate renderer
+
+main -> viewer ** : GCubeViewer(renderer, cube)
+
+main -> window : set_draw_handler(on_draw)
+main -> window : set_key_handler(on_key)
+main -> window : set_mouse_handler(on_mouse)
+
+== Event Loop ==
+
+main -> loop : run()
+activate loop
+
+loop -> window : process_events()
+activate window
+
+window -> main : on_draw()
+activate main
+
+main -> renderer : clear()
+main -> renderer : view.set_projection(w, h)
+main -> viewer : draw()
+activate viewer
+
+viewer -> cube : read state (faces, colors)
+viewer -> renderer : shapes.quad(vertices, color)
+viewer -> renderer : display_lists.call_list(id)
+
+viewer --> main
+deactivate viewer
+
+main -> renderer : end_frame()
+main --> window
+deactivate main
+
+window --> loop
+deactivate window
+
+note over loop
+    Loop continues until
+    window.close() or
+    loop.stop() is called
+end note
+
+== Key Press Event ==
+
+loop -> window : process_events()
+window -> main : on_key(KeyEvent)
+activate main
+
+alt Key is cube move (R, L, U, D, F, B)
+    main -> cube : Operator.play(alg)
+    main -> window : request_redraw()
+else Key is quit (Q)
+    main -> loop : stop()
+end
+
+main --> window
+deactivate main
+
+== Animation (if supported) ==
+
+main -> renderer : animation.run_animation(cube, face, slices, n)
+activate renderer
+
+loop over animation frames
+    renderer -> viewer : update animation state
+    renderer -> window : request_redraw()
+    window -> main : on_draw()
+    main -> viewer : draw() with interpolated transform
+end
+
+renderer -> main : on_complete callback
+deactivate renderer
+
+main -> cube : apply final rotation
+
+deactivate loop
+
+@enduml
