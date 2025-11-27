@@ -48,6 +48,7 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/boaznahum/cubesolve"
 Repository = "https://github.com/boaznahum/cubesolve"
+# Project layout reference: https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
 
 [tool.setuptools.packages.find]
 where = ["."]
