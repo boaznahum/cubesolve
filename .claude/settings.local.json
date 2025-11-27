@@ -22,7 +22,9 @@
       "Bash(.venv_test_prod/Scripts/python.exe:*)",
       "Bash(timeout /t 10 /nobreak)",
       "Bash(dir:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(pip freeze:*)"
     ],
     "deny": [],
     "ask": []

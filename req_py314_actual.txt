@@ -1,5 +1,6 @@
 autoprop==4.1.0
 colorama==0.4.6
+keyboard==0.13.5
 numpy==2.3.5
 pyglet==1.5.31
 PyYAML==6.0.3
