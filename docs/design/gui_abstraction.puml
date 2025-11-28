@@ -1,7 +1,7 @@
 @startuml GUI Abstraction Architecture
 
 title GUI Abstraction Layer - Architecture Diagram
-footer Last Updated: 2025-11-28
+footer Last Updated: 2025-11-28 | Migration Complete ✅
 
 skinparam packageStyle rectangle
 skinparam linetype ortho
@@ -346,11 +346,11 @@ package "cube.viewer ✅" as viewer #90EE90 {
 }
 
 ' ============================================
-' PENDING MIGRATION (still has OpenGL)
+' PYGLET-SPECIFIC CODE (intentional)
 ' ============================================
-package "Pending Migration" as pending #FFB6C1 {
+package "Pyglet Backend Code" as pyglet_code #FFFFE0 {
     class "shapes.py" as shapes_old {
-        ' ⏳ Will be DELETED
+        ' Part of pyglet backend
         +quad_with_line()
         +sphere()
         +cylinder()
@@ -358,19 +358,21 @@ package "Pending Migration" as pending #FFB6C1 {
     }
 
     class "texture.py" as texture_old {
-        ' ⏳ Move to Renderer
+        ' Part of pyglet backend
         +TextureData.load()
     }
 
     class "app_state.py" as appstate_old {
-        ' ⏳ Use ViewStateManager
+        ' Part of pyglet backend
         +prepare_objects_view()
         +restore_objects_view()
     }
 
     note bottom of shapes_old
-        ⏳ Will be deleted
-        Replaced by renderer.shapes
+        Intentionally kept as
+        pyglet backend code.
+        Only abstract if adding
+        another 3D backend.
     end note
 }
 
@@ -447,8 +449,8 @@ app_window --> GCubeViewer : "✅ passes renderer"
 ' Entry points use viewer
 main_g --> Operator
 
-' Old code dependencies (fallback only)
-Cell ..> shapes_old : "fallback when no renderer"
-Board ..> texture_old : "⏳ pending removal"
+' Backend code dependencies (pyglet-specific, intentional)
+Cell --> shapes_old : "uses (pyglet backend)"
+Board --> texture_old : "uses (pyglet backend)"
 
 @enduml

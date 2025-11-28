@@ -1,7 +1,7 @@
 @startuml GUI Initialization and Rendering Sequence
 
 title GUI Abstraction - Initialization & Rendering Flow
-footer Last Updated: 2025-11-28
+footer Last Updated: 2025-11-28 | Migration Complete ✅
 
 participant "main_pyglet.py" as main
 participant "BackendRegistry" as registry
@@ -48,10 +48,17 @@ note over window, viewer
     Passes renderer to GCubeViewer
 end note
 
-== Event Loop ==
+== Event Loop (✅ Abstracted) ==
 
+note over main
+    Wire up event loop to animation manager:
+    app.am.set_event_loop(backend.event_loop)
+end note
+
+main -> backend : backend.event_loop
 main -> loop : run()
 activate loop
+note right: Uses backend.event_loop.run()\nnot direct pyglet.app.run()
 
 loop -> window : process_events()
 activate window

@@ -1,7 +1,7 @@
 @startuml Renderer Flow
 
 title Renderer Flow Through Application Hierarchy
-footer Last Updated: 2025-11-28
+footer Last Updated: 2025-11-28 | Migration Complete ✅
 
 skinparam sequenceMessageAlign center
 skinparam responseMessageBelowArrow true
@@ -10,6 +10,7 @@ participant "main_pyglet.py" as main
 participant "BackendRegistry" as registry
 participant "GUIBackend" as backend
 participant "PygletRenderer" as renderer
+participant "PygletEventLoop" as eventloop
 participant "Window\n(main_window)" as window
 participant "GCubeViewer" as viewer
 participant "_Board" as board
@@ -26,6 +27,11 @@ deactivate registry
 
 main -> main : AbstractApp.create()
 
+note over main
+  Wire up event loop to animation manager:
+  app.am.set_event_loop(backend.event_loop)
+end note
+
 main -> window : Window(app, 720, 720, title, **backend**)
 activate window
 
@@ -39,10 +45,10 @@ deactivate backend
 window -> renderer : setup()
 note right: Initializes OpenGL state:\nglClearColor, glEnable(GL_DEPTH_TEST)
 
-window -> viewer : GCubeViewer(batch, cube, vs, **renderer**)
+window -> viewer : GCubeViewer(cube, vs, **renderer**)
 activate viewer
 
-viewer -> board : _Board(cube, batch, vs, **renderer**)
+viewer -> board : _Board(cube, vs, **renderer**)
 activate board
 
 board -> faceboard : _FaceBoard(self, ...)
@@ -55,14 +61,17 @@ note right
   self._board.renderer
 end note
 
-faceboard -> cell : _Cell(self, batch)
+faceboard -> cell : _Cell(self)
 activate cell
 note right
   _Cell accesses renderer via property:
 
   @property
-  def _renderer(self):
+  def renderer(self):
     return self._face_board.board.renderer
+
+  **Renderer is REQUIRED**
+  RuntimeError if not configured
 end note
 
 deactivate cell
@@ -71,9 +80,19 @@ deactivate board
 deactivate viewer
 deactivate window
 
-== Rendering (on_draw) ==
+== Event Loop (✅ Abstracted) ==
 
-main -> window : pyglet.app.run()
+main -> backend : backend.event_loop
+activate backend
+backend -> eventloop ** : event_loop_factory()
+backend --> main : event_loop
+deactivate backend
+
+main -> eventloop : run()
+activate eventloop
+note right: Uses pyglet.app.run()\ninternally
+
+eventloop -> window : process_events()
 activate window
 
 window -> window : on_draw()
@@ -85,15 +104,10 @@ activate board
 
 board -> board : _prepare_view_state()
 
-alt renderer is not None
-  board -> renderer : display_lists.call_lists(lists)
-  activate renderer
-  renderer -> renderer : glCallList() for each
-  deactivate renderer
-else renderer is None (fallback)
-  board -> board : gl.glCallLists(n, GL_INT, array)
-  note right: Direct OpenGL fallback
-end
+board -> renderer : display_lists.call_lists(lists)
+activate renderer
+renderer -> renderer : glCallList() for each
+deactivate renderer
 
 board -> board : _restore_view_state()
 
@@ -101,33 +115,34 @@ deactivate board
 deactivate viewer
 deactivate window
 
+deactivate eventloop
+
 == Shape Rendering (inside display list compile) ==
 
 cell -> cell : _update_polygon()
 activate cell
 
-alt renderer is not None
-  cell -> renderer : shapes.quad_with_border(points, color, lw, lc)
-  activate renderer
-  renderer -> renderer : gl.glBegin(GL_QUADS)...
-  deactivate renderer
+cell -> renderer : shapes.quad_with_border(points, color, lw, lc)
+activate renderer
+renderer -> renderer : gl.glBegin(GL_QUADS)...
+deactivate renderer
 
-  cell -> renderer : shapes.cross(points, width, color)
-  activate renderer
-  renderer -> renderer : gl.glBegin(GL_LINES)...
-  deactivate renderer
+cell -> renderer : shapes.cross(points, width, color)
+activate renderer
+renderer -> renderer : gl.glBegin(GL_LINES)...
+deactivate renderer
 
-  cell -> renderer : shapes.full_cylinder(p1, p2, r_out, r_in, color)
-  activate renderer
-  renderer -> renderer : gluCylinder(), gluDisk()
-  deactivate renderer
-else renderer is None (fallback)
-  cell -> cell : shapes.quad_with_line(...)
-  cell -> cell : shapes.cross(...)
-  cell -> cell : shapes.full_cylinder(...)
-  note right: Falls back to viewer/shapes.py\n(direct OpenGL calls)
-end
+cell -> renderer : shapes.full_cylinder(p1, p2, r_out, r_in, color)
+activate renderer
+renderer -> renderer : gluCylinder(), gluDisk()
+deactivate renderer
 
 deactivate cell
+
+note over cell, renderer
+  **No fallback code**
+  Renderer is always required
+  All rendering goes through renderer.*
+end note
 
 @enduml

@@ -802,7 +802,9 @@ class TkinterShapeRenderer:
 
 > **Last Updated:** 2025-11-28
 
-### Completed ✅
+### Migration Complete ✅
+
+The core abstraction layer migration is **COMPLETE** (Steps 1-12).
 
 | Component | Status | Notes |
 |-----------|--------|-------|
@@ -815,12 +817,25 @@ class TkinterShapeRenderer:
 | Backend tests | ✅ Done | `tests/backends/` with --backend option |
 | Texture support | ✅ Done | load_texture(), bind_texture(), quad_with_texture() |
 | Renderer in viewer hierarchy | ✅ Done | GCubeViewer → _Board → _FaceBoard → _Cell |
-| main_g.py / main_pyglet.py | ✅ Done | Uses `BackendRegistry.get_backend()` |
+| main_g.py / main_pyglet.py | ✅ Done | Uses `BackendRegistry.get_backend()` and `backend.event_loop.run()` |
 | main_window/Window.py | ✅ Done | Accepts `backend: GUIBackend` parameter |
 | GUITestRunner | ✅ Done | Uses `BackendRegistry.get_backend()` |
-| viewer/_cell.py (display lists) | ✅ Done | Uses renderer.display_lists.* |
-| viewer/_cell.py (shapes) | ✅ Done | Uses renderer.shapes.* with fallback |
-| viewer/_board.py | ✅ Done | Uses renderer.display_lists.call_lists() |
+| viewer/_cell.py | ✅ Done | Uses renderer.display_lists.* and renderer.shapes.* |
+| viewer/_board.py | ✅ Done | Uses renderer.display_lists.call_lists(), no pyglet imports |
+| viewer/viewer_g.py | ✅ Done | No pyglet imports (cleaned up) |
+| animation/animation_manager.py | ✅ Done | Uses abstract EventLoop protocol |
+| main_g_abstract.py | ✅ Done | AbstractWindow is now a Protocol (not pyglet-dependent) |
+| EventLoop protocol | ✅ Done | `gui/protocols/event_loop.py` - run(), stop(), step(), schedule_*(), has_exit, idle(), notify() |
+
+### Migration Tags
+
+| Tag | Description |
+|-----|-------------|
+| `step8-eventloop-migration` | AnimationManager uses abstract EventLoop |
+| `step9-mainloop-migration` | main_pyglet.py uses backend.event_loop.run() |
+| `step10-abstractwindow-protocol` | AbstractWindow converted to Protocol |
+| `step11-viewer-cleanup` | Removed unused pyglet imports from viewer modules |
+| `step12-final-verification` | All tests pass, migration complete |
 
 ### Renderer Flow (✅ Implemented)
 
@@ -836,52 +851,41 @@ main_pyglet.py
             ├── self._renderer = backend.renderer  # Lazy creation
             ├── renderer.setup()  # Initialize OpenGL state
             │
-            └── GCubeViewer(batch, cube, vs, renderer=self._renderer)
+            └── GCubeViewer(cube, vs, renderer=self._renderer)
                     │
-                    └── _Board(cube, batch, vs, renderer=renderer)
+                    └── _Board(cube, vs, renderer=renderer)
                             │
                             └── _FaceBoard(self, ...)  # stores ref to _Board
                                     │
-                                    └── _Cell(self, batch)
+                                    └── _Cell(self)
                                             │
-                                            └── @property _renderer
+                                            └── @property renderer
                                                     return self._face_board.board.renderer
 ```
 
 **Access Pattern:**
 - `Window` receives `GUIBackend` and gets renderer via `backend.renderer`
 - `_Cell` accesses the renderer via: `self._face_board.board.renderer`
-- All shape rendering uses `renderer.shapes.*` when renderer is available
-- All display list operations use `renderer.display_lists.*` when renderer is available
-- Renderer is now REQUIRED - no fallback to direct OpenGL calls
+- All shape rendering uses `renderer.shapes.*`
+- All display list operations use `renderer.display_lists.*`
+- **Renderer is REQUIRED** - RuntimeError if not configured
 
 **See also:** `docs/design/renderer_flow.puml` for sequence diagram
 
-### Pending (Fallback Code) ⏳
+### Remaining Direct OpenGL Code (Intentional)
 
-These files still contain fallback OpenGL code that is used when no renderer is provided:
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| viewer/shapes.py | ⏳ Fallback | Used when renderer is None, can be deleted once migration complete |
-| viewer/texture.py | ⏳ Pending | Move to renderer.load_texture() |
-| app/app_state.py | ⏳ Pending | GL matrix/projection calls |
-| animation/animation_manager.py | ⏳ Pending | Use AnimationBackend protocol |
-
-### OpenGL Usage Locations
-
-Files that still contain direct OpenGL calls (in addition to `gui/backends/pyglet/`):
+These files contain direct pyglet/OpenGL calls and are part of the **pyglet backend**:
 
 | File | GL Calls | Notes |
 |------|----------|-------|
-| `viewer/_cell.py` | ~30 | Fallback path when no renderer |
-| `viewer/_board.py` | ~3 | Fallback path when no renderer |
-| `viewer/shapes.py` | ~100 | Fallback functions, can be deleted |
-| `viewer/texture.py` | ~20 | Move to renderer.load_texture() |
-| `viewer/gl_helper.py` | ~10 | Delete after migration |
-| `app/app_state.py` | ~30 | Move to renderer.view.* |
-| `animation/animation_manager.py` | ~5 | Use AnimationBackend protocol |
-| `main_window/Window.py` | ~10 | Some direct GL for text/axis |
+| `viewer/_cell.py` | ~30 | Low-level GL rendering (pyglet backend code) |
+| `viewer/shapes.py` | ~100 | Shape primitives (pyglet backend code) |
+| `viewer/texture.py` | ~20 | Texture loading (pyglet backend code) |
+| `viewer/viewer_g_ext.py` | ~10 | draw_axis() helper |
+| `app/app_state.py` | ~30 | Matrix operations |
+| `main_window/Window.py` | ~10 | draw_text() orthographic projection |
+
+These would only need abstraction if adding another 3D backend (e.g., Vulkan).
 
 ---
 

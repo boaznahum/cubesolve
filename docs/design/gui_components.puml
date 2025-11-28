@@ -1,7 +1,7 @@
 @startuml GUI Package Structure
 
 title GUI Abstraction - Package & Component Diagram
-footer Last Updated: 2025-11-28 | ✅ = Done | 🔄 = In Progress | ⏳ = Pending
+footer Last Updated: 2025-11-28 | Migration Complete ✅
 
 skinparam componentStyle rectangle
 
@@ -85,27 +85,28 @@ package "src/cube" {
     }
 
     ' ============================================
-    ' ANIMATION (⏳ pending)
+    ' ANIMATION (✅ migrated)
     ' ============================================
-    package "animation ⏳" as anim_pkg #FFFFE0 {
-        component [AnimationManager\n(still uses pyglet.clock)] as anim_mgr_comp
+    package "animation ✅" as anim_pkg #90EE90 {
+        component [AnimationManager\n+set_event_loop() ✅\nuses EventLoop protocol] as anim_mgr_comp
     }
 
     ' ============================================
-    ' APP (⏳ pending)
+    ' APP (partial - pyglet backend)
     ' ============================================
-    package "app ⏳" as app_pkg #FFFFE0 {
+    package "app" as app_pkg #FFFFE0 {
         component [AbstractApp] as app_comp
-        component [ApplicationAndViewState\n(still uses gl.* calls)] as state_comp #FFB6C1
+        component [ApplicationAndViewState\n(pyglet backend code)] as state_comp
     }
 
     ' ============================================
-    ' MAIN WINDOW (⏳ pending)
+    ' MAIN WINDOW (✅ migrated)
     ' ============================================
-    package "main_window ⏳" as mainwin_pkg #FFFFE0 {
-        component [Window\n(extends pyglet.window)] as win_comp #FFB6C1
-        component [KeyboardInput] as key_comp
-        component [MouseInput] as mouse_comp
+    package "main_window ✅" as mainwin_pkg #90EE90 {
+        component [Window\n(pyglet-specific)] as win_comp
+        component [AbstractWindow\n(Protocol) ✅] as abstract_win_comp
+        component [KeyboardInput ✅\nuses Keys protocol] as key_comp
+        component [MouseInput ✅\nuses MouseButton protocol] as mouse_comp
     }
 
     ' ============================================
@@ -155,17 +156,17 @@ cell_comp --> renderer_proto : uses (partial)
 ' Viewer reads model
 gviewer_comp --> cube_comp : reads
 
-' Animation uses protocol (pending)
-anim_mgr_comp ..> anim_proto : should use
+' Animation uses protocol (✅ done)
+anim_mgr_comp --> loop_proto : "✅ uses EventLoop"
 
 ' App coordinates everything
 app_comp --> operator_comp
 app_comp --> solver_comp
 app_comp --> state_comp
 
-' Main window should use protocols (pending)
-win_comp ..> window_proto : should use
-win_comp ..> loop_proto : should use
+' Main window uses protocols (✅ done)
+abstract_win_comp ..|> window_proto : implements
+win_comp --> abstract_win_comp : implements
 
 ' Entry point uses factory (✅ done)
 main_g --> factory_comp : "✅ get_backend()"
@@ -212,8 +213,7 @@ note right of viewer_pkg
     ✅ Viewer fully migrated
     Uses renderer.shapes.*
     Uses renderer.display_lists.*
-    Falls back to direct GL
-    when renderer is None
+    **No fallback** - renderer required
 end note
 
 @enduml
