@@ -254,3 +254,166 @@ All pyglet imports have been successfully removed from:
 **Remaining pyglet imports (by design):**
 1. `src/cube/gui/backends/pyglet/*` - Backend implementation
 2. `src/cube/main_window/Window.py` - IS the pyglet window class
+
+---
+
+## Phase 3: Abstract Window Layer (PLANNED)
+
+### Goal for Phase 3
+
+Create an abstract `AppWindow` class that can work with ANY backend (pyglet, tkinter, etc.), allowing `main_tkinter.py` to use the same keyboard/mouse handling code as `main_pyglet.py`.
+
+### Current Problem
+
+The `main_window/Window.py` is tightly coupled to pyglet:
+- Inherits from `pyglet.window.Window`
+- Uses pyglet-specific GL calls (`gl.glViewport`, `gl.glEnable`)
+- Uses pyglet-specific text rendering (`pyglet.text.Label`)
+- Handles pyglet-specific events (`on_key_press`, `on_draw`, etc.)
+
+The keyboard/mouse handlers in `main_g_keyboard_input.py` and `main_g_mouse.py` are already abstracted using `AbstractWindow` protocol, but:
+- They need cursor methods (`get_system_mouse_cursor`, `set_mouse_cursor`)
+- They need text rendering for status display
+- The main Window class creates pyglet-specific labels
+
+### Architecture Design
+
+```
+                         AbstractWindow (Protocol)
+                               ↑
+                               │ implements
+            ┌──────────────────┼──────────────────┐
+            │                  │                  │
+    PygletAppWindow    TkinterAppWindow    [Future backends]
+    (wraps Window.py)  (new implementation)
+            │                  │
+            └────────┬─────────┘
+                     │
+              AppWindowBase (shared logic)
+                     │
+        ┌────────────┴────────────┐
+        │                         │
+  main_g_keyboard_input    main_g_mouse
+  (already abstracted)     (already abstracted)
+```
+
+### Phase 3 Migration Steps
+
+#### Step 18: Create AppWindow Protocol
+- **Target:** `src/cube/gui/protocols/app_window.py` (NEW)
+- **Changes:**
+  - Define `AppWindow` protocol extending current `AbstractWindow`
+  - Add `inject_key_sequence()` for testing
+  - Add text rendering interface
+  - Add cursor interface (or make optional with default no-op)
+
+#### Step 19: Create AppWindowBase Class
+- **Target:** `src/cube/gui/app_window_base.py` (NEW)
+- **Changes:**
+  - Implement shared logic (keyboard/mouse dispatch)
+  - Hold references to: `app`, `viewer`, `renderer`, `backend`
+  - Implement `update_gui_elements()` calling viewer.update()
+  - Delegate actual window operations to abstract methods
+
+#### Step 20: Create PygletAppWindow
+- **Target:** `src/cube/gui/backends/pyglet/app_window.py` (NEW)
+- **Changes:**
+  - Wrap existing `Window.py` functionality
+  - Implement pyglet-specific: GL viewport, text labels, cursor
+  - Keep `inject_key_sequence()` for testing
+
+#### Step 21: Create TkinterAppWindow
+- **Target:** `src/cube/gui/backends/tkinter/app_window.py` (NEW)
+- **Changes:**
+  - Use existing `TkinterWindow` for basic window
+  - Implement tkinter-specific text rendering
+  - Implement cursor methods (or no-op)
+  - Wire up to same keyboard/mouse handlers
+
+#### Step 22: Update main_pyglet.py
+- **Target:** `src/cube/main_pyglet.py`
+- **Changes:**
+  - Use new `PygletAppWindow` instead of direct `Window`
+  - Should be minimal changes
+
+#### Step 23: Update main_tkinter.py
+- **Target:** `src/cube/main_tkinter.py`
+- **Changes:**
+  - Replace custom `TkinterCubeApp` with `TkinterAppWindow`
+  - Use same keyboard/mouse handlers as pyglet version
+  - Remove duplicate key handling code
+
+#### Step 24: Phase 3 Final Verification
+- **Verification:**
+  - Both `main_pyglet.py` and `main_tkinter.py` use same handlers
+  - All keyboard shortcuts work in both backends
+  - Mouse rotation/slicing works in both (or gracefully degraded in tkinter)
+  - All tests pass
+
+### Key Abstractions Needed
+
+1. **Text Rendering:**
+   - Current: `pyglet.text.Label` directly in Window
+   - Abstract: `TextRenderer.draw_label()` - already exists in protocols
+
+2. **Cursor Management:**
+   - Current: `window.get_system_mouse_cursor()`, `window.set_mouse_cursor()`
+   - Abstract: Make optional with no-op default for backends that don't support it
+
+3. **GL-specific calls in Window.py:**
+   - `gl.glViewport()` → Move to renderer or backend-specific window
+   - `gl.glEnable(gl.GL_DEPTH_TEST)` → Move to renderer setup
+
+4. **Event Dispatch:**
+   - `on_key_press` → `handle_keyboard_input()`
+   - `on_mouse_drag/press/release/scroll` → `main_g_mouse.*`
+   - Already abstracted, just need proper wiring
+
+### Files That Will Change
+
+| File | Action |
+|------|--------|
+| `gui/protocols/app_window.py` | NEW - AppWindow protocol |
+| `gui/app_window_base.py` | NEW - Shared implementation |
+| `gui/backends/pyglet/app_window.py` | NEW - Pyglet implementation |
+| `gui/backends/tkinter/app_window.py` | NEW - Tkinter implementation |
+| `main_window/Window.py` | MODIFY - Extract reusable parts |
+| `main_window/main_g_abstract.py` | MODIFY or REMOVE - Merge into new protocol |
+| `main_pyglet.py` | MODIFY - Use new window class |
+| `main_tkinter.py` | MODIFY - Use new window class |
+
+### Notes
+
+- The `main_g_keyboard_input.py` and `main_g_mouse.py` are ALREADY backend-agnostic
+- They use `AbstractWindow` protocol which defines the interface
+- The main work is creating concrete implementations for each backend
+- Tkinter won't support all features (e.g., screen_to_world picking may not work well)
+- Focus on getting basic cube display + keyboard rotations working first
+
+---
+
+## Future Investigation: pyopengltk
+
+### Background
+
+The current Tkinter backend uses pure 2D Canvas rendering with isometric projection. This has limitations:
+- No true 3D (fake perspective via math)
+- No depth buffer
+- No hardware acceleration
+- Visual differences from pyglet backend
+
+### Alternative: pyopengltk
+
+`pyopengltk` provides an OpenGL context inside a tkinter window, which would allow:
+- Reusing most of the pyglet backend's OpenGL code
+- True 3D rendering with depth buffer
+- Hardware acceleration
+- Near-identical visual output to pyglet
+
+Trade-offs:
+- Adds external dependency (`pip install pyopengltk`)
+- Event handling differs from pyglet (needs adaptation)
+
+### Status
+- **Priority:** Low (current Canvas approach works for basic functionality)
+- **Tracked in:** `__todo.md`

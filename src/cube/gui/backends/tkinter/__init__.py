@@ -24,10 +24,21 @@ Usage:
     register()
 """
 
-# TODO: Implement tkinter backend
-# from cube.gui.backends.tkinter.renderer import TkinterRenderer
-# from cube.gui.backends.tkinter.window import TkinterWindow
-# from cube.gui.backends.tkinter.event_loop import TkinterEventLoop
+from cube.gui.backends.tkinter.renderer import TkinterRenderer
+from cube.gui.backends.tkinter.window import TkinterWindow
+from cube.gui.backends.tkinter.event_loop import TkinterEventLoop
+
+__all__ = ["TkinterRenderer", "TkinterWindow", "TkinterEventLoop", "register"]
+
+
+def _create_window(width: int, height: int, title: str) -> TkinterWindow:
+    """Factory function for creating TkinterWindow."""
+    return TkinterWindow(width, height, title)
+
+
+def _create_event_loop() -> TkinterEventLoop:
+    """Factory function for creating TkinterEventLoop."""
+    return TkinterEventLoop()
 
 
 def register() -> None:
@@ -36,17 +47,17 @@ def register() -> None:
     This is called automatically on import, but can also be called
     explicitly to ensure registration.
     """
-    # TODO: Implement registration once backend classes are ready
-    # from cube.gui.factory import BackendRegistry
-    # BackendRegistry.register(
-    #     "tkinter",
-    #     renderer_factory=TkinterRenderer,
-    #     window_factory=lambda w, h, t: TkinterWindow(w, h, t),
-    #     event_loop_factory=TkinterEventLoop,
-    #     animation_factory=None,  # Can add TkinterAnimation later
-    # )
-    pass
+    from cube.gui.factory import BackendRegistry
+
+    if not BackendRegistry.is_registered("tkinter"):
+        BackendRegistry.register(
+            "tkinter",
+            renderer_factory=TkinterRenderer,
+            window_factory=_create_window,
+            event_loop_factory=_create_event_loop,
+            animation_factory=None,  # No animation support for now
+        )
 
 
-# Auto-register on import (commented out until implemented)
-# register()
+# Auto-register on import
+register()
