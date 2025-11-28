@@ -4,7 +4,6 @@ title GUI Abstraction - Initialization & Rendering Flow
 
 participant "main_g.py" as main
 participant "BackendRegistry" as registry
-participant "create_gui()" as factory
 participant "Renderer" as renderer
 participant "Window" as window
 participant "EventLoop" as loop
@@ -18,23 +17,10 @@ activate registry
 registry --> main
 deactivate registry
 
-main -> factory : create_gui(backend="pyglet")
-activate factory
-
-factory -> registry : create_renderer("pyglet")
-registry --> factory : PygletRenderer
-
-factory -> registry : create_window(720, 720, "Cube")
-registry --> factory : PygletWindow
-
-factory -> registry : create_event_loop()
-registry --> factory : PygletEventLoop
-
-factory -> registry : create_animation()
-registry --> factory : PygletAnimation
-
-factory --> main : (renderer, window, loop, animation)
-deactivate factory
+main -> registry : create_renderer(backend="pyglet")
+activate registry
+registry --> main : PygletRenderer
+deactivate registry
 
 main -> renderer : setup()
 activate renderer

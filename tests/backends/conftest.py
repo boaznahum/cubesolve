@@ -408,9 +408,12 @@ def animation(backend_name: str, ensure_backend_registered: None) -> AnimationBa
 @pytest.fixture
 def gui_components(backend_name: str, ensure_backend_registered: None) -> Iterator[tuple[Renderer, Window, EventLoop, AnimationBackend | None]]:
     """Create all GUI components for the specified backend."""
-    from cube.gui import create_gui
+    from cube.gui import BackendRegistry
 
-    renderer, window, event_loop, animation = create_gui(backend=backend_name)
+    renderer = BackendRegistry.create_renderer(backend_name)
+    window = BackendRegistry.create_window(backend=backend_name)
+    event_loop = BackendRegistry.create_event_loop(backend_name)
+    animation = BackendRegistry.create_animation(backend_name)
     renderer.setup()
 
     yield renderer, window, event_loop, animation

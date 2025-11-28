@@ -181,17 +181,6 @@ package "cube.gui" as gui_root #LightYellow {
         +create_animation(backend)
     }
 
-    class "create_gui()" as create_gui <<function>> {
-        backend: str = None
-        width: int = 720
-        height: int = 720
-        title: str = "Cube"
-        --
-        returns (Renderer, Window,
-                 EventLoop, Animation)
-    }
-
-    create_gui --> BackendRegistry : uses
 }
 
 ' ============================================
@@ -428,7 +417,7 @@ GCubeViewer --> Cube : reads state
 
 ' Entry points use factory
 main_g --> BackendRegistry : "✅ create_renderer()"
-tests --> create_gui : "✅ uses"
+tests --> BackendRegistry : "✅ create_renderer()"
 
 ' Renderer flow: main_g -> Window -> GCubeViewer -> _Board -> _Cell
 main_g --> app_window : "✅ passes renderer"

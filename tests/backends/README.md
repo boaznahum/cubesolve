@@ -137,7 +137,7 @@ pytest --backend=headless
          ▼
 ┌─────────────────────────────────────┐
 │  gui_components fixture             │
-│  → create_gui(backend="headless")   │
+│  → BackendRegistry.create_*()      │
 │  → HeadlessRenderer                 │
 │  → HeadlessWindow                   │
 │  → HeadlessEventLoop                │

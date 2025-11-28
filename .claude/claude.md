@@ -129,3 +129,38 @@ When reorganizing tests:
 - [ ] Update TESTING.md project structure section
 - [ ] Create `__init__.py` in new test packages
 - [ ] Verify all tests still pass
+
+---
+
+## Design Documentation Maintenance
+
+**IMPORTANT**: When making changes to code or architecture, ALWAYS update the design documents.
+
+### Files to Update
+
+1. **`docs/design/gui_abstraction.md`** - Main design document:
+   - Architecture descriptions
+   - Code examples
+   - Status tables
+   - API documentation
+
+2. **PlantUML diagrams** in `docs/design/`:
+   - `gui_abstraction.puml` - Class diagrams and relationships
+   - `gui_components.puml` - Component diagrams
+   - `gui_sequence.puml` - Sequence diagrams
+
+### When to Update
+
+- Adding/removing functions, classes, or protocols
+- Changing API signatures
+- Adding/removing files or modules
+- Changing relationships between components
+- Updating implementation status
+
+### Checklist
+
+When making code changes:
+- [ ] Update `gui_abstraction.md` if architecture changed
+- [ ] Update `.puml` diagrams if classes/relationships changed
+- [ ] Keep code examples in docs in sync with actual code
+- [ ] Update status tables (✅ Done, 🔄 In Progress, etc.)

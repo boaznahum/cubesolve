@@ -69,7 +69,7 @@ The console viewer (`src/cube/main_console/viewer.py`) provides a useful pattern
 src/cube/gui/
     __init__.py                 # Public API exports
     types.py                    # Common types (Point3D, Color3, events)
-    factory.py                  # BackendRegistry and create_gui()
+    factory.py                  # BackendRegistry
 
     protocols/
         __init__.py
@@ -615,27 +615,6 @@ class BackendRegistry:
         return anim_class() if anim_class else None
 
 
-def create_gui(backend: str | None = None,
-               width: int = 720,
-               height: int = 720,
-               title: str = "Cube") -> tuple[Renderer, Window, EventLoop, AnimationBackend | None]:
-    """Create all GUI components for a backend.
-
-    Args:
-        backend: Backend name, or None for default
-        width: Window width
-        height: Window height
-        title: Window title
-
-    Returns:
-        Tuple of (renderer, window, event_loop, animation_backend)
-    """
-    return (
-        BackendRegistry.create_renderer(backend),
-        BackendRegistry.create_window(width, height, title, backend),
-        BackendRegistry.create_event_loop(backend),
-        BackendRegistry.create_animation(backend),
-    )
 ```
 
 ---
@@ -776,7 +755,7 @@ class TkinterShapeRenderer:
 |-----------|--------|-------|
 | Protocol definitions | ✅ Done | `gui/protocols/*.py` |
 | Types and events | ✅ Done | `gui/types.py` - KeyEvent, MouseEvent, Keys, DisplayList, TextureHandle |
-| Backend registry | ✅ Done | `gui/factory.py` - BackendRegistry, create_gui() |
+| Backend registry | ✅ Done | `gui/factory.py` - BackendRegistry |
 | Pyglet backend | ✅ Done | Full OpenGL implementation in `gui/backends/pyglet/` |
 | Headless backend | ✅ Done | No-op implementation in `gui/backends/headless/` |
 | Backend tests | ✅ Done | `tests/backends/` with --backend option |
@@ -942,28 +921,19 @@ def main():
 ### After Migration
 
 ```python
-from cube.gui import create_gui, BackendRegistry
+from cube.gui import BackendRegistry
 from cube.gui.backends.pyglet import register  # Auto-registers pyglet
 
 def main(backend: str | None = None):
-    # Create GUI components
-    renderer, window, event_loop, animation = create_gui(
-        backend=backend,  # 'pyglet', 'tkinter', 'headless', or None for default
-        width=720,
-        height=720,
-        title="Cube"
-    )
+    # Create renderer
+    renderer = BackendRegistry.create_renderer(backend)
 
-    # Create app with GUI components
-    app = AbstractApp.create_with_gui(renderer, animation)
+    # Create app and window (current approach)
+    app = AbstractApp.create()
+    win = Window(app, 720, 720, "Cube", renderer=renderer)
 
-    # Set up window handlers
-    window.set_draw_handler(lambda: app.draw(renderer))
-    window.set_key_handler(lambda e: handle_key(app, e))
-    window.set_mouse_drag_handler(lambda e: handle_mouse(app, e))
-
-    # Run event loop
-    event_loop.run()
+    # Run pyglet event loop
+    pyglet.app.run()
 
 if __name__ == '__main__':
     import sys
@@ -974,14 +944,14 @@ if __name__ == '__main__':
 ### For Tests
 
 ```python
-from cube.gui import create_gui
+from cube.gui import BackendRegistry
 
 def test_cube_operations():
     # Use headless backend for fast testing
-    renderer, window, event_loop, _ = create_gui(backend='headless')
+    renderer = BackendRegistry.create_renderer(backend='headless')
 
-    # Create app
-    app = AbstractApp.create_with_gui(renderer, animation=None)
+    # Create app without GUI
+    app = AbstractApp.create_non_default(cube_size=3, animation=False)
 
     # Test cube operations without GUI overhead
     app.cube.rotate_face(FaceName.R, 1)

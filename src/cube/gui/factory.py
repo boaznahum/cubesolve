@@ -1,8 +1,7 @@
 """
 Backend factory and registry.
 
-This module provides the BackendRegistry for managing GUI backends
-and the create_gui() factory function for creating GUI components.
+This module provides the BackendRegistry for managing GUI backends.
 """
 
 from typing import Type, TypeVar, Callable, Any
@@ -238,44 +237,6 @@ class BackendRegistry:
         """
         entry = cls._get_entry(backend)
         return entry.animation_factory is not None
-
-
-def create_gui(
-    backend: str | None = None,
-    width: int = 720,
-    height: int = 720,
-    title: str = "Cube",
-) -> tuple[Renderer, Window, EventLoop, AnimationBackend | None]:
-    """Create all GUI components for a backend.
-
-    This is the main factory function for creating a complete GUI setup.
-
-    Args:
-        backend: Backend name ('pyglet', 'tkinter', 'headless'), or None for default
-        width: Window width in pixels
-        height: Window height in pixels
-        title: Window title
-
-    Returns:
-        Tuple of (renderer, window, event_loop, animation_backend)
-        Note: animation_backend may be None if not supported
-
-    Example:
-        renderer, window, event_loop, animation = create_gui(backend='pyglet')
-
-        # Or with custom size
-        renderer, window, event_loop, animation = create_gui(
-            width=1024,
-            height=768,
-            title="Rubik's Cube Solver"
-        )
-    """
-    return (
-        BackendRegistry.create_renderer(backend),
-        BackendRegistry.create_window(width, height, title, backend),
-        BackendRegistry.create_event_loop(backend),
-        BackendRegistry.create_animation(backend),
-    )
 
 
 def register_backend(

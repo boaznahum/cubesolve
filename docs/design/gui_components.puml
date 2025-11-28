@@ -43,7 +43,7 @@ package "src/cube" {
 
         component [types.py ✅\n(Point3D, Color3,\nKeyEvent, MouseEvent,\nDisplayList, TextureHandle)] as types_comp
 
-        component [factory.py ✅\n(BackendRegistry,\ncreate_gui)] as factory_comp
+        component [factory.py ✅\n(BackendRegistry)] as factory_comp
 
         component [context.py ✅\n(RenderingContext)] as context_comp
 
