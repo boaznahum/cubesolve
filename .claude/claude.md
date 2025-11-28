@@ -87,3 +87,45 @@ main_g.py → main_pyglet.py → Window → GCubeViewer → _Board → _FaceBoar
 
 ## Summary
 When in doubt, always ask before committing. The user prefers to review changes first.
+
+---
+
+## Test Infrastructure Maintenance
+
+**IMPORTANT**: When making changes to testing infrastructure, ALWAYS update related files.
+
+### When to Update
+
+Whenever you:
+- Add new pytest flags or options (e.g., `--animate`)
+- Reorganize test files or folders
+- Add new test markers
+- Change how tests are run
+- Add new test categories or fixtures
+
+### What to Update
+
+1. **`tests/TESTING.md`** - Update documentation with:
+   - New command-line options
+   - New test organization/structure
+   - New markers or fixtures
+   - Examples of how to run tests
+
+2. **PyCharm run configurations** (`.idea/runConfigurations/*.xml`) - Update paths when:
+   - Moving test files to new locations
+   - Renaming test files
+   - Adding new frequently-used test configurations
+
+3. **`tests/gui/conftest.py`** or root `conftest.py` - When adding:
+   - New pytest fixtures
+   - New command-line options
+   - New pytest hooks
+
+### Example Checklist
+
+When reorganizing tests:
+- [ ] Move files with `git mv` (preserves history)
+- [ ] Update PyCharm run configurations with new paths
+- [ ] Update TESTING.md project structure section
+- [ ] Create `__init__.py` in new test packages
+- [ ] Verify all tests still pass

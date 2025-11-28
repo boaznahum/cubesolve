@@ -338,7 +338,7 @@ def test_exception_message():
 
 ```
 cubesolve/
-├── cube/                   # Main package
+├── src/cube/               # Main package
 │   ├── algs/               # Algorithm definitions
 │   ├── app/                # Application logic
 │   ├── model/              # Cube model
@@ -347,18 +347,22 @@ cubesolve/
 │   └── ...
 ├── tests/                  # Test directory (this folder)
 │   ├── TESTING.md          # This file
-│   ├── test_cube.py        # Core cube tests
-│   ├── test_boy.py         # BOY orientation tests
-│   ├── test_simplify.py    # Algorithm simplification tests
-│   ├── test_indexes_slices.py  # Slice operations tests
-│   ├── test_scramble_repeatable.py  # Scramble repeatability
-│   ├── test_alg_slice_sequence.py   # Slice syntax tests
-│   ├── test_cube_aggresive.py  # Stress tests (marked slow)
-│   ├── test_perf.py        # Benchmarks (marked slow)
-│   ├── bug_sanity_on.py    # Sanity check tests
-│   └── gui/                # GUI tests (separate, require display)
+│   ├── algs/               # Algorithm and solver tests
+│   │   ├── test_cube.py            # Core scramble/solve tests
+│   │   ├── test_boy.py             # BOY orientation tests
+│   │   ├── test_simplify.py        # Simplification tests
+│   │   ├── test_alg_slice_sequence.py  # Slice syntax tests
+│   │   ├── test_indexes_slices.py  # Slice operations tests
+│   │   ├── test_scramble_repeatable.py  # Scramble repeatability
+│   │   └── bug_sanity_on.py        # Sanity check tests
+│   ├── performance/        # Performance tests (marked slow)
+│   │   ├── test_perf.py            # Benchmarks
+│   │   └── test_cube_aggresive.py  # Stress tests
+│   ├── gui/                # GUI tests (require display)
+│   ├── backends/           # Backend protocol tests
+│   ├── console/            # Console interface tests
+│   └── tetser/             # Test runner utilities
 ├── pyproject.toml          # Project configuration
-├── pytest.ini              # Pytest configuration
 └── requirements*.txt       # Dependencies
 ```
 
