@@ -51,12 +51,23 @@ Before marking a step complete and tagging:
 - **Manual Test Focus:** Test mouse clicking and dragging on cube faces - should still work correctly
 - **Status:** COMPLETED
 
-## Pending Steps
-
 ### Step 6: Migrate main_g_mouse.py - Mouse Handling
 - **Tag:** `migration-step-6-mouse`
-- **Files to Change:** `src/cube/main_window/main_g_mouse.py`
-- **Changes Needed:** Replace direct GL calls with renderer methods
+- **Files Changed:**
+  - `src/cube/main_window/main_g_mouse.py` - Removed pyglet imports, uses abstract types
+  - `src/cube/gui/types.py` - Added `MouseButton` class
+  - `src/cube/gui/backends/pyglet/window.py` - Added `_convert_mouse_buttons()` function
+  - `src/cube/main_window/Window.py` - Converts mouse events to abstract types
+- **Changes:**
+  - `_screen_to_model()` now uses `renderer.view.screen_to_world()` instead of direct GL calls
+  - Mouse drag/press handlers use abstract `Modifiers` and `MouseButton` constants
+- **Bug Fix:** Initial implementation incorrectly assumed pyglet mouse events use top-left origin.
+  Pyglet uses OpenGL convention (bottom-left origin, y=0 at bottom). Removed unnecessary Y-flip
+  from `screen_to_world()` which was causing mouse picking to select wrong faces.
+- **Manual Test Focus:** Right-click drag to rotate view, left-drag on faces to rotate slices, shift/ctrl+click
+- **Status:** COMPLETED
+
+## Pending Steps
 
 ### Step 7: Add Batch Protocol
 - **Tag:** `migration-step-7-batch`
@@ -106,7 +117,7 @@ Report any visual glitches, crashes, or unexpected behavior.
 
 ## Current Migration Status
 
-**Last Completed Step:** Step 5 - Add Picking to Renderer Protocol
-**Last Tag:** `migration-step-5-picking`
-**Next Step:** Step 6 - Migrate main_g_mouse.py
+**Last Completed Step:** Step 6 - Migrate main_g_mouse.py
+**Last Tag:** `migration-step-6-mouse`
+**Next Step:** Step 7 - Add Batch Protocol
 **Tests Passing:** 21 algorithm tests, 3 GUI tests, manual GUI verified
