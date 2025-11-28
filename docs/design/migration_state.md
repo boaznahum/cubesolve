@@ -41,15 +41,17 @@ Before marking a step complete and tagging:
   - Fixed `draw_text()` GL_MATRIX_MODE bug (use GL_TRANSFORM_BIT)
 - **Status:** COMPLETED
 
-## Pending Steps
-
 ### Step 5: Add Picking to Renderer Protocol
 - **Tag:** `migration-step-5-picking`
-- **Files to Change:**
-  - `src/cube/gui/protocols/renderer.py`
-  - `src/cube/gui/backends/pyglet/renderer.py`
-  - `src/cube/main_window/main_g_mouse.py`
-- **Changes Needed:** Add `screen_to_world()` method to renderer protocol
+- **Files Changed:**
+  - `src/cube/gui/protocols/renderer.py` - Added `screen_to_world()` method to ViewStateManager protocol
+  - `src/cube/gui/backends/pyglet/renderer.py` - Implemented using `gluUnProject`
+  - `src/cube/gui/backends/headless/renderer.py` - Added no-op implementation returning (0,0,0)
+- **Changes:** Added screen coordinate to world coordinate conversion (picking) to renderer protocol
+- **Manual Test Focus:** Test mouse clicking and dragging on cube faces - should still work correctly
+- **Status:** COMPLETED
+
+## Pending Steps
 
 ### Step 6: Migrate main_g_mouse.py - Mouse Handling
 - **Tag:** `migration-step-6-mouse`
@@ -104,7 +106,7 @@ Report any visual glitches, crashes, or unexpected behavior.
 
 ## Current Migration Status
 
-**Last Completed Step:** Step 4 - Keyboard Input Migration
-**Last Tag:** `migration-step-4-keyboard`
-**Next Step:** Step 5 - Add Picking to Renderer Protocol
+**Last Completed Step:** Step 5 - Add Picking to Renderer Protocol
+**Last Tag:** `migration-step-5-picking`
+**Next Step:** Step 6 - Migrate main_g_mouse.py
 **Tests Passing:** 21 algorithm tests, 3 GUI tests, manual GUI verified

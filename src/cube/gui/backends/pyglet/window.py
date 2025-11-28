@@ -10,10 +10,11 @@ try:
     import pyglet
     from pyglet import gl
     from pyglet.window import key as pyglet_key
+    from pyglet.window import mouse as pyglet_mouse
 except ImportError as e:
     raise ImportError("pyglet is required for PygletWindow: pip install pyglet") from e
 
-from cube.gui.types import KeyEvent, MouseEvent, Keys, Modifiers, Color4
+from cube.gui.types import KeyEvent, MouseEvent, Keys, Modifiers, MouseButton, Color4
 from cube.gui.protocols.window import Window as WindowProtocol, TextRenderer
 
 
@@ -77,6 +78,18 @@ def _convert_modifiers(pyglet_mods: int) -> int:
         result |= Modifiers.ALT
     if pyglet_mods & (pyglet_key.MOD_COMMAND | pyglet_key.MOD_WINDOWS):
         result |= Modifiers.META
+    return result
+
+
+def _convert_mouse_buttons(pyglet_buttons: int) -> int:
+    """Convert pyglet mouse button flags to our MouseButton flags."""
+    result = 0
+    if pyglet_buttons & pyglet_mouse.LEFT:
+        result |= MouseButton.LEFT
+    if pyglet_buttons & pyglet_mouse.MIDDLE:
+        result |= MouseButton.MIDDLE
+    if pyglet_buttons & pyglet_mouse.RIGHT:
+        result |= MouseButton.RIGHT
     return result
 
 

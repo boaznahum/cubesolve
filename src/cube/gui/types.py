@@ -151,6 +151,14 @@ class Modifiers:
     META = 8  # Command on Mac, Windows key on PC
 
 
+class MouseButton:
+    """Mouse button constants."""
+
+    LEFT = 1
+    MIDDLE = 2
+    RIGHT = 4
+
+
 def make_point3d(x: float, y: float, z: float) -> Point3D:
     """Create a Point3D from coordinates."""
     return np.array([x, y, z], dtype=np.float32)

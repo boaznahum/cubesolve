@@ -18,7 +18,7 @@ from cube.solver import Solver
 from cube.viewer.viewer_g import GCubeViewer
 from cube.viewer.viewer_g_ext import GViewerExt
 from cube.gui.factory import GUIBackend
-from cube.gui.backends.pyglet.window import _PYGLET_TO_KEYS, _convert_modifiers
+from cube.gui.backends.pyglet.window import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 
 # noinspection PyAbstractClass
 class Window(AbstractWindow, AnimationWindow):
@@ -303,10 +303,15 @@ class Window(AbstractWindow, AnimationWindow):
                 self.update_gui_elements()  # to create error label
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        return main_g_mouse.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
+        # Convert pyglet mouse button and modifier values to abstract types
+        abstract_buttons = _convert_mouse_buttons(buttons)
+        abstract_mods = _convert_modifiers(modifiers)
+        return main_g_mouse.on_mouse_drag(self, x, y, dx, dy, abstract_buttons, abstract_mods)
 
     def on_mouse_press(self, x, y, button, modifiers):
-        return main_g_mouse.on_mouse_press(self, self.app.vs, x, y, modifiers)
+        # Convert pyglet modifier values to abstract types
+        abstract_mods = _convert_modifiers(modifiers)
+        return main_g_mouse.on_mouse_press(self, self.app.vs, x, y, abstract_mods)
 
     def on_mouse_release(self, x, y, button, modifiers):
         return main_g_mouse.on_mouse_release()

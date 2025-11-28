@@ -9,9 +9,8 @@ from typing import Tuple, Any
 
 import numpy as np
 from numpy import ndarray
-from pyglet.window import key, mouse  # type: ignore
-from pyglet import gl  # type: ignore
 
+from cube.gui.types import Keys, Modifiers, MouseButton
 from cube.config import INPUT_MOUSE_DEBUG as INPUT_MOUSE_DEBUG
 from cube.config import INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM as INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM
 from cube.config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_ADJUSTED_FACE
@@ -38,10 +37,10 @@ _DRAG_VECTOR_DETECTION_DATA_X0_Y0: Tuple[int, int] = (0, 0)
 
 def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
     # these are persevered for clik slicing, and panning
-    if not modifiers & (key.MOD_SHIFT | key.MOD_CTRL | key.MOD_ALT):
+    if not modifiers & (Modifiers.SHIFT | Modifiers.CTRL | Modifiers.ALT):
 
         if INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
-            if buttons & mouse.RIGHT:
+            if buttons & MouseButton.RIGHT:
                 _handle_model_view_rotate_by_drag(win, dx, dy)
             else:
                 # don't allow cube modification during animation
@@ -49,7 +48,7 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
                     return
                 _handle_face_slice_rotate_by_drag(win, x, y, dx, dy)
 
-    elif (modifiers & key.MOD_ALT) == key.MOD_ALT:
+    elif (modifiers & Modifiers.ALT) == Modifiers.ALT:
 
         win.app.vs.change_offset(dx, dy, 0)
 
@@ -59,12 +58,12 @@ def on_mouse_press(window: AbstractWindow, vs: ApplicationAndViewState, x, y, mo
     if window.app.op.is_animation_running:
         return
 
-    if modifiers & (key.MOD_SHIFT | key.MOD_CTRL):
+    if modifiers & (Modifiers.SHIFT | Modifiers.CTRL):
 
         selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(vs, window, x, y)
 
         if selected:
-            _handle_selected_slice(window, selected[0], modifiers & key.MOD_CTRL)
+            _handle_selected_slice(window, selected[0], modifiers & Modifiers.CTRL)
 
 
 def on_mouse_release():
@@ -572,41 +571,32 @@ def _slice_on_part_edge_alg(part_edge: PartEdge) -> Alg:
 
 
 def _screen_to_model(vs, window, x, y) -> np.ndarray:
-    # almost as in
-    # https://stackoverflow.com/questions/57495078/trying-to-get-3d-point-from-2d-click-on-screen-with-opengl
-    # print(f"on mouse press: {x} {y}")
-    x = float(x)
-    y = window.height - float(y)
-    # The following could work if we were not initially scaling to zoom on
-    # the bed
-    # if self.orthographic:
-    #    return (x - self.width / 2, y - self.height / 2, 0)
-    pmat = (gl.GLdouble * 16)()
-    mvmat = (gl.GLdouble * 16)()
-    # mvmat = self.get_modelview_mat(local_transform)
-    viewport = (gl.GLint * 4)()
-    px = gl.GLdouble()
-    py = gl.GLdouble()
-    pz = gl.GLdouble()
+    """Convert screen coordinates to 3D model coordinates using the renderer.
+
+    This function uses the renderer's screen_to_world() method which handles
+    the GL matrix operations and depth buffer reading internally.
+
+    Args:
+        vs: Application view state (for prepare/restore_objects_view)
+        window: The window (provides renderer access)
+        x: Screen X coordinate
+        y: Screen Y coordinate (top-left origin)
+
+    Returns:
+        3D point as numpy array [x, y, z]
+    """
     renderer = window.renderer
+
+    # Set up the view matrices for unprojection
     vs.prepare_objects_view(renderer)
-    # 0, 0, width, height
-    # TODO: Step 6 - These GL calls should be migrated to renderer.screen_to_world()
-    gl.glGetIntegerv(gl.GL_VIEWPORT, viewport)
-    # print(f"{[f for f in viewport]}")
-    gl.glGetDoublev(gl.GL_PROJECTION_MATRIX, pmat)
-    gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX, mvmat)
-    real_y = viewport[3] - y  # mouse is up down, gl is down up
-    d = (gl.GLfloat * 1)()  # why ?
-    gl.glReadPixels(int(x), int(real_y), 1, 1, gl.GL_DEPTH_COMPONENT, gl.GL_FLOAT, d)
-    # print(f"{[ f for f in d ]=}")
-    # the z coordinate
-    depth = d[0]
-    gl.gluUnProject(x, real_y, depth, mvmat, pmat, viewport, px, py, pz)
-    # print(f"{px.value=}, {py.value=}, {pz.value=}")
+
+    # Use renderer to convert screen to world coordinates
+    # Note: screen_to_world expects y from top (which matches our input)
+    world_x, world_y, world_z = renderer.view.screen_to_world(float(x), float(y))
+
     vs.restore_objects_view(renderer)
 
-    return np.array([px.value, py.value, pz.value])
+    return np.array([world_x, world_y, world_z])
 
 
 def _get_selected_slice(vs, window, x, y) -> Tuple[PartEdge, np.ndarray, np.ndarray] | None:
