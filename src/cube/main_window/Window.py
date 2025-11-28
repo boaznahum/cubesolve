@@ -373,6 +373,10 @@ class Window(AbstractWindow, AnimationWindow):
             ',': key.COMMA,      # Undo
             '<': key.COMMA,      # Undo (shift+comma)
             '[': key.BRACKETLEFT,   # Redo
+
+            # Animation speed control (Numpad +/-)
+            '+': key.NUM_ADD,        # Increase animation speed
+            '-': key.NUM_SUBTRACT,   # Decrease animation speed
         }
 
         return char_map.get(char)

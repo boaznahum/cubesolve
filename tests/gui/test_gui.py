@@ -12,6 +12,9 @@ Run all GUI tests with pytest:
 Run with animations enabled (slower but visible):
     pytest tests/gui/test_gui.py -v --animate
 
+Control animation speed (default: 3 speed-ups):
+    pytest tests/gui/test_gui.py -v --animate --speed-up 5
+
 Run a specific test:
     pytest tests/gui/test_gui.py::test_scramble_and_solve -v
 
@@ -21,6 +24,7 @@ and should be run one at a time or with pytest-forked for isolation.
 
 import pytest
 
+from tests.gui.keys import GUIKeys
 from tests.gui.tester.GUITestRunner import GUITestRunner
 
 
@@ -29,7 +33,7 @@ pytestmark = pytest.mark.gui
 
 
 @pytest.mark.parametrize("cube_size", [3])
-def test_scramble_and_solve(cube_size: int, enable_animation: bool):
+def test_scramble_and_solve(cube_size: int, enable_animation: bool, speed_up_count: int):
     """
     Test scrambling and solving a cube.
 
@@ -39,9 +43,12 @@ def test_scramble_and_solve(cube_size: int, enable_animation: bool):
         Size of cube to test.
     enable_animation : bool
         Fixture from conftest.py, controlled by --animate flag.
+    speed_up_count : int
+        Fixture from conftest.py, controlled by --speed-up flag.
     """
+    speed_up = GUIKeys.SPEED_UP * speed_up_count
     result = GUITestRunner.run_test(
-        key_sequence="1/q",
+        key_sequence=speed_up + GUIKeys.SCRAMBLE_1 + GUIKeys.SOLVE + GUIKeys.QUIT,
         cube_size=cube_size,
         timeout_sec=60.0,
         enable_animation=enable_animation,
@@ -51,7 +58,7 @@ def test_scramble_and_solve(cube_size: int, enable_animation: bool):
 
 
 @pytest.mark.parametrize("cube_size", [3])
-def test_multiple_scrambles(cube_size: int, enable_animation: bool):
+def test_multiple_scrambles(cube_size: int, enable_animation: bool, speed_up_count: int):
     """
     Test multiple scrambles followed by solve.
 
@@ -61,9 +68,12 @@ def test_multiple_scrambles(cube_size: int, enable_animation: bool):
         Size of cube to test.
     enable_animation : bool
         Fixture from conftest.py, controlled by --animate flag.
+    speed_up_count : int
+        Fixture from conftest.py, controlled by --speed-up flag.
     """
+    speed_up = GUIKeys.SPEED_UP * speed_up_count
     result = GUITestRunner.run_test(
-        key_sequence="123/q",
+        key_sequence=speed_up + GUIKeys.SCRAMBLE_1 + GUIKeys.SCRAMBLE_2 + GUIKeys.SCRAMBLE_3 + GUIKeys.SOLVE + GUIKeys.QUIT,
         cube_size=cube_size,
         timeout_sec=90.0,
         enable_animation=enable_animation,
@@ -73,7 +83,7 @@ def test_multiple_scrambles(cube_size: int, enable_animation: bool):
 
 
 @pytest.mark.parametrize("cube_size", [3])
-def test_face_rotations(cube_size: int, enable_animation: bool):
+def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: int):
     """Test basic face rotations.
 
     Parameters
@@ -82,9 +92,12 @@ def test_face_rotations(cube_size: int, enable_animation: bool):
         Size of cube to test.
     enable_animation : bool
         Fixture from conftest.py, controlled by --animate flag.
+    speed_up_count : int
+        Fixture from conftest.py, controlled by --speed-up flag.
     """
+    speed_up = GUIKeys.SPEED_UP * speed_up_count
     result = GUITestRunner.run_test(
-        key_sequence="rrrludfbq",
+        key_sequence=speed_up + GUIKeys.R + GUIKeys.R + GUIKeys.R + GUIKeys.L + GUIKeys.U + GUIKeys.D + GUIKeys.F + GUIKeys.B + GUIKeys.QUIT,
         cube_size=cube_size,
         timeout_sec=30.0,
         enable_animation=enable_animation,
@@ -109,8 +122,9 @@ if __name__ == "__main__":
     print(f"Running: {test_name}")
     print("-" * 70)
 
+    speed_up = GUIKeys.SPEED_UP * 3
     result = GUITestRunner.run_test(
-        key_sequence="1/q",
+        key_sequence=speed_up + GUIKeys.SCRAMBLE_1 + GUIKeys.SOLVE + GUIKeys.QUIT,
         cube_size=3,
         timeout_sec=60.0,
         enable_animation=False,

@@ -69,6 +69,12 @@ pytest tests/gui/test_gui.py -v
 # Run GUI tests with animation (slower, but you can see the cube)
 pytest tests/gui/test_gui.py -v --animate
 
+# Run with animation and custom speed (0 = no speed-up, 5 = faster)
+pytest tests/gui/test_gui.py -v --animate --speed-up 5
+
+# Run with animation at default speed (slower, easier to watch)
+pytest tests/gui/test_gui.py -v --animate --speed-up 0
+
 # Run a specific GUI test
 pytest tests/gui/test_gui.py::test_face_rotations -v
 
@@ -100,6 +106,7 @@ pytest tests/gui/test_gui.py::test_scramble_and_solve -v --animate
 |--------|-------------|
 | (none) | Fast mode - no animation, window flashes briefly |
 | `--animate` | Enable animations - slower but visible cube movements |
+| `--speed-up N` | Increase animation speed N times (default: 3, use 0 for slowest) |
 
 ### Output Options
 
