@@ -27,7 +27,8 @@
       "Bash(pip freeze:*)",
       "Bash(git rm:*)",
       "Bash(.venv314Scriptspython.exe -m pytest:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git tag:*)"
     ],
     "deny": [],
     "ask": []

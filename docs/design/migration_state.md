@@ -105,5 +105,6 @@ Report any visual glitches, crashes, or unexpected behavior.
 ## Current Migration Status
 
 **Last Completed Step:** Step 4 - Keyboard Input Migration
+**Last Tag:** `migration-step-4-keyboard`
 **Next Step:** Step 5 - Add Picking to Renderer Protocol
-**Tests Passing:** 126 non-GUI tests, 3 GUI tests
+**Tests Passing:** 21 algorithm tests, 3 GUI tests, manual GUI verified

@@ -497,6 +497,35 @@ class PygletViewStateManager(ViewStateManager):
             up_x, up_y, up_z,
         )
 
+    def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float, float]:
+        """Convert screen coordinates to world coordinates.
+
+        Uses gluUnProject with current matrices and depth buffer.
+        """
+        # Get current matrices and viewport
+        pmat = (gl.GLdouble * 16)()
+        mvmat = (gl.GLdouble * 16)()
+        viewport = (gl.GLint * 4)()
+
+        gl.glGetIntegerv(gl.GL_VIEWPORT, viewport)
+        gl.glGetDoublev(gl.GL_PROJECTION_MATRIX, pmat)
+        gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX, mvmat)
+
+        # Convert screen Y (top-left origin) to OpenGL Y (bottom-left origin)
+        real_y = viewport[3] - screen_y
+
+        # Read depth at the pixel
+        depth = (gl.GLfloat * 1)()
+        gl.glReadPixels(int(screen_x), int(real_y), 1, 1, gl.GL_DEPTH_COMPONENT, gl.GL_FLOAT, depth)
+
+        # Unproject to world coordinates
+        world_x = gl.GLdouble()
+        world_y = gl.GLdouble()
+        world_z = gl.GLdouble()
+        gl.gluUnProject(screen_x, real_y, depth[0], mvmat, pmat, viewport, world_x, world_y, world_z)
+
+        return (world_x.value, world_y.value, world_z.value)
+
 
 class PygletRenderer(Renderer):
     """Pyglet/OpenGL renderer implementing Renderer protocol."""

@@ -373,6 +373,21 @@ class ViewStateManager(Protocol):
         """
         ...
 
+    def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float, float]:
+        """Convert screen coordinates to world coordinates.
+
+        Uses the current projection and modelview matrices along with
+        depth buffer to unproject screen coordinates to 3D world space.
+
+        Args:
+            screen_x: X coordinate in screen/window space
+            screen_y: Y coordinate in screen/window space (origin at top-left)
+
+        Returns:
+            Tuple of (world_x, world_y, world_z) coordinates
+        """
+        ...
+
 
 @runtime_checkable
 class Renderer(Protocol):

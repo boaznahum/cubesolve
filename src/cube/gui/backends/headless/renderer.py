@@ -234,6 +234,10 @@ class HeadlessViewStateManager(ViewStateManager):
         """No-op look-at setup."""
         pass
 
+    def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float, float]:
+        """Return origin for headless mode - no actual unprojection."""
+        return (0.0, 0.0, 0.0)
+
 
 class HeadlessRenderer(Renderer):
     """Headless renderer combining all no-op components.
