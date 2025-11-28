@@ -228,12 +228,12 @@ class _Cell:
     def _prepare_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self._face_board.board.vs
-        vs.prepare_objects_view()
+        vs.prepare_objects_view(self._renderer)
 
     def _restore_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self._face_board.board.vs
-        vs.restore_objects_view()
+        vs.restore_objects_view(self._renderer)
 
     @contextmanager
     def _gen_list_for_slice(self, p_slice: PartSlice, dest: dict[PartSliceHashID, MutableSequence[int]]):
@@ -417,12 +417,9 @@ class _Cell:
                 # Use renderer abstraction
                 points = self._vertices_to_points(_vx)
                 if cubie_facet_texture:
-                    from ..gui.types import TextureHandle
-                    # Call the texture's setup display list to ensure texture data is uploaded
-                    # The TextureData class uploads texture inside a display list, so we must call it
-                    gl.glCallList(cubie_facet_texture.gl_list)
-                    # Use the GL texture ID directly as a TextureHandle
-                    tex_handle = TextureHandle(cubie_facet_texture._gl_texture_id)
+                    # Bind the texture for rendering
+                    cubie_facet_texture.bind()
+                    tex_handle = cubie_facet_texture.texture_handle
                     tex_map = self._texture_data_to_map(cubie_facet_texture)
                     renderer.shapes.quad_with_texture(points, facet_color, tex_handle, tex_map)
                 else:

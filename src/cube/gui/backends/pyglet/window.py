@@ -14,6 +14,7 @@ except ImportError as e:
     raise ImportError("pyglet is required for PygletWindow: pip install pyglet") from e
 
 from cube.gui.types import KeyEvent, MouseEvent, Keys, Modifiers, Color4
+from cube.gui.protocols.window import Window as WindowProtocol, TextRenderer
 
 
 # Mapping from pyglet key codes to our abstract Keys
@@ -45,6 +46,20 @@ _PYGLET_TO_KEYS: dict[int, int] = {
     pyglet_key.PAGEUP: Keys.PAGE_UP, pyglet_key.PAGEDOWN: Keys.PAGE_DOWN,
     pyglet_key.SLASH: Keys.SLASH, pyglet_key.APOSTROPHE: Keys.APOSTROPHE,
     pyglet_key.MINUS: Keys.MINUS, pyglet_key.EQUAL: Keys.EQUAL,
+    pyglet_key.COMMA: Keys.COMMA, pyglet_key.PERIOD: Keys.PERIOD,
+    pyglet_key.BACKSLASH: Keys.BACKSLASH,
+    pyglet_key.BRACKETLEFT: Keys.BRACKETLEFT, pyglet_key.BRACKETRIGHT: Keys.BRACKETRIGHT,
+    # Numpad
+    pyglet_key.NUM_ADD: Keys.NUM_ADD, pyglet_key.NUM_SUBTRACT: Keys.NUM_SUBTRACT,
+    pyglet_key.NUM_0: Keys.NUM_0, pyglet_key.NUM_1: Keys.NUM_1,
+    pyglet_key.NUM_2: Keys.NUM_2, pyglet_key.NUM_3: Keys.NUM_3,
+    pyglet_key.NUM_4: Keys.NUM_4, pyglet_key.NUM_5: Keys.NUM_5,
+    pyglet_key.NUM_6: Keys.NUM_6, pyglet_key.NUM_7: Keys.NUM_7,
+    pyglet_key.NUM_8: Keys.NUM_8, pyglet_key.NUM_9: Keys.NUM_9,
+    # Modifier keys
+    pyglet_key.LSHIFT: Keys.LSHIFT, pyglet_key.RSHIFT: Keys.RSHIFT,
+    pyglet_key.LCTRL: Keys.LCTRL, pyglet_key.RCTRL: Keys.RCTRL,
+    pyglet_key.LALT: Keys.LALT, pyglet_key.RALT: Keys.RALT,
 }
 
 # Reverse mapping
@@ -65,7 +80,7 @@ def _convert_modifiers(pyglet_mods: int) -> int:
     return result
 
 
-class PygletTextRenderer:
+class PygletTextRenderer(TextRenderer):
     """Text renderer using pyglet labels."""
 
     def __init__(self, window: "PygletWindow") -> None:
@@ -127,10 +142,13 @@ class PygletTextRenderer:
 
 
 class PygletWindow(pyglet.window.Window):
-    """Pyglet window implementing Window protocol.
+    """Pyglet window implementing Window protocol (WindowProtocol).
 
     Inherits from pyglet.window.Window to get native window functionality,
     and adds protocol-compliant handler registration.
+
+    Note: Cannot inherit from WindowProtocol due to metaclass conflict with pyglet.
+    Protocol compliance is verified at runtime via @runtime_checkable.
     """
 
     def __init__(

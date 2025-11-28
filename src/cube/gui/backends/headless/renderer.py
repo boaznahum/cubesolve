@@ -8,9 +8,10 @@ and headless operation.
 from typing import Sequence
 
 from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
+from cube.gui.protocols.renderer import ShapeRenderer, DisplayListManager, ViewStateManager, Renderer
 
 
-class HeadlessShapeRenderer:
+class HeadlessShapeRenderer(ShapeRenderer):
     """No-op shape renderer for headless mode.
 
     All methods are no-ops that accept parameters but do nothing.
@@ -125,7 +126,7 @@ class HeadlessShapeRenderer:
         pass
 
 
-class HeadlessDisplayListManager:
+class HeadlessDisplayListManager(DisplayListManager):
     """In-memory display list manager for headless mode.
 
     Tracks display list IDs but doesn't store any rendering commands.
@@ -169,7 +170,7 @@ class HeadlessDisplayListManager:
             self._active_lists.discard(list_id)
 
 
-class HeadlessViewStateManager:
+class HeadlessViewStateManager(ViewStateManager):
     """No-op view state manager for headless mode.
 
     Tracks basic state (matrix stack depth) but doesn't perform calculations.
@@ -234,7 +235,7 @@ class HeadlessViewStateManager:
         pass
 
 
-class HeadlessRenderer:
+class HeadlessRenderer(Renderer):
     """Headless renderer combining all no-op components.
 
     Use this for testing and headless operation where no actual

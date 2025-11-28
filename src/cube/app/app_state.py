@@ -4,13 +4,14 @@ import tempfile
 from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Literal, Any, Tuple
-
-from pyglet import gl  # type: ignore
+from typing import Literal, Any, Tuple, TYPE_CHECKING
 
 # noinspection PyMethodMayBeStatic
 from cube import algs
 from cube import config
+
+if TYPE_CHECKING:
+    from cube.gui.protocols.renderer import Renderer
 from cube.animation.main_g_animation_text import AnimationText
 from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
@@ -189,53 +190,55 @@ class ApplicationAndViewState:
     def offset(self) -> Sequence[int]:
         return self._offset
 
-    def prepare_objects_view(self):
+    def prepare_objects_view(self, renderer: "Renderer") -> None:
+        """Set up the model-view transformation for drawing objects.
+
+        Applies offset translation and rotations based on view state.
+        Call restore_objects_view() when done drawing.
+
+        Args:
+            renderer: Renderer to use for view transformations
         """
-        leave matrix mode GL_MODELVIEW
-        :return:
-        """
-        gl.glPushAttrib(gl.GL_MATRIX_MODE)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
+        view = renderer.view
+
+        view.push_matrix()
+        view.load_identity()
 
         o = self._offset
+        view.translate(float(o[0]), float(o[1]), float(o[2]))
 
-        gl.glTranslatef(o[0], o[1], o[2])
+        # Apply initial rotation (base orientation)
+        view.rotate(math.degrees(self.alpha_x_0), 1, 0, 0)
+        view.rotate(math.degrees(self.alpha_y_0), 0, 1, 0)
+        view.rotate(math.degrees(self.alpha_z_0), 0, 0, 1)
 
-        # why rotate (a1 + a2)  is not rotate a1 then rotate a2
-        gl.glRotatef(math.degrees(self.alpha_x_0), 1, 0, 0)
-        gl.glRotatef(math.degrees(self.alpha_y_0), 0, 1, 0)
-        gl.glRotatef(math.degrees(self.alpha_z_0), 0, 0, 1)
-        gl.glRotatef(math.degrees(self.alpha_x), 1, 0, 0)
-        gl.glRotatef(math.degrees(self.alpha_y), 0, 1, 0)
-        gl.glRotatef(math.degrees(self.alpha_z), 0, 0, 1)
+        # Apply user-controlled rotation (from mouse drag)
+        view.rotate(math.degrees(self.alpha_x), 1, 0, 0)
+        view.rotate(math.degrees(self.alpha_y), 0, 1, 0)
+        view.rotate(math.degrees(self.alpha_z), 0, 0, 1)
 
-    # noinspection PyMethodMayBeStatic
-    def restore_objects_view(self):
+    def restore_objects_view(self, renderer: "Renderer") -> None:
+        """Undo prepare_objects_view - restore previous matrix state.
+
+        Args:
+            renderer: Renderer to use for view transformations
         """
-        Undo prepare_objects_view
-        :return:
+        renderer.view.pop_matrix()
+
+    def set_projection(self, width: int, height: int, renderer: "Renderer") -> None:
+        """Set up the projection matrix for the viewport.
+
+        Args:
+            width: Viewport width in pixels
+            height: Viewport height in pixels
+            renderer: Renderer to use for view transformations
         """
-        # Pop Matrix off stack
-        gl.glPopMatrix()
-        gl.glPopAttrib()
-
-    def set_projection(self, width: int, height: int):
-        gl.glPushAttrib(gl.GL_MATRIX_MODE)
-        # using Projection mode
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-
-        aspect_ratio = width / height
-        # gluPerspective( GLdouble ( fovy ) , GLdouble ( aspect ) , GLdouble ( zNear ) , GLdouble ( zFar ) )-> void
-        gl.gluPerspective(self._fov_y, aspect_ratio, 1, 1000)
-
-        # gl.glMatrixMode(gl.GL_MODELVIEW)
-        # gl.glLoadIdentity()
-        # gl.glTranslatef(0, 0, -400)
-
-        gl.glPopAttrib()
+        renderer.view.set_projection(
+            width, height,
+            fov_y=float(self._fov_y),
+            near=1.0,
+            far=1000.0
+        )
 
     @property
     def get_speed_index(self):

@@ -82,9 +82,8 @@ class _Board:
 
         texture_map: list[tuple[int, int]] = [(0, 0), (0, 1), (1, 1), (1, 0)]
 
-        self._cubie_texture = TextureData.load("cubie.bmp", texture_map)
-        #self._cubie_texture = TextureData.load("6-2-target-picture-resized.png", texture_map)
-        #self._target_texture = TextureData.load("6-2-target-picture-resized.png", texture_map)
+        # Load texture using renderer abstraction
+        self._cubie_texture = TextureData.load("cubie.bmp", texture_map, self.renderer)
 
     @property
     def renderer(self) -> Renderer:
@@ -278,12 +277,12 @@ class _Board:
     def _prepare_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self.vs
-        vs.prepare_objects_view()
+        vs.prepare_objects_view(self.renderer)
 
     def _restore_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self.vs
-        vs.restore_objects_view()
+        vs.restore_objects_view(self.renderer)
 
     @property
     def alpha_x(self):

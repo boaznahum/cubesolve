@@ -14,9 +14,10 @@ except ImportError as e:
     raise ImportError("pyglet is required for PygletRenderer: pip install pyglet") from e
 
 from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
+from cube.gui.protocols.renderer import ShapeRenderer, DisplayListManager, ViewStateManager, Renderer
 
 
-class PygletShapeRenderer:
+class PygletShapeRenderer(ShapeRenderer):
     """OpenGL shape renderer implementing ShapeRenderer protocol."""
 
     def quad(self, vertices: Sequence[Point3D], color: Color3) -> None:
@@ -381,7 +382,7 @@ class PygletShapeRenderer:
         gl.glPopMatrix()
 
 
-class PygletDisplayListManager:
+class PygletDisplayListManager(DisplayListManager):
     """OpenGL display list manager implementing DisplayListManager protocol."""
 
     def __init__(self) -> None:
@@ -431,7 +432,7 @@ class PygletDisplayListManager:
             self.delete_list(list_id)
 
 
-class PygletViewStateManager:
+class PygletViewStateManager(ViewStateManager):
     """OpenGL view state manager implementing ViewStateManager protocol."""
 
     def set_projection(
@@ -439,8 +440,8 @@ class PygletViewStateManager:
         width: int,
         height: int,
         fov_y: float = 45.0,
-        z_near: float = 0.1,
-        z_far: float = 100.0,
+        near: float = 0.1,
+        far: float = 100.0,
     ) -> None:
         """Set up perspective projection."""
         gl.glViewport(0, 0, width, height)
@@ -448,7 +449,7 @@ class PygletViewStateManager:
         gl.glLoadIdentity()
 
         aspect = width / height if height > 0 else 1.0
-        gl.gluPerspective(fov_y, aspect, z_near, z_far)
+        gl.gluPerspective(fov_y, aspect, near, far)
 
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
@@ -497,7 +498,7 @@ class PygletViewStateManager:
         )
 
 
-class PygletRenderer:
+class PygletRenderer(Renderer):
     """Pyglet/OpenGL renderer implementing Renderer protocol."""
 
     def __init__(self) -> None:

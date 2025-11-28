@@ -11,8 +11,10 @@ try:
 except ImportError as e:
     raise ImportError("pyglet is required for PygletAnimation: pip install pyglet") from e
 
+from cube.gui.protocols.animation import AnimationBackend
 
-class PygletAnimation:
+
+class PygletAnimation(AnimationBackend):
     """Pyglet animation backend implementing AnimationBackend protocol.
 
     Uses pyglet's clock for smooth animation timing.

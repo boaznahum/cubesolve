@@ -110,6 +110,35 @@ class Keys:
     MINUS = 45
     PLUS = 43
     EQUAL = 61
+    COMMA = 44
+    PERIOD = 46
+    BACKSLASH = 92
+    BRACKETLEFT = 91  # '['
+    BRACKETRIGHT = 93  # ']'
+
+    # Numpad keys
+    NUM_ADD = 334  # Numpad +
+    NUM_SUBTRACT = 333  # Numpad -
+    NUM_0 = 320
+    NUM_1 = 321
+    NUM_2 = 322
+    NUM_3 = 323
+    NUM_4 = 324
+    NUM_5 = 325
+    NUM_6 = 326
+    NUM_7 = 327
+    NUM_8 = 328
+    NUM_9 = 329
+
+    # Modifier keys (for range checking)
+    LSHIFT = 340
+    RSHIFT = 344
+    LCTRL = 341
+    RCTRL = 345
+    LALT = 342
+    RALT = 346
+    LMETA = 343  # Left command/super
+    RMETA = 347  # Right command/super
 
 
 class Modifiers:

@@ -372,7 +372,10 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
             animation.done = True
             return # False
 
-        vs.prepare_objects_view()
+        if renderer is None:
+            raise RuntimeError("Renderer is required but not configured. Use BackendRegistry.create_renderer()")
+
+        vs.prepare_objects_view(renderer)
 
         ct = math.cos(current_angel)
         st = math.sin(current_angel)
@@ -383,20 +386,15 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
 
         model_view: ndarray = mt @ Rz @ m
 
-        gm = (gl.GLfloat * 16)(0)
-        # column major
-        gm[:] = model_view.flatten(order="F")
-
-        gl.glMultMatrixf(gm)
+        # Apply the animation rotation matrix
+        renderer.view.multiply_matrix(model_view)
 
         try:
-            if renderer is None:
-                raise RuntimeError("Renderer is required but not configured. Use BackendRegistry.create_renderer()")
             # Use renderer to call display lists (maps internal IDs to GL IDs)
             for f in gui_objects:
                 renderer.display_lists.call_list(DisplayList(f))
         finally:
-            vs.restore_objects_view()
+            vs.restore_objects_view(renderer)
 
         #return True
 

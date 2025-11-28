@@ -1,10 +1,9 @@
 import math
 from collections.abc import Sequence
 
-from pyglet import gl  # type: ignore
-
 from cube import config
 from cube.app.app_state import ApplicationAndViewState
+from cube.gui.protocols.renderer import Renderer
 
 
 class GViewerExt:
@@ -13,56 +12,41 @@ class GViewerExt:
     """
 
     @staticmethod
-    def draw_axis(vs: ApplicationAndViewState):
+    def draw_axis(vs: ApplicationAndViewState, renderer: Renderer) -> None:
+        """Draw the XYZ axis indicator.
 
+        Args:
+            vs: Application view state with offset and rotation angles
+            renderer: Renderer to use for drawing
+        """
         axis_length = config.AXIS_LENGTH
+        line_width = 3.0
 
-        gl.glPushAttrib(gl.GL_MATRIX_MODE)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
+        view = renderer.view
+        shapes = renderer.shapes
 
-        gl.glPushMatrix()
+        # Save current matrix state
+        view.push_matrix()
+        view.load_identity()
 
-        gl.glLoadIdentity()
-
+        # Apply offset translation
         offset: Sequence[int] = vs.offset
+        view.translate(float(offset[0]), float(offset[1]), float(offset[2]))
 
-        gl.glTranslatef(offset[0], offset[1], offset[2])
+        # Rotate axes to match current view orientation
+        # (so the axis rotates with the cube)
+        view.rotate(math.degrees(vs.alpha_x_0), 1, 0, 0)
+        view.rotate(math.degrees(vs.alpha_y_0), 0, 1, 0)
+        view.rotate(math.degrees(vs.alpha_z_0), 0, 0, 1)
 
-        # print_matrix("GL_MODELVIEW_MATRIX", gl.GL_MODELVIEW_MATRIX)
-        # print_matrix("GL_PROJECTION_MATRIX", gl.GL_PROJECTION_MATRIX)
-        # print_matrix("GL_VIEWPORT", gl.GL_VIEWPORT)
+        # Draw X axis - white
+        shapes.line((0, 0, 0), (axis_length, 0, 0), line_width, (255, 255, 255))
 
-        # ideally we want the axis to be fixed, but in this case we won't see the Z,
-        #  so we rotate the Axes, or we should change the perspective
-        gl.glRotatef(math.degrees(vs.alpha_x_0), 1, 0, 0)
-        gl.glRotatef(math.degrees(vs.alpha_y_0), 0, 1, 0)
-        gl.glRotatef(math.degrees(vs.alpha_z_0), 0, 0, 1)
+        # Draw Y axis - red
+        shapes.line((0, 0, 0), (0, axis_length, 0), line_width, (255, 0, 0))
 
-        gl.glPushAttrib(gl.GL_LINE_WIDTH)
-        gl.glLineWidth(3)
+        # Draw Z axis - green
+        shapes.line((0, 0, 0), (0, 0, axis_length), line_width, (0, 255, 0))
 
-        gl.glBegin(gl.GL_LINES)
-
-        gl.glColor3ub(255, 255, 255)
-        gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(axis_length, 0, 0)
-        gl.glEnd()
-
-        gl.glBegin(gl.GL_LINES)
-        gl.glColor3ub(255, 0, 0)
-        gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(0, axis_length, 0)
-        gl.glEnd()
-
-        gl.glBegin(gl.GL_LINES)
-        gl.glColor3ub(0, 255, 0)
-        gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(0, 0, axis_length)
-
-        gl.glEnd()
-
-        gl.glPopAttrib()  # line width
-
-        # Pop Matrix off stack
-        gl.glPopMatrix()
-        gl.glPopAttrib()  # GL_MATRIX_MODE
+        # Restore matrix state
+        view.pop_matrix()

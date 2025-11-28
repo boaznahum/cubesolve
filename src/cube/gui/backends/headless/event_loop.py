@@ -9,6 +9,8 @@ import time
 from typing import Callable
 from dataclasses import dataclass, field
 
+from cube.gui.protocols.event_loop import EventLoop
+
 
 @dataclass
 class _ScheduledCallback:
@@ -20,7 +22,7 @@ class _ScheduledCallback:
 
 
 @dataclass
-class HeadlessEventLoop:
+class HeadlessEventLoop(EventLoop):
     """Minimal event loop for headless testing.
 
     Features:

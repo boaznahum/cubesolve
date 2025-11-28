@@ -79,7 +79,7 @@ def on_mouse_scroll(window: AbstractWindow, scroll_y):
 
     vs.change_fov_y(scroll_y)
 
-    vs.set_projection(window.width, window.height)
+    vs.set_projection(window.width, window.height, window.renderer)
 
 
 def _handle_model_view_rotate_by_drag(win, dx, dy):
@@ -588,9 +588,10 @@ def _screen_to_model(vs, window, x, y) -> np.ndarray:
     px = gl.GLdouble()
     py = gl.GLdouble()
     pz = gl.GLdouble()
-    vs = vs
-    vs.prepare_objects_view()
+    renderer = window.renderer
+    vs.prepare_objects_view(renderer)
     # 0, 0, width, height
+    # TODO: Step 6 - These GL calls should be migrated to renderer.screen_to_world()
     gl.glGetIntegerv(gl.GL_VIEWPORT, viewport)
     # print(f"{[f for f in viewport]}")
     gl.glGetDoublev(gl.GL_PROJECTION_MATRIX, pmat)
@@ -603,7 +604,7 @@ def _screen_to_model(vs, window, x, y) -> np.ndarray:
     depth = d[0]
     gl.gluUnProject(x, real_y, depth, mvmat, pmat, viewport, px, py, pz)
     # print(f"{px.value=}, {py.value=}, {pz.value=}")
-    vs.restore_objects_view()
+    vs.restore_objects_view(renderer)
 
     return np.array([px.value, py.value, pz.value])
 

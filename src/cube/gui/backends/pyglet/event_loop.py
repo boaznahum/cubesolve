@@ -11,8 +11,10 @@ try:
 except ImportError as e:
     raise ImportError("pyglet is required for PygletEventLoop: pip install pyglet") from e
 
+from cube.gui.protocols.event_loop import EventLoop
 
-class PygletEventLoop:
+
+class PygletEventLoop(EventLoop):
     """Pyglet event loop implementing EventLoop protocol.
 
     Wraps pyglet's event loop and clock for scheduling.

@@ -1,9 +1,13 @@
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
 import pyglet  # type: ignore
 
 from cube.app.abstract_ap import AbstractApp
 from cube.viewer.viewer_g import GCubeViewer
+
+if TYPE_CHECKING:
+    from cube.gui.protocols.renderer import Renderer
 
 
 class AbstractWindow(pyglet.window.Window):
@@ -39,4 +43,10 @@ class AbstractWindow(pyglet.window.Window):
     @property
     @abstractmethod
     def viewer(self) -> GCubeViewer:
+        pass
+
+    @property
+    @abstractmethod
+    def renderer(self) -> "Renderer":
+        """Access the renderer for this window."""
         pass

@@ -18,6 +18,7 @@ from cube.solver import Solver
 from cube.viewer.viewer_g import GCubeViewer
 from cube.viewer.viewer_g_ext import GViewerExt
 from cube.gui.factory import GUIBackend
+from cube.gui.backends.pyglet.window import _PYGLET_TO_KEYS, _convert_modifiers
 
 # noinspection PyAbstractClass
 class Window(AbstractWindow, AnimationWindow):
@@ -74,6 +75,11 @@ class Window(AbstractWindow, AnimationWindow):
     @property
     def viewer(self) -> GCubeViewer:
         return self._viewer
+
+    @property
+    def renderer(self):
+        """Access the renderer for this window."""
+        return self._renderer
 
     # def set_animation(self, an: Animation | None):
     #     self._animation = an
@@ -229,7 +235,6 @@ class Window(AbstractWindow, AnimationWindow):
                 print("Skipping draw due to ", self._vs.skip_next_on_draw)
             return
 
-        # print("Updating")
         # need to understand which buffers it clear, see
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         self.clear()
@@ -251,7 +256,7 @@ class Window(AbstractWindow, AnimationWindow):
         # yw(y)=(ynd+1)(height/2)+y
         gl.glViewport(0, 0, width, height)
 
-        self.app.vs.set_projection(width, height)
+        self.app.vs.set_projection(width, height, self._renderer)
 
     def on_key_press(self, symbol, modifiers):
         """
@@ -265,7 +270,10 @@ class Window(AbstractWindow, AnimationWindow):
         :return:
         """
         try:
-            main_g_keyboard_input.handle_keyboard_input(self, symbol, modifiers)
+            # Convert pyglet key codes to abstract key codes
+            abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
+            abstract_mods = _convert_modifiers(modifiers)
+            main_g_keyboard_input.handle_keyboard_input(self, abstract_symbol, abstract_mods)
 
         except (AppExit, RunStop, OpAborted) as e:
             # In test mode, AppExit should actually exit
@@ -383,12 +391,13 @@ class Window(AbstractWindow, AnimationWindow):
         return char_map.get(char)
 
     def draw_axis(self):
-        GViewerExt.draw_axis(self.app.vs)
+        GViewerExt.draw_axis(self.app.vs, self._renderer)
 
     def draw_text(self):
         window = self
 
-        gl.glPushAttrib(gl.GL_MATRIX_MODE)
+        # Save current matrix mode using TRANSFORM_BIT (not GL_MATRIX_MODE which is wrong!)
+        gl.glPushAttrib(gl.GL_TRANSFORM_BIT)
 
         # using Projection mode
         gl.glMatrixMode(gl.GL_PROJECTION)
@@ -403,26 +412,21 @@ class Window(AbstractWindow, AnimationWindow):
         gl.glPushMatrix()
         gl.glLoadIdentity()
 
-        gl.glPopAttrib()  # matrix mode
-
         for t in self.text:
             t.draw()
 
         for t in self.animation_text:
             t.draw()
 
-        # restore state
-
-        gl.glPushAttrib(gl.GL_MATRIX_MODE)
-
-        # using Projection mode
+        # restore state - pop matrices in reverse order
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glPopMatrix()
 
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glPopMatrix()
 
-        gl.glPopAttrib()  # matrix mode
+        # Restore matrix mode (GL_TRANSFORM_BIT includes matrix mode)
+        gl.glPopAttrib()
 
     def draw_animation(self):
 
