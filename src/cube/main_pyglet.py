@@ -3,16 +3,11 @@ Pyglet-based GUI entry point for the Cube Solver.
 
 This module explicitly uses the pyglet backend for rendering.
 """
-import pyglet  # type: ignore
-
 from cube.app.abstract_ap import AbstractApp
 # Import pyglet backend to register it with BackendRegistry
 import cube.gui.backends.pyglet  # noqa: F401 - registers backend
 from cube.gui import BackendRegistry
 from cube.main_window import Window
-
-
-# pyglet.options["debug_graphics_batch"] = True
 
 
 def main():
@@ -27,12 +22,17 @@ def main():
     backend = BackendRegistry.get_backend("pyglet")
 
     app = AbstractApp.create()
+
+    # Set the event loop on the animation manager if it exists
+    if app.am is not None:
+        app.am.set_event_loop(backend.event_loop)
+
     win = Window(app, 720, 720, '"Cube"', backend=backend)
 
     win.set_mouse_visible(True)
 
     try:
-        pyglet.app.run()
+        backend.event_loop.run()
     finally:
         win.viewer.cleanup()
 
