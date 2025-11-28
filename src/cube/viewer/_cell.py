@@ -5,15 +5,12 @@ from contextlib import contextmanager
 from typing import Tuple, TYPE_CHECKING, Callable, Any, Hashable, Sequence
 
 import numpy as np
-import pyglet  # type: ignore
 from numpy import ndarray
-from pyglet import gl
 
 from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube_boy import Color, FaceName
 from cube.model.cube_face import Face
 from cube.utils import geometry
-from . import shapes
 from .texture import TextureData
 from .viewer_markers import VMarker, viewer_get_markers
 from .. import config
@@ -99,11 +96,6 @@ class _Cell:
         self._right_top_v3: ndarray | None = None
         self._left_bottom_v3: ndarray | None = None
         self._face_board = face_board
-        self._g_polygon: pyglet.shapes.Polygon | None = None
-        self._g_lines: Sequence[pyglet.shapes.Line] | None = None
-        # noinspection PyProtectedMember
-        self._g_markers: Sequence[pyglet.shapes._ShapeBase] | None = None
-        # self._create_objects(x0, y0, x1, y1, (255, 255, 255))
 
         self.gl_lists_movable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
         self.gl_lists_unmovable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
