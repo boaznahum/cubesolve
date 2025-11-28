@@ -53,6 +53,7 @@ class GUIBackend:
         self._name = name
         self._entry = entry
         self._renderer: Renderer | None = None
+        self._event_loop: EventLoop | None = None
 
     @property
     def name(self) -> str:
@@ -65,6 +66,13 @@ class GUIBackend:
         if self._renderer is None:
             self._renderer = self._entry.renderer_factory()
         return self._renderer
+
+    @property
+    def event_loop(self) -> EventLoop:
+        """Get or create the event loop (lazy, singleton per GUIBackend instance)."""
+        if self._event_loop is None:
+            self._event_loop = self._entry.event_loop_factory()
+        return self._event_loop
 
     def create_window(self, width: int = 720, height: int = 720, title: str = "Cube") -> Window:
         """Create a window for this backend."""

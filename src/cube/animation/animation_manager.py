@@ -5,9 +5,7 @@ from collections.abc import Collection, Set, Iterable
 from typing import Callable, TypeAlias
 
 import numpy as np
-import pyglet  # type: ignore
 from numpy import ndarray
-from pyglet import gl  # type: ignore
 
 from cube import algs
 from cube.algs import SimpleAlg
@@ -17,6 +15,7 @@ from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
 from cube.viewer.viewer_g import GCubeViewer
 from cube.gui.protocols.renderer import Renderer
+from cube.gui.protocols.event_loop import EventLoop
 from cube.gui.types import DisplayList
 
 OpProtocol: TypeAlias = Callable[[algs.Alg, bool], None]
@@ -63,13 +62,15 @@ class AnimationWindow:
 
 
 class AnimationManager(ABC):
-    __slots__ = ["_window", "_current_animation", "_vs"]
+    __slots__ = ["_window", "_current_animation", "_vs", "_event_loop"]
 
     def __init__(self,
-                 vs: ApplicationAndViewState):
+                 vs: ApplicationAndViewState,
+                 event_loop: EventLoop | None = None):
         self._vs = vs
         self._window: AnimationWindow | None = None
         self._current_animation: Animation | None = None
+        self._event_loop: EventLoop | None = event_loop
 
     def set_window(self, window: AnimationWindow):
         """
@@ -79,14 +80,21 @@ class AnimationManager(ABC):
         """
         self._window = window
 
+    def set_event_loop(self, event_loop: EventLoop):
+        """Set the event loop for animation scheduling."""
+        self._event_loop = event_loop
+
     # noinspection PyMethodMayBeStatic
     def run_animation(self, cube: Cube, op: OpProtocol, alg: SimpleAlg):
         assert self._window
+        if self._event_loop is None:
+            raise RuntimeError("EventLoop is required for animation. Call set_event_loop() first.")
         _op_and_play_animation(self._window,
                                cube,
                                self._set_animation,
                                self._window.viewer,
                                self._vs,
+                               self._event_loop,
                                op, False, alg)
 
     def animation_running(self) -> Animation | None:
@@ -123,6 +131,7 @@ def _op_and_play_animation(window: AnimationWindow,
                            animation_sink: Callable[[Animation | None], None],
                            viewer: GCubeViewer,
                            vs: ApplicationAndViewState,
+                           event_loop: EventLoop,
                            operator: OpProtocol,
                            inv: bool,
                            alg: algs.SimpleAlg):
@@ -132,6 +141,7 @@ def _op_and_play_animation(window: AnimationWindow,
     :param vs:
     :param cube:
     :param window:
+    :param event_loop: Abstract event loop for scheduling
     :param operator:
     :param inv:
     :param alg:
@@ -141,18 +151,14 @@ def _op_and_play_animation(window: AnimationWindow,
     #     operator.op(alg, inv, animation=False)
     #     return
 
-    event_loop = pyglet.app.event_loop
-
     if event_loop.has_exit:
         return  # maybe long alg is still running
-
-    platform_event_loop = pyglet.app.platform_event_loop
 
     if isinstance(alg, algs.AnnotationAlg):
         operator(alg, inv)
         window.update_gui_elements()
         #        time.sleep(1)
-        platform_event_loop.notify()
+        event_loop.notify()
         return
 
     if inv:
@@ -165,8 +171,6 @@ def _op_and_play_animation(window: AnimationWindow,
         operator(alg, False)
         return
 
-    clock: pyglet.clock.Clock = event_loop.clock
-
     # single step mode ?
     if vs.single_step_mode:
 
@@ -174,8 +178,6 @@ def _op_and_play_animation(window: AnimationWindow,
 
         def _update_gui(_):
             window.update_gui_elements()
-
-        event_loop = pyglet.app.event_loop
 
         # bug in stop behaviour
         #  we press abort, operator accept in and turn internal flag
@@ -186,13 +188,13 @@ def _op_and_play_animation(window: AnimationWindow,
         # meanwhile it is a patch
         try:
             # If you read event loop, only handled events cause to redraw
-            clock.schedule_once(_update_gui, 0)
+            event_loop.schedule_once(_update_gui, 0)
 
             vs.single_step_mode_stop_pressed = False
             while (not event_loop.has_exit and (vs.paused_on_single_step_mode and vs.single_step_mode)
                    and not vs.single_step_mode_stop_pressed):
                 timeout = event_loop.idle()
-                platform_event_loop.step(timeout)
+                event_loop.step(timeout)
         finally:
             vs.paused_on_single_step_mode = None
 
@@ -221,17 +223,17 @@ def _op_and_play_animation(window: AnimationWindow,
         # animation if any other model state is changed, it will update during keyboard handling,
         # and animation.update_gui_elements() will be re-called (is it a problem?) and then redraw again
         # window.on_redraw
-        clock.schedule_interval(_update, delay)
+        event_loop.schedule_interval(_update, delay)
 
         # copied from EventLoop#run
         while not event_loop.has_exit and not animation.done:
             timeout = event_loop.idle()  # this will trigger on_draw
-            platform_event_loop.step(timeout)
+            event_loop.step(timeout)
 
         if event_loop.has_exit:
             return
 
-        clock.unschedule(_update)
+        event_loop.unschedule(_update)
 
         # while not animation.done:
         #     window.on_draw()

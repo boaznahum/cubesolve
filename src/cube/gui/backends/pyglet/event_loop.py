@@ -33,6 +33,11 @@ class PygletEventLoop(EventLoop):
         """Whether the event loop is running."""
         return self._running
 
+    @property
+    def has_exit(self) -> bool:
+        """Whether the event loop has been signaled to exit."""
+        return self._event_loop.has_exit or self._should_stop
+
     def run(self) -> None:
         """Run the event loop until stop() is called.
 
@@ -42,10 +47,8 @@ class PygletEventLoop(EventLoop):
         self._should_stop = False
 
         try:
-            # Use manual stepping for control
-            while not self._should_stop and not self._event_loop.has_exit:
-                timeout = self._event_loop.idle()
-                self._platform_loop.step(timeout)
+            # Use pyglet's standard run() which properly handles window events
+            pyglet.app.run()
         finally:
             self._running = False
 
@@ -124,3 +127,19 @@ class PygletEventLoop(EventLoop):
         for callback in self._scheduled_callbacks[:]:
             pyglet.clock.unschedule(callback)
         self._scheduled_callbacks.clear()
+
+    def idle(self) -> float:
+        """Process any pending scheduled callbacks and return timeout until next.
+
+        Returns:
+            Timeout in seconds until next scheduled callback (0 if immediate)
+        """
+        return self._event_loop.idle()
+
+    def notify(self) -> None:
+        """Wake up the event loop if it's waiting.
+
+        Used to signal that there's work to do, for example after
+        changing state that should trigger a redraw.
+        """
+        self._platform_loop.notify()

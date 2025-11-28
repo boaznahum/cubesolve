@@ -20,6 +20,15 @@ class EventLoop(Protocol):
         """Whether the event loop is currently running."""
         ...
 
+    @property
+    def has_exit(self) -> bool:
+        """Whether the event loop has been signaled to exit.
+
+        This is typically the inverse of running, but may be True
+        before run() actually returns.
+        """
+        ...
+
     def run(self) -> None:
         """Start the event loop (blocking).
 
@@ -86,5 +95,24 @@ class EventLoop(Protocol):
 
         Returns:
             Time in seconds (monotonic, suitable for measuring intervals)
+        """
+        ...
+
+    def idle(self) -> float:
+        """Process any pending scheduled callbacks and return timeout until next.
+
+        This is used for animation loops where the caller manually steps
+        the event loop.
+
+        Returns:
+            Timeout in seconds until next scheduled callback (0 if immediate)
+        """
+        ...
+
+    def notify(self) -> None:
+        """Wake up the event loop if it's waiting.
+
+        Used to signal that there's work to do, for example after
+        changing state that should trigger a redraw.
         """
         ...

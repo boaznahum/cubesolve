@@ -152,6 +152,11 @@ class GUITestRunner:
             # Create app, backend, and window
             app = AbstractApp.create()
             backend = BackendRegistry.get_backend("pyglet")
+
+            # Set the event loop on the animation manager if it exists
+            if app.am is not None:
+                app.am.set_event_loop(backend.event_loop)
+
             win = Window(app, 720, 720, "Cube Test", backend=backend)
 
             # Start timeout watchdog

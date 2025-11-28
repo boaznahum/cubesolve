@@ -55,6 +55,11 @@ class HeadlessEventLoop(EventLoop):
         """Whether the event loop is running."""
         return self._running
 
+    @property
+    def has_exit(self) -> bool:
+        """Whether the event loop has been signaled to exit."""
+        return self._should_stop
+
     def run(self) -> None:
         """Run the event loop until stop() is called.
 
@@ -219,6 +224,44 @@ class HeadlessEventLoop(EventLoop):
         """Remove all scheduled callbacks (for testing cleanup)."""
         self._callbacks.clear()
         self._immediate_callbacks.clear()
+
+    def idle(self) -> float:
+        """Process any pending scheduled callbacks and return timeout until next.
+
+        Returns:
+            Timeout in seconds until next scheduled callback (0 if immediate)
+        """
+        # Process immediate callbacks first
+        while self._immediate_callbacks:
+            callback = self._immediate_callbacks.pop(0)
+            callback()
+
+        current_time = self.get_time()
+
+        # Process due scheduled callbacks
+        for scheduled in self._callbacks[:]:
+            if scheduled.next_time <= current_time:
+                dt = current_time - (scheduled.next_time - (scheduled.interval or 0))
+                scheduled.callback(dt)
+
+                if scheduled.interval is not None:
+                    scheduled.next_time = current_time + scheduled.interval
+                else:
+                    self._callbacks.remove(scheduled)
+
+        # Return timeout until next callback
+        if self._callbacks:
+            next_time = min(s.next_time for s in self._callbacks)
+            return max(0.0, next_time - self.get_time())
+        return 0.0
+
+    def notify(self) -> None:
+        """Wake up the event loop if it's waiting.
+
+        In the headless implementation, this is a no-op since
+        there's no blocking wait to interrupt.
+        """
+        pass  # No-op for headless - no blocking wait to interrupt
 
     @property
     def pending_callback_count(self) -> int:
