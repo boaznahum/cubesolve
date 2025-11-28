@@ -9,6 +9,9 @@ Usage
 Run all GUI tests with pytest:
     pytest tests/gui/test_gui.py -v
 
+Run with animations enabled (slower but visible):
+    pytest tests/gui/test_gui.py -v --animate
+
 Run a specific test:
     pytest tests/gui/test_gui.py::test_scramble_and_solve -v
 
@@ -26,7 +29,7 @@ pytestmark = pytest.mark.gui
 
 
 @pytest.mark.parametrize("cube_size", [3])
-def test_scramble_and_solve(cube_size: int):
+def test_scramble_and_solve(cube_size: int, enable_animation: bool):
     """
     Test scrambling and solving a cube.
 
@@ -34,19 +37,21 @@ def test_scramble_and_solve(cube_size: int):
     ----------
     cube_size : int
         Size of cube to test.
+    enable_animation : bool
+        Fixture from conftest.py, controlled by --animate flag.
     """
     result = GUITestRunner.run_test(
         key_sequence="1/q",
         cube_size=cube_size,
         timeout_sec=60.0,
-        enable_animation=False,
+        enable_animation=enable_animation,
         debug=True
     )
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
 
 
 @pytest.mark.parametrize("cube_size", [3])
-def test_multiple_scrambles(cube_size: int):
+def test_multiple_scrambles(cube_size: int, enable_animation: bool):
     """
     Test multiple scrambles followed by solve.
 
@@ -54,25 +59,35 @@ def test_multiple_scrambles(cube_size: int):
     ----------
     cube_size : int
         Size of cube to test.
+    enable_animation : bool
+        Fixture from conftest.py, controlled by --animate flag.
     """
     result = GUITestRunner.run_test(
         key_sequence="123/q",
         cube_size=cube_size,
         timeout_sec=90.0,
-        enable_animation=False,
+        enable_animation=enable_animation,
         debug=True
     )
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
 
 
 @pytest.mark.parametrize("cube_size", [3])
-def test_face_rotations(cube_size: int):
-    """Test basic face rotations."""
+def test_face_rotations(cube_size: int, enable_animation: bool):
+    """Test basic face rotations.
+
+    Parameters
+    ----------
+    cube_size : int
+        Size of cube to test.
+    enable_animation : bool
+        Fixture from conftest.py, controlled by --animate flag.
+    """
     result = GUITestRunner.run_test(
         key_sequence="rrrludfbq",
         cube_size=cube_size,
         timeout_sec=30.0,
-        enable_animation=False,
+        enable_animation=enable_animation,
         debug=True
     )
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"

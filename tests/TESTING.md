@@ -55,6 +55,52 @@ pytest -m "not slow"
 pytest -m "slow and not benchmark"
 ```
 
+### GUI Tests
+
+GUI tests are in `tests/gui/` and are **excluded by default** (see `addopts` in pytest config).
+These tests open a real pyglet window and inject keyboard sequences.
+
+#### From Command Line
+
+```powershell
+# Run GUI tests (fast mode, no animation - window flashes briefly)
+pytest tests/gui/test_gui.py -v
+
+# Run GUI tests with animation (slower, but you can see the cube)
+pytest tests/gui/test_gui.py -v --animate
+
+# Run a specific GUI test
+pytest tests/gui/test_gui.py::test_face_rotations -v
+
+# Run specific test with animation
+pytest tests/gui/test_gui.py::test_scramble_and_solve -v --animate
+```
+
+#### From PyCharm
+
+1. **Create a run configuration:**
+   - Run → Edit Configurations → + → pytest
+   - Name: `GUI Tests` or `GUI Tests (animated)`
+   - Target: `tests/gui/test_gui.py`
+   - Additional Arguments: `-v` (or `-v --animate` for animation)
+   - Click OK
+
+2. **Run directly:**
+   - Right-click on `tests/gui/test_gui.py` → Run 'pytest in test_gui.py'
+   - To add `--animate`: Edit the run configuration and add to Additional Arguments
+
+3. **Quick run with animation:**
+   - After running once, edit the configuration
+   - Add `--animate` to "Additional Arguments"
+   - Run again
+
+#### GUI Test Options
+
+| Option | Description |
+|--------|-------------|
+| (none) | Fast mode - no animation, window flashes briefly |
+| `--animate` | Enable animations - slower but visible cube movements |
+
 ### Output Options
 
 ```powershell

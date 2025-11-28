@@ -29,7 +29,7 @@ import pyglet  # type: ignore[import-untyped]
 from cube import config
 from cube.app.abstract_ap import AbstractApp
 from cube.main_window.Window import Window
-from cube.gui.backends import BackendRegistry
+from cube.gui.factory import BackendRegistry
 # Import pyglet backend to register it
 import cube.gui.backends.pyglet  # noqa: F401
 from tests.gui.tester.GUITestResult import GUITestResult
