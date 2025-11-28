@@ -14,8 +14,8 @@ def pytest_addoption(parser):
     parser.addoption(
         "--animate",
         action="store_true",
-        default=False,
-        help="Enable animations during GUI tests (slower but visible)"
+        default=True,
+        help="Enable animations during GUI tests (default: on)"
     )
     parser.addoption(
         "--speed-up",
@@ -28,7 +28,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture
 def enable_animation(request) -> bool:
-    """Fixture that returns True if --animate flag is passed."""
+    """Fixture that returns True if --animate flag is passed (default: True)."""
     return request.config.getoption("--animate")
 
 
