@@ -4,7 +4,6 @@ from typing import Callable, Tuple
 
 import numpy as np
 from numpy import ndarray
-from pyglet import gl  # type: ignore
 
 from cube.app.app_state import ApplicationAndViewState
 from cube.model import PartFixedID

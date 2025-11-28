@@ -2,10 +2,7 @@ from collections.abc import Collection
 from typing import Tuple, Iterable
 
 import colorama  # type: ignore
-import pyglet  # type: ignore
-import pyglet.gl as gl  # type: ignore
 from numpy import ndarray
-from pyglet.gl import *  # type: ignore
 
 from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
