@@ -3,6 +3,7 @@
 ## Current Work: GUI Abstraction Layer Migration
 
 **Branch:** `new_gui`
+**Status Document:** `docs/design/migration_state.md` (detailed step-by-step progress)
 
 ### Project Overview
 This is a Rubik's cube solver with a 3D GUI using pyglet/OpenGL. We are migrating from direct OpenGL calls to a renderer abstraction layer to support multiple backends (pyglet, headless for testing, potentially Vulkan).
@@ -11,49 +12,65 @@ This is a Rubik's cube solver with a 3D GUI using pyglet/OpenGL. We are migratin
 ```
 main_g.py → main_pyglet.py → Window → GCubeViewer → _Board → _FaceBoard → _Cell
                 ↓
-        BackendRegistry.create_renderer(backend="pyglet")
+        BackendRegistry.get_backend("pyglet")
                 ↓
-        PygletRenderer (implements Renderer protocol)
-            ├── ShapeRenderer (quad, triangle, line, sphere, etc.)
-            ├── DisplayListManager (gen_list, call_list, delete_list)
-            └── ViewStateManager (matrix operations)
+        GUIBackend
+            ├── renderer (lazy singleton) → PygletRenderer
+            └── event_loop → PygletEventLoop
+
+PygletRenderer (implements Renderer protocol)
+    ├── shapes: ShapeRenderer (quad, triangle, line, sphere, etc.)
+    ├── display_lists: DisplayListManager (gen_list, call_list, delete_list)
+    └── view: ViewStateManager (matrix operations, screen_to_world)
 ```
 
 ### Key Files
 - `src/cube/gui/protocols/renderer.py` - Renderer Protocol definition
-- `src/cube/gui/backends/pyglet/renderer.py` - Pyglet implementation
+- `src/cube/gui/protocols/event_loop.py` - EventLoop Protocol definition
+- `src/cube/gui/backends/pyglet/renderer.py` - Pyglet renderer implementation
+- `src/cube/gui/backends/pyglet/event_loop.py` - Pyglet event loop implementation
 - `src/cube/gui/backends/headless/` - Headless backend for testing
-- `src/cube/gui/backends/__init__.py` - BackendRegistry
-- `src/cube/viewer/_cell.py` - Cell rendering (uses renderer)
-- `src/cube/viewer/_board.py` - Board rendering (uses renderer)
-- `src/cube/animation/animation_manager.py` - Animation (uses renderer)
+- `src/cube/gui/factory.py` - BackendRegistry and GUIBackend
+- `docs/design/migration_state.md` - **Detailed migration status**
 - `docs/design/gui_abstraction.md` - Design documentation
 
 ### Current Status (2025-11-28)
-**COMPLETED:**
-- Renderer protocol with ShapeRenderer, DisplayListManager, ViewStateManager
-- PygletRenderer implementation
-- Migrated _cell.py, _board.py, animation_manager.py to use renderer
-- Removed ALL fallback code - renderer is now REQUIRED everywhere
-- GUITestRunner updated to use BackendRegistry
 
-**REMAINING WORK:**
-1. Migrate remaining direct GL calls in:
-   - `viewer_g_ext.py` - draw_axis()
-   - `texture.py` - TextureData texture loading
-   - `app_state.py` - matrix operations (prepare_objects_view/restore_objects_view)
-   - `Window.py` - draw_text() orthographic projection
-2. Complete headless backend for testing
-3. Update design documentation
+**PHASE 1 COMPLETED (Steps 1-12):**
+- Renderer protocol with ShapeRenderer, DisplayListManager, ViewStateManager
+- EventLoop protocol with run(), stop(), schedule_*(), has_exit, idle(), notify()
+- PygletRenderer and PygletEventLoop implementations
+- AbstractWindow converted to Protocol
+- main_pyglet.py uses `backend.event_loop.run()` (no direct pyglet import)
+- animation_manager.py uses EventLoop (no direct pyglet import)
+- Keyboard/mouse handlers use abstract Keys and MouseButton
+
+**PHASE 2 PENDING (Steps 13-17):**
+Files still using pyglet outside the backend:
+- `viewer/_cell.py` - `import pyglet`, `from pyglet import gl`
+- `viewer/shapes.py` - `from pyglet import gl`, `pyglet.gl.glu`
+- `viewer/gl_helper.py` - `from pyglet import gl`
+- `viewer/graphic_helper.py` - `from pyglet import gl`
+- `main_window/Window.py` - ACCEPTABLE (this is the pyglet window class)
+
+**Goal:** All pyglet imports should only exist in:
+1. `src/cube/gui/backends/pyglet/` - The pyglet backend
+2. `src/cube/main_window/Window.py` - The pyglet window class
 
 ### How to Run
-- GUI: `python main_g.py`
-- Tests: `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
+- GUI: `python -m cube.main_pyglet`
+- Tests (non-GUI): `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
+- Tests (GUI): `python -m pytest tests/gui -v --speed-up 2`
+
+### Check Pyglet Usage
+```bash
+grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "gui/backends/pyglet" | grep -v "__pycache__"
+```
 
 ### Important Notes
-- All code now throws `RuntimeError` if renderer is None - no fallbacks
+- Renderer is REQUIRED - RuntimeError if not configured
 - Display lists use internal IDs mapped to GL IDs via `DisplayListManager`
-- TextureData uploads texture inside a display list - must call that list before drawing
+- EventLoop is wired to AnimationManager via `am.set_event_loop(backend.event_loop)`
 
 ---
 
