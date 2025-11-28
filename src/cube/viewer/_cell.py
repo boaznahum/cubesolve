@@ -8,7 +8,6 @@ import numpy as np
 import pyglet  # type: ignore
 from numpy import ndarray
 from pyglet import gl
-from pyglet.graphics import Batch  # type: ignore
 
 from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube_boy import Color, FaceName
@@ -95,11 +94,10 @@ class _RectGeometry:
 # noinspection PyMethodMayBeStatic
 class _Cell:
 
-    def __init__(self, face_board: "_FaceBoard", batch: Batch) -> None:
+    def __init__(self, face_board: "_FaceBoard") -> None:
         super().__init__()
         self._right_top_v3: ndarray | None = None
         self._left_bottom_v3: ndarray | None = None
-        self._batch = batch
         self._face_board = face_board
         self._g_polygon: pyglet.shapes.Polygon | None = None
         self._g_lines: Sequence[pyglet.shapes.Line] | None = None

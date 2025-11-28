@@ -67,12 +67,22 @@ Before marking a step complete and tagging:
 - **Manual Test Focus:** Right-click drag to rotate view, left-drag on faces to rotate slices, shift/ctrl+click
 - **Status:** COMPLETED
 
-## Pending Steps
-
-### Step 7: Add Batch Protocol
+### Step 7: Remove Unused Batch
 - **Tag:** `migration-step-7-batch`
-- **Files to Change:** TBD
-- **Changes Needed:** Abstract pyglet.graphics.Batch
+- **Files Changed:**
+  - `src/cube/main_window/Window.py` - Removed `self.batch` and `pyglet.graphics.Batch()` creation
+  - `src/cube/viewer/viewer_g.py` - Removed `batch` parameter from `GCubeViewer.__init__()`
+  - `src/cube/viewer/_board.py` - Removed `batch` parameter and `self.batch` attribute
+  - `src/cube/viewer/_faceboard.py` - Removed `batch` parameter and `self._batch` attribute
+  - `src/cube/viewer/_cell.py` - Removed `batch` parameter, removed `from pyglet.graphics import Batch`
+- **Changes:**
+  - The `pyglet.graphics.Batch` was being passed through the entire viewer hierarchy but never used
+  - `self.batch.draw()` in Window was already commented out
+  - Removed all Batch-related imports, parameters, and attributes
+  - No protocol needed - Batch was dead code
+- **Status:** COMPLETED
+
+## Pending Steps
 
 ### Step 8: Migrate animation_manager.py - Event Loop/Clock
 - **Tag:** `migration-step-8-animation`
@@ -117,7 +127,7 @@ Report any visual glitches, crashes, or unexpected behavior.
 
 ## Current Migration Status
 
-**Last Completed Step:** Step 6 - Migrate main_g_mouse.py
-**Last Tag:** `migration-step-6-mouse`
-**Next Step:** Step 7 - Add Batch Protocol
+**Last Completed Step:** Step 7 - Remove Unused Batch
+**Last Tag:** `migration-step-7-batch`
+**Next Step:** Step 8 - Migrate animation_manager.py
 **Tests Passing:** 21 algorithm tests, 3 GUI tests, manual GUI verified

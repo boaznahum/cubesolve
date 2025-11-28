@@ -5,7 +5,6 @@ from typing import Callable, Tuple
 import numpy as np
 from numpy import ndarray
 from pyglet import gl  # type: ignore
-from pyglet.graphics import Batch  # type: ignore
 
 from cube.app.app_state import ApplicationAndViewState
 from cube.model import PartFixedID
@@ -65,13 +64,11 @@ class _Board:
     def __init__(
         self,
         cube: Cube,
-        batch: Batch,
         vs: ApplicationAndViewState,
         renderer: Renderer | None = None,
     ) -> None:
         super().__init__()
         self._hidden_objects: Set[int] = set()
-        self.batch = batch
         self._faces: MutableSequence[_FaceBoard] = []
         self._vs = vs
         self._renderer = renderer
@@ -248,7 +245,7 @@ class _Board:
                     left_right_direction: ndarray,
                     left_top_direction: ndarray,
                     ortho_direction: ndarray):
-        f = _FaceBoard(self, cube_face, self.batch, f0, left_right_direction, left_top_direction, ortho_direction)
+        f = _FaceBoard(self, cube_face, f0, left_right_direction, left_top_direction, ortho_direction)
         self._faces.append(f)
         return f
 

@@ -6,7 +6,6 @@ import pyglet  # type: ignore
 import pyglet.gl as gl  # type: ignore
 from numpy import ndarray
 from pyglet.gl import *  # type: ignore
-from pyglet.graphics import Batch  # type: ignore
 
 from cube.app.app_state import ApplicationAndViewState
 from cube.model.cube import Cube
@@ -25,25 +24,21 @@ from ..gui.protocols.renderer import Renderer
 
 
 class GCubeViewer:
-    __slots__ = ["_batch", "_cube", "_board", "_test",
+    __slots__ = ["_cube", "_board", "_test",
                  "_hidden_objects", "_vs", "_renderer"]
 
     def __init__(
         self,
-        batch: Batch,
         cube: Cube,
         vs: ApplicationAndViewState,
         renderer: Renderer | None = None,
     ) -> None:
         super().__init__()
         self._cube = cube
-        self._batch = batch
         self._vs = vs
         self._renderer = renderer
 
-        #        self._test = pyglet.shapes.Line(0, 0, 20, 20, width=10, color=(255, 255, 255), batch=batch)
-
-        self._board: _Board = _Board(cube, self._batch, vs, renderer)
+        self._board: _Board = _Board(cube, vs, renderer)
 
         self.reset()
 

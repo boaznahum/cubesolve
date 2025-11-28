@@ -3,7 +3,6 @@ from typing import Callable, Tuple, TYPE_CHECKING
 
 import numpy as np
 from numpy import ndarray
-from pyglet.graphics import Batch  # type: ignore
 
 from cube.model import Part, Corner, Edge, Center
 from cube.model import PartFixedID
@@ -32,12 +31,11 @@ class _FaceBoard:
 
     def __init__(self,
                  board: "_Board",
-                 cube_face_supplier: Callable[[], Face], batch: Batch,
+                 cube_face_supplier: Callable[[], Face],
                  f0: np.ndarray, left_right_direction: ndarray, left_top_direction: ndarray,
                  ortho_direction: ndarray
                  ) -> None:
         super().__init__()
-        self._batch = batch
         self._board: "_Board" = board
         self.cube_face_supplier = cube_face_supplier
         # self.flip_h = flip_h
@@ -47,7 +45,7 @@ class _FaceBoard:
         self.left_top_direction: ndarray = left_top_direction
         self._ortho_direction: ndarray = ortho_direction
 
-        self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self, self._batch) for p in
+        self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self) for p in
                                                  self.cube_face_supplier().parts}
 
 
@@ -62,7 +60,7 @@ class _FaceBoard:
         for c in self._cells.values():
             c.release_resources()
 
-        self._cells = {p.fixed_id: _Cell(self, self._batch) for p in
+        self._cells = {p.fixed_id: _Cell(self) for p in
                                                  self.cube_face_supplier().parts}
 
     @property

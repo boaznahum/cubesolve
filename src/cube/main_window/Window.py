@@ -53,9 +53,7 @@ class Window(AbstractWindow, AnimationWindow):
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
         gl.glEnable(gl.GL_DEPTH_TEST)
 
-        self.batch = pyglet.graphics.Batch()
-
-        self._viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs, renderer=self._renderer)
+        self._viewer: GCubeViewer = GCubeViewer(app.cube, app.vs, renderer=self._renderer)
         self.text: MutableSequence[pyglet.text.Label] = []
         self.animation_text: MutableSequence[pyglet.text.Label] = []
 
@@ -242,7 +240,6 @@ class Window(AbstractWindow, AnimationWindow):
         self.draw_axis()
 
         self.viewer.draw()
-        # self.batch.draw()
         self.draw_text()
 
         self.draw_animation()
