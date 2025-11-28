@@ -129,3 +129,30 @@ When reorganizing tests:
 - [ ] Update TESTING.md project structure section
 - [ ] Create `__init__.py` in new test packages
 - [ ] Verify all tests still pass
+
+---
+
+## Known Issues & Fixes
+
+### GUI Animation Solver Bug (Lazy Cache Initialization)
+
+**Status:** Investigating (2025-11-28)
+
+**Symptom:** GUI test `test_scramble_and_solve` fails with `AssertionError` at `l3_cross.py:186` when running with animation at default speed (`--speed-up 0`), but passes when `+` (speed-up) keys are pressed first.
+
+**Root Cause:** Lazy initialization and caching of cube piece properties (`colors_id`, `position_id` in `Part` and `PartSlice` classes) combined with timing issues during animation.
+
+**Mechanism:**
+1. `Part.colors_id` and `Part.position_id` are lazily initialized (cached on first access)
+2. Cache is reset via `reset_after_faces_changes()` after each cube rotation
+3. Pressing `+` triggers `update_gui_elements()` → `cube.is_sanity(force_check=True)`
+4. Sanity check accesses `colors_id` for all parts, forcing cache initialization
+5. Without this initialization, cache state becomes inconsistent during animation
+
+**Key Files:**
+- `src/cube/model/Part.py` lines 221-273 - Lazy cache properties
+- `src/cube/model/_part_slice.py` lines 213-245 - Similar lazy caching
+- `src/cube/model/cube_slice.py` line 230 - `reset_after_faces_changes()` call
+- `src/cube/solver/begginer/l3_cross.py` line 186 - Failing assertion
+
+**Workaround:** Press `+` key before scramble (or use `--speed-up 1+` in tests)

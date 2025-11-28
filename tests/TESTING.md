@@ -106,7 +106,7 @@ pytest tests/gui/test_gui.py::test_scramble_and_solve -v --animate
 |--------|-------------|
 | (none) | Fast mode - no animation, window flashes briefly |
 | `--animate` | Enable animations - slower but visible cube movements |
-| `--speed-up N` | Increase animation speed N times (default: 3, use 0 for slowest) |
+| `--speed-up N` | Increase animation speed N times (default: 5, use 0 for slowest) |
 
 ### Output Options
 

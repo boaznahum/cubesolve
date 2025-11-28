@@ -3,7 +3,7 @@ Pytest configuration for GUI tests.
 
 Provides command-line options for GUI test configuration:
 - --animate: Enable animations during testing
-- --speed-up: Number of times to increase animation speed (default: 3)
+- --speed-up: Number of times to increase animation speed (default: 5)
 """
 
 import pytest
@@ -21,8 +21,8 @@ def pytest_addoption(parser):
         "--speed-up",
         action="store",
         type=int,
-        default=3,
-        help="Number of times to increase animation speed (default: 3)"
+        default=5,
+        help="Number of times to increase animation speed (default: 5)"
     )
 
 
