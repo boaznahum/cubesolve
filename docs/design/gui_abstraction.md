@@ -69,7 +69,7 @@ The console viewer (`src/cube/main_console/viewer.py`) provides a useful pattern
 src/cube/gui/
     __init__.py                 # Public API exports
     types.py                    # Common types (Point3D, Color3, events)
-    factory.py                  # BackendRegistry
+    factory.py                  # BackendRegistry, GUIBackend
 
     protocols/
         __init__.py
@@ -534,33 +534,75 @@ class AnimationBackend(Protocol):
 from typing import Type, Dict, Any, Callable
 from cube.gui.protocols import Renderer, Window, EventLoop, AnimationBackend
 
+
+class GUIBackend:
+    """Single entry point for all GUI backend components.
+
+    Provides lazy creation of renderer (singleton per instance) and
+    factory methods for window, event loop, and animation.
+
+    Usage:
+        backend = BackendRegistry.get_backend("pyglet")
+        renderer = backend.renderer  # Lazy created on first access
+        window = backend.create_window(720, 720, "Title")
+    """
+
+    def __init__(self, name: str, entry: _BackendEntry):
+        self._name = name
+        self._entry = entry
+        self._renderer: Renderer | None = None
+
+    @property
+    def name(self) -> str:
+        """Backend name (e.g., 'pyglet', 'headless')."""
+        return self._name
+
+    @property
+    def renderer(self) -> Renderer:
+        """Get or create the renderer (lazy singleton per GUIBackend instance)."""
+        if self._renderer is None:
+            self._renderer = self._entry.renderer_factory()
+        return self._renderer
+
+    def create_window(self, width: int = 720, height: int = 720, title: str = "Cube") -> Window:
+        """Create a new window instance."""
+        return self._entry.window_factory(width, height, title)
+
+    def create_event_loop(self) -> EventLoop:
+        """Create a new event loop instance."""
+        return self._entry.event_loop_factory()
+
+    def create_animation(self) -> AnimationBackend | None:
+        """Create an animation backend instance (may be None)."""
+        if self._entry.animation_factory:
+            return self._entry.animation_factory()
+        return None
+
+    @property
+    def supports_animation(self) -> bool:
+        """Whether this backend supports animation."""
+        return self._entry.animation_factory is not None
+
+
 class BackendRegistry:
     """Registry for GUI backends."""
 
-    _backends: Dict[str, Dict[str, Type]] = {}
+    _backends: Dict[str, _BackendEntry] = {}
     _default: str | None = None
 
     @classmethod
     def register(cls, name: str, *,
-                 renderer_class: Type[Renderer],
-                 window_class: Type[Window],
-                 event_loop_class: Type[EventLoop],
-                 animation_class: Type[AnimationBackend] | None = None) -> None:
-        """Register a new backend.
-
-        Args:
-            name: Backend identifier (e.g., 'pyglet', 'tkinter', 'headless')
-            renderer_class: Class implementing Renderer protocol
-            window_class: Class implementing Window protocol
-            event_loop_class: Class implementing EventLoop protocol
-            animation_class: Optional class implementing AnimationBackend
-        """
-        cls._backends[name] = {
-            'renderer': renderer_class,
-            'window': window_class,
-            'event_loop': event_loop_class,
-            'animation': animation_class,
-        }
+                 renderer_factory: Callable[[], Renderer],
+                 window_factory: Callable[[int, int, str], Window],
+                 event_loop_factory: Callable[[], EventLoop],
+                 animation_factory: Callable[[], AnimationBackend] | None = None) -> None:
+        """Register a new backend."""
+        cls._backends[name] = _BackendEntry(
+            renderer_factory=renderer_factory,
+            window_factory=window_factory,
+            event_loop_factory=event_loop_factory,
+            animation_factory=animation_factory,
+        )
 
     @classmethod
     def set_default(cls, name: str) -> None:
@@ -589,32 +631,43 @@ class BackendRegistry:
         return list(cls._backends.keys())
 
     @classmethod
+    def get_backend(cls, name: str | None = None) -> GUIBackend:
+        """Get a GUIBackend instance for the specified backend.
+
+        This is the primary entry point for obtaining backend functionality.
+
+        Args:
+            name: Backend name (e.g., 'pyglet', 'headless'). Uses default if None.
+
+        Returns:
+            GUIBackend instance providing access to renderer and factory methods.
+        """
+        backend_name = name or cls.get_default()
+        if backend_name not in cls._backends:
+            raise ValueError(f"Unknown backend: {backend_name}")
+        return GUIBackend(backend_name, cls._backends[backend_name])
+
+    # Legacy methods (deprecated - use get_backend() instead)
+    @classmethod
     def create_renderer(cls, backend: str | None = None) -> Renderer:
-        """Create a renderer instance."""
-        name = backend or cls.get_default()
-        return cls._backends[name]['renderer']()
+        """Create a renderer instance. DEPRECATED: Use get_backend().renderer"""
+        return cls.get_backend(backend).renderer
 
     @classmethod
     def create_window(cls, width: int, height: int, title: str,
                       backend: str | None = None) -> Window:
-        """Create a window instance."""
-        name = backend or cls.get_default()
-        return cls._backends[name]['window'](width, height, title)
+        """Create a window instance. DEPRECATED: Use get_backend().create_window()"""
+        return cls.get_backend(backend).create_window(width, height, title)
 
     @classmethod
     def create_event_loop(cls, backend: str | None = None) -> EventLoop:
-        """Create an event loop instance."""
-        name = backend or cls.get_default()
-        return cls._backends[name]['event_loop']()
+        """Create an event loop instance. DEPRECATED: Use get_backend().create_event_loop()"""
+        return cls.get_backend(backend).create_event_loop()
 
     @classmethod
     def create_animation(cls, backend: str | None = None) -> AnimationBackend | None:
-        """Create an animation backend instance (may be None)."""
-        name = backend or cls.get_default()
-        anim_class = cls._backends[name]['animation']
-        return anim_class() if anim_class else None
-
-
+        """Create an animation backend. DEPRECATED: Use get_backend().create_animation()"""
+        return cls.get_backend(backend).create_animation()
 ```
 
 ---
@@ -747,7 +800,7 @@ class TkinterShapeRenderer:
 
 ## 5. Implementation Status
 
-> **Last Updated:** 2025-11-27
+> **Last Updated:** 2025-11-28
 
 ### Completed ✅
 
@@ -755,14 +808,16 @@ class TkinterShapeRenderer:
 |-----------|--------|-------|
 | Protocol definitions | ✅ Done | `gui/protocols/*.py` |
 | Types and events | ✅ Done | `gui/types.py` - KeyEvent, MouseEvent, Keys, DisplayList, TextureHandle |
-| Backend registry | ✅ Done | `gui/factory.py` - BackendRegistry |
+| Backend registry | ✅ Done | `gui/factory.py` - BackendRegistry with `get_backend()` |
+| GUIBackend class | ✅ Done | `gui/factory.py` - Single entry point for backend components |
 | Pyglet backend | ✅ Done | Full OpenGL implementation in `gui/backends/pyglet/` |
 | Headless backend | ✅ Done | No-op implementation in `gui/backends/headless/` |
 | Backend tests | ✅ Done | `tests/backends/` with --backend option |
 | Texture support | ✅ Done | load_texture(), bind_texture(), quad_with_texture() |
 | Renderer in viewer hierarchy | ✅ Done | GCubeViewer → _Board → _FaceBoard → _Cell |
-| main_g.py | ✅ Done | Uses BackendRegistry.create_renderer() |
-| main_window/Window.py | ✅ Done | Accepts renderer parameter, passes to viewer |
+| main_g.py / main_pyglet.py | ✅ Done | Uses `BackendRegistry.get_backend()` |
+| main_window/Window.py | ✅ Done | Accepts `backend: GUIBackend` parameter |
+| GUITestRunner | ✅ Done | Uses `BackendRegistry.get_backend()` |
 | viewer/_cell.py (display lists) | ✅ Done | Uses renderer.display_lists.* |
 | viewer/_cell.py (shapes) | ✅ Done | Uses renderer.shapes.* with fallback |
 | viewer/_board.py | ✅ Done | Uses renderer.display_lists.call_lists() |
@@ -772,15 +827,16 @@ class TkinterShapeRenderer:
 The renderer flows through the application hierarchy as follows:
 
 ```
-main_g.py
+main_pyglet.py
     │
-    ├── renderer = BackendRegistry.create_renderer()
+    ├── backend = BackendRegistry.get_backend("pyglet")  # Get GUIBackend
     │
-    └── Window(app, 720, 720, title, renderer=renderer)
+    └── Window(app, 720, 720, title, backend=backend)
             │
+            ├── self._renderer = backend.renderer  # Lazy creation
             ├── renderer.setup()  # Initialize OpenGL state
             │
-            └── GCubeViewer(batch, cube, vs, renderer=renderer)
+            └── GCubeViewer(batch, cube, vs, renderer=self._renderer)
                     │
                     └── _Board(cube, batch, vs, renderer=renderer)
                             │
@@ -793,10 +849,11 @@ main_g.py
 ```
 
 **Access Pattern:**
+- `Window` receives `GUIBackend` and gets renderer via `backend.renderer`
 - `_Cell` accesses the renderer via: `self._face_board.board.renderer`
 - All shape rendering uses `renderer.shapes.*` when renderer is available
 - All display list operations use `renderer.display_lists.*` when renderer is available
-- Falls back to direct OpenGL calls when no renderer is provided (backward compatibility)
+- Renderer is now REQUIRED - no fallback to direct OpenGL calls
 
 **See also:** `docs/design/renderer_flow.puml` for sequence diagram
 
@@ -921,24 +978,27 @@ def main():
 ### After Migration
 
 ```python
+import pyglet
+from cube.app.abstract_ap import AbstractApp
 from cube.gui import BackendRegistry
-from cube.gui.backends.pyglet import register  # Auto-registers pyglet
+# Import pyglet backend to register it
+import cube.gui.backends.pyglet  # noqa: F401 - registers backend
+from cube.main_window import Window
 
-def main(backend: str | None = None):
-    # Create renderer
-    renderer = BackendRegistry.create_renderer(backend)
+def main(backend_name: str | None = None):
+    # Get backend instance (provides lazy renderer, window factory, etc.)
+    backend = BackendRegistry.get_backend(backend_name or "pyglet")
 
-    # Create app and window (current approach)
+    # Create app and window
+    # Window receives backend and gets renderer via backend.renderer
     app = AbstractApp.create()
-    win = Window(app, 720, 720, "Cube", renderer=renderer)
+    win = Window(app, 720, 720, "Cube", backend=backend)
 
     # Run pyglet event loop
     pyglet.app.run()
 
 if __name__ == '__main__':
-    import sys
-    backend = sys.argv[1] if len(sys.argv) > 1 else None
-    main(backend)
+    main()
 ```
 
 ### For Tests
@@ -948,7 +1008,7 @@ from cube.gui import BackendRegistry
 
 def test_cube_operations():
     # Use headless backend for fast testing
-    renderer = BackendRegistry.create_renderer(backend='headless')
+    backend = BackendRegistry.get_backend('headless')
 
     # Create app without GUI
     app = AbstractApp.create_non_default(cube_size=3, animation=False)

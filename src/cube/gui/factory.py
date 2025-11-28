@@ -1,12 +1,16 @@
 """
 Backend factory and registry.
 
-This module provides the BackendRegistry for managing GUI backends.
+This module provides the BackendRegistry for managing GUI backends
+and the GUIBackend class for accessing backend components.
 """
 
-from typing import Type, TypeVar, Callable, Any
+from typing import Type, TypeVar, Callable, Any, TYPE_CHECKING
 
 from cube.gui.protocols import Renderer, Window, EventLoop, AnimationBackend
+
+if TYPE_CHECKING:
+    from cube.gui.factory import _BackendEntry
 
 # Type variables for generic factory methods
 R = TypeVar("R", bound=Renderer)
@@ -33,6 +37,55 @@ class _BackendEntry:
         self.animation_factory = animation_factory
 
 
+class GUIBackend:
+    """Single entry point for all GUI backend components.
+
+    Provides access to renderer, window, event loop, and animation
+    components for a specific backend.
+
+    Example:
+        backend = BackendRegistry.get_backend("pyglet")
+        renderer = backend.renderer  # Lazily created, singleton
+        window = backend.create_window(720, 720, "Cube")
+    """
+
+    def __init__(self, name: str, entry: _BackendEntry):
+        self._name = name
+        self._entry = entry
+        self._renderer: Renderer | None = None
+
+    @property
+    def name(self) -> str:
+        """Get the backend name."""
+        return self._name
+
+    @property
+    def renderer(self) -> Renderer:
+        """Get or create the renderer (lazy, singleton per GUIBackend instance)."""
+        if self._renderer is None:
+            self._renderer = self._entry.renderer_factory()
+        return self._renderer
+
+    def create_window(self, width: int = 720, height: int = 720, title: str = "Cube") -> Window:
+        """Create a window for this backend."""
+        return self._entry.window_factory(width, height, title)
+
+    def create_event_loop(self) -> EventLoop:
+        """Create an event loop for this backend."""
+        return self._entry.event_loop_factory()
+
+    def create_animation(self) -> AnimationBackend | None:
+        """Create animation backend if supported."""
+        if self._entry.animation_factory:
+            return self._entry.animation_factory()
+        return None
+
+    @property
+    def supports_animation(self) -> bool:
+        """Check if this backend supports animation."""
+        return self._entry.animation_factory is not None
+
+
 class BackendRegistry:
     """Registry for GUI backends.
 
@@ -52,8 +105,9 @@ class BackendRegistry:
         # Set as default
         BackendRegistry.set_default("pyglet")
 
-        # Create components
-        renderer = BackendRegistry.create_renderer()
+        # Get a backend instance (recommended)
+        backend = BackendRegistry.get_backend("pyglet")
+        renderer = backend.renderer
     """
 
     _backends: dict[str, _BackendEntry] = {}
@@ -153,6 +207,32 @@ class BackendRegistry:
             True if registered, False otherwise
         """
         return name in cls._backends
+
+    @classmethod
+    def get_backend(cls, name: str | None = None) -> GUIBackend:
+        """Get a GUIBackend instance for the specified backend.
+
+        This is the recommended way to access backend components.
+        The returned GUIBackend provides access to renderer (lazy singleton),
+        and factory methods for window, event loop, and animation.
+
+        Args:
+            name: Backend name, or None for default
+
+        Returns:
+            GUIBackend instance
+
+        Raises:
+            ValueError: If backend is not registered
+
+        Example:
+            backend = BackendRegistry.get_backend("pyglet")
+            renderer = backend.renderer
+        """
+        backend_name = name or cls.get_default()
+        if backend_name not in cls._backends:
+            raise ValueError(f"Unknown backend: {backend_name}. Available: {list(cls._backends.keys())}")
+        return GUIBackend(backend_name, cls._backends[backend_name])
 
     @classmethod
     def _get_entry(cls, backend: str | None) -> _BackendEntry:

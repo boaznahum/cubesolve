@@ -149,10 +149,10 @@ class GUITestRunner:
                 print(f"Starting GUI test with sequence: '{key_sequence}'")
                 print(f"  Cube size: {cube_size}, Animation: {enable_animation}, Timeout: {timeout_sec}s")
 
-            # Create app, renderer, and window
+            # Create app, backend, and window
             app = AbstractApp.create()
-            renderer = BackendRegistry.create_renderer(backend="pyglet")
-            win = Window(app, 720, 720, "Cube Test", renderer=renderer)
+            backend = BackendRegistry.get_backend("pyglet")
+            win = Window(app, 720, 720, "Cube Test", backend=backend)
 
             # Start timeout watchdog
             watchdog = threading.Thread(target=timeout_watchdog, daemon=True)

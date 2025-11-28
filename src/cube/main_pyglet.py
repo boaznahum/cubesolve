@@ -23,11 +23,11 @@ def main():
     On the other hand, Window needs to know about the manager to request draw/update events
     and to know if animation is running.
     """
-    # Create renderer explicitly using pyglet backend
-    renderer = BackendRegistry.create_renderer(backend="pyglet")
+    # Get the pyglet backend
+    backend = BackendRegistry.get_backend("pyglet")
 
     app = AbstractApp.create()
-    win = Window(app, 720, 720, '"Cube"', renderer=renderer)
+    win = Window(app, 720, 720, '"Cube"', backend=backend)
 
     win.set_mouse_visible(True)
 

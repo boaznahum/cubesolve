@@ -17,7 +17,7 @@ from cube.main_window.main_g_abstract import AbstractWindow
 from cube.solver import Solver
 from cube.viewer.viewer_g import GCubeViewer
 from cube.viewer.viewer_g_ext import GViewerExt
-from cube.gui.protocols.renderer import Renderer
+from cube.gui.factory import GUIBackend
 
 # noinspection PyAbstractClass
 class Window(AbstractWindow, AnimationWindow):
@@ -26,15 +26,16 @@ class Window(AbstractWindow, AnimationWindow):
 
     def __init__(self, app: AbstractApp,
                  width, height, title='',
-                 renderer: Renderer | None = None):
+                 backend: GUIBackend | None = None):
         # Set _app before super().__init__() because pyglet's __init__ triggers
         # on_resize which accesses self.app (via the property that returns self._app)
         self._app: AbstractApp = app
         self._vs = app.vs
 
-        if renderer is None:
-            raise RuntimeError("Renderer is required but not configured. Use BackendRegistry.create_renderer()")
-        self._renderer = renderer
+        if backend is None:
+            raise RuntimeError("Backend is required. Use BackendRegistry.get_backend()")
+        self._backend = backend
+        self._renderer = backend.renderer
 
         super(Window, self).__init__(width, height, title, resizable=True)
 
@@ -45,7 +46,7 @@ class Window(AbstractWindow, AnimationWindow):
             self._animation_manager.set_window(self)
 
         # Initialize renderer
-        renderer.setup()
+        self._renderer.setup()
 
         # see Z-Buffer in
         #  https://learnopengl.com/Getting-started/Coordinate-Systems  #Z-buffer
@@ -53,7 +54,7 @@ class Window(AbstractWindow, AnimationWindow):
 
         self.batch = pyglet.graphics.Batch()
 
-        self._viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs, renderer=renderer)
+        self._viewer: GCubeViewer = GCubeViewer(self.batch, app.cube, app.vs, renderer=self._renderer)
         self.text: MutableSequence[pyglet.text.Label] = []
         self.animation_text: MutableSequence[pyglet.text.Label] = []
 

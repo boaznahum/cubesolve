@@ -1,13 +1,14 @@
 @startuml Renderer Flow
 
 title Renderer Flow Through Application Hierarchy
-footer Last Updated: 2025-11-27
+footer Last Updated: 2025-11-28
 
 skinparam sequenceMessageAlign center
 skinparam responseMessageBelowArrow true
 
-participant "main_g.py" as main
+participant "main_pyglet.py" as main
 participant "BackendRegistry" as registry
+participant "GUIBackend" as backend
 participant "PygletRenderer" as renderer
 participant "Window\n(main_window)" as window
 participant "GCubeViewer" as viewer
@@ -17,19 +18,23 @@ participant "_Cell" as cell
 
 == Initialization ==
 
-main -> registry : create_renderer()
+main -> registry : get_backend("pyglet")
 activate registry
-registry -> renderer : PygletRenderer()
-activate renderer
-renderer --> registry : renderer
-deactivate renderer
-registry --> main : renderer
+registry -> backend ** : GUIBackend(name, entry)
+registry --> main : backend
 deactivate registry
 
 main -> main : AbstractApp.create()
 
-main -> window : Window(app, 720, 720, title, **renderer**)
+main -> window : Window(app, 720, 720, title, **backend**)
 activate window
+
+window -> backend : backend.renderer
+activate backend
+backend -> renderer ** : renderer_factory()
+note right: Lazy singleton creation\n(only on first access)
+backend --> window : renderer
+deactivate backend
 
 window -> renderer : setup()
 note right: Initializes OpenGL state:\nglClearColor, glEnable(GL_DEPTH_TEST)

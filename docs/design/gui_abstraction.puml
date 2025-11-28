@@ -1,7 +1,7 @@
 @startuml GUI Abstraction Architecture
 
 title GUI Abstraction Layer - Architecture Diagram
-footer Last Updated: 2025-11-27
+footer Last Updated: 2025-11-28
 
 skinparam packageStyle rectangle
 skinparam linetype ortho
@@ -168,19 +168,33 @@ package "cube.gui.types" as types_pkg #LightYellow {
 ' BACKEND FACTORY (implemented)
 ' ============================================
 package "cube.gui" as gui_root #LightYellow {
+    class GUIBackend {
+        -_name: str
+        -_entry: _BackendEntry
+        -_renderer: Renderer | None
+        +name: str
+        +renderer: Renderer  «lazy singleton»
+        +create_window(w, h, title): Window
+        +create_event_loop(): EventLoop
+        +create_animation(): AnimationBackend | None
+        +supports_animation: bool
+    }
+
     class BackendRegistry <<singleton>> {
         -_backends: Dict
         -_default: str
-        +register(name, renderer, window, loop, anim)
+        +register(name, factories...)
         +set_default(name)
         +get_default(): str
         +available(): list[str]
-        +create_renderer(backend)
-        +create_window(w, h, title, backend)
-        +create_event_loop(backend)
-        +create_animation(backend)
+        +get_backend(name): GUIBackend  «primary»
+        +create_renderer(backend)  «deprecated»
+        +create_window(...)  «deprecated»
+        +create_event_loop(backend)  «deprecated»
+        +create_animation(backend)  «deprecated»
     }
 
+    BackendRegistry --> GUIBackend : creates
 }
 
 ' ============================================
@@ -364,16 +378,21 @@ package "Pending Migration" as pending #FFB6C1 {
 ' ENTRY POINTS
 ' ============================================
 package "Entry Points" as entry #Lavender {
-    class "main_g.py ✅" as main_g {
-        +main(backend=None)
-        ' ✅ Uses BackendRegistry.create_renderer()
-        ' ✅ Passes renderer to Window
+    class "main_pyglet.py ✅" as main_g {
+        +main()
+        ' ✅ Uses BackendRegistry.get_backend()
+        ' ✅ Passes backend to Window
     }
 
     class "Window ✅" as app_window {
-        +__init__(app, w, h, title, renderer)
+        +__init__(app, w, h, title, backend: GUIBackend)
+        ' ✅ Gets renderer via backend.renderer
         ' ✅ Passes renderer to GCubeViewer
-        ' ✅ Calls renderer.setup()
+    }
+
+    class "GUITestRunner ✅" as test_runner {
+        +run_test(key_sequence, ...)
+        ' ✅ Uses BackendRegistry.get_backend()
     }
 
     class "tests/backends/*" as tests {
@@ -406,21 +425,23 @@ TkinterRenderer ..|> Renderer
 TkinterWindow ..|> Window
 TkinterEventLoop ..|> EventLoop
 
-' Registry relationships
-BackendRegistry --> PygletRenderer : creates
-BackendRegistry --> HeadlessRenderer : creates
-BackendRegistry --> TkinterRenderer : creates
+' GUIBackend uses entries to create instances
+GUIBackend --> PygletRenderer : creates (lazy)
+GUIBackend --> HeadlessRenderer : creates (lazy)
+GUIBackend --> TkinterRenderer : creates (lazy)
 
 ' Viewer uses protocols (✅ complete)
 GCubeViewer --> Renderer : "✅ uses"
 GCubeViewer --> Cube : reads state
 
 ' Entry points use factory
-main_g --> BackendRegistry : "✅ create_renderer()"
-tests --> BackendRegistry : "✅ create_renderer()"
+main_g --> BackendRegistry : "✅ get_backend()"
+test_runner --> BackendRegistry : "✅ get_backend()"
+tests --> BackendRegistry : "✅ get_backend()"
 
-' Renderer flow: main_g -> Window -> GCubeViewer -> _Board -> _Cell
-main_g --> app_window : "✅ passes renderer"
+' Backend flow: main_g -> Window (backend) -> GCubeViewer (renderer)
+main_g --> app_window : "✅ passes backend"
+app_window --> GUIBackend : "✅ backend.renderer"
 app_window --> GCubeViewer : "✅ passes renderer"
 
 ' Entry points use viewer

@@ -1,7 +1,7 @@
 @startuml GUI Package Structure
 
 title GUI Abstraction - Package & Component Diagram
-footer Last Updated: 2025-11-27 | ✅ = Done | 🔄 = In Progress | ⏳ = Pending
+footer Last Updated: 2025-11-28 | ✅ = Done | 🔄 = In Progress | ⏳ = Pending
 
 skinparam componentStyle rectangle
 
@@ -43,7 +43,7 @@ package "src/cube" {
 
         component [types.py ✅\n(Point3D, Color3,\nKeyEvent, MouseEvent,\nDisplayList, TextureHandle)] as types_comp
 
-        component [factory.py ✅\n(BackendRegistry)] as factory_comp
+        component [factory.py ✅\n(GUIBackend,\nBackendRegistry)] as factory_comp
 
         component [context.py ✅\n(RenderingContext)] as context_comp
 
@@ -111,8 +111,9 @@ package "src/cube" {
     ' ============================================
     ' ENTRY POINTS
     ' ============================================
-    component [main_g.py ✅\n(uses BackendRegistry)] as main_g #90EE90
-    component [Window ✅\n(passes renderer)] as win_entry #90EE90
+    component [main_pyglet.py ✅\n(uses get_backend())] as main_g #90EE90
+    component [Window ✅\n(accepts backend,\ngets renderer)] as win_entry #90EE90
+    component [GUITestRunner ✅\n(uses get_backend())] as test_runner #90EE90
     component [main_c.py ✅\n(no GUI)] as main_c #90EE90
 }
 
@@ -167,8 +168,9 @@ win_comp ..> window_proto : should use
 win_comp ..> loop_proto : should use
 
 ' Entry point uses factory (✅ done)
-main_g --> factory_comp : "✅ create_renderer()"
-main_g --> win_entry : "✅ passes renderer"
+main_g --> factory_comp : "✅ get_backend()"
+test_runner --> factory_comp : "✅ get_backend()"
+main_g --> win_entry : "✅ passes backend"
 win_entry --> gviewer_comp : "✅ passes renderer"
 main_g --> app_comp
 
