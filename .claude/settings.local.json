@@ -28,7 +28,9 @@
       "Bash(git rm:*)",
       "Bash(.venv314Scriptspython.exe -m pytest:*)",
       "Bash(git checkout:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(winget install:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
