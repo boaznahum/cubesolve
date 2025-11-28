@@ -501,6 +501,8 @@ class PygletViewStateManager(ViewStateManager):
         """Convert screen coordinates to world coordinates.
 
         Uses gluUnProject with current matrices and depth buffer.
+
+        Note: screen_y is expected in OpenGL/pyglet convention (origin at bottom-left).
         """
         # Get current matrices and viewport
         pmat = (gl.GLdouble * 16)()
@@ -511,18 +513,18 @@ class PygletViewStateManager(ViewStateManager):
         gl.glGetDoublev(gl.GL_PROJECTION_MATRIX, pmat)
         gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX, mvmat)
 
-        # Convert screen Y (top-left origin) to OpenGL Y (bottom-left origin)
-        real_y = viewport[3] - screen_y
+        # screen_y is already in OpenGL convention (bottom-left origin)
+        # No conversion needed for pyglet backend
 
         # Read depth at the pixel
         depth = (gl.GLfloat * 1)()
-        gl.glReadPixels(int(screen_x), int(real_y), 1, 1, gl.GL_DEPTH_COMPONENT, gl.GL_FLOAT, depth)
+        gl.glReadPixels(int(screen_x), int(screen_y), 1, 1, gl.GL_DEPTH_COMPONENT, gl.GL_FLOAT, depth)
 
         # Unproject to world coordinates
         world_x = gl.GLdouble()
         world_y = gl.GLdouble()
         world_z = gl.GLdouble()
-        gl.gluUnProject(screen_x, real_y, depth[0], mvmat, pmat, viewport, world_x, world_y, world_z)
+        gl.gluUnProject(screen_x, screen_y, depth[0], mvmat, pmat, viewport, world_x, world_y, world_z)
 
         return (world_x.value, world_y.value, world_z.value)
 

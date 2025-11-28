@@ -381,7 +381,7 @@ class ViewStateManager(Protocol):
 
         Args:
             screen_x: X coordinate in screen/window space
-            screen_y: Y coordinate in screen/window space (origin at top-left)
+            screen_y: Y coordinate in screen/window space (origin at bottom-left, OpenGL convention)
 
         Returns:
             Tuple of (world_x, world_y, world_z) coordinates

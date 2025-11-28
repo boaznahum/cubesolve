@@ -580,7 +580,7 @@ def _screen_to_model(vs, window, x, y) -> np.ndarray:
         vs: Application view state (for prepare/restore_objects_view)
         window: The window (provides renderer access)
         x: Screen X coordinate
-        y: Screen Y coordinate (top-left origin)
+        y: Screen Y coordinate (pyglet/OpenGL convention: origin at bottom-left)
 
     Returns:
         3D point as numpy array [x, y, z]
@@ -591,7 +591,7 @@ def _screen_to_model(vs, window, x, y) -> np.ndarray:
     vs.prepare_objects_view(renderer)
 
     # Use renderer to convert screen to world coordinates
-    # Note: screen_to_world expects y from top (which matches our input)
+    # pyglet uses OpenGL convention (y=0 at bottom), same as screen_to_world expects
     world_x, world_y, world_z = renderer.view.screen_to_world(float(x), float(y))
 
     vs.restore_objects_view(renderer)

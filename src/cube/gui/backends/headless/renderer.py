@@ -235,7 +235,10 @@ class HeadlessViewStateManager(ViewStateManager):
         pass
 
     def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float, float]:
-        """Return origin for headless mode - no actual unprojection."""
+        """Return origin for headless mode - no actual unprojection.
+
+        Note: screen_y is expected in OpenGL convention (origin at bottom-left).
+        """
         return (0.0, 0.0, 0.0)
 
 
