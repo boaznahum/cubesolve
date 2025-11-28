@@ -24,7 +24,8 @@
       "Bash(dir:*)",
       "Bash(git commit:*)",
       "Bash(git push)",
-      "Bash(pip freeze:*)"
+      "Bash(pip freeze:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
