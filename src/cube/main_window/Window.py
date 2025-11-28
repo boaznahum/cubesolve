@@ -1,7 +1,6 @@
 import traceback
 from typing import MutableSequence, Sequence
 
-# import pygame
 import pyglet  # type: ignore
 from pyglet import gl
 from pyglet.window import key  # type: ignore
@@ -13,15 +12,14 @@ from cube.app.abstract_ap import AbstractApp
 from cube.app.app_state import ApplicationAndViewState
 from cube.app.app_exceptions import AppExit, RunStop, OpAborted
 from cube.main_window import main_g_keyboard_input, main_g_mouse
-from cube.main_window.main_g_abstract import AbstractWindow
 from cube.solver import Solver
 from cube.viewer.viewer_g import GCubeViewer
 from cube.viewer.viewer_g_ext import GViewerExt
 from cube.gui.factory import GUIBackend
 from cube.gui.backends.pyglet.window import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 
-# noinspection PyAbstractClass
-class Window(AbstractWindow, AnimationWindow):
+
+class Window(pyglet.window.Window, AnimationWindow):
     #     # Cube 3D start rotation
     xRotation = yRotation = 30
 

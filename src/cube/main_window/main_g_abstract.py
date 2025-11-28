@@ -1,7 +1,4 @@
-from abc import abstractmethod
-from typing import TYPE_CHECKING
-
-import pyglet  # type: ignore
+from typing import Protocol, TYPE_CHECKING, Any, runtime_checkable
 
 from cube.app.abstract_ap import AbstractApp
 from cube.viewer.viewer_g import GCubeViewer
@@ -10,43 +7,57 @@ if TYPE_CHECKING:
     from cube.gui.protocols.renderer import Renderer
 
 
-class AbstractWindow(pyglet.window.Window):
-    #
-    # @abstractmethod
-    # def set_animation(self, an: Animation | None):
-    #     pass
+@runtime_checkable
+class AbstractWindow(Protocol):
+    """Protocol for the main application window.
 
-    # @property
-    # @abstractmethod
-    # def animation_running(self):
-    #     """
-    #     Indicate that the animation hook start and animation
-    #     Usually it is enough to check if Operator:is_animation_running
-    #     because it invokes the animation hook that invokes the windows
-    #     :return:
-    #     """
-    #     pass
-
-    @abstractmethod
-    def set_annotation_text(self, text1: str | None, text2: str | None):
-        pass
-
-    @abstractmethod
-    def update_gui_elements(self):
-        pass
+    This defines the interface that keyboard/mouse handlers expect from a window.
+    The concrete implementation (e.g., pyglet Window) implements this protocol.
+    """
 
     @property
-    @abstractmethod
     def app(self) -> AbstractApp:
-        pass
+        """Access the application."""
+        ...
 
     @property
-    @abstractmethod
     def viewer(self) -> GCubeViewer:
-        pass
+        """Access the cube viewer."""
+        ...
 
     @property
-    @abstractmethod
     def renderer(self) -> "Renderer":
         """Access the renderer for this window."""
-        pass
+        ...
+
+    @property
+    def width(self) -> int:
+        """Window width in pixels."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """Window height in pixels."""
+        ...
+
+    @property
+    def animation_running(self) -> Any:
+        """Whether animation is currently running."""
+        ...
+
+    def update_gui_elements(self) -> None:
+        """Update all GUI elements."""
+        ...
+
+    def close(self) -> None:
+        """Close the window."""
+        ...
+
+    # Cursor methods (used by keyboard handler)
+    def get_system_mouse_cursor(self, cursor_type: Any) -> Any:
+        """Get a system mouse cursor."""
+        ...
+
+    def set_mouse_cursor(self, cursor: Any) -> None:
+        """Set the mouse cursor."""
+        ...
