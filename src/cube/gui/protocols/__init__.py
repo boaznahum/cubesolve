@@ -13,6 +13,7 @@ from cube.gui.protocols.renderer import (
 from cube.gui.protocols.window import Window, TextRenderer
 from cube.gui.protocols.event_loop import EventLoop
 from cube.gui.protocols.animation import AnimationBackend
+from cube.gui.protocols.app_window import AppWindow
 
 __all__ = [
     # Renderer protocols
@@ -27,4 +28,6 @@ __all__ = [
     "EventLoop",
     # Animation
     "AnimationBackend",
+    # App window
+    "AppWindow",
 ]
