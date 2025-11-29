@@ -18,6 +18,7 @@ from cube.app.abstract_ap import AbstractApp
 from cube.app.app_exceptions import AppExit, RunStop, OpAborted
 from cube.animation.animation_manager import AnimationWindow
 from cube.gui.factory import GUIBackend
+from cube.gui.protocols.app_window import AppWindow
 from cube.gui.backends.pyglet.window import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 from cube.main_window import main_g_keyboard_input, main_g_mouse
 from cube.main_window.app_window_base import AppWindowBase, TextLabel
@@ -25,7 +26,7 @@ from cube.viewer.viewer_g import GCubeViewer
 from cube.viewer.viewer_g_ext import GViewerExt
 
 
-class PygletAppWindow(pyglet.window.Window, AnimationWindow):
+class PygletAppWindow(AppWindow, pyglet.window.Window, AnimationWindow):
     """Pyglet-specific AppWindow implementation.
 
     Combines pyglet.window.Window for rendering/events with AppWindowBase
