@@ -7,10 +7,11 @@ and the GUIBackend class for accessing backend components.
 
 from typing import Type, TypeVar, Callable, Any, TYPE_CHECKING
 
-from cube.gui.protocols import Renderer, Window, EventLoop, AnimationBackend
+from cube.gui.protocols import Renderer, Window, EventLoop, AnimationBackend, AppWindow
 
 if TYPE_CHECKING:
     from cube.gui.factory import _BackendEntry
+    from cube.app.abstract_ap import AbstractApp
 
 # Type variables for generic factory methods
 R = TypeVar("R", bound=Renderer)
@@ -22,19 +23,22 @@ A = TypeVar("A", bound=AnimationBackend)
 class _BackendEntry:
     """Internal class holding backend component factories."""
 
-    __slots__ = ["renderer_factory", "window_factory", "event_loop_factory", "animation_factory"]
+    __slots__ = ["renderer_factory", "window_factory", "event_loop_factory",
+                 "animation_factory", "app_window_factory"]
 
     def __init__(
         self,
         renderer_factory: Callable[[], Renderer],
-        window_factory: Callable[[int, int, str], Window],
+        window_factory: Callable[[int, int, str], Window] | None,
         event_loop_factory: Callable[[], EventLoop],
         animation_factory: Callable[[], AnimationBackend] | None = None,
+        app_window_factory: Callable[["AbstractApp", int, int, str, "GUIBackend"], AppWindow] | None = None,
     ):
         self.renderer_factory = renderer_factory
         self.window_factory = window_factory
         self.event_loop_factory = event_loop_factory
         self.animation_factory = animation_factory
+        self.app_window_factory = app_window_factory
 
 
 class GUIBackend:
@@ -93,6 +97,38 @@ class GUIBackend:
         """Check if this backend supports animation."""
         return self._entry.animation_factory is not None
 
+    def create_app_window(
+        self,
+        app: "AbstractApp",
+        width: int = 720,
+        height: int = 720,
+        title: str = "Cube Solver",
+    ) -> AppWindow:
+        """Create an AppWindow for this backend.
+
+        This also wires up the animation manager to the event loop.
+
+        Args:
+            app: Application instance with cube, operator, solver.
+            width: Window width in pixels (ignored for console/headless).
+            height: Window height in pixels (ignored for console/headless).
+            title: Window title.
+
+        Returns:
+            An AppWindow instance for this backend.
+
+        Raises:
+            RuntimeError: If this backend doesn't have an app_window_factory.
+        """
+        # Wire up animation manager to event loop
+        if app.am is not None:
+            app.am.set_event_loop(self.event_loop)
+
+        # Create AppWindow
+        if self._entry.app_window_factory is None:
+            raise RuntimeError(f"Backend '{self._name}' does not have app_window_factory")
+        return self._entry.app_window_factory(app, width, height, title, self)
+
 
 class BackendRegistry:
     """Registry for GUI backends.
@@ -127,24 +163,27 @@ class BackendRegistry:
         name: str,
         *,
         renderer_factory: Callable[[], Renderer],
-        window_factory: Callable[[int, int, str], Window],
+        window_factory: Callable[[int, int, str], Window] | None,
         event_loop_factory: Callable[[], EventLoop],
         animation_factory: Callable[[], AnimationBackend] | None = None,
+        app_window_factory: Callable[["AbstractApp", int, int, str, GUIBackend], AppWindow] | None = None,
     ) -> None:
         """Register a new backend.
 
         Args:
             name: Backend identifier (e.g., 'pyglet', 'tkinter', 'headless')
             renderer_factory: Callable that creates a Renderer instance
-            window_factory: Callable(width, height, title) that creates a Window
+            window_factory: Callable(width, height, title) that creates a Window (can be None)
             event_loop_factory: Callable that creates an EventLoop
             animation_factory: Optional callable that creates an AnimationBackend
+            app_window_factory: Optional callable that creates an AppWindow
         """
         cls._backends[name] = _BackendEntry(
             renderer_factory=renderer_factory,
             window_factory=window_factory,
             event_loop_factory=event_loop_factory,
             animation_factory=animation_factory,
+            app_window_factory=app_window_factory,
         )
 
     @classmethod

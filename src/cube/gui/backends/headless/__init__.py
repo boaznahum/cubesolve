@@ -47,6 +47,7 @@ def register() -> None:
             window_factory=lambda w, h, t: HeadlessWindow(w, h, t),
             event_loop_factory=HeadlessEventLoop,
             animation_factory=None,  # Headless doesn't support animation
+            app_window_factory=lambda app, w, h, t, backend: HeadlessAppWindow(app, w, h, t, backend),
         )
 
 

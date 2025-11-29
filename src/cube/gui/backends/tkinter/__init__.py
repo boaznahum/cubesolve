@@ -65,6 +65,7 @@ def register() -> None:
             window_factory=_create_window,
             event_loop_factory=_create_event_loop,
             animation_factory=TkinterAnimation,
+            app_window_factory=lambda app, w, h, t, backend: TkinterAppWindow(app, w, h, t, backend),
         )
 
 

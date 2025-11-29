@@ -17,6 +17,7 @@ Usage:
 """
 
 from cube.gui.factory import BackendRegistry, GUIBackend
+from cube.gui.protocols import AppWindow
 from cube.gui.types import (
     Point3D,
     Matrix4x4,
@@ -33,6 +34,8 @@ __all__ = [
     # Factory
     "BackendRegistry",
     "GUIBackend",
+    # Protocols
+    "AppWindow",
     # Types
     "Point3D",
     "Matrix4x4",

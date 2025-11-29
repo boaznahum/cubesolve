@@ -46,6 +46,7 @@ def register() -> None:
         window_factory=lambda w, h, t: PygletWindow(w, h, t),
         event_loop_factory=PygletEventLoop,
         animation_factory=PygletAnimation,
+        app_window_factory=lambda app, w, h, t, backend: PygletAppWindow(app, w, h, t, backend),
     )
 
 

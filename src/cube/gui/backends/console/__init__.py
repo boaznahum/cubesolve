@@ -56,6 +56,7 @@ def register() -> None:
             window_factory=None,  # Console doesn't use Window protocol
             event_loop_factory=_create_event_loop,
             animation_factory=None,  # Console doesn't support animation
+            app_window_factory=lambda app, w, h, t, backend: ConsoleAppWindow(app, w, h, t, backend),
         )
 
 

@@ -29,15 +29,6 @@ if TYPE_CHECKING:
     from cube.gui.protocols.app_window import AppWindow
 
 
-# Backend-to-AppWindow mapping
-_APP_WINDOW_CLASSES = {
-    "pyglet": ("cube.gui.backends.pyglet.app_window", "PygletAppWindow"),
-    "tkinter": ("cube.gui.backends.tkinter.app_window", "TkinterAppWindow"),
-    "console": ("cube.gui.backends.console.app_window", "ConsoleAppWindow"),
-    "headless": ("cube.gui.backends.headless.app_window", "HeadlessAppWindow"),
-}
-
-
 def _import_backend(backend_name: str) -> None:
     """Import the backend module to register it.
 
@@ -59,32 +50,6 @@ def _import_backend(backend_name: str) -> None:
         __import__(module_name)
 
 
-def _get_app_window_class(backend_name: str):
-    """Get the AppWindow class for the specified backend.
-
-    Args:
-        backend_name: Name of the backend.
-
-    Returns:
-        The AppWindow class for the backend.
-
-    Raises:
-        ValueError: If the backend is not recognized.
-    """
-    if backend_name not in _APP_WINDOW_CLASSES:
-        raise ValueError(f"Unknown backend: {backend_name}. "
-                        f"Available: {list(_APP_WINDOW_CLASSES.keys())}")
-
-    module_name, class_name = _APP_WINDOW_CLASSES[backend_name]
-
-    # Import the module
-    import importlib
-    module = importlib.import_module(module_name)
-
-    # Get the class
-    return getattr(module, class_name)
-
-
 def create_app_window(
     app: AbstractApp,
     backend_name: str = "pyglet",
@@ -95,6 +60,7 @@ def create_app_window(
     """Create an AppWindow with the specified backend.
 
     This is the main factory function for creating application windows.
+    Delegates to GUIBackend.create_app_window() which handles animation manager wiring.
 
     Args:
         app: Application instance with cube, operator, solver.
@@ -118,18 +84,10 @@ def create_app_window(
     # Import backend to register it
     _import_backend(backend_name)
 
-    # Get backend from registry
+    # Get backend from registry and create window
+    # GUIBackend.create_app_window() handles animation manager wiring
     backend = BackendRegistry.get_backend(backend_name)
-
-    # Set event loop on animation manager if it exists
-    if app.am is not None:
-        app.am.set_event_loop(backend.event_loop)
-
-    # Get the AppWindow class for this backend
-    AppWindowClass = _get_app_window_class(backend_name)
-
-    # Create and return the window
-    return AppWindowClass(app, width, height, title, backend)
+    return backend.create_app_window(app, width, height, title)
 
 
 def run_with_backend(
