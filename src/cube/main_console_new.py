@@ -16,7 +16,8 @@ from cube.main_any_backend import main as any_main
 
 def main():
     """Main entry point for the console-based interface."""
-    sys.argv.extend(["--backend", "console"])
+    # Console doesn't support animation
+    sys.argv.extend(["--backend", "console", "--no-animation"])
     return any_main()
 
 
