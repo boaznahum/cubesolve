@@ -60,7 +60,16 @@ Files still using pyglet outside the backend:
 ### How to Run
 - GUI: `python -m cube.main_pyglet`
 - Tests (non-GUI): `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
-- Tests (GUI): `python -m pytest tests/gui -v --speed-up 2`
+- Tests (GUI): `python -m pytest tests/gui -v --speed-up 5`
+
+### Testing Requirements
+**IMPORTANT:** Before committing changes, ALWAYS run BOTH test suites:
+1. Non-GUI tests: `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
+2. GUI tests: `python -m pytest tests/gui -v --speed-up 5`
+
+Both must pass before committing.
+
+**Note:** Use `--speed-up 5` (not 2) to work around the known animation timing bug (see "Known Issues" section below).
 
 ### Check Pyglet Usage
 ```bash

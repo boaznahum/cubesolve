@@ -30,3 +30,10 @@
   - Ask Claude architects to rearrange them by layers
 
 - ❌ **Q2.** Add typing to all code, make sure mypy is green
+
+# under it new entries that claude need to reformat, claude please read tehm reforamt and put above this line, dont delete this line
+
+## Bugs
+
+- investigate the gui test bugs fails in slow animation, read lcuade md files for explaination
+- 
