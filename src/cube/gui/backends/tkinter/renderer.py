@@ -34,10 +34,6 @@ class TkinterShapeRenderer(ShapeRenderer):
         """Set the display list manager for command capture."""
         self._display_list_manager = dlm
 
-    def _is_compiling(self) -> bool:
-        """Check if we're currently compiling a display list."""
-        return self._display_list_manager is not None and self._display_list_manager.is_compiling()
-
     def _project(self, point_3d: Point3D) -> tuple[float, float]:
         """Project 3D point to 2D canvas coordinates using current transformation."""
         return self._project_with_matrix(point_3d, self._view._current_matrix)
@@ -65,7 +61,7 @@ class TkinterShapeRenderer(ShapeRenderer):
 
         # Isometric formula: rotate 45° around Y, then ~35.264° around X
         # Simplified: x' = (x - z) * scale, y' = y - (x + z) * 0.5 * scale
-        scale = self._view.scale
+        scale = self._view.scale_factor
         offset_x = self._view.offset_x
         offset_y = self._view.offset_y
 
@@ -105,9 +101,10 @@ class TkinterShapeRenderer(ShapeRenderer):
 
     def quad(self, vertices: Sequence[Point3D], color: Color3) -> None:
         """Render filled quadrilateral."""
-        if self._is_compiling():
+        dlm = self._display_list_manager
+        if dlm is not None and dlm.is_compiling():
             # Store vertices and color; matrix will be applied at call time
-            self._display_list_manager.add_command(
+            dlm.add_command(
                 lambda v=list(vertices), c=color: self._draw_quad(v, c, self._view._current_matrix)
             )
             return
@@ -135,9 +132,10 @@ class TkinterShapeRenderer(ShapeRenderer):
         line_color: Color3,
     ) -> None:
         """Render quad with colored border."""
-        if self._is_compiling():
+        dlm = self._display_list_manager
+        if dlm is not None and dlm.is_compiling():
             # Store vertices and colors; matrix will be applied at call time
-            self._display_list_manager.add_command(
+            dlm.add_command(
                 lambda v=list(vertices), fc=face_color, lw=line_width, lc=line_color:
                     self._draw_quad_with_border(v, fc, lw, lc, self._view._current_matrix)
             )
@@ -168,8 +166,9 @@ class TkinterShapeRenderer(ShapeRenderer):
 
     def triangle(self, vertices: Sequence[Point3D], color: Color3) -> None:
         """Render filled triangle."""
-        if self._is_compiling():
-            self._display_list_manager.add_command(
+        dlm = self._display_list_manager
+        if dlm is not None and dlm.is_compiling():
+            dlm.add_command(
                 lambda v=list(vertices), c=color: self._draw_triangle(v, c, self._view._current_matrix)
             )
             return
@@ -191,8 +190,9 @@ class TkinterShapeRenderer(ShapeRenderer):
 
     def line(self, p1: Point3D, p2: Point3D, width: float, color: Color3) -> None:
         """Render a line segment."""
-        if self._is_compiling():
-            self._display_list_manager.add_command(
+        dlm = self._display_list_manager
+        if dlm is not None and dlm.is_compiling():
+            dlm.add_command(
                 lambda pt1=p1, pt2=p2, w=width, c=color: self._draw_line(pt1, pt2, w, c, self._view._current_matrix)
             )
             return
@@ -214,13 +214,15 @@ class TkinterShapeRenderer(ShapeRenderer):
 
     def sphere(self, center: Point3D, radius: float, color: Color3) -> None:
         """Render a sphere as a circle."""
-        if self._is_compiling():
-            self._display_list_manager.add_command(
-                lambda c=center, r=radius, col=color: self._draw_sphere(c, r, col, self._view._current_matrix, self._view.scale)
+        dlm = self._display_list_manager
+        current_scale = self._view.scale_factor
+        if dlm is not None and dlm.is_compiling():
+            dlm.add_command(
+                lambda c=center, r=radius, col=color, s=current_scale: self._draw_sphere(c, r, col, self._view._current_matrix, s)
             )
             return
 
-        self._draw_sphere(center, radius, color, self._view._current_matrix, self._view.scale)
+        self._draw_sphere(center, radius, color, self._view._current_matrix, current_scale)
 
     def _draw_sphere(self, center: Point3D, radius: float, color: Color3, matrix: np.ndarray, scale: float) -> None:
         """Actually draw the sphere."""
@@ -244,14 +246,16 @@ class TkinterShapeRenderer(ShapeRenderer):
         color: Color3,
     ) -> None:
         """Render cylinder as a thick line (simplified 2D representation)."""
-        if self._is_compiling():
-            self._display_list_manager.add_command(
-                lambda pt1=p1, pt2=p2, r1=radius1, r2=radius2, c=color:
-                    self._draw_cylinder(pt1, pt2, r1, r2, c, self._view._current_matrix, self._view.scale)
+        dlm = self._display_list_manager
+        current_scale = self._view.scale_factor
+        if dlm is not None and dlm.is_compiling():
+            dlm.add_command(
+                lambda pt1=p1, pt2=p2, r1=radius1, r2=radius2, c=color, s=current_scale:
+                    self._draw_cylinder(pt1, pt2, r1, r2, c, self._view._current_matrix, s)
             )
             return
 
-        self._draw_cylinder(p1, p2, radius1, radius2, color, self._view._current_matrix, self._view.scale)
+        self._draw_cylinder(p1, p2, radius1, radius2, color, self._view._current_matrix, current_scale)
 
     def _draw_cylinder(
         self, p1: Point3D, p2: Point3D, radius1: float, radius2: float, color: Color3, matrix: np.ndarray, scale: float
@@ -280,14 +284,16 @@ class TkinterShapeRenderer(ShapeRenderer):
         color: Color3,
     ) -> None:
         """Render disk as an ellipse (simplified)."""
-        if self._is_compiling():
-            self._display_list_manager.add_command(
-                lambda c=center, n=normal, ri=inner_radius, ro=outer_radius, col=color:
-                    self._draw_disk(c, n, ri, ro, col, self._view._current_matrix, self._view.scale)
+        dlm = self._display_list_manager
+        current_scale = self._view.scale_factor
+        if dlm is not None and dlm.is_compiling():
+            dlm.add_command(
+                lambda c=center, n=normal, ri=inner_radius, ro=outer_radius, col=color, s=current_scale:
+                    self._draw_disk(c, n, ri, ro, col, self._view._current_matrix, s)
             )
             return
 
-        self._draw_disk(center, normal, inner_radius, outer_radius, color, self._view._current_matrix, self._view.scale)
+        self._draw_disk(center, normal, inner_radius, outer_radius, color, self._view._current_matrix, current_scale)
 
     def _draw_disk(
         self, center: Point3D, normal: Point3D, inner_radius: float, outer_radius: float,
@@ -323,8 +329,9 @@ class TkinterShapeRenderer(ShapeRenderer):
         color: Color3,
     ) -> None:
         """Render multiple line segments."""
-        if self._is_compiling():
-            self._display_list_manager.add_command(
+        dlm = self._display_list_manager
+        if dlm is not None and dlm.is_compiling():
+            dlm.add_command(
                 lambda pts=list(points), w=width, c=color: self._draw_lines(pts, w, c, self._view._current_matrix)
             )
             return
@@ -366,8 +373,9 @@ class TkinterShapeRenderer(ShapeRenderer):
         line_color: Color3,
     ) -> None:
         """Render a cross (X) inside a quadrilateral."""
-        if self._is_compiling():
-            self._display_list_manager.add_command(
+        dlm = self._display_list_manager
+        if dlm is not None and dlm.is_compiling():
+            dlm.add_command(
                 lambda v=list(vertices), lw=line_width, lc=line_color: self._draw_cross(v, lw, lc, self._view._current_matrix)
             )
             return
@@ -409,8 +417,9 @@ class TkinterShapeRenderer(ShapeRenderer):
         if n <= 0:
             return
 
-        if self._is_compiling():
-            self._display_list_manager.add_command(
+        dlm = self._display_list_manager
+        if dlm is not None and dlm.is_compiling():
+            dlm.add_command(
                 lambda v=list(vertices), num=n, lw=line_width, lc=line_color:
                     self._draw_lines_in_quad(v, num, lw, lc, self._view._current_matrix)
             )
@@ -441,8 +450,8 @@ class TkinterShapeRenderer(ShapeRenderer):
             p_bottom = lb + dx_bottom * (i + 1)
             p_top = lt + dx_top * (i + 1)
 
-            x1, y1 = self._project_with_matrix(tuple(p_bottom), matrix)
-            x2, y2 = self._project_with_matrix(tuple(p_top), matrix)
+            x1, y1 = self._project_with_matrix(p_bottom, matrix)
+            x2, y2 = self._project_with_matrix(p_top, matrix)
 
             item_id = canvas.create_line(x1, y1, x2, y2, fill=hex_color, width=width)
             self._add_item(item_id)
@@ -572,9 +581,19 @@ class TkinterViewStateManager(ViewStateManager):
         self._current_matrix = np.eye(4)
         self._width = 720
         self._height = 720
-        self.scale = 25.0  # Scale factor for isometric projection
+        self._scale_factor = 25.0  # Scale factor for isometric projection
         self.offset_x = 360.0  # Center X offset
         self.offset_y = 360.0  # Center Y offset
+
+    @property
+    def scale_factor(self) -> float:
+        """Get the scale factor for isometric projection."""
+        return self._scale_factor
+
+    @scale_factor.setter
+    def scale_factor(self, value: float) -> None:
+        """Set the scale factor for isometric projection."""
+        self._scale_factor = value
 
     def set_projection(
         self,
@@ -593,7 +612,7 @@ class TkinterViewStateManager(ViewStateManager):
         # For isometric: max extent is roughly cube_size * 1.5 (diagonal)
         # We want this to fit in min(width, height) with some margin
         cube_size = 90  # The cube geometry spans 0-90
-        self.scale = min(width, height) * 0.4 / cube_size  # ~3.2 for 720px
+        self._scale_factor = min(width, height) * 0.4 / cube_size  # ~3.2 for 720px
 
     def push_matrix(self) -> None:
         """Save current matrix to stack."""
@@ -673,8 +692,8 @@ class TkinterViewStateManager(ViewStateManager):
 
         # Simplified inverse (assumes z ≈ x for isometric)
         # This is an approximation - proper unprojection would need depth info
-        x = x_2d / (0.866 * self.scale)
-        y = y_2d / self.scale
+        x = x_2d / (0.866 * self._scale_factor)
+        y = y_2d / self._scale_factor
         z = 0.0
 
         return (x, y, z)

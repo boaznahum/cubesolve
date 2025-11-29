@@ -128,8 +128,8 @@ class _Cell:
 
     @staticmethod
     def _to_point3d(v: ndarray) -> Point3D:
-        """Convert numpy array to Point3D tuple."""
-        return (float(v[0]), float(v[1]), float(v[2]))
+        """Convert numpy array to Point3D (ndarray)."""
+        return v  # Point3D is already ndarray
 
     @staticmethod
     def _vertices_to_points(vertices: Sequence[ndarray]) -> list[Point3D]:

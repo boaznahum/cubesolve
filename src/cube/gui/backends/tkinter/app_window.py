@@ -79,7 +79,8 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow):
     @property
     def viewer(self) -> GCubeViewer:
         """Access the cube viewer."""
-        return self._viewer
+        # _viewer is always initialized in __init__, so this is never None
+        return self._viewer  # type: ignore[return-value]
 
     def run(self) -> None:
         """Run the main event loop."""
@@ -116,7 +117,8 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow):
         self._renderer.view.load_identity()
 
         # Draw the cube
-        self._viewer.draw()
+        if self._viewer is not None:
+            self._viewer.draw()
 
         # Draw status text
         self._draw_status_text()

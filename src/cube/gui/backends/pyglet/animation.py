@@ -4,7 +4,7 @@ Pyglet animation backend implementation.
 Provides animation support using pyglet's clock and event loop.
 """
 
-from typing import Callable
+from typing import Callable, Collection, TYPE_CHECKING
 
 try:
     import pyglet
@@ -12,6 +12,11 @@ except ImportError as e:
     raise ImportError("pyglet is required for PygletAnimation: pip install pyglet") from e
 
 from cube.gui.protocols.animation import AnimationBackend
+
+if TYPE_CHECKING:
+    from cube.model.cube import Cube
+    from cube.model.cube_boy import FaceName
+    from cube.model._part_slice import PartSlice
 
 
 class PygletAnimation(AnimationBackend):
@@ -26,6 +31,7 @@ class PygletAnimation(AnimationBackend):
         self._speed = 1.0
         self._current_animation: Callable[[float], bool] | None = None
         self._on_complete: Callable[[], None] | None = None
+        self._update_callback: Callable[[float], None] | None = None
 
     @property
     def supported(self) -> bool:
@@ -49,48 +55,44 @@ class PygletAnimation(AnimationBackend):
 
     def run_animation(
         self,
-        update_func: Callable[[float], bool],
-        on_complete: Callable[[], None] | None = None,
-        interval: float = 1 / 60,
+        cube: "Cube",
+        rotate_face: "FaceName",
+        slices: Collection[int],
+        n_quarter_turns: int,
+        parts_to_animate: Collection["PartSlice"],
+        on_complete: Callable[[], None],
     ) -> None:
-        """Run an animation.
+        """Start an animation for a cube rotation.
+
+        Note: This is the protocol-compliant signature. The actual animation
+        logic is handled by AnimationManager through EventLoop.schedule_interval().
 
         Args:
-            update_func: Function(dt) that returns True while animation should continue
-            on_complete: Optional callback when animation completes
-            interval: Update interval in seconds (default 60 FPS)
+            cube: The cube being rotated
+            rotate_face: Face/axis of rotation
+            slices: Which slice indices are rotating
+            n_quarter_turns: Number of 90-degree turns
+            parts_to_animate: Collection of PartSlice objects
+            on_complete: Callback when animation finishes
         """
         if self._running:
             self.cancel()
 
-        self._current_animation = update_func
         self._on_complete = on_complete
         self._running = True
         self._paused = False
 
-        def animation_update(dt: float) -> None:
-            if not self._running or self._paused:
-                return
-
-            # Apply speed multiplier
-            adjusted_dt = dt * self._speed
-
-            # Call update function
-            if self._current_animation:
-                should_continue = self._current_animation(adjusted_dt)
-
-                if not should_continue:
-                    self._finish_animation()
-
-        pyglet.clock.schedule_interval(animation_update, interval)
-        self._update_callback = animation_update
+        # The actual animation frames are handled by AnimationManager
+        # through EventLoop.schedule_interval(). This is just for
+        # tracking state and providing the protocol interface.
 
     def _finish_animation(self) -> None:
         """Complete the current animation."""
         self._running = False
 
-        if hasattr(self, '_update_callback'):
+        if self._update_callback is not None:
             pyglet.clock.unschedule(self._update_callback)
+            self._update_callback = None
 
         if self._on_complete:
             self._on_complete()
@@ -102,8 +104,9 @@ class PygletAnimation(AnimationBackend):
         """Cancel the current animation."""
         if self._running:
             self._running = False
-            if hasattr(self, '_update_callback'):
+            if self._update_callback is not None:
                 pyglet.clock.unschedule(self._update_callback)
+                self._update_callback = None
             self._current_animation = None
             self._on_complete = None
 

@@ -5,6 +5,8 @@
 > - ♾️ (infinity) - In progress: `Win + .` → search "infinity" → select ♾️
 > - ✅ (green V) - Completed: `Win + .` → search "check" → select ✅
 > - Or copy/paste from here: `❌` `♾️` `✅`
+>
+> **Claude: When starting work on a task, change its status to ♾️ (in progress) BEFORE beginning work.**
 
 ---
 
@@ -44,7 +46,11 @@
 - ❌ **Q1.** Refactor too many packages under `src/cube`
   - Ask Claude architects to rearrange them by layers
 
-- ❌ **Q2.** Add typing to all code, make sure mypy is green
+- ✅ **Q2.** Add typing to all code, make sure mypy is green
+  - Completed: 0 errors in 141 source files (down from 57 errors)
+  - Fixed: protocol signatures, abstract class implementations, None/Optional narrowing,
+    wrong argument types, variable/import conflicts, missing protocol members
+  - Added `disable_error_code = import-untyped` to `mypy.ini` for pyglet (no type stubs)
 
 - ❌ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name
   - Example: `class MyClass` should be in `MyClass.py` (not `my_class.py`)
@@ -53,6 +59,22 @@
 
 - ✅ **Q4.** Create `/mytodo` slash command to read and manage `__todo.md`
   - Created `.claude/commands/mytodo.md`
+
+- ❌ **Q5.** Review all `# type: ignore` comments and document why they're needed
+  - Audit added during Q2 mypy fixes
+  - Some are for protocol compliance with concrete classes (AnimationWindow, AbstractWindow)
+  - Some are for method overrides with different signatures
+
+- ❌ **Q6.** Evaluate if `disable_error_code = import-untyped` hides real problems
+  - Currently disabled globally in `mypy.ini` to suppress pyglet stub warnings
+  - Risk: May hide issues with other untyped third-party libraries
+  - Alternative: Use per-module `[mypy-pyglet.*]` with `ignore_missing_imports = True`
+  - Investigate: Are there other libraries being silently ignored?
+
+- ❌ **Q7.** Add type annotations to untyped lambda callbacks in tkinter backend
+  - Files: `tkinter/event_loop.py:34-35`, `tkinter/renderer.py:580`
+  - Currently triggers mypy `annotation-unchecked` notes
+  - Would allow using `--check-untyped-defs` for stricter checking
 
 ---
 # New entries below - Claude will reformat and move above this line

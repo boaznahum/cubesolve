@@ -197,11 +197,6 @@ class _FaceBoard:
     def cells(self) -> Iterable[_Cell]:
         return self._cells.values()
 
-
-    @property
-    def board(self):
-        return self._board
-
     def gui_objects(self) -> Sequence[int]:
         lists: list[int] = []
         for c in self.cells:

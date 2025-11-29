@@ -19,9 +19,20 @@ class ConsoleEventLoop(EventLoop):
 
     def __init__(self) -> None:
         self._running = False
+        self._has_exit = False
         self._key_handler: Callable[[str], bool] | None = None
         self._key_sequence: list[str] = []
         self._use_keyboard = True
+
+    @property
+    def running(self) -> bool:
+        """Whether the event loop is currently running."""
+        return self._running
+
+    @property
+    def has_exit(self) -> bool:
+        """Whether the event loop has been signaled to exit."""
+        return self._has_exit
 
     def set_key_handler(self, handler: Callable[[str], bool]) -> None:
         """Set the key press handler.
@@ -103,37 +114,73 @@ class ConsoleEventLoop(EventLoop):
     def stop(self) -> None:
         """Stop the event loop."""
         self._running = False
+        self._has_exit = True
 
-    def schedule_once(self, callback: Callable[[], None], delay: float) -> None:
+    def schedule_once(self, callback: Callable[[float], None], delay: float) -> None:
         """Schedule a callback - not supported in console mode.
 
         Args:
-            callback: Function to call.
+            callback: Function receiving elapsed time since scheduling.
             delay: Delay in seconds.
         """
         # Console mode doesn't support scheduled callbacks
-        # Just call immediately
-        callback()
+        # Just call immediately with 0 elapsed time
+        callback(0.0)
 
-    def schedule_interval(
-        self, callback: Callable[[float], bool | None], interval: float
-    ) -> int:
+    def schedule_interval(self, callback: Callable[[float], None], interval: float) -> None:
         """Schedule a repeating callback - not supported in console mode.
 
         Args:
-            callback: Function to call.
+            callback: Function receiving time since last call.
             interval: Interval in seconds.
-
-        Returns:
-            Schedule ID (always 0 in console mode).
         """
         # Console mode doesn't support intervals - no animation
-        return 0
+        pass
 
-    def unschedule(self, schedule_id: int) -> None:
+    def unschedule(self, callback: Callable[[float], None]) -> None:
         """Unschedule a callback - no-op in console mode.
 
         Args:
-            schedule_id: The schedule ID to cancel.
+            callback: Previously scheduled function to remove.
         """
+        pass
+
+    def call_soon(self, callback: Callable[[], None]) -> None:
+        """Schedule a callback to run as soon as possible - calls immediately.
+
+        Args:
+            callback: Function to call (no arguments).
+        """
+        callback()
+
+    def get_time(self) -> float:
+        """Get current time in seconds.
+
+        Returns:
+            Time in seconds (monotonic).
+        """
+        import time
+        return time.monotonic()
+
+    def step(self, timeout: float = 0.0) -> bool:
+        """Process pending events without blocking - no-op in console mode.
+
+        Args:
+            timeout: Maximum time to wait for events.
+
+        Returns:
+            False (no events processed in console mode).
+        """
+        return False
+
+    def idle(self) -> float:
+        """Process pending scheduled callbacks - no-op in console mode.
+
+        Returns:
+            0.0 (no pending callbacks).
+        """
+        return 0.0
+
+    def notify(self) -> None:
+        """Wake up the event loop - no-op in console mode."""
         pass

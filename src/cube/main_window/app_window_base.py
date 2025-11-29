@@ -55,6 +55,9 @@ class AppWindowBase(ABC):
     - _request_redraw() - Request window redraw
     """
 
+    # Pyglet cursor constant (for compatibility with keyboard handler)
+    CURSOR_WAIT = "wait"
+
     def __init__(self, app: "AbstractApp", backend: "GUIBackend"):
         """Initialize the base window.
 
@@ -67,9 +70,12 @@ class AppWindowBase(ABC):
         self._viewer: "GCubeViewer | None" = None
         self._animation_manager = app.am
 
+        # Keyboard handler state
+        self._last_edge_solve_count: int = 0
+
         # Connect animation manager to this window
         if self._animation_manager:
-            self._animation_manager.set_window(self)
+            self._animation_manager.set_window(self)  # type: ignore[arg-type]
 
         # Text labels built by update_text()
         self._status_labels: list[TextLabel] = []
@@ -117,6 +123,14 @@ class AppWindowBase(ABC):
         """Show or hide the mouse cursor."""
         ...
 
+    def get_system_mouse_cursor(self, cursor_type: str) -> None:
+        """Get a system mouse cursor. Returns None for non-pyglet backends."""
+        return None
+
+    def set_mouse_cursor(self, cursor: object) -> None:
+        """Set the mouse cursor. No-op for non-pyglet backends."""
+        pass
+
     def update_gui_elements(self) -> None:
         """Update all GUI elements after state changes.
 
@@ -145,7 +159,7 @@ class AppWindowBase(ABC):
             modifiers: Modifier flags (from Modifiers)
         """
         try:
-            main_g_keyboard_input.handle_keyboard_input(self, symbol, modifiers)
+            main_g_keyboard_input.handle_keyboard_input(self, symbol, modifiers)  # type: ignore[arg-type]
 
         except (AppExit, RunStop, OpAborted) as e:
             # In test mode, AppExit should actually exit
@@ -182,7 +196,7 @@ class AppWindowBase(ABC):
             buttons: Mouse button flags
             modifiers: Modifier flags
         """
-        main_g_mouse.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
+        main_g_mouse.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)  # type: ignore[arg-type]
 
     def handle_mouse_press(self, x: int, y: int, modifiers: int) -> None:
         """Handle mouse press event.
@@ -191,7 +205,7 @@ class AppWindowBase(ABC):
             x, y: Mouse position
             modifiers: Modifier flags
         """
-        main_g_mouse.on_mouse_press(self, self._app.vs, x, y, modifiers)
+        main_g_mouse.on_mouse_press(self, self._app.vs, x, y, modifiers)  # type: ignore[arg-type]
 
     def handle_mouse_release(self) -> None:
         """Handle mouse release event."""
@@ -203,7 +217,7 @@ class AppWindowBase(ABC):
         Args:
             scroll_y: Vertical scroll amount
         """
-        main_g_mouse.on_mouse_scroll(self, scroll_y)
+        main_g_mouse.on_mouse_scroll(self, scroll_y)  # type: ignore[arg-type]
 
     def inject_key(self, key: int, modifiers: int = 0) -> None:
         """Inject a single key press.

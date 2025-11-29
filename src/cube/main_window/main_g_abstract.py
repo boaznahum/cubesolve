@@ -15,6 +15,12 @@ class AbstractWindow(Protocol):
     The concrete implementation (e.g., pyglet Window) implements this protocol.
     """
 
+    # Class attribute for cursor type (used by _wait_cursor context manager)
+    CURSOR_WAIT: str
+
+    # Instance attribute for tracking edge solve count
+    _last_edge_solve_count: int
+
     @property
     def app(self) -> AbstractApp:
         """Access the application."""

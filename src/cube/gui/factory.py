@@ -10,7 +10,6 @@ from typing import Type, TypeVar, Callable, Any, TYPE_CHECKING
 from cube.gui.protocols import Renderer, Window, EventLoop, AnimationBackend, AppWindow
 
 if TYPE_CHECKING:
-    from cube.gui.factory import _BackendEntry
     from cube.app.abstract_ap import AbstractApp
 
 # Type variables for generic factory methods
@@ -80,6 +79,8 @@ class GUIBackend:
 
     def create_window(self, width: int = 720, height: int = 720, title: str = "Cube") -> Window:
         """Create a window for this backend."""
+        if self._entry.window_factory is None:
+            raise RuntimeError(f"Backend '{self._name}' does not have a window_factory")
         return self._entry.window_factory(width, height, title)
 
     def create_event_loop(self) -> EventLoop:
@@ -322,6 +323,8 @@ class BackendRegistry:
             Window instance
         """
         entry = cls._get_entry(backend)
+        if entry.window_factory is None:
+            raise RuntimeError(f"Backend does not have a window_factory")
         return entry.window_factory(width, height, title)
 
     @classmethod

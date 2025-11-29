@@ -48,8 +48,19 @@ _TK_KEY_MAP = {
 }
 
 
-def _convert_modifiers(state: int) -> int:
-    """Convert Tkinter modifier state to abstract Modifiers."""
+def _convert_modifiers(state: int | str) -> int:
+    """Convert Tkinter modifier state to abstract Modifiers.
+
+    Args:
+        state: Tkinter modifier state (usually int, but can be str in some edge cases)
+    """
+    # Tkinter event.state can sometimes be a string representation
+    if isinstance(state, str):
+        try:
+            state = int(state)
+        except ValueError:
+            return 0
+
     mods = 0
     if state & 0x0001:  # Shift
         mods |= Modifiers.SHIFT

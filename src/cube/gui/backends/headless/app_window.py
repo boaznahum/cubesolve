@@ -46,10 +46,15 @@ class HeadlessAppWindow:
         """
         self._app = app
         self._backend = backend
+        self._width = width
+        self._height = height
         self._renderer: HeadlessRenderer = backend.renderer  # type: ignore
         self._event_loop: HeadlessEventLoop = backend.event_loop  # type: ignore
         self._window = HeadlessWindow(width, height, title)
         self._closed = False
+
+        # Keyboard handler state
+        self._last_edge_solve_count: int = 0
 
         # Create viewer (for API compatibility, though not rendered)
         self._viewer = GCubeViewer(app.cube, app.vs, renderer=self._renderer)
@@ -57,7 +62,7 @@ class HeadlessAppWindow:
         # Animation manager connection
         self._animation_manager = app.am
         if self._animation_manager:
-            self._animation_manager.set_window(self)
+            self._animation_manager.set_window(self)  # type: ignore[arg-type]
 
     @property
     def app(self) -> AbstractApp:
@@ -68,6 +73,16 @@ class HeadlessAppWindow:
     def viewer(self) -> GCubeViewer:
         """Access the cube viewer."""
         return self._viewer
+
+    @property
+    def width(self) -> int:
+        """Window width (nominal, for headless)."""
+        return self._width
+
+    @property
+    def height(self) -> int:
+        """Window height (nominal, for headless)."""
+        return self._height
 
     @property
     def renderer(self) -> HeadlessRenderer:
