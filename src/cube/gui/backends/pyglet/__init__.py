@@ -20,12 +20,14 @@ from cube.gui.backends.pyglet.renderer import PygletRenderer
 from cube.gui.backends.pyglet.window import PygletWindow
 from cube.gui.backends.pyglet.event_loop import PygletEventLoop
 from cube.gui.backends.pyglet.animation import PygletAnimation
+from cube.gui.backends.pyglet.app_window import PygletAppWindow
 
 __all__ = [
     "PygletRenderer",
     "PygletWindow",
     "PygletEventLoop",
     "PygletAnimation",
+    "PygletAppWindow",
     "register",
 ]
 
