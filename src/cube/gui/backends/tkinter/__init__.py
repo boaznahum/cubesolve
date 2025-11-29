@@ -27,8 +27,9 @@ Usage:
 from cube.gui.backends.tkinter.renderer import TkinterRenderer
 from cube.gui.backends.tkinter.window import TkinterWindow
 from cube.gui.backends.tkinter.event_loop import TkinterEventLoop
+from cube.gui.backends.tkinter.animation import TkinterAnimation
 
-__all__ = ["TkinterRenderer", "TkinterWindow", "TkinterEventLoop", "register"]
+__all__ = ["TkinterRenderer", "TkinterWindow", "TkinterEventLoop", "TkinterAnimation", "register"]
 
 
 def _create_window(width: int, height: int, title: str) -> TkinterWindow:
@@ -55,7 +56,7 @@ def register() -> None:
             renderer_factory=TkinterRenderer,
             window_factory=_create_window,
             event_loop_factory=_create_event_loop,
-            animation_factory=None,  # No animation support for now
+            animation_factory=TkinterAnimation,
         )
 
 
