@@ -3,3 +3,4 @@ __pycache__/
 /nul
 /build/
 cubesolve.egg-info/
+.venv312/
