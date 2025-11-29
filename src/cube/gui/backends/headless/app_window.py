@@ -111,6 +111,18 @@ class HeadlessAppWindow:
         """Set mouse visibility (no-op in headless mode)."""
         self._window.set_mouse_visible(visible)
 
+    # === Pyglet compatibility stubs (for keyboard handler) ===
+
+    CURSOR_WAIT = "wait"  # Pyglet cursor constant
+
+    def get_system_mouse_cursor(self, cursor_type: str) -> None:
+        """Stub for pyglet compatibility - returns None."""
+        return None
+
+    def set_mouse_cursor(self, cursor) -> None:
+        """Stub for pyglet compatibility - no-op."""
+        pass
+
     # === Key Injection ===
 
     def inject_key(self, key: int, modifiers: int = 0) -> None:
@@ -152,8 +164,9 @@ class HeadlessAppWindow:
         Args:
             event: The key event to handle.
         """
-        from cube.main_window import main_g_keyboard_input
-        main_g_keyboard_input.handle_keyboard_input(self, event.symbol, event.modifiers)
+        # Import directly to avoid pyglet dependency through main_window/__init__.py
+        from cube.main_window.main_g_keyboard_input import handle_keyboard_input
+        handle_keyboard_input(self, event.symbol, event.modifiers)
 
     # === Testing Helpers ===
 
