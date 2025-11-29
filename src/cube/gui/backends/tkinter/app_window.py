@@ -8,7 +8,6 @@ and AppWindowBase for shared logic.
 from cube.app.abstract_ap import AbstractApp
 from cube.animation.animation_manager import AnimationWindow
 from cube.gui.factory import GUIBackend
-from cube.gui.protocols.app_window import AppWindow
 from cube.gui.types import Keys
 from cube.main_window.app_window_base import AppWindowBase
 from cube.viewer.viewer_g import GCubeViewer
@@ -18,9 +17,10 @@ from cube.gui.backends.tkinter.renderer import TkinterRenderer
 from cube.gui.backends.tkinter.event_loop import TkinterEventLoop
 
 
-class TkinterAppWindow(AppWindow, AppWindowBase, AnimationWindow):
+class TkinterAppWindow(AppWindowBase, AnimationWindow):
     """Tkinter-specific AppWindow implementation.
 
+    Implements the AppWindow protocol (verified via @runtime_checkable).
     Uses TkinterWindow for display and AppWindowBase for shared logic.
     """
 

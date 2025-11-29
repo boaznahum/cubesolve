@@ -1,21 +1,19 @@
 """
 Pyglet-based GUI entry point for the Cube Solver.
 
-This module explicitly uses the pyglet backend for rendering.
-Delegates to main_any_backend with --backend=pyglet.
+This module explicitly uses the pyglet backend for OpenGL 3D rendering.
 
 Usage:
     python -m cube.main_pyglet
 """
 import sys
-from cube.main_any_backend import main as any_main
+from cube.main_any_backend import run_with_backend
 
 
 def main():
     """Main entry point for the pyglet-based GUI."""
-    sys.argv.extend(["--backend", "pyglet"])
-    return any_main()
+    return run_with_backend("pyglet")
 
 
 if __name__ == '__main__':
-    sys.exit(main() or 0)
+    sys.exit(main())
