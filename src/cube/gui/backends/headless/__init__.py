@@ -21,11 +21,13 @@ Usage:
 from cube.gui.backends.headless.renderer import HeadlessRenderer
 from cube.gui.backends.headless.window import HeadlessWindow
 from cube.gui.backends.headless.event_loop import HeadlessEventLoop
+from cube.gui.backends.headless.app_window import HeadlessAppWindow
 
 __all__ = [
     "HeadlessRenderer",
     "HeadlessWindow",
     "HeadlessEventLoop",
+    "HeadlessAppWindow",
     "register",
 ]
 
