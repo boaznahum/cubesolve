@@ -46,11 +46,13 @@
 
 - ❌ **Q2.** Add typing to all code, make sure mypy is green
 
+- ❌ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name
+  - Example: `class MyClass` should be in `MyClass.py` (not `my_class.py`)
+  - Research: Is this good practice? Why doesn't Python community follow this?
+  - If approved: Add to CLAUDE.md as coding standard
+
+- ✅ **Q4.** Create `/mytodo` slash command to read and manage `__todo.md`
+  - Created `.claude/commands/mytodo.md`
+
 ---
 # New entries below - Claude will reformat and move above this line
-
-i want files with single class and name of file is case sentive as class name, ask claude architects if it is good pracice and whay 
-it doesnt do it, if yes instruct clause to follow this rules in the future
-
-
-use claude mecanims to add new slash commd to add new command mytodo to read __todo.md . reformat it according to the rules
