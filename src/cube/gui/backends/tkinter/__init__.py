@@ -28,8 +28,16 @@ from cube.gui.backends.tkinter.renderer import TkinterRenderer
 from cube.gui.backends.tkinter.window import TkinterWindow
 from cube.gui.backends.tkinter.event_loop import TkinterEventLoop
 from cube.gui.backends.tkinter.animation import TkinterAnimation
+from cube.gui.backends.tkinter.app_window import TkinterAppWindow
 
-__all__ = ["TkinterRenderer", "TkinterWindow", "TkinterEventLoop", "TkinterAnimation", "register"]
+__all__ = [
+    "TkinterRenderer",
+    "TkinterWindow",
+    "TkinterEventLoop",
+    "TkinterAnimation",
+    "TkinterAppWindow",
+    "register",
+]
 
 
 def _create_window(width: int, height: int, title: str) -> TkinterWindow:
