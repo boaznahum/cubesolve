@@ -38,9 +38,13 @@
 
 - ❌ **A2.** Introduce commands injecting instead of keys, simplify key handling
   - **A2.0.** ✅ Unify keyboard handling across all backends (prerequisite)
-    - Created `handle_key_with_error_handling()` - single entry point for all backends
-    - Simplified PygletAppWindow, TkinterAppWindow, HeadlessAppWindow
-    - Fixed ConsoleAppWindow - removed 60+ lines of duplicated command logic
+    - Created `handle_key_with_error_handling()` - unified error handling
+    - All backends now use `handle_key(symbol, modifiers)` as the **protocol method**
+    - Each backend has its own **native handler** that converts and calls `handle_key()`:
+      - Pyglet: `on_key_press()` → `handle_key()`
+      - Tkinter: `_on_tk_key_event()` → `handle_key()`
+      - Console: `_on_console_key_event()` → `handle_key()`
+      - Headless: `inject_key()` → `handle_key()`
     - See `docs/design/keyboard_and_commands.md` for details
   - **A2.1.** ❌ Create Command enum and inject_command() mechanism in AppWindow
     - Define `Command` enum with all cube operations (ROTATE_R, SOLVE, SCRAMBLE, etc.)
