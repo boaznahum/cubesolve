@@ -392,6 +392,82 @@ The keyboard/mouse handlers in `main_g_keyboard_input.py` and `main_g_mouse.py` 
 
 ---
 
+## Phase 4: File Naming Convention (Q3.1) - IN PROGRESS
+
+### Goal
+Rename all files to PascalCase matching their class names (Java/C# style):
+- `renderer.py` → `Renderer.py`
+- `event_loop.py` → `EventLoop.py`
+- Files with multiple classes are split (one class per file)
+
+### Completed Steps
+
+#### Step 1: Split protocols/ (DONE)
+Created new PascalCase files in `src/cube/gui/protocols/`:
+- `ShapeRenderer.py` - ShapeRenderer protocol
+- `DisplayListManager.py` - DisplayListManager protocol
+- `ViewStateManager.py` - ViewStateManager protocol
+- `Renderer.py` - Renderer protocol (imports above 3)
+- `TextRenderer.py` - TextRenderer protocol
+- `Window.py` - Window protocol (imports TextRenderer)
+- `EventLoop.py` - EventLoop protocol
+- `AnimationBackend.py` - AnimationBackend protocol
+- `AppWindow.py` - AppWindow protocol
+
+Old files deleted: `renderer.py`, `window.py`, `event_loop.py`, `animation.py`, `app_window.py`
+
+Updated `__init__.py` to import from new PascalCase files.
+
+### Pending Steps
+
+#### Step 2: Update imports across codebase
+Files that need import updates (change lowercase to PascalCase):
+```
+src/cube/main_any_backend.py - from .app_window → .AppWindow
+src/cube/main_window/app_window_base.py - from .renderer → .Renderer
+src/cube/main_window/main_g_abstract.py - from .renderer → .Renderer
+src/cube/app/app_state.py - from .renderer → .Renderer
+src/cube/viewer/texture.py - from .renderer → .Renderer
+src/cube/viewer/viewer_g_ext.py - from .renderer → .Renderer
+src/cube/animation/animation_manager.py - from .renderer, .event_loop → .Renderer, .EventLoop
+src/cube/gui/context.py - from .renderer → .Renderer
+src/cube/gui/backends/console/event_loop.py - from .event_loop → .EventLoop
+src/cube/gui/backends/console/renderer.py - from .renderer → .Renderer etc
+src/cube/gui/backends/console/app_window.py - from .app_window → .AppWindow
+src/cube/gui/backends/tkinter/animation.py - from .animation → .AnimationBackend
+src/cube/gui/backends/tkinter/app_window.py - from .app_window → .AppWindow
+src/cube/gui/backends/tkinter/event_loop.py - from .event_loop → .EventLoop
+src/cube/gui/backends/tkinter/renderer.py - from .renderer → .Renderer etc
+src/cube/gui/backends/tkinter/window.py - from .window → .Window, .TextRenderer
+src/cube/gui/backends/headless/event_loop.py - from .event_loop → .EventLoop
+src/cube/gui/backends/headless/renderer.py - from .renderer → .Renderer etc
+src/cube/gui/backends/pyglet/animation.py - from .animation → .AnimationBackend
+src/cube/gui/backends/pyglet/renderer.py - from .renderer → .Renderer etc
+src/cube/gui/backends/pyglet/window.py - from .window → .Window, .TextRenderer
+src/cube/gui/backends/pyglet/event_loop.py - from .event_loop → .EventLoop
+```
+
+#### Step 3: Split backend files (same pattern as protocols)
+For each backend (pyglet, headless, tkinter, console):
+- Split `renderer.py` → `PygletShapeRenderer.py`, `PygletDisplayListManager.py`, etc.
+- Split `window.py` → `PygletTextRenderer.py`, `PygletWindow.py`
+- Rename `event_loop.py` → `PygletEventLoop.py`
+- Rename `animation.py` → `PygletAnimation.py`
+- Rename `app_window.py` → `PygletAppWindow.py`
+
+#### Step 4: Run tests
+After all renames, run:
+```bash
+python -m pytest tests/ -v --ignore=tests/gui -m "not slow"
+```
+
+### How to Continue
+1. Run the import update commands (Step 2)
+2. Split backend files (Step 3)
+3. Run tests (Step 4)
+
+---
+
 ## Future Investigation: pyopengltk
 
 ### Background

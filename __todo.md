@@ -78,10 +78,19 @@
 - ❌ **Q1.** Refactor too many packages under `src/cube`
   - Ask Claude architects to rearrange them by layers
 
-- ❌ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name also when implenating protocol or base class the implentation class should not be that same as the base class, e.g. protoc Ax is implmented in some specic implemantation Iy by class AxIy (claud:fix the neglish of this section)
+- ❌ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name
+  - When implementing a protocol or base class, the implementation class name should differ from the base
+  - Example: Protocol `Renderer` implemented by `PygletRenderer`, `HeadlessRenderer` (not just `Renderer`)
   - Example: `class MyClass` should be in `MyClass.py` (not `my_class.py`)
   - Research: Is this good practice? Why doesn't Python community follow this?
   - If approved: Add to CLAUDE.md as coding standard
+  - **Q3.1.** ♾️ Audit and fix all protocol classes and their implementations
+    - Review all protocols in `gui/protocols/`
+    - Ensure implementation class names include backend prefix (e.g., `PygletRenderer`, not `Renderer`)
+    - Rename files to match class names if needed
+  - **Q3.2.** ❌ Audit and fix all other classes in the codebase
+    - Review remaining classes for naming convention compliance
+    - Rename files to match class names (case-sensitive)
 
 - ❌ **Q5.** Review all `# type: ignore` comments and document why they're needed
   - Audit added during Q2 mypy fixes

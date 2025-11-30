@@ -1,5 +1,5 @@
 """
-Animation backend protocol definition.
+AnimationBackend protocol definition.
 
 This protocol defines the interface for animation support in GUI backends.
 """
