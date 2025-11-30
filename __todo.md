@@ -25,10 +25,6 @@
 
 ## GUI & Testing
 
-- ❌ **G1.** Make sure all test_gui run with all backends
-  - Need an abstract mechanism of key sequences that alternates to the keys that the backend understands
-  - The backend will be a pytest fixture, the default should be "all" meaning all backends
-
 - ❌ **G2.** Investigate pyopengltk as alternative to pure Canvas rendering for tkinter backend
   - Would allow reusing OpenGL code from pyglet backend
   - True 3D rendering instead of 2D isometric projection
@@ -36,7 +32,7 @@
 
 ## Architecture
 
-- ❌ **A2.** Introduce commands injecting instead of keys, simplify key handling
+- ✅ **A2.** Introduce commands injecting instead of keys, simplify key handling
   - **A2.0.** ✅ Unify keyboard handling across all backends (prerequisite)
     - Created `handle_key_with_error_handling()` - unified error handling
     - All backends now use `handle_key(symbol, modifiers)` as the **protocol method**
@@ -54,10 +50,13 @@
     - Wired `handle_key()` to use `lookup_command()` + `command.execute()`
     - **DELETED** `main_g_keyboard_input.py` (~600 lines of legacy code)
     - See `docs/design/keyboard_and_commands.md` for architecture details
-  - **A2.2.** ❌ Update GUI tests to use inject_command() instead of inject_key_sequence()
-    - Replace string sequences like "1/Q" with Command.SCRAMBLE_1, Command.SOLVE, Command.QUIT
-    - Remove backend-specific key mapping duplication
-    - Tests become truly backend-agnostic
+  - **A2.2.** ✅ Update GUI tests to use inject_command() instead of inject_key_sequence()
+    - Created `CommandSequence` class with `+` and `*` operators for fluent API
+    - Updated `GUITestRunner` to accept `Command | CommandSequence` and `backend` parameter
+    - Added `--backend` pytest fixture (default: all 4 backends)
+    - Added `BackendRegistry.ensure_registered()` helper
+    - Deleted `tests/gui/keys.py` (GUIKeys no longer needed)
+    - Tests now use: `Command.SPEED_UP * 5 + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT`
 
 - ❌ **A3.** Consider moving animation manager wiring from GUIBackend to elsewhere
   - Currently `GUIBackend.create_app_window()` wires up `app.am.set_event_loop()`
@@ -121,6 +120,12 @@
 ---
 
 ## Done Tasks
+
+- ✅ **G1.** Make sure all test_gui run with all backends
+  - Added `--backend` pytest option (default: "all" runs pyglet, headless, console, tkinter)
+  - Tests use `Command` enum instead of string key sequences
+  - `BackendRegistry.ensure_registered()` ensures backend is loaded
+  - Animation manager gracefully handles backends without viewers
 
 - ✅ **A1.** Move main window factory to backend, not a special factory in main_any
   - Added `app_window_factory` to `_BackendEntry` and `GUIBackend.create_app_window()`

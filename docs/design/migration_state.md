@@ -507,6 +507,63 @@ Action performed
 
 ---
 
+## A2.2: GUI Tests with Commands - COMPLETE ✅
+
+### Goal
+Update GUI tests to use `Command` enum instead of string key sequences, and support all backends.
+
+### Architecture
+
+```
+# Old way (string sequences)
+GUITestRunner.run_test(key_sequence="1/q")
+
+# New way (type-safe commands)
+GUITestRunner.run_test(
+    commands=Command.SPEED_UP * 5 + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+    backend="pyglet"  # or "headless", "console", "tkinter", or omit for all
+)
+```
+
+### Key Components
+
+1. **CommandSequence** (`gui/command.py`)
+   - `+` operator to combine commands
+   - `*` operator to repeat commands
+   - Iterable for executing all commands
+
+2. **GUITestRunner** (`tests/gui/tester/GUITestRunner.py`)
+   - Accepts `Command | CommandSequence`
+   - `backend` parameter to specify which backend
+   - Uses `BackendRegistry.ensure_registered()` to load backend
+
+3. **Backend Fixture** (`tests/gui/conftest.py`)
+   - `--backend` pytest option (default: "all")
+   - Parametrizes tests with all 4 backends
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `gui/command.py` | Added `CommandSequence` class with `+` and `*` operators |
+| `gui/factory.py` | Added `BackendRegistry.ensure_registered()` |
+| `tests/gui/tester/GUITestRunner.py` | Accept commands + backend parameter |
+| `tests/gui/conftest.py` | Added `--backend` pytest option |
+| `tests/gui/test_gui.py` | Use `Command` instead of `GUIKeys` |
+| `tests/gui/keys.py` | **DELETED** (GUIKeys no longer needed) |
+| `animation/animation_manager.py` | Graceful handling when no viewer |
+| `gui/backends/console/ConsoleAppWindow.py` | Disable animation manager |
+
+### Test Results
+
+All 4 backends pass:
+- **pyglet:** 2 passed, 1 skipped
+- **headless:** 2 passed, 1 skipped
+- **console:** 2 passed, 1 skipped
+- **tkinter:** 2 passed, 1 skipped
+
+---
+
 ## Future Investigation: pyopengltk
 
 ### Background
