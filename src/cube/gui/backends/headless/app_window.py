@@ -8,6 +8,7 @@ from cube.app.abstract_ap import AbstractApp
 from cube.gui.factory import GUIBackend
 from cube.gui.protocols.app_window import AppWindow
 from cube.gui.types import Keys, KeyEvent
+from cube.main_window.app_window_base import handle_key_with_error_handling
 from cube.viewer.viewer_g import GCubeViewer
 
 from cube.gui.backends.headless.renderer import HeadlessRenderer
@@ -148,8 +149,7 @@ class HeadlessAppWindow(AppWindow):
             key: Key code (from Keys enum).
             modifiers: Modifier flags.
         """
-        event = KeyEvent(symbol=key, modifiers=modifiers)
-        self._handle_key_event(event)
+        handle_key_with_error_handling(self, key, modifiers)
 
     def inject_key_sequence(self, sequence: str) -> None:
         """Inject a sequence of key presses.
@@ -173,16 +173,6 @@ class HeadlessAppWindow(AppWindow):
             key = key_map.get(char)
             if key is not None:
                 self.inject_key(key, 0)
-
-    def _handle_key_event(self, event: KeyEvent) -> None:
-        """Handle a key event.
-
-        Args:
-            event: The key event to handle.
-        """
-        # Import directly to avoid pyglet dependency through main_window/__init__.py
-        from cube.main_window.main_g_keyboard_input import handle_keyboard_input
-        handle_keyboard_input(self, event.symbol, event.modifiers)
 
     # === Testing Helpers ===
 

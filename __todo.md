@@ -37,6 +37,20 @@
 ## Architecture
 
 - ❌ **A2.** Introduce commands injecting instead of keys, simplify key handling
+  - **A2.0.** ✅ Unify keyboard handling across all backends (prerequisite)
+    - Created `handle_key_with_error_handling()` - single entry point for all backends
+    - Simplified PygletAppWindow, TkinterAppWindow, HeadlessAppWindow
+    - Fixed ConsoleAppWindow - removed 60+ lines of duplicated command logic
+    - See `docs/design/keyboard_and_commands.md` for details
+  - **A2.1.** ❌ Create Command enum and inject_command() mechanism in AppWindow
+    - Define `Command` enum with all cube operations (ROTATE_R, SOLVE, SCRAMBLE, etc.)
+    - Add `inject_command(cmd, **params)` to AppWindow protocol
+    - Implement command dispatch that maps Command → action
+    - Keep key handling working (keys → commands → actions)
+  - **A2.2.** ❌ Update GUI tests to use inject_command() instead of inject_key_sequence()
+    - Replace string sequences like "1/Q" with Command.SCRAMBLE_1, Command.SOLVE, Command.QUIT
+    - Remove backend-specific key mapping duplication
+    - Tests become truly backend-agnostic
 
 - ❌ **A3.** Consider moving animation manager wiring from GUIBackend to elsewhere
   - Currently `GUIBackend.create_app_window()` wires up `app.am.set_event_loop()`

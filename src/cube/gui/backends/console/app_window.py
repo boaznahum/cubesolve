@@ -3,17 +3,48 @@ Console AppWindow implementation.
 
 Provides a text-based application window for console mode.
 Uses existing main_console.viewer for cube rendering.
+
+Key Handling:
+- Console keys are mapped to abstract Keys
+- Inverse mode (') sets SHIFT modifier
+- All command logic is in handle_key_with_error_handling (single source of truth)
 """
 
-from cube.algs import Algs
 from cube.app.abstract_ap import AbstractApp
 from cube.gui.factory import GUIBackend
 from cube.gui.protocols.app_window import AppWindow
+from cube.gui.types import Keys, Modifiers
 from cube.main_console import viewer as console_viewer
 from cube.main_console.keys import Keys as ConsoleKeys
+from cube.main_window.app_window_base import handle_key_with_error_handling
 
 from cube.gui.backends.console.renderer import ConsoleRenderer
 from cube.gui.backends.console.event_loop import ConsoleEventLoop
+
+
+# Mapping from console key characters to abstract Keys
+_CONSOLE_TO_KEYS: dict[str, int] = {
+    ConsoleKeys.R: Keys.R,
+    ConsoleKeys.L: Keys.L,
+    ConsoleKeys.U: Keys.U,
+    ConsoleKeys.F: Keys.F,
+    ConsoleKeys.B: Keys.B,
+    ConsoleKeys.D: Keys.D,
+    ConsoleKeys.X: Keys.X,
+    ConsoleKeys.Y: Keys.Y,
+    ConsoleKeys.M: Keys.M,
+    ConsoleKeys.CLEAR: Keys.C,
+    ConsoleKeys.SCRAMBLE_RANDOM: Keys._0,
+    ConsoleKeys.SCRAMBLE_1: Keys._1,
+    ConsoleKeys.SCRAMBLE_2: Keys._2,
+    ConsoleKeys.SCRAMBLE_3: Keys._3,
+    ConsoleKeys.SCRAMBLE_4: Keys._4,
+    ConsoleKeys.SCRAMBLE_5: Keys._5,
+    ConsoleKeys.SCRAMBLE_6: Keys._6,
+    ConsoleKeys.SOLVE: Keys.SLASH,
+    ConsoleKeys.UNDO: Keys.COMMA,
+    ConsoleKeys.QUIT: Keys.Q,
+}
 
 
 class ConsoleAppWindow(AppWindow):
@@ -122,78 +153,43 @@ class ConsoleAppWindow(AppWindow):
     def _handle_key(self, key: str) -> bool:
         """Handle a key press.
 
+        Translates console keys to abstract Keys and delegates to
+        handle_key_with_error_handling() - the single source of truth.
+
         Args:
             key: The key that was pressed (uppercase).
 
         Returns:
             True if the application should quit.
         """
-        op = self._app.op
-        slv = self._app.slv
+        # Handle inverse mode toggle (console-specific state)
+        if key == ConsoleKeys.INV:
+            self._inv_mode = not self._inv_mode
+            return False
 
-        not_operation = False
+        # Handle Ctrl+C as quit
+        if key == ConsoleKeys.CTRL_C:
+            return True
 
-        match key:
-            case ConsoleKeys.INV:
-                self._inv_mode = not self._inv_mode
-                not_operation = True
+        # Convert console key to abstract key
+        abstract_key = _CONSOLE_TO_KEYS.get(key)
+        if abstract_key is None:
+            return False  # Unknown key, ignore
 
-            case ConsoleKeys.R:
-                op.play(Algs.R, self._inv_mode)
+        # Apply modifiers (inverse mode → SHIFT)
+        modifiers = Modifiers.SHIFT if self._inv_mode else 0
 
-            case ConsoleKeys.L:
-                op.play(Algs.L, self._inv_mode)
+        # Call unified handler
+        handle_key_with_error_handling(self, abstract_key, modifiers)
 
-            case ConsoleKeys.U:
-                op.play(Algs.U, self._inv_mode)
+        # Reset inverse mode after operation
+        self._inv_mode = False
 
-            case ConsoleKeys.F:
-                op.play(Algs.F, self._inv_mode)
+        # Redraw after command
+        self._draw()
 
-            case ConsoleKeys.B:
-                op.play(Algs.B, self._inv_mode)
-
-            case ConsoleKeys.D:
-                op.play(Algs.D, self._inv_mode)
-
-            case ConsoleKeys.X:
-                op.play(Algs.X, self._inv_mode)
-
-            case ConsoleKeys.Y:
-                op.play(Algs.Y, self._inv_mode)
-
-            case ConsoleKeys.M:
-                op.play(Algs.M, self._inv_mode)
-
-            case ConsoleKeys.CLEAR:
-                op.reset()
-
-            case ConsoleKeys.SCRAMBLE_RANDOM:
-                alg = Algs.scramble(self._app.cube.size)
-                op.play(alg, self._inv_mode)
-
-            case ConsoleKeys.SCRAMBLE_1 | ConsoleKeys.SCRAMBLE_2 | ConsoleKeys.SCRAMBLE_3 | \
-                 ConsoleKeys.SCRAMBLE_4 | ConsoleKeys.SCRAMBLE_5 | ConsoleKeys.SCRAMBLE_6:
-                alg = Algs.scramble(self._app.cube.size, int(key))
-                op.play(alg, self._inv_mode)
-
-            case ConsoleKeys.UNDO:
-                op.undo()
-
-            case ConsoleKeys.SOLVE:
-                slv.solve()
-
-            case ConsoleKeys.QUIT | ConsoleKeys.CTRL_C:
-                return True  # Quit
-
-            case _:
-                not_operation = True
-
-        if not not_operation:
-            self._inv_mode = False
-            self._draw()
-
-        return False  # Continue
+        # Check for quit
+        return abstract_key == Keys.Q
 
     def inject_key(self, key: int, modifiers: int = 0) -> None:
         """Inject a single key press.

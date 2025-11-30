@@ -160,36 +160,47 @@ When reorganizing tests:
 
 ## Design Documentation Maintenance
 
-**IMPORTANT**: When making changes to code or architecture, ALWAYS update the design documents.
+**CRITICAL**: When making ANY changes to code or architecture, you MUST update the design documents.
+This is NOT optional. Documentation that doesn't match code is worse than no documentation.
 
-### Files to Update
+### Design Documents
 
-1. **`docs/design/gui_abstraction.md`** - Main design document:
-   - Architecture descriptions
-   - Code examples
-   - Status tables
-   - API documentation
+| Document | Purpose |
+|----------|---------|
+| `docs/design/gui_abstraction.md` | GUI backend abstraction layer |
+| `docs/design/keyboard_and_commands.md` | Keyboard handling and command system |
+| `docs/design/migration_state.md` | Migration progress tracking |
+| `docs/design/phase3_migration_plan.md` | Phase 3 detailed plan |
 
-2. **PlantUML diagrams** in `docs/design/`:
-   - `gui_abstraction.puml` - Class diagrams and relationships
-   - `gui_components.puml` - Component diagrams
-   - `gui_sequence.puml` - Sequence diagrams
+### PlantUML Diagrams
+
+- `docs/design/gui_abstraction.puml` - Class diagrams and relationships
+- `docs/design/gui_components.puml` - Component diagrams
+- `docs/design/gui_sequence.puml` - Sequence diagrams
+
+### MANDATORY Update Checklist
+
+After EVERY code change, verify:
+- [ ] Design documents reflect the current architecture
+- [ ] Code examples in docs match actual implementation
+- [ ] API signatures in docs match actual code
+- [ ] Status tables are up to date (✅ Done, 🔄 In Progress, etc.)
+- [ ] New files/classes are documented
 
 ### When to Update
 
-- Adding/removing functions, classes, or protocols
-- Changing API signatures
-- Adding/removing files or modules
-- Changing relationships between components
-- Updating implementation status
+- **ALWAYS** when adding/removing functions, classes, or protocols
+- **ALWAYS** when changing API signatures or method names
+- **ALWAYS** when adding/removing files or modules
+- **ALWAYS** when changing relationships between components
+- **ALWAYS** when fixing architectural issues
 
-### Checklist
+### How to Update
 
-When making code changes:
-- [ ] Update `gui_abstraction.md` if architecture changed
-- [ ] Update `.puml` diagrams if classes/relationships changed
-- [ ] Keep code examples in docs in sync with actual code
-- [ ] Update status tables (✅ Done, 🔄 In Progress, etc.)
+1. **Read the relevant doc** before making changes
+2. **Update the doc** immediately after code changes
+3. **Include the doc update** in the same commit as the code change
+4. **Show the user** the updated documentation
 
 ---
 

@@ -30,7 +30,10 @@
       "Bash(git checkout:*)",
       "Bash(git tag:*)",
       "Bash(winget install:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(..venv314Scriptspython.exe -m pytest tests/ -v --ignore=tests/gui -m \"not slow\")",
+      "Bash(E:devprojectspythoncubesolve.venv314Scriptspython.exe -m pytest tests/ -v --ignore=tests/gui -m \"not slow\")",
+      "SlashCommand(/mytodo)"
     ],
     "deny": [],
     "ask": []

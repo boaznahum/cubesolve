@@ -5,8 +5,6 @@ Provides the pyglet-specific AppWindow that inherits from pyglet.window.Window
 and uses AppWindowBase for shared logic.
 """
 
-import traceback
-
 try:
     import pyglet
     from pyglet import gl
@@ -15,12 +13,12 @@ except ImportError as e:
 
 from cube import config
 from cube.app.abstract_ap import AbstractApp
-from cube.app.app_exceptions import AppExit, RunStop, OpAborted
+from cube.app.app_exceptions import AppExit
 from cube.animation.animation_manager import AnimationWindow
 from cube.gui.factory import GUIBackend
 from cube.gui.backends.pyglet.window import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
-from cube.main_window import main_g_keyboard_input, main_g_mouse
-from cube.main_window.app_window_base import AppWindowBase, TextLabel
+from cube.main_window import main_g_mouse
+from cube.main_window.app_window_base import AppWindowBase, TextLabel, handle_key_with_error_handling
 from cube.viewer.viewer_g import GCubeViewer
 from cube.viewer.viewer_g_ext import GViewerExt
 
@@ -144,29 +142,14 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self._app.vs.set_projection(width, height, self._renderer)
 
     def on_key_press(self, symbol, modifiers):
-        """Pyglet key press event."""
-        try:
-            abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
-            abstract_mods = _convert_modifiers(modifiers)
-            main_g_keyboard_input.handle_keyboard_input(self, abstract_symbol, abstract_mods)
+        """Pyglet key press event.
 
-        except (AppExit, RunStop, OpAborted) as e:
-            if config.GUI_TEST_MODE and isinstance(e, AppExit):
-                self.close()
-                raise
-            else:
-                self._app.set_error("Asked to stop")
-                self.update_gui_elements()
-
-        except Exception as e:
-            if config.GUI_TEST_MODE and config.QUIT_ON_ERROR_IN_TEST_MODE:
-                self.close()
-                raise
-            else:
-                traceback.print_exc()
-                msg = str(e)
-                self._app.set_error(f"Error: {msg}" if msg else "Error occurred")
-                self.update_gui_elements()
+        Converts pyglet key codes to abstract Keys and delegates to
+        handle_key_with_error_handling() - the single entry point for all backends.
+        """
+        abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
+        abstract_mods = _convert_modifiers(modifiers)
+        handle_key_with_error_handling(self, abstract_symbol, abstract_mods)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         """Pyglet mouse drag event."""

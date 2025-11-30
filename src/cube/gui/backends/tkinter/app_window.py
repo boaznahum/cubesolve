@@ -161,8 +161,11 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         self._draw()
 
     def _on_key_press(self, event) -> None:
-        """Handle key press."""
-        self.handle_key_press(event.symbol, event.modifiers)
+        """Handle key press.
+
+        Delegates to _on_native_key_press() - the single entry point for all backends.
+        """
+        self._on_native_key_press(event.symbol, event.modifiers)
         self._draw()
 
     def _on_close(self) -> bool:
@@ -173,7 +176,7 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
     def inject_key(self, key: int, modifiers: int = 0) -> None:
         """Inject a single key press."""
-        self.handle_key_press(key, modifiers)
+        self._on_native_key_press(key, modifiers)
         self._draw()
 
     def inject_key_sequence(self, sequence: str) -> None:

@@ -4,12 +4,17 @@ AppWindowBase - Shared application window logic for all backends.
 This module provides the common logic that all backend AppWindow implementations
 share. Backend-specific implementations (PygletAppWindow, TkinterAppWindow, etc.)
 inherit from this class and implement the abstract rendering methods.
+
+Key Handling Architecture:
+- All backends call handle_key_with_error_handling() for unified keyboard input
+- This function wraps main_g_keyboard_input.handle_keyboard_input() with error handling
+- Backends convert their native key events to abstract Keys before calling
 """
 
 import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Sequence, Protocol
 
 from cube import config
 from cube.algs import Algs, Alg
@@ -22,6 +27,63 @@ if TYPE_CHECKING:
     from cube.viewer.viewer_g import GCubeViewer
     from cube.gui.factory import GUIBackend
     from cube.gui.protocols.renderer import Renderer
+
+
+class _KeyHandlerWindow(Protocol):
+    """Protocol for windows that handle keyboard input."""
+
+    @property
+    def app(self) -> "AbstractApp": ...
+    def close(self) -> None: ...
+    def update_gui_elements(self) -> None: ...
+
+
+def handle_key_with_error_handling(
+    window: _KeyHandlerWindow,
+    symbol: int,
+    modifiers: int
+) -> None:
+    """Handle keyboard input with unified error handling.
+
+    This is the SINGLE ENTRY POINT for all keyboard input from all backends.
+    All backends convert their native key events to abstract Keys and call this.
+
+    Args:
+        window: The window handling the key (must implement _KeyHandlerWindow protocol)
+        symbol: Key code (from Keys enum)
+        modifiers: Modifier flags (from Modifiers)
+
+    Raises:
+        AppExit: In test mode, re-raised after closing window
+        Exception: In test mode with QUIT_ON_ERROR_IN_TEST_MODE, re-raised after closing
+    """
+    try:
+        main_g_keyboard_input.handle_keyboard_input(window, symbol, modifiers)  # type: ignore[arg-type]
+
+    except (AppExit, RunStop, OpAborted) as e:
+        # In test mode, AppExit should actually exit
+        if config.GUI_TEST_MODE and isinstance(e, AppExit):
+            window.close()
+            raise
+        else:
+            # Normal GUI mode - show error message
+            window.app.set_error("Asked to stop")
+            window.update_gui_elements()
+
+    except Exception as e:
+        # In test mode, exceptions should propagate
+        if config.GUI_TEST_MODE and config.QUIT_ON_ERROR_IN_TEST_MODE:
+            window.close()
+            raise
+        else:
+            # Normal GUI mode - show error in GUI
+            traceback.print_exc()
+            msg = str(e)
+            error_text = "Some error occurred:"
+            if msg:
+                error_text += msg
+            window.app.set_error(error_text)
+            window.update_gui_elements()
 
 
 @dataclass
@@ -149,42 +211,25 @@ class AppWindowBase(ABC):
 
         self._request_redraw()
 
-    def handle_key_press(self, symbol: int, modifiers: int) -> None:
-        """Handle a key press event.
+    def _on_native_key_press(self, symbol: int, modifiers: int) -> None:
+        """Handle a key press from any backend.
 
-        Delegates to main_g_keyboard_input with proper error handling.
+        This is the SINGLE ENTRY POINT for all keyboard input.
+        All backends convert their native events to abstract keys and call this.
 
         Args:
             symbol: Key code (from Keys enum)
             modifiers: Modifier flags (from Modifiers)
         """
-        try:
-            main_g_keyboard_input.handle_keyboard_input(self, symbol, modifiers)  # type: ignore[arg-type]
+        handle_key_with_error_handling(self, symbol, modifiers)
 
-        except (AppExit, RunStop, OpAborted) as e:
-            # In test mode, AppExit should actually exit
-            if config.GUI_TEST_MODE and isinstance(e, AppExit):
-                self.close()
-                raise
-            else:
-                # Normal GUI mode - show error message
-                self._app.set_error("Asked to stop")
-                self.update_gui_elements()
+    def handle_key_press(self, symbol: int, modifiers: int) -> None:
+        """Handle a key press event.
 
-        except Exception as e:
-            # In test mode, exceptions should propagate
-            if config.GUI_TEST_MODE and config.QUIT_ON_ERROR_IN_TEST_MODE:
-                self.close()
-                raise
-            else:
-                # Normal GUI mode - show error in GUI
-                traceback.print_exc()
-                msg = str(e)
-                error_text = "Some error occurred:"
-                if msg:
-                    error_text += msg
-                self._app.set_error(error_text)
-                self.update_gui_elements()
+        DEPRECATED: Use _on_native_key_press() instead.
+        This method exists for backward compatibility.
+        """
+        self._on_native_key_press(symbol, modifiers)
 
     def handle_mouse_drag(self, x: int, y: int, dx: int, dy: int,
                           buttons: int, modifiers: int) -> None:
@@ -226,7 +271,7 @@ class AppWindowBase(ABC):
             key: Key code (from Keys enum)
             modifiers: Modifier flags
         """
-        self.handle_key_press(key, modifiers)
+        self._on_native_key_press(key, modifiers)
 
     def inject_key_sequence(self, sequence: str) -> None:
         """Inject a sequence of key presses.
