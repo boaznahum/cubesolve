@@ -66,12 +66,19 @@
   - Tried `TYPE_CHECKING` trick - didn't work in PyCharm
   - Options: composition pattern, wrapper class, or accept docstring-only documentation
 
+## Documentation
+
+- ❌ **D1.** Improve keyboard_and_commands.md diagram clarity
+  - Current diagram in section 1.4 is confusing - shows separate flows for each backend
+  - Goal: Make it visually clear that Part 1 (native handlers) is different, Part 2 (unified path) is identical
+  - Consider: Use actual colors/formatting that renders in markdown, or restructure as separate diagrams
+
 ## Code Quality
 
 - ❌ **Q1.** Refactor too many packages under `src/cube`
   - Ask Claude architects to rearrange them by layers
 
-- ❌ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name
+- ❌ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name also when implenating protocol or base class the implentation class should not be that same as the base class, e.g. protoc Ax is implmented in some specic implemantation Iy by class AxIy (claud:fix the neglish of this section)
   - Example: `class MyClass` should be in `MyClass.py` (not `my_class.py`)
   - Research: Is this good practice? Why doesn't Python community follow this?
   - If approved: Add to CLAUDE.md as coding standard
