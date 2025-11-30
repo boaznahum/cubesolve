@@ -4,7 +4,7 @@ from cube.app.abstract_ap import AbstractApp
 from cube.viewer.viewer_g import GCubeViewer
 
 if TYPE_CHECKING:
-    from cube.gui.protocols.renderer import Renderer
+    from cube.gui.protocols import Renderer
 
 
 @runtime_checkable

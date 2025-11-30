@@ -11,7 +11,7 @@ try:
 except ImportError as e:
     raise ImportError("pyglet is required for PygletAnimation: pip install pyglet") from e
 
-from cube.gui.protocols.animation import AnimationBackend
+from cube.gui.protocols import AnimationBackend
 
 if TYPE_CHECKING:
     from cube.model.cube import Cube

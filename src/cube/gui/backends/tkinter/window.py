@@ -8,7 +8,7 @@ import tkinter as tk
 from typing import Callable
 
 from cube.gui.types import KeyEvent, MouseEvent, Color4, Keys, Modifiers, MouseButton
-from cube.gui.protocols.window import Window as WindowProtocol, TextRenderer
+from cube.gui.protocols import Window as WindowProtocol, TextRenderer
 
 
 # Key mapping from Tkinter keysyms to abstract Keys

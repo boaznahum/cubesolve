@@ -14,8 +14,7 @@ from cube.model import PartSlice
 from cube.model.cube import Cube
 from cube.model.cube_boy import FaceName
 from cube.viewer.viewer_g import GCubeViewer
-from cube.gui.protocols.renderer import Renderer
-from cube.gui.protocols.event_loop import EventLoop
+from cube.gui.protocols import Renderer, EventLoop
 from cube.gui.types import DisplayList
 
 OpProtocol: TypeAlias = Callable[[algs.Alg, bool], None]

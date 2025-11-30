@@ -7,7 +7,7 @@ Provides an input-based event loop for console mode.
 import sys
 from typing import Callable
 
-from cube.gui.protocols.event_loop import EventLoop
+from cube.gui.protocols import EventLoop
 
 
 class ConsoleEventLoop(EventLoop):

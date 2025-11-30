@@ -8,7 +8,7 @@ This class provides the AnimationBackend protocol implementation for completenes
 
 from typing import Callable, Collection, TYPE_CHECKING
 
-from cube.gui.protocols.animation import AnimationBackend
+from cube.gui.protocols import AnimationBackend
 
 if TYPE_CHECKING:
     from cube.model.cube import Cube

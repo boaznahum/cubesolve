@@ -9,7 +9,7 @@ import numpy as np
 from math import cos, sin, radians
 
 from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
-from cube.gui.protocols.renderer import ShapeRenderer, DisplayListManager, ViewStateManager, Renderer
+from cube.gui.protocols import ShapeRenderer, DisplayListManager, ViewStateManager, Renderer
 
 
 class TkinterShapeRenderer(ShapeRenderer):

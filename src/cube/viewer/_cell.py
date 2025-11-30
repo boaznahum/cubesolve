@@ -18,7 +18,7 @@ from cube.model import PartEdge
 from cube.model import PartSliceHashID
 from cube.model import Part, Corner, Edge, Center
 from cube.model import PartSlice, EdgeWing, CenterSlice
-from ..gui.protocols.renderer import Renderer
+from ..gui.protocols import Renderer
 from ..gui.types import DisplayList, TextureCoord, TextureMap, Point3D, Color3
 
 _CELL_SIZE: int = config.CELL_SIZE

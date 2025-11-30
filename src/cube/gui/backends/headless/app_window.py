@@ -6,7 +6,7 @@ Provides a no-output application window for testing and automation.
 
 from cube.app.abstract_ap import AbstractApp
 from cube.gui.factory import GUIBackend
-from cube.gui.protocols.app_window import AppWindow
+from cube.gui.protocols import AppWindow
 from cube.gui.types import KeyEvent
 from cube.main_window.app_window_base import AppWindowBase
 from cube.viewer.viewer_g import GCubeViewer

@@ -13,7 +13,7 @@ from cube.utils import prof
 from ._board import _Board
 from ._faceboard import _FaceBoard
 from .. import config
-from ..gui.protocols.renderer import Renderer
+from ..gui.protocols import Renderer
 
 
 # todo: delete ?

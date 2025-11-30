@@ -18,7 +18,7 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 from .texture import TextureData
 from ..model import PartEdge
 from ..model.cube_boy import FaceName
-from ..gui.protocols.renderer import Renderer
+from ..gui.protocols import Renderer
 from ..gui.types import DisplayList
 
 

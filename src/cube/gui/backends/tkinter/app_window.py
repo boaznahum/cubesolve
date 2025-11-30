@@ -8,7 +8,7 @@ and AppWindowBase for shared logic.
 from cube.app.abstract_ap import AbstractApp
 from cube.animation.animation_manager import AnimationWindow
 from cube.gui.factory import GUIBackend
-from cube.gui.protocols.app_window import AppWindow
+from cube.gui.protocols import AppWindow
 from cube.gui.types import Keys
 from cube.main_window.app_window_base import AppWindowBase
 from cube.viewer.viewer_g import GCubeViewer

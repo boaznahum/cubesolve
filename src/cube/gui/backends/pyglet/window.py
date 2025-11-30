@@ -15,7 +15,7 @@ except ImportError as e:
     raise ImportError("pyglet is required for PygletWindow: pip install pyglet") from e
 
 from cube.gui.types import KeyEvent, MouseEvent, Keys, Modifiers, MouseButton, Color4
-from cube.gui.protocols.window import Window as WindowProtocol, TextRenderer
+from cube.gui.protocols import Window as WindowProtocol, TextRenderer
 
 
 # Mapping from pyglet key codes to our abstract Keys

@@ -9,7 +9,7 @@ import time
 from typing import Callable
 from dataclasses import dataclass, field
 
-from cube.gui.protocols.event_loop import EventLoop
+from cube.gui.protocols import EventLoop
 
 
 @dataclass

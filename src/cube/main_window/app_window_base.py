@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from cube.app.abstract_ap import AbstractApp
     from cube.viewer.viewer_g import GCubeViewer
     from cube.gui.factory import GUIBackend
-    from cube.gui.protocols.renderer import Renderer
+    from cube.gui.protocols import Renderer
 
 
 class _KeyHandlerWindow(Protocol):

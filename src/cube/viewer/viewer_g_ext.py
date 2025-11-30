@@ -5,7 +5,7 @@ import numpy as np
 
 from cube import config
 from cube.app.app_state import ApplicationAndViewState
-from cube.gui.protocols.renderer import Renderer
+from cube.gui.protocols import Renderer
 
 
 class GViewerExt:

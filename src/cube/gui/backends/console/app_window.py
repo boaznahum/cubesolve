@@ -12,7 +12,7 @@ Key Handling:
 
 from cube.app.abstract_ap import AbstractApp
 from cube.gui.factory import GUIBackend
-from cube.gui.protocols.app_window import AppWindow
+from cube.gui.protocols import AppWindow
 from cube.gui.types import Keys, Modifiers
 from cube.main_console import viewer as console_viewer
 from cube.main_console.keys import Keys as ConsoleKeys

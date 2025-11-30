@@ -14,7 +14,7 @@ except ImportError as e:
     raise ImportError("pyglet is required for PygletRenderer: pip install pyglet") from e
 
 from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
-from cube.gui.protocols.renderer import ShapeRenderer, DisplayListManager, ViewStateManager, Renderer
+from cube.gui.protocols import ShapeRenderer, DisplayListManager, ViewStateManager, Renderer
 
 
 class PygletShapeRenderer(ShapeRenderer):

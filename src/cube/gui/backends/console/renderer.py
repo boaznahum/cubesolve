@@ -6,7 +6,7 @@ A null renderer for console mode - uses text-based output instead of graphics.
 
 from typing import Sequence
 
-from cube.gui.protocols.renderer import Renderer, ShapeRenderer, DisplayListManager, ViewStateManager
+from cube.gui.protocols import Renderer, ShapeRenderer, DisplayListManager, ViewStateManager
 from cube.gui.types import Point3D, Color3, Color4, DisplayList as DisplayListType, Matrix4x4, TextureHandle, TextureMap
 
 

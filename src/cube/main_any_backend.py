@@ -26,7 +26,7 @@ from cube.app.abstract_ap import AbstractApp
 from cube.gui import BackendRegistry
 
 if TYPE_CHECKING:
-    from cube.gui.protocols.app_window import AppWindow
+    from cube.gui.protocols import AppWindow
 
 
 def _import_backend(backend_name: str) -> None:
