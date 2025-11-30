@@ -25,16 +25,10 @@
       "Bash(git commit:*)",
       "Bash(git push)",
       "Bash(pip freeze:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
       "Bash(git rm:*)",
-      "Bash(.venv314Scriptspython.exe -m pytest:*)",
-      "Bash(git checkout:*)",
-      "Bash(git tag:*)",
-      "Bash(winget install:*)",
-      "Bash(git push:*)",
-      "Bash(..venv314Scriptspython.exe -m pytest tests/ -v --ignore=tests/gui -m \"not slow\")",
-      "Bash(E:devprojectspythoncubesolve.venv314Scriptspython.exe -m pytest tests/ -v --ignore=tests/gui -m \"not slow\")",
-      "SlashCommand(/mytodo)",
-      "Bash(E:devprojectspythoncubesolve.venv314Scriptspython.exe -m pytest E:devprojectspythoncubesolvetests -v --ignore=E:devprojectspythoncubesolvetestsgui -m \"not slow\")"
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

@@ -24,11 +24,6 @@ class _FaceBoard:
      2,0 | 2,1 | 2,2
     """
 
-    # face size in terms of cells
-    # todo: delete
-    _h_size: int = 1 * _FACE_SIZE
-    _v_size: int = 1 * _FACE_SIZE
-
     def __init__(self,
                  board: "_Board",
                  cube_face_supplier: Callable[[], Face],

@@ -27,11 +27,15 @@ Usage:
 from cube.gui.backends.console.ConsoleRenderer import ConsoleRenderer
 from cube.gui.backends.console.ConsoleEventLoop import ConsoleEventLoop
 from cube.gui.backends.console.ConsoleAppWindow import ConsoleAppWindow
+from cube.gui.backends.console import ConsoleViewer
+from cube.gui.backends.console import ConsoleKeys
 
 __all__ = [
     "ConsoleRenderer",
     "ConsoleEventLoop",
     "ConsoleAppWindow",
+    "ConsoleViewer",
+    "ConsoleKeys",
     "register",
 ]
 

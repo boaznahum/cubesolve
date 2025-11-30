@@ -7,7 +7,7 @@ from numpy import ndarray
 
 from cube.app.app_state import ApplicationAndViewState
 from cube.model import PartFixedID
-from cube.model import PartSlice, SuperElement
+from cube.model import PartSlice
 from cube.model.cube import Cube
 from cube.model.cube_face import Face
 from ._cell import _Cell, _CELL_SIZE
@@ -308,21 +308,6 @@ class _Board:
 
     def unhidden_all(self):
         self._hidden_objects = set()
-
-    # todo: to delete
-    def get_all_cells_movable_gui_elements(self, element: SuperElement) -> Set[int]:
-
-        lists: set[int] = set()
-
-        # need to optimize !!!
-        for s in element.slices:
-
-            c: _Cell
-            for cs in self._cells.values():
-                for c in cs:
-                    lists.update(c.gui_slice_movable_gui_objects(s))
-
-        return lists
 
     def get_all_movable_gui_elements(self, for_parts: Collection[PartSlice]) -> Set[int]:
 

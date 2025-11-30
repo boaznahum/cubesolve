@@ -14,9 +14,10 @@ from cube.app.abstract_ap import AbstractApp
 from cube.gui.factory import GUIBackend
 from cube.gui.protocols import AppWindow
 from cube.gui.types import Keys, Modifiers
-from cube.main_console import viewer as console_viewer
-from cube.main_console.keys import Keys as ConsoleKeys
 from cube.main_window.app_window_base import AppWindowBase
+
+from cube.gui.backends.console import ConsoleViewer as console_viewer
+from cube.gui.backends.console.ConsoleKeys import Keys as ConsoleKeys
 
 from cube.gui.backends.console.ConsoleRenderer import ConsoleRenderer
 from cube.gui.backends.console.ConsoleEventLoop import ConsoleEventLoop

@@ -121,6 +121,16 @@
 
 ## Done Tasks
 
+- ✅ **Q8.** Code cleanup: remove unused code and consolidate console backend
+  - Deleted `main_c.py` (old standalone console app) and `tests/console/`
+  - Removed unused imports: `colorama`, `Collection` from `viewer_g.py`
+  - Removed unused `__slots__` entries: `_test`, `_hidden_objects` from `GCubeViewer`
+  - Removed dead function `get_all_cells_movable_gui_elements()` from `_board.py`
+  - Removed unused class attrs `_h_size`, `_v_size` from `_FaceBoard`
+  - Moved `main_console/keys.py` → `backends/console/ConsoleKeys.py`
+  - Moved `main_console/viewer.py` → `backends/console/ConsoleViewer.py`
+  - Deleted `main_console/` folder (all code now in `gui/backends/console/`)
+
 - ✅ **G1.** Make sure all test_gui run with all backends
   - Added `--backend` pytest option (default: "all" runs pyglet, headless, console, tkinter)
   - Tests use `Command` enum instead of string key sequences

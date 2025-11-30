@@ -1,7 +1,5 @@
-from collections.abc import Collection
 from typing import Tuple, Iterable
 
-import colorama  # type: ignore
 from numpy import ndarray
 
 from cube.app.app_state import ApplicationAndViewState
@@ -16,13 +14,8 @@ from .. import config
 from ..gui.protocols import Renderer
 
 
-# todo: delete ?
-#  _parts: dict[Hashable, int] = {}
-
-
 class GCubeViewer:
-    __slots__ = ["_cube", "_board", "_test",
-                 "_hidden_objects", "_vs", "_renderer"]
+    __slots__ = ["_cube", "_board", "_vs", "_renderer"]
 
     def __init__(
         self,
