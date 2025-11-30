@@ -6,7 +6,7 @@ from . import res
 from cube.gui.types import TextureHandle
 
 if TYPE_CHECKING:
-    from cube.gui.protocols import Renderer
+    from cube.gui.protocols.Renderer import Renderer
 
 
 class TextureData:

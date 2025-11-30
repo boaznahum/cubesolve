@@ -12,6 +12,7 @@
 > - When a task is done, move it to the "Done Tasks" section at the bottom, preserving its ID number.
 > - When adding new tasks, check existing IDs (including Done) to avoid duplicates (e.g., if A1, A2 exist, new is A3).
 > - If reopening a done task, mention "Reopened from Done" in the description.
+> - After refactoring run mypy -p cube, if change need to be done run tests only and so on
 
 
 ---
@@ -31,6 +32,51 @@
   - Adds external dependency (`pip install pyopengltk`)
 
 ## Architecture
+
+- ❌ **A3.** Consider moving animation manager wiring from GUIBackend to elsewhere
+  - Currently `GUIBackend.create_app_window()` wires up `app.am.set_event_loop()`
+  - This creates coupling between GUIBackend and AbstractApp
+  - Options: move to AbstractApp, make it explicit in main_any, or keep as-is
+
+- ❌ **A4.** PygletAppWindow cannot inherit from AppWindow protocol due to metaclass conflict
+  - `pyglet.window.Window` has its own metaclass that conflicts with Protocol
+  - Tried `TYPE_CHECKING` trick - didn't work in PyCharm
+  - Options: composition pattern, wrapper class, or accept docstring-only documentation
+
+## Documentation
+
+- ❌ **D1.** Improve keyboard_and_commands.md diagram clarity
+  - Current diagram in section 1.4 is confusing - shows separate flows for each backend
+  - Goal: Make it visually clear that Part 1 (native handlers) is different, Part 2 (unified path) is identical
+  - Consider: Use actual colors/formatting that renders in markdown, or restructure as separate diagrams
+
+## Code Quality
+
+- ❌ **Q1.** Refactor too many packages under `src/cube`
+  - Ask Claude architects to rearrange them by layers
+
+- ❌ **Q5.** Review all `# type: ignore` comments and document why they're needed
+  - Audit added during Q2 mypy fixes
+  - Some are for protocol compliance with concrete classes (AnimationWindow, AbstractWindow)
+  - Some are for method overrides with different signatures
+
+- ❌ **Q6.** Evaluate if `disable_error_code = import-untyped` hides real problems
+  - Currently disabled globally in `mypy.ini` to suppress pyglet stub warnings
+  - Risk: May hide issues with other untyped third-party libraries
+  - Alternative: Use per-module `[mypy-pyglet.*]` with `ignore_missing_imports = True`
+  - Investigate: Are there other libraries being silently ignored?
+
+- ❌ **Q7.** Add type annotations to untyped lambda callbacks in tkinter backend
+  - Files: `tkinter/event_loop.py:34-35`, `tkinter/renderer.py:580`
+  - Currently triggers mypy `annotation-unchecked` notes
+  - Would allow using `--check-untyped-defs` for stricter checking
+
+---
+# New entries below - Claude will reformat and move above this line
+
+---
+
+## Done Tasks
 
 - ✅ **A2.** Introduce commands injecting instead of keys, simplify key handling
   - **A2.0.** ✅ Unify keyboard handling across all backends (prerequisite)
@@ -58,29 +104,7 @@
     - Deleted `tests/gui/keys.py` (GUIKeys no longer needed)
     - Tests now use: `Command.SPEED_UP * 5 + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT`
 
-- ❌ **A3.** Consider moving animation manager wiring from GUIBackend to elsewhere
-  - Currently `GUIBackend.create_app_window()` wires up `app.am.set_event_loop()`
-  - This creates coupling between GUIBackend and AbstractApp
-  - Options: move to AbstractApp, make it explicit in main_any, or keep as-is
-
-- ❌ **A4.** PygletAppWindow cannot inherit from AppWindow protocol due to metaclass conflict
-  - `pyglet.window.Window` has its own metaclass that conflicts with Protocol
-  - Tried `TYPE_CHECKING` trick - didn't work in PyCharm
-  - Options: composition pattern, wrapper class, or accept docstring-only documentation
-
-## Documentation
-
-- ❌ **D1.** Improve keyboard_and_commands.md diagram clarity
-  - Current diagram in section 1.4 is confusing - shows separate flows for each backend
-  - Goal: Make it visually clear that Part 1 (native handlers) is different, Part 2 (unified path) is identical
-  - Consider: Use actual colors/formatting that renders in markdown, or restructure as separate diagrams
-
-## Code Quality
-
-- ❌ **Q1.** Refactor too many packages under `src/cube`
-  - Ask Claude architects to rearrange them by layers
-
-- ❌ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name
+- ✅ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name
   - When implementing a protocol or base class, the implementation class name should differ from the base
   - Example: Protocol `Renderer` implemented by `PygletRenderer`, `HeadlessRenderer` (not just `Renderer`)
   - Example: `class MyClass` should be in `MyClass.py` (not `my_class.py`)
@@ -94,32 +118,12 @@
       - console: ConsoleEventLoop.py, ConsoleAppWindow.py, etc.
       - tkinter: TkinterEventLoop.py, TkinterAppWindow.py, etc.
     - Updated all __init__.py files and imports
-  - **Q3.2.** ❌ Audit and fix all other classes in the codebase
-    - Review remaining classes for naming convention compliance
-    - Rename files to match class names (case-sensitive)
-
-- ❌ **Q5.** Review all `# type: ignore` comments and document why they're needed
-  - Audit added during Q2 mypy fixes
-  - Some are for protocol compliance with concrete classes (AnimationWindow, AbstractWindow)
-  - Some are for method overrides with different signatures
-
-- ❌ **Q6.** Evaluate if `disable_error_code = import-untyped` hides real problems
-  - Currently disabled globally in `mypy.ini` to suppress pyglet stub warnings
-  - Risk: May hide issues with other untyped third-party libraries
-  - Alternative: Use per-module `[mypy-pyglet.*]` with `ignore_missing_imports = True`
-  - Investigate: Are there other libraries being silently ignored?
-
-- ❌ **Q7.** Add type annotations to untyped lambda callbacks in tkinter backend
-  - Files: `tkinter/event_loop.py:34-35`, `tkinter/renderer.py:580`
-  - Currently triggers mypy `annotation-unchecked` notes
-  - Would allow using `--check-untyped-defs` for stricter checking
-
----
-# New entries below - Claude will reformat and move above this line
-mypy -p cube fails
----
-
-## Done Tasks
+  - **Q3.2.** ✅ Audit and fix all other classes in the codebase
+    - Renamed 45 files to match class names (PascalCase)
+    - Split 6 multi-class files with backward-compatible re-export modules:
+      - `app_exceptions.py`, `gui/factory.py`, `gui/types.py`
+      - `model/cube_boy.py`, `model/cube_slice.py`, `operator/op_annotation.py`
+    - Left 3 complex files unsplit due to tight coupling: `_elements.py`, `_part.py`, `_part_slice.py`
 
 - ✅ **Q8.** Code cleanup: remove unused code and consolidate console backend
   - Deleted `main_c.py` (old standalone console app) and `tests/console/`
@@ -149,3 +153,11 @@ mypy -p cube fails
 
 - ✅ **Q4.** Create `/mytodo` slash command to read and manage `__todo.md`
   - Created `.claude/commands/mytodo.md`
+
+- ✅ **B2.** Fix mypy -p cube errors after Q3.2 file renames
+  - Fixed import ambiguity: module names vs class names (e.g., `from cube.model import PartEdge`)
+  - Solution: use explicit imports from files (e.g., `from cube.model.PartEdge import PartEdge`)
+  - Fixed imports in: Part.py, Face.py, Edge.py, Corner.py, Center.py, _part.py, _part_slice.py
+  - Fixed Renderer imports in: TextureData.py, ApplicationAndViewState.py, GCubeViewer.py
+  - Fixed AnnotationAlg import in Inv.py
+  - Fixed type errors in: Command.py, AnimationManager.py, HeadlessAppWindow.py

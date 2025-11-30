@@ -11,7 +11,7 @@ from cube import algs
 from cube import config
 
 if TYPE_CHECKING:
-    from cube.gui.protocols import Renderer
+    from cube.gui.protocols.Renderer import Renderer
 from cube.animation.AnimationText import AnimationText
 from cube.model.Cube import Cube
 from cube.model.cube_boy import FaceName

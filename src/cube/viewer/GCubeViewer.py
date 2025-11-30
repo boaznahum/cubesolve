@@ -1,17 +1,20 @@
 from typing import Tuple, Iterable
+from collections.abc import Collection
 
 from numpy import ndarray
 
 from cube.app.ApplicationAndViewState import ApplicationAndViewState
 from cube.model.Cube import Cube
 from cube.model.Face import Face
-from cube.model import FaceName, PartSlice, PartEdge
+from cube.model.cube_boy import FaceName
+from cube.model._part_slice import PartSlice
+from cube.model.PartEdge import PartEdge
 # noinspection PyMethodMayBeStatic
 from cube.utils import prof
 from ._board import _Board
 from ._faceboard import _FaceBoard
 from .. import config
-from ..gui.protocols import Renderer
+from ..gui.protocols.Renderer import Renderer
 
 
 class GCubeViewer:

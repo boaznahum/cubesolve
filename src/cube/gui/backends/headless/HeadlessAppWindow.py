@@ -66,6 +66,7 @@ class HeadlessAppWindow(AppWindowBase, AppWindow):
     @property
     def viewer(self) -> GCubeViewer:
         """Access the cube viewer."""
+        assert self._viewer is not None
         return self._viewer
 
     @property
@@ -103,7 +104,8 @@ class HeadlessAppWindow(AppWindowBase, AppWindow):
 
     def update_gui_elements(self) -> None:
         """Update GUI elements (no-op in headless mode)."""
-        self._viewer.update()
+        if self._viewer:
+            self._viewer.update()
 
         if self._animation_manager:
             self._animation_manager.update_gui_elements()

@@ -5,8 +5,10 @@ from typing import Tuple, TypeVar, Self
 from typing_extensions import deprecated
 
 from cube import config
-from cube.model import PartSlice, PartEdge, SliceIndex, FaceName, Color
-from cube.model._elements import CubeElement, PartColorsID, PartFixedID, _Face, _Cube
+from cube.model._part_slice import PartSlice
+from cube.model.PartEdge import PartEdge
+from cube.model._elements import CubeElement, PartColorsID, PartFixedID, _Face, _Cube, SliceIndex
+from cube.model.cube_boy import FaceName, Color
 from cube.model.cube_boy import color2long
 
 TPartType = TypeVar("TPartType", bound="Part")

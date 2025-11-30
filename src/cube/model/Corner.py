@@ -1,7 +1,9 @@
 from collections.abc import Sequence, Iterator, Iterable
 from typing import TYPE_CHECKING, TypeAlias, Tuple
 
-from . import PartEdge, SliceIndex, Color
+from .PartEdge import PartEdge
+from ._elements import SliceIndex
+from .cube_boy import Color
 from .Part import Part
 from ._part import CornerName, _faces_2_corner_name
 from ._part_slice import CornerSlice, PartSlice

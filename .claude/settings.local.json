@@ -31,7 +31,8 @@
       "Bash(find:*)",
       "Bash(powershell -NoProfile -Command \"Get-ChildItem -Path src/cube -Recurse -Filter ''''*.py'''' | Where-Object { $_ame -notmatch ''''__init__|__pycache__'''' } | ForEach-Object { $content = Get-Content $_ullName -Raw; if ($content -match ''''(?m)^class ([A-Z][A-Za-z0-9_]*)'''') { $_ullName + '''':'''' + $Matches[1] } }\")",
       "Bash(del analyze_classes.py)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(.venv314Scriptspython.exe -m mypy -p cube)"
     ],
     "deny": [],
     "ask": []

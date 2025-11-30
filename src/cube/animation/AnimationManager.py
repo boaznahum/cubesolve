@@ -94,7 +94,7 @@ class AnimationManager(ABC):
             viewer = self._window.viewer
         except RuntimeError:
             # Viewer not initialized - skip animation, execute directly
-            op(alg, animation=False)
+            op(alg, False)
             return
 
         _op_and_play_animation(self._window,

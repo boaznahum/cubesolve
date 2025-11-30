@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import Callable
 
-from . import FaceName
+from .cube_boy import FaceName
 from .Center import Center
 from .Corner import Corner
 from .Edge import Edge

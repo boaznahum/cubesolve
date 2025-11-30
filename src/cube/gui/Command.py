@@ -408,7 +408,7 @@ def _test_run(ctx: CommandContext) -> None:
 def _test_run_last(ctx: CommandContext) -> None:
     from cube import config
     last_test_key, last_test_size = ctx.vs.get_last_scramble_test()
-    ctx.app.run_single_test(last_test_key, last_test_size, config.SOLVER_DEBUG, animation=None)
+    ctx.app.run_single_test(last_test_key, last_test_size, config.SOLVER_DEBUG, animation=True)
 
 
 def _test_scramble_last(ctx: CommandContext) -> None:

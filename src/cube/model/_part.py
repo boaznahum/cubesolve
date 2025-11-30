@@ -5,7 +5,7 @@ from enum import Enum, unique
 from typing import Tuple, TypeAlias, TYPE_CHECKING, TypeVar
 
 from cube import config
-from cube.model import PartEdge
+from cube.model.PartEdge import PartEdge
 from cube.model.cube_boy import FaceName, Color, color2long
 from ._elements import CubeElement, PartColorsID, PartFixedID, SliceIndex, CenterSliceIndex, EdgeSliceIndex
 from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
