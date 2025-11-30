@@ -75,6 +75,9 @@ class ConsoleAppWindow(AppWindowBase, AppWindow):
         # Initialize base class (sets _app, _backend, _animation_manager, etc.)
         super().__init__(app, backend)
 
+        # Console doesn't support animation - disable animation manager
+        self._animation_manager = None
+
         # Console-specific attributes
         self._renderer: ConsoleRenderer = backend.renderer  # type: ignore
         self._event_loop: ConsoleEventLoop = backend.event_loop  # type: ignore

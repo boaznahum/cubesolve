@@ -88,10 +88,19 @@ class AnimationManager(ABC):
         assert self._window
         if self._event_loop is None:
             raise RuntimeError("EventLoop is required for animation. Call set_event_loop() first.")
+
+        # Check if viewer is available (backends without GUI support won't have one)
+        try:
+            viewer = self._window.viewer
+        except RuntimeError:
+            # Viewer not initialized - skip animation, execute directly
+            op(alg, animation=False)
+            return
+
         _op_and_play_animation(self._window,
                                cube,
                                self._set_animation,
-                               self._window.viewer,
+                               viewer,
                                self._vs,
                                self._event_loop,
                                op, False, alg)
