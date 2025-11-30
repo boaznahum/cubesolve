@@ -182,13 +182,21 @@ class GUITestRunner:
             watchdog.start()
 
             # Schedule command injection after window is ready
-            def inject_commands(dt):
+            commands_injected = False
+
+            def inject_commands(dt: float) -> None:
+                nonlocal commands_injected
+                # Prevent re-entry (headless event loop may call scheduled callbacks multiple times)
+                if commands_injected:
+                    return
+                commands_injected = True
+
                 try:
                     if debug:
                         print(f"Injecting commands: {cmd_seq}")
                     for cmd in cmd_seq:
                         win.inject_command(cmd)
-                except Exception as e:
+                except Exception:
                     # This exception will propagate to inject_command which will handle it
                     raise
 
