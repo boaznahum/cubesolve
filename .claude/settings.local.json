@@ -34,7 +34,10 @@
       "Bash(..venv314Scriptspython.exe -m pytest tests/ -v --ignore=tests/gui -m \"not slow\")",
       "Bash(E:devprojectspythoncubesolve.venv314Scriptspython.exe -m pytest tests/ -v --ignore=tests/gui -m \"not slow\")",
       "SlashCommand(/mytodo)",
-      "Bash(E:devprojectspythoncubesolve.venv314Scriptspython.exe -m pytest E:devprojectspythoncubesolvetests -v --ignore=E:devprojectspythoncubesolvetestsgui -m \"not slow\")"
+      "Bash(E:devprojectspythoncubesolve.venv314Scriptspython.exe -m pytest E:devprojectspythoncubesolvetests -v --ignore=E:devprojectspythoncubesolvetestsgui -m \"not slow\")",
+      "Bash(git branch:*)",
+      "Bash(del \"F:\\Dev\\code\\python\\cubesolve2\\src\\cube\\utils\\debug.py\")",
+      "Bash(timeout /t 30 /nobreak)"
     ],
     "deny": [],
     "ask": []

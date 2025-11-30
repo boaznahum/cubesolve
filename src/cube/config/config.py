@@ -93,7 +93,7 @@ INPUT_MOUSE_DEBUG= False
 ############## Operator ##############
 OPERATOR_SHOW_ALG_ANNOTATION = True
 
-##############  Solver  ###################
+##############  Solver  ##################
 OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False  # under test doesn't work well
 
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True
