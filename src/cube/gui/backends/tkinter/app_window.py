@@ -74,7 +74,7 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         self._tk_window.set_draw_handler(self._draw)
         self._tk_window.set_resize_handler(self._on_resize)
         self._tk_window.set_mouse_drag_handler(self._on_mouse_drag)
-        self._tk_window.set_key_press_handler(self._on_key_press)
+        self._tk_window.set_key_press_handler(self._on_tk_key_event)
         self._tk_window.set_close_handler(self._on_close)
 
     @property
@@ -160,12 +160,24 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         self._app.vs.alpha_x -= event.dy * sensitivity
         self._draw()
 
-    def _on_key_press(self, event) -> None:
-        """Handle key press.
+    def _on_tk_key_event(self, event) -> None:
+        """Native key event handler from TkinterWindow.
 
-        Delegates to _on_native_key_press() - the single entry point for all backends.
+        Receives KeyEvent with already-converted abstract keys.
+        Calls handle_key() - the protocol method.
         """
-        self._on_native_key_press(event.symbol, event.modifiers)
+        self.handle_key(event.symbol, event.modifiers)
+
+    def handle_key(self, symbol: int, modifiers: int) -> None:
+        """Protocol method - handle abstract key press.
+
+        Overrides AppWindowBase.handle_key() to add redraw after key press.
+
+        Args:
+            symbol: Key code (from Keys enum) - already converted to abstract
+            modifiers: Modifier flags (from Modifiers)
+        """
+        super().handle_key(symbol, modifiers)
         self._draw()
 
     def _on_close(self) -> bool:
@@ -175,9 +187,8 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
     # === Key Injection ===
 
     def inject_key(self, key: int, modifiers: int = 0) -> None:
-        """Inject a single key press."""
-        self._on_native_key_press(key, modifiers)
-        self._draw()
+        """Inject a single key press (already abstract keys)."""
+        self.handle_key(key, modifiers)
 
     def inject_key_sequence(self, sequence: str) -> None:
         """Inject a sequence of key presses."""

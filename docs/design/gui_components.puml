@@ -1,7 +1,7 @@
 @startuml GUI Package Structure
 
 title GUI Abstraction - Package & Component Diagram
-footer Last Updated: 2025-11-28 | Migration Complete ✅
+footer Last Updated: 2025-11-30 | AppWindow Inheritance Added
 
 skinparam componentStyle rectangle
 
@@ -54,18 +54,27 @@ package "src/cube" {
                 component [PygletWindow] as pyg_window
                 component [PygletEventLoop] as pyg_loop
                 component [PygletAnimation] as pyg_anim
+                component [PygletAppWindow\n(own handle_key -\nmetaclass conflict)] as pyg_app_window
             }
 
             package "headless ✅" as headless_pkg #90EE90 {
                 component [HeadlessRenderer\n(no-op)] as hl_renderer
                 component [HeadlessWindow\n(event queue)] as hl_window
                 component [HeadlessEventLoop] as hl_loop
+                component [HeadlessAppWindow\n(inherits AppWindowBase)] as hl_app_window
             }
 
-            package "tkinter ⏳" as tk_pkg #Wheat {
+            package "tkinter ✅" as tk_pkg #90EE90 {
                 component [TkinterRenderer\n(Canvas 2D)] as tk_renderer
                 component [TkinterWindow] as tk_window
                 component [TkinterEventLoop] as tk_loop
+                component [TkinterAppWindow\n(inherits AppWindowBase)] as tk_app_window
+            }
+
+            package "console ✅" as console_pkg #90EE90 {
+                component [ConsoleRenderer\n(text output)] as con_renderer
+                component [ConsoleEventLoop] as con_loop
+                component [ConsoleAppWindow\n(inherits AppWindowBase)] as con_app_window
             }
         }
     }
@@ -105,9 +114,16 @@ package "src/cube" {
     package "main_window ✅" as mainwin_pkg #90EE90 {
         component [Window\n(pyglet-specific)] as win_comp
         component [AbstractWindow\n(Protocol) ✅] as abstract_win_comp
+        component [AppWindowBase ✅\n(handle_key,\ninject_key,\ninject_key_sequence)] as app_window_base
         component [KeyboardInput ✅\nuses Keys protocol] as key_comp
         component [MouseInput ✅\nuses MouseButton protocol] as mouse_comp
     }
+
+    note right of app_window_base
+        ✅ Base class for AppWindows
+        Tkinter, Console, Headless inherit
+        Pyglet cannot (metaclass conflict)
+    end note
 
     ' ============================================
     ' ENTRY POINTS
@@ -146,7 +162,8 @@ tk_loop ..|> loop_proto
 ' Factory creates backends
 factory_comp --> pyglet_pkg : creates
 factory_comp --> headless_pkg : creates
-factory_comp --> tk_pkg : creates (future)
+factory_comp --> tk_pkg : creates
+factory_comp --> console_pkg : creates
 
 ' Viewer uses protocols (goal - partial)
 gviewer_comp --> renderer_proto : uses (partial)

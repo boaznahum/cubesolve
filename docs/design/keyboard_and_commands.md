@@ -6,11 +6,18 @@
 
 ### 1.1 Overview
 
-All backends now use a **single entry point** for keyboard handling:
+All backends now use a **unified flow** for keyboard handling:
 
 ```
-User Input → Backend Native Event → Abstract Keys → handle_key_with_error_handling() → Action
+User Input → Backend Native Event → Native Handler (converts) → handle_key(symbol, modifiers) → Action
 ```
+
+**Key principle:** All backends have the same **protocol method** `handle_key(symbol, modifiers)` that:
+1. Takes abstract `Keys` values (not native keys)
+2. Calls `handle_key_with_error_handling()` for unified error handling
+3. Which calls `main_g_keyboard_input.handle_keyboard_input()` for command execution
+
+Each backend has its own native handler that receives native events, converts to abstract keys, and calls `handle_key()`.
 
 ### 1.2 Why All Backends Use the Same Abstract Keys
 
@@ -36,7 +43,29 @@ This makes key mapping intuitive:
 All backends convert their native key representation to the same abstract `Keys` values,
 which are then passed to `handle_key_with_error_handling()`.
 
-### 1.3 Detailed Flow by Backend
+### 1.3 Flow Table: Native Event → handle_key (Protocol Method)
+
+| Backend | Native Event Source | Native Handler | Calls Protocol Method |
+|---------|---------------------|----------------|----------------------|
+| **Pyglet** | `pyglet.window.Window` → `on_key_press()` | `on_key_press()` converts via `_PYGLET_TO_KEYS` | `handle_key()` |
+| **Tkinter** | `TkinterWindow` → `key_press_handler()` | `_on_tk_key_event()` (already converted) | `handle_key()` |
+| **Console** | `ConsoleEventLoop` → `key_handler()` | `_on_console_key_event()` converts via `_CONSOLE_TO_KEYS` | `handle_key()` |
+| **Headless** | Test calls `inject_key()` | `inject_key()` (already abstract) | `handle_key()` |
+
+**All backends call `handle_key(symbol, modifiers)` → `handle_key_with_error_handling()`**
+
+**File locations:**
+- `pyglet/app_window.py:144` - `on_key_press()` native handler
+- `pyglet/app_window.py:154` - `handle_key()` protocol method
+- `tkinter/app_window.py:163` - `_on_tk_key_event()` native handler
+- `tkinter/app_window.py:171` - `handle_key()` protocol method
+- `console/app_window.py:153` - `_on_console_key_event()` native handler
+- `console/app_window.py:193` - `handle_key()` protocol method
+- `headless/app_window.py:145` - `inject_key()` native handler
+- `headless/app_window.py:156` - `handle_key()` protocol method
+- `app_window_base.py:214` - `handle_key()` base implementation
+
+### 1.4 Detailed Flow by Backend (with line numbers)
 
 #### Pyglet Backend Flow
 ```
@@ -46,21 +75,19 @@ User presses 'R' key
 pyglet.window.Window.on_key_press(symbol=114, modifiers=0)     [pyglet internal]
     │
     ▼
-PygletAppWindow.on_key_press(symbol=114, modifiers=0)          [pyglet/app_window.py:146]
+PygletAppWindow.on_key_press(symbol=114, modifiers=0)          [pyglet/app_window.py:144]
     │
     ├── abstract_symbol = _PYGLET_TO_KEYS.get(114) → Keys.R (82)
     ├── abstract_mods = _convert_modifiers(0) → 0
+    │
+    ▼
+PygletAppWindow.handle_key(82, 0)                              [pyglet/app_window.py:154]
     │
     ▼
 handle_key_with_error_handling(self, 82, 0)                    [app_window_base.py:41]
     │
     ▼
 main_g_keyboard_input.handle_keyboard_input(window, 82, 0)     [main_g_keyboard_input.py:19]
-    │
-    ▼
-match value:
-    case Keys.R:  # 82
-        op.play(Algs.R, inverse=False)
 ```
 
 #### Tkinter Backend Flow
@@ -75,10 +102,10 @@ TkinterWindow._on_key_press(tk_event)                          [tkinter/window.p
     ├── event = KeyEvent(symbol=82, modifiers=0)
     │
     ▼
-key_press_handler(event)  →  TkinterAppWindow._on_key_press(event)  [tkinter/app_window.py:163]
+key_press_handler(event) → TkinterAppWindow._on_tk_key_event(event)  [tkinter/app_window.py:163]
     │
     ▼
-self._on_native_key_press(82, 0)                               [inherited from AppWindowBase]
+TkinterAppWindow.handle_key(82, 0)                             [tkinter/app_window.py:171]
     │
     ▼
 handle_key_with_error_handling(self, 82, 0)                    [app_window_base.py:41]
@@ -95,10 +122,13 @@ User types 'R' character
 ConsoleEventLoop reads stdin → calls key_handler('R')          [console/event_loop.py]
     │
     ▼
-ConsoleAppWindow._handle_key('R')                              [console/app_window.py:153]
+ConsoleAppWindow._on_console_key_event('R')                    [console/app_window.py:153]
     │
     ├── abstract_key = _CONSOLE_TO_KEYS.get('R') → Keys.R (82)
     ├── modifiers = Modifiers.SHIFT if self._inv_mode else 0
+    │
+    ▼
+ConsoleAppWindow.handle_key(82, 0)                             [console/app_window.py:193]
     │
     ▼
 handle_key_with_error_handling(self, 82, 0)                    [app_window_base.py:41]
@@ -115,32 +145,35 @@ Test calls window.inject_key(Keys.R, 0)
 HeadlessAppWindow.inject_key(82, 0)                            [headless/app_window.py:145]
     │
     ▼
+HeadlessAppWindow.handle_key(82, 0)                            [headless/app_window.py:156]
+    │
+    ▼
 handle_key_with_error_handling(self, 82, 0)                    [app_window_base.py:41]
     │
     ▼
 main_g_keyboard_input.handle_keyboard_input(window, 82, 0)     [main_g_keyboard_input.py:19]
 ```
 
-### 1.4 Summary Diagram
+### 1.5 Summary Diagram
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                           NATIVE KEY EVENT                                  │
 ├────────────────────────────────────────────────────────────────────────────┤
-│ Pyglet:   pyglet.window.Window.on_key_press(symbol: int)                   │
-│ Tkinter:  TkinterWindow._on_key_press(tk_event) → KeyEvent                 │
-│ Console:  ConsoleEventLoop → key_handler(char: str)                        │
-│ Headless: test calls inject_key(key: int)                                  │
+│ Pyglet:   pyglet.window.Window dispatches to on_key_press(symbol, mods)    │
+│ Tkinter:  TkinterWindow dispatches to key_press_handler(KeyEvent)          │
+│ Console:  ConsoleEventLoop dispatches to key_handler(char: str)            │
+│ Headless: test calls inject_key(key, modifiers)                            │
 └────────────────────────────────┬───────────────────────────────────────────┘
                                  │
                                  ▼
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                        BACKEND APP WINDOW METHOD                            │
+│     NATIVE HANDLER (converts) ──────────────────────► PROTOCOL METHOD      │
 ├────────────────────────────────────────────────────────────────────────────┤
-│ PygletAppWindow.on_key_press()        → converts via _PYGLET_TO_KEYS       │
-│ TkinterAppWindow._on_key_press()      → already converted by TkinterWindow │
-│ ConsoleAppWindow._handle_key()        → converts via _CONSOLE_TO_KEYS      │
-│ HeadlessAppWindow.inject_key()        → already abstract Keys              │
+│ Pyglet:   on_key_press()           ─────────────────► handle_key()         │
+│ Tkinter:  _on_tk_key_event()       ─────────────────► handle_key()         │
+│ Console:  _on_console_key_event()  ─────────────────► handle_key()         │
+│ Headless: inject_key()             ─────────────────► handle_key()         │
 └────────────────────────────────┬───────────────────────────────────────────┘
                                  │
                                  ▼
@@ -148,7 +181,7 @@ main_g_keyboard_input.handle_keyboard_input(window, 82, 0)     [main_g_keyboard_
 │  handle_key_with_error_handling(window, symbol: int, modifiers: int)       │
 │  Location: src/cube/main_window/app_window_base.py:41                      │
 │                                                                             │
-│  - SINGLE ENTRY POINT for all backends                                     │
+│  - Unified error handling for all backends                                 │
 │  - Wraps call with try/except for AppExit, RunStop, OpAborted              │
 │  - Handles GUI_TEST_MODE vs normal mode error display                      │
 └────────────────────────────────┬───────────────────────────────────────────┘
@@ -164,54 +197,95 @@ main_g_keyboard_input.handle_keyboard_input(window, 82, 0)     [main_g_keyboard_
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.4 Backend Implementation Details
+### 1.6 Backend Inheritance Structure
 
-#### Pyglet Backend
-```python
-# src/cube/gui/backends/pyglet/app_window.py
-def on_key_press(self, symbol, modifiers):
-    abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
-    abstract_mods = _convert_modifiers(modifiers)
-    handle_key_with_error_handling(self, abstract_symbol, abstract_mods)
+```
+AppWindowBase (ABC)                          [app_window_base.py]
+    │
+    ├── handle_key()          ← Protocol method (calls handle_key_with_error_handling)
+    ├── inject_key()          ← Delegates to handle_key()
+    ├── inject_key_sequence() ← Parses string and calls inject_key()
+    └── [shared: app, viewer, animation_running, status_labels, etc.]
+
+    ▼ Inheritance
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow)             │
+│   - Inherits handle_key(), overrides to add _draw()                     │
+│   - Native handler: _on_tk_key_event() → handle_key()                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│ ConsoleAppWindow(AppWindowBase, AppWindow)                              │
+│   - Inherits handle_key(), inject_key() from base                       │
+│   - Native handler: _on_console_key_event() → handle_key()              │
+├─────────────────────────────────────────────────────────────────────────┤
+│ HeadlessAppWindow(AppWindowBase, AppWindow)                             │
+│   - Inherits handle_key(), inject_key(), inject_key_sequence() from base│
+│   - Native handler: (tests call inject_key() directly)                  │
+├─────────────────────────────────────────────────────────────────────────┤
+│ PygletAppWindow(pyglet.window.Window, AnimationWindow)  ← NO AppWindowBase│
+│   - Cannot inherit from AppWindowBase (metaclass conflict with pyglet)  │
+│   - Has its own handle_key() implementation                             │
+│   - Native handler: on_key_press() → handle_key()                       │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Tkinter Backend
+**Note:** PygletAppWindow cannot inherit from AppWindowBase because `pyglet.window.Window` has a metaclass (`WindowMeta`) that conflicts with `ABCMeta`. The solution is to duplicate the `handle_key()` method in PygletAppWindow.
+
+### 1.7 Backend Implementation Details
+
+All backends implement `handle_key(symbol, modifiers)` - the protocol method.
+
+#### Pyglet Backend (duplicates handle_key - metaclass conflict)
 ```python
-# src/cube/gui/backends/tkinter/app_window.py
-def _on_key_press(self, event):
-    self._on_native_key_press(event.symbol, event.modifiers)  # Inherited from AppWindowBase
+# src/cube/gui/backends/pyglet/app_window.py:144
+def on_key_press(self, symbol, modifiers):
+    """NATIVE handler - called by pyglet, converts and calls handle_key."""
+    abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
+    abstract_mods = _convert_modifiers(modifiers)
+    self.handle_key(abstract_symbol, abstract_mods)
+
+# src/cube/gui/backends/pyglet/app_window.py:154
+def handle_key(self, symbol: int, modifiers: int) -> None:
+    """PROTOCOL METHOD - receives abstract Keys."""
+    handle_key_with_error_handling(self, symbol, modifiers)
+```
+
+#### Tkinter Backend (inherits from AppWindowBase)
+```python
+# src/cube/gui/backends/tkinter/app_window.py:163
+def _on_tk_key_event(self, event) -> None:
+    """NATIVE handler - called by TkinterWindow, calls handle_key."""
+    self.handle_key(event.symbol, event.modifiers)
+
+# src/cube/gui/backends/tkinter/app_window.py:171
+def handle_key(self, symbol: int, modifiers: int) -> None:
+    """PROTOCOL METHOD - overrides to add redraw after key press."""
+    super().handle_key(symbol, modifiers)  # ← calls AppWindowBase.handle_key()
     self._draw()
 ```
 
-#### Headless Backend
+#### Console Backend (inherits from AppWindowBase)
 ```python
-# src/cube/gui/backends/headless/app_window.py
-def inject_key(self, key, modifiers=0):
-    handle_key_with_error_handling(self, key, modifiers)
-```
-
-#### Console Backend
-```python
-# src/cube/gui/backends/console/app_window.py
-
-# Mapping from console characters to abstract Keys
-_CONSOLE_TO_KEYS = {
-    'R': Keys.R, 'L': Keys.L, 'U': Keys.U, ...
-    '0': Keys._0, '1': Keys._1, ...
-    '?': Keys.SLASH, '<': Keys.COMMA, 'Q': Keys.Q,
-}
-
-def _handle_key(self, key: str):
-    if key == ConsoleKeys.INV:  # Handle console-specific inverse mode
-        self._inv_mode = not self._inv_mode
-        return False
-
+# src/cube/gui/backends/console/app_window.py:146
+def _on_console_key_event(self, key: str) -> bool:
+    """NATIVE handler - called by ConsoleEventLoop, converts and calls handle_key."""
     abstract_key = _CONSOLE_TO_KEYS.get(key)
     modifiers = Modifiers.SHIFT if self._inv_mode else 0
-    handle_key_with_error_handling(self, abstract_key, modifiers)
+    self.handle_key(abstract_key, modifiers)  # ← inherited from AppWindowBase
+
+# handle_key() inherited from AppWindowBase
 ```
 
-### 1.5 Key Files
+#### Headless Backend (inherits from AppWindowBase)
+```python
+# Tests call inject_key() directly - inherited from AppWindowBase
+
+# inject_key() inherited from AppWindowBase
+# handle_key() inherited from AppWindowBase
+# inject_key_sequence() inherited from AppWindowBase
+```
+
+### 1.8 Key Files
 
 | File | Purpose |
 |------|---------|
@@ -295,9 +369,20 @@ class Command(Enum):
 
 1. ✅ Created `handle_key_with_error_handling()` in `app_window_base.py`
 2. ✅ Simplified `PygletAppWindow.on_key_press()` - removed duplicate error handling
-3. ✅ Updated `TkinterAppWindow` to use `_on_native_key_press()`
-4. ✅ Simplified `HeadlessAppWindow` - now calls `handle_key_with_error_handling()`
-5. ✅ **Fixed ConsoleAppWindow** - removed 60+ lines of duplicated command logic
+3. ✅ Updated `TkinterAppWindow` to use `_on_tk_key_event()` native handler
+4. ✅ Simplified `HeadlessAppWindow` - now inherits from `AppWindowBase`
+5. ✅ **Fixed ConsoleAppWindow** - now inherits from `AppWindowBase`
+6. ✅ **Unified inheritance** - Tkinter, Console, Headless all inherit from `AppWindowBase`
+7. ✅ **Removed duplicate code** - `handle_key()`, `inject_key()`, `inject_key_sequence()` in base class
+
+### Backend Inheritance Summary
+
+| Backend | Inherits from | handle_key() |
+|---------|---------------|--------------|
+| **Tkinter** | `AppWindowBase` | Overrides (adds `_draw()`) |
+| **Console** | `AppWindowBase` | Inherited from base |
+| **Headless** | `AppWindowBase` | Inherited from base |
+| **Pyglet** | `pyglet.window.Window` | Own implementation (metaclass conflict) |
 
 ### Before/After: Console Backend
 
@@ -312,12 +397,16 @@ def _handle_key(self, key):
         # ... 50+ more lines
 ```
 
-**After (clean delegation):**
+**After (clean delegation via inheritance):**
 ```python
-def _handle_key(self, key):
-    abstract_key = _CONSOLE_TO_KEYS.get(key)
-    modifiers = Modifiers.SHIFT if self._inv_mode else 0
-    handle_key_with_error_handling(self, abstract_key, modifiers)
+class ConsoleAppWindow(AppWindowBase, AppWindow):
+    # handle_key() inherited from AppWindowBase
+    # inject_key() inherited from AppWindowBase
+
+    def _on_console_key_event(self, key: str) -> bool:
+        abstract_key = _CONSOLE_TO_KEYS.get(key)
+        modifiers = Modifiers.SHIFT if self._inv_mode else 0
+        self.handle_key(abstract_key, modifiers)  # ← inherited
 ```
 
 ### Pending (A2)

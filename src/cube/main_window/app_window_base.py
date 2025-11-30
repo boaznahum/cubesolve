@@ -211,25 +211,23 @@ class AppWindowBase(ABC):
 
         self._request_redraw()
 
-    def _on_native_key_press(self, symbol: int, modifiers: int) -> None:
-        """Handle a key press from any backend.
+    def handle_key(self, symbol: int, modifiers: int) -> None:
+        """Handle a key press event - PROTOCOL METHOD.
 
-        This is the SINGLE ENTRY POINT for all keyboard input.
-        All backends convert their native events to abstract keys and call this.
+        This is the protocol method that ALL backends call after converting
+        native keys to abstract Keys. Subclasses can override to add
+        backend-specific behavior (e.g., redraw after key press).
+
+        Flow:
+            Native Event → Backend native handler → convert → handle_key(symbol, modifiers)
+                         → handle_key_with_error_handling()
+                         → main_g_keyboard_input.handle_keyboard_input()
 
         Args:
-            symbol: Key code (from Keys enum)
+            symbol: Key code (from Keys enum) - must be abstract, not native
             modifiers: Modifier flags (from Modifiers)
         """
         handle_key_with_error_handling(self, symbol, modifiers)
-
-    def handle_key_press(self, symbol: int, modifiers: int) -> None:
-        """Handle a key press event.
-
-        DEPRECATED: Use _on_native_key_press() instead.
-        This method exists for backward compatibility.
-        """
-        self._on_native_key_press(symbol, modifiers)
 
     def handle_mouse_drag(self, x: int, y: int, dx: int, dy: int,
                           buttons: int, modifiers: int) -> None:
@@ -271,7 +269,7 @@ class AppWindowBase(ABC):
             key: Key code (from Keys enum)
             modifiers: Modifier flags
         """
-        self._on_native_key_press(key, modifiers)
+        self.handle_key(key, modifiers)
 
     def inject_key_sequence(self, sequence: str) -> None:
         """Inject a sequence of key presses.

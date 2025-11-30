@@ -1,7 +1,7 @@
 @startuml GUI Abstraction Architecture
 
 title GUI Abstraction Layer - Architecture Diagram
-footer Last Updated: 2025-11-28 | Migration Complete ✅
+footer Last Updated: 2025-11-30 | AppWindow Inheritance Added
 
 skinparam packageStyle rectangle
 skinparam linetype ortho
@@ -277,6 +277,63 @@ package "cube.gui.backends.headless" as headless_backend #90EE90 {
         ✅ Fully implemented
     end note
 }
+
+' ============================================
+' APP WINDOW INHERITANCE (✅ 2025-11-30)
+' ============================================
+package "cube.main_window" as main_window_pkg #90EE90 {
+    abstract class AppWindowBase {
+        #_app: AbstractApp
+        #_backend: GUIBackend
+        #_animation_manager
+        +app: AbstractApp
+        +animation_running: bool
+        ..
+        +handle_key(symbol, modifiers) ← protocol method
+        +inject_key(key, modifiers)
+        +inject_key_sequence(sequence)
+        ..
+        {abstract} +run()
+        {abstract} +close()
+        {abstract} #_request_redraw()
+        {abstract} +set_mouse_visible()
+    }
+
+    note bottom of AppWindowBase
+        Base class for AppWindows.
+        Provides unified keyboard handling.
+        All backends call handle_key().
+    end note
+}
+
+package "cube.gui.backends" as app_windows_pkg {
+    class TkinterAppWindow {
+        +handle_key() ← overrides (adds _draw)
+        +_on_tk_key_event() ← native handler
+    }
+
+    class ConsoleAppWindow {
+        ' handle_key() inherited
+        +_on_console_key_event() ← native handler
+    }
+
+    class HeadlessAppWindow {
+        ' handle_key(), inject_key() inherited
+    }
+
+    class PygletAppWindow {
+        +handle_key() ← own implementation
+        +on_key_press() ← native handler (pyglet)
+        -- metaclass conflict --
+        Cannot inherit AppWindowBase
+        (pyglet.window.WindowMeta)
+    }
+}
+
+AppWindowBase <|-- TkinterAppWindow
+AppWindowBase <|-- ConsoleAppWindow
+AppWindowBase <|-- HeadlessAppWindow
+' PygletAppWindow cannot inherit - metaclass conflict
 
 ' ============================================
 ' TKINTER BACKEND (future)

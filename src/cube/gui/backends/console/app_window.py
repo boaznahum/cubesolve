@@ -16,7 +16,7 @@ from cube.gui.protocols.app_window import AppWindow
 from cube.gui.types import Keys, Modifiers
 from cube.main_console import viewer as console_viewer
 from cube.main_console.keys import Keys as ConsoleKeys
-from cube.main_window.app_window_base import handle_key_with_error_handling
+from cube.main_window.app_window_base import AppWindowBase, handle_key_with_error_handling
 
 from cube.gui.backends.console.renderer import ConsoleRenderer
 from cube.gui.backends.console.event_loop import ConsoleEventLoop
@@ -47,9 +47,10 @@ _CONSOLE_TO_KEYS: dict[str, int] = {
 }
 
 
-class ConsoleAppWindow(AppWindow):
+class ConsoleAppWindow(AppWindowBase, AppWindow):
     """Console-based AppWindow implementation.
 
+    Inherits from AppWindowBase for shared logic and handle_key().
     Inherits from AppWindow protocol for PyCharm visibility.
     Uses console_viewer.plot() for text-based cube display.
     """
@@ -71,8 +72,10 @@ class ConsoleAppWindow(AppWindow):
             title: Window title (printed to console)
             backend: GUI backend for rendering
         """
-        self._app = app
-        self._backend = backend
+        # Initialize base class (sets _app, _backend, _animation_manager, etc.)
+        super().__init__(app, backend)
+
+        # Console-specific attributes
         self._renderer: ConsoleRenderer = backend.renderer  # type: ignore
         self._event_loop: ConsoleEventLoop = backend.event_loop  # type: ignore
         self._title = title
@@ -80,25 +83,15 @@ class ConsoleAppWindow(AppWindow):
         self._inv_mode = False  # Inverse mode toggle
         self._debug = False
 
-        # Set up event loop
-        self._event_loop.set_key_handler(self._handle_key)
+        # Set up event loop - pass our on_key_press as the handler
+        self._event_loop.set_key_handler(self._on_console_key_event)
 
         # Print title
         print(f"\n=== {title} ===\n")
 
     @property
-    def app(self) -> AbstractApp:
-        """Access the application instance."""
-        return self._app
-
-    @property
-    def viewer(self):
-        """Access the cube viewer - returns None for console mode."""
-        return None
-
-    @property
     def renderer(self) -> ConsoleRenderer:
-        """Access the renderer."""
+        """Access the renderer (console-specific type)."""
         return self._renderer
 
     @property
@@ -150,11 +143,10 @@ class ConsoleAppWindow(AppWindow):
         print("\nCommands: R L U F B D (faces), X Y M (rotations)")
         print("          ' (inv toggle), 0-6 (scramble), ? (solve), < (undo), C (clear), Q (quit)")
 
-    def _handle_key(self, key: str) -> bool:
-        """Handle a key press.
+    def _on_console_key_event(self, key: str) -> bool:
+        """Native key event handler from ConsoleEventLoop.
 
-        Translates console keys to abstract Keys and delegates to
-        handle_key_with_error_handling() - the single source of truth.
+        Converts console key to abstract Keys and calls handle_key().
 
         Args:
             key: The key that was pressed (uppercase).
@@ -179,8 +171,8 @@ class ConsoleAppWindow(AppWindow):
         # Apply modifiers (inverse mode → SHIFT)
         modifiers = Modifiers.SHIFT if self._inv_mode else 0
 
-        # Call unified handler
-        handle_key_with_error_handling(self, abstract_key, modifiers)
+        # Call protocol method
+        self.handle_key(abstract_key, modifiers)
 
         # Reset inverse mode after operation
         self._inv_mode = False
@@ -191,17 +183,8 @@ class ConsoleAppWindow(AppWindow):
         # Check for quit
         return abstract_key == Keys.Q
 
-    def inject_key(self, key: int, modifiers: int = 0) -> None:
-        """Inject a single key press.
-
-        Args:
-            key: Key code (for console, this is the ASCII value).
-            modifiers: Ignored in console mode.
-        """
-        # Convert key code to character
-        if key < 256:
-            char = chr(key).upper()
-            self._handle_key(char)
+    # handle_key() inherited from AppWindowBase
+    # inject_key() inherited from AppWindowBase
 
     def inject_key_sequence(self, sequence: str) -> None:
         """Inject a sequence of key presses.
@@ -215,4 +198,8 @@ class ConsoleAppWindow(AppWindow):
 
     def set_mouse_visible(self, visible: bool) -> None:
         """No-op for console mode."""
+        pass
+
+    def _request_redraw(self) -> None:
+        """Request redraw (no-op for console mode - draws immediately)."""
         pass

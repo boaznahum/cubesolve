@@ -142,14 +142,25 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self._app.vs.set_projection(width, height, self._renderer)
 
     def on_key_press(self, symbol, modifiers):
-        """Pyglet key press event.
+        """Pyglet native key press event.
 
-        Converts pyglet key codes to abstract Keys and delegates to
-        handle_key_with_error_handling() - the single entry point for all backends.
+        Called by pyglet framework. Converts native keys to abstract Keys
+        and calls handle_key() - the protocol method.
         """
         abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
         abstract_mods = _convert_modifiers(modifiers)
-        handle_key_with_error_handling(self, abstract_symbol, abstract_mods)
+        self.handle_key(abstract_symbol, abstract_mods)
+
+    def handle_key(self, symbol: int, modifiers: int) -> None:
+        """Protocol method - handle abstract key press.
+
+        Implements: `AppWindowBase.handle_key`
+
+        Args:
+            symbol: Key code (from Keys enum) - already converted to abstract
+            modifiers: Modifier flags (from Modifiers)
+        """
+        handle_key_with_error_handling(self, symbol, modifiers)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         """Pyglet mouse drag event."""
