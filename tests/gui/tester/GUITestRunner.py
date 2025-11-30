@@ -150,7 +150,11 @@ class GUITestRunner:
                 print(f"  Cube size: {cube_size}, Animation: {enable_animation}, Timeout: {timeout_sec}s")
 
             # Create app, backend, and window
-            app = AbstractApp.create()
+            app = AbstractApp.create_non_default(
+                cube_size=cube_size,
+                animation=enable_animation,
+                debug_all=debug
+            )
             backend = BackendRegistry.get_backend("pyglet")
 
             # Set the event loop on the animation manager if it exists
@@ -175,11 +179,17 @@ class GUITestRunner:
 
             pyglet.clock.schedule_once(inject_keys, 0.1)  # Small delay to let window initialize
 
+            # Debug: dump cube state before main loop
+            app.vs.debug_dump_cube_state(app.cube, "Before Main Loop (Test)")
+
             # Run the event loop
             if debug:
                 print("Starting pyglet event loop...")
 
             pyglet.app.run()
+
+            # Debug: dump cube state after main loop
+            app.vs.debug_dump_cube_state(app.cube, "After Main Loop (Test)")
 
             # If we get here, the test completed (likely quit via 'q' key)
             if timeout_occurred:

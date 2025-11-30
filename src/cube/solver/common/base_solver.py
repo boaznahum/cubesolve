@@ -30,6 +30,9 @@ class BaseSolver(Solver, ABC):
 
     @property
     def is_debug_config_mode(self) -> bool:
+        # Check both config flag and is_debug_all from app_state
+        if self._op.app_state.is_debug_all:
+            return True
         return config.SOLVER_DEBUG
 
     @property

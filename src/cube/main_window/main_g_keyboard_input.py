@@ -21,8 +21,10 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     done = False
     app: AbstractApp = window.app
     op: Operator = app.op
+    vs: ApplicationAndViewState = app.vs
 
-    if config.KEYBOAD_INPUT_DEBUG:
+    # Check both config flag and is_debug_all
+    if config.KEYBOAD_INPUT_DEBUG or vs.is_debug_all:
         def debug(*_s):
             print("key board handler:", *_s)
     else:
@@ -36,8 +38,6 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     if Keys.LSHIFT <= value <= Keys.RMETA:
         debug(f"In _handle_input , Only modifiers, decided to quit")
         return
-
-    vs: ApplicationAndViewState = app.vs
 
     cube = app.cube
 

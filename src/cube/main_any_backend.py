@@ -99,6 +99,7 @@ def run_with_backend(
     cube_size: int | None = None,
     animation: bool = True,
     key_sequence: str | None = None,
+    debug_all: bool = False,
 ) -> int:
     """Run the application with the specified backend.
 
@@ -113,6 +114,7 @@ def run_with_backend(
         cube_size: Cube size (default: 3).
         animation: Enable animation (default: True).
         key_sequence: Key sequence to inject (for testing).
+        debug_all: Enable debug_all mode for verbose logging (default: False).
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -125,7 +127,8 @@ def run_with_backend(
     # Create application
     app = AbstractApp.create_non_default(
         cube_size=cube_size,
-        animation=animation
+        animation=animation,
+        debug_all=debug_all
     )
 
     window = None
@@ -145,8 +148,14 @@ def run_with_backend(
         if key_sequence:
             window.inject_key_sequence(key_sequence)
 
+        # Debug: dump cube state before main loop
+        app.vs.debug_dump_cube_state(app.cube, "Before Main Loop")
+
         # Run the event loop
         window.run()
+
+        # Debug: dump cube state after main loop
+        app.vs.debug_dump_cube_state(app.cube, "After Main Loop")
 
     except ImportError as e:
         print(f"Error: Backend '{backend_name}' is not available: {e}", file=sys.stderr)
@@ -219,6 +228,11 @@ def main(args: list[str] | None = None) -> int:
         default=None,
         help="Key sequence to inject (for testing). Example: '1?Q' = scramble, solve, quit"
     )
+    parser.add_argument(
+        "--debug-all",
+        action="store_true",
+        help="Enable debug_all mode for verbose logging"
+    )
 
     parsed = parser.parse_args(args)
 
@@ -230,6 +244,7 @@ def main(args: list[str] | None = None) -> int:
         cube_size=parsed.cube_size,
         animation=not parsed.no_animation,
         key_sequence=parsed.key_sequence,
+        debug_all=parsed.debug_all,
     )
 
 

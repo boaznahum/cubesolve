@@ -76,11 +76,12 @@ class ApplicationAndViewState:
     #     "_alpha_delta",
     # ]
 
-    def __init__(self) -> None:
+    def __init__(self, debug_all: bool = False) -> None:
         super().__init__()
         # self._animation_speed_delay_between_steps: float = 1/40
         # self._animation_speed_number_of_steps = 30
 
+        self._debug_all = debug_all
         self._speed = 3
 
         # self._alpha_x_0: float = 0.3
@@ -365,4 +366,74 @@ class ApplicationAndViewState:
 
         return self._last_scramble_key_size
 
+    @property
+    def is_debug_all(self) -> bool:
+        """Return True if debug_all mode is enabled."""
+        return self._debug_all
+
+    def debug(self, *args) -> None:
+        """Print debug information if debug_all mode is enabled.
+
+        Args:
+            *args: Arguments to print, same as print() function.
+        """
+        if self._debug_all:
+            print("DEBUG:", *args)
+
+    def debug_dump_cube_state(self, cube: Cube, label: str = "Cube State") -> None:
+        """Dump detailed cube state using the debug infrastructure.
+
+        Includes: size, solved status, modify counter, all slices with their
+        colors, colors_id, cache state, match status.
+
+        Args:
+            cube: The cube to dump state for.
+            label: A label to identify this dump in the output.
+        """
+        if not self._debug_all:
+            return
+
+        self.debug("=" * 70)
+        self.debug(f"DUMP: {label}")
+        self.debug("=" * 70)
+        self.debug(f"Size: {cube.size}, Solved: {cube.solved}, ModCounter: {cube._modify_counter}")
+
+        # Get full state
+        state = cube.cqr.get_sate()
+        self.debug(f"State entries: {len(state)}")
+
+        # Dump all slices with detailed state
+        # Note: get_all_parts() returns PartSlice objects (slices), not Part objects
+        self.debug("-" * 70)
+        self.debug("SLICES:")
+        self.debug("-" * 70)
+
+        all_slices = cube.get_all_parts()
+        for s in sorted(all_slices, key=lambda p: str(p.fixed_id)):
+            # Check cache state BEFORE accessing (to see if it was initialized)
+            colors_cache = getattr(s, '_colors_id_by_colors', None)
+
+            # Get match status
+            match_faces = s.match_faces
+
+            # Build edges string
+            edges_str = ", ".join(f"{e.face.name.value}:{e.color.name}" for e in s.edges)
+
+            self.debug(f"  Slice: {s.fixed_id}")
+            self.debug(f"    index: {s._index}")
+            self.debug(f"    edges: [{edges_str}]")
+            self.debug(f"    colors: {s.colors}")
+            self.debug(f"    colors_id: {s.colors_id} (cache_was={colors_cache})")
+            self.debug(f"    match_faces: {match_faces}")
+
+        # Dump full state dictionary
+        self.debug("-" * 70)
+        self.debug("FULL STATE DICT:")
+        self.debug("-" * 70)
+        for fixed_id, colors in sorted(state.items(), key=lambda x: str(x[0])):
+            self.debug(f"  {fixed_id} -> {colors}")
+
+        self.debug("=" * 70)
+        self.debug(f"END DUMP: {label}")
+        self.debug("=" * 70)
 

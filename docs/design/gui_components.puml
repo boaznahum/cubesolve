@@ -1,7 +1,7 @@
 @startuml GUI Package Structure
 
 title GUI Abstraction - Package & Component Diagram
-footer Last Updated: 2025-11-30 | AppWindow Inheritance Added
+footer Last Updated: 2025-11-30 | Added Module Composition
 
 skinparam componentStyle rectangle
 
@@ -231,6 +231,236 @@ note right of viewer_pkg
     Uses renderer.shapes.*
     Uses renderer.display_lists.*
     **No fallback** - renderer required
+end note
+
+@enduml
+
+' ============================================
+' SEPARATE DIAGRAM: Module Composition
+' ============================================
+@startuml Module Composition
+
+title Module Composition - Who Contains What
+footer Last Updated: 2025-11-30 | debug_all added to ApplicationAndViewState
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ============================================
+' CORE MODEL
+' ============================================
+package "model" #LightGreen {
+    class Cube {
+        +faces: Face[6]
+        +parts: PartSlice[]
+        +cqr: CubeQueries2
+        +solved: bool
+        +_modify_counter: int
+    }
+
+    class CubeQueries2 {
+        +get_sate(): CubeState
+        +compare_state()
+    }
+
+    Cube *-- CubeQueries2 : cqr
+}
+
+' ============================================
+' APPLICATION STATE
+' ============================================
+package "app" #LightYellow {
+    class ApplicationAndViewState {
+        -_debug_all: bool
+        -_speed: int
+        -_alpha_x, _alpha_y, _alpha_z: float
+        -_fov_y: float
+        -_offset: list
+        +cube_size: int
+        ..
+        +is_debug_all: bool
+        +debug(*args)
+        +debug_dump_cube_state(cube, label)
+        ..
+        +prepare_objects_view(renderer)
+        +restore_objects_view(renderer)
+        +set_projection(w, h, renderer)
+        +get_speed: AnimationSpeed
+    }
+
+    class "_App (AbstractApp)" as App {
+        -_vs: ApplicationAndViewState
+        -_cube: Cube
+        -_op: Operator
+        -_am: AnimationManager
+        -_slv: Solver
+        ..
+        +vs: ApplicationAndViewState
+        +cube: Cube
+        +op: Operator
+        +am: AnimationManager
+        +slv: Solver
+    }
+
+    App *-- ApplicationAndViewState : _vs
+    App *-- Cube : _cube
+}
+
+' ============================================
+' OPERATOR
+' ============================================
+package "operator" #LightGreen {
+    class Operator {
+        -_cube: Cube
+        -_app_state: ApplicationAndViewState
+        -_animation_manager: AnimationManager
+        -_annotation: OpAnnotation
+        ..
+        +app_state: ApplicationAndViewState
+        +play(alg)
+        +log(*s)
+    }
+
+    Operator o-- ApplicationAndViewState : _app_state
+    Operator o-- Cube : _cube
+}
+
+' ============================================
+' ANIMATION
+' ============================================
+package "animation" #90EE90 {
+    class AnimationManager {
+        -_vs: ApplicationAndViewState
+        -_event_loop: EventLoop
+        ..
+        +set_event_loop(loop)
+        +run_animation(update, on_complete)
+    }
+
+    AnimationManager o-- ApplicationAndViewState : _vs
+}
+
+' ============================================
+' SOLVER
+' ============================================
+package "solver" #LightGreen {
+    class BaseSolver {
+        -_op: Operator
+        -_cube: Cube
+        ..
+        +is_debug_config_mode: bool
+        +debug(*args)
+    }
+
+    BaseSolver o-- Operator : _op
+    BaseSolver o-- Cube : _cube
+
+    note right of BaseSolver
+        is_debug_config_mode checks:
+        1. op.app_state.is_debug_all
+        2. config.SOLVER_DEBUG
+    end note
+}
+
+' ============================================
+' GUI BACKEND
+' ============================================
+package "gui" #LightBlue {
+    class GUIBackend {
+        -_renderer: Renderer
+        -_event_loop: EventLoop
+        ..
+        +renderer: Renderer (lazy)
+        +event_loop: EventLoop
+    }
+
+    interface Renderer {
+        +shapes: ShapeRenderer
+        +display_lists: DisplayListManager
+        +view: ViewStateManager
+    }
+
+    interface EventLoop {
+        +run()
+        +stop()
+        +schedule_once()
+    }
+
+    GUIBackend *-- Renderer : _renderer (lazy)
+    GUIBackend *-- EventLoop : creates
+}
+
+' ============================================
+' MAIN WINDOW
+' ============================================
+package "main_window" #90EE90 {
+    class AppWindowBase {
+        #_app: AbstractApp
+        #_backend: GUIBackend
+        ..
+        +app: AbstractApp
+        +handle_key(symbol, modifiers)
+    }
+
+    class "Window (Pyglet)" as Window {
+        -_viewer: GCubeViewer
+        -_renderer: Renderer
+        ..
+        +renderer: Renderer
+        +viewer: GCubeViewer
+    }
+
+    AppWindowBase o-- App : _app
+    AppWindowBase o-- GUIBackend : _backend
+    Window o-- Renderer : _renderer
+}
+
+' ============================================
+' VIEWER
+' ============================================
+package "viewer" #90EE90 {
+    class GCubeViewer {
+        -_renderer: Renderer
+        -_board: _Board
+        ..
+        +renderer: Renderer
+    }
+
+    GCubeViewer o-- Renderer : _renderer
+}
+
+' ============================================
+' CROSS-PACKAGE RELATIONSHIPS
+' ============================================
+App *-- Operator : _op
+App *-- AnimationManager : _am
+App *-- BaseSolver : _slv
+
+' App is the central coordinator
+note bottom of App
+    **App is the central coordinator**
+    Created by AbstractApp.create_non_default()
+
+    Contains:
+    - ApplicationAndViewState (view config + debug)
+    - Cube (model)
+    - Operator (mutations)
+    - AnimationManager (animation)
+    - Solver (AI)
+end note
+
+' ApplicationAndViewState is shared
+note right of ApplicationAndViewState
+    **Shared state object**
+    Created first, passed to:
+    - _App (owns it)
+    - Operator (reference)
+    - AnimationManager (reference)
+
+    **New debug_all support:**
+    - is_debug_all property
+    - debug() method
+    - debug_dump_cube_state()
 end note
 
 @enduml
