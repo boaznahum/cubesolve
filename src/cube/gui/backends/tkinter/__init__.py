@@ -24,11 +24,11 @@ Usage:
     register()
 """
 
-from cube.gui.backends.tkinter.renderer import TkinterRenderer
-from cube.gui.backends.tkinter.window import TkinterWindow
-from cube.gui.backends.tkinter.event_loop import TkinterEventLoop
-from cube.gui.backends.tkinter.animation import TkinterAnimation
-from cube.gui.backends.tkinter.app_window import TkinterAppWindow
+from cube.gui.backends.tkinter.TkinterRenderer import TkinterRenderer
+from cube.gui.backends.tkinter.TkinterWindow import TkinterWindow
+from cube.gui.backends.tkinter.TkinterEventLoop import TkinterEventLoop
+from cube.gui.backends.tkinter.TkinterAnimation import TkinterAnimation
+from cube.gui.backends.tkinter.TkinterAppWindow import TkinterAppWindow
 
 __all__ = [
     "TkinterRenderer",

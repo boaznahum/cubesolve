@@ -16,11 +16,11 @@ Usage:
     register()
 """
 
-from cube.gui.backends.pyglet.renderer import PygletRenderer
-from cube.gui.backends.pyglet.window import PygletWindow
-from cube.gui.backends.pyglet.event_loop import PygletEventLoop
-from cube.gui.backends.pyglet.animation import PygletAnimation
-from cube.gui.backends.pyglet.app_window import PygletAppWindow
+from cube.gui.backends.pyglet.PygletRenderer import PygletRenderer
+from cube.gui.backends.pyglet.PygletWindow import PygletWindow
+from cube.gui.backends.pyglet.PygletEventLoop import PygletEventLoop
+from cube.gui.backends.pyglet.PygletAnimation import PygletAnimation
+from cube.gui.backends.pyglet.PygletAppWindow import PygletAppWindow
 
 __all__ = [
     "PygletRenderer",

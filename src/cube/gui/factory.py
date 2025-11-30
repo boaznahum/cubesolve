@@ -159,6 +159,31 @@ class BackendRegistry:
     _default: str | None = None
 
     @classmethod
+    def ensure_registered(cls, name: str) -> None:
+        """Ensure a backend is registered by importing it.
+
+        Args:
+            name: Backend name ('pyglet', 'headless', 'console', 'tkinter')
+
+        Raises:
+            ValueError: If backend name is unknown
+        """
+        if cls.is_registered(name):
+            return
+
+        # Import backend module to trigger auto-registration
+        if name == "pyglet":
+            import cube.gui.backends.pyglet  # noqa: F401
+        elif name == "headless":
+            import cube.gui.backends.headless  # noqa: F401
+        elif name == "console":
+            import cube.gui.backends.console  # noqa: F401
+        elif name == "tkinter":
+            import cube.gui.backends.tkinter  # noqa: F401
+        else:
+            raise ValueError(f"Unknown backend: {name}. Available: pyglet, headless, console, tkinter")
+
+    @classmethod
     def register(
         cls,
         name: str,

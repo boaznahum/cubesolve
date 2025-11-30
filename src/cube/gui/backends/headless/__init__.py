@@ -18,10 +18,10 @@ Usage:
     register()
 """
 
-from cube.gui.backends.headless.renderer import HeadlessRenderer
-from cube.gui.backends.headless.window import HeadlessWindow
-from cube.gui.backends.headless.event_loop import HeadlessEventLoop
-from cube.gui.backends.headless.app_window import HeadlessAppWindow
+from cube.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
+from cube.gui.backends.headless.HeadlessWindow import HeadlessWindow
+from cube.gui.backends.headless.HeadlessEventLoop import HeadlessEventLoop
+from cube.gui.backends.headless.HeadlessAppWindow import HeadlessAppWindow
 
 __all__ = [
     "HeadlessRenderer",

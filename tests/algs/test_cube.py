@@ -45,7 +45,7 @@ def test_scramble_by_seed_and_solve(seed: int):
     This test uses the same scramble seeds as the GUI tests to ensure
     the solver works correctly for these specific scramble patterns.
 
-    Matches GUI test: GUIKeys.SCRAMBLE_1 + GUIKeys.SOLVE + GUIKeys.QUIT
+    Matches GUI test: Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT
     Which calls: app.scramble(seed, None, animation=False) then app.slv.solve()
     """
     app = AbstractApp.create_non_default(cube_size=3, animation=False)

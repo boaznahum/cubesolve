@@ -13,9 +13,9 @@ from cube.gui.types import Keys
 from cube.main_window.app_window_base import AppWindowBase
 from cube.viewer.viewer_g import GCubeViewer
 
-from cube.gui.backends.tkinter.window import TkinterWindow
-from cube.gui.backends.tkinter.renderer import TkinterRenderer
-from cube.gui.backends.tkinter.event_loop import TkinterEventLoop
+from cube.gui.backends.tkinter.TkinterWindow import TkinterWindow
+from cube.gui.backends.tkinter.TkinterRenderer import TkinterRenderer
+from cube.gui.backends.tkinter.TkinterEventLoop import TkinterEventLoop
 
 
 class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):

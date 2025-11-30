@@ -238,10 +238,12 @@ Report any visual glitches, crashes, or unexpected behavior.
 
 **Phase 1:** COMPLETE (Steps 1-12) ✅
 **Phase 2:** COMPLETE (Steps 13-17) ✅
+**Phase 3:** COMPLETE (Abstract Window Layer) ✅
+**Phase 4 (Q3.1):** COMPLETE (File Naming Convention) ✅
+**A2.1:** COMPLETE (Command Pattern) ✅
 
-**Last Completed Step:** Step 17 - Phase 2 Final Verification
-**Last Tag:** `step17-phase2-complete`
-**Tests Passing:** 126 non-GUI tests, 8 skipped
+**Last Completed Step:** A2.1 - Command Pattern Implementation
+**Tests Passing:** 126 non-GUI tests, 2 GUI tests, 8 skipped
 
 ### Migration Complete!
 
@@ -392,7 +394,7 @@ The keyboard/mouse handlers in `main_g_keyboard_input.py` and `main_g_mouse.py` 
 
 ---
 
-## Phase 4: File Naming Convention (Q3.1) - IN PROGRESS
+## Phase 4: File Naming Convention (Q3.1) - COMPLETE ✅
 
 ### Goal
 Rename all files to PascalCase matching their class names (Java/C# style):
@@ -414,57 +416,94 @@ Created new PascalCase files in `src/cube/gui/protocols/`:
 - `AnimationBackend.py` - AnimationBackend protocol
 - `AppWindow.py` - AppWindow protocol
 
-Old files deleted: `renderer.py`, `window.py`, `event_loop.py`, `animation.py`, `app_window.py`
+#### Step 2: Rename backend implementation files (DONE)
+All backend files renamed to PascalCase:
 
-Updated `__init__.py` to import from new PascalCase files.
+**Pyglet backend:**
+- `event_loop.py` → `PygletEventLoop.py`
+- `app_window.py` → `PygletAppWindow.py`
+- `animation.py` → `PygletAnimation.py`
+- `renderer.py` → `PygletRenderer.py`
+- `window.py` → `PygletWindow.py`
 
-### Pending Steps
+**Headless backend:**
+- `event_loop.py` → `HeadlessEventLoop.py`
+- `app_window.py` → `HeadlessAppWindow.py`
+- `renderer.py` → `HeadlessRenderer.py`
+- `window.py` → `HeadlessWindow.py`
 
-#### Step 2: Update imports across codebase
-Files that need import updates (change lowercase to PascalCase):
+**Console backend:**
+- `event_loop.py` → `ConsoleEventLoop.py`
+- `app_window.py` → `ConsoleAppWindow.py`
+- `renderer.py` → `ConsoleRenderer.py`
+
+**Tkinter backend:**
+- `event_loop.py` → `TkinterEventLoop.py`
+- `app_window.py` → `TkinterAppWindow.py`
+- `animation.py` → `TkinterAnimation.py`
+- `renderer.py` → `TkinterRenderer.py`
+- `window.py` → `TkinterWindow.py`
+
+#### Step 3: Update all imports (DONE)
+All `__init__.py` files and cross-file imports updated.
+
+#### Step 4: Tests passed (DONE)
+All 126 non-GUI tests pass, 2 GUI tests pass.
+
+---
+
+## A2.1: Command Pattern - COMPLETE ✅
+
+### Goal
+Replace the legacy `main_g_keyboard_input.py` (600 lines of match/case) with a clean Command pattern.
+
+### Architecture
+
 ```
-src/cube/main_any_backend.py - from .app_window → .AppWindow
-src/cube/main_window/app_window_base.py - from .renderer → .Renderer
-src/cube/main_window/main_g_abstract.py - from .renderer → .Renderer
-src/cube/app/app_state.py - from .renderer → .Renderer
-src/cube/viewer/texture.py - from .renderer → .Renderer
-src/cube/viewer/viewer_g_ext.py - from .renderer → .Renderer
-src/cube/animation/animation_manager.py - from .renderer, .event_loop → .Renderer, .EventLoop
-src/cube/gui/context.py - from .renderer → .Renderer
-src/cube/gui/backends/console/event_loop.py - from .event_loop → .EventLoop
-src/cube/gui/backends/console/renderer.py - from .renderer → .Renderer etc
-src/cube/gui/backends/console/app_window.py - from .app_window → .AppWindow
-src/cube/gui/backends/tkinter/animation.py - from .animation → .AnimationBackend
-src/cube/gui/backends/tkinter/app_window.py - from .app_window → .AppWindow
-src/cube/gui/backends/tkinter/event_loop.py - from .event_loop → .EventLoop
-src/cube/gui/backends/tkinter/renderer.py - from .renderer → .Renderer etc
-src/cube/gui/backends/tkinter/window.py - from .window → .Window, .TextRenderer
-src/cube/gui/backends/headless/event_loop.py - from .event_loop → .EventLoop
-src/cube/gui/backends/headless/renderer.py - from .renderer → .Renderer etc
-src/cube/gui/backends/pyglet/animation.py - from .animation → .AnimationBackend
-src/cube/gui/backends/pyglet/renderer.py - from .renderer → .Renderer etc
-src/cube/gui/backends/pyglet/window.py - from .window → .Window, .TextRenderer
-src/cube/gui/backends/pyglet/event_loop.py - from .event_loop → .EventLoop
+handle_key(symbol, modifiers)
+    ↓
+lookup_command(symbol, modifiers, animation_running)   [key_bindings.py]
+    ↓
+command.execute(ctx)   [command.py - self-executing Command enum]
+    ↓
+Action performed
 ```
 
-#### Step 3: Split backend files (same pattern as protocols)
-For each backend (pyglet, headless, tkinter, console):
-- Split `renderer.py` → `PygletShapeRenderer.py`, `PygletDisplayListManager.py`, etc.
-- Split `window.py` → `PygletTextRenderer.py`, `PygletWindow.py`
-- Rename `event_loop.py` → `PygletEventLoop.py`
-- Rename `animation.py` → `PygletAnimation.py`
-- Rename `app_window.py` → `PygletAppWindow.py`
+### Key Components
 
-#### Step 4: Run tests
-After all renames, run:
-```bash
-python -m pytest tests/ -v --ignore=tests/gui -m "not slow"
-```
+1. **Command Enum** (`gui/command.py`)
+   - ~100 self-executing commands (ROTATE_R, SCRAMBLE_1, SOLVE_ALL, etc.)
+   - Lazy handler creation with caching
+   - CommandContext provides access to app, cube, operator, solver
 
-### How to Continue
-1. Run the import update commands (Step 2)
-2. Split backend files (Step 3)
-3. Run tests (Step 4)
+2. **Key Bindings** (`gui/key_bindings.py`)
+   - `KEY_BINDINGS_NORMAL` - Commands when NOT animating
+   - `KEY_BINDINGS_ANIMATION` - Commands DURING animation (S=Stop, etc.)
+   - `lookup_command()` - O(1) dict lookup
+
+3. **Integration** (`main_window/app_window_base.py`)
+   - `handle_key()` → `lookup_command()` → `inject_command()`
+   - `inject_command()` executes with error handling
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `gui/command.py` | NEW - Command enum with ~100 commands |
+| `gui/key_bindings.py` | NEW - Key binding tables |
+| `main_window/app_window_base.py` | Updated handle_key() to use commands |
+| `main_window/main_g_keyboard_input.py` | **DELETED** (~600 lines) |
+| `gui/backends/pyglet/PygletAppWindow.py` | Updated handle_key() |
+| `main_window/Window.py` | Updated on_key_press() |
+| `tests/gui/tester/GUITestRunner.py` | Handle AppExit as success |
+
+### Benefits
+
+1. **Single Source of Truth** - Key bindings in one place
+2. **Self-Documenting** - `Command.ROTATE_R_PRIME` vs magic keys
+3. **Type-Safe** - IDE autocomplete for commands
+4. **Testable** - `inject_command()` bypasses key handling
+5. **Lazy Loading** - Handlers created on first use
 
 ---
 

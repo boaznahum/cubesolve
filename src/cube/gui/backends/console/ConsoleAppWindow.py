@@ -7,7 +7,7 @@ Uses existing main_console.viewer for cube rendering.
 Key Handling:
 - Console keys are mapped to abstract Keys
 - Inverse mode (') sets SHIFT modifier
-- All command logic is in handle_key_with_error_handling (single source of truth)
+- All command logic is in handle_key() via lookup_command + command.execute()
 """
 
 from cube.app.abstract_ap import AbstractApp
@@ -16,10 +16,10 @@ from cube.gui.protocols import AppWindow
 from cube.gui.types import Keys, Modifiers
 from cube.main_console import viewer as console_viewer
 from cube.main_console.keys import Keys as ConsoleKeys
-from cube.main_window.app_window_base import AppWindowBase, handle_key_with_error_handling
+from cube.main_window.app_window_base import AppWindowBase
 
-from cube.gui.backends.console.renderer import ConsoleRenderer
-from cube.gui.backends.console.event_loop import ConsoleEventLoop
+from cube.gui.backends.console.ConsoleRenderer import ConsoleRenderer
+from cube.gui.backends.console.ConsoleEventLoop import ConsoleEventLoop
 
 
 # Mapping from console key characters to abstract Keys

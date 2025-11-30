@@ -2,21 +2,33 @@
 GUITestRunner - Utility class for running automated GUI tests.
 
 This module provides a clean, reusable interface for running automated GUI tests
-with keyboard input injection, timeout handling, and error detection.
+with command injection, timeout handling, and error detection.
 
 Usage
 -----
-Run a simple test:
-    from tests.gui.GUITestRunner import GUITestRunner
-    result = GUITestRunner.run_test("1/q", timeout_sec=60.0)
+Run a simple test with commands:
+    from tests.gui.tester.GUITestRunner import GUITestRunner
+    from cube.gui.command import Command
+
+    result = GUITestRunner.run_test(
+        commands=Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        timeout_sec=60.0
+    )
 
 With custom configuration:
     result = GUITestRunner.run_test(
-        key_sequence="1/q",
+        commands=Command.SPEED_UP * 5 + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
         cube_size=3,
         enable_animation=True,
         timeout_sec=120.0,
         debug=True
+    )
+
+With specific backend:
+    result = GUITestRunner.run_test(
+        commands=Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        backend="headless",  # or "pyglet", "console"
+        timeout_sec=30.0
     )
 """
 
@@ -24,14 +36,11 @@ import threading
 import time
 import traceback
 
-import pyglet  # type: ignore[import-untyped]
-
 from cube import config
 from cube.app.abstract_ap import AbstractApp
-from cube.main_window.Window import Window
+from cube.app.app_exceptions import AppExit
 from cube.gui.factory import BackendRegistry
-# Import pyglet backend to register it
-import cube.gui.backends.pyglet  # noqa: F401
+from cube.gui.command import Command, CommandSequence
 from tests.gui.tester.GUITestResult import GUITestResult
 from tests.gui.tester.GUITestTimeout import GUITestTimeout
 
@@ -41,58 +50,57 @@ class GUITestRunner:
     Utility class for running automated GUI tests.
 
     This class provides a clean static interface for running GUI tests with
-    keyboard input injection, timeout handling, and error detection. Designed
-    for reusability across different test suites.
+    command injection, timeout handling, and error detection. Designed
+    for reusability across different test suites and backends.
 
     Examples
     --------
     Basic test with scramble and solve:
 
-    >>> result = GUITestRunner.run_test("1/q", timeout_sec=60.0)
+    >>> result = GUITestRunner.run_test(
+    ...     Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+    ...     timeout_sec=60.0
+    ... )
     >>> if result.success:
     ...     print("Test passed!")
 
-    Test with animation enabled:
+    Test with specific backend:
 
     >>> result = GUITestRunner.run_test(
-    ...     key_sequence="1/q",
-    ...     cube_size=3,
-    ...     enable_animation=True,
-    ...     timeout_sec=120.0,
-    ...     debug=True
+    ...     Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+    ...     backend="headless",
+    ...     timeout_sec=30.0
     ... )
-
-    Test multiple operations:
-
-    >>> result = GUITestRunner.run_test("123/q", cube_size=4, timeout_sec=90.0)
     """
 
     @staticmethod
     def run_test(
-        key_sequence: str,
+        commands: Command | CommandSequence,
         timeout_sec: float = 30.0,
         cube_size: int = 3,
         enable_animation: bool = False,
+        backend: str = "pyglet",
         debug: bool = False
     ) -> GUITestResult:
         """
-        Run a GUI test with a keyboard sequence.
+        Run a GUI test with a command sequence.
 
         Parameters
         ----------
-        key_sequence : str
-            String of characters representing key presses.
+        commands : Command | CommandSequence
+            Commands to execute. Use + to combine commands:
             Examples:
-                "1/q"   - Scramble with key 1, solve, quit
-                "123/q" - Three different scrambles, solve, quit
-                "rrrq"  - Three R rotations, quit
-                "1aq"   - Scramble, toggle animation, quit
+                Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT
+                Command.SPEED_UP * 5 + Command.SCRAMBLE_1 + Command.QUIT
         timeout_sec : float, optional
             Maximum time to wait for test completion. Default is 30 seconds.
         cube_size : int, optional
             Size of cube to test (3, 4, 5, etc.). Default is 3.
         enable_animation : bool, optional
             Enable animations during test. Default is False (faster).
+            Note: Only pyglet backend supports animation.
+        backend : str, optional
+            Backend to use: "pyglet", "headless", or "console". Default is "pyglet".
         debug : bool, optional
             Enable debug output. Default is False.
 
@@ -105,20 +113,27 @@ class GUITestRunner:
         --------
         Test scramble and solve:
 
-        >>> result = GUITestRunner.run_test("1/q", timeout_sec=60.0)
+        >>> result = GUITestRunner.run_test(
+        ...     Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        ...     timeout_sec=60.0
+        ... )
         >>> if result.success:
         ...     print("Test passed!")
-        >>> else:
-        ...     print(f"Test failed: {result.error}")
 
-        Test multiple scrambles:
+        Test with headless backend (faster, no display):
 
-        >>> result = GUITestRunner.run_test("123/q", cube_size=4)
-
-        Test with animation enabled:
-
-        >>> result = GUITestRunner.run_test("1/q", enable_animation=True, timeout_sec=120.0)
+        >>> result = GUITestRunner.run_test(
+        ...     Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        ...     backend="headless",
+        ...     timeout_sec=30.0
+        ... )
         """
+        # Normalize to CommandSequence for uniform handling
+        if isinstance(commands, Command):
+            cmd_seq = CommandSequence([commands])
+        else:
+            cmd_seq = commands
+
         # Save original config values
         original_test_mode = config.GUI_TEST_MODE
         original_animation = config.animation_enabled
@@ -128,6 +143,7 @@ class GUITestRunner:
         test_error: Exception | None = None
         test_success = False
         timeout_occurred = False
+        event_loop = None
 
         def timeout_watchdog():
             """Watchdog thread that enforces timeout."""
@@ -136,9 +152,13 @@ class GUITestRunner:
             if not test_success and test_error is None:
                 timeout_occurred = True
                 # Force quit the event loop
-                pyglet.app.exit()
+                if event_loop is not None:
+                    event_loop.stop()
 
         try:
+            # Ensure backend is registered
+            BackendRegistry.ensure_registered(backend)
+
             # Configure for testing
             config.GUI_TEST_MODE = True
             config.animation_enabled = enable_animation
@@ -146,40 +166,39 @@ class GUITestRunner:
             config.KEYBOAD_INPUT_DEBUG = debug
 
             if debug:
-                print(f"Starting GUI test with sequence: '{key_sequence}'")
-                print(f"  Cube size: {cube_size}, Animation: {enable_animation}, Timeout: {timeout_sec}s")
+                print(f"Starting GUI test with commands: {cmd_seq}")
+                print(f"  Backend: {backend}, Cube size: {cube_size}, Animation: {enable_animation}, Timeout: {timeout_sec}s")
 
-            # Create app, backend, and window
+            # Create app and backend
             app = AbstractApp.create()
-            backend = BackendRegistry.get_backend("pyglet")
+            gui_backend = BackendRegistry.get_backend(backend)
+            event_loop = gui_backend.event_loop
 
-            # Set the event loop on the animation manager if it exists
-            if app.am is not None:
-                app.am.set_event_loop(backend.event_loop)
-
-            win = Window(app, 720, 720, "Cube Test", backend=backend)
+            # Create app window using backend factory
+            win = gui_backend.create_app_window(app, 720, 720, "Cube Test")
 
             # Start timeout watchdog
             watchdog = threading.Thread(target=timeout_watchdog, daemon=True)
             watchdog.start()
 
-            # Schedule key injection after window is ready
-            def inject_keys(dt):
+            # Schedule command injection after window is ready
+            def inject_commands(dt):
                 try:
                     if debug:
-                        print(f"Injecting key sequence: '{key_sequence}'")
-                    win.inject_key_sequence(key_sequence, process_events=True)
+                        print(f"Injecting commands: {cmd_seq}")
+                    for cmd in cmd_seq:
+                        win.inject_command(cmd)
                 except Exception as e:
-                    # This exception will propagate to on_key_press which will handle it
+                    # This exception will propagate to inject_command which will handle it
                     raise
 
-            pyglet.clock.schedule_once(inject_keys, 0.1)  # Small delay to let window initialize
+            event_loop.schedule_once(inject_commands, 0.1)  # Small delay to let window initialize
 
             # Run the event loop
             if debug:
-                print("Starting pyglet event loop...")
+                print(f"Starting {backend} event loop...")
 
-            pyglet.app.run()
+            event_loop.run()
 
             # If we get here, the test completed (likely quit via 'q' key)
             if timeout_occurred:
@@ -192,7 +211,7 @@ class GUITestRunner:
 
             return GUITestResult(
                 success=True,
-                message=f"Test completed successfully with sequence '{key_sequence}'"
+                message=f"Test completed successfully with {len(cmd_seq)} commands on {backend}"
             )
 
         except GUITestTimeout as e:
@@ -201,6 +220,15 @@ class GUITestRunner:
                 success=False,
                 error=e,
                 message=f"Test timed out after {timeout_sec} seconds"
+            )
+
+        except AppExit:
+            # AppExit is expected when quit is pressed - this is success
+            if debug:
+                print("AppExit received (quit command) - test completed successfully")
+            return GUITestResult(
+                success=True,
+                message=f"Test completed successfully with {len(cmd_seq)} commands on {backend}"
             )
 
         except Exception as e:
@@ -216,17 +244,18 @@ class GUITestRunner:
             )
 
         finally:
-            # Clean up window and pyglet state
+            # Clean up window and event loop state
             try:
                 # Close window if it exists and isn't already closed
-                if 'win' in locals() and win and not win.has_exit:
+                if 'win' in locals() and win and hasattr(win, 'has_exit') and not win.has_exit:
                     win.close()
             except:
                 pass  # Window might already be closed
 
             # Clear all scheduled clock events
             try:
-                pyglet.clock.unschedule(inject_keys)
+                if event_loop is not None:
+                    event_loop.unschedule(inject_commands)
             except:
                 pass
 

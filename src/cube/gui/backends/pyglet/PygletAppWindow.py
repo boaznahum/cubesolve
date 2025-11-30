@@ -16,9 +16,11 @@ from cube.app.abstract_ap import AbstractApp
 from cube.app.app_exceptions import AppExit
 from cube.animation.animation_manager import AnimationWindow
 from cube.gui.factory import GUIBackend
-from cube.gui.backends.pyglet.window import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
+from cube.gui.backends.pyglet.PygletWindow import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 from cube.main_window import main_g_mouse
-from cube.main_window.app_window_base import AppWindowBase, TextLabel, handle_key_with_error_handling
+from cube.main_window.app_window_base import AppWindowBase, TextLabel
+from cube.gui.command import Command, CommandContext
+from cube.gui.key_bindings import lookup_command
 from cube.viewer.viewer_g import GCubeViewer
 from cube.viewer.viewer_g_ext import GViewerExt
 
@@ -77,6 +79,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self._animation_labels: list[TextLabel] = []
         self.text: list[pyglet.text.Label] = []
         self.animation_text: list[pyglet.text.Label] = []
+
+        # State for keyboard handler (used by Command handlers)
+        self._last_edge_solve_count: int = 0
 
         # Initial GUI update
         self.update_gui_elements()
@@ -160,7 +165,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
             symbol: Key code (from Keys enum) - already converted to abstract
             modifiers: Modifier flags (from Modifiers)
         """
-        handle_key_with_error_handling(self, symbol, modifiers)
+        cmd = lookup_command(symbol, modifiers, self.animation_running)
+        if cmd:
+            self.inject_command(cmd)
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         """Pyglet mouse drag event."""
@@ -188,7 +195,10 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self.on_key_press(key, modifiers)
 
     def inject_key_sequence(self, sequence: str, process_events: bool = True) -> None:
-        """Inject a sequence of key presses."""
+        """Inject a sequence of key presses.
+
+        DEPRECATED: Use inject_command() instead for type-safe command injection.
+        """
         from pyglet.window import key
 
         char_map = {
@@ -209,6 +219,47 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
                 self.on_key_press(symbol, 0)
                 if process_events:
                     pyglet.app.platform_event_loop.step(0.0)
+
+    def inject_command(self, command: Command) -> None:
+        """Inject a command directly.
+
+        Preferred method for testing and automation - bypasses key handling
+        and directly executes the command. Type-safe with IDE autocomplete.
+
+        Args:
+            command: Command enum value to execute
+
+        Example:
+            window.inject_command(Command.SCRAMBLE_1)
+            window.inject_command(Command.SOLVE_ALL)
+            window.inject_command(Command.QUIT)
+        """
+        import traceback
+
+        try:
+            ctx = CommandContext.from_window(self)
+            result = command.execute(ctx)
+            if not result.no_gui_update:
+                self.update_gui_elements()
+        except AppExit:
+            if config.GUI_TEST_MODE:
+                self.close()
+                raise
+            else:
+                self._app.set_error("Asked to stop")
+                self.update_gui_elements()
+        except Exception as e:
+            if config.GUI_TEST_MODE and config.QUIT_ON_ERROR_IN_TEST_MODE:
+                self.close()
+                raise
+            else:
+                traceback.print_exc()
+                msg = str(e)
+                error_text = "Some error occurred:"
+                if msg:
+                    error_text += msg
+                self._app.set_error(error_text)
+                self.update_gui_elements()
 
     # === Text Rendering ===
 

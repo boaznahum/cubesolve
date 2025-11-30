@@ -204,6 +204,38 @@ After EVERY code change, verify:
 
 ---
 
+## Code Style Requirements
+
+### Type Annotations
+
+**MANDATORY**: All new code MUST include type annotations.
+
+- All function parameters must have type hints
+- All function return types must be specified
+- Class attributes should be typed
+- Use `from __future__ import annotations` for forward references
+
+**Example:**
+```python
+from __future__ import annotations
+
+def process_commands(
+    commands: Command | CommandSequence,
+    timeout: float = 30.0,
+    debug: bool = False
+) -> GUITestResult:
+    """Process a sequence of commands."""
+    result: GUITestResult | None = None
+    # ...
+    return result
+```
+
+**Exceptions:**
+- Lambda functions in callbacks (e.g., `lambda w, h, t: Window(w, h, t)`)
+- Simple one-liners where types are obvious from context
+
+---
+
 ## Protocol Implementation Pattern
 
 **IMPORTANT**: When implementing protocols, always inherit from them for PyCharm visibility.

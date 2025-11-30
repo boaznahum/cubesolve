@@ -24,9 +24,9 @@ Usage:
     register()
 """
 
-from cube.gui.backends.console.renderer import ConsoleRenderer
-from cube.gui.backends.console.event_loop import ConsoleEventLoop
-from cube.gui.backends.console.app_window import ConsoleAppWindow
+from cube.gui.backends.console.ConsoleRenderer import ConsoleRenderer
+from cube.gui.backends.console.ConsoleEventLoop import ConsoleEventLoop
+from cube.gui.backends.console.ConsoleAppWindow import ConsoleAppWindow
 
 __all__ = [
     "ConsoleRenderer",

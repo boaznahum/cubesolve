@@ -11,9 +11,9 @@ from cube.gui.types import KeyEvent
 from cube.main_window.app_window_base import AppWindowBase
 from cube.viewer.viewer_g import GCubeViewer
 
-from cube.gui.backends.headless.renderer import HeadlessRenderer
-from cube.gui.backends.headless.window import HeadlessWindow
-from cube.gui.backends.headless.event_loop import HeadlessEventLoop
+from cube.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
+from cube.gui.backends.headless.HeadlessWindow import HeadlessWindow
+from cube.gui.backends.headless.HeadlessEventLoop import HeadlessEventLoop
 
 
 class HeadlessAppWindow(AppWindowBase, AppWindow):

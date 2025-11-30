@@ -11,12 +11,14 @@ from cube.animation.animation_manager import AnimationWindow
 from cube.app.abstract_ap import AbstractApp
 from cube.app.app_state import ApplicationAndViewState
 from cube.app.app_exceptions import AppExit, RunStop, OpAborted
-from cube.main_window import main_g_keyboard_input, main_g_mouse
+from cube.main_window import main_g_mouse
+from cube.gui.command import CommandContext
+from cube.gui.key_bindings import lookup_command
 from cube.solver import Solver
 from cube.viewer.viewer_g import GCubeViewer
 from cube.viewer.viewer_g_ext import GViewerExt
 from cube.gui.factory import GUIBackend
-from cube.gui.backends.pyglet.window import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
+from cube.gui.backends.pyglet.PygletWindow import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 
 
 class Window(pyglet.window.Window, AnimationWindow):
@@ -268,7 +270,14 @@ class Window(pyglet.window.Window, AnimationWindow):
             # Convert pyglet key codes to abstract key codes
             abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
             abstract_mods = _convert_modifiers(modifiers)
-            main_g_keyboard_input.handle_keyboard_input(self, abstract_symbol, abstract_mods)
+
+            # Look up command and execute
+            cmd = lookup_command(abstract_symbol, abstract_mods, self.animation_running)
+            if cmd:
+                ctx = CommandContext.from_window(self)
+                result = cmd.execute(ctx)
+                if not result.no_gui_update:
+                    self.update_gui_elements()
 
         except (AppExit, RunStop, OpAborted) as e:
             # In test mode, AppExit should actually exit

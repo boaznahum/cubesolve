@@ -46,11 +46,14 @@
       - Console: `_on_console_key_event()` → `handle_key()`
       - Headless: `inject_key()` → `handle_key()`
     - See `docs/design/keyboard_and_commands.md` for details
-  - **A2.1.** ❌ Create Command enum and inject_command() mechanism in AppWindow
-    - Define `Command` enum with all cube operations (ROTATE_R, SOLVE, SCRAMBLE, etc.)
-    - Add `inject_command(cmd, **params)` to AppWindow protocol
-    - Implement command dispatch that maps Command → action
-    - Keep key handling working (keys → commands → actions)
+  - **A2.1.** ✅ Create Command enum and inject_command() mechanism in AppWindow
+    - Created `Command` enum with ~100 self-executing commands (gui/command.py)
+    - Created `key_bindings.py` with KEY_BINDINGS_NORMAL and KEY_BINDINGS_ANIMATION tables
+    - Added `lookup_command()` for O(1) key→command lookup
+    - Added `inject_command()` to AppWindow protocol
+    - Wired `handle_key()` to use `lookup_command()` + `command.execute()`
+    - **DELETED** `main_g_keyboard_input.py` (~600 lines of legacy code)
+    - See `docs/design/keyboard_and_commands.md` for architecture details
   - **A2.2.** ❌ Update GUI tests to use inject_command() instead of inject_key_sequence()
     - Replace string sequences like "1/Q" with Command.SCRAMBLE_1, Command.SOLVE, Command.QUIT
     - Remove backend-specific key mapping duplication
@@ -84,10 +87,14 @@
   - Example: `class MyClass` should be in `MyClass.py` (not `my_class.py`)
   - Research: Is this good practice? Why doesn't Python community follow this?
   - If approved: Add to CLAUDE.md as coding standard
-  - **Q3.1.** ♾️ Audit and fix all protocol classes and their implementations
-    - Review all protocols in `gui/protocols/`
-    - Ensure implementation class names include backend prefix (e.g., `PygletRenderer`, not `Renderer`)
-    - Rename files to match class names if needed
+  - **Q3.1.** ✅ Audit and fix all protocol classes and their implementations
+    - Split protocol files to PascalCase (ShapeRenderer.py, EventLoop.py, etc.)
+    - Renamed all backend implementation files to PascalCase:
+      - pyglet: PygletEventLoop.py, PygletAppWindow.py, PygletRenderer.py, etc.
+      - headless: HeadlessEventLoop.py, HeadlessAppWindow.py, etc.
+      - console: ConsoleEventLoop.py, ConsoleAppWindow.py, etc.
+      - tkinter: TkinterEventLoop.py, TkinterAppWindow.py, etc.
+    - Updated all __init__.py files and imports
   - **Q3.2.** ❌ Audit and fix all other classes in the codebase
     - Review remaining classes for naming convention compliance
     - Rename files to match class names (case-sensitive)
