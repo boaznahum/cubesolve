@@ -6,6 +6,7 @@ Provides a no-output application window for testing and automation.
 
 from cube.app.abstract_ap import AbstractApp
 from cube.gui.factory import GUIBackend
+from cube.gui.protocols.app_window import AppWindow
 from cube.gui.types import Keys, KeyEvent
 from cube.viewer.viewer_g import GCubeViewer
 
@@ -14,11 +15,10 @@ from cube.gui.backends.headless.window import HeadlessWindow
 from cube.gui.backends.headless.event_loop import HeadlessEventLoop
 
 
-class HeadlessAppWindow:
+class HeadlessAppWindow(AppWindow):
     """Headless AppWindow implementation for testing.
 
-    Implements the AppWindow protocol (verified via @runtime_checkable)
-    with no visual output.
+    Inherits from AppWindow protocol for PyCharm visibility.
 
     Useful for:
     - Unit testing

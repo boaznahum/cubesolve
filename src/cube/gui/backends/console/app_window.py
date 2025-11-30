@@ -8,6 +8,7 @@ Uses existing main_console.viewer for cube rendering.
 from cube.algs import Algs
 from cube.app.abstract_ap import AbstractApp
 from cube.gui.factory import GUIBackend
+from cube.gui.protocols.app_window import AppWindow
 from cube.main_console import viewer as console_viewer
 from cube.main_console.keys import Keys as ConsoleKeys
 
@@ -15,11 +16,11 @@ from cube.gui.backends.console.renderer import ConsoleRenderer
 from cube.gui.backends.console.event_loop import ConsoleEventLoop
 
 
-class ConsoleAppWindow:
+class ConsoleAppWindow(AppWindow):
     """Console-based AppWindow implementation.
 
-    Implements the AppWindow protocol (verified via @runtime_checkable)
-    for text-based operation. Uses console_viewer.plot() for cube display.
+    Inherits from AppWindow protocol for PyCharm visibility.
+    Uses console_viewer.plot() for text-based cube display.
     """
 
     def __init__(

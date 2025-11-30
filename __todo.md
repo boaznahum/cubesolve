@@ -6,7 +6,13 @@
 > - ✅ (green V) - Completed: `Win + .` → search "check" → select ✅
 > - Or copy/paste from here: `❌` `♾️` `✅`
 >
-> **Claude: When starting work on a task, change its status to ♾️ (in progress) BEFORE beginning work.**
+> **Claude:**
+> - When starting work on a task, change its status to ♾️ (in progress) BEFORE beginning work.
+> - When reading this file, look for unformatted entries at the bottom and ask user to reformat or not.
+> - When a task is done, move it to the "Done Tasks" section at the bottom, preserving its ID number.
+> - When adding new tasks, check existing IDs (including Done) to avoid duplicates (e.g., if A1, A2 exist, new is A3).
+> - If reopening a done task, mention "Reopened from Done" in the description.
+
 
 ---
 
@@ -30,10 +36,6 @@
 
 ## Architecture
 
-- ✅ **A1.** Move main window factory to backend, not a special factory in main_any
-  - Added `app_window_factory` to `_BackendEntry` and `GUIBackend.create_app_window()`
-  - Animation manager wiring is now in `GUIBackend.create_app_window()`
-
 - ❌ **A2.** Introduce commands injecting instead of keys, simplify key handling
 
 - ❌ **A3.** Consider moving animation manager wiring from GUIBackend to elsewhere
@@ -41,24 +43,20 @@
   - This creates coupling between GUIBackend and AbstractApp
   - Options: move to AbstractApp, make it explicit in main_any, or keep as-is
 
+- ❌ **A4.** PygletAppWindow cannot inherit from AppWindow protocol due to metaclass conflict
+  - `pyglet.window.Window` has its own metaclass that conflicts with Protocol
+  - Tried `TYPE_CHECKING` trick - didn't work in PyCharm
+  - Options: composition pattern, wrapper class, or accept docstring-only documentation
+
 ## Code Quality
 
 - ❌ **Q1.** Refactor too many packages under `src/cube`
   - Ask Claude architects to rearrange them by layers
 
-- ✅ **Q2.** Add typing to all code, make sure mypy is green
-  - Completed: 0 errors in 141 source files (down from 57 errors)
-  - Fixed: protocol signatures, abstract class implementations, None/Optional narrowing,
-    wrong argument types, variable/import conflicts, missing protocol members
-  - Added `disable_error_code = import-untyped` to `mypy.ini` for pyglet (no type stubs)
-
 - ❌ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name
   - Example: `class MyClass` should be in `MyClass.py` (not `my_class.py`)
   - Research: Is this good practice? Why doesn't Python community follow this?
   - If approved: Add to CLAUDE.md as coding standard
-
-- ✅ **Q4.** Create `/mytodo` slash command to read and manage `__todo.md`
-  - Created `.claude/commands/mytodo.md`
 
 - ❌ **Q5.** Review all `# type: ignore` comments and document why they're needed
   - Audit added during Q2 mypy fixes
@@ -78,3 +76,20 @@
 
 ---
 # New entries below - Claude will reformat and move above this line
+
+---
+
+## Done Tasks
+
+- ✅ **A1.** Move main window factory to backend, not a special factory in main_any
+  - Added `app_window_factory` to `_BackendEntry` and `GUIBackend.create_app_window()`
+  - Animation manager wiring is now in `GUIBackend.create_app_window()`
+
+- ✅ **Q2.** Add typing to all code, make sure mypy is green
+  - Completed: 0 errors in 141 source files (down from 57 errors)
+  - Fixed: protocol signatures, abstract class implementations, None/Optional narrowing,
+    wrong argument types, variable/import conflicts, missing protocol members
+  - Added `disable_error_code = import-untyped` to `mypy.ini` for pyglet (no type stubs)
+
+- ✅ **Q4.** Create `/mytodo` slash command to read and manage `__todo.md`
+  - Created `.claude/commands/mytodo.md`

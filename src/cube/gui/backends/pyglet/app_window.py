@@ -26,14 +26,14 @@ from cube.viewer.viewer_g_ext import GViewerExt
 
 
 class PygletAppWindow(pyglet.window.Window, AnimationWindow):
-    """Pyglet-specific AppWindow implementation.
+    """Pyglet-specific AppWindow implementation (AppWindow protocol).
 
-    Implements the AppWindow protocol (verified via @runtime_checkable).
     Combines pyglet.window.Window for rendering/events with AnimationWindow
     for animation support.
 
-    Note: Cannot inherit from AppWindow Protocol due to metaclass conflict
-    with pyglet.window.Window. Protocol compliance is runtime-checked.
+    Note: Cannot inherit from AppWindow protocol due to metaclass conflict
+    with pyglet.window.Window. Protocol compliance is verified at runtime
+    via @runtime_checkable.
     """
 
     def __init__(
