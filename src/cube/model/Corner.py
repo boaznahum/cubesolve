@@ -8,8 +8,8 @@ from ._part_slice import CornerSlice, PartSlice
 from ..app.app_exceptions import InternalSWError
 
 if TYPE_CHECKING:
-    from .cube_face import Face
-    from .cube import Cube
+    from .Face import Face
+    from .Cube import Cube
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore

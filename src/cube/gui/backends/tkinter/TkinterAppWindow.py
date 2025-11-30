@@ -5,13 +5,13 @@ Provides the Tkinter-specific AppWindow that uses TkinterWindow
 and AppWindowBase for shared logic.
 """
 
-from cube.app.abstract_ap import AbstractApp
-from cube.animation.animation_manager import AnimationWindow
+from cube.app.AbstractApp import AbstractApp
+from cube.animation.AnimationManager import AnimationWindow
 from cube.gui.factory import GUIBackend
 from cube.gui.protocols import AppWindow
 from cube.gui.types import Keys
-from cube.main_window.app_window_base import AppWindowBase
-from cube.viewer.viewer_g import GCubeViewer
+from cube.main_window.AppWindowBase import AppWindowBase
+from cube.viewer.GCubeViewer import GCubeViewer
 
 from cube.gui.backends.tkinter.TkinterWindow import TkinterWindow
 from cube.gui.backends.tkinter.TkinterRenderer import TkinterRenderer

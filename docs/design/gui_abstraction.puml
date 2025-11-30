@@ -419,7 +419,7 @@ package "Pyglet Backend Code" as pyglet_code #FFFFE0 {
         +TextureData.load()
     }
 
-    class "app_state.py" as appstate_old {
+    class "ApplicationAndViewState.py" as appstate_old {
         ' Part of pyglet backend
         +prepare_objects_view()
         +restore_objects_view()

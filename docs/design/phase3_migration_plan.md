@@ -199,7 +199,7 @@ class AppWindow(Protocol):
 **Status:** ⬜ Pending
 **Effort:** High
 **Files:**
-- Create: `src/cube/main_window/app_window_base.py`
+- Create: `src/cube/main_window/AppWindowBase.py`
 
 **Shared Logic to Extract:**
 - Keyboard input handling (delegate to `main_g_keyboard_input`)
@@ -469,7 +469,7 @@ Usage:
 """
 import argparse
 
-from cube.app.abstract_ap import AbstractApp
+from cube.app.AbstractApp import AbstractApp
 from cube.gui import BackendRegistry
 
 # Import all backends to register them
@@ -559,7 +559,7 @@ class TestSequence:
     def run(self, backend: str = "headless") -> TestResult:
         """Run sequence on specified backend."""
         from cube.gui import BackendRegistry
-        from cube.app.abstract_ap import AbstractApp
+        from cube.app.AbstractApp import AbstractApp
 
         backend = BackendRegistry.get_backend(backend)
         app = AbstractApp.create()

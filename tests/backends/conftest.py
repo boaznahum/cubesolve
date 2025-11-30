@@ -12,8 +12,8 @@ from dataclasses import dataclass, field
 from cube.gui.factory import BackendRegistry
 from cube.gui.protocols import Renderer, Window, EventLoop, AnimationBackend
 from cube.gui.types import KeyEvent, Keys, Modifiers, parse_key_string, make_key_sequence
-from cube.model.cube import Cube
-from cube.operator.cube_operator import Operator
+from cube.model.Cube import Cube
+from cube.operator.Operator import Operator
 from cube.algs import Algs
 from cube.solver import Solvers
 

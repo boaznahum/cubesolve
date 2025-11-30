@@ -7,12 +7,12 @@ from typing import Tuple, TYPE_CHECKING, Callable, Any, Hashable, Sequence
 import numpy as np
 from numpy import ndarray
 
-from cube.app.app_state import ApplicationAndViewState
+from cube.app.ApplicationAndViewState import ApplicationAndViewState
 from cube.model.cube_boy import Color, FaceName
-from cube.model.cube_face import Face
+from cube.model.Face import Face
 from cube.utils import geometry
-from .texture import TextureData
-from .viewer_markers import VMarker, viewer_get_markers
+from .TextureData import TextureData
+from .VMarker import VMarker, viewer_get_markers
 from .. import config
 from cube.model import PartEdge
 from cube.model import PartSliceHashID

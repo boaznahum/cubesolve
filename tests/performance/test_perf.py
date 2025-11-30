@@ -3,10 +3,10 @@ import pytest
 import time
 
 from cube.algs import Algs
-from cube.app.app_state import ApplicationAndViewState
-from cube.operator.cube_operator import Operator
+from cube.app.ApplicationAndViewState import ApplicationAndViewState
+from cube.operator.Operator import Operator
 from cube.solver import Solver, Solvers
-from cube.model.cube import Cube
+from cube.model.Cube import Cube
 
 
 @pytest.mark.slow

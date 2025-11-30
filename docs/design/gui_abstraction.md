@@ -48,8 +48,8 @@ Cube
 | Board | `viewer/_board.py` | Display lists, texture binding |
 | Face board | `viewer/_faceboard.py` | GL vertex arrays |
 | Shapes | `viewer/shapes.py` | `GL_QUADS`, `gluSphere`, `gluCylinder` |
-| View state | `app/app_state.py` | `glPushAttrib`, `glRotatef`, `gluPerspective` |
-| Animation | `animation/animation_manager.py` | `pyglet.app.event_loop`, `pyglet.clock` |
+| View state | `app/ApplicationAndViewState.py` | `glPushAttrib`, `glRotatef`, `gluPerspective` |
+| Animation | `animation/AnimationManager.py` | `pyglet.app.event_loop`, `pyglet.clock` |
 
 ### 2.3 Existing Console Viewer (Reference Pattern)
 
@@ -823,7 +823,7 @@ The core abstraction layer migration is **COMPLETE** (Steps 1-12).
 | viewer/_cell.py | ✅ Done | Uses renderer.display_lists.* and renderer.shapes.* |
 | viewer/_board.py | ✅ Done | Uses renderer.display_lists.call_lists(), no pyglet imports |
 | viewer/viewer_g.py | ✅ Done | No pyglet imports (cleaned up) |
-| animation/animation_manager.py | ✅ Done | Uses abstract EventLoop protocol |
+| animation/AnimationManager.py | ✅ Done | Uses abstract EventLoop protocol |
 | main_g_abstract.py | ✅ Done | AbstractWindow is now a Protocol (not pyglet-dependent) |
 | EventLoop protocol | ✅ Done | `gui/protocols/event_loop.py` - run(), stop(), step(), schedule_*(), has_exit, idle(), notify() |
 
@@ -882,7 +882,7 @@ These files contain direct pyglet/OpenGL calls and are part of the **pyglet back
 | `viewer/shapes.py` | ~100 | Shape primitives (pyglet backend code) |
 | `viewer/texture.py` | ~20 | Texture loading (pyglet backend code) |
 | `viewer/viewer_g_ext.py` | ~10 | draw_axis() helper |
-| `app/app_state.py` | ~30 | Matrix operations |
+| `app/ApplicationAndViewState.py` | ~30 | Matrix operations |
 | `main_window/Window.py` | ~10 | draw_text() orthographic projection |
 
 These would only need abstraction if adding another 3D backend (e.g., Vulkan).
@@ -940,14 +940,14 @@ These would only need abstraction if adding another 3D backend (e.g., Vulkan).
 ### Phase 5: Refactor ApplicationAndViewState
 
 **Files to modify:**
-- `src/cube/app/app_state.py` - Extract GL code to use `ViewStateManager`
+- `src/cube/app/ApplicationAndViewState.py` - Extract GL code to use `ViewStateManager`
 
 **Impact:** Internal refactoring
 
 ### Phase 6: Refactor Animation System
 
 **Files to modify:**
-- `src/cube/animation/animation_manager.py` - Use `AnimationBackend` protocol
+- `src/cube/animation/AnimationManager.py` - Use `AnimationBackend` protocol
 
 **Impact:** Internal refactoring
 
@@ -962,7 +962,7 @@ These would only need abstraction if adding another 3D backend (e.g., Vulkan).
 ### Phase 8: Update AbstractApp Factory
 
 **Files to modify:**
-- `src/cube/app/abstract_ap.py` - Add `create_with_gui()` method
+- `src/cube/app/AbstractApp.py` - Add `create_with_gui()` method
 
 **Impact:** New factory method, existing method unchanged
 
@@ -983,7 +983,7 @@ def main():
 
 ```python
 import pyglet
-from cube.app.abstract_ap import AbstractApp
+from cube.app.AbstractApp import AbstractApp
 from cube.gui import BackendRegistry
 # Import pyglet backend to register it
 import cube.gui.backends.pyglet  # noqa: F401 - registers backend
@@ -1040,8 +1040,8 @@ def test_cube_operations():
 | Priority | File | Description |
 |----------|------|-------------|
 | 1 | `viewer/_cell.py` | Heaviest GL usage - display lists, shape rendering |
-| 2 | `app/app_state.py` | View state management - projection, matrix stack |
-| 3 | `animation/animation_manager.py` | Animation system - event loop integration |
+| 2 | `app/ApplicationAndViewState.py` | View state management - projection, matrix stack |
+| 3 | `animation/AnimationManager.py` | Animation system - event loop integration |
 | 4 | `main_window/Window.py` | Main window - pyglet.window.Window subclass |
 | 5 | `viewer/shapes.py` | Primitive rendering functions |
 | 6 | `main_g.py` | Entry point |

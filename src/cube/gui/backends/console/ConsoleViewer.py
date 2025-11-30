@@ -3,7 +3,7 @@ from typing import Hashable
 
 import colorama
 
-from cube.model.cube import Cube
+from cube.model.Cube import Cube
 from cube.model import Part, Color, Face
 
 _CELL_SIZE: int = 2

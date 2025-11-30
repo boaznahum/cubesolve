@@ -6,7 +6,7 @@ from numpy import ndarray
 
 from cube.model import Part, Corner, Edge, Center
 from cube.model import PartFixedID
-from cube.model.cube_face import Face
+from cube.model.Face import Face
 from ._cell import _Cell, _CELL_SIZE, _CORNER_SIZE
 
 _FACE_SIZE = 3

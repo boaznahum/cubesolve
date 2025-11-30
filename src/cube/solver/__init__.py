@@ -1,2 +1,2 @@
 from .solver import Solver, SolveStep
-from .solvers import Solvers
+from .Solvers import Solvers

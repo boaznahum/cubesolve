@@ -2,14 +2,14 @@ from typing import Any, TYPE_CHECKING
 
 from cube import config
 from cube.algs import Alg
-from cube.app.abstract_ap import AbstractApp
-from cube.app.app_state import ApplicationAndViewState
-from cube.model.cube import Cube
-from cube.operator.cube_operator import Operator
+from cube.app.AbstractApp import AbstractApp
+from cube.app.ApplicationAndViewState import ApplicationAndViewState
+from cube.model.Cube import Cube
+from cube.operator.Operator import Operator
 from cube.solver import Solver, Solvers
 
 if TYPE_CHECKING:
-    from cube.animation.animation_manager import AnimationManager
+    from cube.animation.AnimationManager import AnimationManager
 
 
 class _App(AbstractApp):

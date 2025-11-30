@@ -9,8 +9,8 @@ from ._part import EdgeName, _faces_2_edge_name
 from ..app.app_exceptions import InternalSWError
 
 if TYPE_CHECKING:
-    from .cube_face import Face
-    from .cube import Cube
+    from .Face import Face
+    from .Cube import Cube
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
@@ -337,7 +337,7 @@ class Edge(Part):
         :return: opposite edge on face
         """
 
-        from .cube_face import Face
+        from .Face import Face
 
         my_other: Face = self.get_other_face(face)
         other_opposite = my_other.opposite

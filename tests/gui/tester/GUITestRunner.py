@@ -8,7 +8,7 @@ Usage
 -----
 Run a simple test with commands:
     from tests.gui.tester.GUITestRunner import GUITestRunner
-    from cube.gui.command import Command
+    from cube.gui.Command import Command
 
     result = GUITestRunner.run_test(
         commands=Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
@@ -37,10 +37,10 @@ import time
 import traceback
 
 from cube import config
-from cube.app.abstract_ap import AbstractApp
+from cube.app.AbstractApp import AbstractApp
 from cube.app.app_exceptions import AppExit
 from cube.gui.factory import BackendRegistry
-from cube.gui.command import Command, CommandSequence
+from cube.gui.Command import Command, CommandSequence
 from tests.gui.tester.GUITestResult import GUITestResult
 from tests.gui.tester.GUITestTimeout import GUITestTimeout
 

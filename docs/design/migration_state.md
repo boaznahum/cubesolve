@@ -21,7 +21,7 @@ Before marking a step complete and tagging:
 
 ### Step 2: Migrate app_state.py - Matrix Operations
 - **Tag:** `migration-step-2-matrix-ops`
-- **Files Changed:** `src/cube/app/app_state.py`
+- **Files Changed:** `src/cube/app/ApplicationAndViewState.py`
 - **Changes:** `prepare_objects_view()`, `restore_objects_view()`, `set_projection()` now accept renderer parameter
 - **Status:** COMPLETED
 
@@ -79,7 +79,7 @@ Before marking a step complete and tagging:
 ### Step 8: Migrate animation_manager.py - Event Loop/Clock
 - **Tag:** `step8-eventloop-migration`
 - **Files Changed:**
-  - `src/cube/animation/animation_manager.py` - Removed pyglet imports, uses abstract EventLoop
+  - `src/cube/animation/AnimationManager.py` - Removed pyglet imports, uses abstract EventLoop
   - `src/cube/gui/protocols/event_loop.py` - Added `has_exit`, `idle()`, `notify()` methods
   - `src/cube/gui/backends/pyglet/event_loop.py` - Implemented new methods
   - `src/cube/gui/backends/headless/event_loop.py` - Implemented new methods
@@ -102,7 +102,7 @@ Before marking a step complete and tagging:
 ### Step 10: Migrate Window.py + main_g_abstract.py
 - **Tag:** `step10-abstractwindow-protocol`
 - **Files Changed:**
-  - `src/cube/main_window/main_g_abstract.py` - Converted AbstractWindow from class to Protocol
+  - `src/cube/main_window/AbstractWindow.py` - Converted AbstractWindow from class to Protocol
   - `src/cube/main_window/Window.py` - Now inherits directly from `pyglet.window.Window`
 - **Changes:**
   - AbstractWindow is now a `@runtime_checkable` Protocol defining the interface
@@ -380,7 +380,7 @@ The keyboard/mouse handlers in `main_g_keyboard_input.py` and `main_g_mouse.py` 
 | `gui/backends/pyglet/app_window.py` | NEW - Pyglet implementation |
 | `gui/backends/tkinter/app_window.py` | NEW - Tkinter implementation |
 | `main_window/Window.py` | MODIFY - Extract reusable parts |
-| `main_window/main_g_abstract.py` | MODIFY or REMOVE - Merge into new protocol |
+| `main_window/AbstractWindow.py` | MODIFY or REMOVE - Merge into new protocol |
 | `main_pyglet.py` | MODIFY - Use new window class |
 | `main_tkinter.py` | MODIFY - Use new window class |
 
@@ -471,7 +471,7 @@ Action performed
 
 ### Key Components
 
-1. **Command Enum** (`gui/command.py`)
+1. **Command Enum** (`gui/Command.py`)
    - ~100 self-executing commands (ROTATE_R, SCRAMBLE_1, SOLVE_ALL, etc.)
    - Lazy handler creation with caching
    - CommandContext provides access to app, cube, operator, solver
@@ -481,7 +481,7 @@ Action performed
    - `KEY_BINDINGS_ANIMATION` - Commands DURING animation (S=Stop, etc.)
    - `lookup_command()` - O(1) dict lookup
 
-3. **Integration** (`main_window/app_window_base.py`)
+3. **Integration** (`main_window/AppWindowBase.py`)
    - `handle_key()` → `lookup_command()` → `inject_command()`
    - `inject_command()` executes with error handling
 
@@ -489,9 +489,9 @@ Action performed
 
 | File | Change |
 |------|--------|
-| `gui/command.py` | NEW - Command enum with ~100 commands |
+| `gui/Command.py` | NEW - Command enum with ~100 commands |
 | `gui/key_bindings.py` | NEW - Key binding tables |
-| `main_window/app_window_base.py` | Updated handle_key() to use commands |
+| `main_window/AppWindowBase.py` | Updated handle_key() to use commands |
 | `main_window/main_g_keyboard_input.py` | **DELETED** (~600 lines) |
 | `gui/backends/pyglet/PygletAppWindow.py` | Updated handle_key() |
 | `main_window/Window.py` | Updated on_key_press() |
@@ -527,7 +527,7 @@ GUITestRunner.run_test(
 
 ### Key Components
 
-1. **CommandSequence** (`gui/command.py`)
+1. **CommandSequence** (`gui/Command.py`)
    - `+` operator to combine commands
    - `*` operator to repeat commands
    - Iterable for executing all commands
@@ -545,13 +545,13 @@ GUITestRunner.run_test(
 
 | File | Change |
 |------|--------|
-| `gui/command.py` | Added `CommandSequence` class with `+` and `*` operators |
+| `gui/Command.py` | Added `CommandSequence` class with `+` and `*` operators |
 | `gui/factory.py` | Added `BackendRegistry.ensure_registered()` |
 | `tests/gui/tester/GUITestRunner.py` | Accept commands + backend parameter |
 | `tests/gui/conftest.py` | Added `--backend` pytest option |
 | `tests/gui/test_gui.py` | Use `Command` instead of `GUIKeys` |
 | `tests/gui/keys.py` | **DELETED** (GUIKeys no longer needed) |
-| `animation/animation_manager.py` | Graceful handling when no viewer |
+| `animation/AnimationManager.py` | Graceful handling when no viewer |
 | `gui/backends/console/ConsoleAppWindow.py` | Disable animation manager |
 
 ### Test Results

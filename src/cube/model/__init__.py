@@ -1,16 +1,16 @@
 from .cube_boy import Color, FaceName
-from ._PartEdge import PartEdge
+from .PartEdge import PartEdge
 from ._elements import PartColorsID, AxisName, PartSliceHashID, PartFixedID, CenterSliceIndex, SliceIndex
-from ._PartEdge import PartEdge
+from .PartEdge import PartEdge
 from ._part_slice import PartSlice, EdgeWing, CenterSlice
-from ._super_element import SuperElement
+from .SuperElement import SuperElement
 
 from .Part import Part
 from .Center import Center
 from .Edge import Edge
 from .Corner import Corner
-from .cube import Cube
+from .Cube import Cube
 from .cube_boy import Color
-from .cube_face import Face
+from .Face import Face
 
 

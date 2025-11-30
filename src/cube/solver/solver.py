@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from cube.operator.cube_operator import Operator
-from cube.solver.solver_name import SolverName
+from cube.operator.Operator import Operator
+from cube.solver.SolverName import SolverName
 
 
 class SolveStep(Enum):

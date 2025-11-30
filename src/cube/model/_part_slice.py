@@ -10,8 +10,8 @@ from cube.model.cube_boy import FaceName, Color
 from ._elements import SliceIndex, PartColorsID, PartSliceHashID, EdgeSliceIndex, CenterSliceIndex, PartSliceColors
 
 if TYPE_CHECKING:
-    from .cube_face import Face
-    from .cube import Cube
+    from .Face import Face
+    from .Cube import Cube
     from .Part import Part
     from .Edge import Edge
 

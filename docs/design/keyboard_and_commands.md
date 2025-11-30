@@ -305,10 +305,10 @@ class AppWindowBase(ABC):
 
 | File | Purpose |
 |------|---------|
-| `gui/command.py` | Command enum with 100+ self-executing commands |
+| `gui/Command.py` | Command enum with 100+ self-executing commands |
 | `gui/key_bindings.py` | Key→Command binding tables, lookup_command() |
 | `gui/types.py` | Abstract `Keys` class with ASCII-like values |
-| `main_window/app_window_base.py` | Base class with handle_key(), inject_command() |
+| `main_window/AppWindowBase.py` | Base class with handle_key(), inject_command() |
 | `gui/backends/pyglet/PygletWindow.py` | `_PYGLET_TO_KEYS` mapping |
 | `gui/backends/tkinter/TkinterWindow.py` | `_TK_KEY_MAP` mapping |
 | `gui/backends/console/ConsoleAppWindow.py` | `_CONSOLE_TO_KEYS` mapping |

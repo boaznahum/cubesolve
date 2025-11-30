@@ -1,28 +1,16 @@
-class AppExit(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
+# Re-exports for backward compatibility
+from .ExceptionAppExit import AppExit
+from .ExceptionRunStop import RunStop
+from .ExceptionOpAborted import OpAborted
+from .ExceptionEvenCubeEdgeParity import EvenCubeEdgeParityException
+from .ExceptionEvenCubeCornerSwap import EvenCubeCornerSwapException
+from .ExceptionInternalSWError import InternalSWError
 
-
-class RunStop(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
-
-
-class OpAborted(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
-
-
-class EvenCubeEdgeParityException(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
-
-
-class EvenCubeCornerSwapException(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
-
-
-class InternalSWError(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
+__all__ = [
+    'AppExit',
+    'RunStop',
+    'OpAborted',
+    'EvenCubeEdgeParityException',
+    'EvenCubeCornerSwapException',
+    'InternalSWError',
+]

@@ -1,7 +1,7 @@
 import pytest
 
 from cube.algs import Algs
-from cube.app.abstract_ap import AbstractApp
+from cube.app.AbstractApp import AbstractApp
 from cube import config
 
 

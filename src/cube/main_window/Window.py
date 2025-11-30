@@ -7,16 +7,16 @@ from pyglet.window import key  # type: ignore
 
 from cube import config
 from cube.algs import Algs, Alg
-from cube.animation.animation_manager import AnimationWindow
-from cube.app.abstract_ap import AbstractApp
-from cube.app.app_state import ApplicationAndViewState
+from cube.animation.AnimationManager import AnimationWindow
+from cube.app.AbstractApp import AbstractApp
+from cube.app.ApplicationAndViewState import ApplicationAndViewState
 from cube.app.app_exceptions import AppExit, RunStop, OpAborted
 from cube.main_window import main_g_mouse
-from cube.gui.command import CommandContext
+from cube.gui.Command import CommandContext
 from cube.gui.key_bindings import lookup_command
 from cube.solver import Solver
-from cube.viewer.viewer_g import GCubeViewer
-from cube.viewer.viewer_g_ext import GViewerExt
+from cube.viewer.GCubeViewer import GCubeViewer
+from cube.viewer.GViewerExt import GViewerExt
 from cube.gui.factory import GUIBackend
 from cube.gui.backends.pyglet.PygletWindow import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 

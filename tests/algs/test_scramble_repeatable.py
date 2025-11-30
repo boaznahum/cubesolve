@@ -1,10 +1,10 @@
 """Tests to verify that random scramble is repeatable with same seed."""
 import pytest
 
-from cube.app.abstract_ap import AbstractApp
-from cube.app.app_state import ApplicationAndViewState
-from cube.model.cube import Cube
-from cube.operator.cube_operator import Operator
+from cube.app.AbstractApp import AbstractApp
+from cube.app.ApplicationAndViewState import ApplicationAndViewState
+from cube.model.Cube import Cube
+from cube.operator.Operator import Operator
 from cube.solver import Solver, Solvers
 
 

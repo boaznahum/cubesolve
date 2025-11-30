@@ -6,7 +6,7 @@ from cube.model import CenterSlice, PartEdge, SliceIndex, CenterSliceIndex, Face
 from .Part import TPartType
 
 if TYPE_CHECKING:
-    from .cube_face import Face
+    from .Face import Face
 
 _Face: TypeAlias = "Face"
 

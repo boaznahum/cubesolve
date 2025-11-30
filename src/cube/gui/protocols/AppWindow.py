@@ -10,10 +10,10 @@ a unified entry point (main_any_backend.py).
 from typing import Protocol, runtime_checkable, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cube.app.abstract_ap import AbstractApp
-    from cube.viewer.viewer_g import GCubeViewer
+    from cube.app.AbstractApp import AbstractApp
+    from cube.viewer.GCubeViewer import GCubeViewer
     from cube.gui.protocols.Renderer import Renderer
-    from cube.gui.command import Command
+    from cube.gui.Command import Command
 
 
 @runtime_checkable

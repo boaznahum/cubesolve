@@ -4,8 +4,8 @@ from math import ceil
 
 from cube import config
 from cube.algs import Algs
-from cube.app.abstract_ap import AbstractApp
-from cube.solver.solver_name import SolverName
+from cube.app.AbstractApp import AbstractApp
+from cube.solver.SolverName import SolverName
 from tests.tetser import TestRunner
 
 

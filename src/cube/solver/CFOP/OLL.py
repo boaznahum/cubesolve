@@ -4,10 +4,10 @@ from typing import Tuple
 from cube.algs import Alg, Algs
 from cube.app.app_exceptions import InternalSWError
 from cube.model import FaceName, Part
-from cube.model.cube_face import Face
-from cube.solver.common.advanced_even_oll_big_cube_parity import AdvancedEdgeEdgeParity
-from cube.solver.common.base_solver import BaseSolver
-from cube.solver.common.solver_element import StepSolver
+from cube.model.Face import Face
+from cube.solver.common.AdvancedEvenOLLBigCubeParity import AdvancedEdgeEdgeParity
+from cube.solver.common.BaseSolver import BaseSolver
+from cube.solver.common.SolverElement import StepSolver
 
 
 def use(_):

@@ -12,13 +12,13 @@ Design:
 
 Usage:
     from cube.gui.key_bindings import lookup_command
-    from cube.gui.command import Command
+    from cube.gui.Command import Command
 
     cmd = lookup_command(Keys.R, Modifiers.SHIFT, animation_running=False)
     # Returns Command.ROTATE_R_PRIME
 """
 from cube.gui.types import Keys, Modifiers
-from cube.gui.command import Command
+from cube.gui.Command import Command
 
 # Type alias for binding tuple: (key, modifiers, command)
 KeyBinding = tuple[int, int, Command]

@@ -14,7 +14,7 @@ except ImportError as e:
 from cube.gui.protocols import AnimationBackend
 
 if TYPE_CHECKING:
-    from cube.model.cube import Cube
+    from cube.model.Cube import Cube
     from cube.model.cube_boy import FaceName
     from cube.model._part_slice import PartSlice
 

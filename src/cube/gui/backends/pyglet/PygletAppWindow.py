@@ -12,17 +12,17 @@ except ImportError as e:
     raise ImportError("pyglet is required: pip install pyglet") from e
 
 from cube import config
-from cube.app.abstract_ap import AbstractApp
+from cube.app.AbstractApp import AbstractApp
 from cube.app.app_exceptions import AppExit
-from cube.animation.animation_manager import AnimationWindow
+from cube.animation.AnimationManager import AnimationWindow
 from cube.gui.factory import GUIBackend
 from cube.gui.backends.pyglet.PygletWindow import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 from cube.main_window import main_g_mouse
-from cube.main_window.app_window_base import AppWindowBase, TextLabel
-from cube.gui.command import Command, CommandContext
+from cube.main_window.AppWindowBase import AppWindowBase, TextLabel
+from cube.gui.Command import Command, CommandContext
 from cube.gui.key_bindings import lookup_command
-from cube.viewer.viewer_g import GCubeViewer
-from cube.viewer.viewer_g_ext import GViewerExt
+from cube.viewer.GCubeViewer import GCubeViewer
+from cube.viewer.GViewerExt import GViewerExt
 
 
 class PygletAppWindow(pyglet.window.Window, AnimationWindow):

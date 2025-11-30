@@ -10,11 +10,11 @@ Key Handling:
 - All command logic is in handle_key() via lookup_command + command.execute()
 """
 
-from cube.app.abstract_ap import AbstractApp
+from cube.app.AbstractApp import AbstractApp
 from cube.gui.factory import GUIBackend
 from cube.gui.protocols import AppWindow
 from cube.gui.types import Keys, Modifiers
-from cube.main_window.app_window_base import AppWindowBase
+from cube.main_window.AppWindowBase import AppWindowBase
 
 from cube.gui.backends.console import ConsoleViewer as console_viewer
 from cube.gui.backends.console.ConsoleKeys import Keys as ConsoleKeys
