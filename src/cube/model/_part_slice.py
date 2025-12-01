@@ -1,3 +1,4 @@
+import sys
 import itertools
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -236,7 +237,7 @@ class PartSlice(ABC, Hashable):
             new_colors_id = frozenset(e.color for e in self._edges)
 
             if colors_id and new_colors_id != colors_id:
-                print("Bug here !!!!")
+                print("Bug here !!!!", file=sys.stderr)
 
             colors_id = new_colors_id
 

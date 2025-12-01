@@ -84,7 +84,7 @@ class L2(SolverElement):
         down: Face = up.opposite
 
         if st.actual.on_face(down):
-            print()
+            self.debug("Edge unexpectedly on down face:", st.actual)
 
         assert not st.actual.on_face(down)
 

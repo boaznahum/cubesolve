@@ -161,7 +161,7 @@ class NxNCentersFaceTrackers(SolverElement):
 
     # noinspection PyUnreachableCode,PyUnusedLocal
     def _debug_print_track_slices(self, message: str):
-
+        # Disabled - kept for future debugging
         if True:
             return
 

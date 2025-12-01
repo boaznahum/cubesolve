@@ -1,3 +1,4 @@
+import sys
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Sequence, Iterator, Iterable
@@ -261,7 +262,7 @@ class Part(ABC, CubeElement):
             new_colors_id = frozenset(e.color for e in self._3x3_representative_edges)
 
             if colors_id and new_colors_id != colors_id:
-                print("Bug here !!!!")
+                print("Bug here !!!!", file=sys.stderr)
 
             colors_id = new_colors_id
 

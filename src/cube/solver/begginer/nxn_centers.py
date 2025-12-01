@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Iterator, Sequence, Iterable, Set
 from enum import Enum, unique
 from typing import Tuple, TypeAlias
@@ -182,10 +183,10 @@ class NxNCenters(SolverElement):
         return work_done
 
     def _print_faces(self):
-
-        for f in self._faces:
-            print(f.face, f.color, " ", end="")
-        print()
+        if not self._solver._is_debug_enabled:
+            return
+        parts = [f"{f.face} {f.color}" for f in self._faces]
+        self.debug("Faces:", " ".join(parts))
 
     # noinspection PyUnreachableCode,PyUnusedLocal
     def _asserts_is_boy(self, faces: Iterable[FaceTracker]):
@@ -384,10 +385,10 @@ class NxNCenters(SolverElement):
                        f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}")
             for rc in self._2d_center_iter():
                 if center.get_center_slice(rc).color != color:
-                    print(f"Missing: {rc}  {[*self._get_four_center_points(rc[0], rc[1])]}")
+                    self.debug(f"Missing: {rc}  {[*self._get_four_center_points(rc[0], rc[1])]}")
             for rc in self._2d_center_iter():
                 if source_face.center.get_center_slice(rc).color == color:
-                    print(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
+                    self.debug(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
 
             raise InternalSWError("See error in log")
 
@@ -769,7 +770,7 @@ class NxNCenters(SolverElement):
             rc2_f_rotated = self.rotate_point_counterclockwise(r2, c2)
 
             if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-                print("xxx")
+                print("Intersection still exists after rotation", file=sys.stderr)
             assert not self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1]))
         else:
             # clockwise is OK

@@ -35,11 +35,17 @@ class BaseSolver(Solver, ABC):
 
     @property
     def _is_debug_enabled(self) -> bool:
-        if self._debug_override is None:
-            return self.is_debug_config_mode
-        else:
-            # Still need to respect quiet_all even with override
-            return self._op.app_state.is_debug(self._debug_override)
+        # Truth table (_debug_override, SOLVER_DEBUG) -> result:
+        # | override | config | result |  (None means "use config")
+        # |----------|--------|--------|
+        # | None     | False  | False  |  <- use config
+        # | None     | True   | True   |  <- use config
+        # | False    | False  | False  |  <- override wins
+        # | False    | True   | False  |  <- override wins (can't use OR!)
+        # | True     | False  | True   |  <- override wins
+        # | True     | True   | True   |  <- override wins
+        flag = self._debug_override if self._debug_override is not None else config.SOLVER_DEBUG
+        return self._op.app_state.is_debug(flag)
 
     def debug(self, *args):
         vs = self._op.app_state
