@@ -4,9 +4,10 @@
 
 This document describes the migration from pyglet 1.5 to pyglet 2.0, and the path forward to modern OpenGL.
 
-**Status:** ❌ Blocked - Pyglet 2.0 lacks compatibility profile support on Windows
+**Status:** 🔄 In Progress - Modern OpenGL Migration
 
-> **Important:** The pyglet2 backend does NOT work with our legacy OpenGL code. See [Root Cause](#root-cause-pyglet-20-limitation) below.
+> **Decision (2025-12-01):** Since pyglet 2.0 cannot request compatibility profile on Windows,
+> we are proceeding with **modern OpenGL migration** (shaders + VBOs) instead.
 
 ## Root Cause: Pyglet 2.0 Limitation
 
@@ -188,9 +189,90 @@ python -m venv .venv_pyglet2
 
 ---
 
-## Future: Modern OpenGL Migration (A5.c)
+## Modern OpenGL Migration Plan
 
-The current solution uses **legacy OpenGL in compatibility mode**. A full modern OpenGL migration would provide better performance and future-proofing.
+Since compatibility profile is not available, we're migrating to **modern OpenGL 3.3+ core profile**.
+
+### Incremental Migration Strategy
+
+The key insight: migrate **one ShapeRenderer method at a time** while keeping the app working.
+
+#### Phase 1: Infrastructure (Current)
+- [x] Verify modern GL symbols work in pyglet 2.0 context
+- [ ] Create basic shader infrastructure (compile, link, error handling)
+- [ ] Create basic VBO/VAO wrapper classes
+- [ ] Add matrix math library (numpy or pyrr)
+
+#### Phase 2: Simple Shapes
+- [ ] Migrate `line()` - simplest primitive
+- [ ] Migrate `quad()` - most used primitive
+- [ ] Migrate `triangle()`
+
+#### Phase 3: Complex Rendering
+- [ ] Replace display lists with VBO caching
+- [ ] Migrate matrix stack (push/pop/rotate/translate)
+- [ ] Replace GLU quadrics (sphere, cylinder) with generated geometry
+
+#### Phase 4: Polish
+- [ ] Performance optimization (batch similar draws)
+- [ ] Clean up temporary compatibility code
+
+### Modern GL Symbols Test
+
+```python
+# These should work in pyglet 2.0 core profile context:
+from pyglet.gl import gl
+
+# Core profile functions
+gl.glGenBuffers        # VBOs
+gl.glGenVertexArrays   # VAOs
+gl.glCreateShader      # Shaders
+gl.glCreateProgram     # Shader programs
+gl.glUniform3f         # Shader uniforms
+```
+
+**Tested 2025-12-01:** All 22 modern GL symbols available ✅
+
+### Shader + VBO Rendering Test
+
+Verified that full modern GL pipeline works:
+- Vertex shader compiles ✅
+- Fragment shader compiles ✅
+- Program links ✅
+- VBO uploads data ✅
+- VAO binds attributes ✅
+- Triangle renders with vertex colors ✅
+
+```python
+# Minimal vertex shader
+VERTEX_SHADER = '''
+#version 330 core
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aColor;
+out vec3 vertexColor;
+void main() {
+    gl_Position = vec4(aPos, 1.0);
+    vertexColor = aColor;
+}
+'''
+
+# Minimal fragment shader
+FRAGMENT_SHADER = '''
+#version 330 core
+in vec3 vertexColor;
+out vec4 FragColor;
+void main() {
+    FragColor = vec4(vertexColor, 1.0);
+}
+'''
+```
+
+---
+
+## Legacy Reference: Compatibility Mode Attempt
+
+The following documents our **failed attempt** to use legacy GL in pyglet 2.0.
+Kept for historical reference.
 
 ### Migration Scope
 

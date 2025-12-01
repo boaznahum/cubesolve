@@ -43,7 +43,8 @@
       "Bash(.venv_pyglet2/Scripts/python.exe:*)",
       "Bash(.venv_pyglet2/Scripts/pip.exe:*)",
       "Bash(timeout /t 3 /nobreak)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
