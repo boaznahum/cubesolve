@@ -21,10 +21,15 @@ class AbstractApp(metaclass=ABCMeta):
         return AbstractApp.create_non_default(None)
 
     @staticmethod
-    def create_non_default(cube_size: int | None, animation=True) -> "AbstractApp":
+    def create_non_default(
+        cube_size: int | None,
+        animation: bool = True,
+        debug_all: bool = False,
+        quiet_all: bool = False,
+    ) -> "AbstractApp":
         from .app import _App
 
-        vs = ApplicationAndViewState()
+        vs = ApplicationAndViewState(debug_all=debug_all, quiet_all=quiet_all)
         am: "AnimationManager | None" = None
         if animation:
             from cube.animation.AnimationManager import AnimationManager

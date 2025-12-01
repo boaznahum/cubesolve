@@ -101,7 +101,7 @@ KEY_BINDINGS_NORMAL: list[KeyBinding] = [
     # Solve Commands
     # -------------------------------------------------------------------------
     (Keys.SLASH, 0, Command.SOLVE_ALL),
-    (Keys.SLASH, Modifiers.SHIFT, Command.SOLVE_ALL),  # Same, animation handled elsewhere
+    (Keys.SLASH, Modifiers.SHIFT, Command.SOLVE_ALL_NO_ANIMATION),  # Instant solve
     (Keys.F1, 0, Command.SOLVE_L1),
     (Keys.F1, Modifiers.CTRL, Command.SOLVE_L1X),
     (Keys.F2, 0, Command.SOLVE_L2),

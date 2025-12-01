@@ -267,6 +267,11 @@ def _solve_all(ctx: CommandContext) -> None:
     ctx.slv.solve(animation=None)
 
 
+def _solve_all_no_animation(ctx: CommandContext) -> None:
+    """Full solve without animation (instant)."""
+    ctx.slv.solve(animation=False)
+
+
 def _solve_edges(ctx: CommandContext) -> None:
     """Solve NxN edges and track count."""
     n0 = ctx.op.count
@@ -544,6 +549,7 @@ class Command(Enum):
 
     # Solve Commands
     SOLVE_ALL = (_simple, _solve_all)
+    SOLVE_ALL_NO_ANIMATION = (_simple, _solve_all_no_animation)
     SOLVE_L1 = (_solve, SolveStep.L1)
     SOLVE_L1X = (_solve, SolveStep.L1x)
     SOLVE_L2 = (_solve, SolveStep.L2)

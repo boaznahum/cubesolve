@@ -217,3 +217,8 @@ claude said: I need to discuss the situation with you. Your codebase heavily use
   - Migrated error diagnostics (CubeSanity, Part, _part_slice, etc.) to stderr
   - Added `--debug-all` and `--quiet` CLI flags to `main_any_backend.py`
   - Added `--debug-all` and `--quiet-debug` pytest options
+
+- ✅ **B3.** Shift+/ (solve without animation) no longer works after command refactoring
+  - **Fixed:** Added `SOLVE_ALL_NO_ANIMATION` command and mapped Shift+/ to it
+  - Key binding updated in `key_bindings.py:104`
+  - New command in `Command.py:552`
