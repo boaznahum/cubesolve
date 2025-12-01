@@ -97,6 +97,11 @@ class AnimationManager(ABC):
             op(alg, False)
             return
 
+        # Some backends (e.g., pyglet2 with modern GL) don't have a legacy viewer
+        if viewer is None:
+            op(alg, False)
+            return
+
         _op_and_play_animation(self._window,
                                cube,
                                self._set_animation,

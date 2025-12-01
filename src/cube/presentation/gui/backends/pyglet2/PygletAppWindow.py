@@ -181,11 +181,17 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # self._viewer.draw()    # Uses glBegin/glEnd - needs migration
         # self._draw_animation() # Uses legacy GL - needs migration
 
+        # Disable depth testing for 2D text overlay
+        gl.glDisable(gl.GL_DEPTH_TEST)
+
         # Pyglet 2.0's label drawing uses modern GL internally
         for t in self.text:
             t.draw()
         for t in self.animation_text:
             t.draw()
+
+        # Re-enable depth testing for next frame
+        gl.glEnable(gl.GL_DEPTH_TEST)
 
     def on_resize(self, width, height):
         """Pyglet resize event."""
