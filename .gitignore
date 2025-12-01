@@ -1,4 +1,5 @@
 /.logs/
+/.temp/
 __pycache__/
 /nul
 /build/

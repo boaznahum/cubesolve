@@ -1,3 +1,4 @@
+import sys
 from typing import Mapping, Hashable, Sequence
 
 from cube.app.app_exceptions import InternalSWError
@@ -67,14 +68,14 @@ class CubeSanity:
                         m = "!!!"
                     else:
                         m = "+++"
-                    print(clr, _k, f"{m}{len(_v)}{m}", v)
+                    print(clr, _k, f"{m}{len(_v)}{m}", v, file=sys.stderr)
 
             clr_n = sum(len(s) for s in clr_dist.values())
 
             if clr_n != n_slices * n_slices:
                 s = f"Too few entries for color {clr}"
                 _print_clr()
-                print(s)
+                print(s, file=sys.stderr)
                 raise InternalSWError(s)
             for k, v in clr_dist.items():
                 if len(v) != 4:
@@ -83,13 +84,13 @@ class CubeSanity:
                         if len(v) != 1:
                             s = f"Wrong middle center {k} entries for color {clr}"
                             _print_clr()
-                            print(s)
+                            print(s, file=sys.stderr)
                             raise InternalSWError(s)
 
                     else:
                         s = f"Too few point {k} entries for color {clr}"
                         _print_clr()
-                        print(s)
+                        print(s, file=sys.stderr)
                         raise InternalSWError(s)
 
     @staticmethod
@@ -110,14 +111,14 @@ class CubeSanity:
                         m = "!!!"
                     else:
                         m = "+++"
-                    print(clr, _k, f"{m}{len(_v)}{m}", v)
+                    print(clr, _k, f"{m}{len(_v)}{m}", v, file=sys.stderr)
 
             clr_n = sum(len(s) for s in clr_dist.values())
 
             if clr_n != n_slices:
                 s = f"Too few entries for color {clr}"
                 _print_clr()
-                print(s)
+                print(s, file=sys.stderr)
                 raise InternalSWError(s)
             for k, v in clr_dist.items():
                 if len(v) != 2:
@@ -125,11 +126,11 @@ class CubeSanity:
                         if len(v) != 1:
                             s = f"Wrong middle center {k} entries for color {clr}"
                             _print_clr()
-                            print(s)
+                            print(s, file=sys.stderr)
                             raise InternalSWError(s)
 
                     else:
                         s = f"Too few point {k} entries for color {clr}"
                         _print_clr()
-                        print(s)
+                        print(s, file=sys.stderr)
                         raise InternalSWError(s)
