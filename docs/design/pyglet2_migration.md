@@ -191,31 +191,38 @@ python -m venv .venv_pyglet2
 
 ## Modern OpenGL Migration Plan
 
-Since compatibility profile is not available, we're migrating to **modern OpenGL 3.3+ core profile**.
+Since compatibility profile is not available on Windows, we're migrating to **modern OpenGL 3.3+ core profile**.
 
 ### Incremental Migration Strategy
 
 The key insight: migrate **one ShapeRenderer method at a time** while keeping the app working.
 
-#### Phase 1: Infrastructure (Current)
+#### Phase 1: Infrastructure ✅ COMPLETE
 - [x] Verify modern GL symbols work in pyglet 2.0 context
-- [ ] Create basic shader infrastructure (compile, link, error handling)
-- [ ] Create basic VBO/VAO wrapper classes
-- [ ] Add matrix math library (numpy or pyrr)
+- [x] Create basic shader infrastructure (`shaders.py` - compile, link, error handling)
+- [x] Create basic VBO/VAO wrapper classes (`buffers.py`)
+- [x] Add matrix math library (`matrix.py` - Mat4, perspective, rotate, translate)
 
-#### Phase 2: Simple Shapes
-- [ ] Migrate `line()` - simplest primitive
-- [ ] Migrate `quad()` - most used primitive
-- [ ] Migrate `triangle()`
+#### Phase 2: Simple Shapes ✅ COMPLETE
+- [x] Migrate `line()` - working in ModernGLRenderer
+- [x] Migrate `quad()` - working in ModernGLRenderer
+- [x] Migrate `triangle()` - working in ModernGLRenderer
 
-#### Phase 3: Complex Rendering
-- [ ] Replace display lists with VBO caching
-- [ ] Migrate matrix stack (push/pop/rotate/translate)
-- [ ] Replace GLU quadrics (sphere, cylinder) with generated geometry
+#### Phase 3: Cube Rendering ✅ WORKING (partial)
+- [x] Create `ModernGLCubeViewer` - generates cube geometry from model
+- [x] Per-vertex colors for stickers
+- [x] Grid lines for cell borders
+- [x] Face rotations work (instant, no animation)
+- [x] Scramble/Solve work (instant)
+- [x] Mouse drag (camera orbit)
+- [x] Mouse scroll (zoom)
+- [ ] **Animation** - NOT WORKING (display lists not available)
+- [ ] Mouse picking - untested
 
-#### Phase 4: Polish
-- [ ] Performance optimization (batch similar draws)
-- [ ] Clean up temporary compatibility code
+#### Phase 4: Animation (PENDING)
+- [ ] Design VBO-based animation system
+- [ ] Per-piece matrix transforms
+- [ ] Integration with AnimationManager
 
 ### Modern GL Symbols Test
 
@@ -357,6 +364,125 @@ def quad(self, vertices, color):
 - Provides path forward to modern GL if needed
 
 **Outcome:** pyglet2 backend working with pyglet 2.1.11
+
+---
+
+## Current Implementation Status (2025-12-01)
+
+### Files in pyglet2 Backend
+
+```
+src/cube/presentation/gui/backends/pyglet2/
+├── __init__.py           # Backend registration
+├── AbstractWindow.py     # Window protocol
+├── AppWindowBase.py      # Shared window logic (copied from pyglet)
+├── buffers.py            # VBO/VAO buffer management
+├── main_g_mouse.py       # Mouse handling (copied from pyglet)
+├── matrix.py             # Mat4, perspective, rotate, multiply
+├── ModernGLCubeViewer.py # Shader-based cube rendering (10KB)
+├── ModernGLRenderer.py   # Modern GL with GLSL shaders (14KB)
+├── PygletAnimation.py    # Animation (currently unused)
+├── PygletAppWindow.py    # Main window class (15KB)
+├── PygletEventLoop.py    # Event loop (same as pyglet)
+├── PygletRenderer.py     # gl_compat wrapper (implements protocol)
+├── PygletWindow.py       # Base window
+├── shaders.py            # Shader compilation utilities
+└── Window.py             # Legacy window (unused)
+```
+
+### Architecture Notes
+
+The pyglet2 backend has **two parallel renderer implementations**:
+
+| Renderer | GL Mode | Status | Animation Support |
+|----------|---------|--------|-------------------|
+| `PygletRenderer.py` | `gl_compat` (legacy) | Working | Possible via display lists |
+| `ModernGLRenderer.py` | Modern GL 3.3+ | Working | Needs VBO-based approach |
+
+**Currently using:** `ModernGLRenderer` + `ModernGLCubeViewer`
+
+### How Animation Currently Fails
+
+```python
+# In PygletAppWindow.__init__():
+self._viewer = None  # GCubeViewer disabled!
+
+# In AnimationManager.run_animation():
+try:
+    viewer = self._window.viewer  # Property access
+except RuntimeError:
+    # Viewer not initialized - skip animation
+    op(alg, False)  # Execute instantly without animation
+    return
+```
+
+### Feature Status
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Cube rendering | ✅ Working | ModernGLCubeViewer with shaders |
+| Face rotations | ✅ Working | R/L/U/D/F/B execute instantly |
+| Scramble | ✅ Working | Press 1-9 for scrambles |
+| Solve | ✅ Working | Press ? for solve |
+| Mouse drag | ✅ Working | Camera orbit via matrix.py |
+| Mouse scroll | ✅ Working | Z-axis translation |
+| Text labels | ✅ Working | pyglet.text.Label (modern GL) |
+| Debug logging | ✅ Working | `--debug-all` shows output |
+| **Animation** | ❌ Not working | Display lists not available |
+| Mouse picking | ❓ Untested | Needs screen_to_world |
+
+### How to Run
+
+```bash
+# Requires .venv_pyglet2 with pyglet 2.x
+.venv_pyglet2/Scripts/python.exe -m cube.main_any_backend --backend=pyglet2
+
+# With debug output
+.venv_pyglet2/Scripts/python.exe -m cube.main_any_backend --backend=pyglet2 --debug-all
+```
+
+### Test Results
+
+```bash
+# Run tests with pyglet2 backend
+.venv_pyglet2/Scripts/python.exe -m pytest tests/gui/test_gui.py -v --backend=pyglet2
+
+# Results:
+# - test_simple_quit: PASSED
+# - test_face_rotations: PASSED (without animation)
+# - test_scramble_and_solve: SKIPPED (needs GCubeViewer)
+# - test_multiple_scrambles: SKIPPED (marked skip)
+```
+
+### Recent Commits (new-opengl branch)
+
+```
+7028e0b Merge debug fixes from main
+b7ec97f Fix pyglet2 mouse rotation and key press debug logging
+f2cc9ab Fix pyglet2 animation skip and text rendering
+dea6893 Add ModernGLCubeViewer for pyglet2 backend with working cube rendering
+1ac0103 Fix pyglet2 on_resize called before renderer initialized
+ba42268 Integrate ModernGLRenderer with PygletAppWindow
+7a62dbb A5: Document pyglet 2.0 compatibility profile limitation
+```
+
+### Next Steps for New Session
+
+**Decision needed:** Which path to pursue for animation?
+
+1. **Option A: Use gl_compat** - Fastest path to full feature parity
+   - `PygletRenderer.py` already implements all protocols using `gl_compat`
+   - Would allow existing `GCubeViewer` + display lists to work
+   - Requires: Verify display lists work in compatibility mode
+   - Estimated: 1-2 days
+
+2. **Option B: Implement modern animation** - Future-proof but more work
+   - Use `ModernGLCubeViewer` for rendering (already working)
+   - Implement VBO-based animation (rotate vertex positions per piece)
+   - More complex, requires matrix stack per-piece
+   - Estimated: 1-2 weeks
+
+**Recommended:** Try Option A first since `PygletRenderer.py` already exists with gl_compat.
 
 ---
 
