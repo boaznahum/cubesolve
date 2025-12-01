@@ -31,7 +31,7 @@ and should be run one at a time or with pytest-forked for isolation.
 
 import pytest
 
-from cube.gui.Command import Command
+from cube.presentation.gui.Command import Command
 from tests.gui.tester.GUITestRunner import GUITestRunner
 
 

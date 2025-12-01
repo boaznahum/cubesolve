@@ -8,8 +8,8 @@ the Renderer, ShapeRenderer, DisplayListManager, and ViewStateManager protocols.
 import pytest
 import numpy as np
 
-from cube.gui.protocols import Renderer, ShapeRenderer, DisplayListManager, ViewStateManager
-from cube.gui.types import make_point3d
+from cube.presentation.gui.protocols import Renderer, ShapeRenderer, DisplayListManager, ViewStateManager
+from cube.presentation.gui.types import make_point3d
 
 
 class TestRendererProtocol:

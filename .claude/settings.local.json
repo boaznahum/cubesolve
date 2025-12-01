@@ -33,7 +33,10 @@
       "Bash(del analyze_classes.py)",
       "Bash(rm:*)",
       "Bash(.venv314Scriptspython.exe -m mypy -p cube)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(tr:*)",
+      "Bash(where:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

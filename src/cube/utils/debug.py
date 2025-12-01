@@ -8,7 +8,7 @@ for debugging purposes, especially for tracking down cache-related bugs.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cube.model.cube import Cube
+    from cube.domain.model.Cube import Cube
 
 
 def dump_cube_state(cube: "Cube", label: str = "Cube State") -> None:

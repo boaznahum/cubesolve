@@ -8,7 +8,7 @@ the EventLoop protocol.
 import pytest
 import time
 
-from cube.gui.protocols import EventLoop
+from cube.presentation.gui.protocols import EventLoop
 
 
 class TestEventLoopProtocol:

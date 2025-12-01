@@ -23,12 +23,12 @@ import re
 import sys
 from typing import TYPE_CHECKING
 
-from cube.app.AbstractApp import AbstractApp
-from cube.gui import BackendRegistry
-from cube.gui.Command import Command
+from cube.application.AbstractApp import AbstractApp
+from cube.presentation.gui import BackendRegistry
+from cube.presentation.gui.Command import Command
 
 if TYPE_CHECKING:
-    from cube.gui.protocols import AppWindow
+    from cube.presentation.gui.protocols import AppWindow
 
 
 def _inject_commands(window: "AppWindow", commands_str: str) -> None:

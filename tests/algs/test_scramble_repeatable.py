@@ -1,11 +1,11 @@
 """Tests to verify that random scramble is repeatable with same seed."""
 import pytest
 
-from cube.app.AbstractApp import AbstractApp
-from cube.app.ApplicationAndViewState import ApplicationAndViewState
-from cube.model.Cube import Cube
-from cube.operator.Operator import Operator
-from cube.solver import Solver, Solvers
+from cube.application.AbstractApp import AbstractApp
+from cube.application.state import ApplicationAndViewState
+from cube.domain.model.Cube import Cube
+from cube.application.commands.Operator import Operator
+from cube.domain.solver import Solver, Solvers
 
 
 def test_scramble_repeatable():

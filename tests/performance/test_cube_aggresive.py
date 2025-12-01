@@ -2,10 +2,10 @@
 import pytest
 from math import ceil
 
-from cube import config
-from cube.algs import Algs
-from cube.app.AbstractApp import AbstractApp
-from cube.solver.SolverName import SolverName
+from cube.application import config
+from cube.domain.algs import Algs
+from cube.application.AbstractApp import AbstractApp
+from cube.domain.solver.SolverName import SolverName
 from tests.tetser import TestRunner
 
 

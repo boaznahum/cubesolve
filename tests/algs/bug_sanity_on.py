@@ -1,9 +1,9 @@
 """Test for sanity check functionality."""
 import pytest
 
-from cube import config
-from cube.algs import Algs
-from cube.model.Cube import Cube
+from cube.application import config
+from cube.domain.algs import Algs
+from cube.domain.model.Cube import Cube
 
 
 def test_sanity_check_enabled():

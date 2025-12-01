@@ -3,12 +3,12 @@ import traceback
 from collections.abc import Collection
 from typing import Any
 
-from cube.algs import Algs
-from cube.app.ApplicationAndViewState import ApplicationAndViewState
-from cube.model import Cube
-from cube.operator.Operator import Operator
-from cube.solver import Solver, Solvers
-from cube.solver.SolverName import SolverName
+from cube.domain.algs import Algs
+from cube.application.state import ApplicationAndViewState
+from cube.domain.model.Cube import Cube
+from cube.application.commands.Operator import Operator
+from cube.domain.solver import Solver, Solvers
+from cube.domain.solver.SolverName import SolverName
 
 
 def run_solvers_sizes(solvers: Collection[SolverName], cube_sizes: Collection[int],

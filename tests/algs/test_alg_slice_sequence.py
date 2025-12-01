@@ -4,7 +4,7 @@ This test was written due to pyright warning that only slice object is supported
 """
 import pytest
 
-from cube.algs import Algs
+from cube.domain.algs import Algs
 
 
 def test_tuple_slice_syntax():

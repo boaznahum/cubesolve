@@ -7,8 +7,8 @@ the Window and TextRenderer protocols.
 
 import pytest
 
-from cube.gui.protocols import Window, TextRenderer
-from cube.gui.types import KeyEvent, MouseEvent, Keys, Modifiers
+from cube.presentation.gui.protocols import Window, TextRenderer
+from cube.presentation.gui.types import KeyEvent, MouseEvent, Keys, Modifiers
 
 
 class TestWindowProtocol:

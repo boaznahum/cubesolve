@@ -1,9 +1,9 @@
 """Tests for slice index operations."""
 import pytest
 
-from cube.algs import Algs
-from cube.app.AbstractApp import AbstractApp
-from cube.model.CubeQueries2 import CubeQueries2
+from cube.domain.algs import Algs
+from cube.application.AbstractApp import AbstractApp
+from cube.domain.model.CubeQueries2 import CubeQueries2
 
 
 def test_slice_play_and_inverse():

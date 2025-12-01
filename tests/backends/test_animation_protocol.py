@@ -7,8 +7,8 @@ implement the AnimationBackend protocol.
 
 import pytest
 
-from cube.gui.protocols import AnimationBackend
-from cube.gui.factory import BackendRegistry
+from cube.presentation.gui.protocols import AnimationBackend
+from cube.presentation.gui.factory import BackendRegistry
 
 
 class TestAnimationBackendProtocol:
@@ -92,7 +92,7 @@ class TestAnimationBackendWithCube:
     @pytest.fixture
     def cube(self):
         """Create a cube for animation testing."""
-        from cube.model.Cube import Cube
+        from cube.domain.model.Cube import Cube
         return Cube(3)
 
     @pytest.mark.requires_animation

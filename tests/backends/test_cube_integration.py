@@ -14,8 +14,8 @@ The CubeTestDriver handles:
 
 import pytest
 
-from cube.algs import Algs
-from cube.gui.types import Keys
+from cube.domain.algs import Algs
+from cube.presentation.gui.types import Keys
 
 # Import CubeTestDriver from conftest (available via fixture)
 from tests.backends.conftest import CubeTestDriver

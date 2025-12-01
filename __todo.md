@@ -39,10 +39,10 @@
     4. Sanity check accesses `colors_id` for all parts, forcing cache initialization
     5. Without this initialization, cache state becomes inconsistent during animation
   - **Key Files:**
-    - `src/cube/model/Part.py` lines 221-273 - Lazy cache properties
-    - `src/cube/model/_part_slice.py` lines 213-245 - Similar lazy caching
-    - `src/cube/model/cube_slice.py` line 230 - `reset_after_faces_changes()` call
-    - `src/cube/solver/begginer/L3Cross.py` line 178 - Failing assertion
+    - `src/cube/domain/model/Part.py` lines 221-273 - Lazy cache properties
+    - `src/cube/domain/model/_part_slice.py` lines 213-245 - Similar lazy caching
+    - `src/cube/domain/model/cube_slice.py` line 230 - `reset_after_faces_changes()` call
+    - `src/cube/domain/solver/beginner/L3Cross.py` line 178 - Failing assertion
   - **Workaround:** Press `+` key before scramble (or use `--speed-up 5` in tests)
 
 ## GUI & Testing
@@ -73,9 +73,6 @@
   - Consider: Use actual colors/formatting that renders in markdown, or restructure as separate diagrams
 
 ## Code Quality
-
-- ❌ **Q1.** Refactor too many packages under `src/cube`
-  - Ask Claude architects to rearrange them by layers
 
 - ❌ **Q5.** Review all `# type: ignore` comments and document why they're needed
   - Audit added during Q2 mypy fixes
@@ -212,3 +209,15 @@
   - **Fixed:** Added `SOLVE_ALL_NO_ANIMATION` command and mapped Shift+/ to it
   - Key binding updated in `key_bindings.py:104`
   - New command in `Command.py:552`
+
+- ✅ **Q1.** Refactor too many packages under `src/cube`
+  - **Completed:** Full layered architecture restructuring
+  - **New structure:**
+    - `domain/` - Pure business logic (algs, model, solver with beginner typo fixed)
+    - `application/` - Orchestration (commands, animation, config, exceptions, state)
+    - `presentation/` - View/UI (viewer, gui with backends)
+    - `utils/` - Utility functions (unchanged)
+    - `main_*.py` - Entry points (stay at cube/ root)
+  - **Files moved:** ~150 files across 12 packages into 3 layer packages
+  - **Fixed:** solver/begginer → solver/beginner (typo)
+  - **All tests pass:** 126 non-GUI tests, 8 GUI tests (4 skipped for B1)

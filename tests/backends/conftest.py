@@ -9,13 +9,13 @@ import pytest
 from typing import Iterator, Callable
 from dataclasses import dataclass, field
 
-from cube.gui.factory import BackendRegistry
-from cube.gui.protocols import Renderer, Window, EventLoop, AnimationBackend
-from cube.gui.types import KeyEvent, Keys, Modifiers, parse_key_string, make_key_sequence
-from cube.model.Cube import Cube
-from cube.operator.Operator import Operator
-from cube.algs import Algs
-from cube.solver import Solvers
+from cube.presentation.gui.factory import BackendRegistry
+from cube.presentation.gui.protocols import Renderer, Window, EventLoop, AnimationBackend
+from cube.presentation.gui.types import KeyEvent, Keys, Modifiers, parse_key_string, make_key_sequence
+from cube.domain.model.Cube import Cube
+from cube.application.commands.Operator import Operator
+from cube.domain.algs import Algs
+from cube.domain.solver import Solvers
 
 
 # Standard key-to-algorithm mapping for cube operations
@@ -287,7 +287,7 @@ def get_available_backends() -> list[str]:
 
     # Always try headless first (no dependencies)
     try:
-        from cube.gui.backends import headless  # noqa: F401
+        from cube.presentation.gui.backends import headless  # noqa: F401
         if BackendRegistry.is_registered("headless"):
             available.append("headless")
     except ImportError:
@@ -295,7 +295,7 @@ def get_available_backends() -> list[str]:
 
     # Try pyglet (requires pyglet + display)
     try:
-        from cube.gui.backends import pyglet  # noqa: F401
+        from cube.presentation.gui.backends import pyglet  # noqa: F401
         if BackendRegistry.is_registered("pyglet"):
             available.append("pyglet")
     except ImportError:
@@ -303,7 +303,7 @@ def get_available_backends() -> list[str]:
 
     # Try tkinter (requires tk)
     try:
-        from cube.gui.backends import tkinter  # noqa: F401
+        from cube.presentation.gui.backends import tkinter  # noqa: F401
         if BackendRegistry.is_registered("tkinter"):
             available.append("tkinter")
     except ImportError:
@@ -365,11 +365,11 @@ def backend_name(request: pytest.FixtureRequest) -> str:
 def ensure_backend_registered(backend_name: str) -> None:
     """Ensure the backend is registered before tests."""
     if backend_name == "headless":
-        from cube.gui.backends import headless  # noqa: F401
+        from cube.presentation.gui.backends import headless  # noqa: F401
     elif backend_name == "pyglet":
-        from cube.gui.backends import pyglet  # noqa: F401
+        from cube.presentation.gui.backends import pyglet  # noqa: F401
     elif backend_name == "tkinter":
-        from cube.gui.backends import tkinter  # noqa: F401
+        from cube.presentation.gui.backends import tkinter  # noqa: F401
 
 
 @pytest.fixture
@@ -408,7 +408,7 @@ def animation(backend_name: str, ensure_backend_registered: None) -> AnimationBa
 @pytest.fixture
 def gui_components(backend_name: str, ensure_backend_registered: None) -> Iterator[tuple[Renderer, Window, EventLoop, AnimationBackend | None]]:
     """Create all GUI components for the specified backend."""
-    from cube.gui import BackendRegistry
+    from cube.presentation.gui import BackendRegistry
 
     renderer = BackendRegistry.create_renderer(backend_name)
     window = BackendRegistry.create_window(backend=backend_name)

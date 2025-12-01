@@ -2,11 +2,11 @@
 import pytest
 import time
 
-from cube.algs import Algs
-from cube.app.ApplicationAndViewState import ApplicationAndViewState
-from cube.operator.Operator import Operator
-from cube.solver import Solver, Solvers
-from cube.model.Cube import Cube
+from cube.domain.algs import Algs
+from cube.application.state import ApplicationAndViewState
+from cube.application.commands.Operator import Operator
+from cube.domain.solver import Solver, Solvers
+from cube.domain.model.Cube import Cube
 
 
 @pytest.mark.slow
