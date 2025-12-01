@@ -34,26 +34,26 @@ Cube
 **Key Design Principle:** Parts never move in 3D space - only their colors change.
 
 **Model Files:**
-- `src/cube/model/cube.py` - Root Cube class
-- `src/cube/model/cube_face.py` - Face rotation logic
-- `src/cube/model/Part.py`, `Edge.py`, `Corner.py`, `Center.py` - Piece types
-- `src/cube/operator/cube_operator.py` - Move execution
+- `src/cube/domain/model/Cube.py` - Root Cube class
+- `src/cube/domain/model/cube_face.py` - Face rotation logic
+- `src/cube/domain/model/Part.py`, `Edge.py`, `Corner.py`, `Center.py` - Piece types
+- `src/cube/application/commands/Operator.py` - Move execution
 
 ### 2.2 View Layer (Tightly Coupled to pyglet/OpenGL)
 
 | Component | Location | OpenGL Coupling |
 |-----------|----------|-----------------|
-| Window | `main_window/Window.py` | Extends `pyglet.window.Window` |
-| Cell rendering | `viewer/_cell.py` | `glBegin`, `glVertex3f`, `glGenLists`, `glCallList` |
-| Board | `viewer/_board.py` | Display lists, texture binding |
-| Face board | `viewer/_faceboard.py` | GL vertex arrays |
-| Shapes | `viewer/shapes.py` | `GL_QUADS`, `gluSphere`, `gluCylinder` |
-| View state | `app/ApplicationAndViewState.py` | `glPushAttrib`, `glRotatef`, `gluPerspective` |
-| Animation | `animation/AnimationManager.py` | `pyglet.app.event_loop`, `pyglet.clock` |
+| Window | `presentation/gui/backends/pyglet/Window.py` | Extends `pyglet.window.Window` |
+| Cell rendering | `presentation/viewer/_cell.py` | `glBegin`, `glVertex3f`, `glGenLists`, `glCallList` |
+| Board | `presentation/viewer/_board.py` | Display lists, texture binding |
+| Face board | `presentation/viewer/_faceboard.py` | GL vertex arrays |
+| Shapes | `presentation/viewer/shapes.py` (DELETED) | Was `GL_QUADS`, `gluSphere`, `gluCylinder` |
+| View state | `application/state.py` | `glPushAttrib`, `glRotatef`, `gluPerspective` |
+| Animation | `application/animation/AnimationManager.py` | `pyglet.app.event_loop`, `pyglet.clock` |
 
 ### 2.3 Existing Console Viewer (Reference Pattern)
 
-The console viewer (`src/cube/main_console/viewer.py`) provides a useful pattern:
+The console viewer (`src/cube/presentation/gui/backends/console/ConsoleViewer.py`) provides a useful pattern:
 - Has its own `_Cell`, `_FaceBoard`, `_Board` classes
 - Text-based rendering with colorama
 - No OpenGL dependencies
@@ -66,36 +66,42 @@ The console viewer (`src/cube/main_console/viewer.py`) provides a useful pattern
 ### 3.1 Package Structure
 
 ```
-src/cube/gui/
+src/cube/presentation/gui/
     __init__.py                 # Public API exports
     types.py                    # Common types (Point3D, Color3, events)
-    factory.py                  # BackendRegistry, GUIBackend
+    BackendRegistry.py          # BackendRegistry class
+    GUIBackend.py               # GUIBackend class
 
     protocols/
         __init__.py
-        renderer.py             # ShapeRenderer, DisplayListManager, ViewStateManager
-        window.py               # Window, TextRenderer protocols
-        event_loop.py           # EventLoop protocol
-        animation.py            # AnimationBackend protocol
+        Renderer.py             # ShapeRenderer, DisplayListManager, ViewStateManager
+        Window.py               # Window, TextRenderer protocols
+        EventLoop.py            # EventLoop protocol
+        AnimationBackend.py     # AnimationBackend protocol
 
     backends/
         __init__.py
         pyglet/                 # Wraps existing OpenGL code
             __init__.py
-            renderer.py
-            window.py
-            event_loop.py
-            animation.py
+            PygletRenderer.py
+            PygletWindow.py
+            PygletEventLoop.py
+            PygletAnimation.py
         headless/               # No-op for testing
             __init__.py
-            renderer.py
-            window.py
-            event_loop.py
-        tkinter/                # Future: Canvas-based rendering
+            HeadlessRenderer.py
+            HeadlessWindow.py
+            HeadlessEventLoop.py
+        tkinter/                # Canvas-based rendering
             __init__.py
-            renderer.py
-            window.py
-            event_loop.py
+            TkinterRenderer.py
+            TkinterWindow.py
+            TkinterEventLoop.py
+        console/                # Text-based console rendering
+            __init__.py
+            ConsoleRenderer.py
+            ConsoleAppWindow.py
+            ConsoleEventLoop.py
 ```
 
 ### 3.2 Core Protocols
@@ -172,7 +178,7 @@ class Keys:
 
 ```python
 from typing import Protocol, Sequence, runtime_checkable
-from cube.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4
+from cube.presentation.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4
 
 @runtime_checkable
 class ShapeRenderer(Protocol):
@@ -336,7 +342,7 @@ class Renderer(Protocol):
 
 ```python
 from typing import Protocol, Callable, runtime_checkable
-from cube.gui.types import KeyEvent, MouseEvent, Color4
+from cube.presentation.gui.types import KeyEvent, MouseEvent, Color4
 
 @runtime_checkable
 class TextRenderer(Protocol):
@@ -480,9 +486,9 @@ class EventLoop(Protocol):
 
 ```python
 from typing import Protocol, Callable, Collection, runtime_checkable
-from cube.model import PartSlice
-from cube.model.cube import Cube
-from cube.model.cube_boy import FaceName
+from cube.domain.model import PartSlice
+from cube.domain.model.Cube import Cube
+from cube.domain.model.cube_boy import FaceName
 
 @runtime_checkable
 class AnimationBackend(Protocol):
@@ -532,7 +538,7 @@ class AnimationBackend(Protocol):
 
 ```python
 from typing import Type, Dict, Any, Callable
-from cube.gui.protocols import Renderer, Window, EventLoop, AnimationBackend
+from cube.presentation.gui.protocols import Renderer, Window, EventLoop, AnimationBackend
 
 
 class GUIBackend:
@@ -679,9 +685,9 @@ class BackendRegistry:
 Wraps the existing OpenGL code:
 
 ```python
-# backends/pyglet/renderer.py
+# backends/pyglet/PygletRenderer.py
 from pyglet import gl
-from cube.gui.protocols.renderer import ShapeRenderer, DisplayListManager, ViewStateManager
+from cube.presentation.gui.protocols.Renderer import ShapeRenderer, DisplayListManager, ViewStateManager
 
 class PygletShapeRenderer:
     """Wraps existing shapes.py functions."""
@@ -739,7 +745,7 @@ class PygletRenderer:
 No-op implementations for testing:
 
 ```python
-# backends/headless/renderer.py
+# backends/headless/HeadlessRenderer.py
 class HeadlessShapeRenderer:
     """No-op shape renderer."""
     def quad(self, vertices, color): pass
@@ -770,9 +776,9 @@ class HeadlessRenderer:
 Canvas-based 2D rendering:
 
 ```python
-# backends/tkinter/renderer.py
+# backends/tkinter/TkinterRenderer.py
 import tkinter as tk
-from cube.gui.types import Point3D, Color3
+from cube.presentation.gui.types import Point3D, Color3
 
 class TkinterShapeRenderer:
     """2D canvas-based rendering with isometric projection."""
@@ -808,24 +814,24 @@ The core abstraction layer migration is **COMPLETE** (Steps 1-12).
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Protocol definitions | ✅ Done | `gui/protocols/*.py` |
-| Types and events | ✅ Done | `gui/types.py` - KeyEvent, MouseEvent, Keys, DisplayList, TextureHandle |
-| Backend registry | ✅ Done | `gui/factory.py` - BackendRegistry with `get_backend()` |
-| GUIBackend class | ✅ Done | `gui/factory.py` - Single entry point for backend components |
-| Pyglet backend | ✅ Done | Full OpenGL implementation in `gui/backends/pyglet/` |
-| Headless backend | ✅ Done | No-op implementation in `gui/backends/headless/` |
+| Protocol definitions | ✅ Done | `presentation/gui/protocols/*.py` |
+| Types and events | ✅ Done | `presentation/gui/types.py` - KeyEvent, MouseEvent, Keys, DisplayList, TextureHandle |
+| Backend registry | ✅ Done | `presentation/gui/BackendRegistry.py` - BackendRegistry with `get_backend()` |
+| GUIBackend class | ✅ Done | `presentation/gui/GUIBackend.py` - Single entry point for backend components |
+| Pyglet backend | ✅ Done | Full OpenGL implementation in `presentation/gui/backends/pyglet/` |
+| Headless backend | ✅ Done | No-op implementation in `presentation/gui/backends/headless/` |
 | Backend tests | ✅ Done | `tests/backends/` with --backend option |
 | Texture support | ✅ Done | load_texture(), bind_texture(), quad_with_texture() |
 | Renderer in viewer hierarchy | ✅ Done | GCubeViewer → _Board → _FaceBoard → _Cell |
 | main_g.py / main_pyglet.py | ✅ Done | Uses `BackendRegistry.get_backend()` and `backend.event_loop.run()` |
-| main_window/Window.py | ✅ Done | Accepts `backend: GUIBackend` parameter |
+| presentation/gui/backends/pyglet/Window.py | ✅ Done | Accepts `backend: GUIBackend` parameter |
 | GUITestRunner | ✅ Done | Uses `BackendRegistry.get_backend()` |
-| viewer/_cell.py | ✅ Done | Uses renderer.display_lists.* and renderer.shapes.* |
-| viewer/_board.py | ✅ Done | Uses renderer.display_lists.call_lists(), no pyglet imports |
-| viewer/viewer_g.py | ✅ Done | No pyglet imports (cleaned up) |
-| animation/AnimationManager.py | ✅ Done | Uses abstract EventLoop protocol |
-| main_g_abstract.py | ✅ Done | AbstractWindow is now a Protocol (not pyglet-dependent) |
-| EventLoop protocol | ✅ Done | `gui/protocols/event_loop.py` - run(), stop(), step(), schedule_*(), has_exit, idle(), notify() |
+| presentation/viewer/_cell.py | ✅ Done | Uses renderer.display_lists.* and renderer.shapes.* |
+| presentation/viewer/_board.py | ✅ Done | Uses renderer.display_lists.call_lists(), no pyglet imports |
+| presentation/viewer/viewer_g.py | ✅ Done | No pyglet imports (cleaned up) |
+| application/animation/AnimationManager.py | ✅ Done | Uses abstract EventLoop protocol |
+| AbstractWindow | ✅ Done | AbstractWindow is now a Protocol (not pyglet-dependent) |
+| EventLoop protocol | ✅ Done | `presentation/gui/protocols/EventLoop.py` - run(), stop(), step(), schedule_*(), has_exit, idle(), notify() |
 
 ### Migration Tags
 
@@ -878,12 +884,12 @@ These files contain direct pyglet/OpenGL calls and are part of the **pyglet back
 
 | File | GL Calls | Notes |
 |------|----------|-------|
-| `viewer/_cell.py` | ~30 | Low-level GL rendering (pyglet backend code) |
-| `viewer/shapes.py` | ~100 | Shape primitives (pyglet backend code) |
-| `viewer/texture.py` | ~20 | Texture loading (pyglet backend code) |
-| `viewer/viewer_g_ext.py` | ~10 | draw_axis() helper |
-| `app/ApplicationAndViewState.py` | ~30 | Matrix operations |
-| `main_window/Window.py` | ~10 | draw_text() orthographic projection |
+| `presentation/viewer/_cell.py` | ~30 | Low-level GL rendering (pyglet backend code) |
+| `presentation/viewer/shapes.py` | ~100 | Shape primitives (DELETED - was dead code) |
+| `presentation/viewer/TextureData.py` | ~20 | Texture loading (pyglet backend code) |
+| `presentation/viewer/viewer_g_ext.py` | ~10 | draw_axis() helper |
+| `application/state.py` | ~30 | Matrix operations |
+| `presentation/gui/backends/pyglet/Window.py` | ~10 | draw_text() orthographic projection |
 
 These would only need abstraction if adding another 3D backend (e.g., Vulkan).
 
@@ -893,76 +899,77 @@ These would only need abstraction if adding another 3D backend (e.g., Vulkan).
 
 ### Phase 1: Create Protocol Definitions (Non-breaking)
 
-**Files to create:**
-- `src/cube/gui/__init__.py`
-- `src/cube/gui/types.py`
-- `src/cube/gui/factory.py`
-- `src/cube/gui/protocols/__init__.py`
-- `src/cube/gui/protocols/renderer.py`
-- `src/cube/gui/protocols/window.py`
-- `src/cube/gui/protocols/event_loop.py`
-- `src/cube/gui/protocols/animation.py`
+**Files created:**
+- `src/cube/presentation/gui/__init__.py`
+- `src/cube/presentation/gui/types.py`
+- `src/cube/presentation/gui/BackendRegistry.py`
+- `src/cube/presentation/gui/GUIBackend.py`
+- `src/cube/presentation/gui/protocols/__init__.py`
+- `src/cube/presentation/gui/protocols/Renderer.py`
+- `src/cube/presentation/gui/protocols/Window.py`
+- `src/cube/presentation/gui/protocols/EventLoop.py`
+- `src/cube/presentation/gui/protocols/AnimationBackend.py`
 
 **Impact:** None - new code only
 
 ### Phase 2: Implement Pyglet Backend
 
-**Files to create:**
-- `src/cube/gui/backends/__init__.py`
-- `src/cube/gui/backends/pyglet/__init__.py`
-- `src/cube/gui/backends/pyglet/renderer.py`
-- `src/cube/gui/backends/pyglet/window.py`
-- `src/cube/gui/backends/pyglet/event_loop.py`
-- `src/cube/gui/backends/pyglet/animation.py`
+**Files created:**
+- `src/cube/presentation/gui/backends/__init__.py`
+- `src/cube/presentation/gui/backends/pyglet/__init__.py`
+- `src/cube/presentation/gui/backends/pyglet/PygletRenderer.py`
+- `src/cube/presentation/gui/backends/pyglet/PygletWindow.py`
+- `src/cube/presentation/gui/backends/pyglet/PygletEventLoop.py`
+- `src/cube/presentation/gui/backends/pyglet/PygletAnimation.py`
 
 **Impact:** Wraps existing code, no changes to existing files
 
 ### Phase 3: Implement Headless Backend
 
-**Files to create:**
-- `src/cube/gui/backends/headless/__init__.py`
-- `src/cube/gui/backends/headless/renderer.py`
-- `src/cube/gui/backends/headless/window.py`
-- `src/cube/gui/backends/headless/event_loop.py`
+**Files created:**
+- `src/cube/presentation/gui/backends/headless/__init__.py`
+- `src/cube/presentation/gui/backends/headless/HeadlessRenderer.py`
+- `src/cube/presentation/gui/backends/headless/HeadlessWindow.py`
+- `src/cube/presentation/gui/backends/headless/HeadlessEventLoop.py`
 
 **Impact:** Enables fast testing without GUI
 
 ### Phase 4: Refactor Viewer to Use Protocols
 
-**Files to modify:**
-- `src/cube/viewer/_cell.py` - Accept `Renderer`, use `renderer.display_lists` and `renderer.shapes`
-- `src/cube/viewer/_board.py` - Accept and pass `Renderer`
-- `src/cube/viewer/_faceboard.py` - Accept and pass `Renderer`
-- `src/cube/viewer/viewer_g.py` - Accept `Renderer`
+**Files modified:**
+- `src/cube/presentation/viewer/_cell.py` - Accept `Renderer`, use `renderer.display_lists` and `renderer.shapes`
+- `src/cube/presentation/viewer/_board.py` - Accept and pass `Renderer`
+- `src/cube/presentation/viewer/_faceboard.py` - Accept and pass `Renderer`
+- `src/cube/presentation/viewer/viewer_g.py` - Accept `Renderer`
 
 **Impact:** Internal refactoring, API unchanged
 
 ### Phase 5: Refactor ApplicationAndViewState
 
-**Files to modify:**
-- `src/cube/app/ApplicationAndViewState.py` - Extract GL code to use `ViewStateManager`
+**Files modified:**
+- `src/cube/application/state.py` - Extract GL code to use `ViewStateManager`
 
 **Impact:** Internal refactoring
 
 ### Phase 6: Refactor Animation System
 
-**Files to modify:**
-- `src/cube/animation/AnimationManager.py` - Use `AnimationBackend` protocol
+**Files modified:**
+- `src/cube/application/animation/AnimationManager.py` - Use `AnimationBackend` protocol
 
 **Impact:** Internal refactoring
 
 ### Phase 7: Refactor Window and Entry Point
 
-**Files to modify:**
-- `src/cube/main_window/Window.py` - Use protocols, delegate to backend
-- `src/cube/main_g.py` - Use backend factory
+**Files modified:**
+- `src/cube/presentation/gui/backends/pyglet/Window.py` - Use protocols, delegate to backend
+- `src/cube/main_pyglet.py` - Use backend factory
 
 **Impact:** Entry point signature may change
 
 ### Phase 8: Update AbstractApp Factory
 
-**Files to modify:**
-- `src/cube/app/AbstractApp.py` - Add `create_with_gui()` method
+**Files modified:**
+- `src/cube/application/AbstractApp.py` - Add `create_with_gui()` method
 
 **Impact:** New factory method, existing method unchanged
 
@@ -983,11 +990,11 @@ def main():
 
 ```python
 import pyglet
-from cube.app.AbstractApp import AbstractApp
-from cube.gui import BackendRegistry
+from cube.application.AbstractApp import AbstractApp
+from cube.presentation.gui import BackendRegistry
 # Import pyglet backend to register it
-import cube.gui.backends.pyglet  # noqa: F401 - registers backend
-from cube.main_window import Window
+import cube.presentation.gui.backends.pyglet  # noqa: F401 - registers backend
+from cube.presentation.gui.backends.pyglet import Window
 
 def main(backend_name: str | None = None):
     # Get backend instance (provides lazy renderer, window factory, etc.)
@@ -1008,7 +1015,8 @@ if __name__ == '__main__':
 ### For Tests
 
 ```python
-from cube.gui import BackendRegistry
+from cube.presentation.gui import BackendRegistry
+from cube.application.AbstractApp import AbstractApp
 
 def test_cube_operations():
     # Use headless backend for fast testing
@@ -1039,12 +1047,12 @@ def test_cube_operations():
 
 | Priority | File | Description |
 |----------|------|-------------|
-| 1 | `viewer/_cell.py` | Heaviest GL usage - display lists, shape rendering |
-| 2 | `app/ApplicationAndViewState.py` | View state management - projection, matrix stack |
-| 3 | `animation/AnimationManager.py` | Animation system - event loop integration |
-| 4 | `main_window/Window.py` | Main window - pyglet.window.Window subclass |
-| 5 | `viewer/shapes.py` | Primitive rendering functions |
-| 6 | `main_g.py` | Entry point |
+| 1 | `presentation/viewer/_cell.py` | Heaviest GL usage - display lists, shape rendering |
+| 2 | `application/state.py` | View state management - projection, matrix stack |
+| 3 | `application/animation/AnimationManager.py` | Animation system - event loop integration |
+| 4 | `presentation/gui/backends/pyglet/Window.py` | Main window - pyglet.window.Window subclass |
+| 5 | `presentation/viewer/shapes.py` | Primitive rendering functions (DELETED - dead code) |
+| 6 | `main_pyglet.py` | Entry point |
 
 ---
 

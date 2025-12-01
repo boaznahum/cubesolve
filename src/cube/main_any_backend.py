@@ -57,27 +57,6 @@ def _inject_commands(window: "AppWindow", commands_str: str) -> None:
             raise ValueError(f"Unknown command: {name}. Use --list-commands to see available commands.")
 
 
-def _import_backend(backend_name: str) -> None:
-    """Import the backend module to register it.
-
-    Args:
-        backend_name: Name of the backend to import.
-
-    Raises:
-        ImportError: If the backend module cannot be imported.
-    """
-    backend_modules = {
-        "pyglet": "cube.gui.backends.pyglet",
-        "tkinter": "cube.gui.backends.tkinter",
-        "console": "cube.gui.backends.console",
-        "headless": "cube.gui.backends.headless",
-    }
-
-    module_name = backend_modules.get(backend_name)
-    if module_name:
-        __import__(module_name)
-
-
 def create_app_window(
     app: AbstractApp,
     backend_name: str = "pyglet",
@@ -109,8 +88,8 @@ def create_app_window(
         >>> window = create_app_window(app, "tkinter")
         >>> window.run()
     """
-    # Import backend to register it
-    _import_backend(backend_name)
+    # Ensure backend is registered
+    BackendRegistry.ensure_registered(backend_name)
 
     # Get backend from registry and create window
     # GUIBackend.create_app_window() handles animation manager wiring

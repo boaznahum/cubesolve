@@ -55,11 +55,6 @@
 
 ## Architecture
 
-- ❌ **A3.** Consider moving animation manager wiring from GUIBackend to elsewhere
-  - Currently `GUIBackend.create_app_window()` wires up `app.am.set_event_loop()`
-  - This creates coupling between GUIBackend and AbstractApp
-  - Options: move to AbstractApp, make it explicit in main_any, or keep as-is
-
 - ❌ **A4.** PygletAppWindow cannot inherit from AppWindow protocol due to metaclass conflict
   - `pyglet.window.Window` has its own metaclass that conflicts with Protocol
   - Tried `TYPE_CHECKING` trick - didn't work in PyCharm

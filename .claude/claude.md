@@ -29,23 +29,23 @@ Command Pattern (keyboard handling)
 
 ### Key Files (PascalCase naming convention)
 **Protocols:**
-- `src/cube/gui/protocols/Renderer.py` - Renderer Protocol
-- `src/cube/gui/protocols/EventLoop.py` - EventLoop Protocol
-- `src/cube/gui/protocols/AppWindow.py` - AppWindow Protocol
+- `src/cube/presentation/gui/protocols/Renderer.py` - Renderer Protocol
+- `src/cube/presentation/gui/protocols/EventLoop.py` - EventLoop Protocol
+- `src/cube/presentation/gui/protocols/AppWindow.py` - AppWindow Protocol
 
 **Pyglet Backend:**
-- `src/cube/gui/backends/pyglet/PygletRenderer.py`
-- `src/cube/gui/backends/pyglet/PygletEventLoop.py`
-- `src/cube/gui/backends/pyglet/PygletAppWindow.py`
+- `src/cube/presentation/gui/backends/pyglet/PygletRenderer.py`
+- `src/cube/presentation/gui/backends/pyglet/PygletEventLoop.py`
+- `src/cube/presentation/gui/backends/pyglet/PygletAppWindow.py`
 
 **Other Backends:**
-- `src/cube/gui/backends/headless/` - Headless backend for testing
-- `src/cube/gui/backends/console/` - Console text-based backend
-- `src/cube/gui/backends/tkinter/` - Tkinter 2D canvas backend
+- `src/cube/presentation/gui/backends/headless/` - Headless backend for testing
+- `src/cube/presentation/gui/backends/console/` - Console text-based backend
+- `src/cube/presentation/gui/backends/tkinter/` - Tkinter 2D canvas backend
 
 **Command System:**
-- `src/cube/gui/Command.py` - Command enum (~100 commands)
-- `src/cube/gui/key_bindings.py` - Key→Command mappings
+- `src/cube/presentation/gui/Command.py` - Command enum (~100 commands)
+- `src/cube/presentation/gui/key_bindings.py` - Key→Command mappings
 
 **Design Docs:**
 - `docs/design/migration_state.md` - Migration history
@@ -66,8 +66,7 @@ Command Pattern (keyboard handling)
 **Tests:** 126 non-GUI tests, 2 GUI tests pass (8 skipped)
 
 All pyglet imports now only exist in:
-1. `src/cube/gui/backends/pyglet/` - The pyglet backend
-2. `src/cube/main_window/Window.py` - The pyglet window class
+1. `src/cube/presentation/gui/backends/pyglet/` - The pyglet backend
 
 ### How to Run
 - GUI: `python -m cube.main_pyglet`
@@ -85,7 +84,7 @@ Both must pass before committing.
 
 ### Check Pyglet Usage
 ```bash
-grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "gui/backends/pyglet" | grep -v "__pycache__"
+grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "presentation/gui/backends/pyglet" | grep -v "__pycache__"
 ```
 
 ### Important Notes
@@ -257,7 +256,7 @@ def process_commands(
 Implementation classes should inherit from their Protocol classes:
 
 ```python
-from cube.gui.protocols.renderer import Renderer, ShapeRenderer
+from cube.presentation.gui.protocols.Renderer import Renderer, ShapeRenderer
 
 class PygletShapeRenderer(ShapeRenderer):
     """Implements ShapeRenderer protocol."""
@@ -284,11 +283,11 @@ class PygletWindow(pyglet.window.Window):
 
 ### Implementation Files
 
-- `src/cube/gui/backends/pyglet/PygletRenderer.py` - Inherits from Renderer protocols
-- `src/cube/gui/backends/pyglet/PygletAnimation.py` - Inherits from AnimationBackend
-- `src/cube/gui/backends/pyglet/PygletEventLoop.py` - Inherits from EventLoop
-- `src/cube/gui/backends/pyglet/PygletWindow.py` - PygletTextRenderer inherits TextRenderer, PygletWindow cannot (metaclass)
-- `src/cube/gui/backends/headless/*.py` - Same pattern as pyglet
+- `src/cube/presentation/gui/backends/pyglet/PygletRenderer.py` - Inherits from Renderer protocols
+- `src/cube/presentation/gui/backends/pyglet/PygletAnimation.py` - Inherits from AnimationBackend
+- `src/cube/presentation/gui/backends/pyglet/PygletEventLoop.py` - Inherits from EventLoop
+- `src/cube/presentation/gui/backends/pyglet/PygletWindow.py` - PygletTextRenderer inherits TextRenderer, PygletWindow cannot (metaclass)
+- `src/cube/presentation/gui/backends/headless/*.py` - Same pattern as pyglet
 
 ---
 
@@ -310,9 +309,9 @@ class PygletWindow(pyglet.window.Window):
 5. Without this initialization, cache state becomes inconsistent during animation
 
 **Key Files:**
-- `src/cube/model/Part.py` lines 221-273 - Lazy cache properties
-- `src/cube/model/_part_slice.py` lines 213-245 - Similar lazy caching
-- `src/cube/model/cube_slice.py` line 230 - `reset_after_faces_changes()` call
-- `src/cube/solver/begginer/l3_cross.py` line 186 - Failing assertion
+- `src/cube/domain/model/Part.py` lines 221-273 - Lazy cache properties
+- `src/cube/domain/model/_part_slice.py` lines 213-245 - Similar lazy caching
+- `src/cube/domain/model/cube_slice.py` line 230 - `reset_after_faces_changes()` call
+- `src/cube/domain/solver/beginner/L3Cross.py` line 178 - Failing assertion
 
 **Workaround:** Press `+` key before scramble (or use `--speed-up 1+` in tests)

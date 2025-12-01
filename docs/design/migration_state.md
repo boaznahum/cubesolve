@@ -15,29 +15,29 @@ Before marking a step complete and tagging:
 
 ### Step 1: Migrate viewer_g_ext.py - Axis Drawing
 - **Tag:** `migration-step-1-axis-drawing`
-- **Files Changed:** `src/cube/viewer/viewer_g_ext.py`
+- **Files Changed:** `src/cube/presentation/viewer/viewer_g_ext.py`
 - **Changes:** Removed `from pyglet import gl`, now uses `renderer.view` and `renderer.shapes` for axis drawing
 - **Status:** COMPLETED
 
 ### Step 2: Migrate app_state.py - Matrix Operations
 - **Tag:** `migration-step-2-matrix-ops`
-- **Files Changed:** `src/cube/app/ApplicationAndViewState.py`
+- **Files Changed:** `src/cube/application/state.py`
 - **Changes:** `prepare_objects_view()`, `restore_objects_view()`, `set_projection()` now accept renderer parameter
 - **Status:** COMPLETED
 
 ### Step 3: Migrate texture.py - Texture Loading
 - **Tag:** `migration-step-3-texture`
-- **Files Changed:** `src/cube/viewer/texture.py`
+- **Files Changed:** `src/cube/presentation/viewer/TextureData.py`
 - **Changes:** Uses `renderer.load_texture()` instead of `pyglet.image.load()`
 - **Status:** COMPLETED
 
 ### Step 4: Migrate main_g_keyboard_input.py - Key Constants
 - **Tag:** `migration-step-4-keyboard`
 - **Files Changed:**
-  - `src/cube/main_window/main_g_keyboard_input.py`
-  - `src/cube/gui/types.py` (added key constants)
-  - `src/cube/gui/backends/pyglet/window.py` (key mappings)
-  - `src/cube/main_window/Window.py` (key conversion, draw_text fix)
+  - `src/cube/presentation/gui/backends/pyglet/main_g_keyboard_input.py` (DELETED in A2.1)
+  - `src/cube/presentation/gui/types.py` (added key constants)
+  - `src/cube/presentation/gui/backends/pyglet/PygletWindow.py` (key mappings)
+  - `src/cube/presentation/gui/backends/pyglet/Window.py` (key conversion, draw_text fix)
 - **Changes:**
   - Replaced `pyglet.window.key` with abstract `Keys` and `Modifiers`
   - Fixed `draw_text()` GL_MATRIX_MODE bug (use GL_TRANSFORM_BIT)
@@ -46,19 +46,19 @@ Before marking a step complete and tagging:
 ### Step 5: Add Picking to Renderer Protocol
 - **Tag:** `migration-step-5-picking`
 - **Files Changed:**
-  - `src/cube/gui/protocols/renderer.py` - Added `screen_to_world()` method to ViewStateManager protocol
-  - `src/cube/gui/backends/pyglet/renderer.py` - Implemented using `gluUnProject`
-  - `src/cube/gui/backends/headless/renderer.py` - Added no-op implementation returning (0,0,0)
+  - `src/cube/presentation/gui/protocols/Renderer.py` - Added `screen_to_world()` method to ViewStateManager protocol
+  - `src/cube/presentation/gui/backends/pyglet/PygletRenderer.py` - Implemented using `gluUnProject`
+  - `src/cube/presentation/gui/backends/headless/HeadlessRenderer.py` - Added no-op implementation returning (0,0,0)
 - **Changes:** Added screen coordinate to world coordinate conversion (picking) to renderer protocol
 - **Status:** COMPLETED
 
 ### Step 6: Migrate main_g_mouse.py - Mouse Handling
 - **Tag:** `migration-step-6-mouse`
 - **Files Changed:**
-  - `src/cube/main_window/main_g_mouse.py` - Removed pyglet imports, uses abstract types
-  - `src/cube/gui/types.py` - Added `MouseButton` class
-  - `src/cube/gui/backends/pyglet/window.py` - Added `_convert_mouse_buttons()` function
-  - `src/cube/main_window/Window.py` - Converts mouse events to abstract types
+  - `src/cube/presentation/gui/backends/pyglet/main_g_mouse.py` - Removed pyglet imports, uses abstract types
+  - `src/cube/presentation/gui/types.py` - Added `MouseButton` class
+  - `src/cube/presentation/gui/backends/pyglet/PygletWindow.py` - Added `_convert_mouse_buttons()` function
+  - `src/cube/presentation/gui/backends/pyglet/Window.py` - Converts mouse events to abstract types
 - **Changes:**
   - `_screen_to_model()` now uses `renderer.view.screen_to_world()` instead of direct GL calls
   - Mouse drag/press handlers use abstract `Modifiers` and `MouseButton` constants
@@ -68,22 +68,22 @@ Before marking a step complete and tagging:
 ### Step 7: Remove Unused Batch
 - **Tag:** `migration-step-7-batch`
 - **Files Changed:**
-  - `src/cube/main_window/Window.py` - Removed `self.batch` and `pyglet.graphics.Batch()` creation
-  - `src/cube/viewer/viewer_g.py` - Removed `batch` parameter from `GCubeViewer.__init__()`
-  - `src/cube/viewer/_board.py` - Removed `batch` parameter and `self.batch` attribute
-  - `src/cube/viewer/_faceboard.py` - Removed `batch` parameter and `self._batch` attribute
-  - `src/cube/viewer/_cell.py` - Removed `batch` parameter, removed `from pyglet.graphics import Batch`
+  - `src/cube/presentation/gui/backends/pyglet/Window.py` - Removed `self.batch` and `pyglet.graphics.Batch()` creation
+  - `src/cube/presentation/viewer/viewer_g.py` - Removed `batch` parameter from `GCubeViewer.__init__()`
+  - `src/cube/presentation/viewer/_board.py` - Removed `batch` parameter and `self.batch` attribute
+  - `src/cube/presentation/viewer/_faceboard.py` - Removed `batch` parameter and `self._batch` attribute
+  - `src/cube/presentation/viewer/_cell.py` - Removed `batch` parameter, removed `from pyglet.graphics import Batch`
 - **Changes:** Removed unused `pyglet.graphics.Batch` from entire viewer hierarchy
 - **Status:** COMPLETED
 
 ### Step 8: Migrate animation_manager.py - Event Loop/Clock
 - **Tag:** `step8-eventloop-migration`
 - **Files Changed:**
-  - `src/cube/animation/AnimationManager.py` - Removed pyglet imports, uses abstract EventLoop
-  - `src/cube/gui/protocols/event_loop.py` - Added `has_exit`, `idle()`, `notify()` methods
-  - `src/cube/gui/backends/pyglet/event_loop.py` - Implemented new methods
-  - `src/cube/gui/backends/headless/event_loop.py` - Implemented new methods
-  - `src/cube/gui/factory.py` - Added `event_loop` property to GUIBackend
+  - `src/cube/application/animation/AnimationManager.py` - Removed pyglet imports, uses abstract EventLoop
+  - `src/cube/presentation/gui/protocols/EventLoop.py` - Added `has_exit`, `idle()`, `notify()` methods
+  - `src/cube/presentation/gui/backends/pyglet/PygletEventLoop.py` - Implemented new methods
+  - `src/cube/presentation/gui/backends/headless/HeadlessEventLoop.py` - Implemented new methods
+  - `src/cube/presentation/gui/GUIBackend.py` - Added `event_loop` property to GUIBackend
   - `tests/gui/tester/GUITestRunner.py` - Wire up event loop to animation manager
 - **Changes:**
   - AnimationManager now accepts EventLoop via `set_event_loop()` method
@@ -102,8 +102,8 @@ Before marking a step complete and tagging:
 ### Step 10: Migrate Window.py + main_g_abstract.py
 - **Tag:** `step10-abstractwindow-protocol`
 - **Files Changed:**
-  - `src/cube/main_window/AbstractWindow.py` - Converted AbstractWindow from class to Protocol
-  - `src/cube/main_window/Window.py` - Now inherits directly from `pyglet.window.Window`
+  - `src/cube/presentation/gui/backends/pyglet/AbstractWindow.py` - Converted AbstractWindow from class to Protocol
+  - `src/cube/presentation/gui/backends/pyglet/Window.py` - Now inherits directly from `pyglet.window.Window`
 - **Changes:**
   - AbstractWindow is now a `@runtime_checkable` Protocol defining the interface
   - Window class implements the Protocol by being a pyglet window
@@ -112,8 +112,8 @@ Before marking a step complete and tagging:
 ### Step 11: Migrate viewer_g.py + _board.py - Cleanup
 - **Tag:** `step11-viewer-cleanup`
 - **Files Changed:**
-  - `src/cube/viewer/viewer_g.py` - Removed unused `import pyglet`, `import pyglet.gl as gl`, `from pyglet.gl import *`
-  - `src/cube/viewer/_board.py` - Removed unused `from pyglet import gl`
+  - `src/cube/presentation/viewer/viewer_g.py` - Removed unused `import pyglet`, `import pyglet.gl as gl`, `from pyglet.gl import *`
+  - `src/cube/presentation/viewer/_board.py` - Removed unused `from pyglet import gl`
 - **Changes:** Cleanup of unused imports
 - **Status:** COMPLETED
 
@@ -139,26 +139,26 @@ All `import pyglet` and `from pyglet` statements should ONLY exist in:
 
 #### Step 13: Delete shapes.py (Dead Code)
 - **Tag:** `step13-delete-shapes`
-- **Target:** `src/cube/viewer/shapes.py`
+- **Target:** `src/cube/presentation/viewer/shapes.py`
 - **Action:** DELETED - All 440 lines were unused dead code
 - **Finding:** `_cell.py` already used `renderer.shapes.*` for all rendering
 - **Status:** COMPLETED ✅
 
 #### Step 14: Delete gl_helper.py (Dead Code)
 - **Tag:** `step14-delete-gl-helper`
-- **Target:** `src/cube/viewer/gl_helper.py`
+- **Target:** `src/cube/presentation/viewer/gl_helper.py`
 - **Action:** DELETED - Only imported by shapes.py (which was deleted)
 - **Status:** COMPLETED ✅
 
 #### Step 15: Delete graphic_helper.py (Debug Only)
 - **Tag:** `step15-delete-graphic-helper`
-- **Target:** `src/cube/viewer/graphic_helper.py`
+- **Target:** `src/cube/presentation/viewer/graphic_helper.py`
 - **Action:** DELETED - Debug-only functions, `complement()` was unused
 - **Status:** COMPLETED ✅
 
 #### Step 16: Clean up _cell.py
 - **Tag:** `step16-cleanup-cell`
-- **Target:** `src/cube/viewer/_cell.py`
+- **Target:** `src/cube/presentation/viewer/_cell.py`
 - **Changes:**
   - Removed `import pyglet` (line 8)
   - Removed `from pyglet import gl` (line 10)
@@ -210,12 +210,13 @@ EventLoop
 ```
 
 ### Key Files
-- `src/cube/gui/protocols/renderer.py` - Renderer protocol definition
-- `src/cube/gui/protocols/event_loop.py` - EventLoop protocol definition
-- `src/cube/gui/backends/pyglet/renderer.py` - Pyglet renderer implementation
-- `src/cube/gui/backends/pyglet/event_loop.py` - Pyglet event loop implementation
-- `src/cube/gui/backends/headless/` - Headless backend for testing
-- `src/cube/gui/factory.py` - BackendRegistry and GUIBackend
+- `src/cube/presentation/gui/protocols/Renderer.py` - Renderer protocol definition
+- `src/cube/presentation/gui/protocols/EventLoop.py` - EventLoop protocol definition
+- `src/cube/presentation/gui/backends/pyglet/PygletRenderer.py` - Pyglet renderer implementation
+- `src/cube/presentation/gui/backends/pyglet/PygletEventLoop.py` - Pyglet event loop implementation
+- `src/cube/presentation/gui/backends/headless/` - Headless backend for testing
+- `src/cube/presentation/gui/BackendRegistry.py` - BackendRegistry
+- `src/cube/presentation/gui/GUIBackend.py` - GUIBackend
 
 ---
 
@@ -248,14 +249,13 @@ Report any visual glitches, crashes, or unexpected behavior.
 ### Migration Complete!
 
 All pyglet imports have been successfully removed from:
-- `viewer/shapes.py` - DELETED (440 lines of dead code)
-- `viewer/gl_helper.py` - DELETED (32 lines, only used by shapes.py)
-- `viewer/graphic_helper.py` - DELETED (53 lines, debug only)
-- `viewer/_cell.py` - Cleaned up (removed 3 imports, 4 dead type hints)
+- `presentation/viewer/shapes.py` - DELETED (440 lines of dead code)
+- `presentation/viewer/gl_helper.py` - DELETED (32 lines, only used by shapes.py)
+- `presentation/viewer/graphic_helper.py` - DELETED (53 lines, debug only)
+- `presentation/viewer/_cell.py` - Cleaned up (removed 3 imports, 4 dead type hints)
 
 **Remaining pyglet imports (by design):**
-1. `src/cube/gui/backends/pyglet/*` - Backend implementation
-2. `src/cube/main_window/Window.py` - IS the pyglet window class
+1. `src/cube/presentation/gui/backends/pyglet/*` - Backend implementation
 
 ---
 
@@ -267,7 +267,7 @@ Create an abstract `AppWindow` class that can work with ANY backend (pyglet, tki
 
 ### Current Problem
 
-The `main_window/Window.py` is tightly coupled to pyglet:
+The `presentation/gui/backends/pyglet/Window.py` is tightly coupled to pyglet:
 - Inherits from `pyglet.window.Window`
 - Uses pyglet-specific GL calls (`gl.glViewport`, `gl.glEnable`)
 - Uses pyglet-specific text rendering (`pyglet.text.Label`)
