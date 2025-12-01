@@ -60,6 +60,19 @@
   - Tried `TYPE_CHECKING` trick - didn't work in PyCharm
   - Options: composition pattern, wrapper class, or accept docstring-only documentation
 
+- ❌ **A5.** Pyglet 2.0 vs 1.5 - OpenGL compatibility decision
+  - **Status:** ❌ BLOCKED - Pyglet 2.0 cannot request compatibility profile on Windows
+  - **Root Cause:** `Win32ARBContext` doesn't set `WGL_CONTEXT_PROFILE_MASK_ARB`
+  - **Error:** `GLException (0x1282)` on legacy GL calls (glBegin/glEnd)
+  - **Attempted:** Created `pyglet2` backend with `gl_compat` and PyOpenGL
+  - **Result:** Code compiles but fails at runtime - core profile has no legacy GL
+  - **Options:**
+    1. Stay on pyglet 1.5 (recommended) ✅
+    2. Rewrite to modern OpenGL (2-4 weeks)
+    3. Patch pyglet (risky)
+  - **Files:** `src/cube/presentation/gui/backends/pyglet2/` (non-functional)
+  - **Docs:** `docs/design/pyglet2_migration.md`
+
 ## Documentation
 
 - ❌ **D1.** Improve keyboard_and_commands.md diagram clarity
@@ -104,18 +117,6 @@
 - ✅ **A1.** Move main window factory to backend, not a special factory in main_any
   - Added `app_window_factory` to `_BackendEntry` and `GUIBackend.create_app_window()`
   - Animation manager wiring is now in `GUIBackend.create_app_window()`
-
-- ✅ **A5.** Pyglet 2.0 vs 1.5 - OpenGL compatibility decision
-  - **Decision:** Created `pyglet2` backend using compatibility profile mode
-  - **Solution:** Use `pyglet.gl.gl_compat` for legacy GL, PyOpenGL for GLU
-  - **Key changes:**
-    - Request OpenGL 2.1 context → driver returns 4.6 compatibility profile
-    - Import `from pyglet.gl import gl_compat as gl` (not `from pyglet import gl`)
-    - Import `from OpenGL import GLU as glu` (GLU removed from pyglet 2.0)
-    - Label API: `bold=True` → `weight='bold'`
-  - **Files:** New `src/cube/presentation/gui/backends/pyglet2/` directory
-  - **Usage:** `python -m cube.main_any_backend --backend=pyglet2`
-  - **Docs:** `docs/design/pyglet2_migration.md`
 
 - ✅ **A2.** Introduce commands injecting instead of keys, simplify key handling
   - **A2.0.** ✅ Unify keyboard handling across all backends (prerequisite)

@@ -36,7 +36,14 @@
       "Bash(git checkout:*)",
       "Bash(tr:*)",
       "Bash(where:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(xcopy:*)",
+      "Bash(powershell -NoProfile -Command:*)",
+      "Bash(F:\\Dev\\code\\python\\cubesolve2\\.venv_pyglet2\\Scripts\\pip.exe install:*)",
+      "Bash(.venv_pyglet2/Scripts/python.exe:*)",
+      "Bash(.venv_pyglet2/Scripts/pip.exe:*)",
+      "Bash(timeout /t 3 /nobreak)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []

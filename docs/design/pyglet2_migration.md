@@ -4,7 +4,49 @@
 
 This document describes the migration from pyglet 1.5 to pyglet 2.0, and the path forward to modern OpenGL.
 
-**Status:** Phase 1 Complete (Compatibility Mode)
+**Status:** ❌ Blocked - Pyglet 2.0 lacks compatibility profile support on Windows
+
+> **Important:** The pyglet2 backend does NOT work with our legacy OpenGL code. See [Root Cause](#root-cause-pyglet-20-limitation) below.
+
+## Root Cause: Pyglet 2.0 Limitation
+
+### Why It Doesn't Work
+
+Our code uses legacy OpenGL functions (`glBegin`, `glEnd`, `glVertex`, display lists). These require an **OpenGL Compatibility Profile** context.
+
+Pyglet 2.0's `Win32ARBContext` (in `pyglet/gl/win32.py`) creates contexts using `wglCreateContextAttribsARB`, but it does **not** set:
+- `WGL_CONTEXT_PROFILE_MASK_ARB = 0x9126`
+- `WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB = 0x00000002`
+
+Without these attributes, Windows drivers default to **Core Profile** (OpenGL 3.3+), which removes all legacy functions.
+
+### Error Observed
+
+```
+pyglet.gl.lib.GLException: (0x1282): Invalid operation. The specified operation is not allowed in the current state.
+```
+
+This occurs when calling `glEnd()` because `glBegin()` was a no-op in core profile.
+
+### Verification
+
+```python
+# GL Version reported: 3.3.0 NVIDIA 560.94
+# This is core profile - legacy GL not available
+```
+
+### Options Forward
+
+| Option | Effort | Risk | Notes |
+|--------|--------|------|-------|
+| **Stay on pyglet 1.5** | None | Low | Use existing `pyglet` backend |
+| **Rewrite to modern GL** | High (2-4 weeks) | Medium | Shaders, VBOs, manual matrix math |
+| **Patch pyglet** | Medium | High | Add profile constants, may break updates |
+| **Report pyglet issue** | Low | N/A | May be fixed in future pyglet versions |
+
+**Recommendation:** Continue using the `pyglet` backend with pyglet 1.5.x for now.
+
+---
 
 ## Background
 

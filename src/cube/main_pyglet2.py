@@ -18,7 +18,7 @@ def main():
     """Main entry point for the pyglet-based GUI."""
     # Insert default backend if not specified
     if "--backend" not in sys.argv and "-b" not in sys.argv:
-        sys.argv.insert(1, "--backend=pyglet")
+        sys.argv.insert(1, "--backend=pyglet2")
     return main_any()
 
 
