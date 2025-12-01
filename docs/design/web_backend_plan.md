@@ -1,195 +1,541 @@
 # Web Backend Implementation Plan
 
+**Created:** 2025-12-01
+**Status Document:** `docs/design/web_backend_state.md`
+
 ## Overview
 
-Implement a web-based backend that renders the Rubik's cube in a browser using WebGL (Three.js), with a Python server communicating via WebSocket.
+Implement a web-based backend that renders the Rubik's cube in a browser using WebGL (Three.js), with a Python server communicating via WebSocket. This enables cross-platform viewing without local GUI dependencies.
 
 ## Architecture
 
 ```
-Python Backend                    Browser Frontend
-┌──────────────────┐              ┌──────────────────┐
-│   WebRenderer    │   WebSocket  │  Three.js/WebGL  │
-│   (collects      │ ──────────►  │  (renders with   │
-│    draw calls)   │              │   depth buffer)  │
-│                  │              │                  │
-│   WebEventLoop   │ ◄──────────  │  Event handlers  │
-│   (asyncio +     │   WebSocket  │  (keyboard,      │
-│    websockets)   │              │   mouse)         │
-└──────────────────┘              └──────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              PYTHON SERVER                                   │
+│                                                                              │
+│  WebAppWindow ──► WebRenderer ──► WebEventLoop                              │
+│       │          (JSON cmds)     (aiohttp server)                           │
+│       │                               │                                      │
+│       ▼                               │                                      │
+│  GCubeViewer                          │ HTTP: static files                   │
+│  (cube model)                         │ WS: /ws endpoint                     │
+│                                       │                                      │
+└───────────────────────────────────────┼──────────────────────────────────────┘
+                                        │ WebSocket (JSON)
+                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              BROWSER CLIENT                                  │
+│                                                                              │
+│  index.html ──► cube.js ──► Three.js/WebGL                                  │
+│                (WS client)   (depth buffer)                                 │
+│                     │                                                        │
+│                     ▼                                                        │
+│              Keyboard/Mouse Events ──► WebSocket ──► Python                 │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Why WebGL (not Canvas2D)
 
 Canvas2D has no depth buffer - front faces cannot automatically hide rear faces.
-Options considered:
-1. **Canvas2D + Z-sorting**: Sort polygons by depth each frame - complex, edge cases
-2. **WebGL + Three.js**: Hardware depth buffer like OpenGL - correct, fast
 
-Decision: **WebGL + Three.js** - same depth handling as Pyglet/OpenGL backend.
+| Approach | Pros | Cons |
+|----------|------|------|
+| Canvas2D + Z-sorting | Simple API | Complex sorting, edge cases with intersecting polygons |
+| **WebGL + Three.js** | Hardware depth buffer, same as OpenGL | More complex setup |
+
+**Decision:** WebGL + Three.js - matches Pyglet/OpenGL depth handling.
 
 ## Implementation Phases
 
-### Phase 1: Empty Window (Current)
+| Phase | Goal | Status |
+|-------|------|--------|
+| Phase 1 | Empty Window - WebSocket works | ✅ Complete |
+| Phase 2 | Basic Shapes - Three.js renders quads/lines | 🔄 Next |
+| Phase 3 | View Transforms - Matrix stack works | Pending |
+| Phase 4 | Full Cube Display - Cube visible | Pending |
+| Phase 5 | Interactivity - Keyboard/mouse | Pending |
+
+---
+
+## Phase 1: Empty Window ✅ COMPLETE
 
 **Goal:** Verify WebSocket communication works
 
-- Python WebSocket server starts
-- Browser connects and shows empty canvas
-- Server can send "clear" command with background color
-- Browser renders background color
+**Completed:**
+- [x] Create directory structure
+- [x] Implement WebRenderer (collects commands as JSON)
+- [x] Implement WebEventLoop (aiohttp HTTP + WebSocket)
+- [x] Implement WebWindow (event handlers)
+- [x] Implement WebAppWindow (orchestrates components)
+- [x] Create index.html with canvas
+- [x] Create cube.js with WebSocket client
+- [x] Register in BackendRegistry
+- [x] Add to main_any_backend CLI
 
-### Phase 2: Basic Shapes
+**Success Criteria (all met):**
+1. ✅ `python -m cube.main_any_backend --backend web` starts server
+2. ✅ Browser opens to http://localhost:8765
+3. ✅ Canvas shows gray background
+4. ✅ Console shows "Client connected"
 
-**Goal:** Render simple geometry
+---
 
-- Implement `quad`, `line`, `triangle` commands
-- Server sends shape commands, browser renders
-- No transformations yet (identity matrix)
+## Phase 2: Basic Shapes (Three.js) 🔄 NEXT
 
-### Phase 3: View Transforms
+**Goal:** Render simple geometry with proper depth
 
-**Goal:** Support rotation/translation
+### Step 2.1: Add Three.js Library
 
-- Implement matrix stack (push/pop/rotate/translate)
-- Send transform state with frame
-- Three.js camera/scene setup
+Option A: CDN (simpler, requires internet)
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+```
 
-### Phase 4: Full Cube Display
+Option B: Local (offline, larger repo)
+```
+static/
+├── three.min.js
+├── index.html
+└── cube.js
+```
 
-**Goal:** Display static cube
+**Decision:** Start with CDN, can switch to local later.
 
-- All ShapeRenderer methods working
-- Display lists (batch commands)
-- Cube renders correctly
+### Step 2.2: Create WebGL Scene
 
-### Phase 5: Interactivity
+Replace Canvas2D context with Three.js:
 
-**Goal:** Keyboard and mouse
+```javascript
+class CubeClient {
+    constructor() {
+        this.canvas = document.getElementById('canvas');
 
-- Forward keyboard events to Python
-- Mouse drag for rotation
-- Animation support
+        // Three.js setup
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+        this.camera.position.z = 400;
+
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: this.canvas,
+            antialias: true
+        });
+        this.renderer.setSize(720, 720);
+
+        // For collecting frame geometry
+        this.frameGroup = new THREE.Group();
+        this.scene.add(this.frameGroup);
+
+        // Animation loop
+        this.animate();
+    }
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        this.renderer.render(this.scene, this.camera);
+    }
+}
+```
+
+### Step 2.3: Implement Shape Commands
+
+**Quad command:**
+```javascript
+executeQuad(cmd) {
+    const vertices = cmd.vertices;
+    const color = new THREE.Color(
+        cmd.color[0]/255,
+        cmd.color[1]/255,
+        cmd.color[2]/255
+    );
+
+    // Create geometry from 4 vertices (two triangles)
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array([
+        // Triangle 1
+        vertices[0][0], vertices[0][1], vertices[0][2],
+        vertices[1][0], vertices[1][1], vertices[1][2],
+        vertices[2][0], vertices[2][1], vertices[2][2],
+        // Triangle 2
+        vertices[0][0], vertices[0][1], vertices[0][2],
+        vertices[2][0], vertices[2][1], vertices[2][2],
+        vertices[3][0], vertices[3][1], vertices[3][2],
+    ]);
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.computeVertexNormals();
+
+    const material = new THREE.MeshBasicMaterial({
+        color: color,
+        side: THREE.DoubleSide
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.applyMatrix4(this.currentMatrix);
+    this.frameGroup.add(mesh);
+}
+```
+
+**Line command:**
+```javascript
+executeLine(cmd) {
+    const material = new THREE.LineBasicMaterial({
+        color: new THREE.Color(cmd.color[0]/255, cmd.color[1]/255, cmd.color[2]/255),
+        linewidth: cmd.width  // Note: linewidth > 1 not supported in WebGL
+    });
+
+    const points = [
+        new THREE.Vector3(cmd.p1[0], cmd.p1[1], cmd.p1[2]),
+        new THREE.Vector3(cmd.p2[0], cmd.p2[1], cmd.p2[2])
+    ];
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(geometry, material);
+    line.applyMatrix4(this.currentMatrix);
+    this.frameGroup.add(line);
+}
+```
+
+**Quad with border:**
+```javascript
+executeQuadBorder(cmd) {
+    // Draw filled quad
+    this.executeQuad({
+        cmd: 'quad',
+        vertices: cmd.vertices,
+        color: cmd.face_color
+    });
+
+    // Draw border lines
+    const v = cmd.vertices;
+    for (let i = 0; i < 4; i++) {
+        this.executeLine({
+            cmd: 'line',
+            p1: v[i],
+            p2: v[(i + 1) % 4],
+            width: cmd.line_width,
+            color: cmd.line_color
+        });
+    }
+}
+```
+
+### Step 2.4: Frame Management
+
+Clear scene at start of each frame:
+
+```javascript
+handleFrame(commands) {
+    // Clear previous frame geometry
+    while (this.frameGroup.children.length > 0) {
+        const child = this.frameGroup.children[0];
+        child.geometry?.dispose();
+        child.material?.dispose();
+        this.frameGroup.remove(child);
+    }
+
+    // Reset matrix stack
+    this.matrixStack = [];
+    this.currentMatrix = new THREE.Matrix4();
+
+    // Execute all commands
+    for (const cmd of commands) {
+        this.executeCommand(cmd);
+    }
+}
+```
+
+---
+
+## Phase 3: View Transforms
+
+**Goal:** Implement matrix stack for proper 3D positioning
+
+### Matrix Stack Implementation
+
+```javascript
+class CubeClient {
+    constructor() {
+        // ... Three.js setup ...
+        this.matrixStack = [];
+        this.currentMatrix = new THREE.Matrix4();
+    }
+
+    executePushMatrix() {
+        this.matrixStack.push(this.currentMatrix.clone());
+    }
+
+    executePopMatrix() {
+        if (this.matrixStack.length > 0) {
+            this.currentMatrix = this.matrixStack.pop();
+        }
+    }
+
+    executeLoadIdentity() {
+        this.currentMatrix = new THREE.Matrix4();
+    }
+
+    executeTranslate(cmd) {
+        const m = new THREE.Matrix4().makeTranslation(cmd.x, cmd.y, cmd.z);
+        this.currentMatrix.multiply(m);
+    }
+
+    executeRotate(cmd) {
+        const axis = new THREE.Vector3(cmd.x, cmd.y, cmd.z).normalize();
+        const m = new THREE.Matrix4().makeRotationAxis(axis, cmd.angle * Math.PI / 180);
+        this.currentMatrix.multiply(m);
+    }
+
+    executeScale(cmd) {
+        const m = new THREE.Matrix4().makeScale(cmd.x, cmd.y, cmd.z);
+        this.currentMatrix.multiply(m);
+    }
+}
+```
+
+### Camera Setup
+
+```javascript
+executeProjection(cmd) {
+    this.camera = new THREE.PerspectiveCamera(
+        cmd.fov_y,           // Field of view
+        cmd.width / cmd.height,  // Aspect ratio
+        cmd.near,            // Near plane
+        cmd.far              // Far plane
+    );
+}
+
+executeLookAt(cmd) {
+    this.camera.position.set(cmd.eye[0], cmd.eye[1], cmd.eye[2]);
+    this.camera.lookAt(cmd.center[0], cmd.center[1], cmd.center[2]);
+    this.camera.up.set(cmd.up[0], cmd.up[1], cmd.up[2]);
+}
+```
+
+---
+
+## Phase 4: Full Cube Display
+
+**Goal:** Render the complete cube correctly
+
+### Additional Shape Commands
+
+**Sphere:**
+```javascript
+executeSphere(cmd) {
+    const geometry = new THREE.SphereGeometry(cmd.radius, 16, 16);
+    const material = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(cmd.color[0]/255, cmd.color[1]/255, cmd.color[2]/255)
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(cmd.center[0], cmd.center[1], cmd.center[2]);
+    mesh.applyMatrix4(this.currentMatrix);
+    this.frameGroup.add(mesh);
+}
+```
+
+**Cylinder:**
+```javascript
+executeCylinder(cmd) {
+    const height = new THREE.Vector3(...cmd.p2).sub(new THREE.Vector3(...cmd.p1)).length();
+    const geometry = new THREE.CylinderGeometry(cmd.radius1, cmd.radius2, height, 16);
+    // ... position and orient between p1 and p2 ...
+}
+```
+
+### Display Lists (Optional Optimization)
+
+If performance is an issue, cache geometry:
+
+```javascript
+class CubeClient {
+    constructor() {
+        this.displayLists = new Map();  // id -> Three.js Group
+    }
+
+    executeDisplayList(cmd) {
+        if (this.displayLists.has(cmd.id)) {
+            const cached = this.displayLists.get(cmd.id).clone();
+            cached.applyMatrix4(this.currentMatrix);
+            this.frameGroup.add(cached);
+        }
+    }
+}
+```
+
+---
+
+## Phase 5: Interactivity
+
+**Goal:** Handle keyboard and mouse events
+
+### Keyboard Events
+
+Browser side (cube.js):
+```javascript
+document.addEventListener('keydown', (event) => {
+    if (!this.connected) return;
+
+    // Prevent default for cube control keys
+    if (['r', 'l', 'u', 'd', 'f', 'b'].includes(event.key.toLowerCase())) {
+        event.preventDefault();
+    }
+
+    this.send({
+        type: 'key',
+        key: event.key,
+        code: event.keyCode,
+        modifiers: (event.shiftKey ? 1 : 0) |
+                   (event.ctrlKey ? 2 : 0) |
+                   (event.altKey ? 4 : 0)
+    });
+});
+```
+
+Python side (WebEventLoop.py):
+```python
+async def _handle_message(self, websocket, message: str):
+    data = json.loads(message)
+
+    if data["type"] == "key":
+        # Convert to KeyEvent and dispatch
+        from cube.presentation.gui.types import KeyEvent
+        event = KeyEvent(
+            symbol=data["code"],
+            modifiers=data["modifiers"]
+        )
+        if self._key_handler:
+            self._key_handler(event)
+```
+
+### Mouse Rotation
+
+Option A: OrbitControls (simpler)
+```javascript
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+this.controls = new OrbitControls(this.camera, this.canvas);
+this.controls.enableDamping = true;
+```
+
+Option B: Custom drag (matches pyglet behavior)
+```javascript
+let isDragging = false;
+let lastX, lastY;
+
+canvas.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+
+    this.send({
+        type: 'mouse_drag',
+        x: e.clientX,
+        y: e.clientY,
+        dx: dx,
+        dy: dy
+    });
+
+    lastX = e.clientX;
+    lastY = e.clientY;
+});
+```
+
+### Animation Sync
+
+Python schedules frames, browser renders them:
+
+```javascript
+// Browser maintains consistent frame rate
+animate() {
+    requestAnimationFrame(() => this.animate());
+    this.renderer.render(this.scene, this.camera);
+}
+
+// When frame arrives from server, update geometry
+handleFrame(commands) {
+    this.pendingCommands = commands;
+}
+
+// Apply pending commands in animation loop
+animate() {
+    if (this.pendingCommands) {
+        this.applyCommands(this.pendingCommands);
+        this.pendingCommands = null;
+    }
+    requestAnimationFrame(() => this.animate());
+    this.renderer.render(this.scene, this.camera);
+}
+```
+
+---
 
 ## File Structure
 
 ```
 src/cube/presentation/gui/backends/web/
 ├── __init__.py           # create_backend() factory
-├── WebRenderer.py        # Renderer protocol - collects commands
-├── WebEventLoop.py       # EventLoop protocol - asyncio + WebSocket
-├── WebWindow.py          # Window protocol - connection state
-├── WebAppWindow.py       # AppWindow protocol
+├── WebRenderer.py        # Renderer protocol - collects JSON commands
+├── WebEventLoop.py       # EventLoop protocol - aiohttp server
+├── WebWindow.py          # Window protocol - event handlers
+├── WebAppWindow.py       # AppWindow protocol - orchestrates all
 └── static/
-    ├── index.html        # Main page with canvas
-    └── cube.js           # Three.js renderer + WebSocket client
+    ├── index.html        # HTML page with canvas
+    ├── cube.js           # Three.js client + WebSocket
+    └── style.css         # Optional styling
 ```
 
-## Protocol Messages
+## Protocol Specification
 
-### Server → Browser
-
-```json
-// Frame with commands
-{
-  "type": "frame",
-  "commands": [
-    {"cmd": "clear", "color": [217, 217, 217, 255]},
-    {"cmd": "quad", "vertices": [[x,y,z],...], "color": [r,g,b]},
-    {"cmd": "line", "p1": [x,y,z], "p2": [x,y,z], "color": [r,g,b], "width": 1}
-  ]
-}
-
-// Simple clear (Phase 1)
-{"type": "clear", "color": [217, 217, 217, 255]}
-```
-
-### Browser → Server
-
-```json
-{"type": "key", "key": "r", "code": 82, "modifiers": 0}
-{"type": "mouse_press", "x": 100, "y": 200, "button": 1}
-{"type": "mouse_drag", "x": 110, "y": 210, "dx": 10, "dy": 10}
-{"type": "resize", "width": 800, "height": 600}
-{"type": "connected"}
-```
-
-## Phase 1 Implementation Details
-
-### Step 1.1: Create directory structure
-```
-src/cube/presentation/gui/backends/web/
-├── __init__.py
-├── WebRenderer.py
-├── WebEventLoop.py
-├── WebWindow.py
-├── WebAppWindow.py
-└── static/
-    ├── index.html
-    └── cube.js
-```
-
-### Step 1.2: Minimal WebEventLoop
-- Start asyncio event loop
-- Run WebSocket server on port 8765
-- Serve static files (index.html, cube.js)
-- Track connected clients
-
-### Step 1.3: Minimal WebRenderer
-- Implement `clear()` - queue clear command
-- Implement `end_frame()` - send queued commands via WebSocket
-- Other methods: no-op for now
-
-### Step 1.4: Minimal WebWindow
-- Store width/height
-- Track connection state
-
-### Step 1.5: Browser client
-- Connect to WebSocket
-- On "clear" message: fill canvas with color
-- Send "connected" message on open
-
-### Step 1.6: Register backend
-- Add to BackendRegistry
-- Test with: `python -m cube.main_any_backend --backend web`
+See `docs/design/web_backend_state.md` for complete protocol specification.
 
 ## Dependencies
 
 ```toml
-# pyproject.toml
 [project.optional-dependencies]
-web = ["websockets>=12.0", "aiohttp>=3.9.0"]
+web = ["aiohttp>=3.9.0"]
 ```
 
-Using `aiohttp` for serving static files alongside WebSocket.
+Note: `websockets` package not needed - aiohttp handles WebSocket.
 
-## Success Criteria - Phase 1
+## How to Run
 
-1. `python -m cube.main_any_backend --backend web` starts server
-2. Browser opens to `http://localhost:8765`
-3. Canvas shows gray background (color from clear command)
-4. Console shows "Client connected"
-5. No errors in browser console or Python
+```bash
+# Install dependencies (if not already)
+pip install aiohttp
 
-## Future Phases (Brief)
+# Run web backend
+python -m cube.main_any_backend --backend web
 
-### Phase 2: Basic Shapes
-- Three.js scene with BufferGeometry
-- Interpret quad/line/triangle commands
-- Simple flat shading
+# Server starts at http://localhost:8765
+# Browser opens automatically
+```
 
-### Phase 3: Transforms
-- Three.js camera positioning
-- Matrix stack in JS
-- Rotation/translation commands
+## Testing Strategy
 
-### Phase 4: Full Cube
-- All shape types
-- Display list batching (send once, replay)
-- Performance optimization
+1. **Manual testing:** Visual verification of cube rendering
+2. **Unit tests:** WebRenderer command generation
+3. **Integration tests:** WebSocket message flow
+4. **Browser automation:** Playwright for end-to-end tests
 
-### Phase 5: Events
-- Keyboard capture → WebSocket → Python handler
-- Mouse OrbitControls or custom drag
-- Animation frame sync
+## Risk Mitigation
 
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| WebSocket disconnects | Medium | Auto-reconnect in cube.js |
+| Slow rendering | Low | Batch commands, optimize Three.js |
+| Browser compatibility | Low | Target modern browsers only |
+| Line width limitation | Low | WebGL doesn't support linewidth > 1; use cylinders |
+
+## References
+
+- Current state: `docs/design/web_backend_state.md`
+- GUI abstraction: `docs/design/gui_abstraction.md`
+- Pyglet backend (reference): `src/cube/presentation/gui/backends/pyglet/`
+- Three.js docs: https://threejs.org/docs/
