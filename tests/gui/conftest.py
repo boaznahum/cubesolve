@@ -56,7 +56,9 @@ def pytest_generate_tests(metafunc):
 
         if backend_option == "all":
             # Run with all available backends
-            backends = ["pyglet", "pyglet2", "headless", "console", "tkinter"]
+            # Note: pyglet2 requires separate venv with pyglet>=2.0
+            # Run pyglet2 tests separately: --backend=pyglet2
+            backends = ["pyglet", "headless", "console", "tkinter"]
         else:
             # Single backend specified
             backends = [backend_option]
