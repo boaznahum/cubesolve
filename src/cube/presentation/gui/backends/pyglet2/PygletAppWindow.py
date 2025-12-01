@@ -142,15 +142,25 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
             return
 
         self.clear()
-        self._draw_axis()
-        self._viewer.draw()
-        self._draw_text()
-        self._draw_animation()
+
+        # TODO: Modern GL migration in progress
+        # Legacy GL calls disabled - they fail in OpenGL 3.3 core profile
+        # self._draw_axis()      # Uses glBegin/glEnd
+        # self._viewer.draw()    # Uses glBegin/glEnd
+        # self._draw_text()      # Uses glPushMatrix/glOrtho
+        # self._draw_animation() # Uses legacy GL
+
+        # Pyglet 2.0's label drawing uses modern GL internally
+        for t in self.text:
+            t.draw()
+        for t in self.animation_text:
+            t.draw()
 
     def on_resize(self, width, height):
         """Pyglet resize event."""
         gl.glViewport(0, 0, width, height)
-        self._app.vs.set_projection(width, height, self._renderer)
+        # TODO: Modern GL migration - set_projection uses legacy GL
+        # self._app.vs.set_projection(width, height, self._renderer)
 
     def on_key_press(self, symbol, modifiers):
         """Pyglet native key press event.
