@@ -3,14 +3,27 @@ Modern OpenGL Cube Viewer for pyglet2 backend.
 
 This viewer renders a Rubik's cube using modern OpenGL (shaders, VBOs)
 instead of legacy immediate mode rendering.
+
+Animation Support:
+    This viewer supports smooth face rotation animation by tracking which
+    cells are being animated and rendering them with a rotation matrix.
+    The animation flow:
+    1. AnimationManager calls get_slices_movable_gui_objects() to start animation
+    2. Animated cells are marked and separated from static cells
+    3. draw() renders static cells normally, then animated cells with rotation
+    4. unhidden_all() ends the animation and clears the state
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import math
+from collections.abc import Collection, Iterable
+from typing import TYPE_CHECKING, Tuple
 
 import numpy as np
+from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color, FaceName
+from cube.domain.model._part_slice import PartSlice
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -69,6 +82,13 @@ class ModernGLCubeViewer:
         self._face_triangles: np.ndarray | None = None
         self._line_data: np.ndarray | None = None
 
+        # Animation state - separate geometry for animated cells
+        self._animated_face_triangles: np.ndarray | None = None
+        self._animated_line_data: np.ndarray | None = None
+        self._animated_parts: set[PartSlice] | None = None
+        self._animation_face_center: ndarray | None = None
+        self._animation_opposite_center: ndarray | None = None
+
         # Track if we need to rebuild
         self._dirty = True
 
@@ -78,6 +98,113 @@ class ModernGLCubeViewer:
         Call this when cube state changes.
         """
         self._dirty = True
+
+    def cleanup(self) -> None:
+        """Clean up resources. Called on exit."""
+        # No resources to clean up - VBOs are recreated each frame
+        pass
+
+    def reset(self) -> None:
+        """Reset the viewer. Called on cube resize."""
+        # Mark as dirty to rebuild geometry
+        self._dirty = True
+
+    @property
+    def renderer(self) -> ModernGLRenderer:
+        """Get the renderer instance.
+
+        This property is required by AnimationManager.
+        """
+        return self._renderer
+
+    # === Animation Interface (for AnimationManager compatibility) ===
+
+    def get_slices_movable_gui_objects(
+        self,
+        face_name_rotate_axis: FaceName,
+        cube_parts: Collection[PartSlice],
+        hide: bool = True,
+    ) -> Tuple[ndarray, ndarray, Iterable[int]]:
+        """Get animation data for a set of parts.
+
+        This method is called by AnimationManager to set up animation.
+        In legacy GL, it returns display list IDs. In modern GL, we store
+        the animated parts and return empty gui_objects (animation is
+        handled differently).
+
+        Args:
+            face_name_rotate_axis: The face determining the rotation axis
+            cube_parts: The parts being rotated
+            hide: If True, mark these parts for separate animation rendering
+
+        Returns:
+            Tuple of (face_center, opposite_center, gui_objects)
+            - face_center: Center of the rotation face
+            - opposite_center: Center of the opposite face (for axis)
+            - gui_objects: Empty iterable (modern GL doesn't use display lists)
+        """
+        cube = self._cube
+        face = cube.face(face_name_rotate_axis)
+        opposite = face.opposite
+
+        # Get face centers in 3D space
+        face_center = np.array(_FACE_TRANSFORMS[face_name_rotate_axis][0], dtype=np.float32)
+        opposite_center = np.array(_FACE_TRANSFORMS[opposite.name][0], dtype=np.float32)
+
+        if hide:
+            # Store animation state
+            if not isinstance(cube_parts, set):
+                cube_parts = set(cube_parts)
+            self._animated_parts = cube_parts
+            self._animation_face_center = face_center
+            self._animation_opposite_center = opposite_center
+
+            # Force geometry rebuild to separate animated parts
+            self._dirty = True
+
+        return face_center, opposite_center, []
+
+    def unhidden_all(self) -> None:
+        """End animation and restore normal rendering.
+
+        Called by AnimationManager when animation completes.
+        """
+        self._animated_parts = None
+        self._animation_face_center = None
+        self._animation_opposite_center = None
+        self._animated_face_triangles = None
+        self._animated_line_data = None
+        self._dirty = True
+
+    def is_animating(self) -> bool:
+        """Check if animation is active."""
+        return self._animated_parts is not None
+
+    def draw_animated(self, model_view: ndarray) -> None:
+        """Draw animated parts with the given model-view matrix.
+
+        This is called by the animation system's _draw() closure to render
+        the rotating parts with animation transform applied.
+
+        Args:
+            model_view: The 4x4 rotation matrix to apply to animated geometry
+        """
+        if self._animated_face_triangles is None or len(self._animated_face_triangles) == 0:
+            return
+
+        # Save current model-view matrix
+        self._renderer.push_matrix()
+
+        # Apply animation rotation matrix
+        self._renderer.multiply_matrix(model_view)
+
+        # Draw animated geometry
+        self._renderer.draw_colored_triangles(self._animated_face_triangles)
+        if self._animated_line_data is not None and len(self._animated_line_data) > 0:
+            self._renderer.draw_colored_lines(self._animated_line_data, line_width=2.0)
+
+        # Restore matrix
+        self._renderer.pop_matrix()
 
     def draw(self) -> None:
         """Draw the cube.
@@ -97,13 +224,21 @@ class ModernGLCubeViewer:
             self._renderer.draw_colored_lines(self._line_data, line_width=2.0)
 
     def _rebuild_geometry(self) -> None:
-        """Rebuild all geometry from current cube state."""
+        """Rebuild all geometry from current cube state.
+
+        If animation is active, separates geometry into:
+        - Static geometry (non-animated cells) in _face_triangles/_line_data
+        - Animated geometry in _animated_face_triangles/_animated_line_data
+        """
         cube = self._cube
         size = cube.size
+        animated_parts = self._animated_parts
 
         # Collect all triangle vertices (6 floats per vertex: x,y,z,r,g,b)
         face_verts: list[float] = []
         line_verts: list[float] = []
+        animated_face_verts: list[float] = []
+        animated_line_verts: list[float] = []
 
         # For each face of the cube
         for face_name in FaceName:
@@ -123,6 +258,17 @@ class ModernGLCubeViewer:
                     # Get color for this cell
                     color = self._get_cell_color(face, row, col, size)
                     r, g, b = _COLORS.get(color, (0.5, 0.5, 0.5))
+
+                    # Check if this cell is animated
+                    is_animated = False
+                    if animated_parts is not None:
+                        part_slice = self._get_cell_part_slice(face, row, col, size)
+                        if part_slice is not None and part_slice in animated_parts:
+                            is_animated = True
+
+                    # Select target lists based on animation state
+                    target_face_verts = animated_face_verts if is_animated else face_verts
+                    target_line_verts = animated_line_verts if is_animated else line_verts
 
                     # Calculate cell position
                     # Cell (0,0) is bottom-left, (size-1, size-1) is top-right
@@ -146,18 +292,101 @@ class ModernGLCubeViewer:
 
                     # Two triangles for quad: (bl, br, tr) and (bl, tr, tl)
                     for v in [bl, br, tr, bl, tr, tl]:
-                        face_verts.extend([v[0], v[1], v[2], r, g, b])
+                        target_face_verts.extend([v[0], v[1], v[2], r, g, b])
 
                     # Border lines (black)
                     line_color = (0.0, 0.0, 0.0)
                     for p1, p2 in [(bl, br), (br, tr), (tr, tl), (tl, bl)]:
-                        line_verts.extend([
+                        target_line_verts.extend([
                             p1[0], p1[1], p1[2], *line_color,
                             p2[0], p2[1], p2[2], *line_color
                         ])
 
         self._face_triangles = np.array(face_verts, dtype=np.float32)
         self._line_data = np.array(line_verts, dtype=np.float32)
+        self._animated_face_triangles = np.array(animated_face_verts, dtype=np.float32) if animated_face_verts else None
+        self._animated_line_data = np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None
+
+    def _get_cell_part_slice(self, face, row: int, col: int, size: int) -> PartSlice | None:
+        """Get the PartSlice for a cell on a face.
+
+        Args:
+            face: The Face object
+            row: Row index (0 = bottom)
+            col: Column index (0 = left)
+            size: Cube size
+
+        Returns:
+            PartSlice for this cell, or None if not found
+        """
+        if size == 3:
+            return self._get_cell_part_slice_3x3(face, row, col)
+        else:
+            return self._get_cell_part_slice_nxn(face, row, col, size)
+
+    def _get_cell_part_slice_3x3(self, face, row: int, col: int) -> PartSlice | None:
+        """Get cell PartSlice for 3x3 cube."""
+        # Corners
+        if row == 0 and col == 0:
+            return face.corner_bottom_left.slice
+        if row == 0 and col == 2:
+            return face.corner_bottom_right.slice
+        if row == 2 and col == 0:
+            return face.corner_top_left.slice
+        if row == 2 and col == 2:
+            return face.corner_top_right.slice
+
+        # Edges (single slice for 3x3)
+        if row == 0 and col == 1:
+            return face.edge_bottom.get_slice_by_ltr_index(face, 0)
+        if row == 2 and col == 1:
+            return face.edge_top.get_slice_by_ltr_index(face, 0)
+        if row == 1 and col == 0:
+            return face.edge_left.get_slice_by_ltr_index(face, 0)
+        if row == 1 and col == 2:
+            return face.edge_right.get_slice_by_ltr_index(face, 0)
+
+        # Center (single cell for 3x3)
+        if row == 1 and col == 1:
+            return face.center.get_slice((0, 0))
+
+        return None
+
+    def _get_cell_part_slice_nxn(self, face, row: int, col: int, size: int) -> PartSlice | None:
+        """Get cell PartSlice for NxN cube."""
+        last = size - 1
+
+        # Corners
+        if row == 0 and col == 0:
+            return face.corner_bottom_left.slice
+        if row == 0 and col == last:
+            return face.corner_bottom_right.slice
+        if row == last and col == 0:
+            return face.corner_top_left.slice
+        if row == last and col == last:
+            return face.corner_top_right.slice
+
+        # Bottom edge
+        if row == 0 and 0 < col < last:
+            return face.edge_bottom.get_slice_by_ltr_index(face, col - 1)
+
+        # Top edge
+        if row == last and 0 < col < last:
+            return face.edge_top.get_slice_by_ltr_index(face, col - 1)
+
+        # Left edge
+        if col == 0 and 0 < row < last:
+            return face.edge_left.get_slice_by_ltr_index(face, row - 1)
+
+        # Right edge
+        if col == last and 0 < row < last:
+            return face.edge_right.get_slice_by_ltr_index(face, row - 1)
+
+        # Center
+        if 0 < row < last and 0 < col < last:
+            return face.center.get_slice((row - 1, col - 1))
+
+        return None
 
     def _get_cell_color(self, face, row: int, col: int, size: int) -> Color:
         """Get the color of a cell on a face.
@@ -417,8 +646,6 @@ class ModernGLCubeViewer:
         ray_origin = near_world
         ray_direction = far_world - near_world
         ray_direction = ray_direction / np.linalg.norm(ray_direction)
-
-        print(f"[RAY] ndc=({ndc_x:.2f}, {ndc_y:.2f}), origin={ray_origin}, dir={ray_direction}", flush=True)
 
         return ray_origin, ray_direction
 

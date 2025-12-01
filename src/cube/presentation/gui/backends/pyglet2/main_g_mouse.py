@@ -422,13 +422,13 @@ def _play(window: AbstractWindow, alg: Alg):
 
     vs.debug(INPUT_MOUSE_DEBUG, f"[PLAY] Playing {alg}")
 
-    # Use op.play() with animation=False to:
-    # 1. Track the move in history (for undo, display, etc.)
-    # 2. Skip animation (which uses legacy GL not available in pyglet2)
-    op.play(alg, animation=False)
+    # Use op.play() with animation enabled (modern GL animation now available)
+    # Animation will run if globally enabled (op.animation_enabled)
+    op.play(alg, animation=True)
 
-    # Update GUI to show the result
-    window.update_gui_elements()
+    # Update GUI to show the result (only needed if animation was skipped)
+    if not op.animation_enabled:
+        window.update_gui_elements()
 
 
 def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bool):

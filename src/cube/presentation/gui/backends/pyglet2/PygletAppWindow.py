@@ -109,9 +109,12 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         return self._app
 
     @property
-    def viewer(self) -> GCubeViewer | None:
-        """Access the cube viewer (None in pyglet2 - uses ModernGLCubeViewer instead)."""
-        return self._viewer
+    def viewer(self) -> GCubeViewer | ModernGLCubeViewer | None:
+        """Access the cube viewer.
+
+        Returns ModernGLCubeViewer for pyglet2 backend (used by AnimationManager).
+        """
+        return self._modern_viewer
 
     @property
     def renderer(self):
@@ -192,7 +195,13 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self._modern_renderer.draw_axis(length=5.0)
 
         # Draw the Rubik's cube using modern GL viewer
+        # This draws only non-animated parts when animation is active
         self._modern_viewer.draw()
+
+        # Draw animated parts if animation is running
+        # The animation's _draw() closure will render rotating parts with transform
+        if self._animation_manager:
+            self._animation_manager.draw()
 
         # Disable depth testing for 2D text overlay
         gl.glDisable(gl.GL_DEPTH_TEST)

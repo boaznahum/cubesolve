@@ -242,11 +242,11 @@ Report any visual glitches, crashes, or unexpected behavior.
 **Phase 3:** COMPLETE (Abstract Window Layer) ✅
 **Phase 4 (Q3.1):** COMPLETE (File Naming Convention) ✅
 **A2.1:** COMPLETE (Command Pattern) ✅
-**A5:** IN PROGRESS (Pyglet 2.0 Backend) 🔄
+**A5:** COMPLETE (Pyglet 2.0 Backend with Animation) ✅
 
-**Last Completed Step:** A5 - Pyglet 2.0 modern GL cube rendering
+**Last Completed Step:** A5 - Pyglet 2.0 modern GL with VBO-based animation
 **Current Branch:** `new-opengl`
-**Tests Passing:** 126 non-GUI tests, 2 GUI tests (pyglet2: 2 passed, 2 skipped)
+**Tests Passing:** 126 non-GUI tests, 11 GUI tests (pyglet2: 2 passed, 2 skipped; headless/console/tkinter: 9 passed)
 
 ### Migration Complete!
 
@@ -625,21 +625,21 @@ pyglet2 backend
     └── AnimationManager bypassed (falls back to instant)
 ```
 
-### Current Status (2025-12-01)
+### Current Status (2025-12-02)
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Cube rendering | ✅ Working | ModernGLCubeViewer with shaders |
-| Face rotations (keyboard) | ✅ Working | R/L/U/D/F/B execute instantly |
+| Face rotations (keyboard) | ✅ Working | R/L/U/D/F/B with animation |
 | Scramble | ✅ Working | Press 1-9 for scrambles |
 | Solve | ✅ Working | Press ? for solve |
 | Mouse drag (camera rotation) | ✅ Working | Right-click drag, camera orbit via matrix.py |
-| Mouse drag (face rotation) | ✅ Working | Left-click drag, ray-plane intersection |
+| Mouse drag (face rotation) | ✅ Working | Left-click drag with animation |
 | Mouse scroll (zoom) | ✅ Working | Z-axis translation |
 | Text labels | ✅ Working | pyglet.text.Label (modern GL) |
 | Debug logging | ✅ Working | `--debug-all` shows output |
-| History tracking | ✅ Working | `op.play(alg, animation=False)` |
-| **Visual animation** | ❌ Not working | Display lists not available |
+| History tracking | ✅ Working | Via Operator.play() |
+| **Visual animation** | ✅ Working | VBO-based animation via ModernGLCubeViewer |
 
 ### Mouse Face Picking - IMPLEMENTED ✅
 
@@ -691,15 +691,22 @@ op.play(alg, animation=False) - Execute without animation, track history
 window.update_gui_elements() - Refresh display
 ```
 
-#### Workaround: No Animation
+#### Animation Support - IMPLEMENTED ✅
+
+Animation now works for both keyboard and mouse rotation using VBO-based rendering:
 
 ```python
-# In _play():
-op.play(alg, animation=False)  # Skip animation (uses legacy GL)
-window.update_gui_elements()   # Instant visual update
+# AnimationManager detects ModernGLCubeViewer via duck-typing:
+is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+if is_modern_gl:
+    animation = _create_modern_gl_animation(cube, viewer, vs, alg, alg.n)
 ```
 
-This properly uses the Operator (tracking history, undo support) while bypassing the animation system which requires legacy GL display lists.
+The `ModernGLCubeViewer` implements:
+- `get_slices_movable_gui_objects()` - Separates animated geometry from static
+- `draw_animated(model_view)` - Renders animated parts with rotation matrix
+- `unhidden_all()` - Restores normal rendering after animation
+- `is_animating()` - Animation state check
 
 ### Solution Attempt: Compatibility Profile (FAILED)
 
@@ -743,19 +750,17 @@ in its constructor (`_Board._create_faces()` → `_Cell.prepare_geometry()` → 
 
 **The geometry and GL are deeply intertwined in `GCubeViewer`/`_Board`/`_Cell`.**
 
-### Next Steps
+### Completed Features
 
-**Completed:**
 - ✅ Ray-plane intersection for mouse face picking
-- ✅ History tracking via `op.play(alg, animation=False)`
+- ✅ History tracking via Operator.play()
+- ✅ VBO-based visual animation (keyboard and mouse rotation)
+- ✅ Animation uses ModernGLCubeViewer.draw_animated() with rotation matrix
+- ✅ Test configuration updated to use pyglet2 instead of legacy pyglet
 
 **Remaining work for pyglet2:**
-1. **Visual animation** - Currently instant only
-   - Option A: Implement VBO-based animation (modern GL)
-   - Option B: Accept instant-only as limitation
-2. **Shift+click face selection** - Uses `_handle_selected_slice()` which calls `op.play()` without `animation=False`
-   - May need similar fix to use `animation=False`
-3. **Remove unused code** - `GCubeViewer` reference (`self._viewer = None`) can be cleaned up
+1. **Enable test_scramble_and_solve** - Currently skipped, may work now with animation
+2. **Remove unused code** - `GCubeViewer` reference (`self._viewer = None`) can be cleaned up
 
 ### Files in pyglet2 Backend
 
@@ -814,17 +819,17 @@ python -m venv .venv_pyglet2
 .venv_pyglet2/Scripts/python.exe -m cube.main_any_backend --backend=pyglet2 --debug-all
 ```
 
-### Test Results
+### Test Results (2025-12-02)
 
 ```bash
-# Run tests with pyglet2 backend
-.venv_pyglet2/Scripts/python.exe -m pytest tests/gui/test_gui.py -v --backend=pyglet2
+# Run all GUI tests (pyglet2 is now default instead of legacy pyglet)
+.venv_pyglet2/Scripts/python.exe -m pytest tests/gui -v --speed-up 5
 
-# Results:
-# - test_simple_quit: PASSED
-# - test_face_rotations: PASSED (without animation)
-# - test_scramble_and_solve: SKIPPED (needs GCubeViewer)
-# - test_multiple_scrambles: SKIPPED (marked skip)
+# Results: 11 passed, 5 skipped
+# pyglet2: test_face_rotations PASSED, test_simple_quit PASSED
+# headless: 3 passed
+# console: 3 passed
+# tkinter: 3 passed
 ```
 
 ### Recent Commits (new-opengl branch)
@@ -839,13 +844,12 @@ ba42268 Integrate ModernGLRenderer with PygletAppWindow
 7a62dbb A5: Document pyglet 2.0 compatibility profile limitation
 ```
 
-### Next Steps for New Session
+### Completed Tasks
 
 1. ~~**Test mouse picking**: Implement screen_to_world for face selection~~ ✅ DONE
-2. **Decide on animation approach**: gl_compat vs modern GL
-3. **If gl_compat**: Test if display lists work, integrate GCubeViewer
-4. **If modern GL**: Design VBO-based animation system
-5. **Fix Shift+click** to use `animation=False` (if needed)
+2. ~~**Decide on animation approach**: gl_compat vs modern GL~~ ✅ Chose modern GL
+3. ~~**Modern GL animation**: VBO-based animation system~~ ✅ DONE
+4. ~~**Enable mouse rotation animation**~~ ✅ DONE
 
 ---
 

@@ -17,6 +17,12 @@ from cube.presentation.viewer.GCubeViewer import GCubeViewer
 from cube.presentation.gui.protocols import Renderer, EventLoop
 from cube.presentation.gui.types import DisplayList
 
+# Import for type checking only to avoid circular imports
+try:
+    from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCubeViewer
+except ImportError:
+    ModernGLCubeViewer = None  # type: ignore
+
 OpProtocol: TypeAlias = Callable[[algs.Alg, bool], None]
 
 
@@ -97,7 +103,8 @@ class AnimationManager(ABC):
             op(alg, False)
             return
 
-        # Some backends (e.g., pyglet2 with modern GL) don't have a legacy viewer
+        # Skip animation if no viewer at all (headless or console backends)
+        # Note: ModernGLCubeViewer is NOT None, so it will proceed with animation
         if viewer is None:
             op(alg, False)
             return
@@ -220,7 +227,14 @@ def _op_and_play_animation(window: AnimationWindow,
         operator(alg, False)
         return
 
-    animation: Animation = _create_animation(cube, viewer, vs, alg, alg.n, viewer.renderer)
+    # Choose animation creation based on viewer type
+    # ModernGLCubeViewer uses VBOs (has draw_animated method), legacy GCubeViewer uses display lists
+    # Use duck-typing check since isinstance can fail with dynamic imports
+    is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+    if is_modern_gl:
+        animation: Animation = _create_modern_gl_animation(cube, viewer, vs, alg, alg.n)
+    else:
+        animation: Animation = _create_animation(cube, viewer, vs, alg, alg.n, viewer.renderer)
     delay: float = animation.delay
 
     # animation.draw() is called from window.on_draw
@@ -412,6 +426,130 @@ def _create_animation(cube: Cube, viewer: GCubeViewer, vs: ApplicationAndViewSta
             vs.restore_objects_view(renderer)
 
         #return True
+
+    animation.delay = animation_speed.delay_between_steps
+    animation._animation_draw_only = _draw
+    animation._animation_update_only = _update
+
+    return animation
+
+
+def _create_modern_gl_animation(
+    cube: Cube,
+    viewer,  # ModernGLCubeViewer
+    vs: ApplicationAndViewState,
+    alg: algs.AnimationAbleAlg,
+    n_count: int
+) -> Animation:
+    """Create animation for modern GL viewer (pyglet2).
+
+    Similar to _create_animation but uses VBOs instead of display lists.
+    The viewer.draw_animated() method renders the rotating parts.
+    """
+    rotate_face: FaceName
+    cube_parts: Collection[PartSlice]
+
+    # Get the face and parts to animate
+    rotate_face, cube_parts = alg.get_animation_objects(cube)
+
+    if not isinstance(cube_parts, Set):
+        cube_parts = set(cube_parts)
+
+    # Set up animation in viewer (marks parts for separate rendering)
+    face_center, opposite_face_center, _ = viewer.get_slices_movable_gui_objects(rotate_face, cube_parts)
+
+    current_angle: float = 0
+
+    # Compute target angle
+    n = n_count % 4
+    if n == 3:
+        n = -1
+    target_angle = math.radians(90 * n)
+    animation_speed = vs.get_speed
+    angle_delta = target_angle / float(animation_speed.number_of_steps) / math.fabs(n)
+
+    # Compute rotation axis matrices (same as legacy animation)
+    x1 = face_center[0]
+    y1 = face_center[1]
+    z1 = face_center[2]
+    t: ndarray = np.array([[1, 0, 0, -x1],
+                           [0, 1, 0, -y1],
+                           [0, 0, 1, -z1],
+                           [0, 0, 0, 1]], dtype=float)
+    tt = np.linalg.inv(t)
+    u = (face_center - opposite_face_center) / np.linalg.norm(face_center - opposite_face_center)
+    a = u[0]
+    b = u[1]
+    c = u[2]
+    d = math.sqrt(b * b + c * c)
+    if d == 0:
+        rx = np.array([[1, 0, 0, 0],
+                       [0, 1, 0, 0],
+                       [0, 0, 1, 0],
+                       [0, 0, 0, 1]], dtype=float)
+    else:
+        rx = np.array([[1, 0, 0, 0],
+                       [0, c / d, -b / d, 0],
+                       [0, b / d, c / d, 0],
+                       [0, 0, 0, 1]], dtype=float)
+
+    rx_t = np.linalg.inv(rx)
+    ry = np.array([[d, 0, -a, 0],
+                   [0, 1, 0, 0],
+                   [a, 0, d, 0],
+                   [0, 0, 0, 1]], dtype=float)
+    ry_t = np.linalg.inv(ry)
+
+    # Combined pre/post rotation matrices
+    mt: ndarray = tt @ rx_t @ ry_t
+    m: ndarray = ry @ rx @ t
+
+    animation = Animation()
+    animation.done = False
+    animation._animation_cleanup = lambda: viewer.unhidden_all()
+
+    last_update = time.time()
+
+    def _update() -> bool:
+        nonlocal current_angle
+        nonlocal last_update
+
+        if (time.time() - last_update) > animation.delay:
+            _angle = current_angle + angle_delta
+
+            if abs(_angle) > abs(target_angle):
+                if current_angle < target_angle:
+                    current_angle = target_angle
+                else:
+                    animation.done = True
+            else:
+                current_angle = _angle
+
+            last_update = time.time()
+            return True
+        else:
+            return False
+
+    def _draw() -> None:
+        nonlocal current_angle
+
+        if abs(current_angle) > abs(target_angle):
+            animation.done = True
+            return
+
+        # Compute the rotation matrix for current angle
+        ct = math.cos(current_angle)
+        st = math.sin(current_angle)
+        Rz = np.array([[ct, st, 0, 0],
+                       [-st, ct, 0, 0],
+                       [0, 0, 1, 0],
+                       [0, 0, 0, 1]], dtype=float)
+
+        model_view: ndarray = mt @ Rz @ m
+
+        # Draw animated parts with the rotation matrix
+        # This is called from on_draw which already has the view matrix set up
+        viewer.draw_animated(model_view)
 
     animation.delay = animation_speed.delay_between_steps
     animation._animation_draw_only = _draw

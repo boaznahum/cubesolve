@@ -200,6 +200,16 @@ class ModernGLRenderer:
         """Apply scale to modelview matrix."""
         self._modelview.scale(x, y, z)
 
+    def multiply_matrix(self, matrix: np.ndarray) -> None:
+        """Multiply current modelview matrix by the given matrix.
+
+        Used by animation system to apply rotation transforms.
+
+        Args:
+            matrix: 4x4 matrix to multiply
+        """
+        self._modelview.mult(matrix.astype(np.float32))
+
     # === Color ===
 
     def set_color(self, r: int, g: int, b: int) -> None:
