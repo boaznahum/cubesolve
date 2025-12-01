@@ -18,7 +18,8 @@ class TestAnimationBackendProtocol:
         """AnimationBackend must indicate if animation is supported."""
         if animation is None:
             # Backend doesn't support animation - that's valid
-            assert not BackendRegistry.supports_animation(backend_name)
+            backend = BackendRegistry.get_backend(backend_name)
+            assert not backend.supports_animation
         else:
             assert hasattr(animation, 'supported')
             assert isinstance(animation.supported, bool)

@@ -288,24 +288,21 @@ def get_available_backends() -> list[str]:
     # Always try headless first (no dependencies)
     try:
         from cube.presentation.gui.backends import headless  # noqa: F401
-        if BackendRegistry.is_registered("headless"):
-            available.append("headless")
+        available.append("headless")
     except ImportError:
         pass
 
     # Try pyglet (requires pyglet + display)
     try:
         from cube.presentation.gui.backends import pyglet  # noqa: F401
-        if BackendRegistry.is_registered("pyglet"):
-            available.append("pyglet")
+        available.append("pyglet")
     except ImportError:
         pass
 
     # Try tkinter (requires tk)
     try:
         from cube.presentation.gui.backends import tkinter  # noqa: F401
-        if BackendRegistry.is_registered("tkinter"):
-            available.append("tkinter")
+        available.append("tkinter")
     except ImportError:
         pass
 
@@ -362,58 +359,51 @@ def backend_name(request: pytest.FixtureRequest) -> str:
 
 
 @pytest.fixture
-def ensure_backend_registered(backend_name: str) -> None:
-    """Ensure the backend is registered before tests."""
-    if backend_name == "headless":
-        from cube.presentation.gui.backends import headless  # noqa: F401
-    elif backend_name == "pyglet":
-        from cube.presentation.gui.backends import pyglet  # noqa: F401
-    elif backend_name == "tkinter":
-        from cube.presentation.gui.backends import tkinter  # noqa: F401
-
-
-@pytest.fixture
-def renderer(backend_name: str, ensure_backend_registered: None) -> Iterator[Renderer]:
+def renderer(backend_name: str) -> Iterator[Renderer]:
     """Create a renderer for the specified backend."""
-    r = BackendRegistry.create_renderer(backend_name)
+    backend = BackendRegistry.get_backend(backend_name)
+    r = backend.renderer
     r.setup()
     yield r
     r.cleanup()
 
 
 @pytest.fixture
-def window(backend_name: str, ensure_backend_registered: None) -> Iterator[Window]:
+def window(backend_name: str) -> Iterator[Window]:
     """Create a window for the specified backend."""
-    w = BackendRegistry.create_window(640, 480, "Test Window", backend_name)
+    backend = BackendRegistry.get_backend(backend_name)
+    w = backend.create_window(640, 480, "Test Window")
     yield w
     if hasattr(w, 'close'):
         w.close()
 
 
 @pytest.fixture
-def event_loop(backend_name: str, ensure_backend_registered: None) -> Iterator[EventLoop]:
+def event_loop(backend_name: str) -> Iterator[EventLoop]:
     """Create an event loop for the specified backend."""
-    loop = BackendRegistry.create_event_loop(backend_name)
+    backend = BackendRegistry.get_backend(backend_name)
+    loop = backend.create_event_loop()
     yield loop
     if hasattr(loop, 'clear_callbacks'):
         loop.clear_callbacks()
 
 
 @pytest.fixture
-def animation(backend_name: str, ensure_backend_registered: None) -> AnimationBackend | None:
+def animation(backend_name: str) -> AnimationBackend | None:
     """Create an animation backend (may be None if not supported)."""
-    return BackendRegistry.create_animation(backend_name)
+    backend = BackendRegistry.get_backend(backend_name)
+    return backend.create_animation()
 
 
 @pytest.fixture
-def gui_components(backend_name: str, ensure_backend_registered: None) -> Iterator[tuple[Renderer, Window, EventLoop, AnimationBackend | None]]:
+def gui_components(backend_name: str) -> Iterator[tuple[Renderer, Window, EventLoop, AnimationBackend | None]]:
     """Create all GUI components for the specified backend."""
-    from cube.presentation.gui import BackendRegistry
+    backend = BackendRegistry.get_backend(backend_name)
 
-    renderer = BackendRegistry.create_renderer(backend_name)
-    window = BackendRegistry.create_window(backend=backend_name)
-    event_loop = BackendRegistry.create_event_loop(backend_name)
-    animation = BackendRegistry.create_animation(backend_name)
+    renderer = backend.renderer
+    window = backend.create_window()
+    event_loop = backend.create_event_loop()
+    animation = backend.create_animation()
     renderer.setup()
 
     yield renderer, window, event_loop, animation

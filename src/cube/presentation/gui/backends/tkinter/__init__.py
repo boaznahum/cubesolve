@@ -16,12 +16,8 @@ Limitations:
 - Simpler animation (via canvas.after())
 
 Usage:
-    from cube.presentation.gui.backends import tkinter
-    # Backend is automatically registered on import
-
-    # Or explicitly:
-    from cube.presentation.gui.backends.tkinter import register
-    register()
+    from cube.presentation.gui import BackendRegistry
+    backend = BackendRegistry.get_backend("tkinter")
 """
 
 from cube.presentation.gui.backends.tkinter.TkinterRenderer import TkinterRenderer
@@ -36,38 +32,19 @@ __all__ = [
     "TkinterEventLoop",
     "TkinterAnimation",
     "TkinterAppWindow",
-    "register",
+    "create_backend",
 ]
 
 
-def _create_window(width: int, height: int, title: str) -> TkinterWindow:
-    """Factory function for creating TkinterWindow."""
-    return TkinterWindow(width, height, title)
+def create_backend() -> "GUIBackendFactory":
+    """Create a GUIBackendFactory for the tkinter backend."""
+    from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
-
-def _create_event_loop() -> TkinterEventLoop:
-    """Factory function for creating TkinterEventLoop."""
-    return TkinterEventLoop()
-
-
-def register() -> None:
-    """Register the tkinter backend with the BackendRegistry.
-
-    This is called automatically on import, but can also be called
-    explicitly to ensure registration.
-    """
-    from cube.presentation.gui.factory import BackendRegistry
-
-    if not BackendRegistry.is_registered("tkinter"):
-        BackendRegistry.register(
-            "tkinter",
-            renderer_factory=TkinterRenderer,
-            window_factory=_create_window,
-            event_loop_factory=_create_event_loop,
-            animation_factory=TkinterAnimation,
-            app_window_factory=lambda app, w, h, t, backend: TkinterAppWindow(app, w, h, t, backend),
-        )
-
-
-# Auto-register on import
-register()
+    return GUIBackendFactory(
+        name="tkinter",
+        renderer_factory=TkinterRenderer,
+        event_loop_factory=TkinterEventLoop,
+        window_factory=lambda w, h, t: TkinterWindow(w, h, t),
+        animation_factory=TkinterAnimation,
+        app_window_factory=lambda app, w, h, t, backend: TkinterAppWindow(app, w, h, t, backend),
+    )

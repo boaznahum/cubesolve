@@ -1,19 +1,15 @@
 """
 Pyglet 2.0/Modern OpenGL backend for GUI abstraction layer.
 
-This backend is a copy of the pyglet backend, intended for migration
-to pyglet 2.0 and modern OpenGL (shaders, VBOs, VAOs).
+This backend uses pyglet 2.0 with modern OpenGL (shaders, VBOs, VAOs)
+instead of legacy immediate mode rendering.
 
 Requirements:
     pip install pyglet>=2.0
 
 Usage:
-    from cube.presentation.gui.backends import pyglet2
-    # Backend is automatically registered on import
-
-    # Or explicitly:
-    from cube.presentation.gui.backends.pyglet2 import register
-    register()
+    from cube.presentation.gui import BackendRegistry
+    backend = BackendRegistry.get_backend("pyglet2")
 """
 
 from cube.presentation.gui.backends.pyglet2.PygletRenderer import PygletRenderer
@@ -28,27 +24,19 @@ __all__ = [
     "PygletEventLoop",
     "PygletAnimation",
     "PygletAppWindow",
-    "register",
+    "create_backend",
 ]
 
 
-def register() -> None:
-    """Register the pyglet2 backend with the BackendRegistry.
+def create_backend() -> "GUIBackendFactory":
+    """Create a GUIBackendFactory for the pyglet2 backend."""
+    from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
-    This is called automatically on import, but can also be called
-    explicitly to ensure registration.
-    """
-    from cube.presentation.gui.factory import BackendRegistry
-
-    BackendRegistry.register(
-        "pyglet2",
+    return GUIBackendFactory(
+        name="pyglet2",
         renderer_factory=PygletRenderer,
-        window_factory=lambda w, h, t: PygletWindow(w, h, t),
         event_loop_factory=PygletEventLoop,
+        window_factory=lambda w, h, t: PygletWindow(w, h, t),
         animation_factory=PygletAnimation,
         app_window_factory=lambda app, w, h, t, backend: PygletAppWindow(app, w, h, t, backend),
     )
-
-
-# Auto-register on import
-register()

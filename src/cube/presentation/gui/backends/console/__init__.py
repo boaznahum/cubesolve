@@ -16,12 +16,8 @@ Limitations:
 - No mouse input
 
 Usage:
-    from cube.presentation.gui.backends import console
-    # Backend is automatically registered on import
-
-    # Or explicitly:
-    from cube.presentation.gui.backends.console import register
-    register()
+    from cube.presentation.gui import BackendRegistry
+    backend = BackendRegistry.get_backend("console")
 """
 
 from cube.presentation.gui.backends.console.ConsoleRenderer import ConsoleRenderer
@@ -36,33 +32,19 @@ __all__ = [
     "ConsoleAppWindow",
     "ConsoleViewer",
     "ConsoleKeys",
-    "register",
+    "create_backend",
 ]
 
 
-def _create_event_loop() -> ConsoleEventLoop:
-    """Factory function for creating ConsoleEventLoop."""
-    return ConsoleEventLoop()
+def create_backend() -> "GUIBackendFactory":
+    """Create a GUIBackendFactory for the console backend."""
+    from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
-
-def register() -> None:
-    """Register the console backend with the BackendRegistry.
-
-    This is called automatically on import, but can also be called
-    explicitly to ensure registration.
-    """
-    from cube.presentation.gui.factory import BackendRegistry
-
-    if not BackendRegistry.is_registered("console"):
-        BackendRegistry.register(
-            "console",
-            renderer_factory=ConsoleRenderer,
-            window_factory=None,  # Console doesn't use Window protocol
-            event_loop_factory=_create_event_loop,
-            animation_factory=None,  # Console doesn't support animation
-            app_window_factory=lambda app, w, h, t, backend: ConsoleAppWindow(app, w, h, t, backend),
-        )
-
-
-# Auto-register on import
-register()
+    return GUIBackendFactory(
+        name="console",
+        renderer_factory=ConsoleRenderer,
+        event_loop_factory=ConsoleEventLoop,
+        window_factory=None,  # Console doesn't use Window protocol
+        animation_factory=None,  # Console doesn't support animation
+        app_window_factory=lambda app, w, h, t, backend: ConsoleAppWindow(app, w, h, t, backend),
+    )

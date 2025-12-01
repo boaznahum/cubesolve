@@ -6,7 +6,7 @@ the cube solver to work with different rendering systems (pyglet/OpenGL,
 tkinter, headless for testing, etc.).
 
 Usage:
-    from cube.presentation.gui import BackendRegistry, GUIBackend
+    from cube.presentation.gui import BackendRegistry, GUIBackendFactory
 
     # Get a backend instance (recommended)
     backend = BackendRegistry.get_backend("pyglet")
@@ -16,7 +16,7 @@ Usage:
     backend = BackendRegistry.get_backend()
 """
 
-from cube.presentation.gui.factory import BackendRegistry, GUIBackend
+from cube.presentation.gui.factory import BackendRegistry, GUIBackendFactory, GUIBackend
 from cube.presentation.gui.protocols import AppWindow
 from cube.presentation.gui.types import (
     Point3D,
@@ -33,7 +33,8 @@ from cube.presentation.gui.types import (
 __all__ = [
     # Factory
     "BackendRegistry",
-    "GUIBackend",
+    "GUIBackendFactory",
+    "GUIBackend",  # Alias for backward compatibility
     # Protocols
     "AppWindow",
     # Types
