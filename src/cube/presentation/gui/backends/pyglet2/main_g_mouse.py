@@ -44,10 +44,11 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
             if buttons & MouseButton.RIGHT:
                 _handle_model_view_rotate_by_drag(win, dx, dy)
             else:
-                # don't allow cube modification during animation
-                if win.app.op.is_animation_running:
-                    return
-                _handle_face_slice_rotate_by_drag(win, x, y, dx, dy)
+                # pyglet2 backend: face slicing requires legacy GL (screen_to_world)
+                # which is not available in OpenGL 3.3 core profile.
+                # For now, make left-click also do camera rotation.
+                # TODO: Implement modern GL screen-to-world for face slicing
+                _handle_model_view_rotate_by_drag(win, dx, dy)
 
     elif (modifiers & Modifiers.ALT) == Modifiers.ALT:
 

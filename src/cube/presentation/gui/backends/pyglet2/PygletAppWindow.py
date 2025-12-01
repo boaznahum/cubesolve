@@ -165,10 +165,15 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         offset = vs.offset
         self._modern_renderer.translate(float(offset[0]), float(offset[1]), float(offset[2]))
 
-        # Apply rotation (convert from radians to degrees)
+        # Apply initial rotation (base orientation)
         self._modern_renderer.rotate(math.degrees(vs.alpha_x_0), 1, 0, 0)
         self._modern_renderer.rotate(math.degrees(vs.alpha_y_0), 0, 1, 0)
         self._modern_renderer.rotate(math.degrees(vs.alpha_z_0), 0, 0, 1)
+
+        # Apply user-controlled rotation (from mouse drag)
+        self._modern_renderer.rotate(math.degrees(vs.alpha_x), 1, 0, 0)
+        self._modern_renderer.rotate(math.degrees(vs.alpha_y), 0, 1, 0)
+        self._modern_renderer.rotate(math.degrees(vs.alpha_z), 0, 0, 1)
 
         # Draw axis using modern GL renderer
         self._modern_renderer.draw_axis(length=5.0)
@@ -206,6 +211,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         Called by pyglet framework. Converts native keys to abstract Keys
         and calls handle_key() - the protocol method.
         """
+        self._vs.debug(False, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
         abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
         abstract_mods = _convert_modifiers(modifiers)
         self.handle_key(abstract_symbol, abstract_mods)
