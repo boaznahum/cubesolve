@@ -7,8 +7,7 @@ and uses AppWindowBase for shared logic.
 
 try:
     import pyglet
-    # Pyglet 2.0 uses modern OpenGL by default - use gl_compat for legacy functions
-    from pyglet.gl import gl_compat as gl
+    from pyglet import gl
 except ImportError as e:
     raise ImportError("pyglet2 backend requires: pip install 'pyglet>=2.0'") from e
 
@@ -20,6 +19,7 @@ from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.backends.pyglet2.PygletWindow import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 from cube.presentation.gui.backends.pyglet2 import main_g_mouse
 from cube.presentation.gui.backends.pyglet2.AppWindowBase import AppWindowBase, TextLabel
+from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer
 from cube.presentation.gui.Command import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
@@ -60,25 +60,27 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self._backend = backend
         self._renderer = backend.renderer
 
-        # Request OpenGL 2.1 to get a compatibility profile context
-        # This allows legacy GL functions (glBegin, display lists, etc.)
-        # The driver will typically return the highest compatible version (e.g., 4.6)
-        gl_config = pyglet.gl.Config(major_version=2, minor_version=1)
-
-        # Initialize pyglet window with compatibility profile
-        super().__init__(width, height, title, resizable=True, config=gl_config)
+        # Initialize pyglet window (uses OpenGL 3.3 core profile on pyglet 2.0)
+        super().__init__(width, height, title, resizable=True)
 
         # Animation manager connection
         self._animation_manager = app.am
         if self._animation_manager:
             self._animation_manager.set_window(self)
 
-        # Initialize renderer
-        self._renderer.setup()
+        # Initialize modern GL renderer (replaces legacy GL rendering)
+        self._modern_renderer = ModernGLRenderer()
+        self._modern_renderer.setup()
         gl.glEnable(gl.GL_DEPTH_TEST)
 
+        # Set up perspective projection
+        self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=0.1, far=100.0)
+
         # Create viewer
-        self._viewer = GCubeViewer(app.cube, app.vs, renderer=self._renderer)
+        # TODO: GCubeViewer uses legacy display lists - needs migration to modern GL
+        # For now, viewer is disabled to test axis rendering
+        self._viewer: GCubeViewer | None = None
+        # self._viewer = GCubeViewer(app.cube, app.vs, renderer=self._renderer)
 
         # Text labels (built by _update_status_text/_update_animation_text)
         self._status_labels: list[TextLabel] = []
@@ -98,7 +100,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         return self._app
 
     @property
-    def viewer(self) -> GCubeViewer:
+    def viewer(self) -> GCubeViewer | None:
         """Access the cube viewer."""
         return self._viewer
 
@@ -118,7 +120,8 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
 
     def update_gui_elements(self) -> None:
         """Update all GUI elements."""
-        self._viewer.update()
+        if self._viewer:
+            self._viewer.update()
 
         if self._animation_manager:
             self._animation_manager.update_gui_elements()
@@ -137,18 +140,34 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
 
     def on_draw(self):
         """Pyglet draw event."""
+        import math
+
         if self._vs.skip_next_on_draw:
             self._vs.skip_next_on_draw = False
             return
 
         self.clear()
 
+        # Set up view transform (camera position)
+        vs = self._app.vs
+        self._modern_renderer.load_identity()
+
+        # Apply offset translation (camera distance)
+        offset = vs.offset
+        self._modern_renderer.translate(float(offset[0]), float(offset[1]), float(offset[2]))
+
+        # Apply rotation (convert from radians to degrees)
+        self._modern_renderer.rotate(math.degrees(vs.alpha_x_0), 1, 0, 0)
+        self._modern_renderer.rotate(math.degrees(vs.alpha_y_0), 0, 1, 0)
+        self._modern_renderer.rotate(math.degrees(vs.alpha_z_0), 0, 0, 1)
+
+        # Draw axis using modern GL renderer
+        self._modern_renderer.draw_axis(length=5.0)
+
         # TODO: Modern GL migration in progress
         # Legacy GL calls disabled - they fail in OpenGL 3.3 core profile
-        # self._draw_axis()      # Uses glBegin/glEnd
-        # self._viewer.draw()    # Uses glBegin/glEnd
-        # self._draw_text()      # Uses glPushMatrix/glOrtho
-        # self._draw_animation() # Uses legacy GL
+        # self._viewer.draw()    # Uses glBegin/glEnd - needs migration
+        # self._draw_animation() # Uses legacy GL - needs migration
 
         # Pyglet 2.0's label drawing uses modern GL internally
         for t in self.text:
@@ -159,8 +178,8 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
     def on_resize(self, width, height):
         """Pyglet resize event."""
         gl.glViewport(0, 0, width, height)
-        # TODO: Modern GL migration - set_projection uses legacy GL
-        # self._app.vs.set_projection(width, height, self._renderer)
+        # Update projection for modern GL renderer
+        self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=0.1, far=100.0)
 
     def on_key_press(self, symbol, modifiers):
         """Pyglet native key press event.
