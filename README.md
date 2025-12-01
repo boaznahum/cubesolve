@@ -154,6 +154,122 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
     W - Annotation test
     A - Special algorithm test
 
+## Complete Command Reference
+
+> **Note:** Key bindings shown below are for the **pyglet backend**. Other backends (tkinter, console, headless) may have different or limited key mappings.
+
+All commands below can be executed via keyboard or programmatically via `--commands` CLI option:
+
+```bash
+python -m cube.main_any_backend --commands="SCRAMBLE_1,SOLVE_ALL,QUIT"
+python -m cube.main_any_backend -c "SPEED_UP+SPEED_UP+SCRAMBLE_1+SOLVE_ALL+QUIT"
+```
+
+| Category | Key | Modifiers | Command | Description |
+|----------|-----|-----------|---------|-------------|
+| **Face Rotations** | R | - | `ROTATE_R` | Rotate right face clockwise |
+| | R | Shift | `ROTATE_R_PRIME` | Rotate right face counter-clockwise |
+| | R | Ctrl | `ROTATE_RW` | Wide rotation (Rw) - right two layers |
+| | R | Ctrl+Shift | `ROTATE_RW_PRIME` | Wide rotation (Rw') counter-clockwise |
+| | L | - | `ROTATE_L` | Rotate left face clockwise |
+| | L | Shift | `ROTATE_L_PRIME` | Rotate left face counter-clockwise |
+| | L | Ctrl | `ROTATE_LW` | Wide rotation (Lw) - left two layers |
+| | L | Ctrl+Shift | `ROTATE_LW_PRIME` | Wide rotation (Lw') counter-clockwise |
+| | U | - | `ROTATE_U` | Rotate up face clockwise |
+| | U | Shift | `ROTATE_U_PRIME` | Rotate up face counter-clockwise |
+| | U | Ctrl | `ROTATE_UW` | Wide rotation (Uw) - top two layers |
+| | U | Ctrl+Shift | `ROTATE_UW_PRIME` | Wide rotation (Uw') counter-clockwise |
+| | D | - | `ROTATE_D` | Rotate down face clockwise |
+| | D | Shift | `ROTATE_D_PRIME` | Rotate down face counter-clockwise |
+| | D | Ctrl | `ROTATE_DW` | Wide rotation (Dw) - bottom two layers |
+| | D | Ctrl+Shift | `ROTATE_DW_PRIME` | Wide rotation (Dw') counter-clockwise |
+| | F | - | `ROTATE_F` | Rotate front face clockwise |
+| | F | Shift | `ROTATE_F_PRIME` | Rotate front face counter-clockwise |
+| | F | Ctrl | `ROTATE_FW` | Wide rotation (Fw) - front two layers |
+| | F | Ctrl+Shift | `ROTATE_FW_PRIME` | Wide rotation (Fw') counter-clockwise |
+| | B | - | `ROTATE_B` | Rotate back face clockwise |
+| | B | Shift | `ROTATE_B_PRIME` | Rotate back face counter-clockwise |
+| | B | Ctrl | `ROTATE_BW` | Wide rotation (Bw) - back two layers |
+| | B | Ctrl+Shift | `ROTATE_BW_PRIME` | Wide rotation (Bw') counter-clockwise |
+| **Slice Moves** | M | - | `SLICE_M` | Middle slice (parallel to L) |
+| | M | Shift | `SLICE_M_PRIME` | Middle slice counter-clockwise |
+| | E | - | `SLICE_E` | Equatorial slice (parallel to D) |
+| | E | Shift | `SLICE_E_PRIME` | Equatorial slice counter-clockwise |
+| | S | - | `SLICE_S` | Standing slice (parallel to F) |
+| | S | Shift | `SLICE_S_PRIME` | Standing slice counter-clockwise |
+| **Cube Rotations** | X | - | `CUBE_X` | Rotate entire cube on R axis |
+| | X | Shift | `CUBE_X_PRIME` | Rotate entire cube on R axis (inverse) |
+| | Y | - | `CUBE_Y` | Rotate entire cube on U axis |
+| | Y | Shift | `CUBE_Y_PRIME` | Rotate entire cube on U axis (inverse) |
+| | Z | - | `CUBE_Z` | Rotate entire cube on F axis |
+| | Z | Shift | `CUBE_Z_PRIME` | Rotate entire cube on F axis (inverse) |
+| **Scramble** | 0 | - | `SCRAMBLE_0` | Scramble with seed 0 (animated) |
+| | 1 | - | `SCRAMBLE_1` | Scramble with seed 1 |
+| | 2 | - | `SCRAMBLE_2` | Scramble with seed 2 |
+| | 3 | - | `SCRAMBLE_3` | Scramble with seed 3 |
+| | 4 | - | `SCRAMBLE_4` | Scramble with seed 4 |
+| | 5 | - | `SCRAMBLE_5` | Scramble with seed 5 |
+| | 6 | - | `SCRAMBLE_6` | Scramble with seed 6 |
+| | 7 | - | `SCRAMBLE_7` | Scramble with seed 7 |
+| | 8 | - | `SCRAMBLE_8` | Scramble with seed 8 |
+| | 9 | - | `SCRAMBLE_9` | Scramble with seed 9 |
+| | F9 | - | `SCRAMBLE_F9` | Scramble with configured key |
+| **Solve** | / | - | `SOLVE_ALL` | Solve the entire cube |
+| | / | Shift | `SOLVE_ALL_NO_ANIMATION` | Solve instantly (no animation) |
+| | F1 | - | `SOLVE_L1` | Solve layer 1 (cross + corners) |
+| | F1 | Ctrl | `SOLVE_L1X` | Solve layer 1 cross only |
+| | F2 | - | `SOLVE_L2` | Solve layer 2 |
+| | F3 | - | `SOLVE_L3` | Solve layer 3 (OLL + PLL) |
+| | F3 | Ctrl | `SOLVE_L3X` | Solve layer 3 cross only |
+| | F4 | - | `SOLVE_CENTERS` | Solve big cube centers (NxN) |
+| | F5 | - | `SOLVE_EDGES` | Solve big cube edges (NxN) |
+| **View Control** | X | Ctrl | `VIEW_ALPHA_X_DEC` | Rotate view around X axis (negative) |
+| | X | Alt | `VIEW_ALPHA_X_INC` | Rotate view around X axis (positive) |
+| | Y | Ctrl | `VIEW_ALPHA_Y_DEC` | Rotate view around Y axis (negative) |
+| | Y | Alt | `VIEW_ALPHA_Y_INC` | Rotate view around Y axis (positive) |
+| | Z | Ctrl | `VIEW_ALPHA_Z_DEC` | Rotate view around Z axis (negative) |
+| | Z | Alt | `VIEW_ALPHA_Z_INC` | Rotate view around Z axis (positive) |
+| | Up | - | `PAN_UP` | Pan view up |
+| | Down | - | `PAN_DOWN` | Pan view down |
+| | Left | - | `PAN_LEFT` | Pan view left |
+| | Right | - | `PAN_RIGHT` | Pan view right |
+| | Up | Ctrl | `ZOOM_IN` | Zoom in |
+| | Down | Ctrl | `ZOOM_OUT` | Zoom out |
+| | C | Alt | `VIEW_RESET` | Reset view to default |
+| **Animation** | + (NumPad) | - | `SPEED_UP` | Increase animation speed |
+| | - (NumPad) | - | `SPEED_DOWN` | Decrease animation speed |
+| | Space | - | `PAUSE_TOGGLE` | Pause/resume animation |
+| | Space | Ctrl | `SINGLE_STEP_TOGGLE` | Toggle single-step mode |
+| | S | - | `STOP_ANIMATION` | Stop animation (during animation only) |
+| **Shadow** | F10 | - | `SHADOW_TOGGLE_L` | Toggle left face shadow |
+| | F11 | - | `SHADOW_TOGGLE_D` | Toggle down face shadow |
+| | F12 | - | `SHADOW_TOGGLE_B` | Toggle back face shadow |
+| **Cube Size** | = | - | `SIZE_INC` | Increase cube size |
+| | - | - | `SIZE_DEC` | Decrease cube size |
+| **Slice Selection** | [ | - | `SLICE_START_INC` | Increase slice start index |
+| | [ | Shift | `SLICE_START_DEC` | Decrease slice start index |
+| | [ | Alt | `SLICE_RESET` | Reset slice selection |
+| | ] | - | `SLICE_STOP_INC` | Increase slice stop index |
+| | ] | Shift | `SLICE_STOP_DEC` | Decrease slice stop index |
+| **Recording** | P | - | `RECORDING_PLAY` | Play recorded sequence |
+| | P | Shift | `RECORDING_PLAY_PRIME` | Play recording in reverse |
+| | P | Ctrl | `RECORDING_TOGGLE` | Start/stop recording |
+| | P | Alt | `RECORDING_CLEAR` | Clear recording |
+| **Debug/Config** | O | - | `TOGGLE_ANIMATION` | Toggle animation on/off |
+| | O | Ctrl | `TOGGLE_DEBUG` | Toggle solver debug output |
+| | O | Alt | `TOGGLE_SANITY_CHECK` | Toggle cube sanity checking |
+| | I | - | `DEBUG_INFO` | Print debug information |
+| **Testing** | T | - | `TEST_RUN` | Run solver tests |
+| | T | Alt | `TEST_RUN_LAST` | Rerun last test |
+| | T | Ctrl | `TEST_SCRAMBLE_LAST` | Rerun last scramble |
+| **Application** | Q | - | `QUIT` | Quit application |
+| | C | - | `RESET_CUBE` | Reset cube to solved state |
+| | C | Ctrl | `RESET_CUBE_AND_VIEW` | Reset cube and view |
+| | , | - | `UNDO` | Undo last move |
+| | \ | - | `SWITCH_SOLVER` | Switch between solvers |
+| **Special** | W | - | `ANNOTATE` | Toggle annotation mode |
+| | A | - | `SPECIAL_ALG` | Run special algorithm test |
+
 # Code layout
 
 ## Algs
