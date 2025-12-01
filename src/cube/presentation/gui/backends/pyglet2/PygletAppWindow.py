@@ -60,6 +60,10 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self._backend = backend
         self._renderer = backend.renderer
 
+        # Initialize to None - will be set after super().__init__()
+        # (pyglet calls on_resize during __init__ before we can create the renderer)
+        self._modern_renderer: ModernGLRenderer | None = None
+
         # Initialize pyglet window (uses OpenGL 3.3 core profile on pyglet 2.0)
         super().__init__(width, height, title, resizable=True)
 
@@ -181,8 +185,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
     def on_resize(self, width, height):
         """Pyglet resize event."""
         gl.glViewport(0, 0, width, height)
-        # Update projection for modern GL renderer
-        self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=0.1, far=100.0)
+        # Update projection for modern GL renderer (if initialized)
+        if self._modern_renderer:
+            self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=0.1, far=100.0)
 
     def on_key_press(self, symbol, modifiers):
         """Pyglet native key press event.
