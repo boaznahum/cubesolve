@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Solver - Web Backend</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #canvas {
+            border: 2px solid #444;
+            background: #d9d9d9;
+        }
+        #status {
+            margin-top: 10px;
+            color: #888;
+            font-size: 14px;
+        }
+        #status.connected {
+            color: #4a4;
+        }
+        #status.error {
+            color: #a44;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <canvas id="canvas" width="720" height="720"></canvas>
+        <div id="status">Connecting...</div>
+    </div>
+    <script src="cube.js"></script>
+</body>
+</html>
