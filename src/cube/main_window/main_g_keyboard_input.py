@@ -1,3 +1,4 @@
+import sys
 from contextlib import contextmanager
 from typing import Any
 
@@ -457,8 +458,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                             good = good + a
                         except:
                             cube.cqr.print_dist()
-                            print("Failed on", a)
-                            print(good)
+                            print("Failed on", a, file=sys.stderr)
+                            print(good, file=sys.stderr)
                             raise
                 elif modifiers & Modifiers.ALT:
                     vs.debug(True, "Rerunning good:", good)
@@ -468,7 +469,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                                 op.play(a, animation=False)
                             cube.cqr.print_dist()
                         except:
-                            print(good)
+                            print(good, file=sys.stderr)
                             raise
 
                 else:

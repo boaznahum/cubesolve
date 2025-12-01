@@ -201,8 +201,8 @@ class NxNCenters(SolverElement):
         is_boy = cl.same(self.cube.original_layout)
 
         if not is_boy:
-            print(cl)
-            print()
+            print(cl, file=sys.stderr)
+            print(file=sys.stderr)
 
         assert is_boy
 

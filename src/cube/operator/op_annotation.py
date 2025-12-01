@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from enum import unique, Enum
@@ -163,7 +164,7 @@ class OpAnnotation:
                 try:
                     e = cqr.find_slice_edge(parts, _c_pred(i, key))
                 except:
-                    print("")
+                    print("", file=sys.stderr)
                     raise
 
                 if i < 0:
