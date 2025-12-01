@@ -156,9 +156,6 @@ class GUITestRunner:
                     event_loop.stop()
 
         try:
-            # Ensure backend is registered
-            BackendRegistry.ensure_registered(backend)
-
             # Configure for testing
             config.GUI_TEST_MODE = True
             config.animation_enabled = enable_animation

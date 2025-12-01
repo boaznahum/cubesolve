@@ -1,10 +1,12 @@
-# Re-exports for backward compatibility
-from .GUIBackend import GUIBackend
-from .BackendRegistry import BackendRegistry, _BackendEntry, register_backend
+# Re-exports for convenience
+from .GUIBackendFactory import GUIBackendFactory
+from .BackendRegistry import BackendRegistry
+
+# Backward compatibility alias
+GUIBackend = GUIBackendFactory
 
 __all__ = [
-    'GUIBackend',
+    'GUIBackendFactory',
+    'GUIBackend',  # Alias for backward compatibility
     'BackendRegistry',
-    '_BackendEntry',
-    'register_backend',
 ]

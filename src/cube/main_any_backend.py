@@ -88,11 +88,8 @@ def create_app_window(
         >>> window = create_app_window(app, "tkinter")
         >>> window.run()
     """
-    # Ensure backend is registered
-    BackendRegistry.ensure_registered(backend_name)
-
     # Get backend from registry and create window
-    # GUIBackend.create_app_window() handles animation manager wiring
+    # GUIBackendFactory.create_app_window() handles animation manager wiring
     backend = BackendRegistry.get_backend(backend_name)
     return backend.create_app_window(app, width, height, title)
 

@@ -8,12 +8,8 @@ Requirements:
     pip install pyglet
 
 Usage:
-    from cube.presentation.gui.backends import pyglet
-    # Backend is automatically registered on import
-
-    # Or explicitly:
-    from cube.presentation.gui.backends.pyglet import register
-    register()
+    from cube.presentation.gui import BackendRegistry
+    backend = BackendRegistry.get_backend("pyglet")
 """
 
 from cube.presentation.gui.backends.pyglet.PygletRenderer import PygletRenderer
@@ -28,27 +24,19 @@ __all__ = [
     "PygletEventLoop",
     "PygletAnimation",
     "PygletAppWindow",
-    "register",
+    "create_backend",
 ]
 
 
-def register() -> None:
-    """Register the pyglet backend with the BackendRegistry.
+def create_backend() -> "GUIBackendFactory":
+    """Create a GUIBackendFactory for the pyglet backend."""
+    from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
-    This is called automatically on import, but can also be called
-    explicitly to ensure registration.
-    """
-    from cube.presentation.gui.factory import BackendRegistry
-
-    BackendRegistry.register(
-        "pyglet",
+    return GUIBackendFactory(
+        name="pyglet",
         renderer_factory=PygletRenderer,
-        window_factory=lambda w, h, t: PygletWindow(w, h, t),
         event_loop_factory=PygletEventLoop,
+        window_factory=lambda w, h, t: PygletWindow(w, h, t),
         animation_factory=PygletAnimation,
         app_window_factory=lambda app, w, h, t, backend: PygletAppWindow(app, w, h, t, backend),
     )
-
-
-# Auto-register on import
-register()

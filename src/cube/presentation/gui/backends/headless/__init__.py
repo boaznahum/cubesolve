@@ -10,12 +10,8 @@ Useful for:
 - CI/CD pipelines
 
 Usage:
-    from cube.presentation.gui.backends import headless
-    # Backend is automatically registered on import
-
-    # Or explicitly:
-    from cube.presentation.gui.backends.headless import register
-    register()
+    from cube.presentation.gui import BackendRegistry
+    backend = BackendRegistry.get_backend("headless")
 """
 
 from cube.presentation.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
@@ -28,28 +24,19 @@ __all__ = [
     "HeadlessWindow",
     "HeadlessEventLoop",
     "HeadlessAppWindow",
-    "register",
+    "create_backend",
 ]
 
 
-def register() -> None:
-    """Register the headless backend with the BackendRegistry.
+def create_backend() -> "GUIBackendFactory":
+    """Create a GUIBackendFactory for the headless backend."""
+    from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
-    This is called automatically on import, but can also be called
-    explicitly to ensure registration.
-    """
-    from cube.presentation.gui.factory import BackendRegistry
-
-    if not BackendRegistry.is_registered("headless"):
-        BackendRegistry.register(
-            "headless",
-            renderer_factory=HeadlessRenderer,
-            window_factory=lambda w, h, t: HeadlessWindow(w, h, t),
-            event_loop_factory=HeadlessEventLoop,
-            animation_factory=None,  # Headless doesn't support animation
-            app_window_factory=lambda app, w, h, t, backend: HeadlessAppWindow(app, w, h, t, backend),
-        )
-
-
-# Auto-register on import
-register()
+    return GUIBackendFactory(
+        name="headless",
+        renderer_factory=HeadlessRenderer,
+        event_loop_factory=HeadlessEventLoop,
+        window_factory=lambda w, h, t: HeadlessWindow(w, h, t),
+        animation_factory=None,  # Headless doesn't support animation
+        app_window_factory=lambda app, w, h, t, backend: HeadlessAppWindow(app, w, h, t, backend),
+    )
