@@ -37,7 +37,8 @@
       "Bash(E:devprojectspythoncubesolve.venv314Scriptspython.exe -m pytest E:devprojectspythoncubesolvetests -v --ignore=E:devprojectspythoncubesolvetestsgui -m \"not slow\")",
       "Bash(git branch:*)",
       "Bash(del \"F:\\Dev\\code\\python\\cubesolve2\\src\\cube\\utils\\debug.py\")",
-      "Bash(timeout /t 30 /nobreak)"
+      "Bash(timeout /t 30 /nobreak)",
+      "Bash(powershell -NoProfile -Command \"& ''.\\.venv314\\Scripts\\python.exe'' -m pytest tests/ -v --ignore=tests/gui -m ''not slow'' 2>&1 | Select-Object -Last 10\")"
     ],
     "deny": [],
     "ask": []

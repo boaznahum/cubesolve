@@ -221,7 +221,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
         match value:
 
             case Keys.I:
-                vs.debug(False, f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
+                vs.debug(True, f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
                 no_operation = True
                 cube.cqr.print_dist()
 
@@ -461,7 +461,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                             print(good)
                             raise
                 elif modifiers & Modifiers.ALT:
-                    vs.debug(False, "Rerunning good:", good)
+                    vs.debug(True, "Rerunning good:", good)
                     for a in good.algs:
                         try:
                             with _wait_cursor(window):

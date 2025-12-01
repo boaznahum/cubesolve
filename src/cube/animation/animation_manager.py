@@ -166,7 +166,7 @@ def _op_and_play_animation(window: AnimationWindow,
         alg = _alg
 
     if not isinstance(alg, algs.AnimationAbleAlg):
-        vs.debug(False, f"{alg} is not animation-able")
+        vs.debug(True, f"{alg} is not animation-able")
         operator(alg, False)
         return
 
@@ -202,7 +202,7 @@ def _op_and_play_animation(window: AnimationWindow,
 
     # but still useful for SS mode
     if alg.n % 4 == 0:
-        vs.debug(False, f"{alg} is zero rotating, can't animate")
+        vs.debug(True, f"{alg} is zero rotating, can't animate")
         operator(alg, False)
         return
 
