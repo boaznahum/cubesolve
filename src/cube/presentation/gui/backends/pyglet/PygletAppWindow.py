@@ -152,6 +152,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         Called by pyglet framework. Converts native keys to abstract Keys
         and calls handle_key() - the protocol method.
         """
+        self._vs.debug(False, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
         abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
         abstract_mods = _convert_modifiers(modifiers)
         self.handle_key(abstract_symbol, abstract_mods)
