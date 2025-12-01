@@ -44,7 +44,9 @@
       "Bash(.venv_pyglet2/Scripts/pip.exe:*)",
       "Bash(timeout /t 3 /nobreak)",
       "WebFetch(domain:github.com)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git cherry-pick:*)"
     ],
     "deny": [],
     "ask": []
