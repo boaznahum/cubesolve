@@ -290,14 +290,14 @@ def rf(self) -> algs.Alg:
 slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
    ```
 
-![Algs](/assets/algs.png)
+![Algs](/readme_files/algs.png)
 
 ## Model
 
     In package model:
      Cube, Face, Slice, Corner, Edge, Center ...
 
-![Model](/assets/cube_model.png)
+![Model](/readme_files/cube_model.png)
 
 ## Operator
 
@@ -307,7 +307,7 @@ slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
 
     Still have a probelm that I need to solve, animation manager <-> window/operator runtime relation are bidirectional 
 
-![Operator-Animation](/assets/win-animation.png)
+![Operator-Animation](/readme_files/win-animation.png)
 
 ## Solver
 
@@ -321,7 +321,7 @@ l3_corners.py
 
 Solver operates on cube using Operator
 
-![Solver](/assets/solver.png)
+![Solver](/readme_files/solver.png)
 
 The operator is very naive, it is simply mimics the beginner solver, for example from l2.py, bring edge from top to its
 location
