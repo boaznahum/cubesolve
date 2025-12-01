@@ -108,6 +108,12 @@
 
 ## Done Tasks
 
+### Architecture
+
+- ✅ **A1.** Move main window factory to backend, not a special factory in main_any
+  - Added `app_window_factory` to `_BackendEntry` and `GUIBackend.create_app_window()`
+  - Animation manager wiring is now in `GUIBackend.create_app_window()`
+
 - ✅ **A2.** Introduce commands injecting instead of keys, simplify key handling
   - **A2.0.** ✅ Unify keyboard handling across all backends (prerequisite)
     - Created `handle_key_with_error_handling()` - unified error handling
@@ -134,55 +140,16 @@
     - Deleted `tests/gui/keys.py` (GUIKeys no longer needed)
     - Tests now use: `Command.SPEED_UP * 5 + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT`
 
-- ✅ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name
-  - When implementing a protocol or base class, the implementation class name should differ from the base
-  - Example: Protocol `Renderer` implemented by `PygletRenderer`, `HeadlessRenderer` (not just `Renderer`)
-  - Example: `class MyClass` should be in `MyClass.py` (not `my_class.py`)
-  - Research: Is this good practice? Why doesn't Python community follow this?
-  - If approved: Add to CLAUDE.md as coding standard
-  - **Q3.1.** ✅ Audit and fix all protocol classes and their implementations
-    - Split protocol files to PascalCase (ShapeRenderer.py, EventLoop.py, etc.)
-    - Renamed all backend implementation files to PascalCase:
-      - pyglet: PygletEventLoop.py, PygletAppWindow.py, PygletRenderer.py, etc.
-      - headless: HeadlessEventLoop.py, HeadlessAppWindow.py, etc.
-      - console: ConsoleEventLoop.py, ConsoleAppWindow.py, etc.
-      - tkinter: TkinterEventLoop.py, TkinterAppWindow.py, etc.
-    - Updated all __init__.py files and imports
-  - **Q3.2.** ✅ Audit and fix all other classes in the codebase
-    - Renamed 45 files to match class names (PascalCase)
-    - Split 6 multi-class files with backward-compatible re-export modules:
-      - `app_exceptions.py`, `gui/factory.py`, `gui/types.py`
-      - `model/cube_boy.py`, `model/cube_slice.py`, `operator/op_annotation.py`
-    - Left 3 complex files unsplit due to tight coupling: `_elements.py`, `_part.py`, `_part_slice.py`
+- ✅ **A3.** Consider moving animation manager wiring from GUIBackend to elsewhere
+  - **Decision:** Keep as-is (closed as "by design")
+  - **Rationale:**
+    - The coupling is benign - it's just wiring, not business logic
+    - `create_app_window()` is a natural injection point for animation setup
+    - This is cohesive: factory creates window and wires its animation system
+    - Alternatives add boilerplate without practical benefit
+    - A1 intentionally consolidated this wiring into GUIBackend - that was correct
 
-- ✅ **Q8.** Code cleanup: remove unused code and consolidate console backend
-  - Deleted `main_c.py` (old standalone console app) and `tests/console/`
-  - Removed unused imports: `colorama`, `Collection` from `viewer_g.py`
-  - Removed unused `__slots__` entries: `_test`, `_hidden_objects` from `GCubeViewer`
-  - Removed dead function `get_all_cells_movable_gui_elements()` from `_board.py`
-  - Removed unused class attrs `_h_size`, `_v_size` from `_FaceBoard`
-  - Moved `main_console/keys.py` → `backends/console/ConsoleKeys.py`
-  - Moved `main_console/viewer.py` → `backends/console/ConsoleViewer.py`
-  - Deleted `main_console/` folder (all code now in `gui/backends/console/`)
-
-- ✅ **G1.** Make sure all test_gui run with all backends
-  - Added `--backend` pytest option (default: "all" runs pyglet, headless, console, tkinter)
-  - Tests use `Command` enum instead of string key sequences
-  - `BackendRegistry.ensure_registered()` ensures backend is loaded
-  - Animation manager gracefully handles backends without viewers
-
-- ✅ **A1.** Move main window factory to backend, not a special factory in main_any
-  - Added `app_window_factory` to `_BackendEntry` and `GUIBackend.create_app_window()`
-  - Animation manager wiring is now in `GUIBackend.create_app_window()`
-
-- ✅ **Q2.** Add typing to all code, make sure mypy is green
-  - Completed: 0 errors in 141 source files (down from 57 errors)
-  - Fixed: protocol signatures, abstract class implementations, None/Optional narrowing,
-    wrong argument types, variable/import conflicts, missing protocol members
-  - Added `disable_error_code = import-untyped` to `mypy.ini` for pyglet (no type stubs)
-
-- ✅ **Q4.** Create `/mytodo` slash command to read and manage `__todo.md`
-  - Created `.claude/commands/mytodo.md`
+### Bugs
 
 - ✅ **B2.** Fix mypy -p cube errors after Q3.2 file renames
   - Fixed import ambiguity: module names vs class names (e.g., `from cube.model import PartEdge`)
@@ -192,18 +159,20 @@
   - Fixed AnnotationAlg import in Inv.py
   - Fixed type errors in: Command.py, AnimationManager.py, HeadlessAppWindow.py
 
-- ✅ **Q8.2.** Centralized debug output control
-  - Added `debug_all` and `quiet_all` flags to `ApplicationAndViewState`
-  - Added `debug()`, `debug_lazy()`, `is_debug()`, `debug_prefix()` methods
-  - Migrated solver debug prints to use `vs.debug()` system (adds `DEBUG:` prefix)
-  - Migrated error diagnostics (CubeSanity, Part, _part_slice, etc.) to stderr
-  - Added `--debug-all` and `--quiet` CLI flags to `main_any_backend.py`
-  - Added `--debug-all` and `--quiet-debug` pytest options
-
 - ✅ **B3.** Shift+/ (solve without animation) no longer works after command refactoring
   - **Fixed:** Added `SOLVE_ALL_NO_ANIMATION` command and mapped Shift+/ to it
   - Key binding updated in `key_bindings.py:104`
   - New command in `Command.py:552`
+
+### GUI & Testing
+
+- ✅ **G1.** Make sure all test_gui run with all backends
+  - Added `--backend` pytest option (default: "all" runs pyglet, headless, console, tkinter)
+  - Tests use `Command` enum instead of string key sequences
+  - `BackendRegistry.ensure_registered()` ensures backend is loaded
+  - Animation manager gracefully handles backends without viewers
+
+### Code Quality
 
 - ✅ **Q1.** Refactor too many packages under `src/cube`
   - **Completed:** Full layered architecture restructuring
@@ -216,3 +185,37 @@
   - **Files moved:** ~150 files across 12 packages into 3 layer packages
   - **Fixed:** solver/begginer → solver/beginner (typo)
   - **All tests pass:** 126 non-GUI tests, 8 GUI tests (4 skipped for B1)
+
+- ✅ **Q2.** Add typing to all code, make sure mypy is green
+  - Completed: 0 errors in 141 source files (down from 57 errors)
+  - Fixed: protocol signatures, abstract class implementations, None/Optional narrowing,
+    wrong argument types, variable/import conflicts, missing protocol members
+  - Added `disable_error_code = import-untyped` to `mypy.ini` for pyglet (no type stubs)
+
+- ✅ **Q3.** File naming convention: single class per file with case-sensitive filename matching class name
+  - When implementing a protocol or base class, the implementation class name should differ from the base
+  - Example: Protocol `Renderer` implemented by `PygletRenderer`, `HeadlessRenderer` (not just `Renderer`)
+  - Example: `class MyClass` should be in `MyClass.py` (not `my_class.py`)
+  - **Q3.1.** ✅ Audit and fix all protocol classes and their implementations
+    - Split protocol files to PascalCase (ShapeRenderer.py, EventLoop.py, etc.)
+    - Renamed all backend implementation files to PascalCase
+    - Updated all __init__.py files and imports
+  - **Q3.2.** ✅ Audit and fix all other classes in the codebase
+    - Renamed 45 files to match class names (PascalCase)
+    - Split 6 multi-class files with backward-compatible re-export modules
+    - Left 3 complex files unsplit due to tight coupling: `_elements.py`, `_part.py`, `_part_slice.py`
+
+- ✅ **Q4.** Create `/mytodo` slash command to read and manage `__todo.md`
+  - Created `.claude/commands/mytodo.md`
+
+- ✅ **Q8.** Code cleanup: remove unused code and consolidate console backend
+  - Deleted `main_c.py` (old standalone console app) and `tests/console/`
+  - Removed unused imports and dead functions
+  - Moved `main_console/` code to `gui/backends/console/`
+  - Deleted `main_console/` folder
+
+- ✅ **Q8.2.** Centralized debug output control
+  - Added `debug_all` and `quiet_all` flags to `ApplicationAndViewState`
+  - Added `debug()`, `debug_lazy()`, `is_debug()`, `debug_prefix()` methods
+  - Migrated solver debug prints to use `vs.debug()` system
+  - Added `--debug-all` and `--quiet` CLI flags
