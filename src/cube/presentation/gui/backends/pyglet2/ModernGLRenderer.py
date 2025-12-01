@@ -212,6 +212,21 @@ class ModernGLRenderer:
         """Get combined Model-View-Projection matrix."""
         return multiply(self._projection.current, self._modelview.current)
 
+    def get_inverse_mvp(self) -> np.ndarray:
+        """Get the inverse of the combined MVP matrix.
+
+        Used for unprojecting screen coordinates to world space (ray casting).
+
+        Returns:
+            4x4 numpy array representing the inverse MVP matrix.
+        """
+        mvp = self._get_mvp()
+        try:
+            return np.linalg.inv(mvp)
+        except np.linalg.LinAlgError:
+            # Matrix not invertible - return identity
+            return np.eye(4, dtype=np.float32)
+
     def _upload_and_draw(self, vertices: np.ndarray, mode: int) -> None:
         """Upload vertex data and draw.
 
@@ -472,3 +487,60 @@ class ModernGLRenderer:
         gl.glDrawArrays(gl.GL_LINES, 0, vertex_count)
 
         gl.glBindVertexArray(0)
+
+    # === Picking / Unprojection ===
+
+    def screen_to_world(
+        self,
+        screen_x: float,
+        screen_y: float,
+        window_width: int,
+        window_height: int,
+    ) -> tuple[float, float, float]:
+        """Convert screen coordinates to world coordinates.
+
+        Uses current projection and modelview matrices to unproject
+        screen coordinates to 3D world space.
+
+        Args:
+            screen_x: Screen X coordinate (0 = left)
+            screen_y: Screen Y coordinate (0 = bottom, OpenGL convention)
+            window_width: Window width in pixels
+            window_height: Window height in pixels
+
+        Returns:
+            Tuple of (world_x, world_y, world_z)
+        """
+        # Read depth at the pixel
+        depth_buffer = (gl.GLfloat * 1)()
+        gl.glReadPixels(
+            int(screen_x), int(screen_y), 1, 1,
+            gl.GL_DEPTH_COMPONENT, gl.GL_FLOAT, depth_buffer
+        )
+        depth = depth_buffer[0]
+
+        # Convert screen coords to normalized device coordinates (NDC)
+        # NDC range is [-1, 1] for x, y, z
+        ndc_x = (2.0 * screen_x / window_width) - 1.0
+        ndc_y = (2.0 * screen_y / window_height) - 1.0
+        ndc_z = 2.0 * depth - 1.0
+
+        # Get combined MVP matrix and its inverse
+        mvp = self._get_mvp()
+        try:
+            inv_mvp = np.linalg.inv(mvp)
+        except np.linalg.LinAlgError:
+            # Matrix not invertible - return origin
+            return (0.0, 0.0, 0.0)
+
+        # Unproject: multiply NDC coords by inverse MVP
+        clip_coords = np.array([ndc_x, ndc_y, ndc_z, 1.0], dtype=np.float32)
+        world_coords = np.matmul(inv_mvp, clip_coords)
+
+        # Perspective divide
+        if abs(world_coords[3]) < 1e-10:
+            return (0.0, 0.0, 0.0)
+
+        world_coords /= world_coords[3]
+
+        return (float(world_coords[0]), float(world_coords[1]), float(world_coords[2]))

@@ -65,7 +65,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # (pyglet calls on_resize during __init__ before we can create the renderer)
         self._modern_renderer: ModernGLRenderer | None = None
 
-        # Initialize pyglet window (uses OpenGL 3.3 core profile on pyglet 2.0)
+        # Note: Tried compatibility profile (forward_compatible=False, major_version=2)
+        # but it doesn't work on Windows - pyglet 2 always creates core profile.
+        # See migration_state.md for details.
         super().__init__(width, height, title, resizable=True)
 
         # Animation manager connection
@@ -82,10 +84,11 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Camera offset is typically [0, 0, -400], so far plane needs to be > 400
         self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=1.0, far=1000.0)
 
-        # Create modern GL cube viewer
+        # Create modern GL cube viewer (for shader-based rendering)
         self._modern_viewer = ModernGLCubeViewer(app.cube, self._modern_renderer)
 
-        # Legacy viewer disabled (uses display lists which don't work in GL 3.3 core)
+        # GCubeViewer disabled - its constructor uses legacy GL (display lists)
+        # TODO: Implement ray-plane intersection picking in ModernGLCubeViewer
         self._viewer: GCubeViewer | None = None
 
         # Text labels (built by _update_status_text/_update_animation_text)
@@ -107,13 +110,23 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
 
     @property
     def viewer(self) -> GCubeViewer | None:
-        """Access the cube viewer."""
+        """Access the cube viewer (None in pyglet2 - uses ModernGLCubeViewer instead)."""
         return self._viewer
 
     @property
     def renderer(self):
         """Access the renderer."""
         return self._renderer
+
+    @property
+    def modern_renderer(self) -> ModernGLRenderer:
+        """Access the modern GL renderer."""
+        return self._modern_renderer
+
+    @property
+    def modern_viewer(self) -> ModernGLCubeViewer:
+        """Access the modern GL cube viewer (for ray-plane picking)."""
+        return self._modern_viewer
 
     @property
     def animation_running(self) -> bool:
@@ -129,8 +142,8 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Update modern GL viewer
         self._modern_viewer.update()
 
-        if self._viewer:
-            self._viewer.update()
+        # Note: Don't call self._viewer.update() - that uses legacy GL
+        # The GCubeViewer is only used for find_facet() geometry lookup
 
         if self._animation_manager:
             self._animation_manager.update_gui_elements()
@@ -157,7 +170,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
 
         self.clear()
 
-        # Set up view transform (camera position)
+        # Set up view transform (camera position) using modern GL renderer
         vs = self._app.vs
         self._modern_renderer.load_identity()
 
@@ -180,11 +193,6 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
 
         # Draw the Rubik's cube using modern GL viewer
         self._modern_viewer.draw()
-
-        # TODO: Modern GL migration in progress
-        # Legacy GL calls disabled - they fail in OpenGL 3.3 core profile
-        # self._viewer.draw()    # Uses glBegin/glEnd - needs migration
-        # self._draw_animation() # Uses legacy GL - needs migration
 
         # Disable depth testing for 2D text overlay
         gl.glDisable(gl.GL_DEPTH_TEST)

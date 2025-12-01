@@ -37,18 +37,15 @@ _DRAG_VECTOR_DETECTION_DATA_X0_Y0: Tuple[int, int] = (0, 0)
 
 
 def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
-    # these are persevered for clik slicing, and panning
+    # these are persevered for click slicing, and panning
     if not modifiers & (Modifiers.SHIFT | Modifiers.CTRL | Modifiers.ALT):
 
         if INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
             if buttons & MouseButton.RIGHT:
                 _handle_model_view_rotate_by_drag(win, dx, dy)
             else:
-                # pyglet2 backend: face slicing requires legacy GL (screen_to_world)
-                # which is not available in OpenGL 3.3 core profile.
-                # For now, make left-click also do camera rotation.
-                # TODO: Implement modern GL screen-to-world for face slicing
-                _handle_model_view_rotate_by_drag(win, dx, dy)
+                # Face rotation by left-click drag (uses ray-plane intersection)
+                _handle_face_slice_rotate_by_drag(win, x, y, dx, dy)
 
     elif (modifiers & Modifiers.ALT) == Modifiers.ALT:
 
@@ -103,9 +100,10 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     global _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING
     vs = window.app.vs
 
-    vs.debug(INPUT_MOUSE_DEBUG, f"Mouse drag: Handler started: {x=}, {y=})")
+    vs.debug(INPUT_MOUSE_DEBUG, f"[DRAG] Handler: x={x}, y={y}, dx={dx}, dy={dy}")
 
     if _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING:
+        vs.debug(INPUT_MOUSE_DEBUG, f"[DRAG] Skipped - already running")
         return
 
     global _DRAG_VECTOR_DETECTION_DATA
@@ -121,10 +119,9 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     if n == 1:  # first point
         _DRAG_VECTOR_DETECTION_DATA_X0_Y0 = (x, y)
 
-    # print(f"{n}")
+    vs.debug(INPUT_MOUSE_DEBUG, f"[DRAG] Data points: {n}/{_DRAG_VECTOR_DETECTION_DATA_LENGTH}")
 
     if n < _DRAG_VECTOR_DETECTION_DATA_LENGTH:
-        vs.debug(INPUT_MOUSE_DEBUG, f"Mouse drag: Not enough points {n} / {_DRAG_VECTOR_DETECTION_DATA_LENGTH}")
         # Since we add a texture, draw become expansive (don't know why)
         #  so we found that we are not handling these events fast enough, so never slicing/rotating (big cube)
         window.app.vs.skip_next_on_draw = True
@@ -151,6 +148,8 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     left_to_right = selected[1]
     left_to_top = selected[2]
 
+    vs.debug(INPUT_MOUSE_DEBUG, f"[ROTATE] Selected: face={slice_edge.face.name}, left_to_right={left_to_right}, left_to_top={left_to_top}")
+
     p0 = _screen_to_model(app.vs, window, x, y)  # todo we already in selected !!!
     p1 = _screen_to_model(app.vs, window, x + dx, y + dy)
     d_vector: ndarray = p1 - p0
@@ -161,7 +160,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     part_slice: PartSlice = slice_edge.parent
     part: Part = part_slice.parent
 
-    vs.debug(INPUT_MOUSE_DEBUG, f"Mouse drag:{type(part)=}, { part_slice.index=}, {d_vector=}, {on_left_to_right=}, {on_left_to_top=}")
+    vs.debug(INPUT_MOUSE_DEBUG, f"[ROTATE] part={type(part).__name__}, d_vector={d_vector}, ltr={on_left_to_right:.2f}, ltt={on_left_to_top:.2f}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 
@@ -210,7 +209,10 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
         if alg:
             if inv:
                 alg = alg.inv()
+            vs.debug(INPUT_MOUSE_DEBUG, f"[ROTATE] Playing: {alg}")
             _play(window, alg)
+        else:
+            vs.debug(INPUT_MOUSE_DEBUG, f"[ROTATE] No alg to play")
 
     finally:
         _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = False
@@ -415,12 +417,18 @@ def _handle_slice_on_corner_adjusted_face(slice_face: Face,
 
 
 def _play(window: AbstractWindow, alg: Alg):
+    vs = window.app.vs
     op = window.app.op
 
-    op.play(alg)
-    # why I need that
-    if not op.animation_enabled:
-        window.update_gui_elements()
+    vs.debug(INPUT_MOUSE_DEBUG, f"[PLAY] Playing {alg}")
+
+    # Use op.play() with animation=False to:
+    # 1. Track the move in history (for undo, display, etc.)
+    # 2. Skip animation (which uses legacy GL not available in pyglet2)
+    op.play(alg, animation=False)
+
+    # Update GUI to show the result
+    window.update_gui_elements()
 
 
 def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bool):
@@ -569,35 +577,55 @@ def _slice_on_part_edge_alg(part_edge: PartEdge) -> Alg:
 
 
 def _screen_to_model(vs, window, x, y) -> np.ndarray:
-    """Convert screen coordinates to 3D model coordinates using the renderer.
+    """Convert screen coordinates to 3D model coordinates using modern GL.
 
-    This function uses the renderer's screen_to_world() method which handles
-    the GL matrix operations and depth buffer reading internally.
+    Uses ModernGLRenderer's screen_to_world() which reads the depth buffer
+    and unprojects using our tracked projection/modelview matrices.
 
     Args:
-        vs: Application view state (for prepare/restore_objects_view)
-        window: The window (provides renderer access)
+        vs: Application view state (unused in modern GL version)
+        window: The window (provides modern_renderer access)
         x: Screen X coordinate
         y: Screen Y coordinate (pyglet/OpenGL convention: origin at bottom-left)
 
     Returns:
         3D point as numpy array [x, y, z]
     """
-    renderer = window.renderer
-
-    # Set up the view matrices for unprojection
-    vs.prepare_objects_view(renderer)
-
-    # Use renderer to convert screen to world coordinates
-    # pyglet uses OpenGL convention (y=0 at bottom), same as screen_to_world expects
-    world_x, world_y, world_z = renderer.view.screen_to_world(float(x), float(y))
-
-    vs.restore_objects_view(renderer)
+    # Use modern GL renderer for screen-to-world conversion
+    modern_renderer = window.modern_renderer
+    world_x, world_y, world_z = modern_renderer.screen_to_world(
+        float(x), float(y), window.width, window.height
+    )
 
     return np.array([world_x, world_y, world_z])
 
 
 def _get_selected_slice(vs, window, x, y) -> Tuple[PartEdge, np.ndarray, np.ndarray] | None:
-    p = _screen_to_model(vs, window, x, y)
+    """Get the selected slice at screen position using ray-plane intersection.
 
-    return window.viewer.find_facet(p[0], p[1], p[2])
+    Args:
+        vs: Application view state (passed to recalculate view matrix)
+        window: The window (provides modern_viewer access)
+        x: Screen X coordinate
+        y: Screen Y coordinate
+
+    Returns:
+        Tuple of (PartEdge, left_to_right_dir, left_to_top_dir) or None
+    """
+    # Use modern GL ray-plane intersection for picking
+    modern_viewer = window.modern_viewer
+
+    vs.debug(INPUT_MOUSE_DEBUG, f"[PICK] screen=({x}, {y}), window=({window.width}, {window.height})")
+
+    # Pass view state to ensure matrix is up-to-date for picking
+    result = modern_viewer.get_part_edge_at_screen(
+        float(x), float(y), window.width, window.height, vs
+    )
+
+    if result is None:
+        vs.debug(INPUT_MOUSE_DEBUG, f"[PICK] No hit")
+        return None
+
+    part_edge, right_dir, up_dir = result
+    vs.debug(INPUT_MOUSE_DEBUG, f"[PICK] Hit: {part_edge.face.name} part={type(part_edge.parent.parent).__name__}")
+    return (part_edge, right_dir, up_dir)

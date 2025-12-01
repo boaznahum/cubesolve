@@ -630,15 +630,132 @@ pyglet2 backend
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Cube rendering | ✅ Working | ModernGLCubeViewer with shaders |
-| Face rotations | ✅ Working | R/L/U/D/F/B execute instantly |
+| Face rotations (keyboard) | ✅ Working | R/L/U/D/F/B execute instantly |
 | Scramble | ✅ Working | Press 1-9 for scrambles |
 | Solve | ✅ Working | Press ? for solve |
-| Mouse drag (rotation) | ✅ Working | Camera orbit via matrix.py |
+| Mouse drag (camera rotation) | ✅ Working | Right-click drag, camera orbit via matrix.py |
+| Mouse drag (face rotation) | ✅ Working | Left-click drag, ray-plane intersection |
 | Mouse scroll (zoom) | ✅ Working | Z-axis translation |
 | Text labels | ✅ Working | pyglet.text.Label (modern GL) |
 | Debug logging | ✅ Working | `--debug-all` shows output |
+| History tracking | ✅ Working | `op.play(alg, animation=False)` |
 | **Visual animation** | ❌ Not working | Display lists not available |
-| Mouse picking | ❓ Untested | Needs screen_to_world |
+
+### Mouse Face Picking - IMPLEMENTED ✅
+
+The old pyglet 1.x backend used legacy GL functions for picking:
+- `glGetDoublev(GL_PROJECTION_MATRIX)` - get current matrices
+- `glGetDoublev(GL_MODELVIEW_MATRIX)`
+- `gluUnProject()` - convert screen coords to 3D world coords
+- `GCubeViewer.find_facet()` - find which cube face was clicked
+
+In pyglet 2.0, these legacy functions are not available. **Solution: Ray-plane intersection**.
+
+#### Ray-Plane Intersection Implementation
+
+New methods added to `ModernGLCubeViewer.py`:
+- `_setup_view_matrix(vs)` - Recalculates view matrix for current camera orientation
+- `screen_to_ray(x, y, width, height, vs)` - Convert screen coords to world-space ray
+- `find_facet_by_ray(origin, direction)` - Intersect ray with 6 cube face planes
+- `find_facet_at_screen(x, y, width, height, vs)` - Combine above two
+- `get_part_edge_at_screen(x, y, width, height, vs)` - Return PartEdge like legacy API
+- `_get_part_edge_at_cell(face, row, col)` - Map (row, col) to cube model parts
+
+New method added to `ModernGLRenderer.py`:
+- `get_inverse_mvp()` - Get inverse of combined Model-View-Projection matrix
+
+Updated `main_g_mouse.py`:
+- `_get_selected_slice()` - Now uses `modern_viewer.get_part_edge_at_screen()`
+- `_play()` - Uses `op.play(alg, animation=False)` to track history without animation
+- Converted debug `print()` to `vs.debug()` for consistency
+
+#### How It Works
+
+```
+Left-click drag on cube face:
+    ↓
+_handle_face_slice_rotate_by_drag()
+    ↓
+_get_selected_slice() → modern_viewer.get_part_edge_at_screen()
+    ↓
+screen_to_ray() - Convert screen (x,y) to world-space ray using inverse MVP
+    ↓
+find_facet_by_ray() - Test ray against 6 face planes, find closest hit
+    ↓
+_get_part_edge_at_cell() - Map hit (face, row, col) to PartEdge
+    ↓
+Determine rotation direction from drag vector
+    ↓
+op.play(alg, animation=False) - Execute without animation, track history
+    ↓
+window.update_gui_elements() - Refresh display
+```
+
+#### Workaround: No Animation
+
+```python
+# In _play():
+op.play(alg, animation=False)  # Skip animation (uses legacy GL)
+window.update_gui_elements()   # Instant visual update
+```
+
+This properly uses the Operator (tracking history, undo support) while bypassing the animation system which requires legacy GL display lists.
+
+### Solution Attempt: Compatibility Profile (FAILED)
+
+Tried using pyglet 2.0 compatibility profile via window config:
+
+```python
+from pyglet.gl import Config
+
+# Attempt 1: forward_compatible=False
+config = Config(
+    double_buffer=True,
+    depth_size=24,
+    forward_compatible=False,
+)
+
+# Attempt 2: Request OpenGL 2.1 explicitly
+config = Config(
+    double_buffer=True,
+    depth_size=24,
+    major_version=2,
+    minor_version=1,
+)
+```
+
+**Result:** Both attempts FAILED on Windows.
+- `glBegin`/`glEnd` still throw `GLException: Invalid operation (0x1282)`
+- Pyglet 2.x on Windows always creates a core profile context
+- The Config options don't override this behavior
+
+**Conclusion:** Compatibility profile approach doesn't work on pyglet 2 + Windows.
+
+### Solution Attempt: Modern GL screen_to_world (PARTIAL)
+
+Added `screen_to_world()` to `ModernGLRenderer` that:
+1. Reads depth buffer with `glReadPixels` (works in modern GL)
+2. Inverts projection*modelview matrix
+3. Unprojects screen coords to world coords
+
+**Problem:** `GCubeViewer.find_facet()` requires `GCubeViewer` which creates display lists
+in its constructor (`_Board._create_faces()` → `_Cell.prepare_geometry()` → `glGenLists`).
+
+**The geometry and GL are deeply intertwined in `GCubeViewer`/`_Board`/`_Cell`.**
+
+### Next Steps
+
+**Completed:**
+- ✅ Ray-plane intersection for mouse face picking
+- ✅ History tracking via `op.play(alg, animation=False)`
+
+**Remaining work for pyglet2:**
+1. **Visual animation** - Currently instant only
+   - Option A: Implement VBO-based animation (modern GL)
+   - Option B: Accept instant-only as limitation
+2. **Shift+click face selection** - Uses `_handle_selected_slice()` which calls `op.play()` without `animation=False`
+   - May need similar fix to use `animation=False`
+3. **Remove unused code** - `GCubeViewer` reference (`self._viewer = None`) can be cleaned up
 
 ### Files in pyglet2 Backend
 
@@ -724,10 +841,11 @@ ba42268 Integrate ModernGLRenderer with PygletAppWindow
 
 ### Next Steps for New Session
 
-1. **Decide on animation approach**: gl_compat vs modern GL
-2. **If gl_compat**: Test if display lists work, integrate GCubeViewer
-3. **If modern GL**: Design VBO-based animation system
-4. **Test mouse picking**: Implement screen_to_world for face selection
+1. ~~**Test mouse picking**: Implement screen_to_world for face selection~~ ✅ DONE
+2. **Decide on animation approach**: gl_compat vs modern GL
+3. **If gl_compat**: Test if display lists work, integrate GCubeViewer
+4. **If modern GL**: Design VBO-based animation system
+5. **Fix Shift+click** to use `animation=False` (if needed)
 
 ---
 

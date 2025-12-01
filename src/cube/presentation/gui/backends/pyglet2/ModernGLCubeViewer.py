@@ -265,3 +265,305 @@ class ModernGLCubeViewer:
 
         # Fallback
         return face.original_color
+
+    # === Ray-Plane Intersection for Mouse Picking ===
+
+    def find_facet_by_ray(
+        self,
+        ray_origin: np.ndarray,
+        ray_direction: np.ndarray,
+    ) -> tuple[FaceName, int, int, np.ndarray, np.ndarray] | None:
+        """Find which cube facet (cell) is hit by a ray.
+
+        Uses ray-plane intersection for each of the 6 cube faces.
+        Returns the closest hit.
+
+        Args:
+            ray_origin: Ray start point in world space (3D)
+            ray_direction: Ray direction in world space (3D, normalized)
+
+        Returns:
+            Tuple of (face_name, row, col, right_dir, up_dir) or None if no hit.
+            - face_name: Which face was hit (F, B, R, L, U, D)
+            - row, col: Cell indices on that face
+            - right_dir, up_dir: Face orientation vectors for drag direction
+        """
+        size = self._cube.size
+        face_size = FACE_OFFSET * 2
+        cell_size = face_size / size
+
+        best_hit: tuple[FaceName, int, int, np.ndarray, np.ndarray] | None = None
+        best_t = float('inf')
+
+        for face_name, (center, right, up) in _FACE_TRANSFORMS.items():
+            center_np = np.array(center, dtype=np.float32)
+            right_np = np.array(right, dtype=np.float32)
+            up_np = np.array(up, dtype=np.float32)
+
+            # Face normal is cross(right, up)
+            normal = np.cross(right_np, up_np)
+            normal = normal / np.linalg.norm(normal)
+
+            # Ray-plane intersection: t = (center - origin) . normal / (direction . normal)
+            denom = np.dot(ray_direction, normal)
+            if abs(denom) < 1e-6:
+                continue  # Ray parallel to plane
+
+            t = np.dot(center_np - ray_origin, normal) / denom
+            if t < 0:
+                continue  # Intersection behind ray origin
+
+            if t >= best_t:
+                continue  # Further than current best
+
+            # Calculate intersection point
+            hit_point = ray_origin + t * ray_direction
+
+            # Convert to face-local coordinates (relative to center)
+            local = hit_point - center_np
+            local_x = np.dot(local, right_np)  # Position along right direction
+            local_y = np.dot(local, up_np)     # Position along up direction
+
+            # Check if within face bounds
+            if abs(local_x) > FACE_OFFSET or abs(local_y) > FACE_OFFSET:
+                continue  # Outside face
+
+            # Convert to cell indices
+            # local_x ranges from -FACE_OFFSET to +FACE_OFFSET
+            # Map to 0..size
+            col = int((local_x + FACE_OFFSET) / cell_size)
+            row = int((local_y + FACE_OFFSET) / cell_size)
+
+            # Clamp to valid range
+            col = max(0, min(size - 1, col))
+            row = max(0, min(size - 1, row))
+
+            best_t = t
+            best_hit = (face_name, row, col, right_np, up_np)
+
+        return best_hit
+
+    def _setup_view_matrix(self, vs) -> None:
+        """Set up the modelview matrix from view state.
+
+        This ensures the modelview matrix is current for picking operations
+        that happen outside of on_draw().
+
+        Args:
+            vs: Application view state containing rotation angles and offset
+        """
+        import math
+
+        self._renderer.load_identity()
+
+        # Apply offset translation (camera distance)
+        offset = vs.offset
+        self._renderer.translate(float(offset[0]), float(offset[1]), float(offset[2]))
+
+        # Apply initial rotation (base orientation)
+        self._renderer.rotate(math.degrees(vs.alpha_x_0), 1, 0, 0)
+        self._renderer.rotate(math.degrees(vs.alpha_y_0), 0, 1, 0)
+        self._renderer.rotate(math.degrees(vs.alpha_z_0), 0, 0, 1)
+
+        # Apply user-controlled rotation (from mouse drag)
+        self._renderer.rotate(math.degrees(vs.alpha_x), 1, 0, 0)
+        self._renderer.rotate(math.degrees(vs.alpha_y), 0, 1, 0)
+        self._renderer.rotate(math.degrees(vs.alpha_z), 0, 0, 1)
+
+    def screen_to_ray(
+        self,
+        screen_x: float,
+        screen_y: float,
+        window_width: int,
+        window_height: int,
+        vs=None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Convert screen coordinates to a ray in world space.
+
+        Args:
+            screen_x: X coordinate in pixels (0 = left)
+            screen_y: Y coordinate in pixels (0 = bottom in OpenGL)
+            window_width: Window width in pixels
+            window_height: Window height in pixels
+            vs: Optional view state - if provided, recalculates the view matrix
+
+        Returns:
+            Tuple of (ray_origin, ray_direction) both as numpy arrays
+        """
+        # Recalculate view matrix if view state provided
+        if vs is not None:
+            self._setup_view_matrix(vs)
+
+        # Get inverse MVP matrix from renderer
+        inv_mvp = self._renderer.get_inverse_mvp()
+
+        # Convert screen to NDC (-1 to 1)
+        ndc_x = (2.0 * screen_x / window_width) - 1.0
+        ndc_y = (2.0 * screen_y / window_height) - 1.0
+
+        # Create two points: near plane (z=-1) and far plane (z=1)
+        near_ndc = np.array([ndc_x, ndc_y, -1.0, 1.0], dtype=np.float32)
+        far_ndc = np.array([ndc_x, ndc_y, 1.0, 1.0], dtype=np.float32)
+
+        # Unproject to world space
+        near_world = np.matmul(inv_mvp, near_ndc)
+        far_world = np.matmul(inv_mvp, far_ndc)
+
+        # Perspective divide
+        near_world = near_world[:3] / near_world[3]
+        far_world = far_world[:3] / far_world[3]
+
+        # Ray from near to far
+        ray_origin = near_world
+        ray_direction = far_world - near_world
+        ray_direction = ray_direction / np.linalg.norm(ray_direction)
+
+        print(f"[RAY] ndc=({ndc_x:.2f}, {ndc_y:.2f}), origin={ray_origin}, dir={ray_direction}", flush=True)
+
+        return ray_origin, ray_direction
+
+    def find_facet_at_screen(
+        self,
+        screen_x: float,
+        screen_y: float,
+        window_width: int,
+        window_height: int,
+        vs=None,
+    ) -> tuple[FaceName, int, int, np.ndarray, np.ndarray] | None:
+        """Find which cube facet is under the given screen position.
+
+        Combines screen_to_ray() and find_facet_by_ray() for easy mouse picking.
+
+        Args:
+            screen_x: X coordinate in pixels
+            screen_y: Y coordinate in pixels
+            window_width: Window width
+            window_height: Window height
+            vs: Optional view state for matrix recalculation
+
+        Returns:
+            Tuple of (face_name, row, col, right_dir, up_dir) or None
+        """
+        ray_origin, ray_direction = self.screen_to_ray(
+            screen_x, screen_y, window_width, window_height, vs
+        )
+        return self.find_facet_by_ray(ray_origin, ray_direction)
+
+    def get_part_edge_at_screen(
+        self,
+        screen_x: float,
+        screen_y: float,
+        window_width: int,
+        window_height: int,
+        vs=None,
+    ) -> tuple | None:
+        """Find the PartEdge at screen position.
+
+        This is the main interface for mouse picking - returns the same format
+        as the legacy GCubeViewer.find_facet() method.
+
+        Args:
+            screen_x: X coordinate in pixels
+            screen_y: Y coordinate in pixels
+            window_width: Window width
+            window_height: Window height
+            vs: Optional view state for matrix recalculation
+
+        Returns:
+            Tuple of (PartEdge, right_dir, up_dir) or None
+            - PartEdge: The cube part edge that was clicked
+            - right_dir: Face's "right" direction vector (for drag detection)
+            - up_dir: Face's "up" direction vector (for drag detection)
+        """
+        from cube.domain.model.PartEdge import PartEdge
+
+        result = self.find_facet_at_screen(
+            screen_x, screen_y, window_width, window_height, vs
+        )
+        if result is None:
+            return None
+
+        face_name, row, col, right_dir, up_dir = result
+
+        # Get the face from the cube
+        face = self._cube.face(face_name)
+        size = self._cube.size
+
+        # Convert (row, col) to PartEdge
+        part_edge = self._get_part_edge_at_cell(face, row, col, size)
+        if part_edge is None:
+            return None
+
+        return (part_edge, right_dir, up_dir)
+
+    def _get_part_edge_at_cell(self, face, row: int, col: int, size: int):
+        """Get the PartEdge at a specific cell on a face.
+
+        Args:
+            face: The Face object
+            row: Row index (0 = bottom)
+            col: Column index (0 = left)
+            size: Cube size
+
+        Returns:
+            PartEdge for this cell, or None
+        """
+        from cube.domain.model.PartEdge import PartEdge
+
+        last = size - 1
+
+        # Corners (at the 4 corners of the face)
+        if row == 0 and col == 0:
+            return face.corner_bottom_left.slice.get_face_edge(face)
+        if row == 0 and col == last:
+            return face.corner_bottom_right.slice.get_face_edge(face)
+        if row == last and col == 0:
+            return face.corner_top_left.slice.get_face_edge(face)
+        if row == last and col == last:
+            return face.corner_top_right.slice.get_face_edge(face)
+
+        # For 3x3 cube
+        if size == 3:
+            # Edges (middle of each border)
+            if row == 0 and col == 1:
+                return face.edge_bottom.get_slice_by_ltr_index(face, 0).get_face_edge(face)
+            if row == last and col == 1:
+                return face.edge_top.get_slice_by_ltr_index(face, 0).get_face_edge(face)
+            if row == 1 and col == 0:
+                return face.edge_left.get_slice_by_ltr_index(face, 0).get_face_edge(face)
+            if row == 1 and col == last:
+                return face.edge_right.get_slice_by_ltr_index(face, 0).get_face_edge(face)
+
+            # Center
+            if row == 1 and col == 1:
+                return face.center.get_slice((0, 0)).get_face_edge(face)
+        else:
+            # NxN cube
+
+            # Bottom edge (excluding corners)
+            if row == 0 and 0 < col < last:
+                idx = col - 1
+                return face.edge_bottom.get_slice_by_ltr_index(face, idx).get_face_edge(face)
+
+            # Top edge (excluding corners)
+            if row == last and 0 < col < last:
+                idx = col - 1
+                return face.edge_top.get_slice_by_ltr_index(face, idx).get_face_edge(face)
+
+            # Left edge (excluding corners)
+            if col == 0 and 0 < row < last:
+                idx = row - 1
+                return face.edge_left.get_slice_by_ltr_index(face, idx).get_face_edge(face)
+
+            # Right edge (excluding corners)
+            if col == last and 0 < row < last:
+                idx = row - 1
+                return face.edge_right.get_slice_by_ltr_index(face, idx).get_face_edge(face)
+
+            # Center (the middle area)
+            if 0 < row < last and 0 < col < last:
+                center_row = row - 1
+                center_col = col - 1
+                return face.center.get_slice((center_row, center_col)).get_face_edge(face)
+
+        return None
