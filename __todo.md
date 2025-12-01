@@ -20,9 +20,18 @@
 ## Bugs
 
 - ❌ **B1.** Investigate GUI test bug that fails in slow animation
-  - See CLAUDE.md "Known Issues" section for details
-  - Root cause: Lazy cache initialization in `Part.colors_id` / `Part.position_id`
-  - Workaround: Use `--speed-up 5` in tests
+  - **Reproduce:**
+    ```bash
+    # FAILS:
+    pytest tests/gui/test_gui.py::test_scramble_and_solve -v --speed-up 0 --backend pyglet
+    # PASSES:
+    pytest tests/gui/test_gui.py::test_scramble_and_solve -v --speed-up 5 --backend pyglet
+    ```
+  - **Error:** `AssertionError` at `L3Cross.py:178` (`assert top.match`)
+  - **Root cause:** Lazy cache initialization in `Part.colors_id` / `Part.position_id`
+  - **Mechanism:** Speed-up triggers `update_gui_elements()` → `cube.is_sanity(force_check=True)` → forces cache init
+  - **Workaround:** Use `--speed-up 5` in tests
+  - See CLAUDE.md "Known Issues" section for more details
 
 ## GUI & Testing
 
@@ -81,6 +90,26 @@
 
 ---
 # New entries below - Claude will reformat and move above this line
+claude said: I need to discuss the situation with you. Your codebase heavily uses deprecated OpenGL 1.x functions that pyglet 2.0 no longer supports. Here are your options:
+
+  Option 1: Revert to Pyglet 1.5 ⭐ (Recommended for now)
+
+  - ✅ Everything works immediately
+  - ✅ Removes unused glooey dependency
+  - ✅ Uses PyOpenGL for GLU functions
+  - ❌ Miss out on pyglet 2.x performance improvements
+
+  Option 2: Continue debugging Pyglet 2.0
+
+  - Try to make PyOpenGL work with pyglet's context
+  - Uncertain if it will work reliably
+  - Already spent significant time troubleshooting
+
+  Option 3: Major refactoring to Modern OpenGL
+
+  - Migrate from display lists → VBOs/VAOs
+  - Migrate from immediate mode → shaders
+  - Huge undertaking (weeks/months of work)
 
 ---
 
