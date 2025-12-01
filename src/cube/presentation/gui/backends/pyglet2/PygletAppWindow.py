@@ -164,6 +164,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Draw axis using modern GL renderer
         self._modern_renderer.draw_axis(length=5.0)
 
+        # Draw test cube to prove rendering works
+        self._modern_renderer.draw_cube(size=50.0)
+
         # TODO: Modern GL migration in progress
         # Legacy GL calls disabled - they fail in OpenGL 3.3 core profile
         # self._viewer.draw()    # Uses glBegin/glEnd - needs migration

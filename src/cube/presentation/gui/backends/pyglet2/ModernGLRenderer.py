@@ -258,3 +258,53 @@ class ModernGLRenderer:
 
         # Reset color
         self.set_color(255, 255, 255)
+
+    def draw_cube(self, size: float = 50.0) -> None:
+        """Draw a simple colored cube for testing.
+
+        Standard Rubik's cube colors:
+        - White on top (U)
+        - Yellow on bottom (D)
+        - Green on front (F)
+        - Blue on back (B)
+        - Red on right (R)
+        - Orange on left (L)
+        """
+        s = size / 2  # half size
+
+        # Define the 8 vertices of the cube
+        # Front face vertices (z = +s)
+        ftl = (-s, +s, +s)  # front top left
+        ftr = (+s, +s, +s)  # front top right
+        fbr = (+s, -s, +s)  # front bottom right
+        fbl = (-s, -s, +s)  # front bottom left
+
+        # Back face vertices (z = -s)
+        btl = (-s, +s, -s)  # back top left
+        btr = (+s, +s, -s)  # back top right
+        bbr = (+s, -s, -s)  # back bottom right
+        bbl = (-s, -s, -s)  # back bottom left
+
+        # Front face - Green
+        self.set_color(0, 155, 72)
+        self.quad([fbl, fbr, ftr, ftl])
+
+        # Back face - Blue
+        self.set_color(0, 70, 173)
+        self.quad([bbr, bbl, btl, btr])
+
+        # Top face - White
+        self.set_color(255, 255, 255)
+        self.quad([ftl, ftr, btr, btl])
+
+        # Bottom face - Yellow
+        self.set_color(255, 213, 0)
+        self.quad([bbl, bbr, fbr, fbl])
+
+        # Right face - Red
+        self.set_color(183, 18, 52)
+        self.quad([fbr, bbr, btr, ftr])
+
+        # Left face - Orange
+        self.set_color(255, 88, 0)
+        self.quad([bbl, fbl, ftl, btl])

@@ -125,6 +125,31 @@ def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: 
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
 
 
+@pytest.mark.parametrize("cube_size", [3])
+def test_simple_quit(cube_size: int, backend: str):
+    """Test that the window opens and quits cleanly.
+
+    This is a basic smoke test to verify the backend initializes correctly
+    and can exit without errors.
+
+    Parameters
+    ----------
+    cube_size : int
+        Size of cube to test.
+    backend : str
+        Backend to use, parametrized from conftest.py.
+    """
+    result = GUITestRunner.run_test(
+        commands=Command.QUIT,
+        cube_size=cube_size,
+        timeout_sec=10.0,
+        enable_animation=False,
+        backend=backend,
+        debug=True
+    )
+    assert result.success, f"Simple quit test failed: {result.message}. Error: {result.error}"
+
+
 # Legacy main() for direct script execution
 if __name__ == "__main__":
     import sys

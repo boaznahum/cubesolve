@@ -56,7 +56,7 @@ def pytest_generate_tests(metafunc):
 
         if backend_option == "all":
             # Run with all available backends
-            backends = ["pyglet", "headless", "console", "tkinter"]
+            backends = ["pyglet", "pyglet2", "headless", "console", "tkinter"]
         else:
             # Single backend specified
             backends = [backend_option]
