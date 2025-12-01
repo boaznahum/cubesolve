@@ -414,7 +414,7 @@ class ApplicationAndViewState:
         if self._quiet_all:
             return
         if self._debug_all or debug_on:
-            print("DEBUG:", *args)
+            print("DEBUG:", *args, flush=True)
 
     def debug_lazy(self, debug_on: bool, func: Callable[[], Any]) -> None:
         """Print debug information with lazy evaluation.
