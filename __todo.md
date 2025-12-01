@@ -55,23 +55,26 @@
 
 ## Architecture
 
+- ❌ **A6.** CRITICAL: AnimationManager should not know about pyglet2/ModernGLCubeViewer
+  - **Problem:** `AnimationManager._op_and_play_animation()` uses duck-typing to detect ModernGLCubeViewer:
+    ```python
+    is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+    if is_modern_gl:
+        animation = _create_modern_gl_animation(...)
+    ```
+  - **Violation:** Application layer (AnimationManager) knows about presentation layer implementation details
+  - **Solution Options:**
+    1. Add animation creation to a protocol that viewers implement
+    2. Move animation creation to the viewer itself (viewer.create_animation())
+    3. Use a factory/strategy pattern injected from the backend
+  - **Files:** `src/cube/application/animation/AnimationManager.py` lines 230-237
+  - **Added:** 2025-12-02
+
 - ❌ **A4.** PygletAppWindow cannot inherit from AppWindow protocol due to metaclass conflict
   - `pyglet.window.Window` has its own metaclass that conflicts with Protocol
   - Tried `TYPE_CHECKING` trick - didn't work in PyCharm
   - Options: composition pattern, wrapper class, or accept docstring-only documentation
 
-- ❌ **A5.** Pyglet 2.0 vs 1.5 - OpenGL compatibility decision
-  - **Status:** ❌ BLOCKED - Pyglet 2.0 cannot request compatibility profile on Windows
-  - **Root Cause:** `Win32ARBContext` doesn't set `WGL_CONTEXT_PROFILE_MASK_ARB`
-  - **Error:** `GLException (0x1282)` on legacy GL calls (glBegin/glEnd)
-  - **Attempted:** Created `pyglet2` backend with `gl_compat` and PyOpenGL
-  - **Result:** Code compiles but fails at runtime - core profile has no legacy GL
-  - **Options:**
-    1. Stay on pyglet 1.5 (recommended) ✅
-    2. Rewrite to modern OpenGL (2-4 weeks)
-    3. Patch pyglet (risky)
-  - **Files:** `src/cube/presentation/gui/backends/pyglet2/` (non-functional)
-  - **Docs:** `docs/design/pyglet2_migration.md`
 
 ## Documentation
 
@@ -152,6 +155,19 @@
     - This is cohesive: factory creates window and wires its animation system
     - Alternatives add boilerplate without practical benefit
     - A1 intentionally consolidated this wiring into GUIBackend - that was correct
+
+- ✅ **A5.** Pyglet 2.0 Backend with Modern OpenGL
+  - **Completed:** 2025-12-02
+  - **Solution:** Created `pyglet2` backend with VBO-based rendering and animation
+  - **Key components:**
+    - `ModernGLCubeViewer` - Shader-based cube rendering with animation support
+    - `ModernGLRenderer` - Modern GL with GLSL shaders and matrix stack emulation
+    - Ray-plane intersection for mouse face picking (replaces gluUnProject)
+    - VBO-based animation via `draw_animated()` method
+  - **Tests:** 126 non-GUI passed, 11 GUI passed (2 pyglet2, 9 other backends)
+  - **Files:** `src/cube/presentation/gui/backends/pyglet2/`
+  - **Docs:** `docs/design/migration_state.md` (A5 section)
+  - **Note:** A6 tracks remaining architectural issue with AnimationManager coupling
 
 ### Bugs
 
