@@ -130,9 +130,13 @@ def run_with_backend(
     app = AbstractApp.create_non_default(
         cube_size=cube_size,
         animation=animation,
-        debug_all=debug_all,
-        quiet_all=quiet_all
     )
+
+    # Configure debug settings
+    if debug_all:
+        app.vs.debug_all = True
+    if quiet_all:
+        app.vs.quiet_all = True
 
     window = None
     try:

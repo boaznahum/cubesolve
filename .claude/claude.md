@@ -1,59 +1,71 @@
 # Project-Specific Instructions for Claude
 
-## Current Work: GUI Abstraction Layer Migration
+## Project Overview
 
-**Branch:** `new_gui`
-**Status Document:** `docs/design/migration_state.md` (detailed step-by-step progress)
+This is a Rubik's cube solver with a 3D GUI using pyglet/OpenGL. The codebase uses a renderer abstraction layer supporting multiple backends (pyglet, headless, console, tkinter).
 
-### Project Overview
-This is a Rubik's cube solver with a 3D GUI using pyglet/OpenGL. We are migrating from direct OpenGL calls to a renderer abstraction layer to support multiple backends (pyglet, headless for testing, potentially Vulkan).
+**Status Document:** `docs/design/migration_state.md` (detailed history)
+**Todo List:** `__todo.md` (current tasks)
 
 ### Architecture
 ```
-main_g.py → main_pyglet.py → Window → GCubeViewer → _Board → _FaceBoard → _Cell
-                ↓
-        BackendRegistry.get_backend("pyglet")
-                ↓
-        GUIBackend
-            ├── renderer (lazy singleton) → PygletRenderer
-            └── event_loop → PygletEventLoop
+main_any_backend.py → BackendRegistry.get_backend("pyglet")
+                              ↓
+                        GUIBackend
+                            ├── renderer → PygletRenderer
+                            ├── event_loop → PygletEventLoop
+                            └── create_app_window() → PygletAppWindow
+                                        ↓
+                              GCubeViewer → _Board → _FaceBoard → _Cell
 
 PygletRenderer (implements Renderer protocol)
     ├── shapes: ShapeRenderer (quad, triangle, line, sphere, etc.)
     ├── display_lists: DisplayListManager (gen_list, call_list, delete_list)
     └── view: ViewStateManager (matrix operations, screen_to_world)
+
+Command Pattern (keyboard handling)
+    handle_key() → lookup_command() → Command.execute(ctx)
 ```
 
-### Key Files
-- `src/cube/gui/protocols/renderer.py` - Renderer Protocol definition
-- `src/cube/gui/protocols/event_loop.py` - EventLoop Protocol definition
-- `src/cube/gui/backends/pyglet/renderer.py` - Pyglet renderer implementation
-- `src/cube/gui/backends/pyglet/event_loop.py` - Pyglet event loop implementation
+### Key Files (PascalCase naming convention)
+**Protocols:**
+- `src/cube/gui/protocols/Renderer.py` - Renderer Protocol
+- `src/cube/gui/protocols/EventLoop.py` - EventLoop Protocol
+- `src/cube/gui/protocols/AppWindow.py` - AppWindow Protocol
+
+**Pyglet Backend:**
+- `src/cube/gui/backends/pyglet/PygletRenderer.py`
+- `src/cube/gui/backends/pyglet/PygletEventLoop.py`
+- `src/cube/gui/backends/pyglet/PygletAppWindow.py`
+
+**Other Backends:**
 - `src/cube/gui/backends/headless/` - Headless backend for testing
-- `src/cube/gui/factory.py` - BackendRegistry and GUIBackend
-- `docs/design/migration_state.md` - **Detailed migration status**
-- `docs/design/gui_abstraction.md` - Design documentation
+- `src/cube/gui/backends/console/` - Console text-based backend
+- `src/cube/gui/backends/tkinter/` - Tkinter 2D canvas backend
 
-### Current Status (2025-11-28)
+**Command System:**
+- `src/cube/gui/Command.py` - Command enum (~100 commands)
+- `src/cube/gui/key_bindings.py` - Key→Command mappings
 
-**PHASE 1 COMPLETED (Steps 1-12):**
-- Renderer protocol with ShapeRenderer, DisplayListManager, ViewStateManager
-- EventLoop protocol with run(), stop(), schedule_*(), has_exit, idle(), notify()
-- PygletRenderer and PygletEventLoop implementations
-- AbstractWindow converted to Protocol
-- main_pyglet.py uses `backend.event_loop.run()` (no direct pyglet import)
-- animation_manager.py uses EventLoop (no direct pyglet import)
-- Keyboard/mouse handlers use abstract Keys and MouseButton
+**Design Docs:**
+- `docs/design/migration_state.md` - Migration history
+- `docs/design/gui_abstraction.md` - Architecture design
+- `docs/design/keyboard_and_commands.md` - Command pattern
 
-**PHASE 2 PENDING (Steps 13-17):**
-Files still using pyglet outside the backend:
-- `viewer/_cell.py` - `import pyglet`, `from pyglet import gl`
-- `viewer/shapes.py` - `from pyglet import gl`, `pyglet.gl.glu`
-- `viewer/gl_helper.py` - `from pyglet import gl`
-- `viewer/graphic_helper.py` - `from pyglet import gl`
-- `main_window/Window.py` - ACCEPTABLE (this is the pyglet window class)
+### Current Status (2025-12-01)
 
-**Goal:** All pyglet imports should only exist in:
+| Phase | Description | Status |
+|-------|-------------|--------|
+| Phase 1 | Core Abstraction Layer | ✅ Done |
+| Phase 2 | Move Pyglet to Backend | ✅ Done |
+| Phase 3 | Abstract Window Layer | ✅ Done |
+| Phase 4 | PascalCase File Naming | ✅ Done |
+| A2.1 | Command Pattern | ✅ Done |
+| A2.2 | GUI Tests with Commands | ✅ Done |
+
+**Tests:** 126 non-GUI tests, 2 GUI tests pass (8 skipped)
+
+All pyglet imports now only exist in:
 1. `src/cube/gui/backends/pyglet/` - The pyglet backend
 2. `src/cube/main_window/Window.py` - The pyglet window class
 
@@ -272,10 +284,10 @@ class PygletWindow(pyglet.window.Window):
 
 ### Implementation Files
 
-- `src/cube/gui/backends/pyglet/renderer.py` - Inherits from Renderer protocols
-- `src/cube/gui/backends/pyglet/animation.py` - Inherits from AnimationBackend
-- `src/cube/gui/backends/pyglet/event_loop.py` - Inherits from EventLoop
-- `src/cube/gui/backends/pyglet/window.py` - PygletTextRenderer inherits TextRenderer, PygletWindow cannot (metaclass)
+- `src/cube/gui/backends/pyglet/PygletRenderer.py` - Inherits from Renderer protocols
+- `src/cube/gui/backends/pyglet/PygletAnimation.py` - Inherits from AnimationBackend
+- `src/cube/gui/backends/pyglet/PygletEventLoop.py` - Inherits from EventLoop
+- `src/cube/gui/backends/pyglet/PygletWindow.py` - PygletTextRenderer inherits TextRenderer, PygletWindow cannot (metaclass)
 - `src/cube/gui/backends/headless/*.py` - Same pattern as pyglet
 
 ---
