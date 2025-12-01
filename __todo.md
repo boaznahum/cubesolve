@@ -21,7 +21,8 @@
 
 - ❌ **B1.** GUI Animation Solver Bug (Lazy Cache Initialization)
   - **Status:** Investigating (2025-11-28)
-  - **Symptom:** GUI test `test_scramble_and_solve` fails with `AssertionError` when running with animation at default speed (`--speed-up 0`), but passes when `+` (speed-up) keys are pressed first.
+  - **Skipped Test:** `test_multiple_scrambles` in `tests/gui/test_gui.py` (re-enable when fixed)
+  - **Symptom:** GUI tests fail with `AssertionError` when running with animation at default speed (`--speed-up 0`), but pass when `+` (speed-up) keys are pressed first.
   - **Reproduce:**
     ```bash
     # FAILS:

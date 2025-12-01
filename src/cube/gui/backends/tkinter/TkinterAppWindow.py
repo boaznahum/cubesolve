@@ -190,26 +190,6 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         """Inject a single key press (already abstract keys)."""
         self.handle_key(key, modifiers)
 
-    def inject_key_sequence(self, sequence: str) -> None:
-        """Inject a sequence of key presses."""
-        # Extended key map for cube commands
-        key_map = {
-            'R': Keys.R, 'L': Keys.L, 'U': Keys.U, 'D': Keys.D, 'F': Keys.F, 'B': Keys.B,
-            'r': Keys.R, 'l': Keys.L, 'u': Keys.U, 'd': Keys.D, 'f': Keys.F, 'b': Keys.B,
-            '0': Keys._0, '1': Keys._1, '2': Keys._2, '3': Keys._3, '4': Keys._4,
-            '5': Keys._5, '6': Keys._6, '7': Keys._7, '8': Keys._8, '9': Keys._9,
-            '/': Keys.SLASH, '?': Keys.SLASH,
-            'Q': Keys.Q, 'q': Keys.Q,
-            ' ': Keys.SPACE,
-            '<': Keys.COMMA, ',': Keys.COMMA,
-            '+': Keys.NUM_ADD, '-': Keys.NUM_SUBTRACT,
-        }
-
-        for char in sequence:
-            key = key_map.get(char)
-            if key is not None:
-                self.inject_key(key, 0)
-
     # === Text Building (from AppWindowBase) ===
 
     def _update_status_text(self) -> None:

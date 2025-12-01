@@ -42,37 +42,36 @@ except Exception as e:
         self.app.set_error(str(e))
 ```
 
-### 3. Key Injection Utility (`cube/main_window/Window.py`)
+### 3. Command Injection
 
-New methods for programmatic keyboard input:
+Type-safe command injection with IDE autocomplete:
 
 ```python
-window.inject_key_sequence("1/q")  # Scramble, solve, quit
+from cube.gui.Command import Command
+
+window.inject_command(Command.SCRAMBLE_1)
+window.inject_command(Command.SOLVE_ALL)
+window.inject_command(Command.QUIT)
 ```
 
-Supported characters:
-- **Numbers** (0-9): Scrambles
-- **Face rotations** (R, L, U, D, F, B): Cube moves
-- **Special commands**:
-  - `/` - Solve
-  - `q` or `Q` - Quit
-  - `a` or `A` - Toggle animation
-  - `,` - Undo
-  - `[` - Redo
+Available commands include:
+- **Scrambles**: `SCRAMBLE_0` through `SCRAMBLE_9`
+- **Face rotations**: `ROTATE_R`, `ROTATE_L`, `ROTATE_U`, etc.
+- **Solve**: `SOLVE_ALL`, `SOLVE_L1`, `SOLVE_L2`, etc.
+- **Application**: `QUIT`, `UNDO`, `RESET_CUBE`
 
-### 4. Test Harness (`cube/tests/test_gui.py`)
+### 4. Test Harness (`tests/gui/tester/GUITestRunner.py`)
 
 Complete testing framework with:
 
 ```python
-from cube.tests.gui.test_gui import run_gui_test
+from tests.gui.tester.GUITestRunner import GUITestRunner
+from cube.gui.Command import Command
 
-result = run_gui_test(
-    key_sequence="1/q",  # Keys to inject
-    timeout_sec=60.0,  # Max execution time
-    cube_size=3,  # 3x3, 4x4, 5x5, etc.
-    enable_animation=False,  # Speed up tests
-    debug=True  # Print debug info
+result = GUITestRunner.run_test(
+    commands=Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+    cube_size=3,
+    backend="pyglet"
 )
 
 if result.success:
@@ -212,12 +211,12 @@ print(result)  # "✓ Test passed: ..." or "✗ Test failed: ..."
 ### How It Works
 
 1. **Setup**: Test harness sets `config.GUI_TEST_MODE = True`
-2. **Initialization**: Creates `AbstractApp` and `Window`
-3. **Key Injection**: Schedules `inject_key_sequence()` to run after window is ready
-4. **Event Loop**: Runs pyglet event loop
+2. **Initialization**: Creates `AbstractApp` and `AppWindow` via backend
+3. **Command Injection**: Injects commands via `inject_command()`
+4. **Event Loop**: Runs backend event loop
 5. **Exception Handling**:
    - If exception occurs: Window closes, exception propagates, test fails
-   - If 'q' pressed: `AppExit` raised, window closes, test succeeds
+   - If QUIT command: `AppExit` raised, window closes, test succeeds
    - If timeout: Watchdog thread exits event loop, test fails
 6. **Cleanup**: Restores original config values
 

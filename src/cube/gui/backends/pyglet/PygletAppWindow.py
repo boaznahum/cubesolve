@@ -194,32 +194,6 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         """Inject a single key press."""
         self.on_key_press(key, modifiers)
 
-    def inject_key_sequence(self, sequence: str, process_events: bool = True) -> None:
-        """Inject a sequence of key presses.
-
-        DEPRECATED: Use inject_command() instead for type-safe command injection.
-        """
-        from pyglet.window import key
-
-        char_map = {
-            '0': key._0, '1': key._1, '2': key._2, '3': key._3, '4': key._4,
-            '5': key._5, '6': key._6, '7': key._7, '8': key._8, '9': key._9,
-            'R': key.R, 'L': key.L, 'U': key.U, 'D': key.D, 'F': key.F, 'B': key.B,
-            'r': key.R, 'l': key.L, 'u': key.U, 'd': key.D, 'f': key.F, 'b': key.B,
-            '/': key.SLASH, '?': key.SLASH,
-            'q': key.Q, 'Q': key.Q,
-            ' ': key.SPACE,
-            ',': key.COMMA, '<': key.COMMA,
-            '+': key.NUM_ADD, '-': key.NUM_SUBTRACT,
-        }
-
-        for char in sequence:
-            symbol = char_map.get(char)
-            if symbol is not None:
-                self.on_key_press(symbol, 0)
-                if process_events:
-                    pyglet.app.platform_event_loop.step(0.0)
-
     def inject_command(self, command: Command) -> None:
         """Inject a command directly.
 

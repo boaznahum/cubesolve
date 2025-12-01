@@ -247,15 +247,7 @@ window.inject_command(Command.SOLVE_ALL)
 window.inject_command(Command.QUIT)
 ```
 
-### 3.2 inject_key_sequence() - Legacy
-
-String-based key injection (DEPRECATED):
-
-```python
-window.inject_key_sequence("1/Q")  # Scramble, solve, quit
-```
-
-### 3.3 inject_key() - Low-level
+### 3.2 inject_key() - Low-level
 
 Single key injection:
 

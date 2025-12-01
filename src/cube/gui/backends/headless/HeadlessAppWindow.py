@@ -119,7 +119,7 @@ class HeadlessAppWindow(AppWindowBase, AppWindow):
         self._window.set_mouse_visible(visible)
 
     # CURSOR_WAIT, get_system_mouse_cursor(), set_mouse_cursor() inherited from AppWindowBase
-    # handle_key(), inject_key(), inject_key_sequence() inherited from AppWindowBase
+    # handle_key(), inject_key(), inject_command() inherited from AppWindowBase
 
     # === Testing Helpers ===
 

@@ -96,23 +96,6 @@ class AppWindow(Protocol):
         """
         ...
 
-    def inject_key_sequence(self, sequence: str) -> None:
-        """Inject a sequence of key presses.
-
-        DEPRECATED: Use inject_command() instead for type-safe command injection.
-
-        Used for testing and automation.
-        Common sequences:
-        - "RURU" - Manual moves
-        - "1" - Scramble preset 1
-        - "?" - Solve
-        - "Q" - Quit
-
-        Args:
-            sequence: String of key characters to inject
-        """
-        ...
-
     def inject_command(self, command: "Command") -> None:
         """Inject a command directly.
 

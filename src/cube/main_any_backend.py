@@ -9,7 +9,7 @@ Usage:
     python -m cube.main_any_backend --backend=tkinter  # Tkinter backend
     python -m cube.main_any_backend --backend=console  # Console mode
     python -m cube.main_any_backend --backend=headless # Headless testing
-    python -m cube.main_any_backend --backend=headless --key-sequence="1?Q"
+    python -m cube.main_any_backend --commands="SCRAMBLE_1,SOLVE_ALL,QUIT"
 
 Available backends:
     - pyglet:   OpenGL-based 3D rendering (requires pyglet)
@@ -19,14 +19,42 @@ Available backends:
 """
 
 import argparse
+import re
 import sys
 from typing import TYPE_CHECKING
 
 from cube.app.AbstractApp import AbstractApp
 from cube.gui import BackendRegistry
+from cube.gui.Command import Command
 
 if TYPE_CHECKING:
     from cube.gui.protocols import AppWindow
+
+
+def _inject_commands(window: "AppWindow", commands_str: str) -> None:
+    """Parse and inject commands from a string.
+
+    Args:
+        window: The application window to inject commands into.
+        commands_str: Comma or + separated command names.
+            Example: "SCRAMBLE_1,SOLVE_ALL,QUIT" or "SPEED_UP+SPEED_UP+SCRAMBLE_1"
+
+    Raises:
+        ValueError: If a command name is invalid.
+    """
+    # Split by comma or +
+    command_names = re.split(r'[,+]', commands_str)
+
+    for name in command_names:
+        name = name.strip()
+        if not name:
+            continue
+
+        try:
+            cmd = Command[name]
+            window.inject_command(cmd)
+        except KeyError:
+            raise ValueError(f"Unknown command: {name}. Use --list-commands to see available commands.")
 
 
 def _import_backend(backend_name: str) -> None:
@@ -98,7 +126,7 @@ def run_with_backend(
     title: str = "Cube Solver",
     cube_size: int | None = None,
     animation: bool = True,
-    key_sequence: str | None = None,
+    commands: str | None = None,
     debug_all: bool = False,
     quiet_all: bool = False,
 ) -> int:
@@ -114,7 +142,8 @@ def run_with_backend(
         title: Window title.
         cube_size: Cube size (default: 3).
         animation: Enable animation (default: True).
-        key_sequence: Key sequence to inject (for testing).
+        commands: Command sequence to inject (comma or + separated).
+            Example: "SCRAMBLE_1,SOLVE_ALL,QUIT" or "SPEED_UP+SPEED_UP+SCRAMBLE_1"
         debug_all: Enable debug_all mode for verbose logging (default: False).
         quiet_all: Suppress all debug output (default: False).
 
@@ -124,7 +153,7 @@ def run_with_backend(
     Example:
         >>> from cube.main_any_backend import run_with_backend
         >>> run_with_backend("tkinter")  # Run with tkinter
-        >>> run_with_backend("headless", key_sequence="1?Q")  # Test sequence
+        >>> run_with_backend("headless", commands="SCRAMBLE_1,SOLVE_ALL,QUIT")
     """
     # Create application
     app = AbstractApp.create_non_default(
@@ -147,9 +176,9 @@ def run_with_backend(
 
         window.set_mouse_visible(True)
 
-        # Inject key sequence if provided
-        if key_sequence:
-            window.inject_key_sequence(key_sequence)
+        # Inject commands if provided
+        if commands:
+            _inject_commands(window, commands)
 
         # Debug: dump cube state before main loop
         app.vs.debug_dump_cube_state(app.cube, "Before Main Loop")
@@ -227,9 +256,9 @@ def main(args: list[str] | None = None) -> int:
         help="Disable animation"
     )
     parser.add_argument(
-        "--key-sequence", "-k",
+        "--commands", "-c",
         default=None,
-        help="Key sequence to inject (for testing). Example: '1?Q' = scramble, solve, quit"
+        help="Commands to inject (comma or + separated). Example: 'SCRAMBLE_1,SOLVE_ALL,QUIT'"
     )
     parser.add_argument(
         "--debug-all",
@@ -251,7 +280,7 @@ def main(args: list[str] | None = None) -> int:
         title=parsed.title,
         cube_size=parsed.cube_size,
         animation=not parsed.no_animation,
-        key_sequence=parsed.key_sequence,
+        commands=parsed.commands,
         debug_all=parsed.debug_all,
         quiet_all=parsed.quiet,
     )

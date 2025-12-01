@@ -217,38 +217,6 @@ class AppWindowBase(ABC):
         """
         self.handle_key(key, modifiers)
 
-    def inject_key_sequence(self, sequence: str) -> None:
-        """Inject a sequence of key presses.
-
-        DEPRECATED: Use inject_command() instead for type-safe command injection.
-
-        Common sequences:
-        - "RURU" - Manual moves
-        - "1" - Scramble preset 1
-        - "?" or "/" - Solve
-        - "Q" - Quit
-
-        Args:
-            sequence: String of key characters
-        """
-        # Extend the mapping for cube-specific commands
-        extended_map = {
-            '?': Keys.SLASH,  # Solve command
-            '<': Keys.COMMA,  # Undo
-            '+': Keys.NUM_ADD,
-            '-': Keys.NUM_SUBTRACT,
-        }
-
-        for char in sequence:
-            # Check extended map first
-            if char in extended_map:
-                self.inject_key(extended_map[char], 0)
-            else:
-                # Use parse_key_string for standard keys
-                events = parse_key_string(char)
-                for event in events:
-                    self.inject_key(event.symbol, event.modifiers)
-
     def inject_command(self, command: Command) -> None:
         """Inject a command directly.
 

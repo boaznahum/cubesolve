@@ -190,16 +190,6 @@ class ConsoleAppWindow(AppWindowBase, AppWindow):
     # handle_key() inherited from AppWindowBase
     # inject_key() inherited from AppWindowBase
 
-    def inject_key_sequence(self, sequence: str) -> None:
-        """Inject a sequence of key presses.
-
-        Args:
-            sequence: String of key characters to inject.
-        """
-        # Inject into event loop for processing
-        self._event_loop.inject_sequence(sequence)
-        self._event_loop.set_use_keyboard(False)
-
     def set_mouse_visible(self, visible: bool) -> None:
         """No-op for console mode."""
         pass
