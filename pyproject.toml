@@ -28,7 +28,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "pyglet>=1.5.0,<2.0",  # pyglet 2.x removed pyglet.gl.glu
+    "pyglet>=1.5.0",  # 1.5.x uses legacy GL, 2.x uses modern GL (pyglet2 backend)
     "numpy",
     "PyYAML",
     "colorama",
@@ -44,6 +44,9 @@ dev = [
     "pyright",
     "types-colorama",
     "types-keyboard",
+]
+pyglet2 = [
+    "PyOpenGL",  # For GLU functions (gluSphere, etc.) not in pyglet 2.0
 ]
 
 [project.urls]

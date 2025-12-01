@@ -77,6 +77,8 @@ class BackendRegistry:
         # Import backend module to trigger auto-registration
         if name == "pyglet":
             import cube.presentation.gui.backends.pyglet  # noqa: F401
+        elif name == "pyglet2":
+            import cube.presentation.gui.backends.pyglet2  # noqa: F401
         elif name == "headless":
             import cube.presentation.gui.backends.headless  # noqa: F401
         elif name == "console":
@@ -84,7 +86,7 @@ class BackendRegistry:
         elif name == "tkinter":
             import cube.presentation.gui.backends.tkinter  # noqa: F401
         else:
-            raise ValueError(f"Unknown backend: {name}. Available: pyglet, headless, console, tkinter")
+            raise ValueError(f"Unknown backend: {name}. Available: pyglet, pyglet2, headless, console, tkinter")
 
     @classmethod
     def register(
