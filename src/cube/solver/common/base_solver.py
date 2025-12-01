@@ -30,23 +30,22 @@ class BaseSolver(Solver, ABC):
 
     @property
     def is_debug_config_mode(self) -> bool:
-        # Check both config flag and is_debug_all from app_state
-        if self._op.app_state.is_debug_all:
-            return True
-        return config.SOLVER_DEBUG
+        # Check config flag (is_debug also checks debug_all and quiet_all)
+        return self._op.app_state.is_debug(config.SOLVER_DEBUG)
 
     @property
     def _is_debug_enabled(self) -> bool:
         if self._debug_override is None:
             return self.is_debug_config_mode
         else:
-            return self._debug_override
+            # Still need to respect quiet_all even with override
+            return self._op.app_state.is_debug(self._debug_override)
 
     def debug(self, *args):
-        if self._is_debug_enabled:
+        vs = self._op.app_state
+        if vs.is_debug(self._debug_override if self._debug_override is not None else config.SOLVER_DEBUG):
             prefix = self.name + ":"
-            print("Solver:", prefix, *(str(x) for x in args) )
-
+            print(vs.debug_prefix(), "Solver:", prefix, *(str(x) for x in args))
             self.op.log("Solver:", prefix, *args)
 
 

@@ -99,9 +99,9 @@ def _handle_model_view_rotate_by_drag(win, dx, dy):
 
 def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     global _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING
+    vs = window.app.vs
 
-    if INPUT_MOUSE_DEBUG:
-        print(f"Mouse drag: Handler started: {x=}, {y=})")
+    vs.debug(INPUT_MOUSE_DEBUG, f"Mouse drag: Handler started: {x=}, {y=})")
 
     if _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING:
         return
@@ -122,8 +122,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     # print(f"{n}")
 
     if n < _DRAG_VECTOR_DETECTION_DATA_LENGTH:
-        if INPUT_MOUSE_DEBUG:
-            print(f"Mouse drag: Not enough points {n} / {_DRAG_VECTOR_DETECTION_DATA_LENGTH}")
+        vs.debug(INPUT_MOUSE_DEBUG, f"Mouse drag: Not enough points {n} / {_DRAG_VECTOR_DETECTION_DATA_LENGTH}")
         # Since we add a texture, draw become expansive (don't know why)
         #  so we found that we are not handling these events fast enough, so never slicing/rotating (big cube)
         window.app.vs.skip_next_on_draw = True
@@ -141,9 +140,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(app.vs, window, x, y)
 
     if not selected:
-        if INPUT_MOUSE_DEBUG:
-            print(f"Mouse drag: Didn't find selected element: {x=}, {y=})")
-
+        vs.debug(INPUT_MOUSE_DEBUG, f"Mouse drag: Didn't find selected element: {x=}, {y=})")
         return
 
     # print(f"{selected}")
@@ -162,8 +159,7 @@ def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
     part_slice: PartSlice = slice_edge.parent
     part: Part = part_slice.parent
 
-    if INPUT_MOUSE_DEBUG:
-        print(f"Mouse drag:{type(part)=}, { part_slice.index=}, {d_vector=}, {on_left_to_right=}, {on_left_to_top=}")
+    vs.debug(INPUT_MOUSE_DEBUG, f"Mouse drag:{type(part)=}, { part_slice.index=}, {d_vector=}, {on_left_to_right=}, {on_left_to_top=}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 

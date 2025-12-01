@@ -23,13 +23,8 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
     op: Operator = app.op
     vs: ApplicationAndViewState = app.vs
 
-    # Check both config flag and is_debug_all
-    if config.KEYBOAD_INPUT_DEBUG or vs.is_debug_all:
-        def debug(*_s):
-            print("key board handler:", *_s)
-    else:
-        def debug(*_s):
-            pass
+    def debug(*_s):
+        vs.debug(config.KEYBOAD_INPUT_DEBUG, "key board handler:", *_s)
 
     debug(f"In _handle_input , value:{value}  {hex(value)} "
           f"modifiers:{hex(modifiers)} ")
@@ -226,7 +221,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
         match value:
 
             case Keys.I:
-                print(f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
+                vs.debug(False, f"{vs.alpha_x + vs.alpha_x_0=} {vs.alpha_y+vs.alpha_y_0=} {vs.alpha_z+vs.alpha_z_0=}")
                 no_operation = True
                 cube.cqr.print_dist()
 
@@ -466,7 +461,7 @@ def handle_keyboard_input(window: AbstractWindow, value: int, modifiers: int):
                             print(good)
                             raise
                 elif modifiers & Modifiers.ALT:
-                    print("Rerunning good:", good)
+                    vs.debug(False, "Rerunning good:", good)
                     for a in good.algs:
                         try:
                             with _wait_cursor(window):

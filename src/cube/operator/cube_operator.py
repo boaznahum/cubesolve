@@ -64,7 +64,7 @@ class Operator:
     def check_clear_rais_abort(self):
         if self._aborted:
             self._aborted = False
-            print(f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
+            self._app_state.debug(False, f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
             raise OpAborted()
 
     def play(self, alg: Alg, inv: Any = False, animation: Any = True):
@@ -139,7 +139,7 @@ class Operator:
                     algs: list[SimpleAlg] = [*alg.flatten()]
 
                     if self._app_state.single_step_mode:
-                        print(f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
+                        self._app_state.debug_lazy(False, lambda: f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
 
                     cube = self.cube
                     op = self.play
@@ -333,7 +333,7 @@ class Operator:
         Only animation from top can be aborted
         :return:
         """
-        print("Operator: raised an abort signal")
+        self._app_state.debug(False, "Operator: raised an abort signal")
         self._aborted = True
 
     @property

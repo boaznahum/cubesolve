@@ -4,7 +4,7 @@ import tempfile
 from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Literal, Any, Tuple, TYPE_CHECKING
+from typing import Literal, Any, Tuple, TYPE_CHECKING, Callable
 
 # noinspection PyMethodMayBeStatic
 from cube import algs
@@ -76,12 +76,13 @@ class ApplicationAndViewState:
     #     "_alpha_delta",
     # ]
 
-    def __init__(self, debug_all: bool = False) -> None:
+    def __init__(self, debug_all: bool = False, quiet_all: bool = False) -> None:
         super().__init__()
         # self._animation_speed_delay_between_steps: float = 1/40
         # self._animation_speed_number_of_steps = 30
 
         self._debug_all = debug_all
+        self._quiet_all = quiet_all
         self._speed = 3
 
         # self._alpha_x_0: float = 0.3
@@ -371,14 +372,68 @@ class ApplicationAndViewState:
         """Return True if debug_all mode is enabled."""
         return self._debug_all
 
-    def debug(self, *args) -> None:
-        """Print debug information if debug_all mode is enabled.
+    @property
+    def quiet_all(self) -> bool:
+        """Return True if quiet_all mode is enabled (suppresses all debug output)."""
+        return self._quiet_all
+
+    @quiet_all.setter
+    def quiet_all(self, value: bool) -> None:
+        """Set quiet_all mode."""
+        self._quiet_all = value
+
+    def is_debug(self, debug_on: bool = False) -> bool:
+        """Check if debug output should happen.
 
         Args:
-            *args: Arguments to print, same as print() function.
+            debug_on: Local flag to enable debug for this specific call.
+
+        Returns:
+            True if debug output should happen:
+            - quiet_all is False AND (debug_all is True OR debug_on is True)
         """
-        if self._debug_all:
+        if self._quiet_all:
+            return False
+        return self._debug_all or debug_on
+
+    def debug_prefix(self) -> str:
+        """Return the standard debug prefix."""
+        return "DEBUG:"
+
+    def debug(self, debug_on: bool, *args) -> None:
+        """Print debug information if allowed by flags.
+
+        Args:
+            debug_on: Local flag to enable debug for this specific call.
+            *args: Arguments to print, same as print() function.
+
+        Logic:
+            - If quiet_all is True → never print
+            - If debug_all is True OR debug_on is True → print
+        """
+        if self._quiet_all:
+            return
+        if self._debug_all or debug_on:
             print("DEBUG:", *args)
+
+    def debug_lazy(self, debug_on: bool, func: Callable[[], Any]) -> None:
+        """Print debug information with lazy evaluation.
+
+        The func is only called if we're actually going to print,
+        avoiding expensive computation when debug is disabled.
+
+        Args:
+            debug_on: Local flag to enable debug for this specific call.
+            func: Callable that returns the message to print.
+
+        Logic:
+            - If quiet_all is True → never print, func not called
+            - If debug_all is True OR debug_on is True → call func and print
+        """
+        if self._quiet_all:
+            return
+        if self._debug_all or debug_on:
+            print("DEBUG:", func())
 
     def debug_dump_cube_state(self, cube: Cube, label: str = "Cube State") -> None:
         """Dump detailed cube state using the debug infrastructure.
@@ -393,20 +448,20 @@ class ApplicationAndViewState:
         if not self._debug_all:
             return
 
-        self.debug("=" * 70)
-        self.debug(f"DUMP: {label}")
-        self.debug("=" * 70)
-        self.debug(f"Size: {cube.size}, Solved: {cube.solved}, ModCounter: {cube._modify_counter}")
+        self.debug(False, "=" * 70)
+        self.debug(False, f"DUMP: {label}")
+        self.debug(False, "=" * 70)
+        self.debug(False, f"Size: {cube.size}, Solved: {cube.solved}, ModCounter: {cube._modify_counter}")
 
         # Get full state
         state = cube.cqr.get_sate()
-        self.debug(f"State entries: {len(state)}")
+        self.debug(False, f"State entries: {len(state)}")
 
         # Dump all slices with detailed state
         # Note: get_all_parts() returns PartSlice objects (slices), not Part objects
-        self.debug("-" * 70)
-        self.debug("SLICES:")
-        self.debug("-" * 70)
+        self.debug(False, "-" * 70)
+        self.debug(False, "SLICES:")
+        self.debug(False, "-" * 70)
 
         all_slices = cube.get_all_parts()
         for s in sorted(all_slices, key=lambda p: str(p.fixed_id)):
@@ -419,21 +474,21 @@ class ApplicationAndViewState:
             # Build edges string
             edges_str = ", ".join(f"{e.face.name.value}:{e.color.name}" for e in s.edges)
 
-            self.debug(f"  Slice: {s.fixed_id}")
-            self.debug(f"    index: {s._index}")
-            self.debug(f"    edges: [{edges_str}]")
-            self.debug(f"    colors: {s.colors}")
-            self.debug(f"    colors_id: {s.colors_id} (cache_was={colors_cache})")
-            self.debug(f"    match_faces: {match_faces}")
+            self.debug(False, f"  Slice: {s.fixed_id}")
+            self.debug(False, f"    index: {s._index}")
+            self.debug(False, f"    edges: [{edges_str}]")
+            self.debug(False, f"    colors: {s.colors}")
+            self.debug(False, f"    colors_id: {s.colors_id} (cache_was={colors_cache})")
+            self.debug(False, f"    match_faces: {match_faces}")
 
         # Dump full state dictionary
-        self.debug("-" * 70)
-        self.debug("FULL STATE DICT:")
-        self.debug("-" * 70)
+        self.debug(False, "-" * 70)
+        self.debug(False, "FULL STATE DICT:")
+        self.debug(False, "-" * 70)
         for fixed_id, colors in sorted(state.items(), key=lambda x: str(x[0])):
-            self.debug(f"  {fixed_id} -> {colors}")
+            self.debug(False, f"  {fixed_id} -> {colors}")
 
-        self.debug("=" * 70)
-        self.debug(f"END DUMP: {label}")
-        self.debug("=" * 70)
+        self.debug(False, "=" * 70)
+        self.debug(False, f"END DUMP: {label}")
+        self.debug(False, "=" * 70)
 

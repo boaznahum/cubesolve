@@ -34,6 +34,7 @@
   - True 3D rendering instead of 2D isometric projection
   - Adds external dependency (`pip install pyopengltk`)
 
+
 ## Architecture
 
 - ❌ **A2.** Introduce commands injecting instead of keys, simplify key handling
@@ -107,6 +108,16 @@
   - Files: `tkinter/event_loop.py:34-35`, `tkinter/renderer.py:580`
   - Currently triggers mypy `annotation-unchecked` notes
   - Would allow using `--check-untyped-defs` for stricter checking
+
+- ♾️ **Q8.** Create DebugUtils class for centralized debug output control
+  - Add `DebugUtils` class to `src/cube/utils/debug.py`
+  - Include `quiet_all` flag (similar to `debug_all`) to suppress all debug output
+  - Add `debug_print(message, debug_on=False)` method with logic:
+    - If `quiet_all` is True → do not print
+    - If `debug_all` is True OR `debug_on` parameter is True → print
+  - Wire `DebugUtils` into application (like `AppState` is contained in app)
+  - Give `DebugUtils` a reference to `AppState` for accessing flags
+  - **Q8.1.** ❌ Audit all print statements in codebase and migrate to `debug_print()`
 
 ---
 # New entries below - Claude will reformat and move above this line

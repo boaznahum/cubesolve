@@ -2,33 +2,24 @@
 Pyglet-based GUI entry point for the Cube Solver.
 
 This module explicitly uses the pyglet backend for OpenGL 3D rendering.
+All CLI options are inherited from main_any_backend.
 
 Usage:
     python -m cube.main_pyglet
     python -m cube.main_pyglet --debug-all
+    python -m cube.main_pyglet --quiet
+    python -m cube.main_pyglet --cube-size 5
 """
-import argparse
 import sys
-from cube.main_any_backend import run_with_backend
+from cube.main_any_backend import main as main_any
 
 
 def main():
     """Main entry point for the pyglet-based GUI."""
-    parser = argparse.ArgumentParser(description="Rubik's Cube Solver (pyglet)")
-    parser.add_argument(
-        "--debug-all",
-        action="store_true",
-        help="Enable debug_all mode for verbose logging"
-    )
-    parser.add_argument(
-        "--cube-size", "-s",
-        type=int,
-        default=None,
-        help="Cube size (default: 3)"
-    )
-    args = parser.parse_args()
-
-    return run_with_backend("pyglet", debug_all=args.debug_all, cube_size=args.cube_size)
+    # Insert default backend if not specified
+    if "--backend" not in sys.argv and "-b" not in sys.argv:
+        sys.argv.insert(1, "--backend=pyglet")
+    return main_any()
 
 
 if __name__ == '__main__':

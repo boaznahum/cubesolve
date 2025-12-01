@@ -2,6 +2,7 @@
 Headless entry point for the Cube Solver.
 
 This module uses the headless backend for testing and automation.
+All CLI options are inherited from main_any_backend.
 
 Useful for:
 - Unit testing
@@ -11,17 +12,20 @@ Useful for:
 
 Usage:
     python -m cube.main_headless
-
-For key sequence injection, use main_any_backend directly:
-    python -m cube.main_any_backend --backend=headless --key-sequence="1?Q"
+    python -m cube.main_headless --key-sequence="1?Q"
+    python -m cube.main_headless --debug-all
+    python -m cube.main_headless --quiet
 """
 import sys
-from cube.main_any_backend import run_with_backend
+from cube.main_any_backend import main as main_any
 
 
 def main():
     """Main entry point for headless operation."""
-    return run_with_backend("headless")
+    # Insert default backend if not specified
+    if "--backend" not in sys.argv and "-b" not in sys.argv:
+        sys.argv.insert(1, "--backend=headless")
+    return main_any()
 
 
 if __name__ == '__main__':

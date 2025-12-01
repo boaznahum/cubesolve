@@ -100,6 +100,7 @@ def run_with_backend(
     animation: bool = True,
     key_sequence: str | None = None,
     debug_all: bool = False,
+    quiet_all: bool = False,
 ) -> int:
     """Run the application with the specified backend.
 
@@ -115,6 +116,7 @@ def run_with_backend(
         animation: Enable animation (default: True).
         key_sequence: Key sequence to inject (for testing).
         debug_all: Enable debug_all mode for verbose logging (default: False).
+        quiet_all: Suppress all debug output (default: False).
 
     Returns:
         Exit code (0 for success, 1 for error).
@@ -128,7 +130,8 @@ def run_with_backend(
     app = AbstractApp.create_non_default(
         cube_size=cube_size,
         animation=animation,
-        debug_all=debug_all
+        debug_all=debug_all,
+        quiet_all=quiet_all
     )
 
     window = None
@@ -233,6 +236,11 @@ def main(args: list[str] | None = None) -> int:
         action="store_true",
         help="Enable debug_all mode for verbose logging"
     )
+    parser.add_argument(
+        "--quiet", "-q",
+        action="store_true",
+        help="Suppress all debug output"
+    )
 
     parsed = parser.parse_args(args)
 
@@ -245,6 +253,7 @@ def main(args: list[str] | None = None) -> int:
         animation=not parsed.no_animation,
         key_sequence=parsed.key_sequence,
         debug_all=parsed.debug_all,
+        quiet_all=parsed.quiet,
     )
 
 

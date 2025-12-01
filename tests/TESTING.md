@@ -136,6 +136,30 @@ pytest --maxfail=3
 pytest --durations=10
 ```
 
+### Debug Output Options
+
+Control debug output during tests using these flags:
+
+```powershell
+# Suppress all debug output (quiet mode)
+pytest --quiet-debug
+
+# Enable all debug output (verbose debug mode)
+pytest --debug-all
+
+# Combine with other options
+pytest -vs --debug-all       # See all debug output
+pytest --quiet-debug -x      # Quiet mode, stop on first failure
+```
+
+| Option | Description |
+|--------|-------------|
+| `--quiet-debug` | Suppress all debug output (sets `quiet_all=True`) |
+| `--debug-all` | Enable all debug output (sets `debug_all=True`) |
+
+**Note:** These flags set `quiet_all` and `debug_all` in `ApplicationAndViewState`. Tests using
+the `quiet_all` or `debug_all` fixtures can access these values.
+
 ### From PyCharm
 
 1. Right-click on `tests` folder → "Run 'pytest in tests'"
