@@ -228,7 +228,8 @@ class ShaderProgram:
             else:
                 # Assume it's already a ctypes pointer or similar
                 data = matrix
-            gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, data)
+            # GL_TRUE = transpose (numpy row-major -> OpenGL column-major)
+            gl.glUniformMatrix4fv(loc, 1, gl.GL_TRUE, data)
 
     def delete(self) -> None:
         """Delete the shader program."""

@@ -45,7 +45,7 @@ dev = [
     "types-colorama",
     "types-keyboard",
 ]
-pyglet2 = [
+pyglet2 = [  # pip install -e ".[pyglet2]" "pyglet>=2.0"
     "PyOpenGL",  # For GLU functions (gluSphere, etc.) not in pyglet 2.0
 ]
 

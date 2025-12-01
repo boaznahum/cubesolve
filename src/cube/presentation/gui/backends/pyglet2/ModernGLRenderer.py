@@ -40,6 +40,32 @@ void main() {
 }
 """
 
+# Per-vertex color shader - position and color per vertex
+VERTEX_COLOR_VERTEX_SHADER = """
+#version 330 core
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aColor;
+
+uniform mat4 uMVP;
+
+out vec3 vColor;
+
+void main() {
+    gl_Position = uMVP * vec4(aPos, 1.0);
+    vColor = aColor;
+}
+"""
+
+VERTEX_COLOR_FRAGMENT_SHADER = """
+#version 330 core
+in vec3 vColor;
+out vec4 FragColor;
+
+void main() {
+    FragColor = vec4(vColor, 1.0);
+}
+"""
+
 
 class ModernGLRenderer:
     """Modern OpenGL renderer using shaders and VBOs.
@@ -49,6 +75,7 @@ class ModernGLRenderer:
 
     def __init__(self) -> None:
         self._shader: ShaderProgram | None = None
+        self._vertex_color_shader: ShaderProgram | None = None
         self._initialized = False
 
         # Matrix stacks (emulate legacy GL)
@@ -58,28 +85,51 @@ class ModernGLRenderer:
         # Current color (RGB, 0-255)
         self._color: tuple[int, int, int] = (255, 255, 255)
 
-        # Reusable VBO/VAO for immediate-style drawing
+        # Reusable VBO/VAO for immediate-style drawing (position only)
         self._vao = ctypes.c_uint()
         self._vbo = ctypes.c_uint()
+
+        # VAO/VBO for vertex-colored drawing (position + color interleaved)
+        self._vc_vao = ctypes.c_uint()
+        self._vc_vbo = ctypes.c_uint()
 
     def setup(self) -> None:
         """Initialize the renderer. Must be called after GL context exists."""
         if self._initialized:
             return
 
-        # Create shader
+        # Create shaders
         self._shader = ShaderProgram(SOLID_VERTEX_SHADER, SOLID_FRAGMENT_SHADER)
+        self._vertex_color_shader = ShaderProgram(
+            VERTEX_COLOR_VERTEX_SHADER, VERTEX_COLOR_FRAGMENT_SHADER
+        )
 
-        # Create reusable VAO/VBO
+        # Create reusable VAO/VBO for solid color
         gl.glGenVertexArrays(1, ctypes.byref(self._vao))
         gl.glGenBuffers(1, ctypes.byref(self._vbo))
 
-        # Set up VAO with position attribute
+        # Set up VAO with position attribute only
         gl.glBindVertexArray(self._vao)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._vbo)
         # Position at location 0, 3 floats
         gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 3 * 4, ctypes.c_void_p(0))
         gl.glEnableVertexAttribArray(0)
+        gl.glBindVertexArray(0)
+
+        # Create VAO/VBO for vertex-colored drawing
+        gl.glGenVertexArrays(1, ctypes.byref(self._vc_vao))
+        gl.glGenBuffers(1, ctypes.byref(self._vc_vbo))
+
+        # Set up VAO with position + color (interleaved: 3 pos + 3 color = 6 floats)
+        gl.glBindVertexArray(self._vc_vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._vc_vbo)
+        stride = 6 * 4  # 6 floats * 4 bytes
+        # Position at location 0
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(0))
+        gl.glEnableVertexAttribArray(0)
+        # Color at location 1
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, stride, ctypes.c_void_p(3 * 4))
+        gl.glEnableVertexAttribArray(1)
         gl.glBindVertexArray(0)
 
         self._initialized = True
@@ -89,10 +139,17 @@ class ModernGLRenderer:
         if self._shader:
             self._shader.delete()
             self._shader = None
+        if self._vertex_color_shader:
+            self._vertex_color_shader.delete()
+            self._vertex_color_shader = None
         if self._vao.value:
             gl.glDeleteVertexArrays(1, ctypes.byref(self._vao))
         if self._vbo.value:
             gl.glDeleteBuffers(1, ctypes.byref(self._vbo))
+        if self._vc_vao.value:
+            gl.glDeleteVertexArrays(1, ctypes.byref(self._vc_vao))
+        if self._vc_vbo.value:
+            gl.glDeleteBuffers(1, ctypes.byref(self._vc_vbo))
         self._initialized = False
 
     # === Projection Setup ===
@@ -308,3 +365,110 @@ class ModernGLRenderer:
         # Left face - Orange
         self.set_color(255, 88, 0)
         self.quad([bbl, fbl, ftl, btl])
+
+    def quad_with_border(
+        self,
+        vertices: Sequence[tuple[float, float, float]],
+        face_color: tuple[int, int, int],
+        line_width: float = 1.0,
+        line_color: tuple[int, int, int] = (0, 0, 0),
+    ) -> None:
+        """Draw a filled quad with a border outline.
+
+        Args:
+            vertices: Four vertices in order [bottom-left, bottom-right, top-right, top-left]
+            face_color: RGB color (0-255) for the face fill
+            line_width: Width of the border lines
+            line_color: RGB color (0-255) for the border
+        """
+        # Draw filled quad
+        self.set_color(*face_color)
+        self.quad(vertices)
+
+        # Draw border as line loop
+        self.set_color(*line_color)
+        gl.glLineWidth(line_width)
+
+        if len(vertices) != 4:
+            return
+        v0, v1, v2, v3 = vertices
+        # Draw 4 lines: v0->v1, v1->v2, v2->v3, v3->v0
+        lines = np.array([
+            *v0, *v1,
+            *v1, *v2,
+            *v2, *v3,
+            *v3, *v0
+        ], dtype=np.float32)
+        self._upload_and_draw(lines, gl.GL_LINES)
+
+    def draw_colored_triangles(
+        self,
+        data: np.ndarray
+    ) -> None:
+        """Draw multiple triangles with per-vertex colors.
+
+        Args:
+            data: Numpy array of float32 with interleaved position and color:
+                  [x, y, z, r, g, b, x, y, z, r, g, b, ...]
+                  Colors are normalized (0.0-1.0)
+        """
+        if self._vertex_color_shader is None:
+            return
+
+        self._vertex_color_shader.use()
+
+        # Set MVP matrix
+        mvp = self._get_mvp()
+        self._vertex_color_shader.set_uniform_matrix4('uMVP', mvp)
+
+        # Upload vertex data and draw
+        gl.glBindVertexArray(self._vc_vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._vc_vbo)
+        gl.glBufferData(
+            gl.GL_ARRAY_BUFFER,
+            data.nbytes,
+            data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+            gl.GL_DYNAMIC_DRAW
+        )
+
+        # Each vertex has 6 floats (3 pos + 3 color)
+        vertex_count = len(data) // 6
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, vertex_count)
+
+        gl.glBindVertexArray(0)
+
+    def draw_colored_lines(
+        self,
+        data: np.ndarray,
+        line_width: float = 1.0
+    ) -> None:
+        """Draw multiple lines with per-vertex colors.
+
+        Args:
+            data: Numpy array of float32 with interleaved position and color
+            line_width: Line width
+        """
+        if self._vertex_color_shader is None:
+            return
+
+        gl.glLineWidth(line_width)
+        self._vertex_color_shader.use()
+
+        # Set MVP matrix
+        mvp = self._get_mvp()
+        self._vertex_color_shader.set_uniform_matrix4('uMVP', mvp)
+
+        # Upload vertex data and draw
+        gl.glBindVertexArray(self._vc_vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._vc_vbo)
+        gl.glBufferData(
+            gl.GL_ARRAY_BUFFER,
+            data.nbytes,
+            data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+            gl.GL_DYNAMIC_DRAW
+        )
+
+        vertex_count = len(data) // 6
+        gl.glDrawArrays(gl.GL_LINES, 0, vertex_count)
+
+        gl.glBindVertexArray(0)

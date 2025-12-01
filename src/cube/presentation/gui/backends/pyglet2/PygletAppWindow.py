@@ -20,6 +20,7 @@ from cube.presentation.gui.backends.pyglet2.PygletWindow import _PYGLET_TO_KEYS,
 from cube.presentation.gui.backends.pyglet2 import main_g_mouse
 from cube.presentation.gui.backends.pyglet2.AppWindowBase import AppWindowBase, TextLabel
 from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer
+from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCubeViewer
 from cube.presentation.gui.Command import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
@@ -78,13 +79,14 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         gl.glEnable(gl.GL_DEPTH_TEST)
 
         # Set up perspective projection
-        self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=0.1, far=100.0)
+        # Camera offset is typically [0, 0, -400], so far plane needs to be > 400
+        self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=1.0, far=1000.0)
 
-        # Create viewer
-        # TODO: GCubeViewer uses legacy display lists - needs migration to modern GL
-        # For now, viewer is disabled to test axis rendering
+        # Create modern GL cube viewer
+        self._modern_viewer = ModernGLCubeViewer(app.cube, self._modern_renderer)
+
+        # Legacy viewer disabled (uses display lists which don't work in GL 3.3 core)
         self._viewer: GCubeViewer | None = None
-        # self._viewer = GCubeViewer(app.cube, app.vs, renderer=self._renderer)
 
         # Text labels (built by _update_status_text/_update_animation_text)
         self._status_labels: list[TextLabel] = []
@@ -124,6 +126,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
 
     def update_gui_elements(self) -> None:
         """Update all GUI elements."""
+        # Update modern GL viewer
+        self._modern_viewer.update()
+
         if self._viewer:
             self._viewer.update()
 
@@ -168,8 +173,8 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Draw axis using modern GL renderer
         self._modern_renderer.draw_axis(length=5.0)
 
-        # Draw test cube to prove rendering works
-        self._modern_renderer.draw_cube(size=50.0)
+        # Draw the Rubik's cube using modern GL viewer
+        self._modern_viewer.draw()
 
         # TODO: Modern GL migration in progress
         # Legacy GL calls disabled - they fail in OpenGL 3.3 core profile
@@ -187,7 +192,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         gl.glViewport(0, 0, width, height)
         # Update projection for modern GL renderer (if initialized)
         if self._modern_renderer:
-            self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=0.1, far=100.0)
+            self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=1.0, far=1000.0)
 
     def on_key_press(self, symbol, modifiers):
         """Pyglet native key press event.
