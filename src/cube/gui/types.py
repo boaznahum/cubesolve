@@ -10,6 +10,14 @@ from typing import TypeAlias, Tuple, NewType
 import numpy as np
 from numpy import ndarray
 
+# Re-export classes from split files
+from .KeyEvent import KeyEvent
+from .MouseEvent import MouseEvent
+from .Keys import Keys
+from .Modifiers import Modifiers
+from .MouseButton import MouseButton
+from .TextureCoord import TextureCoord
+
 # Geometric types
 Point3D: TypeAlias = ndarray  # Shape (3,) - [x, y, z]
 Matrix4x4: TypeAlias = ndarray  # Shape (4, 4) column-major for OpenGL compatibility
@@ -24,139 +32,8 @@ DisplayList = NewType("DisplayList", int)
 # Texture handle (opaque type for loaded textures)
 TextureHandle = NewType("TextureHandle", int)
 
-
-@dataclass(frozen=True)
-class TextureCoord:
-    """UV texture coordinate for a vertex."""
-
-    u: int
-    v: int
-
-
 # Texture map is a sequence of UV coordinates for each vertex
 TextureMap: TypeAlias = Tuple[TextureCoord, TextureCoord, TextureCoord, TextureCoord]
-
-
-@dataclass(frozen=True)
-class KeyEvent:
-    """Backend-independent keyboard event."""
-
-    symbol: int  # Key code (use Keys constants)
-    modifiers: int  # Modifier flags (use Modifiers constants)
-    char: str | None = None  # Character if printable key
-
-
-@dataclass(frozen=True)
-class MouseEvent:
-    """Backend-independent mouse event."""
-
-    x: int  # X position in window coordinates
-    y: int  # Y position in window coordinates
-    dx: int = 0  # Delta X for drag events
-    dy: int = 0  # Delta Y for drag events
-    button: int = 0  # Mouse button (1=left, 2=middle, 3=right)
-    modifiers: int = 0  # Modifier flags
-
-
-class Keys:
-    """Backend-independent key constants.
-
-    These are abstract key codes that each backend maps to/from
-    its native key codes.
-    """
-
-    # Letters (using ASCII-like values for convenience)
-    A, B, C, D, E, F = 65, 66, 67, 68, 69, 70
-    G, H, I, J, K, L = 71, 72, 73, 74, 75, 76
-    M, N, O, P, Q, R = 77, 78, 79, 80, 81, 82
-    S, T, U, V, W, X = 83, 84, 85, 86, 87, 88
-    Y, Z = 89, 90
-
-    # Numbers
-    _0, _1, _2, _3, _4 = 48, 49, 50, 51, 52
-    _5, _6, _7, _8, _9 = 53, 54, 55, 56, 57
-
-    # Special keys
-    ESCAPE = 256
-    SPACE = 32
-    RETURN = 257
-    ENTER = 257  # Alias for RETURN
-    TAB = 258
-    BACKSPACE = 259
-    DELETE = 260
-    INSERT = 261
-
-    # Arrow keys
-    LEFT = 262
-    RIGHT = 263
-    UP = 264
-    DOWN = 265
-
-    # Function keys
-    F1, F2, F3, F4 = 290, 291, 292, 293
-    F5, F6, F7, F8 = 294, 295, 296, 297
-    F9, F10, F11, F12 = 298, 299, 300, 301
-
-    # Other common keys
-    HOME = 268
-    END = 269
-    PAGE_UP = 270
-    PAGE_DOWN = 271
-
-    # Punctuation (commonly used in cube notation)
-    SLASH = 47  # '/' - often used for solve command
-    QUESTION = 47  # Same as slash (shift+/)
-    APOSTROPHE = 39  # "'" - prime moves
-    MINUS = 45
-    PLUS = 43
-    EQUAL = 61
-    COMMA = 44
-    PERIOD = 46
-    BACKSLASH = 92
-    BRACKETLEFT = 91  # '['
-    BRACKETRIGHT = 93  # ']'
-
-    # Numpad keys
-    NUM_ADD = 334  # Numpad +
-    NUM_SUBTRACT = 333  # Numpad -
-    NUM_0 = 320
-    NUM_1 = 321
-    NUM_2 = 322
-    NUM_3 = 323
-    NUM_4 = 324
-    NUM_5 = 325
-    NUM_6 = 326
-    NUM_7 = 327
-    NUM_8 = 328
-    NUM_9 = 329
-
-    # Modifier keys (for range checking)
-    LSHIFT = 340
-    RSHIFT = 344
-    LCTRL = 341
-    RCTRL = 345
-    LALT = 342
-    RALT = 346
-    LMETA = 343  # Left command/super
-    RMETA = 347  # Right command/super
-
-
-class Modifiers:
-    """Modifier key flags."""
-
-    NONE = 0
-    SHIFT = 1
-    CTRL = 2
-    ALT = 4
-    META = 8  # Command on Mac, Windows key on PC
-
-
-class MouseButton:
-    """Mouse button constants."""
-
-    LEFT = 1
-    MIDDLE = 2
-    RIGHT = 4
 
 
 def make_point3d(x: float, y: float, z: float) -> Point3D:
@@ -312,3 +189,30 @@ def parse_key_string(key_string: str, uppercase_is_shift: bool = False) -> list[
                 modifiers = Modifiers.SHIFT
             events.append(KeyEvent(symbol=symbol, modifiers=modifiers, char=char))
     return events
+
+
+__all__ = [
+    # Classes
+    'KeyEvent',
+    'MouseEvent',
+    'Keys',
+    'Modifiers',
+    'MouseButton',
+    'TextureCoord',
+    # Type aliases
+    'Point3D',
+    'Matrix4x4',
+    'Color3',
+    'Color4',
+    'DisplayList',
+    'TextureHandle',
+    'TextureMap',
+    # Functions
+    'make_point3d',
+    'make_identity_matrix',
+    'make_translation_matrix',
+    'make_rotation_matrix',
+    'make_key_event',
+    'make_key_sequence',
+    'parse_key_string',
+]

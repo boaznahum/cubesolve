@@ -2,15 +2,17 @@ from collections.abc import Iterator, Iterable
 from typing import TYPE_CHECKING, TypeAlias, Sequence, Self
 
 from cube.model.Part import Part
-from cube.model import EdgeWing, PartEdge, SliceIndex, PartSlice
+from cube.model._part_slice import EdgeWing, PartSlice
+from cube.model.PartEdge import PartEdge
+from cube.model._elements import SliceIndex
 from .Part import TPartType
 from ._elements import EdgeSliceIndex
 from ._part import EdgeName, _faces_2_edge_name
 from ..app.app_exceptions import InternalSWError
 
 if TYPE_CHECKING:
-    from .cube_face import Face
-    from .cube import Cube
+    from .Face import Face
+    from .Cube import Cube
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
@@ -337,7 +339,7 @@ class Edge(Part):
         :return: opposite edge on face
         """
 
-        from .cube_face import Face
+        from .Face import Face
 
         my_other: Face = self.get_other_face(face)
         other_opposite = my_other.opposite

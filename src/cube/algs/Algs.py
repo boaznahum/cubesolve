@@ -2,7 +2,7 @@ import warnings
 from typing import Sequence
 
 from cube.algs.Alg import Alg
-from cube.algs.AnnoationAlg import AnnotationAlg
+from cube.algs.AnnotationAlg import AnnotationAlg
 from cube.algs.DoubleLayerAlg import DoubleLayerAlg
 from cube.algs.FaceAlg import FaceAlg, _L, _B, _D, _R, _U, _F
 from cube.algs.Scramble import _scramble, _Scramble

@@ -1,8 +1,8 @@
 import pytest
 
 from cube import algs
-from cube.app.abstract_ap import AbstractApp
-from cube.model.cube import Cube
+from cube.app.AbstractApp import AbstractApp
+from cube.model.Cube import Cube
 
 
 def test_scramble1_preserves_boy_large_cube() -> None:

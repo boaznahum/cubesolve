@@ -3,7 +3,7 @@ import pytest
 
 from cube import config
 from cube.algs import Algs
-from cube.model.cube import Cube
+from cube.model.Cube import Cube
 
 
 def test_sanity_check_enabled():

@@ -5,17 +5,17 @@ from typing import Callable, Tuple
 import numpy as np
 from numpy import ndarray
 
-from cube.app.app_state import ApplicationAndViewState
+from cube.app.ApplicationAndViewState import ApplicationAndViewState
 from cube.model import PartFixedID
-from cube.model import PartSlice, SuperElement
-from cube.model.cube import Cube
-from cube.model.cube_face import Face
+from cube.model import PartSlice
+from cube.model.Cube import Cube
+from cube.model.Face import Face
 from ._cell import _Cell, _CELL_SIZE
 from ._faceboard import _FACE_SIZE, _FaceBoard
 #
 #   update  --update----|           -*update--------|-------------------|
 #                                                   <-----draw_init-----|
-from .texture import TextureData
+from .TextureData import TextureData
 from ..model import PartEdge
 from ..model.cube_boy import FaceName
 from ..gui.protocols import Renderer
@@ -308,21 +308,6 @@ class _Board:
 
     def unhidden_all(self):
         self._hidden_objects = set()
-
-    # todo: to delete
-    def get_all_cells_movable_gui_elements(self, element: SuperElement) -> Set[int]:
-
-        lists: set[int] = set()
-
-        # need to optimize !!!
-        for s in element.slices:
-
-            c: _Cell
-            for cs in self._cells.values():
-                for c in cs:
-                    lists.update(c.gui_slice_movable_gui_objects(s))
-
-        return lists
 
     def get_all_movable_gui_elements(self, for_parts: Collection[PartSlice]) -> Set[int]:
 

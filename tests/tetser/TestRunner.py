@@ -4,22 +4,22 @@ from collections.abc import Collection
 from typing import Any
 
 from cube.algs import Algs
-from cube.app.app_state import ApplicationAndViewState
+from cube.app.ApplicationAndViewState import ApplicationAndViewState
 from cube.model import Cube
-from cube.operator.cube_operator import Operator
+from cube.operator.Operator import Operator
 from cube.solver import Solver, Solvers
-from cube.solver.solver_name import SolverName
+from cube.solver.SolverName import SolverName
 
 
 def run_solvers_sizes(solvers: Collection[SolverName], cube_sizes: Collection[int],
                       first_scramble_key: Any,
                       number_of_loops: int, debug: bool):
     for cube_size in cube_sizes:
-        for solver_name in solvers:
+        for SolverName in solvers:
             cube = Cube(cube_size)
             vs = ApplicationAndViewState()
             op: Operator = Operator(cube, vs)
-            slv: Solver = Solvers.by_name(solver_name, op)
+            slv: Solver = Solvers.by_name(SolverName, op)
 
             run_tests(slv, first_scramble_key,
                                  number_of_loops,

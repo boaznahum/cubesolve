@@ -26,7 +26,7 @@ class AxisName(Enum):
 _Face: TypeAlias = "Face"  # type: ignore
 
 if TYPE_CHECKING:
-    from .cube import Cube
+    from .Cube import Cube
 
 # noinspection PyUnresolvedReferences
 _Cube: TypeAlias = "Cube"  # type: ignore

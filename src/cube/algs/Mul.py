@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from typing import final, override
 
 from cube.algs.Alg import Alg
-from cube.algs.AnnoationAlg import AnnotationAlg
+from cube.algs.AnnotationAlg import AnnotationAlg
 from cube.algs.SeqAlg import SeqAlg, SeqSimpleAlg
 from cube.algs.SimpleAlg import NSimpleAlg, SimpleAlg
 from cube.algs._internal_utils import _normalize_for_count

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Iterator
 
-import cube.algs.AnnoationAlg
+from cube.algs.AnnotationAlg import AnnotationAlg
 from .Alg import Alg
 from cube.model import Cube
 
@@ -51,7 +51,7 @@ class _Inv(Alg):
             s = a.clone()
             s *= -1  # inv - that is my function
             return s.simplify()
-        elif isinstance(a, cube.algs.AnnoationAlg.AnnotationAlg):
+        elif isinstance(a, AnnotationAlg):
             return a
         elif isinstance(a, _Inv.SeqAlg):
 

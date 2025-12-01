@@ -1,13 +1,20 @@
 """
 GUI Testing Harness for Rubik's Cube Solver (pytest version)
 
-This module provides pytest test functions for automated GUI testing by injecting keyboard
-sequences and detecting exceptions or errors during execution.
+This module provides pytest test functions for automated GUI testing by injecting
+command sequences and detecting exceptions or errors during execution.
 
 Usage
 -----
 Run all GUI tests with pytest:
     pytest tests/gui/test_gui.py -v
+
+Run with all backends (default):
+    pytest tests/gui/test_gui.py -v --backend=all
+
+Run with specific backend:
+    pytest tests/gui/test_gui.py -v --backend=pyglet
+    pytest tests/gui/test_gui.py -v --backend=headless
 
 Run with animations enabled (slower but visible):
     pytest tests/gui/test_gui.py -v --animate
@@ -24,7 +31,7 @@ and should be run one at a time or with pytest-forked for isolation.
 
 import pytest
 
-from tests.gui.keys import GUIKeys
+from cube.gui.Command import Command
 from tests.gui.tester.GUITestRunner import GUITestRunner
 
 
@@ -34,7 +41,7 @@ pytestmark = pytest.mark.gui
 
 @pytest.mark.skip(reason="Temporarily disabled - exit code 127 issue with pyglet event loop")
 @pytest.mark.parametrize("cube_size", [3])
-def test_scramble_and_solve(cube_size: int, enable_animation: bool, speed_up_count: int):
+def test_scramble_and_solve(cube_size: int, enable_animation: bool, speed_up_count: int, backend: str):
     """
     Test scrambling and solving a cube.
 
@@ -46,20 +53,22 @@ def test_scramble_and_solve(cube_size: int, enable_animation: bool, speed_up_cou
         Fixture from conftest.py, controlled by --animate flag.
     speed_up_count : int
         Fixture from conftest.py, controlled by --speed-up flag.
+    backend : str
+        Backend to use, parametrized from conftest.py.
     """
-    speed_up = GUIKeys.SPEED_UP * speed_up_count
     result = GUITestRunner.run_test(
-        key_sequence=speed_up + GUIKeys.SCRAMBLE_1 + GUIKeys.SOLVE + GUIKeys.QUIT,
+        commands=Command.SPEED_UP * speed_up_count + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
         cube_size=cube_size,
         timeout_sec=60.0,
         enable_animation=enable_animation,
+        backend=backend,
         debug=True
     )
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
 
 
 @pytest.mark.parametrize("cube_size", [3])
-def test_multiple_scrambles(cube_size: int, enable_animation: bool, speed_up_count: int):
+def test_multiple_scrambles(cube_size: int, enable_animation: bool, speed_up_count: int, backend: str):
     """
     Test multiple scrambles followed by solve.
 
@@ -71,20 +80,24 @@ def test_multiple_scrambles(cube_size: int, enable_animation: bool, speed_up_cou
         Fixture from conftest.py, controlled by --animate flag.
     speed_up_count : int
         Fixture from conftest.py, controlled by --speed-up flag.
+    backend : str
+        Backend to use, parametrized from conftest.py.
     """
-    speed_up = GUIKeys.SPEED_UP * speed_up_count
     result = GUITestRunner.run_test(
-        key_sequence=speed_up + GUIKeys.SCRAMBLE_1 + GUIKeys.SCRAMBLE_2 + GUIKeys.SCRAMBLE_3 + GUIKeys.SOLVE + GUIKeys.QUIT,
+        commands=(Command.SPEED_UP * speed_up_count +
+                  Command.SCRAMBLE_1 + Command.SCRAMBLE_2 + Command.SCRAMBLE_3 +
+                  Command.SOLVE_ALL + Command.QUIT),
         cube_size=cube_size,
         timeout_sec=90.0,
         enable_animation=enable_animation,
+        backend=backend,
         debug=True
     )
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
 
 
 @pytest.mark.parametrize("cube_size", [3])
-def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: int):
+def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: int, backend: str):
     """Test basic face rotations.
 
     Parameters
@@ -95,13 +108,18 @@ def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: 
         Fixture from conftest.py, controlled by --animate flag.
     speed_up_count : int
         Fixture from conftest.py, controlled by --speed-up flag.
+    backend : str
+        Backend to use, parametrized from conftest.py.
     """
-    speed_up = GUIKeys.SPEED_UP * speed_up_count
     result = GUITestRunner.run_test(
-        key_sequence=speed_up + GUIKeys.R + GUIKeys.R + GUIKeys.R + GUIKeys.L + GUIKeys.U + GUIKeys.D + GUIKeys.F + GUIKeys.B + GUIKeys.QUIT,
+        commands=(Command.SPEED_UP * speed_up_count +
+                  Command.ROTATE_R * 3 + Command.ROTATE_L + Command.ROTATE_U +
+                  Command.ROTATE_D + Command.ROTATE_F + Command.ROTATE_B +
+                  Command.QUIT),
         cube_size=cube_size,
         timeout_sec=30.0,
         enable_animation=enable_animation,
+        backend=backend,
         debug=True
     )
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
@@ -123,12 +141,12 @@ if __name__ == "__main__":
     print(f"Running: {test_name}")
     print("-" * 70)
 
-    speed_up = GUIKeys.SPEED_UP * 3
     result = GUITestRunner.run_test(
-        key_sequence=speed_up + GUIKeys.SCRAMBLE_1 + GUIKeys.SOLVE + GUIKeys.QUIT,
+        commands=Command.SPEED_UP * 3 + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
         cube_size=3,
         timeout_sec=60.0,
         enable_animation=False,
+        backend="pyglet",
         debug=True
     )
 

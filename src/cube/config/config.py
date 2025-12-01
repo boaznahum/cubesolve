@@ -1,6 +1,6 @@
 from typing import Tuple
 
-#from cube.solver.solver_name import SolverName
+#from cube.solver.SolverName import SolverName
 
 ########## Some top important
 # Only initial value, can be changed

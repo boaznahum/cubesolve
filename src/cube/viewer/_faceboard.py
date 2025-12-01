@@ -6,7 +6,7 @@ from numpy import ndarray
 
 from cube.model import Part, Corner, Edge, Center
 from cube.model import PartFixedID
-from cube.model.cube_face import Face
+from cube.model.Face import Face
 from ._cell import _Cell, _CELL_SIZE, _CORNER_SIZE
 
 _FACE_SIZE = 3
@@ -23,11 +23,6 @@ class _FaceBoard:
      ---------------
      2,0 | 2,1 | 2,2
     """
-
-    # face size in terms of cells
-    # todo: delete
-    _h_size: int = 1 * _FACE_SIZE
-    _v_size: int = 1 * _FACE_SIZE
 
     def __init__(self,
                  board: "_Board",

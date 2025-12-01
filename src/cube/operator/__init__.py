@@ -1,1 +1,1 @@
-from .cube_operator import Operator
+from .Operator import Operator

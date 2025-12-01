@@ -17,12 +17,12 @@ from cube.config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_A
 
 from cube.algs.SliceAlg import SliceAlg
 from cube.algs import Alg, Algs
-from cube.app.abstract_ap import AbstractApp
+from cube.app.AbstractApp import AbstractApp
 from cube.app.app_exceptions import InternalSWError
-from cube.app.app_state import ApplicationAndViewState
-from .main_g_abstract import AbstractWindow
+from cube.app.ApplicationAndViewState import ApplicationAndViewState
+from .AbstractWindow import AbstractWindow
 from cube.model.cube_boy import FaceName
-from cube.model.cube_face import Face
+from cube.model.Face import Face
 from cube.model import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
 
 # to avoid the case we start another handling while animation is running

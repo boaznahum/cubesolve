@@ -2,8 +2,8 @@
 import pytest
 
 from cube.algs import Algs
-from cube.app.abstract_ap import AbstractApp
-from cube.model.cube_queries2 import CubeQueries2
+from cube.app.AbstractApp import AbstractApp
+from cube.model.CubeQueries2 import CubeQueries2
 
 
 def test_slice_play_and_inverse():

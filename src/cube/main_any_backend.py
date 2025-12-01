@@ -22,7 +22,7 @@ import argparse
 import sys
 from typing import TYPE_CHECKING
 
-from cube.app.abstract_ap import AbstractApp
+from cube.app.AbstractApp import AbstractApp
 from cube.gui import BackendRegistry
 
 if TYPE_CHECKING:

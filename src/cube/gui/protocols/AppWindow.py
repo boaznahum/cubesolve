@@ -10,9 +10,10 @@ a unified entry point (main_any_backend.py).
 from typing import Protocol, runtime_checkable, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cube.app.abstract_ap import AbstractApp
-    from cube.viewer.viewer_g import GCubeViewer
+    from cube.app.AbstractApp import AbstractApp
+    from cube.viewer.GCubeViewer import GCubeViewer
     from cube.gui.protocols.Renderer import Renderer
+    from cube.gui.Command import Command
 
 
 @runtime_checkable
@@ -98,6 +99,8 @@ class AppWindow(Protocol):
     def inject_key_sequence(self, sequence: str) -> None:
         """Inject a sequence of key presses.
 
+        DEPRECATED: Use inject_command() instead for type-safe command injection.
+
         Used for testing and automation.
         Common sequences:
         - "RURU" - Manual moves
@@ -107,6 +110,22 @@ class AppWindow(Protocol):
 
         Args:
             sequence: String of key characters to inject
+        """
+        ...
+
+    def inject_command(self, command: "Command") -> None:
+        """Inject a command directly.
+
+        Preferred method for testing and automation - bypasses key handling
+        and directly dispatches the command.
+
+        Args:
+            command: Command enum value to execute
+
+        Example:
+            window.inject_command(Command.SCRAMBLE_1)
+            window.inject_command(Command.SOLVE_ALL)
+            window.inject_command(Command.QUIT)
         """
         ...
 

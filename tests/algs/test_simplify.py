@@ -4,7 +4,7 @@ from typing import Iterable
 
 from cube import config, algs as algs
 from cube.algs import Algs, Alg
-from cube.model.cube import Cube
+from cube.model.Cube import Cube
 
 
 def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]):

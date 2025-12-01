@@ -2,11 +2,14 @@ from collections.abc import Sequence, Iterator, Iterable
 from typing import TypeAlias, TYPE_CHECKING, Self
 
 from cube.model.Part import Part
-from cube.model import CenterSlice, PartEdge, SliceIndex, CenterSliceIndex, FaceName
+from cube.model._part_slice import CenterSlice
+from cube.model.PartEdge import PartEdge
+from cube.model._elements import SliceIndex, CenterSliceIndex
+from cube.model.cube_boy import FaceName
 from .Part import TPartType
 
 if TYPE_CHECKING:
-    from .cube_face import Face
+    from .Face import Face
 
 _Face: TypeAlias = "Face"
 

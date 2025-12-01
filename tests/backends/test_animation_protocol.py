@@ -92,7 +92,7 @@ class TestAnimationBackendWithCube:
     @pytest.fixture
     def cube(self):
         """Create a cube for animation testing."""
-        from cube.model.cube import Cube
+        from cube.model.Cube import Cube
         return Cube(3)
 
     @pytest.mark.requires_animation

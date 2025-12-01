@@ -3,8 +3,8 @@ import traceback
 from typing import Any
 
 from cube.algs import Algs, Alg
-from cube.app.abstract_ap import AbstractApp
-from cube.operator.cube_operator import Operator
+from cube.app.AbstractApp import AbstractApp
+from cube.operator.Operator import Operator
 
 
 def scramble(app:AbstractApp,

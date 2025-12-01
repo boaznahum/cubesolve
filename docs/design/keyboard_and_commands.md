@@ -1,25 +1,41 @@
 # Keyboard Handling and Command System
 
-## 1. Architecture (After Refactoring)
+## 1. Architecture (Current)
 
-> **Last Updated:** 2025-11-30
+> **Last Updated:** 2025-11-30 (A2.1 Complete)
 
 ### 1.1 Overview
 
-All backends now use a **unified flow** for keyboard handling:
+All backends use a **unified flow** for keyboard handling with the **Command pattern**:
 
 ```
-User Input → Backend Native Event → Native Handler (converts) → handle_key(symbol, modifiers) → Action
+User Input → Backend Native Event → Native Handler (converts) → handle_key(symbol, modifiers)
+           → lookup_command() → command.execute(ctx) → Action
 ```
 
 **Key principle:** All backends have the same **protocol method** `handle_key(symbol, modifiers)` that:
 1. Takes abstract `Keys` values (not native keys)
-2. Calls `handle_key_with_error_handling()` for unified error handling
-3. Which calls `main_g_keyboard_input.handle_keyboard_input()` for command execution
+2. Calls `lookup_command()` to find the Command for the key+modifiers
+3. Calls `command.execute(ctx)` to perform the action
 
 Each backend has its own native handler that receives native events, converts to abstract keys, and calls `handle_key()`.
 
-### 1.2 Why All Backends Use the Same Abstract Keys
+### 1.2 Command Pattern Architecture
+
+The Command pattern separates **key binding** from **command execution**:
+
+```
+┌─────────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐
+│   Key Bindings      │     │     Command Enum     │     │  Command Handlers   │
+│  (key_bindings.py)  │────▶│    (command.py)      │────▶│   (command.py)      │
+├─────────────────────┤     ├──────────────────────┤     ├─────────────────────┤
+│ KEY_BINDINGS_NORMAL │     │ Command.ROTATE_R     │     │ _rotate("R", False) │
+│ KEY_BINDINGS_ANIM   │     │ Command.SCRAMBLE_1   │     │ _scramble(1)        │
+│ lookup_command()    │     │ Command.SOLVE_ALL    │     │ _solve(...)         │
+└─────────────────────┘     └──────────────────────┘     └─────────────────────┘
+```
+
+### 1.3 Why All Backends Use the Same Abstract Keys
 
 The `Keys` class in `gui/types.py` uses **ASCII-like values** by design:
 
@@ -40,44 +56,13 @@ This makes key mapping intuitive:
 - **Console**: character 'R' → `Keys.R` (82)
 - **Headless**: already uses `Keys.R` directly
 
-All backends convert their native key representation to the same abstract `Keys` values,
-which are then passed to `handle_key_with_error_handling()`.
-
-### 1.3 Flow Table: Native Event → handle_key (Protocol Method)
-
-| Backend | Native Event Source | Native Handler | Calls Protocol Method |
-|---------|---------------------|----------------|----------------------|
-| **Pyglet** | `pyglet.window.Window` → `on_key_press()` | `on_key_press()` converts via `_PYGLET_TO_KEYS` | `handle_key()` |
-| **Tkinter** | `TkinterWindow` → `key_press_handler()` | `_on_tk_key_event()` (already converted) | `handle_key()` |
-| **Console** | `ConsoleEventLoop` → `key_handler()` | `_on_console_key_event()` converts via `_CONSOLE_TO_KEYS` | `handle_key()` |
-| **Headless** | Test calls `inject_key()` | `inject_key()` (already abstract) | `handle_key()` |
-
-**All backends call `handle_key(symbol, modifiers)` → `handle_key_with_error_handling()`**
-
-**File locations:**
-- `pyglet/app_window.py:144` - `on_key_press()` native handler
-- `pyglet/app_window.py:154` - `handle_key()` protocol method
-- `tkinter/app_window.py:163` - `_on_tk_key_event()` native handler
-- `tkinter/app_window.py:171` - `handle_key()` protocol method (overrides base)
-- `console/app_window.py:146` - `_on_console_key_event()` native handler
-- `console/app_window.py` - `handle_key()` inherited from `AppWindowBase`
-- `headless/app_window.py` - `inject_key()`, `handle_key()` inherited from `AppWindowBase`
-- `app_window_base.py:41` - `handle_key_with_error_handling()` - the single entry point
-- `app_window_base.py:214` - `handle_key()` base implementation
-
-### 1.4 Two-Part Architecture: Native Handlers + Unified Path
-
-The keyboard handling has exactly **two parts**:
-
-1. **Native Handlers (DIFFERENT per backend)** - Convert native keys to abstract `Keys`
-2. **Unified Path (IDENTICAL for all backends)** - From `handle_key()` to command execution
+### 1.4 Flow Diagram: Native Event → Command Execution
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  PART 1: NATIVE HANDLERS (Backend-Specific)                                 │
 │  ─────────────────────────────────────────────────────────────────────────  │
 │  Each backend receives native key events and converts to abstract Keys.    │
-│  This is the ONLY code that differs between backends.                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  Pyglet:   on_key_press(symbol=114, mods)                                   │
@@ -107,21 +92,24 @@ The keyboard handling has exactly **two parts**:
 │                                                                             │
 │  handle_key(symbol=82, modifiers=0)                                         │
 │      │                                                                      │
-│      │  [app_window_base.py:214] or [pyglet/app_window.py:154]              │
+│      │  [app_window_base.py:159] or [pyglet/PygletAppWindow.py:159]         │
 │      │                                                                      │
 │      ▼                                                                      │
-│  handle_key_with_error_handling(window, 82, 0)                              │
+│  cmd = lookup_command(symbol, modifiers, animation_running)                 │
 │      │                                                                      │
-│      │  [app_window_base.py:41]                                             │
-│      │  - Unified error handling (AppExit, RunStop, OpAborted)              │
-│      │  - GUI_TEST_MODE vs normal mode                                      │
+│      │  [key_bindings.py:274]                                               │
+│      │  - Looks up (key, mods) in KEY_BINDINGS_NORMAL or _ANIMATION         │
+│      │  - Returns Command enum value or None                                │
 │      │                                                                      │
 │      ▼                                                                      │
-│  main_g_keyboard_input.handle_keyboard_input(window, 82, 0)                 │
+│  if cmd:                                                                    │
+│      self.inject_command(cmd)                                               │
 │      │                                                                      │
-│      │  [main_g_keyboard_input.py:19]                                       │
-│      │  - ALL command logic lives here (~600 lines)                         │
-│      │  - match value: case Keys.R: op.play(Algs.R, inv) ...                │
+│      │  [app_window_base.py:251]                                            │
+│      │  - Creates CommandContext from window                                │
+│      │  - Calls cmd.execute(ctx)                                            │
+│      │  - Updates GUI if needed                                             │
+│      │  - Handles exceptions (AppExit, etc.)                                │
 │      │                                                                      │
 │      ▼                                                                      │
 │  COMMAND EXECUTED (cube rotated, scrambled, solved, etc.)                   │
@@ -129,218 +117,178 @@ The keyboard handling has exactly **two parts**:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.5 Native Handler Details (Part 1)
+---
 
-These are the **only backend-specific** keyboard handling functions:
+## 2. Command System
 
-| Backend | Native Handler | Location | Converts |
-|---------|----------------|----------|----------|
-| **Pyglet** | `on_key_press()` | `pyglet/app_window.py:144` | pyglet key codes → `Keys` |
-| **Tkinter** | `_on_tk_key_event()` | `tkinter/app_window.py:163` | (already converted) |
-| **Console** | `_on_console_key_event()` | `console/app_window.py:146` | characters → `Keys` |
-| **Headless** | `inject_key()` | (inherited) | (already abstract) |
+### 2.1 Command Enum (command.py)
 
-### 1.6 Unified Path Details (Part 2)
+Each command is a self-executing enum value with lazy handler creation:
 
-After native handlers call `handle_key()`, the path is **identical**:
-
-```
-handle_key(symbol, modifiers)
-    ↓
-handle_key_with_error_handling(window, symbol, modifiers)   [app_window_base.py:41]
-    ↓
-main_g_keyboard_input.handle_keyboard_input(window, symbol, modifiers)   [main_g_keyboard_input.py:19]
-    ↓
-Command execution (op.play, slv.solve, etc.)
-```
-
-**All command logic is in ONE place:** `main_g_keyboard_input.py`
-
-### 1.7 Backend Inheritance Structure
-
-```
-AppWindowBase (ABC)                          [app_window_base.py]
-    │
-    ├── handle_key()          ← Protocol method (calls handle_key_with_error_handling)
-    ├── inject_key()          ← Delegates to handle_key()
-    ├── inject_key_sequence() ← Parses string and calls inject_key()
-    └── [shared: app, viewer, animation_running, status_labels, etc.]
-
-    ▼ Inheritance
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│ TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow)             │
-│   - Inherits handle_key(), overrides to add _draw()                     │
-│   - Native handler: _on_tk_key_event() → handle_key()                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│ ConsoleAppWindow(AppWindowBase, AppWindow)                              │
-│   - Inherits handle_key(), inject_key() from base                       │
-│   - Native handler: _on_console_key_event() → handle_key()              │
-├─────────────────────────────────────────────────────────────────────────┤
-│ HeadlessAppWindow(AppWindowBase, AppWindow)                             │
-│   - Inherits handle_key(), inject_key(), inject_key_sequence() from base│
-│   - Native handler: (tests call inject_key() directly)                  │
-├─────────────────────────────────────────────────────────────────────────┤
-│ PygletAppWindow(pyglet.window.Window, AnimationWindow)  ← NO AppWindowBase│
-│   - Cannot inherit from AppWindowBase (metaclass conflict with pyglet)  │
-│   - Has its own handle_key() implementation                             │
-│   - Native handler: on_key_press() → handle_key()                       │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-**Note:** PygletAppWindow cannot inherit from AppWindowBase because `pyglet.window.Window` has a metaclass (`WindowMeta`) that conflicts with `ABCMeta`. The solution is to duplicate the `handle_key()` method in PygletAppWindow.
-
-### 1.8 Backend Implementation Details
-
-All backends implement `handle_key(symbol, modifiers)` - the protocol method.
-
-#### Pyglet Backend (duplicates handle_key - metaclass conflict)
 ```python
-# src/cube/gui/backends/pyglet/app_window.py:144
-def on_key_press(self, symbol, modifiers):
-    """NATIVE handler - called by pyglet, converts and calls handle_key."""
-    abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
-    abstract_mods = _convert_modifiers(modifiers)
-    self.handle_key(abstract_symbol, abstract_mods)
+class Command(Enum):
+    """Self-executing command enum.
 
-# src/cube/gui/backends/pyglet/app_window.py:154
-def handle_key(self, symbol: int, modifiers: int) -> None:
-    """PROTOCOL METHOD - receives abstract Keys."""
-    handle_key_with_error_handling(self, symbol, modifiers)
+    Each value is a tuple: (handler_factory, *args)
+    """
+    ROTATE_R = (_rotate, "R", False)
+    ROTATE_R_PRIME = (_rotate, "R", True)
+    SCRAMBLE_1 = (_scramble, 1)
+    SOLVE_ALL = (_solve, None)
+    QUIT = (_quit,)
+    # ... 100+ commands
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        """Execute this command with the given context."""
+        handler = self._get_handler()  # Lazy creation
+        result = handler(ctx)
+        return result if result else CommandResult()
 ```
 
-#### Tkinter Backend (inherits from AppWindowBase)
+### 2.2 CommandContext
+
+Provides access to all application components:
+
 ```python
-# src/cube/gui/backends/tkinter/app_window.py:163
-def _on_tk_key_event(self, event) -> None:
-    """NATIVE handler - called by TkinterWindow, calls handle_key."""
-    self.handle_key(event.symbol, event.modifiers)
+@dataclass
+class CommandContext:
+    window: "AbstractWindow"
 
-# src/cube/gui/backends/tkinter/app_window.py:171
-def handle_key(self, symbol: int, modifiers: int) -> None:
-    """PROTOCOL METHOD - overrides to add redraw after key press."""
-    super().handle_key(symbol, modifiers)  # ← calls AppWindowBase.handle_key()
-    self._draw()
+    @property
+    def app(self) -> "AbstractApp": return self.window.app
+
+    @property
+    def op(self): return self.app.op      # Operator
+
+    @property
+    def vs(self): return self.app.vs      # ViewState
+
+    @property
+    def slv(self): return self.app.slv    # Solver
+
+    @property
+    def cube(self): return self.app.cube  # Cube
+
+    @property
+    def viewer(self): return self.window.viewer
 ```
 
-#### Console Backend (inherits from AppWindowBase)
+### 2.3 Key Bindings (key_bindings.py)
+
+Two declarative binding tables:
+
 ```python
-# src/cube/gui/backends/console/app_window.py:146
-def _on_console_key_event(self, key: str) -> bool:
-    """NATIVE handler - called by ConsoleEventLoop, converts and calls handle_key."""
-    # Handle inverse mode toggle (console-specific)
-    if key == ConsoleKeys.INV:
-        self._inv_mode = not self._inv_mode
-        return False
+# Normal mode bindings (when NOT animating)
+KEY_BINDINGS_NORMAL: list[KeyBinding] = [
+    (Keys.R, 0, Command.ROTATE_R),
+    (Keys.R, Modifiers.SHIFT, Command.ROTATE_R_PRIME),
+    (Keys._1, 0, Command.SCRAMBLE_1),
+    (Keys.SLASH, 0, Command.SOLVE_ALL),
+    (Keys.Q, 0, Command.QUIT),
+    # ... 60+ bindings
+]
 
-    # Convert and dispatch
-    abstract_key = _CONSOLE_TO_KEYS.get(key)
-    modifiers = Modifiers.SHIFT if self._inv_mode else 0
-    self.handle_key(abstract_key, modifiers)  # ← inherited from AppWindowBase
+# Animation mode bindings (DURING animation)
+KEY_BINDINGS_ANIMATION: list[KeyBinding] = [
+    (Keys.S, 0, Command.STOP_ANIMATION),  # S = Stop during animation
+    (Keys.SPACE, 0, Command.PAUSE_TOGGLE),
+    (Keys.NUM_ADD, 0, Command.SPEED_UP),
+    (Keys.Q, 0, Command.QUIT),
+    # ... limited set of commands
+]
 
-# handle_key() inherited from AppWindowBase
+def lookup_command(key: int, modifiers: int, animation_running: bool) -> Command | None:
+    """O(1) lookup for key binding."""
+    table = _ANIMATION_MAP if animation_running else _NORMAL_MAP
+    return table.get((key, modifiers))
 ```
 
-#### Headless Backend (inherits from AppWindowBase)
+### 2.4 Command Handlers
+
+Handlers are factory functions that create the actual handler:
+
 ```python
-# Tests call inject_key() directly - inherited from AppWindowBase
+def _rotate(face: str, inv: bool) -> Handler:
+    """Create handler for face rotation."""
+    def handler(ctx: CommandContext) -> CommandResult:
+        from cube.algs import Algs
+        alg = getattr(Algs, face)
+        ctx.op.play(ctx.vs.slice_alg(ctx.cube, alg), inv)
+        return CommandResult()
+    return handler
 
-# inject_key() inherited from AppWindowBase
-# handle_key() inherited from AppWindowBase
-# inject_key_sequence() inherited from AppWindowBase
+def _scramble(seed: int | None) -> Handler:
+    """Create handler for scramble."""
+    def handler(ctx: CommandContext) -> CommandResult:
+        from cube.algs import Algs
+        ctx.op.play(Algs.scramble(ctx.cube.size, seed))
+        return CommandResult()
+    return handler
+
+def _quit(ctx: CommandContext) -> None:
+    """Handler for quit command."""
+    from cube.app.app_exceptions import AppExit
+    ctx.op.abort()
+    ctx.window.close()
+    raise AppExit
 ```
-
-### 1.9 Key Files
-
-| File | Purpose |
-|------|---------|
-| `main_window/app_window_base.py` | `handle_key_with_error_handling()` - single entry point |
-| `main_window/main_g_keyboard_input.py` | All command logic (~600 lines) |
-| `gui/types.py` | Abstract `Keys` class with ASCII-like values |
-| `gui/backends/pyglet/window.py` | `_PYGLET_TO_KEYS` mapping |
-| `gui/backends/tkinter/window.py` | `_TK_KEY_MAP` mapping |
-| `gui/backends/console/app_window.py` | `_CONSOLE_TO_KEYS` mapping |
 
 ---
 
-## 2. Key Injection
+## 3. Key Injection Methods
 
-### 2.1 inject_key_sequence()
+### 3.1 inject_command() - Preferred
 
-Each backend still has its own `inject_key_sequence()` for test convenience:
+Type-safe command injection with IDE autocomplete:
 
 ```python
-window.inject_key_sequence("1/Q")  # Scramble seed 1, solve, quit
+window.inject_command(Command.SCRAMBLE_1)
+window.inject_command(Command.SOLVE_ALL)
+window.inject_command(Command.QUIT)
 ```
 
-This is a high-level API that maps characters to Keys and calls `inject_key()`.
+### 3.2 inject_key_sequence() - Legacy
 
-### 2.2 inject_key()
+String-based key injection (DEPRECATED):
 
-Low-level API that injects a single abstract key:
+```python
+window.inject_key_sequence("1/Q")  # Scramble, solve, quit
+```
+
+### 3.3 inject_key() - Low-level
+
+Single key injection:
 
 ```python
 window.inject_key(Keys.R, Modifiers.SHIFT)  # R' (R inverse)
 ```
 
-All backends implement this by calling `handle_key_with_error_handling()`.
-
 ---
 
-## 3. Future: Command Pattern (A2)
+## 4. Backend Implementation Details
 
-### 3.1 Motivation
-
-While keyboard handling is now unified, tests still inject **keys** which requires:
-- Character → Key mapping in each backend's `inject_key_sequence()`
-- Understanding key semantics (SHIFT = inverse)
-
-### 3.2 Proposed Solution
-
-Replace key injection with **command injection**:
+### 4.1 Base Class (app_window_base.py)
 
 ```python
-# Current (key-based)
-window.inject_key_sequence("1/Q")
+class AppWindowBase(ABC):
+    def handle_key(self, symbol: int, modifiers: int) -> None:
+        """Protocol method - lookup command and execute."""
+        cmd = lookup_command(symbol, modifiers, self.animation_running)
+        if cmd:
+            self.inject_command(cmd)
 
-# Future (command-based)
-window.inject_commands([Command.SCRAMBLE_1, Command.SOLVE, Command.QUIT])
+    def inject_command(self, command: Command) -> None:
+        """Execute a command with error handling."""
+        try:
+            ctx = CommandContext.from_window(self)
+            result = command.execute(ctx)
+            if not result.no_gui_update:
+                self.update_gui_elements()
+        except AppExit:
+            # Handle quit...
 ```
 
-### 3.3 Command Enum (Planned)
-
-```python
-class Command(Enum):
-    ROTATE_R = auto()
-    ROTATE_R_PRIME = auto()
-    SCRAMBLE_1 = auto()
-    SOLVE = auto()
-    QUIT = auto()
-    # ... etc
-```
-
-### 3.4 Benefits
-
-1. **Backend-agnostic tests** - No key mapping needed
-2. **Type-safe** - `Command.ROTATE_R` vs magic string "R"
-3. **Explicit semantics** - `ROTATE_R_PRIME` vs `Keys.R + SHIFT`
-4. **Extensible** - Add commands without changing key handler
-
----
-
-## 4. Migration History
-
-### Completed (2025-11-30)
-
-1. ✅ Created `handle_key_with_error_handling()` in `app_window_base.py`
-2. ✅ Simplified `PygletAppWindow.on_key_press()` - removed duplicate error handling
-3. ✅ Updated `TkinterAppWindow` to use `_on_tk_key_event()` native handler
-4. ✅ Simplified `HeadlessAppWindow` - now inherits from `AppWindowBase`
-5. ✅ **Fixed ConsoleAppWindow** - now inherits from `AppWindowBase`
-6. ✅ **Unified inheritance** - Tkinter, Console, Headless all inherit from `AppWindowBase`
-7. ✅ **Removed duplicate code** - `handle_key()`, `inject_key()`, `inject_key_sequence()` in base class
-
-### Backend Inheritance Summary
+### 4.2 Backend Inheritance
 
 | Backend | Inherits from | handle_key() |
 |---------|---------------|--------------|
@@ -349,34 +297,72 @@ class Command(Enum):
 | **Headless** | `AppWindowBase` | Inherited from base |
 | **Pyglet** | `pyglet.window.Window` | Own implementation (metaclass conflict) |
 
-### Before/After: Console Backend
+**Note:** PygletAppWindow cannot inherit from AppWindowBase because `pyglet.window.Window` has a metaclass that conflicts with `ABCMeta`.
 
-**Before (60+ lines of duplicated logic):**
-```python
-def _handle_key(self, key):
-    match key:
-        case ConsoleKeys.R:
-            op.play(Algs.R, self._inv_mode)  # Duplicate!
-        case ConsoleKeys.L:
-            op.play(Algs.L, self._inv_mode)  # Duplicate!
-        # ... 50+ more lines
+---
+
+## 5. Key Files
+
+| File | Purpose |
+|------|---------|
+| `gui/Command.py` | Command enum with 100+ self-executing commands |
+| `gui/key_bindings.py` | Key→Command binding tables, lookup_command() |
+| `gui/types.py` | Abstract `Keys` class with ASCII-like values |
+| `main_window/AppWindowBase.py` | Base class with handle_key(), inject_command() |
+| `gui/backends/pyglet/PygletWindow.py` | `_PYGLET_TO_KEYS` mapping |
+| `gui/backends/tkinter/TkinterWindow.py` | `_TK_KEY_MAP` mapping |
+| `gui/backends/console/ConsoleAppWindow.py` | `_CONSOLE_TO_KEYS` mapping |
+
+---
+
+## 6. Migration History
+
+### Completed (2025-11-30)
+
+#### A2.0: Unified Keyboard Handling
+1. ✅ Created `handle_key_with_error_handling()` in `app_window_base.py`
+2. ✅ Unified inheritance - Tkinter, Console, Headless all inherit from `AppWindowBase`
+3. ✅ Removed duplicate code - `handle_key()`, `inject_key()` in base class
+
+#### A2.1: Command Pattern Implementation
+1. ✅ Created `Command` enum with ~100 self-executing commands
+2. ✅ Created `key_bindings.py` with `KEY_BINDINGS_NORMAL` and `KEY_BINDINGS_ANIMATION`
+3. ✅ Created `lookup_command()` for O(1) key→command lookup
+4. ✅ Implemented lazy handler creation with caching
+5. ✅ Added `inject_command()` to AppWindow protocol
+6. ✅ Wired `handle_key()` to use `lookup_command()` + `command.execute()`
+7. ✅ **Removed `main_g_keyboard_input.py`** (~600 lines of legacy match/case)
+8. ✅ Updated `GUITestRunner` to handle `AppExit` as success
+
+#### Q3.1: File Naming Convention (PascalCase)
+All backend implementation files renamed to match class names:
+- `pyglet/app_window.py` → `pyglet/PygletAppWindow.py`
+- `pyglet/renderer.py` → `pyglet/PygletRenderer.py`
+- `headless/app_window.py` → `headless/HeadlessAppWindow.py`
+- etc.
+
+### Architecture Before/After
+
+**Before (A2.0):**
+```
+handle_key() → handle_key_with_error_handling() → main_g_keyboard_input.handle_keyboard_input()
+                                                   └── 600 lines of match/case
 ```
 
-**After (clean delegation via inheritance):**
-```python
-class ConsoleAppWindow(AppWindowBase, AppWindow):
-    # handle_key() inherited from AppWindowBase
-    # inject_key() inherited from AppWindowBase
-
-    def _on_console_key_event(self, key: str) -> bool:
-        abstract_key = _CONSOLE_TO_KEYS.get(key)
-        modifiers = Modifiers.SHIFT if self._inv_mode else 0
-        self.handle_key(abstract_key, modifiers)  # ← inherited
+**After (A2.1):**
+```
+handle_key() → lookup_command() → command.execute(ctx)
+               └── O(1) dict lookup    └── Self-contained handler
 ```
 
-### Pending (A2)
+---
 
-- [ ] Create `Command` enum
-- [ ] Create `CommandDispatcher`
-- [ ] Add `inject_command()` to AppWindow protocol
-- [ ] Update GUI tests to use commands
+## 7. Benefits of Command Pattern
+
+1. **Single Source of Truth** - Key bindings in one place (`key_bindings.py`)
+2. **Self-Documenting** - `Command.ROTATE_R_PRIME` vs magic `Keys.R + SHIFT`
+3. **Type-Safe** - IDE autocomplete for commands
+4. **Testable** - `inject_command()` bypasses key handling
+5. **Extensible** - Add commands without modifying key handler
+6. **Context-Aware** - Different commands during animation vs normal mode
+7. **Lazy Loading** - Handlers created on first use, reducing startup time
