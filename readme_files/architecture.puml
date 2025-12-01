@@ -1,0 +1,89 @@
+@startuml
+'https://plantuml.com/component-diagram
+
+skinparam componentStyle rectangle
+
+title High-Level Architecture
+
+package "Entry Points" {
+    [main_pyglet.py] as main_pyglet
+    [main_headless.py] as main_headless
+    [main_tkinter.py] as main_tkinter
+    [main_any_backend.py] as main_any
+}
+
+package "GUI Layer" {
+    [Window] as window
+    [GCubeViewer] as viewer
+    [AnimationManager] as anim
+}
+
+package "Application Core" {
+    [AbstractApp] as app
+
+    package "App Components" {
+        [Cube] as cube
+        [Operator] as operator
+        [Solver] as solver
+        [ViewState] as vs
+    }
+}
+
+package "Backend Abstraction" {
+    [GUIBackend] as backend
+
+    [PygletBackend] as pyglet_be
+    [HeadlessBackend] as headless_be
+    [TkinterBackend] as tkinter_be
+}
+
+' Entry point connections
+main_pyglet --> backend
+main_headless --> backend
+main_tkinter --> backend
+main_any --> backend
+
+backend --> window
+
+' Window connections
+window --> app
+window --> viewer
+window --> anim
+
+' App owns components
+app *-- cube
+app *-- operator
+app *-- solver
+app *-- vs
+
+' Viewer uses cube and viewstate
+viewer ..> cube : reads
+viewer ..> vs : reads
+
+' Operator uses cube
+operator ..> cube : modifies
+
+' Solver uses operator
+solver ..> operator : uses
+
+' Animation manager
+anim ..> operator : coordinates
+
+' Backend implementations
+pyglet_be ..|> backend
+headless_be ..|> backend
+tkinter_be ..|> backend
+
+note right of app
+  Central application object
+  - Creates and owns all components
+  - Provides access via properties
+end note
+
+note bottom of viewer
+  3D rendering of cube state
+  - Draws faces, edges, corners
+  - Handles rotation animation
+end note
+
+@enduml

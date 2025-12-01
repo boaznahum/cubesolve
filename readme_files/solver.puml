@@ -3,12 +3,37 @@
 
 'https://plantuml.com/class-diagram
 
-interface Solver {
-    solve()
-    is_solved()
+enum SolveStep {
+    ALL
+    L1x
+    L1
+    L2
+    L3
+    L3x
+    NxNCenters
+    NxNEdges
 }
+
+class SolverResults {
+    was_corner_swap: bool
+    was_even_edge_parity: bool
+    was_partial_edge_parity: bool
+}
+
+interface Solver {
+    {abstract} solve(what: SolveStep): SolverResults
+    {abstract} is_solved: bool
+    {abstract} status: str
+    {abstract} is_debug_config_mode: bool
+    {abstract} op: Operator
+    name: str
+}
+
 interface ReductionSolver
 interface BeginnerLBLReduce
+
+Solver ..> SolveStep : uses
+Solver ..> SolverResults : returns
 
 Solver <|-- ReductionSolver
 

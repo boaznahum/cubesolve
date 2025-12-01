@@ -1,11 +1,21 @@
 @startuml
 'https://plantuml.com/class-diagram
 
+!theme mars
+title Algorithm Class Hierarchy
+
 abstract class Alg {
-    Alg prime()
+    {abstract} play(cube, inv)
+    {abstract} count(): int
+    {abstract} atomic_str(): str
+    {abstract} flatten(): Iterator
+    inv(): Alg
+    prime: Alg
+    simplify(): SeqSimpleAlg
     __neg__()
-    __mul__()
-    SeqAlg __add__()
+    __mul__(n)
+    __add__(other)
+    __sub__(other)
 }
 
 together {

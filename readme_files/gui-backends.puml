@@ -1,0 +1,140 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+!theme mars
+skinparam classAttributeIconSize 0
+
+title GUI Backend Abstraction Layer
+
+package "Protocols (cube.gui.protocols)" {
+    interface Renderer {
+        +shapes: ShapeRenderer
+        +display_lists: DisplayListManager
+        +view: ViewStateManager
+        +setup()
+        +cleanup()
+        +clear()
+        +flush()
+    }
+
+    interface ShapeRenderer {
+        +quad()
+        +triangle()
+        +line()
+        +sphere()
+        +set_color()
+    }
+
+    interface DisplayListManager {
+        +gen_list(): int
+        +new_list(id)
+        +end_list()
+        +call_list(id)
+        +delete_list(id)
+    }
+
+    interface ViewStateManager {
+        +push_matrix()
+        +pop_matrix()
+        +translate()
+        +rotate()
+        +scale()
+        +set_projection()
+    }
+
+    interface EventLoop {
+        +run()
+        +stop()
+        +schedule(callback, delay)
+        +schedule_interval(callback, interval)
+        +unschedule(callback)
+    }
+
+    interface AppWindow {
+        +app: AbstractApp
+        +viewer: GCubeViewer
+        +handle_key()
+        +inject_command()
+        +update_gui_elements()
+        +close()
+    }
+
+    Renderer *-- ShapeRenderer
+    Renderer *-- DisplayListManager
+    Renderer *-- ViewStateManager
+}
+
+package "Factory" {
+    class GUIBackend {
+        +renderer: Renderer
+        +event_loop: EventLoop
+    }
+
+    class BackendRegistry <<singleton>> {
+        +get_backend(name): GUIBackend
+        +register(name, factory)
+    }
+
+    BackendRegistry --> GUIBackend : creates
+}
+
+package "Backends" {
+    package "Pyglet" {
+        class PygletRenderer
+        class PygletEventLoop
+        class PygletAppWindow
+    }
+
+    package "Headless" {
+        class HeadlessRenderer
+        class HeadlessEventLoop
+        class HeadlessAppWindow
+    }
+
+    package "Tkinter" {
+        class TkinterRenderer
+        class TkinterEventLoop
+        class TkinterAppWindow
+    }
+
+    package "Console" {
+        class ConsoleRenderer
+        class ConsoleEventLoop
+    }
+}
+
+' Implementations
+PygletRenderer ..|> Renderer
+PygletEventLoop ..|> EventLoop
+PygletAppWindow ..|> AppWindow
+
+HeadlessRenderer ..|> Renderer
+HeadlessEventLoop ..|> EventLoop
+HeadlessAppWindow ..|> AppWindow
+
+TkinterRenderer ..|> Renderer
+TkinterEventLoop ..|> EventLoop
+TkinterAppWindow ..|> AppWindow
+
+ConsoleRenderer ..|> Renderer
+ConsoleEventLoop ..|> EventLoop
+
+note right of Renderer
+  Main rendering interface
+  - Composites sub-renderers
+  - Backend-agnostic API
+end note
+
+note bottom of BackendRegistry
+  Factory pattern
+  - Lazy singleton per backend
+  - "pyglet", "headless", "tkinter", "console"
+end note
+
+note right of HeadlessRenderer
+  No-op implementation
+  - For testing/CI
+  - No GPU required
+end note
+
+@enduml

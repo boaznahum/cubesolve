@@ -1,13 +1,45 @@
 @startuml
 'https://plantuml.com/class-diagram
 
-class Cube
+!theme mars
 
-class Face
+class Cube {
+    size: int
+    front, back, left, right, up, down: Face
+    reset()
+    is_solved: bool
+    is_sanity(): bool
+}
 
-abstract class Part
-abstract class PartSlice
-abstract class PartEdge
+class Face {
+    name: FaceName
+    color: Color
+    center: Center
+    edges: Edge[4]
+    corners: Corner[4]
+}
+
+class Slice {
+    name: SliceName
+    M, E, S
+}
+
+abstract class Part {
+    fixed_id: PartFixedID
+    colors_id: PartColorsID
+    all_slices: Iterator[PartSlice]
+}
+
+abstract class PartSlice {
+    fixed_id
+    colors_id
+    parent: Part
+}
+
+abstract class PartEdge {
+    color: Color
+    face: Face
+}
 
 Part <|-- Edge
 Part <|-- Corner
@@ -20,16 +52,22 @@ PartSlice <|-- CornerSlice
 PartSlice <|-- CenterSlice
 
 
-Cube   *--  "6" Face: "faces"
+Cube *-- "6" Face: faces
+Cube *-- "3" Slice: M, E, S
 
-Face  o-- "1" Center
-Face  o-- "4" Edge
-Face  o-- "4" Corner
+Face o-- "1" Center
+Face o-- "4" Edge : shared
+Face o-- "4" Corner : shared
 
-Edge o.. "N" EdgeWing: "sp*"
-note on link #yellow: "specification"
-Corner o.. "1" CornerSlice: "sp*"
-Center o.. "NxN" CenterSlice: "sp*"
+note right of Face
+  Parts are **shared**
+  between adjacent faces.
+  front.edge_top is up.edge_bottom
+end note
+
+Edge o-- "N-2" EdgeWing : slices
+Corner o-- "1" CornerSlice : slice
+Center o-- "(N-2)²" CenterSlice : grid
 
 PartSlice *-- PartEdge
 
@@ -37,8 +75,14 @@ PartEdge <|-- WingFacet
 PartEdge <|-- CornerSliceFacet
 PartEdge <|-- CenterSliceFacet
 
-EdgeWing o.. "2" WingFacet: "sp*"
-CornerSlice o.. "3" CornerSliceFacet: "sp*"
-CenterSlice o.. "1" CenterSliceFacet: "sp*"
+EdgeWing o-- "2" WingFacet : facets
+CornerSlice o-- "3" CornerSliceFacet : facets
+CenterSlice o-- "1" CenterSliceFacet : facet
+
+note bottom of Cube
+  N = cube size
+  Parts at FIXED positions
+  Colors rotate, not parts
+end note
 
 @enduml

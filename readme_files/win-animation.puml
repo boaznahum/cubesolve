@@ -1,43 +1,52 @@
 @startuml
 'https://plantuml.com/sequence-diagram
 
+!theme mars
 autonumber
+
+title Animation Sequence Flow
 
 control EventLoop
 participant Window
+participant Operator
+participant AnimationManager as AM
+participant Animation
+participant Cube
 
+== User Action ==
 
-
-EventLoop -> Window: play
+EventLoop -> Window: key_press (e.g., 'R')
 Window -> Operator: play(alg)
 
-Operator -> AnimationManager: play
+== Animation Setup ==
 
-AnimationManager -> AnimationManager: set(animation)
+Operator -> AM: run_animation(alg)
+AM -> AM: create Animation
+AM -> EventLoop: schedule_interval(update)
 
-loop update
+== Animation Loop ==
 
-AnimationManager -> Animation: update
+loop until animation.done
 
-EventLoop -> Window: draw
-Window -> AnimationManager: draw
-AnimationManager -> Animation: draw
+    EventLoop -> AM: update callback
+    AM -> Animation: update_gui_elements()
+    note right: Calculate rotation angle\nbased on elapsed time
 
+    EventLoop -> Window: on_draw
+    Window -> AM: draw()
+    AM -> Animation: draw()
+    note right: Draw rotating slices\nat current angle
 
 end
 
-AnimationManager -> Animation: cleanup
+== Cleanup ==
 
-AnimationManager -> AnimationManager: set(None)
+AM -> Animation: cleanup()
+AM -> Operator: op(alg, inv=False)
+note right: Actually apply the\nmove to the cube
+Operator -> Cube: alg.play(cube)
 
-AnimationManager -> Operator: play
-Operator -> Operator: play(cube)
-
-AnimationManager -> Window: update
-
-AnimationManager -> Operator: done
-
-
-
+AM -> EventLoop: unschedule(update)
+AM -> Window: update_gui_elements()
 
 @enduml

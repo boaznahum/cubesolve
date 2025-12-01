@@ -272,6 +272,17 @@ python -m cube.main_any_backend -c "SPEED_UP+SPEED_UP+SCRAMBLE_1+SOLVE_ALL+QUIT"
 
 # Code layout
 
+## Architecture Overview
+
+The application is organized into distinct layers:
+
+- **Entry Points** - `main_pyglet.py`, `main_headless.py`, `main_any_backend.py`
+- **GUI Layer** - Window, Viewer, Animation Manager
+- **Application Core** - App, Cube, Operator, Solver, ViewState
+- **Backend Abstraction** - Renderer, EventLoop protocols with multiple implementations
+
+![Architecture](/readme_files/architecture.png)
+
 ## Algs
 
 All basic algs are in algs.py
@@ -349,6 +360,40 @@ def _ul_alg(self) -> Alg:
   ```
 
 ## Viewer/GUI
+
+The GUI layer uses a **backend abstraction** pattern to support multiple rendering backends:
+
+| Backend | Description | Use Case |
+|---------|-------------|----------|
+| **Pyglet** | OpenGL-based 3D rendering | Main GUI, full features |
+| **Headless** | No-op renderer | Testing, CI/CD |
+| **Tkinter** | Canvas-based rendering | Alternative GUI |
+| **Console** | Text-based display | Debugging |
+
+### Backend Architecture
+
+Each backend implements three protocols:
+- **Renderer** - Shape drawing, display lists, view transformations
+- **EventLoop** - Event scheduling, run loop management
+- **AppWindow** - Window creation, input handling
+
+![GUI Backends](/readme_files/gui-backends.png)
+
+### Command System
+
+Keyboard input flows through a **Command pattern**:
+
+1. Backend receives native key event
+2. Converts to abstract `Keys` value
+3. `lookup_command()` finds matching `Command` enum
+4. `command.execute(ctx)` runs the handler
+
+![Command Flow](/readme_files/command-flow.png)
+
+This design allows:
+- Type-safe command injection for testing
+- Declarative key bindings in one place
+- Lazy handler creation for fast startup
 
 ## Known Issues
 

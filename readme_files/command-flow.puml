@@ -1,0 +1,56 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+!theme mars
+autonumber
+
+title Command Pattern Flow
+
+participant "User" as user
+participant "Backend\n(Pyglet/Tkinter)" as backend
+participant "Window" as window
+participant "key_bindings.py" as bindings
+participant "Command" as cmd
+participant "Handler" as handler
+participant "App Components\n(Cube/Operator/Solver)" as app
+
+== Key Press Event ==
+
+user -> backend: Press key (e.g., 'R')
+backend -> backend: Convert native key\nto abstract Keys.R
+backend -> window: handle_key(symbol, modifiers)
+
+== Command Lookup ==
+
+window -> bindings: lookup_command(key, mods, animating)
+note right of bindings
+  KEY_BINDINGS_NORMAL or
+  KEY_BINDINGS_ANIMATION
+  based on animation state
+end note
+bindings --> window: Command.ROTATE_R
+
+== Command Execution ==
+
+window -> window: inject_command(cmd)
+window -> cmd: execute(ctx)
+
+cmd -> cmd: _get_handler()
+note right of cmd
+  Lazy handler creation
+  - First call: factory(*args)
+  - Cached for reuse
+end note
+
+cmd -> handler: handler(ctx)
+handler -> app: ctx.op.play(Algs.R)
+app --> handler: done
+handler --> cmd: CommandResult
+cmd --> window: CommandResult
+
+== GUI Update ==
+
+window -> window: update_gui_elements()
+window --> backend: done
+
+@enduml
