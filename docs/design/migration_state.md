@@ -242,9 +242,11 @@ Report any visual glitches, crashes, or unexpected behavior.
 **Phase 3:** COMPLETE (Abstract Window Layer) ✅
 **Phase 4 (Q3.1):** COMPLETE (File Naming Convention) ✅
 **A2.1:** COMPLETE (Command Pattern) ✅
+**A5:** IN PROGRESS (Pyglet 2.0 Backend) 🔄
 
-**Last Completed Step:** A2.1 - Command Pattern Implementation
-**Tests Passing:** 126 non-GUI tests, 2 GUI tests, 8 skipped
+**Last Completed Step:** A5 - Pyglet 2.0 modern GL cube rendering
+**Current Branch:** `new-opengl`
+**Tests Passing:** 126 non-GUI tests, 2 GUI tests (pyglet2: 2 passed, 2 skipped)
 
 ### Migration Complete!
 
@@ -561,6 +563,92 @@ All 4 backends pass:
 - **headless:** 2 passed, 1 skipped
 - **console:** 2 passed, 1 skipped
 - **tkinter:** 2 passed, 1 skipped
+
+---
+
+## A5: Pyglet 2.0 Backend (new-opengl branch)
+
+### Goal
+Create a new pyglet2 backend that uses modern OpenGL 3.3+ core profile instead of legacy OpenGL (glBegin/glEnd, display lists).
+
+### Background
+Pyglet 2.0 creates OpenGL 3.3 core profile by default, which removes all legacy GL functions:
+- No `glBegin`/`glEnd` (immediate mode)
+- No display lists (`glGenLists`, `glNewList`, `glCallList`)
+- No fixed-function pipeline (`glMatrixMode`, `glLoadIdentity`)
+- Shaders and VBOs are required
+
+### Architecture
+
+```
+pyglet2 backend (modern OpenGL)
+├── ModernGLRenderer - Shader-based rendering with VBOs
+│   ├── GLSL shaders (vertex color + solid color)
+│   ├── VAO/VBO management
+│   └── Matrix stack emulation
+├── ModernGLCubeViewer - Cube rendering with batched triangles
+│   ├── Generates face geometry from cube model
+│   ├── Per-vertex colors for stickers
+│   └── Grid lines for borders
+├── shaders.py - Shader compilation/linking utilities
+├── matrix.py - Matrix math (perspective, translate, rotate)
+└── PygletAppWindow - Window with modern GL integration
+```
+
+### Current Status
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Cube rendering | ✅ Working | ModernGLCubeViewer with batched triangles |
+| Face rotations | ✅ Working | Keyboard R/L/U/D/F/B execute instantly |
+| Scramble | ✅ Working | Operations execute without visual animation |
+| Solve | ✅ Working | Operations execute without visual animation |
+| Mouse drag (rotation) | ✅ Working | Camera orbit works |
+| Mouse scroll (zoom) | ✅ Working | Z-axis translation works |
+| Text labels | ✅ Working | Pyglet 2.0 labels use modern GL internally |
+| Visual animation | ❌ Skipped | No display lists in core profile |
+| Mouse picking | ❓ Untested | Requires `screen_to_world` |
+
+### Files Created/Modified
+
+| File | Change |
+|------|--------|
+| `backends/pyglet2/__init__.py` | NEW - Backend registration |
+| `backends/pyglet2/shaders.py` | NEW - Shader utilities |
+| `backends/pyglet2/matrix.py` | NEW - Matrix math |
+| `backends/pyglet2/ModernGLRenderer.py` | NEW - Modern GL renderer |
+| `backends/pyglet2/ModernGLCubeViewer.py` | NEW - Cube viewer |
+| `backends/pyglet2/PygletAppWindow.py` | NEW - Window class |
+| `backends/pyglet2/PygletRenderer.py` | NEW - Protocol adapter |
+| `backends/pyglet2/PygletEventLoop.py` | NEW - Event loop |
+| `backends/pyglet2/PygletWindow.py` | NEW - Base window |
+| `backends/__init__.py` | Modified - Added pyglet2 registration |
+
+### How Animation Works (current behavior)
+
+When a face rotation is requested:
+1. AnimationManager.run_animation() checks for viewer
+2. Since `self._viewer = None` (legacy viewer disabled), it catches RuntimeError
+3. Falls back to `op(alg, False)` - executes operation instantly
+4. No visual animation but cube state updates correctly
+
+### Pending Work
+
+1. **Visual Animation** - Would require either:
+   - Migrating GCubeViewer's display list approach to VBOs
+   - Or implementing animation in ModernGLCubeViewer with rotating geometry
+
+2. **Mouse Picking** - Needs `screen_to_world` for face selection
+
+### Test Results
+
+```
+pytest tests/gui/test_gui.py -v --backend=pyglet2
+- test_simple_quit: PASSED
+- test_face_rotations: PASSED (without animation)
+- test_scramble_and_solve: SKIPPED (needs GCubeViewer)
+- test_multiple_scrambles: SKIPPED (marked skip)
+```
 
 ---
 
