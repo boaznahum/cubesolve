@@ -92,15 +92,6 @@
     - Remove them entirely, or
     - Migrate to use `vs.debug()` system and remove the guards
 
-- ❌ **A5.** Pyglet 2.0 vs 1.5 - OpenGL compatibility decision
-  - **Issue:** Codebase uses deprecated OpenGL 1.x functions not supported by pyglet 2.0
-  - **Current state:** Staying on pyglet 1.5.x (works but missing 2.x improvements)
-  - **Options:**
-    1. **Stay on Pyglet 1.5** ⭐ (current) - Works, uses PyOpenGL for GLU
-    2. **Debug Pyglet 2.0** - Try PyOpenGL with pyglet's context (uncertain)
-    3. **Modern OpenGL refactor** - Migrate display lists → VBOs/VAOs, immediate mode → shaders (weeks/months)
-  - **Decision needed:** When/if to invest in modern OpenGL migration
-
 ---
 # New entries below - Claude will reformat and move above this line
 
@@ -113,6 +104,18 @@
 - ✅ **A1.** Move main window factory to backend, not a special factory in main_any
   - Added `app_window_factory` to `_BackendEntry` and `GUIBackend.create_app_window()`
   - Animation manager wiring is now in `GUIBackend.create_app_window()`
+
+- ✅ **A5.** Pyglet 2.0 vs 1.5 - OpenGL compatibility decision
+  - **Decision:** Created `pyglet2` backend using compatibility profile mode
+  - **Solution:** Use `pyglet.gl.gl_compat` for legacy GL, PyOpenGL for GLU
+  - **Key changes:**
+    - Request OpenGL 2.1 context → driver returns 4.6 compatibility profile
+    - Import `from pyglet.gl import gl_compat as gl` (not `from pyglet import gl`)
+    - Import `from OpenGL import GLU as glu` (GLU removed from pyglet 2.0)
+    - Label API: `bold=True` → `weight='bold'`
+  - **Files:** New `src/cube/presentation/gui/backends/pyglet2/` directory
+  - **Usage:** `python -m cube.main_any_backend --backend=pyglet2`
+  - **Docs:** `docs/design/pyglet2_migration.md`
 
 - ✅ **A2.** Introduce commands injecting instead of keys, simplify key handling
   - **A2.0.** ✅ Unify keyboard handling across all backends (prerequisite)
