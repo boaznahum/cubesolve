@@ -25,6 +25,16 @@ import numpy as np
 from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color, FaceName
+
+# Color to home face mapping (for textures)
+_COLOR_TO_FACE: dict[Color, FaceName] = {
+    Color.GREEN: FaceName.F,   # Green = Front
+    Color.BLUE: FaceName.B,    # Blue = Back
+    Color.RED: FaceName.R,     # Red = Right
+    Color.ORANGE: FaceName.L,  # Orange = Left
+    Color.WHITE: FaceName.U,   # White = Up
+    Color.YELLOW: FaceName.D,  # Yellow = Down
+}
 from cube.domain.model._part_slice import PartSlice
 
 from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
@@ -98,8 +108,9 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._face_triangles: np.ndarray | None = None
         self._line_data: np.ndarray | None = None
 
-        # Per-face geometry for textured rendering (11 floats: pos+normal+color+uv)
-        self._face_triangles_per_face: dict[FaceName, np.ndarray] = {}
+        # Per-color geometry for textured rendering (11 floats: pos+normal+color+uv)
+        # Grouped by COLOR so textures "stick" to pieces when they move
+        self._triangles_per_color: dict[Color, np.ndarray] = {}
 
         # Animation state - separate geometry for animated cells
         self._animated_face_triangles: np.ndarray | None = None
@@ -107,8 +118,8 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._animated_parts: set[PartSlice] | None = None
         self._animation_face_center: ndarray | None = None
         self._animation_opposite_center: ndarray | None = None
-        # Per-face animated geometry for textured rendering
-        self._animated_face_triangles_per_face: dict[FaceName, np.ndarray] = {}
+        # Per-color animated geometry for textured rendering
+        self._animated_triangles_per_color: dict[Color, np.ndarray] = {}
 
         # Texture mode state
         self._texture_mode: bool = False
@@ -208,7 +219,7 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._animation_opposite_center = None
         self._animated_face_triangles = None
         self._animated_line_data = None
-        self._animated_face_triangles_per_face.clear()
+        self._animated_triangles_per_color.clear()
         self._dirty = True
 
     def is_animating(self) -> bool:
@@ -315,7 +326,7 @@ class ModernGLCubeViewer(AnimatableViewer):
         has_animated_geometry = (
             (not self._texture_mode and self._animated_face_triangles is not None
              and len(self._animated_face_triangles) > 0) or
-            (self._texture_mode and len(self._animated_face_triangles_per_face) > 0)
+            (self._texture_mode and len(self._animated_triangles_per_color) > 0)
         )
         if not has_animated_geometry:
             return
@@ -328,10 +339,11 @@ class ModernGLCubeViewer(AnimatableViewer):
 
         # Draw animated geometry with lighting
         if self._texture_mode:
-            # Textured mode: draw each face separately with its texture
-            for face_name, triangles in self._animated_face_triangles_per_face.items():
+            # Textured mode: draw each color group with its home face texture
+            for color, triangles in self._animated_triangles_per_color.items():
                 if len(triangles) > 0:
-                    texture_handle = self._face_textures.get(face_name)
+                    home_face = _COLOR_TO_FACE.get(color)
+                    texture_handle = self._face_textures.get(home_face) if home_face else None
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
         else:
             # Solid color mode
@@ -489,10 +501,13 @@ class ModernGLCubeViewer(AnimatableViewer):
 
         # Draw filled faces with lighting
         if self._texture_mode:
-            # Textured mode: draw each face separately with its texture
-            for face_name, triangles in self._face_triangles_per_face.items():
+            # Textured mode: draw each color group with its home face texture
+            # This makes textures "stick" to pieces as they move
+            for color, triangles in self._triangles_per_color.items():
                 if len(triangles) > 0:
-                    texture_handle = self._face_textures.get(face_name)
+                    # Get texture for this color's home face
+                    home_face = _COLOR_TO_FACE.get(color)
+                    texture_handle = self._face_textures.get(home_face) if home_face else None
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
         else:
             # Solid color mode: draw all faces in one batch
@@ -527,9 +542,10 @@ class ModernGLCubeViewer(AnimatableViewer):
         animated_face_verts: list[float] = []
         animated_line_verts: list[float] = []
 
-        # Per-face geometry for textured mode (11 floats: pos+normal+color+uv)
-        face_verts_per_face: dict[FaceName, list[float]] = {fn: [] for fn in FaceName}
-        animated_face_verts_per_face: dict[FaceName, list[float]] = {fn: [] for fn in FaceName}
+        # Per-color geometry for textured mode (11 floats: pos+normal+color+uv)
+        # Grouped by COLOR so textures "stick" to pieces
+        verts_per_color: dict[Color, list[float]] = {c: [] for c in Color}
+        animated_verts_per_color: dict[Color, list[float]] = {c: [] for c in Color}
 
         # Shadow face offsets (in units of FACE_OFFSET * 2 = full face size)
         # These match the legacy _board.py offsets
@@ -551,7 +567,7 @@ class ModernGLCubeViewer(AnimatableViewer):
             self._generate_face_geometry(
                 face, face_name, center, right, up, size, animated_parts,
                 face_verts, line_verts, animated_face_verts, animated_line_verts,
-                face_verts_per_face[face_name], animated_face_verts_per_face[face_name]
+                verts_per_color, animated_verts_per_color
             )
 
             # Generate shadow face if enabled (L, D, B faces only)
@@ -563,7 +579,7 @@ class ModernGLCubeViewer(AnimatableViewer):
                     self._generate_face_geometry(
                         face, face_name, shadow_center, right, up, size, None,
                         face_verts, line_verts, [], [],
-                        face_verts_per_face[face_name], []
+                        verts_per_color, {}
                     )
 
         self._face_triangles = np.array(face_verts, dtype=np.float32)
@@ -571,12 +587,13 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._animated_face_triangles = np.array(animated_face_verts, dtype=np.float32) if animated_face_verts else None
         self._animated_line_data = np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None
 
-        # Convert per-face lists to numpy arrays
-        self._face_triangles_per_face = {
-            fn: np.array(verts, dtype=np.float32) for fn, verts in face_verts_per_face.items()
+        # Convert per-color lists to numpy arrays
+        self._triangles_per_color = {
+            c: np.array(verts, dtype=np.float32) for c, verts in verts_per_color.items()
+            if verts  # Only include non-empty
         }
-        self._animated_face_triangles_per_face = {
-            fn: np.array(verts, dtype=np.float32) for fn, verts in animated_face_verts_per_face.items()
+        self._animated_triangles_per_color = {
+            c: np.array(verts, dtype=np.float32) for c, verts in animated_verts_per_color.items()
             if verts  # Only include non-empty
         }
 
@@ -593,8 +610,8 @@ class ModernGLCubeViewer(AnimatableViewer):
         line_verts: list[float],
         animated_face_verts: list[float],
         animated_line_verts: list[float],
-        textured_face_verts: list[float],
-        animated_textured_face_verts: list[float],
+        verts_per_color: dict[Color, list[float]],
+        animated_verts_per_color: dict[Color, list[float]],
     ) -> None:
         """Generate geometry for a single face.
 
@@ -610,8 +627,8 @@ class ModernGLCubeViewer(AnimatableViewer):
             line_verts: Output list for static line segments
             animated_face_verts: Output list for animated face triangles (9 floats/vertex)
             animated_line_verts: Output list for animated line segments
-            textured_face_verts: Output list for static textured triangles (11 floats/vertex)
-            animated_textured_face_verts: Output list for animated textured triangles (11 floats/vertex)
+            verts_per_color: Output dict for textured triangles by color (11 floats/vertex)
+            animated_verts_per_color: Output dict for animated textured triangles by color
         """
         # Compute face normal (outward direction)
         normal = np.cross(right, up)
@@ -639,7 +656,12 @@ class ModernGLCubeViewer(AnimatableViewer):
                 # Select target lists based on animation state
                 target_face_verts = animated_face_verts if is_animated else face_verts
                 target_line_verts = animated_line_verts if is_animated else line_verts
-                target_textured_verts = animated_textured_face_verts if is_animated else textured_face_verts
+                # For textured mode, get the appropriate list for this cell's color
+                target_color_dict = animated_verts_per_color if is_animated else verts_per_color
+                # Ensure color key exists in the dict
+                if target_color_dict and color not in target_color_dict:
+                    target_color_dict[color] = []
+                target_textured_verts = target_color_dict.get(color) if target_color_dict else None
 
                 # Calculate cell position
                 # Cell (0,0) is bottom-left, (size-1, size-1) is top-right
@@ -680,14 +702,15 @@ class ModernGLCubeViewer(AnimatableViewer):
                     target_face_verts.extend([v[0], v[1], v[2], nx, ny, nz, r, g, b])
 
                 # Textured: position (3) + normal (3) + color (3) + uv (2) = 11 floats
-                # Triangle 1: bl, br, tr
-                target_textured_verts.extend([bl[0], bl[1], bl[2], nx, ny, nz, r, g, b, uv_bl[0], uv_bl[1]])
-                target_textured_verts.extend([br[0], br[1], br[2], nx, ny, nz, r, g, b, uv_br[0], uv_br[1]])
-                target_textured_verts.extend([tr[0], tr[1], tr[2], nx, ny, nz, r, g, b, uv_tr[0], uv_tr[1]])
-                # Triangle 2: bl, tr, tl
-                target_textured_verts.extend([bl[0], bl[1], bl[2], nx, ny, nz, r, g, b, uv_bl[0], uv_bl[1]])
-                target_textured_verts.extend([tr[0], tr[1], tr[2], nx, ny, nz, r, g, b, uv_tr[0], uv_tr[1]])
-                target_textured_verts.extend([tl[0], tl[1], tl[2], nx, ny, nz, r, g, b, uv_tl[0], uv_tl[1]])
+                if target_textured_verts is not None:
+                    # Triangle 1: bl, br, tr
+                    target_textured_verts.extend([bl[0], bl[1], bl[2], nx, ny, nz, r, g, b, uv_bl[0], uv_bl[1]])
+                    target_textured_verts.extend([br[0], br[1], br[2], nx, ny, nz, r, g, b, uv_br[0], uv_br[1]])
+                    target_textured_verts.extend([tr[0], tr[1], tr[2], nx, ny, nz, r, g, b, uv_tr[0], uv_tr[1]])
+                    # Triangle 2: bl, tr, tl
+                    target_textured_verts.extend([bl[0], bl[1], bl[2], nx, ny, nz, r, g, b, uv_bl[0], uv_bl[1]])
+                    target_textured_verts.extend([tr[0], tr[1], tr[2], nx, ny, nz, r, g, b, uv_tr[0], uv_tr[1]])
+                    target_textured_verts.extend([tl[0], tl[1], tl[2], nx, ny, nz, r, g, b, uv_tl[0], uv_tl[1]])
 
                 # Border lines (black) - still 6 floats, no normals needed
                 line_color = (0.0, 0.0, 0.0)
