@@ -19,6 +19,21 @@
 
 ## Bugs
 
+- ❌ **B6.** Celebration effect triggers on reset/resize, not just actual solves
+  - **Status:** New (2025-12-02)
+  - **Symptom:** Celebration effect (confetti, victory spin, etc.) triggers when:
+    - Resetting the cube (Escape key)
+    - Changing cube size (+/- size commands)
+    - Other scenarios where cube becomes "solved" without actually solving
+  - **Expected:** Celebration should ONLY trigger when user solves a scrambled cube
+  - **Root Cause:** Effect triggers whenever `cube.is_solved` becomes True, not checking if it was actually scrambled first
+  - **Fix Ideas:**
+    - Track "was_scrambled" state, only celebrate if transitioning from scrambled→solved
+    - Add "solve_count" or "last_scramble_time" to detect real solves
+  - **Files to investigate:**
+    - `src/cube/application/commands/Operator.py` - where solve detection happens
+    - Celebration effect trigger location (needs investigation)
+
 - ❌ **B5.** Missing debug output when running with `--debug-all`
   - **Status:** New (2025-12-02)
   - **Symptom:** When running with `debug=True` or `--debug-all`, many expected debug messages are missing:
