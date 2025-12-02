@@ -592,3 +592,150 @@ Cell --> shapes_old : "uses (pyglet backend)"
 Board --> texture_old : "uses (pyglet backend)"
 
 @enduml
+
+' ============================================
+' SEQUENCE DIAGRAM: A6 - Animation Creation
+' ============================================
+@startuml A6 Animation Sequence
+
+title A6: Animation Creation via AnimatableViewer Protocol
+footer Shows how AnimationManager creates animations polymorphically
+
+participant "AnimationManager" as AM
+participant "viewer:\nAnimatableViewer" as Viewer
+participant "Animation" as Anim
+
+note over AM, Viewer
+  **Before A6 (bad):**
+  is_modern_gl = hasattr(viewer, 'draw_animated')
+  if is_modern_gl:
+      animation = _create_modern_gl_animation(...)
+  else:
+      animation = _create_animation(...)
+end note
+
+AM -> Viewer : create_animation(alg, vs)
+activate Viewer
+
+note right of Viewer
+  Viewer decides HOW:
+  • GCubeViewer: display lists
+  • ModernGLCubeViewer: VBOs
+end note
+
+Viewer -> Viewer : get_slices_movable_gui_objects()
+Viewer -> Viewer : compute rotation matrices
+Viewer --> Anim : <<create>>
+Viewer -> Anim : set callbacks (_draw, _update, _cleanup)
+Viewer --> AM : animation
+
+deactivate Viewer
+
+AM -> AM : schedule animation
+AM -> Anim : _animation_draw_only()
+AM -> Anim : _animation_update_only()
+AM -> Anim : _animation_cleanup()
+
+note over AM, Anim
+  **After A6 (good):**
+  animation = viewer.create_animation(alg, vs)
+  // AnimationManager doesn't know about viewer type!
+end note
+
+@enduml
+
+' ============================================
+' SEQUENCE DIAGRAM: B4 - Zoom Command
+' ============================================
+@startuml B4 Zoom Sequence
+
+title B4: Zoom Command Flow (pyglet2 backend)
+footer Shows how ModernGLRendererAdapter enables zoom without gluPerspective
+
+participant "Command\n_zoom_in()" as Cmd
+participant "ApplicationAndViewState" as VS
+participant "PygletAppWindow" as Win
+participant "ModernGLRendererAdapter" as Adapter
+participant "ModernGLViewStateManager" as VSM
+participant "ModernGLRenderer" as Renderer
+
+Cmd -> VS : dec_fov_y()
+VS -> VS : _fov_y -= 1
+
+Cmd -> VS : set_projection(width, height, renderer)
+activate VS
+
+VS -> Win : renderer
+Win --> Adapter : _renderer_adapter
+
+note right of Adapter
+  **B4 Fix:**
+  Returns adapter, not
+  legacy PygletRenderer
+end note
+
+VS -> Adapter : view
+Adapter --> VSM : _view
+
+VS -> VSM : set_projection(w, h, fov_y, near, far)
+activate VSM
+
+VSM -> Renderer : set_perspective(w, h, fov_y, near, far)
+activate Renderer
+
+note right of Renderer
+  Uses shader-based
+  perspective matrix
+  (no gluPerspective!)
+end note
+
+Renderer -> Renderer : _projection.load(perspective(...))
+Renderer --> VSM : done
+
+deactivate Renderer
+deactivate VSM
+deactivate VS
+
+@enduml
+
+' ============================================
+' SEQUENCE DIAGRAM: Startup Flow
+' ============================================
+@startuml Startup Sequence
+
+title Application Startup Flow
+footer Shows how backend, renderer, and viewer are wired together
+
+participant "main_pyglet" as Main
+participant "BackendRegistry" as Registry
+participant "GUIBackend" as Backend
+participant "PygletAppWindow" as Win
+participant "ModernGLRenderer" as Renderer
+participant "ModernGLCubeViewer" as Viewer
+
+Main -> Registry : get_backend("pyglet2")
+Registry --> Backend : <<create>>
+
+Main -> Backend : create_app_window(app, w, h, title)
+activate Backend
+
+Backend --> Win : <<create>>
+activate Win
+
+Win --> Renderer : <<create>>
+Win -> Renderer : setup()
+Win -> Renderer : set_perspective(w, h, fov, near, far)
+
+Win --> Viewer : <<create>>(cube, renderer)
+
+Win -> Win : update_gui_elements()
+
+deactivate Win
+Backend --> Main : window
+
+deactivate Backend
+
+Main -> Backend : event_loop
+Main -> Main : event_loop.run()
+
+@enduml
