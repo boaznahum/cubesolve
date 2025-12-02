@@ -725,3 +725,136 @@ class ModernGLRenderer:
         world_coords /= world_coords[3]
 
         return (float(world_coords[0]), float(world_coords[1]), float(world_coords[2]))
+
+
+class ModernGLViewStateManager:
+    """ViewStateManager adapter that wraps ModernGLRenderer.
+
+    This adapter implements the ViewStateManager protocol by delegating to
+    ModernGLRenderer methods. Used by pyglet2 backend to provide modern GL
+    compatible view state management (avoiding legacy gluPerspective etc.).
+
+    Part of B4 fix: Zoom crash in pyglet2 backend.
+    """
+
+    def __init__(self, renderer: ModernGLRenderer, window_width: int = 800, window_height: int = 600):
+        """Initialize the adapter.
+
+        Args:
+            renderer: The ModernGLRenderer to wrap
+            window_width: Window width for screen_to_world
+            window_height: Window height for screen_to_world
+        """
+        self._renderer = renderer
+        self._window_width = window_width
+        self._window_height = window_height
+
+    def update_window_size(self, width: int, height: int) -> None:
+        """Update window size (called on resize)."""
+        self._window_width = width
+        self._window_height = height
+
+    def set_projection(
+        self, width: int, height: int, fov_y: float = 50.0, near: float = 0.1, far: float = 100.0
+    ) -> None:
+        """Set up projection matrix for the viewport."""
+        self._window_width = width
+        self._window_height = height
+        self._renderer.set_perspective(width, height, fov_y, near, far)
+
+    def push_matrix(self) -> None:
+        """Save current model-view matrix to stack."""
+        self._renderer.push_matrix()
+
+    def pop_matrix(self) -> None:
+        """Restore model-view matrix from stack."""
+        self._renderer.pop_matrix()
+
+    def load_identity(self) -> None:
+        """Reset model-view matrix to identity."""
+        self._renderer.load_identity()
+
+    def translate(self, x: float, y: float, z: float) -> None:
+        """Apply translation to current matrix."""
+        self._renderer.translate(x, y, z)
+
+    def rotate(self, angle_degrees: float, x: float, y: float, z: float) -> None:
+        """Apply rotation around axis to current matrix."""
+        self._renderer.rotate(angle_degrees, x, y, z)
+
+    def scale(self, x: float, y: float, z: float) -> None:
+        """Apply scaling to current matrix."""
+        self._renderer.scale(x, y, z)
+
+    def multiply_matrix(self, matrix: np.ndarray) -> None:
+        """Multiply current matrix by given 4x4 matrix."""
+        self._renderer.multiply_matrix(matrix)
+
+    def look_at(
+        self,
+        eye_x: float, eye_y: float, eye_z: float,
+        center_x: float, center_y: float, center_z: float,
+        up_x: float, up_y: float, up_z: float,
+    ) -> None:
+        """Set up view matrix to look at a point.
+
+        Note: ModernGLRenderer uses direct matrix operations for camera.
+        This method computes the look-at matrix and applies it.
+        """
+        # Compute look-at matrix
+        from cube.presentation.gui.backends.pyglet2.matrix import look_at as compute_look_at
+        look_at_matrix = compute_look_at(
+            (eye_x, eye_y, eye_z),
+            (center_x, center_y, center_z),
+            (up_x, up_y, up_z)
+        )
+        self._renderer.multiply_matrix(look_at_matrix)
+
+    def screen_to_world(self, screen_x: float, screen_y: float) -> tuple[float, float, float]:
+        """Convert screen coordinates to world coordinates."""
+        return self._renderer.screen_to_world(
+            screen_x, screen_y, self._window_width, self._window_height
+        )
+
+
+class ModernGLRendererAdapter:
+    """Renderer protocol adapter for pyglet2's ModernGLRenderer.
+
+    This adapter makes ModernGLRenderer compatible with code that expects
+    the legacy Renderer protocol (specifically renderer.view for zoom commands).
+
+    Part of B4 fix: Zoom crash in pyglet2 backend.
+
+    Note: shapes and display_lists are not supported in modern GL mode.
+    Use ModernGLRenderer directly for drawing.
+    """
+
+    def __init__(self, modern_renderer: ModernGLRenderer, window_width: int = 800, window_height: int = 600):
+        """Initialize the adapter.
+
+        Args:
+            modern_renderer: The ModernGLRenderer to wrap
+            window_width: Initial window width
+            window_height: Initial window height
+        """
+        self._modern_renderer = modern_renderer
+        self._view = ModernGLViewStateManager(modern_renderer, window_width, window_height)
+
+    @property
+    def view(self) -> ModernGLViewStateManager:
+        """Access view transformation methods (ViewStateManager protocol)."""
+        return self._view
+
+    @property
+    def shapes(self):
+        """Shape rendering not supported - use ModernGLRenderer directly."""
+        raise NotImplementedError("shapes not supported in modern GL adapter - use ModernGLRenderer directly")
+
+    @property
+    def display_lists(self):
+        """Display lists not supported in modern GL - use VBOs instead."""
+        raise NotImplementedError("display_lists not supported in modern GL - use VBOs instead")
+
+    def update_window_size(self, width: int, height: int) -> None:
+        """Update window size for view state manager."""
+        self._view.update_window_size(width, height)

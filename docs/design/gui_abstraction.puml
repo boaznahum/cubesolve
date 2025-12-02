@@ -1,7 +1,7 @@
 @startuml GUI Abstraction Architecture
 
 title GUI Abstraction Layer - Architecture Diagram
-footer Last Updated: 2025-12-02 | A6: AnimatableViewer Protocol Added
+footer Last Updated: 2025-12-02 | A6: AnimatableViewer + B4: ModernGL Zoom Fix
 
 skinparam packageStyle rectangle
 skinparam linetype ortho
@@ -290,6 +290,38 @@ package "cube.gui.backends.pyglet2" as pyglet2_backend #90EE90 {
     end note
 
     ModernGLCubeViewer ..|> AnimatableViewer : implements
+
+    class ModernGLViewStateManager {
+        ' B4 Fix: ViewStateManager for modern GL
+        -_renderer: ModernGLRenderer
+        -_window_width: int
+        -_window_height: int
+        +set_projection(w, h, fov, near, far)
+        +push_matrix()
+        +pop_matrix()
+        +translate(x, y, z)
+        +rotate(angle, x, y, z)
+        +multiply_matrix(matrix)
+        +look_at(...)
+        +screen_to_world(x, y)
+    }
+
+    class ModernGLRendererAdapter {
+        ' B4 Fix: Renderer protocol adapter
+        -_modern_renderer: ModernGLRenderer
+        -_view: ModernGLViewStateManager
+        +view: ViewStateManager
+    }
+
+    note bottom of ModernGLRendererAdapter
+        ✅ **B4 Fix (2025-12-02)**
+        Provides view.set_projection()
+        without legacy gluPerspective.
+        Zoom commands now work!
+    end note
+
+    ModernGLRendererAdapter *-- ModernGLViewStateManager : view
+    ModernGLViewStateManager o-- ModernGLRenderer : wraps
 }
 
 ' ============================================

@@ -19,7 +19,7 @@ from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.backends.pyglet2.PygletWindow import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 from cube.presentation.gui.backends.pyglet2 import main_g_mouse
 from cube.presentation.gui.backends.pyglet2.AppWindowBase import AppWindowBase, TextLabel
-from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer
+from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer, ModernGLRendererAdapter
 from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCubeViewer
 from cube.presentation.gui.Command import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
@@ -84,6 +84,10 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Camera offset is typically [0, 0, -400], so far plane needs to be > 400
         self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=1.0, far=1000.0)
 
+        # Create renderer adapter for Renderer protocol compatibility
+        # This provides view.set_projection() without legacy GLU (B4 fix)
+        self._renderer_adapter = ModernGLRendererAdapter(self._modern_renderer, width, height)
+
         # Create modern GL cube viewer (for shader-based rendering)
         self._modern_viewer = ModernGLCubeViewer(app.cube, self._modern_renderer)
 
@@ -117,9 +121,13 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         return self._modern_viewer
 
     @property
-    def renderer(self):
-        """Access the renderer."""
-        return self._renderer
+    def renderer(self) -> ModernGLRendererAdapter:
+        """Access the renderer (Renderer protocol adapter).
+
+        Returns ModernGLRendererAdapter which provides view.set_projection()
+        using modern GL instead of legacy gluPerspective (B4 fix).
+        """
+        return self._renderer_adapter
 
     @property
     def modern_renderer(self) -> ModernGLRenderer:
@@ -221,6 +229,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Update projection for modern GL renderer (if initialized)
         if self._modern_renderer:
             self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=1.0, far=1000.0)
+        # Update adapter's window size for screen_to_world (B4 fix)
+        if hasattr(self, '_renderer_adapter') and self._renderer_adapter:
+            self._renderer_adapter.update_window_size(width, height)
 
     def on_key_press(self, symbol, modifiers):
         """Pyglet native key press event.

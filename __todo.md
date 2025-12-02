@@ -45,12 +45,6 @@
     - `src/cube/domain/solver/beginner/L3Cross.py` line 178 - Failing assertion
   - **Workaround:** Press `+` key before scramble (or use `--speed-up 5` in tests)
 
-- ❌ **B4.** Mouse zoom (scroll wheel) and Ctrl+Up/Down zoom crash in pyglet2 backend
-  - **Symptom:** Application crashes when using zoom controls
-  - **Controls affected:**
-    - Mouse wheel scroll (zoom in/out)
-    - Ctrl+Up / Ctrl+Down (keyboard zoom)
-  - **Added:** 2025-12-02
 
 ## GUI & Testing
 
@@ -137,6 +131,14 @@
 ---
 
 ## Done Tasks
+
+### Bugs
+
+- ✅ **B4.** Mouse zoom (scroll wheel) and Ctrl+Up/Down zoom crash in pyglet2 backend
+  - **Fixed:** 2025-12-02
+  - **Root Cause:** Zoom commands called `renderer.view.set_projection()` which used legacy `gluPerspective()` not available in OpenGL core profile
+  - **Solution:** Created `ModernGLViewStateManager` and `ModernGLRendererAdapter` to provide modern GL compatible `set_projection()`
+  - **Files:** `backends/pyglet2/ModernGLRenderer.py`, `backends/pyglet2/PygletAppWindow.py`
 
 ### Architecture
 

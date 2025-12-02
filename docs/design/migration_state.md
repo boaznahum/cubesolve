@@ -244,10 +244,9 @@ Report any visual glitches, crashes, or unexpected behavior.
 **A2.1:** COMPLETE (Command Pattern) ✅
 **A5:** COMPLETE (Pyglet 2.0 Backend with Animation) ✅
 **A6:** COMPLETE - AnimatableViewer Protocol (Layer Separation) ✅
-**B4:** PLANNED - Zoom Crash Fix 🔄
+**B4:** COMPLETE - Zoom Crash Fix (ModernGLViewStateManager) ✅
 
-**Last Completed Step:** A6 - AnimatableViewer protocol for clean layer separation
-**Current Work:** B4 - Fix zoom crash using ModernGLViewStateManager adapter
+**Last Completed Step:** B4 - ModernGLViewStateManager adapter for zoom commands
 **Current Branch:** `new-opengl`
 **Tests Passing:** 126 non-GUI tests, 11 GUI tests
 
@@ -976,11 +975,13 @@ animation: Animation = viewer.create_animation(alg, vs)
 
 ---
 
-## B4: Zoom Crash Fix - PLANNED 🔄
+## B4: Zoom Crash Fix - COMPLETE ✅
 
-### Problem Statement
+> **Completed:** 2025-12-02
 
-Zoom commands (Ctrl+Up/Down, mouse scroll) crash in pyglet2 backend because they call `gluPerspective()` which is not available in OpenGL core profile.
+### Problem Statement (Solved)
+
+Zoom commands (Ctrl+Up/Down, mouse scroll) crashed in pyglet2 backend because they called `gluPerspective()` which is not available in OpenGL core profile.
 
 ### Root Cause
 
@@ -1023,31 +1024,36 @@ class ModernGLViewStateManager(ViewStateManager):
     # ... etc
 ```
 
-### Implementation Plan
+### Implementation ✅ COMPLETE
 
-1. **Create `ModernGLViewStateManager`** in `ModernGLRenderer.py`
+1. ✅ **Created `ModernGLViewStateManager`** in `ModernGLRenderer.py`
    - Implements `ViewStateManager` protocol
    - Wraps `ModernGLRenderer` instance
+   - Delegates all methods to modern GL equivalents
 
-2. **Update `PygletRenderer`** (pyglet2 version)
-   - Accept `ModernGLRenderer` reference
-   - Return `ModernGLViewStateManager` from `view` property
+2. ✅ **Created `ModernGLRendererAdapter`** in `ModernGLRenderer.py`
+   - Implements `Renderer` protocol (view property only)
+   - Returns `ModernGLViewStateManager` from `view` property
 
-3. **Wire up in `PygletAppWindow.__init__`**
-   - After creating `_modern_renderer`, inject it into `_renderer`
+3. ✅ **Wired up in `PygletAppWindow`**
+   - Created `_renderer_adapter` after `_modern_renderer`
+   - `renderer` property returns adapter instead of legacy renderer
+   - `on_resize` updates adapter's window size
 
-### Benefits
+### Files Changed ✅
 
-- Fixes ALL code paths using `renderer.view.set_projection()`
-- Commands remain backend-agnostic
-- Single point of change
+| File | Change | Status |
+|------|--------|--------|
+| `backends/pyglet2/ModernGLRenderer.py` | Added `ModernGLViewStateManager` and `ModernGLRendererAdapter` | ✅ Created |
+| `backends/pyglet2/PygletAppWindow.py` | Import adapter, create instance, override `renderer` property | ✅ Updated |
 
-### Dependency
+### Benefits Achieved ✅
 
-A6 should be fixed first because:
-1. Both involve pyglet2 backend architecture
-2. A6 establishes cleaner patterns that B4 can follow
-3. Fixing A6 first ensures we don't introduce new layer violations in B4
+- ✅ Fixes ALL code paths using `renderer.view.set_projection()`
+- ✅ Commands remain backend-agnostic
+- ✅ Single point of change
+- ✅ Zoom (Ctrl+Up/Down) now works in pyglet2 backend
+- ✅ Mouse scroll zoom now works in pyglet2 backend
 
 ---
 
