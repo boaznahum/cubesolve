@@ -355,3 +355,12 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         """Draw animation frame."""
         if self._animation_manager:
             self._animation_manager.draw()
+
+    def get_opengl_info(self) -> str:
+        """Get OpenGL version and renderer information.
+
+        Returns:
+            Formatted string with OpenGL version, GLSL, renderer, vendor.
+        """
+        from cube.presentation.gui.backends.common_gl_utils import get_opengl_info_string
+        return get_opengl_info_string()

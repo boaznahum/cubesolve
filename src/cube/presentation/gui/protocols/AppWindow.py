@@ -119,3 +119,13 @@ class AppWindow(Protocol):
             visible: True to show, False to hide
         """
         ...
+
+    def get_opengl_info(self) -> str:
+        """Get OpenGL version and renderer information.
+
+        Returns:
+            Formatted string with OpenGL info, or empty string if not applicable.
+            For OpenGL backends (pyglet, pyglet2): version, GLSL, renderer, vendor.
+            For non-OpenGL backends (tkinter, console, headless): empty string.
+        """
+        ...

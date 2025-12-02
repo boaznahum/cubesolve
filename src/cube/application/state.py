@@ -435,43 +435,84 @@ class ApplicationAndViewState:
         if self._debug_all or debug_on:
             print("DEBUG:", func())
 
-    def debug_dump_cube_state(self, cube: Cube, label: str = "Cube State") -> None:
-        """Dump detailed cube state using the debug infrastructure.
+    def debug_dump(
+        self,
+        cube: Cube,
+        label: str = "Application State",
+        opengl_info: str | None = None,
+    ) -> None:
+        """Unified dump of OpenGL info, application state, config, and cube state.
 
-        Includes: size, solved status, modify counter, all slices with their
-        colors, colors_id, cache state, match status.
+        Debug levels:
+        - OpenGL info: always printed (if provided, unless quiet)
+        - State/config values: debug(True) - shows in normal debug mode
+        - Cube slices/details: debug(False) - only shows with --debug-all
 
         Args:
             cube: The cube to dump state for.
             label: A label to identify this dump in the output.
+            opengl_info: Optional OpenGL version string to include.
         """
+        # OpenGL info - always print if provided (unless quiet)
+        if opengl_info and not self._quiet_all:
+            print("=" * 60)
+            print("OpenGL Information:")
+            print(opengl_info)
+            print("=" * 60)
+
+        # State and config - debug(True) = shows without --debug-all
+        self.debug(True, "=" * 60)
+        self.debug(True, f"DUMP: {label}")
+        self.debug(True, "=" * 60)
+
+        # View state
+        self.debug(True, "View State:")
+        self.debug(True, f"  Initial rotation: alpha_x_0={self._alpha_x_0:.4f}, "
+                   f"alpha_y_0={self._alpha_y_0:.4f}, alpha_z_0={self._alpha_z_0:.4f}")
+        self.debug(True, f"  User rotation:    alpha_x={self._alpha_x:.4f}, "
+                   f"alpha_y={self._alpha_y:.4f}, alpha_z={self._alpha_z:.4f}")
+        self.debug(True, f"  Alpha delta: {self._alpha_delta}")
+        self.debug(True, f"  FOV: {self._fov_y} (initial: {self._fov_y_0})")
+        self.debug(True, f"  Offset: {self._offset} (initial: {self._offset_0})")
+
+        # Config values
+        self.debug(True, "Config:")
+        self.debug(True, f"  Cube size: {self.cube_size}")
+        self.debug(True, f"  Slice range: [{self.slice_start}, {self.slice_stop}]")
+        self.debug(True, f"  Shadow faces: '{self._draw_shadows}'")
+        self.debug(True, f"  Speed index: {self._speed} ({self.get_speed.get_speed()})")
+        self.debug(True, f"  Single step mode: {self.single_step_mode}")
+        self.debug(True, f"  Debug all: {self._debug_all}, Quiet all: {self._quiet_all}")
+
+        # Cube summary - debug(True)
+        self.debug(True, "Cube:")
+        self.debug(True, f"  Size: {cube.size}, Solved: {cube.solved}, "
+                   f"ModCounter: {cube._modify_counter}")
+
+        # Recording
+        if self.last_recording:
+            self.debug(True, f"  Last recording: {len(self.last_recording)} moves")
+
+        self.debug(True, "-" * 60)
+
+        # Cube slices detail - debug(False) = only with --debug-all
+        # Early return if not debug_all to avoid expensive computation
         if not self._debug_all:
+            self.debug(True, "(Use --debug-all for verbose cube slice details)")
+            self.debug(True, "=" * 60)
+            self.debug(True, f"END DUMP: {label}")
+            self.debug(True, "=" * 60)
             return
 
-        self.debug(False, "=" * 70)
-        self.debug(False, f"DUMP: {label}")
-        self.debug(False, "=" * 70)
-        self.debug(False, f"Size: {cube.size}, Solved: {cube.solved}, ModCounter: {cube._modify_counter}")
-
-        # Get full state
         state = cube.cqr.get_sate()
         self.debug(False, f"State entries: {len(state)}")
-
-        # Dump all slices with detailed state
-        # Note: get_all_parts() returns PartSlice objects (slices), not Part objects
-        self.debug(False, "-" * 70)
-        self.debug(False, "SLICES:")
-        self.debug(False, "-" * 70)
+        self.debug(False, "-" * 60)
+        self.debug(False, "SLICES (verbose):")
 
         all_slices = cube.get_all_parts()
         for s in sorted(all_slices, key=lambda p: str(p.fixed_id)):
-            # Check cache state BEFORE accessing (to see if it was initialized)
             colors_cache = getattr(s, '_colors_id_by_colors', None)
-
-            # Get match status
             match_faces = s.match_faces
-
-            # Build edges string
             edges_str = ", ".join(f"{e.face.name.value}:{e.color.name}" for e in s.edges)
 
             self.debug(False, f"  Slice: {s.fixed_id}")
@@ -481,14 +522,13 @@ class ApplicationAndViewState:
             self.debug(False, f"    colors_id: {s.colors_id} (cache_was={colors_cache})")
             self.debug(False, f"    match_faces: {match_faces}")
 
-        # Dump full state dictionary
-        self.debug(False, "-" * 70)
+        # Full state dictionary - debug(False)
+        self.debug(False, "-" * 60)
         self.debug(False, "FULL STATE DICT:")
-        self.debug(False, "-" * 70)
         for fixed_id, colors in sorted(state.items(), key=lambda x: str(x[0])):
             self.debug(False, f"  {fixed_id} -> {colors}")
 
-        self.debug(False, "=" * 70)
-        self.debug(False, f"END DUMP: {label}")
-        self.debug(False, "=" * 70)
+        self.debug(True, "=" * 60)
+        self.debug(True, f"END DUMP: {label}")
+        self.debug(True, "=" * 60)
 

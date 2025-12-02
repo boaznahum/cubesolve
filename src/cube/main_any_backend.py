@@ -156,14 +156,14 @@ def run_with_backend(
         if commands:
             _inject_commands(window, commands)
 
-        # Debug: dump cube state before main loop
-        app.vs.debug_dump_cube_state(app.cube, "Before Main Loop")
+        # Debug: dump state before main loop (OpenGL info always shown if available)
+        app.vs.debug_dump(app.cube, "Before Main Loop", window.get_opengl_info())
 
         # Run the event loop
         window.run()
 
-        # Debug: dump cube state after main loop
-        app.vs.debug_dump_cube_state(app.cube, "After Main Loop")
+        # Debug: dump state after main loop
+        app.vs.debug_dump(app.cube, "After Main Loop")
 
     except ImportError as e:
         print(f"Error: Backend '{backend_name}' is not available: {e}", file=sys.stderr)

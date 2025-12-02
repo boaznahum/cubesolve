@@ -200,3 +200,11 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
     def _update_animation_text(self) -> None:
         """Build animation text labels using AppWindowBase method."""
         super()._update_animation_text()
+
+    def get_opengl_info(self) -> str:
+        """Get OpenGL version information (not applicable for tkinter).
+
+        Returns:
+            Empty string (tkinter backend uses 2D canvas, no OpenGL).
+        """
+        return ""

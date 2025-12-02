@@ -108,6 +108,15 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Initial GUI update
         self.update_gui_elements()
 
+    def get_opengl_info(self) -> str:
+        """Get OpenGL version and renderer information.
+
+        Returns:
+            Formatted string with OpenGL version, GLSL, renderer, vendor.
+        """
+        from cube.presentation.gui.backends.common_gl_utils import get_opengl_info_string
+        return get_opengl_info_string()
+
     @property
     def app(self) -> AbstractApp:
         """Access the application instance."""
