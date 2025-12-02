@@ -6,45 +6,46 @@ This directory contains images for cube face textures.
 
 ```
 resources/faces/
-├── generate_images.py   # Script to create synthetic test images
 ├── README.md            # This file
-├── set1/                # Simple face letters (F, B, R, L, U, D)
-├── set2/                # Gradients with UV arrows
-└── family/              # 3x3 numbered grid
+├── set1/                # Default texture set
+├── numbers/             # Numbered faces (was "boaz")
+├── letters/             # Letter faces F,B,R,L,U,D (was "demo")
+└── family/              # Your family photos (create this!)
 ```
 
-## How to Create Images
+## How to Toggle Textures
 
-### Option 1: Generate Synthetic Test Images
+**Keyboard:** Press `Ctrl+Shift+T` to cycle through texture sets.
 
-**Requires:** `pip install Pillow`
+The cycle follows `TEXTURE_SETS` in `config.py`:
+```python
+TEXTURE_SETS: list[str | None] = ["set1", "numbers", "family", None]
+```
+- `None` = solid colors (no textures)
 
-Run from this directory:
+## How to Create Your Own Textures
+
+### Option 1: From Family Photos (Automatic Face Detection)
+
 ```bash
-cd resources/faces
-python generate_images.py <type> <output_dir>
+# Install dependencies
+.venv_pyglet2/Scripts/pip.exe install opencv-python pillow
+
+# Extract all faces from your photos
+.venv_pyglet2/Scripts/python.exe make_face_textures.py extract "C:/Photos/Family" src/cube/resources/faces/family
+
+# Review faces in src/cube/resources/faces/family/all_faces/
+# Note which numbers (001, 002, ...) you want
+
+# Select 6 faces for the cube
+.venv_pyglet2/Scripts/python.exe make_face_textures.py select src/cube/resources/faces/family 1 3 5 7 9 11
+
+# Add "family" to TEXTURE_SETS in config.py
 ```
 
-**Parameters:**
-- `type`: Image style to generate
-  - `letters` - Simple face letters (F, B, R, L, U, D) with borders
-  - `gradients` - Gradient patterns with UV direction arrows
-  - `grid` - 3x3 numbered grid (1-9) for UV verification
-- `output_dir`: Name of output directory (created under resources/faces/)
+### Option 2: Manual Image Creation
 
-**Examples:**
-```bash
-python generate_images.py letters set1       # Creates set1/ with letter images
-python generate_images.py gradients set2     # Creates set2/ with gradient images
-python generate_images.py grid family        # Creates family/ with numbered grid
-python generate_images.py letters demo       # Creates demo/ with letter images
-```
-
-Creates 6 PNG images (F.png, B.png, R.png, L.png, U.png, D.png) in the specified directory.
-
-### Option 2: Use Your Own Images
-
-1. Create a new directory under `resources/faces/` (e.g., `myphotos/`)
+1. Create a new directory (e.g., `myphotos/`)
 
 2. Add 6 square images named:
    - `F.png` - Front face (green on standard cube)
@@ -56,29 +57,18 @@ Creates 6 PNG images (F.png, B.png, R.png, L.png, U.png, D.png) in the specified
 
 3. Image requirements:
    - Format: PNG, JPG, or BMP
-   - Size: Square recommended (e.g., 256x256, 512x512)
-   - Non-square images will be stretched
+   - Size: Square recommended (e.g., 512x512)
+   - Non-square images will be cropped to square
 
-## How to Use Textures
+4. Add your folder name to `TEXTURE_SETS` in `config.py`
 
-### Method 1: Launch Script
+### Option 3: Generate Synthetic Test Images
+
 ```bash
-python run_with_textures.py set1      # Use set1
-python run_with_textures.py family    # Use family
-python run_with_textures.py myphotos  # Use custom directory
-```
-
-### Method 2: Keyboard Toggle
-1. Run normal app: `python -m cube.main_pyglet`
-2. Press `Ctrl+T` to toggle texture mode on/off
-
-Note: Textures must be loaded first (via config or script).
-
-### Method 3: Config File
-Edit `src/cube/application/config.py`:
-```python
-TEXTURE_MODE_ENABLED = True
-TEXTURE_SET_PATH = "resources/faces/set1"
+cd src/cube/resources/faces
+python generate_images.py letters mytest    # Creates letter images
+python generate_images.py gradients mytest  # Creates gradient images
+python generate_images.py grid mytest       # Creates numbered grid
 ```
 
 ## UV Mapping
@@ -87,4 +77,4 @@ Each face texture is mapped to a 3x3 grid (or NxN for larger cubes):
 - Bottom-left cell = bottom-left of texture (UV 0,0)
 - Top-right cell = top-right of texture (UV 1,1)
 
-The `family` set shows numbered cells 1-9 to verify correct mapping.
+The `numbers` set shows numbered cells to verify correct mapping.

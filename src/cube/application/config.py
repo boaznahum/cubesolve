@@ -143,6 +143,6 @@ LIGHTING_BACKGROUND = 0.15  # Default background (black)
 # List of texture sets to cycle through with Ctrl+Shift+T
 # Can be preset names ("set1", "family"), paths, or None for solid colors
 # Ctrl+Shift+T cycles: set1 → family → None (solid) → set1 → ...
-TEXTURE_SETS: list[str | None] = ["letters", "numbers", "set2", None]
+TEXTURE_SETS: list[str | None] = ["family", "letters", "numbers", "set2", None]
 # Index of initial texture set (0 = first in list, or None to start with solid colors)
 TEXTURE_SET_INDEX: int = 0
