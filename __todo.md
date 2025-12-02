@@ -66,16 +66,6 @@
   - True 3D rendering instead of 2D isometric projection
   - Adds external dependency (`pip install pyopengltk`)
 
-- ❌ **G3.** Add keyboard controls for lighting adjustment (pyglet2 backend)
-  - **Current state:** Lighting parameters are hardcoded in `ModernGLRenderer.__init__()`
-  - **Goal:** Allow user to adjust brightness/ambient during runtime
-  - **Proposed keys:** `[` / `]` for brightness down/up, or similar
-  - **Parameters to control:**
-    - Ambient light (currently 0.65)
-    - Light position
-    - Shininess
-  - **Files:** `src/cube/presentation/gui/backends/pyglet2/ModernGLRenderer.py`
-  - **Added:** 2025-12-02
 
 - ❌ **G5.** Comprehensive Command Testing Plan
   - **Goal:** Create automated tests for ALL keyboard commands and document mouse commands for manual testing
@@ -148,6 +138,20 @@
   - **Files:** `backends/pyglet2/ModernGLRenderer.py`, `backends/pyglet2/PygletAppWindow.py`
 
 ### GUI & Testing
+
+- ✅ **G3.** Add keyboard controls for lighting adjustment (pyglet2 backend)
+  - **Completed:** 2025-12-02
+  - **Keys:** `Ctrl+[` / `Ctrl+]` for brightness down/up
+  - **Features:**
+    - Adjusts ambient light from 10% to 100%
+    - Persisted in `ApplicationAndViewState.brightness`
+    - Displayed in status bar as "Light:XX%"
+    - Works during animation
+  - **Implementation:**
+    - Added `adjust_brightness()` / `get_brightness()` to `AppWindow` protocol
+    - Default implementation in `AppWindowBase` (returns None for unsupported backends)
+    - Added `BRIGHTNESS_UP` / `BRIGHTNESS_DOWN` commands
+  - **Files:** `ModernGLRenderer.py`, `Command.py`, `key_bindings.py`, `AppWindow.py`, `state.py`
 
 - ✅ **G4.** F10/F11/F12 shadow modes don't work in pyglet2 backend
   - **Fixed:** 2025-12-02
