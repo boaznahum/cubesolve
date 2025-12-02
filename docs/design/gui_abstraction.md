@@ -534,6 +534,202 @@ class AnimationBackend(Protocol):
         ...
 ```
 
+#### 3.2.6 AnimatableViewer Protocol (`protocols/AnimatableViewer.py`) ✅ A6
+
+> **Added:** 2025-12-02 as part of A6 fix (layer separation)
+
+This protocol decouples `AnimationManager` (application layer) from specific viewer implementations (presentation layer).
+
+```python
+from typing import Protocol, runtime_checkable, TYPE_CHECKING
+from cube.domain.model.Cube import Cube
+from cube.domain.algs import AnimationAbleAlg
+from cube.application.state import ApplicationAndViewState
+from cube.application.animation.AnimationManager import Animation
+
+@runtime_checkable
+class AnimatableViewer(Protocol):
+    """Protocol for viewers that support animation.
+
+    Both GCubeViewer (display lists) and ModernGLCubeViewer (VBOs) implement
+    this protocol, allowing AnimationManager to create animations polymorphically.
+
+    The viewer decides HOW to animate (display lists, VBOs, shaders, etc.),
+    while AnimationManager handles WHEN (scheduling, timing, event loop).
+    """
+
+    @property
+    def cube(self) -> Cube:
+        """The cube being viewed."""
+        ...
+
+    def create_animation(
+        self,
+        alg: AnimationAbleAlg,
+        vs: ApplicationAndViewState,
+    ) -> Animation:
+        """Create an animation for the given algorithm.
+
+        The viewer creates an Animation object with:
+        - _animation_draw_only: Called each frame to render animated parts
+        - _animation_update_only: Called to advance animation state
+        - _animation_cleanup: Called when animation completes
+        - delay: Time between frames
+        - done: Flag to indicate completion
+
+        Args:
+            alg: The algorithm being animated (has get_animation_objects())
+            vs: Application view state (for speed settings, view transforms)
+
+        Returns:
+            Animation object ready for scheduling by AnimationManager
+        """
+        ...
+
+    def update(self) -> None:
+        """Update the viewer's display (called when cube state changes)."""
+        ...
+```
+
+**Before A6 (layer violation):**
+```python
+# AnimationManager knew about specific viewer types via duck-typing
+is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+if is_modern_gl:
+    animation = _create_modern_gl_animation(cube, viewer, ...)
+else:
+    animation = _create_animation(cube, viewer, ...)
+```
+
+**After A6 (clean protocol):**
+```python
+# AnimationManager just uses the protocol
+animation: Animation = viewer.create_animation(alg, vs)
+```
+
+**Implementations:**
+| Viewer | Location | Animation Method |
+|--------|----------|------------------|
+| `GCubeViewer` | `viewer/GCubeViewer.py` | Display lists |
+| `ModernGLCubeViewer` | `backends/pyglet2/ModernGLCubeViewer.py` | VBOs + shaders |
+
+#### 3.2.7 ModernGLViewStateManager (`backends/pyglet2/ModernGLRenderer.py`) ✅ B4
+
+> **Added:** 2025-12-02 as part of B4 fix (zoom crash)
+
+This adapter wraps `ModernGLRenderer` and implements the `ViewStateManager` protocol, enabling zoom commands to work in pyglet2's core OpenGL profile.
+
+**Problem:** Zoom commands called `renderer.view.set_projection()` which used legacy `gluPerspective()` - not available in core profile.
+
+**Solution:** Adapter pattern with two classes:
+
+```plantuml
+@startuml B4 Adapter Pattern
+skinparam classAttributeIconSize 0
+
+package "pyglet2 backend" {
+    class ModernGLRenderer {
+        -_projection: MatrixStack
+        -_modelview: MatrixStack
+        +set_perspective(w, h, fov, near, far)
+        +push_matrix()
+        +pop_matrix()
+        +translate(x, y, z)
+        +rotate(angle, x, y, z)
+        +multiply_matrix(matrix)
+    }
+
+    class ModernGLViewStateManager {
+        -_renderer: ModernGLRenderer
+        -_window_width: int
+        -_window_height: int
+        +set_projection(w, h, fov, near, far)
+        +push_matrix()
+        +pop_matrix()
+        +look_at(...)
+        +screen_to_world(x, y)
+    }
+
+    class ModernGLRendererAdapter {
+        -_modern_renderer: ModernGLRenderer
+        -_view: ModernGLViewStateManager
+        +view: ViewStateManager
+    }
+
+    ModernGLRendererAdapter *-- ModernGLViewStateManager : view
+    ModernGLViewStateManager o-- ModernGLRenderer : delegates to
+}
+
+interface ViewStateManager <<protocol>> {
+    +set_projection()
+    +push_matrix()
+    +pop_matrix()
+    ...
+}
+
+ModernGLViewStateManager ..|> ViewStateManager : implements
+@enduml
+```
+
+**Sequence: How Zoom Now Works**
+
+```plantuml
+@startuml B4 Zoom Sequence
+participant "Command._zoom_in()" as Cmd
+participant "PygletAppWindow" as Win
+participant "ModernGLRendererAdapter" as Adapter
+participant "ModernGLViewStateManager" as VSM
+participant "ModernGLRenderer" as Renderer
+
+Cmd -> Win: renderer
+Win --> Adapter: _renderer_adapter
+Cmd -> Adapter: view
+Adapter --> VSM: _view
+Cmd -> VSM: set_projection(w, h, fov, near, far)
+VSM -> Renderer: set_perspective(w, h, fov, near, far)
+note right: Uses shader-based\nprojection matrix\n(no gluPerspective!)
+@enduml
+```
+
+**Code:**
+```python
+class ModernGLViewStateManager:
+    """ViewStateManager adapter that wraps ModernGLRenderer."""
+
+    def __init__(self, renderer: ModernGLRenderer, window_width: int, window_height: int):
+        self._renderer = renderer
+        self._window_width = window_width
+        self._window_height = window_height
+
+    def set_projection(self, width, height, fov_y=50.0, near=0.1, far=100.0):
+        # Delegate to modern renderer (uses shader-based perspective)
+        self._renderer.set_perspective(width, height, fov_y, near, far)
+
+    # All other methods delegate similarly...
+
+
+class ModernGLRendererAdapter:
+    """Renderer protocol adapter for pyglet2."""
+
+    def __init__(self, modern_renderer: ModernGLRenderer, width: int, height: int):
+        self._view = ModernGLViewStateManager(modern_renderer, width, height)
+
+    @property
+    def view(self) -> ModernGLViewStateManager:
+        return self._view
+```
+
+**Wiring in PygletAppWindow:**
+```python
+# In __init__:
+self._modern_renderer = ModernGLRenderer()
+self._renderer_adapter = ModernGLRendererAdapter(self._modern_renderer, width, height)
+
+@property
+def renderer(self) -> ModernGLRendererAdapter:
+    return self._renderer_adapter  # Not the legacy renderer!
+```
+
 ### 3.3 Backend Factory (`factory.py`)
 
 ```python
@@ -806,15 +1002,16 @@ class TkinterShapeRenderer:
 
 ## 5. Implementation Status
 
-> **Last Updated:** 2025-11-28
+> **Last Updated:** 2025-12-02
 
 ### Migration Complete ✅
 
-The core abstraction layer migration is **COMPLETE** (Steps 1-12).
+The core abstraction layer migration is **COMPLETE** (Steps 1-12 + A6).
 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Protocol definitions | ✅ Done | `presentation/gui/protocols/*.py` |
+| **AnimatableViewer protocol** | ✅ Done | **A6:** Clean layer separation for animation |
 | Types and events | ✅ Done | `presentation/gui/types.py` - KeyEvent, MouseEvent, Keys, DisplayList, TextureHandle |
 | Backend registry | ✅ Done | `presentation/gui/BackendRegistry.py` - BackendRegistry with `get_backend()` |
 | GUIBackend class | ✅ Done | `presentation/gui/GUIBackend.py` - Single entry point for backend components |
@@ -829,7 +1026,7 @@ The core abstraction layer migration is **COMPLETE** (Steps 1-12).
 | presentation/viewer/_cell.py | ✅ Done | Uses renderer.display_lists.* and renderer.shapes.* |
 | presentation/viewer/_board.py | ✅ Done | Uses renderer.display_lists.call_lists(), no pyglet imports |
 | presentation/viewer/viewer_g.py | ✅ Done | No pyglet imports (cleaned up) |
-| application/animation/AnimationManager.py | ✅ Done | Uses abstract EventLoop protocol |
+| application/animation/AnimationManager.py | ✅ Done | Uses EventLoop + AnimatableViewer protocols (A6) |
 | AbstractWindow | ✅ Done | AbstractWindow is now a Protocol (not pyglet-dependent) |
 | EventLoop protocol | ✅ Done | `presentation/gui/protocols/EventLoop.py` - run(), stop(), step(), schedule_*(), has_exit, idle(), notify() |
 

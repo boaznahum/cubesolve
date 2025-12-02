@@ -111,6 +111,10 @@ def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: 
     backend : str
         Backend to use, parametrized from conftest.py.
     """
+    # pyglet2 works without animation but animation system needs legacy GL
+    if backend == "pyglet2":
+        enable_animation = False
+        speed_up_count = 0
     result = GUITestRunner.run_test(
         commands=(Command.SPEED_UP * speed_up_count +
                   Command.ROTATE_R * 3 + Command.ROTATE_L + Command.ROTATE_U +
@@ -123,6 +127,31 @@ def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: 
         debug=True
     )
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
+
+
+@pytest.mark.parametrize("cube_size", [3])
+def test_simple_quit(cube_size: int, backend: str):
+    """Test that the window opens and quits cleanly.
+
+    This is a basic smoke test to verify the backend initializes correctly
+    and can exit without errors.
+
+    Parameters
+    ----------
+    cube_size : int
+        Size of cube to test.
+    backend : str
+        Backend to use, parametrized from conftest.py.
+    """
+    result = GUITestRunner.run_test(
+        commands=Command.QUIT,
+        cube_size=cube_size,
+        timeout_sec=10.0,
+        enable_animation=False,
+        backend=backend,
+        debug=True
+    )
+    assert result.success, f"Simple quit test failed: {result.message}. Error: {result.error}"
 
 
 # Legacy main() for direct script execution

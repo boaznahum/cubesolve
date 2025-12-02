@@ -197,3 +197,13 @@ class ConsoleAppWindow(AppWindowBase, AppWindow):
     def _request_redraw(self) -> None:
         """Request redraw (no-op for console mode - draws immediately)."""
         pass
+
+    def get_opengl_info(self) -> str:
+        """Get OpenGL version information (not applicable for console).
+
+        Returns:
+            Empty string (console backend has no OpenGL context).
+        """
+        return ""
+
+    # adjust_brightness() and get_brightness() inherited from AppWindowBase (return None)

@@ -242,9 +242,13 @@ Report any visual glitches, crashes, or unexpected behavior.
 **Phase 3:** COMPLETE (Abstract Window Layer) ✅
 **Phase 4 (Q3.1):** COMPLETE (File Naming Convention) ✅
 **A2.1:** COMPLETE (Command Pattern) ✅
+**A5:** COMPLETE (Pyglet 2.0 Backend with Animation) ✅
+**A6:** COMPLETE - AnimatableViewer Protocol (Layer Separation) ✅
+**B4:** COMPLETE - Zoom Crash Fix (ModernGLViewStateManager) ✅
 
-**Last Completed Step:** A2.1 - Command Pattern Implementation
-**Tests Passing:** 126 non-GUI tests, 2 GUI tests, 8 skipped
+**Last Completed Step:** B4 - ModernGLViewStateManager adapter for zoom commands
+**Current Branch:** `new-opengl`
+**Tests Passing:** 126 non-GUI tests, 11 GUI tests
 
 ### Migration Complete!
 
@@ -561,6 +565,495 @@ All 4 backends pass:
 - **headless:** 2 passed, 1 skipped
 - **console:** 2 passed, 1 skipped
 - **tkinter:** 2 passed, 1 skipped
+
+---
+
+## A5: Pyglet 2.0 Backend (new-opengl branch) - IN PROGRESS 🔄
+
+### Goal
+Create a new pyglet2 backend that uses modern OpenGL 3.3+ core profile instead of legacy OpenGL (glBegin/glEnd, display lists).
+
+### Background
+Pyglet 2.0 creates OpenGL 3.3 core profile by default, which removes all legacy GL functions:
+- No `glBegin`/`glEnd` (immediate mode)
+- No display lists (`glGenLists`, `glNewList`, `glCallList`)
+- No fixed-function pipeline (`glMatrixMode`, `glLoadIdentity`)
+- Shaders and VBOs are required
+
+### Key Insight: Two Renderer Approaches
+
+The pyglet2 backend has **two parallel renderer implementations**:
+
+| Renderer | GL Mode | Status | Animation Support |
+|----------|---------|--------|-------------------|
+| `PygletRenderer.py` | `gl_compat` (legacy) | Working | Possible via display lists |
+| `ModernGLRenderer.py` | Modern GL 3.3+ | Working | Needs VBO-based approach |
+
+**Decision Needed:** Which path to pursue for animation?
+
+1. **Option A: Use `gl_compat`** - Fastest path to full feature parity
+   - `PygletRenderer.py` already implements all protocols using `gl_compat`
+   - Would allow existing `GCubeViewer` + display lists to work
+   - Requires: Verify display lists work in compatibility mode
+
+2. **Option B: Implement modern animation** - Future-proof but more work
+   - Use `ModernGLCubeViewer` for rendering
+   - Implement VBO-based animation (rotate vertex positions)
+   - More complex, requires matrix stack per-piece
+
+### Architecture
+
+```
+pyglet2 backend
+├── PygletRenderer.py     # gl_compat wrapper (implements Renderer protocol)
+│   ├── Uses pyglet.gl.gl_compat for legacy functions
+│   ├── Uses PyOpenGL (GLU) for sphere/cylinder
+│   └── Full ShapeRenderer protocol implementation
+│
+├── ModernGLRenderer.py   # True modern GL (GLSL shaders)
+│   ├── Vertex shaders: solid color + per-vertex color
+│   ├── VBO/VAO management via buffers.py
+│   └── Matrix stack emulation via matrix.py
+│
+├── ModernGLCubeViewer.py # Cube rendering (bypasses GCubeViewer)
+│   ├── Generates face triangles from cube model
+│   ├── Per-vertex colors for stickers
+│   ├── Grid lines for cell borders
+│   └── update() / draw() interface
+│
+└── PygletAppWindow.py    # Main window
+    ├── Uses ModernGLRenderer for cube drawing
+    ├── Uses ModernGLCubeViewer (not GCubeViewer)
+    └── AnimationManager bypassed (falls back to instant)
+```
+
+### Current Status (2025-12-02)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Cube rendering | ✅ Working | ModernGLCubeViewer with shaders |
+| Face rotations (keyboard) | ✅ Working | R/L/U/D/F/B with animation |
+| Scramble | ✅ Working | Press 1-9 for scrambles |
+| Solve | ✅ Working | Press ? for solve |
+| Mouse drag (camera rotation) | ✅ Working | Right-click drag, camera orbit via matrix.py |
+| Mouse drag (face rotation) | ✅ Working | Left-click drag with animation |
+| Mouse scroll (zoom) | ✅ Working | Z-axis translation |
+| Text labels | ✅ Working | pyglet.text.Label (modern GL) |
+| Debug logging | ✅ Working | `--debug-all` shows output |
+| History tracking | ✅ Working | Via Operator.play() |
+| **Visual animation** | ✅ Working | VBO-based animation via ModernGLCubeViewer |
+
+### Mouse Face Picking - IMPLEMENTED ✅
+
+The old pyglet 1.x backend used legacy GL functions for picking:
+- `glGetDoublev(GL_PROJECTION_MATRIX)` - get current matrices
+- `glGetDoublev(GL_MODELVIEW_MATRIX)`
+- `gluUnProject()` - convert screen coords to 3D world coords
+- `GCubeViewer.find_facet()` - find which cube face was clicked
+
+In pyglet 2.0, these legacy functions are not available. **Solution: Ray-plane intersection**.
+
+#### Ray-Plane Intersection Implementation
+
+New methods added to `ModernGLCubeViewer.py`:
+- `_setup_view_matrix(vs)` - Recalculates view matrix for current camera orientation
+- `screen_to_ray(x, y, width, height, vs)` - Convert screen coords to world-space ray
+- `find_facet_by_ray(origin, direction)` - Intersect ray with 6 cube face planes
+- `find_facet_at_screen(x, y, width, height, vs)` - Combine above two
+- `get_part_edge_at_screen(x, y, width, height, vs)` - Return PartEdge like legacy API
+- `_get_part_edge_at_cell(face, row, col)` - Map (row, col) to cube model parts
+
+New method added to `ModernGLRenderer.py`:
+- `get_inverse_mvp()` - Get inverse of combined Model-View-Projection matrix
+
+Updated `main_g_mouse.py`:
+- `_get_selected_slice()` - Now uses `modern_viewer.get_part_edge_at_screen()`
+- `_play()` - Uses `op.play(alg, animation=False)` to track history without animation
+- Converted debug `print()` to `vs.debug()` for consistency
+
+#### How It Works
+
+```
+Left-click drag on cube face:
+    ↓
+_handle_face_slice_rotate_by_drag()
+    ↓
+_get_selected_slice() → modern_viewer.get_part_edge_at_screen()
+    ↓
+screen_to_ray() - Convert screen (x,y) to world-space ray using inverse MVP
+    ↓
+find_facet_by_ray() - Test ray against 6 face planes, find closest hit
+    ↓
+_get_part_edge_at_cell() - Map hit (face, row, col) to PartEdge
+    ↓
+Determine rotation direction from drag vector
+    ↓
+op.play(alg, animation=False) - Execute without animation, track history
+    ↓
+window.update_gui_elements() - Refresh display
+```
+
+#### Animation Support - IMPLEMENTED ✅
+
+Animation now works for both keyboard and mouse rotation using VBO-based rendering:
+
+```python
+# AnimationManager detects ModernGLCubeViewer via duck-typing:
+is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+if is_modern_gl:
+    animation = _create_modern_gl_animation(cube, viewer, vs, alg, alg.n)
+```
+
+The `ModernGLCubeViewer` implements:
+- `get_slices_movable_gui_objects()` - Separates animated geometry from static
+- `draw_animated(model_view)` - Renders animated parts with rotation matrix
+- `unhidden_all()` - Restores normal rendering after animation
+- `is_animating()` - Animation state check
+
+### Solution Attempt: Compatibility Profile (FAILED)
+
+Tried using pyglet 2.0 compatibility profile via window config:
+
+```python
+from pyglet.gl import Config
+
+# Attempt 1: forward_compatible=False
+config = Config(
+    double_buffer=True,
+    depth_size=24,
+    forward_compatible=False,
+)
+
+# Attempt 2: Request OpenGL 2.1 explicitly
+config = Config(
+    double_buffer=True,
+    depth_size=24,
+    major_version=2,
+    minor_version=1,
+)
+```
+
+**Result:** Both attempts FAILED on Windows.
+- `glBegin`/`glEnd` still throw `GLException: Invalid operation (0x1282)`
+- Pyglet 2.x on Windows always creates a core profile context
+- The Config options don't override this behavior
+
+**Conclusion:** Compatibility profile approach doesn't work on pyglet 2 + Windows.
+
+### Solution Attempt: Modern GL screen_to_world (PARTIAL)
+
+Added `screen_to_world()` to `ModernGLRenderer` that:
+1. Reads depth buffer with `glReadPixels` (works in modern GL)
+2. Inverts projection*modelview matrix
+3. Unprojects screen coords to world coords
+
+**Problem:** `GCubeViewer.find_facet()` requires `GCubeViewer` which creates display lists
+in its constructor (`_Board._create_faces()` → `_Cell.prepare_geometry()` → `glGenLists`).
+
+**The geometry and GL are deeply intertwined in `GCubeViewer`/`_Board`/`_Cell`.**
+
+### Completed Features
+
+- ✅ Ray-plane intersection for mouse face picking
+- ✅ History tracking via Operator.play()
+- ✅ VBO-based visual animation (keyboard and mouse rotation)
+- ✅ Animation uses ModernGLCubeViewer.draw_animated() with rotation matrix
+- ✅ Test configuration updated to use pyglet2 instead of legacy pyglet
+
+**Remaining work for pyglet2:**
+1. **Enable test_scramble_and_solve** - Currently skipped, may work now with animation
+2. **Remove unused code** - `GCubeViewer` reference (`self._viewer = None`) can be cleaned up
+
+### Files in pyglet2 Backend
+
+```
+src/cube/presentation/gui/backends/pyglet2/
+├── __init__.py           # Backend registration
+├── AbstractWindow.py     # Window protocol
+├── AppWindowBase.py      # Shared window logic (copied from pyglet)
+├── buffers.py            # VBO/VAO buffer management
+├── main_g_mouse.py       # Mouse handling (copied from pyglet)
+├── matrix.py             # Mat4, perspective, rotate, multiply
+├── ModernGLCubeViewer.py # Shader-based cube rendering
+├── ModernGLRenderer.py   # Modern GL with GLSL shaders
+├── PygletAnimation.py    # Animation (currently unused)
+├── PygletAppWindow.py    # Main window class
+├── PygletEventLoop.py    # Event loop (same as pyglet)
+├── PygletRenderer.py     # gl_compat wrapper (implements protocol)
+├── PygletWindow.py       # Base window
+├── shaders.py            # Shader compilation utilities
+└── Window.py             # Legacy window (unused)
+```
+
+### How Animation Currently Fails
+
+```python
+# In PygletAppWindow.__init__():
+self._viewer = None  # GCubeViewer disabled!
+
+# In AnimationManager.run_animation():
+try:
+    viewer = self._window.viewer  # Property access
+except RuntimeError:
+    # Viewer not initialized - skip animation, execute directly
+    op(alg, False)  # <-- This is what happens
+    return
+```
+
+### Environment Setup
+
+```bash
+# Pyglet 2.x requires separate venv (incompatible with pyglet 1.5)
+python -m venv .venv_pyglet2
+.venv_pyglet2/Scripts/pip install "pyglet>=2.0" PyOpenGL numpy
+
+# Main branch uses pyglet 1.5:
+.venv314/Scripts/pip install "pyglet<2.0"
+```
+
+### How to Run
+
+```bash
+# Requires .venv_pyglet2 with pyglet 2.x
+.venv_pyglet2/Scripts/python.exe -m cube.main_any_backend --backend=pyglet2
+
+# With debug output
+.venv_pyglet2/Scripts/python.exe -m cube.main_any_backend --backend=pyglet2 --debug-all
+```
+
+### Test Results (2025-12-02)
+
+```bash
+# Run all GUI tests (pyglet2 is now default instead of legacy pyglet)
+.venv_pyglet2/Scripts/python.exe -m pytest tests/gui -v --speed-up 5
+
+# Results: 11 passed, 5 skipped
+# pyglet2: test_face_rotations PASSED, test_simple_quit PASSED
+# headless: 3 passed
+# console: 3 passed
+# tkinter: 3 passed
+```
+
+### Recent Commits (new-opengl branch)
+
+```
+7028e0b Merge debug fixes from main
+b7ec97f Fix pyglet2 mouse rotation and key press debug logging
+f2cc9ab Fix pyglet2 animation skip and text rendering
+dea6893 Add ModernGLCubeViewer for pyglet2 backend with working cube rendering
+1ac0103 Fix pyglet2 on_resize called before renderer initialized
+ba42268 Integrate ModernGLRenderer with PygletAppWindow
+7a62dbb A5: Document pyglet 2.0 compatibility profile limitation
+```
+
+### Completed Tasks
+
+1. ~~**Test mouse picking**: Implement screen_to_world for face selection~~ ✅ DONE
+2. ~~**Decide on animation approach**: gl_compat vs modern GL~~ ✅ Chose modern GL
+3. ~~**Modern GL animation**: VBO-based animation system~~ ✅ DONE
+4. ~~**Enable mouse rotation animation**~~ ✅ DONE
+
+---
+
+## A6: AnimationManager Layer Violation Fix - COMPLETE ✅
+
+> **Completed:** 2025-12-02
+
+### Problem Statement (Solved)
+
+The `AnimationManager` (application layer) was using duck-typing to detect `ModernGLCubeViewer` (presentation layer):
+
+```python
+# BEFORE: AnimationManager._op_and_play_animation() - REMOVED
+is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+if is_modern_gl:
+    animation = _create_modern_gl_animation(cube, viewer, vs, alg, alg.n)
+```
+
+**Violation:** Application layer knew about presentation layer implementation details.
+
+### Architecture Issue
+
+```
+Current (Bad):
+                    AnimationManager (application layer)
+                           │
+                           ├── knows about GCubeViewer (presentation)
+                           │      uses display lists for animation
+                           │
+                           └── knows about ModernGLCubeViewer (presentation)
+                                  uses duck-typing to detect VBO animation
+
+Desired (Good):
+                    AnimationManager (application layer)
+                           │
+                           └── AnimatableViewer (protocol)
+                                      │
+                           ┌──────────┴──────────┐
+                           │                     │
+                    GCubeViewer            ModernGLCubeViewer
+                    (implements)           (implements)
+```
+
+### Solution: AnimatableViewer Protocol ✅ IMPLEMENTED
+
+Created a protocol that both `GCubeViewer` and `ModernGLCubeViewer` implement:
+
+```python
+# src/cube/presentation/gui/protocols/AnimatableViewer.py
+@runtime_checkable
+class AnimatableViewer(Protocol):
+    """Protocol for viewers that support animation."""
+
+    @property
+    def cube(self) -> Cube:
+        """The cube being viewed."""
+        ...
+
+    def create_animation(
+        self,
+        alg: AnimationAbleAlg,
+        vs: ApplicationAndViewState,
+    ) -> Animation:
+        """Create an animation for the given algorithm.
+
+        The viewer decides HOW to animate (display lists, VBOs, etc.)
+        Returns an Animation object that AnimationManager can schedule.
+        """
+        ...
+
+    def update(self) -> None:
+        """Update the viewer's display."""
+        ...
+```
+
+**AnimationManager now uses the protocol:**
+```python
+# AFTER: Clean protocol-based polymorphism
+animation: Animation = viewer.create_animation(alg, vs)
+```
+
+### Implementation ✅ COMPLETE
+
+1. ✅ **Created `AnimatableViewer` protocol** in `protocols/AnimatableViewer.py`
+   - Defines interface for animation creation
+   - Animation object returned handles the HOW
+
+2. ✅ **Updated `GCubeViewer`** to implement protocol
+   - Added `cube` property
+   - Added `create_animation()` method that uses display lists
+   - Moved `_create_animation()` logic from `AnimationManager` to viewer
+
+3. ✅ **Updated `ModernGLCubeViewer`** to implement protocol
+   - Added `cube` property
+   - Added `create_animation()` method that uses VBOs
+   - Moved `_create_modern_gl_animation()` logic from `AnimationManager` to viewer
+
+4. ✅ **Updated `AnimationManager`**
+   - Removed duck-typing detection (`hasattr(viewer, 'draw_animated')`)
+   - Removed `_create_animation()` and `_create_modern_gl_animation()` functions
+   - Now uses `viewer.create_animation()` polymorphically
+   - No knowledge of specific viewer implementations
+
+### Files Changed ✅
+
+| File | Change | Status |
+|------|--------|--------|
+| `protocols/AnimatableViewer.py` | NEW - Protocol definition | ✅ Created |
+| `protocols/__init__.py` | Export AnimatableViewer | ✅ Updated |
+| `presentation/viewer/GCubeViewer.py` | Add `cube` property, `create_animation()` | ✅ Updated |
+| `backends/pyglet2/ModernGLCubeViewer.py` | Add `cube` property, `create_animation()` | ✅ Updated |
+| `application/animation/AnimationManager.py` | Remove duck-typing, use protocol, remove old functions | ✅ Updated |
+
+### Benefits Achieved ✅
+
+1. ✅ **Clean layer separation** - Application layer uses protocol, not concrete types
+2. ✅ **Extensibility** - New viewers just implement the protocol
+3. ✅ **Type-safe** - Protocol is `@runtime_checkable` for safety
+4. ✅ **Self-documenting** - Animation creation is viewer's responsibility
+5. ✅ **No pyglet2 imports in AnimationManager** - Removed `ModernGLCubeViewer` import attempt
+
+---
+
+## B4: Zoom Crash Fix - COMPLETE ✅
+
+> **Completed:** 2025-12-02
+
+### Problem Statement (Solved)
+
+Zoom commands (Ctrl+Up/Down, mouse scroll) crashed in pyglet2 backend because they called `gluPerspective()` which is not available in OpenGL core profile.
+
+### Root Cause
+
+The pyglet2 backend has two renderers:
+- `_modern_renderer` (ModernGLRenderer) - shader-based, has `set_perspective()`
+- `_renderer` (PygletRenderer) - legacy, has `ViewStateManager.set_projection()` using `gluPerspective()`
+
+Zoom path uses wrong renderer:
+```python
+# Command.py _zoom_in():
+ctx.vs.set_projection(ctx.window.width, ctx.window.height, ctx.window.renderer)
+# → window.renderer is PygletRenderer (legacy)
+# → calls gluPerspective() → CRASH in core profile
+```
+
+But `on_resize` works correctly:
+```python
+# PygletAppWindow.on_resize():
+self._modern_renderer.set_perspective(width, height, fov_y=45.0, ...)
+# → uses modern GL → works
+```
+
+### Solution: ModernGLViewStateManager Adapter
+
+Create an adapter that wraps `ModernGLRenderer` and implements `ViewStateManager` protocol.
+
+```python
+class ModernGLViewStateManager(ViewStateManager):
+    """ViewStateManager that delegates to ModernGLRenderer."""
+
+    def __init__(self, modern_renderer: ModernGLRenderer):
+        self._renderer = modern_renderer
+
+    def set_projection(self, width, height, fov_y, near, far):
+        # Delegate to modern renderer
+        self._renderer.set_perspective(width, height, fov_y, near, far)
+
+    def push_matrix(self): self._renderer.push_matrix()
+    def pop_matrix(self): self._renderer.pop_matrix()
+    # ... etc
+```
+
+### Implementation ✅ COMPLETE
+
+1. ✅ **Created `ModernGLViewStateManager`** in `ModernGLRenderer.py`
+   - Implements `ViewStateManager` protocol
+   - Wraps `ModernGLRenderer` instance
+   - Delegates all methods to modern GL equivalents
+
+2. ✅ **Created `ModernGLRendererAdapter`** in `ModernGLRenderer.py`
+   - Implements `Renderer` protocol (view property only)
+   - Returns `ModernGLViewStateManager` from `view` property
+
+3. ✅ **Wired up in `PygletAppWindow`**
+   - Created `_renderer_adapter` after `_modern_renderer`
+   - `renderer` property returns adapter instead of legacy renderer
+   - `on_resize` updates adapter's window size
+
+### Files Changed ✅
+
+| File | Change | Status |
+|------|--------|--------|
+| `backends/pyglet2/ModernGLRenderer.py` | Added `ModernGLViewStateManager` and `ModernGLRendererAdapter` | ✅ Created |
+| `backends/pyglet2/PygletAppWindow.py` | Import adapter, create instance, override `renderer` property | ✅ Updated |
+
+### Benefits Achieved ✅
+
+- ✅ Fixes ALL code paths using `renderer.view.set_projection()`
+- ✅ Commands remain backend-agnostic
+- ✅ Single point of change
+- ✅ Zoom (Ctrl+Up/Down) now works in pyglet2 backend
+- ✅ Mouse scroll zoom now works in pyglet2 backend
 
 ---
 

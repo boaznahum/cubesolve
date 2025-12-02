@@ -153,3 +153,13 @@ class HeadlessAppWindow(AppWindowBase, AppWindow):
             if self._window.process_next_key_event():
                 count += 1
         return count
+
+    def get_opengl_info(self) -> str:
+        """Get OpenGL version information (not applicable for headless).
+
+        Returns:
+            Empty string (headless backend has no OpenGL context).
+        """
+        return ""
+
+    # adjust_brightness() and get_brightness() inherited from AppWindowBase (return None)

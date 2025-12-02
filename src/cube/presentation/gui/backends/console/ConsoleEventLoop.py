@@ -75,8 +75,12 @@ class ConsoleEventLoop(EventLoop):
             if sys.stdin.isatty():
                 try:
                     import keyboard
-                    event = keyboard.read_event(suppress=True)
-                    return event.name
+                    # Loop until we get a KEY_DOWN event (ignore KEY_UP)
+                    while True:
+                        event = keyboard.read_event(suppress=True)
+                        if event.event_type == keyboard.KEY_DOWN:
+                            return event.name
+                        # KEY_UP events are ignored, continue waiting
                 except ImportError:
                     pass
 

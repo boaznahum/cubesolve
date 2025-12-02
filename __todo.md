@@ -19,6 +19,19 @@
 
 ## Bugs
 
+- ❌ **B5.** Missing debug output when running with `--debug-all`
+  - **Status:** New (2025-12-02)
+  - **Symptom:** When running with `debug=True` or `--debug-all`, many expected debug messages are missing:
+    - Algorithm execution (e.g., R, L, U face rotations)
+    - Command execution (which command was triggered by which key)
+    - Keyboard input events (KEYBOAD_INPUT_DEBUG flag exists but is never used)
+  - **Expected:** Debug mode should show full trace of user actions and cube operations
+  - **Related:** `config.KEYBOAD_INPUT_DEBUG` is defined but never checked anywhere
+  - **Files to investigate:**
+    - `src/cube/application/config.py` - KEYBOAD_INPUT_DEBUG flag
+    - `src/cube/presentation/gui/Command.py` - command execution
+    - `src/cube/application/commands/Operator.py` - algorithm execution
+
 - ❌ **B1.** GUI Animation Solver Bug (Lazy Cache Initialization)
   - **Status:** Investigating (2025-11-28)
   - **Skipped Test:** `test_multiple_scrambles` in `tests/gui/test_gui.py` (re-enable when fixed)
@@ -45,6 +58,7 @@
     - `src/cube/domain/solver/beginner/L3Cross.py` line 178 - Failing assertion
   - **Workaround:** Press `+` key before scramble (or use `--speed-up 5` in tests)
 
+
 ## GUI & Testing
 
 - ❌ **G2.** Investigate pyopengltk as alternative to pure Canvas rendering for tkinter backend
@@ -53,12 +67,25 @@
   - Adds external dependency (`pip install pyopengltk`)
 
 
+- ❌ **G5.** Comprehensive Command Testing Plan
+  - **Goal:** Create automated tests for ALL keyboard commands and document mouse commands for manual testing
+  - **Phase 1: Automated keyboard command tests**
+    - Each command can be tested by checking state changes after `inject_command()`
+    - Create `tests/gui/test_all_commands.py` with comprehensive coverage
+    - See `docs/design/command_test_mapping.md` for command→state mapping
+  - **Phase 2: Manual mouse testing documentation**
+    - Mouse commands require visual verification (drag, click, scroll)
+    - Document test procedures in `docs/design/mouse_testing.md`
+  - **Added:** 2025-12-02
+
+
 ## Architecture
 
 - ❌ **A4.** PygletAppWindow cannot inherit from AppWindow protocol due to metaclass conflict
   - `pyglet.window.Window` has its own metaclass that conflicts with Protocol
   - Tried `TYPE_CHECKING` trick - didn't work in PyCharm
   - Options: composition pattern, wrapper class, or accept docstring-only documentation
+
 
 ## Documentation
 
@@ -92,21 +119,49 @@
     - Remove them entirely, or
     - Migrate to use `vs.debug()` system and remove the guards
 
-- ❌ **A5.** Pyglet 2.0 vs 1.5 - OpenGL compatibility decision
-  - **Issue:** Codebase uses deprecated OpenGL 1.x functions not supported by pyglet 2.0
-  - **Current state:** Staying on pyglet 1.5.x (works but missing 2.x improvements)
-  - **Options:**
-    1. **Stay on Pyglet 1.5** ⭐ (current) - Works, uses PyOpenGL for GLU
-    2. **Debug Pyglet 2.0** - Try PyOpenGL with pyglet's context (uncertain)
-    3. **Modern OpenGL refactor** - Migrate display lists → VBOs/VAOs, immediate mode → shaders (weeks/months)
-  - **Decision needed:** When/if to invest in modern OpenGL migration
-
----
-# New entries below - Claude will reformat and move above this line
+- ❌ **Q10.** Relocate `debug_dump()` from `main_any_backend.py` to a better location
+  - **Status:** New (2025-12-02)
+  - **Problem:** `debug_dump()` is in `main_any_backend.py` which is not called by tests or other entry points
+  - **Goal:** Debug dump should be available to any code that creates an application (tests, scripts, etc.)
+  - **Needs:** Architecture review to determine proper location (maybe `AbstractApp` or `ApplicationAndViewState`)
 
 ---
 
 ## Done Tasks
+
+### Bugs
+
+- ✅ **B4.** Mouse zoom (scroll wheel) and Ctrl+Up/Down zoom crash in pyglet2 backend
+  - **Fixed:** 2025-12-02
+  - **Root Cause:** Zoom commands called `renderer.view.set_projection()` which used legacy `gluPerspective()` not available in OpenGL core profile
+  - **Solution:** Created `ModernGLViewStateManager` and `ModernGLRendererAdapter` to provide modern GL compatible `set_projection()`
+  - **Files:** `backends/pyglet2/ModernGLRenderer.py`, `backends/pyglet2/PygletAppWindow.py`
+
+### GUI & Testing
+
+- ✅ **G3.** Add keyboard controls for lighting adjustment (pyglet2 backend)
+  - **Completed:** 2025-12-02
+  - **Keys:** `Ctrl+[` / `Ctrl+]` for brightness down/up
+  - **Features:**
+    - Adjusts ambient light from 10% to 100%
+    - Persisted in `ApplicationAndViewState.brightness`
+    - Displayed in status bar as "Light:XX%"
+    - Works during animation
+  - **Implementation:**
+    - Added `adjust_brightness()` / `get_brightness()` to `AppWindow` protocol
+    - Default implementation in `AppWindowBase` (returns None for unsupported backends)
+    - Added `BRIGHTNESS_UP` / `BRIGHTNESS_DOWN` commands
+  - **Files:** `ModernGLRenderer.py`, `Command.py`, `key_bindings.py`, `AppWindow.py`, `state.py`
+
+- ✅ **G4.** F10/F11/F12 shadow modes don't work in pyglet2 backend
+  - **Fixed:** 2025-12-02
+  - **Root Cause:** `ModernGLCubeViewer._rebuild_geometry()` only drew 6 main faces, didn't check shadow mode or create offset duplicates
+  - **Solution:**
+    - Added `vs` parameter to `ModernGLCubeViewer.__init__()`
+    - Refactored geometry generation into `_generate_face_geometry()` helper
+    - When shadow mode enabled for L/D/B faces, generates duplicate face at offset position
+    - Shadow offsets match legacy `_board.py`: L=-75 (x), D=-50 (y), B=-200 (z)
+  - **Files:** `backends/pyglet2/ModernGLCubeViewer.py`, `backends/pyglet2/PygletAppWindow.py`
 
 ### Architecture
 
@@ -148,6 +203,34 @@
     - This is cohesive: factory creates window and wires its animation system
     - Alternatives add boilerplate without practical benefit
     - A1 intentionally consolidated this wiring into GUIBackend - that was correct
+
+- ✅ **A5.** Pyglet 2.0 Backend with Modern OpenGL
+  - **Completed:** 2025-12-02
+  - **Solution:** Created `pyglet2` backend with VBO-based rendering and animation
+  - **Key components:**
+    - `ModernGLCubeViewer` - Shader-based cube rendering with animation support
+    - `ModernGLRenderer` - Modern GL with GLSL shaders and matrix stack emulation
+    - Ray-plane intersection for mouse face picking (replaces gluUnProject)
+    - VBO-based animation via `draw_animated()` method
+  - **Tests:** 126 non-GUI passed, 11 GUI passed (2 pyglet2, 9 other backends)
+  - **Files:** `src/cube/presentation/gui/backends/pyglet2/`
+  - **Docs:** `docs/design/migration_state.md` (A5 section)
+
+- ✅ **A6.** AnimationManager layer violation (application layer knowing presentation details)
+  - **Completed:** 2025-12-02
+  - **Problem:** `AnimationManager` (application layer) used duck-typing to detect viewer type:
+    ```python
+    is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+    ```
+  - **Solution:** Created `AnimatableViewer` protocol in presentation layer
+    - Viewers implement `create_animation()` method polymorphically
+    - AnimationManager uses protocol, not concrete types
+    - Removed ~270 lines of `_create_animation()` and `_create_modern_gl_animation()` functions
+  - **Files:**
+    - `protocols/AnimatableViewer.py` (NEW)
+    - `viewer/GCubeViewer.py` - inherits from AnimatableViewer, adds `create_animation()`
+    - `backends/pyglet2/ModernGLCubeViewer.py` - inherits from AnimatableViewer, adds `create_animation()`
+    - `application/animation/AnimationManager.py` - now uses `viewer.create_animation()` polymorphically
 
 ### Bugs
 

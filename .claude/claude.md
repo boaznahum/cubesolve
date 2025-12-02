@@ -94,6 +94,25 @@ grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "presen
 
 ---
 
+## User Attention Alert
+
+**IMPORTANT:** When you need the user's attention, run the beep script:
+
+```bash
+.venv_pyglet2/Scripts/python.exe beep.py
+```
+
+**Use this when:**
+- Asking a question that requires user input
+- Requesting permission (e.g., before committing)
+- Task is complete and awaiting review
+- Encountered an error or blocker that needs user decision
+- Any time you would otherwise wait for user response
+
+The script uses Windows Text-to-Speech to say "Hey Friend! Claude needs your attention!" through the user's speakers.
+
+---
+
 ## Git Commit Policy
 
 **IMPORTANT**: Never commit changes without explicit user approval.
@@ -244,6 +263,41 @@ def process_commands(
 **Exceptions:**
 - Lambda functions in callbacks (e.g., `lambda w, h, t: Window(w, h, t)`)
 - Simple one-liners where types are obvious from context
+
+### No Duck Typing
+
+**PROHIBITED**: Do not use duck typing with `getattr()` or `hasattr()` to check for optional features.
+
+Instead, add optional methods to the appropriate protocol with clear return types that indicate support:
+- Return `None` if feature not supported
+- Return the actual value if feature is supported
+
+**Bad (duck typing):**
+```python
+# DON'T DO THIS
+modern_renderer = getattr(ctx.window, 'modern_renderer', None)
+if modern_renderer is not None:
+    modern_renderer.adjust_ambient(0.05)
+```
+
+**Good (protocol method):**
+```python
+# DO THIS - add method to AppWindow protocol
+def adjust_brightness(self, delta: float) -> float | None:
+    """Returns new brightness or None if not supported."""
+    ...
+
+# In command handler:
+new_level = ctx.window.adjust_brightness(0.05)
+if new_level is not None:
+    # Feature supported, use value
+    ...
+```
+
+This ensures:
+- Type safety and IDE autocomplete
+- Clear API contracts in protocols
+- No runtime attribute guessing
 
 ---
 

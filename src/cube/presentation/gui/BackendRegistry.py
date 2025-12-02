@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
 # Available backends
-BACKENDS = ("pyglet", "headless", "console", "tkinter", "web")
+BACKENDS = ("pyglet", "pyglet2", "headless", "console", "tkinter", "web")
 DEFAULT_BACKEND = "pyglet"
 
 
@@ -28,7 +28,7 @@ class BackendRegistry:
         """Get a GUIBackendFactory for the specified backend.
 
         Args:
-            name: Backend name ('pyglet', 'headless', 'console', 'tkinter'),
+            name: Backend name ('pyglet', 'pyglet2', 'headless', 'console', 'tkinter', 'web'),
                   or None for default ('pyglet')
 
         Returns:
@@ -41,6 +41,9 @@ class BackendRegistry:
 
         if backend_name == "pyglet":
             from cube.presentation.gui.backends.pyglet import create_backend
+            return create_backend()
+        elif backend_name == "pyglet2":
+            from cube.presentation.gui.backends.pyglet2 import create_backend
             return create_backend()
         elif backend_name == "headless":
             from cube.presentation.gui.backends.headless import create_backend

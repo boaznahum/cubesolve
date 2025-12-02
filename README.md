@@ -100,6 +100,13 @@ According to: [Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced) and [
 
 https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a18f-719876cb7b59.mp4
 
+### Lighting (pyglet2 backend only)
+    Ctrl+[ - Decrease ambient light brightness
+    Ctrl+] - Increase ambient light brightness
+
+    Adjusts the overall lighting level from 10% to 100%. The current brightness is displayed
+    in the status bar as "Light:XX%". Works during animation.
+
 ### Undo/Reset
 
     , (COMMA) - Undo last move (user or solver)
@@ -244,6 +251,8 @@ python -m cube.main_any_backend -c "SPEED_UP+SPEED_UP+SCRAMBLE_1+SOLVE_ALL+QUIT"
 | **Shadow** | F10 | - | `SHADOW_TOGGLE_L` | Toggle left face shadow |
 | | F11 | - | `SHADOW_TOGGLE_D` | Toggle down face shadow |
 | | F12 | - | `SHADOW_TOGGLE_B` | Toggle back face shadow |
+| **Lighting** | [ | Ctrl | `BRIGHTNESS_DOWN` | Decrease brightness (pyglet2 only) |
+| | ] | Ctrl | `BRIGHTNESS_UP` | Increase brightness (pyglet2 only) |
 | **Cube Size** | = | - | `SIZE_INC` | Increase cube size |
 | | - | - | `SIZE_DEC` | Decrease cube size |
 | **Slice Selection** | [ | - | `SLICE_START_INC` | Increase slice start index |

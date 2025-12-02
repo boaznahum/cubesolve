@@ -474,6 +474,24 @@ def _scramble_f9(ctx: CommandContext) -> None:
     ctx.app.scramble(config.SCRAMBLE_KEY_FOR_F9, None, animation=False, verbose=True)
 
 
+def _brightness_up(ctx: CommandContext) -> CommandResult:
+    """Increase ambient light brightness (pyglet2 backend only)."""
+    new_level = ctx.window.adjust_brightness(0.05)
+    if new_level is not None:
+        ctx.vs.debug(False, f"Brightness: {new_level:.2f}")
+    # Return default (no_gui_update=False) so status text updates with new value
+    return CommandResult()
+
+
+def _brightness_down(ctx: CommandContext) -> CommandResult:
+    """Decrease ambient light brightness (pyglet2 backend only)."""
+    new_level = ctx.window.adjust_brightness(-0.05)
+    if new_level is not None:
+        ctx.vs.debug(False, f"Brightness: {new_level:.2f}")
+    # Return default (no_gui_update=False) so status text updates with new value
+    return CommandResult()
+
+
 # =============================================================================
 # COMMAND ENUM
 # =============================================================================
@@ -579,6 +597,10 @@ class Command(Enum):
     PAUSE_TOGGLE = (_simple, _pause_toggle)
     SINGLE_STEP_TOGGLE = (_simple, _single_step_toggle)
     STOP_ANIMATION = (_simple, _stop_animation)
+
+    # Lighting Control (pyglet2 backend only)
+    BRIGHTNESS_UP = (_simple, _brightness_up)
+    BRIGHTNESS_DOWN = (_simple, _brightness_down)
 
     # Shadow Toggles
     SHADOW_TOGGLE_L = (_shadow_toggle, FaceName.L)

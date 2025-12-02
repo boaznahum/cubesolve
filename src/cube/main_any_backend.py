@@ -2,20 +2,24 @@
 Unified entry point for the Cube Solver application.
 
 This module provides a single entry point that can run with any registered
-GUI backend: pyglet, tkinter, console, or headless.
+GUI backend: pyglet, pyglet2, tkinter, console, headless, or web.
 
 Usage:
     python -m cube.main_any_backend                    # Default (pyglet)
+    python -m cube.main_any_backend --backend=pyglet2  # Pyglet 2.0 backend
     python -m cube.main_any_backend --backend=tkinter  # Tkinter backend
     python -m cube.main_any_backend --backend=console  # Console mode
     python -m cube.main_any_backend --backend=headless # Headless testing
+    python -m cube.main_any_backend --backend=web      # Web browser backend
     python -m cube.main_any_backend --commands="SCRAMBLE_1,SOLVE_ALL,QUIT"
 
 Available backends:
-    - pyglet:   OpenGL-based 3D rendering (requires pyglet)
+    - pyglet:   OpenGL-based 3D rendering (requires pyglet 1.5)
+    - pyglet2:  Modern OpenGL with shaders (requires pyglet 2.0)
     - tkinter:  2D canvas-based rendering (built-in)
     - console:  Text-based console output (built-in)
     - headless: No output, for testing (built-in)
+    - web:      WebSocket + browser rendering (requires aiohttp)
 """
 
 import argparse
@@ -71,7 +75,7 @@ def create_app_window(
 
     Args:
         app: Application instance with cube, operator, solver.
-        backend_name: Backend to use ("pyglet", "tkinter", "console", "headless").
+        backend_name: Backend to use ("pyglet", "pyglet2", "tkinter", "console", "headless", "web").
         width: Window width in pixels (ignored for console/headless).
         height: Window height in pixels (ignored for console/headless).
         title: Window title.
@@ -112,7 +116,7 @@ def run_with_backend(
     manipulating sys.argv.
 
     Args:
-        backend_name: Backend to use ("pyglet", "tkinter", "console", "headless").
+        backend_name: Backend to use ("pyglet", "pyglet2", "tkinter", "console", "headless", "web").
         width: Window width in pixels (ignored for console/headless).
         height: Window height in pixels (ignored for console/headless).
         title: Window title.
@@ -125,6 +129,12 @@ def run_with_backend(
 
     Returns:
         Exit code (0 for success, 1 for error).
+
+    Note:
+        Celebration effects are configured via config.py:
+        - CELEBRATION_EFFECT: Effect name ("confetti", "victory_spin", etc.)
+        - CELEBRATION_ENABLED: Whether effects are enabled
+        - CELEBRATION_DURATION: Effect duration in seconds
 
     Example:
         >>> from cube.main_any_backend import run_with_backend
@@ -156,14 +166,19 @@ def run_with_backend(
         if commands:
             _inject_commands(window, commands)
 
-        # Debug: dump cube state before main loop
-        app.vs.debug_dump_cube_state(app.cube, "Before Main Loop")
+        # Debug: dump state before main loop (backend/OpenGL info always shown)
+        app.vs.debug_dump(
+            app.cube,
+            "Before Main Loop",
+            opengl_info=window.get_opengl_info(),
+            backend_name=backend_name,
+        )
 
         # Run the event loop
         window.run()
 
-        # Debug: dump cube state after main loop
-        app.vs.debug_dump_cube_state(app.cube, "After Main Loop")
+        # Debug: dump state after main loop
+        app.vs.debug_dump(app.cube, "After Main Loop", backend_name=backend_name)
 
     except ImportError as e:
         print(f"Error: Backend '{backend_name}' is not available: {e}", file=sys.stderr)
@@ -175,8 +190,8 @@ def run_with_backend(
 
     finally:
         # Cleanup
-        if window is not None and window.viewer:
-            window.viewer.cleanup()
+        if window is not None:
+            window.cleanup()
 
     return 0
 
@@ -199,7 +214,7 @@ def main(args: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--backend", "-b",
-        choices=["pyglet", "tkinter", "console", "headless", "web"],
+        choices=["pyglet", "pyglet2", "tkinter", "console", "headless", "web"],
         default="pyglet",
         help="GUI backend to use (default: pyglet)"
     )

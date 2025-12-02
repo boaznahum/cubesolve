@@ -124,6 +124,14 @@ class ApplicationAndViewState:
 
         self._last_scramble_key_size: Tuple[Any, int | None] | None = None
 
+        # Celebration effect settings (from config)
+        self._celebration_effect: str = config.CELEBRATION_EFFECT
+        self._celebration_enabled: bool = config.CELEBRATION_ENABLED
+        self._celebration_duration: float = config.CELEBRATION_DURATION
+
+        # Lighting settings (pyglet2 backend only)
+        self._brightness: float = 0.65  # Default ambient light level (0.0-1.0)
+
     def reset(self, not_view=False) -> None:
         self._alpha_x = 0
         self._alpha_y = 0
@@ -191,6 +199,16 @@ class ApplicationAndViewState:
     @property
     def offset(self) -> Sequence[int]:
         return self._offset
+
+    @property
+    def brightness(self) -> float:
+        """Get current brightness level (0.0-1.0)."""
+        return self._brightness
+
+    @brightness.setter
+    def brightness(self, value: float) -> None:
+        """Set brightness level (clamped to 0.1-1.0)."""
+        self._brightness = max(0.1, min(1.0, value))
 
     def prepare_objects_view(self, renderer: "Renderer") -> None:
         """Set up the model-view transformation for drawing objects.
@@ -414,7 +432,7 @@ class ApplicationAndViewState:
         if self._quiet_all:
             return
         if self._debug_all or debug_on:
-            print("DEBUG:", *args)
+            print("DEBUG:", *args, flush=True)
 
     def debug_lazy(self, debug_on: bool, func: Callable[[], Any]) -> None:
         """Print debug information with lazy evaluation.
@@ -435,43 +453,89 @@ class ApplicationAndViewState:
         if self._debug_all or debug_on:
             print("DEBUG:", func())
 
-    def debug_dump_cube_state(self, cube: Cube, label: str = "Cube State") -> None:
-        """Dump detailed cube state using the debug infrastructure.
+    def debug_dump(
+        self,
+        cube: Cube,
+        label: str = "Application State",
+        opengl_info: str | None = None,
+        backend_name: str | None = None,
+    ) -> None:
+        """Unified dump of OpenGL info, application state, config, and cube state.
 
-        Includes: size, solved status, modify counter, all slices with their
-        colors, colors_id, cache state, match status.
+        Debug levels:
+        - Backend/OpenGL info: always printed (if provided, unless quiet)
+        - State/config values: debug(True) - shows in normal debug mode
+        - Cube slices/details: debug(False) - only shows with --debug-all
 
         Args:
             cube: The cube to dump state for.
             label: A label to identify this dump in the output.
+            opengl_info: Optional OpenGL version string to include.
+            backend_name: Optional backend name (e.g., "pyglet2", "tkinter").
         """
+        # Backend and OpenGL info - always print if provided (unless quiet)
+        if (backend_name or opengl_info) and not self._quiet_all:
+            print("=" * 60)
+            if backend_name:
+                print(f"Backend: {backend_name}")
+            if opengl_info:
+                print("OpenGL Information:")
+                print(opengl_info)
+            print("=" * 60)
+
+        # State and config - debug(True) = shows without --debug-all
+        self.debug(True, "=" * 60)
+        self.debug(True, f"DUMP: {label}")
+        self.debug(True, "=" * 60)
+
+        # View state
+        self.debug(True, "View State:")
+        self.debug(True, f"  Initial rotation: alpha_x_0={self._alpha_x_0:.4f}, "
+                   f"alpha_y_0={self._alpha_y_0:.4f}, alpha_z_0={self._alpha_z_0:.4f}")
+        self.debug(True, f"  User rotation:    alpha_x={self._alpha_x:.4f}, "
+                   f"alpha_y={self._alpha_y:.4f}, alpha_z={self._alpha_z:.4f}")
+        self.debug(True, f"  Alpha delta: {self._alpha_delta}")
+        self.debug(True, f"  FOV: {self._fov_y} (initial: {self._fov_y_0})")
+        self.debug(True, f"  Offset: {self._offset} (initial: {self._offset_0})")
+
+        # Config values
+        self.debug(True, "Config:")
+        self.debug(True, f"  Cube size: {self.cube_size}")
+        self.debug(True, f"  Slice range: [{self.slice_start}, {self.slice_stop}]")
+        self.debug(True, f"  Shadow faces: '{self._draw_shadows}'")
+        self.debug(True, f"  Speed index: {self._speed} ({self.get_speed.get_speed()})")
+        self.debug(True, f"  Single step mode: {self.single_step_mode}")
+        self.debug(True, f"  Debug all: {self._debug_all}, Quiet all: {self._quiet_all}")
+
+        # Cube summary - debug(True)
+        self.debug(True, "Cube:")
+        self.debug(True, f"  Size: {cube.size}, Solved: {cube.solved}, "
+                   f"ModCounter: {cube._modify_counter}")
+
+        # Recording
+        if self.last_recording:
+            self.debug(True, f"  Last recording: {len(self.last_recording)} moves")
+
+        self.debug(True, "-" * 60)
+
+        # Cube slices detail - debug(False) = only with --debug-all
+        # Early return if not debug_all to avoid expensive computation
         if not self._debug_all:
+            self.debug(True, "(Use --debug-all for verbose cube slice details)")
+            self.debug(True, "=" * 60)
+            self.debug(True, f"END DUMP: {label}")
+            self.debug(True, "=" * 60)
             return
 
-        self.debug(False, "=" * 70)
-        self.debug(False, f"DUMP: {label}")
-        self.debug(False, "=" * 70)
-        self.debug(False, f"Size: {cube.size}, Solved: {cube.solved}, ModCounter: {cube._modify_counter}")
-
-        # Get full state
         state = cube.cqr.get_sate()
         self.debug(False, f"State entries: {len(state)}")
-
-        # Dump all slices with detailed state
-        # Note: get_all_parts() returns PartSlice objects (slices), not Part objects
-        self.debug(False, "-" * 70)
-        self.debug(False, "SLICES:")
-        self.debug(False, "-" * 70)
+        self.debug(False, "-" * 60)
+        self.debug(False, "SLICES (verbose):")
 
         all_slices = cube.get_all_parts()
         for s in sorted(all_slices, key=lambda p: str(p.fixed_id)):
-            # Check cache state BEFORE accessing (to see if it was initialized)
             colors_cache = getattr(s, '_colors_id_by_colors', None)
-
-            # Get match status
             match_faces = s.match_faces
-
-            # Build edges string
             edges_str = ", ".join(f"{e.face.name.value}:{e.color.name}" for e in s.edges)
 
             self.debug(False, f"  Slice: {s.fixed_id}")
@@ -481,14 +545,44 @@ class ApplicationAndViewState:
             self.debug(False, f"    colors_id: {s.colors_id} (cache_was={colors_cache})")
             self.debug(False, f"    match_faces: {match_faces}")
 
-        # Dump full state dictionary
-        self.debug(False, "-" * 70)
+        # Full state dictionary - debug(False)
+        self.debug(False, "-" * 60)
         self.debug(False, "FULL STATE DICT:")
-        self.debug(False, "-" * 70)
         for fixed_id, colors in sorted(state.items(), key=lambda x: str(x[0])):
             self.debug(False, f"  {fixed_id} -> {colors}")
 
-        self.debug(False, "=" * 70)
-        self.debug(False, f"END DUMP: {label}")
-        self.debug(False, "=" * 70)
+        self.debug(True, "=" * 60)
+        self.debug(True, f"END DUMP: {label}")
+        self.debug(True, "=" * 60)
+
+    # Celebration effect properties
+    @property
+    def celebration_effect(self) -> str:
+        """Get the current celebration effect name."""
+        return self._celebration_effect
+
+    @celebration_effect.setter
+    def celebration_effect(self, value: str) -> None:
+        """Set the celebration effect name."""
+        self._celebration_effect = value
+
+    @property
+    def celebration_enabled(self) -> bool:
+        """Check if celebration effects are enabled."""
+        return self._celebration_enabled
+
+    @celebration_enabled.setter
+    def celebration_enabled(self, value: bool) -> None:
+        """Enable or disable celebration effects."""
+        self._celebration_enabled = value
+
+    @property
+    def celebration_duration(self) -> float:
+        """Get the celebration effect duration in seconds."""
+        return self._celebration_duration
+
+    @celebration_duration.setter
+    def celebration_duration(self, value: float) -> None:
+        """Set the celebration effect duration in seconds."""
+        self._celebration_duration = value
 

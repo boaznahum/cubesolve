@@ -75,6 +75,14 @@ class AppWindow(Protocol):
         """
         ...
 
+    def cleanup(self) -> None:
+        """Clean up resources when shutting down.
+
+        Called after run() exits to release resources (textures, display lists, etc.).
+        Each backend handles its own cleanup (viewer cleanup if applicable).
+        """
+        ...
+
     def update_gui_elements(self) -> None:
         """Update all GUI elements.
 
@@ -117,5 +125,40 @@ class AppWindow(Protocol):
 
         Args:
             visible: True to show, False to hide
+        """
+        ...
+
+    def get_opengl_info(self) -> str:
+        """Get OpenGL version and renderer information.
+
+        Returns:
+            Formatted string with OpenGL info, or empty string if not applicable.
+            For OpenGL backends (pyglet, pyglet2): version, GLSL, renderer, vendor.
+            For non-OpenGL backends (tkinter, console, headless): empty string.
+        """
+        ...
+
+    def adjust_brightness(self, delta: float) -> float | None:
+        """Adjust ambient light brightness (if supported by backend).
+
+        Only implemented by backends with lighting support (pyglet2).
+        Other backends return None (no-op).
+
+        Args:
+            delta: Amount to adjust (positive = brighter, negative = darker)
+
+        Returns:
+            New brightness level (0.0-1.0) if supported, None otherwise.
+        """
+        ...
+
+    def get_brightness(self) -> float | None:
+        """Get current brightness level (if supported by backend).
+
+        Only implemented by backends with lighting support (pyglet2).
+        Other backends return None.
+
+        Returns:
+            Current brightness level (0.0-1.0) if supported, None otherwise.
         """
         ...

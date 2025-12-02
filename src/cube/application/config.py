@@ -125,3 +125,10 @@ AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 100 # per solver and size
 OPERATION_LOG = False
 OPERATION_LOG_PATH = ".logs/operation.log"
 LAST_SCRAMBLE_PATH = ".logs/last_scramble.txt"
+
+################ Celebration Effects
+# Available effects: "none", "confetti", "victory_spin", "sparkle", "glow", "combo"
+CELEBRATION_EFFECTS = ["none", "confetti", "victory_spin", "sparkle", "glow", "combo"]
+CELEBRATION_EFFECT = "combo"  # Default effect
+CELEBRATION_ENABLED = True
+CELEBRATION_DURATION = 3.0  # seconds

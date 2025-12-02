@@ -21,6 +21,7 @@ from cube.presentation.gui.backends.pyglet import main_g_mouse
 from cube.presentation.gui.backends.pyglet.AppWindowBase import AppWindowBase, TextLabel
 from cube.presentation.gui.Command import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
+from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
 from cube.presentation.viewer.GViewerExt import GViewerExt
 
@@ -83,6 +84,15 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # State for keyboard handler (used by Command handlers)
         self._last_edge_solve_count: int = 0
 
+        # Celebration effects
+        self._last_solved_state: bool = app.cube.solved
+        self._celebration_manager = CelebrationManager(
+            renderer=self._renderer,
+            vs=app.vs,
+            event_loop=backend.event_loop,
+            backend_name="pyglet",
+        )
+
         # Initial GUI update
         self.update_gui_elements()
 
@@ -110,6 +120,11 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         """Run the main event loop."""
         self._backend.event_loop.run()
 
+    def cleanup(self) -> None:
+        """Clean up resources when shutting down."""
+        if self._viewer is not None:
+            self._viewer.cleanup()
+
     def update_gui_elements(self) -> None:
         """Update all GUI elements."""
         self._viewer.update()
@@ -121,6 +136,13 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
 
         if not self.animation_running:
             self._update_status_text()
+
+        # Check for solve state transition (cube just became solved)
+        current_solved = self._app.cube.solved
+        if current_solved and not self._last_solved_state:
+            # Cube just became solved - trigger celebration!
+            self._celebration_manager.trigger_celebration()
+        self._last_solved_state = current_solved
 
     def _request_redraw(self) -> None:
         """Request window redraw."""
@@ -138,6 +160,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self.clear()
         self._draw_axis()
         self._viewer.draw()
+        # Draw celebration effect (if running) - before text overlay
+        if self._celebration_manager:
+            self._celebration_manager.draw()
         self._draw_text()
         self._draw_animation()
 
@@ -152,6 +177,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         Called by pyglet framework. Converts native keys to abstract Keys
         and calls handle_key() - the protocol method.
         """
+        self._vs.debug(False, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
         abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
         abstract_mods = _convert_modifiers(modifiers)
         self.handle_key(abstract_symbol, abstract_mods)
@@ -354,3 +380,28 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         """Draw animation frame."""
         if self._animation_manager:
             self._animation_manager.draw()
+
+    def get_opengl_info(self) -> str:
+        """Get OpenGL version and renderer information.
+
+        Returns:
+            Formatted string with OpenGL version, GLSL, renderer, vendor.
+        """
+        from cube.presentation.gui.backends.common_gl_utils import get_opengl_info_string
+        return get_opengl_info_string()
+
+    def adjust_brightness(self, delta: float) -> float | None:
+        """Adjust ambient light brightness (not supported in legacy pyglet backend).
+
+        Returns:
+            None (lighting not supported in legacy OpenGL backend).
+        """
+        return None
+
+    def get_brightness(self) -> float | None:
+        """Get current brightness level (not supported in legacy pyglet backend).
+
+        Returns:
+            None (lighting not supported in legacy OpenGL backend).
+        """
+        return None
