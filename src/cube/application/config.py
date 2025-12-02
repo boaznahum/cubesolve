@@ -129,6 +129,6 @@ LAST_SCRAMBLE_PATH = ".logs/last_scramble.txt"
 ################ Celebration Effects
 # Available effects: "none", "confetti", "victory_spin", "sparkle", "glow", "combo"
 CELEBRATION_EFFECTS = ["none", "confetti", "victory_spin", "sparkle", "glow", "combo"]
-CELEBRATION_EFFECT = "confetti"  # Default effect
+CELEBRATION_EFFECT = "combo"  # Default effect
 CELEBRATION_ENABLED = True
 CELEBRATION_DURATION = 3.0  # seconds

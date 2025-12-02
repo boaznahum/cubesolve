@@ -40,11 +40,16 @@ class EffectRegistry:
         from cube.presentation.gui.effects.effects.NoneEffect import NoneEffect
         from cube.presentation.gui.effects.effects.ConfettiEffect import ConfettiEffect
         from cube.presentation.gui.effects.effects.VictorySpinEffect import VictorySpinEffect
+        from cube.presentation.gui.effects.effects.SparkleEffect import SparkleEffect
+        from cube.presentation.gui.effects.effects.GlowEffect import GlowEffect
+        from cube.presentation.gui.effects.effects.ComboEffect import ComboEffect
 
         cls.register("none", lambda r, vs, b: NoneEffect(r, vs, b))
         cls.register("confetti", lambda r, vs, b: ConfettiEffect(r, vs, b))
         cls.register("victory_spin", lambda r, vs, b: VictorySpinEffect(r, vs, b))
-        # TODO: Add sparkle, glow, combo effects
+        cls.register("sparkle", lambda r, vs, b: SparkleEffect(r, vs, b))
+        cls.register("glow", lambda r, vs, b: GlowEffect(r, vs, b))
+        cls.register("combo", lambda r, vs, b: ComboEffect(r, vs, b))
 
     @classmethod
     def register(cls, name: str, factory: EffectFactory) -> None:
