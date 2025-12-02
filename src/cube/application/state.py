@@ -440,11 +440,12 @@ class ApplicationAndViewState:
         cube: Cube,
         label: str = "Application State",
         opengl_info: str | None = None,
+        backend_name: str | None = None,
     ) -> None:
         """Unified dump of OpenGL info, application state, config, and cube state.
 
         Debug levels:
-        - OpenGL info: always printed (if provided, unless quiet)
+        - Backend/OpenGL info: always printed (if provided, unless quiet)
         - State/config values: debug(True) - shows in normal debug mode
         - Cube slices/details: debug(False) - only shows with --debug-all
 
@@ -452,12 +453,16 @@ class ApplicationAndViewState:
             cube: The cube to dump state for.
             label: A label to identify this dump in the output.
             opengl_info: Optional OpenGL version string to include.
+            backend_name: Optional backend name (e.g., "pyglet2", "tkinter").
         """
-        # OpenGL info - always print if provided (unless quiet)
-        if opengl_info and not self._quiet_all:
+        # Backend and OpenGL info - always print if provided (unless quiet)
+        if (backend_name or opengl_info) and not self._quiet_all:
             print("=" * 60)
-            print("OpenGL Information:")
-            print(opengl_info)
+            if backend_name:
+                print(f"Backend: {backend_name}")
+            if opengl_info:
+                print("OpenGL Information:")
+                print(opengl_info)
             print("=" * 60)
 
         # State and config - debug(True) = shows without --debug-all

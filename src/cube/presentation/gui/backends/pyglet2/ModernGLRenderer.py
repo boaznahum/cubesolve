@@ -163,6 +163,30 @@ class ModernGLRenderer:
         self._ambient_color: tuple[float, float, float] = (0.65, 0.65, 0.65)
         self._shininess: float = 12.0
 
+        # Cached line width range (queried once on first use)
+        self._line_width_range: tuple[float, float] | None = None
+
+    def _clamp_line_width(self, width: float) -> float:
+        """Clamp line width to the range supported by the GPU.
+
+        OpenGL 4.x core profile only supports line_width=1.0, while
+        compatibility profiles may support wider lines.
+
+        Args:
+            width: Requested line width
+
+        Returns:
+            Clamped line width within supported range
+        """
+        if self._line_width_range is None:
+            # Query supported range once
+            range_buf = (ctypes.c_float * 2)()
+            gl.glGetFloatv(gl.GL_ALIASED_LINE_WIDTH_RANGE, range_buf)
+            self._line_width_range = (range_buf[0], range_buf[1])
+
+        min_width, max_width = self._line_width_range
+        return max(min_width, min(max_width, width))
+
     def setup(self) -> None:
         """Initialize the renderer. Must be called after GL context exists."""
         if self._initialized:
@@ -381,9 +405,9 @@ class ModernGLRenderer:
         Args:
             start: Starting point (x, y, z)
             end: Ending point (x, y, z)
-            width: Line width (may not be supported on all hardware)
+            width: Line width (clamped to GPU-supported range)
         """
-        gl.glLineWidth(width)
+        gl.glLineWidth(self._clamp_line_width(width))
         vertices = np.array([*start, *end], dtype=np.float32)
         self._upload_and_draw(vertices, gl.GL_LINES)
 
@@ -509,7 +533,7 @@ class ModernGLRenderer:
 
         # Draw border as line loop
         self.set_color(*line_color)
-        gl.glLineWidth(line_width)
+        gl.glLineWidth(self._clamp_line_width(line_width))
 
         if len(vertices) != 4:
             return
@@ -579,7 +603,8 @@ class ModernGLRenderer:
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
 
-        gl.glLineWidth(line_width)
+        # Clamp line width to supported range (OpenGL 4.x core only supports 1.0)
+        gl.glLineWidth(self._clamp_line_width(line_width))
         self._vertex_color_shader.use()
 
         # Set MVP matrix

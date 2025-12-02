@@ -65,9 +65,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # (pyglet calls on_resize during __init__ before we can create the renderer)
         self._modern_renderer: ModernGLRenderer | None = None
 
-        # Note: Tried compatibility profile (forward_compatible=False, major_version=2)
-        # but it doesn't work on Windows - pyglet 2 always creates core profile.
-        # See migration_state.md for details.
+        # Use OpenGL 3.3 core profile (default for pyglet 2)
+        # Note: OpenGL 4.6 core profile doesn't support wide lines (glLineWidth > 1.0)
+        # so we stay with 3.3 which supports both shaders and wide lines for grid rendering
         super().__init__(width, height, title, resizable=True)
 
         # Animation manager connection

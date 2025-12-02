@@ -118,7 +118,8 @@
 
 ---
 # New entries below - Claude will reformat and move above this line
-
+putting debug_dump is main_any_backend is the wrong place, it will not paear when running tests or any other that create application
+all the needed information need to be availbe to any who call dup, need arcithetcs agent for this
 ---
 
 ## Done Tasks
