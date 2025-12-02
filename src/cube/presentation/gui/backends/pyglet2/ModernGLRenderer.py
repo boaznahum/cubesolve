@@ -66,6 +66,64 @@ void main() {
 }
 """
 
+# Phong lighting shader with per-vertex color and normal
+# Vertex data: position (3) + normal (3) + color (3) = 9 floats per vertex
+PHONG_VERTEX_SHADER = """
+#version 330 core
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec3 aColor;
+
+uniform mat4 uMVP;
+uniform mat4 uModelView;
+uniform mat3 uNormalMatrix;
+
+out vec3 vColor;
+out vec3 vNormal;
+out vec3 vFragPos;
+
+void main() {
+    gl_Position = uMVP * vec4(aPos, 1.0);
+    vColor = aColor;
+    vNormal = uNormalMatrix * aNormal;
+    vFragPos = vec3(uModelView * vec4(aPos, 1.0));
+}
+"""
+
+PHONG_FRAGMENT_SHADER = """
+#version 330 core
+in vec3 vColor;
+in vec3 vNormal;
+in vec3 vFragPos;
+
+uniform vec3 uLightPos;
+uniform vec3 uLightColor;
+uniform vec3 uAmbientColor;
+uniform float uShininess;
+
+out vec4 FragColor;
+
+void main() {
+    // Ambient
+    vec3 ambient = uAmbientColor * vColor;
+
+    // Diffuse
+    vec3 norm = normalize(vNormal);
+    vec3 lightDir = normalize(uLightPos - vFragPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * uLightColor * vColor;
+
+    // Specular (Blinn-Phong)
+    vec3 viewDir = normalize(-vFragPos);  // Camera at origin in view space
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), uShininess);
+    vec3 specular = spec * uLightColor * 0.3;  // Reduced specular intensity
+
+    vec3 result = ambient + diffuse + specular;
+    FragColor = vec4(result, 1.0);
+}
+"""
+
 
 class ModernGLRenderer:
     """Modern OpenGL renderer using shaders and VBOs.
@@ -76,6 +134,7 @@ class ModernGLRenderer:
     def __init__(self) -> None:
         self._shader: ShaderProgram | None = None
         self._vertex_color_shader: ShaderProgram | None = None
+        self._phong_shader: ShaderProgram | None = None
         self._initialized = False
 
         # Matrix stacks (emulate legacy GL)
@@ -93,6 +152,16 @@ class ModernGLRenderer:
         self._vc_vao = ctypes.c_uint()
         self._vc_vbo = ctypes.c_uint()
 
+        # VAO/VBO for lit drawing (position + normal + color interleaved)
+        self._lit_vao = ctypes.c_uint()
+        self._lit_vbo = ctypes.c_uint()
+
+        # Lighting parameters
+        self._light_pos = (100.0, 100.0, 200.0)  # Light position in world space
+        self._light_color = (1.0, 1.0, 1.0)  # White light
+        self._ambient_color = (0.3, 0.3, 0.3)  # Ambient light
+        self._shininess = 32.0  # Specular shininess
+
     def setup(self) -> None:
         """Initialize the renderer. Must be called after GL context exists."""
         if self._initialized:
@@ -103,6 +172,7 @@ class ModernGLRenderer:
         self._vertex_color_shader = ShaderProgram(
             VERTEX_COLOR_VERTEX_SHADER, VERTEX_COLOR_FRAGMENT_SHADER
         )
+        self._phong_shader = ShaderProgram(PHONG_VERTEX_SHADER, PHONG_FRAGMENT_SHADER)
 
         # Create reusable VAO/VBO for solid color
         gl.glGenVertexArrays(1, ctypes.byref(self._vao))
@@ -132,6 +202,25 @@ class ModernGLRenderer:
         gl.glEnableVertexAttribArray(1)
         gl.glBindVertexArray(0)
 
+        # Create VAO/VBO for lit drawing (position + normal + color)
+        gl.glGenVertexArrays(1, ctypes.byref(self._lit_vao))
+        gl.glGenBuffers(1, ctypes.byref(self._lit_vbo))
+
+        # Set up VAO with position + normal + color (9 floats per vertex)
+        gl.glBindVertexArray(self._lit_vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._lit_vbo)
+        lit_stride = 9 * 4  # 9 floats * 4 bytes
+        # Position at location 0
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, lit_stride, ctypes.c_void_p(0))
+        gl.glEnableVertexAttribArray(0)
+        # Normal at location 1
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, lit_stride, ctypes.c_void_p(3 * 4))
+        gl.glEnableVertexAttribArray(1)
+        # Color at location 2
+        gl.glVertexAttribPointer(2, 3, gl.GL_FLOAT, gl.GL_FALSE, lit_stride, ctypes.c_void_p(6 * 4))
+        gl.glEnableVertexAttribArray(2)
+        gl.glBindVertexArray(0)
+
         self._initialized = True
 
     def cleanup(self) -> None:
@@ -142,6 +231,9 @@ class ModernGLRenderer:
         if self._vertex_color_shader:
             self._vertex_color_shader.delete()
             self._vertex_color_shader = None
+        if self._phong_shader:
+            self._phong_shader.delete()
+            self._phong_shader = None
         if self._vao.value:
             gl.glDeleteVertexArrays(1, ctypes.byref(self._vao))
         if self._vbo.value:
@@ -150,6 +242,10 @@ class ModernGLRenderer:
             gl.glDeleteVertexArrays(1, ctypes.byref(self._vc_vao))
         if self._vc_vbo.value:
             gl.glDeleteBuffers(1, ctypes.byref(self._vc_vbo))
+        if self._lit_vao.value:
+            gl.glDeleteVertexArrays(1, ctypes.byref(self._lit_vao))
+        if self._lit_vbo.value:
+            gl.glDeleteBuffers(1, ctypes.byref(self._lit_vbo))
         self._initialized = False
 
     # === Projection Setup ===

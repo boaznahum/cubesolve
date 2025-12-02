@@ -111,6 +111,7 @@
 ---
 # New entries below - Claude will reformat and move above this line
 
+cube bugs: f10 f11 f12 shadows doesnt work
 ---
 
 ## Done Tasks

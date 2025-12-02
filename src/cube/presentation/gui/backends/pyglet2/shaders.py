@@ -166,6 +166,64 @@ void main() {
 }
 """
 
+# Phong lighting shader with per-vertex color and normal
+# Vertex data: position (3) + normal (3) + color (3) = 9 floats per vertex
+PHONG_VERTEX_SHADER = """
+#version 330 core
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec3 aColor;
+
+uniform mat4 uMVP;
+uniform mat4 uModelView;
+uniform mat3 uNormalMatrix;
+
+out vec3 vColor;
+out vec3 vNormal;
+out vec3 vFragPos;
+
+void main() {
+    gl_Position = uMVP * vec4(aPos, 1.0);
+    vColor = aColor;
+    vNormal = uNormalMatrix * aNormal;
+    vFragPos = vec3(uModelView * vec4(aPos, 1.0));
+}
+"""
+
+PHONG_FRAGMENT_SHADER = """
+#version 330 core
+in vec3 vColor;
+in vec3 vNormal;
+in vec3 vFragPos;
+
+uniform vec3 uLightPos;
+uniform vec3 uLightColor;
+uniform vec3 uAmbientColor;
+uniform float uShininess;
+
+out vec4 FragColor;
+
+void main() {
+    // Ambient
+    vec3 ambient = uAmbientColor * vColor;
+
+    // Diffuse
+    vec3 norm = normalize(vNormal);
+    vec3 lightDir = normalize(uLightPos - vFragPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * uLightColor * vColor;
+
+    // Specular (Blinn-Phong)
+    vec3 viewDir = normalize(-vFragPos);  // Camera at origin in view space
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), uShininess);
+    vec3 specular = spec * uLightColor * 0.3;  // Reduced specular intensity
+
+    vec3 result = ambient + diffuse + specular;
+    FragColor = vec4(result, 1.0);
+}
+"""
+
 
 class ShaderProgram:
     """Wrapper for an OpenGL shader program with cached uniform locations."""
