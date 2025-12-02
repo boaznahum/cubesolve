@@ -76,15 +76,22 @@ class ModernGLCubeViewer(AnimatableViewer):
     in batches for efficiency.
     """
 
-    def __init__(self, cube: Cube, renderer: ModernGLRenderer) -> None:
+    def __init__(
+        self,
+        cube: Cube,
+        renderer: ModernGLRenderer,
+        vs: "ApplicationAndViewState | None" = None,
+    ) -> None:
         """Initialize the cube viewer.
 
         Args:
             cube: The cube model to render
             renderer: The modern GL renderer to use
+            vs: Application view state (for shadow mode support)
         """
         self._cube = cube
         self._renderer = renderer
+        self._vs = vs
 
         # Cached triangle data (position + color interleaved)
         # Will be rebuilt when cube state changes
@@ -381,6 +388,8 @@ class ModernGLCubeViewer(AnimatableViewer):
         - Static geometry (non-animated cells) in _face_triangles/_line_data
         - Animated geometry in _animated_face_triangles/_animated_line_data
 
+        Shadow faces (F10/F11/F12) are rendered as duplicate faces at offset positions.
+
         Vertex format for faces: 9 floats per vertex (x, y, z, nx, ny, nz, r, g, b)
         Vertex format for lines: 6 floats per vertex (x, y, z, r, g, b)
         """
@@ -395,6 +404,14 @@ class ModernGLCubeViewer(AnimatableViewer):
         animated_face_verts: list[float] = []
         animated_line_verts: list[float] = []
 
+        # Shadow face offsets (in units of FACE_OFFSET * 2 = full face size)
+        # These match the legacy _board.py offsets
+        shadow_offsets: dict[FaceName, tuple[float, float, float]] = {
+            FaceName.L: (-0.75 * FACE_OFFSET * 2, 0, 0),  # Left shadow: offset in -X
+            FaceName.D: (0, -0.5 * FACE_OFFSET * 2, 0),   # Down shadow: offset in -Y
+            FaceName.B: (0, 0, -2.0 * FACE_OFFSET * 2),   # Back shadow: offset in -Z
+        }
+
         # For each face of the cube
         for face_name in FaceName:
             face = cube.face(face_name)
@@ -403,70 +420,114 @@ class ModernGLCubeViewer(AnimatableViewer):
             right = np.array(transform[1], dtype=np.float32)
             up = np.array(transform[2], dtype=np.float32)
 
-            # Compute face normal (outward direction)
-            normal = np.cross(right, up)
-            normal = normal / np.linalg.norm(normal)
-            nx, ny, nz = float(normal[0]), float(normal[1]), float(normal[2])
+            # Generate main face geometry
+            self._generate_face_geometry(
+                face, center, right, up, size, animated_parts,
+                face_verts, line_verts, animated_face_verts, animated_line_verts
+            )
 
-            # Face size in world units
-            face_size = FACE_OFFSET * 2
-            cell_size = face_size / size
-
-            # Generate quads for each cell on this face
-            for row in range(size):
-                for col in range(size):
-                    # Get color for this cell
-                    color = self._get_cell_color(face, row, col, size)
-                    r, g, b = _COLORS.get(color, (0.5, 0.5, 0.5))
-
-                    # Check if this cell is animated
-                    is_animated = False
-                    if animated_parts is not None:
-                        part_slice = self._get_cell_part_slice(face, row, col, size)
-                        if part_slice is not None and part_slice in animated_parts:
-                            is_animated = True
-
-                    # Select target lists based on animation state
-                    target_face_verts = animated_face_verts if is_animated else face_verts
-                    target_line_verts = animated_line_verts if is_animated else line_verts
-
-                    # Calculate cell position
-                    # Cell (0,0) is bottom-left, (size-1, size-1) is top-right
-                    x0 = -FACE_OFFSET + col * cell_size
-                    y0 = -FACE_OFFSET + row * cell_size
-                    x1 = x0 + cell_size
-                    y1 = y0 + cell_size
-
-                    # Apply small gap between cells for grid effect
-                    gap = cell_size * 0.02
-                    x0 += gap
-                    y0 += gap
-                    x1 -= gap
-                    y1 -= gap
-
-                    # Calculate 4 corners in world space
-                    bl = center + x0 * right + y0 * up
-                    br = center + x1 * right + y0 * up
-                    tr = center + x1 * right + y1 * up
-                    tl = center + x0 * right + y1 * up
-
-                    # Two triangles for quad: (bl, br, tr) and (bl, tr, tl)
-                    # Each vertex: position (3) + normal (3) + color (3) = 9 floats
-                    for v in [bl, br, tr, bl, tr, tl]:
-                        target_face_verts.extend([v[0], v[1], v[2], nx, ny, nz, r, g, b])
-
-                    # Border lines (black) - still 6 floats, no normals needed
-                    line_color = (0.0, 0.0, 0.0)
-                    for p1, p2 in [(bl, br), (br, tr), (tr, tl), (tl, bl)]:
-                        target_line_verts.extend([
-                            p1[0], p1[1], p1[2], *line_color,
-                            p2[0], p2[1], p2[2], *line_color
-                        ])
+            # Generate shadow face if enabled (L, D, B faces only)
+            if self._vs is not None and face_name in shadow_offsets:
+                if self._vs.get_draw_shadows_mode(face_name):
+                    offset = np.array(shadow_offsets[face_name], dtype=np.float32)
+                    shadow_center = center + offset
+                    # Shadow faces are never animated (static copies)
+                    self._generate_face_geometry(
+                        face, shadow_center, right, up, size, None,
+                        face_verts, line_verts, [], []
+                    )
 
         self._face_triangles = np.array(face_verts, dtype=np.float32)
         self._line_data = np.array(line_verts, dtype=np.float32)
         self._animated_face_triangles = np.array(animated_face_verts, dtype=np.float32) if animated_face_verts else None
         self._animated_line_data = np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None
+
+    def _generate_face_geometry(
+        self,
+        face,
+        center: np.ndarray,
+        right: np.ndarray,
+        up: np.ndarray,
+        size: int,
+        animated_parts: set[PartSlice] | None,
+        face_verts: list[float],
+        line_verts: list[float],
+        animated_face_verts: list[float],
+        animated_line_verts: list[float],
+    ) -> None:
+        """Generate geometry for a single face.
+
+        Args:
+            face: The cube Face object
+            center: Face center position in world space
+            right: Face "right" direction vector
+            up: Face "up" direction vector
+            size: Cube size (3 for 3x3, etc.)
+            animated_parts: Set of parts being animated (or None)
+            face_verts: Output list for static face triangles
+            line_verts: Output list for static line segments
+            animated_face_verts: Output list for animated face triangles
+            animated_line_verts: Output list for animated line segments
+        """
+        # Compute face normal (outward direction)
+        normal = np.cross(right, up)
+        normal = normal / np.linalg.norm(normal)
+        nx, ny, nz = float(normal[0]), float(normal[1]), float(normal[2])
+
+        # Face size in world units
+        face_size = FACE_OFFSET * 2
+        cell_size = face_size / size
+
+        # Generate quads for each cell on this face
+        for row in range(size):
+            for col in range(size):
+                # Get color for this cell
+                color = self._get_cell_color(face, row, col, size)
+                r, g, b = _COLORS.get(color, (0.5, 0.5, 0.5))
+
+                # Check if this cell is animated
+                is_animated = False
+                if animated_parts is not None:
+                    part_slice = self._get_cell_part_slice(face, row, col, size)
+                    if part_slice is not None and part_slice in animated_parts:
+                        is_animated = True
+
+                # Select target lists based on animation state
+                target_face_verts = animated_face_verts if is_animated else face_verts
+                target_line_verts = animated_line_verts if is_animated else line_verts
+
+                # Calculate cell position
+                # Cell (0,0) is bottom-left, (size-1, size-1) is top-right
+                x0 = -FACE_OFFSET + col * cell_size
+                y0 = -FACE_OFFSET + row * cell_size
+                x1 = x0 + cell_size
+                y1 = y0 + cell_size
+
+                # Apply small gap between cells for grid effect
+                gap = cell_size * 0.02
+                x0 += gap
+                y0 += gap
+                x1 -= gap
+                y1 -= gap
+
+                # Calculate 4 corners in world space
+                bl = center + x0 * right + y0 * up
+                br = center + x1 * right + y0 * up
+                tr = center + x1 * right + y1 * up
+                tl = center + x0 * right + y1 * up
+
+                # Two triangles for quad: (bl, br, tr) and (bl, tr, tl)
+                # Each vertex: position (3) + normal (3) + color (3) = 9 floats
+                for v in [bl, br, tr, bl, tr, tl]:
+                    target_face_verts.extend([v[0], v[1], v[2], nx, ny, nz, r, g, b])
+
+                # Border lines (black) - still 6 floats, no normals needed
+                line_color = (0.0, 0.0, 0.0)
+                for p1, p2 in [(bl, br), (br, tr), (tr, tl), (tl, bl)]:
+                    target_line_verts.extend([
+                        p1[0], p1[1], p1[2], *line_color,
+                        p2[0], p2[1], p2[2], *line_color
+                    ])
 
     def _get_cell_part_slice(self, face, row: int, col: int, size: int) -> PartSlice | None:
         """Get the PartSlice for a cell on a face.

@@ -64,9 +64,15 @@
   - **Files:** `src/cube/presentation/gui/backends/pyglet2/ModernGLRenderer.py`
   - **Added:** 2025-12-02
 
-- ❌ **G4.** F10/F11/F12 shadow modes don't work in pyglet2 backend
-  - These keys control shadow/lighting modes in legacy backend
-  - Need to investigate and implement for modern GL
+- ❌ **G5.** Comprehensive Command Testing Plan
+  - **Goal:** Create automated tests for ALL keyboard commands and document mouse commands for manual testing
+  - **Phase 1: Automated keyboard command tests**
+    - Each command can be tested by checking state changes after `inject_command()`
+    - Create `tests/gui/test_all_commands.py` with comprehensive coverage
+    - See `docs/design/command_test_mapping.md` for command→state mapping
+  - **Phase 2: Manual mouse testing documentation**
+    - Mouse commands require visual verification (drag, click, scroll)
+    - Document test procedures in `docs/design/mouse_testing.md`
   - **Added:** 2025-12-02
 
 
@@ -124,6 +130,18 @@
   - **Root Cause:** Zoom commands called `renderer.view.set_projection()` which used legacy `gluPerspective()` not available in OpenGL core profile
   - **Solution:** Created `ModernGLViewStateManager` and `ModernGLRendererAdapter` to provide modern GL compatible `set_projection()`
   - **Files:** `backends/pyglet2/ModernGLRenderer.py`, `backends/pyglet2/PygletAppWindow.py`
+
+### GUI & Testing
+
+- ✅ **G4.** F10/F11/F12 shadow modes don't work in pyglet2 backend
+  - **Fixed:** 2025-12-02
+  - **Root Cause:** `ModernGLCubeViewer._rebuild_geometry()` only drew 6 main faces, didn't check shadow mode or create offset duplicates
+  - **Solution:**
+    - Added `vs` parameter to `ModernGLCubeViewer.__init__()`
+    - Refactored geometry generation into `_generate_face_geometry()` helper
+    - When shadow mode enabled for L/D/B faces, generates duplicate face at offset position
+    - Shadow offsets match legacy `_board.py`: L=-75 (x), D=-50 (y), B=-200 (z)
+  - **Files:** `backends/pyglet2/ModernGLCubeViewer.py`, `backends/pyglet2/PygletAppWindow.py`
 
 ### Architecture
 

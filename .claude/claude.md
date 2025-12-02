@@ -94,6 +94,25 @@ grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "presen
 
 ---
 
+## User Attention Alert
+
+**IMPORTANT:** When you need the user's attention, run the beep script:
+
+```bash
+.venv_pyglet2/Scripts/python.exe beep.py
+```
+
+**Use this when:**
+- Asking a question that requires user input
+- Requesting permission (e.g., before committing)
+- Task is complete and awaiting review
+- Encountered an error or blocker that needs user decision
+- Any time you would otherwise wait for user response
+
+The script uses Windows Text-to-Speech to say "Hey Friend! Claude needs your attention!" through the user's speakers.
+
+---
+
 ## Git Commit Policy
 
 **IMPORTANT**: Never commit changes without explicit user approval.

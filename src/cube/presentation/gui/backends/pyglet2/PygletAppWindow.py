@@ -89,7 +89,8 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self._renderer_adapter = ModernGLRendererAdapter(self._modern_renderer, width, height)
 
         # Create modern GL cube viewer (for shader-based rendering)
-        self._modern_viewer = ModernGLCubeViewer(app.cube, self._modern_renderer)
+        # Pass vs for shadow mode support (F10/F11/F12 - G4 fix)
+        self._modern_viewer = ModernGLCubeViewer(app.cube, self._modern_renderer, app.vs)
 
         # GCubeViewer disabled - its constructor uses legacy GL (display lists)
         # TODO: Implement ray-plane intersection picking in ModernGLCubeViewer
