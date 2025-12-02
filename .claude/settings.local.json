@@ -56,7 +56,8 @@
       "Bash(timeout 120 .venv314/Scripts/python.exe -m pytest:*)",
       "Bash(timeout 5 .venv314/Scripts/python.exe:*)",
       "Bash(git restore:*)",
-      "Bash(timeout 180 .venv314/Scripts/python.exe -m pytest:*)"
+      "Bash(timeout 180 .venv314/Scripts/python.exe -m pytest:*)",
+      "Bash(timeout 60 .venv314/Scripts/python.exe -m pytest:*)"
     ],
     "deny": [],
     "ask": []

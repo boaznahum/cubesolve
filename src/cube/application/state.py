@@ -130,8 +130,8 @@ class ApplicationAndViewState:
         self._celebration_duration: float = config.CELEBRATION_DURATION
 
         # Lighting settings (pyglet2 backend only)
-        self._brightness: float = 0.65  # Default ambient light level (0.1-1.5)
-        self._background_gray: float = 0.0  # Background gray level (0.0-0.5)
+        self._brightness: float = config.LIGHTING_BRIGHTNESS
+        self._background_gray: float = config.LIGHTING_BACKGROUND
 
     def reset(self, not_view=False) -> None:
         self._alpha_x = 0

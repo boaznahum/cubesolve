@@ -132,3 +132,9 @@ CELEBRATION_EFFECTS = ["none", "confetti", "victory_spin", "sparkle", "glow", "c
 CELEBRATION_EFFECT = "combo"  # Default effect
 CELEBRATION_ENABLED = True
 CELEBRATION_DURATION = 3.0  # seconds
+
+################ Lighting (pyglet2 backend only)
+# Brightness: ambient light level (0.1 = dark, 1.0 = normal, 1.5 = overbright)
+LIGHTING_BRIGHTNESS = 0.65  # Default ambient light level
+# Background: gray level for window background (0.0 = black, 0.5 = gray)
+LIGHTING_BACKGROUND = 0.0  # Default background (black)
