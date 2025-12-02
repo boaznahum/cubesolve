@@ -140,9 +140,9 @@ LIGHTING_BRIGHTNESS = 0.65  # Default ambient light level
 LIGHTING_BACKGROUND = 0.15  # Default background (black)
 
 ################ Textures (pyglet2 backend only)
-# Enable texture mode at startup (False = solid colors, True = textures)
-TEXTURE_MODE_ENABLED = True
-# Path to directory containing face textures (F.png, B.png, R.png, L.png, U.png, D.png)
-# Can be a preset name ("set1", "boaz", "family") or a full path to a directory
-# Set to None to not load any textures at startup
-TEXTURE_SET_PATH: str | None = "set1"
+# List of texture sets to cycle through with Ctrl+Shift+T
+# Can be preset names ("set1", "family"), paths, or None for solid colors
+# Ctrl+Shift+T cycles: set1 → family → None (solid) → set1 → ...
+TEXTURE_SETS: list[str | None] = ["letters", "numbers", "set2", None]
+# Index of initial texture set (0 = first in list, or None to start with solid colors)
+TEXTURE_SET_INDEX: int = 0

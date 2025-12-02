@@ -508,11 +508,11 @@ def _background_down(ctx: CommandContext) -> CommandResult:
     return CommandResult()
 
 
-def _texture_mode_toggle(ctx: CommandContext) -> CommandResult:
-    """Toggle texture mode on/off (pyglet2 backend only)."""
-    enabled = ctx.window.toggle_texture_mode()
-    if enabled is not None:
-        ctx.vs.debug(False, f"Texture Mode: {'ON' if enabled else 'OFF'}")
+def _texture_set_cycle(ctx: CommandContext) -> CommandResult:
+    """Cycle through texture sets (pyglet2 backend only)."""
+    texture_set = ctx.window.cycle_texture_set()
+    if texture_set is not None:
+        ctx.vs.debug(False, f"Texture: {texture_set}")
     return CommandResult()
 
 
@@ -628,8 +628,8 @@ class Command(Enum):
     BACKGROUND_UP = (_simple, _background_up)
     BACKGROUND_DOWN = (_simple, _background_down)
 
-    # Texture Mode (pyglet2 backend only)
-    TEXTURE_MODE_TOGGLE = (_simple, _texture_mode_toggle)
+    # Texture Set Cycling (pyglet2 backend only)
+    TEXTURE_SET_CYCLE = (_simple, _texture_set_cycle)
 
     # Shadow Toggles
     SHADOW_TOGGLE_L = (_shadow_toggle, FaceName.L)

@@ -188,14 +188,15 @@ class AppWindow(Protocol):
         """
         ...
 
-    def toggle_texture_mode(self) -> bool | None:
-        """Toggle texture rendering mode on/off (if supported by backend).
+    def cycle_texture_set(self) -> str | None:
+        """Cycle to the next texture set (if supported by backend).
 
+        Cycles through TEXTURE_SETS from config (can include None for solid colors).
         Only implemented by backends with texture support (pyglet2).
         Other backends return None (no-op).
 
         Returns:
-            New texture mode state (True=enabled, False=disabled) if supported, None otherwise.
+            Name of new texture set, "solid" if None/disabled, or None if not supported.
         """
         ...
 
