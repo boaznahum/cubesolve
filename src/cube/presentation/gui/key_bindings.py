@@ -170,7 +170,7 @@ KEY_BINDINGS_NORMAL: list[KeyBinding] = [
     (Keys.BRACKETRIGHT, Modifiers.CTRL, Command.BRIGHTNESS_UP),
     (Keys.BRACKETLEFT, Modifiers.CTRL | Modifiers.SHIFT, Command.BACKGROUND_DOWN),
     (Keys.BRACKETRIGHT, Modifiers.CTRL | Modifiers.SHIFT, Command.BACKGROUND_UP),
-    (Keys.T, Modifiers.CTRL, Command.TEXTURE_MODE_TOGGLE),
+    (Keys.T, Modifiers.CTRL | Modifiers.SHIFT, Command.TEXTURE_MODE_TOGGLE),
 
     # -------------------------------------------------------------------------
     # Recording
@@ -262,7 +262,7 @@ KEY_BINDINGS_ANIMATION: list[KeyBinding] = [
     (Keys.BRACKETRIGHT, Modifiers.CTRL, Command.BRIGHTNESS_UP),
     (Keys.BRACKETLEFT, Modifiers.CTRL | Modifiers.SHIFT, Command.BACKGROUND_DOWN),
     (Keys.BRACKETRIGHT, Modifiers.CTRL | Modifiers.SHIFT, Command.BACKGROUND_UP),
-    (Keys.T, Modifiers.CTRL, Command.TEXTURE_MODE_TOGGLE),
+    (Keys.T, Modifiers.CTRL | Modifiers.SHIFT, Command.TEXTURE_MODE_TOGGLE),
 
     # -------------------------------------------------------------------------
     # Solver Switch (works during animation)
