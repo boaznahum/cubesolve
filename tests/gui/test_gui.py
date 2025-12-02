@@ -55,8 +55,6 @@ def test_scramble_and_solve(cube_size: int, enable_animation: bool, speed_up_cou
     backend : str
         Backend to use, parametrized from conftest.py.
     """
-    if backend == "pyglet2":
-        pytest.skip("pyglet2: GCubeViewer not migrated to modern GL yet")
     result = GUITestRunner.run_test(
         commands=Command.SPEED_UP * speed_up_count + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
         cube_size=cube_size,
