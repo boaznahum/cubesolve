@@ -243,8 +243,11 @@ Report any visual glitches, crashes, or unexpected behavior.
 **Phase 4 (Q3.1):** COMPLETE (File Naming Convention) ✅
 **A2.1:** COMPLETE (Command Pattern) ✅
 **A5:** COMPLETE (Pyglet 2.0 Backend with Animation) ✅
+**A6:** PLANNED - AnimationManager Layer Violation Fix 🔄
+**B4:** PLANNED - Zoom Crash Fix (depends on A6) 🔄
 
 **Last Completed Step:** A5 - Pyglet 2.0 modern GL with VBO-based animation
+**Current Work:** A6 - Fix AnimationManager layer violation, then B4 - Fix zoom crash
 **Current Branch:** `new-opengl`
 **Tests Passing:** 126 non-GUI tests, 11 GUI tests (pyglet2: 2 passed, 2 skipped; headless/console/tkinter: 9 passed)
 
@@ -850,6 +853,193 @@ ba42268 Integrate ModernGLRenderer with PygletAppWindow
 2. ~~**Decide on animation approach**: gl_compat vs modern GL~~ ✅ Chose modern GL
 3. ~~**Modern GL animation**: VBO-based animation system~~ ✅ DONE
 4. ~~**Enable mouse rotation animation**~~ ✅ DONE
+
+---
+
+## A6: AnimationManager Layer Violation Fix - PLANNED 🔄
+
+### Problem Statement
+
+The `AnimationManager` (application layer) uses duck-typing to detect `ModernGLCubeViewer` (presentation layer):
+
+```python
+# In AnimationManager._op_and_play_animation() lines 230-237:
+is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+if is_modern_gl:
+    animation = _create_modern_gl_animation(cube, viewer, vs, alg, alg.n)
+```
+
+**Violation:** Application layer knows about presentation layer implementation details.
+
+### Architecture Issue
+
+```
+Current (Bad):
+                    AnimationManager (application layer)
+                           │
+                           ├── knows about GCubeViewer (presentation)
+                           │      uses display lists for animation
+                           │
+                           └── knows about ModernGLCubeViewer (presentation)
+                                  uses duck-typing to detect VBO animation
+
+Desired (Good):
+                    AnimationManager (application layer)
+                           │
+                           └── AnimatableViewer (protocol)
+                                      │
+                           ┌──────────┴──────────┐
+                           │                     │
+                    GCubeViewer            ModernGLCubeViewer
+                    (implements)           (implements)
+```
+
+### Solution: AnimatableViewer Protocol
+
+Create a protocol that both `GCubeViewer` and `ModernGLCubeViewer` implement:
+
+```python
+# src/cube/presentation/gui/protocols/AnimatableViewer.py
+from typing import Protocol, runtime_checkable, Any
+from cube.domain.model.Cube import Cube
+from cube.domain.algs import Alg
+
+@runtime_checkable
+class AnimatableViewer(Protocol):
+    """Protocol for viewers that support animation."""
+
+    @property
+    def cube(self) -> Cube:
+        """The cube being viewed."""
+        ...
+
+    def create_animation(
+        self,
+        alg: Alg,
+        vs: Any,  # ApplicationAndViewState
+        on_finish: Callable[[], None]
+    ) -> "Animation":
+        """Create an animation for the given algorithm.
+
+        The viewer decides HOW to animate (display lists, VBOs, etc.)
+        Returns an Animation object that AnimationManager can schedule.
+        """
+        ...
+
+    def update(self) -> None:
+        """Update the viewer's display."""
+        ...
+```
+
+### Implementation Plan
+
+1. **Create `AnimatableViewer` protocol** in `protocols/AnimatableViewer.py`
+   - Define interface for animation creation
+   - Animation object returned handles the HOW
+
+2. **Update `GCubeViewer`** to implement protocol
+   - Add `create_animation()` method that uses display lists
+   - Move `_create_animation()` from `AnimationManager` to viewer
+
+3. **Update `ModernGLCubeViewer`** to implement protocol
+   - Add `create_animation()` method that uses VBOs
+   - Move `_create_modern_gl_animation()` from `AnimationManager` to viewer
+
+4. **Update `AnimationManager`**
+   - Remove duck-typing detection
+   - Use `viewer.create_animation()` polymorphically
+   - No knowledge of specific viewer implementations
+
+### Files to Change
+
+| File | Change |
+|------|--------|
+| `protocols/AnimatableViewer.py` | NEW - Protocol definition |
+| `presentation/viewer/GCubeViewer.py` | Add `create_animation()` |
+| `backends/pyglet2/ModernGLCubeViewer.py` | Add `create_animation()` |
+| `application/animation/AnimationManager.py` | Remove duck-typing, use protocol |
+
+### Benefits
+
+1. **Clean layer separation** - Application layer uses protocol, not concrete types
+2. **Extensibility** - New viewers just implement the protocol
+3. **Type-safe** - Protocol is `@runtime_checkable` for safety
+4. **Self-documenting** - Animation creation is viewer's responsibility
+
+---
+
+## B4: Zoom Crash Fix - PLANNED 🔄
+
+### Problem Statement
+
+Zoom commands (Ctrl+Up/Down, mouse scroll) crash in pyglet2 backend because they call `gluPerspective()` which is not available in OpenGL core profile.
+
+### Root Cause
+
+The pyglet2 backend has two renderers:
+- `_modern_renderer` (ModernGLRenderer) - shader-based, has `set_perspective()`
+- `_renderer` (PygletRenderer) - legacy, has `ViewStateManager.set_projection()` using `gluPerspective()`
+
+Zoom path uses wrong renderer:
+```python
+# Command.py _zoom_in():
+ctx.vs.set_projection(ctx.window.width, ctx.window.height, ctx.window.renderer)
+# → window.renderer is PygletRenderer (legacy)
+# → calls gluPerspective() → CRASH in core profile
+```
+
+But `on_resize` works correctly:
+```python
+# PygletAppWindow.on_resize():
+self._modern_renderer.set_perspective(width, height, fov_y=45.0, ...)
+# → uses modern GL → works
+```
+
+### Solution: ModernGLViewStateManager Adapter
+
+Create an adapter that wraps `ModernGLRenderer` and implements `ViewStateManager` protocol.
+
+```python
+class ModernGLViewStateManager(ViewStateManager):
+    """ViewStateManager that delegates to ModernGLRenderer."""
+
+    def __init__(self, modern_renderer: ModernGLRenderer):
+        self._renderer = modern_renderer
+
+    def set_projection(self, width, height, fov_y, near, far):
+        # Delegate to modern renderer
+        self._renderer.set_perspective(width, height, fov_y, near, far)
+
+    def push_matrix(self): self._renderer.push_matrix()
+    def pop_matrix(self): self._renderer.pop_matrix()
+    # ... etc
+```
+
+### Implementation Plan
+
+1. **Create `ModernGLViewStateManager`** in `ModernGLRenderer.py`
+   - Implements `ViewStateManager` protocol
+   - Wraps `ModernGLRenderer` instance
+
+2. **Update `PygletRenderer`** (pyglet2 version)
+   - Accept `ModernGLRenderer` reference
+   - Return `ModernGLViewStateManager` from `view` property
+
+3. **Wire up in `PygletAppWindow.__init__`**
+   - After creating `_modern_renderer`, inject it into `_renderer`
+
+### Benefits
+
+- Fixes ALL code paths using `renderer.view.set_projection()`
+- Commands remain backend-agnostic
+- Single point of change
+
+### Dependency
+
+A6 should be fixed first because:
+1. Both involve pyglet2 backend architecture
+2. A6 establishes cleaner patterns that B4 can follow
+3. Fixing A6 first ensures we don't introduce new layer violations in B4
 
 ---
 
