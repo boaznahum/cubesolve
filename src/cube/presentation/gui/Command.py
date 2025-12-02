@@ -492,6 +492,22 @@ def _brightness_down(ctx: CommandContext) -> CommandResult:
     return CommandResult()
 
 
+def _background_up(ctx: CommandContext) -> CommandResult:
+    """Increase background gray level (pyglet2 backend only)."""
+    new_level = ctx.window.adjust_background(0.05)
+    if new_level is not None:
+        ctx.vs.debug(False, f"Background: {new_level:.2f}")
+    return CommandResult()
+
+
+def _background_down(ctx: CommandContext) -> CommandResult:
+    """Decrease background gray level (pyglet2 backend only)."""
+    new_level = ctx.window.adjust_background(-0.05)
+    if new_level is not None:
+        ctx.vs.debug(False, f"Background: {new_level:.2f}")
+    return CommandResult()
+
+
 # =============================================================================
 # COMMAND ENUM
 # =============================================================================
@@ -601,6 +617,8 @@ class Command(Enum):
     # Lighting Control (pyglet2 backend only)
     BRIGHTNESS_UP = (_simple, _brightness_up)
     BRIGHTNESS_DOWN = (_simple, _brightness_down)
+    BACKGROUND_UP = (_simple, _background_up)
+    BACKGROUND_DOWN = (_simple, _background_down)
 
     # Shadow Toggles
     SHADOW_TOGGLE_L = (_shadow_toggle, FaceName.L)

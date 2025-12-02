@@ -103,9 +103,12 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
 ### Lighting (pyglet2 backend only)
     Ctrl+[ - Decrease ambient light brightness
     Ctrl+] - Increase ambient light brightness
+    Ctrl+Shift+[ - Decrease background gray level
+    Ctrl+Shift+] - Increase background gray level
 
-    Adjusts the overall lighting level from 10% to 100%. The current brightness is displayed
-    in the status bar as "Light:XX%". Works during animation.
+    Brightness: Adjusts ambient lighting from 10% to 150%. Displayed as "Light:XX%".
+    Background: Adjusts background from black (0%) to gray (50%). Displayed as "BG:XX%" when non-zero.
+    Both work during animation.
 
 ### Undo/Reset
 
@@ -253,6 +256,8 @@ python -m cube.main_any_backend -c "SPEED_UP+SPEED_UP+SCRAMBLE_1+SOLVE_ALL+QUIT"
 | | F12 | - | `SHADOW_TOGGLE_B` | Toggle back face shadow |
 | **Lighting** | [ | Ctrl | `BRIGHTNESS_DOWN` | Decrease brightness (pyglet2 only) |
 | | ] | Ctrl | `BRIGHTNESS_UP` | Increase brightness (pyglet2 only) |
+| | [ | Ctrl+Shift | `BACKGROUND_DOWN` | Decrease background gray (pyglet2 only) |
+| | ] | Ctrl+Shift | `BACKGROUND_UP` | Increase background gray (pyglet2 only) |
 | **Cube Size** | = | - | `SIZE_INC` | Increase cube size |
 | | - | - | `SIZE_DEC` | Decrease cube size |
 | **Slice Selection** | [ | - | `SLICE_START_INC` | Increase slice start index |

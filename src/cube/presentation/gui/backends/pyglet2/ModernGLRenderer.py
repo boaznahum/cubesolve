@@ -705,9 +705,10 @@ class ModernGLRenderer:
             delta: Amount to add (positive = brighter, negative = darker)
 
         Returns:
-            New ambient level after clamping to [0.1, 1.0]
+            New ambient level after clamping to [0.1, 1.5]
+            Values > 1.0 create overbright lighting for better visibility.
         """
-        new_level = max(0.1, min(1.0, self._ambient_color[0] + delta))
+        new_level = max(0.1, min(1.5, self._ambient_color[0] + delta))
         self._ambient_color = (new_level, new_level, new_level)
         return new_level
 

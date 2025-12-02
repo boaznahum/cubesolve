@@ -162,3 +162,28 @@ class AppWindow(Protocol):
             Current brightness level (0.0-1.0) if supported, None otherwise.
         """
         ...
+
+    def adjust_background(self, delta: float) -> float | None:
+        """Adjust background gray level (if supported by backend).
+
+        Only implemented by backends with background control (pyglet2).
+        Other backends return None (no-op).
+
+        Args:
+            delta: Amount to adjust (positive = lighter, negative = darker)
+
+        Returns:
+            New background level (0.0-0.5) if supported, None otherwise.
+        """
+        ...
+
+    def get_background(self) -> float | None:
+        """Get current background gray level (if supported by backend).
+
+        Only implemented by backends with background control (pyglet2).
+        Other backends return None.
+
+        Returns:
+            Current background level (0.0-0.5) if supported, None otherwise.
+        """
+        ...

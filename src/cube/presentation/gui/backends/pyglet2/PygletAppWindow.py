@@ -183,6 +183,29 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         """
         return self._vs.brightness
 
+    def adjust_background(self, delta: float) -> float | None:
+        """Adjust background gray level.
+
+        Updates vs.background_gray (used in on_draw for glClearColor).
+
+        Args:
+            delta: Amount to adjust (positive = lighter, negative = darker)
+
+        Returns:
+            New background level (0.0-0.5).
+        """
+        new_level = max(0.0, min(0.5, self._vs.background_gray + delta))
+        self._vs.background_gray = new_level
+        return new_level
+
+    def get_background(self) -> float | None:
+        """Get current background gray level.
+
+        Returns:
+            Current background level (0.0-0.5) from vs (authoritative value).
+        """
+        return self._vs.background_gray
+
     @property
     def modern_viewer(self) -> ModernGLCubeViewer:
         """Access the modern GL cube viewer (for ray-plane picking)."""
@@ -240,6 +263,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
             self._vs.skip_next_on_draw = False
             return
 
+        # Set background color from vs (allows runtime adjustment)
+        bg = self._vs.background_gray
+        gl.glClearColor(bg, bg, bg, 1.0)
         self.clear()
 
         # Set up view transform (camera position) using modern GL renderer
@@ -446,6 +472,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         brightness = self.get_brightness()
         if brightness is not None:
             s += f", Light:{brightness:.0%}"
+        background = self.get_background()
+        if background is not None and background > 0:
+            s += f", BG:{background:.0%}"
         self.text.append(pyglet.text.Label(s, x=10, y=y, font_size=10, color=(255, 255, 0, 255), weight='bold'))
         y += 20
 

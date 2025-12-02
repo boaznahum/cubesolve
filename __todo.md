@@ -78,6 +78,27 @@
     - Document test procedures in `docs/design/mouse_testing.md`
   - **Added:** 2025-12-02
 
+- ❌ **G6.** Additional lighting improvements (pyglet2 backend)
+  - **Current state:** G3 implemented brightness (10%-150%) and background (0%-50%)
+  - **Future enhancements:**
+    - Add fill light from below/behind to reduce dark shadows
+    - Boost base colors in shader for more vivid appearance
+    - Add light position control (move light source around cube)
+    - Add specular/shininess control
+  - **Added:** 2025-12-02
+
+- ❌ **G7.** Texture mapping for cube faces (custom images)
+  - **Goal:** Allow user to put images (photos, logos) on cube faces
+  - **Use case:** Personal photos, educational content, branded cubes
+  - **Implementation considerations:**
+    - Load images as OpenGL textures
+    - Map UV coordinates for each facelet
+    - Handle different image aspect ratios
+    - Add command to toggle texture mode on/off
+    - Store texture file paths in config
+  - **Files:** `ModernGLRenderer.py`, `ModernGLCubeViewer.py`
+  - **Added:** 2025-12-02
+
 
 ## Architecture
 
