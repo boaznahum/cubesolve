@@ -938,13 +938,26 @@ class ModernGLRenderer:
             gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
             gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
 
-            # Determine format
-            if len(image.format) == 4:  # RGBA
+            # Determine format - pyglet may load as BGR/BGRA
+            img_format = image.format
+            if img_format == 'RGBA':
                 internal_format = gl.GL_RGBA
                 format_ = gl.GL_RGBA
-            else:  # RGB
+            elif img_format == 'BGRA':
+                internal_format = gl.GL_RGBA
+                format_ = gl.GL_BGRA
+            elif img_format == 'RGB':
                 internal_format = gl.GL_RGB
                 format_ = gl.GL_RGB
+            elif img_format == 'BGR':
+                internal_format = gl.GL_RGB
+                format_ = gl.GL_BGR
+            else:
+                # Unknown format - convert to RGBA
+                image = image.get_image_data()
+                image_data = image.get_data('RGBA', image.width * 4)
+                internal_format = gl.GL_RGBA
+                format_ = gl.GL_RGBA
 
             # Upload texture data
             gl.glTexImage2D(
