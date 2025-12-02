@@ -45,6 +45,13 @@
     - `src/cube/domain/solver/beginner/L3Cross.py` line 178 - Failing assertion
   - **Workaround:** Press `+` key before scramble (or use `--speed-up 5` in tests)
 
+- ❌ **B4.** Mouse zoom (scroll wheel) and Ctrl+Up/Down zoom crash in pyglet2 backend
+  - **Symptom:** Application crashes when using zoom controls
+  - **Controls affected:**
+    - Mouse wheel scroll (zoom in/out)
+    - Ctrl+Up / Ctrl+Down (keyboard zoom)
+  - **Added:** 2025-12-02
+
 ## GUI & Testing
 
 - ❌ **G2.** Investigate pyopengltk as alternative to pure Canvas rendering for tkinter backend
