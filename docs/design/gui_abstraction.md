@@ -613,6 +613,123 @@ animation: Animation = viewer.create_animation(alg, vs)
 | `GCubeViewer` | `viewer/GCubeViewer.py` | Display lists |
 | `ModernGLCubeViewer` | `backends/pyglet2/ModernGLCubeViewer.py` | VBOs + shaders |
 
+#### 3.2.7 ModernGLViewStateManager (`backends/pyglet2/ModernGLRenderer.py`) ✅ B4
+
+> **Added:** 2025-12-02 as part of B4 fix (zoom crash)
+
+This adapter wraps `ModernGLRenderer` and implements the `ViewStateManager` protocol, enabling zoom commands to work in pyglet2's core OpenGL profile.
+
+**Problem:** Zoom commands called `renderer.view.set_projection()` which used legacy `gluPerspective()` - not available in core profile.
+
+**Solution:** Adapter pattern with two classes:
+
+```plantuml
+@startuml B4 Adapter Pattern
+skinparam classAttributeIconSize 0
+
+package "pyglet2 backend" {
+    class ModernGLRenderer {
+        -_projection: MatrixStack
+        -_modelview: MatrixStack
+        +set_perspective(w, h, fov, near, far)
+        +push_matrix()
+        +pop_matrix()
+        +translate(x, y, z)
+        +rotate(angle, x, y, z)
+        +multiply_matrix(matrix)
+    }
+
+    class ModernGLViewStateManager {
+        -_renderer: ModernGLRenderer
+        -_window_width: int
+        -_window_height: int
+        +set_projection(w, h, fov, near, far)
+        +push_matrix()
+        +pop_matrix()
+        +look_at(...)
+        +screen_to_world(x, y)
+    }
+
+    class ModernGLRendererAdapter {
+        -_modern_renderer: ModernGLRenderer
+        -_view: ModernGLViewStateManager
+        +view: ViewStateManager
+    }
+
+    ModernGLRendererAdapter *-- ModernGLViewStateManager : view
+    ModernGLViewStateManager o-- ModernGLRenderer : delegates to
+}
+
+interface ViewStateManager <<protocol>> {
+    +set_projection()
+    +push_matrix()
+    +pop_matrix()
+    ...
+}
+
+ModernGLViewStateManager ..|> ViewStateManager : implements
+@enduml
+```
+
+**Sequence: How Zoom Now Works**
+
+```plantuml
+@startuml B4 Zoom Sequence
+participant "Command._zoom_in()" as Cmd
+participant "PygletAppWindow" as Win
+participant "ModernGLRendererAdapter" as Adapter
+participant "ModernGLViewStateManager" as VSM
+participant "ModernGLRenderer" as Renderer
+
+Cmd -> Win: renderer
+Win --> Adapter: _renderer_adapter
+Cmd -> Adapter: view
+Adapter --> VSM: _view
+Cmd -> VSM: set_projection(w, h, fov, near, far)
+VSM -> Renderer: set_perspective(w, h, fov, near, far)
+note right: Uses shader-based\nprojection matrix\n(no gluPerspective!)
+@enduml
+```
+
+**Code:**
+```python
+class ModernGLViewStateManager:
+    """ViewStateManager adapter that wraps ModernGLRenderer."""
+
+    def __init__(self, renderer: ModernGLRenderer, window_width: int, window_height: int):
+        self._renderer = renderer
+        self._window_width = window_width
+        self._window_height = window_height
+
+    def set_projection(self, width, height, fov_y=50.0, near=0.1, far=100.0):
+        # Delegate to modern renderer (uses shader-based perspective)
+        self._renderer.set_perspective(width, height, fov_y, near, far)
+
+    # All other methods delegate similarly...
+
+
+class ModernGLRendererAdapter:
+    """Renderer protocol adapter for pyglet2."""
+
+    def __init__(self, modern_renderer: ModernGLRenderer, width: int, height: int):
+        self._view = ModernGLViewStateManager(modern_renderer, width, height)
+
+    @property
+    def view(self) -> ModernGLViewStateManager:
+        return self._view
+```
+
+**Wiring in PygletAppWindow:**
+```python
+# In __init__:
+self._modern_renderer = ModernGLRenderer()
+self._renderer_adapter = ModernGLRendererAdapter(self._modern_renderer, width, height)
+
+@property
+def renderer(self) -> ModernGLRendererAdapter:
+    return self._renderer_adapter  # Not the legacy renderer!
+```
+
 ### 3.3 Backend Factory (`factory.py`)
 
 ```python
