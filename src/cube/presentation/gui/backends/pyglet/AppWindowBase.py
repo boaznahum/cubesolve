@@ -110,6 +110,15 @@ class AppWindowBase(ABC):
         """Check if animation is currently running."""
         return bool(self._animation_manager and self._animation_manager.animation_running())
 
+    def cleanup(self) -> None:
+        """Clean up resources when shutting down.
+
+        Handles viewer cleanup if viewer exists. Subclasses can override
+        to add additional cleanup, but should call super().cleanup().
+        """
+        if self._viewer is not None:
+            self._viewer.cleanup()
+
     @abstractmethod
     def run(self) -> None:
         """Run the main event loop. Blocks until close() is called."""

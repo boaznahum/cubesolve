@@ -186,8 +186,8 @@ def run_with_backend(
 
     finally:
         # Cleanup
-        if window is not None and window.viewer:
-            window.viewer.cleanup()
+        if window is not None:
+            window.cleanup()
 
     return 0
 
