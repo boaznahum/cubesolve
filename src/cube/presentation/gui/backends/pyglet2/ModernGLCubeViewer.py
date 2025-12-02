@@ -198,10 +198,10 @@ class ModernGLCubeViewer:
         # Apply animation rotation matrix
         self._renderer.multiply_matrix(model_view)
 
-        # Draw animated geometry
-        self._renderer.draw_colored_triangles(self._animated_face_triangles)
+        # Draw animated geometry with lighting
+        self._renderer.draw_lit_triangles(self._animated_face_triangles)
         if self._animated_line_data is not None and len(self._animated_line_data) > 0:
-            self._renderer.draw_colored_lines(self._animated_line_data, line_width=2.0)
+            self._renderer.draw_colored_lines(self._animated_line_data, line_width=4.0)
 
         # Restore matrix
         self._renderer.pop_matrix()
@@ -209,19 +209,19 @@ class ModernGLCubeViewer:
     def draw(self) -> None:
         """Draw the cube.
 
-        Rebuilds geometry if cube state changed, then renders.
+        Rebuilds geometry if cube state changed, then renders with lighting.
         """
         if self._dirty:
             self._rebuild_geometry()
             self._dirty = False
 
-        # Draw filled faces
+        # Draw filled faces with lighting
         if self._face_triangles is not None and len(self._face_triangles) > 0:
-            self._renderer.draw_colored_triangles(self._face_triangles)
+            self._renderer.draw_lit_triangles(self._face_triangles)
 
-        # Draw grid lines
+        # Draw grid lines (no lighting) - use thick lines like legacy GL
         if self._line_data is not None and len(self._line_data) > 0:
-            self._renderer.draw_colored_lines(self._line_data, line_width=2.0)
+            self._renderer.draw_colored_lines(self._line_data, line_width=4.0)
 
     def _rebuild_geometry(self) -> None:
         """Rebuild all geometry from current cube state.
@@ -229,13 +229,17 @@ class ModernGLCubeViewer:
         If animation is active, separates geometry into:
         - Static geometry (non-animated cells) in _face_triangles/_line_data
         - Animated geometry in _animated_face_triangles/_animated_line_data
+
+        Vertex format for faces: 9 floats per vertex (x, y, z, nx, ny, nz, r, g, b)
+        Vertex format for lines: 6 floats per vertex (x, y, z, r, g, b)
         """
         cube = self._cube
         size = cube.size
         animated_parts = self._animated_parts
 
-        # Collect all triangle vertices (6 floats per vertex: x,y,z,r,g,b)
+        # Collect all triangle vertices (9 floats per vertex: x,y,z,nx,ny,nz,r,g,b)
         face_verts: list[float] = []
+        # Lines still use 6 floats (no lighting needed)
         line_verts: list[float] = []
         animated_face_verts: list[float] = []
         animated_line_verts: list[float] = []
@@ -247,6 +251,11 @@ class ModernGLCubeViewer:
             center = np.array(transform[0], dtype=np.float32)
             right = np.array(transform[1], dtype=np.float32)
             up = np.array(transform[2], dtype=np.float32)
+
+            # Compute face normal (outward direction)
+            normal = np.cross(right, up)
+            normal = normal / np.linalg.norm(normal)
+            nx, ny, nz = float(normal[0]), float(normal[1]), float(normal[2])
 
             # Face size in world units
             face_size = FACE_OFFSET * 2
@@ -291,10 +300,11 @@ class ModernGLCubeViewer:
                     tl = center + x0 * right + y1 * up
 
                     # Two triangles for quad: (bl, br, tr) and (bl, tr, tl)
+                    # Each vertex: position (3) + normal (3) + color (3) = 9 floats
                     for v in [bl, br, tr, bl, tr, tl]:
-                        target_face_verts.extend([v[0], v[1], v[2], r, g, b])
+                        target_face_verts.extend([v[0], v[1], v[2], nx, ny, nz, r, g, b])
 
-                    # Border lines (black)
+                    # Border lines (black) - still 6 floats, no normals needed
                     line_color = (0.0, 0.0, 0.0)
                     for p1, p2 in [(bl, br), (br, tr), (tr, tl), (tl, bl)]:
                         target_line_verts.extend([

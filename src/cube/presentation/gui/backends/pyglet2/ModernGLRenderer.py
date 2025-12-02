@@ -156,11 +156,12 @@ class ModernGLRenderer:
         self._lit_vao = ctypes.c_uint()
         self._lit_vbo = ctypes.c_uint()
 
-        # Lighting parameters
-        self._light_pos = (100.0, 100.0, 200.0)  # Light position in world space
+        # Lighting parameters - tuned to match legacy OpenGL appearance
+        # TODO: A6 - Add keyboard controls to adjust these (brightness up/down)
+        self._light_pos = (150.0, 150.0, 300.0)  # Light position in world space
         self._light_color = (1.0, 1.0, 1.0)  # White light
-        self._ambient_color = (0.3, 0.3, 0.3)  # Ambient light
-        self._shininess = 32.0  # Specular shininess
+        self._ambient_color = (0.65, 0.65, 0.65)  # Ambient light (65% - bright)
+        self._shininess = 12.0  # Lower shininess for softer highlights
 
     def setup(self) -> None:
         """Initialize the renderer. Must be called after GL context exists."""
@@ -572,6 +573,12 @@ class ModernGLRenderer:
         if self._vertex_color_shader is None:
             return
 
+        # Enable line anti-aliasing for smoother lines
+        gl.glEnable(gl.GL_LINE_SMOOTH)
+        gl.glEnable(gl.GL_BLEND)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+        gl.glHint(gl.GL_LINE_SMOOTH_HINT, gl.GL_NICEST)
+
         gl.glLineWidth(line_width)
         self._vertex_color_shader.use()
 
@@ -593,6 +600,74 @@ class ModernGLRenderer:
         gl.glDrawArrays(gl.GL_LINES, 0, vertex_count)
 
         gl.glBindVertexArray(0)
+
+        # Disable line anti-aliasing after drawing
+        gl.glDisable(gl.GL_LINE_SMOOTH)
+
+    def draw_lit_triangles(self, data: np.ndarray) -> None:
+        """Draw triangles with Phong lighting.
+
+        Args:
+            data: Numpy array of float32 with interleaved position, normal, and color:
+                  [x, y, z, nx, ny, nz, r, g, b, ...]
+                  Colors are normalized (0.0-1.0), 9 floats per vertex
+        """
+        if self._phong_shader is None or len(data) == 0:
+            return
+
+        self._phong_shader.use()
+
+        # Set matrices
+        mvp = self._get_mvp()
+        modelview = self._modelview.current
+
+        # Normal matrix is inverse transpose of upper-left 3x3 of modelview
+        normal_matrix = np.linalg.inv(modelview[:3, :3]).T.astype(np.float32)
+
+        self._phong_shader.set_uniform_matrix4('uMVP', mvp)
+        self._phong_shader.set_uniform_matrix4('uModelView', modelview)
+
+        # Set normal matrix (3x3)
+        loc = self._phong_shader.get_uniform('uNormalMatrix')
+        if loc >= 0:
+            gl.glUniformMatrix3fv(
+                loc, 1, gl.GL_TRUE,
+                normal_matrix.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+            )
+
+        # Set lighting uniforms
+        self._phong_shader.set_uniform_3f('uLightPos', *self._light_pos)
+        self._phong_shader.set_uniform_3f('uLightColor', *self._light_color)
+        self._phong_shader.set_uniform_3f('uAmbientColor', *self._ambient_color)
+        self._phong_shader.set_uniform_1f('uShininess', self._shininess)
+
+        # Upload vertex data and draw
+        gl.glBindVertexArray(self._lit_vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._lit_vbo)
+        gl.glBufferData(
+            gl.GL_ARRAY_BUFFER,
+            data.nbytes,
+            data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+            gl.GL_DYNAMIC_DRAW
+        )
+
+        # Each vertex has 9 floats (3 pos + 3 normal + 3 color)
+        vertex_count = len(data) // 9
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, vertex_count)
+
+        gl.glBindVertexArray(0)
+
+    def set_light_position(self, x: float, y: float, z: float) -> None:
+        """Set the light position in world space."""
+        self._light_pos = (x, y, z)
+
+    def set_light_color(self, r: float, g: float, b: float) -> None:
+        """Set the light color (0.0-1.0)."""
+        self._light_color = (r, g, b)
+
+    def set_ambient_color(self, r: float, g: float, b: float) -> None:
+        """Set the ambient light color (0.0-1.0)."""
+        self._ambient_color = (r, g, b)
 
     # === Picking / Unprojection ===
 

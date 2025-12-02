@@ -52,6 +52,22 @@
   - True 3D rendering instead of 2D isometric projection
   - Adds external dependency (`pip install pyopengltk`)
 
+- ❌ **G3.** Add keyboard controls for lighting adjustment (pyglet2 backend)
+  - **Current state:** Lighting parameters are hardcoded in `ModernGLRenderer.__init__()`
+  - **Goal:** Allow user to adjust brightness/ambient during runtime
+  - **Proposed keys:** `[` / `]` for brightness down/up, or similar
+  - **Parameters to control:**
+    - Ambient light (currently 0.65)
+    - Light position
+    - Shininess
+  - **Files:** `src/cube/presentation/gui/backends/pyglet2/ModernGLRenderer.py`
+  - **Added:** 2025-12-02
+
+- ❌ **G4.** F10/F11/F12 shadow modes don't work in pyglet2 backend
+  - These keys control shadow/lighting modes in legacy backend
+  - Need to investigate and implement for modern GL
+  - **Added:** 2025-12-02
+
 
 ## Architecture
 
@@ -111,7 +127,6 @@
 ---
 # New entries below - Claude will reformat and move above this line
 
-cube bugs: f10 f11 f12 shadows doesnt work
 ---
 
 ## Done Tasks
