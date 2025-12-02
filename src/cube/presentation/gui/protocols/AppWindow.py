@@ -75,6 +75,14 @@ class AppWindow(Protocol):
         """
         ...
 
+    def cleanup(self) -> None:
+        """Clean up resources when shutting down.
+
+        Called after run() exits to release resources (textures, display lists, etc.).
+        Each backend handles its own cleanup (viewer cleanup if applicable).
+        """
+        ...
+
     def update_gui_elements(self) -> None:
         """Update all GUI elements.
 

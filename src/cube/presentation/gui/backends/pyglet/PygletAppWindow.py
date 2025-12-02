@@ -120,6 +120,11 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         """Run the main event loop."""
         self._backend.event_loop.run()
 
+    def cleanup(self) -> None:
+        """Clean up resources when shutting down."""
+        if self._viewer is not None:
+            self._viewer.cleanup()
+
     def update_gui_elements(self) -> None:
         """Update all GUI elements."""
         self._viewer.update()
