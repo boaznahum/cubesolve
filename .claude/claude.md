@@ -264,6 +264,41 @@ def process_commands(
 - Lambda functions in callbacks (e.g., `lambda w, h, t: Window(w, h, t)`)
 - Simple one-liners where types are obvious from context
 
+### No Duck Typing
+
+**PROHIBITED**: Do not use duck typing with `getattr()` or `hasattr()` to check for optional features.
+
+Instead, add optional methods to the appropriate protocol with clear return types that indicate support:
+- Return `None` if feature not supported
+- Return the actual value if feature is supported
+
+**Bad (duck typing):**
+```python
+# DON'T DO THIS
+modern_renderer = getattr(ctx.window, 'modern_renderer', None)
+if modern_renderer is not None:
+    modern_renderer.adjust_ambient(0.05)
+```
+
+**Good (protocol method):**
+```python
+# DO THIS - add method to AppWindow protocol
+def adjust_brightness(self, delta: float) -> float | None:
+    """Returns new brightness or None if not supported."""
+    ...
+
+# In command handler:
+new_level = ctx.window.adjust_brightness(0.05)
+if new_level is not None:
+    # Feature supported, use value
+    ...
+```
+
+This ensures:
+- Type safety and IDE autocomplete
+- Clear API contracts in protocols
+- No runtime attribute guessing
+
 ---
 
 ## Protocol Implementation Pattern

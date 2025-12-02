@@ -129,6 +129,9 @@ class ApplicationAndViewState:
         self._celebration_enabled: bool = config.CELEBRATION_ENABLED
         self._celebration_duration: float = config.CELEBRATION_DURATION
 
+        # Lighting settings (pyglet2 backend only)
+        self._brightness: float = 0.65  # Default ambient light level (0.0-1.0)
+
     def reset(self, not_view=False) -> None:
         self._alpha_x = 0
         self._alpha_y = 0
@@ -196,6 +199,16 @@ class ApplicationAndViewState:
     @property
     def offset(self) -> Sequence[int]:
         return self._offset
+
+    @property
+    def brightness(self) -> float:
+        """Get current brightness level (0.0-1.0)."""
+        return self._brightness
+
+    @brightness.setter
+    def brightness(self, value: float) -> None:
+        """Set brightness level (clamped to 0.1-1.0)."""
+        self._brightness = max(0.1, min(1.0, value))
 
     def prepare_objects_view(self, renderer: "Renderer") -> None:
         """Set up the model-view transformation for drawing objects.

@@ -389,3 +389,19 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         """
         from cube.presentation.gui.backends.common_gl_utils import get_opengl_info_string
         return get_opengl_info_string()
+
+    def adjust_brightness(self, delta: float) -> float | None:
+        """Adjust ambient light brightness (not supported in legacy pyglet backend).
+
+        Returns:
+            None (lighting not supported in legacy OpenGL backend).
+        """
+        return None
+
+    def get_brightness(self) -> float | None:
+        """Get current brightness level (not supported in legacy pyglet backend).
+
+        Returns:
+            None (lighting not supported in legacy OpenGL backend).
+        """
+        return None

@@ -694,6 +694,43 @@ class ModernGLRenderer:
         """Set the ambient light color (0.0-1.0)."""
         self._ambient_color = (r, g, b)
 
+    def get_ambient_level(self) -> float:
+        """Get the current ambient light level (average of RGB)."""
+        return self._ambient_color[0]
+
+    def adjust_ambient(self, delta: float) -> float:
+        """Adjust the ambient light level.
+
+        Args:
+            delta: Amount to add (positive = brighter, negative = darker)
+
+        Returns:
+            New ambient level after clamping to [0.1, 1.0]
+        """
+        new_level = max(0.1, min(1.0, self._ambient_color[0] + delta))
+        self._ambient_color = (new_level, new_level, new_level)
+        return new_level
+
+    def get_shininess(self) -> float:
+        """Get the current shininess value."""
+        return self._shininess
+
+    def set_shininess(self, value: float) -> None:
+        """Set the shininess value (clamped to [1.0, 128.0])."""
+        self._shininess = max(1.0, min(128.0, value))
+
+    def adjust_shininess(self, delta: float) -> float:
+        """Adjust the shininess value.
+
+        Args:
+            delta: Amount to add
+
+        Returns:
+            New shininess value after clamping to [1.0, 128.0]
+        """
+        self._shininess = max(1.0, min(128.0, self._shininess + delta))
+        return self._shininess
+
     # === Picking / Unprojection ===
 
     def screen_to_world(

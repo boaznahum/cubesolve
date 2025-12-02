@@ -81,6 +81,10 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self._modern_renderer.setup()
         gl.glEnable(gl.GL_DEPTH_TEST)
 
+        # Initialize brightness from vs (persisted value)
+        brightness = self._vs.brightness
+        self._modern_renderer.set_ambient_color(brightness, brightness, brightness)
+
         # Set up perspective projection
         # Camera offset is typically [0, 0, -400], so far plane needs to be > 400
         self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=1.0, far=1000.0)
@@ -153,6 +157,31 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
     def modern_renderer(self) -> ModernGLRenderer:
         """Access the modern GL renderer."""
         return self._modern_renderer
+
+    def adjust_brightness(self, delta: float) -> float | None:
+        """Adjust ambient light brightness.
+
+        Updates both the renderer and vs.brightness (persisted value).
+
+        Args:
+            delta: Amount to adjust (positive = brighter, negative = darker)
+
+        Returns:
+            New brightness level (0.0-1.0).
+        """
+        # Update renderer
+        new_level = self._modern_renderer.adjust_ambient(delta)
+        # Update vs (authoritative persisted value)
+        self._vs.brightness = new_level
+        return new_level
+
+    def get_brightness(self) -> float | None:
+        """Get current brightness level.
+
+        Returns:
+            Current brightness level (0.0-1.0) from vs (authoritative value).
+        """
+        return self._vs.brightness
 
     @property
     def modern_viewer(self) -> ModernGLCubeViewer:
@@ -413,6 +442,10 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         s = f"Animation:{_b(op.animation_enabled)}, [{vs.get_speed_index}] {vs.get_speed.get_speed()}"
         s += f", Sanity check:{_b(config.CHECK_CUBE_SANITY)}, Debug={_b(slv.is_debug_config_mode)}"
         s += f", SS Mode:{_b(vs.single_step_mode)}"
+        # Add lighting info (uses protocol method)
+        brightness = self.get_brightness()
+        if brightness is not None:
+            s += f", Light:{brightness:.0%}"
         self.text.append(pyglet.text.Label(s, x=10, y=y, font_size=10, color=(255, 255, 0, 255), weight='bold'))
         y += 20
 

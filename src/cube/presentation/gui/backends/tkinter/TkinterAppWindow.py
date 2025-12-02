@@ -208,3 +208,5 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             Empty string (tkinter backend uses 2D canvas, no OpenGL).
         """
         return ""
+
+    # adjust_brightness() and get_brightness() inherited from AppWindowBase (return None)

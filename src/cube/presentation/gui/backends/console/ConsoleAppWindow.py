@@ -205,3 +205,5 @@ class ConsoleAppWindow(AppWindowBase, AppWindow):
             Empty string (console backend has no OpenGL context).
         """
         return ""
+
+    # adjust_brightness() and get_brightness() inherited from AppWindowBase (return None)

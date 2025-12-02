@@ -164,6 +164,12 @@ KEY_BINDINGS_NORMAL: list[KeyBinding] = [
     (Keys.BRACKETRIGHT, Modifiers.SHIFT, Command.SLICE_STOP_DEC),
 
     # -------------------------------------------------------------------------
+    # Lighting (pyglet2 backend only)
+    # -------------------------------------------------------------------------
+    (Keys.BRACKETLEFT, Modifiers.CTRL, Command.BRIGHTNESS_DOWN),
+    (Keys.BRACKETRIGHT, Modifiers.CTRL, Command.BRIGHTNESS_UP),
+
+    # -------------------------------------------------------------------------
     # Recording
     # -------------------------------------------------------------------------
     (Keys.P, 0, Command.RECORDING_PLAY),
@@ -245,6 +251,12 @@ KEY_BINDINGS_ANIMATION: list[KeyBinding] = [
     (Keys.F10, 0, Command.SHADOW_TOGGLE_L),
     (Keys.F11, 0, Command.SHADOW_TOGGLE_D),
     (Keys.F12, 0, Command.SHADOW_TOGGLE_B),
+
+    # -------------------------------------------------------------------------
+    # Lighting (pyglet2 backend only, works during animation)
+    # -------------------------------------------------------------------------
+    (Keys.BRACKETLEFT, Modifiers.CTRL, Command.BRIGHTNESS_DOWN),
+    (Keys.BRACKETRIGHT, Modifiers.CTRL, Command.BRIGHTNESS_UP),
 
     # -------------------------------------------------------------------------
     # Solver Switch (works during animation)

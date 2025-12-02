@@ -137,3 +137,28 @@ class AppWindow(Protocol):
             For non-OpenGL backends (tkinter, console, headless): empty string.
         """
         ...
+
+    def adjust_brightness(self, delta: float) -> float | None:
+        """Adjust ambient light brightness (if supported by backend).
+
+        Only implemented by backends with lighting support (pyglet2).
+        Other backends return None (no-op).
+
+        Args:
+            delta: Amount to adjust (positive = brighter, negative = darker)
+
+        Returns:
+            New brightness level (0.0-1.0) if supported, None otherwise.
+        """
+        ...
+
+    def get_brightness(self) -> float | None:
+        """Get current brightness level (if supported by backend).
+
+        Only implemented by backends with lighting support (pyglet2).
+        Other backends return None.
+
+        Returns:
+            Current brightness level (0.0-1.0) if supported, None otherwise.
+        """
+        ...

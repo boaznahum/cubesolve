@@ -334,6 +334,10 @@ class AppWindowBase(ABC):
         s += f", Sanity check:{_b(config.CHECK_CUBE_SANITY)}"
         s += f", Debug={_b(slv.is_debug_config_mode)}"
         s += f", SS Mode:{_b(vs.single_step_mode)}"
+        # Add lighting info if backend supports it
+        brightness = self.get_brightness()
+        if brightness is not None:
+            s += f", Light:{brightness:.0%}"
         self._status_labels.append(TextLabel(
             s, x=10, y=y, font_size=10, color=(255, 255, 0, 255), bold=True
         ))
@@ -389,3 +393,28 @@ class AppWindowBase(ABC):
     def animation_labels(self) -> list[TextLabel]:
         """Get current animation text labels."""
         return self._animation_labels
+
+    def adjust_brightness(self, delta: float) -> float | None:
+        """Adjust ambient light brightness (if supported by backend).
+
+        Default implementation returns None (not supported).
+        Override in backends with lighting support (e.g., pyglet2).
+
+        Args:
+            delta: Amount to adjust (positive = brighter, negative = darker)
+
+        Returns:
+            New brightness level (0.0-1.0) if supported, None otherwise.
+        """
+        return None
+
+    def get_brightness(self) -> float | None:
+        """Get current brightness level (if supported by backend).
+
+        Default implementation returns None (not supported).
+        Override in backends with lighting support (e.g., pyglet2).
+
+        Returns:
+            Current brightness level (0.0-1.0) if supported, None otherwise.
+        """
+        return None
