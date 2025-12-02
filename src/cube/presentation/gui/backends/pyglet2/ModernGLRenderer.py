@@ -153,15 +153,15 @@ class ModernGLRenderer:
         self._vc_vbo = ctypes.c_uint()
 
         # VAO/VBO for lit drawing (position + normal + color interleaved)
-        self._lit_vao = ctypes.c_uint()
-        self._lit_vbo = ctypes.c_uint()
+        self._lit_vao: ctypes.c_uint = ctypes.c_uint()
+        self._lit_vbo: ctypes.c_uint = ctypes.c_uint()
 
         # Lighting parameters - tuned to match legacy OpenGL appearance
-        # TODO: A6 - Add keyboard controls to adjust these (brightness up/down)
-        self._light_pos = (150.0, 150.0, 300.0)  # Light position in world space
-        self._light_color = (1.0, 1.0, 1.0)  # White light
-        self._ambient_color = (0.65, 0.65, 0.65)  # Ambient light (65% - bright)
-        self._shininess = 12.0  # Lower shininess for softer highlights
+        # TODO: G3 - Add keyboard controls to adjust these (brightness up/down)
+        self._light_pos: tuple[float, float, float] = (150.0, 150.0, 300.0)
+        self._light_color: tuple[float, float, float] = (1.0, 1.0, 1.0)
+        self._ambient_color: tuple[float, float, float] = (0.65, 0.65, 0.65)
+        self._shininess: float = 12.0
 
     def setup(self) -> None:
         """Initialize the renderer. Must be called after GL context exists."""
