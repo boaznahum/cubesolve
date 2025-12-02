@@ -1,7 +1,7 @@
 @startuml GUI Package Structure
 
 title GUI Abstraction - Package & Component Diagram
-footer Last Updated: 2025-11-30 | Added Module Composition
+footer Last Updated: 2025-12-02 | A6: AnimatableViewer Protocol Added
 
 skinparam componentStyle rectangle
 
@@ -39,6 +39,7 @@ package "src/cube" {
             component [Window] as window_proto
             component [EventLoop] as loop_proto
             component [AnimationBackend] as anim_proto
+            component [AnimatableViewer ✅\n(A6: clean layer separation)] as animatable_viewer_proto
         }
 
         component [types.py ✅\n(Point3D, Color3,\nKeyEvent, MouseEvent,\nDisplayList, TextureHandle)] as types_comp
@@ -80,10 +81,10 @@ package "src/cube" {
     }
 
     ' ============================================
-    ' VIEWER (✅ migrated)
+    ' VIEWER (✅ migrated + A6)
     ' ============================================
     package "viewer ✅" as viewer_pkg #90EE90 {
-        component [GCubeViewer\n+renderer param ✅] as gviewer_comp
+        component [GCubeViewer ✅\n+renderer param\n+cube property\n**A6:** +create_animation()\nimplements AnimatableViewer] as gviewer_comp
         component [_Board\n+renderer param ✅\n+call_lists ✅] as board_comp
         component [_Cell\n+renderer prop ✅\n+display_lists ✅\n+shapes.* ✅] as cell_comp
         component [_FaceBoard\n+board prop ✅] as faceboard_comp
@@ -94,10 +95,10 @@ package "src/cube" {
     }
 
     ' ============================================
-    ' ANIMATION (✅ migrated)
+    ' ANIMATION (✅ migrated + A6)
     ' ============================================
     package "animation ✅" as anim_pkg #90EE90 {
-        component [AnimationManager\n+set_event_loop() ✅\nuses EventLoop protocol] as anim_mgr_comp
+        component [AnimationManager\n+set_event_loop() ✅\nuses EventLoop protocol\n**A6:** uses AnimatableViewer\n(no duck-typing!)] as anim_mgr_comp
     }
 
     ' ============================================
@@ -173,8 +174,10 @@ cell_comp --> renderer_proto : uses (partial)
 ' Viewer reads model
 gviewer_comp --> cube_comp : reads
 
-' Animation uses protocol (✅ done)
+' Animation uses protocols (✅ done + A6)
 anim_mgr_comp --> loop_proto : "✅ uses EventLoop"
+anim_mgr_comp --> animatable_viewer_proto : "✅ A6: uses AnimatableViewer"
+gviewer_comp ..|> animatable_viewer_proto : implements
 
 ' App coordinates everything
 app_comp --> operator_comp

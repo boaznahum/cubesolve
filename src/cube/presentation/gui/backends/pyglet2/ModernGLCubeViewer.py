@@ -8,15 +8,17 @@ Animation Support:
     This viewer supports smooth face rotation animation by tracking which
     cells are being animated and rendering them with a rotation matrix.
     The animation flow:
-    1. AnimationManager calls get_slices_movable_gui_objects() to start animation
+    1. AnimationManager calls viewer.create_animation() to create animation
     2. Animated cells are marked and separated from static cells
-    3. draw() renders static cells normally, then animated cells with rotation
-    4. unhidden_all() ends the animation and clears the state
+    3. draw() renders static cells normally
+    4. Animation's _draw() calls draw_animated() for rotating parts
+    5. unhidden_all() ends the animation and clears the state
 """
 from __future__ import annotations
 
 import math
-from collections.abc import Collection, Iterable
+import time
+from collections.abc import Collection, Iterable, Set
 from typing import TYPE_CHECKING, Tuple
 
 import numpy as np
@@ -27,6 +29,9 @@ from cube.domain.model._part_slice import PartSlice
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
+    from cube.domain.algs import AnimationAbleAlg
+    from cube.application.state import ApplicationAndViewState
+    from cube.application.animation.AnimationManager import Animation
     from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer
 
 
@@ -117,7 +122,15 @@ class ModernGLCubeViewer:
         """
         return self._renderer
 
-    # === Animation Interface (for AnimationManager compatibility) ===
+    @property
+    def cube(self) -> Cube:
+        """Get the cube instance.
+
+        Part of AnimatableViewer protocol.
+        """
+        return self._cube
+
+    # === Animation Interface (AnimatableViewer protocol) ===
 
     def get_slices_movable_gui_objects(
         self,
@@ -205,6 +218,140 @@ class ModernGLCubeViewer:
 
         # Restore matrix
         self._renderer.pop_matrix()
+
+    def create_animation(
+        self,
+        alg: "AnimationAbleAlg",
+        vs: "ApplicationAndViewState",
+    ) -> "Animation":
+        """Create animation for a face rotation algorithm.
+
+        Implements AnimatableViewer protocol. Uses VBOs for rendering
+        the animated parts.
+
+        Args:
+            alg: The algorithm to animate (must implement get_animation_objects)
+            vs: Application view state (for speed settings, view transforms)
+
+        Returns:
+            Animation object ready for scheduling
+        """
+        # Import here to avoid circular imports
+        from cube.application.animation.AnimationManager import Animation
+
+        cube = self._cube
+        n_count = alg.n
+
+        # Get the rotated face and parts
+        rotate_face, cube_parts = alg.get_animation_objects(cube)
+
+        if not isinstance(cube_parts, Set):
+            cube_parts = set(cube_parts)
+
+        # Set up animation in viewer (marks parts for separate rendering)
+        face_center, opposite_face_center, _ = self.get_slices_movable_gui_objects(
+            rotate_face, cube_parts
+        )
+
+        current_angle: float = 0
+
+        # Compute target angle
+        n = n_count % 4
+        if n == 3:
+            n = -1
+        target_angle = math.radians(90 * n)
+        animation_speed = vs.get_speed
+        angle_delta = target_angle / float(animation_speed.number_of_steps) / math.fabs(n)
+
+        # Compute rotation axis transformation matrices
+        # Reference: https://www.eng.uc.edu/~beaucag/Classes/Properties/OptionalProjects/
+        # CoordinateTransformationCode/Rotate%20about%20an%20arbitrary%20axis%20(3%20dimensions).html
+        x1 = face_center[0]
+        y1 = face_center[1]
+        z1 = face_center[2]
+        t: ndarray = np.array([[1, 0, 0, -x1],
+                               [0, 1, 0, -y1],
+                               [0, 0, 1, -z1],
+                               [0, 0, 0, 1]], dtype=float)
+        tt = np.linalg.inv(t)
+        u = (face_center - opposite_face_center) / np.linalg.norm(face_center - opposite_face_center)
+        a = u[0]
+        b = u[1]
+        c = u[2]
+        d = math.sqrt(b * b + c * c)
+        if d == 0:
+            rx = np.array([[1, 0, 0, 0],
+                           [0, 1, 0, 0],
+                           [0, 0, 1, 0],
+                           [0, 0, 0, 1]], dtype=float)
+        else:
+            rx = np.array([[1, 0, 0, 0],
+                           [0, c / d, -b / d, 0],
+                           [0, b / d, c / d, 0],
+                           [0, 0, 0, 1]], dtype=float)
+
+        rx_t = np.linalg.inv(rx)
+        ry = np.array([[d, 0, -a, 0],
+                       [0, 1, 0, 0],
+                       [a, 0, d, 0],
+                       [0, 0, 0, 1]], dtype=float)
+        ry_t = np.linalg.inv(ry)
+
+        # Combined pre/post rotation matrices
+        mt: ndarray = tt @ rx_t @ ry_t
+        m: ndarray = ry @ rx @ t
+
+        animation = Animation()
+        animation.done = False
+        animation._animation_cleanup = lambda: self.unhidden_all()
+
+        last_update = time.time()
+
+        def _update() -> bool:
+            nonlocal current_angle
+            nonlocal last_update
+
+            if (time.time() - last_update) > animation.delay:
+                _angle = current_angle + angle_delta
+
+                if abs(_angle) > abs(target_angle):
+                    if current_angle < target_angle:
+                        current_angle = target_angle
+                    else:
+                        animation.done = True
+                else:
+                    current_angle = _angle
+
+                last_update = time.time()
+                return True
+            else:
+                return False
+
+        def _draw() -> None:
+            nonlocal current_angle
+
+            if abs(current_angle) > abs(target_angle):
+                animation.done = True
+                return
+
+            # Compute the rotation matrix for current angle
+            ct = math.cos(current_angle)
+            st = math.sin(current_angle)
+            Rz = np.array([[ct, st, 0, 0],
+                           [-st, ct, 0, 0],
+                           [0, 0, 1, 0],
+                           [0, 0, 0, 1]], dtype=float)
+
+            model_view: ndarray = mt @ Rz @ m
+
+            # Draw animated parts with the rotation matrix
+            self.draw_animated(model_view)
+
+        animation.delay = animation_speed.delay_between_steps
+        animation._animation_draw_only = _draw
+        animation._animation_update_only = _update
+
+        return animation
 
     def draw(self) -> None:
         """Draw the cube.

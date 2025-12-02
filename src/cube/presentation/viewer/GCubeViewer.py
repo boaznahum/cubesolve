@@ -1,6 +1,11 @@
-from typing import Tuple, Iterable
-from collections.abc import Collection
+from __future__ import annotations
 
+import math
+import time
+from typing import Tuple, Iterable, TYPE_CHECKING
+from collections.abc import Collection, Set
+
+import numpy as np
 from numpy import ndarray
 
 from cube.application.state import ApplicationAndViewState
@@ -15,6 +20,11 @@ from ._board import _Board
 from ._faceboard import _FaceBoard
 from cube.application import config
 from ..gui.protocols.Renderer import Renderer
+from ..gui.types import DisplayList
+
+if TYPE_CHECKING:
+    from cube.domain.algs import AnimationAbleAlg
+    from cube.application.animation.AnimationManager import Animation
 
 
 class GCubeViewer:
@@ -39,6 +49,11 @@ class GCubeViewer:
     def renderer(self) -> Renderer | None:
         """Get the renderer instance."""
         return self._renderer
+
+    @property
+    def cube(self) -> Cube:
+        """Get the cube instance."""
+        return self._cube
 
     def reset(self):
         """
@@ -141,3 +156,149 @@ class GCubeViewer:
 
         with prof.w_prof("Locate facet", config.PROF_VIEWER_SEARCH_FACET):
             return self._board.find_facet(x, y, z)
+
+    def create_animation(
+        self,
+        alg: "AnimationAbleAlg",
+        vs: ApplicationAndViewState,
+    ) -> "Animation":
+        """Create animation for a face rotation algorithm.
+
+        Implements AnimatableViewer protocol. Uses display lists for rendering
+        the animated parts.
+
+        Args:
+            alg: The algorithm to animate (must implement get_animation_objects)
+            vs: Application view state (for speed settings, view transforms)
+
+        Returns:
+            Animation object ready for scheduling
+        """
+        # Import here to avoid circular imports
+        from cube.application.animation.AnimationManager import Animation
+
+        renderer = self._renderer
+        if renderer is None:
+            raise RuntimeError("Renderer is required for animation")
+
+        cube = self._cube
+        n_count = alg.n
+
+        # Get the rotated face and parts
+        rotate_face, cube_parts = alg.get_animation_objects(cube)
+
+        if not isinstance(cube_parts, Set):
+            cube_parts = set(cube_parts)
+
+        # Get face centers and gui objects (display lists)
+        face_center, opposite_face_center, gui_objects = self.get_slices_movable_gui_objects(
+            rotate_face, cube_parts
+        )
+
+        current_angle: float = 0
+
+        # Compute target angle
+        n = n_count % 4
+        if n == 3:
+            n = -1
+        target_angle = math.radians(90 * n)
+        animation_speed = vs.get_speed
+        angle_delta = target_angle / float(animation_speed.number_of_steps) / math.fabs(n)
+
+        # Compute rotation axis transformation matrices
+        # Reference: https://www.eng.uc.edu/~beaucag/Classes/Properties/OptionalProjects/
+        # CoordinateTransformationCode/Rotate%20about%20an%20arbitrary%20axis%20(3%20dimensions).html
+        x1 = face_center[0]
+        y1 = face_center[1]
+        z1 = face_center[2]
+        t: ndarray = np.array([[1, 0, 0, -x1],
+                               [0, 1, 0, -y1],
+                               [0, 0, 1, -z1],
+                               [0, 0, 0, 1]], dtype=float)
+        tt = np.linalg.inv(t)
+        u = (face_center - opposite_face_center) / np.linalg.norm(face_center - opposite_face_center)
+        a = u[0]
+        b = u[1]
+        c = u[2]
+        d = math.sqrt(b * b + c * c)
+        if d == 0:
+            rx = np.array([[1, 0, 0, 0],
+                           [0, 1, 0, 0],
+                           [0, 0, 1, 0],
+                           [0, 0, 0, 1]], dtype=float)
+        else:
+            rx = np.array([[1, 0, 0, 0],
+                           [0, c / d, -b / d, 0],
+                           [0, b / d, c / d, 0],
+                           [0, 0, 0, 1]], dtype=float)
+
+        rx_t = np.linalg.inv(rx)
+        ry = np.array([[d, 0, -a, 0],
+                       [0, 1, 0, 0],
+                       [a, 0, d, 0],
+                       [0, 0, 0, 1]], dtype=float)
+        ry_t = np.linalg.inv(ry)
+
+        # Combined pre/post rotation matrices
+        mt: ndarray = tt @ rx_t @ ry_t
+        m: ndarray = ry @ rx @ t
+
+        animation = Animation()
+        animation.done = False
+        animation._animation_cleanup = lambda: self.unhidden_all()
+
+        last_update = time.time()
+
+        def _update() -> bool:
+            nonlocal current_angle
+            nonlocal last_update
+
+            if (time.time() - last_update) > animation.delay:
+                _angle = current_angle + angle_delta
+
+                if abs(_angle) > abs(target_angle):
+                    if current_angle < target_angle:
+                        current_angle = target_angle
+                    else:
+                        animation.done = True
+                else:
+                    current_angle = _angle
+
+                last_update = time.time()
+                return True
+            else:
+                return False
+
+        def _draw() -> None:
+            nonlocal current_angle
+
+            if abs(current_angle) > abs(target_angle):
+                animation.done = True
+                return
+
+            vs.prepare_objects_view(renderer)
+
+            ct = math.cos(current_angle)
+            st = math.sin(current_angle)
+            Rz = np.array([[ct, st, 0, 0],
+                           [-st, ct, 0, 0],
+                           [0, 0, 1, 0],
+                           [0, 0, 0, 1]], dtype=float)
+
+            model_view: ndarray = mt @ Rz @ m
+
+            # Apply the animation rotation matrix
+            renderer.view.multiply_matrix(model_view)
+
+            try:
+                # Use renderer to call display lists
+                for f in gui_objects:
+                    renderer.display_lists.call_list(DisplayList(f))
+            finally:
+                vs.restore_objects_view(renderer)
+
+        animation.delay = animation_speed.delay_between_steps
+        animation._animation_draw_only = _draw
+        animation._animation_update_only = _update
+
+        return animation

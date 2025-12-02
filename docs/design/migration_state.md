@@ -243,13 +243,13 @@ Report any visual glitches, crashes, or unexpected behavior.
 **Phase 4 (Q3.1):** COMPLETE (File Naming Convention) ✅
 **A2.1:** COMPLETE (Command Pattern) ✅
 **A5:** COMPLETE (Pyglet 2.0 Backend with Animation) ✅
-**A6:** PLANNED - AnimationManager Layer Violation Fix 🔄
-**B4:** PLANNED - Zoom Crash Fix (depends on A6) 🔄
+**A6:** COMPLETE - AnimatableViewer Protocol (Layer Separation) ✅
+**B4:** PLANNED - Zoom Crash Fix 🔄
 
-**Last Completed Step:** A5 - Pyglet 2.0 modern GL with VBO-based animation
-**Current Work:** A6 - Fix AnimationManager layer violation, then B4 - Fix zoom crash
+**Last Completed Step:** A6 - AnimatableViewer protocol for clean layer separation
+**Current Work:** B4 - Fix zoom crash using ModernGLViewStateManager adapter
 **Current Branch:** `new-opengl`
-**Tests Passing:** 126 non-GUI tests, 11 GUI tests (pyglet2: 2 passed, 2 skipped; headless/console/tkinter: 9 passed)
+**Tests Passing:** 126 non-GUI tests, 11 GUI tests
 
 ### Migration Complete!
 
@@ -856,20 +856,22 @@ ba42268 Integrate ModernGLRenderer with PygletAppWindow
 
 ---
 
-## A6: AnimationManager Layer Violation Fix - PLANNED 🔄
+## A6: AnimationManager Layer Violation Fix - COMPLETE ✅
 
-### Problem Statement
+> **Completed:** 2025-12-02
 
-The `AnimationManager` (application layer) uses duck-typing to detect `ModernGLCubeViewer` (presentation layer):
+### Problem Statement (Solved)
+
+The `AnimationManager` (application layer) was using duck-typing to detect `ModernGLCubeViewer` (presentation layer):
 
 ```python
-# In AnimationManager._op_and_play_animation() lines 230-237:
+# BEFORE: AnimationManager._op_and_play_animation() - REMOVED
 is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
 if is_modern_gl:
     animation = _create_modern_gl_animation(cube, viewer, vs, alg, alg.n)
 ```
 
-**Violation:** Application layer knows about presentation layer implementation details.
+**Violation:** Application layer knew about presentation layer implementation details.
 
 ### Architecture Issue
 
@@ -894,16 +896,12 @@ Desired (Good):
                     (implements)           (implements)
 ```
 
-### Solution: AnimatableViewer Protocol
+### Solution: AnimatableViewer Protocol ✅ IMPLEMENTED
 
-Create a protocol that both `GCubeViewer` and `ModernGLCubeViewer` implement:
+Created a protocol that both `GCubeViewer` and `ModernGLCubeViewer` implement:
 
 ```python
 # src/cube/presentation/gui/protocols/AnimatableViewer.py
-from typing import Protocol, runtime_checkable, Any
-from cube.domain.model.Cube import Cube
-from cube.domain.algs import Alg
-
 @runtime_checkable
 class AnimatableViewer(Protocol):
     """Protocol for viewers that support animation."""
@@ -915,10 +913,9 @@ class AnimatableViewer(Protocol):
 
     def create_animation(
         self,
-        alg: Alg,
-        vs: Any,  # ApplicationAndViewState
-        on_finish: Callable[[], None]
-    ) -> "Animation":
+        alg: AnimationAbleAlg,
+        vs: ApplicationAndViewState,
+    ) -> Animation:
         """Create an animation for the given algorithm.
 
         The viewer decides HOW to animate (display lists, VBOs, etc.)
@@ -931,40 +928,51 @@ class AnimatableViewer(Protocol):
         ...
 ```
 
-### Implementation Plan
+**AnimationManager now uses the protocol:**
+```python
+# AFTER: Clean protocol-based polymorphism
+animation: Animation = viewer.create_animation(alg, vs)
+```
 
-1. **Create `AnimatableViewer` protocol** in `protocols/AnimatableViewer.py`
-   - Define interface for animation creation
+### Implementation ✅ COMPLETE
+
+1. ✅ **Created `AnimatableViewer` protocol** in `protocols/AnimatableViewer.py`
+   - Defines interface for animation creation
    - Animation object returned handles the HOW
 
-2. **Update `GCubeViewer`** to implement protocol
-   - Add `create_animation()` method that uses display lists
-   - Move `_create_animation()` from `AnimationManager` to viewer
+2. ✅ **Updated `GCubeViewer`** to implement protocol
+   - Added `cube` property
+   - Added `create_animation()` method that uses display lists
+   - Moved `_create_animation()` logic from `AnimationManager` to viewer
 
-3. **Update `ModernGLCubeViewer`** to implement protocol
-   - Add `create_animation()` method that uses VBOs
-   - Move `_create_modern_gl_animation()` from `AnimationManager` to viewer
+3. ✅ **Updated `ModernGLCubeViewer`** to implement protocol
+   - Added `cube` property
+   - Added `create_animation()` method that uses VBOs
+   - Moved `_create_modern_gl_animation()` logic from `AnimationManager` to viewer
 
-4. **Update `AnimationManager`**
-   - Remove duck-typing detection
-   - Use `viewer.create_animation()` polymorphically
+4. ✅ **Updated `AnimationManager`**
+   - Removed duck-typing detection (`hasattr(viewer, 'draw_animated')`)
+   - Removed `_create_animation()` and `_create_modern_gl_animation()` functions
+   - Now uses `viewer.create_animation()` polymorphically
    - No knowledge of specific viewer implementations
 
-### Files to Change
+### Files Changed ✅
 
-| File | Change |
-|------|--------|
-| `protocols/AnimatableViewer.py` | NEW - Protocol definition |
-| `presentation/viewer/GCubeViewer.py` | Add `create_animation()` |
-| `backends/pyglet2/ModernGLCubeViewer.py` | Add `create_animation()` |
-| `application/animation/AnimationManager.py` | Remove duck-typing, use protocol |
+| File | Change | Status |
+|------|--------|--------|
+| `protocols/AnimatableViewer.py` | NEW - Protocol definition | ✅ Created |
+| `protocols/__init__.py` | Export AnimatableViewer | ✅ Updated |
+| `presentation/viewer/GCubeViewer.py` | Add `cube` property, `create_animation()` | ✅ Updated |
+| `backends/pyglet2/ModernGLCubeViewer.py` | Add `cube` property, `create_animation()` | ✅ Updated |
+| `application/animation/AnimationManager.py` | Remove duck-typing, use protocol, remove old functions | ✅ Updated |
 
-### Benefits
+### Benefits Achieved ✅
 
-1. **Clean layer separation** - Application layer uses protocol, not concrete types
-2. **Extensibility** - New viewers just implement the protocol
-3. **Type-safe** - Protocol is `@runtime_checkable` for safety
-4. **Self-documenting** - Animation creation is viewer's responsibility
+1. ✅ **Clean layer separation** - Application layer uses protocol, not concrete types
+2. ✅ **Extensibility** - New viewers just implement the protocol
+3. ✅ **Type-safe** - Protocol is `@runtime_checkable` for safety
+4. ✅ **Self-documenting** - Animation creation is viewer's responsibility
+5. ✅ **No pyglet2 imports in AnimationManager** - Removed `ModernGLCubeViewer` import attempt
 
 ---
 

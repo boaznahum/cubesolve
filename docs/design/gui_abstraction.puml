@@ -1,7 +1,7 @@
 @startuml GUI Abstraction Architecture
 
 title GUI Abstraction Layer - Architecture Diagram
-footer Last Updated: 2025-11-30 | AppWindow Inheritance Added
+footer Last Updated: 2025-12-02 | A6: AnimatableViewer Protocol Added
 
 skinparam packageStyle rectangle
 skinparam linetype ortho
@@ -123,6 +123,21 @@ package "cube.gui.protocols" as protocols #LightBlue {
         +resume()
         +skip()
     }
+
+    interface AnimatableViewer <<protocol>> {
+        ' ✅ A6: Clean layer separation
+        ' Viewers implement this, AnimationManager uses it
+        +cube: Cube
+        +create_animation(alg, vs): Animation
+        +update()
+    }
+
+    note bottom of AnimatableViewer
+        ✅ **A6 Fix (2025-12-02)**
+        Decouples AnimationManager
+        from viewer implementations.
+        No more duck-typing!
+    end note
 
     Renderer *-- ShapeRenderer
     Renderer *-- DisplayListManager
@@ -248,6 +263,36 @@ package "cube.gui.backends.pyglet" as pyglet_backend #90EE90 {
 }
 
 ' ============================================
+' PYGLET2 BACKEND (Modern GL)
+' ============================================
+package "cube.gui.backends.pyglet2" as pyglet2_backend #90EE90 {
+    class ModernGLRenderer {
+        ' Shader-based rendering
+        +set_perspective(w, h, fov, near, far)
+        +draw_lit_triangles(vertices)
+        +draw_colored_lines(vertices)
+    }
+
+    class ModernGLCubeViewer {
+        -_cube: Cube
+        -_renderer: ModernGLRenderer
+        +cube: Cube «property»
+        +update()
+        +draw()
+        +create_animation(alg, vs): Animation
+        +draw_animated(model_view)
+    }
+
+    note bottom of ModernGLCubeViewer
+        ✅ **A6: Implements AnimatableViewer**
+        create_animation() uses VBOs
+        AnimationManager calls polymorphically
+    end note
+
+    ModernGLCubeViewer ..|> AnimatableViewer : implements
+}
+
+' ============================================
 ' HEADLESS BACKEND (implemented)
 ' ============================================
 package "cube.gui.backends.headless" as headless_backend #90EE90 {
@@ -361,14 +406,17 @@ package "cube.gui.backends.tkinter" as tkinter_backend #Wheat {
 }
 
 ' ============================================
-' VIEWER LAYER (✅ migrated)
+' VIEWER LAYER (✅ migrated + A6)
 ' ============================================
 package "cube.viewer ✅" as viewer #90EE90 {
     class GCubeViewer {
         -_renderer: Renderer | None
         -_board: Board
+        -_cube: Cube
+        +cube: Cube «property»
         +update()
         +draw()
+        +create_animation(alg, vs): Animation
     }
 
     class "_Board" as Board {
@@ -391,12 +439,13 @@ package "cube.viewer ✅" as viewer #90EE90 {
         ' ✅ shapes.* migrated
     }
 
-    note right of Cell
-        ✅ Fully migrated
-        Uses renderer.shapes.*
-        with fallback to direct GL
+    note right of GCubeViewer
+        ✅ **A6: Implements AnimatableViewer**
+        create_animation() uses display lists
+        AnimationManager calls polymorphically
     end note
 
+    GCubeViewer ..|> AnimatableViewer : implements
     GCubeViewer *-- Board
     Board *-- FaceBoard
     FaceBoard *-- Cell

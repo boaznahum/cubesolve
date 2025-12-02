@@ -534,6 +534,85 @@ class AnimationBackend(Protocol):
         ...
 ```
 
+#### 3.2.6 AnimatableViewer Protocol (`protocols/AnimatableViewer.py`) ✅ A6
+
+> **Added:** 2025-12-02 as part of A6 fix (layer separation)
+
+This protocol decouples `AnimationManager` (application layer) from specific viewer implementations (presentation layer).
+
+```python
+from typing import Protocol, runtime_checkable, TYPE_CHECKING
+from cube.domain.model.Cube import Cube
+from cube.domain.algs import AnimationAbleAlg
+from cube.application.state import ApplicationAndViewState
+from cube.application.animation.AnimationManager import Animation
+
+@runtime_checkable
+class AnimatableViewer(Protocol):
+    """Protocol for viewers that support animation.
+
+    Both GCubeViewer (display lists) and ModernGLCubeViewer (VBOs) implement
+    this protocol, allowing AnimationManager to create animations polymorphically.
+
+    The viewer decides HOW to animate (display lists, VBOs, shaders, etc.),
+    while AnimationManager handles WHEN (scheduling, timing, event loop).
+    """
+
+    @property
+    def cube(self) -> Cube:
+        """The cube being viewed."""
+        ...
+
+    def create_animation(
+        self,
+        alg: AnimationAbleAlg,
+        vs: ApplicationAndViewState,
+    ) -> Animation:
+        """Create an animation for the given algorithm.
+
+        The viewer creates an Animation object with:
+        - _animation_draw_only: Called each frame to render animated parts
+        - _animation_update_only: Called to advance animation state
+        - _animation_cleanup: Called when animation completes
+        - delay: Time between frames
+        - done: Flag to indicate completion
+
+        Args:
+            alg: The algorithm being animated (has get_animation_objects())
+            vs: Application view state (for speed settings, view transforms)
+
+        Returns:
+            Animation object ready for scheduling by AnimationManager
+        """
+        ...
+
+    def update(self) -> None:
+        """Update the viewer's display (called when cube state changes)."""
+        ...
+```
+
+**Before A6 (layer violation):**
+```python
+# AnimationManager knew about specific viewer types via duck-typing
+is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+if is_modern_gl:
+    animation = _create_modern_gl_animation(cube, viewer, ...)
+else:
+    animation = _create_animation(cube, viewer, ...)
+```
+
+**After A6 (clean protocol):**
+```python
+# AnimationManager just uses the protocol
+animation: Animation = viewer.create_animation(alg, vs)
+```
+
+**Implementations:**
+| Viewer | Location | Animation Method |
+|--------|----------|------------------|
+| `GCubeViewer` | `viewer/GCubeViewer.py` | Display lists |
+| `ModernGLCubeViewer` | `backends/pyglet2/ModernGLCubeViewer.py` | VBOs + shaders |
+
 ### 3.3 Backend Factory (`factory.py`)
 
 ```python
@@ -806,15 +885,16 @@ class TkinterShapeRenderer:
 
 ## 5. Implementation Status
 
-> **Last Updated:** 2025-11-28
+> **Last Updated:** 2025-12-02
 
 ### Migration Complete ✅
 
-The core abstraction layer migration is **COMPLETE** (Steps 1-12).
+The core abstraction layer migration is **COMPLETE** (Steps 1-12 + A6).
 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Protocol definitions | ✅ Done | `presentation/gui/protocols/*.py` |
+| **AnimatableViewer protocol** | ✅ Done | **A6:** Clean layer separation for animation |
 | Types and events | ✅ Done | `presentation/gui/types.py` - KeyEvent, MouseEvent, Keys, DisplayList, TextureHandle |
 | Backend registry | ✅ Done | `presentation/gui/BackendRegistry.py` - BackendRegistry with `get_backend()` |
 | GUIBackend class | ✅ Done | `presentation/gui/GUIBackend.py` - Single entry point for backend components |
@@ -829,7 +909,7 @@ The core abstraction layer migration is **COMPLETE** (Steps 1-12).
 | presentation/viewer/_cell.py | ✅ Done | Uses renderer.display_lists.* and renderer.shapes.* |
 | presentation/viewer/_board.py | ✅ Done | Uses renderer.display_lists.call_lists(), no pyglet imports |
 | presentation/viewer/viewer_g.py | ✅ Done | No pyglet imports (cleaned up) |
-| application/animation/AnimationManager.py | ✅ Done | Uses abstract EventLoop protocol |
+| application/animation/AnimationManager.py | ✅ Done | Uses EventLoop + AnimatableViewer protocols (A6) |
 | AbstractWindow | ✅ Done | AbstractWindow is now a Protocol (not pyglet-dependent) |
 | EventLoop protocol | ✅ Done | `presentation/gui/protocols/EventLoop.py` - run(), stop(), step(), schedule_*(), has_exit, idle(), notify() |
 
