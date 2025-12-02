@@ -72,21 +72,6 @@
 
 ## Architecture
 
-- ❌ **A6.** CRITICAL: AnimationManager should not know about pyglet2/ModernGLCubeViewer
-  - **Problem:** `AnimationManager._op_and_play_animation()` uses duck-typing to detect ModernGLCubeViewer:
-    ```python
-    is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
-    if is_modern_gl:
-        animation = _create_modern_gl_animation(...)
-    ```
-  - **Violation:** Application layer (AnimationManager) knows about presentation layer implementation details
-  - **Solution Options:**
-    1. Add animation creation to a protocol that viewers implement
-    2. Move animation creation to the viewer itself (viewer.create_animation())
-    3. Use a factory/strategy pattern injected from the backend
-  - **Files:** `src/cube/application/animation/AnimationManager.py` lines 230-237
-  - **Added:** 2025-12-02
-
 - ❌ **A4.** PygletAppWindow cannot inherit from AppWindow protocol due to metaclass conflict
   - `pyglet.window.Window` has its own metaclass that conflicts with Protocol
   - Tried `TYPE_CHECKING` trick - didn't work in PyCharm
@@ -192,7 +177,22 @@
   - **Tests:** 126 non-GUI passed, 11 GUI passed (2 pyglet2, 9 other backends)
   - **Files:** `src/cube/presentation/gui/backends/pyglet2/`
   - **Docs:** `docs/design/migration_state.md` (A5 section)
-  - **Note:** A6 tracks remaining architectural issue with AnimationManager coupling
+
+- ✅ **A6.** AnimationManager layer violation (application layer knowing presentation details)
+  - **Completed:** 2025-12-02
+  - **Problem:** `AnimationManager` (application layer) used duck-typing to detect viewer type:
+    ```python
+    is_modern_gl = hasattr(viewer, 'draw_animated') and hasattr(viewer, 'is_animating')
+    ```
+  - **Solution:** Created `AnimatableViewer` protocol in presentation layer
+    - Viewers implement `create_animation()` method polymorphically
+    - AnimationManager uses protocol, not concrete types
+    - Removed ~270 lines of `_create_animation()` and `_create_modern_gl_animation()` functions
+  - **Files:**
+    - `protocols/AnimatableViewer.py` (NEW)
+    - `viewer/GCubeViewer.py` - inherits from AnimatableViewer, adds `create_animation()`
+    - `backends/pyglet2/ModernGLCubeViewer.py` - inherits from AnimatableViewer, adds `create_animation()`
+    - `application/animation/AnimationManager.py` - now uses `viewer.create_animation()` polymorphically
 
 ### Bugs
 
