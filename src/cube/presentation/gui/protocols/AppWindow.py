@@ -187,3 +187,29 @@ class AppWindow(Protocol):
             Current background level (0.0-0.5) if supported, None otherwise.
         """
         ...
+
+    def toggle_texture_mode(self) -> bool | None:
+        """Toggle texture rendering mode on/off (if supported by backend).
+
+        Only implemented by backends with texture support (pyglet2).
+        Other backends return None (no-op).
+
+        Returns:
+            New texture mode state (True=enabled, False=disabled) if supported, None otherwise.
+        """
+        ...
+
+    def load_texture_set(self, directory: str) -> int:
+        """Load all face textures from a directory (if supported by backend).
+
+        Expects files named F.png, B.png, R.png, L.png, U.png, D.png.
+        Only implemented by backends with texture support (pyglet2).
+        Other backends return 0 (no textures loaded).
+
+        Args:
+            directory: Path to directory containing face texture images
+
+        Returns:
+            Number of textures successfully loaded (0-6).
+        """
+        ...

@@ -97,6 +97,25 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Pass vs for shadow mode support (F10/F11/F12 - G4 fix)
         self._modern_viewer = ModernGLCubeViewer(app.cube, self._modern_renderer, app.vs)
 
+        # Load textures from config if specified
+        if config.TEXTURE_SET_PATH:
+            from pathlib import Path
+            from cube.resources.faces import get_texture_set_path
+
+            texture_path = config.TEXTURE_SET_PATH
+
+            # Check if it's a preset name (not a path)
+            if not Path(texture_path).exists():
+                # Try as a preset name
+                preset_path = get_texture_set_path(texture_path)
+                if preset_path:
+                    texture_path = str(preset_path)
+
+            if Path(texture_path).exists():
+                loaded = self._modern_viewer.load_texture_set(texture_path)
+                if loaded > 0 and config.TEXTURE_MODE_ENABLED:
+                    self._modern_viewer.toggle_texture_mode()
+
         # GCubeViewer disabled - its constructor uses legacy GL (display lists)
         # TODO: Implement ray-plane intersection picking in ModernGLCubeViewer
         self._viewer: GCubeViewer | None = None
@@ -205,6 +224,25 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
             Current background level (0.0-0.5) from vs (authoritative value).
         """
         return self._vs.background_gray
+
+    def toggle_texture_mode(self) -> bool | None:
+        """Toggle texture rendering mode on/off.
+
+        Returns:
+            New texture mode state (True=enabled, False=disabled).
+        """
+        return self._modern_viewer.toggle_texture_mode()
+
+    def load_texture_set(self, directory: str) -> int:
+        """Load all face textures from a directory.
+
+        Args:
+            directory: Path to directory containing F.png, B.png, etc.
+
+        Returns:
+            Number of textures successfully loaded (0-6).
+        """
+        return self._modern_viewer.load_texture_set(directory)
 
     @property
     def modern_viewer(self) -> ModernGLCubeViewer:

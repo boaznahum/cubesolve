@@ -98,12 +98,22 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._face_triangles: np.ndarray | None = None
         self._line_data: np.ndarray | None = None
 
+        # Per-face geometry for textured rendering (11 floats: pos+normal+color+uv)
+        self._face_triangles_per_face: dict[FaceName, np.ndarray] = {}
+
         # Animation state - separate geometry for animated cells
         self._animated_face_triangles: np.ndarray | None = None
         self._animated_line_data: np.ndarray | None = None
         self._animated_parts: set[PartSlice] | None = None
         self._animation_face_center: ndarray | None = None
         self._animation_opposite_center: ndarray | None = None
+        # Per-face animated geometry for textured rendering
+        self._animated_face_triangles_per_face: dict[FaceName, np.ndarray] = {}
+
+        # Texture mode state
+        self._texture_mode: bool = False
+        # Textures per face: FaceName -> texture_handle
+        self._face_textures: dict[FaceName, int] = {}
 
         # Track if we need to rebuild
         self._dirty = True
@@ -198,11 +208,99 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._animation_opposite_center = None
         self._animated_face_triangles = None
         self._animated_line_data = None
+        self._animated_face_triangles_per_face.clear()
         self._dirty = True
 
     def is_animating(self) -> bool:
         """Check if animation is active."""
         return self._animated_parts is not None
+
+    # === Texture Mode Control ===
+
+    @property
+    def texture_mode(self) -> bool:
+        """Check if texture mode is enabled."""
+        return self._texture_mode
+
+    def set_texture_mode(self, enabled: bool) -> None:
+        """Enable or disable texture mode.
+
+        Args:
+            enabled: True to enable texture rendering, False for solid colors
+        """
+        if self._texture_mode != enabled:
+            self._texture_mode = enabled
+            self._dirty = True  # Force geometry rebuild with/without UVs
+
+    def toggle_texture_mode(self) -> bool:
+        """Toggle texture mode on/off.
+
+        Returns:
+            New texture mode state (True = enabled)
+        """
+        self.set_texture_mode(not self._texture_mode)
+        return self._texture_mode
+
+    def load_face_texture(self, face_name: FaceName, file_path: str) -> bool:
+        """Load a texture for a specific face.
+
+        Args:
+            face_name: Which face to apply the texture to
+            file_path: Path to image file (PNG, JPG, etc.)
+
+        Returns:
+            True if texture loaded successfully
+        """
+        # Delete existing texture if any
+        if face_name in self._face_textures:
+            self._renderer.delete_texture(self._face_textures[face_name])
+            del self._face_textures[face_name]
+
+        # Load new texture
+        handle = self._renderer.load_texture(file_path)
+        if handle is not None:
+            self._face_textures[face_name] = handle
+            self._dirty = True
+            return True
+        return False
+
+    def get_face_texture(self, face_name: FaceName) -> int | None:
+        """Get texture handle for a face, or None if no texture loaded."""
+        return self._face_textures.get(face_name)
+
+    def clear_face_textures(self) -> None:
+        """Remove all face textures."""
+        for handle in self._face_textures.values():
+            self._renderer.delete_texture(handle)
+        self._face_textures.clear()
+        self._dirty = True
+
+    def load_texture_set(self, directory: str) -> int:
+        """Load all face textures from a directory.
+
+        Expects files named F.png, B.png, R.png, L.png, U.png, D.png
+        (or .jpg, .bmp, etc.).
+
+        Args:
+            directory: Path to directory containing face texture images
+
+        Returns:
+            Number of textures successfully loaded (0-6)
+        """
+        from pathlib import Path
+        dir_path = Path(directory)
+        loaded = 0
+
+        for face_name in FaceName:
+            # Try common image extensions
+            for ext in ['.png', '.jpg', '.jpeg', '.bmp']:
+                file_path = dir_path / f"{face_name.name}{ext}"
+                if file_path.exists():
+                    if self.load_face_texture(face_name, str(file_path)):
+                        loaded += 1
+                    break
+
+        return loaded
 
     def draw_animated(self, model_view: ndarray) -> None:
         """Draw animated parts with the given model-view matrix.
@@ -213,7 +311,13 @@ class ModernGLCubeViewer(AnimatableViewer):
         Args:
             model_view: The 4x4 rotation matrix to apply to animated geometry
         """
-        if self._animated_face_triangles is None or len(self._animated_face_triangles) == 0:
+        # Check if we have anything to draw
+        has_animated_geometry = (
+            (not self._texture_mode and self._animated_face_triangles is not None
+             and len(self._animated_face_triangles) > 0) or
+            (self._texture_mode and len(self._animated_face_triangles_per_face) > 0)
+        )
+        if not has_animated_geometry:
             return
 
         # Save current model-view matrix
@@ -223,7 +327,17 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._renderer.multiply_matrix(model_view)
 
         # Draw animated geometry with lighting
-        self._renderer.draw_lit_triangles(self._animated_face_triangles)
+        if self._texture_mode:
+            # Textured mode: draw each face separately with its texture
+            for face_name, triangles in self._animated_face_triangles_per_face.items():
+                if len(triangles) > 0:
+                    texture_handle = self._face_textures.get(face_name)
+                    self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
+        else:
+            # Solid color mode
+            if self._animated_face_triangles is not None:
+                self._renderer.draw_lit_triangles(self._animated_face_triangles)
+
         if self._animated_line_data is not None and len(self._animated_line_data) > 0:
             self._renderer.draw_colored_lines(self._animated_line_data, line_width=4.0)
 
@@ -374,8 +488,16 @@ class ModernGLCubeViewer(AnimatableViewer):
             self._dirty = False
 
         # Draw filled faces with lighting
-        if self._face_triangles is not None and len(self._face_triangles) > 0:
-            self._renderer.draw_lit_triangles(self._face_triangles)
+        if self._texture_mode:
+            # Textured mode: draw each face separately with its texture
+            for face_name, triangles in self._face_triangles_per_face.items():
+                if len(triangles) > 0:
+                    texture_handle = self._face_textures.get(face_name)
+                    self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
+        else:
+            # Solid color mode: draw all faces in one batch
+            if self._face_triangles is not None and len(self._face_triangles) > 0:
+                self._renderer.draw_lit_triangles(self._face_triangles)
 
         # Draw grid lines (no lighting) - use thick lines like legacy GL
         if self._line_data is not None and len(self._line_data) > 0:
@@ -390,7 +512,8 @@ class ModernGLCubeViewer(AnimatableViewer):
 
         Shadow faces (F10/F11/F12) are rendered as duplicate faces at offset positions.
 
-        Vertex format for faces: 9 floats per vertex (x, y, z, nx, ny, nz, r, g, b)
+        Vertex format for faces (non-textured): 9 floats per vertex (x, y, z, nx, ny, nz, r, g, b)
+        Vertex format for faces (textured): 11 floats per vertex (x, y, z, nx, ny, nz, r, g, b, u, v)
         Vertex format for lines: 6 floats per vertex (x, y, z, r, g, b)
         """
         cube = self._cube
@@ -403,6 +526,10 @@ class ModernGLCubeViewer(AnimatableViewer):
         line_verts: list[float] = []
         animated_face_verts: list[float] = []
         animated_line_verts: list[float] = []
+
+        # Per-face geometry for textured mode (11 floats: pos+normal+color+uv)
+        face_verts_per_face: dict[FaceName, list[float]] = {fn: [] for fn in FaceName}
+        animated_face_verts_per_face: dict[FaceName, list[float]] = {fn: [] for fn in FaceName}
 
         # Shadow face offsets (in units of FACE_OFFSET * 2 = full face size)
         # These match the legacy _board.py offsets
@@ -422,8 +549,9 @@ class ModernGLCubeViewer(AnimatableViewer):
 
             # Generate main face geometry
             self._generate_face_geometry(
-                face, center, right, up, size, animated_parts,
-                face_verts, line_verts, animated_face_verts, animated_line_verts
+                face, face_name, center, right, up, size, animated_parts,
+                face_verts, line_verts, animated_face_verts, animated_line_verts,
+                face_verts_per_face[face_name], animated_face_verts_per_face[face_name]
             )
 
             # Generate shadow face if enabled (L, D, B faces only)
@@ -433,8 +561,9 @@ class ModernGLCubeViewer(AnimatableViewer):
                     shadow_center = center + offset
                     # Shadow faces are never animated (static copies)
                     self._generate_face_geometry(
-                        face, shadow_center, right, up, size, None,
-                        face_verts, line_verts, [], []
+                        face, face_name, shadow_center, right, up, size, None,
+                        face_verts, line_verts, [], [],
+                        face_verts_per_face[face_name], []
                     )
 
         self._face_triangles = np.array(face_verts, dtype=np.float32)
@@ -442,9 +571,19 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._animated_face_triangles = np.array(animated_face_verts, dtype=np.float32) if animated_face_verts else None
         self._animated_line_data = np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None
 
+        # Convert per-face lists to numpy arrays
+        self._face_triangles_per_face = {
+            fn: np.array(verts, dtype=np.float32) for fn, verts in face_verts_per_face.items()
+        }
+        self._animated_face_triangles_per_face = {
+            fn: np.array(verts, dtype=np.float32) for fn, verts in animated_face_verts_per_face.items()
+            if verts  # Only include non-empty
+        }
+
     def _generate_face_geometry(
         self,
         face,
+        face_name: FaceName,
         center: np.ndarray,
         right: np.ndarray,
         up: np.ndarray,
@@ -454,20 +593,25 @@ class ModernGLCubeViewer(AnimatableViewer):
         line_verts: list[float],
         animated_face_verts: list[float],
         animated_line_verts: list[float],
+        textured_face_verts: list[float],
+        animated_textured_face_verts: list[float],
     ) -> None:
         """Generate geometry for a single face.
 
         Args:
             face: The cube Face object
+            face_name: Name of this face (for texture lookups)
             center: Face center position in world space
             right: Face "right" direction vector
             up: Face "up" direction vector
             size: Cube size (3 for 3x3, etc.)
             animated_parts: Set of parts being animated (or None)
-            face_verts: Output list for static face triangles
+            face_verts: Output list for static face triangles (9 floats/vertex)
             line_verts: Output list for static line segments
-            animated_face_verts: Output list for animated face triangles
+            animated_face_verts: Output list for animated face triangles (9 floats/vertex)
             animated_line_verts: Output list for animated line segments
+            textured_face_verts: Output list for static textured triangles (11 floats/vertex)
+            animated_textured_face_verts: Output list for animated textured triangles (11 floats/vertex)
         """
         # Compute face normal (outward direction)
         normal = np.cross(right, up)
@@ -495,6 +639,7 @@ class ModernGLCubeViewer(AnimatableViewer):
                 # Select target lists based on animation state
                 target_face_verts = animated_face_verts if is_animated else face_verts
                 target_line_verts = animated_line_verts if is_animated else line_verts
+                target_textured_verts = animated_textured_face_verts if is_animated else textured_face_verts
 
                 # Calculate cell position
                 # Cell (0,0) is bottom-left, (size-1, size-1) is top-right
@@ -516,10 +661,33 @@ class ModernGLCubeViewer(AnimatableViewer):
                 tr = center + x1 * right + y1 * up
                 tl = center + x0 * right + y1 * up
 
+                # UV coordinates for this cell
+                # Map cell to portion of texture: (col, row) -> (u, v)
+                u0 = col / size
+                v0 = row / size
+                u1 = (col + 1) / size
+                v1 = (row + 1) / size
+
+                # UV coordinates for each corner
+                uv_bl = (u0, v0)
+                uv_br = (u1, v0)
+                uv_tr = (u1, v1)
+                uv_tl = (u0, v1)
+
                 # Two triangles for quad: (bl, br, tr) and (bl, tr, tl)
-                # Each vertex: position (3) + normal (3) + color (3) = 9 floats
+                # Non-textured: position (3) + normal (3) + color (3) = 9 floats
                 for v in [bl, br, tr, bl, tr, tl]:
                     target_face_verts.extend([v[0], v[1], v[2], nx, ny, nz, r, g, b])
+
+                # Textured: position (3) + normal (3) + color (3) + uv (2) = 11 floats
+                # Triangle 1: bl, br, tr
+                target_textured_verts.extend([bl[0], bl[1], bl[2], nx, ny, nz, r, g, b, uv_bl[0], uv_bl[1]])
+                target_textured_verts.extend([br[0], br[1], br[2], nx, ny, nz, r, g, b, uv_br[0], uv_br[1]])
+                target_textured_verts.extend([tr[0], tr[1], tr[2], nx, ny, nz, r, g, b, uv_tr[0], uv_tr[1]])
+                # Triangle 2: bl, tr, tl
+                target_textured_verts.extend([bl[0], bl[1], bl[2], nx, ny, nz, r, g, b, uv_bl[0], uv_bl[1]])
+                target_textured_verts.extend([tr[0], tr[1], tr[2], nx, ny, nz, r, g, b, uv_tr[0], uv_tr[1]])
+                target_textured_verts.extend([tl[0], tl[1], tl[2], nx, ny, nz, r, g, b, uv_tl[0], uv_tl[1]])
 
                 # Border lines (black) - still 6 floats, no normals needed
                 line_color = (0.0, 0.0, 0.0)

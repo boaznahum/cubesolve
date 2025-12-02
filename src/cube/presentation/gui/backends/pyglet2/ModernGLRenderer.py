@@ -124,6 +124,80 @@ void main() {
 }
 """
 
+# Textured Phong lighting shader with per-vertex UV coordinates
+# Vertex data: position (3) + normal (3) + color (3) + uv (2) = 11 floats per vertex
+TEXTURED_PHONG_VERTEX_SHADER = """
+#version 330 core
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec3 aColor;
+layout(location = 3) in vec2 aTexCoord;
+
+uniform mat4 uMVP;
+uniform mat4 uModelView;
+uniform mat3 uNormalMatrix;
+
+out vec3 vColor;
+out vec3 vNormal;
+out vec3 vFragPos;
+out vec2 vTexCoord;
+
+void main() {
+    gl_Position = uMVP * vec4(aPos, 1.0);
+    vColor = aColor;
+    vNormal = uNormalMatrix * aNormal;
+    vFragPos = vec3(uModelView * vec4(aPos, 1.0));
+    vTexCoord = aTexCoord;
+}
+"""
+
+TEXTURED_PHONG_FRAGMENT_SHADER = """
+#version 330 core
+in vec3 vColor;
+in vec3 vNormal;
+in vec3 vFragPos;
+in vec2 vTexCoord;
+
+uniform vec3 uLightPos;
+uniform vec3 uLightColor;
+uniform vec3 uAmbientColor;
+uniform float uShininess;
+uniform sampler2D uTexture;
+uniform int uUseTexture;  // 0 = no texture, 1 = use texture
+
+out vec4 FragColor;
+
+void main() {
+    // Get base color from texture or vertex color
+    vec3 baseColor;
+    if (uUseTexture != 0) {
+        vec4 texColor = texture(uTexture, vTexCoord);
+        // Use pure texture color (no tinting)
+        baseColor = texColor.rgb;
+    } else {
+        baseColor = vColor;
+    }
+
+    // Ambient
+    vec3 ambient = uAmbientColor * baseColor;
+
+    // Diffuse
+    vec3 norm = normalize(vNormal);
+    vec3 lightDir = normalize(uLightPos - vFragPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * uLightColor * baseColor;
+
+    // Specular (Blinn-Phong)
+    vec3 viewDir = normalize(-vFragPos);
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), uShininess);
+    vec3 specular = spec * uLightColor * 0.3;
+
+    vec3 result = ambient + diffuse + specular;
+    FragColor = vec4(result, 1.0);
+}
+"""
+
 
 class ModernGLRenderer:
     """Modern OpenGL renderer using shaders and VBOs.
@@ -135,6 +209,7 @@ class ModernGLRenderer:
         self._shader: ShaderProgram | None = None
         self._vertex_color_shader: ShaderProgram | None = None
         self._phong_shader: ShaderProgram | None = None
+        self._textured_phong_shader: ShaderProgram | None = None
         self._initialized = False
 
         # Matrix stacks (emulate legacy GL)
@@ -156,8 +231,16 @@ class ModernGLRenderer:
         self._lit_vao: ctypes.c_uint = ctypes.c_uint()
         self._lit_vbo: ctypes.c_uint = ctypes.c_uint()
 
+        # VAO/VBO for textured lit drawing (position + normal + color + uv interleaved)
+        self._textured_vao: ctypes.c_uint = ctypes.c_uint()
+        self._textured_vbo: ctypes.c_uint = ctypes.c_uint()
+
+        # Texture management
+        self._textures: dict[int, ctypes.c_uint] = {}  # handle -> GL texture ID
+        self._next_texture_handle: int = 1
+        self._bound_texture: int | None = None
+
         # Lighting parameters - tuned to match legacy OpenGL appearance
-        # TODO: G3 - Add keyboard controls to adjust these (brightness up/down)
         self._light_pos: tuple[float, float, float] = (150.0, 150.0, 300.0)
         self._light_color: tuple[float, float, float] = (1.0, 1.0, 1.0)
         self._ambient_color: tuple[float, float, float] = (0.65, 0.65, 0.65)
@@ -246,6 +329,33 @@ class ModernGLRenderer:
         gl.glEnableVertexAttribArray(2)
         gl.glBindVertexArray(0)
 
+        # Create textured Phong shader
+        self._textured_phong_shader = ShaderProgram(
+            TEXTURED_PHONG_VERTEX_SHADER, TEXTURED_PHONG_FRAGMENT_SHADER
+        )
+
+        # Create VAO/VBO for textured lit drawing (position + normal + color + uv)
+        gl.glGenVertexArrays(1, ctypes.byref(self._textured_vao))
+        gl.glGenBuffers(1, ctypes.byref(self._textured_vbo))
+
+        # Set up VAO with position + normal + color + uv (11 floats per vertex)
+        gl.glBindVertexArray(self._textured_vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._textured_vbo)
+        textured_stride = 11 * 4  # 11 floats * 4 bytes
+        # Position at location 0
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, textured_stride, ctypes.c_void_p(0))
+        gl.glEnableVertexAttribArray(0)
+        # Normal at location 1
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, textured_stride, ctypes.c_void_p(3 * 4))
+        gl.glEnableVertexAttribArray(1)
+        # Color at location 2
+        gl.glVertexAttribPointer(2, 3, gl.GL_FLOAT, gl.GL_FALSE, textured_stride, ctypes.c_void_p(6 * 4))
+        gl.glEnableVertexAttribArray(2)
+        # UV at location 3
+        gl.glVertexAttribPointer(3, 2, gl.GL_FLOAT, gl.GL_FALSE, textured_stride, ctypes.c_void_p(9 * 4))
+        gl.glEnableVertexAttribArray(3)
+        gl.glBindVertexArray(0)
+
         self._initialized = True
 
     def cleanup(self) -> None:
@@ -259,6 +369,9 @@ class ModernGLRenderer:
         if self._phong_shader:
             self._phong_shader.delete()
             self._phong_shader = None
+        if self._textured_phong_shader:
+            self._textured_phong_shader.delete()
+            self._textured_phong_shader = None
         if self._vao.value:
             gl.glDeleteVertexArrays(1, ctypes.byref(self._vao))
         if self._vbo.value:
@@ -271,6 +384,14 @@ class ModernGLRenderer:
             gl.glDeleteVertexArrays(1, ctypes.byref(self._lit_vao))
         if self._lit_vbo.value:
             gl.glDeleteBuffers(1, ctypes.byref(self._lit_vbo))
+        if self._textured_vao.value:
+            gl.glDeleteVertexArrays(1, ctypes.byref(self._textured_vao))
+        if self._textured_vbo.value:
+            gl.glDeleteBuffers(1, ctypes.byref(self._textured_vbo))
+        # Delete all loaded textures
+        for tex_id in self._textures.values():
+            gl.glDeleteTextures(1, ctypes.byref(tex_id))
+        self._textures.clear()
         self._initialized = False
 
     # === Projection Setup ===
@@ -788,6 +909,161 @@ class ModernGLRenderer:
         world_coords /= world_coords[3]
 
         return (float(world_coords[0]), float(world_coords[1]), float(world_coords[2]))
+
+    # === Texture Management ===
+
+    def load_texture(self, file_path: str) -> int | None:
+        """Load a texture from an image file.
+
+        Args:
+            file_path: Path to image file (PNG, JPG, BMP, etc.)
+
+        Returns:
+            Texture handle for use with draw_textured_lit_triangles,
+            or None if loading failed.
+        """
+        try:
+            import pyglet.image
+            image = pyglet.image.load(file_path)
+            image_data = image.get_data()
+
+            # Create OpenGL texture
+            tex_id = ctypes.c_uint()
+            gl.glGenTextures(1, ctypes.byref(tex_id))
+            gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
+
+            # Set texture parameters
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR)
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+
+            # Determine format
+            if len(image.format) == 4:  # RGBA
+                internal_format = gl.GL_RGBA
+                format_ = gl.GL_RGBA
+            else:  # RGB
+                internal_format = gl.GL_RGB
+                format_ = gl.GL_RGB
+
+            # Upload texture data
+            gl.glTexImage2D(
+                gl.GL_TEXTURE_2D, 0, internal_format,
+                image.width, image.height, 0,
+                format_, gl.GL_UNSIGNED_BYTE, image_data
+            )
+
+            # Generate mipmaps
+            gl.glGenerateMipmap(gl.GL_TEXTURE_2D)
+
+            gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+
+            # Assign handle and store mapping
+            handle = self._next_texture_handle
+            self._next_texture_handle += 1
+            self._textures[handle] = tex_id
+
+            return handle
+
+        except Exception as e:
+            print(f"Failed to load texture {file_path}: {e}")
+            return None
+
+    def bind_texture(self, texture_handle: int | None) -> None:
+        """Bind a texture for rendering.
+
+        Args:
+            texture_handle: Handle from load_texture, or None to unbind
+        """
+        if texture_handle is None:
+            gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+            self._bound_texture = None
+        elif texture_handle in self._textures:
+            gl.glBindTexture(gl.GL_TEXTURE_2D, self._textures[texture_handle])
+            self._bound_texture = texture_handle
+
+    def delete_texture(self, texture_handle: int) -> None:
+        """Delete a texture and free resources.
+
+        Args:
+            texture_handle: Handle from load_texture
+        """
+        if texture_handle in self._textures:
+            tex_id = self._textures.pop(texture_handle)
+            gl.glDeleteTextures(1, ctypes.byref(tex_id))
+            if self._bound_texture == texture_handle:
+                self._bound_texture = None
+
+    def draw_textured_lit_triangles(
+        self,
+        data: np.ndarray,
+        texture_handle: int | None = None,
+    ) -> None:
+        """Draw triangles with Phong lighting and optional texture.
+
+        Args:
+            data: Numpy array of float32 with interleaved data:
+                  [x, y, z, nx, ny, nz, r, g, b, u, v, ...]
+                  Colors are normalized (0.0-1.0), 11 floats per vertex
+            texture_handle: Optional texture handle from load_texture.
+                           If provided and valid, texture will be sampled.
+        """
+        if self._textured_phong_shader is None or len(data) == 0:
+            return
+
+        self._textured_phong_shader.use()
+
+        # Set matrices
+        mvp = self._get_mvp()
+        modelview = self._modelview.current
+
+        # Normal matrix is inverse transpose of upper-left 3x3 of modelview
+        normal_matrix = np.linalg.inv(modelview[:3, :3]).T.astype(np.float32)
+
+        self._textured_phong_shader.set_uniform_matrix4('uMVP', mvp)
+        self._textured_phong_shader.set_uniform_matrix4('uModelView', modelview)
+
+        # Set normal matrix (3x3)
+        loc = self._textured_phong_shader.get_uniform('uNormalMatrix')
+        if loc >= 0:
+            gl.glUniformMatrix3fv(
+                loc, 1, gl.GL_TRUE,
+                normal_matrix.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+            )
+
+        # Set lighting uniforms
+        self._textured_phong_shader.set_uniform_3f('uLightPos', *self._light_pos)
+        self._textured_phong_shader.set_uniform_3f('uLightColor', *self._light_color)
+        self._textured_phong_shader.set_uniform_3f('uAmbientColor', *self._ambient_color)
+        self._textured_phong_shader.set_uniform_1f('uShininess', self._shininess)
+
+        # Set texture uniforms
+        use_texture = texture_handle is not None and texture_handle in self._textures
+        self._textured_phong_shader.set_uniform_1i('uUseTexture', 1 if use_texture else 0)
+
+        if use_texture:
+            gl.glActiveTexture(gl.GL_TEXTURE0)
+            gl.glBindTexture(gl.GL_TEXTURE_2D, self._textures[texture_handle])
+            self._textured_phong_shader.set_uniform_1i('uTexture', 0)
+
+        # Upload vertex data and draw
+        gl.glBindVertexArray(self._textured_vao)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._textured_vbo)
+        gl.glBufferData(
+            gl.GL_ARRAY_BUFFER,
+            data.nbytes,
+            data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+            gl.GL_DYNAMIC_DRAW
+        )
+
+        # Each vertex has 11 floats (3 pos + 3 normal + 3 color + 2 uv)
+        vertex_count = len(data) // 11
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, vertex_count)
+
+        gl.glBindVertexArray(0)
+
+        if use_texture:
+            gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
 
 class ModernGLViewStateManager:

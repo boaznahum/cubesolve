@@ -138,3 +138,11 @@ CELEBRATION_DURATION = 3.0  # seconds
 LIGHTING_BRIGHTNESS = 0.65  # Default ambient light level
 # Background: gray level for window background (0.0 = black, 0.5 = gray)
 LIGHTING_BACKGROUND = 0.15  # Default background (black)
+
+################ Textures (pyglet2 backend only)
+# Enable texture mode at startup (False = solid colors, True = textures)
+TEXTURE_MODE_ENABLED = True
+# Path to directory containing face textures (F.png, B.png, R.png, L.png, U.png, D.png)
+# Can be a preset name ("set1", "boaz", "family") or a full path to a directory
+# Set to None to not load any textures at startup
+TEXTURE_SET_PATH: str | None = "set1"

@@ -34,7 +34,7 @@ from cube.domain.solver import SolveStep
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
-    from cube.presentation.gui.backends.pyglet.AbstractWindow import AbstractWindow
+    from cube.presentation.gui.protocols.AppWindow import AppWindow
 
 
 # =============================================================================
@@ -47,7 +47,7 @@ class CommandContext:
 
     Provides access to all application components needed by command handlers.
     """
-    window: "AbstractWindow"
+    window: "AppWindow"
 
     @property
     def app(self) -> "AbstractApp":
@@ -74,7 +74,7 @@ class CommandContext:
         return self.window.viewer
 
     @classmethod
-    def from_window(cls, window: "AbstractWindow") -> "CommandContext":
+    def from_window(cls, window: "AppWindow") -> "CommandContext":
         """Create context from a window."""
         return cls(window=window)
 
@@ -508,6 +508,14 @@ def _background_down(ctx: CommandContext) -> CommandResult:
     return CommandResult()
 
 
+def _texture_mode_toggle(ctx: CommandContext) -> CommandResult:
+    """Toggle texture mode on/off (pyglet2 backend only)."""
+    enabled = ctx.window.toggle_texture_mode()
+    if enabled is not None:
+        ctx.vs.debug(False, f"Texture Mode: {'ON' if enabled else 'OFF'}")
+    return CommandResult()
+
+
 # =============================================================================
 # COMMAND ENUM
 # =============================================================================
@@ -619,6 +627,9 @@ class Command(Enum):
     BRIGHTNESS_DOWN = (_simple, _brightness_down)
     BACKGROUND_UP = (_simple, _background_up)
     BACKGROUND_DOWN = (_simple, _background_down)
+
+    # Texture Mode (pyglet2 backend only)
+    TEXTURE_MODE_TOGGLE = (_simple, _texture_mode_toggle)
 
     # Shadow Toggles
     SHADOW_TOGGLE_L = (_shadow_toggle, FaceName.L)

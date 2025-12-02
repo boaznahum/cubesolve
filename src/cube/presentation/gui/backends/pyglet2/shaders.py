@@ -259,6 +259,12 @@ class ShaderProgram:
         if loc >= 0:
             gl.glUniform1f(loc, value)
 
+    def set_uniform_1i(self, name: str, value: int) -> None:
+        """Set an integer uniform (used for booleans and sampler2D)."""
+        loc = self.get_uniform(name)
+        if loc >= 0:
+            gl.glUniform1i(loc, value)
+
     def set_uniform_3f(self, name: str, x: float, y: float, z: float) -> None:
         """Set a vec3 uniform."""
         loc = self.get_uniform(name)
