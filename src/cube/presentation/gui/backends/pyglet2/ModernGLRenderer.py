@@ -842,6 +842,31 @@ class ModernGLViewStateManager:
         )
 
 
+class ModernGLShapeAdapter:
+    """Shape renderer adapter for ModernGLRenderer.
+
+    Provides ShapeRenderer-like interface for effects that need simple shape drawing.
+    """
+
+    def __init__(self, modern_renderer: "ModernGLRenderer"):
+        self._renderer = modern_renderer
+
+    def quad(self, vertices, color: tuple[int, int, int]) -> None:
+        """Draw a filled quad with color."""
+        self._renderer.set_color(*color)
+        self._renderer.quad(vertices)
+
+    def triangle(self, vertices, color: tuple[int, int, int]) -> None:
+        """Draw a filled triangle with color."""
+        self._renderer.set_color(*color)
+        self._renderer.triangle(vertices)
+
+    def line(self, p1, p2, width: float = 1.0, color: tuple[int, int, int] = (255, 255, 255)) -> None:
+        """Draw a line with color."""
+        self._renderer.set_color(*color)
+        self._renderer.line(p1, p2, width)
+
+
 class ModernGLRendererAdapter:
     """Renderer protocol adapter for pyglet2's ModernGLRenderer.
 
@@ -849,9 +874,6 @@ class ModernGLRendererAdapter:
     the legacy Renderer protocol (specifically renderer.view for zoom commands).
 
     Part of B4 fix: Zoom crash in pyglet2 backend.
-
-    Note: shapes and display_lists are not supported in modern GL mode.
-    Use ModernGLRenderer directly for drawing.
     """
 
     def __init__(self, modern_renderer: ModernGLRenderer, window_width: int = 800, window_height: int = 600):
@@ -864,6 +886,7 @@ class ModernGLRendererAdapter:
         """
         self._modern_renderer = modern_renderer
         self._view = ModernGLViewStateManager(modern_renderer, window_width, window_height)
+        self._shapes = ModernGLShapeAdapter(modern_renderer)
 
     @property
     def view(self) -> ModernGLViewStateManager:
@@ -871,9 +894,9 @@ class ModernGLRendererAdapter:
         return self._view
 
     @property
-    def shapes(self):
-        """Shape rendering not supported - use ModernGLRenderer directly."""
-        raise NotImplementedError("shapes not supported in modern GL adapter - use ModernGLRenderer directly")
+    def shapes(self) -> ModernGLShapeAdapter:
+        """Access shape rendering methods."""
+        return self._shapes
 
     @property
     def display_lists(self):

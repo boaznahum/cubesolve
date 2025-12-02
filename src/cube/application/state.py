@@ -124,6 +124,11 @@ class ApplicationAndViewState:
 
         self._last_scramble_key_size: Tuple[Any, int | None] | None = None
 
+        # Celebration effect settings (from config)
+        self._celebration_effect: str = config.CELEBRATION_EFFECT
+        self._celebration_enabled: bool = config.CELEBRATION_ENABLED
+        self._celebration_duration: float = config.CELEBRATION_DURATION
+
     def reset(self, not_view=False) -> None:
         self._alpha_x = 0
         self._alpha_y = 0
@@ -536,4 +541,35 @@ class ApplicationAndViewState:
         self.debug(True, "=" * 60)
         self.debug(True, f"END DUMP: {label}")
         self.debug(True, "=" * 60)
+
+    # Celebration effect properties
+    @property
+    def celebration_effect(self) -> str:
+        """Get the current celebration effect name."""
+        return self._celebration_effect
+
+    @celebration_effect.setter
+    def celebration_effect(self, value: str) -> None:
+        """Set the celebration effect name."""
+        self._celebration_effect = value
+
+    @property
+    def celebration_enabled(self) -> bool:
+        """Check if celebration effects are enabled."""
+        return self._celebration_enabled
+
+    @celebration_enabled.setter
+    def celebration_enabled(self, value: bool) -> None:
+        """Enable or disable celebration effects."""
+        self._celebration_enabled = value
+
+    @property
+    def celebration_duration(self) -> float:
+        """Get the celebration effect duration in seconds."""
+        return self._celebration_duration
+
+    @celebration_duration.setter
+    def celebration_duration(self, value: float) -> None:
+        """Set the celebration effect duration in seconds."""
+        self._celebration_duration = value
 

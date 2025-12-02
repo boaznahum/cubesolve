@@ -126,6 +126,12 @@ def run_with_backend(
     Returns:
         Exit code (0 for success, 1 for error).
 
+    Note:
+        Celebration effects are configured via config.py:
+        - CELEBRATION_EFFECT: Effect name ("confetti", "victory_spin", etc.)
+        - CELEBRATION_ENABLED: Whether effects are enabled
+        - CELEBRATION_DURATION: Effect duration in seconds
+
     Example:
         >>> from cube.main_any_backend import run_with_backend
         >>> run_with_backend("tkinter")  # Run with tkinter

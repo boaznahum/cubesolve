@@ -23,6 +23,7 @@ from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRend
 from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCubeViewer
 from cube.presentation.gui.Command import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
+from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
 from cube.presentation.viewer.GViewerExt import GViewerExt
 
@@ -105,6 +106,15 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # State for keyboard handler (used by Command handlers)
         self._last_edge_solve_count: int = 0
 
+        # Celebration effects
+        self._last_solved_state: bool = app.cube.solved
+        self._celebration_manager = CelebrationManager(
+            renderer=self._renderer_adapter,
+            vs=app.vs,
+            event_loop=backend.event_loop,
+            backend_name="pyglet2",
+        )
+
         # Initial GUI update
         self.update_gui_elements()
 
@@ -174,6 +184,13 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         if not self.animation_running:
             self._update_status_text()
 
+        # Check for solve state transition (cube just became solved)
+        current_solved = self._app.cube.solved
+        if current_solved and not self._last_solved_state:
+            # Cube just became solved - trigger celebration!
+            self._celebration_manager.trigger_celebration()
+        self._last_solved_state = current_solved
+
     def _request_redraw(self) -> None:
         """Request window redraw."""
         # Pyglet handles this automatically via on_draw
@@ -220,6 +237,10 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # The animation's _draw() closure will render rotating parts with transform
         if self._animation_manager:
             self._animation_manager.draw()
+
+        # Draw celebration effect (if running)
+        if self._celebration_manager:
+            self._celebration_manager.draw()
 
         # Disable depth testing for 2D text overlay
         gl.glDisable(gl.GL_DEPTH_TEST)

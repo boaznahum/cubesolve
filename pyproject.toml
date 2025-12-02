@@ -34,6 +34,7 @@ dependencies = [
     "colorama",
     "vecrec",
     "typeguard>=4.4.0",  # override signature_dispatch's ~=3.0 constraint for Python 3.14 compatibility
+    "typing_extensions>=4.14.0",  # for @deprecated decorator
     "keyboard",
 ]
 

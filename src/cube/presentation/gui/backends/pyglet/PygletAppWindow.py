@@ -21,6 +21,7 @@ from cube.presentation.gui.backends.pyglet import main_g_mouse
 from cube.presentation.gui.backends.pyglet.AppWindowBase import AppWindowBase, TextLabel
 from cube.presentation.gui.Command import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
+from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
 from cube.presentation.viewer.GViewerExt import GViewerExt
 
@@ -83,6 +84,15 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # State for keyboard handler (used by Command handlers)
         self._last_edge_solve_count: int = 0
 
+        # Celebration effects
+        self._last_solved_state: bool = app.cube.solved
+        self._celebration_manager = CelebrationManager(
+            renderer=self._renderer,
+            vs=app.vs,
+            event_loop=backend.event_loop,
+            backend_name="pyglet",
+        )
+
         # Initial GUI update
         self.update_gui_elements()
 
@@ -122,6 +132,13 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         if not self.animation_running:
             self._update_status_text()
 
+        # Check for solve state transition (cube just became solved)
+        current_solved = self._app.cube.solved
+        if current_solved and not self._last_solved_state:
+            # Cube just became solved - trigger celebration!
+            self._celebration_manager.trigger_celebration()
+        self._last_solved_state = current_solved
+
     def _request_redraw(self) -> None:
         """Request window redraw."""
         # Pyglet handles this automatically via on_draw
@@ -138,6 +155,9 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self.clear()
         self._draw_axis()
         self._viewer.draw()
+        # Draw celebration effect (if running) - before text overlay
+        if self._celebration_manager:
+            self._celebration_manager.draw()
         self._draw_text()
         self._draw_animation()
 
