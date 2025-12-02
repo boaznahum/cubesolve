@@ -20,6 +20,7 @@ from ._board import _Board
 from ._faceboard import _FaceBoard
 from cube.application import config
 from ..gui.protocols.Renderer import Renderer
+from ..gui.protocols.AnimatableViewer import AnimatableViewer
 from ..gui.types import DisplayList
 
 if TYPE_CHECKING:
@@ -27,7 +28,11 @@ if TYPE_CHECKING:
     from cube.application.animation.AnimationManager import Animation
 
 
-class GCubeViewer:
+class GCubeViewer(AnimatableViewer):
+    """3D cube viewer using legacy OpenGL (display lists).
+
+    Implements AnimatableViewer protocol for animation support.
+    """
     __slots__ = ["_cube", "_board", "_vs", "_renderer"]
 
     def __init__(

@@ -27,6 +27,8 @@ from numpy import ndarray
 from cube.domain.model.cube_boy import Color, FaceName
 from cube.domain.model._part_slice import PartSlice
 
+from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
+
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.algs import AnimationAbleAlg
@@ -64,8 +66,10 @@ _FACE_TRANSFORMS: dict[FaceName, tuple[
 }
 
 
-class ModernGLCubeViewer:
-    """Renders a Rubik's cube using modern OpenGL.
+class ModernGLCubeViewer(AnimatableViewer):
+    """Renders a Rubik's cube using modern OpenGL (shaders, VBOs).
+
+    Implements AnimatableViewer protocol for animation support.
 
     This is a simplified viewer that works with ModernGLRenderer.
     It generates triangle data for all cube facets and renders them
