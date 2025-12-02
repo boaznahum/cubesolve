@@ -19,6 +19,19 @@
 
 ## Bugs
 
+- ❌ **B5.** Missing debug output when running with `--debug-all`
+  - **Status:** New (2025-12-02)
+  - **Symptom:** When running with `debug=True` or `--debug-all`, many expected debug messages are missing:
+    - Algorithm execution (e.g., R, L, U face rotations)
+    - Command execution (which command was triggered by which key)
+    - Keyboard input events (KEYBOAD_INPUT_DEBUG flag exists but is never used)
+  - **Expected:** Debug mode should show full trace of user actions and cube operations
+  - **Related:** `config.KEYBOAD_INPUT_DEBUG` is defined but never checked anywhere
+  - **Files to investigate:**
+    - `src/cube/application/config.py` - KEYBOAD_INPUT_DEBUG flag
+    - `src/cube/presentation/gui/Command.py` - command execution
+    - `src/cube/application/commands/Operator.py` - algorithm execution
+
 - ❌ **B1.** GUI Animation Solver Bug (Lazy Cache Initialization)
   - **Status:** Investigating (2025-11-28)
   - **Skipped Test:** `test_multiple_scrambles` in `tests/gui/test_gui.py` (re-enable when fixed)
@@ -116,10 +129,12 @@
     - Remove them entirely, or
     - Migrate to use `vs.debug()` system and remove the guards
 
----
-# New entries below - Claude will reformat and move above this line
-putting debug_dump is main_any_backend is the wrong place, it will not paear when running tests or any other that create application
-all the needed information need to be availbe to any who call dup, need arcithetcs agent for this
+- ❌ **Q10.** Relocate `debug_dump()` from `main_any_backend.py` to a better location
+  - **Status:** New (2025-12-02)
+  - **Problem:** `debug_dump()` is in `main_any_backend.py` which is not called by tests or other entry points
+  - **Goal:** Debug dump should be available to any code that creates an application (tests, scripts, etc.)
+  - **Needs:** Architecture review to determine proper location (maybe `AbstractApp` or `ApplicationAndViewState`)
+
 ---
 
 ## Done Tasks
