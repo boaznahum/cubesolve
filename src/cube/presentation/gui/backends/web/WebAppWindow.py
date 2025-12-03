@@ -65,6 +65,11 @@ class WebAppWindow:
         if self._animation_manager:
             self._animation_manager.set_window(self)  # type: ignore[arg-type]
 
+        # Disable animation for web backend - async event loop doesn't support
+        # the blocking animation loop used by AnimationManager.run_animation()
+        # TODO: Implement async animation support for web backend
+        app.op.toggle_animation_on(False)
+
         # Set up event handlers
         self._setup_handlers()
 
@@ -157,6 +162,15 @@ class WebAppWindow:
 
     def update_gui_elements(self) -> None:
         """Update all GUI elements."""
+        # Update viewer to regenerate display lists with new colors
+        if self._viewer:
+            self._viewer.update()
+
+        # Update animation manager
+        if self._animation_manager:
+            self._animation_manager.update_gui_elements()
+
+        # Redraw
         self._on_draw()
 
     def inject_key(self, key: int, modifiers: int = 0) -> None:
