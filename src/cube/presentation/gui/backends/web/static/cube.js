@@ -16,6 +16,10 @@ class CubeClient {
         // WebSocket port (Python server runs on 8765)
         this.wsPort = 8765;
 
+        // Reconnect tracking
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 3;
+
         this.connect();
     }
 
@@ -29,6 +33,7 @@ class CubeClient {
 
             this.ws.onopen = () => {
                 this.connected = true;
+                this.reconnectAttempts = 0;  // Reset on successful connection
                 this.setStatus('Connected', 'connected');
 
                 // Send connected message
@@ -48,22 +53,31 @@ class CubeClient {
 
             this.ws.onclose = () => {
                 this.connected = false;
-                this.setStatus('Disconnected - Reconnecting...', 'error');
+                this.reconnectAttempts++;
 
-                // Reconnect after delay
+                if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                    this.setStatus('Server stopped - close this tab', 'error');
+                    return;
+                }
+
+                this.setStatus(`Disconnected - Reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`, 'error');
                 setTimeout(() => this.connect(), 2000);
             };
 
             this.ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
-                this.setStatus('Connection error', 'error');
             };
 
         } catch (error) {
             console.error('Failed to create WebSocket:', error);
-            this.setStatus('Failed to connect', 'error');
+            this.reconnectAttempts++;
 
-            // Retry after delay
+            if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                this.setStatus('Server stopped - close this tab', 'error');
+                return;
+            }
+
+            this.setStatus(`Failed to connect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`, 'error');
             setTimeout(() => this.connect(), 2000);
         }
     }

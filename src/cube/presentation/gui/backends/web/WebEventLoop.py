@@ -128,8 +128,10 @@ class WebEventLoop(EventLoop):
         print(f"Web backend running at http://localhost:{self._port}", flush=True)
         print("Press Ctrl+C to stop", flush=True)
 
-        # Open browser
-        webbrowser.open(f"http://localhost:{self._port}")
+        # Open browser (skip in test mode)
+        from cube.application import config
+        if not config.GUI_TEST_MODE:
+            webbrowser.open(f"http://localhost:{self._port}")
 
         # Main loop
         try:
@@ -151,9 +153,13 @@ class WebEventLoop(EventLoop):
             elif msg_type == "key":
                 keycode = data.get("code", 0)
                 modifiers = data.get("modifiers", 0)
-                symbol = self._js_keycode_to_symbol(keycode, data.get("key", ""))
+                key_char = data.get("key", "")
+                symbol = self._js_keycode_to_symbol(keycode, key_char)
+                print(f"Key: '{key_char}' code={keycode} -> symbol={symbol} mod={modifiers}", flush=True)
                 if self._key_handler:
                     self._key_handler(symbol, modifiers)
+                else:
+                    print("  Warning: No key handler set!", flush=True)
             elif msg_type == "mouse_press":
                 print(f"Mouse press: {data}", flush=True)
             elif msg_type == "mouse_drag":
@@ -203,7 +209,12 @@ class WebEventLoop(EventLoop):
 
     def stop(self) -> None:
         """Request the event loop to stop."""
+        print("Stopping event loop...", flush=True)
         self._has_exit = True
+        # Close all WebSocket clients
+        if self._loop and self._clients:
+            for client in self._clients.copy():
+                asyncio.run_coroutine_threadsafe(client.close(), self._loop)
 
     def step(self, timeout: float = 0.0) -> bool:
         """Process pending events (limited support in async context)."""

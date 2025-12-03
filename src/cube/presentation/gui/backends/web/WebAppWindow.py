@@ -161,12 +161,9 @@ class WebAppWindow:
             if not result.no_gui_update:
                 self.update_gui_elements()
         except AppExit:
-            if config.GUI_TEST_MODE:
-                self.close()
-                raise
-            else:
-                self._app.set_error("Asked to stop")
-                self.update_gui_elements()
+            # For web backend, always close on AppExit (Q key)
+            print("Closing web backend...", flush=True)
+            self.close()
         except Exception as e:
             if config.GUI_TEST_MODE and config.QUIT_ON_ERROR_IN_TEST_MODE:
                 self.close()
