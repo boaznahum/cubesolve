@@ -53,6 +53,9 @@ class WebAppWindow:
         # Wire key handler to event loop (receives keys from browser)
         self._event_loop.set_key_handler(self._handle_browser_key)
 
+        # Wire client connected callback for initial draw
+        self._event_loop.set_client_connected_handler(self._on_client_connected)
+
         # Create viewer
         from cube.presentation.viewer.GCubeViewer import GCubeViewer
         self._viewer = GCubeViewer(app.cube, app.vs, self._renderer)
@@ -107,6 +110,11 @@ class WebAppWindow:
         if command:
             self.inject_command(command)
 
+    def _on_client_connected(self) -> None:
+        """Handle browser client connection - trigger initial draw."""
+        print("Client connected - sending initial frame", flush=True)
+        self._on_draw()
+
     def _on_close(self) -> None:
         """Handle close event."""
         self._event_loop.stop()
@@ -133,8 +141,8 @@ class WebAppWindow:
 
     def run(self) -> None:
         """Run the main event loop."""
-        # Initial draw after client connects
-        self._event_loop.schedule_once(lambda dt: self._on_draw(), 0.5)
+        # Initial draw is triggered by _on_client_connected callback
+        # when browser connects (via set_client_connected_handler)
 
         # Run event loop (blocking)
         self._event_loop.run()
