@@ -65,9 +65,10 @@ class WebEventLoop(EventLoop):
         """Main async entry point."""
         try:
             from aiohttp import web
-        except ImportError:
-            print("Error: aiohttp package required. Install with: pip install aiohttp", flush=True)
-            return
+        except ImportError as e:
+            raise ImportError(
+                "aiohttp package required for web backend. Install with: pip install aiohttp"
+            ) from e
 
         self._loop = asyncio.get_running_loop()
 
