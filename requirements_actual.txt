@@ -1,4 +1,0 @@
-colorama==0.4.6
-numpy==2.3.5
-pip==25.3
-pyglet==1.5.31

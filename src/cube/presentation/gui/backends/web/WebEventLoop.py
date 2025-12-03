@@ -26,20 +26,35 @@ class WebEventLoop(EventLoop):
     Uses aiohttp for both HTTP and WebSocket on the same port.
     """
 
-    def __init__(self):
+    def __init__(self, port: int | None = None):
         self._running = False
         self._has_exit = False
         self._loop: asyncio.AbstractEventLoop | None = None
         self._clients: set = set()
         self._scheduled: list[tuple[float, Callable[[float], None], float | None]] = []
         self._start_time = time.monotonic()
-        self._port = 8765
+        # In test mode, find a free port; otherwise use provided or default
+        from cube.application import config
+        if config.GUI_TEST_MODE:
+            self._port = self._find_free_port()
+        else:
+            self._port = port if port is not None else 8765
 
         # Callbacks for call_soon
         self._pending_callbacks: list[Callable[[], None]] = []
 
         # Key event handler (set by WebAppWindow)
         self._key_handler: Callable[[int, int], None] | None = None
+
+    @staticmethod
+    def _find_free_port() -> int:
+        """Find an available port for the server."""
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('localhost', 0))
+            s.listen(1)
+            port = s.getsockname()[1]
+        return port
 
     def set_key_handler(self, handler: Callable[[int, int], None] | None) -> None:
         """Set handler for key events (symbol, modifiers)."""
@@ -122,7 +137,7 @@ class WebEventLoop(EventLoop):
         # Start server
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, 'localhost', self._port)
+        site = web.TCPSite(runner, 'localhost', self._port, reuse_address=True)
         await site.start()
 
         print(f"Web backend running at http://localhost:{self._port}", flush=True)
