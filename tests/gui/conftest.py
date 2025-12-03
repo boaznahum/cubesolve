@@ -58,7 +58,7 @@ def pytest_generate_tests(metafunc):
             # Run with all available backends
             # Note: pyglet (legacy GL) removed - doesn't work with pyglet 2.0
             # Use pyglet2 backend instead which uses modern OpenGL
-            backends = ["pyglet2", "headless", "console", "tkinter"]
+            backends = ["pyglet2", "headless", "console", "tkinter", "web"]
         else:
             # Single backend specified
             backends = [backend_option]
