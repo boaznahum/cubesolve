@@ -66,7 +66,7 @@ class WebEventLoop(EventLoop):
         try:
             from aiohttp import web
         except ImportError:
-            print("Error: aiohttp package required. Install with: pip install aiohttp")
+            print("Error: aiohttp package required. Install with: pip install aiohttp", flush=True)
             return
 
         self._loop = asyncio.get_running_loop()
@@ -81,17 +81,17 @@ class WebEventLoop(EventLoop):
             await ws.prepare(request)
 
             self._clients.add(ws)
-            print(f"Client connected. Total clients: {len(self._clients)}")
+            print(f"Client connected. Total clients: {len(self._clients)}", flush=True)
 
             try:
                 async for msg in ws:
                     if msg.type == web.WSMsgType.TEXT:
                         await self._handle_message(ws, msg.data)
                     elif msg.type == web.WSMsgType.ERROR:
-                        print(f"WebSocket error: {ws.exception()}")
+                        print(f"WebSocket error: {ws.exception()}", flush=True)
             finally:
                 self._clients.discard(ws)
-                print(f"Client disconnected. Total clients: {len(self._clients)}")
+                print(f"Client disconnected. Total clients: {len(self._clients)}", flush=True)
 
             return ws
 
@@ -117,8 +117,8 @@ class WebEventLoop(EventLoop):
         site = web.TCPSite(runner, 'localhost', self._port)
         await site.start()
 
-        print(f"Web backend running at http://localhost:{self._port}")
-        print("Press Ctrl+C to stop")
+        print(f"Web backend running at http://localhost:{self._port}", flush=True)
+        print("Press Ctrl+C to stop", flush=True)
 
         # Open browser
         webbrowser.open(f"http://localhost:{self._port}")
@@ -139,19 +139,19 @@ class WebEventLoop(EventLoop):
             msg_type = data.get("type")
 
             if msg_type == "connected":
-                print("Browser connected and ready")
+                print("Browser connected and ready", flush=True)
             elif msg_type == "key":
                 # TODO: Forward to WebWindow
-                print(f"Key event: {data}")
+                print(f"Key event: {data}", flush=True)
             elif msg_type == "mouse_press":
-                print(f"Mouse press: {data}")
+                print(f"Mouse press: {data}", flush=True)
             elif msg_type == "mouse_drag":
                 pass  # Don't log drag events (too noisy)
             elif msg_type == "resize":
-                print(f"Resize: {data}")
+                print(f"Resize: {data}", flush=True)
 
         except json.JSONDecodeError:
-            print(f"Invalid JSON: {message}")
+            print(f"Invalid JSON: {message}", flush=True)
 
     async def _process_scheduled(self) -> None:
         """Process scheduled callbacks."""
@@ -175,7 +175,7 @@ class WebEventLoop(EventLoop):
                 if interval is not None:
                     self._scheduled.append((now + interval, callback, interval))
             except Exception as e:
-                print(f"Callback error: {e}")
+                print(f"Callback error: {e}", flush=True)
                 import traceback
                 traceback.print_exc()
 
@@ -188,7 +188,7 @@ class WebEventLoop(EventLoop):
             try:
                 callback()
             except Exception as e:
-                print(f"Callback error: {e}")
+                print(f"Callback error: {e}", flush=True)
 
     def stop(self) -> None:
         """Request the event loop to stop."""
@@ -248,4 +248,4 @@ class WebEventLoop(EventLoop):
                         self._loop
                     )
                 except Exception as e:
-                    print(f"Broadcast error: {e}")
+                    print(f"Broadcast error: {e}", flush=True)
