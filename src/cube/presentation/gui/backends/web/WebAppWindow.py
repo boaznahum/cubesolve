@@ -60,11 +60,13 @@ class WebAppWindow:
         from cube.presentation.viewer.GCubeViewer import GCubeViewer
         self._viewer = GCubeViewer(app.cube, app.vs, self._renderer)
 
+        # Wire animation manager to this window
+        self._animation_manager = app.am
+        if self._animation_manager:
+            self._animation_manager.set_window(self)  # type: ignore[arg-type]
+
         # Set up event handlers
         self._setup_handlers()
-
-        # Animation state
-        self._animation_running = False
 
     def _setup_handlers(self) -> None:
         """Set up window event handlers."""
@@ -98,7 +100,7 @@ class WebAppWindow:
         """Handle key press event."""
         from cube.presentation.gui.key_bindings import lookup_command
 
-        command = lookup_command(event.symbol, event.modifiers, self._animation_running)
+        command = lookup_command(event.symbol, event.modifiers, self.animation_running)
         if command:
             self.inject_command(command)
 
@@ -106,7 +108,7 @@ class WebAppWindow:
         """Handle key event from browser via WebSocket."""
         from cube.presentation.gui.key_bindings import lookup_command
 
-        command = lookup_command(symbol, modifiers, self._animation_running)
+        command = lookup_command(symbol, modifiers, self.animation_running)
         if command:
             self.inject_command(command)
 
@@ -137,7 +139,7 @@ class WebAppWindow:
     @property
     def animation_running(self) -> bool:
         """Check if animation is currently running."""
-        return self._animation_running
+        return bool(self._animation_manager and self._animation_manager.animation_running())
 
     def run(self) -> None:
         """Run the main event loop."""
