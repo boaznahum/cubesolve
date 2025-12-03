@@ -38,6 +38,13 @@ class WebEventLoop(EventLoop):
         # Callbacks for call_soon
         self._pending_callbacks: list[Callable[[], None]] = []
 
+        # Key event handler (set by WebAppWindow)
+        self._key_handler: Callable[[int, int], None] | None = None
+
+    def set_key_handler(self, handler: Callable[[int, int], None] | None) -> None:
+        """Set handler for key events (symbol, modifiers)."""
+        self._key_handler = handler
+
     @property
     def running(self) -> bool:
         """Whether the event loop is currently running."""
@@ -142,8 +149,11 @@ class WebEventLoop(EventLoop):
             if msg_type == "connected":
                 print("Browser connected and ready", flush=True)
             elif msg_type == "key":
-                # TODO: Forward to WebWindow
-                print(f"Key event: {data}", flush=True)
+                keycode = data.get("code", 0)
+                modifiers = data.get("modifiers", 0)
+                symbol = self._js_keycode_to_symbol(keycode, data.get("key", ""))
+                if self._key_handler:
+                    self._key_handler(symbol, modifiers)
             elif msg_type == "mouse_press":
                 print(f"Mouse press: {data}", flush=True)
             elif msg_type == "mouse_drag":
@@ -250,3 +260,63 @@ class WebEventLoop(EventLoop):
                     )
                 except Exception as e:
                     print(f"Broadcast error: {e}", flush=True)
+
+    def _js_keycode_to_symbol(self, keycode: int, key: str) -> int:
+        """Convert JavaScript keyCode to our Keys symbol.
+
+        JavaScript keyCode values mostly match ASCII for letters/numbers,
+        but special keys need mapping.
+        """
+        from cube.presentation.gui.Keys import Keys
+
+        # Map JavaScript special keyCodes to our Keys constants
+        # JavaScript keyCode reference: https://keycode.info/
+        JS_TO_KEYS = {
+            27: Keys.ESCAPE,      # Escape
+            13: Keys.RETURN,      # Enter
+            32: Keys.SPACE,       # Space
+            9: Keys.TAB,          # Tab
+            8: Keys.BACKSPACE,    # Backspace
+            46: Keys.DELETE,      # Delete
+            45: Keys.INSERT,      # Insert
+            37: Keys.LEFT,        # ArrowLeft
+            39: Keys.RIGHT,       # ArrowRight
+            38: Keys.UP,          # ArrowUp
+            40: Keys.DOWN,        # ArrowDown
+            36: Keys.HOME,        # Home
+            35: Keys.END,         # End
+            33: Keys.PAGE_UP,     # PageUp
+            34: Keys.PAGE_DOWN,   # PageDown
+            # Function keys
+            112: Keys.F1, 113: Keys.F2, 114: Keys.F3, 115: Keys.F4,
+            116: Keys.F5, 117: Keys.F6, 118: Keys.F7, 119: Keys.F8,
+            120: Keys.F9, 121: Keys.F10, 122: Keys.F11, 123: Keys.F12,
+            # Punctuation
+            191: Keys.SLASH,      # /
+            222: Keys.APOSTROPHE, # '
+            189: Keys.MINUS,      # -
+            187: Keys.EQUAL,      # = (also +)
+            188: Keys.COMMA,      # ,
+            190: Keys.PERIOD,     # .
+            220: Keys.BACKSLASH,  # \
+            219: Keys.BRACKETLEFT,  # [
+            221: Keys.BRACKETRIGHT, # ]
+            # Numpad
+            107: Keys.NUM_ADD,    # Numpad +
+            109: Keys.NUM_SUBTRACT, # Numpad -
+            96: Keys.NUM_0, 97: Keys.NUM_1, 98: Keys.NUM_2,
+            99: Keys.NUM_3, 100: Keys.NUM_4, 101: Keys.NUM_5,
+            102: Keys.NUM_6, 103: Keys.NUM_7, 104: Keys.NUM_8,
+            105: Keys.NUM_9,
+        }
+
+        if keycode in JS_TO_KEYS:
+            return JS_TO_KEYS[keycode]
+
+        # Letters A-Z (65-90) and numbers 0-9 (48-57) match ASCII
+        # which also matches our Keys constants
+        if 65 <= keycode <= 90 or 48 <= keycode <= 57:
+            return keycode
+
+        # Fallback: return keycode directly (may not match)
+        return keycode

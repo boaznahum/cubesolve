@@ -50,6 +50,9 @@ class WebAppWindow:
         # Wire renderer to event loop for WebSocket communication
         self._renderer.set_event_loop(self._event_loop)
 
+        # Wire key handler to event loop (receives keys from browser)
+        self._event_loop.set_key_handler(self._handle_browser_key)
+
         # Create viewer
         from cube.presentation.viewer.GCubeViewer import GCubeViewer
         self._viewer = GCubeViewer(app.cube, app.vs, self._renderer)
@@ -93,6 +96,14 @@ class WebAppWindow:
         from cube.presentation.gui.key_bindings import lookup_command
 
         command = lookup_command(event.symbol, event.modifiers, self._animation_running)
+        if command:
+            self.inject_command(command)
+
+    def _handle_browser_key(self, symbol: int, modifiers: int) -> None:
+        """Handle key event from browser via WebSocket."""
+        from cube.presentation.gui.key_bindings import lookup_command
+
+        command = lookup_command(symbol, modifiers, self._animation_running)
         if command:
             self.inject_command(command)
 
