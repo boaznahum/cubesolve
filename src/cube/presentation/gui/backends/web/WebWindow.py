@@ -163,14 +163,14 @@ class WebWindow:
             event = KeyEvent(symbol=key, modifiers=modifiers)
             self._key_press_handler(event)
 
-    def simulate_mouse_press(self, x: float, y: float, button: int) -> None:
+    def simulate_mouse_press(self, x: int, y: int, button: int) -> None:
         """Simulate a mouse press event."""
         if self._mouse_press_handler:
-            from cube.presentation.gui.types import MouseEvent, MouseButton
-            event = MouseEvent(x=x, y=y, button=MouseButton(button), dx=0, dy=0)
+            from cube.presentation.gui.types import MouseEvent
+            event = MouseEvent(x=x, y=y, button=button, dx=0, dy=0)
             self._mouse_press_handler(event)
 
-    def simulate_mouse_drag(self, x: float, y: float, dx: float, dy: float) -> None:
+    def simulate_mouse_drag(self, x: int, y: int, dx: int, dy: int) -> None:
         """Simulate a mouse drag event."""
         if self._mouse_drag_handler:
             from cube.presentation.gui.types import MouseEvent, MouseButton

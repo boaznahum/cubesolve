@@ -14,7 +14,7 @@ from cube.presentation.gui.backends.web.WebRenderer import WebRenderer
 from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
 from cube.presentation.gui.Command import Command, CommandContext
 from cube.application.exceptions.ExceptionAppExit import AppExit
-from cube import config
+from cube.application import config
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
@@ -45,7 +45,7 @@ class WebAppWindow:
         # Get components from backend (singletons)
         self._renderer: WebRenderer = backend.renderer  # type: ignore[assignment]
         self._event_loop: WebEventLoop = backend.event_loop  # type: ignore[assignment]
-        self._window: WebWindow = backend.create_window(width, height, title)
+        self._window: WebWindow = backend.create_window(width, height, title)  # type: ignore[assignment]
 
         # Wire renderer to event loop for WebSocket communication
         self._renderer.set_event_loop(self._event_loop)
@@ -92,7 +92,7 @@ class WebAppWindow:
         """Handle key press event."""
         from cube.presentation.gui.key_bindings import lookup_command
 
-        command = lookup_command(event.symbol, event.modifiers)
+        command = lookup_command(event.symbol, event.modifiers, self._animation_running)
         if command:
             self.inject_command(command)
 
@@ -172,3 +172,21 @@ class WebAppWindow:
     def set_mouse_visible(self, visible: bool) -> None:
         """Set mouse visibility."""
         self._window.set_mouse_visible(visible)
+
+    def cleanup(self) -> None:
+        """Clean up resources."""
+        if self._viewer:
+            self._viewer.cleanup()
+        self._renderer.cleanup()
+
+    def get_opengl_info(self) -> str:
+        """Get OpenGL info string (not applicable for web backend)."""
+        return "Web Backend (WebGL in browser)"
+
+    def adjust_brightness(self, delta: float) -> float | None:
+        """Adjust lighting brightness (not supported in web backend)."""
+        return None
+
+    def get_brightness(self) -> float | None:
+        """Get current brightness level (not supported in web backend)."""
+        return None
