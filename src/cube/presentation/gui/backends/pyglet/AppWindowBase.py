@@ -338,6 +338,9 @@ class AppWindowBase(ABC):
         brightness = self.get_brightness()
         if brightness is not None:
             s += f", Light:{brightness:.0%}"
+        background = self.get_background()
+        if background is not None and background > 0:
+            s += f", BG:{background:.0%}"
         self._status_labels.append(TextLabel(
             s, x=10, y=y, font_size=10, color=(255, 255, 0, 255), bold=True
         ))
@@ -418,3 +421,53 @@ class AppWindowBase(ABC):
             Current brightness level (0.0-1.0) if supported, None otherwise.
         """
         return None
+
+    def adjust_background(self, delta: float) -> float | None:
+        """Adjust background gray level (if supported by backend).
+
+        Default implementation returns None (not supported).
+        Override in backends with background control (e.g., pyglet2).
+
+        Args:
+            delta: Amount to adjust (positive = lighter, negative = darker)
+
+        Returns:
+            New background level (0.0-0.5) if supported, None otherwise.
+        """
+        return None
+
+    def get_background(self) -> float | None:
+        """Get current background gray level (if supported by backend).
+
+        Default implementation returns None (not supported).
+        Override in backends with background control (e.g., pyglet2).
+
+        Returns:
+            Current background level (0.0-0.5) if supported, None otherwise.
+        """
+        return None
+
+    def cycle_texture_set(self) -> str | None:
+        """Cycle to the next texture set (if supported by backend).
+
+        Default implementation returns None (not supported).
+        Override in backends with texture support (e.g., pyglet2).
+
+        Returns:
+            Name of new texture set, "solid" if None, or None if not supported.
+        """
+        return None
+
+    def load_texture_set(self, directory: str) -> int:
+        """Load all face textures from a directory (if supported by backend).
+
+        Default implementation returns 0 (not supported).
+        Override in backends with texture support (e.g., pyglet2).
+
+        Args:
+            directory: Path to directory containing face texture images
+
+        Returns:
+            Number of textures successfully loaded (0-6).
+        """
+        return 0

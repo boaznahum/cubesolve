@@ -69,6 +69,7 @@ dev = [
     "mypy",
     "types-colorama",
     "types-keyboard",
+    "Pillow",  # For generating test face textures (resources/faces/generate_images.py)
 ]
 
 [project.urls]
@@ -79,6 +80,9 @@ Repository = "https://github.com/boaznahum/cubesolve"
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["cube*"]
+
+[tool.setuptools.package-data]
+"cube.resources.faces" = ["**/*.png", "**/*.jpg", "README.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -103,9 +103,42 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
 ### Lighting (pyglet2 backend only)
     Ctrl+[ - Decrease ambient light brightness
     Ctrl+] - Increase ambient light brightness
+    Ctrl+Shift+[ - Decrease background gray level
+    Ctrl+Shift+] - Increase background gray level
 
-    Adjusts the overall lighting level from 10% to 100%. The current brightness is displayed
-    in the status bar as "Light:XX%". Works during animation.
+    Brightness: Adjusts ambient lighting from 10% to 150%. Displayed as "Light:XX%".
+    Background: Adjusts background from black (0%) to gray (50%). Displayed as "BG:XX%" when non-zero.
+    Both work during animation.
+
+### Textures (pyglet2 backend only)
+    Ctrl+Shift+T - Cycle through texture sets (set1 → numbers → solid → ...)
+
+    Textures allow you to put custom images (family photos, logos) on cube faces.
+    Configure texture sets in `config.py`:
+
+    ```python
+    TEXTURE_SETS: list[str | None] = ["set1", "numbers", "family", None]
+    ```
+
+    Each texture set is a folder with 6 images: F.png, B.png, R.png, L.png, U.png, D.png
+    Built-in presets are in `src/cube/resources/faces/`
+
+    **Creating textures from family photos:**
+    ```bash
+    # Install dependencies (use existing venv)
+    .venv_pyglet2/Scripts/pip.exe install opencv-python pillow
+
+    # Step 1: Extract all faces from photos
+    .venv_pyglet2/Scripts/python.exe make_face_textures.py extract "C:/Photos/Family" src/cube/resources/faces/family
+
+    # Step 2: Review faces in src/cube/resources/faces/family/all_faces/
+    #         Note which face numbers (001, 002, ...) you want to use
+
+    # Step 3: Select 6 faces for the cube (F, B, R, L, U, D)
+    .venv_pyglet2/Scripts/python.exe make_face_textures.py select src/cube/resources/faces/family 1 3 5 7 9 11
+
+    # Add "family" to TEXTURE_SETS in config.py
+    ```
 
 ### Undo/Reset
 
@@ -253,6 +286,9 @@ python -m cube.main_any_backend -c "SPEED_UP+SPEED_UP+SCRAMBLE_1+SOLVE_ALL+QUIT"
 | | F12 | - | `SHADOW_TOGGLE_B` | Toggle back face shadow |
 | **Lighting** | [ | Ctrl | `BRIGHTNESS_DOWN` | Decrease brightness (pyglet2 only) |
 | | ] | Ctrl | `BRIGHTNESS_UP` | Increase brightness (pyglet2 only) |
+| | [ | Ctrl+Shift | `BACKGROUND_DOWN` | Decrease background gray (pyglet2 only) |
+| | ] | Ctrl+Shift | `BACKGROUND_UP` | Increase background gray (pyglet2 only) |
+| **Textures** | T | Ctrl+Shift | `TEXTURE_SET_CYCLE` | Cycle texture sets (pyglet2 only) |
 | **Cube Size** | = | - | `SIZE_INC` | Increase cube size |
 | | - | - | `SIZE_DEC` | Decrease cube size |
 | **Slice Selection** | [ | - | `SLICE_START_INC` | Increase slice start index |

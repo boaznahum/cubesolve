@@ -132,3 +132,17 @@ CELEBRATION_EFFECTS = ["none", "confetti", "victory_spin", "sparkle", "glow", "c
 CELEBRATION_EFFECT = "combo"  # Default effect
 CELEBRATION_ENABLED = True
 CELEBRATION_DURATION = 3.0  # seconds
+
+################ Lighting (pyglet2 backend only)
+# Brightness: ambient light level (0.1 = dark, 1.0 = normal, 1.5 = overbright)
+LIGHTING_BRIGHTNESS = 0.65  # Default ambient light level
+# Background: gray level for window background (0.0 = black, 0.5 = gray)
+LIGHTING_BACKGROUND = 0.15  # Default background (black)
+
+################ Textures (pyglet2 backend only)
+# List of texture sets to cycle through with Ctrl+Shift+T
+# Can be preset names ("set1", "family"), paths, or None for solid colors
+# Ctrl+Shift+T cycles: set1 → family → None (solid) → set1 → ...
+TEXTURE_SETS: list[str | None] = ["family", "letters", "numbers", "set2", None]
+# Index of initial texture set (0 = first in list, or None to start with solid colors)
+TEXTURE_SET_INDEX: int = 0

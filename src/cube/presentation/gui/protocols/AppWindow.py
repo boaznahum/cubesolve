@@ -162,3 +162,55 @@ class AppWindow(Protocol):
             Current brightness level (0.0-1.0) if supported, None otherwise.
         """
         ...
+
+    def adjust_background(self, delta: float) -> float | None:
+        """Adjust background gray level (if supported by backend).
+
+        Only implemented by backends with background control (pyglet2).
+        Other backends return None (no-op).
+
+        Args:
+            delta: Amount to adjust (positive = lighter, negative = darker)
+
+        Returns:
+            New background level (0.0-0.5) if supported, None otherwise.
+        """
+        ...
+
+    def get_background(self) -> float | None:
+        """Get current background gray level (if supported by backend).
+
+        Only implemented by backends with background control (pyglet2).
+        Other backends return None.
+
+        Returns:
+            Current background level (0.0-0.5) if supported, None otherwise.
+        """
+        ...
+
+    def cycle_texture_set(self) -> str | None:
+        """Cycle to the next texture set (if supported by backend).
+
+        Cycles through TEXTURE_SETS from config (can include None for solid colors).
+        Only implemented by backends with texture support (pyglet2).
+        Other backends return None (no-op).
+
+        Returns:
+            Name of new texture set, "solid" if None/disabled, or None if not supported.
+        """
+        ...
+
+    def load_texture_set(self, directory: str) -> int:
+        """Load all face textures from a directory (if supported by backend).
+
+        Expects files named F.png, B.png, R.png, L.png, U.png, D.png.
+        Only implemented by backends with texture support (pyglet2).
+        Other backends return 0 (no textures loaded).
+
+        Args:
+            directory: Path to directory containing face texture images
+
+        Returns:
+            Number of textures successfully loaded (0-6).
+        """
+        ...

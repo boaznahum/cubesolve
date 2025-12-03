@@ -34,7 +34,7 @@ from cube.domain.solver import SolveStep
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
-    from cube.presentation.gui.backends.pyglet.AbstractWindow import AbstractWindow
+    from cube.presentation.gui.protocols.AppWindow import AppWindow
 
 
 # =============================================================================
@@ -47,7 +47,7 @@ class CommandContext:
 
     Provides access to all application components needed by command handlers.
     """
-    window: "AbstractWindow"
+    window: "AppWindow"
 
     @property
     def app(self) -> "AbstractApp":
@@ -74,7 +74,7 @@ class CommandContext:
         return self.window.viewer
 
     @classmethod
-    def from_window(cls, window: "AbstractWindow") -> "CommandContext":
+    def from_window(cls, window: "AppWindow") -> "CommandContext":
         """Create context from a window."""
         return cls(window=window)
 
@@ -492,6 +492,30 @@ def _brightness_down(ctx: CommandContext) -> CommandResult:
     return CommandResult()
 
 
+def _background_up(ctx: CommandContext) -> CommandResult:
+    """Increase background gray level (pyglet2 backend only)."""
+    new_level = ctx.window.adjust_background(0.05)
+    if new_level is not None:
+        ctx.vs.debug(False, f"Background: {new_level:.2f}")
+    return CommandResult()
+
+
+def _background_down(ctx: CommandContext) -> CommandResult:
+    """Decrease background gray level (pyglet2 backend only)."""
+    new_level = ctx.window.adjust_background(-0.05)
+    if new_level is not None:
+        ctx.vs.debug(False, f"Background: {new_level:.2f}")
+    return CommandResult()
+
+
+def _texture_set_cycle(ctx: CommandContext) -> CommandResult:
+    """Cycle through texture sets (pyglet2 backend only)."""
+    texture_set = ctx.window.cycle_texture_set()
+    if texture_set is not None:
+        ctx.vs.debug(False, f"Texture: {texture_set}")
+    return CommandResult()
+
+
 # =============================================================================
 # COMMAND ENUM
 # =============================================================================
@@ -601,6 +625,11 @@ class Command(Enum):
     # Lighting Control (pyglet2 backend only)
     BRIGHTNESS_UP = (_simple, _brightness_up)
     BRIGHTNESS_DOWN = (_simple, _brightness_down)
+    BACKGROUND_UP = (_simple, _background_up)
+    BACKGROUND_DOWN = (_simple, _background_down)
+
+    # Texture Set Cycling (pyglet2 backend only)
+    TEXTURE_SET_CYCLE = (_simple, _texture_set_cycle)
 
     # Shadow Toggles
     SHADOW_TOGGLE_L = (_shadow_toggle, FaceName.L)
