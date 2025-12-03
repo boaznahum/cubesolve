@@ -45,6 +45,10 @@ dependencies = [
 pyglet1 = ["pyglet>=1.5,<2.0"]
 pyglet2 = ["pyglet>=2.0"]
 
+# Web backend - browser-based rendering via WebSocket
+#   pip install -e ".[web]"
+web = ["aiohttp>=3.9.0"]
+
 # Install with pyglet 1.x (legacy OpenGL)
 # pip install -e ".[pyglet1]" --force-reinstall
 
