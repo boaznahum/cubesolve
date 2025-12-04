@@ -1,0 +1,260 @@
+@startuml presentation_classes
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide members
+
+title Presentation Package - Class Diagram
+footer Generated 2025-12-04
+
+' ============================================
+' PROTOCOLS (Interfaces)
+' ============================================
+package "protocols" <<Rectangle>> #E8F5E9 {
+    interface Renderer
+    interface ShapeRenderer
+    interface DisplayListManager
+    interface ViewStateManager
+    interface EventLoop
+    interface AppWindow
+    interface AnimationBackend
+    interface AnimatableViewer
+    interface TextRenderer
+    interface Window
+
+    ' Abstract base classes with no-op defaults
+    abstract class AbstractRenderer
+    abstract class AbstractShapeRenderer
+
+    ' Protocol relationships
+    Renderer --> ShapeRenderer : shapes
+    Renderer --> DisplayListManager : display_lists
+    Renderer --> ViewStateManager : view
+
+    AbstractRenderer ..|> Renderer
+    AbstractShapeRenderer ..|> ShapeRenderer
+}
+
+' ============================================
+' PYGLET BACKEND (Legacy OpenGL)
+' ============================================
+package "backends/pyglet" <<Rectangle>> #E3F2FD {
+    class PygletRenderer
+    class PygletShapeRenderer
+    class PygletDisplayListManager
+    class PygletViewStateManager
+    class PygletEventLoop
+    class PygletAppWindow
+    class PygletWindow
+    class PygletTextRenderer
+    class PygletAnimation
+    abstract class AppWindowBase
+
+    PygletRenderer ..|> Renderer
+    PygletShapeRenderer ..|> ShapeRenderer
+    PygletDisplayListManager ..|> DisplayListManager
+    PygletViewStateManager ..|> ViewStateManager
+    PygletEventLoop ..|> EventLoop
+    PygletAppWindow ..|> AppWindow
+    PygletTextRenderer ..|> TextRenderer
+    PygletAnimation ..|> AnimationBackend
+}
+
+' ============================================
+' PYGLET2 BACKEND (Modern OpenGL)
+' ============================================
+package "backends/pyglet2" <<Rectangle>> #FFF3E0 {
+    class ModernGLRenderer
+    class ModernGLCubeViewer
+    class ModernGLViewStateManager
+    class ModernGLShapeAdapter
+    class ModernGLRendererAdapter
+    class ShaderProgram
+    class VertexBuffer
+    class VertexArray
+    class Mesh
+    class MatrixStack
+
+    ' Reuses some pyglet classes
+    class "PygletRenderer" as P2Renderer
+    class "PygletEventLoop" as P2EventLoop
+    class "PygletAppWindow" as P2AppWindow
+    class "PygletWindow" as P2Window
+    class "PygletAnimation" as P2Animation
+
+    ModernGLViewStateManager ..|> ViewStateManager
+    ModernGLShapeAdapter ..|> AbstractShapeRenderer
+    ModernGLRendererAdapter ..|> AbstractRenderer
+    ModernGLCubeViewer ..|> AnimatableViewer
+    P2Renderer ..|> Renderer
+    P2EventLoop ..|> EventLoop
+    P2AppWindow ..|> AppWindow
+    P2Animation ..|> AnimationBackend
+}
+
+' ============================================
+' HEADLESS BACKEND (Testing)
+' ============================================
+package "backends/headless" <<Rectangle>> #F3E5F5 {
+    class HeadlessRenderer
+    class HeadlessShapeRenderer
+    class HeadlessDisplayListManager
+    class HeadlessViewStateManager
+    class HeadlessEventLoop
+    class HeadlessAppWindow
+    class HeadlessWindow
+    class HeadlessTextRenderer
+
+    HeadlessRenderer ..|> Renderer
+    HeadlessShapeRenderer ..|> ShapeRenderer
+    HeadlessDisplayListManager ..|> DisplayListManager
+    HeadlessViewStateManager ..|> ViewStateManager
+    HeadlessEventLoop ..|> EventLoop
+    HeadlessAppWindow ..|> AppWindow
+    HeadlessTextRenderer ..|> TextRenderer
+}
+
+' ============================================
+' CONSOLE BACKEND (Text-based)
+' ============================================
+package "backends/console" <<Rectangle>> #ECEFF1 {
+    class ConsoleRenderer
+    class ConsoleShapeRenderer
+    class ConsoleDisplayListManager
+    class ConsoleViewStateManager
+    class ConsoleEventLoop
+    class ConsoleAppWindow
+    class ConsoleViewer
+
+    ConsoleRenderer ..|> Renderer
+    ConsoleShapeRenderer ..|> ShapeRenderer
+    ConsoleDisplayListManager ..|> DisplayListManager
+    ConsoleViewStateManager ..|> ViewStateManager
+    ConsoleEventLoop ..|> EventLoop
+    ConsoleAppWindow ..|> AppWindow
+}
+
+' ============================================
+' TKINTER BACKEND (2D Canvas)
+' ============================================
+package "backends/tkinter" <<Rectangle>> #FBE9E7 {
+    class TkinterRenderer
+    class TkinterShapeRenderer
+    class TkinterDisplayListManager
+    class TkinterViewStateManager
+    class TkinterEventLoop
+    class TkinterAppWindow
+    class TkinterWindow
+    class TkinterTextRenderer
+    class TkinterAnimation
+
+    TkinterRenderer ..|> Renderer
+    TkinterShapeRenderer ..|> ShapeRenderer
+    TkinterDisplayListManager ..|> DisplayListManager
+    TkinterViewStateManager ..|> ViewStateManager
+    TkinterEventLoop ..|> EventLoop
+    TkinterAppWindow ..|> AppWindow
+    TkinterTextRenderer ..|> TextRenderer
+    TkinterAnimation ..|> AnimationBackend
+}
+
+' ============================================
+' WEB BACKEND (Browser/WebSocket)
+' ============================================
+package "backends/web" <<Rectangle>> #E0F7FA {
+    class WebRenderer
+    class WebShapeRenderer
+    class WebDisplayListManager
+    class WebViewStateManager
+    class WebEventLoop
+    class WebAppWindow
+    class WebWindow
+    class WebTextRenderer
+
+    WebRenderer ..|> Renderer
+    WebShapeRenderer ..|> ShapeRenderer
+    WebDisplayListManager ..|> DisplayListManager
+    WebViewStateManager ..|> ViewStateManager
+    WebEventLoop ..|> EventLoop
+    WebAppWindow ..|> AppWindow
+    WebWindow ..|> Window
+    WebTextRenderer ..|> TextRenderer
+}
+
+' ============================================
+' GUI CORE (Top-level)
+' ============================================
+package "gui" <<Rectangle>> #FFFDE7 {
+    class BackendRegistry
+    class GUIBackendFactory
+    class RenderingContext
+    enum Command
+    class CommandContext
+    class CommandResult
+    class CommandSequence
+    class KeyEvent
+    enum Keys
+    enum Modifiers
+    enum MouseButton
+    class MouseEvent
+}
+
+' ============================================
+' EFFECTS SYSTEM
+' ============================================
+package "gui/effects" <<Rectangle>> #FCE4EC {
+    interface CelebrationEffect
+    class CelebrationManager
+    class EffectRegistry
+    abstract class BaseEffect
+    class ConfettiEffect
+    class ComboEffect
+    class GlowEffect
+    class NoneEffect
+    class SparkleEffect
+    class VictorySpinEffect
+
+    BaseEffect ..|> CelebrationEffect
+    ConfettiEffect --|> BaseEffect
+    ComboEffect --|> BaseEffect
+    GlowEffect --|> BaseEffect
+    NoneEffect --|> BaseEffect
+    SparkleEffect --|> BaseEffect
+    VictorySpinEffect --|> BaseEffect
+
+    CelebrationManager --> EffectRegistry
+    CelebrationManager --> CelebrationEffect
+}
+
+' ============================================
+' VIEWER (Cube Visualization)
+' ============================================
+package "viewer" <<Rectangle>> #E8EAF6 {
+    class GCubeViewer
+    class GViewerExt
+    class TextureData
+    enum VMarker
+    class _Board
+    class _FaceBoard
+    class _Cell
+    class _RectGeometry
+
+    GCubeViewer ..|> AnimatableViewer
+    GCubeViewer --> _Board
+    _Board --> _FaceBoard
+    _FaceBoard --> _Cell
+    _Cell --> _RectGeometry
+}
+
+' ============================================
+' KEY RELATIONSHIPS
+' ============================================
+BackendRegistry --> GUIBackendFactory : creates
+GUIBackendFactory --> Renderer : provides
+GUIBackendFactory --> EventLoop : provides
+GUIBackendFactory --> AppWindow : creates
+
+AppWindow --> Renderer : uses
+AppWindow --> GCubeViewer : displays
+
+@enduml

@@ -176,6 +176,55 @@ class WebTextRenderer(TextRenderer):
     def clear_labels(self) -> None: ...
 ```
 
+### Fix Pattern for Partial Implementations
+
+When a class only implements a subset of protocol methods, create an abstract base class
+with default no-op implementations for all methods. This allows partial implementations
+to inherit and only override what they need.
+
+```python
+# STEP 1: Create AbstractShapeRenderer with no-op defaults
+from cube.presentation.gui.protocols.ShapeRenderer import ShapeRenderer
+
+class AbstractShapeRenderer(ShapeRenderer):
+    """Abstract base class providing default no-op implementations."""
+
+    def quad(self, vertices, color) -> None:
+        pass  # No-op default
+
+    def quad_with_border(self, vertices, face_color, line_width, line_color) -> None:
+        pass  # No-op default
+
+    def triangle(self, vertices, color) -> None:
+        pass  # No-op default
+
+    # ... all other methods with no-op defaults ...
+
+# STEP 2: Partial implementation inherits from abstract class
+class ModernGLShapeAdapter(AbstractShapeRenderer):
+    """Only implements quad, triangle, line - inherits no-ops for rest."""
+
+    def quad(self, vertices, color) -> None:
+        # Real implementation
+        self._renderer.set_color(*color)
+        self._renderer.quad(vertices)
+
+    def triangle(self, vertices, color) -> None:
+        # Real implementation
+        ...
+
+    def line(self, p1, p2, width, color) -> None:
+        # Real implementation
+        ...
+    # Other methods inherited as no-ops from AbstractShapeRenderer
+```
+
+**Benefits:**
+1. Partial implementations satisfy the protocol via inheritance
+2. No repeated stub methods in each partial class
+3. `isinstance(obj, ShapeRenderer)` works correctly
+4. IDE autocomplete and type checking work
+
 ---
 
 ## Part 3: Runtime Duck Typing (`hasattr`/`getattr`)
@@ -286,10 +335,10 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow): ...
 - [✅] `WebTextRenderer` - add `TextRenderer` to inheritance
 - [✅] `WebWindow` - add `Window` to inheritance
 
-### Priority 2: Fix Pyglet2 Adapters (3 classes)
-- [ ] `ModernGLViewStateManager` - add `ViewStateManager` to inheritance
-- [ ] `ModernGLShapeAdapter` - add `ShapeRenderer` to inheritance
-- [ ] `ModernGLRendererAdapter` - add `Renderer` to inheritance
+### Priority 2: Fix Pyglet2 Adapters (3 classes) ✅ Done 2025-12-04
+- [✅] `ModernGLViewStateManager` - add `ViewStateManager` to inheritance (full implementation)
+- [✅] `ModernGLShapeAdapter` - created `AbstractShapeRenderer` with no-op defaults, inherits from it
+- [✅] `ModernGLRendererAdapter` - created `AbstractRenderer` with no-op defaults, inherits from it
 
 ### Priority 3: Fix Lazy Initialization (2 files)
 - [ ] `pyglet/PygletWindow.py` - initialize `_key_event_queue` in `__init__`

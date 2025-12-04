@@ -16,6 +16,9 @@ from cube.presentation.gui.backends.pyglet2.shaders import ShaderProgram
 from cube.presentation.gui.backends.pyglet2.matrix import (
     Mat4, identity, perspective, multiply, MatrixStack
 )
+from cube.presentation.gui.protocols.ViewStateManager import ViewStateManager
+from cube.presentation.gui.protocols.AbstractShapeRenderer import AbstractShapeRenderer
+from cube.presentation.gui.protocols.AbstractRenderer import AbstractRenderer
 
 
 # Solid color shader - position only, color from uniform
@@ -1079,7 +1082,7 @@ class ModernGLRenderer:
             gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
 
-class ModernGLViewStateManager:
+class ModernGLViewStateManager(ViewStateManager):
     """ViewStateManager adapter that wraps ModernGLRenderer.
 
     This adapter implements the ViewStateManager protocol by delegating to
@@ -1169,10 +1172,11 @@ class ModernGLViewStateManager:
         )
 
 
-class ModernGLShapeAdapter:
+class ModernGLShapeAdapter(AbstractShapeRenderer):
     """Shape renderer adapter for ModernGLRenderer.
 
-    Provides ShapeRenderer-like interface for effects that need simple shape drawing.
+    Provides ShapeRenderer interface for effects that need simple shape drawing.
+    Inherits no-op defaults from AbstractShapeRenderer for unimplemented methods.
     """
 
     def __init__(self, modern_renderer: "ModernGLRenderer"):
@@ -1194,11 +1198,12 @@ class ModernGLShapeAdapter:
         self._renderer.line(p1, p2, width)
 
 
-class ModernGLRendererAdapter:
+class ModernGLRendererAdapter(AbstractRenderer):
     """Renderer protocol adapter for pyglet2's ModernGLRenderer.
 
     This adapter makes ModernGLRenderer compatible with code that expects
     the legacy Renderer protocol (specifically renderer.view for zoom commands).
+    Inherits no-op defaults from AbstractRenderer for unimplemented methods.
 
     Part of B4 fix: Zoom crash in pyglet2 backend.
     """
