@@ -138,6 +138,8 @@ KEY_BINDINGS_NORMAL: list[KeyBinding] = [
     # -------------------------------------------------------------------------
     (Keys.NUM_ADD, 0, Command.SPEED_UP),
     (Keys.NUM_SUBTRACT, 0, Command.SPEED_DOWN),
+    (Keys.UP, Modifiers.SHIFT, Command.SPEED_UP),      # Alternative for keyboards without numpad
+    (Keys.DOWN, Modifiers.SHIFT, Command.SPEED_DOWN),  # Alternative for keyboards without numpad
     (Keys.SPACE, 0, Command.PAUSE_TOGGLE),
     (Keys.SPACE, Modifiers.CTRL, Command.SINGLE_STEP_TOGGLE),
 
@@ -224,6 +226,8 @@ KEY_BINDINGS_ANIMATION: list[KeyBinding] = [
     # -------------------------------------------------------------------------
     (Keys.NUM_ADD, 0, Command.SPEED_UP),
     (Keys.NUM_SUBTRACT, 0, Command.SPEED_DOWN),
+    (Keys.UP, Modifiers.SHIFT, Command.SPEED_UP),      # Alternative for keyboards without numpad
+    (Keys.DOWN, Modifiers.SHIFT, Command.SPEED_DOWN),  # Alternative for keyboards without numpad
     (Keys.SPACE, 0, Command.PAUSE_TOGGLE),
     (Keys.SPACE, Modifiers.CTRL, Command.SINGLE_STEP_TOGGLE),
 

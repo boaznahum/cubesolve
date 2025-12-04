@@ -46,7 +46,7 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     O - Turn animation on/off
     Ctrl+O - Turn on/off solver debug level
     Alt+O - Turn on/off cube sanity (corruption) check (run after each step)
-    Num Pad +/- - Change animation speed
+    Shift+Up/Down or Num Pad +/- - Change animation speed
     +/- (EQUAL/MINUS) - Change cube size
 
     S - During animation, stop the solver
@@ -276,8 +276,8 @@ python -m cube.main_any_backend -c "SPEED_UP+SPEED_UP+SCRAMBLE_1+SOLVE_ALL+QUIT"
 | | Up | Ctrl | `ZOOM_IN` | Zoom in |
 | | Down | Ctrl | `ZOOM_OUT` | Zoom out |
 | | C | Alt | `VIEW_RESET` | Reset view to default |
-| **Animation** | + (NumPad) | - | `SPEED_UP` | Increase animation speed |
-| | - (NumPad) | - | `SPEED_DOWN` | Decrease animation speed |
+| **Animation** | Up or + (NumPad) | Shift or - | `SPEED_UP` | Increase animation speed |
+| | Down or - (NumPad) | Shift or - | `SPEED_DOWN` | Decrease animation speed |
 | | Space | - | `PAUSE_TOGGLE` | Pause/resume animation |
 | | Space | Ctrl | `SINGLE_STEP_TOGGLE` | Toggle single-step mode |
 | | S | - | `STOP_ANIMATION` | Stop animation (during animation only) |

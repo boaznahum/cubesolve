@@ -28,6 +28,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "pyglet>=2.0",
     "PyOpenGL",
     "numpy",
     "PyYAML",
