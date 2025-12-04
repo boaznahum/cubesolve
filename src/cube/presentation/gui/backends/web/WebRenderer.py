@@ -29,10 +29,22 @@ class WebShapeRenderer(ShapeRenderer):
 
     def __init__(self, command_queue: list[dict]):
         self._commands = command_queue
+        self._display_list_manager: "WebDisplayListManager | None" = None
+
+    def set_display_list_manager(self, dlm: "WebDisplayListManager") -> None:
+        """Set display list manager for compile-time redirection."""
+        self._display_list_manager = dlm
+
+    def _add_command(self, cmd: dict) -> None:
+        """Add command to appropriate queue (main or compile buffer)."""
+        if self._display_list_manager and self._display_list_manager.is_compiling():
+            self._display_list_manager.add_to_compile(cmd)
+        else:
+            self._commands.append(cmd)
 
     def quad(self, vertices: Sequence[Point3D], color: Color3) -> None:
         """Queue quad command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "quad",
             "vertices": [v.tolist() for v in vertices],
             "color": list(color)
@@ -46,7 +58,7 @@ class WebShapeRenderer(ShapeRenderer):
         line_color: Color3,
     ) -> None:
         """Queue quad with border command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "quad_border",
             "vertices": [v.tolist() for v in vertices],
             "face_color": list(face_color),
@@ -56,7 +68,7 @@ class WebShapeRenderer(ShapeRenderer):
 
     def triangle(self, vertices: Sequence[Point3D], color: Color3) -> None:
         """Queue triangle command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "triangle",
             "vertices": [v.tolist() for v in vertices],
             "color": list(color)
@@ -64,7 +76,7 @@ class WebShapeRenderer(ShapeRenderer):
 
     def line(self, p1: Point3D, p2: Point3D, width: float, color: Color3) -> None:
         """Queue line command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "line",
             "p1": p1.tolist(),
             "p2": p2.tolist(),
@@ -74,7 +86,7 @@ class WebShapeRenderer(ShapeRenderer):
 
     def sphere(self, center: Point3D, radius: float, color: Color3) -> None:
         """Queue sphere command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "sphere",
             "center": center.tolist(),
             "radius": radius,
@@ -90,7 +102,7 @@ class WebShapeRenderer(ShapeRenderer):
         color: Color3,
     ) -> None:
         """Queue cylinder command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "cylinder",
             "p1": p1.tolist(),
             "p2": p2.tolist(),
@@ -108,7 +120,7 @@ class WebShapeRenderer(ShapeRenderer):
         color: Color3,
     ) -> None:
         """Queue disk command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "disk",
             "center": center.tolist(),
             "normal": normal.tolist(),
@@ -124,7 +136,7 @@ class WebShapeRenderer(ShapeRenderer):
         color: Color3,
     ) -> None:
         """Queue multiple lines command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "lines",
             "points": [[p1.tolist(), p2.tolist()] for p1, p2 in points],
             "width": width,
@@ -148,7 +160,7 @@ class WebShapeRenderer(ShapeRenderer):
         line_color: Color3,
     ) -> None:
         """Queue cross command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "cross",
             "vertices": [v.tolist() for v in vertices],
             "line_width": line_width,
@@ -165,7 +177,7 @@ class WebShapeRenderer(ShapeRenderer):
         """Queue lines-in-quad command."""
         if n <= 0:
             return
-        self._commands.append({
+        self._add_command({
             "cmd": "lines_in_quad",
             "vertices": [v.tolist() for v in vertices],
             "n": n,
@@ -182,7 +194,7 @@ class WebShapeRenderer(ShapeRenderer):
         line_color: Color3,
     ) -> None:
         """Queue box command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "box",
             "bottom": [v.tolist() for v in bottom_quad],
             "top": [v.tolist() for v in top_quad],
@@ -200,7 +212,7 @@ class WebShapeRenderer(ShapeRenderer):
         color: Color3,
     ) -> None:
         """Queue full cylinder command."""
-        self._commands.append({
+        self._add_command({
             "cmd": "full_cylinder",
             "p1": p1.tolist(),
             "p2": p2.tolist(),
@@ -373,6 +385,9 @@ class WebRenderer(Renderer):
         self._event_loop: WebEventLoop | None = None
         self._clear_color: Color4 = (217, 217, 217, 255)
 
+        # Wire shape renderer to display list manager for compile redirection
+        self._shapes.set_display_list_manager(self._display_lists)
+
     def set_event_loop(self, event_loop: "WebEventLoop") -> None:
         """Set the event loop for sending messages."""
         self._event_loop = event_loop
@@ -415,6 +430,7 @@ class WebRenderer(Renderer):
     def end_frame(self) -> None:
         """End frame - send commands to browser."""
         if self._event_loop is not None and self._commands:
+            print(f"Sending frame with {len(self._commands)} commands", flush=True)
             message = json.dumps({
                 "type": "frame",
                 "commands": self._commands

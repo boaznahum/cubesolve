@@ -46,6 +46,9 @@ class WebEventLoop(EventLoop):
         # Key event handler (set by WebAppWindow)
         self._key_handler: Callable[[int, int], None] | None = None
 
+        # Client connected callback (for initial draw)
+        self._on_client_connected: Callable[[], None] | None = None
+
     @staticmethod
     def _find_free_port() -> int:
         """Find an available port for the server."""
@@ -59,6 +62,10 @@ class WebEventLoop(EventLoop):
     def set_key_handler(self, handler: Callable[[int, int], None] | None) -> None:
         """Set handler for key events (symbol, modifiers)."""
         self._key_handler = handler
+
+    def set_client_connected_handler(self, handler: Callable[[], None] | None) -> None:
+        """Set handler for client connection (for initial draw)."""
+        self._on_client_connected = handler
 
     @property
     def running(self) -> bool:
@@ -165,6 +172,9 @@ class WebEventLoop(EventLoop):
 
             if msg_type == "connected":
                 print("Browser connected and ready", flush=True)
+                # Trigger initial draw now that browser is connected
+                if self._on_client_connected:
+                    self._on_client_connected()
             elif msg_type == "key":
                 keycode = data.get("code", 0)
                 modifiers = data.get("modifiers", 0)

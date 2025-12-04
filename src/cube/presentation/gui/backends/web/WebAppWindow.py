@@ -53,15 +53,25 @@ class WebAppWindow:
         # Wire key handler to event loop (receives keys from browser)
         self._event_loop.set_key_handler(self._handle_browser_key)
 
+        # Wire client connected callback for initial draw
+        self._event_loop.set_client_connected_handler(self._on_client_connected)
+
         # Create viewer
         from cube.presentation.viewer.GCubeViewer import GCubeViewer
         self._viewer = GCubeViewer(app.cube, app.vs, self._renderer)
 
+        # Wire animation manager to this window
+        self._animation_manager = app.am
+        if self._animation_manager:
+            self._animation_manager.set_window(self)  # type: ignore[arg-type]
+
+        # Disable animation for web backend - async event loop doesn't support
+        # the blocking animation loop used by AnimationManager.run_animation()
+        # TODO: Implement async animation support for web backend
+        app.op.toggle_animation_on(False)
+
         # Set up event handlers
         self._setup_handlers()
-
-        # Animation state
-        self._animation_running = False
 
     def _setup_handlers(self) -> None:
         """Set up window event handlers."""
@@ -95,7 +105,7 @@ class WebAppWindow:
         """Handle key press event."""
         from cube.presentation.gui.key_bindings import lookup_command
 
-        command = lookup_command(event.symbol, event.modifiers, self._animation_running)
+        command = lookup_command(event.symbol, event.modifiers, self.animation_running)
         if command:
             self.inject_command(command)
 
@@ -103,9 +113,14 @@ class WebAppWindow:
         """Handle key event from browser via WebSocket."""
         from cube.presentation.gui.key_bindings import lookup_command
 
-        command = lookup_command(symbol, modifiers, self._animation_running)
+        command = lookup_command(symbol, modifiers, self.animation_running)
         if command:
             self.inject_command(command)
+
+    def _on_client_connected(self) -> None:
+        """Handle browser client connection - trigger initial draw."""
+        print("Client connected - sending initial frame", flush=True)
+        self._on_draw()
 
     def _on_close(self) -> None:
         """Handle close event."""
@@ -129,12 +144,12 @@ class WebAppWindow:
     @property
     def animation_running(self) -> bool:
         """Check if animation is currently running."""
-        return self._animation_running
+        return bool(self._animation_manager and self._animation_manager.animation_running())
 
     def run(self) -> None:
         """Run the main event loop."""
-        # Initial draw after client connects
-        self._event_loop.schedule_once(lambda dt: self._on_draw(), 0.5)
+        # Initial draw is triggered by _on_client_connected callback
+        # when browser connects (via set_client_connected_handler)
 
         # Run event loop (blocking)
         self._event_loop.run()
@@ -147,6 +162,15 @@ class WebAppWindow:
 
     def update_gui_elements(self) -> None:
         """Update all GUI elements."""
+        # Update viewer to regenerate display lists with new colors
+        if self._viewer:
+            self._viewer.update()
+
+        # Update animation manager
+        if self._animation_manager:
+            self._animation_manager.update_gui_elements()
+
+        # Redraw
         self._on_draw()
 
     def inject_key(self, key: int, modifiers: int = 0) -> None:
