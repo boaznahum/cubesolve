@@ -839,6 +839,6 @@ step28-phase3-complete
 
 ## References
 
-- [Phase 1-2 Migration State](migration_state.md)
+- [Phase 1-2 Migration State](wip/migration_state.md)
 - [GUI Abstraction Design](gui_abstraction.md)
 - [Architecture Documentation](../../arch.md)
