@@ -13,6 +13,7 @@ from cube.presentation.gui.backends.web.WebWindow import WebWindow
 from cube.presentation.gui.backends.web.WebRenderer import WebRenderer
 from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
 from cube.presentation.gui.Command import Command, CommandContext
+from cube.presentation.gui.protocols.AppWindow import AppWindow
 from cube.application.exceptions.ExceptionAppExit import AppExit
 from cube.application import config
 
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
 
-class WebAppWindow:
+class WebAppWindow(AppWindow):
     """Web application window implementing AppWindow protocol.
 
     Combines WebWindow, WebRenderer, and WebEventLoop with
@@ -222,3 +223,19 @@ class WebAppWindow:
     def get_brightness(self) -> float | None:
         """Get current brightness level (not supported in web backend)."""
         return None
+
+    def adjust_background(self, delta: float) -> float | None:
+        """Adjust background gray level (not supported in web backend)."""
+        return None
+
+    def get_background(self) -> float | None:
+        """Get current background gray level (not supported in web backend)."""
+        return None
+
+    def cycle_texture_set(self) -> str | None:
+        """Cycle to the next texture set (not supported in web backend)."""
+        return None
+
+    def load_texture_set(self, directory: str) -> int:
+        """Load all face textures from a directory (not supported in web backend)."""
+        return 0

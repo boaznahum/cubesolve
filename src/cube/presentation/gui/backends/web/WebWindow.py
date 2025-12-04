@@ -8,11 +8,14 @@ from __future__ import annotations
 
 from typing import Callable, TYPE_CHECKING
 
+from cube.presentation.gui.protocols.TextRenderer import TextRenderer
+from cube.presentation.gui.protocols.Window import Window
+
 if TYPE_CHECKING:
     from cube.presentation.gui.types import KeyEvent, MouseEvent
 
 
-class WebTextRenderer:
+class WebTextRenderer(TextRenderer):
     """Text renderer for web backend.
 
     Queues text labels to be rendered in browser.
@@ -24,11 +27,11 @@ class WebTextRenderer:
     def draw_label(
         self,
         text: str,
-        x: float,
-        y: float,
-        font_name: str = "Arial",
+        x: int,
+        y: int,
         font_size: int = 12,
         color: tuple[int, int, int, int] = (255, 255, 255, 255),
+        bold: bool = False,
         anchor_x: str = "left",
         anchor_y: str = "bottom",
     ) -> None:
@@ -37,9 +40,10 @@ class WebTextRenderer:
             "text": text,
             "x": x,
             "y": y,
-            "font": font_name,
+            "font": "Arial",
             "size": font_size,
             "color": list(color),
+            "bold": bold,
             "anchor_x": anchor_x,
             "anchor_y": anchor_y
         })
@@ -53,7 +57,7 @@ class WebTextRenderer:
         return self._labels
 
 
-class WebWindow:
+class WebWindow(Window):
     """Web window representing browser canvas.
 
     Tracks window state and event handlers.
@@ -64,6 +68,7 @@ class WebWindow:
         self._height = height
         self._title = title
         self._visible = True
+        self._closed = False
         self._mouse_visible = True
 
         # Text renderer
@@ -77,8 +82,9 @@ class WebWindow:
         self._mouse_press_handler: Callable[["MouseEvent"], None] | None = None
         self._mouse_release_handler: Callable[["MouseEvent"], None] | None = None
         self._mouse_drag_handler: Callable[["MouseEvent"], None] | None = None
-        self._mouse_scroll_handler: Callable[[float, float, float, float], None] | None = None
-        self._close_handler: Callable[[], None] | None = None
+        self._mouse_move_handler: Callable[["MouseEvent"], None] | None = None
+        self._mouse_scroll_handler: Callable[[int, int, float, float], None] | None = None
+        self._close_handler: Callable[[], bool] | None = None
 
     @property
     def width(self) -> int:
@@ -91,9 +97,17 @@ class WebWindow:
         return self._height
 
     @property
-    def text_renderer(self) -> WebTextRenderer:
+    def text(self) -> WebTextRenderer:
         """Access text renderer."""
         return self._text_renderer
+
+    def set_title(self, title: str) -> None:
+        """Set window title."""
+        self._title = title
+
+    def set_visible(self, visible: bool) -> None:
+        """Show or hide the window."""
+        self._visible = visible
 
     def set_size(self, width: int, height: int) -> None:
         """Set window size."""
@@ -144,13 +158,17 @@ class WebWindow:
         """Set the mouse drag handler."""
         self._mouse_drag_handler = handler
 
+    def set_mouse_move_handler(self, handler: Callable[["MouseEvent"], None] | None) -> None:
+        """Set the mouse move handler (without button pressed)."""
+        self._mouse_move_handler = handler
+
     def set_mouse_scroll_handler(
-        self, handler: Callable[[float, float, float, float], None] | None
+        self, handler: Callable[[int, int, float, float], None] | None
     ) -> None:
         """Set the mouse scroll handler."""
         self._mouse_scroll_handler = handler
 
-    def set_close_handler(self, handler: Callable[[], None] | None) -> None:
+    def set_close_handler(self, handler: Callable[[], bool] | None) -> None:
         """Set the close handler."""
         self._close_handler = handler
 
