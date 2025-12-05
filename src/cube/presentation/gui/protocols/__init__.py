@@ -2,6 +2,9 @@
 GUI Protocol definitions.
 
 This module exports all protocol interfaces that backends must implement.
+
+Note: AppWindowBase and TextLabel are NOT exported here to avoid circular imports.
+Import them directly: from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase, TextLabel
 """
 
 from cube.presentation.gui.protocols.ShapeRenderer import ShapeRenderer
@@ -14,7 +17,6 @@ from cube.presentation.gui.protocols.EventLoop import EventLoop
 from cube.presentation.gui.protocols.AnimationBackend import AnimationBackend
 from cube.presentation.gui.protocols.AppWindow import AppWindow
 from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
-from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase, TextLabel
 from cube.presentation.gui.protocols.AbstractWindow import AbstractWindow, AbstractTextRenderer
 from cube.presentation.gui.protocols.WindowBase import WindowBase
 
@@ -37,6 +39,5 @@ __all__ = [
     "AnimatableViewer",
     # App window
     "AppWindow",
-    "AppWindowBase",
-    "TextLabel",
+    # Note: AppWindowBase, TextLabel not exported - import directly to avoid circular import
 ]

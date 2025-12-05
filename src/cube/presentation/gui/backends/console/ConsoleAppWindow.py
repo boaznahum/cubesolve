@@ -14,7 +14,7 @@ from cube.application.AbstractApp import AbstractApp
 from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.protocols import AppWindow
 from cube.presentation.gui.types import Keys, Modifiers
-from cube.presentation.gui.protocols import AppWindowBase
+from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase
 
 from cube.presentation.gui.backends.console import ConsoleViewer as console_viewer
 from cube.presentation.gui.backends.console.ConsoleKeys import Keys as ConsoleKeys

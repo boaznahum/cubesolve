@@ -8,7 +8,7 @@ from cube.application.AbstractApp import AbstractApp
 from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.protocols import AppWindow
 from cube.presentation.gui.types import KeyEvent
-from cube.presentation.gui.protocols import AppWindowBase
+from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
 
 from cube.presentation.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
