@@ -82,6 +82,33 @@ Both must pass before committing.
 
 **Note:** Use `--speed-up 5` (not 2) to work around the known animation timing bug (see "Known Issues" section below).
 
+### Pyglet Backend Testing - SEPARATE ENVIRONMENTS
+
+**CRITICAL:** The `pyglet` (legacy) and `pyglet2` (modern) backends require DIFFERENT Python environments because they use incompatible pyglet versions.
+
+| Backend | Environment | Pyglet Version | OpenGL |
+|---------|-------------|----------------|--------|
+| `pyglet` | `.venv_pyglet_legacy` | pyglet 1.x (`<2.0`) | Legacy (display lists) |
+| `pyglet2` | `.venv` (default) | pyglet 2.x (`>=2.0`) | Modern (shaders/VBOs) |
+
+**Setup `.venv_pyglet_legacy` environment:**
+```bash
+python -m venv .venv_pyglet_legacy
+.venv_pyglet_legacy/Scripts/pip.exe install -e ".[dev]"
+.venv_pyglet_legacy/Scripts/pip.exe install --force-reinstall "pyglet>=1.5,<2.0"
+```
+
+**Running tests for each backend:**
+```bash
+# pyglet2 (modern) - uses default .venv
+.venv/Scripts/python.exe -m pytest tests/gui -v --speed-up 5 --backend=pyglet2
+
+# pyglet (legacy) - uses .venv_pyglet_legacy
+.venv_pyglet_legacy/Scripts/python.exe -m pytest tests/gui -v --speed-up 5 --backend=pyglet
+```
+
+**NEVER mix environments:** Running pyglet (legacy) tests with pyglet 2.x installed will fail with errors like `AttributeError: module 'pyglet.gl' has no attribute 'glGenLists'` because pyglet 2.x removed legacy OpenGL functions.
+
 ### Check Pyglet Usage
 ```bash
 grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "presentation/gui/backends/pyglet" | grep -v "__pycache__"
