@@ -65,6 +65,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Initialize to None - will be set after super().__init__()
         # (pyglet calls on_resize during __init__ before we can create the renderer)
         self._modern_renderer: ModernGLRenderer | None = None
+        self._renderer_adapter: ModernGLRendererAdapter | None = None
 
         # Use OpenGL 3.3 core profile (default for pyglet 2)
         # Note: OpenGL 4.6 core profile doesn't support wide lines (glLineWidth > 1.0)
@@ -388,7 +389,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         if self._modern_renderer:
             self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=1.0, far=1000.0)
         # Update adapter's window size for screen_to_world (B4 fix)
-        if hasattr(self, '_renderer_adapter') and self._renderer_adapter:
+        if self._renderer_adapter:
             self._renderer_adapter.update_window_size(width, height)
 
     def on_key_press(self, symbol, modifiers):

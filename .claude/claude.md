@@ -248,6 +248,85 @@ Key rules (detailed in architecture_rules.md):
 
 ---
 
+## Type Annotations - MANDATORY
+
+**CRITICAL:** ALL code must have complete type annotations. This catches bugs at write time, not runtime.
+
+### Requirements
+
+1. **All function parameters** must have type hints
+2. **All function return types** must be specified
+3. **All local variables** should have type hints when the type isn't obvious
+4. **Use `from __future__ import annotations`** for forward references
+
+### Example
+
+```python
+from __future__ import annotations
+from collections.abc import Collection
+
+def process_slices(cube: Cube, label: str = "default") -> None:
+    all_slices: Collection[PartSlice] = cube.get_all_parts()
+    for slice_ in all_slices:
+        colors_cache: PartColorsID | None = slice_._colors_id_by_colors
+        # ...
+```
+
+### Why This Matters
+
+Without type annotations, bugs like this go unnoticed:
+```python
+# BUG: get_all_parts() returns PartSlice, not Part
+# PartSlice doesn't have position_id - only Part does
+all_parts = cube.get_all_parts()  # No type hint = no IDE warning
+for part in all_parts:
+    pos = part.position_id  # Runtime error!
+```
+
+With type annotations, the IDE catches this immediately:
+```python
+all_slices: Collection[PartSlice] = cube.get_all_parts()
+for slice_ in all_slices:
+    pos = slice_.position_id  # IDE error: PartSlice has no attribute 'position_id'
+```
+
+---
+
+## Domain Model - Understand Before Changing
+
+**CRITICAL:** Before modifying domain model code, read `docs/design/domain_model.md`.
+
+### Key Concepts
+
+```
+Cube
+ ├── Part (Edge, Corner, Center) - has colors_id AND position_id
+ │    └── PartSlice (EdgeWing, CornerSlice, CenterSlice) - has colors_id only
+ │         └── PartEdge - single sticker on single face
+```
+
+### Important Distinctions
+
+| Class | Has `colors_id` | Has `position_id` | Returned by |
+|-------|-----------------|-------------------|-------------|
+| Part | Yes | Yes | - |
+| PartSlice | Yes | **No** | `cube.get_all_parts()` |
+| PartEdge | No | No | - |
+
+### Access Pattern
+
+```python
+# cube.get_all_parts() returns PartSlice objects, NOT Part
+all_slices: Collection[PartSlice] = cube.get_all_parts()
+for slice_ in all_slices:
+    slice_.colors_id       # OK - PartSlice has this
+    slice_.position_id     # ERROR - only Part has this
+    slice_._parent         # Access parent Part
+    slice_._parent.position_id  # OK - Part has position_id
+```
+
+---
+
 ## Known Issues & Fixes
 
 ### GUI Animation Solver Bug (Lazy Cache Initialization)

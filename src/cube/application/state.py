@@ -545,7 +545,8 @@ class ApplicationAndViewState:
 
         all_slices = cube.get_all_parts()
         for s in sorted(all_slices, key=lambda p: str(p.fixed_id)):
-            colors_cache = getattr(s, '_colors_id_by_colors', None)
+            # _colors_id_by_colors is initialized in PartSlice.__init__
+            colors_cache = s._colors_id_by_colors
             match_faces = s.match_faces
             edges_str = ", ".join(f"{e.face.name.value}:{e.color.name}" for e in s.edges)
 
