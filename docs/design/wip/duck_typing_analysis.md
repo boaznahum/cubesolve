@@ -1,9 +1,10 @@
 
 # Duck Typing Analysis
 
-> **Date:** 2025-12-04
+> **Date:** 2025-12-04 (Updated: 2025-12-05)
 > **Purpose:** Identify all classes implementing protocols without explicit inheritance ("duck typing")
 > **Violation of:** CLAUDE.md rule: "When implementing protocols, always inherit from them for PyCharm visibility"
+> **Status:** HIGH/MEDIUM priority items mostly complete. Only lazy initialization in PygletWindow files remains.
 
 ---
 
@@ -34,12 +35,12 @@ This analysis identifies **two categories** of duck typing issues in the codebas
 
 ### Key Findings
 
-| Category                                        | Count | Risk Level | Details Section |
-|-------------------------------------------------|-------|------------|-----------------|
-| Classes missing protocol inheritance            | 6     | HIGH       | Part 2          |
-| `hasattr()`/`getattr()` for optional features   | 1     | HIGH       | Part 3.1        |
-| `hasattr()`/`getattr()` for lazy initialization | 3     | MEDIUM     | Part 3.2        |
-| Acceptable duck typing (external libs, debug)   | 6     | LOW        | Part 3.3        |
+| Category                                        | Count | Risk Level | Status    | Details Section |
+|-------------------------------------------------|-------|------------|-----------|-----------------|
+| Classes missing protocol inheritance            | 6     | HIGH       | ✅ FIXED  | Part 2          |
+| `hasattr()`/`getattr()` for optional features   | 1     | HIGH       | ✅ FIXED  | Part 3.1        |
+| `hasattr()`/`getattr()` for lazy initialization | 3     | MEDIUM     | PENDING   | Part 3.2        |
+| Acceptable duck typing (external libs, debug)   | 6     | LOW        | OK        | Part 3.3        |
 
 ---
 
@@ -232,23 +233,24 @@ class ModernGLShapeAdapter(AbstractShapeRenderer):
 
 ## Part 3: Runtime Duck Typing (`hasattr`/`getattr`)
 
-### 3.1 HIGH RISK - Optional Feature Detection
+### 3.1 HIGH RISK - Optional Feature Detection ✅ FIXED 2025-12-05
 
 ```python
 # FILE: backends/pyglet2/PygletAppWindow.py:391
+# WAS:
 if hasattr(self, '_renderer_adapter') and self._renderer_adapter:
+    self._renderer_adapter.update_window_size(width, height)
+
+# NOW FIXED - initialize attribute before super().__init__():
+self._renderer_adapter: ModernGLRendererAdapter | None = None
+# ...
+if self._renderer_adapter:  # No more hasattr()
     self._renderer_adapter.update_window_size(width, height)
 ```
 
-**Problem:** Uses duck typing to check for optional feature instead of protocol method.
+**Problem:** Used duck typing to check for optional feature.
 
-**Fix:** Add method to `AppWindow` protocol:
-```python
-# In AppWindow protocol:
-def update_adapter_window_size(self, width: int, height: int) -> bool | None:
-    """Returns None if not supported, True if updated."""
-    ...
-```
+**Fix Applied:** Initialize `_renderer_adapter = None` before `super().__init__()` so the attribute always exists.
 
 ### 3.2 MEDIUM RISK - Lazy Attribute Initialization
 
@@ -280,12 +282,14 @@ These patterns are acceptable because they handle external library interop or de
 
 | File                 | Line            | Pattern                                  | Why Acceptable                   |
 |----------------------|-----------------|------------------------------------------|----------------------------------|
-| `debug.py`           | 51-52, 96-97    | `getattr(part, '_colors_id_by_colors')`  | Debug-only, inspecting internals |
-| `state.py`           | 548             | `getattr(s, '_colors_id_by_colors')`     | Debug-only                       |
+| `debug.py`           | 51-52, 96-97    | `slice_._colors_id_by_colors` (direct)   | Debug-only, inspecting internals |
 | `Command.py`         | 175, 186, 196   | `getattr(Algs, alg_name)`                | Idiomatic enum lookup            |
 | `common_gl_utils.py` | 32              | `hasattr(value, 'contents')`             | ctypes pointer detection         |
 | `TkinterWindow.py`   | 312             | `hasattr(event, 'delta')`                | Platform-specific tkinter        |
 | `shaders.py`         | 290             | `hasattr(matrix, 'ctypes')`              | numpy vs ctypes dispatch         |
+| `RenderingContext.py`| 56, 70          | `getattr(self._local, 'renderer', None)` | Thread-local storage pattern     |
+
+**Note:** `state.py:548` was fixed - removed unnecessary getattr (2025-12-05)
 
 ---
 
@@ -361,8 +365,12 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow): ...
 - [ ] `pyglet/PygletWindow.py` - initialize `_key_event_queue` in `__init__`
 - [ ] `pyglet2/PygletWindow.py` - initialize `_key_event_queue` in `__init__`
 
-### Priority 7: Fix Optional Feature Detection (1 file)
-- [ ] `pyglet2/PygletAppWindow.py:391` - add protocol method for adapter
+### Priority 7: Fix Optional Feature Detection (1 file) ✅ Done 2025-12-05
+- [✅] `pyglet2/PygletAppWindow.py:391` - initialize `_renderer_adapter = None` before `super().__init__()`
+
+### Priority 8: Fix debug.py type annotations ✅ Done 2025-12-05
+- [✅] Add proper type annotations to `debug.py`
+- [✅] Handle Part vs PartSlice correctly (see `docs/design/domain_model.md`)
 
 ---
 
@@ -476,4 +484,57 @@ class AppWindow(Protocol):
 
 - `CLAUDE.md` - Protocol Implementation Pattern section
 - `docs/design/gui_abstraction.md` - GUI architecture overview
+- `docs/design/domain_model.md` - Cube domain model (Part vs PartSlice)
 - `__todo.md` - Task A4 (AppWindowBase inheritance mess)
+
+---
+
+## Session Summary for Continuation (2025-12-05)
+
+### Completed This Session
+
+1. **Fixed `hasattr` in PygletAppWindow.py** (Priority 7)
+   - Issue: `hasattr(self, '_renderer_adapter')` in `on_resize`
+   - Fix: Initialize `_renderer_adapter = None` before `super().__init__()`
+
+2. **Fixed debug.py type annotations** (Priority 8)
+   - Added proper type annotations with `from __future__ import annotations`
+   - Correctly handles Part vs PartSlice distinction
+   - `cube.get_all_parts()` returns `Collection[PartSlice]`, NOT `Part`
+   - Access parent Part via `slice_._parent` for `position_id`
+
+3. **Fixed circular import** (Critical bug introduced earlier)
+   - Root cause: `AppWindowBase` was exported from `protocols/__init__.py`
+   - Import chain: Algs → Cube → Face → VMarker → presentation → protocols → AppWindowBase → Algs
+   - Fix: Removed AppWindowBase from `protocols/__init__.py`, backends import directly
+
+4. **Created documentation**
+   - `docs/design/domain_model.md` - Comprehensive cube structure documentation
+
+### Commits Pushed
+- `a2a1f73` - Fix duck typing issues, add domain model documentation
+- `29bbe5c` - Fix circular import: don't export AppWindowBase from protocols/__init__.py
+
+### Remaining Work
+
+**Priority 4: Create AbstractWindow and WindowBase** (OPTIONAL)
+- [ ] Create `protocols/AbstractWindow.py` with no-op defaults
+- [ ] Update window implementations to inherit
+
+**Priority 5: Standardize naming conventions** (OPTIONAL)
+- [ ] Rename protocols to use `I` prefix
+
+**Priority 6: Fix Lazy Initialization** (LOW - works but not clean)
+- [ ] `pyglet/PygletWindow.py` - initialize `_key_event_queue` in `__init__`
+- [ ] `pyglet2/PygletWindow.py` - initialize `_key_event_queue` in `__init__`
+
+### Test Status
+- Non-GUI tests: 65 passed, 61 errors (pre-existing from window_factory removal)
+- GUI tests: 12 passed, 4 skipped (tkinter env issue)
+
+### Key Learnings for Next Session
+1. **ALWAYS** understand domain model before modifying domain-related code
+2. Read `docs/design/domain_model.md` before touching Part/PartSlice/PartEdge
+3. `cube.get_all_parts()` returns `Collection[PartSlice]`, not `Part`
+4. Type annotations are MANDATORY - they catch bugs at write time
+5. Don't export heavy imports from `__init__.py` - causes circular imports
