@@ -14,6 +14,9 @@
 > 2. When the fix is complete and tested, change it to `[✅]` (done)
 > 3. Update the status in Part 5 "Recommended Actions" section
 > 4. After ALL fixes in a priority group are done, add completion date
+> 5. Whenever you change in presentation elements and GUI, update the UML diagrams
+> 6. Protocols should be named with `I` prefix (like Java interfaces), e.g., `IWindow` instead of `Window`
+> 7. In UML diagrams, show duck typing with bold red dashed lines labeled "duck" to visualize the full picture
 >
 > **Status symbols:**
 > - `[ ]` - Not started
@@ -340,11 +343,25 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow): ...
 - [✅] `ModernGLShapeAdapter` - created `AbstractShapeRenderer` with no-op defaults, inherits from it
 - [✅] `ModernGLRendererAdapter` - created `AbstractRenderer` with no-op defaults, inherits from it
 
-### Priority 3: Fix Lazy Initialization (2 files)
+### Priority 3: Move AppWindowBase to protocols package ✅ Done 2025-12-05
+- [✅] Move `AppWindowBase` to `protocols/AppWindowBase.py`
+- [✅] Update all backends to import from `protocols.AppWindowBase`
+- [✅] Delete duplicate `AppWindowBase` files from backend folders
+
+### Priority 4: Create AbstractWindow and WindowBase for IWindow protocol
+- [ ] Create `protocols/AbstractWindow.py` with no-op defaults for IWindow
+- [ ] Create `protocols/WindowBase.py` with shared Window implementation (if needed)
+- [ ] Update PygletWindow, HeadlessWindow, TkinterWindow to inherit appropriately
+
+### Priority 5: Standardize naming conventions
+- [ ] Rename protocols to use `I` prefix (e.g., `Window` → `IWindow`)
+- [ ] Verify 4-level architecture: Interface (`I*`) → Abstract (`Abstract*`) → Base (`*Base`) → Concrete
+
+### Priority 6: Fix Lazy Initialization (2 files)
 - [ ] `pyglet/PygletWindow.py` - initialize `_key_event_queue` in `__init__`
 - [ ] `pyglet2/PygletWindow.py` - initialize `_key_event_queue` in `__init__`
 
-### Priority 4: Fix Optional Feature Detection (1 file)
+### Priority 7: Fix Optional Feature Detection (1 file)
 - [ ] `pyglet2/PygletAppWindow.py:391` - add protocol method for adapter
 
 ---

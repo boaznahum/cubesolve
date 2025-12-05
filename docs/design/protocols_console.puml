@@ -1,0 +1,71 @@
+@startuml protocols_console
+!theme plain
+skinparam classAttributeIconSize 0
+hide members
+
+title Protocols & Console Backend - Class Diagram
+footer Generated 2025-12-05
+
+' ============================================
+' PROTOCOLS (Interfaces) - TOP
+' ============================================
+package "protocols" as P <<Rectangle>> #E8F5E9 {
+    interface Renderer
+    interface ShapeRenderer
+    interface DisplayListManager
+    interface ViewStateManager
+    interface EventLoop
+    interface AppWindow
+    interface Window
+
+    ' Abstract base classes (no-op defaults)
+    abstract class AbstractRenderer
+    abstract class AbstractShapeRenderer
+    abstract class AbstractWindow
+
+    ' Base classes (real shared implementation)
+    abstract class AppWindowBase
+    abstract class WindowBase
+
+    ' Protocol relationships
+    Renderer --> ShapeRenderer : shapes
+    Renderer --> DisplayListManager : display_lists
+    Renderer --> ViewStateManager : view
+
+    AbstractRenderer ..|> Renderer
+    AbstractShapeRenderer ..|> ShapeRenderer
+    AbstractWindow ..|> Window
+    AppWindowBase ..|> AppWindow
+    WindowBase --|> AbstractWindow
+}
+
+' ============================================
+' CONSOLE BACKEND (Text-based)
+' ============================================
+package "backends/console" as B <<Rectangle>> #ECEFF1 {
+    class ConsoleRenderer
+    class ConsoleShapeRenderer
+    class ConsoleDisplayListManager
+    class ConsoleViewStateManager
+    class ConsoleEventLoop
+    class ConsoleAppWindow
+    class ConsoleViewer
+}
+
+' Force protocols package above console package
+P -[hidden]down- B
+
+' ============================================
+' PROPER PROTOCOL IMPLEMENTATIONS (normal dashed line)
+' ============================================
+ConsoleRenderer ..|> Renderer
+ConsoleShapeRenderer ..|> ShapeRenderer
+ConsoleDisplayListManager ..|> DisplayListManager
+ConsoleViewStateManager ..|> ViewStateManager
+ConsoleEventLoop ..|> EventLoop
+
+' ConsoleAppWindow inherits from AppWindowBase AND AppWindow protocol
+ConsoleAppWindow --|> AppWindowBase
+ConsoleAppWindow ..|> AppWindow
+
+@enduml

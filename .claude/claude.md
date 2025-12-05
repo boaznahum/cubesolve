@@ -234,114 +234,17 @@ After EVERY code change, verify:
 
 ---
 
-## Code Style Requirements
+## Architecture Rules
 
-### Type Annotations
+**See:** `docs/design/architecture_rules.md` for comprehensive architecture rules.
 
-**MANDATORY**: All new code MUST include type annotations.
-
-- All function parameters must have type hints
-- All function return types must be specified
-- Class attributes should be typed
-- Use `from __future__ import annotations` for forward references
-
-**Example:**
-```python
-from __future__ import annotations
-
-def process_commands(
-    commands: Command | CommandSequence,
-    timeout: float = 30.0,
-    debug: bool = False
-) -> GUITestResult:
-    """Process a sequence of commands."""
-    result: GUITestResult | None = None
-    # ...
-    return result
-```
-
-**Exceptions:**
-- Lambda functions in callbacks (e.g., `lambda w, h, t: Window(w, h, t)`)
-- Simple one-liners where types are obvious from context
-
-### No Duck Typing
-
-**PROHIBITED**: Do not use duck typing with `getattr()` or `hasattr()` to check for optional features.
-
-Instead, add optional methods to the appropriate protocol with clear return types that indicate support:
-- Return `None` if feature not supported
-- Return the actual value if feature is supported
-
-**Bad (duck typing):**
-```python
-# DON'T DO THIS
-modern_renderer = getattr(ctx.window, 'modern_renderer', None)
-if modern_renderer is not None:
-    modern_renderer.adjust_ambient(0.05)
-```
-
-**Good (protocol method):**
-```python
-# DO THIS - add method to AppWindow protocol
-def adjust_brightness(self, delta: float) -> float | None:
-    """Returns new brightness or None if not supported."""
-    ...
-
-# In command handler:
-new_level = ctx.window.adjust_brightness(0.05)
-if new_level is not None:
-    # Feature supported, use value
-    ...
-```
-
-This ensures:
-- Type safety and IDE autocomplete
-- Clear API contracts in protocols
-- No runtime attribute guessing
-
----
-
-## Protocol Implementation Pattern
-
-**IMPORTANT**: When implementing protocols, always inherit from them for PyCharm visibility.
-
-### Pattern
-
-Implementation classes should inherit from their Protocol classes:
-
-```python
-from cube.presentation.gui.protocols.Renderer import Renderer, ShapeRenderer
-
-class PygletShapeRenderer(ShapeRenderer):
-    """Implements ShapeRenderer protocol."""
-    ...
-
-class PygletRenderer(Renderer):
-    """Implements Renderer protocol."""
-    ...
-```
-
-### Exception: Metaclass Conflicts
-
-Some classes (like `pyglet.window.Window`) have their own metaclass that conflicts with Protocol.
-In these cases, document the protocol in the docstring instead:
-
-```python
-class PygletWindow(pyglet.window.Window):
-    """Pyglet window implementing Window protocol (WindowProtocol).
-
-    Note: Cannot inherit from WindowProtocol due to metaclass conflict.
-    Protocol compliance is verified at runtime via @runtime_checkable.
-    """
-```
-
-### Implementation Files
-
-- `src/cube/presentation/gui/backends/pyglet/PygletRenderer.py` - Inherits from Renderer protocols
-- `src/cube/presentation/gui/backends/pyglet/PygletAnimation.py` - Inherits from AnimationBackend
-- `src/cube/presentation/gui/backends/pyglet/PygletEventLoop.py` - Inherits from EventLoop
-- `src/cube/presentation/gui/backends/pyglet/PygletWindow.py` - PygletTextRenderer inherits TextRenderer, PygletWindow cannot (metaclass)
-- `src/cube/presentation/gui/backends/headless/*.py` - Same pattern as pyglet
+Key rules (detailed in architecture_rules.md):
+1. **4-Level Hierarchy:** Protocol -> Abstract -> Base -> Concrete
+2. **Always inherit from protocols** - no exceptions
+3. **No runtime duck typing** with `getattr()`/`hasattr()` for optional features
+4. **Type annotations required** on all functions and methods
+5. **Initialize attributes in `__init__`** (no lazy initialization with `hasattr`)
+6. **Update UML diagrams** with every code change (diagrams must match code)
 
 ---
 

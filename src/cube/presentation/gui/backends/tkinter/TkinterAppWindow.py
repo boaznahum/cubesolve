@@ -10,7 +10,7 @@ from cube.application.animation.AnimationManager import AnimationWindow
 from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.protocols import AppWindow
 from cube.presentation.gui.types import Keys
-from cube.presentation.gui.backends.pyglet.AppWindowBase import AppWindowBase
+from cube.presentation.gui.protocols import AppWindowBase
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
 
 from cube.presentation.gui.backends.tkinter.TkinterWindow import TkinterWindow
@@ -22,7 +22,7 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
     """Tkinter-specific AppWindow implementation.
 
     Inherits from AppWindow protocol for PyCharm visibility.
-    Uses TkinterWindow for display and AppWindowBase for shared logic.
+    Uses TkinterWindow for display and AbstractAppWindow for shared logic.
     """
 
     def __init__(

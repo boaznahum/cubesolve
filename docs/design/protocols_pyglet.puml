@@ -1,0 +1,83 @@
+@startuml protocols_pyglet
+!theme plain
+skinparam classAttributeIconSize 0
+hide members
+
+title Protocols & Pyglet Backend - Class Diagram
+footer Generated 2025-12-05
+
+' ============================================
+' PROTOCOLS (Interfaces) - TOP
+' ============================================
+package "protocols" as P <<Rectangle>> #E8F5E9 {
+    interface Renderer
+    interface ShapeRenderer
+    interface DisplayListManager
+    interface ViewStateManager
+    interface EventLoop
+    interface AppWindow
+    interface AnimationBackend
+    interface TextRenderer
+    interface Window
+
+    ' Abstract base classes (no-op defaults)
+    abstract class AbstractRenderer
+    abstract class AbstractShapeRenderer
+    abstract class AbstractWindow
+
+    ' Base classes (real shared implementation)
+    abstract class AppWindowBase
+    abstract class WindowBase
+
+    ' Protocol relationships
+    Renderer --> ShapeRenderer : shapes
+    Renderer --> DisplayListManager : display_lists
+    Renderer --> ViewStateManager : view
+
+    AbstractRenderer ..|> Renderer
+    AbstractShapeRenderer ..|> ShapeRenderer
+    AbstractWindow ..|> Window
+    AppWindowBase ..|> AppWindow
+    WindowBase --|> AbstractWindow
+}
+
+' ============================================
+' PYGLET BACKEND (Legacy OpenGL)
+' ============================================
+package "backends/pyglet" as B <<Rectangle>> #E3F2FD {
+    class PygletRenderer
+    class PygletShapeRenderer
+    class PygletDisplayListManager
+    class PygletViewStateManager
+    class PygletEventLoop
+    class PygletAppWindow
+    class PygletWindow
+    class PygletTextRenderer
+    class PygletAnimation
+}
+
+' Force protocols package above pyglet package
+P -[hidden]down- B
+
+' ============================================
+' PROPER PROTOCOL IMPLEMENTATIONS (normal dashed line)
+' ============================================
+PygletRenderer ..|> Renderer
+PygletShapeRenderer ..|> ShapeRenderer
+PygletDisplayListManager ..|> DisplayListManager
+PygletViewStateManager ..|> ViewStateManager
+PygletEventLoop ..|> EventLoop
+PygletAnimation ..|> AnimationBackend
+PygletTextRenderer ..|> TextRenderer
+
+' PygletAppWindow inherits from AppWindowBase
+PygletAppWindow --|> AppWindowBase
+
+' ============================================
+' DUCK TYPING - implements protocol but doesn't inherit (bold red)
+' (metaclass conflict with pyglet.window.Window)
+' ============================================
+PygletAppWindow .[#FF0000,bold,dashed].> AppWindow : <color:red>duck
+PygletWindow .[#FF0000,bold,dashed].> Window : <color:red>duck
+
+@enduml

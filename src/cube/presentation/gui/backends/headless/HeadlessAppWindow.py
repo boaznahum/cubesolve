@@ -8,7 +8,7 @@ from cube.application.AbstractApp import AbstractApp
 from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.protocols import AppWindow
 from cube.presentation.gui.types import KeyEvent
-from cube.presentation.gui.backends.pyglet.AppWindowBase import AppWindowBase
+from cube.presentation.gui.protocols import AppWindowBase
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
 
 from cube.presentation.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
@@ -19,7 +19,7 @@ from cube.presentation.gui.backends.headless.HeadlessEventLoop import HeadlessEv
 class HeadlessAppWindow(AppWindowBase, AppWindow):
     """Headless AppWindow implementation for testing.
 
-    Inherits from AppWindowBase for shared logic and handle_key().
+    Inherits from AbstractAppWindow for shared logic and handle_key().
     Inherits from AppWindow protocol for PyCharm visibility.
 
     Useful for:

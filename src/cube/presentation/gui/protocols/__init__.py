@@ -14,6 +14,9 @@ from cube.presentation.gui.protocols.EventLoop import EventLoop
 from cube.presentation.gui.protocols.AnimationBackend import AnimationBackend
 from cube.presentation.gui.protocols.AppWindow import AppWindow
 from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
+from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase, TextLabel
+from cube.presentation.gui.protocols.AbstractWindow import AbstractWindow, AbstractTextRenderer
+from cube.presentation.gui.protocols.WindowBase import WindowBase
 
 __all__ = [
     # Renderer protocols
@@ -24,6 +27,9 @@ __all__ = [
     # Window protocols
     "Window",
     "TextRenderer",
+    "AbstractWindow",
+    "AbstractTextRenderer",
+    "WindowBase",
     # Event loop
     "EventLoop",
     # Animation
@@ -31,4 +37,6 @@ __all__ = [
     "AnimatableViewer",
     # App window
     "AppWindow",
+    "AppWindowBase",
+    "TextLabel",
 ]

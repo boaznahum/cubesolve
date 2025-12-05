@@ -1,0 +1,103 @@
+@startuml protocols_pyglet2
+!theme plain
+skinparam classAttributeIconSize 0
+hide members
+
+title Protocols & Pyglet2 Backend - Class Diagram
+footer Generated 2025-12-05
+
+' ============================================
+' PROTOCOLS (Interfaces) - TOP
+' ============================================
+package "protocols" as P <<Rectangle>> #E8F5E9 {
+    interface Renderer
+    interface ShapeRenderer
+    interface DisplayListManager
+    interface ViewStateManager
+    interface EventLoop
+    interface AppWindow
+    interface AnimationBackend
+    interface AnimatableViewer
+    interface TextRenderer
+    interface Window
+
+    ' Abstract base classes (no-op defaults)
+    abstract class AbstractRenderer
+    abstract class AbstractShapeRenderer
+    abstract class AbstractWindow
+
+    ' Base classes (real shared implementation)
+    abstract class AppWindowBase
+    abstract class WindowBase
+
+    ' Protocol relationships
+    Renderer --> ShapeRenderer : shapes
+    Renderer --> DisplayListManager : display_lists
+    Renderer --> ViewStateManager : view
+
+    AbstractRenderer ..|> Renderer
+    AbstractShapeRenderer ..|> ShapeRenderer
+    AbstractWindow ..|> Window
+    AppWindowBase ..|> AppWindow
+    WindowBase --|> AbstractWindow
+}
+
+' ============================================
+' PYGLET2 BACKEND (Modern OpenGL) - BOTTOM
+' ============================================
+package "backends/pyglet2" as B <<Rectangle>> #FFF3E0 {
+    ' Protocol implementations
+    class PygletRenderer
+    class PygletEventLoop
+    class PygletAppWindow
+    class PygletWindow
+    class PygletAnimation
+
+    ' Modern GL components
+    class ModernGLRenderer
+    class ModernGLCubeViewer
+
+    ' Modern GL adapters (properly inherit from protocols/abstract classes)
+    class ModernGLViewStateManager
+    class ModernGLShapeAdapter
+    class ModernGLRendererAdapter
+
+    ' Support classes
+    class ShaderProgram <<shaders.py>>
+    class MatrixStack <<matrix.py>>
+    class VertexBuffer <<buffers.py>>
+    class VertexArray <<buffers.py>>
+}
+
+' Force protocols package above pyglet2 package
+P -[hidden]down- B
+
+' ============================================
+' PROPER PROTOCOL IMPLEMENTATIONS (normal dashed line)
+' ============================================
+PygletRenderer ..|> Renderer
+PygletEventLoop ..|> EventLoop
+PygletAnimation ..|> AnimationBackend
+ModernGLCubeViewer ..|> AnimatableViewer
+ModernGLViewStateManager ..|> ViewStateManager
+ModernGLShapeAdapter ..|> AbstractShapeRenderer
+ModernGLRendererAdapter ..|> AbstractRenderer
+
+' ============================================
+' DUCK TYPING - implements protocol but doesn't inherit (bold red)
+' (metaclass conflict with pyglet.window.Window)
+' ============================================
+PygletAppWindow .[#FF0000,bold,dashed].> AppWindow : <color:red>duck
+PygletWindow .[#FF0000,bold,dashed].> Window : <color:red>duck
+
+' PygletAppWindow inherits from AppWindowBase (now in protocols)
+PygletAppWindow --|> AppWindowBase
+
+' Internal relationships
+PygletAppWindow --> PygletRenderer : renderer
+PygletAppWindow --> PygletEventLoop : event_loop
+PygletAppWindow --> ModernGLCubeViewer : viewer
+ModernGLRenderer --> ShaderProgram : uses
+ModernGLRenderer --> MatrixStack : uses
+
+@enduml

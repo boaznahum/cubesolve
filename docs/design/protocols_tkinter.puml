@@ -1,0 +1,83 @@
+@startuml protocols_tkinter
+!theme plain
+skinparam classAttributeIconSize 0
+hide members
+
+title Protocols & Tkinter Backend - Class Diagram
+footer Generated 2025-12-05
+
+' ============================================
+' PROTOCOLS (Interfaces) - TOP
+' ============================================
+package "protocols" as P <<Rectangle>> #E8F5E9 {
+    interface Renderer
+    interface ShapeRenderer
+    interface DisplayListManager
+    interface ViewStateManager
+    interface EventLoop
+    interface AppWindow
+    interface AnimationBackend
+    interface TextRenderer
+    interface Window
+
+    ' Abstract base classes (no-op defaults)
+    abstract class AbstractRenderer
+    abstract class AbstractShapeRenderer
+    abstract class AbstractWindow
+
+    ' Base classes (real shared implementation)
+    abstract class AppWindowBase
+    abstract class WindowBase
+
+    ' Protocol relationships
+    Renderer --> ShapeRenderer : shapes
+    Renderer --> DisplayListManager : display_lists
+    Renderer --> ViewStateManager : view
+
+    AbstractRenderer ..|> Renderer
+    AbstractShapeRenderer ..|> ShapeRenderer
+    AbstractWindow ..|> Window
+    AppWindowBase ..|> AppWindow
+    WindowBase --|> AbstractWindow
+}
+
+' ============================================
+' TKINTER BACKEND (2D Canvas)
+' ============================================
+package "backends/tkinter" as B <<Rectangle>> #FBE9E7 {
+    class TkinterRenderer
+    class TkinterShapeRenderer
+    class TkinterDisplayListManager
+    class TkinterViewStateManager
+    class TkinterEventLoop
+    class TkinterAppWindow
+    class TkinterWindow
+    class TkinterTextRenderer
+    class TkinterAnimation
+}
+
+' Force protocols package above tkinter package
+P -[hidden]down- B
+
+' ============================================
+' PROPER PROTOCOL IMPLEMENTATIONS (normal dashed line)
+' ============================================
+TkinterRenderer ..|> Renderer
+TkinterShapeRenderer ..|> ShapeRenderer
+TkinterDisplayListManager ..|> DisplayListManager
+TkinterViewStateManager ..|> ViewStateManager
+TkinterEventLoop ..|> EventLoop
+TkinterAnimation ..|> AnimationBackend
+TkinterTextRenderer ..|> TextRenderer
+
+' TkinterAppWindow inherits from AppWindowBase AND AppWindow protocol
+TkinterAppWindow --|> AppWindowBase
+TkinterAppWindow ..|> AppWindow
+
+' ============================================
+' DUCK TYPING - implements protocol but doesn't inherit (bold red)
+' (tkinter.Tk has its own class hierarchy)
+' ============================================
+TkinterWindow .[#FF0000,bold,dashed].> Window : <color:red>duck
+
+@enduml

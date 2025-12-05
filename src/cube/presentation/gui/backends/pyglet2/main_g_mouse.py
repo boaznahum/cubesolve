@@ -21,7 +21,7 @@ from cube.domain.algs.Algs import Algs
 from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import InternalSWError
 from cube.application.state import ApplicationAndViewState
-from .AbstractWindow import AbstractWindow
+from cube.presentation.gui.protocols import AppWindow
 from cube.domain.model.cube_boy import FaceName
 from cube.domain.model.Face import Face
 from cube.domain.model import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
@@ -36,7 +36,7 @@ _DRAG_VECTOR_DETECTION_DATA: list[Tuple[int, int]] = []
 _DRAG_VECTOR_DETECTION_DATA_X0_Y0: Tuple[int, int] = (0, 0)
 
 
-def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
+def on_mouse_drag(win: AppWindow, x, y, dx, dy, buttons, modifiers):
     # these are persevered for click slicing, and panning
     if not modifiers & (Modifiers.SHIFT | Modifiers.CTRL | Modifiers.ALT):
 
@@ -52,7 +52,7 @@ def on_mouse_drag(win: AbstractWindow, x, y, dx, dy, buttons, modifiers):
         win.app.vs.change_offset(dx, dy, 0)
 
 
-def on_mouse_press(window: AbstractWindow, vs: ApplicationAndViewState, x, y, modifiers):
+def on_mouse_press(window: AppWindow, vs: ApplicationAndViewState, x, y, modifiers):
     # don't allow cube modification during animation
     if window.app.op.is_animation_running:
         return
@@ -72,7 +72,7 @@ def on_mouse_release():
     _DRAG_VECTOR_DETECTION_DATA.clear()
 
 
-def on_mouse_scroll(window: AbstractWindow, scroll_y):
+def on_mouse_scroll(window: AppWindow, scroll_y):
     vs = window.app.vs
 
     vs.change_fov_y(scroll_y)
@@ -96,7 +96,7 @@ def _handle_model_view_rotate_by_drag(win, dx, dy):
     app.vs.alpha_y += math.radians(dx)
 
 
-def _handle_face_slice_rotate_by_drag(window: AbstractWindow, x, y, dx, dy):
+def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     global _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING
     vs = window.app.vs
 
@@ -416,7 +416,7 @@ def _handle_slice_on_corner_adjusted_face(slice_face: Face,
                                                on_left_to_top)
 
 
-def _play(window: AbstractWindow, alg: Alg):
+def _play(window: AppWindow, alg: Alg):
     vs = window.app.vs
     op = window.app.op
 
@@ -431,7 +431,7 @@ def _play(window: AbstractWindow, alg: Alg):
         window.update_gui_elements()
 
 
-def _handle_selected_slice(window: AbstractWindow, slice_face: PartEdge, inv: bool):
+def _handle_selected_slice(window: AppWindow, slice_face: PartEdge, inv: bool):
     def __play(alg: Alg):
 
         if inv:

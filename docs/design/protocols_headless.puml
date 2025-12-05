@@ -1,0 +1,79 @@
+@startuml protocols_headless
+!theme plain
+skinparam classAttributeIconSize 0
+hide members
+
+title Protocols & Headless Backend - Class Diagram
+footer Generated 2025-12-05
+
+' ============================================
+' PROTOCOLS (Interfaces) - TOP
+' ============================================
+package "protocols" as P <<Rectangle>> #E8F5E9 {
+    interface Renderer
+    interface ShapeRenderer
+    interface DisplayListManager
+    interface ViewStateManager
+    interface EventLoop
+    interface AppWindow
+    interface TextRenderer
+    interface Window
+
+    ' Abstract base classes (no-op defaults)
+    abstract class AbstractRenderer
+    abstract class AbstractShapeRenderer
+    abstract class AbstractWindow
+
+    ' Base classes (real shared implementation)
+    abstract class AppWindowBase
+    abstract class WindowBase
+
+    ' Protocol relationships
+    Renderer --> ShapeRenderer : shapes
+    Renderer --> DisplayListManager : display_lists
+    Renderer --> ViewStateManager : view
+
+    AbstractRenderer ..|> Renderer
+    AbstractShapeRenderer ..|> ShapeRenderer
+    AbstractWindow ..|> Window
+    AppWindowBase ..|> AppWindow
+    WindowBase --|> AbstractWindow
+}
+
+' ============================================
+' HEADLESS BACKEND (Testing)
+' ============================================
+package "backends/headless" as B <<Rectangle>> #F3E5F5 {
+    class HeadlessRenderer
+    class HeadlessShapeRenderer
+    class HeadlessDisplayListManager
+    class HeadlessViewStateManager
+    class HeadlessEventLoop
+    class HeadlessAppWindow
+    class HeadlessWindow
+    class HeadlessTextRenderer
+}
+
+' Force protocols package above headless package
+P -[hidden]down- B
+
+' ============================================
+' PROPER PROTOCOL IMPLEMENTATIONS (normal dashed line)
+' ============================================
+HeadlessRenderer ..|> Renderer
+HeadlessShapeRenderer ..|> ShapeRenderer
+HeadlessDisplayListManager ..|> DisplayListManager
+HeadlessViewStateManager ..|> ViewStateManager
+HeadlessEventLoop ..|> EventLoop
+HeadlessTextRenderer ..|> TextRenderer
+
+' HeadlessAppWindow inherits from AppWindowBase AND AppWindow protocol
+HeadlessAppWindow --|> AppWindowBase
+HeadlessAppWindow ..|> AppWindow
+
+' ============================================
+' DUCK TYPING - implements protocol but doesn't inherit (bold red)
+' ============================================
+HeadlessWindow .[#FF0000,bold,dashed].> Window : <color:red>duck
+
+@enduml

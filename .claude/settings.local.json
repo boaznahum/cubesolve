@@ -76,7 +76,14 @@
       "Bash(timeout 15 .venv_pyglet2/Scripts/python.exe:*)",
       "Bash(timeout 15 E:\\dev\\code\\cubesolve\\.venv\\Scripts\\python.exe:*)",
       "Bash(timeout:*)",
-      "Bash(.venv/Scripts/python.exe:*)"
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(git -C E:devcodecubesolve status)",
+      "Bash(git -C E:devcodecubesolve diff)",
+      "Bash(git -C E:devcodecubesolve log --oneline -5)",
+      "Bash(git -C E:/dev/code/cubesolve checkout -- src/cube/presentation/gui/backends/pyglet/PygletWindow.py src/cube/presentation/gui/backends/pyglet2/PygletWindow.py src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py)",
+      "Bash(git -C E:/dev/code/cubesolve mv \"src/cube/presentation/gui/backends/pyglet/AppWindowBase.py\" \"src/cube/presentation/gui/protocols/AbstractAppWindow.py\")",
+      "Bash(git -C E:/dev/code/cubesolve mv \"src/cube/presentation/gui/protocols/AbstractAppWindow.py\" \"src/cube/presentation/gui/protocols/AppWindowBase.py\")",
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv\\Scripts\\python.exe\" -m pytest:*)"
     ],
     "deny": [],
     "ask": []

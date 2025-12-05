@@ -29,6 +29,16 @@ class AppWindow(Protocol):
     """
 
     @property
+    def width(self) -> int:
+        """Window width in pixels."""
+        ...
+
+    @property
+    def height(self) -> int:
+        """Window height in pixels."""
+        ...
+
+    @property
     def app(self) -> "AbstractApp":
         """Access the application instance.
 

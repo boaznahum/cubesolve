@@ -14,7 +14,7 @@ from cube.application.AbstractApp import AbstractApp
 from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.protocols import AppWindow
 from cube.presentation.gui.types import Keys, Modifiers
-from cube.presentation.gui.backends.pyglet.AppWindowBase import AppWindowBase
+from cube.presentation.gui.protocols import AppWindowBase
 
 from cube.presentation.gui.backends.console import ConsoleViewer as console_viewer
 from cube.presentation.gui.backends.console.ConsoleKeys import Keys as ConsoleKeys
@@ -51,7 +51,7 @@ _CONSOLE_TO_KEYS: dict[str, int] = {
 class ConsoleAppWindow(AppWindowBase, AppWindow):
     """Console-based AppWindow implementation.
 
-    Inherits from AppWindowBase for shared logic and handle_key().
+    Inherits from AbstractAppWindow for shared logic and handle_key().
     Inherits from AppWindow protocol for PyCharm visibility.
     Uses console_viewer.plot() for text-based cube display.
     """
