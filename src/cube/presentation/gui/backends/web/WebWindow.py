@@ -21,7 +21,7 @@ class WebTextRenderer(TextRenderer):
     Queues text labels to be rendered in browser.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._labels: list[dict] = []
 
     def draw_label(

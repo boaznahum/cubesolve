@@ -29,7 +29,7 @@ def pytest_addoption(parser):
         "--backend",
         action="store",
         default="all",
-        help="Backend to use: pyglet, headless, console, or 'all' (default: all)"
+        help="Backend to use: pyglet2, headless, console, or 'all' (default: all)"
     )
 
 

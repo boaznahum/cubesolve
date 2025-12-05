@@ -2,14 +2,14 @@
 GUI Abstraction Layer for Cube Solver.
 
 This package provides abstract interfaces for GUI backends, allowing
-the cube solver to work with different rendering systems (pyglet/OpenGL,
+the cube solver to work with different rendering systems (pyglet2/OpenGL,
 tkinter, headless for testing, etc.).
 
 Usage:
     from cube.presentation.gui import BackendRegistry, GUIBackendFactory
 
     # Get a backend instance (recommended)
-    backend = BackendRegistry.get_backend("pyglet")
+    backend = BackendRegistry.get_backend("pyglet2")
     renderer = backend.renderer
 
     # Or use the default backend

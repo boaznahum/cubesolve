@@ -21,7 +21,7 @@ class GUIBackendFactory:
       create_animation(), create_app_window()
 
     Example:
-        backend = BackendRegistry.get_backend("pyglet")
+        backend = BackendRegistry.get_backend("pyglet2")
         renderer = backend.renderer  # Lazily created, singleton
         app_window = backend.create_app_window(app)
     """

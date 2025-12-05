@@ -292,12 +292,7 @@ def get_available_backends() -> list[str]:
     except ImportError:
         pass
 
-    # Try pyglet (requires pyglet + display)
-    try:
-        from cube.presentation.gui.backends import pyglet  # noqa: F401
-        available.append("pyglet")
-    except ImportError:
-        pass
+    # Note: pyglet (legacy) backend was archived - use pyglet2 instead
 
     # Try tkinter (requires tk)
     try:
@@ -315,7 +310,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--backend",
         action="store",
         default="headless",
-        help="Backend to test: headless, pyglet, tkinter, or 'all' for all available",
+        help="Backend to test: headless, pyglet2, tkinter, or 'all' for all available",
     )
 
 

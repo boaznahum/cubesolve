@@ -576,7 +576,7 @@ class TkinterViewStateManager(ViewStateManager):
     Handles 3D transformations and provides isometric projection parameters.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._matrix_stack: list[np.ndarray] = []
         self._current_matrix = np.eye(4)
         self._width = 720

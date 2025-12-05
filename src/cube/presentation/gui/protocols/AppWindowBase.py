@@ -194,7 +194,7 @@ class AppWindowBase(ABC):
             modifiers: Modifier flags
         """
         # Lazy import to avoid circular dependency
-        from cube.presentation.gui.backends.pyglet import main_g_mouse
+        from cube.presentation.gui.backends.pyglet2 import main_g_mouse
         main_g_mouse.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)  # type: ignore[arg-type]
 
     def handle_mouse_press(self, x: int, y: int, modifiers: int) -> None:
@@ -205,13 +205,13 @@ class AppWindowBase(ABC):
             modifiers: Modifier flags
         """
         # Lazy import to avoid circular dependency
-        from cube.presentation.gui.backends.pyglet import main_g_mouse
+        from cube.presentation.gui.backends.pyglet2 import main_g_mouse
         main_g_mouse.on_mouse_press(self, self._app.vs, x, y, modifiers)  # type: ignore[arg-type]
 
     def handle_mouse_release(self) -> None:
         """Handle mouse release event."""
         # Lazy import to avoid circular dependency
-        from cube.presentation.gui.backends.pyglet import main_g_mouse
+        from cube.presentation.gui.backends.pyglet2 import main_g_mouse
         main_g_mouse.on_mouse_release()
 
     def handle_mouse_scroll(self, scroll_y: float) -> None:
@@ -221,7 +221,7 @@ class AppWindowBase(ABC):
             scroll_y: Vertical scroll amount
         """
         # Lazy import to avoid circular dependency
-        from cube.presentation.gui.backends.pyglet import main_g_mouse
+        from cube.presentation.gui.backends.pyglet2 import main_g_mouse
         main_g_mouse.on_mouse_scroll(self, scroll_y)  # type: ignore[arg-type]
 
     def inject_key(self, key: int, modifiers: int = 0) -> None:

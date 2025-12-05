@@ -27,7 +27,7 @@ With custom configuration:
 With specific backend:
     result = GUITestRunner.run_test(
         commands=Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
-        backend="headless",  # or "pyglet", "console"
+        backend="headless",  # or "pyglet2", "console"
         timeout_sec=30.0
     )
 """
@@ -79,7 +79,7 @@ class GUITestRunner:
         timeout_sec: float = 30.0,
         cube_size: int = 3,
         enable_animation: bool = False,
-        backend: str = "pyglet",
+        backend: str = "pyglet2",
         debug: bool = False
     ) -> GUITestResult:
         """
@@ -98,9 +98,9 @@ class GUITestRunner:
             Size of cube to test (3, 4, 5, etc.). Default is 3.
         enable_animation : bool, optional
             Enable animations during test. Default is False (faster).
-            Note: Only pyglet backend supports animation.
+            Note: Only pyglet2 backend supports animation.
         backend : str, optional
-            Backend to use: "pyglet", "headless", or "console". Default is "pyglet".
+            Backend to use: "pyglet2", "headless", or "console". Default is "pyglet2".
         debug : bool, optional
             Enable debug output. Default is False.
 

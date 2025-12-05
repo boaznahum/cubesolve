@@ -27,7 +27,7 @@ class TkinterEventLoop(EventLoop):
     the main event loop.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._running = False
         self._should_stop = False
         self._root = None  # Set by set_root()

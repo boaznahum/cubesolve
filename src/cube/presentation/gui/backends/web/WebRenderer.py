@@ -377,7 +377,7 @@ class WebRenderer(Renderer):
     as a batch via WebSocket when end_frame() is called.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._commands: list[dict] = []
         self._shapes = WebShapeRenderer(self._commands)
         self._display_lists = WebDisplayListManager(self._commands)
