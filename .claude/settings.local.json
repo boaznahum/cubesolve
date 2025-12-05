@@ -83,7 +83,16 @@
       "Bash(git -C E:/dev/code/cubesolve checkout -- src/cube/presentation/gui/backends/pyglet/PygletWindow.py src/cube/presentation/gui/backends/pyglet2/PygletWindow.py src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py)",
       "Bash(git -C E:/dev/code/cubesolve mv \"src/cube/presentation/gui/backends/pyglet/AppWindowBase.py\" \"src/cube/presentation/gui/protocols/AbstractAppWindow.py\")",
       "Bash(git -C E:/dev/code/cubesolve mv \"src/cube/presentation/gui/protocols/AbstractAppWindow.py\" \"src/cube/presentation/gui/protocols/AppWindowBase.py\")",
-      "Bash(\"E:\\dev\\code\\cubesolve\\.venv\\Scripts\\python.exe\" -m pytest:*)"
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv\\Scripts\\python.exe\" -m pytest:*)",
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1\\Scripts\\python.exe\" -m pytest tests/gui -v --speed-up 5 -k \"pyglet2\")",
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1\\Scripts\\python.exe\" -c \"import pyglet; print(pyglet.version)\")",
+      "Bash(E:devcodecubesolve.venv_pyglet1_legacyScriptspip.exe install \"pyglet<2.0\" pytest pytest-timeout numpy)",
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\pip.exe\" install \"pyglet<2.0\" pytest numpy)",
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\python.exe\" -c \"import pyglet; print(pyglet.version)\")",
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\python.exe\" -m pytest tests/gui -v --speed-up 5 --backend=pyglet)",
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\pip.exe\" install -e E:devcodecubesolve)",
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\pip.exe\" install -e \"E:\\dev\\code\\cubesolve\")",
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\pip.exe\" install:*)"
     ],
     "deny": [],
     "ask": []

@@ -16,7 +16,7 @@ from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.application.animation.AnimationManager import AnimationWindow
 from cube.presentation.gui.factory import GUIBackend
-from cube.presentation.gui.backends.pyglet2.PygletWindow import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
+from cube.presentation.gui.backends.pyglet2.pyglet_utils import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 from cube.presentation.gui.backends.pyglet2 import main_g_mouse
 from cube.presentation.gui.protocols import AppWindowBase, TextLabel
 from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer, ModernGLRendererAdapter

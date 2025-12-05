@@ -50,7 +50,6 @@ package "backends/pyglet2" as B <<Rectangle>> #FFF3E0 {
     class PygletRenderer
     class PygletEventLoop
     class PygletAppWindow
-    class PygletWindow
     class PygletAnimation
 
     ' Modern GL components
@@ -67,6 +66,7 @@ package "backends/pyglet2" as B <<Rectangle>> #FFF3E0 {
     class MatrixStack <<matrix.py>>
     class VertexBuffer <<buffers.py>>
     class VertexArray <<buffers.py>>
+    class PygletTextRenderer <<pyglet_utils.py>>
 }
 
 ' Force protocols package above pyglet2 package
@@ -88,7 +88,6 @@ ModernGLRendererAdapter ..|> AbstractRenderer
 ' (metaclass conflict with pyglet.window.Window)
 ' ============================================
 PygletAppWindow .[#FF0000,bold,dashed].> AppWindow : <color:red>duck
-PygletWindow .[#FF0000,bold,dashed].> Window : <color:red>duck
 
 ' PygletAppWindow inherits from AppWindowBase (now in protocols)
 PygletAppWindow --|> AppWindowBase

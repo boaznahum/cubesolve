@@ -17,13 +17,11 @@ Usage:
 
 from cube.presentation.gui.backends.web.WebRenderer import WebRenderer
 from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
-from cube.presentation.gui.backends.web.WebWindow import WebWindow
 from cube.presentation.gui.backends.web.WebAppWindow import WebAppWindow
 
 __all__ = [
     "WebRenderer",
     "WebEventLoop",
-    "WebWindow",
     "WebAppWindow",
     "create_backend",
 ]
@@ -37,7 +35,7 @@ def create_backend() -> "GUIBackendFactory":
         name="web",
         renderer_factory=WebRenderer,
         event_loop_factory=WebEventLoop,
-        window_factory=lambda w, h, t: WebWindow(w, h, t),
+        window_factory=None,
         animation_factory=None,  # Web uses JS-side animation
         app_window_factory=lambda app, w, h, t, backend: WebAppWindow(app, w, h, t, backend),
     )

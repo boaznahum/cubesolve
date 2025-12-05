@@ -13,14 +13,12 @@ Usage:
 """
 
 from cube.presentation.gui.backends.pyglet.PygletRenderer import PygletRenderer
-from cube.presentation.gui.backends.pyglet.PygletWindow import PygletWindow
 from cube.presentation.gui.backends.pyglet.PygletEventLoop import PygletEventLoop
 from cube.presentation.gui.backends.pyglet.PygletAnimation import PygletAnimation
 from cube.presentation.gui.backends.pyglet.PygletAppWindow import PygletAppWindow
 
 __all__ = [
     "PygletRenderer",
-    "PygletWindow",
     "PygletEventLoop",
     "PygletAnimation",
     "PygletAppWindow",
@@ -36,7 +34,7 @@ def create_backend() -> "GUIBackendFactory":
         name="pyglet",
         renderer_factory=PygletRenderer,
         event_loop_factory=PygletEventLoop,
-        window_factory=lambda w, h, t: PygletWindow(w, h, t),
+        window_factory=None,
         animation_factory=PygletAnimation,
         app_window_factory=lambda app, w, h, t, backend: PygletAppWindow(app, w, h, t, backend),
     )

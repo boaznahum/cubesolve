@@ -46,7 +46,7 @@ class WebAppWindow(AppWindow):
         # Get components from backend (singletons)
         self._renderer: WebRenderer = backend.renderer  # type: ignore[assignment]
         self._event_loop: WebEventLoop = backend.event_loop  # type: ignore[assignment]
-        self._window: WebWindow = backend.create_window(width, height, title)  # type: ignore[assignment]
+        self._window: WebWindow = WebWindow(width, height, title)
 
         # Wire renderer to event loop for WebSocket communication
         self._renderer.set_event_loop(self._event_loop)

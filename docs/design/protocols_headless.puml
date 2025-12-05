@@ -54,6 +54,9 @@ package "backends/headless" as B <<Rectangle>> #F3E5F5 {
     class HeadlessTextRenderer
 }
 
+' HeadlessAppWindow uses HeadlessWindow via composition
+HeadlessAppWindow --> HeadlessWindow : _window
+
 ' Force protocols package above headless package
 P -[hidden]down- B
 
@@ -70,10 +73,5 @@ HeadlessTextRenderer ..|> TextRenderer
 ' HeadlessAppWindow inherits from AppWindowBase AND AppWindow protocol
 HeadlessAppWindow --|> AppWindowBase
 HeadlessAppWindow ..|> AppWindow
-
-' ============================================
-' DUCK TYPING - implements protocol but doesn't inherit (bold red)
-' ============================================
-HeadlessWindow .[#FF0000,bold,dashed].> Window : <color:red>duck
 
 @enduml

@@ -6,6 +6,12 @@
 
 ---
 
+## Claude Instructions
+> 1. Whenever you change in presentation elements and GUI, update the UML diagrams
+> 2. Protocols should be named with `I` prefix (like Java interfaces), e.g., `IWindow` instead of `Window`
+> 3. In UML diagrams, show duck typing with bold red dashed lines labeled "duck" to visualize the full picture
+>
+
 ## 1. Four-Level Class Hierarchy
 
 All protocol implementations should follow this 4-level architecture pattern:

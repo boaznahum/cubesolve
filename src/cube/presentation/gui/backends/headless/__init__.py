@@ -15,13 +15,11 @@ Usage:
 """
 
 from cube.presentation.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
-from cube.presentation.gui.backends.headless.HeadlessWindow import HeadlessWindow
 from cube.presentation.gui.backends.headless.HeadlessEventLoop import HeadlessEventLoop
 from cube.presentation.gui.backends.headless.HeadlessAppWindow import HeadlessAppWindow
 
 __all__ = [
     "HeadlessRenderer",
-    "HeadlessWindow",
     "HeadlessEventLoop",
     "HeadlessAppWindow",
     "create_backend",
@@ -36,7 +34,7 @@ def create_backend() -> "GUIBackendFactory":
         name="headless",
         renderer_factory=HeadlessRenderer,
         event_loop_factory=HeadlessEventLoop,
-        window_factory=lambda w, h, t: HeadlessWindow(w, h, t),
+        window_factory=None,
         animation_factory=None,  # Headless doesn't support animation
         app_window_factory=lambda app, w, h, t, backend: HeadlessAppWindow(app, w, h, t, backend),
     )

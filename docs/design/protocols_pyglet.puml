@@ -51,8 +51,7 @@ package "backends/pyglet" as B <<Rectangle>> #E3F2FD {
     class PygletViewStateManager
     class PygletEventLoop
     class PygletAppWindow
-    class PygletWindow
-    class PygletTextRenderer
+    class PygletTextRenderer <<pyglet_utils.py>>
     class PygletAnimation
 }
 
@@ -78,6 +77,5 @@ PygletAppWindow --|> AppWindowBase
 ' (metaclass conflict with pyglet.window.Window)
 ' ============================================
 PygletAppWindow .[#FF0000,bold,dashed].> AppWindow : <color:red>duck
-PygletWindow .[#FF0000,bold,dashed].> Window : <color:red>duck
 
 @enduml

@@ -56,6 +56,9 @@ package "backends/tkinter" as B <<Rectangle>> #FBE9E7 {
     class TkinterAnimation
 }
 
+' TkinterAppWindow uses TkinterWindow via composition
+TkinterAppWindow --> TkinterWindow : _tk_window
+
 ' Force protocols package above tkinter package
 P -[hidden]down- B
 
@@ -73,11 +76,5 @@ TkinterTextRenderer ..|> TextRenderer
 ' TkinterAppWindow inherits from AppWindowBase AND AppWindow protocol
 TkinterAppWindow --|> AppWindowBase
 TkinterAppWindow ..|> AppWindow
-
-' ============================================
-' DUCK TYPING - implements protocol but doesn't inherit (bold red)
-' (tkinter.Tk has its own class hierarchy)
-' ============================================
-TkinterWindow .[#FF0000,bold,dashed].> Window : <color:red>duck
 
 @enduml

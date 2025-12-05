@@ -21,14 +21,12 @@ Usage:
 """
 
 from cube.presentation.gui.backends.tkinter.TkinterRenderer import TkinterRenderer
-from cube.presentation.gui.backends.tkinter.TkinterWindow import TkinterWindow
 from cube.presentation.gui.backends.tkinter.TkinterEventLoop import TkinterEventLoop
 from cube.presentation.gui.backends.tkinter.TkinterAnimation import TkinterAnimation
 from cube.presentation.gui.backends.tkinter.TkinterAppWindow import TkinterAppWindow
 
 __all__ = [
     "TkinterRenderer",
-    "TkinterWindow",
     "TkinterEventLoop",
     "TkinterAnimation",
     "TkinterAppWindow",
@@ -44,7 +42,7 @@ def create_backend() -> "GUIBackendFactory":
         name="tkinter",
         renderer_factory=TkinterRenderer,
         event_loop_factory=TkinterEventLoop,
-        window_factory=lambda w, h, t: TkinterWindow(w, h, t),
+        window_factory=None,
         animation_factory=TkinterAnimation,
         app_window_factory=lambda app, w, h, t, backend: TkinterAppWindow(app, w, h, t, backend),
     )
