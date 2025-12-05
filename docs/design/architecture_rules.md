@@ -112,7 +112,49 @@ These patterns are acceptable:
 
 ---
 
-## 4. Type Annotations
+## 4. Type Annotations for Protocols
+
+### Rule: Use Protocols for Type Hints, Not Abstract/Base Classes
+
+**CRITICAL:** When declaring types for parameters, return values, or variables, always use the **Protocol** (interface), never the Abstract or Base class.
+
+Abstract and Base classes exist for **inheritance only**, not for typing. Using them as types defeats the purpose of the abstraction layer.
+
+```python
+# WRONG - Using abstract/base class as type:
+def create_viewer(renderer: AbstractRenderer) -> None:  # BAD!
+    ...
+
+def process_window(window: WindowBase) -> None:  # BAD!
+    ...
+
+# CORRECT - Using protocol as type:
+def create_viewer(renderer: Renderer) -> None:  # GOOD - Renderer is the protocol
+    ...
+
+def process_window(window: Window) -> None:  # GOOD - Window is the protocol
+    ...
+```
+
+### Why This Matters
+
+1. **Liskov Substitution Principle** - Code should depend on abstractions (protocols), not implementations
+2. **Flexibility** - Any class implementing the protocol can be passed, not just subclasses of a specific base
+3. **Decoupling** - Reduces dependencies on internal implementation hierarchy
+4. **Testing** - Makes mocking easier since any protocol-compliant object works
+
+### The Hierarchy Purpose
+
+| Level | Name Pattern | Purpose | Used For |
+|-------|--------------|---------|----------|
+| Protocol | `Window`, `Renderer` | Define the contract | **TYPE HINTS** |
+| Abstract | `Abstract*` | Provide no-op defaults | **INHERITANCE ONLY** |
+| Base | `*Base` | Provide shared implementation | **INHERITANCE ONLY** |
+| Concrete | `Pyglet*`, `Headless*` | Backend-specific code | **INSTANTIATION** |
+
+---
+
+## 5. General Type Annotations
 
 ### Rule: All Code Must Have Type Annotations
 
@@ -137,7 +179,7 @@ def process_commands(
 
 ---
 
-## 5. Lazy Initialization
+## 6. Lazy Initialization
 
 ### Rule: Initialize Attributes in `__init__`
 
@@ -164,7 +206,7 @@ def queue_key_events(self, events):
 
 ---
 
-## 6. UML Diagram Rules
+## 7. UML Diagram Rules
 
 ### Location
 
@@ -214,7 +256,7 @@ PygletAppWindow --|> AppWindowBase
 
 ---
 
-## 7. File Naming
+## 8. File Naming
 
 ### Rule: PascalCase for All Python Files
 
@@ -244,7 +286,7 @@ src/cube/presentation/gui/
 
 ---
 
-## 8. Protocol Location
+## 9. Protocol Location
 
 ### Rule: All Protocols and Base Classes in `protocols/`
 
