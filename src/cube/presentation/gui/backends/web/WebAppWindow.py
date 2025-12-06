@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from cube.presentation.gui.backends.web.WebWindow import WebWindow
 from cube.presentation.gui.backends.web.WebRenderer import WebRenderer
 from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
-from cube.presentation.gui.Command import Command, CommandContext
+from cube.presentation.gui.commands import Command, CommandContext
 from cube.presentation.gui.protocols.AppWindow import AppWindow
 from cube.application.exceptions.ExceptionAppExit import AppExit
 from cube.application import config

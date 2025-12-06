@@ -20,7 +20,7 @@ from cube.application import config
 from cube.domain.algs import Algs, Alg
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.presentation.gui.types import Keys, parse_key_string, Color4
-from cube.presentation.gui.Command import Command, CommandContext
+from cube.presentation.gui.commands import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
 
 if TYPE_CHECKING:
@@ -240,12 +240,12 @@ class AppWindowBase(ABC):
         and directly executes the command. Type-safe with IDE autocomplete.
 
         Args:
-            command: Command enum value to execute
+            command: Command instance to execute
 
         Example:
-            window.inject_command(Command.SCRAMBLE_1)
-            window.inject_command(Command.SOLVE_ALL)
-            window.inject_command(Command.QUIT)
+            window.inject_command(Commands.SCRAMBLE_1)
+            window.inject_command(Commands.SOLVE_ALL)
+            window.inject_command(Commands.QUIT)
         """
         try:
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.presentation.viewer.GCubeViewer import GCubeViewer
     from cube.presentation.gui.protocols.Renderer import Renderer
-    from cube.presentation.gui.Command import Command
+    from cube.presentation.gui.commands import Command, Commands
 
 
 @runtime_checkable
@@ -124,12 +124,12 @@ class AppWindow(Protocol):
         and directly dispatches the command.
 
         Args:
-            command: Command enum value to execute
+            command: Command instance to execute
 
         Example:
-            window.inject_command(Command.SCRAMBLE_1)
-            window.inject_command(Command.SOLVE_ALL)
-            window.inject_command(Command.QUIT)
+            window.inject_command(Commands.SCRAMBLE_1)
+            window.inject_command(Commands.SOLVE_ALL)
+            window.inject_command(Commands.QUIT)
         """
         ...
 

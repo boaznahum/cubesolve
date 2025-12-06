@@ -12,7 +12,10 @@
       "Bash(while read branch)",
       "Bash(do echo '=== $branch ===')",
       "Bash(git -C E:/dev/code/cubesolve ls-tree:*)",
-      "Bash(git -C E:/dev/code/cubesolve log --all --oneline --grep=\"window\" --grep=\"composition\" --all-match)"
+      "Bash(git -C E:/dev/code/cubesolve log --all --oneline --grep=\"window\" --grep=\"composition\" --all-match)",
+      "Bash(.venvScriptspython.exe -m pyright src/cube/presentation/gui/commands/)",
+      "Bash(E:\\dev\\code\\cubesolve\\.venv\\Scripts\\python.exe -m pyright:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

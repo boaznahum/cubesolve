@@ -86,7 +86,7 @@ def _convert_mouse_buttons(pyglet_buttons: int) -> int:
     """Convert pyglet mouse button flags to our MouseButton flags."""
     result = 0
     if pyglet_buttons & pyglet_mouse.LEFT:
-        result |= MouseButton.LEFT
+        result |= MouseButtoclsn.LEFT
     if pyglet_buttons & pyglet_mouse.MIDDLE:
         result |= MouseButton.MIDDLE
     if pyglet_buttons & pyglet_mouse.RIGHT:

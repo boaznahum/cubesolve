@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING
 
 from cube.application.AbstractApp import AbstractApp
 from cube.presentation.gui import BackendRegistry
-from cube.presentation.gui.Command import Command
+from cube.presentation.gui.commands import Commands
 
 if TYPE_CHECKING:
     from cube.presentation.gui.protocols import AppWindow
@@ -55,7 +55,7 @@ def _inject_commands(window: "AppWindow", commands_str: str) -> None:
             continue
 
         try:
-            cmd = Command[name]
+            cmd = Commands.get_by_name(name)
             window.inject_command(cmd)
         except KeyError:
             raise ValueError(f"Unknown command: {name}. Use --list-commands to see available commands.")

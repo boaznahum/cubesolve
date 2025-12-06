@@ -8,16 +8,16 @@ Usage
 -----
 Run a simple test with commands:
     from tests.gui.tester.GUITestRunner import GUITestRunner
-    from cube.presentation.gui.Command import Command
+    from cube.presentation.gui.commands import Commands
 
     result = GUITestRunner.run_test(
-        commands=Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        commands=Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT,
         timeout_sec=60.0
     )
 
 With custom configuration:
     result = GUITestRunner.run_test(
-        commands=Command.SPEED_UP * 5 + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        commands=Commands.SPEED_UP * 5 + Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT,
         cube_size=3,
         enable_animation=True,
         timeout_sec=120.0,
@@ -26,7 +26,7 @@ With custom configuration:
 
 With specific backend:
     result = GUITestRunner.run_test(
-        commands=Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        commands=Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT,
         backend="headless",  # or "pyglet2", "console"
         timeout_sec=30.0
     )
@@ -40,7 +40,7 @@ from cube.application import config
 from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.presentation.gui.factory import BackendRegistry
-from cube.presentation.gui.Command import Command, CommandSequence
+from cube.presentation.gui.commands import Command, CommandSequence
 from tests.gui.tester.GUITestResult import GUITestResult
 from tests.gui.tester.GUITestTimeout import GUITestTimeout
 
@@ -58,7 +58,7 @@ class GUITestRunner:
     Basic test with scramble and solve:
 
     >>> result = GUITestRunner.run_test(
-    ...     Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+    ...     Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT,
     ...     timeout_sec=60.0
     ... )
     >>> if result.success:
@@ -67,7 +67,7 @@ class GUITestRunner:
     Test with specific backend:
 
     >>> result = GUITestRunner.run_test(
-    ...     Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+    ...     Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT,
     ...     backend="headless",
     ...     timeout_sec=30.0
     ... )
@@ -90,8 +90,8 @@ class GUITestRunner:
         commands : Command | CommandSequence
             Commands to execute. Use + to combine commands:
             Examples:
-                Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT
-                Command.SPEED_UP * 5 + Command.SCRAMBLE_1 + Command.QUIT
+                Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT
+                Commands.SPEED_UP * 5 + Commands.SCRAMBLE_1 + Commands.QUIT
         timeout_sec : float, optional
             Maximum time to wait for test completion. Default is 30 seconds.
         cube_size : int, optional
@@ -114,7 +114,7 @@ class GUITestRunner:
         Test scramble and solve:
 
         >>> result = GUITestRunner.run_test(
-        ...     Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        ...     Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT,
         ...     timeout_sec=60.0
         ... )
         >>> if result.success:
@@ -123,7 +123,7 @@ class GUITestRunner:
         Test with headless backend (faster, no display):
 
         >>> result = GUITestRunner.run_test(
-        ...     Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        ...     Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT,
         ...     backend="headless",
         ...     timeout_sec=30.0
         ... )

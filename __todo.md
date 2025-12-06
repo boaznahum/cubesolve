@@ -223,7 +223,8 @@
 ---
 
 ## New entries need to reformat and add above
-
+performace problem
+find all usage of vs.debug or simiar that pass non constant string like template string, violationof the rule after cleaning debug,need to add a comment in debug method so claude willbe carefull, also instructuins in claude.md
 
 ## Done Tasks
 

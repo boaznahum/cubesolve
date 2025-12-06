@@ -31,7 +31,7 @@ and should be run one at a time or with pytest-forked for isolation.
 
 import pytest
 
-from cube.presentation.gui.Command import Command
+from cube.presentation.gui.commands import Commands
 from tests.gui.tester.GUITestRunner import GUITestRunner
 
 
@@ -56,7 +56,7 @@ def test_scramble_and_solve(cube_size: int, enable_animation: bool, speed_up_cou
         Backend to use, parametrized from conftest.py.
     """
     result = GUITestRunner.run_test(
-        commands=Command.SPEED_UP * speed_up_count + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        commands=Commands.SPEED_UP * speed_up_count + Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT,
         cube_size=cube_size,
         timeout_sec=60.0,
         enable_animation=enable_animation,
@@ -84,9 +84,9 @@ def test_multiple_scrambles(cube_size: int, enable_animation: bool, speed_up_cou
         Backend to use, parametrized from conftest.py.
     """
     result = GUITestRunner.run_test(
-        commands=(Command.SPEED_UP * speed_up_count +
-                  Command.SCRAMBLE_1 + Command.SCRAMBLE_2 + Command.SCRAMBLE_3 +
-                  Command.SOLVE_ALL + Command.QUIT),
+        commands=(Commands.SPEED_UP * speed_up_count +
+                  Commands.SCRAMBLE_1 + Commands.SCRAMBLE_2 + Commands.SCRAMBLE_3 +
+                  Commands.SOLVE_ALL + Commands.QUIT),
         cube_size=cube_size,
         timeout_sec=90.0,
         enable_animation=enable_animation,
@@ -116,10 +116,10 @@ def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: 
         enable_animation = False
         speed_up_count = 0
     result = GUITestRunner.run_test(
-        commands=(Command.SPEED_UP * speed_up_count +
-                  Command.ROTATE_R * 3 + Command.ROTATE_L + Command.ROTATE_U +
-                  Command.ROTATE_D + Command.ROTATE_F + Command.ROTATE_B +
-                  Command.QUIT),
+        commands=(Commands.SPEED_UP * speed_up_count +
+                  Commands.ROTATE_R * 3 + Commands.ROTATE_L + Commands.ROTATE_U +
+                  Commands.ROTATE_D + Commands.ROTATE_F + Commands.ROTATE_B +
+                  Commands.QUIT),
         cube_size=cube_size,
         timeout_sec=30.0,
         enable_animation=enable_animation,
@@ -144,7 +144,7 @@ def test_simple_quit(cube_size: int, backend: str):
         Backend to use, parametrized from conftest.py.
     """
     result = GUITestRunner.run_test(
-        commands=Command.QUIT,
+        commands=Commands.QUIT,
         cube_size=cube_size,
         timeout_sec=10.0,
         enable_animation=False,
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     print("-" * 70)
 
     result = GUITestRunner.run_test(
-        commands=Command.SPEED_UP * 3 + Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT,
+        commands=Commands.SPEED_UP * 3 + Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT,
         cube_size=3,
         timeout_sec=60.0,
         enable_animation=False,
