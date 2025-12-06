@@ -4,7 +4,7 @@ skinparam classAttributeIconSize 0
 hide members
 
 title Protocols & Pyglet2 Backend - Class Diagram
-footer Generated 2025-12-05
+footer Generated 2025-12-07
 
 ' ============================================
 ' PROTOCOLS (Interfaces) - TOP
@@ -84,13 +84,19 @@ ModernGLShapeAdapter ..|> AbstractShapeRenderer
 ModernGLRendererAdapter ..|> AbstractRenderer
 
 ' ============================================
-' DUCK TYPING - implements protocol but doesn't inherit (bold red)
-' (metaclass conflict with pyglet.window.Window)
+' COMPOSITION PATTERN - PygletWindow wraps pyglet.window.Window
+' PygletAppWindow properly implements AppWindow protocol
 ' ============================================
-PygletAppWindow .[#FF0000,bold,dashed].> AppWindow : <color:red>duck
 
-' PygletAppWindow inherits from AppWindowBase (now in protocols)
+' PygletAppWindow inherits from AppWindowBase AND implements AppWindow
 PygletAppWindow --|> AppWindowBase
+PygletAppWindow ..|> AppWindow
+
+' PygletWindow is the pyglet.window.Window wrapper (composition)
+class PygletWindow <<pyglet.window.Window>> #FFE0B2
+
+' Composition relationship
+PygletAppWindow --> PygletWindow : _window
 
 ' Internal relationships
 PygletAppWindow --> PygletRenderer : renderer

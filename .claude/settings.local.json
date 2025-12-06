@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C E:/dev/code/cubesolve commit -m \"$(cat <<''EOF''\nFix remaining simple mypy errors\n\n- Add None check for PIL PixelAccess in generate_images.py\n- Fix ctypes Array assignment to use tolist() in PygletRenderer\n\nMypy errors reduced from 6 to 4 (remaining 4 are viewer type mismatch - Q12).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git -C E:/dev/code/cubesolve log --oneline -20 -- src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py)",
+      "Bash(git -C E:/dev/code/cubesolve log --oneline --all -- src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py)",
+      "Bash(git -C E:/dev/code/cubesolve log --oneline --all --grep=\"composition\" -- src/cube/presentation/gui/backends/pyglet2/)",
+      "Bash(git -C E:/dev/code/cubesolve log --oneline --all --grep=\"metaclass\\|composition\\|inherit\" -- src/cube/presentation/gui/backends/pyglet2/)",
+      "Bash(git -C E:/dev/code/cubesolve branch:*)",
+      "Bash(git -C E:/dev/code/cubesolve log --oneline --all --grep=\"composition\")",
+      "Bash(git -C E:/dev/code/cubesolve log --oneline --all --grep=\"PygletAppWindow\")",
+      "Bash(git -C E:/dev/code/cubesolve log --oneline --all --source -- src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py)",
+      "Bash(while read branch)",
+      "Bash(do echo '=== $branch ===')",
+      "Bash(git -C E:/dev/code/cubesolve ls-tree:*)",
+      "Bash(git -C E:/dev/code/cubesolve log --all --oneline --grep=\"window\" --grep=\"composition\" --all-match)"
     ],
     "deny": [],
     "ask": []

@@ -1,9 +1,11 @@
 """
 Pyglet AppWindow implementation.
 
-Provides the pyglet-specific AppWindow that inherits from pyglet.window.Window
-and uses AppWindowBase for shared logic.
+Provides the pyglet-specific AppWindow that uses composition with PygletWindow
+and inherits from AppWindowBase for shared logic.
 """
+
+from __future__ import annotations
 
 try:
     import pyglet
@@ -18,7 +20,9 @@ from cube.application.animation.AnimationManager import AnimationWindow
 from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.backends.pyglet2.pyglet_utils import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
 from cube.presentation.gui.backends.pyglet2 import main_g_mouse
+from cube.presentation.gui.backends.pyglet2.PygletWindow import PygletWindow
 from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase, TextLabel
+from cube.presentation.gui.protocols.AppWindow import AppWindow
 from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer, ModernGLRendererAdapter
 from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCubeViewer
 from cube.presentation.gui.Command import Command, CommandContext
@@ -28,15 +32,12 @@ from cube.presentation.viewer.GCubeViewer import GCubeViewer
 from cube.presentation.viewer.GViewerExt import GViewerExt
 
 
-class PygletAppWindow(pyglet.window.Window, AnimationWindow):
-    """Pyglet-specific AppWindow implementation (AppWindow protocol).
+class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
+    """Pyglet-specific AppWindow implementation.
 
-    Combines pyglet.window.Window for rendering/events with AnimationWindow
-    for animation support.
-
-    Note: Cannot inherit from AppWindow protocol due to metaclass conflict
-    with pyglet.window.Window. Protocol compliance is verified at runtime
-    via @runtime_checkable.
+    Uses composition with PygletWindow (which inherits from pyglet.window.Window)
+    to avoid metaclass conflicts. Inherits from AppWindowBase for shared logic
+    and satisfies the AppWindow protocol.
     """
 
     def __init__(
@@ -56,21 +57,24 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
             title: Window title
             backend: GUI backend for rendering
         """
-        # Store app before super().__init__() because pyglet triggers on_resize
-        self._app = app
-        self._vs = app.vs
-        self._backend = backend
-        self._renderer = backend.renderer
+        # Initialize base class first
+        super().__init__(app, backend)
 
-        # Initialize to None - will be set after super().__init__()
+        # Store additional references
+        self._vs = app.vs
+        self._renderer = backend.renderer
+        self._width = width
+        self._height = height
+
+        # Initialize to None - will be set after window creation
         # (pyglet calls on_resize during __init__ before we can create the renderer)
         self._modern_renderer: ModernGLRenderer | None = None
         self._renderer_adapter: ModernGLRendererAdapter | None = None
 
-        # Use OpenGL 3.3 core profile (default for pyglet 2)
-        # Note: OpenGL 4.6 core profile doesn't support wide lines (glLineWidth > 1.0)
-        # so we stay with 3.3 which supports both shaders and wide lines for grid rendering
-        super().__init__(width, height, title, resizable=True)
+        # Create the pyglet window (composition pattern)
+        # Pass self as parent so events are delegated back to us
+        # Note: pyglet.window.Window abstract methods are handled at runtime
+        self._window: PygletWindow = PygletWindow(self, width, height, title)  # type: ignore[abstract]
 
         # Animation manager connection
         self._animation_manager = app.am
@@ -105,8 +109,8 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Load initial texture set from config
         self._load_current_texture_set()
 
-        # GCubeViewer disabled - its constructor uses legacy GL (display lists)
-        # TODO: Implement ray-plane intersection picking in ModernGLCubeViewer
+        # GCubeViewer for protocol compatibility
+        # Note: This viewer uses legacy GL but we keep a reference for the protocol
         self._viewer: GCubeViewer | None = None
 
         # Text labels (built by _update_status_text/_update_animation_text)
@@ -130,6 +134,18 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Initial GUI update
         self.update_gui_elements()
 
+    # === Window properties (delegated to PygletWindow) ===
+
+    @property
+    def width(self) -> int:
+        """Window width in pixels."""
+        return self._window.width
+
+    @property
+    def height(self) -> int:
+        """Window height in pixels."""
+        return self._window.height
+
     def get_opengl_info(self) -> str:
         """Get OpenGL version and renderer information.
 
@@ -145,12 +161,16 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         return self._app
 
     @property
-    def viewer(self) -> GCubeViewer | ModernGLCubeViewer | None:
+    def viewer(self) -> GCubeViewer:
         """Access the cube viewer.
 
-        Returns ModernGLCubeViewer for pyglet2 backend (used by AnimationManager).
+        Returns GCubeViewer for protocol compatibility.
+        Note: For rendering, use modern_viewer instead.
         """
-        return self._modern_viewer
+        if self._viewer is None:
+            # Create on demand if needed for protocol compatibility
+            raise RuntimeError("GCubeViewer not available in pyglet2 backend - use modern_viewer")
+        return self._viewer
 
     @property
     def renderer(self) -> ModernGLRendererAdapter:
@@ -292,6 +312,11 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         """Run the main event loop."""
         self._backend.event_loop.run()
 
+    def close(self) -> None:
+        """Close the window and stop the event loop."""
+        self._window.close()
+        self._backend.event_loop.stop()
+
     def cleanup(self) -> None:
         """Clean up resources when shutting down."""
         if self._modern_viewer is not None:
@@ -325,11 +350,19 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Pyglet handles this automatically via on_draw
         pass
 
-    # === Pyglet Event Handlers ===
+    # === Pyglet Event Handlers (called by PygletWindow) ===
 
-    def on_draw(self):
-        """Pyglet draw event."""
+    def set_mouse_visible(self, visible: bool) -> None:
+        """Show or hide the mouse cursor."""
+        self._window.set_mouse_visible(visible)
+
+    def on_draw(self) -> None:
+        """Handle draw event (delegated from PygletWindow)."""
         import math
+
+        # Skip if renderer not initialized yet (during window creation)
+        if self._modern_renderer is None:
+            return
 
         if self._vs.skip_next_on_draw:
             self._vs.skip_next_on_draw = False
@@ -338,7 +371,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Set background color from vs (allows runtime adjustment)
         bg = self._vs.background_gray
         gl.glClearColor(bg, bg, bg, 1.0)
-        self.clear()
+        self._window.clear()
 
         # Set up view transform (camera position) using modern GL renderer
         vs = self._app.vs
@@ -386,8 +419,8 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         # Re-enable depth testing for next frame
         gl.glEnable(gl.GL_DEPTH_TEST)
 
-    def on_resize(self, width, height):
-        """Pyglet resize event."""
+    def on_resize(self, width: int, height: int) -> None:
+        """Handle resize event (delegated from PygletWindow)."""
         gl.glViewport(0, 0, width, height)
         # Update projection for modern GL renderer (if initialized)
         if self._modern_renderer:
@@ -396,11 +429,10 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         if self._renderer_adapter:
             self._renderer_adapter.update_window_size(width, height)
 
-    def on_key_press(self, symbol, modifiers):
-        """Pyglet native key press event.
+    def on_key_press(self, symbol: int, modifiers: int) -> None:
+        """Handle key press event (delegated from PygletWindow).
 
-        Called by pyglet framework. Converts native keys to abstract Keys
-        and calls handle_key() - the protocol method.
+        Converts native pyglet keys to abstract Keys and calls handle_key().
         """
         self._vs.debug(False, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
         abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
@@ -408,9 +440,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         self.handle_key(abstract_symbol, abstract_mods)
 
     def handle_key(self, symbol: int, modifiers: int) -> None:
-        """Protocol method - handle abstract key press.
-
-        Implements: `AppWindowBase.handle_key`
+        """Handle abstract key press.
 
         Args:
             symbol: Key code (from Keys enum) - already converted to abstract
@@ -420,23 +450,23 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         if cmd:
             self.inject_command(cmd)
 
-    def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
-        """Pyglet mouse drag event."""
+    def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
+        """Handle mouse drag event (delegated from PygletWindow)."""
         abstract_buttons = _convert_mouse_buttons(buttons)
         abstract_mods = _convert_modifiers(modifiers)
         return main_g_mouse.on_mouse_drag(self, x, y, dx, dy, abstract_buttons, abstract_mods)
 
-    def on_mouse_press(self, x, y, button, modifiers):
-        """Pyglet mouse press event."""
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        """Handle mouse press event (delegated from PygletWindow)."""
         abstract_mods = _convert_modifiers(modifiers)
         return main_g_mouse.on_mouse_press(self, self._app.vs, x, y, abstract_mods)
 
-    def on_mouse_release(self, x, y, button, modifiers):
-        """Pyglet mouse release event."""
+    def on_mouse_release(self, x: int, y: int, button: int, modifiers: int):
+        """Handle mouse release event (delegated from PygletWindow)."""
         return main_g_mouse.on_mouse_release()
 
-    def on_mouse_scroll(self, x, y, scroll_x, scroll_y):
-        """Pyglet mouse scroll event."""
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: float, scroll_y: float):
+        """Handle mouse scroll event (delegated from PygletWindow)."""
         return main_g_mouse.on_mouse_scroll(self, scroll_y)
 
     # === Key Injection ===
@@ -590,14 +620,14 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
     def _draw_text(self) -> None:
         """Draw text labels using pyglet 2.x modern matrix API."""
         # Save current matrices
-        old_view = self.view
-        old_projection = self.projection
+        old_view = self._window.view
+        old_projection = self._window.projection
 
         # Set up 2D orthographic projection for text
-        self.projection = pyglet.math.Mat4.orthogonal_projection(
+        self._window.projection = pyglet.math.Mat4.orthogonal_projection(
             0, self.width, 0, self.height, -1, 1
         )
-        self.view = pyglet.math.Mat4()  # Identity matrix
+        self._window.view = pyglet.math.Mat4()  # Identity matrix
 
         # Draw labels (they use window.view/projection automatically)
         for t in self.text:
@@ -606,8 +636,8 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
             t.draw()
 
         # Restore matrices
-        self.view = old_view
-        self.projection = old_projection
+        self._window.view = old_view
+        self._window.projection = old_projection
 
     def _draw_animation(self) -> None:
         """Draw animation frame."""
