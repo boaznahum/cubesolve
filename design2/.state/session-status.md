@@ -51,3 +51,24 @@ None currently
 - Edge coordinate system (most complex concept) now documented
 - Referenced human diagram in coor-system-doc/
 - Remaining: Slice class (M,E,S), class hierarchy visual, solver docs
+
+---
+
+## MANDATORY: Consistency Checklist
+
+**EVERY documentation change MUST update ALL FOUR areas:**
+
+| # | Area | What to Update | Example |
+|---|------|----------------|---------|
+| 1 | **Code** | Implementation if needed | Add new method |
+| 2 | **Docstrings** | Python docstrings in the code | `Part.py:fixed_id` docstring |
+| 3 | **design2/*.md** | Visual documentation | `model-id-system.md` |
+| 4 | **Insights** | `.state/insights.md` | New learnings |
+
+**Before committing, verify:**
+- [ ] Docstrings reference `design2/*.md` files
+- [ ] Documentation links point to correct source paths (`../src/cube/domain/model/`)
+- [ ] Line numbers in docs match current code
+- [ ] All four areas are consistent
+
+**NEVER document without updating docstrings!**
