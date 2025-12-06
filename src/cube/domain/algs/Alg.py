@@ -62,18 +62,18 @@ class Alg(ABC):
     def __repr__(self) -> str:
         return self.__str__()
 
-    def __neg__(self):
+    def __neg__(self) -> "Alg":
         return self.inv()
 
-    def __mul__(self, n: int):
+    def __mul__(self, n: int) -> "Alg":
         from .Mul import _Mul
         return _Mul(self, n)
 
-    def __add__(self, other: "Alg"):
+    def __add__(self, other: "Alg") -> "Alg":
         from .SeqAlg import SeqAlg
         return SeqAlg(None, self, other)
 
-    def __sub__(self, other: "Alg"):
+    def __sub__(self, other: "Alg") -> "Alg":
         return self + other.prime
 
     def to_printable(self) -> Self:

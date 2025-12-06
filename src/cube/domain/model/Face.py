@@ -185,7 +185,7 @@ class Face(SuperElement, Hashable):
         return self.center.color
 
     @property
-    def original_color(self):
+    def original_color(self) -> Color:
         """
         The color the face was born with, never changed, doesn't move
         good only for locate physical faces

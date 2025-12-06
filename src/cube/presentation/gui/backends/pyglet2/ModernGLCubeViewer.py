@@ -41,6 +41,7 @@ from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
+    from cube.domain.model.Face import Face
     from cube.domain.algs import AnimationAbleAlg
     from cube.application.state import ApplicationAndViewState
     from cube.application.animation.AnimationManager import Animation
@@ -599,7 +600,7 @@ class ModernGLCubeViewer(AnimatableViewer):
 
     def _generate_face_geometry(
         self,
-        face,
+        face: "Face",
         face_name: FaceName,
         center: np.ndarray,
         right: np.ndarray,
@@ -720,7 +721,7 @@ class ModernGLCubeViewer(AnimatableViewer):
                         p2[0], p2[1], p2[2], *line_color
                     ])
 
-    def _get_cell_part_slice(self, face, row: int, col: int, size: int) -> PartSlice | None:
+    def _get_cell_part_slice(self, face: "Face", row: int, col: int, size: int) -> PartSlice | None:
         """Get the PartSlice for a cell on a face.
 
         Args:
@@ -737,7 +738,7 @@ class ModernGLCubeViewer(AnimatableViewer):
         else:
             return self._get_cell_part_slice_nxn(face, row, col, size)
 
-    def _get_cell_part_slice_3x3(self, face, row: int, col: int) -> PartSlice | None:
+    def _get_cell_part_slice_3x3(self, face: "Face", row: int, col: int) -> PartSlice | None:
         """Get cell PartSlice for 3x3 cube."""
         # Corners
         if row == 0 and col == 0:
@@ -765,7 +766,7 @@ class ModernGLCubeViewer(AnimatableViewer):
 
         return None
 
-    def _get_cell_part_slice_nxn(self, face, row: int, col: int, size: int) -> PartSlice | None:
+    def _get_cell_part_slice_nxn(self, face: "Face", row: int, col: int, size: int) -> PartSlice | None:
         """Get cell PartSlice for NxN cube."""
         last = size - 1
 
@@ -801,7 +802,7 @@ class ModernGLCubeViewer(AnimatableViewer):
 
         return None
 
-    def _get_cell_color(self, face, row: int, col: int, size: int) -> Color:
+    def _get_cell_color(self, face: "Face", row: int, col: int, size: int) -> Color:
         """Get the color of a cell on a face.
 
         Args:
@@ -827,7 +828,7 @@ class ModernGLCubeViewer(AnimatableViewer):
         else:
             return self._get_cell_color_nxn(face, row, col, size)
 
-    def _get_cell_color_3x3(self, face, row: int, col: int) -> Color:
+    def _get_cell_color_3x3(self, face: "Face", row: int, col: int) -> Color:
         """Get cell color for 3x3 cube (simpler case)."""
         # Corners
         if row == 0 and col == 0:
@@ -856,7 +857,7 @@ class ModernGLCubeViewer(AnimatableViewer):
         # Fallback
         return face.original_color
 
-    def _get_cell_color_nxn(self, face, row: int, col: int, size: int) -> Color:
+    def _get_cell_color_nxn(self, face: "Face", row: int, col: int, size: int) -> Color:
         """Get cell color for NxN cube."""
         # For NxN, the layout is:
         # - Corners at (0,0), (0, size-1), (size-1, 0), (size-1, size-1)
@@ -1136,7 +1137,7 @@ class ModernGLCubeViewer(AnimatableViewer):
 
         return (part_edge, right_dir, up_dir)
 
-    def _get_part_edge_at_cell(self, face, row: int, col: int, size: int):
+    def _get_part_edge_at_cell(self, face: "Face", row: int, col: int, size: int):
         """Get the PartEdge at a specific cell on a face.
 
         Args:
