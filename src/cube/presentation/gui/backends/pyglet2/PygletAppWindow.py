@@ -584,27 +584,26 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         GViewerExt.draw_axis(self._app.vs, self._renderer)
 
     def _draw_text(self) -> None:
-        """Draw text labels with OpenGL orthographic projection."""
-        gl.glPushAttrib(gl.GL_TRANSFORM_BIT)
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-        gl.glOrtho(0, self.width, 0, self.height, -1.0, 1.0)
+        """Draw text labels using pyglet 2.x modern matrix API."""
+        # Save current matrices
+        old_view = self.view
+        old_projection = self.projection
 
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
+        # Set up 2D orthographic projection for text
+        self.projection = pyglet.math.Mat4.orthogonal_projection(
+            0, self.width, 0, self.height, -1, 1
+        )
+        self.view = pyglet.math.Mat4()  # Identity matrix
 
+        # Draw labels (they use window.view/projection automatically)
         for t in self.text:
             t.draw()
         for t in self.animation_text:
             t.draw()
 
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPopMatrix()
-        gl.glPopAttrib()
+        # Restore matrices
+        self.view = old_view
+        self.projection = old_projection
 
     def _draw_animation(self) -> None:
         """Draw animation frame."""
