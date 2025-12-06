@@ -1,0 +1,4 @@
+passed
+  pyright cube\model cube\algs cube\solver cube\viewer
+  
+

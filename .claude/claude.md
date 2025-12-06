@@ -80,6 +80,15 @@ All pyglet imports now only exist in:
 
 Both must pass before committing.
 
+### Handling Test Failures
+**CRITICAL:** When tests fail, NEVER assume they were "already failing" or "pre-existing issues":
+1. **Investigate the failure** - Read the error message, understand what's being tested
+2. **Find the root cause** - Check the test code, the code being tested, and any missing configuration
+3. **Fix the issue** - Don't skip or ignore failing tests without explicit user approval
+4. **Verify the fix** - Run the tests again to confirm they pass
+
+If you need to verify whether a test was failing before your changes, use `git checkout <commit> -- .` to temporarily restore the old code and run the tests, then restore your changes.
+
 **Note:** Use `--speed-up 5` (not 2) to work around the known animation timing bug (see "Known Issues" section below).
 
 ### Pyglet Backend Testing - SEPARATE ENVIRONMENTS

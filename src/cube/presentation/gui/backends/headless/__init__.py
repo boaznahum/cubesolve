@@ -17,11 +17,13 @@ Usage:
 from cube.presentation.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
 from cube.presentation.gui.backends.headless.HeadlessEventLoop import HeadlessEventLoop
 from cube.presentation.gui.backends.headless.HeadlessAppWindow import HeadlessAppWindow
+from cube.presentation.gui.backends.headless.HeadlessWindow import HeadlessWindow
 
 __all__ = [
     "HeadlessRenderer",
     "HeadlessEventLoop",
     "HeadlessAppWindow",
+    "HeadlessWindow",
     "create_backend",
 ]
 
@@ -34,7 +36,7 @@ def create_backend() -> "GUIBackendFactory":
         name="headless",
         renderer_factory=HeadlessRenderer,
         event_loop_factory=HeadlessEventLoop,
-        window_factory=None,
+        window_factory=HeadlessWindow,
         animation_factory=None,  # Headless doesn't support animation
         app_window_factory=lambda app, w, h, t, backend: HeadlessAppWindow(app, w, h, t, backend),
     )
