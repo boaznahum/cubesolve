@@ -5,6 +5,8 @@ import random
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from cube.presentation.gui.effects.BaseEffect import BaseEffect
 
 if TYPE_CHECKING:
@@ -147,10 +149,10 @@ class SparkleEffect(BaseEffect):
             # Draw as small quad facing camera (billboard-ish)
             half = s.size / 2
             vertices = [
-                (s.x - half, s.y - half, s.z),
-                (s.x + half, s.y - half, s.z),
-                (s.x + half, s.y + half, s.z),
-                (s.x - half, s.y + half, s.z),
+                np.array([s.x - half, s.y - half, s.z]),
+                np.array([s.x + half, s.y - half, s.z]),
+                np.array([s.x + half, s.y + half, s.z]),
+                np.array([s.x - half, s.y + half, s.z]),
             ]
             shapes.quad(vertices, (r, g, b))
 

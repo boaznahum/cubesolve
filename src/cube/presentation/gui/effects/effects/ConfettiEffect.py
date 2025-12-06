@@ -6,6 +6,8 @@ import random
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from cube.presentation.gui.effects.BaseEffect import BaseEffect
 
 if TYPE_CHECKING:
@@ -165,10 +167,10 @@ class ConfettiEffect(BaseEffect):
 
             # Create quad vertices
             vertices = [
-                (p.x - half, p.y - half, p.z),
-                (p.x + half, p.y - half, p.z),
-                (p.x + half, p.y + half, p.z),
-                (p.x - half, p.y + half, p.z),
+                np.array([p.x - half, p.y - half, p.z]),
+                np.array([p.x + half, p.y - half, p.z]),
+                np.array([p.x + half, p.y + half, p.z]),
+                np.array([p.x - half, p.y + half, p.z]),
             ]
 
             shapes.quad(vertices, (r, g, b))

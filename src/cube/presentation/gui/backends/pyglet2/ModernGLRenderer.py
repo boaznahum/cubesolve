@@ -927,7 +927,9 @@ class ModernGLRenderer:
         """
         try:
             import pyglet.image
-            image = pyglet.image.load(file_path)
+            # Load and convert to ImageData to access format and get_data()
+            abstract_image = pyglet.image.load(file_path)
+            image = abstract_image.get_image_data()
             image_data = image.get_data()
 
             # Create OpenGL texture
@@ -957,7 +959,6 @@ class ModernGLRenderer:
                 format_ = gl.GL_BGR
             else:
                 # Unknown format - convert to RGBA
-                image = image.get_image_data()
                 image_data = image.get_data('RGBA', image.width * 4)
                 internal_format = gl.GL_RGBA
                 format_ = gl.GL_RGBA
@@ -1057,7 +1058,7 @@ class ModernGLRenderer:
         use_texture = texture_handle is not None and texture_handle in self._textures
         self._textured_phong_shader.set_uniform_1i('uUseTexture', 1 if use_texture else 0)
 
-        if use_texture:
+        if use_texture and texture_handle is not None:
             gl.glActiveTexture(gl.GL_TEXTURE0)
             gl.glBindTexture(gl.GL_TEXTURE_2D, self._textures[texture_handle])
             self._textured_phong_shader.set_uniform_1i('uTexture', 0)
@@ -1190,7 +1191,8 @@ class ModernGLShapeAdapter(AbstractShapeRenderer):
     def triangle(self, vertices, color: tuple[int, int, int]) -> None:
         """Draw a filled triangle with color."""
         self._renderer.set_color(*color)
-        self._renderer.triangle(vertices)
+        # vertices is a sequence of 3 points - unpack for ModernGLRenderer.triangle
+        self._renderer.triangle(vertices[0], vertices[1], vertices[2])
 
     def line(self, p1, p2, width: float = 1.0, color: tuple[int, int, int] = (255, 255, 255)) -> None:
         """Draw a line with color."""
