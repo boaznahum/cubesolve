@@ -164,12 +164,56 @@ Cube.is3x3:   All faces are 3x3 AND cube is in BOY orientation
 
 ---
 
+## Verified: ID Usage in Solvers
+
+**Source:** Solver code analysis (2025-12-06)
+
+### Phase 1 Solver (NxNEdges.py)
+```python
+# Works at SLICE level - not Part level!
+a_slice = edge.get_slice(i)
+a_slice_id = a_slice.colors_id  # ← Slice colors_id, NOT edge.colors_id!
+
+# Checks reduction status
+if edge.is3x3:
+    # Edge is solved (all slices aligned)
+```
+
+### Phase 2 Solver (L1Cross.py)
+```python
+# Works at PART level - assumes is3x3 = True
+color_codes = Part.parts_id_by_pos(wf.edges)  # ← position_id usage
+source_edge = cube.find_edge_by_color(color_id)  # ← colors_id usage
+if source_edge.match_faces:  # ← Only valid when is3x3!
+    continue
+```
+
+### Tracker.py (Part Tracking)
+```python
+# Tracks by colors_id, finds by position_id
+EdgeTracker.of_position(edge)  # Creates tracker from edge.position_id
+tracker.actual  # Finds part by colors_id
+tracker.position  # Finds slot by position_id
+```
+
+**Conclusion:** My understanding of the ID system is VERIFIED by solver usage patterns.
+
+---
+
 ## Questions Still to Investigate
 
-1. How does rotation actually work mechanically? (traced through Face.rotate())
-2. How does the Slice class (M, E, S) work?
-3. What is `right_top_left_same_direction` in Edge?
-4. How does the solver know when reduction is complete?
+See `.state/task-queue.md` for full list.
+
+High priority:
+1. Face.rotate() mechanics
+2. Slice class (M, E, S) rotation
+3. `right_top_left_same_direction` flag
+
+---
+
+## Documentation Created
+
+- `design2/model-id-system.md` - Visual diagrams of ID system
 
 ---
 
