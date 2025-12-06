@@ -11,6 +11,15 @@ and the `right_top_left_same_direction` flag.
 
 *Human-drawn diagram showing the R (right) and T (top) direction arrows for each face, illustrating which edge pairs have same vs opposite indexing directions.*
 
+## Generated Diagram (Clean Version)
+
+![Edge Coordinate System - Generated diagram with 3D and unfolded views](images/edge-coordinate-system.png)
+
+*Generated diagram showing:*
+- *Left: 3D cube with ✓ (green) = same_direction True, ✗ (red) = False*
+- *Right: Unfolded cube with R (blue→) and T (red↑) direction arrows on each face*
+- *Summary: 8 edges SAME, 4 edges OPPOSITE (L-U, U-B, D-R, D-B)*
+
 ---
 
 ## The Problem: Edge Slice Indexing
