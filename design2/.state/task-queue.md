@@ -86,6 +86,7 @@
 
 | Document | Diagrams | Docstrings Updated |
 |----------|----------|-------------------|
+| model-architecture-overview.md | (text diagrams) | - (overview doc) |
 | model-id-system.md | 5 PNGs | Part.py, Edge.py |
 | edge-coordinate-system.md | 1 PNG + hand-drawn JPG | Edge.py |
 | partedge-attribute-system.md | 3 PNGs | PartEdge.py |

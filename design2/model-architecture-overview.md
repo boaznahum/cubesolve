@@ -1,4 +1,15 @@
-# Rubik's Cube Model - Architecture Documentation
+# Rubik's Cube Model - Architecture Overview
+
+> **Note:** This document provides a high-level overview of the model architecture.
+> For detailed documentation with visual diagrams, see the specialized documents below.
+
+## Related Detailed Documentation
+
+| Topic | Document | Contents |
+|-------|----------|----------|
+| ID System | [model-id-system.md](model-id-system.md) | fixed_id, position_id, colors_id with visual diagrams |
+| Edge Coordinates | [edge-coordinate-system.md](edge-coordinate-system.md) | right_top_left_same_direction explained |
+| Attribute System | [partedge-attribute-system.md](partedge-attribute-system.md) | attributes, c_attributes, f_attributes for animation |
 
 ## Table of Contents
 
@@ -258,6 +269,8 @@ f._corner_top_right = r._corner_top_left = u._corner_bottom_right =
 
 ## Identity Concepts
 
+> **Detailed documentation:** See [model-id-system.md](model-id-system.md) for visual diagrams and in-depth explanation.
+
 ### Three Types of Identity
 
 Each Part has THREE different identity concepts:
@@ -447,6 +460,8 @@ Access: center.get_slice((row, col))
 
 ## Coordinate Systems
 
+> **Detailed documentation:** See [edge-coordinate-system.md](edge-coordinate-system.md) for visual diagrams of edge direction mapping.
+
 ### Per-Face Local Coordinates
 
 Each face uses local coordinates when looking AT it:
@@ -617,8 +632,15 @@ Slice (M, E, S)       →    rotate_slice()
 
 ## See Also
 
-- `cube.py` - Main Cube class implementation
-- `cube_face.py` - Face rotation algorithms
-- `Part.py` - Part base class and identity logic
-- `_part_slice.py` - PartSlice implementations
-- `cube_queries2.py` - Query operations
+### Design Documentation
+- [model-id-system.md](model-id-system.md) - ID system with visual diagrams
+- [edge-coordinate-system.md](edge-coordinate-system.md) - Edge direction mapping
+- [partedge-attribute-system.md](partedge-attribute-system.md) - Animation attribute system
+
+### Source Code
+- [`Cube.py`](../src/cube/domain/model/Cube.py) - Main Cube class implementation
+- [`Face.py`](../src/cube/domain/model/Face.py) - Face rotation algorithms
+- [`Part.py`](../src/cube/domain/model/Part.py) - Part base class and identity logic
+- [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) - PartSlice implementations
+- [`PartEdge.py`](../src/cube/domain/model/PartEdge.py) - Atomic sticker unit
+- [`CubeQueries2.py`](../src/cube/domain/model/CubeQueries2.py) - Query operations

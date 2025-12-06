@@ -35,8 +35,10 @@ This file contains my working notes and instructions to myself during this docum
 
 ## Current Status
 
+- Architecture overview moved from model/ (design2/model-architecture-overview.md)
 - ID system fully documented (design2/model-id-system.md + docstrings)
 - Edge coordinate system documented (design2/edge-coordinate-system.md + docstrings)
+- PartEdge attribute system documented (design2/partedge-attribute-system.md + docstrings)
 - Generated visual diagrams in design2/images/
 
 ## Source File Locations
@@ -55,10 +57,12 @@ All solver files are under: `src/cube/domain/solver/`
 
 | Topic | design2/*.md | Docstrings | Diagrams |
 |-------|--------------|------------|----------|
+| Architecture Overview | ✓ (moved) | - | text diagrams |
 | ID System | ✓ | ✓ | ✓ 5 diagrams |
 | Edge Coordinates | ✓ | ✓ | ✓ 1 diagram |
+| PartEdge Attributes | ✓ | ✓ | ✓ 3 diagrams |
 | Slice (M,E,S) | TODO | TODO | TODO |
-| Class Hierarchy | TODO | TODO | TODO |
+| Class Hierarchy | (in overview) | TODO | TODO |
 
 ## Questions for Human
 
