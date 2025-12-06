@@ -62,6 +62,9 @@ class AppWindow(Protocol):
         """
         ...
 
+    # State for edge solve tracking (used by SOLVE_EDGES command)
+    _last_edge_solve_count: int
+
     @property
     def animation_running(self) -> bool:
         """Check if animation is currently running.

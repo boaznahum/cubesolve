@@ -134,7 +134,8 @@ class PygletEventLoop(EventLoop):
         Returns:
             Timeout in seconds until next scheduled callback (0 if immediate)
         """
-        return self._event_loop.idle()
+        result = self._event_loop.idle()
+        return result if result is not None else 0.0
 
     def notify(self) -> None:
         """Wake up the event loop if it's waiting.

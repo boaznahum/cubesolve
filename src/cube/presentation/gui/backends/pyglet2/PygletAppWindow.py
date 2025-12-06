@@ -100,7 +100,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
 
         # Track current texture set index for cycling
         self._texture_set_index: int = config.TEXTURE_SET_INDEX
-        self._texture_sets: list[str | None] = config.TEXTURE_SETS
+        self._texture_sets: list[str | None] = config.TEXTURE_SETS or [None]
 
         # Load initial texture set from config
         self._load_current_texture_set()
@@ -159,11 +159,15 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
         Returns ModernGLRendererAdapter which provides view.set_projection()
         using modern GL instead of legacy gluPerspective (B4 fix).
         """
+        if self._renderer_adapter is None:
+            raise RuntimeError("Renderer adapter not initialized")
         return self._renderer_adapter
 
     @property
     def modern_renderer(self) -> ModernGLRenderer:
         """Access the modern GL renderer."""
+        if self._modern_renderer is None:
+            raise RuntimeError("Modern renderer not initialized")
         return self._modern_renderer
 
     def adjust_brightness(self, delta: float) -> float | None:
@@ -178,7 +182,7 @@ class PygletAppWindow(pyglet.window.Window, AnimationWindow):
             New brightness level (0.0-1.0).
         """
         # Update renderer
-        new_level = self._modern_renderer.adjust_ambient(delta)
+        new_level = self.modern_renderer.adjust_ambient(delta)
         # Update vs (authoritative persisted value)
         self._vs.brightness = new_level
         return new_level

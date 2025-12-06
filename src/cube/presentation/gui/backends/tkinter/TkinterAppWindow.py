@@ -78,6 +78,16 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         self._tk_window.set_close_handler(self._on_close)
 
     @property
+    def width(self) -> int:
+        """Window width in pixels."""
+        return self._tk_window.width
+
+    @property
+    def height(self) -> int:
+        """Window height in pixels."""
+        return self._tk_window.height
+
+    @property
     def viewer(self) -> GCubeViewer:
         """Access the cube viewer."""
         # _viewer is always initialized in __init__, so this is never None

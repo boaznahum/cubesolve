@@ -113,14 +113,20 @@ class PygletTextRenderer(TextRenderer):
         anchor_y: str = "bottom",
     ) -> None:
         """Draw a text label."""
+        # pyglet 2.x uses weight='bold' instead of bold=True
+        weight = 'bold' if bold else 'normal'
+        # Cast anchor values to satisfy mypy Literal types
+        from typing import cast, Literal
+        ax = cast(Literal['left', 'center', 'right'], anchor_x)
+        ay = cast(Literal['top', 'bottom', 'center', 'baseline'], anchor_y)
         label = pyglet.text.Label(
             text,
             x=x, y=y,
             font_size=font_size,
             color=color,
-            bold=bold,
-            anchor_x=anchor_x,
-            anchor_y=anchor_y,
+            weight=weight,
+            anchor_x=ax,
+            anchor_y=ay,
         )
         self._labels.append(label)
 

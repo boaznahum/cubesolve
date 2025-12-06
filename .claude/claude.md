@@ -74,11 +74,12 @@ All pyglet imports now only exist in:
 - Tests (GUI): `python -m pytest tests/gui -v --speed-up 5`
 
 ### Testing Requirements
-**IMPORTANT:** Before committing changes, ALWAYS run BOTH test suites:
-1. Non-GUI tests: `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
-2. GUI tests: `python -m pytest tests/gui -v --speed-up 5`
+**IMPORTANT:** Before committing changes, ALWAYS run:
+1. **Mypy:** `.venv/Scripts/python.exe -m mypy src/cube`
+2. **Non-GUI tests:** `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
+3. **GUI tests:** `python -m pytest tests/gui -v --speed-up 5`
 
-Both must pass before committing.
+All must pass (or have no new errors for mypy) before committing.
 
 ### Handling Test Failures
 **CRITICAL:** When tests fail, NEVER assume they were "already failing" or "pre-existing issues":

@@ -31,7 +31,8 @@ def _decode_gl_string(value) -> str:
         import ctypes
         if hasattr(value, 'contents'):
             # It's a ctypes pointer - need to read the C string
-            return ctypes.cast(value, ctypes.c_char_p).value.decode('utf-8', errors='replace')
+            raw = ctypes.cast(value, ctypes.c_char_p).value
+            return raw.decode('utf-8', errors='replace') if raw else "Unknown"
     except Exception:
         pass
 

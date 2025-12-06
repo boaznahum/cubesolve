@@ -96,7 +96,10 @@
       "WebFetch(domain:stackoverflow.com)",
       "Bash(.venv/Scripts/pip.exe show:*)",
       "Bash(powershell -Command:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git -C E:/dev/code/cubesolve diff --stat)",
+      "Bash(git -C E:/dev/code/cubesolve add -A)",
+      "Bash(git -C E:/dev/code/cubesolve commit -m \"$(cat <<''EOF''\nFix mypy errors - add missing type annotations and properties\n\n- Add width/height properties to TkinterAppWindow, ConsoleAppWindow, WebAppWindow\n- Add _last_edge_solve_count to AppWindow protocol and WebAppWindow\n- Fix PygletAppWindow.renderer and modern_renderer properties (None check)\n- Fix WebAppWindow._on_close() return type (bool instead of None)\n- Fix PygletAppWindow._texture_sets default value\n- Fix common_gl_utils.py ctypes None check\n- Fix PygletEventLoop.idle() return type handling\n- Fix pyglet_utils.py Label parameters for pyglet 2.x (bold→weight)\n\nMypy errors reduced from 21 to 12.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

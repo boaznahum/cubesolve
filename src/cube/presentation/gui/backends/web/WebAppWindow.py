@@ -43,6 +43,9 @@ class WebAppWindow(AppWindow):
         self._height = height
         self._title = title
 
+        # State for edge solve tracking (used by SOLVE_EDGES command)
+        self._last_edge_solve_count: int = 0
+
         # Get components from backend (singletons)
         self._renderer: WebRenderer = backend.renderer  # type: ignore[assignment]
         self._event_loop: WebEventLoop = backend.event_loop  # type: ignore[assignment]
@@ -123,9 +126,20 @@ class WebAppWindow(AppWindow):
         print("Client connected - sending initial frame", flush=True)
         self._on_draw()
 
-    def _on_close(self) -> None:
+    def _on_close(self) -> bool:
         """Handle close event."""
         self._event_loop.stop()
+        return True
+
+    @property
+    def width(self) -> int:
+        """Window width in pixels."""
+        return self._width
+
+    @property
+    def height(self) -> int:
+        """Window height in pixels."""
+        return self._height
 
     @property
     def app(self) -> "AbstractApp":
