@@ -515,66 +515,6 @@ class _Cell:
                             if attributes["on_y"]:
                                 renderer.shapes.cross(points, cross_width_y, cross_color_y)
 
-    # noinspection PyMethodMayBeStatic
-    def _create_lines(self, vertexes, color):
-
-        gl.glPushAttrib(gl.GL_LINE_WIDTH)
-        gl.glLineWidth(4)
-
-        gl.glColor3ub(*color)
-
-        for i in range(len(vertexes) - 1):
-            gl.glBegin(gl.GL_LINES)
-            gl.glVertex3f(*vertexes[i])
-            gl.glVertex3f(*vertexes[i + 1])
-            gl.glEnd()
-
-        gl.glPopAttrib()
-
-    # noinspection PyMethodMayBeStatic
-    def _create_helpers(self):
-        """
-        For debug
-        :return:
-        """
-
-        gl.glPushAttrib(gl.GL_LINE_WIDTH)
-        gl.glLineWidth(6)
-
-        gl.glBegin(gl.GL_LINES)
-
-        # parallel to X axis with offset on z/y
-        gl.glColor3ub(255, 255, 255)
-        gl.glVertex3f(0, 0, 50)
-        gl.glVertex3f(200, 0, 50)
-        gl.glVertex3f(0, 50, 0)
-        gl.glVertex3f(200, 50, 0)
-
-        # the problematic one, the one on X
-        gl.glColor3ub(255, 255, 0)
-        gl.glVertex3f(0, 0, 0)
-        gl.glVertex3f(50, 0, 0)
-
-        gl.glEnd()
-
-        # parallel to Y axis with offset on x/z
-        gl.glBegin(gl.GL_LINES)
-        gl.glColor3ub(255, 0, 0)
-        gl.glVertex3f(50, 0, 0)
-        gl.glVertex3f(50, 200, 0)
-        gl.glVertex3f(0, 0, 50)
-        gl.glVertex3f(0, 200, 50)
-        gl.glEnd()
-
-        # line parallel to Z axis , with offset on X
-        gl.glBegin(gl.GL_LINES)
-        gl.glColor3ub(0, 255, 255)
-        gl.glVertex3f(50, 0, 0)
-        gl.glVertex3f(50, 0, 200)
-        gl.glEnd()
-
-        gl.glPopAttrib()  # line width
-
     def _create_markers_box(self, vertexes: Sequence[ndarray], color, marker: bool):
 
         if not marker:

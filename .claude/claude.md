@@ -76,10 +76,13 @@ All pyglet imports now only exist in:
 ### Testing Requirements
 **IMPORTANT:** Before committing changes, ALWAYS run:
 1. **Mypy:** `.venv/Scripts/python.exe -m mypy src/cube`
-2. **Non-GUI tests:** `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
-3. **GUI tests:** `python -m pytest tests/gui -v --speed-up 5`
+2. **Pyright:** `.venv/Scripts/python.exe -m pyright src/cube`
+3. **Non-GUI tests:** `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
+4. **GUI tests:** `python -m pytest tests/gui -v --speed-up 5`
 
-All must pass (or have no new errors for mypy) before committing.
+All must pass (or have no new errors for mypy/pyright) before committing.
+
+**Note:** Pyright is stricter than mypy - it catches undefined variables that mypy misses.
 
 ### Handling Test Failures
 **CRITICAL:** When tests fail, NEVER assume they were "already failing" or "pre-existing issues":
