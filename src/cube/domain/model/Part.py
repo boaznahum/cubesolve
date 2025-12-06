@@ -17,14 +17,25 @@ TPartType = TypeVar("TPartType", bound="Part")
 
 class Part(ABC, CubeElement):
     """
+    Base class for cube parts (Edge, Corner, Center).
 
+    FUNDAMENTAL CONCEPT: Parts are FIXED in 3D space - they never move!
+    Only the colored stickers (represented by PartEdge.color) rotate through
+    the fixed part slots during cube moves.
 
-    Parts never chane position, only the color of the parts
+    Three ID Types (see design2/model-id-system.md for visual diagrams):
+    - fixed_id: Based on face NAMES (FaceName enum), NEVER changes
+    - position_id: Based on face CENTER colors, changes on slice/cube rotation (M,E,S,x,y,z)
+    - colors_id: Actual sticker colors, changes on ANY rotation
 
+    Two-Phase Architecture:
+    - Phase 1 (Big Cube): is3x3=False, use PartSlice.colors_id
+    - Phase 2 (After Reduction): is3x3=True, use Part.colors_id, Part.in_position
 
-    N = 1 - center
-    n = 2 - edge
-    n = 3 - corner
+    Part Types by number of faces:
+    - N = 1: Center (one face)
+    - N = 2: Edge (two faces)
+    - N = 3: Corner (three faces)
     """
     __slots__ = ["_cube", "_fixed_id", "_colors_id_by_pos", "_colors_id_by_colors"]
 
@@ -88,9 +99,16 @@ class Part(ABC, CubeElement):
     @property
     def fixed_id(self) -> PartFixedID:
         """
-        An ID that is not changed when color ir parent face color is changed
-        It actually tracks the instance of the edge, but it will same for all instances of cube
-        :return:
+        Structural identity based on face NAMES - NEVER changes.
+
+        This ID identifies the physical SLOT in the cube structure.
+        It is computed from FaceName enum values (F, R, U, L, B, D),
+        NOT from colors. Even if you rotate the whole cube (x, y, z),
+        the fixed_id remains constant.
+
+        Example: Edge at Front-Up position has fixed_id = {FaceName.F, FaceName.U}
+
+        See: design2/model-id-system.md for visual diagrams
         """
         assert self._fixed_id
         return self._fixed_id
@@ -110,6 +128,20 @@ class Part(ABC, CubeElement):
     @property
     @abstractmethod
     def is3x3(self) -> bool:
+        """
+        Returns True if all slices of this part have the same colors.
+
+        This is the key property that determines which phase the cube is in:
+        - is3x3=False (Phase 1): Big cube, slices not aligned. Use slice.colors_id
+        - is3x3=True (Phase 2): After reduction. Part-level methods are valid
+
+        WARNING: When is3x3=False, these properties are MEANINGLESS:
+        - colors_id (returns middle slice colors, not representative)
+        - in_position
+        - match_faces (may return True for wrong reasons)
+
+        See: design2/model-id-system.md section "Evolution: Big Cube → 3x3 Reduction"
+        """
         pass
 
     def __str__(self) -> str:
@@ -190,8 +222,18 @@ class Part(ABC, CubeElement):
     @property
     def match_faces(self):
         """
-        Part is in position, all colors match the faces
-        :return:
+        Returns True if part is SOLVED: correct slot AND correct orientation.
+
+        This means every sticker color matches its face's center color.
+        Example: Edge at F-U slot has Blue sticker on F face and Yellow on U face.
+
+        Requires is3x3=True to be meaningful (all slices must be aligned).
+
+        Relationship to other properties:
+        - in_position=True, match_faces=False → Part in right slot but wrong orientation
+        - in_position=True, match_faces=True → Part fully solved
+
+        See: design2/model-id-system.md section "Key State Check Properties"
         """
         for p in self._3x3_representative_edges:
             if p.color != p.face.color:
@@ -202,7 +244,21 @@ class Part(ABC, CubeElement):
     @property
     def in_position(self):
         """
-        :return: true if part in position, ignoring orientation, position id same as color id
+        Returns True if part is in correct SLOT (ignoring orientation).
+
+        Computed as: position_id == colors_id
+
+        This means the part's sticker colors match the face center colors
+        of the slot it occupies, but it may still be rotated wrong.
+
+        Example:
+        - Edge with White-Red stickers at D-R slot (White/Red centers) → in_position=True
+        - Same edge may have White on D, Red on R → match_faces=True
+        - Or White on R, Red on D → match_faces=False (flipped)
+
+        Requires is3x3=True to be meaningful.
+
+        See: design2/model-id-system.md section "Key State Check Properties"
         """
         return self.position_id == self.colors_id
 
@@ -216,10 +272,22 @@ class Part(ABC, CubeElement):
     @property
     def position_id(self) -> PartColorsID:
         """
-        Return the parts required colors, assume it was in place, not actual colors
-        the colors of the faces it is currently on
-        This id can be changed only if faces are changed in slice and whole cube rotation
-        :return:
+        Target position identity based on face CENTER colors.
+
+        Returns the colors of the FACES this part slot is on (not the sticker colors).
+        This tells you where a part SHOULD go - which slot it belongs to.
+
+        Changes when:
+        - Slice rotation (M, E, S) - moves face centers
+        - Cube rotation (x, y, z) - rotates whole cube including centers
+
+        Does NOT change when:
+        - Face rotation (F, R, U, L, B, D) - centers stay fixed
+
+        Example: Edge at F-U slot → position_id = {BLUE, YELLOW}
+        (colors of Face F and Face U centers)
+
+        See: design2/model-id-system.md section "When Does colors_id Change?"
         """
 
         by_pos: PartColorsID | None = self._colors_id_by_pos
@@ -251,10 +319,26 @@ class Part(ABC, CubeElement):
     @property
     def colors_id(self) -> PartColorsID:
         """
-        Return the parts actual colors
-        the colors of the faces it is currently on
-        Valid for 3x3 mode
-        :return:
+        Actual sticker colors - identifies WHICH piece this is.
+
+        Returns the ACTUAL colors currently visible on this part's stickers.
+        This tells you what piece is in this slot (its identity).
+
+        Changes when:
+        - ANY rotation (F, R, U, M, E, S, x, y, z, etc.)
+
+        WARNING: Only meaningful when is3x3=True!
+        When is3x3=False, returns middle slice colors which don't represent the part.
+
+        Example: White-Red edge piece → colors_id = {WHITE, RED}
+        (regardless of which slot it's currently in)
+
+        Comparison with position_id:
+        - position_id: Where the slot IS (face centers)
+        - colors_id: What piece IS here (sticker colors)
+        - in_position = (position_id == colors_id)
+
+        See: design2/model-id-system.md for visual diagrams
         """
 
         colors_id: PartColorsID | None = self._colors_id_by_colors

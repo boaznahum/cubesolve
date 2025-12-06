@@ -18,9 +18,29 @@ _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
 
 class Edge(Part):
+    """
+    An edge part shared by exactly two faces.
+
+    Each edge contains multiple EdgeWing slices (n-2 slices for an NxN cube).
+    The right_top_left_same_direction flag controls slice index mapping
+    between the two faces.
+
+    See: design2/edge-coordinate-system.md for visual explanation
+    """
 
     def __init__(self, f1: _Face, f2: _Face, right_top_left_same_direction: bool,
                  slices: Sequence[EdgeWing]) -> None:
+        """
+        Initialize an Edge between two faces.
+
+        Args:
+            f1: First face sharing this edge
+            f2: Second face sharing this edge
+            right_top_left_same_direction: If True, both faces index slices the same way.
+                If False, slice indices are inverted between f1 and f2.
+                See design2/edge-coordinate-system.md for detailed explanation.
+            slices: The EdgeWing slices that make up this edge
+        """
         # assign before call to init because _edges is called from ctor
         self._slices: Sequence[EdgeWing] = slices
         super().__init__()
@@ -57,6 +77,22 @@ class Edge(Part):
 
     @property
     def is3x3(self) -> bool:
+        """
+        Returns True if all slices of this edge have the same colors.
+
+        This indicates the edge has been "reduced" - all its wing pieces
+        are grouped together as if it were a 3x3 edge.
+
+        Phase implications:
+        - is3x3=False: Big cube phase, work with individual slice.colors_id
+        - is3x3=True: Reduced phase, edge.colors_id is meaningful
+
+        Example for 5x5:
+        - NOT reduced: slices have colors {R,B}, {O,G}, {R,B}, {G,O}, {R,B}
+        - Reduced: all slices have {R,B}, {R,B}, {R,B}, {R,B}, {R,B}
+
+        See: design2/model-id-system.md section "Evolution: Big Cube → 3x3 Reduction"
+        """
         slices = self.all_slices
 
         s0 = next(slices)
@@ -90,13 +126,27 @@ class Edge(Part):
 
     def get_ltr_index_from_slice_index(self, face: _Face, i) -> int:
         """
+        Convert internal slice index to left-to-right index for a given face.
 
-        # todo: combine and optimize with get_face_edge
-        Given an index of slice in direction from left to right, or left to top
-        find it's actual slice
-        :param face:
-        :param i:
-        :return:
+        Each face has its own coordinate system where slices are numbered
+        left-to-right (for horizontal edges) or bottom-to-top (for vertical).
+        This method converts from the internal slice index to the face's view.
+
+        The right_top_left_same_direction flag determines the mapping:
+        - True: Both faces see slices in same order (index unchanged)
+        - False: f1 uses direct mapping, f2 sees inverted indices
+
+        8 edges have same_direction=True: F-U, F-L, F-R, F-D, L-D, R-B, L-B, U-R
+        4 edges have same_direction=False: L-U, U-B, D-R, D-B
+
+        See: design2/edge-coordinate-system.md for visual explanation
+
+        Args:
+            face: The face from whose perspective to get the index
+            i: Internal slice index
+
+        Returns:
+            Left-to-right index from the face's perspective
         """
         assert face is self._f1 or face is self._f2
 
@@ -110,6 +160,22 @@ class Edge(Part):
                 return self.inv_index(i)  # type: ignore
 
     def get_slice_index_from_ltr_index(self, face: _Face, ltr_i: int) -> int:
+        """
+        Convert left-to-right index (from face's view) to internal slice index.
+
+        Inverse of get_ltr_index_from_slice_index.
+        Used during face rotation to find which internal slice to access
+        when given an index from the face's perspective.
+
+        See: design2/edge-coordinate-system.md for visual explanation
+
+        Args:
+            face: The face from whose perspective the index is given
+            ltr_i: Left-to-right index from face's view
+
+        Returns:
+            Internal slice index
+        """
         assert face is self._f1 or face is self._f2
 
         si: int
