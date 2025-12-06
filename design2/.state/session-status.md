@@ -7,11 +7,7 @@
 2025-12-06
 
 ## Current Focus
-Deep dive into model classes, especially:
-- Cube composition
-- Faces
-- Parts (Corner, Edge, Center) and derived classes
-- Slices and derived classes
+Initial model exploration COMPLETE. Ready for detailed documentation.
 
 ## Completed Tasks
 - [x] Created design2 folder structure
@@ -21,17 +17,18 @@ Deep dive into model classes, especially:
 - [x] Reformatted human-notes.md
 - [x] Read README.md - captured architecture overview
 - [x] Planned research phase
+- [x] Explored model/ package - mapped all classes
+- [x] Read and understood: Cube.py, Part.py, Face.py, Edge.py, Corner.py, Center.py
+- [x] Read and understood: _part_slice.py (EdgeWing, CenterSlice, CornerSlice)
+- [x] Understood the ID system (fixed_id, position_id, colors_id)
+- [x] Connected two-phase insight to is3x3 property chain
 
 ## In Progress
-- [ ] Explore model/ package - map all classes
+- [ ] Create formal documentation based on insights
 
 ## Pending
-- [ ] Document Cube class and composition
-- [ ] Document Face class
-- [ ] Document Part classes (Corner, Edge, Center)
-- [ ] Document Slice classes
-- [ ] Understand position IDs vs color IDs
-- [ ] Document rotation mechanics
+- [ ] Document rotation mechanics (Face.rotate, Slice class)
+- [ ] Understand `right_top_left_same_direction` in Edge
 - [ ] Document solvers
 - [ ] Document presentation layer
 
@@ -39,5 +36,8 @@ Deep dive into model classes, especially:
 None currently
 
 ## Notes for Next Session
-Start by reading this file, then check task-queue.md for detailed next steps.
-Focus on model/ package - especially Cube, Face, Part, Slice hierarchies.
+- Model structure is now well understood
+- Key insight: Fixed parts, rotating colors
+- Key insight: Three ID types and their relationships
+- Key insight: is3x3 property determines phase validity
+- Next: Create formal documentation or investigate remaining questions
