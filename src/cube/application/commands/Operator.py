@@ -71,7 +71,7 @@ class Operator:
             self._app_state.debug(True, f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
             raise OpAborted()
 
-    def play(self, alg: Alg, inv: Any = False, animation: Any = True):
+    def play(self, alg: Alg, inv: Any = False, animation: Any = True) -> None:
         """
         deprecated, use play
         Animation can run only from top level, not from animation itself
@@ -83,13 +83,13 @@ class Operator:
         So it can only turn off current global animation
         :return:
         """
-        return self._play(alg, inv, animation)
+        self._play(alg, inv, animation)
 
     @deprecated("Use play() instead")
-    def op(self, alg: Alg, inv: bool = False, animation=True):
+    def op(self, alg: Alg, inv: bool = False, animation: bool = True) -> None:
         warnings.warn("Use play", DeprecationWarning, 2)
 
-        return self._play(alg, inv, animation)
+        self._play(alg, inv, animation)
 
     # noinspection PyMethodMayBeStatic
     def log(self, *s: Any):

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import final, TYPE_CHECKING, TypeAlias, Tuple, ContextManager
+from typing import final, TYPE_CHECKING, TypeAlias, Tuple, ContextManager, Callable
 
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
@@ -11,6 +11,7 @@ from cube.application.commands.op_annotation import SupportsAnnotation, AnnWhat
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
+    from cube.application.commands.op_annotation import OpAnnotation
 
 _Common: TypeAlias = "CommonOp"
 
@@ -59,7 +60,7 @@ class SolverElement(CubeSupplier):
 
 
     @property
-    def ann(self):
+    def ann(self) -> "OpAnnotation":
         """
         :deprecated, use
         :return:
@@ -67,10 +68,10 @@ class SolverElement(CubeSupplier):
         return self._ann
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
-                 h1=None,
-                 h2=None,
-                 h3=None,
-                 animation=True) -> ContextManager[None]:
+                 h1: str | Callable[[], str] | None = None,
+                 h2: str | Callable[[], str] | None = None,
+                 h3: str | Callable[[], str] | None = None,
+                 animation: bool = True) -> ContextManager[None]:
         return self.ann.annotate(*elements, h1=h1, h2=h2, h3=h3, animation=animation)
 
 

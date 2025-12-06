@@ -3,7 +3,7 @@
 import sys
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
-from typing import TypeAlias, TYPE_CHECKING, Callable, Tuple, Literal, ContextManager, Any, Hashable
+from typing import TypeAlias, TYPE_CHECKING, Callable, Tuple, Literal, ContextManager, Any, Hashable, Generator
 
 from cube.domain.algs.Algs import Algs
 from cube.application.exceptions.app_exceptions import InternalSWError
@@ -172,10 +172,10 @@ class OpAnnotation:
             op.play(Algs.AN)
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
-                 h1=None,
-                 h2=None,
-                 h3=None,
-                 animation=True) -> ContextManager[None]:
+                 h1: _HEAD = None,
+                 h2: _HEAD = None,
+                 h3: _HEAD = None,
+                 animation: bool = True) -> ContextManager[None]:
 
         """
         Annotate moved slice
@@ -201,10 +201,10 @@ class OpAnnotation:
 
     @contextmanager
     def _annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
-                  h1=None,
-                  h2=None,
-                  h3=None,
-                  animation=True):
+                  h1: _HEAD = None,
+                  h2: _HEAD = None,
+                  h3: _HEAD = None,
+                  animation: bool = True) -> Generator[None, None, None]:
 
         global _SLice_Tracking_UniqID
 

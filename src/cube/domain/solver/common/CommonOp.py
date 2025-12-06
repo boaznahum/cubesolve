@@ -1,6 +1,6 @@
 import warnings
 from contextlib import contextmanager
-from typing import Callable, Generator, Sequence, Tuple, ContextManager
+from typing import Callable, Generator, Sequence, Tuple, ContextManager, TYPE_CHECKING
 from typing_extensions import deprecated
 
 from cube.domain.algs import Algs, Alg
@@ -12,6 +12,9 @@ from cube.application.commands.Operator import Operator
 from .BaseSolver import BaseSolver
 from ...model.CubeQueries2 import Pred, Pred0
 from cube.application.commands.op_annotation import AnnWhat, SupportsAnnotation
+
+if TYPE_CHECKING:
+    from cube.application.commands.op_annotation import OpAnnotation
 
 TRACE_UNIQUE_ID: int = 0
 
@@ -59,14 +62,14 @@ class CommonOp:
         return self._slv.cube
 
     @property
-    def ann(self):
+    def ann(self) -> "OpAnnotation":
         return self._ann
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
-                 h1=None,
-                 h2=None,
-                 h3=None,
-                 animation=True) -> ContextManager[None]:
+                 h1: str | Callable[[], str] | None = None,
+                 h2: str | Callable[[], str] | None = None,
+                 h3: str | Callable[[], str] | None = None,
+                 animation: bool = True) -> ContextManager[None]:
         return self.ann.annotate(*elements, h1=h1, h2=h2, h3=h3, animation=animation)
 
     @property
@@ -507,17 +510,20 @@ class CommonOp:
             return  # nothing to do
 
         if face.is_left:
-            return self.slv.op.play(-Algs.Y)
+            self.slv.op.play(-Algs.Y)
+            return
 
         if face.is_right:
-            return self.slv.op.play(Algs.Y)
+            self.slv.op.play(Algs.Y)
+            return
 
         if face.is_back:
-            return self.slv.op.play(Algs.Y * 2)
+            self.slv.op.play(Algs.Y * 2)
+            return
 
         raise ValueError(f"{face} must be L/R/F/B")
 
-    def bring_bottom_edge_to_front_by_d_rotate(self, edge) -> None:
+    def bring_bottom_edge_to_front_by_d_rotate(self, edge: Edge) -> None:
 
         d: Face = self.slv.cube.down
 
@@ -529,13 +535,16 @@ class CommonOp:
             return  # nothing to do
 
         if other.is_left:
-            return self.slv.op.play(Algs.D)
+            self.slv.op.play(Algs.D)
+            return
 
         if other.is_right:
-            return self.slv.op.play(-Algs.D)
+            self.slv.op.play(-Algs.D)
+            return
 
         if other.is_back:
-            return self.slv.op.play(Algs.D * 2)
+            self.slv.op.play(Algs.D * 2)
+            return
 
         raise ValueError(f"{other} must be L/R/F/B")
 
