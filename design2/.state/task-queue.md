@@ -18,41 +18,51 @@
 - [x] Understand color IDs
 - [x] Understand is3x3 property chain
 
-### 1.2 Document Core Concepts (IN PROGRESS)
+### 1.2 Document Core Concepts (MOSTLY COMPLETE)
 - [x] Create ID system diagram (model-id-system.md)
 - [x] Document which methods are phase-dependent
 - [x] Document edge coordinate system (edge-coordinate-system.md)
 - [x] Understand right_top_left_same_direction flag
+- [x] Create 5 visual diagrams for ID system (images/)
+- [x] Create 1 visual diagram for edge coordinates (images/)
 - [ ] Create model architecture diagram (class hierarchy visual)
-- [ ] Document Part class and its methods
 - [ ] Document Slice concept (M, E, S middle layers)
-- [ ] Document Face concept
-- [ ] Document rotation/transformation logic
+- [ ] Document Face.rotate() mechanics in detail
+- [ ] Document Corner class
 
-### 1.3 Validate & Align (NOT STARTED)
-- [ ] Cross-check documentation with existing docstrings
-- [ ] Update any inconsistent docstrings
-- [ ] Add links between docs and code
+### 1.3 Validate & Align (PARTIALLY COMPLETE)
+- [x] Update Part.py docstrings to match design2 docs
+- [x] Update Edge.py docstrings to match design2 docs
+- [x] Add `See: design2/xxx.md` references in docstrings
+- [x] Fix documentation links to correct source paths
+- [ ] Update _part_slice.py docstrings
+- [ ] Update Corner.py docstrings
+- [ ] Update Face.py docstrings
+- [ ] Update Cube.py docstrings
 
 ---
 
 ## Remaining Questions to Investigate
 
 ### High Priority
-1. **Face.rotate() mechanics** - Partially understood via edge coordinate analysis
-2. **Slice class (M, E, S)** - How do middle slice rotations work?
+1. **Slice class (M, E, S)** - How do middle slice rotations work?
+2. **Face.rotate() details** - Complete the rotation mechanics documentation
 
 ### Medium Priority
 3. **PartEdge class** - What is the role of the smallest unit?
 4. **Color scheme (BOY)** - How is it defined and used?
-5. **CubeQueries2** - What queries are available?
+5. **Corner class** - Similar to Edge but with 3 faces
 
 ### Low Priority
 6. **Annotation system** - How does part annotation work?
 7. **CubeSanity** - What validations are performed?
+8. **CubeQueries2** - What queries are available?
 
 ### COMPLETED
-- [x] `right_top_left_same_direction` - Documented in edge-coordinate-system.md
+- [x] `right_top_left_same_direction` - Documented with diagrams
+- [x] ID system (fixed_id, position_id, colors_id) - Full visual documentation
+- [x] Two-phase architecture (is3x3 property) - Documented with diagrams
+- [x] Parts are FIXED, colors move - Documented with diagrams
 
 ---
 
@@ -72,9 +82,18 @@
 
 ---
 
+## Documentation Created
+
+| Document | Diagrams | Docstrings Updated |
+|----------|----------|-------------------|
+| model-id-system.md | 5 PNGs | Part.py, Edge.py |
+| edge-coordinate-system.md | 1 PNG + hand-drawn JPG | Edge.py |
+
+---
+
 ## Consistency Checklist
 After any documentation change, verify alignment of:
-- [ ] Code
-- [ ] Docstrings
-- [ ] design2 documents
-- [ ] .state insights
+- [x] Code
+- [x] Docstrings (Part.py, Edge.py done)
+- [x] design2 documents
+- [x] .state insights
