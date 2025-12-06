@@ -53,7 +53,8 @@ if you need more instructions you can asked snd add them here
 i want to start from the model then solvers and then to thevoresentstion layers
 
 pay focus  if understanding the the cube solituon heve two phasex - a big cube where the part slices are the importnat
-egrn it brcome a 3x3 cube - reduction - wgrn the parts in the model us the inlut to the solver. the parts are wrong 
+egrn it brcome a 3x3 cube - reduction - wgrn the parts in the model us the inlut to the solver.
+(Note: some part methods are useless before reduction - e.g., part color is undefined until all slices are in place) 
 
 giucs on the position and cilor ids things line this
 
@@ -61,8 +62,28 @@ underdtsnd the role of them when rotating silces and faces hiw color ids play ro
 
 (Add key concepts here)
 
-## the story how i developed the cube
-wait fir this section it is important
+## The Story: How I Developed the Cube
+
+*(This section captures the developer's design insights and history)*
+
+### Two-Phase Architecture Insight
+
+The cube solution has two distinct phases, and this affects which part methods are meaningful:
+
+**Phase 1 - Big Cube (e.g., 5x5):**
+- Focus is on part slices
+- Some part methods are useless in this phase
+- Example: A part's "color" is NOT defined until all its slices are in place
+- Before reduction, a part doesn't have one single color - asking for it is meaningless
+
+**Phase 2 - After Reduction (3x3):**
+- The cube is reduced to a 3x3 structure
+- Now parts have well-defined colors
+- Parts become valid input to the solver
+
+**Key insight:** Certain part properties/methods only make sense in certain phases.
+
+*(More story to be added here)*
 ---
 
 *This file is maintained by the human developer to guide the documentation effort. but see cooment above what sllwed to be changed*
