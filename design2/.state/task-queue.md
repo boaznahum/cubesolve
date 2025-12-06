@@ -21,9 +21,11 @@
 ### 1.2 Document Core Concepts (IN PROGRESS)
 - [x] Create ID system diagram (model-id-system.md)
 - [x] Document which methods are phase-dependent
+- [x] Document edge coordinate system (edge-coordinate-system.md)
+- [x] Understand right_top_left_same_direction flag
 - [ ] Create model architecture diagram (class hierarchy visual)
 - [ ] Document Part class and its methods
-- [ ] Document Slice concept
+- [ ] Document Slice concept (M, E, S middle layers)
 - [ ] Document Face concept
 - [ ] Document rotation/transformation logic
 
@@ -37,18 +39,20 @@
 ## Remaining Questions to Investigate
 
 ### High Priority
-1. **Face.rotate() mechanics** - How does rotation actually work step by step?
+1. **Face.rotate() mechanics** - Partially understood via edge coordinate analysis
 2. **Slice class (M, E, S)** - How do middle slice rotations work?
-3. **`right_top_left_same_direction`** - What does this flag mean in Edge class?
 
 ### Medium Priority
-4. **PartEdge class** - What is the role of the smallest unit?
-5. **Color scheme (BOY)** - How is it defined and used?
-6. **CubeQueries2** - What queries are available?
+3. **PartEdge class** - What is the role of the smallest unit?
+4. **Color scheme (BOY)** - How is it defined and used?
+5. **CubeQueries2** - What queries are available?
 
 ### Low Priority
-7. **Annotation system** - How does part annotation work?
-8. **CubeSanity** - What validations are performed?
+6. **Annotation system** - How does part annotation work?
+7. **CubeSanity** - What validations are performed?
+
+### COMPLETED
+- [x] `right_top_left_same_direction` - Documented in edge-coordinate-system.md
 
 ---
 

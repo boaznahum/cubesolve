@@ -200,20 +200,71 @@ tracker.position  # Finds slot by position_id
 
 ---
 
+## Edge Coordinate System: right_top_left_same_direction
+
+**Source:** Human diagram (coor-system-doc/right-top-left-coordinates.jpg) + code analysis (2025-12-06)
+
+### The Problem
+
+When rotating a face, colors move between edges. But in NxN cubes, edges have multiple slices.
+Which slice index on the source edge maps to which slice index on the target edge?
+
+### The Solution
+
+Each face has a "left-to-right" (R) and "bottom-to-top" (T) direction.
+When two faces share an edge, these directions may:
+- **Agree** (`right_top_left_same_direction = True`): slice i → slice i
+- **Disagree** (`right_top_left_same_direction = False`): slice i → slice (n-1-i)
+
+### Edge Direction Mapping
+
+```
+SAME DIRECTION (8 edges):     OPPOSITE DIRECTION (4 edges):
+  F-U, F-L, F-R, F-D            L-U
+  L-D, L-B                      U-B
+  R-B, U-R                      D-R, D-B
+```
+
+**Pattern:** All Front edges are SAME. Back edges meeting U or D are OPPOSITE.
+
+### Code Usage
+
+```python
+# Edge.py - automatic index conversion
+def get_ltr_index_from_slice_index(self, face, i):
+    if self.right_top_left_same_direction:
+        return i  # Direct mapping
+    else:
+        if face is self._f1:
+            return i  # f1 is reference
+        else:
+            return self.inv_index(i)  # f2: INVERT!
+```
+
+### Why It Matters
+
+Without this flag, Face.rotate() would copy slices to wrong positions, corrupting the cube.
+With this flag, rotation works correctly for ANY NxN cube.
+
+**Developer note:** "This is the most complicated thing to understand - without it I couldn't visualize
+and correctly rotate slices."
+
+---
+
 ## Questions Still to Investigate
 
 See `.state/task-queue.md` for full list.
 
 High priority:
-1. Face.rotate() mechanics
+1. Face.rotate() mechanics (partially understood via right_top_left analysis)
 2. Slice class (M, E, S) rotation
-3. `right_top_left_same_direction` flag
 
 ---
 
 ## Documentation Created
 
 - `design2/model-id-system.md` - Visual diagrams of ID system
+- `design2/edge-coordinate-system.md` - right_top_left_same_direction explained
 
 ---
 

@@ -7,7 +7,7 @@
 2025-12-06
 
 ## Current Focus
-ID system deep analysis COMPLETE. Created visual diagram documentation.
+Edge coordinate system (right_top_left_same_direction) now documented!
 
 ## Completed Tasks
 - [x] Created design2 folder structure
@@ -25,13 +25,16 @@ ID system deep analysis COMPLETE. Created visual diagram documentation.
 - [x] Verified ID understanding against solver code (NxNEdges, L1Cross, Tracker)
 - [x] Created `model-id-system.md` with visual diagrams
 - [x] Updated task-queue.md with remaining questions
+- [x] Analyzed human diagram (coor-system-doc/right-top-left-coordinates.jpg)
+- [x] Understood right_top_left_same_direction flag
+- [x] Created `edge-coordinate-system.md` with full explanation
 
 ## In Progress
 None - awaiting human review
 
 ## Pending (see task-queue.md for details)
-- [ ] Document rotation mechanics (Face.rotate, Slice class)
-- [ ] Understand `right_top_left_same_direction` in Edge
+- [ ] Document rotation mechanics (Face.rotate - partially covered)
+- [ ] Document Slice class (M, E, S middle layers)
 - [ ] Create model architecture diagram (class hierarchy visual)
 - [ ] Document solvers
 - [ ] Document presentation layer
@@ -41,8 +44,10 @@ None currently
 
 ## Documentation Created
 - `design2/model-id-system.md` - Visual diagrams explaining ID system
+- `design2/edge-coordinate-system.md` - right_top_left_same_direction explained
 
 ## Notes for Next Session
 - ID system is fully documented with diagrams
-- Understanding verified against solver usage patterns
-- Remaining: rotation mechanics, class diagrams, solver docs
+- Edge coordinate system (most complex concept) now documented
+- Referenced human diagram in coor-system-doc/
+- Remaining: Slice class (M,E,S), class hierarchy visual, solver docs
