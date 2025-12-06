@@ -3,10 +3,10 @@
 This document provides visual diagrams explaining the three ID types in the cube model.
 
 **Key Source Files:**
-- [`model/cube_boy.py`](../model/cube_boy.py) - Cube creation with BOY color scheme
-- [`model/Part.py`](../model/Part.py) - Part class with all ID properties
-- [`model/_part_slice.py`](../model/_part_slice.py) - PartSlice with slice-level IDs
-- [`model/Edge.py`](../model/Edge.py) - Edge class with is3x3 property
+- [`cube_boy.py`](../src/cube/domain/model/cube_boy.py) - Cube creation with BOY color scheme
+- [`Part.py`](../src/cube/domain/model/Part.py) - Part class with all ID properties
+- [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) - PartSlice with slice-level IDs
+- [`Edge.py`](../src/cube/domain/model/Edge.py) - Edge class with is3x3 property
 
 ---
 
@@ -18,9 +18,9 @@ This document provides visual diagrams explaining the three ID types in the cube
 
 | ID Type | Based On | Changes When | Code Location |
 |---------|----------|--------------|---------------|
-| `fixed_id` | Face NAMES (FaceName enum) | NEVER | [`Part.py:89`](../model/Part.py) |
-| `position_id` | Face CENTER colors | Slice/cube rotation (M,E,S,x,y,z) | [`Part.py:217`](../model/Part.py) |
-| `colors_id` | Actual sticker colors | ANY rotation | [`Part.py:252`](../model/Part.py) |
+| `fixed_id` | Face NAMES (FaceName enum) | NEVER | [`Part.py:99`](../src/cube/domain/model/Part.py) |
+| `position_id` | Face CENTER colors | Slice/cube rotation (M,E,S,x,y,z) | [`Part.py:272`](../src/cube/domain/model/Part.py) |
+| `colors_id` | Actual sticker colors | ANY rotation | [`Part.py:319`](../src/cube/domain/model/Part.py) |
 
 ---
 
@@ -43,7 +43,7 @@ def fixed_id(self) -> PartFixedID:
     return frozenset(edge.face.name for edge in self._edges)
 ```
 
-**Reference:** [`Part.py:89-95`](../model/Part.py)
+**Reference:** [`Part.py:99-113`](../src/cube/domain/model/Part.py)
 
 ---
 
@@ -65,7 +65,7 @@ def fixed_id(self) -> PartFixedID:
     This NEVER changes, even if you rotate the whole cube!
 ```
 
-**Code Reference:** [`Part.fixed_id`](../model/Part.py) at line ~89
+**Code Reference:** [`Part.fixed_id`](../src/cube/domain/model/Part.py) at line ~99
 
 ---
 
@@ -86,7 +86,7 @@ def position_id(self) -> PartColorsID:
     return frozenset(edge.face.color for edge in self._3x3_representative_edges)
 ```
 
-**Code Reference:** [`Part.position_id`](../model/Part.py) at line ~217
+**Code Reference:** [`Part.position_id`](../src/cube/domain/model/Part.py) at line ~272
 
 ---
 
@@ -107,7 +107,7 @@ def colors_id(self) -> PartColorsID:
     return frozenset(edge.color for edge in self._3x3_representative_edges)
 ```
 
-**Code Reference:** [`Part.colors_id`](../model/Part.py) at line ~252
+**Code Reference:** [`Part.colors_id`](../src/cube/domain/model/Part.py) at line ~319
 
 ---
 
@@ -125,7 +125,7 @@ def colors_id(self) -> PartColorsID:
 | Cube (x, y, z) | ✓ Same | ✗ Changes | ✗ Changes |
 | Slice (M, E, S) | ✓ Same | ✗ Changes | ✗ Changes |
 
-**Code Reference:** See [`Face.py:211-267`](../model/Face.py) for rotation logic
+**Code Reference:** See [`Face.py:211-267`](../src/cube/domain/model/Face.py) for rotation logic
 
 ---
 
@@ -146,7 +146,7 @@ for i in range(n_slices):
         # fix this slice
 ```
 
-**Code Reference:** [`solver/NxNEdges.py`](../solver/NxNEdges.py)
+**Code Reference:** [`solver/NxNEdges.py`](../src/cube/domain/solver/NxNEdges.py)
 
 ### Phase 2: After Reduction (is3x3 = TRUE)
 
@@ -158,7 +158,7 @@ for edge in cube.edges:
     # solve this edge
 ```
 
-**Code Reference:** [`solver/L1Cross.py`](../solver/L1Cross.py)
+**Code Reference:** [`solver/L1Cross.py`](../src/cube/domain/solver/L1Cross.py)
 
 ---
 
@@ -177,10 +177,10 @@ for edge in cube.edges:
 | PartEdge | ✗ | ✗ | (just `.color`) |
 
 **Code References:**
-- [`Part.py`](../model/Part.py) - Part class
-- [`_part_slice.py`](../model/_part_slice.py) - PartSlice class
-- [`Edge.py`](../model/Edge.py) - Edge (extends Part)
-- [`Corner.py`](../model/Corner.py) - Corner (extends Part)
+- [`Part.py`](../src/cube/domain/model/Part.py) - Part class
+- [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) - PartSlice class
+- [`Edge.py`](../src/cube/domain/model/Edge.py) - Edge (extends Part)
+- [`Corner.py`](../src/cube/domain/model/Corner.py) - Corner (extends Part)
 
 ---
 
@@ -216,9 +216,9 @@ for edge in cube.edges:
 **Code References:**
 | Property | Location | Description |
 |----------|----------|-------------|
-| `Part.in_position` | [`Part.py:203`](../model/Part.py) | position_id == colors_id |
-| `Part.match_faces` | [`Part.py:191`](../model/Part.py) | All colors match faces |
-| `Edge.is3x3` | [`Edge.py:59`](../model/Edge.py) | All slices aligned |
+| `Part.in_position` | [`Part.py:203`](../src/cube/domain/model/Part.py) | position_id == colors_id |
+| `Part.match_faces` | [`Part.py:191`](../src/cube/domain/model/Part.py) | All colors match faces |
+| `Edge.is3x3` | [`Edge.py:59`](../src/cube/domain/model/Edge.py) | All slices aligned |
 
 ---
 
@@ -228,15 +228,15 @@ for edge in cube.edges:
 
 | Solver | Works With | Uses |
 |--------|------------|------|
-| [`NxNEdges.py`](../solver/NxNEdges.py) | Slices | `slice.colors_id` |
-| [`NxNCenters.py`](../solver/NxNCenters.py) | Center slices | `center_slice.colors_id` |
+| [`NxNEdges.py`](../src/cube/domain/solver/NxNEdges.py) | Slices | `slice.colors_id` |
+| [`NxNCenters.py`](../src/cube/domain/solver/NxNCenters.py) | Center slices | `center_slice.colors_id` |
 
 ### Phase 2 Solvers (3x3)
 
 | Solver | Works With | Uses |
 |--------|------------|------|
-| [`L1Cross.py`](../solver/L1Cross.py) | Parts | `edge.position_id`, `edge.colors_id` |
-| [`Tracker.py`](../solver/common/Tracker.py) | Parts | Track by `colors_id` |
+| [`L1Cross.py`](../src/cube/domain/solver/L1Cross.py) | Parts | `edge.position_id`, `edge.colors_id` |
+| [`Tracker.py`](../src/cube/domain/solver/common/Tracker.py) | Parts | Track by `colors_id` |
 
 ---
 
@@ -244,14 +244,14 @@ for edge in cube.edges:
 
 | Property | File | Line | Description |
 |----------|------|------|-------------|
-| `Part.fixed_id` | [`Part.py`](../model/Part.py) | ~89 | Structure-based ID (face names) |
-| `Part.position_id` | [`Part.py`](../model/Part.py) | ~217 | Target position (face center colors) |
-| `Part.colors_id` | [`Part.py`](../model/Part.py) | ~252 | Actual sticker colors |
-| `Part.in_position` | [`Part.py`](../model/Part.py) | ~203 | position_id == colors_id |
-| `Part.match_faces` | [`Part.py`](../model/Part.py) | ~191 | All colors match faces |
-| `Edge.is3x3` | [`Edge.py`](../model/Edge.py) | ~59 | All slices have same colors |
-| `PartSlice.fixed_id` | [`_part_slice.py`](../model/_part_slice.py) | ~180 | Slice structure ID |
-| `PartSlice.colors_id` | [`_part_slice.py`](../model/_part_slice.py) | ~226 | Slice-level colors |
+| `Part.fixed_id` | [`Part.py`](../src/cube/domain/model/Part.py) | ~89 | Structure-based ID (face names) |
+| `Part.position_id` | [`Part.py`](../src/cube/domain/model/Part.py) | ~217 | Target position (face center colors) |
+| `Part.colors_id` | [`Part.py`](../src/cube/domain/model/Part.py) | ~252 | Actual sticker colors |
+| `Part.in_position` | [`Part.py`](../src/cube/domain/model/Part.py) | ~203 | position_id == colors_id |
+| `Part.match_faces` | [`Part.py`](../src/cube/domain/model/Part.py) | ~191 | All colors match faces |
+| `Edge.is3x3` | [`Edge.py`](../src/cube/domain/model/Edge.py) | ~59 | All slices have same colors |
+| `PartSlice.fixed_id` | [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) | ~180 | Slice structure ID |
+| `PartSlice.colors_id` | [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) | ~226 | Slice-level colors |
 
 ---
 

@@ -274,11 +274,11 @@ With `right_top_left_same_direction`:
 
 | Location | Purpose |
 |----------|---------|
-| `Cube.py:1704` | `_create_edge()` function with flag parameter |
-| `Cube.py:387-403` | All 12 edge creations with True/False values |
-| `Edge.py:91-110` | `get_ltr_index_from_slice_index()` - uses the flag |
-| `Edge.py:112-127` | `get_slice_index_from_ltr_index()` - inverse conversion |
-| `Face.py:211-267` | `rotate()` - uses index conversion for slice copying |
+| [`Cube.py`](../src/cube/domain/model/Cube.py) | `_create_edge()` function with flag parameter |
+| [`Cube.py`](../src/cube/domain/model/Cube.py) | All 12 edge creations with True/False values |
+| [`Edge.py:127-160`](../src/cube/domain/model/Edge.py) | `get_ltr_index_from_slice_index()` - uses the flag |
+| [`Edge.py:162-193`](../src/cube/domain/model/Edge.py) | `get_slice_index_from_ltr_index()` - inverse conversion |
+| [`Face.py`](../src/cube/domain/model/Face.py) | `rotate()` - uses index conversion for slice copying |
 
 ---
 
