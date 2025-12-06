@@ -20,11 +20,16 @@ Usage:
     backend = BackendRegistry.get_backend("console")
 """
 
+from typing import TYPE_CHECKING
+
 from cube.presentation.gui.backends.console.ConsoleRenderer import ConsoleRenderer
 from cube.presentation.gui.backends.console.ConsoleEventLoop import ConsoleEventLoop
 from cube.presentation.gui.backends.console.ConsoleAppWindow import ConsoleAppWindow
 from cube.presentation.gui.backends.console import ConsoleViewer
 from cube.presentation.gui.backends.console import ConsoleKeys
+
+if TYPE_CHECKING:
+    from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
 __all__ = [
     "ConsoleRenderer",

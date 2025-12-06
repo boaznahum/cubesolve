@@ -201,6 +201,25 @@
   - **File:** `src/cube/presentation/gui/backends/pyglet2/ModernGLCubeViewer.py`
   - **Needs:** Refactoring to match code quality of legacy `GCubeViewer`
 
+- ❌ **Q12.** Fix AppWindow.viewer type mismatch **(CRITICAL)**
+  - **Status:** New (2025-12-06)
+  - **Problem:** Protocol/implementation type mismatch causing mypy errors
+  - **Details:**
+    - `AppWindow` protocol declares `viewer -> GCubeViewer`
+    - `PygletAppWindow` returns `GCubeViewer | ModernGLCubeViewer | None`
+    - `GCubeViewer` and `ModernGLCubeViewer` are siblings (both inherit `AnimatableViewer`)
+  - **Mypy errors:**
+    - `viewer: expected "GCubeViewer", got "GCubeViewer | ModernGLCubeViewer | None"`
+    - Multiple `[abstract]` errors due to type conflicts
+  - **Fix options:**
+    1. Update `AppWindow` protocol to use `AnimatableViewer` as viewer type
+    2. Make `ModernGLCubeViewer` inherit from `GCubeViewer`
+    3. Create common base/protocol for both viewers
+  - **Files:**
+    - `src/cube/presentation/gui/protocols/AppWindow.py:50` - protocol definition
+    - `src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py:148` - implementation
+    - `src/cube/presentation/gui/protocols/AnimatableViewer.py` - common protocol
+
 ---
 
 ## New entries need to reformat and add above

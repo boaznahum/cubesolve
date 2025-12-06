@@ -20,10 +20,15 @@ Usage:
     backend = BackendRegistry.get_backend("tkinter")
 """
 
+from typing import TYPE_CHECKING
+
 from cube.presentation.gui.backends.tkinter.TkinterRenderer import TkinterRenderer
 from cube.presentation.gui.backends.tkinter.TkinterEventLoop import TkinterEventLoop
 from cube.presentation.gui.backends.tkinter.TkinterAnimation import TkinterAnimation
 from cube.presentation.gui.backends.tkinter.TkinterAppWindow import TkinterAppWindow
+
+if TYPE_CHECKING:
+    from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
 __all__ = [
     "TkinterRenderer",
