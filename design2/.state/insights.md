@@ -4,6 +4,31 @@ This file captures key understandings gained during the documentation project.
 
 ---
 
+## Project Architecture (from README)
+
+**Source:** README.md (2025-12-06)
+
+Architecture layers:
+- **Entry Points** - main_pyglet.py, main_headless.py, main_any_backend.py
+- **GUI Layer** - Window, Viewer, Animation Manager
+- **Application Core** - App, Cube, Operator, Solver, ViewState
+- **Backend Abstraction** - Renderer, EventLoop protocols
+
+**Model package contains:** Cube, Face, Slice, Corner, Edge, Center
+
+**Solvers (order matters - reflects two-phase solving):**
+1. `nxn_centers.py` - Big cube centers (Phase 1)
+2. `nxn_edges.py` - Big cube edges (Phase 1)
+3. `l1_cross.py`, `l1_corners.py` - Layer 1 (Phase 2)
+4. `l2.py` - Layer 2
+5. `l3_cross.py`, `l3_corners.py` - Layer 3
+
+**Algs:** in algs.py - can be combined, inverted, sliced, multiplied
+
+**Diagrams available:** readme_files/ folder contains architecture diagrams
+
+---
+
 ## Two-Phase Cube Architecture
 
 **Source:** Human developer explanation (2025-12-06)
