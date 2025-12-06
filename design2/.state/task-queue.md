@@ -45,8 +45,16 @@
 ## Remaining Questions to Investigate
 
 ### High Priority
-1. **Slice class (M, E, S)** - How do middle slice rotations work?
-2. **Face.rotate() details** - Complete the rotation mechanics documentation
+1. **PartEdge Attribute System** ⚠️ VERY IMPORTANT
+   - `attributes` - Structural/positional (origin, on_x, on_y, cw)
+   - `c_attributes` - Color-associated, moves WITH color during rotation
+   - `f_attributes` - Fixed, never moves (stays with physical slot)
+   - **Investigate:** How used in animation, solving visualization, debugging
+   - **Investigate:** Why three types? What problem do they solve?
+   - **Location:** `PartEdge.py`, used in `Face.py:97-125`, `Edge.py:379-396`
+
+2. **Slice class (M, E, S)** - How do middle slice rotations work?
+3. **Face.rotate() details** - Complete the rotation mechanics documentation
 
 ### Medium Priority
 3. **PartEdge class** - What is the role of the smallest unit?
