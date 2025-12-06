@@ -195,7 +195,16 @@
   - **Goal:** Debug dump should be available to any code that creates an application (tests, scripts, etc.)
   - **Needs:** Architecture review to determine proper location (maybe `AbstractApp` or `ApplicationAndViewState`)
 
+- ❌ **Q11.** Clean up ModernGLCubeViewer.py code quality **(HIGH PRIORITY)**
+  - **Status:** New (2025-12-06)
+  - **Problem:** Code is messy compared to legacy pyglet implementation
+  - **File:** `src/cube/presentation/gui/backends/pyglet2/ModernGLCubeViewer.py`
+  - **Needs:** Refactoring to match code quality of legacy `GCubeViewer`
+
 ---
+
+## New entries need to reformat and add above
+
 
 ## Done Tasks
 

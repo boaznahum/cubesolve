@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="MypySettings">
-    <option name="configFilePath" value="F:\dev\code\python\cubesolve\mypy.ini" />
-    <option name="mypyExecutable" value="F:\dev\code\python\cubesolve\venv311\Scripts\mypy.exe" />
+    <option name="configFilePath" value="$PROJECT_DIR$/pyproject.toml" />
+    <option name="mypyExecutable" value="$PROJECT_DIR$/.venv/Scripts/mypy.exe" />
     <option name="projectDirectory" value="$PROJECT_DIR$" />
   </component>
 </project>
