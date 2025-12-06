@@ -3,7 +3,13 @@
 This document explains the most complex concept in the cube model - the edge coordinate system
 and the `right_top_left_same_direction` flag.
 
-**Reference:** `coor-system-doc/right-top-left-coordinates.jpg` (human-drawn diagram)
+**Reference:** See the hand-drawn diagram below.
+
+## Hand-Drawn Reference Diagram
+
+![Edge Coordinate System - Hand-drawn diagram showing R/T directions for all edges](../coor-system-doc/right-top-left-coordinates.jpg)
+
+*Human-drawn diagram showing the R (right) and T (top) direction arrows for each face, illustrating which edge pairs have same vs opposite indexing directions.*
 
 ---
 
@@ -99,9 +105,9 @@ When two faces share an edge, their R/T directions along that edge may:
 
 ---
 
-## Visual Reference: The Hand-Drawn Diagram
+## Visual Reference: Interpreting the Hand-Drawn Diagram
 
-The diagram in `coor-system-doc/right-top-left-coordinates.jpg` shows:
+The hand-drawn diagram at the top of this document shows:
 
 ```
                          U
@@ -264,7 +270,6 @@ With `right_top_left_same_direction`:
 | `Edge.py:91-110` | `get_ltr_index_from_slice_index()` - uses the flag |
 | `Edge.py:112-127` | `get_slice_index_from_ltr_index()` - inverse conversion |
 | `Face.py:211-267` | `rotate()` - uses index conversion for slice copying |
-| `coor-system-doc/right-top-left-coordinates.jpg` | Human-drawn reference diagram |
 
 ---
 
