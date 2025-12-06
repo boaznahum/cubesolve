@@ -251,6 +251,91 @@ and correctly rotate slices."
 
 ---
 
+## PartEdge Attribute System (CRITICAL for Animation!)
+
+**Source:** PartEdge.py, Face.py, OpAnnotation.py, FaceTracker.py (2025-12-06)
+
+### Three Attribute Types
+
+PartEdge has three distinct dictionary attributes for different purposes:
+
+| Attribute | Moves with Color? | Purpose |
+|-----------|-------------------|---------|
+| `attributes` | No (structural) | Physical slot properties |
+| `c_attributes` | **YES** | Track pieces as they move |
+| `f_attributes` | **NO** | Mark destination slots |
+
+### 1. `attributes` - Structural/Positional
+
+Set ONCE during `Face.finish_init()`:
+- `"origin"` (bool) - Marks slice 0 on each edge
+- `"on_x"` (bool) - X direction marker
+- `"on_y"` (bool) - Y direction marker
+- `"cw"` (int) - Clockwise rotation index
+
+**Never moves** - describes the physical slot position.
+
+### 2. `c_attributes` - Color-Associated (KEY INSIGHT!)
+
+**COPIED during `PartEdge.copy_color()`** - this is the magic!
+
+```python
+def copy_color(self, source):
+    self._color = source._color
+    self.c_attributes.clear()
+    self.c_attributes.update(source.c_attributes)  # <-- COPIED!
+```
+
+**Use case:** Track a specific sticker as it moves around:
+```python
+# Put a marker
+edge.c_attributes["track_key"] = True
+# After rotation, find where it went
+def pred(s): return "track_key" in s.edge.c_attributes
+```
+
+Used by: FaceTracker.by_center_piece(), VMarker.C1
+
+### 3. `f_attributes` - Fixed to Slot
+
+**NOT copied during rotation** - stays at the physical position!
+
+**Use case:** Mark a destination (where piece should go):
+```python
+# Mark destination slot
+target.f_attributes["dest"] = True
+# After rotation, marker is still there
+```
+
+Uses `defaultdict(bool)` so missing keys return False.
+
+Used by: OpAnnotation for VMarker.C2
+
+### Animation System Integration
+
+The annotation system uses both attribute types together:
+
+| AnnWhat Value | Attribute | Marker | Visual Effect |
+|---------------|-----------|--------|---------------|
+| `AnnWhat.Moved` | c_attributes | C1 | Marker follows sticker |
+| `AnnWhat.FixedPosition` | f_attributes | C2 | Marker stays at destination |
+| `AnnWhat.Both` | Both | Both | Shows source AND target |
+
+**Example animation flow:**
+1. Mark source piece with c_attributes marker (follows it)
+2. Mark destination with f_attributes marker (stays put)
+3. Execute rotation
+4. Both markers now at same position = piece arrived!
+
+### Why Three Types?
+
+This is a brilliant design for puzzle visualization:
+- **"Track this piece"** = put marker in c_attributes (moves with piece)
+- **"Mark destination"** = put marker in f_attributes (stays at slot)
+- **"Know slot position"** = read attributes (coordinate system)
+
+---
+
 ## Questions Still to Investigate
 
 See `.state/task-queue.md` for full list.
@@ -265,6 +350,7 @@ High priority:
 
 - `design2/model-id-system.md` - Visual diagrams of ID system
 - `design2/edge-coordinate-system.md` - right_top_left_same_direction explained
+- `design2/partedge-attribute-system.md` - Three attribute types for animation
 
 ---
 
