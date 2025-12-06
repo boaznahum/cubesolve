@@ -65,6 +65,7 @@ pyglet2 = ["pyglet>=2.0"]
 dev = [
     "pytest",
     "mypy",
+    "pyright",
     "types-colorama",
     "types-keyboard",
     "Pillow",  # For generating test face textures (resources/faces/generate_images.py)
@@ -95,11 +96,41 @@ markers = [
 addopts = "--ignore=tests/gui --ignore=tests/console"
 
 [tool.mypy]
+# Mypy configuration - single source of truth (replaces mypy.ini)
+# Run from command line: .venv/Scripts/python.exe -m mypy src/cube
+# Run from PyCharm: Settings → Tools → Mypy → set executable to .venv/Scripts/mypy.exe
 python_version = "3.14"
+
+# Error reporting
+show_error_codes = true
+show_column_numbers = true
+# pretty = true  # Disabled - breaks clickable links in PyCharm
+show_error_context = false  # Disable code snippets for cleaner output
+
+# Strictness - no relaxation, show all errors
+strict_optional = true
 warn_return_any = true
 warn_unused_configs = true
+warn_unreachable = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Import handling
 ignore_missing_imports = true
+
+# Error codes
 enable_error_code = ["deprecated"]
+disable_error_code = ["import-untyped"]
+
+# Exclude test/experimental directories
+exclude = [
+    "^__try/",
+]
+
+# Ignore errors in experimental code
+[[tool.mypy.overrides]]
+module = "__try.*"
+ignore_errors = true
 
 [tool.pyright]
 pythonVersion = "3.14"

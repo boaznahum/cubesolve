@@ -92,7 +92,8 @@
       "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\python.exe\" -m pytest tests/gui -v --speed-up 5 --backend=pyglet)",
       "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\pip.exe\" install -e E:devcodecubesolve)",
       "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\pip.exe\" install -e \"E:\\dev\\code\\cubesolve\")",
-      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\pip.exe\" install:*)"
+      "Bash(\"E:\\dev\\code\\cubesolve\\.venv_pyglet1_legacy\\Scripts\\pip.exe\" install:*)",
+      "WebFetch(domain:stackoverflow.com)"
     ],
     "deny": [],
     "ask": []
