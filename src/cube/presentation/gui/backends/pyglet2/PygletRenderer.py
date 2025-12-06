@@ -487,7 +487,7 @@ class PygletViewStateManager(ViewStateManager):
         """Multiply current matrix by given 4x4 matrix."""
         # Convert to column-major order for OpenGL
         m = (gl.GLfloat * 16)()
-        m[:] = matrix.flatten(order='F')
+        m[:] = matrix.flatten(order='F').tolist()
         gl.glMultMatrixf(m)
 
     def look_at(

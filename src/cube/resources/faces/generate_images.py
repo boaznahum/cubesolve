@@ -89,6 +89,8 @@ def generate_gradients(output_dir: Path, size: int = 256) -> None:
     for face_name, base_color in FACE_COLORS.items():
         img = Image.new('RGB', (size, size), (0, 0, 0))
         pixels = img.load()
+        if pixels is None:
+            raise RuntimeError(f"Failed to load pixels for {face_name}")
 
         # Create gradient (dark bottom-left to light top-right)
         for y in range(size):
