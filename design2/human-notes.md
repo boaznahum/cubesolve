@@ -6,61 +6,59 @@ This file contains background information and instructions from the human develo
 
 ## Background
 
-under design2 we start a huge projrct of doumentation of the cube solve priject, the gial is :
-full yndestabdung abd dicumentation of the model and presentation layer.
-considtence between design 2 dicuments and doc string in the cide in both direction
-full graphjc diagrams id any askect i request.
-any change in cide shuuld be rfelccted here.
-any change requires my cinfirmation.
+Under design2 we start a huge project of documentation of the cube solve project. The goals are:
+- Full understanding and documentation of the model and presentation layer
+- Consistency between design2 documents and docstrings in the code (bidirectional)
+- Full graphic diagrams of any aspect I request
+- Any change in code should be reflected here
+- Any change requires my confirmation
 
+## Instructions to Claude
 
-## Instructions to claude
-- the instrction here are not in particukar otder
+- The instructions here are not in particular order
 
-- you are allowed to change this file fir better fitmstting snd englush improvement if need ask for clarification. see state mechanidm below
+- You are allowed to change this file for better formatting and English improvement if needed. Ask for clarification if unclear. See state mechanism below.
 
-- you need to drvelope snd cistructca state mechsnidm to work on the dicumnets tadk akas from now this task
+- You need to develop and construct a state mechanism to work on the documentation task (from now: "this task")
 
-- the state mrcsnidm shuld support:
--- end clsude session in sny step snd next sesdion know exactly  how ti continue. if need consult againts how to fo it.
--- not repeat tasks if input where not changed gir example tefitmatting this file as described below.
--- details on what shuld be done what shoild still investigate.
--- when rver youvgit or learn new instructiond you dhold mrniruze it in gile in the state areA.
--- all outout  goes  into design  2 folder akas the folder  or dic string in vide
--- all yiur enternsl stAte tukes yku mearn snd ghe mrcanidm you develope shoikd be in .state filder unfer this folder.
-. all inernal state must be git controoled fikes to fitfull the tule jf new session can start
+- The state mechanism should support:
+  - End Claude session at any step and next session knows exactly how to continue. If needed, consult on how to do it.
+  - Not repeat tasks if input was not changed (for example, reformatting this file as described below)
+  - Details on what should be done, what should still be investigated
+  - Whenever you get or learn new instructions, you should memorize it in a file in the state area
+  - All output goes into design2 folder (a.k.a. this folder) or docstrings in code
+  - All your internal state (things you learn and the mechanism you develop) should be in `.state` folder under this folder
+  - All internal state must be git-controlled files to fulfill the rule that new session can start
 
-- ask me if domething us not clear
+- Ask me if something is not clear
 
-indtructuin sbout documents:
+### Instructions About Documents
 
-there are few  area of documentstion that you mudt keep consist - this is the modt imprying rule, i dont need to adj yih agsin and agsin to align them
-1. the code
-2. the doc string in the code akdo yhe ones i write in the past
-3. the documents you create in thus folder
-4. your internal state ehre you keep yiur insights
+There are few areas of documentation that you must keep consistent - this is the most important rule. I don't need to ask you again and again to align them:
+1. The code
+2. The docstrings in the code (also the ones I wrote in the past)
+3. The documents you create in this folder
+4. Your internal state where you keep your insights
 
-it will be great if yiu csn put clicksbke links btween documents snd doc stringd
+It will be great if you can put clickable links between documents and docstrings.
 
-use best agrnts to understabd the modrl cide and katter the presrntstion if you sre bot sure ask me
+Use best agents to understand the model code and later the presentation. If you are not sure, ask me.
 
-if you need more instructions you can asked snd add them here
-
-(Add your instructions here)
+If you need more instructions you can ask and add them here.
 
 ## Key Concepts to Document
 
-i want to start from the model then solvers and then to thevoresentstion layers
+I want to start from the model, then solvers, and then to the presentation layers.
 
-pay focus  if understanding the the cube solituon heve two phasex - a big cube where the part slices are the importnat
-egrn it brcome a 3x3 cube - reduction - wgrn the parts in the model us the inlut to the solver.
-(Note: some part methods are useless before reduction - e.g., part color is undefined until all slices are in place) 
+Pay focus on understanding that the cube solution has two phases:
+- A big cube where the part slices are important
+- Then it becomes a 3x3 cube (reduction) when the parts in the model become the input to the solver
 
-giucs on the position and cilor ids things line this
+*(Note: Some part methods are useless before reduction - e.g., part color is undefined until all slices are in place)*
 
-underdtsnd the role of them when rotating silces and faces hiw color ids play role
+Focus on the position and color IDs - things like this.
 
-(Add key concepts here)
+Understand the role of them when rotating slices and faces, how color IDs play a role.
 
 ## The Story: How I Developed the Cube
 
@@ -84,6 +82,7 @@ The cube solution has two distinct phases, and this affects which part methods a
 **Key insight:** Certain part properties/methods only make sense in certain phases.
 
 *(More story to be added here)*
+
 ---
 
-*This file is maintained by the human developer to guide the documentation effort. but see cooment above what sllwed to be changed*
+*This file is maintained by the human developer to guide the documentation effort. See comment above about what Claude is allowed to change.*
