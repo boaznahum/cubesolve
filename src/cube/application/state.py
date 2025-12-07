@@ -1,17 +1,14 @@
-import math
 import pickle
 import tempfile
 from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Literal, Any, Tuple, TYPE_CHECKING, Callable
+from typing import Literal, Any, Tuple, Callable
 
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
 from cube.application import config
 
-if TYPE_CHECKING:
-    from cube.presentation.gui.protocols.Renderer import Renderer
 from cube.application.animation.AnimationText import AnimationText
 from cube.domain.model.Cube import Cube
 from cube.domain.model.cube_boy import FaceName
@@ -181,6 +178,11 @@ class ApplicationAndViewState:
     def alpha_delta(self):
         return self._alpha_delta
 
+    @property
+    def fov_y(self) -> float:
+        """Get current field of view Y angle."""
+        return self._fov_y
+
     def inc_fov_y(self):
         self._fov_y += 1
 
@@ -220,56 +222,6 @@ class ApplicationAndViewState:
     def background_gray(self, value: float) -> None:
         """Set background gray level (clamped to 0.0-0.5)."""
         self._background_gray = max(0.0, min(0.5, value))
-
-    def prepare_objects_view(self, renderer: "Renderer") -> None:
-        """Set up the model-view transformation for drawing objects.
-
-        Applies offset translation and rotations based on view state.
-        Call restore_objects_view() when done drawing.
-
-        Args:
-            renderer: Renderer to use for view transformations
-        """
-        view = renderer.view
-
-        view.push_matrix()
-        view.load_identity()
-
-        o = self._offset
-        view.translate(float(o[0]), float(o[1]), float(o[2]))
-
-        # Apply initial rotation (base orientation)
-        view.rotate(math.degrees(self.alpha_x_0), 1, 0, 0)
-        view.rotate(math.degrees(self.alpha_y_0), 0, 1, 0)
-        view.rotate(math.degrees(self.alpha_z_0), 0, 0, 1)
-
-        # Apply user-controlled rotation (from mouse drag)
-        view.rotate(math.degrees(self.alpha_x), 1, 0, 0)
-        view.rotate(math.degrees(self.alpha_y), 0, 1, 0)
-        view.rotate(math.degrees(self.alpha_z), 0, 0, 1)
-
-    def restore_objects_view(self, renderer: "Renderer") -> None:
-        """Undo prepare_objects_view - restore previous matrix state.
-
-        Args:
-            renderer: Renderer to use for view transformations
-        """
-        renderer.view.pop_matrix()
-
-    def set_projection(self, width: int, height: int, renderer: "Renderer") -> None:
-        """Set up the projection matrix for the viewport.
-
-        Args:
-            width: Viewport width in pixels
-            height: Viewport height in pixels
-            renderer: Renderer to use for view transformations
-        """
-        renderer.view.set_projection(
-            width, height,
-            fov_y=float(self._fov_y),
-            near=1.0,
-            far=1000.0
-        )
 
     @property
     def get_speed_index(self):

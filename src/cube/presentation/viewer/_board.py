@@ -19,6 +19,7 @@ from .TextureData import TextureData
 from cube.domain.model import PartEdge
 from cube.domain.model.cube_boy import FaceName
 from ..gui.protocols import Renderer
+from ..gui.ViewSetup import ViewSetup
 from ..gui.types import DisplayList
 
 
@@ -273,12 +274,11 @@ class _Board:
     def _prepare_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self.vs
-        vs.prepare_objects_view(self.renderer)
+        ViewSetup.prepare_objects_view(vs, self.renderer)
 
     def _restore_view_state(self) -> None:
 
-        vs: ApplicationAndViewState = self.vs
-        vs.restore_objects_view(self.renderer)
+        ViewSetup.restore_objects_view(self.renderer)
 
     @property
     def alpha_x(self):

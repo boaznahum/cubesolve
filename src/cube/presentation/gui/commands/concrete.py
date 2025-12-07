@@ -11,6 +11,7 @@ from typing import Literal, TYPE_CHECKING
 from cube.domain.model.cube_boy import FaceName
 from cube.domain.solver import SolveStep
 from .base import Command, CommandContext, CommandResult
+from ..ViewSetup import ViewSetup
 
 if TYPE_CHECKING:
     from cube.domain.algs.Alg import Alg
@@ -173,7 +174,7 @@ class ZoomInCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         ctx.vs.dec_fov_y()
-        ctx.vs.set_projection(ctx.window.width, ctx.window.height, ctx.window.renderer)
+        ViewSetup.set_projection(ctx.vs, ctx.window.width, ctx.window.height, ctx.window.renderer)
         return CommandResult(no_gui_update=True)
 
 
@@ -183,7 +184,7 @@ class ZoomOutCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         ctx.vs.inc_fov_y()
-        ctx.vs.set_projection(ctx.window.width, ctx.window.height, ctx.window.renderer)
+        ViewSetup.set_projection(ctx.vs, ctx.window.width, ctx.window.height, ctx.window.renderer)
         return CommandResult(no_gui_update=True)
 
 
@@ -193,7 +194,7 @@ class ViewResetCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         ctx.vs.reset()
-        ctx.vs.set_projection(ctx.window.width, ctx.window.height, ctx.window.renderer)
+        ViewSetup.set_projection(ctx.vs, ctx.window.width, ctx.window.height, ctx.window.renderer)
         return CommandResult(no_gui_update=True)
 
 
@@ -563,7 +564,7 @@ class ResetCubeAndViewCommand(Command):
     def execute(self, ctx: CommandContext) -> CommandResult:
         ctx.app.reset()
         ctx.vs.reset()
-        ctx.vs.set_projection(ctx.window.width, ctx.window.height, ctx.window.renderer)
+        ViewSetup.set_projection(ctx.vs, ctx.window.width, ctx.window.height, ctx.window.renderer)
         return CommandResult()
 
 

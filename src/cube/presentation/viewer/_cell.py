@@ -19,6 +19,7 @@ from cube.domain.model import PartSliceHashID
 from cube.domain.model import Part, Corner, Edge, Center
 from cube.domain.model import PartSlice, EdgeWing, CenterSlice
 from ..gui.protocols import Renderer
+from ..gui.ViewSetup import ViewSetup
 from ..gui.types import DisplayList, TextureCoord, TextureMap, Point3D, Color3
 
 _CELL_SIZE: int = config.CELL_SIZE
@@ -218,12 +219,11 @@ class _Cell:
     def _prepare_view_state(self) -> None:
 
         vs: ApplicationAndViewState = self._face_board.board.vs
-        vs.prepare_objects_view(self._renderer)
+        ViewSetup.prepare_objects_view(vs, self._renderer)
 
     def _restore_view_state(self) -> None:
 
-        vs: ApplicationAndViewState = self._face_board.board.vs
-        vs.restore_objects_view(self._renderer)
+        ViewSetup.restore_objects_view(self._renderer)
 
     @contextmanager
     def _gen_list_for_slice(self, p_slice: PartSlice, dest: dict[PartSliceHashID, MutableSequence[int]]):

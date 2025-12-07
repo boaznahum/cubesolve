@@ -22,6 +22,7 @@ from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import InternalSWError
 from cube.application.state import ApplicationAndViewState
 from cube.presentation.gui.protocols import AppWindow
+from cube.presentation.gui.ViewSetup import ViewSetup
 from cube.domain.model.cube_boy import FaceName
 from cube.domain.model.Face import Face
 from cube.domain.model import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
@@ -77,7 +78,7 @@ def on_mouse_scroll(window: AppWindow, scroll_y):
 
     vs.change_fov_y(scroll_y)
 
-    vs.set_projection(window.width, window.height, window.renderer)
+    ViewSetup.set_projection(vs, window.width, window.height, window.renderer)
 
 
 def _handle_model_view_rotate_by_drag(win, dx, dy):

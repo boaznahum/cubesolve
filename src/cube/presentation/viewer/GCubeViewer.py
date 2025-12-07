@@ -21,6 +21,7 @@ from ._faceboard import _FaceBoard
 from cube.application import config
 from ..gui.protocols.Renderer import Renderer
 from ..gui.protocols.AnimatableViewer import AnimatableViewer
+from ..gui.ViewSetup import ViewSetup
 from ..gui.types import DisplayList
 
 if TYPE_CHECKING:
@@ -281,7 +282,7 @@ class GCubeViewer(AnimatableViewer):
                 animation.done = True
                 return
 
-            vs.prepare_objects_view(renderer)
+            ViewSetup.prepare_objects_view(vs, renderer)
 
             ct = math.cos(current_angle)
             st = math.sin(current_angle)
@@ -300,7 +301,7 @@ class GCubeViewer(AnimatableViewer):
                 for f in gui_objects:
                     renderer.display_lists.call_list(DisplayList(f))
             finally:
-                vs.restore_objects_view(renderer)
+                ViewSetup.restore_objects_view(renderer)
 
         animation.delay = animation_speed.delay_between_steps
         animation._animation_draw_only = _draw
