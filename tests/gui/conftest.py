@@ -10,6 +10,22 @@ Provides command-line options for GUI test configuration:
 import pytest
 
 
+def _is_tkinter_available() -> bool:
+    """Check if tkinter is properly installed and usable."""
+    try:
+        import tkinter as tk
+        # Try to create a Tk instance to verify Tcl/Tk is properly installed
+        root = tk.Tk()
+        root.destroy()
+        return True
+    except Exception:
+        return False
+
+
+# Cache the result at module load time
+_TKINTER_AVAILABLE = _is_tkinter_available()
+
+
 def pytest_addoption(parser):
     """Add custom command-line options for GUI tests."""
     parser.addoption(
@@ -58,7 +74,10 @@ def pytest_generate_tests(metafunc):
             # Run with all available backends
             # Note: pyglet (legacy GL) removed - doesn't work with pyglet 2.0
             # Use pyglet2 backend instead which uses modern OpenGL
-            backends = ["pyglet2", "headless", "console", "tkinter", "web"]
+            backends = ["pyglet2", "headless", "console", "web"]
+            # Only include tkinter if it's properly installed
+            if _TKINTER_AVAILABLE:
+                backends.append("tkinter")
         else:
             # Single backend specified
             backends = [backend_option]
