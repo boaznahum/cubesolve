@@ -7,7 +7,6 @@
 | B1 | Bug | HIGH | GUI Animation Solver Bug (Lazy Cache Initialization) |
 | B5 | Bug | - | Missing debug output when running with `--debug-all` |
 | B6 | Bug | - | Celebration effect triggers on reset/resize |
-| B7 | Bug | FIXED | Commands accessing ctx.viewer fail in pyglet2 backend |
 | G2 | GUI | - | Investigate pyopengltk for tkinter backend |
 | G5 | GUI | - | Comprehensive Command Testing Plan |
 | G6 | GUI | - | Additional lighting improvements (pyglet2) |
@@ -21,7 +20,6 @@
 | Q9 | Quality | - | Clean up dead code debug prints in solver |
 | Q10 | Quality | - | Relocate `debug_dump()` to better location |
 | Q11 | Quality | HIGH | Clean up ModernGLCubeViewer.py code quality |
-| Q12 | Quality | FIXED | Fix AppWindow.viewer type mismatch |
 | Q13 | Quality | - | Evaluate pyright strict mode (1905 errors) |
 | Q14 | Quality | - | Fix vs.debug() performance (avoid template strings) |
 
@@ -388,6 +386,9 @@
   - **Fixed:** Added `SOLVE_ALL_NO_ANIMATION` command and mapped Shift+/ to it
   - Key binding updated in `key_bindings.py:104`
   - New command in `Command.py:552`
+
+- ✅ **B7.** Commands accessing ctx.viewer fail in pyglet2 backend
+  - **Fixed:** 2025-12-07 (details not recorded)
 
 ### GUI & Testing
 
