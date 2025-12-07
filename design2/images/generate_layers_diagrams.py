@@ -2,10 +2,12 @@
 Generate diagrams for the Layers and Dependencies documentation.
 Creates combined layers diagram showing package hierarchy and dependencies.
 
-All violations FIXED (as of 2025-12-07):
-- V1: FIXED - domain.exceptions created, no longer imports from application.exceptions
-- V2: FIXED - domain.solver.protocols created, domain imports protocols not concrete classes
-- V3: FIXED - VMarker moved to domain.model, presentation re-exports for backward compatibility
+Violations status (as of 2025-12-07):
+- V1: FIXED - domain.exceptions created
+- V2: FIXED - domain.solver.protocols created
+- V3: FIXED - VMarker moved to domain.model
+- V4: OPEN - domain imports config from application (13 files)
+- V5: OPEN - application imports protocols/viewer from presentation (4 files)
 """
 
 import matplotlib.pyplot as plt
@@ -473,10 +475,13 @@ def create_combined_layers_diagram():
     arrow(1.3, 6.2, 1.5, 2.5, 'green')      # app.state -> utils
     arrow(16.5, 6, 16.5, 2.5, 'green')      # pres -> resources
 
-    # All violations FIXED - no red arrows needed
-    # V1 FIXED - domain.exceptions created
-    # V2 FIXED - domain.solver.protocols created
-    # V3 FIXED - VMarker moved to domain.model
+    # V1, V2, V3 FIXED
+    # V4 OPEN - domain imports config from application (13 files)
+    # V5 OPEN - application imports protocols from presentation (4 files)
+
+    # Red arrows for remaining violations
+    arrow(5.7, 4.1, 3.6, 6.2, 'red', 'V4')    # domain.model -> app.config (wrong direction)
+    arrow(1.3, 6.2, 11.3, 7.5, 'red', 'V5')   # app.animation -> pres.gui.protocols (wrong direction)
 
     # Legend
     ax.add_patch(FancyBboxPatch((0, 11), 6.5, 2.5, boxstyle="round,pad=0.1",
@@ -485,7 +490,9 @@ def create_combined_layers_diagram():
     ax.annotate('', xy=(2, 12.2), xytext=(1, 12.2),
                 arrowprops=dict(arrowstyle='->', color='green', lw=2))
     ax.text(2.3, 12.2, 'Correct (top→bottom)', ha='left', va='center', fontsize=9)
-    ax.text(1, 11.4, 'All violations FIXED!', ha='left', va='center', fontsize=9, color='green', fontweight='bold')
+    ax.annotate('', xy=(2, 11.4), xytext=(1, 11.4),
+                arrowprops=dict(arrowstyle='->', color='red', lw=2))
+    ax.text(2.3, 11.4, 'WRONG (V4, V5)', ha='left', va='center', fontsize=9, color='red', fontweight='bold')
 
     plt.tight_layout()
     plt.savefig('combined-layers-dependencies.png', dpi=150, bbox_inches='tight',
