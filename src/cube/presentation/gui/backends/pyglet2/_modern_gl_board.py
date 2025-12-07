@@ -318,6 +318,90 @@ class ModernGLBoard:
                     cell.generate_textured_vertices(verts_per_color[color], size)
                 cell.generate_line_vertices(line_verts)
 
+    def generate_per_cell_textured_geometry(
+        self,
+        animated_parts: "set[PartSlice] | None" = None,
+    ) -> tuple[
+        dict[int | None, np.ndarray],  # static triangles per texture handle
+        np.ndarray,  # static line data
+        dict[int | None, np.ndarray],  # animated triangles per texture handle
+        np.ndarray | None,  # animated line data
+    ]:
+        """Generate vertex data grouped by cell texture handle.
+
+        Used for per-cell textures stored in PartEdge.c_attributes.
+        Each cell's texture handle is looked up from c_attributes and
+        cells with the same texture are batched together.
+
+        Cells without texture (None) are grouped together for fallback rendering.
+
+        Args:
+            animated_parts: Set of PartSlices being animated, or None
+
+        Returns:
+            Tuple of (texture_triangles, lines, animated_texture_triangles, animated_lines)
+        """
+        verts_per_texture: dict[int | None, list[float]] = {}
+        animated_verts_per_texture: dict[int | None, list[float]] = {}
+        line_verts: list[float] = []
+        animated_line_verts: list[float] = []
+
+        # Main faces
+        for gl_face in self._faces.values():
+            self._generate_per_cell_textured_face_verts(
+                gl_face, animated_parts,
+                verts_per_texture, line_verts,
+                animated_verts_per_texture, animated_line_verts,
+            )
+
+        # Shadow faces
+        for gl_face in self._shadow_faces.values():
+            self._generate_per_cell_textured_face_verts(
+                gl_face, None,
+                verts_per_texture, line_verts,
+                {}, [],
+            )
+
+        return (
+            {t: np.array(v, dtype=np.float32) for t, v in verts_per_texture.items() if v},
+            np.array(line_verts, dtype=np.float32),
+            {t: np.array(v, dtype=np.float32) for t, v in animated_verts_per_texture.items() if v},
+            np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None,
+        )
+
+    def _generate_per_cell_textured_face_verts(
+        self,
+        gl_face: ModernGLFace,
+        animated_parts: "set[PartSlice] | None",
+        verts_per_texture: dict[int | None, list[float]],
+        line_verts: list[float],
+        animated_verts_per_texture: dict[int | None, list[float]],
+        animated_line_verts: list[float],
+    ) -> None:
+        """Generate vertices for one face, grouped by cell texture handle.
+
+        Uses full UV (0,0 to 1,1) since each cell has its own texture.
+        """
+        for cell in gl_face.cells:
+            texture_handle = cell.cell_texture  # From c_attributes
+
+            # Check if this cell is animated
+            is_animated = (
+                animated_parts is not None
+                and cell.part_slice is not None
+                and cell.part_slice in animated_parts
+            )
+
+            if is_animated:
+                verts_per_texture.setdefault(texture_handle, [])
+                animated_verts_per_texture.setdefault(texture_handle, [])
+                cell.generate_full_uv_vertices(animated_verts_per_texture[texture_handle])
+                cell.generate_line_vertices(animated_line_verts)
+            else:
+                verts_per_texture.setdefault(texture_handle, [])
+                cell.generate_full_uv_vertices(verts_per_texture[texture_handle])
+                cell.generate_line_vertices(line_verts)
+
     def get_face_center(self, face_name: FaceName) -> ndarray:
         """Get the center point of a face."""
         return self._faces[face_name].get_center_point()

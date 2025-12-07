@@ -33,6 +33,9 @@ from cube.domain.model.cube_boy import Color
 
 if TYPE_CHECKING:
     from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model.PartEdge import PartEdge
+
+from ._modern_gl_constants import CELL_TEXTURE_KEY
 
 # Border line color (black)
 _LINE_COLOR = (0.0, 0.0, 0.0)
@@ -51,10 +54,11 @@ class ModernGLCell:
         row: Row index on the face (0 = bottom)
         col: Column index on the face (0 = left)
         part_slice: The PartSlice this cell represents (for animation)
+        part_edge: The PartEdge for this face (for texture lookup from c_attributes)
     """
 
     __slots__ = [
-        'row', 'col', 'part_slice',
+        'row', 'col', 'part_slice', 'part_edge',
         '_corners',  # [left_bottom, right_bottom, right_top, left_top]
         '_normal',   # Face normal vector
         '_color',    # RGB color tuple
@@ -65,6 +69,7 @@ class ModernGLCell:
         row: int,
         col: int,
         part_slice: "PartSlice | None",
+        part_edge: "PartEdge | None",
         corners: list[ndarray],
         normal: ndarray,
         color: tuple[float, float, float],
@@ -75,6 +80,7 @@ class ModernGLCell:
             row: Row index (0 = bottom row)
             col: Column index (0 = left column)
             part_slice: The PartSlice for animation tracking (None for centers on some sizes)
+            part_edge: The PartEdge for this face (for texture from c_attributes)
             corners: List of 4 corner positions [lb, rb, rt, lt] as numpy arrays
             normal: Face normal vector (outward direction)
             color: RGB color tuple (0.0-1.0 range)
@@ -82,6 +88,7 @@ class ModernGLCell:
         self.row = row
         self.col = col
         self.part_slice = part_slice
+        self.part_edge = part_edge
         self._corners = corners
         self._normal = normal
         self._color = color
@@ -142,6 +149,33 @@ class ModernGLCell:
         dest.extend([rt[0], rt[1], rt[2], nx, ny, nz, r, g, b, u1, v1])
         dest.extend([lt[0], lt[1], lt[2], nx, ny, nz, r, g, b, u0, v1])
 
+    def generate_full_uv_vertices(self, dest: list[float]) -> None:
+        """Generate triangle vertices with full UV range (0,0) to (1,1).
+
+        Used for per-cell textures where each cell has its own texture.
+        The entire texture maps to the entire cell quad.
+
+        Appends 6 vertices (2 triangles) to dest.
+        Each vertex: x, y, z, nx, ny, nz, r, g, b, u, v (11 floats)
+
+        Args:
+            dest: List to append vertex data to
+        """
+        lb, rb, rt, lt = self._corners
+        nx, ny, nz = float(self._normal[0]), float(self._normal[1]), float(self._normal[2])
+        r, g, b = self._color
+
+        # Full UV: cell owns entire texture
+        # Triangle 1: lb(0,0), rb(1,0), rt(1,1)
+        dest.extend([lb[0], lb[1], lb[2], nx, ny, nz, r, g, b, 0.0, 0.0])
+        dest.extend([rb[0], rb[1], rb[2], nx, ny, nz, r, g, b, 1.0, 0.0])
+        dest.extend([rt[0], rt[1], rt[2], nx, ny, nz, r, g, b, 1.0, 1.0])
+
+        # Triangle 2: lb(0,0), rt(1,1), lt(0,1)
+        dest.extend([lb[0], lb[1], lb[2], nx, ny, nz, r, g, b, 0.0, 0.0])
+        dest.extend([rt[0], rt[1], rt[2], nx, ny, nz, r, g, b, 1.0, 1.0])
+        dest.extend([lt[0], lt[1], lt[2], nx, ny, nz, r, g, b, 0.0, 1.0])
+
     def generate_line_vertices(self, dest: list[float]) -> None:
         """Generate line vertices for cell border.
 
@@ -166,3 +200,14 @@ class ModernGLCell:
         # This is used for grouping cells by color for texture rendering
         from ._modern_gl_constants import RGB_TO_COLOR
         return RGB_TO_COLOR.get(self._color, Color.WHITE)
+
+    @property
+    def cell_texture(self) -> int | None:
+        """Get the cell-specific texture handle from c_attributes.
+
+        Returns:
+            Texture handle if stored in c_attributes, None otherwise.
+        """
+        if self.part_edge is None:
+            return None
+        return self.part_edge.c_attributes.get(CELL_TEXTURE_KEY)

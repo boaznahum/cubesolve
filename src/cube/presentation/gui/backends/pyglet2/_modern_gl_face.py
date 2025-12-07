@@ -119,6 +119,9 @@ class ModernGLFace:
                 rgb = COLOR_TO_RGB.get(color, (0.5, 0.5, 0.5))
                 part_slice = self._get_cell_part_slice(cube_face, row, col)
 
+                # Get PartEdge for this face (for texture lookup from c_attributes)
+                part_edge = part_slice.get_face_edge(cube_face) if part_slice else None
+
                 # Calculate cell corners
                 corners = self._calc_cell_corners(row, col, cell_size)
 
@@ -126,6 +129,7 @@ class ModernGLFace:
                     row=row,
                     col=col,
                     part_slice=part_slice,
+                    part_edge=part_edge,
                     corners=corners,
                     normal=self.normal,
                     color=rgb,

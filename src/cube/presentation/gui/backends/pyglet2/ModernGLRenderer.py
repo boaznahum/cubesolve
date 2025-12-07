@@ -1015,6 +1015,92 @@ class ModernGLRenderer:
             if self._bound_texture == texture_handle:
                 self._bound_texture = None
 
+    def slice_texture(self, file_path: str, n: int) -> list[list[int]] | None:
+        """Slice an image into NxN cell textures.
+
+        Each cell gets its own GL texture containing that portion of the image.
+        Used for per-cell texture mapping where textures follow stickers.
+
+        Args:
+            file_path: Path to image file (PNG, JPG, BMP, etc.)
+            n: Number of cells per side (e.g., 3 for 3x3 cube)
+
+        Returns:
+            2D list of texture handles [row][col], or None on failure.
+            Row 0 is bottom of image, row n-1 is top.
+        """
+        try:
+            from PIL import Image
+            from PIL.Image import Image as PILImage, Transpose
+
+            # Load image and convert to RGBA for consistent format
+            loaded_img = Image.open(file_path)
+            img: PILImage = loaded_img.convert('RGBA')
+
+            width, height = img.size
+            cell_width = width // n
+            cell_height = height // n
+
+            result: list[list[int]] = []
+
+            for row in range(n):
+                row_handles: list[int] = []
+                for col in range(n):
+                    # Calculate crop box (PIL uses top-left origin, we want bottom-left)
+                    # row 0 = bottom of image = top in PIL coords (height - cell_height)
+                    pil_row = n - 1 - row  # Flip row for PIL coordinates
+                    left = col * cell_width
+                    upper = pil_row * cell_height
+                    right = left + cell_width
+                    lower = upper + cell_height
+
+                    # Crop cell
+                    cell_img = img.crop((left, upper, right, lower))
+
+                    # Flip vertically for OpenGL (OpenGL expects bottom-up)
+                    cell_img = cell_img.transpose(Transpose.FLIP_TOP_BOTTOM)
+
+                    # Get pixel data
+                    cell_data = cell_img.tobytes()
+
+                    # Create OpenGL texture
+                    tex_id = ctypes.c_uint()
+                    gl.glGenTextures(1, ctypes.byref(tex_id))
+                    gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
+
+                    # Set texture parameters
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR_MIPMAP_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE)
+                    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_WRAP_T, gl.GL_CLAMP_TO_EDGE)
+
+                    # Upload texture data
+                    gl.glTexImage2D(
+                        gl.GL_TEXTURE_2D, 0, gl.GL_RGBA,
+                        cell_img.width, cell_img.height, 0,
+                        gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, cell_data
+                    )
+
+                    # Generate mipmaps
+                    gl.glGenerateMipmap(gl.GL_TEXTURE_2D)
+
+                    gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+
+                    # Assign handle and store mapping
+                    handle = self._next_texture_handle
+                    self._next_texture_handle += 1
+                    self._textures[handle] = tex_id
+
+                    row_handles.append(handle)
+
+                result.append(row_handles)
+
+            return result
+
+        except Exception as e:
+            print(f"Failed to slice texture {file_path}: {e}")
+            return None
+
     def draw_textured_lit_triangles(
         self,
         data: np.ndarray,

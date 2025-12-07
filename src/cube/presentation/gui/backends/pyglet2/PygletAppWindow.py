@@ -262,9 +262,9 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
                 texture_path = str(preset_path)
 
         if Path(texture_path).exists():
-            loaded = self._modern_viewer.load_texture_set(texture_path)
+            # Use per-cell textures (stored in c_attributes, follow stickers)
+            loaded = self._modern_viewer.load_texture_set_per_cell(texture_path)
             if loaded > 0:
-                self._modern_viewer.set_texture_mode(True)
                 return texture_set
         return None
 
@@ -284,13 +284,16 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
     def load_texture_set(self, directory: str) -> int:
         """Load all face textures from a directory.
 
+        Uses per-cell textures stored in PartEdge.c_attributes.
+        Textures follow stickers during rotation.
+
         Args:
             directory: Path to directory containing F.png, B.png, etc.
 
         Returns:
             Number of textures successfully loaded (0-6).
         """
-        return self._modern_viewer.load_texture_set(directory)
+        return self._modern_viewer.load_texture_set_per_cell(directory)
 
     @property
     def modern_viewer(self) -> ModernGLCubeViewer:

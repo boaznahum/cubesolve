@@ -61,6 +61,7 @@ from ._modern_gl_constants import (
     FACE_TRANSFORMS,
     COLOR_TO_HOME_FACE,
     BORDER_LINE_WIDTH,
+    CELL_TEXTURE_KEY,
 )
 
 if TYPE_CHECKING:
@@ -121,6 +122,13 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._texture_mode: bool = False
         self._face_textures: dict[FaceName, int] = {}
 
+        # Per-cell texture mode (new system: textures stored in c_attributes)
+        self._use_per_cell_textures: bool = False
+        self._cell_textures: list[int] = []  # All cell texture handles for cleanup
+        self._texture_directory: str | None = None  # For reload on reset/resize
+        self._triangles_per_texture: dict[int | None, np.ndarray] = {}
+        self._animated_triangles_per_texture: dict[int | None, np.ndarray] = {}
+
         # Dirty flag for geometry rebuild
         self._dirty = True
 
@@ -143,6 +151,19 @@ class ModernGLCubeViewer(AnimatableViewer):
     def reset(self) -> None:
         """Reset the viewer. Called on cube resize."""
         self._dirty = True
+
+    def _textures_need_reload(self) -> bool:
+        """Check if textures need to be reloaded.
+
+        Returns True if per-cell textures were loaded but c_attributes
+        no longer contain texture handles (e.g., after cube reset).
+        """
+        # Check first PartEdge to see if texture is still there
+        for part_slice in self._cube.get_all_parts():
+            for edge in part_slice.edges:
+                # If any edge should have texture but doesn't, need reload
+                return CELL_TEXTURE_KEY not in edge.c_attributes
+        return False
 
     @property
     def renderer(self) -> "ModernGLRenderer":
@@ -168,8 +189,13 @@ class ModernGLCubeViewer(AnimatableViewer):
             self._dirty = False
 
         # Draw filled faces with lighting
-        if self._texture_mode:
-            # Textured mode: draw each color group with its texture
+        if self._use_per_cell_textures:
+            # Per-cell texture mode: each cell has its own texture from c_attributes
+            for texture_handle, triangles in self._triangles_per_texture.items():
+                if len(triangles) > 0:
+                    self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
+        elif self._texture_mode:
+            # Old textured mode: draw each color group with its face texture
             for color, triangles in self._triangles_per_color.items():
                 if len(triangles) > 0:
                     home_face = COLOR_TO_HOME_FACE.get(color)
@@ -193,9 +219,12 @@ class ModernGLCubeViewer(AnimatableViewer):
             model_view: The 4x4 rotation matrix to apply
         """
         has_animated_geometry = (
-            (not self._texture_mode and self._animated_face_triangles is not None
+            (self._use_per_cell_textures and len(self._animated_triangles_per_texture) > 0) or
+            (not self._use_per_cell_textures and not self._texture_mode
+             and self._animated_face_triangles is not None
              and len(self._animated_face_triangles) > 0) or
-            (self._texture_mode and len(self._animated_triangles_per_color) > 0)
+            (not self._use_per_cell_textures and self._texture_mode
+             and len(self._animated_triangles_per_color) > 0)
         )
         if not has_animated_geometry:
             return
@@ -203,7 +232,13 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._renderer.push_matrix()
         self._renderer.multiply_matrix(model_view)
 
-        if self._texture_mode:
+        if self._use_per_cell_textures:
+            # Per-cell texture mode
+            for texture_handle, triangles in self._animated_triangles_per_texture.items():
+                if len(triangles) > 0:
+                    self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
+        elif self._texture_mode:
+            # Old textured mode
             for color, triangles in self._animated_triangles_per_color.items():
                 if len(triangles) > 0:
                     home_face = COLOR_TO_HOME_FACE.get(color)
@@ -222,12 +257,30 @@ class ModernGLCubeViewer(AnimatableViewer):
         """Rebuild all geometry from current cube state.
 
         Delegates to ModernGLBoard for geometry generation.
+        Auto-reloads textures if they were lost (e.g., after cube reset).
         """
+        # Check if textures need to be reloaded (cube was reset, c_attributes lost)
+        if self._use_per_cell_textures and self._texture_directory:
+            if self._textures_need_reload():
+                self.load_texture_set_per_cell(self._texture_directory)
+
         # Update board with current cube state
         self._board.update()
 
         # Generate geometry (board separates static/animated)
-        if self._texture_mode:
+        if self._use_per_cell_textures:
+            # Per-cell texture mode: group by texture handle from c_attributes
+            (
+                self._triangles_per_texture,
+                self._line_data,
+                self._animated_triangles_per_texture,
+                self._animated_line_data,
+            ) = self._board.generate_per_cell_textured_geometry(self._animated_parts)
+            self._face_triangles = None
+            self._animated_face_triangles = None
+            self._triangles_per_color.clear()
+            self._animated_triangles_per_color.clear()
+        elif self._texture_mode:
             (
                 self._triangles_per_color,
                 self._line_data,
@@ -236,6 +289,8 @@ class ModernGLCubeViewer(AnimatableViewer):
             ) = self._board.generate_textured_geometry(self._animated_parts)
             self._face_triangles = None
             self._animated_face_triangles = None
+            self._triangles_per_texture.clear()
+            self._animated_triangles_per_texture.clear()
         else:
             (
                 self._face_triangles,
@@ -245,6 +300,8 @@ class ModernGLCubeViewer(AnimatableViewer):
             ) = self._board.generate_geometry(self._animated_parts)
             self._triangles_per_color.clear()
             self._animated_triangles_per_color.clear()
+            self._triangles_per_texture.clear()
+            self._animated_triangles_per_texture.clear()
 
     # =========================================================================
     # Animation Interface (AnimatableViewer protocol)
@@ -489,9 +546,12 @@ class ModernGLCubeViewer(AnimatableViewer):
         self._dirty = True
 
     def load_texture_set(self, directory: str) -> int:
-        """Load all face textures from a directory.
+        """Load all face textures from a directory (OLD method - per-face textures).
 
         Expects files named F.png, B.png, R.png, L.png, U.png, D.png
+
+        Note: This uses the old per-face texture system.
+        For per-cell textures (that follow stickers), use load_texture_set_per_cell().
         """
         from pathlib import Path
         dir_path = Path(directory)
@@ -506,6 +566,98 @@ class ModernGLCubeViewer(AnimatableViewer):
                     break
 
         return loaded
+
+    def load_texture_set_per_cell(self, directory: str) -> int:
+        """Load face textures and slice into per-cell textures.
+
+        This is the NEW texture system where each cell has its own texture
+        stored in PartEdge.c_attributes. Textures follow stickers during
+        rotation via the copy_color() mechanism.
+
+        Expects files named F.png, B.png, R.png, L.png, U.png, D.png
+
+        Args:
+            directory: Path to directory containing face images
+
+        Returns:
+            Number of faces successfully loaded
+        """
+        from pathlib import Path
+
+        # Clear old cell textures
+        self.clear_cell_textures()
+
+        dir_path = Path(directory)
+        size = self._cube.size
+        loaded = 0
+
+        for face_name in FaceName:
+            for ext in ['.png', '.jpg', '.jpeg', '.bmp']:
+                file_path = dir_path / f"{face_name.name}{ext}"
+                if file_path.exists():
+                    # Slice image into NxN cell textures
+                    sliced = self._renderer.slice_texture(str(file_path), size)
+                    if sliced:
+                        # Assign texture handles to PartEdge.c_attributes
+                        self._assign_cell_textures(face_name, sliced)
+                        loaded += 1
+                    break
+
+        if loaded > 0:
+            self._use_per_cell_textures = True
+            self._texture_mode = False  # Disable old texture mode
+            self._texture_directory = directory  # Store for reload on reset/resize
+            self._dirty = True
+
+        return loaded
+
+    def _assign_cell_textures(
+        self,
+        face_name: FaceName,
+        sliced_textures: list[list[int]],
+    ) -> None:
+        """Assign sliced texture handles to PartEdge.c_attributes.
+
+        Each cell's texture handle is stored in the corresponding PartEdge's
+        c_attributes dict under CELL_TEXTURE_KEY. During rotation, copy_color()
+        automatically copies c_attributes, so textures follow stickers.
+
+        Args:
+            face_name: Which face the textures belong to
+            sliced_textures: 2D list of texture handles [row][col]
+        """
+        cube_face = self._cube.face(face_name)
+        size = self._cube.size
+
+        for row in range(size):
+            for col in range(size):
+                texture_handle = sliced_textures[row][col]
+                self._cell_textures.append(texture_handle)  # Track for cleanup
+
+                # Get the PartEdge for this cell
+                gl_face = self._board.faces[face_name]
+                part_edge = gl_face.get_part_edge_at_cell(cube_face, row, col)
+
+                if part_edge is not None:
+                    part_edge.c_attributes[CELL_TEXTURE_KEY] = texture_handle
+
+    def clear_cell_textures(self) -> None:
+        """Clear all per-cell textures from GPU and c_attributes."""
+        # Delete GPU textures
+        for handle in self._cell_textures:
+            self._renderer.delete_texture(handle)
+        self._cell_textures.clear()
+
+        # Clear from c_attributes on all PartEdges
+        for part_slice in self._cube.get_all_parts():
+            for edge in part_slice.edges:
+                edge.c_attributes.pop(CELL_TEXTURE_KEY, None)
+
+        self._use_per_cell_textures = False
+        self._texture_directory = None  # Don't reload on reset
+        self._triangles_per_texture.clear()
+        self._animated_triangles_per_texture.clear()
+        self._dirty = True
 
     # =========================================================================
     # Mouse Picking (Ray-Plane Intersection)
