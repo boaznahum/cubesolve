@@ -4,11 +4,12 @@ Creates:
 1. Package hierarchy diagram
 2. First-level dependencies with WRONG direction (RED) markers
 3. Second-level dependencies with WRONG direction (RED) markers
+4. Combined layers diagram
 
 Violations (as of 2025-12-07):
 - V1: FIXED - domain.exceptions created, no longer imports from application.exceptions
-- V2: domain.solver imports from application.commands (16 files)
-- V3: domain.model imports from presentation.viewer (2 files)
+- V2: FIXED - domain.solver.protocols created, domain imports protocols not concrete classes
+- V3: domain.model imports from presentation.viewer (2 files) - OPEN
 """
 
 import matplotlib.pyplot as plt
@@ -208,8 +209,8 @@ def create_dependencies_first_level_diagram():
     draw_arrow('presentation', 'resources', color='gray')
 
     # WRONG direction dependencies (RED) - bottom to top
-    draw_arrow('domain', 'application', color='red', offset=-0.2)  # V2: commands
-    draw_arrow('domain', 'presentation', color='red', offset=0.2)  # V3: viewer
+    # V2 FIXED - domain now uses protocols, no direct import from application.commands
+    draw_arrow('domain', 'presentation', color='red', offset=0.2)  # V3: viewer (OPEN)
 
     # Legend
     legend_y = 0.5
@@ -223,7 +224,7 @@ def create_dependencies_first_level_diagram():
 
     ax.annotate('', xy=(8.5, legend_y), xytext=(7.5, legend_y),
                 arrowprops=dict(arrowstyle='->', color='red', lw=2))
-    ax.text(8.8, legend_y, 'WRONG (V2, V3)', ha='left', va='center',
+    ax.text(8.8, legend_y, 'WRONG (V3 only)', ha='left', va='center',
             fontsize=9, color='red', fontweight='bold')
 
     plt.tight_layout()
@@ -303,10 +304,9 @@ def create_dependencies_second_level_diagram():
 
     # RED dependencies - WRONG direction (domain -> application/presentation)
     # V1 (exceptions) FIXED - domain now has its own exceptions
-    # V2: domain.solver imports from application.commands (16 files)
-    # V3: domain.model imports from presentation.viewer (2 files)
+    # V2 FIXED - domain now uses protocols, no direct import from application.commands
+    # V3: domain.model imports from presentation.viewer (2 files) - OPEN
     red_deps = [
-        ('dom.solver', 'app.commands', 'V2: domain→app'),
         ('dom.model', 'pres.viewer', 'V3: domain→pres'),
     ]
 
@@ -333,7 +333,7 @@ def create_dependencies_second_level_diagram():
 
     ax.annotate('', xy=(6.5, 2.1), xytext=(5.5, 2.1),
                 arrowprops=dict(arrowstyle='->', color='red', lw=2.5))
-    ax.text(7, 2.1, 'WRONG direction (V2, V3)', ha='left', va='center',
+    ax.text(7, 2.1, 'WRONG direction (V3 only)', ha='left', va='center',
             fontsize=9, color='red', fontweight='bold')
 
     plt.tight_layout()
@@ -453,8 +453,8 @@ def create_combined_layers_diagram():
     arrow(15, 6, 16.5, 2.5, 'green')   # pres -> resources
 
     # WRONG DIRECTION (red) arrows - bottom to top
-    arrow(11.5, 4, 3.5, 6, 'red', 'V2')   # domain.solver -> app.commands
-    arrow(6, 4, 15.5, 7.5, 'red', 'V3')   # domain.model -> pres.viewer
+    # V2 FIXED - domain now uses protocols, no direct import from application.commands
+    arrow(6, 4, 15.5, 7.5, 'red', 'V3')   # domain.model -> pres.viewer (OPEN)
 
     # Legend
     ax.add_patch(FancyBboxPatch((0, 11), 6.5, 2.5, boxstyle="round,pad=0.1",
