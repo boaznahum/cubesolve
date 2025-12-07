@@ -497,12 +497,6 @@ if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
 
-    print("Generating layers and dependencies diagrams...")
-    # Generate all diagrams (for backward compatibility with docs)
-    create_layers_hierarchy_diagram()
-    create_dependencies_first_level_diagram()
-    create_dependencies_second_level_diagram()
-    # Combined diagram is the main one - shows everything in one place
+    print("Generating combined layers and dependencies diagram...")
     create_combined_layers_diagram()
     print("Done!")
-    print("\nNote: combined-layers-dependencies.png is the main diagram showing everything.")
