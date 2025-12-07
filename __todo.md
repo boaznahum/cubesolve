@@ -18,7 +18,6 @@
 | Q7 | Quality | - | Add type annotations to lambda callbacks |
 | Q9 | Quality | - | Clean up dead code debug prints in solver |
 | Q10 | Quality | - | Relocate `debug_dump()` to better location |
-| Q11 | Quality | HIGH | Clean up ModernGLCubeViewer.py code quality |
 | Q13 | Quality | - | Evaluate pyright strict mode (1905 errors) |
 | Q14 | Quality | - | Fix vs.debug() performance (avoid template strings) |
 
@@ -195,12 +194,6 @@
   - **Problem:** `debug_dump()` is in `main_any_backend.py` which is not called by tests or other entry points
   - **Goal:** Debug dump should be available to any code that creates an application (tests, scripts, etc.)
   - **Needs:** Architecture review to determine proper location (maybe `AbstractApp` or `ApplicationAndViewState`)
-
-- ❌ **Q11.** Clean up ModernGLCubeViewer.py code quality **(HIGH PRIORITY)**
-  - **Status:** New (2025-12-06)
-  - **Problem:** Code is messy compared to legacy pyglet implementation
-  - **File:** `src/cube/presentation/gui/backends/pyglet2/ModernGLCubeViewer.py`
-  - **Needs:** Refactoring to match code quality of legacy `GCubeViewer`
 
 - ❌ **Q13.** Evaluate pyright strict mode (1905 errors to fix)
   - **Status:** New (2025-12-07)
@@ -416,6 +409,23 @@
   - Added `debug()`, `debug_lazy()`, `is_debug()`, `debug_prefix()` methods
   - Migrated solver debug prints to use `vs.debug()` system
   - Added `--debug-all` and `--quiet` CLI flags
+
+- ✅ **Q11.** Clean up ModernGLCubeViewer.py code quality
+  - **Fixed:** 2025-12-07
+  - **Problem:** 1210-line monolith with magic numbers, no documentation, duplicate code
+  - **Solution:** Refactored to match legacy `GCubeViewer` → `_Board` → `_FaceBoard` → `_Cell` architecture
+  - **New files created:**
+    - `_modern_gl_constants.py` - Named constants with comments (HALF_CUBE_SIZE, CELL_GAP_RATIO, etc.)
+    - `_modern_gl_board.py` - Manages all 6 faces, ASCII coordinate diagrams
+    - `_modern_gl_face.py` - Manages cells on one face, cell layout documentation
+    - `_modern_gl_cell.py` - Vertex generation for one cell
+  - **Improvements:**
+    - Main file reduced from 1210 → 657 lines
+    - ASCII diagrams documenting coordinate systems (like legacy)
+    - Named booleans (`is_bottom_row`, `is_left_col`) instead of raw comparisons
+    - `_get_cell_color` now delegates to `_get_cell_part_slice` (no duplicate logic)
+    - All magic numbers documented in `_modern_gl_constants.py`
+  - **Files:** `src/cube/presentation/gui/backends/pyglet2/`
 
 - ✅ **Q12.** Fix AppWindow.viewer type mismatch
   - **Fixed:** 2025-12-07 (as part of V5b layer fix)
