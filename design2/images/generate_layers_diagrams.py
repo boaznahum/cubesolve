@@ -459,12 +459,19 @@ def create_combined_layers_diagram():
                     color=color, fontweight='bold',
                     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
-    # CORRECT (gray/green) arrows - top to bottom
-    arrow(3.5, 6, 5, 5, 'green')       # app.commands -> domain.model
-    arrow(13, 7.5, 9, 5, 'green')      # pres.gui -> domain
-    arrow(16, 7.5, 9, 5, 'green')      # pres.viewer -> domain.model
-    arrow(4.3, 6, 1.5, 2.5, 'green')   # app -> utils
-    arrow(15, 6, 16.5, 2.5, 'green')   # pres -> resources
+    # CORRECT (gray/green) arrows - top to bottom, pointing to specific sublayers
+    # Sublayer centers:
+    # - app.commands: (3.6, 8.1), app.animation: (1.3, 8.1)
+    # - dom.model: (5.7, 3.45), dom.algs: (8.5, 3.45), dom.solver: (11.85, 3.45)
+    # - pres.gui: (11.3, 9.75), pres.viewer: (16.1, 8.5)
+
+    arrow(3.6, 7.5, 5.7, 4.1, 'green')      # app.commands -> domain.model
+    arrow(3.6, 7.5, 8.5, 4.1, 'green')      # app.commands -> domain.algs
+    arrow(11.3, 7.5, 11.85, 4.1, 'green')   # pres.gui -> domain.solver
+    arrow(11.3, 7.5, 5.7, 4.1, 'green')     # pres.gui -> domain.model
+    arrow(16.1, 7.5, 5.7, 4.1, 'green')     # pres.viewer -> domain.model
+    arrow(1.3, 6.2, 1.5, 2.5, 'green')      # app.state -> utils
+    arrow(16.5, 6, 16.5, 2.5, 'green')      # pres -> resources
 
     # All violations FIXED - no red arrows needed
     # V1 FIXED - domain.exceptions created
