@@ -154,6 +154,71 @@ def test_simple_quit(cube_size: int, backend: str):
     assert result.success, f"Simple quit test failed: {result.message}. Error: {result.error}"
 
 
+# =============================================================================
+# BUG REPRODUCTION TESTS
+# =============================================================================
+# These tests reproduce specific bugs. Workflow:
+#
+# 1. When a bug is found, add a test here that reproduces it (test should FAIL)
+# 2. Run the test to confirm it fails with the expected error
+# 3. Fix the bug in the code
+# 4. Run the test again to confirm it now PASSES
+# 5. Update __todo.md to mark the bug as fixed (move to Done section)
+
+
+@pytest.mark.parametrize("cube_size", [3])
+def test_bug_B7_size_dec_viewer_error(cube_size: int, backend: str):
+    """
+    Bug B7: Commands accessing ctx.viewer fail in pyglet2 backend.
+
+    SYMPTOM:
+        Pressing `-` key crashes with:
+        RuntimeError: GCubeViewer not available in pyglet2 backend - use modern_viewer
+
+    REPRODUCE:
+        1. Run: python -m cube.main_pyglet2
+        2. Press `-` key (decrease cube size)
+        3. Observe crash
+
+    ROOT CAUSE:
+        pyglet2 backend uses `modern_viewer` (ModernGLCubeViewer) instead of
+        `viewer` (GCubeViewer). Commands call ctx.viewer.reset() but pyglet2's
+        viewer property raises RuntimeError.
+
+    CALL CHAIN:
+        User presses `-`
+        → SizeDecCommand.execute() [concrete.py:358]
+        → ctx.viewer.reset()
+        → CommandContext.viewer [base.py:59]
+        → window.viewer
+        → PygletAppWindow.viewer [PygletAppWindow.py:172]
+        → raises RuntimeError
+
+    FIX OPTIONS:
+        1. Make CommandContext check for modern_viewer first
+        2. Add viewer property to pyglet2 that delegates to modern_viewer
+        3. Create unified viewer interface that both backends implement
+
+    AFFECTED COMMANDS:
+        - SizeDecCommand (ctx.viewer.reset)
+        - SizeIncCommand (ctx.viewer.reset)
+        - ResetCommand (ctx.viewer.reset)
+    """
+    # Only test pyglet2 since that's where the bug manifests
+    if backend != "pyglet2":
+        pytest.skip("B7 only affects pyglet2 backend")
+
+    result = GUITestRunner.run_test(
+        commands=Commands.SIZE_DEC + Commands.QUIT,
+        cube_size=cube_size,
+        timeout_sec=10.0,
+        enable_animation=False,
+        backend=backend,
+        debug=True
+    )
+    assert result.success, f"B7 test failed: {result.message}. Error: {result.error}"
+
+
 # Legacy main() for direct script execution
 if __name__ == "__main__":
     import sys
