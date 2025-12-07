@@ -166,8 +166,7 @@ def test_simple_quit(cube_size: int, backend: str):
 # 5. Update __todo.md to mark the bug as fixed (move to Done section)
 
 
-@pytest.mark.parametrize("cube_size", [3])
-def test_bug_B7_size_dec_viewer_error(cube_size: int, backend: str):
+def test_bug_B7_size_dec_viewer_error(backend: str):
     """
     Bug B7: Commands accessing ctx.viewer fail in pyglet2 backend.
 
@@ -185,32 +184,18 @@ def test_bug_B7_size_dec_viewer_error(cube_size: int, backend: str):
         `viewer` (GCubeViewer). Commands call ctx.viewer.reset() but pyglet2's
         viewer property raises RuntimeError.
 
-    CALL CHAIN:
-        User presses `-`
-        → SizeDecCommand.execute() [concrete.py:358]
-        → ctx.viewer.reset()
-        → CommandContext.viewer [base.py:59]
-        → window.viewer
-        → PygletAppWindow.viewer [PygletAppWindow.py:172]
-        → raises RuntimeError
-
-    FIX OPTIONS:
-        1. Make CommandContext check for modern_viewer first
-        2. Add viewer property to pyglet2 that delegates to modern_viewer
-        3. Create unified viewer interface that both backends implement
+    FIX:
+        Changed AppWindow.viewer to return AnimatableViewer protocol.
+        Both GCubeViewer and ModernGLCubeViewer implement this protocol.
+        PygletAppWindow.viewer now returns self._modern_viewer.
 
     AFFECTED COMMANDS:
         - SizeDecCommand (ctx.viewer.reset)
         - SizeIncCommand (ctx.viewer.reset)
         - ResetCommand (ctx.viewer.reset)
     """
-    # Only test pyglet2 since that's where the bug manifests
-    if backend != "pyglet2":
-        pytest.skip("B7 only affects pyglet2 backend")
-
     result = GUITestRunner.run_test(
         commands=Commands.SIZE_DEC + Commands.QUIT,
-        cube_size=cube_size,
         timeout_sec=10.0,
         enable_animation=False,
         backend=backend,

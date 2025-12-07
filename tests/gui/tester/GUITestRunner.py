@@ -77,7 +77,7 @@ class GUITestRunner:
     def run_test(
         commands: Command | CommandSequence,
         timeout_sec: float = 30.0,
-        cube_size: int = 3,
+        cube_size: int | None = None,
         enable_animation: bool = False,
         backend: str = "pyglet2",
         debug: bool = False
@@ -94,8 +94,8 @@ class GUITestRunner:
                 Commands.SPEED_UP * 5 + Commands.SCRAMBLE_1 + Commands.QUIT
         timeout_sec : float, optional
             Maximum time to wait for test completion. Default is 30 seconds.
-        cube_size : int, optional
-            Size of cube to test (3, 4, 5, etc.). Default is 3.
+        cube_size : int | None, optional
+            Size of cube to test (3, 4, 5, etc.). Default is None (use application default).
         enable_animation : bool, optional
             Enable animations during test. Default is False (faster).
             Note: Only pyglet2 backend supports animation.
@@ -134,10 +134,8 @@ class GUITestRunner:
         else:
             cmd_seq = commands
 
-        # Save original config values
+        # Save original config values (only test-specific flags)
         original_test_mode = config.GUI_TEST_MODE
-        original_animation = config.animation_enabled
-        original_cube_size = config.CUBE_SIZE
         original_debug = config.KEYBOAD_INPUT_DEBUG
 
         test_error: Exception | None = None
@@ -156,10 +154,8 @@ class GUITestRunner:
                     event_loop.stop()
 
         try:
-            # Configure for testing
+            # Configure for testing (only test-specific flags)
             config.GUI_TEST_MODE = True
-            config.animation_enabled = enable_animation
-            config.CUBE_SIZE = cube_size
             config.KEYBOAD_INPUT_DEBUG = debug
 
             if debug:
@@ -167,7 +163,7 @@ class GUITestRunner:
                 print(f"  Backend: {backend}, Cube size: {cube_size}, Animation: {enable_animation}, Timeout: {timeout_sec}s")
 
             # Create app and backend
-            app = AbstractApp.create()
+            app = AbstractApp.create_non_default(cube_size=cube_size, animation=enable_animation)
             gui_backend = BackendRegistry.get_backend(backend)
             event_loop = gui_backend.event_loop
 
@@ -266,8 +262,6 @@ class GUITestRunner:
 
             # Restore original config
             config.GUI_TEST_MODE = original_test_mode
-            config.animation_enabled = original_animation
-            config.CUBE_SIZE = original_cube_size
             config.KEYBOAD_INPUT_DEBUG = original_debug
 
             if debug:

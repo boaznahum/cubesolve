@@ -7,7 +7,7 @@
 | B1 | Bug | HIGH | GUI Animation Solver Bug (Lazy Cache Initialization) |
 | B5 | Bug | - | Missing debug output when running with `--debug-all` |
 | B6 | Bug | - | Celebration effect triggers on reset/resize |
-| B7 | Bug | HIGH | Commands accessing ctx.viewer fail in pyglet2 backend |
+| B7 | Bug | FIXED | Commands accessing ctx.viewer fail in pyglet2 backend |
 | G2 | GUI | - | Investigate pyopengltk for tkinter backend |
 | G5 | GUI | - | Comprehensive Command Testing Plan |
 | G6 | GUI | - | Additional lighting improvements (pyglet2) |
@@ -21,7 +21,7 @@
 | Q9 | Quality | - | Clean up dead code debug prints in solver |
 | Q10 | Quality | - | Relocate `debug_dump()` to better location |
 | Q11 | Quality | HIGH | Clean up ModernGLCubeViewer.py code quality |
-| Q12 | Quality | CRITICAL | Fix AppWindow.viewer type mismatch |
+| Q12 | Quality | FIXED | Fix AppWindow.viewer type mismatch |
 | Q13 | Quality | - | Evaluate pyright strict mode (1905 errors) |
 | Q14 | Quality | - | Fix vs.debug() performance (avoid template strings) |
 
@@ -44,26 +44,6 @@
 ---
 
 ## Bugs
-
-- ❌ **B7.** Commands accessing ctx.viewer fail in pyglet2 backend
-  - **Status:** New (2025-12-07)
-  - **Symptom:** Pressing `-` key (SIZE_DEC command) crashes with:
-    ```
-    RuntimeError: GCubeViewer not available in pyglet2 backend - use modern_viewer
-    ```
-  - **Root Cause:** Command in `concrete.py:358` calls `ctx.viewer.reset()`, but in pyglet2 backend the `viewer` property raises RuntimeError because only `modern_viewer` exists
-  - **Traceback:**
-    - `PygletAppWindow.inject_command()` line 496 → `command.execute(ctx)`
-    - `SizeDecCommand.execute()` in `concrete.py:358` → `ctx.viewer.reset()`
-    - `CommandContext.viewer` in `base.py:59` → `window.viewer`
-    - `PygletAppWindow.viewer` in `PygletAppWindow.py:172` → raises RuntimeError
-  - **Affected commands:** Any command that accesses `ctx.viewer`:
-    - `SizeDecCommand`, `SizeIncCommand` (both call `ctx.viewer.reset()`)
-    - Possibly others
-  - **Fix options:**
-    1. Update commands to check for `modern_viewer` and use it when available
-    2. Add a viewer abstraction that works for both backends
-    3. Make `CommandContext` provide a unified viewer interface
 
 - ❌ **B6.** Celebration effect triggers on reset/resize, not just actual solves
   - **Status:** New (2025-12-02)

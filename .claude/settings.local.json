@@ -21,7 +21,8 @@
       "Bash(1 <<'EOF'\n{\n  \"pythonVersion\": \"3.14\",\n  \"typeCheckingMode\": \"standard\",\n  \"reportUnsupportedDunderAll\": \"error\"\n}\nEOF)",
       "Bash(git add:*)",
       "Bash(cat:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []

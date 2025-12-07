@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.solver import Solver
     from cube.presentation.gui.protocols.AppWindow import AppWindow
-    from cube.presentation.viewer.GCubeViewer import GCubeViewer
+    from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
 
 
 # =============================================================================
@@ -55,7 +55,7 @@ class CommandContext:
         return self.app.cube
 
     @property
-    def viewer(self) -> "GCubeViewer":
+    def viewer(self) -> "AnimatableViewer":
         return self.window.viewer
 
     @classmethod

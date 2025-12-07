@@ -9,11 +9,12 @@ from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.protocols import AppWindow
 from cube.presentation.gui.types import KeyEvent
 from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase
-from cube.presentation.viewer.GCubeViewer import GCubeViewer
+from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
 
 from cube.presentation.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
 from cube.presentation.gui.backends.headless.HeadlessWindow import HeadlessWindow
 from cube.presentation.gui.backends.headless.HeadlessEventLoop import HeadlessEventLoop
+from cube.presentation.viewer.GCubeViewer import GCubeViewer
 
 
 class HeadlessAppWindow(AppWindowBase, AppWindow):
@@ -64,8 +65,8 @@ class HeadlessAppWindow(AppWindowBase, AppWindow):
     # animation_running property inherited from AppWindowBase
 
     @property
-    def viewer(self) -> GCubeViewer:
-        """Access the cube viewer."""
+    def viewer(self) -> AnimatableViewer:
+        """Access the cube viewer (AnimatableViewer protocol)."""
         assert self._viewer is not None
         return self._viewer
 

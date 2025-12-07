@@ -96,6 +96,33 @@ All must pass (or have no new errors for mypy/pyright) before committing.
 
 If you need to verify whether a test was failing before your changes, use `git checkout <commit> -- .` to temporarily restore the old code and run the tests, then restore your changes.
 
+### Test Skipping Policy - NEVER SKIP TESTS
+**CRITICAL:** Do NOT add `pytest.skip()` or `@pytest.mark.skip` to tests. When a test fails:
+
+1. **NEVER skip** the test to make it pass - this hides bugs
+2. **ALWAYS fix** the underlying issue in the code
+3. If a feature is not supported by a backend:
+   - Fix the code so the feature works (add stub/no-op implementations)
+   - Or if truly impossible, discuss with user before adding skip
+
+**Why this matters:** When tests are skipped, real bugs go undetected. A skipped test that was added to reproduce a bug means the bug is never actually verified as fixed. Tests should:
+- FAIL when the bug exists (before fix)
+- PASS when the bug is fixed (after fix)
+- NEVER be skipped
+
+**Example - Wrong approach:**
+```python
+def test_feature_X(backend: str):
+    if backend == "console":
+        pytest.skip("Console doesn't support X")  # BAD - hides the bug!
+```
+
+**Example - Correct approach:**
+```python
+# Fix the code so console backend provides a stub/no-op for feature X
+# Then the test runs on ALL backends and verifies the fix works everywhere
+```
+
 **Note:** Use `--speed-up 5` (not 2) to work around the known animation timing bug (see "Known Issues" section below).
 
 ### Pyglet Backend Testing - SEPARATE ENVIRONMENTS

@@ -28,7 +28,7 @@ from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCu
 from cube.presentation.gui.commands import Command, CommandContext, Commands
 from cube.presentation.gui.key_bindings import lookup_command
 from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
-from cube.presentation.viewer.GCubeViewer import GCubeViewer
+from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
 from cube.presentation.viewer.GViewerExt import GViewerExt
 
 
@@ -109,10 +109,6 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         # Load initial texture set from config
         self._load_current_texture_set()
 
-        # GCubeViewer for protocol compatibility
-        # Note: This viewer uses legacy GL but we keep a reference for the protocol
-        self._viewer: GCubeViewer | None = None
-
         # Text labels (built by _update_status_text/_update_animation_text)
         self._status_labels: list[TextLabel] = []
         self._animation_labels: list[TextLabel] = []
@@ -161,16 +157,14 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         return self._app
 
     @property
-    def viewer(self) -> GCubeViewer:
-        """Access the cube viewer.
+    def viewer(self) -> AnimatableViewer:
+        """Access the cube viewer (AnimatableViewer protocol).
 
-        Returns GCubeViewer for protocol compatibility.
-        Note: For rendering, use modern_viewer instead.
+        Returns ModernGLCubeViewer which implements AnimatableViewer.
+        Both GCubeViewer (legacy) and ModernGLCubeViewer (modern) implement
+        the same protocol, so commands work with either backend.
         """
-        if self._viewer is None:
-            # Create on demand if needed for protocol compatibility
-            raise RuntimeError("GCubeViewer not available in pyglet2 backend - use modern_viewer")
-        return self._viewer
+        return self._modern_viewer
 
     @property
     def renderer(self) -> ModernGLRendererAdapter:

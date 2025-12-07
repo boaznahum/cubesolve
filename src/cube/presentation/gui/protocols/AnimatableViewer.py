@@ -59,3 +59,15 @@ class AnimatableViewer(Protocol):
     def update(self) -> None:
         """Update the viewer's display (called when cube state changes)."""
         ...
+
+    def draw(self) -> None:
+        """Draw the cube to the screen."""
+        ...
+
+    def reset(self) -> None:
+        """Reset the viewer (called when cube is reset or resized)."""
+        ...
+
+    def cleanup(self) -> None:
+        """Clean up resources when shutting down."""
+        ...
