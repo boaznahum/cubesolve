@@ -1,19 +1,44 @@
 # Project TODO
 
-> **How to enter symbols in PyCharm (Windows):**
-> - ❌ (red X) - Not started: `Win + .` → search "cross" or "x mark" → select ❌
-> - ♾️ (infinity) - In progress: `Win + .` → search "infinity" → select ♾️
-> - ✅ (green V) - Completed: `Win + .` → search "check" → select ✅
-> - Or copy/paste from here: `❌` `♾️` `✅`
->
-> **Claude:**
-> - When starting work on a task, change its status to ♾️ (in progress) BEFORE beginning work.
-> - When reading this file, look for unformatted entries at the bottom and ask user to reformat or not.
-> - When a task is done, move it to the "Done Tasks" section at the bottom, preserving its ID number.
-> - When adding new tasks, check existing IDs (including Done) to avoid duplicates (e.g., if A1, A2 exist, new is A3).
-> - If reopening a done task, mention "Reopened from Done" in the description.
-> - After refactoring run mypy -p cube, if change need to be done run tests only and so on
+## Open Tasks Summary
 
+| ID | Category | Priority | Title |
+|----|----------|----------|-------|
+| B1 | Bug | HIGH | GUI Animation Solver Bug (Lazy Cache Initialization) |
+| B5 | Bug | - | Missing debug output when running with `--debug-all` |
+| B6 | Bug | - | Celebration effect triggers on reset/resize |
+| G2 | GUI | - | Investigate pyopengltk for tkinter backend |
+| G5 | GUI | - | Comprehensive Command Testing Plan |
+| G6 | GUI | - | Additional lighting improvements (pyglet2) |
+| G7 | GUI | IN PROGRESS | Texture mapping for cube faces |
+| A4 | Architecture | - | Fix AppWindowBase / AbstractWindow inheritance |
+| A7 | Architecture | - | Investigate and document circular import issues |
+| D1 | Documentation | - | Improve keyboard_and_commands.md diagram |
+| Q5 | Quality | - | Review all `# type: ignore` comments |
+| Q6 | Quality | - | Evaluate `disable_error_code = import-untyped` |
+| Q7 | Quality | - | Add type annotations to lambda callbacks |
+| Q9 | Quality | - | Clean up dead code debug prints in solver |
+| Q10 | Quality | - | Relocate `debug_dump()` to better location |
+| Q11 | Quality | HIGH | Clean up ModernGLCubeViewer.py code quality |
+| Q12 | Quality | CRITICAL | Fix AppWindow.viewer type mismatch |
+| Q13 | Quality | - | Evaluate pyright strict mode (1905 errors) |
+| Q14 | Quality | - | Fix vs.debug() performance (avoid template strings) |
+
+---
+
+> **Instructions for updating this file:**
+>
+> **Symbols (Windows: `Win + .` to open emoji picker):**
+> - ❌ Not started - search "cross" or "x mark"
+> - ♾️ In progress - search "infinity"
+> - ✅ Completed - search "check"
+>
+> **Claude instructions:**
+> - Update the summary table above when adding/completing tasks
+> - When starting work, change status to ♾️ BEFORE beginning
+> - When done, move task to "Done Tasks" section, preserving ID
+> - Check existing IDs (including Done) to avoid duplicates
+> - After code changes: run mypy, pyright, then tests
 
 ---
 
@@ -156,6 +181,21 @@
     - Then: Use composition or mixin pattern to share implementation between pyglet and other backends
     - Finally: Delete `backends/pyglet/AbstractWindow.py` and `backends/pyglet2/AbstractWindow.py`
 
+- ❌ **A7.** Investigate and document circular import issues
+  - **Status:** New (2025-12-07)
+  - **Context:** Discovered during pyright fixes - some `__init__.py` files cannot re-export symbols
+  - **Circular chain found:**
+    ```
+    application.__init__ → app → domain.algs → domain.__init__ → solver →
+    application.commands.Operator → application.state → application.animation →
+    AnimationManager → application.state ← CIRCULAR!
+    ```
+  - **Affected files:**
+    - `src/cube/application/__init__.py` - cannot import App, AbstractApp, etc.
+    - `src/cube/application/animation/__init__.py` - cannot import AnimationManager
+    - `src/cube/domain/__init__.py` - cannot import subpackages
+  - **Goal:** Document why these exist and evaluate if architecture can be improved
+
 
 ## Documentation
 
@@ -220,11 +260,32 @@
     - `src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py:148` - implementation
     - `src/cube/presentation/gui/protocols/AnimatableViewer.py` - common protocol
 
----
+- ❌ **Q13.** Evaluate pyright strict mode (1905 errors to fix)
+  - **Status:** New (2025-12-07)
+  - **Context:** Changed pyright from "basic" to "standard" mode, which catches method override issues
+  - **Strict mode analysis:** Running with `typeCheckingMode = "strict"` reveals 1905 errors:
+    - 741 `reportUnknownMemberType` - Missing type info from libraries (numpy, pyglet)
+    - 216 `reportPrivateUsage` - Accessing `_private` members
+    - 199 `reportUnknownArgumentType` - Args with unknown types
+    - 188 `reportMissingParameterType` - Missing param type hints
+    - 176 `reportUnknownParameterType` - Params with unknown types
+    - 170 `reportUnknownVariableType` - Variables with unknown types
+    - 92 `reportUnusedImport` - Unused imports
+    - 30 `reportUnusedVariable` - Unused variables
+    - Others: unused classes/functions, unnecessary isinstance, etc.
+  - **Decision:** Stay with "standard" mode for now (catches real bugs without noise)
+  - **Future:** Consider enabling individual strict rules incrementally
 
-## New entries need to reformat and add above
-performace problem
-find all usage of vs.debug or simiar that pass non constant string like template string, violationof the rule after cleaning debug,need to add a comment in debug method so claude willbe carefull, also instructuins in claude.md
+- ❌ **Q14.** Fix vs.debug() performance issue with template strings
+  - **Status:** New (2025-12-07)
+  - **Problem:** Calls like `vs.debug(flag, f"value={expensive_call()}")` evaluate the f-string even when debug is off
+  - **Rule:** Always use constant strings or `vs.debug_lazy()` for expensive computations
+  - **Action needed:**
+    - Find all usages of `vs.debug()` with non-constant strings
+    - Add warning comment to `debug()` method docstring
+    - Update CLAUDE.md with instructions
+
+---
 
 ## Done Tasks
 

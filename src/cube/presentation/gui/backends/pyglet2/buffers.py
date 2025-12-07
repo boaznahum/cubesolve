@@ -47,7 +47,7 @@ class VertexBuffer:
         self.bind()
         gl.glBufferData(
             gl.GL_ARRAY_BUFFER,
-            data.nbytes,
+            gl.GLsizeiptr(data.nbytes),
             data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
             usage
         )

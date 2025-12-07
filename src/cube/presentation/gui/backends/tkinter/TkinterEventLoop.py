@@ -179,17 +179,19 @@ class TkinterEventLoop(EventLoop):
 
         # Set up repeating Tkinter callback
         if self._root:
-            def _wrapper():
+            root = self._root  # Capture non-None root for closure
+
+            def _wrapper() -> None:
                 if scheduled in self._callbacks:
                     try:
                         callback(interval)
                     except Exception:
                         pass
                     # Reschedule
-                    scheduled.after_id = self._root.after(int(interval * 1000), _wrapper)
+                    scheduled.after_id = root.after(int(interval * 1000), _wrapper)
                     scheduled.next_time = self.get_time() + interval
 
-            scheduled.after_id = self._root.after(int(interval * 1000), _wrapper)
+            scheduled.after_id = root.after(int(interval * 1000), _wrapper)
 
     def unschedule(self, callback: Callable[[float], None]) -> None:
         """Remove a scheduled callback.

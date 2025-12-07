@@ -82,7 +82,10 @@ All pyglet imports now only exist in:
 
 All must pass (or have no new errors for mypy/pyright) before committing.
 
-**Note:** Pyright is stricter than mypy - it catches undefined variables that mypy misses.
+**Note:** Pyright uses `typeCheckingMode = "standard"` (configured in `pyproject.toml`), which is stricter than mypy. It catches:
+- Undefined variables that mypy misses
+- Method override issues (incompatible parameter types/names)
+- `__all__` declarations that don't match actual exports
 
 ### Handling Test Failures
 **CRITICAL:** When tests fail, NEVER assume they were "already failing" or "pre-existing issues":

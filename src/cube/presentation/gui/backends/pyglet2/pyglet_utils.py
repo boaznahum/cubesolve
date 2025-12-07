@@ -3,8 +3,14 @@ Pyglet utility functions and classes.
 
 Provides key/modifier conversion and text rendering utilities.
 """
+from __future__ import annotations
 
-from typing import Callable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Sequence
+
+if TYPE_CHECKING:
+    from pyglet.window import Window as PygletWindow
+else:
+    PygletWindow = Any  # Runtime: use Any since pyglet is imported dynamically
 
 try:
     import pyglet
@@ -86,7 +92,7 @@ def _convert_mouse_buttons(pyglet_buttons: int) -> int:
     """Convert pyglet mouse button flags to our MouseButton flags."""
     result = 0
     if pyglet_buttons & pyglet_mouse.LEFT:
-        result |= MouseButtoclsn.LEFT
+        result |= MouseButton.LEFT
     if pyglet_buttons & pyglet_mouse.MIDDLE:
         result |= MouseButton.MIDDLE
     if pyglet_buttons & pyglet_mouse.RIGHT:
@@ -97,7 +103,7 @@ def _convert_mouse_buttons(pyglet_buttons: int) -> int:
 class PygletTextRenderer(TextRenderer):
     """Text renderer using pyglet labels."""
 
-    def __init__(self, window: "pyglet.window.Window") -> None:
+    def __init__(self, window: PygletWindow) -> None:
         self._window = window
         self._labels: list[pyglet.text.Label] = []
 

@@ -154,8 +154,8 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     p1 = _screen_to_model(app.vs, window, x + dx, y + dy)
     d_vector: ndarray = p1 - p0
 
-    on_left_to_right = d_vector.dot(left_to_right)
-    on_left_to_top = d_vector.dot(left_to_top)
+    on_left_to_right: float = float(d_vector.dot(left_to_right))
+    on_left_to_top: float = float(d_vector.dot(left_to_top))
 
     part_slice: PartSlice = slice_edge.parent
     part: Part = part_slice.parent
@@ -223,8 +223,8 @@ def _handle_slice_on_edge(rotate_adjusted_face: bool,
                           part: Edge,
                           slice_edge: PartEdge,
                           it_left_to_right: bool,
-                          on_left_to_right: bool,
-                          on_left_to_top: bool) -> Tuple[Alg, bool]:
+                          on_left_to_right: float,
+                          on_left_to_top: float) -> Tuple[Alg, bool]:
     """
     Handle slice on edge
     :param it_left_to_right: the significant movement is left to right on_left_to_right>on_left_to_top

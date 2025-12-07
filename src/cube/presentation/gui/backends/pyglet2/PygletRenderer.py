@@ -475,9 +475,9 @@ class PygletViewStateManager(ViewStateManager):
         """Apply translation."""
         gl.glTranslatef(x, y, z)
 
-    def rotate(self, angle: float, x: float, y: float, z: float) -> None:
+    def rotate(self, angle_degrees: float, x: float, y: float, z: float) -> None:
         """Apply rotation (angle in degrees)."""
-        gl.glRotatef(angle, x, y, z)
+        gl.glRotatef(angle_degrees, x, y, z)
 
     def scale(self, x: float, y: float, z: float) -> None:
         """Apply scaling."""

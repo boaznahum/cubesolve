@@ -15,7 +15,13 @@
       "Bash(git -C E:/dev/code/cubesolve log --all --oneline --grep=\"window\" --grep=\"composition\" --all-match)",
       "Bash(.venvScriptspython.exe -m pyright src/cube/presentation/gui/commands/)",
       "Bash(E:\\dev\\code\\cubesolve\\.venv\\Scripts\\python.exe -m pyright:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(git push)",
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(1 <<'EOF'\n{\n  \"pythonVersion\": \"3.14\",\n  \"typeCheckingMode\": \"standard\",\n  \"reportUnsupportedDunderAll\": \"error\"\n}\nEOF)",
+      "Bash(git add:*)",
+      "Bash(cat:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

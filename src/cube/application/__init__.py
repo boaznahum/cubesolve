@@ -1,13 +1,8 @@
 # Application Layer - Orchestration and business logic coordination
-# Import components explicitly to avoid circular imports:
+#
+# NOTE: Imports are NOT re-exported here to avoid circular import issues.
+# Import components explicitly from their modules:
 #   from cube.application.app import _App as App
 #   from cube.application.AbstractApp import AbstractApp
 #   from cube.application.state import ApplicationAndViewState
 #   from cube.application import config
-
-__all__ = [
-    "App",
-    "AbstractApp",
-    "ApplicationAndViewState",
-    "config",
-]

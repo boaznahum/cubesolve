@@ -134,4 +134,5 @@ ignore_errors = true
 
 [tool.pyright]
 pythonVersion = "3.14"
-typeCheckingMode = "basic"
+typeCheckingMode = "standard"
+reportUnsupportedDunderAll = "error"

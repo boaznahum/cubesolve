@@ -7,10 +7,14 @@ replacing the legacy immediate mode rendering.
 from __future__ import annotations
 
 import ctypes
-from typing import Sequence
+from typing import Sequence, Union
 
 import numpy as np
+from numpy import ndarray
 from pyglet import gl
+
+# Type alias for 3D point: accepts both tuples and numpy arrays
+Vertex3D = Union[Sequence[float], ndarray]
 
 from cube.presentation.gui.backends.pyglet2.shaders import ShaderProgram
 from cube.presentation.gui.backends.pyglet2.matrix import (
@@ -507,7 +511,7 @@ class ModernGLRenderer:
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._vbo)
         gl.glBufferData(
             gl.GL_ARRAY_BUFFER,
-            vertices.nbytes,
+            gl.GLsizeiptr(vertices.nbytes),
             vertices.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
             gl.GL_DYNAMIC_DRAW
         )
@@ -520,15 +524,15 @@ class ModernGLRenderer:
 
     def line(
         self,
-        start: tuple[float, float, float],
-        end: tuple[float, float, float],
+        start: Vertex3D,
+        end: Vertex3D,
         width: float = 1.0
     ) -> None:
         """Draw a line.
 
         Args:
-            start: Starting point (x, y, z)
-            end: Ending point (x, y, z)
+            start: Starting point (x, y, z) - tuple or ndarray
+            end: Ending point (x, y, z) - tuple or ndarray
             width: Line width (clamped to GPU-supported range)
         """
         gl.glLineWidth(self._clamp_line_width(width))
@@ -537,9 +541,9 @@ class ModernGLRenderer:
 
     def triangle(
         self,
-        v0: tuple[float, float, float],
-        v1: tuple[float, float, float],
-        v2: tuple[float, float, float]
+        v0: Vertex3D,
+        v1: Vertex3D,
+        v2: Vertex3D
     ) -> None:
         """Draw a filled triangle."""
         vertices = np.array([*v0, *v1, *v2], dtype=np.float32)
@@ -547,12 +551,12 @@ class ModernGLRenderer:
 
     def quad(
         self,
-        vertices: Sequence[tuple[float, float, float]]
+        vertices: Sequence[Vertex3D]
     ) -> None:
         """Draw a filled quad (4 vertices).
 
         Args:
-            vertices: Four vertices in order (converted to 2 triangles)
+            vertices: Four vertices in order (converted to 2 triangles), each vertex is (x,y,z)
         """
         if len(vertices) != 4:
             return
@@ -696,7 +700,7 @@ class ModernGLRenderer:
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._vc_vbo)
         gl.glBufferData(
             gl.GL_ARRAY_BUFFER,
-            data.nbytes,
+            gl.GLsizeiptr(data.nbytes),
             data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
             gl.GL_DYNAMIC_DRAW
         )
@@ -740,7 +744,7 @@ class ModernGLRenderer:
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._vc_vbo)
         gl.glBufferData(
             gl.GL_ARRAY_BUFFER,
-            data.nbytes,
+            gl.GLsizeiptr(data.nbytes),
             data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
             gl.GL_DYNAMIC_DRAW
         )
@@ -795,7 +799,7 @@ class ModernGLRenderer:
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._lit_vbo)
         gl.glBufferData(
             gl.GL_ARRAY_BUFFER,
-            data.nbytes,
+            gl.GLsizeiptr(data.nbytes),
             data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
             gl.GL_DYNAMIC_DRAW
         )
@@ -1068,7 +1072,7 @@ class ModernGLRenderer:
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._textured_vbo)
         gl.glBufferData(
             gl.GL_ARRAY_BUFFER,
-            data.nbytes,
+            gl.GLsizeiptr(data.nbytes),
             data.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
             gl.GL_DYNAMIC_DRAW
         )

@@ -52,7 +52,7 @@ class NSimpleAlg(SimpleAlg, ABC):
 
         return cl
 
-    def copy(self, other: Self):
+    def copy(self, other: "NSimpleAlg") -> Self:
         self._n = other.n
         return self
 

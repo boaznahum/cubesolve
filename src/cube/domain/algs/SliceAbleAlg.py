@@ -16,7 +16,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         # sorted sequence
         self.slices: slice | Sequence[int] | None = None  # [1 n]
 
-    def copy(self, other: Self):
+    def copy(self, other: NSimpleAlg) -> Self:
         assert isinstance(other, SliceAbleAlg)
         super(SliceAbleAlg, self).copy(other)
         self.slices = other.slices
