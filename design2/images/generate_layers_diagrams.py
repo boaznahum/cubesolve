@@ -6,7 +6,7 @@ Violations status (as of 2025-12-07):
 - V1: FIXED - domain.exceptions created
 - V2: FIXED - domain.solver.protocols created
 - V3: FIXED - VMarker moved to domain.model
-- V4: OPEN - domain imports config from application (13 files)
+- V4: FIXED - ConfigProtocol in utils, application implements it
 - V5: OPEN - application imports protocols/viewer from presentation (4 files)
 """
 
@@ -475,12 +475,13 @@ def create_combined_layers_diagram():
     arrow(1.3, 6.2, 1.5, 2.5, 'green')      # app.state -> utils
     arrow(16.5, 6, 16.5, 2.5, 'green')      # pres -> resources
 
-    # V1, V2, V3 FIXED
-    # V4 OPEN - domain imports config from application (13 files)
+    # V1, V2, V3, V4 FIXED
     # V5 OPEN - application imports protocols from presentation (4 files)
 
+    # Green arrow for V4 fix: domain.model -> utils (config_protocol)
+    arrow(5.7, 2.8, 1.5, 2.5, 'green')  # domain.model -> utils (config_protocol)
+
     # Red arrows for remaining violations
-    arrow(5.7, 4.1, 3.6, 6.2, 'red', 'V4')    # domain.model -> app.config (wrong direction)
     arrow(1.3, 6.2, 11.3, 7.5, 'red', 'V5')   # app.animation -> pres.gui.protocols (wrong direction)
 
     # Legend
@@ -492,7 +493,7 @@ def create_combined_layers_diagram():
     ax.text(2.3, 12.2, 'Correct (top→bottom)', ha='left', va='center', fontsize=9)
     ax.annotate('', xy=(2, 11.4), xytext=(1, 11.4),
                 arrowprops=dict(arrowstyle='->', color='red', lw=2))
-    ax.text(2.3, 11.4, 'WRONG (V4, V5)', ha='left', va='center', fontsize=9, color='red', fontweight='bold')
+    ax.text(2.3, 11.4, 'WRONG (V5 only)', ha='left', va='center', fontsize=9, color='red', fontweight='bold')
 
     plt.tight_layout()
     plt.savefig('combined-layers-dependencies.png', dpi=150, bbox_inches='tight',

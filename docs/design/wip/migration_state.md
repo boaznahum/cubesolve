@@ -804,11 +804,9 @@ except RuntimeError:
 
 ```bash
 # Pyglet 2.x requires separate venv (incompatible with pyglet 1.5)
-python -m venv .venv_pyglet2
-.venv_pyglet2/Scripts/pip install "pyglet>=2.0" PyOpenGL numpy
+python -m venv .venv_pyglet2v
+.venv/Scripts/pip install "pyglet>=2.0" PyOpenGL numpy
 
-# Main branch uses pyglet 1.5:
-.venv314/Scripts/pip install "pyglet<2.0"
 ```
 
 ### How to Run

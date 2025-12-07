@@ -129,7 +129,7 @@ class NxNCentersFaceTrackers(SolverElement):
             try1 = {f.face.name: f.color for f in four_first}
             try1[f5.name] = c5
             try1[f6.name] = c6
-            cl: CubeLayout = CubeLayout(False, try1)
+            cl: CubeLayout = CubeLayout(False, try1, self.cube.sp)
 
             if cl.same(self.cube.original_layout):
                 return True  # f/color make it a BOY
@@ -138,7 +138,7 @@ class NxNCentersFaceTrackers(SolverElement):
             try1 = {f.face.name: f.color for f in four_first}
             try1[f5.name] = c5
             try1[f6.name] = c6
-            cl = CubeLayout(False, try1)
+            cl = CubeLayout(False, try1, self.cube.sp)
             assert cl.same(self.cube.original_layout)
 
             return False

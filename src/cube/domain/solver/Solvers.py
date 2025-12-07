@@ -4,7 +4,6 @@ from .CFOP.CFOP import CFOP
 from .solver import BeginnerLBLReduce
 from .solver import Solver
 from .SolverName import SolverName
-from cube.application import config
 from cube.domain.exceptions import InternalSWError
 
 
@@ -12,7 +11,7 @@ class Solvers:
 
     @staticmethod
     def default(op: OperatorProtocol) -> Solver:
-        if config.SOLVER_CFOP:
+        if op.cube.config.solver_cfop:
             return Solvers.cfop(op)
         else:
             return Solvers.beginner(op)

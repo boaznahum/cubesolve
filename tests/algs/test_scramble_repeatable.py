@@ -6,6 +6,7 @@ from cube.application.state import ApplicationAndViewState
 from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
+from tests.conftest import _test_sp
 
 
 def test_scramble_repeatable():
@@ -14,7 +15,7 @@ def test_scramble_repeatable():
 
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
-    cube = Cube(size=size)
+    cube = Cube(size=size, sp=_test_sp)
 
     vs = ApplicationAndViewState()
     op: Operator = Operator(cube, vs)

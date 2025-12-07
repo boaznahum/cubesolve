@@ -3,13 +3,14 @@ import pytest
 from cube.domain import algs
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.model.Cube import Cube
+from tests.conftest import _test_sp
 
 
 def test_scramble1_preserves_boy_large_cube() -> None:
     """Test that scramble1 preserves BOY orientation on larger cubes."""
     size = 7
 
-    cube = Cube(size)
+    cube = Cube(size, sp=_test_sp)
 
     a: algs.Alg = algs.Algs.scramble1(cube.size)
     a.play(cube)

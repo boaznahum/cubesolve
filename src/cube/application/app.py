@@ -1,6 +1,8 @@
 from typing import Any, TYPE_CHECKING
 
 from cube.application import config
+from cube.application.config_impl import AppConfig
+from cube.utils.config_protocol import ConfigProtocol
 from cube.domain.algs import Alg
 from cube.application.AbstractApp import AbstractApp
 from cube.application.state import ApplicationAndViewState
@@ -18,7 +20,8 @@ class _App(AbstractApp):
                  vs: ApplicationAndViewState,
                  am: 'AnimationManager | None',
                  cube_size: int | None) -> None:
-        super().__init__()
+        self._config = AppConfig()
+        super().__init__()  # This registers self as config provider
 
         self._vs = vs
         self._error = None
@@ -26,7 +29,7 @@ class _App(AbstractApp):
         if cube_size is not None:
             vs.cube_size = cube_size
 
-        self._cube = Cube(self.vs.cube_size)
+        self._cube = Cube(self.vs.cube_size, sp=self)
 
         self._am = am
 
@@ -50,7 +53,12 @@ class _App(AbstractApp):
         self._error = _error
 
     @property
-    def error(self) -> str|None:
+    def config(self) -> ConfigProtocol:
+        """Get the application configuration."""
+        return self._config
+
+    @property
+    def error(self) -> str | None:
         return self._error
 
     @property

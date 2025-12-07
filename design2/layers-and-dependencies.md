@@ -76,7 +76,7 @@ This document describes the package structure of `src/cube/` and the dependencie
 | V1  | `domain`  | `application`  | FIXED | Domain imported exceptions from application |
 | V2  | `domain`  | `application`  | FIXED | Domain imported commands/operators from application |
 | V3  | `domain`  | `presentation` | FIXED | Domain imported VMarker from presentation |
-| V4  | `domain`  | `application`  | OPEN | Domain imports `config` from application (13 files) |
+| V4  | `domain`  | `application`  | FIXED | Domain imported config from application |
 | V5  | `application` | `presentation` | OPEN | Application imports protocols from presentation (4 files) |
 
 ---
@@ -96,16 +96,15 @@ This document describes the package structure of `src/cube/` and the dependencie
 - Moved `VMarker.py` to `domain/model/VMarker.py`
 - Presentation re-exports for backward compatibility
 
+### V4: Config Protocol (FIXED)
+- Created `utils/config_protocol.py` with `ConfigProtocol` interface
+- Created `application/config_impl.py` implementing the protocol by wrapping config.py
+- Domain imports `get_config()` from utils instead of config from application
+- Protocol initialized at app startup via `init_config()`
+
 ---
 
 ## Remaining Violations
-
-### V4: Config (OPEN)
-Domain imports `config` from application (13 files):
-- `domain/model/Cube.py`, `Face.py`, `Part.py`, etc.
-- `domain/solver/` various files
-
-**Potential fix:** Move config to `utils/` or create `domain/config/`
 
 ### V5: Protocols (OPEN)
 Application imports from presentation (4 files):
@@ -123,7 +122,7 @@ Application imports from presentation (4 files):
 presentation -> application -> domain -> utils/resources
 ```
 
-Currently 2 violations remain (V4, V5) preventing clean architecture.
+Currently 1 violation remains (V5) preventing clean architecture.
 
 ---
 

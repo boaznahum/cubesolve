@@ -3,6 +3,7 @@ from enum import Enum, unique
 from typing import TypeAlias, Tuple, TYPE_CHECKING, Union
 
 from .cube_boy import Color
+from cube.utils.config_protocol import ConfigProtocol
 
 
 @unique
@@ -68,6 +69,11 @@ class CubeElement:
     @property
     def cube(self) -> _Cube:
         return self._cube
+
+    @property
+    def config(self) -> ConfigProtocol:
+        """Get the configuration from the cube's service provider."""
+        return self._cube.config
 
     @property
     def n_slices(self) -> int:

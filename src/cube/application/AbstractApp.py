@@ -3,17 +3,24 @@ from typing import TYPE_CHECKING, Any
 
 from cube.domain.algs import Alg
 from cube.application.state import ApplicationAndViewState
-from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver
+from cube.utils.config_protocol import ConfigProtocol
 
 if TYPE_CHECKING:
     from cube.application.animation.AnimationManager import AnimationManager
+    from cube.domain.model.Cube import Cube
 
 
 class AbstractApp(metaclass=ABCMeta):
+    """Abstract base class for the application.
+
+    Implements IServiceProvider protocol - provides config to domain classes
+    via dependency injection (passed to Cube constructor).
+    """
+
     def __init__(self) -> None:
-        self._error : str | None = None
+        self._error: str | None = None
 
 
     @staticmethod
@@ -40,7 +47,13 @@ class AbstractApp(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def error(self) -> str|None:
+    def config(self) -> ConfigProtocol:
+        """Get the application configuration."""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def error(self) -> str | None:
         pass
 
     @abstractmethod
@@ -74,7 +87,7 @@ class AbstractApp(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def cube(self) -> Cube:
+    def cube(self) -> "Cube":
         raise NotImplementedError
 
     @abstractmethod

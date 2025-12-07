@@ -1,6 +1,5 @@
 from typing import Sequence
 
-from cube.application import config
 from cube.domain.algs import Algs, Alg
 from cube.domain.model import FaceName, Edge, PartColorsID, PartEdge, Part
 from cube.domain.model.Cube import Cube
@@ -108,7 +107,7 @@ class L1Cross(SolverElement):
 
         cube: Cube = self.cube
 
-        if config.PRINT_CUBE_AS_TEXT_DURING_SOLVE:
+        if cube.config.print_cube_as_text_during_solve:
             def _debug():
                 # viewer.plot(cube)
                 pass

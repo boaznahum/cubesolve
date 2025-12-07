@@ -9,6 +9,7 @@ from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
 from cube.domain.solver.SolverName import SolverName
+from tests.conftest import _test_sp
 
 
 def run_solvers_sizes(solvers: Collection[SolverName], cube_sizes: Collection[int],
@@ -16,7 +17,7 @@ def run_solvers_sizes(solvers: Collection[SolverName], cube_sizes: Collection[in
                       number_of_loops: int, debug: bool):
     for cube_size in cube_sizes:
         for SolverName in solvers:
-            cube = Cube(cube_size)
+            cube = Cube(cube_size, sp=_test_sp)
             vs = ApplicationAndViewState()
             op: Operator = Operator(cube, vs)
             slv: Solver = Solvers.by_name(SolverName, op)

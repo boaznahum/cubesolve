@@ -16,6 +16,7 @@ from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
 from cube.domain.algs import Algs
 from cube.domain.solver import Solvers
+from tests.conftest import _test_sp
 
 
 # Standard key-to-algorithm mapping for cube operations
@@ -426,7 +427,7 @@ def cube_driver(
     """
     renderer, window, event_loop, animation = gui_components
 
-    cube = Cube(3)
+    cube = Cube(3, sp=_test_sp)
     operator = Operator(cube)
 
     driver = CubeTestDriver(
@@ -457,7 +458,7 @@ def cube_driver_factory(
     renderer, window, event_loop, animation = gui_components
 
     def create_driver(cube_size: int = 3) -> CubeTestDriver:
-        cube = Cube(cube_size)
+        cube = Cube(cube_size, sp=_test_sp)
         operator = Operator(cube)
         return CubeTestDriver(
             cube=cube,

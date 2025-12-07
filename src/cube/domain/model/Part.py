@@ -5,7 +5,6 @@ from collections.abc import Sequence, Iterator, Iterable
 from typing import Tuple, TypeVar, Self
 from typing_extensions import deprecated
 
-from cube.application import config
 from cube.domain.model._part_slice import PartSlice
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.model._elements import CubeElement, PartColorsID, PartFixedID, _Face, _Cube, SliceIndex
@@ -292,7 +291,7 @@ class Part(ABC, CubeElement):
 
         by_pos: PartColorsID | None = self._colors_id_by_pos
 
-        if not by_pos or (False and config.DONT_OPTIMIZED_PART_ID):
+        if not by_pos or (False and self.config.dont_optimized_part_id):
             by_pos = frozenset(e.face.color for e in self._3x3_representative_edges)
             self._colors_id_by_pos = by_pos
 
@@ -343,7 +342,7 @@ class Part(ABC, CubeElement):
 
         colors_id: PartColorsID | None = self._colors_id_by_colors
 
-        if not colors_id or config.DONT_OPTIMIZED_PART_ID:
+        if not colors_id or self.config.dont_optimized_part_id:
 
             new_colors_id = frozenset(e.color for e in self._3x3_representative_edges)
 

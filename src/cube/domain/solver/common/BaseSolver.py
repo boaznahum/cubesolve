@@ -4,7 +4,6 @@ from typing import TypeAlias, TYPE_CHECKING, final
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.protocols import OperatorProtocol
 from .. import Solver
-from cube.application import config
 from ...algs import Algs
 
 if TYPE_CHECKING:
@@ -30,7 +29,7 @@ class BaseSolver(Solver, ABC):
 
     @property
     def is_debug_config_mode(self) -> bool:
-        return config.SOLVER_DEBUG
+        return self._cube.config.solver_debug
 
     @property
     def _is_debug_enabled(self) -> bool:

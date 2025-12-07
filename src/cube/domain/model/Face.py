@@ -10,7 +10,6 @@ from .Part import Part
 from ._elements import *
 from ._part_slice import PartSlice, CenterSlice
 from .SuperElement import SuperElement
-from cube.application.config import GUI_DRAW_SAMPLE_MARKERS
 from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
 
 _Face: TypeAlias = "Face"
@@ -90,7 +89,7 @@ class Face(SuperElement, Hashable):
         self.set_parts(self._center, *self._edges, *self._corners)
         super().finish_init()
 
-        sample_markers = GUI_DRAW_SAMPLE_MARKERS
+        sample_markers = self.config.gui_draw_sample_markers
 
         n = self.cube.n_slices
         n1 = n - 1

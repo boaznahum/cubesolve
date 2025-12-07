@@ -1,10 +1,12 @@
 """Cube layout management."""
 
-from collections.abc import Collection
-from typing import Mapping
+from __future__ import annotations
 
-from cube.application import config
+from collections.abc import Collection
+from typing import Mapping, TYPE_CHECKING
+
 from cube.domain.exceptions import InternalSWError
+from cube.utils.config_protocol import IServiceProvider, ConfigProtocol
 from .FaceName import FaceName
 from .Color import Color
 
@@ -16,11 +18,18 @@ class CubeLayout:
 
     _all_opposite: Mapping[FaceName, FaceName] = {**_opposite, **_rev_opposite}
 
-    def __init__(self, read_only: bool, faces: Mapping[FaceName, Color]) -> None:
+    def __init__(self, read_only: bool, faces: Mapping[FaceName, Color],
+                 sp: IServiceProvider) -> None:
         super().__init__()
         self._faces: dict[FaceName, Color] = dict(faces)
         self._read_only = read_only
+        self._sp = sp
         self._edge_colors: Collection[frozenset[Color]] | None = None
+
+    @property
+    def config(self) -> ConfigProtocol:
+        """Get configuration via service provider."""
+        return self._sp.config
 
     def colors(self) -> Collection[Color]:
         return [*self._faces.values()]
@@ -110,7 +119,7 @@ class CubeLayout:
 
     def clone(self):
 
-        return CubeLayout(False, self._faces)
+        return CubeLayout(False, self._faces, self._sp)
 
     def _is_face(self, color) -> FaceName | None:
         for f, c in self._faces.items():
@@ -248,7 +257,7 @@ class CubeLayout:
         return self.__str__()
 
     def _check(self):
-        if not config.CHECK_CUBE_SANITY:
+        if not self.config.check_cube_sanity:
             return
 
         for c in Color:

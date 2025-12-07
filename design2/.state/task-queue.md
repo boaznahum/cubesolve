@@ -118,6 +118,7 @@
 - [x] **V1**: ✅ FIXED (2025-12-07) - Created `domain/exceptions/` with InternalSWError, OpAborted, EvenCubeEdgeParityException, EvenCubeCornerSwapException. Application re-exports for backward compatibility.
 - [x] **V2**: ✅ FIXED (2025-12-07) - Created `domain/solver/protocols/` with OperatorProtocol, AnnotationProtocol. Moved AnnWhat to domain. Domain now imports protocols instead of concrete classes.
 - [x] **V3**: ✅ FIXED (2025-12-07) - Moved VMarker to `domain/model/VMarker.py`. Presentation re-exports for backward compatibility.
+- [x] **V4**: ✅ FIXED (2025-12-07) - Created `utils/config_protocol.py` with ConfigProtocol. Application implements via `config_impl.py`.
 
 ---
 

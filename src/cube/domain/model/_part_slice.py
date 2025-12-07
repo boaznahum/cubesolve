@@ -5,7 +5,6 @@ from collections import defaultdict
 from collections.abc import Hashable, MutableSequence, Sequence
 from typing import TypeAlias, Any, Tuple, TypeVar, TYPE_CHECKING
 
-from cube.application import config
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.model.cube_boy import FaceName, Color
 from ._elements import SliceIndex, PartColorsID, PartSliceHashID, EdgeSliceIndex, CenterSliceIndex, PartSliceColors
@@ -232,7 +231,7 @@ class PartSlice(ABC, Hashable):
 
         colors_id: PartColorsID | None = self._colors_id_by_colors
 
-        if not colors_id or config.DONT_OPTIMIZED_PART_ID:
+        if not colors_id or self._cube.config.dont_optimized_part_id:
 
             new_colors_id = frozenset(e.color for e in self._edges)
 

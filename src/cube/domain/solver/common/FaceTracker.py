@@ -1,6 +1,5 @@
 from typing import Callable, Any, TypeAlias
 
-from cube.application import config
 from cube.domain.model import Color, CenterSlice, CenterSliceIndex
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
@@ -59,7 +58,8 @@ class FaceTracker:
         edge = _slice.edge
         edge.c_attributes[key] = True
 
-        if config.SOLVER_ANNOTATE_TRACKERS:
+        cube = _slice.parent.cube
+        if cube.config.solver_annotate_trackers:
             viewer_add_view_marker(edge.c_attributes, VMarker.C0)  # to debug if alg move trackers
 
         def _slice_pred(s: CenterSlice):

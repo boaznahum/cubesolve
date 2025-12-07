@@ -6,11 +6,12 @@ from cube.application import config
 from cube.domain import algs
 from cube.domain.algs import Algs, Alg
 from cube.domain.model.Cube import Cube
+from tests.conftest import _test_sp
 
 
 def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]):
     """Compare two sequences of algorithms produce the same cube state."""
-    cube = Cube(cube_size)
+    cube = Cube(cube_size, sp=_test_sp)
 
     for alg in algs1:
         alg.play(cube)
@@ -28,7 +29,7 @@ def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]
 
 def _compare_inv(cube_size: int, algs_list: Iterable[Alg]):
     """Test that applying algorithms then their inverse returns to original state."""
-    cube = Cube(cube_size)
+    cube = Cube(cube_size, sp=_test_sp)
 
     scramble = Algs.scramble(cube_size)
     scramble.play(cube)
@@ -46,7 +47,7 @@ def _compare_inv(cube_size: int, algs_list: Iterable[Alg]):
 
 def _test_simplify(alg: Alg, cube_size: int):
     """Test that simplifying an algorithm produces equivalent results."""
-    cube = Cube(cube_size)
+    cube = Cube(cube_size, sp=_test_sp)
     scramble = Algs.scramble(cube.size, "1")
 
     simplified = alg.simplify()
@@ -61,7 +62,7 @@ def _test_flatten(alg: Alg, cube_size: int):
     """Test that flattening an algorithm produces equivalent results."""
     config.CHECK_CUBE_SANITY = False
 
-    cube = Cube(cube_size)
+    cube = Cube(cube_size, sp=_test_sp)
     scramble = Algs.scramble(cube.size, "1")
 
     scramble.play(cube)
@@ -118,7 +119,7 @@ class TestFlatten:
         """Test flattening of complex rotation sequences."""
         cube_size = 7
 
-        cube = Cube(cube_size)
+        cube = Cube(cube_size, sp=_test_sp)
         inv = cube.inv
 
         c = 2
@@ -167,7 +168,7 @@ class TestSimplifyFlatten:
 
     def test_complex_sequence(self):
         """Test simplify/flatten on complex sequences."""
-        cube = Cube(6)
+        cube = Cube(6, sp=_test_sp)
 
         alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]
         _test_simplify_flatten(alg, cube.size)

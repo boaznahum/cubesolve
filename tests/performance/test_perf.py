@@ -7,6 +7,7 @@ from cube.application.state import ApplicationAndViewState
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
 from cube.domain.model.Cube import Cube
+from tests.conftest import _test_sp
 
 
 @pytest.mark.slow
@@ -16,7 +17,7 @@ def test_solve_performance():
     n_loops = 3
     cube_size = 10
 
-    cube = Cube(cube_size)
+    cube = Cube(cube_size, sp=_test_sp)
     vs = ApplicationAndViewState()
     op: Operator = Operator(cube, vs)
     slv: Solver = Solvers.default(op)

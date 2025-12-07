@@ -4,7 +4,6 @@ from enum import Enum, unique
 from typing import Tuple, TypeAlias
 
 from cube.domain import algs
-from cube.application import config
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import FaceName, Color, CenterSlice
@@ -56,11 +55,12 @@ class NxNCenters(SolverElement):
 
         self._trackers = NxNCentersFaceTrackers(slv)
 
-        self._sanity_check_is_a_boy = config.SOLVER_SANITY_CHECK_IS_A_BOY
-        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES
-        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO
-        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = config.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS
-        self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = config.OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS
+        cfg = self.cube.config
+        self._sanity_check_is_a_boy = cfg.solver_sanity_check_is_a_boy
+        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = cfg.optimize_big_cube_centers_search_complete_slices
+        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = cfg.optimize_big_cube_centers_search_complete_slices_only_target_zero
+        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
+        self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = cfg.optimize_odd_cube_centers_switch_centers
 
     def debug(self, *args, level=3):
         if level <= NxNCenters.D_LEVEL:
@@ -196,7 +196,7 @@ class NxNCenters(SolverElement):
 
         layout = {f.face.name: f.color for f in faces}
 
-        cl: CubeLayout = CubeLayout(False, layout)
+        cl: CubeLayout = CubeLayout(False, layout, self.cube.sp)
 
         is_boy = cl.same(self.cube.original_layout)
 

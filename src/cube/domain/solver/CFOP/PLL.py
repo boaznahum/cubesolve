@@ -1,6 +1,5 @@
 from typing import Tuple
 
-from cube.application import config
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs import Algs, FaceAlg
 from cube.domain.exceptions import InternalSWError
@@ -104,7 +103,7 @@ class PLL(StepSolver):
         :return:
         """
 
-        rotate_while_search = config.SOLVER_PLL_ROTATE_WHILE_SEARCH
+        rotate_while_search = self.cube.config.solver_pll_rotate_while_search
 
         search_alg: Alg = Algs.no_op()
 

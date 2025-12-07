@@ -145,7 +145,7 @@ from ._part_slice import PartSlice, EdgeWing, CornerSlice
 from .cube_boy import CubeLayout, Color, FaceName
 from .Face import Face
 from .cube_slice import Slice, SliceName
-from cube.application import config
+from cube.utils.config_protocol import IServiceProvider, ConfigProtocol
 
 if TYPE_CHECKING:
     from .CubeQueries2 import CubeQueries2
@@ -313,7 +313,8 @@ class Cube(CubeSupplier):
         "_modify_counter",
         "_last_sanity_counter",
         "_original_layout",
-        "_cqr"
+        "_cqr",
+        "_sp"
     ]
 
     _front: Face
@@ -326,9 +327,10 @@ class Cube(CubeSupplier):
     _faces: dict[FaceName, Face]
     _slices: dict[SliceName, Slice]
 
-    def __init__(self, size: int) -> None:
+    def __init__(self, size: int, sp: IServiceProvider) -> None:
         super().__init__()
         self._size = size
+        self._sp = sp
         self._modify_counter = 0
         self._last_sanity_counter = 0
         self._original_layout: CubeLayout | None = None
@@ -453,6 +455,17 @@ class Cube(CubeSupplier):
     @property
     def cube(self) -> "Cube":
         return self
+
+    @property
+    def sp(self) -> IServiceProvider:
+        """Get the service provider."""
+        return self._sp
+
+    @property
+    def config(self) -> ConfigProtocol:
+        """Get the configuration (convenience property)."""
+        assert self._sp is not None, "Cube requires a service provider (sp parameter)"
+        return self._sp.config
 
     @property
     def cqr(self) -> "CubeQueries2":
@@ -1307,8 +1320,7 @@ class Cube(CubeSupplier):
             raise
 
     def _do_sanity(self, force_check=False):
-
-        if not (force_check or config.CHECK_CUBE_SANITY):
+        if not (force_check or self.config.check_cube_sanity):
             return
 
         from .CubeSanity import CubeSanity
@@ -1677,7 +1689,7 @@ class Cube(CubeSupplier):
             f: Face
 
             faces: dict[FaceName, Color] = {f.name: f.original_color for f in self._faces.values()}
-            lo = CubeLayout(True, faces)
+            lo = CubeLayout(True, faces, self._sp)
 
             self._original_layout = lo
 
@@ -1694,7 +1706,7 @@ class Cube(CubeSupplier):
         f: Face
 
         faces: dict[FaceName, Color] = {f.name: f.center.color for f in self._faces.values()}
-        return CubeLayout(False, faces)
+        return CubeLayout(False, faces, self._sp)
 
     @property
     def is_boy(self):

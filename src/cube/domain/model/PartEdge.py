@@ -3,7 +3,6 @@ from collections.abc import Hashable
 from typing import Any, TYPE_CHECKING, TypeAlias
 
 from .cube_boy import Color
-from cube.application import config
 
 if TYPE_CHECKING:
     from .Face import Face
@@ -108,7 +107,7 @@ class PartEdge:
         return self._color
 
     def __str__(self) -> str:
-        if config.SHORT_PART_NAME:
+        if self._face.config.short_part_name:
             return str(self._color.name)
         else:
             return f"{self._color.name}@{self._face}"

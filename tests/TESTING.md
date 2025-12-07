@@ -8,7 +8,7 @@ This project uses **pytest** for testing. This guide covers the basics of runnin
 
 ```powershell
 # Activate virtual environment first
-.\.venv314\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 
 # Run all tests (excludes slow tests by default)
 pytest
@@ -420,7 +420,7 @@ To install the package in development mode (enables imports from anywhere):
 
 ```powershell
 # Activate virtual environment
-.\.venv314\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 
 # Install in editable mode
 pip install -e .

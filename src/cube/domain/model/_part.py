@@ -1,15 +1,9 @@
-import warnings
-from abc import ABC, abstractmethod
-from collections.abc import Sequence, Iterator, Iterable
+from collections.abc import Iterable
+from collections.abc import Iterable
 from enum import Enum, unique
-from typing import Tuple, TypeAlias, TYPE_CHECKING, TypeVar
+from typing import TypeAlias, TYPE_CHECKING
 
-from cube.application import config
-from cube.domain.model.PartEdge import PartEdge
-from cube.domain.model.cube_boy import FaceName, Color, color2long
-from ._elements import CubeElement, PartColorsID, PartFixedID, SliceIndex, CenterSliceIndex, EdgeSliceIndex
-from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
-from cube.domain.exceptions import InternalSWError
+from cube.domain.model.cube_boy import FaceName
 
 if TYPE_CHECKING:
     from .Face import Face
