@@ -308,8 +308,51 @@ class Face(SuperElement, Hashable):
         for _ in range(0, n_rotations % 4):
             # -1 --> 3
             _rotate()
+            # Update texture directions for all affected stickers
+            # See: design2/face-slice-rotation.md for details
+            self._update_texture_directions_after_rotate(1)
             self.cube.modified()
             self.cube.sanity()
+
+    def _update_texture_directions_after_rotate(self, quarter_turns: int) -> None:
+        """Update texture direction for stickers ON this face after rotation.
+
+        When a face rotates:
+        - Stickers ON this face rotate in place → direction changes
+        - Stickers on adjacent edges just MOVE to new face → direction UNCHANGED
+
+        The adjacent edge stickers move but don't rotate - they keep their
+        original orientation relative to their texture. The face's drawing
+        vectors handle the visual orientation.
+
+        See: design2/face-slice-rotation.md for detailed analysis.
+
+        Args:
+            quarter_turns: Number of 90° CW rotations (1 for CW, -1 for CCW)
+        """
+        n_slices = self.cube.n_slices
+
+        # ONLY update stickers ON this face (not adjacent edge stickers!)
+
+        # Edge stickers on THIS face (the rotating face's side of each edge)
+        for edge in [self._edge_top, self._edge_right, self._edge_bottom, self._edge_left]:
+            for i in range(n_slices):
+                part_edge = edge.get_slice(i).get_face_edge(self)
+                part_edge.rotate_texture(quarter_turns)
+
+        # Corner stickers on THIS face
+        for corner in [self._corner_top_left, self._corner_top_right,
+                       self._corner_bottom_right, self._corner_bottom_left]:
+            part_edge = corner.get_face_edge(self)
+            part_edge.rotate_texture(quarter_turns)
+
+        # Center stickers (only exist on this face)
+        center = self._center
+        n = self.cube.size - 2  # Center grid is (size-2) x (size-2)
+        for row in range(n):
+            for col in range(n):
+                part_edge = center.get_center_slice((row, col)).get_face_edge(self)
+                part_edge.rotate_texture(quarter_turns)
 
     @property
     def solved(self):

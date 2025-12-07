@@ -54,12 +54,13 @@ class PartEdge:
     See: design2/partedge-attribute-system.md for visual diagrams
     """
     __slots__ = ["_face", "_parent", "_color", "_annotated_by_color",
-                 "_annotated_fixed_location",
+                 "_annotated_fixed_location", "_texture_direction",
                  "attributes", "c_attributes",
                  "f_attributes"]
 
     _face: _Face
     _color: Color
+    _texture_direction: int  # 0=0°, 1=90°CW, 2=180°, 3=270°CW - see design2/face-slice-rotation.md
 
     def __init__(self, face: _Face, color: Color) -> None:
         """
@@ -79,6 +80,7 @@ class PartEdge:
         self._color = color
         self._annotated_by_color: bool = False
         self._annotated_fixed_location: bool = False
+        self._texture_direction: int = 0  # Texture rotation: 0=0°, 1=90°CW, 2=180°, 3=270°CW
 
         # Structural attributes - physical slot properties (origin, cw, on_x, on_y)
         # Set by Face.finish_init(), never move during rotation
@@ -137,6 +139,7 @@ class PartEdge:
         """
         self._color = source._color
         self._annotated_by_color = source._annotated_by_color
+        self._texture_direction = source._texture_direction
         self.c_attributes.clear()
         self.c_attributes.update(source.c_attributes)
 
@@ -147,6 +150,7 @@ class PartEdge:
         """
         p = PartEdge(self._face, self._color)
         p._annotated_by_color = self._annotated_by_color
+        p._texture_direction = self._texture_direction
         p.attributes = self.attributes.copy()
         p.c_attributes = self.c_attributes.copy()
 
@@ -173,3 +177,20 @@ class PartEdge:
     @property
     def annotated_fixed(self) -> Any:
         return self._annotated_fixed_location
+
+    @property
+    def texture_direction(self) -> int:
+        """Texture rotation: 0=0°, 1=90°CW, 2=180°, 3=270°CW.
+
+        See: design2/face-slice-rotation.md for details on how this is updated
+        during face rotations.
+        """
+        return self._texture_direction
+
+    def rotate_texture(self, quarter_turns: int = 1) -> None:
+        """Rotate the texture direction by the given number of quarter turns CW.
+
+        Args:
+            quarter_turns: Number of 90° clockwise rotations (can be negative)
+        """
+        self._texture_direction = (self._texture_direction + quarter_turns) % 4

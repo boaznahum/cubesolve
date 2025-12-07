@@ -150,10 +150,19 @@ class ModernGLCell:
         dest.extend([lt[0], lt[1], lt[2], nx, ny, nz, r, g, b, u0, v1])
 
     def generate_full_uv_vertices(self, dest: list[float]) -> None:
-        """Generate triangle vertices with full UV range (0,0) to (1,1).
+        """Generate triangle vertices with full UV range, applying texture rotation.
 
         Used for per-cell textures where each cell has its own texture.
         The entire texture maps to the entire cell quad.
+
+        The texture rotation is read from part_edge.texture_direction and applied
+        to UV coordinates to make the texture appear rotated.
+
+        UV rotations (to make texture appear rotated CW by direction * 90°):
+        - Direction 0 (0°):   lb=(0,0), rb=(1,0), rt=(1,1), lt=(0,1)
+        - Direction 1 (90°):  lb=(0,1), rb=(0,0), rt=(1,0), lt=(1,1)
+        - Direction 2 (180°): lb=(1,1), rb=(0,1), rt=(0,0), lt=(1,0)
+        - Direction 3 (270°): lb=(1,0), rb=(1,1), rt=(0,1), lt=(0,0)
 
         Appends 6 vertices (2 triangles) to dest.
         Each vertex: x, y, z, nx, ny, nz, r, g, b, u, v (11 floats)
@@ -165,16 +174,30 @@ class ModernGLCell:
         nx, ny, nz = float(self._normal[0]), float(self._normal[1]), float(self._normal[2])
         r, g, b = self._color
 
-        # Full UV: cell owns entire texture
-        # Triangle 1: lb(0,0), rb(1,0), rt(1,1)
-        dest.extend([lb[0], lb[1], lb[2], nx, ny, nz, r, g, b, 0.0, 0.0])
-        dest.extend([rb[0], rb[1], rb[2], nx, ny, nz, r, g, b, 1.0, 0.0])
-        dest.extend([rt[0], rt[1], rt[2], nx, ny, nz, r, g, b, 1.0, 1.0])
+        # Get texture direction from PartEdge (0-3, representing 0°/90°/180°/270° CW)
+        direction = 0
+        if self.part_edge is not None:
+            direction = self.part_edge.texture_direction
 
-        # Triangle 2: lb(0,0), rt(1,1), lt(0,1)
-        dest.extend([lb[0], lb[1], lb[2], nx, ny, nz, r, g, b, 0.0, 0.0])
-        dest.extend([rt[0], rt[1], rt[2], nx, ny, nz, r, g, b, 1.0, 1.0])
-        dest.extend([lt[0], lt[1], lt[2], nx, ny, nz, r, g, b, 0.0, 1.0])
+        # UV coordinates for each direction
+        # Format: (lb_uv, rb_uv, rt_uv, lt_uv)
+        UV_BY_DIRECTION = [
+            ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),  # 0: normal
+            ((0.0, 1.0), (0.0, 0.0), (1.0, 0.0), (1.0, 1.0)),  # 1: 90° CW
+            ((1.0, 1.0), (0.0, 1.0), (0.0, 0.0), (1.0, 0.0)),  # 2: 180°
+            ((1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0)),  # 3: 270° CW
+        ]
+        uv_lb, uv_rb, uv_rt, uv_lt = UV_BY_DIRECTION[direction]
+
+        # Triangle 1: lb, rb, rt
+        dest.extend([lb[0], lb[1], lb[2], nx, ny, nz, r, g, b, uv_lb[0], uv_lb[1]])
+        dest.extend([rb[0], rb[1], rb[2], nx, ny, nz, r, g, b, uv_rb[0], uv_rb[1]])
+        dest.extend([rt[0], rt[1], rt[2], nx, ny, nz, r, g, b, uv_rt[0], uv_rt[1]])
+
+        # Triangle 2: lb, rt, lt
+        dest.extend([lb[0], lb[1], lb[2], nx, ny, nz, r, g, b, uv_lb[0], uv_lb[1]])
+        dest.extend([rt[0], rt[1], rt[2], nx, ny, nz, r, g, b, uv_rt[0], uv_rt[1]])
+        dest.extend([lt[0], lt[1], lt[2], nx, ny, nz, r, g, b, uv_lt[0], uv_lt[1]])
 
     def generate_line_vertices(self, dest: list[float]) -> None:
         """Generate line vertices for cell border.

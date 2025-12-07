@@ -444,6 +444,174 @@ This ensures textures reload automatically when:
 
 ---
 
-## Known Bug
+## Known Bug: Texture Orientation Not Rotating
 
-_Bug details to be added after user description_
+### Problem Description
+
+When a face rotates, the texture handle follows the sticker correctly (via c_attributes copying),
+but the **texture orientation** does not rotate with it. The texture appears "fixed" in its
+original orientation while the sticker moves to a new position.
+
+### The Root Cause
+
+`PartEdge` has no concept of direction or orientation. It only stores:
+- `color` - which color this sticker shows
+- `c_attributes` - arbitrary attributes (including our texture handle)
+
+When `copy_color()` is called during rotation, it copies the texture handle but has no
+knowledge that a rotation occurred or how to update the texture's orientation.
+
+### Visual Example: Front Face 90° Clockwise Rotation
+
+Consider a sticker on the Front face at the F-U edge (top-middle position).
+The texture has an arrow pointing UP (toward the U face):
+
+```
+BEFORE ROTATION (F-U edge, row=2, col=1):
+
+    Front Face (looking at it):
+    +-------+-------+-------+
+    |       |   ↑   |       |   ← Arrow texture points UP (toward U)
+    |       |  [A]  |       |      Sticker at F-U edge
+    +-------+-------+-------+
+    |       |       |       |
+    |       |       |       |
+    +-------+-------+-------+
+    |       |       |       |
+    |       |       |       |
+    +-------+-------+-------+
+
+    The texture [A] has "up" direction pointing toward U face.
+```
+
+```
+AFTER 90° CW ROTATION - EXPECTED (F-R edge, row=1, col=2):
+
+    Front Face (looking at it):
+    +-------+-------+-------+
+    |       |       |       |
+    |       |       |       |
+    +-------+-------+-------+
+    |       |       |  →    |   ← Arrow should point RIGHT (toward R)
+    |       |       | [A]   |      Sticker moved to F-R edge
+    +-------+-------+-------+      Texture should rotate with sticker
+    |       |       |       |
+    |       |       |       |
+    +-------+-------+-------+
+
+    The sticker rotated 90° CW, so texture "up" now points toward R.
+```
+
+```
+AFTER 90° CW ROTATION - ACTUAL BUG (F-R edge, row=1, col=2):
+
+    Front Face (looking at it):
+    +-------+-------+-------+
+    |       |       |       |
+    |       |       |       |
+    +-------+-------+-------+
+    |       |       |   ↑   |   ← Arrow STILL points UP (toward U)
+    |       |       |  [A]  |      Texture handle moved ✓
+    +-------+-------+-------+      But orientation didn't rotate ✗
+    |       |       |       |
+    |       |       |       |
+    +-------+-------+-------+
+
+    BUG: Texture appears in wrong orientation!
+```
+
+### Why This Happens
+
+The UV mapping in `generate_full_uv_vertices()` is fixed:
+
+```python
+# Current implementation - UV always maps the same way:
+#   lb (left_bottom)  → (0, 0)
+#   rb (right_bottom) → (1, 0)
+#   rt (right_top)    → (1, 1)
+#   lt (left_top)     → (0, 1)
+```
+
+This means texture "up" always aligns with the cell's geometric "up" direction,
+regardless of how the sticker has been rotated.
+
+### The Challenge
+
+1. **PartEdge has no orientation**: It's just a colored sticker on a face, with no
+   concept of "which way is up" for the texture.
+
+2. **copy_color() is rotation-agnostic**: It copies attributes without knowing
+   that a rotation occurred or by how much.
+
+3. **Multiple rotation sources**: Face rotations can happen from:
+   - User keyboard input (R, L, F, B, U, D keys)
+   - Algorithms/solvers
+   - Scramble operations
+   - Undo/redo
+
+4. **Cumulative rotations**: A sticker might rotate multiple times:
+   - F rotation: +90°
+   - Then F rotation again: +90° (total 180°)
+   - Then F' rotation: -90° (total 90°)
+
+### Data Flow During Rotation
+
+```
+Before F rotation:
+    PartEdge at (F, row=2, col=1):
+        color = GREEN
+        c_attributes = {"cell_texture": 42}  # texture handle
+        # No orientation info!
+
+copy_color() called:
+    - Copies color: GREEN → new position
+    - Copies c_attributes: {"cell_texture": 42} → new position
+    - Does NOT know this is a 90° CW rotation
+    - Does NOT update any orientation
+
+After F rotation:
+    PartEdge at (F, row=1, col=2):
+        color = GREEN  ✓ (moved correctly)
+        c_attributes = {"cell_texture": 42}  ✓ (handle moved correctly)
+        # Still no orientation info!
+        # Texture drawn with same UV = wrong orientation
+```
+
+### Proposed Solution
+
+Store texture rotation in c_attributes alongside the texture handle:
+
+```python
+c_attributes = {
+    "cell_texture": 42,           # Texture handle (existing)
+    "cell_texture_rotation": 0,   # NEW: 0, 1, 2, 3 (quarter turns CW)
+}
+```
+
+When a face rotates:
+1. `copy_color()` copies both values (no change needed)
+2. After rotation completes, update `cell_texture_rotation` for all stickers
+   on the rotated face: `rotation = (rotation + direction) % 4`
+
+When drawing:
+1. Read rotation from c_attributes
+2. Apply rotation to UV coordinates:
+
+```
+Rotation 0 (0°):   lb=(0,0), rb=(1,0), rt=(1,1), lt=(0,1)  # Normal
+Rotation 1 (90°):  lb=(1,0), rb=(1,1), rt=(0,1), lt=(0,0)  # CW quarter turn
+Rotation 2 (180°): lb=(1,1), rb=(0,1), rt=(0,0), lt=(1,0)  # Half turn
+Rotation 3 (270°): lb=(0,1), rb=(0,0), rt=(1,0), lt=(1,1)  # CCW quarter turn
+```
+
+### Open Questions
+
+1. **Where to hook rotation updates?** Need to intercept after each face rotation
+   and update rotation values for affected stickers.
+
+2. **What about slice rotations?** M, E, S slices rotate multiple faces.
+
+3. **Cube rotations (x, y, z)?** These rotate the whole cube but don't change
+   sticker orientations relative to their faces.
+
+4. **Performance**: Is iterating all stickers after each rotation acceptable?
