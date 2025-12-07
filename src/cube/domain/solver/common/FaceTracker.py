@@ -5,7 +5,7 @@ from cube.domain.model import Color, CenterSlice, CenterSliceIndex
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.CubeQueries2 import Pred
-from cube.presentation.viewer.VMarker import viewer_add_view_marker, VMarker
+from cube.domain.model.VMarker import viewer_add_view_marker, VMarker
 
 _TRACKER_KEY_PREFIX = "_nxn_centers_track:"
 

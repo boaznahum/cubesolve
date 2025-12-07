@@ -20,7 +20,7 @@ This document describes the package structure of `src/cube/` and the dependencie
 | Middle | `application/` | Application logic, state management, commands |
 | Top | `presentation/` | GUI, viewers, rendering backends |
 
-**Ideal dependency flow:** `presentation → application → domain → utils/resources`
+**Ideal dependency flow:** `presentation -> application -> domain -> utils/resources`
 
 ---
 
@@ -42,7 +42,8 @@ This document describes the package structure of `src/cube/` and the dependencie
 | `solver/beginner/` | Layer-by-layer beginner method |
 | `solver/CFOP/` | CFOP speedcubing method |
 | `solver/common/` | Shared solver utilities (Tracker, CommonOp) |
-| `solver/protocols/` | Protocol interfaces for dependency inversion (V2 fix) |
+| `solver/protocols/` | Protocol interfaces for dependency inversion |
+| `exceptions/` | Domain-specific exceptions |
 
 ### presentation/
 | Package | Purpose |
@@ -59,23 +60,21 @@ This document describes the package structure of `src/cube/` and the dependencie
 ## Dependencies
 
 ### Normal Dependencies (green arrows)
-- `application` → `domain` (uses cube model and algorithms)
-- `presentation` → `domain` (displays cube state)
-- `presentation` → `application` (uses operators and animation)
-- `domain` → `utils` (OrderedSet usage)
-- `presentation` → `resources` (face images)
-
-### Wrong Direction Dependencies (red arrows)
-
-| ID  | From      | To             | Status  | Issue                                       |
-|-----|-----------|----------------|---------|---------------------------------------------|
-| V1  | `domain`  | `application`  | ✅ FIXED | Domain imported from `application.exceptions` |
-| V2  | `domain`  | `application`  | ✅ FIXED | Domain imports from `application.commands` (16 files) |
-| V3  | `domain`  | `presentation` | ❌ Open  | Domain imports from `presentation.viewer` (2 files) |
+- `application` -> `domain` (uses cube model and algorithms)
+- `presentation` -> `domain` (displays cube state)
+- `presentation` -> `application` (uses operators and animation)
+- `domain` -> `utils` (OrderedSet usage)
+- `presentation` -> `resources` (face images)
 
 ---
 
-## Fixes Applied
+## All Violations Fixed!
+
+| ID  | From      | To             | Status  | Fix Applied |
+|-----|-----------|----------------|---------|-------------|
+| V1  | `domain`  | `application`  | FIXED | Created `domain/exceptions/` |
+| V2  | `domain`  | `application`  | FIXED | Created `domain/solver/protocols/` |
+| V3  | `domain`  | `presentation` | FIXED | Moved `VMarker` to `domain/model/` |
 
 ### V1: Exceptions (FIXED)
 - Created `domain/exceptions/` with InternalSWError, OpAborted, etc.
@@ -87,20 +86,25 @@ This document describes the package structure of `src/cube/` and the dependencie
 - Domain imports protocols instead of concrete application classes
 - Application implements protocols and re-exports for backward compatibility
 
-### V3: Viewer (OPEN)
-- `domain/model/Face.py` imports VMarker from presentation.viewer
-- `domain/solver/common/FaceTracker.py` imports viewer utilities
-- **Fix needed:** Use dependency injection or observer pattern
+### V3: Viewer/VMarker (FIXED)
+- Moved `VMarker.py` to `domain/model/VMarker.py`
+- Presentation re-exports for backward compatibility
+- No more domain -> presentation imports
 
 ---
 
-## Ideal Architecture (Clean Architecture)
+## Clean Architecture Achieved
 
 ```
-presentation → application → domain → (nothing external)
-                  ↓
+presentation -> application -> domain -> (nothing external)
+                  |
                utils/resources
 ```
+
+The architecture now follows clean dependency rules:
+- Higher layers depend on lower layers only
+- No circular or wrong-direction dependencies
+- Backward compatibility maintained via re-exports
 
 ---
 

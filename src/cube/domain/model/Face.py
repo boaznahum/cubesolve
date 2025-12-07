@@ -11,7 +11,7 @@ from ._elements import *
 from ._part_slice import PartSlice, CenterSlice
 from .SuperElement import SuperElement
 from cube.application.config import GUI_DRAW_SAMPLE_MARKERS
-from cube.presentation.viewer.VMarker import VMarker, viewer_add_view_marker
+from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore

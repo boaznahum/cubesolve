@@ -43,9 +43,9 @@
 
 ---
 
-## Wrong Direction Dependency Violations (to fix)
+## Wrong Direction Dependency Violations - ALL FIXED!
 
-**Architecture should follow bottom-to-top order:**
+**Architecture now follows bottom-to-top order:**
 ```
            presentation  (top - UI layer)
                 ↓
@@ -56,7 +56,7 @@
            utils/resources (foundation)
 ```
 
-### Violations Found
+### All Violations Fixed
 
 #### V1: domain → application.exceptions (22 files) - ✅ FIXED
 
@@ -106,18 +106,18 @@
 | domain/solver/beginner/NxNCenters.py             | AnnWhat                                          |
 | domain/solver/beginner/NxNEdges.py               | AnnWhat                                          |
 
-#### V3: domain → presentation.viewer (2 files)
+#### V3: domain → presentation.viewer (2 files) - ✅ FIXED
 
 | File                              | Import                            |
 |-----------------------------------|-----------------------------------|
 | domain/model/Face.py              | VMarker, viewer_add_view_marker   |
 | domain/solver/common/FaceTracker.py | viewer_add_view_marker, VMarker |
 
-### Tasks to Fix
+### All Tasks Complete
 
 - [x] **V1**: ✅ FIXED (2025-12-07) - Created `domain/exceptions/` with InternalSWError, OpAborted, EvenCubeEdgeParityException, EvenCubeCornerSwapException. Application re-exports for backward compatibility.
 - [x] **V2**: ✅ FIXED (2025-12-07) - Created `domain/solver/protocols/` with OperatorProtocol, AnnotationProtocol. Moved AnnWhat to domain. Domain now imports protocols instead of concrete classes.
-- [ ] **V3**: Remove visualization hooks from domain.model (use observer pattern or callbacks)
+- [x] **V3**: ✅ FIXED (2025-12-07) - Moved VMarker to `domain/model/VMarker.py`. Presentation re-exports for backward compatibility.
 
 ---
 
