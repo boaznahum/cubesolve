@@ -2,7 +2,7 @@ from abc import ABC
 from typing import TypeAlias, TYPE_CHECKING, final
 
 from cube.domain.model.Cube import Cube
-from cube.application.commands.Operator import Operator
+from cube.domain.solver.protocols import OperatorProtocol
 from .. import Solver
 from cube.application import config
 from ...algs import Algs
@@ -54,7 +54,7 @@ class BaseSolver(Solver, ABC):
 
     @property
     @final
-    def op(self) -> Operator:
+    def op(self) -> OperatorProtocol:
         return self._op
 
     @property

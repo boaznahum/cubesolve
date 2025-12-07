@@ -1,5 +1,5 @@
 from cube.domain.exceptions import OpAborted
-from cube.application.commands.Operator import Operator
+from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.beginner.L1Cross import L1Cross
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.solver import BeginnerLBLReduce, SolveStep, SolverResults
@@ -23,7 +23,7 @@ class CFOP(BaseSolver, BeginnerLBLReduce):
                  "nxn_centers", "nxn_edges"
                  ]
 
-    def __init__(self, op: Operator) -> None:
+    def __init__(self, op: OperatorProtocol) -> None:
         super().__init__(op)
 
         self.l1_cross = L1Cross(self)

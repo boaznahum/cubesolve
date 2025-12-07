@@ -343,6 +343,137 @@ def create_dependencies_second_level_diagram():
     print("Created: dependencies-second-level.png")
 
 
+def create_combined_layers_diagram():
+    """Create combined diagram: first-level layers with second-level packages and all dependencies."""
+    fig, ax = plt.subplots(1, 1, figsize=(18, 14))
+    ax.set_xlim(-1, 19)
+    ax.set_ylim(-1, 15)
+    ax.set_aspect('equal')
+    ax.axis('off')
+
+    fig.suptitle('Package Layers and Dependencies (Combined View)', fontsize=16, fontweight='bold', y=0.97)
+
+    # Layer positions (bottom to top: utils/resources, domain, application, presentation)
+    # Each layer is a colored rectangle containing its second-level packages
+
+    # === UTILS (bottom left) ===
+    utils_box = FancyBboxPatch((0, 0), 3, 2.5, boxstyle="round,pad=0.1",
+                                facecolor=LAYER_COLORS['utils'], edgecolor='black', linewidth=2)
+    ax.add_patch(utils_box)
+    ax.text(1.5, 2.1, 'utils', ha='center', va='center', fontsize=11, fontweight='bold')
+
+    # === RESOURCES (bottom right) ===
+    res_box = FancyBboxPatch((15, 0), 3, 2.5, boxstyle="round,pad=0.1",
+                              facecolor=LAYER_COLORS['resources'], edgecolor='black', linewidth=2)
+    ax.add_patch(res_box)
+    ax.text(16.5, 2.1, 'resources', ha='center', va='center', fontsize=11, fontweight='bold')
+    # faces sublayer
+    ax.add_patch(FancyBboxPatch((15.3, 0.3), 2.4, 1.2, boxstyle="round,pad=0.03",
+                                 facecolor=SUBLAYER_COLORS['resources'], edgecolor='gray'))
+    ax.text(16.5, 0.9, 'faces/', ha='center', va='center', fontsize=9)
+
+    # === DOMAIN (middle) ===
+    dom_box = FancyBboxPatch((4, 0), 10, 5, boxstyle="round,pad=0.1",
+                              facecolor=LAYER_COLORS['domain'], edgecolor='black', linewidth=2)
+    ax.add_patch(dom_box)
+    ax.text(9, 4.5, 'domain', ha='center', va='center', fontsize=12, fontweight='bold')
+
+    # Domain sublayers
+    dom_subs = [
+        ('model', 4.3, 2.8, 2.8, 1.3),
+        ('algs', 7.3, 2.8, 2.4, 1.3),
+        ('solver', 10, 2.8, 3.7, 1.3),
+        ('exceptions', 4.3, 0.3, 2.5, 1.2),
+    ]
+    for name, x, y, w, h in dom_subs:
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.03",
+                                     facecolor=SUBLAYER_COLORS['domain'], edgecolor='gray'))
+        ax.text(x + w/2, y + h/2, name, ha='center', va='center', fontsize=9, fontweight='bold')
+
+    # Solver sub-sublayers
+    for i, name in enumerate(['beginner', 'CFOP', 'common']):
+        ax.text(10.2 + i*1.2, 0.8, name, ha='left', va='center', fontsize=7)
+
+    # === APPLICATION (upper left) ===
+    app_box = FancyBboxPatch((0, 6), 7, 4, boxstyle="round,pad=0.1",
+                              facecolor=LAYER_COLORS['application'], edgecolor='black', linewidth=2)
+    ax.add_patch(app_box)
+    ax.text(3.5, 9.5, 'application', ha='center', va='center', fontsize=12, fontweight='bold')
+
+    # Application sublayers
+    app_subs = [
+        ('animation', 0.3, 7.5, 2, 1.2),
+        ('commands', 2.5, 7.5, 2.2, 1.2),
+        ('exceptions', 4.9, 7.5, 1.8, 1.2),
+        ('state', 0.3, 6.2, 2, 1),
+    ]
+    for name, x, y, w, h in app_subs:
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.03",
+                                     facecolor=SUBLAYER_COLORS['application'], edgecolor='gray'))
+        ax.text(x + w/2, y + h/2, name, ha='center', va='center', fontsize=8, fontweight='bold')
+
+    # === PRESENTATION (upper right) ===
+    pres_box = FancyBboxPatch((8, 6), 10, 7, boxstyle="round,pad=0.1",
+                               facecolor=LAYER_COLORS['presentation'], edgecolor='black', linewidth=2)
+    ax.add_patch(pres_box)
+    ax.text(13, 12.5, 'presentation', ha='center', va='center', fontsize=12, fontweight='bold')
+
+    # Presentation sublayers
+    pres_subs = [
+        ('gui/', 8.3, 7.5, 6, 4.5),
+        ('viewer/', 14.5, 7.5, 3.2, 2),
+    ]
+    for name, x, y, w, h in pres_subs:
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.03",
+                                     facecolor=SUBLAYER_COLORS['presentation'], edgecolor='gray'))
+        ax.text(x + w/2, y + h - 0.4, name, ha='center', va='center', fontsize=9, fontweight='bold')
+
+    # GUI sub-sublayers
+    gui_subs = ['backends/', 'commands/', 'effects/', 'protocols/']
+    for i, name in enumerate(gui_subs):
+        ax.text(8.5 + (i % 2) * 2.8, 10.2 - (i // 2) * 1, name, ha='left', va='center', fontsize=7)
+
+    # === ARROWS ===
+    # Helper for arrows
+    def arrow(x1, y1, x2, y2, color, label=None):
+        ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
+                    arrowprops=dict(arrowstyle='->', color=color, lw=2,
+                                    connectionstyle="arc3,rad=0.1"))
+        if label:
+            mx, my = (x1+x2)/2, (y1+y2)/2
+            ax.text(mx, my + 0.3, label, ha='center', va='center', fontsize=7,
+                    color=color, fontweight='bold',
+                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+    # CORRECT (gray/green) arrows - top to bottom
+    arrow(3.5, 6, 5, 5, 'green')       # app.commands -> domain.model
+    arrow(13, 7.5, 9, 5, 'green')      # pres.gui -> domain
+    arrow(16, 7.5, 9, 5, 'green')      # pres.viewer -> domain.model
+    arrow(4.3, 6, 1.5, 2.5, 'green')   # app -> utils
+    arrow(15, 6, 16.5, 2.5, 'green')   # pres -> resources
+
+    # WRONG DIRECTION (red) arrows - bottom to top
+    arrow(11.5, 4, 3.5, 6, 'red', 'V2')   # domain.solver -> app.commands
+    arrow(6, 4, 15.5, 7.5, 'red', 'V3')   # domain.model -> pres.viewer
+
+    # Legend
+    ax.add_patch(FancyBboxPatch((0, 11), 6.5, 2.5, boxstyle="round,pad=0.1",
+                                 facecolor='#FAFAFA', edgecolor='black', linewidth=1))
+    ax.text(3.25, 13, 'Legend:', ha='center', va='center', fontsize=10, fontweight='bold')
+    ax.annotate('', xy=(2, 12.2), xytext=(1, 12.2),
+                arrowprops=dict(arrowstyle='->', color='green', lw=2))
+    ax.text(2.3, 12.2, 'Correct (top→bottom)', ha='left', va='center', fontsize=9)
+    ax.annotate('', xy=(2, 11.4), xytext=(1, 11.4),
+                arrowprops=dict(arrowstyle='->', color='red', lw=2))
+    ax.text(2.3, 11.4, 'WRONG direction', ha='left', va='center', fontsize=9, color='red', fontweight='bold')
+
+    plt.tight_layout()
+    plt.savefig('combined-layers-dependencies.png', dpi=150, bbox_inches='tight',
+                facecolor='white', edgecolor='none')
+    plt.close()
+    print("Created: combined-layers-dependencies.png")
+
+
 if __name__ == '__main__':
     # Change to images directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -352,4 +483,5 @@ if __name__ == '__main__':
     create_layers_hierarchy_diagram()
     create_dependencies_first_level_diagram()
     create_dependencies_second_level_diagram()
+    create_combined_layers_diagram()
     print("Done!")

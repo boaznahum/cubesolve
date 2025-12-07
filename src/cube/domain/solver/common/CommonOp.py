@@ -8,13 +8,10 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Edge, Color, FaceName, EdgeWing
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from cube.application.commands.Operator import Operator
+from cube.domain.solver.protocols import OperatorProtocol, AnnotationProtocol, SupportsAnnotation
+from cube.domain.solver.AnnWhat import AnnWhat
 from .BaseSolver import BaseSolver
 from ...model.CubeQueries2 import Pred, Pred0
-from cube.application.commands.op_annotation import AnnWhat, SupportsAnnotation
-
-if TYPE_CHECKING:
-    from cube.application.commands.op_annotation import OpAnnotation
 
 TRACE_UNIQUE_ID: int = 0
 
@@ -54,7 +51,7 @@ class CommonOp:
         return self._slv
 
     @property
-    def op(self) -> Operator:
+    def op(self) -> OperatorProtocol:
         return self._slv.op
 
     @property
@@ -62,7 +59,7 @@ class CommonOp:
         return self._slv.cube
 
     @property
-    def ann(self) -> "OpAnnotation":
+    def ann(self) -> AnnotationProtocol:
         return self._ann
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],

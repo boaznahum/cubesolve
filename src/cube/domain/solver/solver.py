@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from cube.application.commands.Operator import Operator
+from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.SolverName import SolverName
 
 
@@ -87,7 +87,7 @@ class Solver(ABC):
 
     @property
     @abstractmethod
-    def op(self) -> Operator:
+    def op(self) -> OperatorProtocol:
         pass
 
 

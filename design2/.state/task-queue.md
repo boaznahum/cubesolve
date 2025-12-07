@@ -85,7 +85,7 @@
 | domain/solver/beginner/BeginnerSolver.py  | OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException |
 | domain/solver/beginner/L3Corners.py       | InternalSWError, EvenCubeCornerSwapException                                         |
 
-#### V2: domain → application.commands (16 files)
+#### V2: domain → application.commands (16 files) - ✅ FIXED
 
 | File                                             | Import                                           |
 |--------------------------------------------------|--------------------------------------------------|
@@ -116,7 +116,7 @@
 ### Tasks to Fix
 
 - [x] **V1**: ✅ FIXED (2025-12-07) - Created `domain/exceptions/` with InternalSWError, OpAborted, EvenCubeEdgeParityException, EvenCubeCornerSwapException. Application re-exports for backward compatibility.
-- [ ] **V2**: Remove command annotations from domain layer (use dependency injection or separate concern)
+- [x] **V2**: ✅ FIXED (2025-12-07) - Created `domain/solver/protocols/` with OperatorProtocol, AnnotationProtocol. Moved AnnWhat to domain. Domain now imports protocols instead of concrete classes.
 - [ ] **V3**: Remove visualization hooks from domain.model (use observer pattern or callbacks)
 
 ---

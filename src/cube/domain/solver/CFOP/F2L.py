@@ -6,7 +6,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Part, Edge, Corner, Color
 from cube.domain.model.Face import Face
 from cube.domain.model.CubeQueries2 import Pred0
-from cube.application.commands.op_annotation import AnnWhat
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.Tracker import EdgeTracker, CornerTracker

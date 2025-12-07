@@ -11,7 +11,7 @@ from cube.domain.model import FaceName, Color, CenterSlice
 from cube.domain.model.Cube import Cube
 from cube.domain.model.cube_boy import CubeLayout, color2long
 from cube.domain.model.Face import Face
-from cube.application.commands.op_annotation import AnnWhat
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.FaceTracker import FaceTracker
 from cube.domain.solver.beginner.NxnCentersFaceTracker import NxNCentersFaceTrackers
 from cube.domain.solver.common.BaseSolver import BaseSolver

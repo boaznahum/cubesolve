@@ -1,5 +1,5 @@
 from cube.domain.algs import Algs
-from cube.application.commands.op_annotation import AnnWhat
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
 

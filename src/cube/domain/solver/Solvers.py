@@ -1,4 +1,4 @@
-from cube.application.commands.Operator import Operator
+from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.beginner.BeginnerSolver import BeginnerSolver
 from .CFOP.CFOP import CFOP
 from .solver import BeginnerLBLReduce
@@ -11,22 +11,22 @@ from cube.domain.exceptions import InternalSWError
 class Solvers:
 
     @staticmethod
-    def default(op: Operator) -> Solver:
+    def default(op: OperatorProtocol) -> Solver:
         if config.SOLVER_CFOP:
             return Solvers.cfop(op)
         else:
             return Solvers.beginner(op)
 
     @staticmethod
-    def beginner(op: Operator) -> BeginnerLBLReduce:
+    def beginner(op: OperatorProtocol) -> BeginnerLBLReduce:
         return BeginnerSolver(op)
 
     @staticmethod
-    def cfop(op: Operator) -> Solver:
+    def cfop(op: OperatorProtocol) -> Solver:
         return CFOP(op)
 
     @classmethod
-    def next_solver(cls, current: SolverName, op: Operator):
+    def next_solver(cls, current: SolverName, op: OperatorProtocol):
 
         _ids = [ * SolverName ]
         index = _ids.index(current)
@@ -36,7 +36,7 @@ class Solvers:
         return cls.by_name(next_s, op)
 
     @classmethod
-    def by_name(cls, solver_id: SolverName, op: Operator):
+    def by_name(cls, solver_id: SolverName, op: OperatorProtocol):
 
         match solver_id:
 

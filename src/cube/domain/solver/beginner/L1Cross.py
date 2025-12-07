@@ -5,7 +5,7 @@ from cube.domain.algs import Algs, Alg
 from cube.domain.model import FaceName, Edge, PartColorsID, PartEdge, Part
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from cube.application.commands.op_annotation import AnnWhat
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
 

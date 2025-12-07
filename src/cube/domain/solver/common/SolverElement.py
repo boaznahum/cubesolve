@@ -3,15 +3,14 @@ from typing import final, TYPE_CHECKING, TypeAlias, Tuple, ContextManager, Calla
 
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
-from cube.application.commands.Operator import Operator
+from cube.domain.solver.protocols import OperatorProtocol, AnnotationProtocol, SupportsAnnotation
 from cube.domain.solver.common.BaseSolver import BaseSolver
+from cube.domain.solver.AnnWhat import AnnWhat
 from ...algs import Alg
 from ...model.CubeQueries2 import CubeQueries2
-from cube.application.commands.op_annotation import SupportsAnnotation, AnnWhat
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
-    from cube.application.commands.op_annotation import OpAnnotation
 
 _Common: TypeAlias = "CommonOp"
 
@@ -52,7 +51,7 @@ class SolverElement(CubeSupplier):
         return self._cqr
 
     @property
-    def op(self) -> Operator:
+    def op(self) -> OperatorProtocol:
         return self._solver.op
 
     def play(self, alg: Alg):
@@ -60,9 +59,9 @@ class SolverElement(CubeSupplier):
 
 
     @property
-    def ann(self) -> "OpAnnotation":
+    def ann(self) -> AnnotationProtocol:
         """
-        :deprecated, use
+        :deprecated, use annotate() directly
         :return:
         """
         return self._ann

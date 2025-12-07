@@ -66,7 +66,7 @@ This document describes the package structure of `src/cube/` and the dependencie
 | ID  | From      | To             | Status  | Issue                                       |
 |-----|-----------|----------------|---------|---------------------------------------------|
 | V1  | `domain`  | `application`  | ✅ FIXED | Domain imported from `application.exceptions` |
-| V2  | `domain`  | `application`  | ❌ Open  | Domain imports from `application.commands` (16 files) |
+| V2  | `domain`  | `application`  | ✅ FIXED | Domain imports from `application.commands` (16 files) |
 | V3  | `domain`  | `presentation` | ❌ Open  | Domain imports from `presentation.viewer` (2 files) |
 
 ---
