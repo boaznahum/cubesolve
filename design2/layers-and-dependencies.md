@@ -77,7 +77,7 @@ This document describes the package structure of `src/cube/` and the dependencie
 | V2  | `domain`  | `application`  | FIXED | Domain imported commands/operators from application |
 | V3  | `domain`  | `presentation` | FIXED | Domain imported VMarker from presentation |
 | V4  | `domain`  | `application`  | FIXED | Domain imported config from application |
-| V5  | `application` | `presentation` | OPEN | Application imports protocols from presentation (4 files) |
+| V5  | `application` | `presentation` | FIXED | Application imports protocols from presentation |
 
 ---
 
@@ -102,17 +102,23 @@ This document describes the package structure of `src/cube/` and the dependencie
 - Domain imports `get_config()` from utils instead of config from application
 - Protocol initialized at app startup via `init_config()`
 
----
+### V5: Application → Presentation (FIXED)
+Three sub-issues fixed:
 
-## Remaining Violations
+**V5a: state.py → Renderer** (FIXED)
+- Created `presentation/gui/ViewSetup.py` utility class
+- Moved view methods (`prepare_objects_view`, `restore_objects_view`, `set_projection`) from state.py to ViewSetup
+- state.py no longer imports from presentation
 
-### V5: Protocols (OPEN)
-Application imports from presentation (4 files):
-- `application/animation/AnimationManager.py` -> `presentation.gui.protocols`
-- `application/commands/OpAnnotation.py` -> `presentation.viewer.VMarker`
-- `application/state.py` -> `presentation.gui.protocols.Renderer`
+**V5b: AnimationManager.py → protocols** (FIXED)
+- Created `application/protocols/` with `EventLoop.py` and `AnimatableViewer.py`
+- These protocols define what application needs; presentation implements them
+- Moved protocols from presentation to application (correct direction)
+- presentation/gui/protocols re-exports for backward compatibility
 
-**Potential fix:** Move protocols to `application/` or use dependency injection
+**V5c: OpAnnotation.py → VMarker** (FIXED)
+- Changed import from `presentation.viewer.VMarker` to `domain.model.VMarker`
+- Deleted `presentation/viewer/VMarker.py` re-export file (no longer needed)
 
 ---
 
@@ -122,7 +128,7 @@ Application imports from presentation (4 files):
 presentation -> application -> domain -> utils/resources
 ```
 
-Currently 1 violation remains (V5) preventing clean architecture.
+**ALL VIOLATIONS FIXED!** Clean architecture achieved.
 
 ---
 

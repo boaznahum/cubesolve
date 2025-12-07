@@ -79,7 +79,7 @@ All pyglet imports now only exist in:
 
 ```bash
 # 1. Mypy type checker
-python -m mypy src/cube --ignore-missing-imports
+python -m mypy -p cube
 
 # 2. Pyright type checker
 python -m pyright src/cube

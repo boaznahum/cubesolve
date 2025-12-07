@@ -242,25 +242,6 @@
   - **File:** `src/cube/presentation/gui/backends/pyglet2/ModernGLCubeViewer.py`
   - **Needs:** Refactoring to match code quality of legacy `GCubeViewer`
 
-- ❌ **Q12.** Fix AppWindow.viewer type mismatch **(CRITICAL)**
-  - **Status:** New (2025-12-06)
-  - **Problem:** Protocol/implementation type mismatch causing mypy errors
-  - **Details:**
-    - `AppWindow` protocol declares `viewer -> GCubeViewer`
-    - `PygletAppWindow` returns `GCubeViewer | ModernGLCubeViewer | None`
-    - `GCubeViewer` and `ModernGLCubeViewer` are siblings (both inherit `AnimatableViewer`)
-  - **Mypy errors:**
-    - `viewer: expected "GCubeViewer", got "GCubeViewer | ModernGLCubeViewer | None"`
-    - Multiple `[abstract]` errors due to type conflicts
-  - **Fix options:**
-    1. Update `AppWindow` protocol to use `AnimatableViewer` as viewer type
-    2. Make `ModernGLCubeViewer` inherit from `GCubeViewer`
-    3. Create common base/protocol for both viewers
-  - **Files:**
-    - `src/cube/presentation/gui/protocols/AppWindow.py:50` - protocol definition
-    - `src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py:148` - implementation
-    - `src/cube/presentation/gui/protocols/AnimatableViewer.py` - common protocol
-
 - ❌ **Q13.** Evaluate pyright strict mode (1905 errors to fix)
   - **Status:** New (2025-12-07)
   - **Context:** Changed pyright from "basic" to "standard" mode, which catches method override issues
@@ -463,3 +444,10 @@
   - Added `debug()`, `debug_lazy()`, `is_debug()`, `debug_prefix()` methods
   - Migrated solver debug prints to use `vs.debug()` system
   - Added `--debug-all` and `--quiet` CLI flags
+
+- ✅ **Q12.** Fix AppWindow.viewer type mismatch
+  - **Fixed:** 2025-12-07 (as part of V5b layer fix)
+  - **Problem:** Protocol declared `viewer -> GCubeViewer` but implementations returned `GCubeViewer | ModernGLCubeViewer | None`
+  - **Solution:** Updated `AppWindow.viewer` to return `AnimatableViewer` protocol type
+  - `AnimatableViewer` is implemented by both `GCubeViewer` and `ModernGLCubeViewer`
+  - **Files:** `src/cube/presentation/gui/protocols/AppWindow.py:50`

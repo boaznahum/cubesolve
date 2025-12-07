@@ -8,7 +8,7 @@ from typing import TypeAlias, TYPE_CHECKING, Callable, Tuple, Literal, ContextMa
 from cube.domain.algs.Algs import Algs
 from cube.application.exceptions.app_exceptions import InternalSWError
 from cube.domain.model import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
-from cube.presentation.viewer.VMarker import VMarker, viewer_add_view_marker, viewer_remove_view_marker
+from cube.domain.model.VMarker import VMarker, viewer_add_view_marker, viewer_remove_view_marker
 from .AnnWhat import AnnWhat
 
 if TYPE_CHECKING:

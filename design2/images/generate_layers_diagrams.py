@@ -7,7 +7,7 @@ Violations status (as of 2025-12-07):
 - V2: FIXED - domain.solver.protocols created
 - V3: FIXED - VMarker moved to domain.model
 - V4: FIXED - ConfigProtocol in utils, application implements it
-- V5: OPEN - application imports protocols/viewer from presentation (4 files)
+- V5: FIXED - Moved protocols to application/protocols, ViewSetup to presentation
 """
 
 import matplotlib.pyplot as plt
@@ -408,6 +408,7 @@ def create_combined_layers_diagram():
         ('commands', 2.5, 7.5, 2.2, 1.2),
         ('exceptions', 4.9, 7.5, 1.8, 1.2),
         ('state', 0.3, 6.2, 2, 1),
+        ('protocols', 2.5, 6.2, 2.2, 1),  # V5 fix: application-level protocols
     ]
     for name, x, y, w, h in app_subs:
         ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.03",
@@ -475,14 +476,10 @@ def create_combined_layers_diagram():
     arrow(1.3, 6.2, 1.5, 2.5, 'green')      # app.state -> utils
     arrow(16.5, 6, 16.5, 2.5, 'green')      # pres -> resources
 
-    # V1, V2, V3, V4 FIXED
-    # V5 OPEN - application imports protocols from presentation (4 files)
+    # ALL VIOLATIONS FIXED (V1-V5)
 
     # Green arrow for V4 fix: domain.model -> utils (config_protocol)
     arrow(5.7, 2.8, 1.5, 2.5, 'green')  # domain.model -> utils (config_protocol)
-
-    # Red arrows for remaining violations
-    arrow(1.3, 6.2, 11.3, 7.5, 'red', 'V5')   # app.animation -> pres.gui.protocols (wrong direction)
 
     # Legend
     ax.add_patch(FancyBboxPatch((0, 11), 6.5, 2.5, boxstyle="round,pad=0.1",
@@ -491,9 +488,8 @@ def create_combined_layers_diagram():
     ax.annotate('', xy=(2, 12.2), xytext=(1, 12.2),
                 arrowprops=dict(arrowstyle='->', color='green', lw=2))
     ax.text(2.3, 12.2, 'Correct (top→bottom)', ha='left', va='center', fontsize=9)
-    ax.annotate('', xy=(2, 11.4), xytext=(1, 11.4),
-                arrowprops=dict(arrowstyle='->', color='red', lw=2))
-    ax.text(2.3, 11.4, 'WRONG (V5 only)', ha='left', va='center', fontsize=9, color='red', fontweight='bold')
+    ax.text(3.25, 11.4, 'ALL VIOLATIONS FIXED!', ha='center', va='center',
+            fontsize=10, color='green', fontweight='bold')
 
     plt.tight_layout()
     plt.savefig('combined-layers-dependencies.png', dpi=150, bbox_inches='tight',

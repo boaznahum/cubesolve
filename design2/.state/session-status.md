@@ -1,17 +1,20 @@
 # Session Status
 
 ## Current Phase
-**Documentation Phase** - Creating visual documentation
+**Architecture Fix Phase** - Fixing layer dependency violations
 
 ## Last Updated
-2025-12-06
+2025-12-07
 
 ## Current Focus
-PartEdge Attribute System fully documented with 3 diagrams!
+ALL LAYER VIOLATIONS FIXED! Clean architecture achieved.
 
 ## Completed Tasks
 - [x] Created design2 folder structure
 - [x] Created human-notes.md and claude-notes.md
+- [x] Fixed V5a: Moved view methods from state.py to ViewSetup.py
+- [x] Fixed V5b: Moved EventLoop/AnimatableViewer protocols to application/protocols/
+- [x] Fixed V5c: OpAnnotation.py imports VMarker from domain (deleted presentation re-export)
 - [x] Captured two-phase architecture insight (part methods validity)
 - [x] Created .state mechanism
 - [x] Reformatted human-notes.md

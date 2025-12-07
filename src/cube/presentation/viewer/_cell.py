@@ -12,7 +12,7 @@ from cube.domain.model.cube_boy import Color, FaceName
 from cube.domain.model.Face import Face
 from cube.utils import geometry
 from .TextureData import TextureData
-from .VMarker import VMarker, viewer_get_markers
+from cube.domain.model.VMarker import VMarker, viewer_get_markers
 from cube.application import config
 from cube.domain.model import PartEdge
 from cube.domain.model import PartSliceHashID
