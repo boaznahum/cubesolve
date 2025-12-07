@@ -11,7 +11,6 @@
 | G5 | GUI | - | Comprehensive Command Testing Plan |
 | G6 | GUI | - | Additional lighting improvements (pyglet2) |
 | G7 | GUI | IN PROGRESS | Texture mapping for cube faces |
-| A4 | Architecture | - | Fix AppWindowBase / AbstractWindow inheritance |
 | A7 | Architecture | - | Investigate and document circular import issues |
 | D1 | Documentation | - | Improve keyboard_and_commands.md diagram |
 | Q5 | Quality | - | Review all `# type: ignore` comments |
@@ -142,43 +141,6 @@
 
 
 ## Architecture
-
-- ❌ **A4.** Fix AppWindowBase / AbstractWindow inheritance mess
-  - **Status:** New (2025-12-02)
-  - **Problem:** Inconsistent inheritance and code duplication in window classes
-  - **Current State:**
-    - Two different protocols exist:
-      - `AbstractWindow` - in `backends/pyglet/AbstractWindow.py` (runtime_checkable Protocol)
-      - `AppWindow` - in `protocols/AppWindow.py` (Protocol)
-    - `AppWindowBase` (ABC in `backends/pyglet/AppWindowBase.py`) does NOT inherit from `AbstractWindow`
-    - Pyglet backends duplicate code instead of inheriting:
-      - `PygletAppWindow(pyglet.window.Window, AnimationWindow)` - no AppWindowBase!
-      - Duplicated methods: `handle_key()`, `inject_command()`, `_update_status_text()`, `_update_animation_text()`
-    - Other backends correctly inherit from AppWindowBase:
-      - `HeadlessAppWindow(AppWindowBase, AppWindow)` ✅
-      - `ConsoleAppWindow(AppWindowBase, AppWindow)` ✅
-      - `TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow)` ✅
-  - **Root Cause:** `pyglet.window.Window` has its own metaclass that conflicts with Protocol/ABC inheritance
-  - **Violations:**
-    - CLAUDE.md rule: "When implementing protocols, always inherit from them for PyCharm visibility"
-    - DRY principle: ~200 lines duplicated between `AppWindowBase` and `PygletAppWindow`
-  - **Files Affected:**
-    - `backends/pyglet/AbstractWindow.py` - Protocol (line 11)
-    - `backends/pyglet/AppWindowBase.py` - ABC (line 48)
-    - `backends/pyglet/PygletAppWindow.py` - duplicates code (lines 185-350)
-    - `backends/pyglet2/AbstractWindow.py` - same issue
-    - `backends/pyglet2/AppWindowBase.py` - same issue
-    - `backends/pyglet2/PygletAppWindow.py` - same issue
-    - `protocols/AppWindow.py` - another protocol (line 20)
-  - **Solution Options:**
-    1. **Composition:** Have `PygletAppWindow` contain an `AppWindowBase` instance and delegate to it
-    2. **Mixin class:** Create `AppWindowMixin` without metaclass, inherit from that
-    3. **Consolidate protocols:** Merge `AbstractWindow` into `AppWindow`, delete duplicate
-    4. **Accept duplication:** Keep as-is with strong documentation (not recommended)
-  - **Recommended Approach:**
-    - First: Consolidate `AbstractWindow` and `AppWindow` into single protocol in `protocols/`
-    - Then: Use composition or mixin pattern to share implementation between pyglet and other backends
-    - Finally: Delete `backends/pyglet/AbstractWindow.py` and `backends/pyglet2/AbstractWindow.py`
 
 - ❌ **A7.** Investigate and document circular import issues
   - **Status:** New (2025-12-07)
@@ -355,6 +317,15 @@
   - **Tests:** 126 non-GUI passed, 11 GUI passed (2 pyglet2, 9 other backends)
   - **Files:** `src/cube/presentation/gui/backends/pyglet2/`
   - **Docs:** `docs/design/migration_state.md` (A5 section)
+
+- ✅ **A4.** Fix AppWindowBase / AbstractWindow inheritance mess
+  - **Fixed:** 2025-12-07 (discovered during V5 layer fixes)
+  - **Solution:**
+    - Centralized `AppWindowBase` in `protocols/` (was duplicated in backends)
+    - Deleted backend-specific `AbstractWindow.py` files
+    - All backends now properly inherit: `PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow)`
+    - No more metaclass conflicts - pyglet2 uses composition via `PygletWindow`
+  - **Files:** `protocols/AppWindowBase.py`, all `*AppWindow.py` files
 
 - ✅ **A6.** AnimationManager layer violation (application layer knowing presentation details)
   - **Completed:** 2025-12-02
