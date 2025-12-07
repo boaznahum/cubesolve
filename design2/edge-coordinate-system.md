@@ -3,7 +3,22 @@
 This document explains the most complex concept in the cube model - the edge coordinate system
 and the `right_top_left_same_direction` flag.
 
-**Reference:** `coor-system-doc/right-top-left-coordinates.jpg` (human-drawn diagram)
+**Reference:** See the hand-drawn diagram below.
+
+## Hand-Drawn Reference Diagram
+
+![Edge Coordinate System - Hand-drawn diagram showing R/T directions for all edges](../coor-system-doc/right-top-left-coordinates.jpg)
+
+*Human-drawn diagram showing the R (right) and T (top) direction arrows for each face, illustrating which edge pairs have same vs opposite indexing directions.*
+
+## Generated Diagram (Clean Version)
+
+![Edge Coordinate System - Generated diagram with 3D and unfolded views](images/edge-coordinate-system.png)
+
+*Generated diagram showing:*
+- *Left: 3D cube with ✓ (green) = same_direction True, ✗ (red) = False*
+- *Right: Unfolded cube with R (blue→) and T (red↑) direction arrows on each face*
+- *Summary: 8 edges SAME, 4 edges OPPOSITE (L-U, U-B, D-R, D-B)*
 
 ---
 
@@ -99,9 +114,9 @@ When two faces share an edge, their R/T directions along that edge may:
 
 ---
 
-## Visual Reference: The Hand-Drawn Diagram
+## Visual Reference: Interpreting the Hand-Drawn Diagram
 
-The diagram in `coor-system-doc/right-top-left-coordinates.jpg` shows:
+The hand-drawn diagram at the top of this document shows:
 
 ```
                          U
@@ -259,12 +274,11 @@ With `right_top_left_same_direction`:
 
 | Location | Purpose |
 |----------|---------|
-| `Cube.py:1704` | `_create_edge()` function with flag parameter |
-| `Cube.py:387-403` | All 12 edge creations with True/False values |
-| `Edge.py:91-110` | `get_ltr_index_from_slice_index()` - uses the flag |
-| `Edge.py:112-127` | `get_slice_index_from_ltr_index()` - inverse conversion |
-| `Face.py:211-267` | `rotate()` - uses index conversion for slice copying |
-| `coor-system-doc/right-top-left-coordinates.jpg` | Human-drawn reference diagram |
+| [`Cube.py`](../src/cube/domain/model/Cube.py) | `_create_edge()` function with flag parameter |
+| [`Cube.py`](../src/cube/domain/model/Cube.py) | All 12 edge creations with True/False values |
+| [`Edge.py:127-160`](../src/cube/domain/model/Edge.py) | `get_ltr_index_from_slice_index()` - uses the flag |
+| [`Edge.py:162-193`](../src/cube/domain/model/Edge.py) | `get_slice_index_from_ltr_index()` - inverse conversion |
+| [`Face.py`](../src/cube/domain/model/Face.py) | `rotate()` - uses index conversion for slice copying |
 
 ---
 

@@ -40,6 +40,22 @@ There are few areas of documentation that you must keep consistent - this is the
 3. The documents you create in this folder
 4. Your internal state where you keep your insights
 
+**⚠️ CRITICAL: Never document without updating docstrings!**
+
+Every documentation change requires updating ALL FOUR areas:
+
+| Step | Action |
+|------|--------|
+| 1 | Update/create `design2/*.md` documentation |
+| 2 | Update Python docstrings in source files |
+| 3 | Add `See: design2/xxx.md` references in docstrings |
+| 4 | Update `.state/insights.md` with new learnings |
+
+Docstrings must include:
+- Clear explanation of the concept
+- Reference to visual documentation: `See: design2/model-id-system.md`
+- Correct file paths: `../src/cube/domain/model/`
+
 It will be great if you can put clickable links between documents and docstrings.
 
 Use best agents to understand the model code and later the presentation. If you are not sure, ask me.

@@ -15,10 +15,44 @@ _Cube: TypeAlias = "Cube"  # type: ignore
 _PartSlice: TypeAlias = "PartSlice"  # type: ignore
 
 
-# todo: move to PartEdge
 class PartEdge:
     """
-    THe smallest part of the cube, aggregated by the :class:`PartSlice`
+    The smallest unit of the cube model, representing a single colored sticker.
+
+    Each PartEdge belongs to exactly one Face and is aggregated by a PartSlice.
+    The color can change during rotations (via copy_color), but the face reference
+    is fixed - representing the physical slot position.
+
+    THREE ATTRIBUTE DICTIONARIES
+    ============================
+    PartEdge has three distinct attribute systems for different use cases:
+
+    1. ``attributes`` - Structural/Positional (FIXED)
+       - Properties of the physical slot itself
+       - Set once during Face.finish_init()
+       - Keys: "origin", "on_x", "on_y", "cw" (clockwise index)
+       - NEVER move during rotations
+       - Used for coordinate system and rotation calculations
+
+    2. ``c_attributes`` - Color-Associated (MOVES with color)
+       - Attributes that travel with the colored sticker during rotations
+       - COPIED during copy_color() method
+       - Keys: "n" (sequential number), tracker keys, VMarker.C1
+       - Use case: Track a specific piece as it moves around the cube
+       - Example: FaceTracker puts a key here to find a piece after rotation
+
+    3. ``f_attributes`` - Fixed to Slot (STAYS at position)
+       - Attributes that stay at the physical slot position
+       - NOT copied during copy_color()
+       - Keys: destination markers, VMarker.C2
+       - Use case: Mark where a piece should end up (destination)
+       - Uses defaultdict(bool) so missing keys return False
+
+    Animation Use Case:
+        - AnnWhat.Moved → uses c_attributes → marker follows the sticker
+        - AnnWhat.FixedPosition → uses f_attributes → marker stays at destination
+
+    See: design2/partedge-attribute-system.md for visual diagrams
     """
     __slots__ = ["_face", "_parent", "_color", "_annotated_by_color",
                  "_annotated_fixed_location",
@@ -29,15 +63,34 @@ class PartEdge:
     _color: Color
 
     def __init__(self, face: _Face, color: Color) -> None:
+        """
+        Create a PartEdge on a specific face with an initial color.
+
+        Args:
+            face: The Face this edge belongs to (fixed, never changes)
+            color: Initial color of the sticker (can change during rotation)
+
+        The three attribute dictionaries are initialized empty:
+        - attributes: {} (structural, set by Face.finish_init)
+        - c_attributes: {} (color-associated, moves with color)
+        - f_attributes: defaultdict(bool) (fixed, stays at slot)
+        """
         super().__init__()
         self._face = face
         self._color = color
         self._annotated_by_color: bool = False
         self._annotated_fixed_location: bool = False
+
+        # Structural attributes - physical slot properties (origin, cw, on_x, on_y)
+        # Set by Face.finish_init(), never move during rotation
         self.attributes: dict[Hashable, Any] = {}
+
+        # Color-associated attributes - MOVE with color during copy_color()
+        # Used by FaceTracker, animation markers (VMarker.C1)
         self.c_attributes: dict[Hashable, Any] = {}
 
-        # fixed attributes that are not moved around with the slice
+        # Fixed attributes - STAY at physical slot, NOT copied during rotation
+        # Used for destination markers (VMarker.C2)
         self.f_attributes: dict[Hashable, Any] = defaultdict(bool)
 
         self._parent: _PartSlice
@@ -61,6 +114,28 @@ class PartEdge:
             return f"{self._color.name}@{self._face}"
 
     def copy_color(self, source: "PartEdge"):
+        """
+        Copy color and color-associated attributes from source.
+
+        This is the core rotation mechanic - colors move between physical slots.
+        Called by PartSlice.copy_colors() during face rotation.
+
+        What gets COPIED:
+        - _color: The actual sticker color
+        - _annotated_by_color: Color-based annotation flag
+        - c_attributes: All color-associated attributes (cleared then updated)
+
+        What is NOT copied (stays at this slot):
+        - _face: Physical face reference
+        - attributes: Structural slot properties
+        - f_attributes: Fixed destination markers
+
+        This distinction enables:
+        - Tracking pieces: Put marker in c_attributes, it follows the color
+        - Marking destinations: Put marker in f_attributes, it stays put
+
+        See: design2/partedge-attribute-system.md for visual diagrams
+        """
         self._color = source._color
         self._annotated_by_color = source._annotated_by_color
         self.c_attributes.clear()

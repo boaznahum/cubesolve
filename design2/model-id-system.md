@@ -2,21 +2,48 @@
 
 This document provides visual diagrams explaining the three ID types in the cube model.
 
+**Key Source Files:**
+- [`cube_boy.py`](../src/cube/domain/model/cube_boy.py) - Cube creation with BOY color scheme
+- [`Part.py`](../src/cube/domain/model/Part.py) - Part class with all ID properties
+- [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) - PartSlice with slice-level IDs
+- [`Edge.py`](../src/cube/domain/model/Edge.py) - Edge class with is3x3 property
+
 ---
 
 ## Overview: Three Types of IDs
 
+![Three ID Types Overview](images/id-types-overview.png)
+
+*The three ID types serve different purposes: fixed_id identifies the structural slot, position_id identifies where a part should go, and colors_id identifies what piece it actually is.*
+
+| ID Type | Based On | Changes When | Code Location |
+|---------|----------|--------------|---------------|
+| `fixed_id` | Face NAMES (FaceName enum) | NEVER | [`Part.py:99`](../src/cube/domain/model/Part.py) |
+| `position_id` | Face CENTER colors | Slice/cube rotation (M,E,S,x,y,z) | [`Part.py:272`](../src/cube/domain/model/Part.py) |
+| `colors_id` | Actual sticker colors | ANY rotation | [`Part.py:319`](../src/cube/domain/model/Part.py) |
+
+---
+
+## Core Concept: Parts are FIXED, Only Colors Move!
+
+![Parts Fixed Colors Move](images/parts-fixed-colors-move.png)
+
+*This is fundamental: the physical slots (Parts) never move in 3D space. Only the colored stickers rotate through the slots during cube moves.*
+
+### Why This Matters
+
+```python
+# From Part.py - fixed_id is based on face NAMES, not colors
+@property
+def fixed_id(self) -> PartFixedID:
+    """
+    Based on face NAMES - never changes regardless of cube state.
+    Identifies the physical SLOT in the cube structure.
+    """
+    return frozenset(edge.face.name for edge in self._edges)
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           ID SYSTEM SUMMARY                                  │
-├─────────────────┬───────────────────────┬───────────────────────────────────┤
-│ ID Type         │ Based On              │ Changes When                      │
-├─────────────────┼───────────────────────┼───────────────────────────────────┤
-│ fixed_id        │ Face NAMES (F,R,U...) │ NEVER                             │
-│ position_id     │ Face CENTER colors    │ Slice/cube rotation (M,E,S,x,y,z) │
-│ colors_id       │ Actual part colors    │ ANY rotation                      │
-└─────────────────┴───────────────────────┴───────────────────────────────────┘
-```
+
+**Reference:** [`Part.py:99-113`](../src/cube/domain/model/Part.py)
 
 ---
 
@@ -27,19 +54,6 @@ This document provides visual diagrams explaining the three ID types in the cube
 **Purpose:** Identifies the physical SLOT in the cube structure.
 
 ```
-                    ┌───────────┐
-                    │     U     │
-                    │  (Yellow) │
-                    └─────┬─────┘
-          ┌───────────┐   │   ┌───────────┐
-          │     L     │───┼───│     R     │
-          │  (Orange) │   │   │   (Red)   │
-          └───────────┘   │   └───────────┘
-                    ┌─────┴─────┐
-                    │     F     │
-                    │  (Blue)   │
-                    └───────────┘
-
     Edge at Front-Up position:
 
     fixed_id = frozenset({FaceName.F, FaceName.U})
@@ -51,16 +65,7 @@ This document provides visual diagrams explaining the three ID types in the cube
     This NEVER changes, even if you rotate the whole cube!
 ```
 
-**Code location:** `Part.fixed_id`, `PartSlice.fixed_id`
-
-**Formula:**
-```python
-# For PartSlice:
-fixed_id = frozenset(tuple([index]) + tuple(edge.face.name for edge in edges))
-
-# For Part:
-fixed_id = frozenset(slice.fixed_id for slice in all_slices)
-```
+**Code Reference:** [`Part.fixed_id`](../src/cube/domain/model/Part.py) at line ~99
 
 ---
 
@@ -70,53 +75,18 @@ fixed_id = frozenset(slice.fixed_id for slice in all_slices)
 
 **Purpose:** Tells you where a part SHOULD go (based on face center colors).
 
-```
-    SOLVED CUBE (BOY orientation):
-
-                    ┌───────────┐
-                    │  YELLOW   │  ← Face U center color
-                    │     U     │
-                    └─────┬─────┘
-                          │
-                    ┌─────┴─────┐
-                    │   BLUE    │  ← Face F center color
-                    │     F     │
-                    └───────────┘
-
-    Edge at Front-Up slot:
-
-    position_id = frozenset({Color.BLUE, Color.YELLOW})
-                            ▲              ▲
-                            │              │
-                    Face F's center   Face U's center
-                         color            color
-```
-
-**When does position_id change?**
-
-```
-    BEFORE y rotation:           AFTER y rotation (cube rotates):
-
-         U(Yellow)                    U(Yellow)
-            │                            │
-    L(Orange)─┼─R(Red)           L(Red)──┼──R(Orange)
-            │                            │
-         F(Blue)                      F(Green)
-
-    Edge at F-U slot:
-    position_id = {BLUE, YELLOW}     position_id = {GREEN, YELLOW}
-
-    ⚠️ CHANGED! Because face F now has GREEN center (was back face)
-```
-
-**Code location:** `Part.position_id`
-
-**Formula:**
 ```python
-position_id = frozenset(edge.face.color for edge in _3x3_representative_edges)
-#                              ▲
-#                     Face's CENTER color (not the part's color!)
+# From Part.py
+@property
+def position_id(self) -> PartColorsID:
+    """
+    Based on face CENTER colors - changes on slice/cube rotation.
+    Tells you the TARGET position for this slot.
+    """
+    return frozenset(edge.face.color for edge in self._3x3_representative_edges)
 ```
+
+**Code Reference:** [`Part.position_id`](../src/cube/domain/model/Part.py) at line ~272
 
 ---
 
@@ -126,145 +96,49 @@ position_id = frozenset(edge.face.color for edge in _3x3_representative_edges)
 
 **Purpose:** Identifies WHICH piece this is (by its sticker colors).
 
-```
-    SCRAMBLED STATE EXAMPLE:
-
-                    ┌───────────┐
-                    │  YELLOW   │  ← Face U center
-                    │    ┌─┐    │
-                    │    │R│    │  ← But this edge has RED sticker!
-                    └────┴─┴────┘
-                          │
-                    ┌─────┴─────┐
-                    │    ┌─┐    │
-                    │    │W│    │  ← And WHITE sticker on F side!
-                    │   BLUE    │  ← Face F center
-                    └───────────┘
-
-    This edge (White-Red piece) is in the F-U slot:
-
-    position_id = {BLUE, YELLOW}     ← Where it IS (slot identity)
-    colors_id   = {WHITE, RED}       ← What it IS (piece identity)
-
-    in_position = (position_id == colors_id) = FALSE!
-
-    The White-Red edge SHOULD be at the Down-Right slot
-    (where White and Red faces meet)
-```
-
-**Code location:** `Part.colors_id`, `PartSlice.colors_id`
-
-**Formula:**
 ```python
-colors_id = frozenset(edge.color for edge in _3x3_representative_edges)
-#                          ▲
-#                  The sticker's ACTUAL color
+# From Part.py
+@property
+def colors_id(self) -> PartColorsID:
+    """
+    Actual sticker colors - changes on ANY rotation.
+    Identifies the specific piece by its colors.
+    """
+    return frozenset(edge.color for edge in self._3x3_representative_edges)
 ```
+
+**Code Reference:** [`Part.colors_id`](../src/cube/domain/model/Part.py) at line ~319
 
 ---
 
-## Visual: How IDs Change During Rotation
+## When Does colors_id Change?
 
-### Face Rotation (F move)
+![When colors_id Changes](images/colors-id-changes.png)
 
-```
-    BEFORE F rotation:                AFTER F rotation:
+*Critical distinction: Face rotations (F, R, U, etc.) only change colors_id. Cube/slice rotations (x, y, z, M, E, S) change BOTH colors_id AND position_id!*
 
-           U                                U
-        ┌──┴──┐                          ┌──┴──┐
-        │Y │Y │                          │O │Y │
-        ├──┼──┤                          ├──┼──┤
-      L │O │B │ R                      L │Y │B │ R
-        ├──┼──┤                          ├──┼──┤
-        │O │B │                          │O │B │
-        └──┬──┘                          └──┬──┘
-           F                                F
+### Summary Table
 
-    Edge at F-U position:
+| Rotation Type | fixed_id | position_id | colors_id |
+|--------------|----------|-------------|-----------|
+| Face (F, R, U, L, B, D) | ✓ Same | ✓ Same | ✗ Changes |
+| Cube (x, y, z) | ✓ Same | ✗ Changes | ✗ Changes |
+| Slice (M, E, S) | ✓ Same | ✗ Changes | ✗ Changes |
 
-    fixed_id:    {F, U}              {F, U}         ← SAME (structure)
-    position_id: {BLUE, YELLOW}      {BLUE, YELLOW} ← SAME (faces unchanged)
-    colors_id:   {YELLOW, BLUE}      {ORANGE, BLUE} ← CHANGED! (colors moved)
-```
-
-### Slice Rotation (M move)
-
-```
-    BEFORE M rotation:                AFTER M rotation:
-
-    Face centers move!
-
-           U(Y)                            U(B)  ← Was Front's color!
-        ┌──┴──┐                          ┌──┴──┐
-        │  │  │                          │  │  │
-      L │  │  │ R                      L │  │  │ R
-        │  │  │                          │  │  │
-        └──┬──┘                          └──┬──┘
-           F(B)                            F(W)  ← Was Down's color!
-
-    Edge at F-U position:
-
-    fixed_id:    {F, U}              {F, U}         ← SAME
-    position_id: {BLUE, YELLOW}      {WHITE, BLUE}  ← CHANGED! (face colors moved)
-    colors_id:   changes...          changes...     ← Also changes
-```
+**Code Reference:** See [`Face.py:211-267`](../src/cube/domain/model/Face.py) for rotation logic
 
 ---
 
-## Phase 1 vs Phase 2: Which IDs Matter?
+## Evolution: Big Cube → 3x3 Reduction
 
-### Phase 1: Big Cube (before reduction)
+![Reduction Evolution](images/reduction-evolution.png)
 
-```
-    5x5 EDGE (not reduced):
+*The two-phase solving approach: Phase 1 works with individual slices, Phase 2 works with whole parts after reduction.*
 
-    ┌───┬───┬───┐
-    │ R │ O │ R │  ← 3 different slices with DIFFERENT colors!
-    ├───┼───┼───┤
-    │ B │ G │ B │
-    └───┴───┴───┘
-
-    Slice 0: colors_id = {RED, BLUE}
-    Slice 1: colors_id = {ORANGE, GREEN}  ← Different!
-    Slice 2: colors_id = {RED, BLUE}
-
-    Edge.colors_id = uses MIDDLE slice = {ORANGE, GREEN}
-
-    ⚠️ Edge.colors_id is MEANINGLESS here!
-    ⚠️ Edge.is3x3 = FALSE
-
-    Solver uses: slice.colors_id (individual slices)
-```
-
-### Phase 2: After Reduction (3x3 mode)
-
-```
-    5x5 EDGE (after reduction):
-
-    ┌───┬───┬───┐
-    │ R │ R │ R │  ← All slices have SAME colors!
-    ├───┼───┼───┤
-    │ B │ B │ B │
-    └───┴───┴───┘
-
-    Slice 0: colors_id = {RED, BLUE}
-    Slice 1: colors_id = {RED, BLUE}  ← Same!
-    Slice 2: colors_id = {RED, BLUE}  ← Same!
-
-    Edge.colors_id = {RED, BLUE}  ← NOW MEANINGFUL!
-    Edge.is3x3 = TRUE
-
-    Solver uses: edge.colors_id, edge.in_position, edge.match_faces
-```
-
----
-
-## Solver Usage Patterns
-
-### NxNEdges.py (Phase 1 - Big Cube)
+### Phase 1: Big Cube (is3x3 = FALSE)
 
 ```python
-# Works with SLICES, not Parts
+# From NxNEdges.py - works with SLICES
 for i in range(n_slices):
     a_slice = edge.get_slice(i)
     a_slice_id = a_slice.colors_id  # ← Slice-level colors_id
@@ -272,38 +146,45 @@ for i in range(n_slices):
         # fix this slice
 ```
 
-### L1Cross.py (Phase 2 - 3x3)
+**Code Reference:** [`solver/NxNEdges.py`](../src/cube/domain/solver/NxNEdges.py)
+
+### Phase 2: After Reduction (is3x3 = TRUE)
 
 ```python
-# Works with PARTS
-color_codes = Part.parts_id_by_pos(wf.edges)  # ← position_id
-for color_id in color_codes:
-    source_edge = cube.find_edge_by_color(color_id)  # ← colors_id
-    if source_edge.match_faces:  # ← Only valid in 3x3!
+# From L1Cross.py - works with PARTS
+for edge in cube.edges:
+    if edge.match_faces:  # ← Only valid when is3x3!
         continue
+    # solve this edge
 ```
 
-### Tracker.py (Phase 2 - Part tracking)
-
-```python
-class PartTracker:
-    def __init__(self, color_id):
-        self._color_id = color_id  # Track by colors_id
-
-    @property
-    def position(self):
-        # Find where this color SHOULD be (by position_id)
-        return find_part_by_position(self._color_id)
-
-    @property
-    def actual(self):
-        # Find where this color IS (by colors_id)
-        return find_part_by_color(self._color_id)
-```
+**Code Reference:** [`solver/L1Cross.py`](../src/cube/domain/solver/L1Cross.py)
 
 ---
 
-## Key Relationships
+## Part vs PartSlice Hierarchy
+
+![Part vs PartSlice](images/part-vs-slice.png)
+
+*Understanding the class hierarchy is essential: Cube → Face → Part → PartSlice → PartEdge*
+
+### ID Availability by Class
+
+| Class | fixed_id | position_id | colors_id |
+|-------|----------|-------------|-----------|
+| Part | ✓ | ✓ (only if is3x3) | ✓ (only if is3x3) |
+| PartSlice | ✓ | ✗ | ✓ |
+| PartEdge | ✗ | ✗ | (just `.color`) |
+
+**Code References:**
+- [`Part.py`](../src/cube/domain/model/Part.py) - Part class
+- [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) - PartSlice class
+- [`Edge.py`](../src/cube/domain/model/Edge.py) - Edge (extends Part)
+- [`Corner.py`](../src/cube/domain/model/Corner.py) - Corner (extends Part)
+
+---
+
+## Key State Check Properties
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -332,21 +213,55 @@ class PartTracker:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**Code References:**
+| Property | Location | Description |
+|----------|----------|-------------|
+| `Part.in_position` | [`Part.py:203`](../src/cube/domain/model/Part.py) | position_id == colors_id |
+| `Part.match_faces` | [`Part.py:191`](../src/cube/domain/model/Part.py) | All colors match faces |
+| `Edge.is3x3` | [`Edge.py:59`](../src/cube/domain/model/Edge.py) | All slices aligned |
+
 ---
 
-## Code References
+## Solver Usage Patterns
+
+### Phase 1 Solvers (Big Cube)
+
+| Solver | Works With | Uses |
+|--------|------------|------|
+| [`NxNEdges.py`](../src/cube/domain/solver/NxNEdges.py) | Slices | `slice.colors_id` |
+| [`NxNCenters.py`](../src/cube/domain/solver/NxNCenters.py) | Center slices | `center_slice.colors_id` |
+
+### Phase 2 Solvers (3x3)
+
+| Solver | Works With | Uses |
+|--------|------------|------|
+| [`L1Cross.py`](../src/cube/domain/solver/L1Cross.py) | Parts | `edge.position_id`, `edge.colors_id` |
+| [`Tracker.py`](../src/cube/domain/solver/common/Tracker.py) | Parts | Track by `colors_id` |
+
+---
+
+## Complete Code Reference Table
 
 | Property | File | Line | Description |
 |----------|------|------|-------------|
-| `Part.fixed_id` | Part.py | ~89 | Structure-based ID |
-| `Part.position_id` | Part.py | ~217 | Face-color-based target |
-| `Part.colors_id` | Part.py | ~252 | Actual sticker colors |
-| `Part.in_position` | Part.py | ~203 | position_id == colors_id |
-| `Part.match_faces` | Part.py | ~191 | All colors match faces |
-| `Edge.is3x3` | Edge.py | ~59 | All slices aligned |
-| `PartSlice.colors_id` | _part_slice.py | ~226 | Slice-level colors |
+| `Part.fixed_id` | [`Part.py`](../src/cube/domain/model/Part.py) | ~89 | Structure-based ID (face names) |
+| `Part.position_id` | [`Part.py`](../src/cube/domain/model/Part.py) | ~217 | Target position (face center colors) |
+| `Part.colors_id` | [`Part.py`](../src/cube/domain/model/Part.py) | ~252 | Actual sticker colors |
+| `Part.in_position` | [`Part.py`](../src/cube/domain/model/Part.py) | ~203 | position_id == colors_id |
+| `Part.match_faces` | [`Part.py`](../src/cube/domain/model/Part.py) | ~191 | All colors match faces |
+| `Edge.is3x3` | [`Edge.py`](../src/cube/domain/model/Edge.py) | ~59 | All slices have same colors |
+| `PartSlice.fixed_id` | [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) | ~180 | Slice structure ID |
+| `PartSlice.colors_id` | [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) | ~226 | Slice-level colors |
+
+---
+
+## Related Documentation
+
+- [Edge Coordinate System](edge-coordinate-system.md) - Explains `right_top_left_same_direction`
+- [Human Notes](human-notes.md) - Project background and instructions
 
 ---
 
 *Document created: 2025-12-06*
+*Graphics generated: 2025-12-06*
 *Source: Deep analysis of model/ package*
