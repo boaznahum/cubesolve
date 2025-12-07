@@ -158,7 +158,23 @@
 ---
 
 ## Phase 3: Presentation Layer Documentation
-*(To be detailed after Phase 2)*
+
+### 3.1 Texture Drawing Flow (COMPLETED 2025-12-07)
+- [x] Create texture-drawing-flow.md document
+- [x] Create class diagram (texture-drawing-classes.png)
+- [x] Create frame rendering sequence diagram (texture-drawing-sequence.png)
+- [x] Create texture loading sequence diagram (texture-loading-sequence.png)
+- [x] Update insights.md with learnings
+
+### 3.2 Texture Bug Investigation (IN PROGRESS)
+- [ ] Identify specific texture bug to investigate
+- [ ] Trace through code flow using diagrams
+- [ ] Document root cause and fix
+
+### 3.3 Other Presentation Layers (TODO)
+- [ ] Animation system documentation
+- [ ] Command/input handling documentation
+- [ ] Renderer abstraction layer documentation
 
 ---
 
@@ -171,6 +187,7 @@
 | edge-coordinate-system.md | 1 PNG + hand-drawn JPG | Edge.py |
 | partedge-attribute-system.md | 3 PNGs | PartEdge.py |
 | layers-and-dependencies.md | 3 PNGs | - (architecture doc) |
+| texture-drawing-flow.md | 3 PNGs | - (presentation layer) |
 
 ---
 

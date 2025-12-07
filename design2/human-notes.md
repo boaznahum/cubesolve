@@ -30,8 +30,12 @@ Under design2 we start a huge project of documentation of the cube solve project
   - All your internal state (things you learn and the mechanism you develop) should be in `.state` folder under this folder
   - All internal state must be git-controlled files to fulfill the rule that new session can start
 
-- If you find new entries under "New entries" section, add them after improving to your internal tasks or this file
+- If you find new entries under "New entries" section, add them after improving to your internal tasks or this file, but do not remove the "New entries" headline
 - Ask me if something is not clear
+
+## New entries
+I want to start investigate a image texture bug, so i need a documnet with classesnd sequnce uml diagrams that explain the flow from the vent loop till a image texture is drawn, do it in special documnet that focus on this issue, later we will work on other presentations layers
+
 
 ### Instructions About Documents
 

@@ -1,0 +1,96 @@
+@startuml texture-drawing-sequence
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceArrowColor #666666
+skinparam sequenceParticipantBackgroundColor #F8F8F8
+skinparam sequenceParticipantBorderColor #888888
+skinparam sequenceLifeLineBorderColor #AAAAAA
+
+title Texture Drawing - Sequence Diagram (Frame Rendering)
+
+participant "pyglet.app" as pyglet
+participant "PygletEventLoop" as eventloop
+participant "PygletWindow" as window
+participant "PygletAppWindow" as appwindow
+participant "ModernGLCubeViewer" as viewer
+participant "ModernGLBoard" as board
+participant "ModernGLRenderer" as renderer
+participant "OpenGL" as gl
+
+== Event Loop Running ==
+
+eventloop -> pyglet: run()
+activate pyglet
+
+loop every frame
+    pyglet -> window: on_draw()
+    activate window
+
+    window -> appwindow: on_draw()
+    activate appwindow
+
+    == Scene Setup ==
+    appwindow -> gl: glClearColor()
+    appwindow -> gl: glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    appwindow -> appwindow: setup view transforms\n(camera, rotations)
+
+    == Cube Drawing ==
+    appwindow -> viewer: draw()
+    activate viewer
+
+    alt geometry is dirty
+        viewer -> board: generate_geometry()
+        activate board
+        board --> viewer: triangles, triangles_per_color
+        deactivate board
+        viewer -> viewer: _dirty = False
+    end
+
+    alt texture_mode == True
+        loop for each Color in _triangles_per_color
+            viewer -> viewer: face = COLOR_TO_HOME_FACE[color]
+            viewer -> viewer: texture = _face_textures[face]
+            viewer -> viewer: triangles = _triangles_per_color[color]
+
+            viewer -> renderer: draw_textured_lit_triangles(triangles, texture)
+            activate renderer
+
+            == OpenGL Texture Operations ==
+            renderer -> gl: glUseProgram(textured_shader)
+            renderer -> gl: set uniforms\n(MVP, light, uUseTexture=1)
+            renderer -> gl: glActiveTexture(GL_TEXTURE0)
+            renderer -> gl: glBindTexture(GL_TEXTURE_2D, _textures[handle])
+            renderer -> gl: glBindVertexArray(_textured_vao)
+            renderer -> gl: glBufferData(_textured_vbo, triangles)
+            renderer -> gl: glDrawArrays(GL_TRIANGLES, ...)
+            renderer -> gl: glBindVertexArray(0)
+            renderer -> gl: glBindTexture(GL_TEXTURE_2D, 0)
+
+            renderer --> viewer:
+            deactivate renderer
+        end
+
+        viewer -> renderer: draw_colored_lines(grid_lines)
+    else texture_mode == False
+        viewer -> renderer: draw_lit_triangles(all_triangles)
+        viewer -> renderer: draw_colored_lines(grid_lines)
+    end
+
+    viewer --> appwindow:
+    deactivate viewer
+
+    == Additional Rendering ==
+    appwindow -> appwindow: draw animation (if active)
+    appwindow -> appwindow: draw celebration (if active)
+    appwindow -> appwindow: draw text labels
+
+    appwindow --> window:
+    deactivate appwindow
+
+    window --> pyglet:
+    deactivate window
+end
+
+deactivate pyglet
+
+@enduml

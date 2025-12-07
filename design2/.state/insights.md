@@ -336,6 +336,114 @@ This is a brilliant design for puzzle visualization:
 
 ---
 
+## Texture Drawing Flow (Presentation Layer)
+
+**Source:** Code analysis of pyglet2 backend (2025-12-07)
+
+### Architecture Overview
+
+The texture drawing system is layered:
+1. **Event Loop Layer** - `PygletEventLoop` runs `pyglet.app.run()`
+2. **Window Layer** - `PygletWindow` receives `on_draw()`, delegates to `PygletAppWindow`
+3. **Viewer Layer** - `ModernGLCubeViewer` manages cube geometry and texture state
+4. **Renderer Layer** - `ModernGLRenderer` handles OpenGL texture operations
+
+### Key Classes
+
+| Class | Responsibility |
+|-------|----------------|
+| `PygletEventLoop` | Runs pyglet event loop, triggers frame updates |
+| `PygletAppWindow` | Orchestrates drawing, manages texture sets |
+| `ModernGLCubeViewer` | Cube geometry, texture mode toggle, face textures |
+| `ModernGLRenderer` | Texture loading/binding, shader-based drawing |
+| `ModernGLBoard` | Generates geometry with UV coordinates |
+
+### Texture Handle Abstraction
+
+The renderer uses opaque integer handles:
+```python
+TextureHandle = int  # NOT the OpenGL texture ID
+
+# Renderer maintains internal mapping:
+_textures: dict[int, c_uint]  # handle -> GL texture ID
+_next_texture_handle: int = 1
+```
+
+### Drawing Flow (per frame)
+
+1. `PygletEventLoop.run()` → `pyglet.app.run()`
+2. Pyglet dispatches `on_draw` → `PygletWindow.on_draw()`
+3. Delegates to `PygletAppWindow.on_draw()`
+4. Calls `ModernGLCubeViewer.draw()`
+5. If `_texture_mode`:
+   - For each Color in `_triangles_per_color`:
+     - Map color to home face (COLOR_TO_HOME_FACE)
+     - Get texture handle from `_face_textures[face]`
+     - Call `renderer.draw_textured_lit_triangles(triangles, texture)`
+6. Renderer binds texture, uses shader, draws triangles
+
+### Texture Loading Flow
+
+1. `PygletAppWindow._load_current_texture_set()`
+2. Gets path from `TEXTURE_SETS[index]`
+3. Calls `ModernGLCubeViewer.load_texture_set(directory)`
+4. For each face (F,B,R,L,U,D):
+   - Find image file ({face}.png/jpg/etc)
+   - Call `renderer.load_texture(path)` → returns handle
+   - Store in `_face_textures[face] = handle`
+5. Set `_texture_mode = True`
+
+### Vertex Data Layout (Textured)
+
+11 floats per vertex:
+```
+Position (3) | Normal (3) | Color (3) | TexCoord (2)
+   x,y,z     |  nx,ny,nz  |   r,g,b   |    u,v
+```
+
+### Key Design: Textures Follow Colors, Not Face Positions
+
+**CRITICAL INSIGHT:** Textures are bound per COLOR, not per face position!
+
+```python
+# ModernGLCubeViewer.draw()
+for color, triangles in self._triangles_per_color.items():
+    home_face = COLOR_TO_HOME_FACE[color]  # WHITE → U, RED → R
+    texture = self._face_textures[home_face]
+    renderer.draw_textured_lit_triangles(triangles, texture)
+```
+
+This means when a WHITE sticker moves from the Up face to the Front face,
+it still uses U.png texture - the texture "follows" the color!
+
+### PartEdge → Cell Mapping
+
+The presentation layer maps domain model parts to grid cells:
+
+```
+Grid layout (3x3):
+  row 2: [corner_TL]  [edge_T]    [corner_TR]
+  row 1: [edge_L]     [center]    [edge_R]
+  row 0: [corner_BL]  [edge_B]    [corner_BR]
+         col 0        col 1       col 2
+```
+
+UV coordinates calculated as:
+- u0, v0 = col/size, row/size
+- u1, v1 = (col+1)/size, (row+1)/size
+
+### Bug Investigation Points
+
+When investigating texture bugs, check:
+1. **load_texture()** returning valid handle?
+2. **bind_texture()** called before drawing?
+3. **UV coordinates** correct in geometry?
+4. **Shader uniforms** (uUseTexture=1, uTexture=0)?
+5. **Draw order** - texture bound BEFORE glDrawArrays?
+6. **COLOR_TO_HOME_FACE mapping** - correct color→texture association?
+
+---
+
 ## Questions Still to Investigate
 
 See `.state/task-queue.md` for full list.
@@ -343,6 +451,7 @@ See `.state/task-queue.md` for full list.
 High priority:
 1. Face.rotate() mechanics (partially understood via right_top_left analysis)
 2. Slice class (M, E, S) rotation
+3. **Texture bug investigation** - specific bug TBD
 
 ---
 
@@ -351,6 +460,7 @@ High priority:
 - `design2/model-id-system.md` - Visual diagrams of ID system
 - `design2/edge-coordinate-system.md` - right_top_left_same_direction explained
 - `design2/partedge-attribute-system.md` - Three attribute types for animation
+- `design2/texture-drawing-flow.md` - Event loop to texture rendering flow
 
 ---
 

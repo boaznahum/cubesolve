@@ -1,0 +1,131 @@
+@startuml texture-drawing-classes
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F8F8F8
+skinparam classBorderColor #888888
+skinparam arrowColor #666666
+skinparam stereotypeCBackgroundColor #DDD
+
+title Texture Drawing - Class Diagram
+
+package "Event Loop Layer" #E8F4E8 {
+    class PygletEventLoop {
+        -_app: pyglet.app
+        -_clock: pyglet.clock
+        +run(): void
+        +schedule_interval(callback, interval): void
+        +unschedule(callback): void
+    }
+}
+
+package "Window Layer" #E8E8F4 {
+    class PygletWindow {
+        -_parent: PygletAppWindow
+        +on_draw(): void
+        +on_key_press(symbol, modifiers): void
+        +on_mouse_drag(...): void
+    }
+
+    class PygletAppWindow {
+        -_window: PygletWindow
+        -_modern_viewer: ModernGLCubeViewer
+        -_renderer: ModernGLRenderer
+        -TEXTURE_SETS: list[str | None]
+        -TEXTURE_SET_INDEX: int
+        +on_draw(): void
+        +load_texture_set(directory): int
+        +cycle_texture_set(): void
+        -_load_current_texture_set(): void
+    }
+}
+
+package "Viewer Layer" #F4E8E8 {
+    class ModernGLCubeViewer {
+        -_renderer: ModernGLRenderer
+        -_board: ModernGLBoard
+        -_texture_mode: bool
+        -_face_textures: dict[FaceName, TextureHandle]
+        -_triangles_per_color: dict[Color, ndarray]
+        -_dirty: bool
+        +draw(): void
+        +set_texture_mode(enabled: bool): void
+        +load_texture_set(directory: str): int
+        +load_face_texture(face: FaceName, path: str): bool
+        -_rebuild_geometry(): void
+    }
+
+    class ModernGLBoard {
+        -_faces: dict[FaceName, ModernGLFace]
+        +generate_geometry(): tuple[ndarray, dict]
+        +generate_textured_geometry(): dict[Color, ndarray]
+    }
+
+    class ModernGLFace {
+        -_cells: list[ModernGLCell]
+        -_face_name: FaceName
+        +generate_triangles(): ndarray
+        +generate_triangles_by_color(): dict[Color, ndarray]
+    }
+}
+
+package "Renderer Layer" #F4F4E8 {
+    class ModernGLRenderer {
+        -_textures: dict[int, c_uint]
+        -_next_texture_handle: int
+        -_bound_texture: int | None
+        -_textured_vao: c_uint
+        -_textured_vbo: c_uint
+        -_textured_shader: ShaderProgram
+        +load_texture(file_path: str): TextureHandle | None
+        +bind_texture(handle: TextureHandle | None): void
+        +delete_texture(handle: TextureHandle): void
+        +draw_textured_lit_triangles(data: ndarray, texture: int): void
+        +draw_lit_triangles(data: ndarray): void
+    }
+}
+
+package "Types" #F0F0F0 {
+    class TextureHandle <<typedef>> {
+        int
+    }
+
+    class FaceName <<enum>> {
+        F, B, R, L, U, D
+    }
+
+    class Color <<enum>> {
+        WHITE, YELLOW, RED, ORANGE, BLUE, GREEN
+    }
+}
+
+' Relationships
+PygletEventLoop ..> PygletWindow : triggers\non_draw
+PygletWindow --> PygletAppWindow : delegates to
+PygletAppWindow --> ModernGLCubeViewer : draw()
+PygletAppWindow --> ModernGLRenderer : uses
+ModernGLCubeViewer --> ModernGLBoard : geometry
+ModernGLCubeViewer --> ModernGLRenderer : draw calls
+ModernGLBoard --> ModernGLFace : contains 6
+ModernGLCubeViewer ..> TextureHandle : uses
+ModernGLCubeViewer ..> FaceName : keys
+ModernGLCubeViewer ..> Color : keys
+ModernGLRenderer ..> TextureHandle : manages
+
+note right of ModernGLRenderer
+  Texture handles are internal IDs
+  mapped to OpenGL texture IDs.
+  This abstracts GL details from
+  the rest of the system.
+end note
+
+note bottom of ModernGLCubeViewer
+  _face_textures maps each face
+  to its texture handle.
+
+  _triangles_per_color groups
+  geometry by color for efficient
+  texture batching (one texture
+  per color = one draw call).
+end note
+
+@enduml

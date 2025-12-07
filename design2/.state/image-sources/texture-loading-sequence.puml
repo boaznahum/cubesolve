@@ -1,0 +1,87 @@
+@startuml texture-loading-sequence
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceArrowColor #666666
+skinparam sequenceParticipantBackgroundColor #F8F8F8
+skinparam sequenceParticipantBorderColor #888888
+skinparam sequenceLifeLineBorderColor #AAAAAA
+
+title Texture Loading - Sequence Diagram
+
+participant "PygletAppWindow" as appwindow
+participant "ModernGLCubeViewer" as viewer
+participant "ModernGLRenderer" as renderer
+participant "pyglet.image" as pygletimg
+participant "OpenGL" as gl
+
+== Texture Set Loading ==
+
+appwindow -> appwindow: _load_current_texture_set()
+activate appwindow
+
+appwindow -> appwindow: path = TEXTURE_SETS[TEXTURE_SET_INDEX]
+
+alt path is None
+    appwindow -> viewer: set_texture_mode(False)
+    note right: Solid color mode
+else path is valid
+    appwindow -> viewer: load_texture_set(directory)
+    activate viewer
+
+    loop for each face in [F, B, R, L, U, D]
+        viewer -> viewer: find file: {face}.{png,jpg,...}
+
+        alt file found
+            viewer -> viewer: load_face_texture(face, file_path)
+            activate viewer
+
+            viewer -> renderer: load_texture(file_path)
+            activate renderer
+
+            == Image Loading ==
+            renderer -> pygletimg: load(file_path)
+            activate pygletimg
+            pygletimg --> renderer: image
+            deactivate pygletimg
+
+            renderer -> renderer: image_data = image.get_image_data()
+            renderer -> renderer: data = image_data.get_data()
+
+            == OpenGL Texture Creation ==
+            renderer -> gl: glGenTextures(1)
+            gl --> renderer: tex_id
+
+            renderer -> gl: glBindTexture(GL_TEXTURE_2D, tex_id)
+
+            renderer -> gl: glTexParameteri(...)\n(MIN_FILTER, MAG_FILTER, WRAP_S, WRAP_T)
+
+            renderer -> gl: glTexImage2D(GL_TEXTURE_2D, 0,\nGL_RGBA, width, height,\n0, format, GL_UNSIGNED_BYTE, data)
+
+            renderer -> gl: glGenerateMipmap(GL_TEXTURE_2D)
+
+            renderer -> gl: glBindTexture(GL_TEXTURE_2D, 0)
+
+            == Handle Assignment ==
+            renderer -> renderer: handle = _next_texture_handle++
+            renderer -> renderer: _textures[handle] = tex_id
+
+            renderer --> viewer: handle
+            deactivate renderer
+
+            viewer -> viewer: _face_textures[face] = handle
+            viewer -> viewer: _dirty = True
+
+            deactivate viewer
+        else file not found
+            note right: Skip this face\n(will use solid color)
+        end
+    end
+
+    viewer -> viewer: set_texture_mode(True)
+    viewer --> appwindow: count of loaded textures
+    deactivate viewer
+end
+
+deactivate appwindow
+
+@enduml
