@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from cube.presentation.gui.effects.CelebrationEffect import CelebrationEffect
-    from cube.presentation.gui.protocols.EventLoop import EventLoop
+    from cube.application.protocols import EventLoop
     from cube.presentation.gui.protocols.Renderer import Renderer
     from cube.application.state import ApplicationAndViewState
 

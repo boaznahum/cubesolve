@@ -37,7 +37,7 @@ _COLOR_TO_FACE: dict[Color, FaceName] = {
 }
 from cube.domain.model._part_slice import PartSlice
 
-from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
+from cube.application.protocols import AnimatableViewer
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

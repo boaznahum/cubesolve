@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
+from cube.application.protocols import AnimatableViewer
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

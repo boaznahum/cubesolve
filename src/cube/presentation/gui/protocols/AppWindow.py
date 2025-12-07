@@ -11,7 +11,7 @@ from typing import Protocol, runtime_checkable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
-    from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
+    from cube.application.protocols import AnimatableViewer
     from cube.presentation.gui.protocols.Renderer import Renderer
     from cube.presentation.gui.commands import Command, Commands
 

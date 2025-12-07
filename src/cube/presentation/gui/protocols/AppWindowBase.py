@@ -25,7 +25,7 @@ from cube.presentation.gui.key_bindings import lookup_command
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
-    from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
+    from cube.application.protocols import AnimatableViewer
     from cube.presentation.gui.factory import GUIBackend
     from cube.presentation.gui.protocols import Renderer
 

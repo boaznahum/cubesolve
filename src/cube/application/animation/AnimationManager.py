@@ -6,8 +6,7 @@ from typing import Callable, TypeAlias, TYPE_CHECKING
 from cube.domain import algs
 from cube.domain.algs import SimpleAlg
 from cube.application.state import ApplicationAndViewState
-from cube.presentation.gui.protocols import EventLoop
-from cube.presentation.gui.protocols.AnimatableViewer import AnimatableViewer
+from cube.application.protocols import EventLoop, AnimatableViewer
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

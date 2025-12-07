@@ -20,7 +20,7 @@ from ._board import _Board
 from ._faceboard import _FaceBoard
 from cube.application import config
 from ..gui.protocols.Renderer import Renderer
-from ..gui.protocols.AnimatableViewer import AnimatableViewer
+from cube.application.protocols import AnimatableViewer
 from ..gui.ViewSetup import ViewSetup
 from ..gui.types import DisplayList
 
