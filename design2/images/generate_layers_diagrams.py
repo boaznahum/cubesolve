@@ -390,9 +390,12 @@ def create_combined_layers_diagram():
                                      facecolor=SUBLAYER_COLORS['domain'], edgecolor='gray'))
         ax.text(x + w/2, y + h/2, name, ha='center', va='center', fontsize=9, fontweight='bold')
 
-    # Solver sub-sublayers
-    for i, name in enumerate(['beginner', 'CFOP', 'common']):
-        ax.text(10.2 + i*1.2, 0.8, name, ha='left', va='center', fontsize=7)
+    # Solver sub-sublayers with boxes
+    solver_subs = [('beginner', 10.2, 0.4, 1.1, 0.6), ('CFOP', 11.4, 0.4, 0.9, 0.6), ('common', 12.4, 0.4, 1.1, 0.6)]
+    for name, x, y, w, h in solver_subs:
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02",
+                                     facecolor='#C8E6C9', edgecolor='gray'))
+        ax.text(x + w/2, y + h/2, name, ha='center', va='center', fontsize=6)
 
     # === APPLICATION (upper left) ===
     app_box = FancyBboxPatch((0, 6), 7, 4, boxstyle="round,pad=0.1",
@@ -428,10 +431,24 @@ def create_combined_layers_diagram():
                                      facecolor=SUBLAYER_COLORS['presentation'], edgecolor='gray'))
         ax.text(x + w/2, y + h - 0.4, name, ha='center', va='center', fontsize=9, fontweight='bold')
 
-    # GUI sub-sublayers
-    gui_subs = ['backends/', 'commands/', 'effects/', 'protocols/']
-    for i, name in enumerate(gui_subs):
-        ax.text(8.5 + (i % 2) * 2.8, 10.2 - (i // 2) * 1, name, ha='left', va='center', fontsize=7)
+    # GUI sub-sublayers with backends list
+    gui_sub_boxes = [
+        ('backends/', 8.5, 8.5, 3.5, 2.5),
+        ('commands/', 12.2, 8.5, 1.5, 0.8),
+        ('effects/', 12.2, 7.6, 1.5, 0.8),
+        ('protocols/', 8.5, 7.6, 1.5, 0.8),
+    ]
+    for name, x, y, w, h in gui_sub_boxes:
+        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02",
+                                     facecolor='#FFF9C4', edgecolor='gray'))
+        ax.text(x + w/2, y + h - 0.25, name, ha='center', va='center', fontsize=7, fontweight='bold')
+
+    # Backends list inside backends box
+    backends = ['console', 'headless', 'pyglet', 'pyglet2', 'tkinter', 'web']
+    for i, name in enumerate(backends):
+        x = 8.7 + (i % 3) * 1.1
+        y = 10.2 - (i // 3) * 0.5
+        ax.text(x, y, f'[{name}]', ha='left', va='center', fontsize=5)
 
     # === ARROWS ===
     # Helper for arrows
