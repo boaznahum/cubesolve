@@ -1,7 +1,7 @@
 import sys
 from typing import Mapping, Hashable, Sequence
 
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from .Cube import Cube
 from .cube_boy import Color
 from ._elements import CHelper, PartColorsID

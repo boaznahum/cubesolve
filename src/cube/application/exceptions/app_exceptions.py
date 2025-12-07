@@ -1,16 +1,24 @@
 # Re-exports for backward compatibility
-from .ExceptionAppExit import AppExit
-from .ExceptionRunStop import RunStop
-from .ExceptionOpAborted import OpAborted
-from .ExceptionEvenCubeEdgeParity import EvenCubeEdgeParityException
-from .ExceptionEvenCubeCornerSwap import EvenCubeCornerSwapException
-from .ExceptionInternalSWError import InternalSWError
+#
+# Domain exceptions have moved to cube.domain.exceptions.
+# This file is kept for backward compatibility with existing code.
+
+from cube.application.exceptions.ExceptionAppExit import AppExit
+from cube.application.exceptions.ExceptionRunStop import RunStop
+
+# Re-export domain exceptions
+from cube.domain.exceptions import (
+    InternalSWError,
+    OpAborted,
+    EvenCubeEdgeParityException,
+    EvenCubeCornerSwapException,
+)
 
 __all__ = [
     'AppExit',
     'RunStop',
+    'InternalSWError',
     'OpAborted',
     'EvenCubeEdgeParityException',
     'EvenCubeCornerSwapException',
-    'InternalSWError',
 ]

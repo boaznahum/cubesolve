@@ -1,0 +1,48 @@
+@startuml dependencies-first-level
+!theme plain
+skinparam backgroundColor white
+skinparam componentStyle rectangle
+
+title First Level Package Dependencies
+
+' Define packages
+package "application" as app #LightBlue
+package "domain" as dom #LightGreen
+package "presentation" as pres #LightYellow
+package "utils" as util #LightGray
+package "resources" as res #Lavender
+
+' Normal dependencies (correct direction: top → bottom)
+app --> dom : uses
+pres --> dom : uses
+pres --> app : uses
+dom --> util : uses
+pres --> res : uses
+
+' WRONG DIRECTION dependencies (RED - violates layer order)
+dom -[#Red,bold]-> app : <color:red>WRONG</color>
+dom -[#Red,bold]-> pres : <color:red>WRONG</color>
+
+note bottom of dom
+  Domain imports from (WRONG):
+  - application.commands (V2)
+  - presentation.viewer (V3)
+
+  FIXED:
+  - application.exceptions → domain.exceptions
+end note
+
+note bottom of pres
+  Presentation imports from:
+  - domain.model (OK)
+  - domain.algs (OK)
+  - application.state (OK)
+  - application.animation (OK)
+end note
+
+legend right
+  Gray = correct direction (top → bottom)
+  RED = wrong direction (violates layer order)
+endlegend
+
+@enduml

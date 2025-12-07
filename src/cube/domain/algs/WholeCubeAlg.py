@@ -4,7 +4,7 @@ from typing import final, Tuple, Collection
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.algs._internal_utils import _inv
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model import AxisName, Cube, FaceName, PartSlice
 
 

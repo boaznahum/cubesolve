@@ -12,7 +12,7 @@ from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 from cube.domain.algs.SliceAlg import SliceAlg, _M, _E, _S
 from cube.domain.algs.WholeCubeAlg import _X, _Y, _Z
 from cube.domain.algs._parser import parse_alg
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model import FaceName
 from cube.domain.model.cube_slice import SliceName
 

@@ -73,14 +73,25 @@ All pyglet imports now only exist in:
 - Tests (non-GUI): `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
 - Tests (GUI): `python -m pytest tests/gui -v --speed-up 5`
 
-### Testing Requirements
-**IMPORTANT:** Before committing changes, ALWAYS run:
-1. **Mypy:** `.venv/Scripts/python.exe -m mypy src/cube`
-2. **Pyright:** `.venv/Scripts/python.exe -m pyright src/cube`
-3. **Non-GUI tests:** `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
-4. **GUI tests:** `python -m pytest tests/gui -v --speed-up 5`
+### All Checks (run before committing)
 
-All must pass (or have no new errors for mypy/pyright) before committing.
+**CRITICAL:** When user says "run all checks", run ALL FOUR of these:
+
+```bash
+# 1. Mypy type checker
+python -m mypy src/cube --ignore-missing-imports
+
+# 2. Pyright type checker
+python -m pyright src/cube
+
+# 3. Non-GUI tests
+python -m pytest tests/ -v --ignore=tests/gui -m "not slow"
+
+# 4. GUI tests
+python -m pytest tests/gui -v --speed-up 5
+```
+
+**ALL FOUR must pass before committing.** Do NOT skip mypy or pyright - they catch different errors than pytest.
 
 **Note:** Pyright uses `typeCheckingMode = "standard"` (configured in `pyproject.toml`), which is stricter than mypy. It catches:
 - Undefined variables that mypy misses

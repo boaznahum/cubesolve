@@ -1,7 +1,7 @@
 import re
 from typing import TYPE_CHECKING, TypeAlias
 
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 
 if TYPE_CHECKING:
     from cube.domain.algs.Alg import Alg

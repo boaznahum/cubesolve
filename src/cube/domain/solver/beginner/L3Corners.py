@@ -1,5 +1,5 @@
 from cube.domain.algs import Algs, Alg
-from cube.application.exceptions.app_exceptions import InternalSWError, EvenCubeCornerSwapException
+from cube.domain.exceptions import InternalSWError, EvenCubeCornerSwapException
 from cube.domain.model import FaceName, Part, Corner
 from cube.domain.model.Face import Face
 from cube.application.commands.op_annotation import AnnWhat

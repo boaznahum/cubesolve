@@ -1,0 +1,64 @@
+@startuml layers-hierarchy
+!theme plain
+skinparam packageStyle rectangle
+skinparam backgroundColor white
+
+title Package Hierarchy - src/cube/
+
+package "src/cube" {
+
+    package "application" #LightBlue {
+        package "animation" #AliceBlue {
+        }
+        package "commands" #AliceBlue {
+        }
+        package "exceptions" #AliceBlue {
+        }
+    }
+
+    package "domain" #LightGreen {
+        package "algs" #Honeydew {
+        }
+        package "model" #Honeydew {
+        }
+        package "solver" #Honeydew {
+            package "beginner" #MintCream {
+            }
+            package "CFOP" #MintCream {
+            }
+            package "common" #MintCream {
+            }
+        }
+    }
+
+    package "presentation" #LightYellow {
+        package "gui" #LemonChiffon {
+            package "backends" #Cornsilk {
+                [console]
+                [headless]
+                [pyglet]
+                [pyglet2]
+                [tkinter]
+                [web]
+            }
+            package "commands" as gui_commands #Cornsilk {
+            }
+            package "effects" #Cornsilk {
+            }
+            package "protocols" #Cornsilk {
+            }
+        }
+        package "viewer" #LemonChiffon {
+        }
+    }
+
+    package "utils" #LightGray {
+    }
+
+    package "resources" #Lavender {
+        package "faces" #Thistle {
+        }
+    }
+}
+
+@enduml

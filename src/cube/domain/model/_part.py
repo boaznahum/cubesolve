@@ -9,7 +9,7 @@ from cube.domain.model.PartEdge import PartEdge
 from cube.domain.model.cube_boy import FaceName, Color, color2long
 from ._elements import CubeElement, PartColorsID, PartFixedID, SliceIndex, CenterSliceIndex, EdgeSliceIndex
 from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 
 if TYPE_CHECKING:
     from .Face import Face

@@ -5,7 +5,7 @@ from .solver import BeginnerLBLReduce
 from .solver import Solver
 from .SolverName import SolverName
 from cube.application import config
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 
 
 class Solvers:

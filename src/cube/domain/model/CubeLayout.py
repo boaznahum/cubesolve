@@ -4,7 +4,7 @@ from collections.abc import Collection
 from typing import Mapping
 
 from cube.application import config
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from .FaceName import FaceName
 from .Color import Color
 

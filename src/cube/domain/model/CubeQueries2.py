@@ -2,7 +2,7 @@ from collections import defaultdict
 from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
 from typing import Callable, TypeVar, Tuple
 
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from . import PartEdge, Edge, Part
 from .Part import TPartType
 from ._elements import PartColorsID, PartSliceHashID, PartSliceColors, CubeState

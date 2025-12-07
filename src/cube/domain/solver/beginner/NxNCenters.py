@@ -6,7 +6,7 @@ from typing import Tuple, TypeAlias
 from cube.domain import algs
 from cube.application import config
 from cube.domain.algs import Algs
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model import FaceName, Color, CenterSlice
 from cube.domain.model.Cube import Cube
 from cube.domain.model.cube_boy import CubeLayout, color2long

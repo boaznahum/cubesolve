@@ -2,7 +2,7 @@ from enum import Enum
 from typing import FrozenSet
 
 from cube.domain.algs import Algs, Alg
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Part, Edge, Corner, Color
 from cube.domain.model.Face import Face
 from cube.domain.model.CubeQueries2 import Pred0

@@ -3,7 +3,7 @@ from typing import Tuple
 from cube.application import config
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs import Algs, FaceAlg
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Part
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import StepSolver

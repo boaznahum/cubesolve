@@ -134,7 +134,7 @@ The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
 from collections.abc import Iterable, MutableSequence
 from typing import Collection, Protocol, Tuple, TYPE_CHECKING
 
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from .Edge import Edge
 from .Corner import Corner
 from .Center import Center

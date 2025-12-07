@@ -25,6 +25,7 @@
 - [x] Understand right_top_left_same_direction flag
 - [x] Create 5 visual diagrams for ID system (images/)
 - [x] Create 1 visual diagram for edge coordinates (images/)
+- [x] **Package layers and dependencies** (layers-and-dependencies.md + 3 diagrams)
 - [ ] Create model architecture diagram (class hierarchy visual)
 - [ ] Document Slice concept (M, E, S middle layers)
 - [ ] Document Face.rotate() mechanics in detail
@@ -39,6 +40,84 @@
 - [ ] Update Corner.py docstrings
 - [ ] Update Face.py docstrings
 - [ ] Update Cube.py docstrings
+
+---
+
+## Wrong Direction Dependency Violations (to fix)
+
+**Architecture should follow bottom-to-top order:**
+```
+           presentation  (top - UI layer)
+                ↓
+           application   (middle - orchestration)
+                ↓
+             domain      (bottom - pure business logic)
+                ↓
+           utils/resources (foundation)
+```
+
+### Violations Found
+
+#### V1: domain → application.exceptions (22 files) - ✅ FIXED
+
+| File                                      | Import                                                                               |
+|-------------------------------------------|--------------------------------------------------------------------------------------|
+| domain/algs/Algs.py                       | InternalSWError                                                                      |
+| domain/algs/SliceAbleAlg.py               | InternalSWError                                                                      |
+| domain/algs/WholeCubeAlg.py               | InternalSWError                                                                      |
+| domain/algs/_parser.py                    | InternalSWError                                                                      |
+| domain/model/Edge.py                      | InternalSWError                                                                      |
+| domain/model/CubeSanity.py                | InternalSWError                                                                      |
+| domain/model/Cube.py                      | InternalSWError                                                                      |
+| domain/model/Corner.py                   | InternalSWError                                                                      |
+| domain/model/CubeQueries2.py              | InternalSWError                                                                      |
+| domain/model/CubeLayout.py                | InternalSWError                                                                      |
+| domain/model/_part.py                     | InternalSWError                                                                      |
+| domain/solver/Solvers.py                  | InternalSWError                                                                      |
+| domain/solver/CFOP/OLL.py                 | InternalSWError                                                                      |
+| domain/solver/CFOP/PLL.py                 | InternalSWError                                                                      |
+| domain/solver/CFOP/CFOP.py                | OpAborted                                                                            |
+| domain/solver/CFOP/F2L.py                 | InternalSWError                                                                      |
+| domain/solver/common/CommonOp.py          | InternalSWError                                                                      |
+| domain/solver/beginner/L3Cross.py         | EvenCubeEdgeParityException                                                          |
+| domain/solver/beginner/NxNCenters.py      | InternalSWError                                                                      |
+| domain/solver/beginner/NxNEdges.py        | InternalSWError                                                                      |
+| domain/solver/beginner/BeginnerSolver.py  | OpAborted, EvenCubeEdgeParityException, InternalSWError, EvenCubeCornerSwapException |
+| domain/solver/beginner/L3Corners.py       | InternalSWError, EvenCubeCornerSwapException                                         |
+
+#### V2: domain → application.commands (16 files)
+
+| File                                             | Import                                           |
+|--------------------------------------------------|--------------------------------------------------|
+| domain/solver/Solvers.py                         | Operator                                         |
+| domain/solver/solver.py                          | Operator                                         |
+| domain/solver/CFOP/CFOP.py                       | Operator                                         |
+| domain/solver/CFOP/F2L.py                        | AnnWhat                                          |
+| domain/solver/common/SolverElement.py            | Operator, SupportsAnnotation, AnnWhat, OpAnnotation |
+| domain/solver/common/BaseSolver.py               | Operator                                         |
+| domain/solver/common/CommonOp.py                 | Operator, AnnWhat, SupportsAnnotation, OpAnnotation |
+| domain/solver/common/AdvancedEvenOLLBigCubeParity.py | AnnWhat                                      |
+| domain/solver/beginner/BeginnerSolver.py         | Operator                                         |
+| domain/solver/beginner/L1Corners.py              | AnnWhat                                          |
+| domain/solver/beginner/L1Cross.py                | AnnWhat                                          |
+| domain/solver/beginner/L2.py                     | AnnWhat                                          |
+| domain/solver/beginner/L3Corners.py              | AnnWhat                                          |
+| domain/solver/beginner/L3Cross.py                | AnnWhat                                          |
+| domain/solver/beginner/NxNCenters.py             | AnnWhat                                          |
+| domain/solver/beginner/NxNEdges.py               | AnnWhat                                          |
+
+#### V3: domain → presentation.viewer (2 files)
+
+| File                              | Import                            |
+|-----------------------------------|-----------------------------------|
+| domain/model/Face.py              | VMarker, viewer_add_view_marker   |
+| domain/solver/common/FaceTracker.py | viewer_add_view_marker, VMarker |
+
+### Tasks to Fix
+
+- [x] **V1**: ✅ FIXED (2025-12-07) - Created `domain/exceptions/` with InternalSWError, OpAborted, EvenCubeEdgeParityException, EvenCubeCornerSwapException. Application re-exports for backward compatibility.
+- [ ] **V2**: Remove command annotations from domain layer (use dependency injection or separate concern)
+- [ ] **V3**: Remove visualization hooks from domain.model (use observer pattern or callbacks)
 
 ---
 
@@ -90,6 +169,7 @@
 | model-id-system.md | 5 PNGs | Part.py, Edge.py |
 | edge-coordinate-system.md | 1 PNG + hand-drawn JPG | Edge.py |
 | partedge-attribute-system.md | 3 PNGs | PartEdge.py |
+| layers-and-dependencies.md | 3 PNGs | - (architecture doc) |
 
 ---
 

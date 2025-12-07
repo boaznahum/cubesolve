@@ -8,7 +8,7 @@ from cube.domain.model._elements import SliceIndex
 from .Part import TPartType
 from ._elements import EdgeSliceIndex
 from ._part import EdgeName, _faces_2_edge_name
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 
 if TYPE_CHECKING:
     from .Face import Face

@@ -30,6 +30,7 @@ Under design2 we start a huge project of documentation of the cube solve project
   - All your internal state (things you learn and the mechanism you develop) should be in `.state` folder under this folder
   - All internal state must be git-controlled files to fulfill the rule that new session can start
 
+- If you find new entries under "New entries" section, add them after improving to your internal tasks or this file
 - Ask me if something is not clear
 
 ### Instructions About Documents

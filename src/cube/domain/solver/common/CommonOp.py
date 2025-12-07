@@ -4,7 +4,7 @@ from typing import Callable, Generator, Sequence, Tuple, ContextManager, TYPE_CH
 from typing_extensions import deprecated
 
 from cube.domain.algs import Algs, Alg
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Edge, Color, FaceName, EdgeWing
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face

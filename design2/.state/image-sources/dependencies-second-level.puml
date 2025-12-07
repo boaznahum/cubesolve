@@ -1,0 +1,77 @@
+@startuml dependencies-second-level
+!theme plain
+skinparam backgroundColor white
+skinparam componentStyle rectangle
+left to right direction
+
+title Second Level Package Dependencies
+
+' Application layer
+package "application" #LightBlue {
+    [animation] as app_anim
+    [commands] as app_cmd
+    [exceptions] as app_exc
+    [state] as app_state
+}
+
+' Domain layer
+package "domain" #LightGreen {
+    [algs] as dom_algs
+    [model] as dom_model
+    [solver] as dom_solver
+    [exceptions] as dom_exc
+}
+
+' Presentation layer
+package "presentation" #LightYellow {
+    [gui] as pres_gui
+    [viewer] as pres_viewer
+}
+
+' Utils and Resources
+[utils] as util #LightGray
+[resources] as res #Lavender
+
+' === Domain internal ===
+dom_solver --> dom_model
+dom_solver --> dom_algs
+dom_solver --> dom_exc
+dom_algs --> dom_model
+dom_algs --> dom_exc
+dom_model --> dom_exc
+
+' === Application internal ===
+app_anim --> app_state
+app_cmd --> app_state
+app_exc --> dom_exc : re-exports
+
+' === Presentation internal ===
+pres_gui --> pres_viewer
+
+' === Cross-layer (correct direction) ===
+app_anim --> dom_model
+app_cmd --> dom_algs
+app_state --> dom_model
+
+pres_gui --> dom_model
+pres_gui --> dom_algs
+pres_gui --> app_state
+pres_gui --> app_anim
+pres_viewer --> dom_model
+
+' === Cross-layer (WRONG DIRECTION - RED) ===
+dom_solver -[#Red,bold]-> app_cmd : <color:red>V2: WRONG</color>
+dom_model -[#Red,bold]-> pres_viewer : <color:red>V3: WRONG</color>
+
+' Utils
+dom_model --> util
+
+legend right
+  Gray = correct direction
+  RED = wrong direction (to fix)
+
+  FIXED: V1 (exceptions)
+  TODO: V2 (commands), V3 (viewer)
+endlegend
+
+@enduml

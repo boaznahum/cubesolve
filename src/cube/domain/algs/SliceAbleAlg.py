@@ -2,7 +2,7 @@ from abc import ABC
 from typing import Sequence, Self, Iterable, TypeVar, TYPE_CHECKING
 
 from cube.domain.algs.SimpleAlg import NSimpleAlg
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError
 
 if TYPE_CHECKING:
     from cube.domain.algs.SimpleAlg import SimpleAlg
