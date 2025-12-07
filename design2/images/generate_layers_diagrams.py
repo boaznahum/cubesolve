@@ -344,14 +344,14 @@ def create_dependencies_second_level_diagram():
 
 
 def create_combined_layers_diagram():
-    """Create combined diagram: first-level layers with second-level packages and all dependencies."""
-    fig, ax = plt.subplots(1, 1, figsize=(18, 14))
-    ax.set_xlim(-1, 19)
-    ax.set_ylim(-1, 15)
+    """Create single comprehensive diagram: hierarchy + all dependencies."""
+    fig, ax = plt.subplots(1, 1, figsize=(20, 16))
+    ax.set_xlim(-1, 21)
+    ax.set_ylim(-1, 17)
     ax.set_aspect('equal')
     ax.axis('off')
 
-    fig.suptitle('Package Layers and Dependencies (Combined View)', fontsize=16, fontweight='bold', y=0.97)
+    fig.suptitle('Package Layers and Dependencies - src/cube/', fontsize=18, fontweight='bold', y=0.97)
 
     # Layer positions (bottom to top: utils/resources, domain, application, presentation)
     # Each layer is a colored rectangle containing its second-level packages
@@ -390,8 +390,9 @@ def create_combined_layers_diagram():
                                      facecolor=SUBLAYER_COLORS['domain'], edgecolor='gray'))
         ax.text(x + w/2, y + h/2, name, ha='center', va='center', fontsize=9, fontweight='bold')
 
-    # Solver sub-sublayers with boxes
-    solver_subs = [('beginner', 10.2, 0.4, 1.1, 0.6), ('CFOP', 11.4, 0.4, 0.9, 0.6), ('common', 12.4, 0.4, 1.1, 0.6)]
+    # Solver sub-sublayers with boxes (including protocols for V2 fix)
+    solver_subs = [('beginner', 10.2, 1.5, 1.1, 0.6), ('CFOP', 11.4, 1.5, 0.9, 0.6), ('common', 12.4, 1.5, 1.1, 0.6),
+                   ('protocols', 10.2, 0.4, 1.4, 0.6)]  # V2 fix location
     for name, x, y, w, h in solver_subs:
         ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02",
                                      facecolor='#C8E6C9', edgecolor='gray'))
@@ -497,8 +498,11 @@ if __name__ == '__main__':
     os.chdir(script_dir)
 
     print("Generating layers and dependencies diagrams...")
+    # Generate all diagrams (for backward compatibility with docs)
     create_layers_hierarchy_diagram()
     create_dependencies_first_level_diagram()
     create_dependencies_second_level_diagram()
+    # Combined diagram is the main one - shows everything in one place
     create_combined_layers_diagram()
     print("Done!")
+    print("\nNote: combined-layers-dependencies.png is the main diagram showing everything.")
