@@ -4,7 +4,7 @@ from typing import Tuple
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 5
+CUBE_SIZE = 3  # Changed to 3 for debug3x3 texture testing
 
 SOLVER_CFOP=False
 
@@ -143,6 +143,6 @@ LIGHTING_BACKGROUND = 0.15  # Default background (black)
 # List of texture sets to cycle through with Ctrl+Shift+T
 # Can be preset names ("set1", "family"), paths, or None for solid colors
 # Ctrl+Shift+T cycles: set1 → family → None (solid) → set1 → ...
-TEXTURE_SETS: list[str | None] | None = ["arrows", "family", "letters", "numbers", "set2", None]
+TEXTURE_SETS: list[str | None] | None = ["debug3x3", "arrows", "family", "letters", "numbers", "set2", None]
 # Index of initial texture set (0 = first in list, or None to start with solid colors)
-TEXTURE_SET_INDEX: int = 0  # Start with arrows for debugging texture rotation
+TEXTURE_SET_INDEX: int = 0  # Start with debug3x3 for debugging texture rotation

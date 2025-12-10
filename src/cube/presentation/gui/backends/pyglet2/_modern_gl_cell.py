@@ -176,17 +176,27 @@ class ModernGLCell:
 
         # Get texture direction from PartEdge (0-3, representing 0°/90°/180°/270° CW)
         direction = 0
-      #  if self.part_edge is not None:
-       #     direction = self.part_edge.texture_direction
+        if self.part_edge is not None:
+            direction = self.part_edge.texture_direction
+            # DEBUG: print direction for F face cells
+            debug_id = self.part_edge.c_attributes.get("cell_debug", "")
+            if debug_id.startswith("F("):
+                print(f"    Cell {debug_id}: texture_direction={direction}", flush=True)
 
         # UV coordinates for each direction
         # Format: (lb_uv, rb_uv, rt_uv, lt_uv)
-        UV_BY_DIRECTION = [
-            ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),  # 0: normal
-            ((0.0, 1.0), (0.0, 0.0), (1.0, 0.0), (1.0, 1.0)),  # 1: 90° CW
-            ((1.0, 1.0), (0.0, 1.0), (0.0, 0.0), (1.0, 0.0)),  # 2: 180°
-            ((1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0)),  # 3: 270° CW
+        # All 4 possible 90° rotation mappings - labeled by visual result:
+        UV_OPTIONS = [
+            ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),  # A: standard
+            ((0.0, 1.0), (0.0, 0.0), (1.0, 0.0), (1.0, 1.0)),  # B: 90° from A
+            ((1.0, 1.0), (0.0, 1.0), (0.0, 0.0), (1.0, 0.0)),  # C: 180° from A
+            ((1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (0.0, 0.0)),  # D: 270° from A
         ]
+        # Map direction to UV option index (TO BE DETERMINED BY TESTING)
+        # Format: UV_BY_DIRECTION[direction] = UV_OPTIONS[index]
+        # Current guess - EDIT THESE INDICES (0-3) to find correct mapping:
+        UV_INDICES = [0, 3, 2, 1]  # direction 0→UP, 1→RIGHT, 2→DOWN, 3→LEFT
+        UV_BY_DIRECTION = [UV_OPTIONS[i] for i in UV_INDICES]
         uv_lb, uv_rb, uv_rt, uv_lt = UV_BY_DIRECTION[direction]
 
         # Triangle 1: lb, rb, rt

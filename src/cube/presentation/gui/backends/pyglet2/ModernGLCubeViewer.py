@@ -133,6 +133,9 @@ class ModernGLCubeViewer(AnimatableViewer):
         # Dirty flag for geometry rebuild
         self._dirty = True
 
+        # Debug counter
+        self._debug_rebuild_count = 0
+
     # =========================================================================
     # Public Interface
     # =========================================================================
@@ -261,6 +264,13 @@ class ModernGLCubeViewer(AnimatableViewer):
         Delegates to ModernGLBoard for geometry generation.
         Auto-reloads textures if they were lost (e.g., after cube reset).
         """
+        # DEBUG: Print texture state before rebuild
+        if self._use_per_cell_textures:
+            self._debug_rebuild_count += 1
+            print(f"\n=== _rebuild_geometry #{self._debug_rebuild_count} ===", flush=True)
+            print(f"  animated_parts: {self._animated_parts is not None}", flush=True)
+            self._debug_print_texture_state("BEFORE board.update()")
+
         # Check if textures need to be reloaded (cube was reset, c_attributes lost)
         if self._use_per_cell_textures and self._texture_directory:
             if self._textures_need_reload():
@@ -268,6 +278,26 @@ class ModernGLCubeViewer(AnimatableViewer):
 
         # Update board with current cube state
         self._board.update()
+
+        # DEBUG: Print texture state after board update
+        if self._use_per_cell_textures:
+            self._debug_print_texture_state("AFTER board.update()")
+            # Also print what cells see
+            from cube.domain.model.cube_boy import FaceName
+            gl_face = self._board.faces[FaceName.F]
+            print(f"    Front face CELLS part_edge.c_attributes:")
+            size = self._cube.size
+            for row in range(size - 1, -1, -1):
+                row_items = []
+                for cell in gl_face.cells:
+                    if cell.row == row:
+                        if cell.part_edge:
+                            debug_id = cell.part_edge.c_attributes.get(CELL_DEBUG_KEY, "???")
+                            row_items.append((cell.col, debug_id))
+                        else:
+                            row_items.append((cell.col, "NoEdge"))
+                row_items.sort(key=lambda x: x[0])
+                print(f"      {[d for c, d in row_items]}")
 
         # Generate geometry (board separates static/animated)
         if self._use_per_cell_textures:
@@ -282,6 +312,11 @@ class ModernGLCubeViewer(AnimatableViewer):
             self._animated_face_triangles = None
             self._triangles_per_color.clear()
             self._animated_triangles_per_color.clear()
+
+            # DEBUG: Print texture handles used in geometry
+            print(f"    Generated geometry:")
+            print(f"      static texture_handles: {sorted(self._triangles_per_texture.keys())}")
+            print(f"      animated texture_handles: {sorted(self._animated_triangles_per_texture.keys())}")
         elif self._texture_mode:
             (
                 self._triangles_per_color,
@@ -343,12 +378,18 @@ class ModernGLCubeViewer(AnimatableViewer):
 
     def unhidden_all(self) -> None:
         """End animation and restore normal rendering."""
+        # DEBUG
+        if self._use_per_cell_textures:
+            print(f"\n=== unhidden_all() called ===")
+            self._debug_print_texture_state("BEFORE unhidden_all clears state")
+
         self._animated_parts = None
         self._animation_face_center = None
         self._animation_opposite_center = None
         self._animated_face_triangles = None
         self._animated_line_data = None
         self._animated_triangles_per_color.clear()
+        self._animated_triangles_per_texture.clear()  # BUG FIX: was missing for per-cell textures!
         self._dirty = True
 
     def is_animating(self) -> bool:
@@ -812,15 +853,66 @@ class ModernGLCubeViewer(AnimatableViewer):
 
         return (part_edge, right_dir, up_dir)
 
+    def _debug_print_texture_state(self, label: str) -> None:
+        """Print compact texture state for Front face for debugging."""
+        from cube.domain.model.cube_boy import FaceName
+        cube_face = self._cube.face(FaceName.F)
+        size = self._cube.size
+
+        print(f"  {label}:", flush=True)
+        print(f"    Front face c_attributes (format: debug_id):", flush=True)
+        for row in range(size - 1, -1, -1):
+            row_items = []
+            for col in range(size):
+                part_slice = self._get_part_slice_at(FaceName.F, row, col)
+                if part_slice:
+                    part_edge = part_slice.get_face_edge(cube_face)
+                    debug_id = part_edge.c_attributes.get(CELL_DEBUG_KEY, "???")
+                    row_items.append(debug_id)
+                else:
+                    row_items.append("None")
+            print(f"      {row_items}", flush=True)
+
+    def _get_part_slice_at(self, face_name: FaceName, row: int, col: int):
+        """Get PartSlice at position (for debugging)."""
+        cube_face = self._cube.face(face_name)
+        size = self._cube.size
+        last = size - 1
+
+        is_bottom_row = (row == 0)
+        is_top_row = (row == last)
+        is_left_col = (col == 0)
+        is_right_col = (col == last)
+
+        if is_bottom_row and is_left_col:
+            return cube_face.corner_bottom_left.slice
+        if is_bottom_row and is_right_col:
+            return cube_face.corner_bottom_right.slice
+        if is_top_row and is_left_col:
+            return cube_face.corner_top_left.slice
+        if is_top_row and is_right_col:
+            return cube_face.corner_top_right.slice
+        if is_bottom_row:
+            return cube_face.edge_bottom.get_slice_by_ltr_index(cube_face, col - 1)
+        if is_top_row:
+            return cube_face.edge_top.get_slice_by_ltr_index(cube_face, col - 1)
+        if is_left_col:
+            return cube_face.edge_left.get_slice_by_ltr_index(cube_face, row - 1)
+        if is_right_col:
+            return cube_face.edge_right.get_slice_by_ltr_index(cube_face, row - 1)
+        if 0 < row < last and 0 < col < last:
+            return cube_face.center.get_slice((row - 1, col - 1))
+        return None
+
     def debug_print_face_grid(self, face_name: FaceName) -> None:
         """Print debug grid showing c_attributes debug IDs for a face.
-        
+
         Prints grid from top to bottom (row N-1 first) to match visual layout.
         """
         cube_face = self._cube.face(face_name)
         size = self._cube.size
         gl_face = self._board.faces[face_name]
-        
+
         print(f"\n=== DEBUG: {face_name.value} face c_attributes ===")
         print("Format: debug_id (texture_handle)")
         # Print from top row to bottom (visual order)
@@ -836,7 +928,7 @@ class ModernGLCubeViewer(AnimatableViewer):
                     row_items.append("None")
             print("  ".join(row_items))
         print("=" * 60)
-        
+
         # Also print what the cells see
         print(f"=== DEBUG: {face_name.value} CELL texture handles ===")
         for row in range(size - 1, -1, -1):
