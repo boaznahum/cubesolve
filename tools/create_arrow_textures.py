@@ -1,15 +1,23 @@
 """
 Create test textures with directional arrows for debugging texture rotation.
 
-Each face gets a different colored arrow pointing UP, so we can easily see
-if textures rotate correctly during face rotations.
+Each face gets an NxN grid where each cell shows:
+- Face name (F, U, R, etc.)
+- Cell position (row, col) - row 0 is BOTTOM, col 0 is LEFT
+- Arrow pointing UP
+
+This helps debug texture bugs by showing exactly which cell texture
+ends up at which position after rotations.
 
 Usage:
-    python tools/create_arrow_textures.py
+    python tools/create_arrow_textures.py [size]
+    
+    size: Cube size (default: 4 for 4x4 cube)
 
-Creates: tools/arrow_textures/F.png, U.png, R.png, etc.
+Creates: src/cube/resources/faces/arrows/F.png, U.png, R.png, etc.
 """
 from pathlib import Path
+import sys
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -31,65 +39,103 @@ FACE_COLORS = {
     "D": (255, 255, 255),   # White
 }
 
-# Arrow color (contrasting)
-ARROW_COLORS = {
-    "F": (255, 255, 255),   # White arrow on blue
-    "B": (255, 255, 255),   # White arrow on green
-    "R": (255, 255, 255),   # White arrow on red
-    "L": (0, 0, 0),         # Black arrow on orange
-    "U": (0, 0, 0),         # Black arrow on yellow
-    "D": (0, 0, 0),         # Black arrow on white
+# Text/arrow color (contrasting)
+TEXT_COLORS = {
+    "F": (255, 255, 255),   # White on blue
+    "B": (255, 255, 255),   # White on green
+    "R": (255, 255, 255),   # White on red
+    "L": (0, 0, 0),         # Black on orange
+    "U": (0, 0, 0),         # Black on yellow
+    "D": (0, 0, 0),         # Black on white
 }
 
-def create_arrow_texture(face_name: str, img_size: int = 128) -> Image.Image:
-    """Create a texture with a SINGLE upward-pointing arrow.
 
-    Each cell has its own texture (per-cell texturing mode), so each image
-    should contain just ONE arrow that fills the entire image.
+def create_grid_texture(face_name: str, grid_size: int, cell_pixels: int = 64) -> Image.Image:
+    """Create a texture with NxN grid, each cell labeled with position.
 
     Args:
         face_name: Name of the face (F, B, R, L, U, D)
-        img_size: Total image size in pixels
+        grid_size: Number of cells per side (e.g., 4 for 4x4)
+        cell_pixels: Size of each cell in pixels
+    
+    Returns:
+        PIL Image with the grid texture
     """
+    img_size = grid_size * cell_pixels
     bg_color = FACE_COLORS[face_name]
-    arrow_color = ARROW_COLORS[face_name]
+    text_color = TEXT_COLORS[face_name]
 
     img = Image.new("RGB", (img_size, img_size), bg_color)
     draw = ImageDraw.Draw(img)
 
-    # Draw border (for debugging alignment)
-    draw.rectangle(
-        [2, 2, img_size - 3, img_size - 3],
-        outline=arrow_color,
-        width=2
-    )
+    # Try to load a font, fall back to default
+    try:
+        font_size = cell_pixels // 4
+        font = ImageFont.truetype("arial.ttf", font_size)
+        small_font = ImageFont.truetype("arial.ttf", font_size // 2)
+    except (OSError, IOError):
+        font = ImageFont.load_default()
+        small_font = font
 
-    # Draw single arrow filling the image
-    draw_arrow_in_cell(draw, 0, 0, img_size, arrow_color)
+    # Draw each cell
+    # NOTE: row 0 is BOTTOM in cube coordinates, but TOP in image coordinates
+    # So we need to flip: image_row = (grid_size - 1 - cube_row)
+    for cube_row in range(grid_size):
+        for col in range(grid_size):
+            # Convert cube row to image row (flip Y axis)
+            img_row = grid_size - 1 - cube_row
+            
+            x = col * cell_pixels
+            y = img_row * cell_pixels
+
+            # Draw cell border
+            draw.rectangle(
+                [x + 1, y + 1, x + cell_pixels - 2, y + cell_pixels - 2],
+                outline=text_color,
+                width=2
+            )
+
+            # Draw arrow in upper portion of cell
+            draw_arrow_in_cell(draw, x, y, cell_pixels, text_color)
+
+            # Draw face name + position label in lower portion
+            # Format: "F(r,c)" where r=row, c=col in CUBE coordinates
+            label = f"{face_name}({cube_row},{col})"
+            
+            # Center the label horizontally
+            bbox = draw.textbbox((0, 0), label, font=small_font)
+            text_width = bbox[2] - bbox[0]
+            text_x = x + (cell_pixels - text_width) // 2
+            text_y = y + cell_pixels - cell_pixels // 4
+            
+            draw.text((text_x, text_y), label, fill=text_color, font=small_font)
 
     return img
 
 
 def draw_arrow_in_cell(draw: ImageDraw.Draw, x: int, y: int, size: int, color: tuple) -> None:
-    """Draw an upward-pointing arrow within a cell."""
-    margin = size // 8
-    arrow_width = size // 4
-    arrow_head_height = size // 3
-    shaft_width = size // 8
-
+    """Draw an upward-pointing arrow in the upper portion of a cell."""
+    # Arrow occupies upper 60% of cell
+    arrow_height = int(size * 0.55)
+    margin_x = size // 6
+    margin_top = size // 10
+    
     center_x = x + size // 2
+    arrow_width = size // 5
+    shaft_width = size // 10
+    arrow_head_height = arrow_height // 2
 
     # Arrow shaft (rectangle)
     shaft_left = center_x - shaft_width // 2
     shaft_right = center_x + shaft_width // 2
-    shaft_top = y + margin + arrow_head_height
-    shaft_bottom = y + size - margin
+    shaft_top = y + margin_top + arrow_head_height
+    shaft_bottom = y + margin_top + arrow_height
 
     draw.rectangle([shaft_left, shaft_top, shaft_right, shaft_bottom], fill=color)
 
     # Arrow head (triangle pointing up)
     arrow_points = [
-        (center_x, y + margin),                              # Top point
+        (center_x, y + margin_top),                          # Top point
         (center_x - arrow_width, shaft_top),                 # Bottom left
         (center_x + arrow_width, shaft_top),                 # Bottom right
     ]
@@ -97,18 +143,28 @@ def draw_arrow_in_cell(draw: ImageDraw.Draw, x: int, y: int, size: int, color: t
 
 
 def main():
-    print(f"Creating arrow textures in {OUTPUT_DIR}")
+    # Get grid size from command line, default to 4
+    grid_size = 4
+    if len(sys.argv) > 1:
+        try:
+            grid_size = int(sys.argv[1])
+        except ValueError:
+            print(f"Invalid size: {sys.argv[1]}, using default 4")
+
+    print(f"Creating {grid_size}x{grid_size} arrow textures in {OUTPUT_DIR}")
+    print(f"Cell format: FACE(row,col) where row 0 = bottom, col 0 = left")
 
     for face_name in FACE_COLORS:
-        img = create_arrow_texture(face_name)
+        img = create_grid_texture(face_name, grid_size)
         output_path = OUTPUT_DIR / f"{face_name}.png"
         img.save(output_path)
         print(f"  Created {output_path}")
 
     print("\nDone! Load these textures in the GUI to test rotation behavior.")
-    print("All arrows should point UP initially.")
-    print("After F rotation, arrows ON face F should point RIGHT.")
-    print("Arrows on adjacent edges should still point UP (relative to their new face).")
+    print("\nExpected behavior after F rotation (clockwise):")
+    print("  - All arrows ON face F should point RIGHT (texture rotated)")
+    print("  - Cell labels should show original positions (e.g., F(0,0) moves to F(0,3))")
+    print("  - Adjacent edge stickers move but arrows still point UP")
 
 
 if __name__ == "__main__":

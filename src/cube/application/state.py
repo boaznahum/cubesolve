@@ -436,6 +436,9 @@ class ApplicationAndViewState:
             opengl_info: Optional OpenGL version string to include.
             backend_name: Optional backend name (e.g., "pyglet2", "tkinter").
         """
+
+        return
+
         # Backend and OpenGL info - always print if provided (unless quiet)
         if (backend_name or opengl_info) and not self._quiet_all:
             print("=" * 60)

@@ -330,6 +330,10 @@ class Face(SuperElement, Hashable):
         Args:
             quarter_turns: Number of 90° CW rotations (1 for CW, -1 for CCW)
         """
+        # Skip texture updates during query rotations (rotate_and_check)
+        if self.cube._skip_texture_updates:
+            return
+
         n_slices = self.cube.n_slices
 
         # ONLY update stickers ON this face (not adjacent edge stickers!)

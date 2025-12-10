@@ -120,6 +120,11 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
         # Celebration effects
         self._last_solved_state: bool = app.cube.solved
+        # Cache for solver status (to avoid expensive rotate_and_check calls)
+        self._cached_status: str = ""
+        self._cached_status_mod_counter: int = -1
+        # Debug tracking
+        self._debug_last_printed_mod: int = -1
         self._celebration_manager = CelebrationManager(
             renderer=self._renderer_adapter,
             vs=app.vs,
@@ -334,6 +339,12 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
         if not self.animation_running:
             self._update_status_text()
+            # DEBUG: Print F face grid when cube state changes
+            current_mod = self._app.cube._modify_counter
+            if current_mod != self._debug_last_printed_mod:
+                self._debug_last_printed_mod = current_mod
+                from cube.domain.model.cube_boy import FaceName
+                self._modern_viewer.debug_print_face_grid(FaceName.F)
 
         # Check for solve state transition (cube just became solved)
         current_solved = self._app.cube.solved
@@ -531,7 +542,14 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         self.text.clear()
         y = 10
 
-        self.text.append(pyglet.text.Label(f"Status:{slv.status}", x=10, y=y, font_size=10))
+        # Cache solver status to avoid expensive rotate_and_check calls
+        # Only recalculate when cube state actually changes
+        current_mod = cube._modify_counter
+        if current_mod != self._cached_status_mod_counter:
+            self._cached_status = slv.status
+            self._cached_status_mod_counter = current_mod
+
+        self.text.append(pyglet.text.Label(f"Status:{self._cached_status}", x=10, y=y, font_size=10))
         y += 20
 
         h = Algs.simplify(*op.history(remove_scramble=True))

@@ -62,6 +62,7 @@ from ._modern_gl_constants import (
     COLOR_TO_HOME_FACE,
     BORDER_LINE_WIDTH,
     CELL_TEXTURE_KEY,
+    CELL_DEBUG_KEY,
 )
 
 if TYPE_CHECKING:
@@ -157,6 +158,7 @@ class ModernGLCubeViewer(AnimatableViewer):
 
         Returns True if per-cell textures were loaded but c_attributes
         no longer contain texture handles (e.g., after cube reset).
+        todo:boaz:what a waste of time !!!
         """
         # Check first PartEdge to see if texture is still there
         for part_slice in self._cube.get_all_parts():
@@ -640,6 +642,8 @@ class ModernGLCubeViewer(AnimatableViewer):
 
                 if part_edge is not None:
                     part_edge.c_attributes[CELL_TEXTURE_KEY] = texture_handle
+                    # Debug identifier to trace c_attributes copying
+                    part_edge.c_attributes[CELL_DEBUG_KEY] = f"{face_name.value}({row},{col})"
 
     def clear_cell_textures(self) -> None:
         """Clear all per-cell textures from GPU and c_attributes."""
@@ -807,3 +811,40 @@ class ModernGLCubeViewer(AnimatableViewer):
             return None
 
         return (part_edge, right_dir, up_dir)
+
+    def debug_print_face_grid(self, face_name: FaceName) -> None:
+        """Print debug grid showing c_attributes debug IDs for a face.
+        
+        Prints grid from top to bottom (row N-1 first) to match visual layout.
+        """
+        cube_face = self._cube.face(face_name)
+        size = self._cube.size
+        gl_face = self._board.faces[face_name]
+        
+        print(f"\n=== DEBUG: {face_name.value} face c_attributes ===")
+        print("Format: debug_id (texture_handle)")
+        # Print from top row to bottom (visual order)
+        for row in range(size - 1, -1, -1):
+            row_items = []
+            for col in range(size):
+                part_edge = gl_face.get_part_edge_at_cell(cube_face, row, col)
+                if part_edge is not None:
+                    debug_id = part_edge.c_attributes.get(CELL_DEBUG_KEY, "???")
+                    tex_handle = part_edge.c_attributes.get(CELL_TEXTURE_KEY, -1)
+                    row_items.append(f"{debug_id}({tex_handle})")
+                else:
+                    row_items.append("None")
+            print("  ".join(row_items))
+        print("=" * 60)
+        
+        # Also print what the cells see
+        print(f"=== DEBUG: {face_name.value} CELL texture handles ===")
+        for row in range(size - 1, -1, -1):
+            row_items = []
+            for cell in gl_face.cells:
+                if cell.row == row:
+                    tex = cell.cell_texture if cell.cell_texture else -1
+                    row_items.append((cell.col, tex))
+            row_items.sort(key=lambda x: x[0])
+            print("  ".join([f"({c},{t})" for c, t in row_items]))
+        print("=" * 60)

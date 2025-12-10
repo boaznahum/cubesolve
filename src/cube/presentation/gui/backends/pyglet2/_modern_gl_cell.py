@@ -176,8 +176,8 @@ class ModernGLCell:
 
         # Get texture direction from PartEdge (0-3, representing 0°/90°/180°/270° CW)
         direction = 0
-        if self.part_edge is not None:
-            direction = self.part_edge.texture_direction
+      #  if self.part_edge is not None:
+       #     direction = self.part_edge.texture_direction
 
         # UV coordinates for each direction
         # Format: (lb_uv, rb_uv, rt_uv, lt_uv)

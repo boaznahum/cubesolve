@@ -334,6 +334,7 @@ class Cube(CubeSupplier):
         self._modify_counter = 0
         self._last_sanity_counter = 0
         self._original_layout: CubeLayout | None = None
+        self._skip_texture_updates: bool = False  # Flag for rotate_and_check queries
         self._reset()
 
         from cube.domain.model.CubeQueries2 import CubeQueries2

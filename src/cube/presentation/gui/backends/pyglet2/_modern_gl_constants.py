@@ -105,6 +105,7 @@ COLOR_TO_HOME_FACE: dict[Color, FaceName] = {
 # "follows" the sticker during rotation via copy_color() mechanism.
 
 CELL_TEXTURE_KEY = "cell_texture"  # Key for texture handle in c_attributes
+CELL_DEBUG_KEY = "cell_debug"  # Debug identifier like "F(0,0)" for tracing
 
 # =============================================================================
 # Face Transforms
