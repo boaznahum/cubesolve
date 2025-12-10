@@ -4,7 +4,7 @@ from typing import Tuple
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 3  # Changed to 3 for debug3x3 texture testing
+CUBE_SIZE = 3  # Using debug3x3 texture set
 
 SOLVER_CFOP=False
 
@@ -130,7 +130,7 @@ LAST_SCRAMBLE_PATH = ".logs/last_scramble.txt"
 # Available effects: "none", "confetti", "victory_spin", "sparkle", "glow", "combo"
 CELEBRATION_EFFECTS = ["none", "confetti", "victory_spin", "sparkle", "glow", "combo"]
 CELEBRATION_EFFECT = "combo"  # Default effect
-CELEBRATION_ENABLED = True
+CELEBRATION_ENABLED = False
 CELEBRATION_DURATION = 3.0  # seconds
 
 ################ Lighting (pyglet2 backend only)

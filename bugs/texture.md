@@ -1,14 +1,15 @@
 # Texture Bug Investigation
 
-**Bug Status**: PARTIALLY FIXED
-**Last Updated**: 2025-12-10
+**Bug Status**: IN PROGRESS
+**Last Updated**: 2025-12-11
 **Branch**: `image-texture-bug`
 
 ## Current State
 
-**F Face rotation: WORKING** ✅
+**F, U face rotations + adjacent: WORKING** ✅
+**R, L, D, B: NEEDS TESTING**
 
-After systematic testing, we found the correct UV mapping for texture rotation on the F face:
+After systematic testing, we found the correct UV mapping for texture rotation:
 - direction=0 → UP (no rotation)
 - direction=1 → RIGHT (after 1 CW rotation)
 - direction=2 → DOWN (after 2 CW rotations)
@@ -16,21 +17,40 @@ After systematic testing, we found the correct UV mapping for texture rotation o
 
 The fix is in `_modern_gl_cell.py` using UV_INDICES = [0, 3, 2, 1]
 
+## Key Insight: Rotation Axis Geometry
+
+Adjacent stickers only need texture rotation when the rotation axis is perpendicular to their "up" direction:
+
+| Face | Axis | Adjacent "Up" | Needs Adjacent Update? |
+|------|------|---------------|------------------------|
+| F, B | Z | mostly Y | YES - Z changes Y |
+| U, D | Y | all Y | NO - Y preserves Y |
+| R, L | X | Y and Z | TBD |
+
+See `design2/texture-my-questions.md` for detailed explanation.
+
 ## Remaining Work
 
-### Phase 1: Test all faces
+### Phase 1: Test all faces ✅ COMPLETE
 - [x] F face rotation
-- [ ] B face rotation
-- [ ] R face rotation
-- [ ] L face rotation
-- [ ] U face rotation
-- [ ] D face rotation
+- [x] B face rotation
+- [x] R face rotation
+- [x] L face rotation
+- [x] U face rotation
+- [x] D face rotation
 
-### Phase 2: Adjacent pieces
-- [ ] Test edges/corners that move between faces during rotation
-- [ ] Verify texture orientation is correct for pieces that cross face boundaries
+### Phase 2: Adjacent pieces - IN PROGRESS
+- [x] F face adjacent - WORKING (all adjacent need update)
+- [x] U face adjacent - WORKING (no adjacent updates needed)
+- [x] D face adjacent - WORKING (no adjacent updates needed)
+- [x] L face adjacent - WORKING (all adjacent need update)
+- [x] B face adjacent - WORKING (no adjacent updates needed)
+- [ ] R face adjacent - PARTIALLY BROKEN (F/B adjacent work, U/D edges broken)
 
-### Phase 3: Large cube testing
+### Phase 3: Middle slices
+- [ ] Test M, S, E slice movements
+
+### Phase 4: Large cube testing
 - [ ] Test on 5x5 cube
 - [ ] Verify all cell textures rotate correctly
 
@@ -365,3 +385,50 @@ Created `src/cube/resources/faces/debug3x3/` with clear directional arrows and c
 ### Test Configuration
 - CUBE_SIZE = 3 in config.py
 - TEXTURE_SETS starts with "debug3x3"
+
+### 2025-12-11 Session - Adjacent Pieces Testing
+
+**Empirical Testing Results:**
+
+| Face | Adjacent Update Rule | Status |
+|------|---------------------|--------|
+| F | ALL adjacent need update | ✅ WORKS |
+| U | NO adjacent updates | ✅ WORKS |
+| D | NO adjacent updates | ✅ WORKS |
+| L | ALL adjacent need update | ✅ WORKS |
+| B | NO adjacent updates | ✅ WORKS |
+| R | F/B adjacent only (not U/D) | ❌ PARTIALLY BROKEN |
+
+**The Puzzle:**
+- F and L (opposite faces) both need ALL adjacent updates
+- B and U/D need NO adjacent updates
+- R seems to need a different rule than L despite being on similar axis
+
+**Geometric Analysis vs Empirical Results:**
+
+Face "up" directions:
+- F, B, R, L have up=Y (toward top of screen when viewing face)
+- U has up=Z- (toward back)
+- D has up=Z+ (toward front)
+
+Rotation axes:
+- F, B rotate around Z
+- U, D rotate around Y
+- R, L rotate around X
+
+The geometric rule "update adjacent when axis affects their up direction" predicted:
+- F: update R, L, D (up=Y), not U (up=Z) → But empirically F needs ALL
+- L: update F, B (up=Y), U, D (up=Z, also affected by X) → ALL - matches
+- R: same as L → But empirically R behaves differently!
+
+**Current State:**
+R face rotation has 3 broken edges (only 1 edge works correctly) with the current "only F/B adjacent" rule. The issue may be related to:
+1. Edge coordinate system differences (right_top_left_same_direction)
+2. Asymmetry in how F/B/U/D are connected to R vs L
+3. Something about the specific edge ordering in Face.py
+
+**Next Session TODO:**
+1. Investigate why R behaves differently than L
+2. Try different per-edge rules for R
+3. Consider the edge coordinate system document
+4. Test with detailed debug output to see which specific edges are broken
