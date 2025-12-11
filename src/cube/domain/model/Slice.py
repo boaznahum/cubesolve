@@ -220,15 +220,14 @@ class Slice(SuperElement):
             self._rotate(slices_indexes)
             _p()
             self.cube.modified()
+            # Update texture directions after each step (like Face.rotate)
+            self._update_texture_directions_after_rotate(1, slices_indexes)
 
         _p()
         self.cube.reset_after_faces_changes()
         _p()
         self.cube.sanity()
         _p()
-
-        # Update texture directions for affected stickers
-        self._update_texture_directions_after_rotate(n, slices_indexes)
 
     def _update_texture_directions_after_rotate(self, quarter_turns: int, slices_indexes: Iterable[int] | None) -> None:
         """Update texture direction for stickers affected by slice rotation.
