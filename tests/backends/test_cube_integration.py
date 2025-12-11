@@ -275,10 +275,12 @@ class TestBatchOperations:
             driver = cube_driver_factory(3)
             driver.scramble(seed=seed)
             driver.solve()
+            # Count actual moves (each history entry may be a sequence)
+            total_moves = sum(alg.count() for alg in driver.operator.history())
             results.append({
                 'seed': seed,
                 'solved': driver.solved,
-                'move_count': len(driver.operator.history()),
+                'move_count': total_moves,
             })
 
         # All should be solved

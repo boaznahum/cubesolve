@@ -125,7 +125,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import kociemba
+import kociemba  # type: ignore[import-not-found]
 
 from cube.domain.algs._parser import parse_alg
 from cube.domain.exceptions import OpAborted

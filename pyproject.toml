@@ -133,6 +133,11 @@ exclude = [
 module = "__try.*"
 ignore_errors = true
 
+# Third-party library without type stubs
+[[tool.mypy.overrides]]
+module = "kociemba"
+ignore_missing_imports = true
+
 [tool.pyright]
 pythonVersion = "3.14"
 typeCheckingMode = "standard"
