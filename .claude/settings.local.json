@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C E:/dev/code/cubesolve log --oneline -20 -- src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py)",
+      "Bash",
       "Bash(git -C E:/dev/code/cubesolve log --oneline --all -- src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py)",
       "Bash(git -C E:/dev/code/cubesolve log --oneline --all --grep=\"composition\" -- src/cube/presentation/gui/backends/pyglet2/)",
       "Bash(git -C E:/dev/code/cubesolve log --oneline --all --grep=\"metaclass\\|composition\\|inherit\" -- src/cube/presentation/gui/backends/pyglet2/)",

@@ -2,7 +2,6 @@
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
-from cube.application.state import ApplicationAndViewState
 from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
@@ -17,7 +16,8 @@ def test_scramble_repeatable():
 
     cube = Cube(size=size, sp=_test_sp)
 
-    vs = ApplicationAndViewState()
+    # Use vs from app (which has config)
+    vs = app.vs
     op: Operator = Operator(cube, vs)
     solver: Solver = Solvers.default(op)
 

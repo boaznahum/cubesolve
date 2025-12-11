@@ -5,7 +5,6 @@ from contextlib import contextmanager
 from typing import Callable, Any, TYPE_CHECKING
 from typing_extensions import deprecated
 
-from cube.application import _config as config
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
 from cube.domain.algs.SimpleAlg import SimpleAlg
@@ -34,13 +33,10 @@ class Operator:
                  "_log_path"]
 
     def __init__(self, cube: Cube,
-                 app_state: ApplicationAndViewState | None = None, # will be created if None
+                 app_state: ApplicationAndViewState,
                  animation_manager: 'AnimationManager | None' = None,
                  animation_enabled: bool = False) -> None:
         super().__init__()
-
-        if app_state is None:
-            app_state = ApplicationAndViewState()
 
         self._aborted: Any = None
         self._cube = cube
@@ -63,7 +59,9 @@ class Operator:
         from cube.application.commands.op_annotation import OpAnnotation
         self._annotation: OpAnnotation = OpAnnotation(self)
 
-        self._log_path = config.OPERATION_LOG_PATH if config.OPERATION_LOG else None
+        # Get config from app_state
+        cfg = app_state.config
+        self._log_path = cfg.operation_log_path if cfg.operation_log else None
 
     def check_clear_rais_abort(self):
         if self._aborted:
@@ -153,7 +151,7 @@ class Operator:
                         an(cube, op, a)
                         self.check_clear_rais_abort()
 
-            do_self_ann = (config.OPERATOR_SHOW_ALG_ANNOTATION and
+            do_self_ann = (self._app_state.config.operator_show_alg_annotation and
                            not self._self_annotation_running and not isinstance(alg, AnnotationAlg))
 
             if do_self_ann:

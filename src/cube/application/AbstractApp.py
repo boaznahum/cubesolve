@@ -35,13 +35,16 @@ class AbstractApp(metaclass=ABCMeta):
         quiet_all: bool = False,
     ) -> "AbstractApp":
         from .app import _App
+        from .config_impl import AppConfig
 
-        vs = ApplicationAndViewState(debug_all=debug_all, quiet_all=quiet_all)
+        # Create config first - it provides values to everything else
+        config = AppConfig()
+        vs = ApplicationAndViewState(config, debug_all=debug_all, quiet_all=quiet_all)
         am: "AnimationManager | None" = None
         if animation:
             from cube.application.animation.AnimationManager import AnimationManager
             am = AnimationManager(vs)
-        app: _App = _App(vs, am, cube_size)
+        app: _App = _App(config, vs, am, cube_size)
 
         return app
 

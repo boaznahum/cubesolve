@@ -15,7 +15,6 @@ from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
 from cube.presentation.gui.commands import Command, CommandContext
 from cube.presentation.gui.protocols.AppWindow import AppWindow
 from cube.application.exceptions.ExceptionAppExit import AppExit
-from cube.application import config
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
@@ -204,7 +203,8 @@ class WebAppWindow(AppWindow):
             print("Closing web backend...", flush=True)
             self.close()
         except Exception as e:
-            if config.GUI_TEST_MODE and config.QUIT_ON_ERROR_IN_TEST_MODE:
+            cfg = self._app.config
+            if cfg.gui_test_mode and cfg.quit_on_error_in_test_mode:
                 self.close()
                 raise
             else:

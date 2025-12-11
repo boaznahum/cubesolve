@@ -10,7 +10,7 @@ from cube.domain.model import PartFixedID
 from cube.domain.model import PartSlice
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from ._cell import _Cell, _CELL_SIZE
+from ._cell import _Cell
 from ._faceboard import _FACE_SIZE, _FaceBoard
 #
 #   update  --update----|           -*update--------|-------------------|
@@ -218,7 +218,8 @@ class _Board:
 
         f0: ndarray = np.array([fx0, fy0, fz0], dtype=float).reshape(3, 1)
         # left_bottom is length=1 vector, we convert it to face size in pixels
-        fs = np.array(left_bottom, dtype=float).reshape(3, 1) * _FACE_SIZE * _CELL_SIZE
+        cell_size = self._vs.config.cell_size
+        fs = np.array(left_bottom, dtype=float).reshape(3, 1) * _FACE_SIZE * cell_size
 
         f0 = f0 + fs
         _left_right_d: ndarray = np.array(left_right_direction, dtype=float).reshape(3, 1)

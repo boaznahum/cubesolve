@@ -18,7 +18,6 @@ from cube.domain.model.PartEdge import PartEdge
 from cube.utils import prof
 from ._board import _Board
 from ._faceboard import _FaceBoard
-from cube.application import config
 from ..gui.protocols.Renderer import Renderer
 from cube.application.protocols import AnimatableViewer
 from ..gui.ViewSetup import ViewSetup
@@ -80,7 +79,7 @@ class GCubeViewer(AnimatableViewer):
         Called on any cue change to re-construct graphic elements
         :return:
         """
-        with prof.w_prof("GUI update", config.VIEWER_TRACE_DRAW_UPDATE):
+        with prof.w_prof("GUI update", self._vs.config.viewer_trace_draw_update):
             self._board.update()
 
     def draw(self):
@@ -88,7 +87,7 @@ class GCubeViewer(AnimatableViewer):
         Draw the graphic elements that were update in :upate
         :return:
         """
-        with prof.w_prof("GUI draw", config.VIEWER_TRACE_DRAW_UPDATE):
+        with prof.w_prof("GUI draw", self._vs.config.viewer_trace_draw_update):
             self._board.draw()
 
     def _get_face(self, name: FaceName) -> _FaceBoard:
@@ -160,7 +159,7 @@ class GCubeViewer(AnimatableViewer):
 
     def find_facet(self, x: float, y: float, z: float) -> Tuple[PartEdge, ndarray, ndarray] | None:
 
-        with prof.w_prof("Locate facet", config.PROF_VIEWER_SEARCH_FACET):
+        with prof.w_prof("Locate facet", self._vs.config.prof_viewer_search_facet):
             return self._board.find_facet(x, y, z)
 
     def create_animation(

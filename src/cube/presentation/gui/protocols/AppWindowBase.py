@@ -16,7 +16,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Sequence
 
-from cube.application import config
 from cube.domain.algs import Algs, Alg
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.presentation.gui.types import Keys, parse_key_string, Color4
@@ -253,14 +252,15 @@ class AppWindowBase(ABC):
             if not result.no_gui_update:
                 self.update_gui_elements()
         except AppExit:
-            if config.GUI_TEST_MODE:
+            if self._app.config.gui_test_mode:
                 self.close()
                 raise
             else:
                 self._app.set_error("Asked to stop")
                 self.update_gui_elements()
         except Exception as e:
-            if config.GUI_TEST_MODE and config.QUIT_ON_ERROR_IN_TEST_MODE:
+            cfg = self._app.config
+            if cfg.gui_test_mode and cfg.quit_on_error_in_test_mode:
                 self.close()
                 raise
             else:
@@ -338,7 +338,7 @@ class AppWindowBase(ABC):
         # Animation settings
         s = f"Animation:{_b(op.animation_enabled)}"
         s += f", [{vs.get_speed_index}] {vs.get_speed.get_speed()}"
-        s += f", Sanity check:{_b(config.CHECK_CUBE_SANITY)}"
+        s += f", Sanity check:{_b(app.config.check_cube_sanity)}"
         s += f", Debug={_b(slv.is_debug_config_mode)}"
         s += f", SS Mode:{_b(vs.single_step_mode)}"
         # Add lighting info if backend supports it
@@ -379,9 +379,10 @@ class AppWindowBase(ABC):
         vs = self._app.vs
         self._animation_labels.clear()
 
+        animation_text_props = self._app.config.animation_text
         at = vs.animation_text
         for i in range(3):
-            prop = config.ANIMATION_TEXT[i]
+            prop = animation_text_props[i]
             line = at.get_line(i)
             if line:
                 x = prop[0]

@@ -13,7 +13,6 @@ try:
 except ImportError as e:
     raise ImportError("pyglet2 backend requires: pip install 'pyglet>=2.0'") from e
 
-from cube.application import _config as config
 from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.application.animation.AnimationManager import AnimationWindow
@@ -107,8 +106,9 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         app.cube.add_listener(self._modern_viewer)
 
         # Track current texture set index for cycling
-        self._texture_set_index: int = config.TEXTURE_SET_INDEX
-        self._texture_sets: list[str | None] = config.TEXTURE_SETS or [None]
+        cfg = app.config
+        self._texture_set_index: int = cfg.texture_set_index
+        self._texture_sets: list[str | None] = cfg.texture_sets or [None]
 
         # Load initial texture set from config
         self._load_current_texture_set()
@@ -533,14 +533,15 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             if not result.no_gui_update:
                 self.update_gui_elements()
         except AppExit:
-            if config.GUI_TEST_MODE:
+            if self._app.config.gui_test_mode:
                 self.close()
                 raise
             else:
                 self._app.set_error("Asked to stop")
                 self.update_gui_elements()
         except Exception as e:
-            if config.GUI_TEST_MODE and config.QUIT_ON_ERROR_IN_TEST_MODE:
+            cfg = self._app.config
+            if cfg.gui_test_mode and cfg.quit_on_error_in_test_mode:
                 self.close()
                 raise
             else:
@@ -611,7 +612,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         y += 20
 
         s = f"Animation:{_b(op.animation_enabled)}, [{vs.get_speed_index}] {vs.get_speed.get_speed()}"
-        s += f", Sanity check:{_b(config.CHECK_CUBE_SANITY)}, Debug={_b(slv.is_debug_config_mode)}"
+        s += f", Sanity check:{_b(app.config.check_cube_sanity)}, Debug={_b(slv.is_debug_config_mode)}"
         s += f", SS Mode:{_b(vs.single_step_mode)}"
         # Add lighting info (uses protocol method)
         brightness = self.get_brightness()
@@ -640,9 +641,10 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         vs = self._app.vs
         self.animation_text.clear()
 
+        animation_text_props = self._app.config.animation_text
         at = vs.animation_text
         for i in range(3):
-            prop = config.ANIMATION_TEXT[i]
+            prop = animation_text_props[i]
             line = at.get_line(i)
             if line:
                 x = prop[0]

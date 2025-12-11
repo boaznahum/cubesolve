@@ -1,24 +1,32 @@
-"""Configuration implementation - implements ConfigProtocol by wrapping config.py.
+"""Configuration implementation - implements ConfigProtocol by wrapping _config.py.
 
-This module provides the concrete implementation of ConfigProtocol that wraps
-the existing config.py values.
+This is the ONLY module allowed to import _config directly.
+All other code must access config through ConfigProtocol via context (app.config or vs.config).
 """
 
 from cube.application import _config as cfg
-from cube.utils.config_protocol import ConfigProtocol
+from cube.utils.config_protocol import ConfigProtocol, MarkerDef, AnimationTextDef
 
 
 class AppConfig(ConfigProtocol):
-    """Application config implementation wrapping config.py values.
+    """Application config implementation wrapping _config.py values.
 
     Implements ConfigProtocol by delegating to the actual config module.
+    This is the single point of access to _config values.
     """
 
+    # ==========================================================================
     # Model settings
+    # ==========================================================================
     @property
     def check_cube_sanity(self) -> bool:
         """Enable cube sanity checks."""
         return cfg.CHECK_CUBE_SANITY
+
+    @check_cube_sanity.setter
+    def check_cube_sanity(self, value: bool) -> None:
+        """Set cube sanity check flag."""
+        cfg.CHECK_CUBE_SANITY = value
 
     @property
     def short_part_name(self) -> bool:
@@ -35,11 +43,23 @@ class AppConfig(ConfigProtocol):
         """Print cube state as text during solve."""
         return cfg.PRINT_CUBE_AS_TEXT_DURING_SOLVE
 
+    @property
+    def cube_size(self) -> int:
+        """Default cube size."""
+        return cfg.CUBE_SIZE
+
+    # ==========================================================================
     # Solver settings
+    # ==========================================================================
     @property
     def solver_debug(self) -> bool:
         """Enable solver debug output."""
         return cfg.SOLVER_DEBUG
+
+    @solver_debug.setter
+    def solver_debug(self, value: bool) -> None:
+        """Set solver debug flag."""
+        cfg.SOLVER_DEBUG = value
 
     @property
     def solver_cfop(self) -> bool:
@@ -61,7 +81,9 @@ class AppConfig(ConfigProtocol):
         """Check if cube is in BOY orientation."""
         return cfg.SOLVER_SANITY_CHECK_IS_A_BOY
 
+    # ==========================================================================
     # Optimization settings
+    # ==========================================================================
     @property
     def optimize_odd_cube_centers_switch_centers(self) -> bool:
         """Optimize odd cube center switching."""
@@ -82,14 +104,186 @@ class AppConfig(ConfigProtocol):
         """Search for blocks in big cube centers."""
         return cfg.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS
 
-    # GUI settings used by domain (for sample markers)
+    # ==========================================================================
+    # Viewer settings
+    # ==========================================================================
+    @property
+    def cell_size(self) -> int:
+        """Size of each cell in the viewer."""
+        return cfg.CELL_SIZE
+
+    @property
+    def corner_size(self) -> float:
+        """Relative corner size (to cell size)."""
+        return cfg.CORNER_SIZE
+
+    @property
+    def axis_length(self) -> float:
+        """Length of axis display."""
+        return cfg.AXIS_LENGTH
+
+    @property
+    def max_marker_radius(self) -> float:
+        """Maximum radius for markers."""
+        return cfg.MAX_MARKER_RADIUS
+
+    @property
+    def viewer_max_size_for_texture(self) -> int:
+        """Maximum cube size for texture rendering."""
+        return cfg.VIEWER_MAX_SIZE_FOR_TEXTURE
+
+    @property
+    def viewer_draw_shadows(self) -> str:
+        """Faces to draw shadows for (e.g., 'LDB')."""
+        return cfg.VIEWER_DRAW_SHADOWS
+
+    @property
+    def viewer_trace_draw_update(self) -> bool:
+        """Trace draw/update calls."""
+        return cfg.VIEWER_TRACE_DRAW_UPDATE
+
+    @property
+    def prof_viewer_search_facet(self) -> bool:
+        """Profile facet search."""
+        return cfg.PROF_VIEWER_SEARCH_FACET
+
+    @property
+    def markers(self) -> dict[str, MarkerDef]:
+        """Marker definitions by name."""
+        return cfg.MARKERS  # type: ignore[return-value]
+
+    # ==========================================================================
+    # GUI settings
+    # ==========================================================================
+    @property
+    def gui_draw_markers(self) -> bool:
+        """Draw markers on cube faces."""
+        return cfg.GUI_DRAW_MARKERS
+
     @property
     def gui_draw_sample_markers(self) -> bool:
         """Draw sample markers on cube faces."""
         return cfg.GUI_DRAW_SAMPLE_MARKERS
 
-    # Debug settings
+    @property
+    def gui_test_mode(self) -> bool:
+        """GUI testing mode - exceptions propagate."""
+        return cfg.GUI_TEST_MODE
+
+    @property
+    def quit_on_error_in_test_mode(self) -> bool:
+        """Quit application on error in test mode."""
+        return cfg.QUIT_ON_ERROR_IN_TEST_MODE
+
+    @property
+    def animation_text(self) -> list[AnimationTextDef]:
+        """Animation text display properties."""
+        return cfg.ANIMATION_TEXT  # type: ignore[return-value]
+
+    @property
+    def animation_enabled(self) -> bool:
+        """Whether animation is enabled by default."""
+        return cfg.animation_enabled
+
+    # ==========================================================================
+    # Texture settings
+    # ==========================================================================
+    @property
+    def texture_sets(self) -> list[str | None] | None:
+        """List of texture set names to cycle through."""
+        return cfg.TEXTURE_SETS
+
+    @property
+    def texture_set_index(self) -> int:
+        """Initial texture set index."""
+        return cfg.TEXTURE_SET_INDEX
+
     @property
     def debug_texture(self) -> bool:
         """Enable texture debug output."""
         return cfg.DEBUG_TEXTURE
+
+    # ==========================================================================
+    # Lighting settings
+    # ==========================================================================
+    @property
+    def lighting_brightness(self) -> float:
+        """Default brightness level."""
+        return cfg.LIGHTING_BRIGHTNESS
+
+    @property
+    def lighting_background(self) -> float:
+        """Default background gray level."""
+        return cfg.LIGHTING_BACKGROUND
+
+    # ==========================================================================
+    # Celebration settings
+    # ==========================================================================
+    @property
+    def celebration_effect(self) -> str:
+        """Default celebration effect name."""
+        return cfg.CELEBRATION_EFFECT
+
+    @property
+    def celebration_enabled(self) -> bool:
+        """Whether celebration effects are enabled."""
+        return cfg.CELEBRATION_ENABLED
+
+    @property
+    def celebration_duration(self) -> float:
+        """Celebration effect duration in seconds."""
+        return cfg.CELEBRATION_DURATION
+
+    # ==========================================================================
+    # Operator settings
+    # ==========================================================================
+    @property
+    def operation_log(self) -> bool:
+        """Enable operation logging."""
+        return cfg.OPERATION_LOG
+
+    @property
+    def operation_log_path(self) -> str:
+        """Path for operation log file."""
+        return cfg.OPERATION_LOG_PATH
+
+    @property
+    def operator_show_alg_annotation(self) -> bool:
+        """Show algorithm annotations."""
+        return cfg.OPERATOR_SHOW_ALG_ANNOTATION
+
+    # ==========================================================================
+    # Testing settings
+    # ==========================================================================
+    @property
+    def scramble_key_for_f9(self) -> int:
+        """Scramble key for F9 shortcut."""
+        return cfg.SCRAMBLE_KEY_FOR_F9
+
+    @property
+    def test_number_of_scramble_iterations(self) -> int:
+        """Number of scramble iterations for tests."""
+        return cfg.TEST_NUMBER_OF_SCRAMBLE_ITERATIONS
+
+    @property
+    def last_scramble_path(self) -> str:
+        """Path for last scramble file."""
+        return cfg.LAST_SCRAMBLE_PATH
+
+    # ==========================================================================
+    # Mouse input settings
+    # ==========================================================================
+    @property
+    def input_mouse_debug(self) -> bool:
+        """Enable mouse input debug output."""
+        return cfg.INPUT_MOUSE_DEBUG
+
+    @property
+    def input_mouse_model_rotate_by_drag_right_bottom(self) -> bool:
+        """Model rotation by dragging right/bottom."""
+        return cfg.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM
+
+    @property
+    def input_mouse_rotate_adjusted_face(self) -> bool:
+        """Rotate adjusted face on edge/corner drag."""
+        return cfg.INPUT_MOUSE_ROTATE_ADJUSTED_FACE

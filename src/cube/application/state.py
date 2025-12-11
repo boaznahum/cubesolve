@@ -7,11 +7,11 @@ from typing import Literal, Any, Tuple, Callable
 
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
-from cube.application import _config as config
 
 from cube.application.animation.AnimationText import AnimationText
 from cube.domain.model.Cube import Cube
 from cube.domain.model.cube_boy import FaceName
+from cube.utils.config_protocol import ConfigProtocol
 
 
 class _AnimationSpeed:
@@ -73,10 +73,10 @@ class ApplicationAndViewState:
     #     "_alpha_delta",
     # ]
 
-    def __init__(self, debug_all: bool = False, quiet_all: bool = False) -> None:
+    def __init__(self, config: ConfigProtocol, debug_all: bool = False, quiet_all: bool = False) -> None:
         super().__init__()
-        # self._animation_speed_delay_between_steps: float = 1/40
-        # self._animation_speed_number_of_steps = 30
+        # Store config reference for access throughout the class
+        self._config = config
 
         self._debug_all = debug_all
         self._quiet_all = quiet_all
@@ -102,8 +102,8 @@ class ApplicationAndViewState:
         # must copy, we modify it
         self._offset = [*self._offset_0]
 
-        self._draw_shadows = config.VIEWER_DRAW_SHADOWS
-        self.cube_size = config.CUBE_SIZE
+        self._draw_shadows = config.viewer_draw_shadows
+        self.cube_size = config.cube_size
 
         self.slice_start: int = 0
         self.slice_stop: int = 0
@@ -122,13 +122,18 @@ class ApplicationAndViewState:
         self._last_scramble_key_size: Tuple[Any, int | None] | None = None
 
         # Celebration effect settings (from config)
-        self._celebration_effect: str = config.CELEBRATION_EFFECT
-        self._celebration_enabled: bool = config.CELEBRATION_ENABLED
-        self._celebration_duration: float = config.CELEBRATION_DURATION
+        self._celebration_effect: str = config.celebration_effect
+        self._celebration_enabled: bool = config.celebration_enabled
+        self._celebration_duration: float = config.celebration_duration
 
         # Lighting settings (pyglet2 backend only)
-        self._brightness: float = config.LIGHTING_BRIGHTNESS
-        self._background_gray: float = config.LIGHTING_BACKGROUND
+        self._brightness: float = config.lighting_brightness
+        self._background_gray: float = config.lighting_background
+
+    @property
+    def config(self) -> ConfigProtocol:
+        """Access the configuration."""
+        return self._config
 
     def reset(self, not_view=False) -> None:
         self._alpha_x = 0
@@ -309,7 +314,7 @@ class ApplicationAndViewState:
 
     def _get_last_test_path(self):
         p = self._get_root_path()
-        return p / config.LAST_SCRAMBLE_PATH
+        return p / self._config.last_scramble_path
 
     def set_last_scramble_test(self, scramble_key: Any, scramble_size: int | None):
 

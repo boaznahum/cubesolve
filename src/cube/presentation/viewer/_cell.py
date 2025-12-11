@@ -13,7 +13,6 @@ from cube.domain.model.Face import Face
 from cube.utils import geometry
 from .TextureData import TextureData
 from cube.domain.model.VMarker import VMarker, viewer_get_markers
-from cube.application import config
 from cube.domain.model import PartEdge
 from cube.domain.model import PartSliceHashID
 from cube.domain.model import Part, Corner, Edge, Center
@@ -21,10 +20,7 @@ from cube.domain.model import PartSlice, EdgeWing, CenterSlice
 from ..gui.protocols import Renderer
 from ..gui.ViewSetup import ViewSetup
 from ..gui.types import DisplayList, TextureCoord, TextureMap, Point3D, Color3
-
-_CELL_SIZE: int = config.CELL_SIZE
-
-_CORNER_SIZE = config.CORNER_SIZE
+from cube.utils.config_protocol import ConfigProtocol
 
 _VColor = Tuple[int, int, int]
 
@@ -98,6 +94,9 @@ class _Cell:
         self._left_bottom_v3: ndarray | None = None
         self._face_board = face_board
 
+        # Store config reference to avoid repeated lookups
+        self._config: ConfigProtocol = face_board._config
+
         self.gl_lists_movable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
         self.gl_lists_unmovable: dict[PartSliceHashID, MutableSequence[int]] = defaultdict(list)
 
@@ -112,7 +111,7 @@ class _Cell:
 
         self._cubie_texture = (
             self._face_board.board.cubie_texture if
-            self._face_board.cube_face.cube.size <= config.VIEWER_MAX_SIZE_FOR_TEXTURE else None
+            self._face_board.cube_face.cube.size <= self._config.viewer_max_size_for_texture else None
         )
 
     @property
@@ -391,8 +390,11 @@ class _Cell:
 
         n: int = part.n_slices
 
+        # Get config for this method
+        cfg = self._config
+
         # color, outer, inner radius, height
-        markers: dict[str, Tuple[Tuple[int, int, int], float, float, float]] = config.MARKERS
+        markers: dict[str, Tuple[Tuple[int, int, int], float, float, float]] = cfg.markers
 
         cubie_facet_texture: TextureData | None = self._cubie_texture
         renderer = self._renderer
@@ -415,7 +417,7 @@ class _Cell:
                 else:
                     renderer.shapes.quad_with_border(points, facet_color, lw, lc)
 
-                if config.GUI_DRAW_MARKERS:
+                if cfg.gui_draw_markers:
                     _nn = part_edge.c_attributes["n"]
                     points = self._vertices_to_points(_vx)
                     renderer.shapes.lines_in_quad(points, _nn, 5, (138, 43, 226))
@@ -452,7 +454,7 @@ class _Cell:
 
                 draw_facet(edge, vertexes)
 
-                if config.GUI_DRAW_MARKERS:
+                if cfg.gui_draw_markers:
                     points = self._vertices_to_points(vertexes)
                     if cube_face.corner_bottom_left is part:
                         renderer.shapes.cross(points, cross_width, cross_color)
@@ -505,7 +507,7 @@ class _Cell:
 
                         draw_facet(edge, vx)
 
-                        if config.GUI_DRAW_MARKERS:
+                        if cfg.gui_draw_markers:
                             attributes = edge.attributes
                             points = self._vertices_to_points(vx)
                             if attributes["origin"]:
@@ -569,7 +571,7 @@ class _Cell:
         _face_size = min([l1, l2])
 
         radius = _face_size / 2.0 * 0.8
-        radius = min([radius, config.MAX_MARKER_RADIUS])
+        radius = min([radius, self._config.max_marker_radius])
 
         # this is also supported by glCallLine
         renderer = self._renderer
@@ -590,7 +592,7 @@ class _Cell:
         _face_size = min([l1, l2])
 
         radius = _face_size / 2.0 * 0.8
-        radius = min([radius, config.MAX_MARKER_RADIUS])
+        radius = min([radius, self._config.max_marker_radius])
 
         radius *= _radius
 
@@ -635,7 +637,7 @@ class _Cell:
 
 
         radius = _face_size / 2.0 * 0.8
-        radius = min([radius, config.MAX_MARKER_RADIUS])
+        radius = min([radius, self._config.max_marker_radius])
 
         radius *= _radius
 

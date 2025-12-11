@@ -14,6 +14,8 @@ from cube.presentation.gui.protocols import Renderer, Window, EventLoop, Animati
 from cube.presentation.gui.types import KeyEvent, Keys, Modifiers, parse_key_string, make_key_sequence
 from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
+from cube.application.config_impl import AppConfig
+from cube.application.state import ApplicationAndViewState
 from cube.domain.algs import Algs
 from cube.domain.solver import Solvers
 from tests.conftest import _test_sp
@@ -428,7 +430,9 @@ def cube_driver(
     renderer, window, event_loop, animation = gui_components
 
     cube = Cube(3, sp=_test_sp)
-    operator = Operator(cube)
+    config = AppConfig()
+    app_state = ApplicationAndViewState(config)
+    operator = Operator(cube, app_state)
 
     driver = CubeTestDriver(
         cube=cube,
@@ -459,7 +463,9 @@ def cube_driver_factory(
 
     def create_driver(cube_size: int = 3) -> CubeTestDriver:
         cube = Cube(cube_size, sp=_test_sp)
-        operator = Operator(cube)
+        config = AppConfig()
+        app_state = ApplicationAndViewState(config)
+        operator = Operator(cube, app_state)
         return CubeTestDriver(
             cube=cube,
             operator=operator,

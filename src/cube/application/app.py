@@ -1,7 +1,5 @@
 from typing import Any, TYPE_CHECKING
 
-from cube.application import _config as config
-from cube.application.config_impl import AppConfig
 from cube.utils.config_protocol import ConfigProtocol
 from cube.domain.algs import Alg
 from cube.application.AbstractApp import AbstractApp
@@ -17,11 +15,12 @@ if TYPE_CHECKING:
 class _App(AbstractApp):
 
     def __init__(self,
+                 config: ConfigProtocol,
                  vs: ApplicationAndViewState,
                  am: 'AnimationManager | None',
                  cube_size: int | None) -> None:
-        self._config = AppConfig()
-        super().__init__()  # This registers self as config provider
+        self._config = config
+        super().__init__()
 
         self._vs = vs
         self._error = None

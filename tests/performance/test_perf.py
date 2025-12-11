@@ -3,6 +3,7 @@ import pytest
 import time
 
 from cube.domain.algs import Algs
+from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
@@ -18,7 +19,8 @@ def test_solve_performance():
     cube_size = 10
 
     cube = Cube(cube_size, sp=_test_sp)
-    vs = ApplicationAndViewState()
+    config = AppConfig()
+    vs = ApplicationAndViewState(config)
     op: Operator = Operator(cube, vs)
     slv: Solver = Solvers.default(op)
 

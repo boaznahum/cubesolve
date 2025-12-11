@@ -11,9 +11,6 @@ import numpy as np
 from numpy import ndarray
 
 from cube.presentation.gui.types import Keys, Modifiers, MouseButton
-from cube.application._config import INPUT_MOUSE_DEBUG as INPUT_MOUSE_DEBUG
-from cube.application._config import INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM as INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM
-from cube.application._config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_ADJUSTED_FACE
 
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.algs.Alg import Alg
@@ -41,7 +38,7 @@ def on_mouse_drag(win: AppWindow, x, y, dx, dy, buttons, modifiers):
     # these are persevered for click slicing, and panning
     if not modifiers & (Modifiers.SHIFT | Modifiers.CTRL | Modifiers.ALT):
 
-        if INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM:
+        if win.app.config.input_mouse_model_rotate_by_drag_right_bottom:
             if buttons & MouseButton.RIGHT:
                 _handle_model_view_rotate_by_drag(win, dx, dy)
             else:
@@ -100,11 +97,12 @@ def _handle_model_view_rotate_by_drag(win, dx, dy):
 def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     global _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING
     vs = window.app.vs
+    mouse_debug = vs.config.input_mouse_debug
 
-    vs.debug(INPUT_MOUSE_DEBUG, f"[DRAG] Handler: x={x}, y={y}, dx={dx}, dy={dy}")
+    vs.debug(mouse_debug, f"[DRAG] Handler: x={x}, y={y}, dx={dx}, dy={dy}")
 
     if _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING:
-        vs.debug(INPUT_MOUSE_DEBUG, f"[DRAG] Skipped - already running")
+        vs.debug(mouse_debug, f"[DRAG] Skipped - already running")
         return
 
     global _DRAG_VECTOR_DETECTION_DATA
@@ -120,7 +118,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     if n == 1:  # first point
         _DRAG_VECTOR_DETECTION_DATA_X0_Y0 = (x, y)
 
-    vs.debug(INPUT_MOUSE_DEBUG, f"[DRAG] Data points: {n}/{_DRAG_VECTOR_DETECTION_DATA_LENGTH}")
+    vs.debug(mouse_debug, f"[DRAG] Data points: {n}/{_DRAG_VECTOR_DETECTION_DATA_LENGTH}")
 
     if n < _DRAG_VECTOR_DETECTION_DATA_LENGTH:
         # Since we add a texture, draw become expansive (don't know why)
@@ -140,7 +138,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(app.vs, window, x, y)
 
     if not selected:
-        vs.debug(INPUT_MOUSE_DEBUG, f"Mouse drag: Didn't find selected element: {x=}, {y=})")
+        vs.debug(mouse_debug, f"Mouse drag: Didn't find selected element: {x=}, {y=})")
         return
 
     # print(f"{selected}")
@@ -149,7 +147,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     left_to_right = selected[1]
     left_to_top = selected[2]
 
-    vs.debug(INPUT_MOUSE_DEBUG, f"[ROTATE] Selected: face={slice_edge.face.name}, left_to_right={left_to_right}, left_to_top={left_to_top}")
+    vs.debug(mouse_debug, f"[ROTATE] Selected: face={slice_edge.face.name}, left_to_right={left_to_right}, left_to_top={left_to_top}")
 
     p0 = _screen_to_model(app.vs, window, x, y)  # todo we already in selected !!!
     p1 = _screen_to_model(app.vs, window, x + dx, y + dy)
@@ -161,11 +159,11 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     part_slice: PartSlice = slice_edge.parent
     part: Part = part_slice.parent
 
-    vs.debug(INPUT_MOUSE_DEBUG, f"[ROTATE] part={type(part).__name__}, d_vector={d_vector}, ltr={on_left_to_right:.2f}, ltt={on_left_to_top:.2f}")
+    vs.debug(mouse_debug, f"[ROTATE] part={type(part).__name__}, d_vector={d_vector}, ltr={on_left_to_right:.2f}, ltt={on_left_to_top:.2f}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 
-    rotate_adjusted_face = INPUT_MOUSE_ROTATE_ADJUSTED_FACE
+    rotate_adjusted_face = vs.config.input_mouse_rotate_adjusted_face
 
     _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = True
     try:
@@ -210,10 +208,10 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
         if alg:
             if inv:
                 alg = alg.inv()
-            vs.debug(INPUT_MOUSE_DEBUG, f"[ROTATE] Playing: {alg}")
+            vs.debug(mouse_debug, f"[ROTATE] Playing: {alg}")
             _play(window, alg)
         else:
-            vs.debug(INPUT_MOUSE_DEBUG, f"[ROTATE] No alg to play")
+            vs.debug(mouse_debug, f"[ROTATE] No alg to play")
 
     finally:
         _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = False
@@ -421,7 +419,7 @@ def _play(window: AppWindow, alg: Alg):
     vs = window.app.vs
     op = window.app.op
 
-    vs.debug(INPUT_MOUSE_DEBUG, f"[PLAY] Playing {alg}")
+    vs.debug(vs.config.input_mouse_debug, f"[PLAY] Playing {alg}")
 
     # Use op.play() with animation enabled (modern GL animation now available)
     # Animation will run if globally enabled (op.animation_enabled)
@@ -615,8 +613,9 @@ def _get_selected_slice(vs, window, x, y) -> Tuple[PartEdge, np.ndarray, np.ndar
     """
     # Use modern GL ray-plane intersection for picking
     modern_viewer = window.modern_viewer
+    mouse_debug = vs.config.input_mouse_debug
 
-    vs.debug(INPUT_MOUSE_DEBUG, f"[PICK] screen=({x}, {y}), window=({window.width}, {window.height})")
+    vs.debug(mouse_debug, f"[PICK] screen=({x}, {y}), window=({window.width}, {window.height})")
 
     # Pass view state to ensure matrix is up-to-date for picking
     result = modern_viewer.get_part_edge_at_screen(
@@ -624,9 +623,9 @@ def _get_selected_slice(vs, window, x, y) -> Tuple[PartEdge, np.ndarray, np.ndar
     )
 
     if result is None:
-        vs.debug(INPUT_MOUSE_DEBUG, f"[PICK] No hit")
+        vs.debug(mouse_debug, f"[PICK] No hit")
         return None
 
     part_edge, right_dir, up_dir = result
-    vs.debug(INPUT_MOUSE_DEBUG, f"[PICK] Hit: {part_edge.face.name} part={type(part_edge.parent.parent).__name__}")
+    vs.debug(mouse_debug, f"[PICK] Hit: {part_edge.face.name} part={type(part_edge.parent.parent).__name__}")
     return (part_edge, right_dir, up_dir)

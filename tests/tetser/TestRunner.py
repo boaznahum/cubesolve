@@ -4,6 +4,7 @@ from collections.abc import Collection
 from typing import Any
 
 from cube.domain.algs import Algs
+from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
@@ -18,7 +19,8 @@ def run_solvers_sizes(solvers: Collection[SolverName], cube_sizes: Collection[in
     for cube_size in cube_sizes:
         for SolverName in solvers:
             cube = Cube(cube_size, sp=_test_sp)
-            vs = ApplicationAndViewState()
+            config = AppConfig()
+            vs = ApplicationAndViewState(config)
             op: Operator = Operator(cube, vs)
             slv: Solver = Solvers.by_name(SolverName, op)
 

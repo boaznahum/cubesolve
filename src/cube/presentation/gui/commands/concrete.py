@@ -87,8 +87,7 @@ class ScrambleF9Command(Command):
     """Command to scramble with F9 key seed."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import _config as config
-        ctx.app.scramble(config.SCRAMBLE_KEY_FOR_F9, None, animation=False, verbose=True)
+        ctx.app.scramble(ctx.app.config.scramble_key_for_f9, None, animation=False, verbose=True)
         return CommandResult()
 
 
@@ -472,8 +471,8 @@ class ToggleDebugCommand(Command):
     """Command to toggle solver debug."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import _config as config
-        config.SOLVER_DEBUG = not config.SOLVER_DEBUG
+        cfg = ctx.app.config
+        cfg.solver_debug = not cfg.solver_debug
         return CommandResult()
 
 
@@ -482,8 +481,8 @@ class ToggleSanityCheckCommand(Command):
     """Command to toggle sanity check."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import _config as config
-        config.CHECK_CUBE_SANITY = not config.CHECK_CUBE_SANITY
+        cfg = ctx.app.config
+        cfg.check_cube_sanity = not cfg.check_cube_sanity
         return CommandResult()
 
 
@@ -507,8 +506,7 @@ class TestRunCommand(Command):
     """Command to run tests."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import _config as config
-        ctx.app.run_tests(1, config.TEST_NUMBER_OF_SCRAMBLE_ITERATIONS)
+        ctx.app.run_tests(1, ctx.app.config.test_number_of_scramble_iterations)
         return CommandResult()
 
 
@@ -517,9 +515,8 @@ class TestRunLastCommand(Command):
     """Command to run last test."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import _config as config
         last_test_key, last_test_size = ctx.vs.get_last_scramble_test()
-        ctx.app.run_single_test(last_test_key, last_test_size, config.SOLVER_DEBUG, animation=True)
+        ctx.app.run_single_test(last_test_key, last_test_size, ctx.app.config.solver_debug, animation=True)
         return CommandResult()
 
 

@@ -3,7 +3,6 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from cube.application import config
 from cube.application.state import ApplicationAndViewState
 from cube.presentation.gui.protocols import Renderer
 
@@ -21,7 +20,7 @@ class GViewerExt:
             vs: Application view state with offset and rotation angles
             renderer: Renderer to use for drawing
         """
-        axis_length = config.AXIS_LENGTH
+        axis_length = vs.config.axis_length
         line_width = 3.0
 
         view = renderer.view

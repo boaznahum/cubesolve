@@ -26,16 +26,16 @@ class WebEventLoop(EventLoop):
     Uses aiohttp for both HTTP and WebSocket on the same port.
     """
 
-    def __init__(self, port: int | None = None):
+    def __init__(self, port: int | None = None, gui_test_mode: bool = False):
         self._running = False
         self._has_exit = False
+        self._gui_test_mode = gui_test_mode
         self._loop: asyncio.AbstractEventLoop | None = None
         self._clients: set = set()
         self._scheduled: list[tuple[float, Callable[[float], None], float | None]] = []
         self._start_time = time.monotonic()
         # In test mode, find a free port; otherwise use provided or default
-        from cube.application import config
-        if config.GUI_TEST_MODE:
+        if gui_test_mode:
             self._port = self._find_free_port()
         else:
             self._port = port if port is not None else 8765
@@ -151,8 +151,7 @@ class WebEventLoop(EventLoop):
         print("Press Ctrl+C to stop", flush=True)
 
         # Open browser (skip in test mode)
-        from cube.application import config
-        if not config.GUI_TEST_MODE:
+        if not self._gui_test_mode:
             webbrowser.open(f"http://localhost:{self._port}")
 
         # Main loop

@@ -7,7 +7,8 @@ from numpy import ndarray
 from cube.domain.model import Part, Corner, Edge, Center
 from cube.domain.model import PartFixedID
 from cube.domain.model.Face import Face
-from ._cell import _Cell, _CELL_SIZE, _CORNER_SIZE
+from cube.utils.config_protocol import ConfigProtocol
+from ._cell import _Cell
 
 _FACE_SIZE = 3
 
@@ -40,9 +41,11 @@ class _FaceBoard:
         self.left_top_direction: ndarray = left_top_direction
         self._ortho_direction: ndarray = ortho_direction
 
+        # Store config reference to avoid repeated lookups
+        self._config: ConfigProtocol = board.vs.config
+
         self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self) for p in
                                                  self.cube_face_supplier().parts}
-
 
     def release_resources(self) -> None:
 
@@ -107,11 +110,14 @@ class _FaceBoard:
 
 
     def _calc_cell_quad_coords(self, part: Part, cx, cy):
+        cfg = self._config
+        cell_size = cfg.cell_size
+        corner_size_ratio = cfg.corner_size
 
-        face_size: float = _CELL_SIZE * 3.0
+        face_size: float = cell_size * 3.0
 
-        max_corner_size = _CELL_SIZE  #  3x3 Cube
-        min_corner_size: float = face_size * _CORNER_SIZE  # Very big NxN -> oo
+        max_corner_size = cell_size  #  3x3 Cube
+        min_corner_size: float = face_size * corner_size_ratio  # Very big NxN -> oo
 
         cube_size = part.cube.size
 
