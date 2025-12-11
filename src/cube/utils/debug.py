@@ -36,10 +36,7 @@ def dump_cube_state(cube: Cube, label: str = "Cube State") -> None:
         cube: The cube to dump state for
         label: A label to identify this dump in the output
     """
-
-    is it dead code
-
-
+    # TODO: is it dead code?
     return
 
     print()
@@ -109,9 +106,7 @@ def dump_cube_state_compact(cube: Cube, label: str = "Cube State") -> None:
         cube: The cube to dump state for
         label: A label to identify this dump in the output
     """
-
-    is it dead code
-
+    # TODO: is it dead code?
     print()
     print(f"=== DEBUG: {label} ===")
     print(f"Size: {cube.size}, Solved: {cube.solved}, ModCounter: {cube._modify_counter}")
