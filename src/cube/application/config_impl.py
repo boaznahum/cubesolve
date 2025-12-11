@@ -4,7 +4,7 @@ This module provides the concrete implementation of ConfigProtocol that wraps
 the existing config.py values.
 """
 
-from cube.application import config as cfg
+from cube.application import _config as cfg
 
 
 class AppConfig:
@@ -86,3 +86,9 @@ class AppConfig:
     def gui_draw_sample_markers(self) -> bool:
         """Draw sample markers on cube faces."""
         return cfg.GUI_DRAW_SAMPLE_MARKERS
+
+    # Debug settings
+    @property
+    def debug_texture(self) -> bool:
+        """Enable texture debug output."""
+        return cfg.DEBUG_TEXTURE

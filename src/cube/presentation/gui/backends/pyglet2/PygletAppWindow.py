@@ -13,7 +13,7 @@ try:
 except ImportError as e:
     raise ImportError("pyglet2 backend requires: pip install 'pyglet>=2.0'") from e
 
-from cube.application import config
+from cube.application import _config as config
 from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.application.animation.AnimationManager import AnimationWindow

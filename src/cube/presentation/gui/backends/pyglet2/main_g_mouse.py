@@ -11,9 +11,9 @@ import numpy as np
 from numpy import ndarray
 
 from cube.presentation.gui.types import Keys, Modifiers, MouseButton
-from cube.application.config import INPUT_MOUSE_DEBUG as INPUT_MOUSE_DEBUG
-from cube.application.config import INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM as INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM
-from cube.application.config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_ADJUSTED_FACE
+from cube.application._config import INPUT_MOUSE_DEBUG as INPUT_MOUSE_DEBUG
+from cube.application._config import INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM as INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM
+from cube.application._config import INPUT_MOUSE_ROTATE_ADJUSTED_FACE as INPUT_MOUSE_ROTATE_ADJUSTED_FACE
 
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.algs.Alg import Alg

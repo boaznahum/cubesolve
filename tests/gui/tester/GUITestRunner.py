@@ -36,7 +36,7 @@ import threading
 import time
 import traceback
 
-from cube.application import config
+from cube.application import _config as config
 from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.presentation.gui.factory import BackendRegistry

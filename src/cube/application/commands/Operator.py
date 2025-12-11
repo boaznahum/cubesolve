@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from typing import Callable, Any, TYPE_CHECKING
 from typing_extensions import deprecated
 
-from cube.application import config
+from cube.application import _config as config
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
 from cube.domain.algs.SimpleAlg import SimpleAlg

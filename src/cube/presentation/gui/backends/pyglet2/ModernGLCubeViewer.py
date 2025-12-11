@@ -90,14 +90,14 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         self,
         cube: "Cube",
         renderer: "ModernGLRenderer",
-        vs: "ApplicationAndViewState | None" = None,
+        vs: "ApplicationAndViewState",
     ) -> None:
         """Initialize the cube viewer.
 
         Args:
             cube: The cube model to render
             renderer: The modern GL renderer to use
-            vs: Application view state (for shadow mode support)
+            vs: Application view state (for shadow mode and debug support)
         """
         self._cube = cube
         self._renderer = renderer
@@ -194,6 +194,14 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                 return CELL_TEXTURE_KEY not in edge.c_attributes
         return False
 
+    def _debug_texture(self, *args) -> None:
+        """Debug print for texture operations, controlled by debug_texture config."""
+        self._vs.debug(self._cube.config.debug_texture, *args)
+
+    def _debug_texture_lazy(self, func) -> None:
+        """Debug print with lazy evaluation for expensive texture debug info."""
+        self._vs.debug_lazy(self._cube.config.debug_texture, func)
+
     @property
     def renderer(self) -> "ModernGLRenderer":
         """Get the renderer instance."""
@@ -288,12 +296,12 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         Delegates to ModernGLBoard for geometry generation.
         Textures are reloaded via CubeListener.on_reset() when cube resets.
         """
-        # DEBUG: Print texture state before rebuild
+        # Debug texture state before rebuild (lazy to avoid cost when debug off)
         if self._use_per_cell_textures:
             self._debug_rebuild_count += 1
-            print(f"\n=== _rebuild_geometry #{self._debug_rebuild_count} ===", flush=True)
-            print(f"  animated_parts: {self._animated_parts is not None}", flush=True)
-            self._debug_print_texture_state("BEFORE board.update()")
+            self._debug_texture(f"\n=== _rebuild_geometry #{self._debug_rebuild_count} ===")
+            self._debug_texture(f"  animated_parts: {self._animated_parts is not None}")
+            self._debug_texture_lazy(lambda: self._format_texture_state("BEFORE board.update()"))
 
         # Note: Textures are now reloaded proactively via CubeListener.on_reset()
         # No need for lazy _textures_need_reload() check here
@@ -301,25 +309,10 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         # Update board with current cube state
         self._board.update()
 
-        # DEBUG: Print texture state after board update
+        # Debug texture state after board update
         if self._use_per_cell_textures:
-            self._debug_print_texture_state("AFTER board.update()")
-            # Also print what cells see
-            from cube.domain.model.cube_boy import FaceName
-            gl_face = self._board.faces[FaceName.F]
-            print(f"    Front face CELLS part_edge.c_attributes:")
-            size = self._cube.size
-            for row in range(size - 1, -1, -1):
-                row_items = []
-                for cell in gl_face.cells:
-                    if cell.row == row:
-                        if cell.part_edge:
-                            debug_id = cell.part_edge.c_attributes.get(CELL_DEBUG_KEY, "???")
-                            row_items.append((cell.col, debug_id))
-                        else:
-                            row_items.append((cell.col, "NoEdge"))
-                row_items.sort(key=lambda x: x[0])
-                print(f"      {[d for c, d in row_items]}")
+            self._debug_texture_lazy(lambda: self._format_texture_state("AFTER board.update()"))
+            self._debug_texture_lazy(lambda: self._format_cell_texture_state())
 
         # Generate geometry (board separates static/animated)
         if self._use_per_cell_textures:
@@ -335,10 +328,8 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             self._triangles_per_color.clear()
             self._animated_triangles_per_color.clear()
 
-            # DEBUG: Print texture handles used in geometry
-            print(f"    Generated geometry:")
-            print(f"      static texture_handles: {sorted(self._triangles_per_texture.keys())}")
-            print(f"      animated texture_handles: {sorted(self._animated_triangles_per_texture.keys())}")
+            # Debug texture handles used in geometry
+            self._debug_texture_lazy(lambda: self._format_geometry_debug())
         elif self._texture_mode:
             (
                 self._triangles_per_color,
@@ -400,10 +391,10 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
 
     def unhidden_all(self) -> None:
         """End animation and restore normal rendering."""
-        # DEBUG
+        # Debug texture state before cleanup
         if self._use_per_cell_textures:
-            print(f"\n=== unhidden_all() called ===")
-            self._debug_print_texture_state("BEFORE unhidden_all clears state")
+            self._debug_texture("\n=== unhidden_all() called ===")
+            self._debug_texture_lazy(lambda: self._format_texture_state("BEFORE unhidden_all clears state"))
 
         self._animated_parts = None
         self._animation_face_center = None
@@ -875,14 +866,13 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
 
         return (part_edge, right_dir, up_dir)
 
-    def _debug_print_texture_state(self, label: str) -> None:
-        """Print compact texture state for Front face for debugging."""
+    def _format_texture_state(self, label: str) -> str:
+        """Format compact texture state for Front face for debugging."""
         from cube.domain.model.cube_boy import FaceName
         cube_face = self._cube.face(FaceName.F)
         size = self._cube.size
 
-        print(f"  {label}:", flush=True)
-        print(f"    Front face c_attributes (format: debug_id):", flush=True)
+        lines = [f"  {label}:", "    Front face c_attributes (format: debug_id):"]
         for row in range(size - 1, -1, -1):
             row_items = []
             for col in range(size):
@@ -893,7 +883,45 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                     row_items.append(debug_id)
                 else:
                     row_items.append("None")
-            print(f"      {row_items}", flush=True)
+            lines.append(f"      {row_items}")
+        return "\n".join(lines)
+
+    def _format_cell_texture_state(self) -> str:
+        """Format cell texture state for Front face."""
+        from cube.domain.model.cube_boy import FaceName
+        gl_face = self._board.faces[FaceName.F]
+        size = self._cube.size
+
+        lines = ["    Front face CELLS part_edge.c_attributes:"]
+        for row in range(size - 1, -1, -1):
+            row_items = []
+            for cell in gl_face.cells:
+                if cell.row == row:
+                    if cell.part_edge:
+                        debug_id = cell.part_edge.c_attributes.get(CELL_DEBUG_KEY, "???")
+                        row_items.append((cell.col, debug_id))
+                    else:
+                        row_items.append((cell.col, "NoEdge"))
+            row_items.sort(key=lambda x: x[0])
+            lines.append(f"      {[d for c, d in row_items]}")
+        return "\n".join(lines)
+
+    def _format_geometry_debug(self) -> str:
+        """Format geometry debug info."""
+        lines = [
+            "    Generated geometry:",
+            f"      static texture_handles: {sorted(self._triangles_per_texture.keys())}",
+            f"      animated texture_handles: {sorted(self._animated_triangles_per_texture.keys())}"
+        ]
+        return "\n".join(lines)
+
+    def _debug_print_texture_state(self, label: str) -> None:
+        """Print compact texture state for Front face for debugging (legacy).
+
+        Note: This method prints directly, ignoring DEBUG_TEXTURE config.
+        Use _debug_texture_lazy(lambda: self._format_texture_state(label)) instead.
+        """
+        self._debug_texture_lazy(lambda: self._format_texture_state(label))
 
     def _get_part_slice_at(self, face_name: FaceName, row: int, col: int):
         """Get PartSlice at position (for debugging)."""
@@ -930,13 +958,20 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         """Print debug grid showing c_attributes debug IDs for a face.
 
         Prints grid from top to bottom (row N-1 first) to match visual layout.
+        Uses debug infrastructure - output controlled by DEBUG_TEXTURE config.
         """
+        self._debug_texture_lazy(lambda: self._format_face_grid(face_name))
+
+    def _format_face_grid(self, face_name: FaceName) -> str:
+        """Format debug grid for a face."""
         cube_face = self._cube.face(face_name)
         size = self._cube.size
         gl_face = self._board.faces[face_name]
 
-        print(f"\n=== DEBUG: {face_name.value} face c_attributes ===")
-        print("Format: debug_id (texture_handle)")
+        lines = [
+            f"\n=== DEBUG: {face_name.value} face c_attributes ===",
+            "Format: debug_id (texture_handle)"
+        ]
         # Print from top row to bottom (visual order)
         for row in range(size - 1, -1, -1):
             row_items = []
@@ -948,11 +983,11 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                     row_items.append(f"{debug_id}({tex_handle})")
                 else:
                     row_items.append("None")
-            print("  ".join(row_items))
-        print("=" * 60)
+            lines.append("  ".join(row_items))
+        lines.append("=" * 60)
 
         # Also print what the cells see
-        print(f"=== DEBUG: {face_name.value} CELL texture handles ===")
+        lines.append(f"=== DEBUG: {face_name.value} CELL texture handles ===")
         for row in range(size - 1, -1, -1):
             row_items = []
             for cell in gl_face.cells:
@@ -960,5 +995,6 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                     tex = cell.cell_texture if cell.cell_texture else -1
                     row_items.append((cell.col, tex))
             row_items.sort(key=lambda x: x[0])
-            print("  ".join([f"({c},{t})" for c, t in row_items]))
-        print("=" * 60)
+            lines.append("  ".join([f"({c},{t})" for c, t in row_items]))
+        lines.append("=" * 60)
+        return "\n".join(lines)

@@ -1,3 +1,17 @@
+"""
+PRIVATE MODULE - DO NOT IMPORT DIRECTLY!
+
+This module contains configuration values for the application. It is intentionally
+named with a leading underscore to indicate it is private to the application package.
+
+To access configuration values from outside the application package:
+1. Use the ConfigProtocol via cube.config property (preferred for domain/presentation layers)
+2. Import as `from cube.application import _config as config` (for tests only)
+
+DO NOT use `from cube.application._config import X` in production code.
+Access config values through the ConfigProtocol interface instead.
+"""
+
 from typing import Tuple
 
 #from cube.domain.solver.SolverName import SolverName
@@ -146,3 +160,5 @@ LIGHTING_BACKGROUND = 0.15  # Default background (black)
 TEXTURE_SETS: list[str | None] | None = ["debug4x4", "debug3x3", "arrows", "family", "letters", "numbers", "set2", None]
 # Index of initial texture set (0 = first in list, or None to start with solid colors)
 TEXTURE_SET_INDEX: int = 0  # Start with debug4x4 for 4x4 cube debugging
+# Debug texture loading/assignment (controlled by vs.debug with this flag)
+DEBUG_TEXTURE: bool = False

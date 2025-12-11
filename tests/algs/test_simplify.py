@@ -2,7 +2,7 @@
 import pytest
 from typing import Iterable
 
-from cube.application import config
+from cube.application import _config as config
 from cube.domain import algs
 from cube.domain.algs import Algs, Alg
 from cube.domain.model.Cube import Cube

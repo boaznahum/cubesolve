@@ -87,7 +87,7 @@ class ScrambleF9Command(Command):
     """Command to scramble with F9 key seed."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import config
+        from cube.application import _config as config
         ctx.app.scramble(config.SCRAMBLE_KEY_FOR_F9, None, animation=False, verbose=True)
         return CommandResult()
 
@@ -327,7 +327,7 @@ class ShadowToggleCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         ctx.vs.toggle_shadows_mode(self.face)
-        ctx.viewer.reset()
+        # Note: viewer.reset() not needed - update_gui_elements() will refresh the viewer
         return CommandResult()
 
 
@@ -472,7 +472,7 @@ class ToggleDebugCommand(Command):
     """Command to toggle solver debug."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import config
+        from cube.application import _config as config
         config.SOLVER_DEBUG = not config.SOLVER_DEBUG
         return CommandResult()
 
@@ -482,7 +482,7 @@ class ToggleSanityCheckCommand(Command):
     """Command to toggle sanity check."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import config
+        from cube.application import _config as config
         config.CHECK_CUBE_SANITY = not config.CHECK_CUBE_SANITY
         return CommandResult()
 
@@ -507,7 +507,7 @@ class TestRunCommand(Command):
     """Command to run tests."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import config
+        from cube.application import _config as config
         ctx.app.run_tests(1, config.TEST_NUMBER_OF_SCRAMBLE_ITERATIONS)
         return CommandResult()
 
@@ -517,7 +517,7 @@ class TestRunLastCommand(Command):
     """Command to run last test."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        from cube.application import config
+        from cube.application import _config as config
         last_test_key, last_test_size = ctx.vs.get_last_scramble_test()
         ctx.app.run_single_test(last_test_key, last_test_size, config.SOLVER_DEBUG, animation=True)
         return CommandResult()

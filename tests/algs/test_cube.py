@@ -2,7 +2,7 @@ import pytest
 
 from cube.domain.algs import Algs
 from cube.application.AbstractApp import AbstractApp
-from cube.application import config
+from cube.application import _config as config
 
 
 @pytest.fixture(autouse=True)

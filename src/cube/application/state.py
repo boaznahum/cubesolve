@@ -7,7 +7,7 @@ from typing import Literal, Any, Tuple, Callable
 
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
-from cube.application import config
+from cube.application import _config as config
 
 from cube.application.animation.AnimationText import AnimationText
 from cube.domain.model.Cube import Cube

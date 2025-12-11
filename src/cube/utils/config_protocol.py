@@ -89,6 +89,12 @@ class ConfigProtocol(Protocol):
         """Draw sample markers on cube faces."""
         ...
 
+    # Debug settings
+    @property
+    def debug_texture(self) -> bool:
+        """Enable texture debug output."""
+        ...
+
 
 @runtime_checkable
 class IServiceProvider(Protocol):

@@ -1,7 +1,7 @@
 """Test for sanity check functionality."""
 import pytest
 
-from cube.application import config
+from cube.application import _config as config
 from cube.domain.algs import Algs
 from cube.domain.model.Cube import Cube
 from tests.conftest import _test_sp

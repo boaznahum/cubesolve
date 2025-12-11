@@ -1,6 +1,6 @@
 from typing import Any, TYPE_CHECKING
 
-from cube.application import config
+from cube.application import _config as config
 from cube.application.config_impl import AppConfig
 from cube.utils.config_protocol import ConfigProtocol
 from cube.domain.algs import Alg
