@@ -9,6 +9,7 @@ from .Center import Center
 from .Edge import Edge
 from .Corner import Corner
 from .Cube import Cube
+from .CubeListener import CubeListener
 from .cube_boy import Color
 from .Face import Face
 

@@ -149,6 +149,7 @@ from cube.utils.config_protocol import IServiceProvider, ConfigProtocol
 
 if TYPE_CHECKING:
     from .CubeQueries2 import CubeQueries2
+    from .CubeListener import CubeListener
 
 
 class CubeSupplier(Protocol):
@@ -335,6 +336,7 @@ class Cube(CubeSupplier):
         self._last_sanity_counter = 0
         self._original_layout: CubeLayout | None = None
         self._skip_texture_updates: bool = False  # Flag for rotate_and_check queries
+        self._listeners: list["CubeListener"] = []
         self._reset()
 
         from cube.domain.model.CubeQueries2 import CubeQueries2
@@ -471,6 +473,23 @@ class Cube(CubeSupplier):
     @property
     def cqr(self) -> "CubeQueries2":
         return self._cqr
+
+    def add_listener(self, listener: "CubeListener") -> None:
+        """Register a listener to be notified of cube events.
+
+        Args:
+            listener: Object implementing CubeListener protocol
+        """
+        self._listeners.append(listener)
+
+    def remove_listener(self, listener: "CubeListener") -> None:
+        """Remove a previously registered listener.
+
+        Args:
+            listener: The listener to remove
+        """
+        if listener in self._listeners:
+            self._listeners.remove(listener)
 
     @property
     def size(self) -> int:
@@ -1426,6 +1445,9 @@ class Cube(CubeSupplier):
         solved : Check if cube is in solved state
         """
         self._reset(cube_size)
+        # Notify listeners after reset (while cube is still in solved state)
+        for listener in self._listeners:
+            listener.on_reset()
 
     def color_2_face(self, c: Color) -> Face:
         if not self._color_2_face:

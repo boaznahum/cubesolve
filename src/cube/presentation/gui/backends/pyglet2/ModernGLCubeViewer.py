@@ -53,6 +53,7 @@ from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color, FaceName
 from cube.domain.model._part_slice import PartSlice
+from cube.domain.model.CubeListener import CubeListener
 from cube.application.protocols import AnimatableViewer
 
 from ._modern_gl_board import ModernGLBoard
@@ -75,10 +76,11 @@ if TYPE_CHECKING:
     from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer
 
 
-class ModernGLCubeViewer(AnimatableViewer):
+class ModernGLCubeViewer(AnimatableViewer, CubeListener):
     """Renders a Rubik's cube using modern OpenGL (shaders, VBOs).
 
     Implements AnimatableViewer protocol for animation support.
+    Implements CubeListener protocol to reload textures on cube reset.
 
     This viewer delegates geometry generation to ModernGLBoard,
     which manages the face/cell hierarchy.
@@ -155,6 +157,28 @@ class ModernGLCubeViewer(AnimatableViewer):
     def reset(self) -> None:
         """Reset the viewer. Called on cube resize."""
         self._dirty = True
+
+    def on_reset(self) -> None:
+        """Called when cube is reset to solved state (CubeListener protocol).
+
+        Reloads textures immediately while cube is in solved state,
+        ensuring textures are assigned to correct sticker positions
+        before any scramble or moves occur.
+        """
+        self._dirty = True
+        # Reload textures now (cube is in solved state, before scramble)
+        if self._use_per_cell_textures and self._texture_directory:
+            self.load_texture_set_per_cell(self._texture_directory)
+
+    def set_texture_directory(self, directory: str | None) -> None:
+        """Set the texture directory without loading.
+
+        Use this before cube.reset() to change texture sets.
+        The on_reset() listener will load from the new directory.
+        """
+        self._texture_directory = directory
+        if directory:
+            self._use_per_cell_textures = True
 
     def _textures_need_reload(self) -> bool:
         """Check if textures need to be reloaded.
@@ -262,7 +286,7 @@ class ModernGLCubeViewer(AnimatableViewer):
         """Rebuild all geometry from current cube state.
 
         Delegates to ModernGLBoard for geometry generation.
-        Auto-reloads textures if they were lost (e.g., after cube reset).
+        Textures are reloaded via CubeListener.on_reset() when cube resets.
         """
         # DEBUG: Print texture state before rebuild
         if self._use_per_cell_textures:
@@ -271,10 +295,8 @@ class ModernGLCubeViewer(AnimatableViewer):
             print(f"  animated_parts: {self._animated_parts is not None}", flush=True)
             self._debug_print_texture_state("BEFORE board.update()")
 
-        # Check if textures need to be reloaded (cube was reset, c_attributes lost)
-        if self._use_per_cell_textures and self._texture_directory:
-            if self._textures_need_reload():
-                self.load_texture_set_per_cell(self._texture_directory)
+        # Note: Textures are now reloaded proactively via CubeListener.on_reset()
+        # No need for lazy _textures_need_reload() check here
 
         # Update board with current cube state
         self._board.update()

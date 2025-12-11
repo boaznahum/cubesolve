@@ -343,7 +343,7 @@ class SizeIncCommand(Command):
         ctx.vs.cube_size += 1
         ctx.cube.reset(ctx.vs.cube_size)
         ctx.op.reset()
-        ctx.viewer.reset()
+        # Note: viewer.reset() not needed - cube.reset() triggers CubeListener.on_reset()
         return CommandResult()
 
 
@@ -356,7 +356,7 @@ class SizeDecCommand(Command):
             ctx.vs.cube_size -= 1
         ctx.cube.reset(ctx.vs.cube_size)
         ctx.op.reset()
-        ctx.viewer.reset()
+        # Note: viewer.reset() not needed - cube.reset() triggers CubeListener.on_reset()
         return CommandResult()
 
 
@@ -605,10 +605,15 @@ class AnnotateCommand(Command):
 
 @dataclass(frozen=True)
 class SpecialAlgCommand(Command):
-    """Command to execute special algorithm."""
+    """Command to execute special algorithm (requires 7x7+ cube)."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         from cube.domain.algs import Algs
+        # This algorithm requires slices [2, 4, 5] which only exist on 7x7+ cubes
+        if ctx.cube.size < 7:
+            ctx.app.set_error(f"Special alg requires 7x7+ cube (current: {ctx.cube.size}x{ctx.cube.size})")
+            return CommandResult()
+
         slices = [2, 4, 5]
         Rs = Algs.R[slices]
         Ls = Algs.L[slices]

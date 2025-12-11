@@ -102,6 +102,10 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         # Pass vs for shadow mode support (F10/F11/F12 - G4 fix)
         self._modern_viewer = ModernGLCubeViewer(app.cube, self._modern_renderer, app.vs)
 
+        # Register viewer as cube listener for reset notifications
+        # This ensures textures are reloaded when cube resets (before scramble)
+        app.cube.add_listener(self._modern_viewer)
+
         # Track current texture set index for cycling
         self._texture_set_index: int = config.TEXTURE_SET_INDEX
         self._texture_sets: list[str | None] = config.TEXTURE_SETS or [None]
@@ -279,12 +283,36 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         Returns:
             Name of new texture set, "solid" if None, or None if not supported.
         """
+        from pathlib import Path
+        from cube.resources.faces import get_texture_set_path
+
         if not self._texture_sets:
             return None
 
         # Move to next set
         self._texture_set_index = (self._texture_set_index + 1) % len(self._texture_sets)
-        return self._load_current_texture_set()
+        texture_set = self._texture_sets[self._texture_set_index]
+
+        if texture_set is None:
+            # Solid colors mode
+            self._modern_viewer.set_texture_directory(None)
+            self._modern_viewer.set_texture_mode(False)
+            self._app.cube.reset()
+            return "solid"
+
+        # Resolve texture path
+        texture_path = texture_set
+        if not Path(texture_path).exists():
+            preset_path = get_texture_set_path(texture_path)
+            if preset_path:
+                texture_path = str(preset_path)
+
+        if Path(texture_path).exists():
+            # Set new texture directory, then reset - on_reset() will load it
+            self._modern_viewer.set_texture_directory(texture_path)
+            self._app.cube.reset()
+            return texture_set
+        return None
 
     def load_texture_set(self, directory: str) -> int:
         """Load all face textures from a directory.
