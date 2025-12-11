@@ -9,6 +9,7 @@ Types:
     letters   - Simple face letters (F, B, R, L, U, D) with borders
     gradients - Gradient patterns with UV direction arrows
     grid      - 3x3 numbered grid (1-9) for UV verification
+    debug4x4  - 4x4 grid with face name, row/col, and orientation arrow
 
 Examples:
     python generate_images.py letters set1
@@ -165,10 +166,72 @@ def generate_grid(output_dir: Path, size: int = 256) -> None:
     print(f"Generated 6 images in {output_dir}/")
 
 
+def generate_debug4x4(output_dir: Path, size: int = 256) -> None:
+    """Debug4x4: 4x4 grid with face name, row/col coords, and up arrow for debugging."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for face_name, base_color in FACE_COLORS.items():
+        img = Image.new('RGB', (size, size), base_color)
+        draw = ImageDraw.Draw(img)
+
+        grid_size = 4
+        cell_size = size // grid_size
+        text_color = TEXT_COLORS[face_name]
+
+        # Fonts
+        face_font = get_font(cell_size // 4)
+        coord_font = get_font(cell_size // 5)
+        tiny_font = get_font(cell_size // 8)
+
+        # Draw grid lines
+        for i in range(grid_size + 1):
+            draw.line([(i * cell_size, 0), (i * cell_size, size)], fill=(0, 0, 0), width=2)
+            draw.line([(0, i * cell_size), (size, i * cell_size)], fill=(0, 0, 0), width=2)
+
+        # Fill each cell with debug info
+        for row in range(grid_size):
+            for col in range(grid_size):
+                # Cell center (row 0 is bottom in cube coords, but top in image coords)
+                # Image y=0 is top, so row 0 (bottom) should be at y = (grid_size-1) * cell_size
+                img_row = grid_size - 1 - row
+                cx = col * cell_size + cell_size // 2
+                cy = img_row * cell_size + cell_size // 2
+
+                # Face name at top of cell
+                text = face_name
+                bbox = draw.textbbox((0, 0), text, font=face_font)
+                tw = bbox[2] - bbox[0]
+                draw.text((cx - tw // 2, cy - cell_size // 3), text, fill=text_color, font=face_font)
+
+                # Row,Col coordinates in middle
+                coord_text = f"{row},{col}"
+                bbox = draw.textbbox((0, 0), coord_text, font=coord_font)
+                tw = bbox[2] - bbox[0]
+                draw.text((cx - tw // 2, cy - 5), coord_text, fill=text_color, font=coord_font)
+
+                # Up arrow at bottom of cell to show orientation
+                arrow_y = cy + cell_size // 4
+                arrow_len = cell_size // 5
+                # Vertical line
+                draw.line([(cx, arrow_y + arrow_len // 2), (cx, arrow_y - arrow_len // 2)],
+                         fill=text_color, width=2)
+                # Arrow head
+                draw.polygon([
+                    (cx, arrow_y - arrow_len // 2),
+                    (cx - 4, arrow_y - arrow_len // 2 + 6),
+                    (cx + 4, arrow_y - arrow_len // 2 + 6)
+                ], fill=text_color)
+
+        img.save(output_dir / f"{face_name}.png")
+
+    print(f"Generated 6 debug4x4 images in {output_dir}/")
+
+
 GENERATORS = {
     'letters': generate_letters,
     'gradients': generate_gradients,
     'grid': generate_grid,
+    'debug4x4': generate_debug4x4,
 }
 
 

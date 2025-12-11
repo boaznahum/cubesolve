@@ -4,7 +4,7 @@ from typing import Tuple
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 3  # Using debug3x3 texture set
+CUBE_SIZE = 4  # Using debug4x4 texture set for 4x4 debugging
 
 SOLVER_CFOP=False
 
@@ -142,7 +142,7 @@ LIGHTING_BACKGROUND = 0.15  # Default background (black)
 ################ Textures (pyglet2 backend only)
 # List of texture sets to cycle through with Ctrl+Shift+T
 # Can be preset names ("set1", "family"), paths, or None for solid colors
-# Ctrl+Shift+T cycles: set1 → family → None (solid) → set1 → ...
-TEXTURE_SETS: list[str | None] | None = ["debug3x3", "arrows", "family", "letters", "numbers", "set2", None]
+# Ctrl+Shift+T cycles: debug4x4 → debug3x3 → arrows → ... → None (solid) → debug4x4 → ...
+TEXTURE_SETS: list[str | None] | None = ["debug4x4", "debug3x3", "arrows", "family", "letters", "numbers", "set2", None]
 # Index of initial texture set (0 = first in list, or None to start with solid colors)
-TEXTURE_SET_INDEX: int = 0  # Start with debug3x3 for debugging texture rotation
+TEXTURE_SET_INDEX: int = 0  # Start with debug4x4 for 4x4 cube debugging
