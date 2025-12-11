@@ -151,3 +151,5 @@ The pattern suggests the rule depends on more than just rotation axis - possibly
 - [ ] Fix R face adjacent - PARTIALLY BROKEN (needs investigation)
 - [ ] Test middle slice movements (M, S, E)
 - [ ] Test on larger cubes (5x5)
+
+

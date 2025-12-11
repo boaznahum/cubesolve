@@ -1,76 +1,68 @@
 # Texture Rotation Bug Analysis
 
-## Bug Description
+## Status: IN PROGRESS (2025-12-11)
 
-When rotating a face with textures enabled, the texture appears scrambled after the rotation animation completes. The texture shows correctly during the animation but "snaps" to a broken state at the end.
+Face rotations (F, R, U, D, L, B) and slice rotations (M, E, S) work correctly.
+Whole-cube rotations (X, Y, Z) need investigation - texture updates may not sum correctly.
 
-## Root Cause
+## Current Working Configuration
 
-The animation system works as follows:
-1. **Before rotation**: Geometry is compiled with current UV coordinates baked in
-2. **During animation**: The compiled geometry is rotated visually using a matrix transform (no UV changes)
-3. **After animation**: The actual cube model rotation happens (`copy_color` moves attributes between pieces)
-4. **Then**: Geometry is rebuilt, reading UV values from the model
+```yaml
+faces:
+  F: {self: 1, U: 1, R: 1, D: 1, L: 1}
+  R: {self: 1, U: 0, B: 2, D: 2, F: 0}
+  U: {self: 1, B: 0, R: 0, F: 0, L: 0}
+  D: {self: 1, F: 0, R: 0, B: 0, L: 0}
+  L: {self: 1, U: 2, F: 0, D: 0, B: 2}
+  B: {self: 1, U: 3, L: 3, D: 3, R: 3}
 
-The attempted fix stored `home_uv` in `PartEdge.c_attributes`, which travels with pieces during rotation via `copy_color()`. This caused the UVs to move with pieces, resulting in a scrambled texture after rebuild.
-
-## The Fundamental Misunderstanding
-
-There are two valid approaches for texture mapping on a rotating cube:
-
-### Approach A: Texture Fixed to Face (Position-based UVs)
-- UV is determined by cell POSITION on the face, not which piece is there
-- The "B" image stays in place while pieces rotate over it
-- After rotation, pieces at new positions show that position's texture region
-- **Simple to implement**: `UV = (col/size, row/size)`
-
-### Approach B: Texture Travels with Piece (Piece-based UVs)
-- Each piece has a fixed UV that travels with it
-- The "B" image appears to rotate 90° when F face rotates
-- Requires storing UV that survives rotation
-- **Problem**: The animation shows the ORIGINAL UVs during animation (geometry baked before rotation), but after rotation the `c_attributes` have MOVED, causing a mismatch
-
-## Why Approach B Failed
-
-1. Animation compiles geometry with UVs at time T
-2. Animation plays (visual rotation only)
-3. Cube model rotates (attributes move via `copy_color`)
-4. Geometry rebuilds at time T+1
-5. At T+1, the piece at position (0,0) has `home_uv` from wherever it came from
-6. This creates a discontinuity - animation showed one thing, final state shows another
-
-## Correct Solution
-
-For this codebase, **Approach A (position-based UVs)** is correct because:
-- The per-COLOR grouping already ensures each color uses its home face's texture
-- Green pieces always use F texture, orange pieces use L texture, etc.
-- Position-based UVs mean the texture image stays fixed on the face
-- No state needs to travel with pieces
-
-```python
-def _get_cell_uv(self, row: int, col: int, size: int) -> tuple:
-    """UV based on position, not piece."""
-    return (col / size, row / size, (col + 1) / size, (row + 1) / size)
+  M: {F: 0, U: 2, B: 2, D: 0}
+  E: {F: 0, R: 0, B: 0, L: 0}
+  S: {U: 3, R: 3, D: 3, L: 3}
 ```
 
-## Key Insight
+## Files Created/Modified
 
-The `c_attributes` mechanism (which copies via `PartEdge.copy_color()`) is designed for attributes that should travel with piece COLORS. However, texture UVs should be tied to POSITION, not color. The animation system's separation of "visual rotation" from "model rotation" makes piece-based UVs particularly problematic.
+1. **`texture_rotation_config.yaml`** - Decision table for texture_direction updates
+2. **`texture_rotation_loader.py`** - Loads YAML config, caches, reloads on file change
+3. **`Face.py`** - `_update_texture_directions_after_rotate()` uses YAML config
+4. **`Slice.py`** - `_update_texture_directions_after_rotate()` added for M, E, S
 
-## Files Involved
+## How It Works
 
-- `ModernGLCubeViewer.py` - Main viewer with texture rendering
-- `PartEdge.py` - Contains `c_attributes` and `copy_color()`
-- `_part_slice.py` - Contains `copy_colors()` which calls `PartEdge.copy_color()`
-- `AnimationManager.py` - Orchestrates animation flow
+1. Each `PartEdge` has `texture_direction` (0-3): 0=up, 1=90°CW, 2=180°, 3=270°CW
+2. When a face/slice rotates, affected stickers get: `direction = (direction + delta) % 4`
+3. The YAML config specifies delta values for each rotation type
+4. `_modern_gl_cell.py` reads `texture_direction` and applies UV rotation
 
-## Lesson Learned
+## Key Insights
 
-When debugging rendering issues in an animated system, always trace the FULL lifecycle:
-1. When is geometry compiled?
-2. What data is baked into the geometry?
-3. When does the model state change?
-4. When is geometry rebuilt?
-5. What data is read during rebuild?
+- **F, L**: All adjacent faces need update (delta=1 or 2)
+- **R**: Only B and D need update (delta=2), not U and F
+- **U, D**: No adjacent updates needed (delta=0 for all)
+- **B**: All adjacent need update (delta=3)
+- **M**: U and B need update (delta=2)
+- **E**: No updates needed (delta=0 for all)
+- **S**: All affected faces need update (delta=3)
 
-The mismatch between "what animation shows" and "what final state shows" often indicates a timing issue between visual updates and model updates.
+## Whole-Cube Rotations (X, Y, Z)
+
+These are composed of face + slice rotations:
+- X = M(-1) + R(1) + L(-1)
+- Y = E(-1) + U(1) + D(-1)
+- Z = S(1) + F(1) + B(-1)
+
+**Issue:** The texture updates from component rotations may not sum correctly.
+X rotation was observed to have incorrect texture on the middle slice on U and D faces.
+
+**Investigation needed:** Determine why the sum of M + R + L texture updates doesn't
+equal the correct X rotation texture update.
+
+## Next Steps
+
+1. ✅ Face rotations working (F, R, U, D, L, B)
+2. ✅ Slice rotations working (M, E, S)
+3. 🔄 Investigate X, Y, Z whole-cube rotations
+4. ⬜ Test with 4x4 cube
+5. ⬜ Convert YAML config to hardcoded efficient table
+6. ⬜ Remove YAML dependency for production

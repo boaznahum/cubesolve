@@ -227,6 +227,47 @@ class Slice(SuperElement):
         self.cube.sanity()
         _p()
 
+        # Update texture directions for affected stickers
+        self._update_texture_directions_after_rotate(n, slices_indexes)
+
+    def _update_texture_directions_after_rotate(self, quarter_turns: int, slices_indexes: Iterable[int] | None) -> None:
+        """Update texture direction for stickers affected by slice rotation.
+
+        Configuration is loaded from texture_rotation_config.yaml.
+
+        Args:
+            quarter_turns: Number of 90° rotations (already adjusted for direction)
+            slices_indexes: Which slice indices were rotated
+        """
+        # Skip texture updates during query rotations
+        if self.cube._skip_texture_updates:
+            return
+
+        # Load config from YAML
+        from cube.presentation.gui.backends.pyglet2 import texture_rotation_loader as trl
+        slice_name = self._name.name  # SliceName.M -> "M"
+
+        s_range = self._get_index_range(slices_indexes)
+
+        for i in s_range:
+            edges, centers = self._get_slices_by_index(i)
+
+            # Update edge stickers
+            for edge_wing in edges:
+                for part_edge in edge_wing.edges:
+                    face_name = part_edge.face.name.name
+                    delta = trl.get_delta(slice_name, face_name)
+                    if delta != 0:
+                        part_edge.rotate_texture(quarter_turns * delta)
+
+            # Update center stickers
+            for center_slice in centers:
+                part_edge = center_slice.edge
+                face_name = part_edge.face.name.name
+                delta = trl.get_delta(slice_name, face_name)
+                if delta != 0:
+                    part_edge.rotate_texture(quarter_turns * delta)
+
     def get_rotate_involved_parts(self, slice_indexes: int | Iterable[int] | None) -> Sequence[PartSlice]:
 
         """

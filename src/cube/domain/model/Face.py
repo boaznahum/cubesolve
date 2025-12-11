@@ -321,6 +321,8 @@ class Face(SuperElement, Hashable):
         - Stickers ON this face rotate in place → direction changes
         - Stickers on ADJACENT edges/corners also rotate → direction changes
 
+        Configuration is loaded from texture_rotation_config.yaml for easy iteration.
+
         Args:
             quarter_turns: Number of 90° CW rotations (1 for CW, -1 for CCW)
         """
@@ -328,75 +330,48 @@ class Face(SuperElement, Hashable):
         if self.cube._skip_texture_updates:
             return
 
+        # Load config from YAML (cached, reloads on file change)
+        from cube.presentation.gui.backends.pyglet2 import texture_rotation_loader as trl
+        face_name = self.name.name  # FaceName.F -> "F"
         n_slices = self.cube.n_slices
 
-        # 1. Edge stickers ON THIS face
-        for edge in [self._edge_top, self._edge_right, self._edge_bottom, self._edge_left]:
-            for i in range(n_slices):
-                part_edge = edge.get_slice(i).get_face_edge(self)
-                part_edge.rotate_texture(quarter_turns)
+        # 1. Stickers ON THIS face (self)
+        delta_self = trl.get_delta(face_name, 'self')
+        if delta_self != 0:
+            for edge in [self._edge_top, self._edge_right, self._edge_bottom, self._edge_left]:
+                for i in range(n_slices):
+                    part_edge = edge.get_slice(i).get_face_edge(self)
+                    part_edge.rotate_texture(quarter_turns * delta_self)
 
-        # 2. Corner stickers ON THIS face
-        for corner in [self._corner_top_left, self._corner_top_right,
-                       self._corner_bottom_right, self._corner_bottom_left]:
-            part_edge = corner.get_face_edge(self)
-            part_edge.rotate_texture(quarter_turns)
+            for corner in [self._corner_top_left, self._corner_top_right,
+                           self._corner_bottom_right, self._corner_bottom_left]:
+                part_edge = corner.get_face_edge(self)
+                part_edge.rotate_texture(quarter_turns * delta_self)
 
-        # 3. Center stickers (only exist on this face)
-        center = self._center
-        n = self.cube.size - 2  # Center grid is (size-2) x (size-2)
-        for row in range(n):
-            for col in range(n):
-                part_edge = center.get_center_slice((row, col)).get_face_edge(self)
-                part_edge.rotate_texture(quarter_turns)
+            center = self._center
+            n = self.cube.size - 2
+            for row in range(n):
+                for col in range(n):
+                    part_edge = center.get_center_slice((row, col)).get_face_edge(self)
+                    part_edge.rotate_texture(quarter_turns * delta_self)
 
-        # 4. ADJACENT stickers - per-edge logic based on geometry
-        #
-        # The rule: update adjacent sticker when rotation axis affects that face's "up" direction
-        # Face "up" directions: F,B,R,L have up=Y; U has up=Z-; D has up=Z+
-        # Rotation axes: F,B around Z; U,D around Y; R,L around X
-        #
-        # Analysis per rotating face:
-        # - F (Z-axis): R,L,D have up=Y (affected by Z), U has up=Z (not affected)
-        #   But empirically F needs ALL adjacent updated
-        # - L (X-axis): F,B have up=Y (affected by X), U,D have up=Z (affected by X)
-        #   Empirically L needs ALL adjacent updated
-        # - U,D (Y-axis): all adjacent have up=Y (not affected) → no updates
-        # - R (X-axis): same geometry as L but empirically partial...
-        # - B (Z-axis): same geometry as F but empirically no updates needed
-        #
-        # Empirical pattern: F and L need full adjacent updates
-        # R needs updates only for faces with up=Y (F and B), not U and D
-        from cube.domain.model.cube_boy import FaceName
-
-        def should_update_adjacent(rotating_face: FaceName, adjacent_face: "Face") -> bool:
-            """Determine if adjacent face stickers need texture update."""
-            adj_name = adjacent_face.name
-            if rotating_face == FaceName.F:
-                return True  # F: all adjacent need update
-            elif rotating_face == FaceName.L:
-                return True  # L: all adjacent need update
-            elif rotating_face == FaceName.R:
-                # R: only F and B (faces with up=Y on sides)
-                return adj_name in (FaceName.F, FaceName.B)
-            else:
-                return False  # U, D, B: no adjacent updates
-
-        # Update adjacent edge stickers (conditionally)
+        # 2. ADJACENT stickers - edges
         for edge in [self._edge_top, self._edge_right, self._edge_bottom, self._edge_left]:
             adjacent_face = edge.get_other_face(self)
-            if should_update_adjacent(self.name, adjacent_face):
+            delta = trl.get_delta(face_name, adjacent_face.name.name)
+            if delta != 0:
                 for i in range(n_slices):
                     part_edge_adj = edge.get_slice(i).get_face_edge(adjacent_face)
-                    part_edge_adj.rotate_texture(quarter_turns)
+                    part_edge_adj.rotate_texture(quarter_turns * delta)
 
-        # Update adjacent corner stickers (conditionally)
+        # 3. ADJACENT stickers - corners
         for corner in [self._corner_top_left, self._corner_top_right,
                        self._corner_bottom_right, self._corner_bottom_left]:
             for part_edge in corner.slice.edges:
                 if part_edge.face != self:
-                    if should_update_adjacent(self.name, part_edge.face):
-                        part_edge.rotate_texture(quarter_turns)
+                    delta = trl.get_delta(face_name, part_edge.face.name.name)
+                    if delta != 0:
+                        part_edge.rotate_texture(quarter_turns * delta)
 
     @property
     def solved(self):
