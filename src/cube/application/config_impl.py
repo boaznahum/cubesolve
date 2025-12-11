@@ -5,9 +5,10 @@ the existing config.py values.
 """
 
 from cube.application import _config as cfg
+from cube.utils.config_protocol import ConfigProtocol
 
 
-class AppConfig:
+class AppConfig(ConfigProtocol):
     """Application config implementation wrapping config.py values.
 
     Implements ConfigProtocol by delegating to the actual config module.
