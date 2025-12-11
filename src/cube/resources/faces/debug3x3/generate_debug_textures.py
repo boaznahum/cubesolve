@@ -51,10 +51,12 @@ def create_face_image(face_name: str) -> Image.Image:
     draw = ImageDraw.Draw(img)
 
     # Try to get a font, fall back to default
+    font_large: ImageFont.FreeTypeFont | ImageFont.ImageFont
+    font_small: ImageFont.FreeTypeFont | ImageFont.ImageFont
     try:
         font_large = ImageFont.truetype("arial.ttf", 24)
         font_small = ImageFont.truetype("arial.ttf", 14)
-    except:
+    except Exception:
         font_large = ImageFont.load_default()
         font_small = font_large
 

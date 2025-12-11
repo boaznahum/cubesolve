@@ -26,9 +26,12 @@ def _load_config() -> dict[str, Any]:
         return _cached_config
 
     with open(_CONFIG_PATH, 'r', encoding='utf-8') as f:
-        _cached_config = yaml.safe_load(f)
+        loaded = yaml.safe_load(f)
+        if loaded is None:
+            loaded = {}
+        _cached_config = loaded
         _cached_mtime = mtime
-        return _cached_config
+        return loaded
 
 
 def get_delta(rotating_face: str, target: str) -> int:

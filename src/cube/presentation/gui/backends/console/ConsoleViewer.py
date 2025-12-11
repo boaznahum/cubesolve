@@ -4,7 +4,9 @@ from typing import Hashable
 import colorama
 
 from cube.domain.model.Cube import Cube
-from cube.domain.model import Part, Color, Face
+from cube.domain.model.Part import Part
+from cube.domain.model.Color import Color
+from cube.domain.model.Face import Face
 
 _CELL_SIZE: int = 2
 

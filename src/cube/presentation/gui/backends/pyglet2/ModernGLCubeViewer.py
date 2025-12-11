@@ -70,7 +70,7 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.domain.model.PartEdge import PartEdge
-    from cube.domain.algs import AnimationAbleAlg
+    from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
     from cube.application.state import ApplicationAndViewState
     from cube.application.animation.AnimationManager import Animation
     from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer
@@ -908,10 +908,13 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
 
     def _format_geometry_debug(self) -> str:
         """Format geometry debug info."""
+        # Sort keys, treating None as -1 for sorting purposes
+        static_keys = sorted(self._triangles_per_texture.keys(), key=lambda x: x if x is not None else -1)
+        animated_keys = sorted(self._animated_triangles_per_texture.keys(), key=lambda x: x if x is not None else -1)
         lines = [
             "    Generated geometry:",
-            f"      static texture_handles: {sorted(self._triangles_per_texture.keys())}",
-            f"      animated texture_handles: {sorted(self._animated_triangles_per_texture.keys())}"
+            f"      static texture_handles: {static_keys}",
+            f"      animated texture_handles: {animated_keys}"
         ]
         return "\n".join(lines)
 
@@ -989,12 +992,12 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         # Also print what the cells see
         lines.append(f"=== DEBUG: {face_name.value} CELL texture handles ===")
         for row in range(size - 1, -1, -1):
-            row_items = []
+            cell_items: list[tuple[int, int]] = []
             for cell in gl_face.cells:
                 if cell.row == row:
                     tex = cell.cell_texture if cell.cell_texture else -1
-                    row_items.append((cell.col, tex))
-            row_items.sort(key=lambda x: x[0])
-            lines.append("  ".join([f"({c},{t})" for c, t in row_items]))
+                    cell_items.append((cell.col, tex))
+            cell_items.sort(key=lambda x: x[0])
+            lines.append("  ".join([f"({c},{t})" for c, t in cell_items]))
         lines.append("=" * 60)
         return "\n".join(lines)
