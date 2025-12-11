@@ -7,6 +7,7 @@ from cube.application.state import ApplicationAndViewState
 from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
+from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:
     from cube.application.animation.AnimationManager import AnimationManager
@@ -18,7 +19,8 @@ class _App(AbstractApp):
                  config: ConfigProtocol,
                  vs: ApplicationAndViewState,
                  am: 'AnimationManager | None',
-                 cube_size: int | None) -> None:
+                 cube_size: int | None,
+                 solver: SolverName | None = None) -> None:
         self._config = config
         super().__init__()
 
@@ -37,7 +39,10 @@ class _App(AbstractApp):
                                       am,
                                       config.animation_enabled)
 
-        self._slv: Solver = Solvers.default(self.op)
+        if solver is not None:
+            self._slv: Solver = Solvers.by_name(solver, self.op)
+        else:
+            self._slv = Solvers.default(self.op)
 
         # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
 

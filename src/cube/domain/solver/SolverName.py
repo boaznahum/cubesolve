@@ -3,5 +3,6 @@ from enum import unique, Enum
 
 @unique
 class SolverName(Enum):
-    LBL="LBL"
+    LBL = "LBL"
     CFOP = "CFOP"
+    KOCIEMBA = "Kociemba"  # Near-optimal solver (18-22 moves)

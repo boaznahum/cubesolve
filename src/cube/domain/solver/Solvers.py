@@ -1,6 +1,7 @@
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.beginner.BeginnerSolver import BeginnerSolver
 from .CFOP.CFOP import CFOP
+from .kociemba.KociembaSolver import KociembaSolver
 from .solver import BeginnerLBLReduce
 from .solver import Solver
 from .SolverName import SolverName
@@ -11,10 +12,8 @@ class Solvers:
 
     @staticmethod
     def default(op: OperatorProtocol) -> Solver:
-        if op.cube.config.solver_cfop:
-            return Solvers.cfop(op)
-        else:
-            return Solvers.beginner(op)
+        # Kociemba is the default - near-optimal solutions (18-22 moves)
+        return Solvers.kociemba(op)
 
     @staticmethod
     def beginner(op: OperatorProtocol) -> BeginnerLBLReduce:
@@ -24,18 +23,22 @@ class Solvers:
     def cfop(op: OperatorProtocol) -> Solver:
         return CFOP(op)
 
-    @classmethod
-    def next_solver(cls, current: SolverName, op: OperatorProtocol):
+    @staticmethod
+    def kociemba(op: OperatorProtocol) -> Solver:
+        return KociembaSolver(op)
 
-        _ids = [ * SolverName ]
+    @classmethod
+    def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
+
+        _ids = [*SolverName]
         index = _ids.index(current)
 
-        next_s = _ids[ (index + 1) % len(_ids)]
+        next_s = _ids[(index + 1) % len(_ids)]
 
         return cls.by_name(next_s, op)
 
     @classmethod
-    def by_name(cls, solver_id: SolverName, op: OperatorProtocol):
+    def by_name(cls, solver_id: SolverName, op: OperatorProtocol) -> Solver:
 
         match solver_id:
 
@@ -45,8 +48,11 @@ class Solvers:
             case SolverName.CFOP:
                 return cls.cfop(op)
 
+            case SolverName.KOCIEMBA:
+                return cls.kociemba(op)
+
             case _:
-                raise InternalSWError("Unknown solver: {id}")
+                raise InternalSWError(f"Unknown solver: {solver_id}")
 
 
 

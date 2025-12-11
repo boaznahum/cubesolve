@@ -38,6 +38,7 @@ dependencies = [
     "typing_extensions>=4.14.0",  # for @deprecated decorator
     "keyboard",
     "aiohttp>=3.9.0",  # Web backend (WebSocket server)
+    "kociemba",  # Near-optimal Rubik's cube solver (18-22 moves)
 ]
 
 [project.optional-dependencies]

@@ -5,6 +5,7 @@ from cube.domain.algs import Alg
 from cube.application.state import ApplicationAndViewState
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver
+from cube.domain.solver.SolverName import SolverName
 from cube.utils.config_protocol import ConfigProtocol
 
 if TYPE_CHECKING:
@@ -33,6 +34,7 @@ class AbstractApp(metaclass=ABCMeta):
         animation: bool = True,
         debug_all: bool = False,
         quiet_all: bool = False,
+        solver: SolverName | None = None,
     ) -> "AbstractApp":
         from .app import _App
         from .config_impl import AppConfig
@@ -44,7 +46,7 @@ class AbstractApp(metaclass=ABCMeta):
         if animation:
             from cube.application.animation.AnimationManager import AnimationManager
             am = AnimationManager(vs)
-        app: _App = _App(config, vs, am, cube_size)
+        app: _App = _App(config, vs, am, cube_size, solver)
 
         return app
 
