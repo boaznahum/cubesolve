@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from typing import Protocol, TYPE_CHECKING, Any, ContextManager
 
 if TYPE_CHECKING:
-    from cube.domain.algs import Alg
+    from cube.domain.algs.Alg import Alg
     from cube.domain.model.Cube import Cube
     from .AnnotationProtocol import AnnotationProtocol
 

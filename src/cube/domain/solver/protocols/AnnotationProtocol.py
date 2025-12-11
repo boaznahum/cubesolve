@@ -6,7 +6,10 @@ from collections.abc import Iterable, Iterator
 from typing import Protocol, TYPE_CHECKING, Callable, Tuple, ContextManager, TypeAlias
 
 if TYPE_CHECKING:
-    from cube.domain.model import Part, PartColorsID, PartEdge, PartSlice
+    from cube.domain.model.Part import Part
+    from cube.domain.model.PartEdge import PartEdge
+    from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model._elements import PartColorsID
     from cube.domain.solver.AnnWhat import AnnWhat
 
 # Type alias for annotation-supported elements

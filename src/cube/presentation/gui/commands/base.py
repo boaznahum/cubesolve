@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.solver import Solver
     from cube.presentation.gui.protocols.AppWindow import AppWindow
-    from cube.application.protocols import AnimatableViewer
+    from cube.application.protocols.AnimatableViewer import AnimatableViewer
 
 
 # =============================================================================

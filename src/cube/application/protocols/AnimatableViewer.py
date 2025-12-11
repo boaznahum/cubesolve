@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
-    from cube.domain.algs import AnimationAbleAlg
+    from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
     from cube.application.state import ApplicationAndViewState
     from cube.application.animation.AnimationManager import Animation
 
