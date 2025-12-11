@@ -5,6 +5,16 @@
 Face rotations (F, R, U, D, L, B) and slice rotations (M, E, S) work correctly.
 Whole-cube rotations (X, Y, Z) need investigation - texture updates may not sum correctly.
 
+## Quick Start for Next Session
+
+1. Run the app: `python -m cube.main_pyglet`
+2. Press `i` to enable textures (shows arrows on each sticker)
+3. Test face rotations: `f`, `r`, `u`, `d`, `l`, `b` - all should work
+4. Test slice rotations: `m`, `e`, `s` - all should work
+5. Test X rotation: `x` - **BROKEN** - middle slice on U/D faces shows wrong direction
+6. Edit config: `src/cube/presentation/gui/backends/pyglet2/texture_rotation_config.yaml`
+   - Changes reload automatically on next rotation
+
 ## Current Working Configuration
 
 ```yaml
@@ -45,18 +55,42 @@ faces:
 - **E**: No updates needed (delta=0 for all)
 - **S**: All affected faces need update (delta=3)
 
-## Whole-Cube Rotations (X, Y, Z)
+## Whole-Cube Rotations (X, Y, Z) - THE OPEN PROBLEM
 
 These are composed of face + slice rotations:
 - X = M(-1) + R(1) + L(-1)
 - Y = E(-1) + U(1) + D(-1)
 - Z = S(1) + F(1) + B(-1)
 
-**Issue:** The texture updates from component rotations may not sum correctly.
-X rotation was observed to have incorrect texture on the middle slice on U and D faces.
+### The Problem
 
-**Investigation needed:** Determine why the sum of M + R + L texture updates doesn't
-equal the correct X rotation texture update.
+When doing X rotation, the middle slice stickers on U and D faces show arrows pointing
+in the wrong direction (180° off). M, R, L rotations work correctly individually.
+
+### What Was Tried
+
+1. **Approach 1: Let component updates sum** - Didn't work. The sum of M + R + L
+   texture updates doesn't equal correct X rotation update.
+
+2. **Approach 2: Separate X/Y/Z table entries** - Added X, Y, Z entries to YAML config
+   with `_skip_texture_updates` flag to skip component updates and do one final update.
+   This broke standalone M rotation (M.D=2 was needed for X but broke M alone).
+
+   **Reverted** - X/Y/Z entries removed from YAML, special handling removed from Cube.py.
+
+### Investigation Ideas
+
+1. **Understand the math**: Why doesn't M(-1) + R(1) + L(-1) texture updates sum correctly?
+   - M affects: F, U, B, D (middle column)
+   - R affects: R face + adjacent edges
+   - L affects: L face + adjacent edges
+   - The stickers that end up on U after X rotation came from F. What updates did they get?
+
+2. **Track a specific sticker**: Follow one sticker through X rotation and see what
+   texture_direction updates it receives vs what it should receive.
+
+3. **Different composition**: Maybe X should be implemented differently for textures?
+   Or texture updates need adjustment based on which stickers actually moved where.
 
 ## Next Steps
 
