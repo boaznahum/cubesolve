@@ -34,12 +34,13 @@ __all__ = [
 
 def create_backend() -> "GUIBackendFactory":
     """Create a GUIBackendFactory for the web backend."""
+    from cube.application import _config as config
     from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
     return GUIBackendFactory(
         name="web",
         renderer_factory=WebRenderer,
-        event_loop_factory=WebEventLoop,
+        event_loop_factory=lambda: WebEventLoop(gui_test_mode=config.GUI_TEST_MODE),
         window_factory=None,
         animation_factory=None,  # Web uses JS-side animation
         app_window_factory=lambda app, w, h, t, backend: WebAppWindow(app, w, h, t, backend),
