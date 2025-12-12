@@ -93,6 +93,13 @@ class L3Cross(SolverElement):
 
         self.debug(f"L3 cross-color: {n} match {yf}")
 
+        # EDGE PARITY DETECTION:
+        # On a real 3x3, the number of correctly-oriented edges is always 0, 2, or 4.
+        # If we get 1 or 3, it means we have "edge parity" - an impossible 3x3 state
+        # that can only happen on even cubes (4x4, 6x6) due to how edges are paired
+        # during reduction. The orchestrator will catch this exception and call
+        # the reducer's fix_edge_parity() method.
+        # See: EvenCubeEdgeParityException docstring for full explanation.
         if n not in [0, 2, 4]:
             if self.cube.n_slices % 2 == 0:
                 self.debug(f"L3 cross-color: Found OLL(Edge Parity), raising EvenCubeEdgeParityException")

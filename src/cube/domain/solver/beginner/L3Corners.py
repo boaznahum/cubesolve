@@ -98,13 +98,20 @@ class L3Corners(SolverElement):
                         self.op.play(self._ur)
 
         if not Part.all_in_position(yf.corners):
+            # CORNER PARITY DETECTION:
+            # On a real 3x3, you can never have exactly 2 corners in position
+            # (with 2 needing to swap). Corner permutations come in cycles.
+            # On even cubes (4x4, 6x6), the reduction can create this impossible
+            # state. We fix it here with a corner swap, then raise the exception
+            # so the orchestrator knows to retry.
+            # See: EvenCubeCornerSwapException docstring for full explanation.
             if self.cube.n_slices % 2 == 0:
                 # Even cube
                 n = sum(c.in_position for c in yf.corners)
                 if n == 2:
-                    self.debug(f"L3 cross-color: Found PLL(Corner swap Parity), doing corner swap")
+                    self.debug(f"L3 corners: Found PLL(Corner swap Parity), doing corner swap")
                     self._do_corner_swap()
-                    self.debug(f"L3 cross-color: Found PLL(Corner swap Parity), raising EvenCubeCornerSwapException")
+                    self.debug(f"L3 corners: Found PLL(Corner swap Parity), raising EvenCubeCornerSwapException")
                     raise EvenCubeCornerSwapException()
 
                 raise InternalSWError("Cube not all corners in position, don't know why")

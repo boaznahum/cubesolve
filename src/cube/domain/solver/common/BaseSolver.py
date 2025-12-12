@@ -3,8 +3,8 @@ from typing import TypeAlias, TYPE_CHECKING, final
 
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.protocols import OperatorProtocol
+from cube.domain.algs.Algs import Algs
 from .. import Solver
-from ...algs import Algs
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
