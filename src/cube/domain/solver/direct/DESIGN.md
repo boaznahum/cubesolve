@@ -41,43 +41,160 @@ solve_X():
         execute([setup: [A, B]])
 ```
 
-### 3. Architecture
+### 3. Architecture - Reusing Existing Infrastructure
+
+**KEY INSIGHT:** The existing `NxNCenters._block_communicator()` already implements
+a commutator pattern! We can learn from and reuse this.
+
+#### 3.1 Class Hierarchy
 
 ```
-CommutatorNxNSolver
-├── CommutatorLibrary          # Database of known commutators
-│   ├── CenterCommutators      # For center 3-cycles
-│   ├── EdgeCommutators        # For edge 3-cycles
-│   └── CornerCommutators      # For corner 3-cycles
-├── PieceFinder                # Locates pieces on cube
-│   ├── find_center_piece()
-│   ├── find_edge_piece()
-│   └── find_corner_piece()
-├── SetupCalculator            # Computes setup moves
-│   └── calculate_setup(piece, commutator) -> moves
-└── CommutatorExecutor         # Executes [setup: [A, B]]
-    └── execute(setup, A, B)
+Solver (ABC)                           # Base interface
+└── BaseSolver                         # Common solver functionality
+    └── CommutatorNxNSolver            # Our new solver
+        ├── CommutatorCenters          # SolverElement for centers
+        ├── CommutatorEdges            # SolverElement for edges
+        └── CommutatorCorners          # SolverElement for corners
+
+SolverElement                          # Base for solver components
+├── Provides: cube, op, ann, cmn, cqr
+├── CommutatorCenters(SolverElement)
+├── CommutatorEdges(SolverElement)
+└── CommutatorCorners(SolverElement)
 ```
 
-### 4. Solving Phases
+#### 3.2 Reusable Components from Existing Code
+
+| Component | Location | What it provides |
+|-----------|----------|------------------|
+| `SolverElement` | `common/SolverElement.py` | Base class with cube, op, annotations |
+| `BaseSolver` | `common/BaseSolver.py` | Solver base with debug, solve interface |
+| `CommonOp` | `common/CommonOp.py` | `bring_face_front()`, `bring_edge_to_front_left_by_whole_rotate()` |
+| `CubeQueries2` | `model/CubeQueries2.py` | `find_edge()`, `rotate_and_check()`, `count_color_on_face()` |
+| `FaceTracker` | `common/FaceTracker.py` | Track faces/pieces during solving |
+| `Algs` | `algs/Algs.py` | All algorithms including slices |
+
+#### 3.3 Key Algorithm APIs
+
+```python
+from cube.domain.algs import Algs
+
+# Face moves
+Algs.R, Algs.U, Algs.F, Algs.L, Algs.D, Algs.B
+Algs.R.prime  # R'
+Algs.R * 2    # R2
+
+# Slice moves (1-indexed, for NxN cubes)
+Algs.M[2]           # Second M slice
+Algs.M[1:3]         # M slices 1 and 2
+Algs.M[[1, 3]]      # M slices 1 and 3 (non-contiguous)
+Algs.E[2].prime     # E slice 2, inverted
+
+# Wide moves
+Algs.R[1:3]         # Rw (R + slice)
+
+# Whole cube rotations
+Algs.X, Algs.Y, Algs.Z
+
+# Sequence
+Algs.seq_alg(None, Algs.R, Algs.U, Algs.R.prime)
+```
+
+### 3.4 The Commutator Pattern from NxNCenters
+
+The existing `_block_communicator()` in `NxNCenters.py` implements:
+
+```python
+# This is [A, B] where:
+#   A = rotate_on_cell (M slice move)
+#   B = on_front_rotate (F face move)
+
+cum = [
+    rotate_on_cell.prime * rotate_mul,    # A'
+    on_front_rotate,                       # B
+    rotate_on_second.prime * rotate_mul,  # (setup for second position)
+    on_front_rotate.prime,                 # B'
+    rotate_on_cell * rotate_mul,          # A
+    on_front_rotate,                       # B
+    rotate_on_second * rotate_mul,        # (restore second position)
+    on_front_rotate.prime                  # B'
+]
+```
+
+This is actually a **double commutator** that cycles 3 center blocks!
+
+### 4. Solving Phases - Detailed Implementation
 
 #### Phase 1: Centers (for N > 3)
 
 For a 4x4 cube, each face has 4 center pieces (2x2 block).
 For a 5x5 cube, each face has 9 center pieces (3x3 block).
 
+**Piece Access API:**
+```python
+# Access center pieces
+face = cube.front
+center = face.center                          # Center object
+center_slice = center.get_center_slice((r, c))  # CenterSlice at row r, col c
+color = center_slice.color                    # Color of this center piece
+
+# Iterate all center slices
+for cs in face.center.all_slices:
+    print(cs.color)
+
+# Check if center is solved (all same color)
+is_solved = face.center.is3x3
+```
+
+**Finding Pieces:**
+```python
+def find_center_piece_by_color(cube: Cube, target_color: Color) -> list[tuple[Face, int, int]]:
+    """Find all center pieces of a given color."""
+    results = []
+    for face in cube.faces:
+        n = cube.n_slices
+        for r in range(n):
+            for c in range(n):
+                cs = face.center.get_center_slice((r, c))
+                if cs.color == target_color:
+                    results.append((face, r, c))
+    return results
+```
+
 **Strategy:**
 1. Choose a reference face (e.g., D/White)
-2. Find center pieces that belong to this face
-3. Use center commutators to cycle them into position
-4. Repeat for opposite face, then remaining 4 faces
+2. For each center position on that face:
+   - If wrong color, find a piece of correct color elsewhere
+   - Use commutator to 3-cycle: wrong_piece → buffer → correct_piece → target
+3. Repeat for opposite face, then remaining 4 faces
 
-**Center Commutator Example (4x4):**
-```
-[Rw U Rw', D2]
+**Center Commutator - Using M Slices:**
+```python
+def center_commutator(self, target_col: int, source_col: int, is_back: bool):
+    """
+    3-cycle centers between Front and Up/Back faces.
 
-Effect: 3-cycles centers on U and D faces
-- Piece at Urf-center → Dlf-center → Ubr-center → Urf-center
+    Based on NxNCenters._block_communicator() pattern.
+    """
+    rotate_mul = 2 if is_back else 1
+
+    # Get slice algorithms
+    slice_target = Algs.M[target_col + 1].prime  # +1 because slices are 1-indexed
+    slice_source = Algs.M[source_col + 1].prime
+
+    # The commutator: [slice, F] pattern
+    alg = Algs.seq_alg(None,
+        slice_target.prime * rotate_mul,
+        Algs.F,
+        slice_source.prime * rotate_mul,
+        Algs.F.prime,
+        slice_target * rotate_mul,
+        Algs.F,
+        slice_source * rotate_mul,
+        Algs.F.prime
+    )
+
+    self.op.play(alg)
 ```
 
 #### Phase 2: Edges
@@ -86,36 +203,101 @@ For 3x3: 12 edges
 For 4x4: 24 edge "wings" (2 per edge position)
 For 5x5: 24 edge wings + 12 center edges
 
-**Strategy:**
-1. Identify all unsolved edge pieces
-2. For each unsolved edge:
-   - Find its target position
-   - Calculate setup moves to align with known commutator
-   - Execute commutator
-   - Verify piece is solved
+**Edge Access API:**
+```python
+# Access edges
+edge = cube.front.edge_left          # Edge object
+edge = cube.fl                       # Shortcut: front-left edge
 
-**Edge Commutator Example:**
+# Edge slices (wings)
+n_slices = edge.n_slices             # Number of wing pairs
+wing = edge.get_slice(i)             # EdgeWing at index i
+colors = wing.colors_id              # frozenset of 2 colors
+
+# Check if edge is solved (all wings paired correctly)
+is_solved = edge.is3x3
+
+# Find edges
+edge = cqr.find_edge(cube.edges, lambda e: not e.is3x3)
 ```
-[R U R', D]
 
-Effect: 3-cycles edges
-- UF → DF → UB → UF
+**Finding Wing Pieces:**
+```python
+def find_wing_by_colors(cube: Cube, color1: Color, color2: Color) -> list[EdgeWing]:
+    """Find all wings with given colors."""
+    target_id = frozenset([color1, color2])
+    results = []
+    for edge in cube.edges:
+        for i in range(edge.n_slices):
+            wing = edge.get_slice(i)
+            if wing.colors_id == target_id:
+                results.append(wing)
+    return results
+```
+
+**Edge Commutator - Basic:**
+```python
+# Classic edge 3-cycle: UF → DF → UB
+# [R U R', D] = R U R' D R U' R' D'
+edge_cycle = Algs.R + Algs.U + Algs.R.prime + Algs.D + \
+             Algs.R + Algs.U.prime + Algs.R.prime + Algs.D.prime
+```
+
+**Edge Commutator - For Wings (4x4+):**
+```python
+def wing_commutator(self, slice_index: int):
+    """
+    3-cycle wing edges using E slice.
+
+    Based on NxNEdges pattern.
+    """
+    # E slice for wing manipulation
+    slice_alg = Algs.E[slice_index + 1]  # +1 for 1-indexing
+
+    # Insert/extract pattern
+    rf = Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F  # from NxNEdges
+
+    alg = slice_alg + rf + slice_alg.prime
+    self.op.play(alg)
 ```
 
 #### Phase 3: Corners
 
 All NxN cubes have exactly 8 corners (same as 3x3).
 
-**Strategy:**
-1. Position corners using corner 3-cycles
-2. Orient corners using orientation commutators
+**Corner Access API:**
+```python
+# Access corners
+corner = cube.front.corner_top_right   # Corner object
+corner = cube.ufr                       # Shortcut: up-front-right corner
+
+# Corner properties
+colors = corner.colors_id              # frozenset of 3 colors
+faces = corner.faces                   # 3 faces this corner touches
+
+# Find corners
+def find_corner_by_colors(cube: Cube, c1: Color, c2: Color, c3: Color) -> Corner:
+    target = frozenset([c1, c2, c3])
+    for corner in cube.corners:
+        if corner.colors_id == target:
+            return corner
+    return None
+```
 
 **Corner Commutator (Niklas):**
+```python
+# Niklas: 3-cycles UFR → UBL → UFL
+# R U' L' U R' U' L U
+niklas = Algs.R + Algs.U.prime + Algs.L.prime + Algs.U + \
+         Algs.R.prime + Algs.U.prime + Algs.L + Algs.U
 ```
-[R U' L' U, R' U' L U]  -- simplified: R U' L' U R' U' L U
 
-Effect: 3-cycles corners
-- UFR → UBL → UFL → UFR
+**Corner Orientation (Sune-based):**
+```python
+# Twist corner in place (UFR clockwise)
+# R U R' U R U2 R'
+sune = Algs.R + Algs.U + Algs.R.prime + Algs.U + \
+       Algs.R + Algs.U * 2 + Algs.R.prime
 ```
 
 ### 5. Data Structures
@@ -179,36 +361,264 @@ class CommutatorLibrary:
         ...
 ```
 
-### 6. Implementation Plan
+### 6. Implementation Plan - Detailed Steps
 
-#### Step 1: Infrastructure
-- [ ] Create `Commutator` dataclass
-- [ ] Implement `inverse()` function for move sequences
-- [ ] Create `CommutatorExecutor` class
+#### Step 1: Create Main Solver Class
 
-#### Step 2: Piece Finding
-- [ ] Implement `PieceFinder` for centers
-- [ ] Implement `PieceFinder` for edges
-- [ ] Implement `PieceFinder` for corners
-- [ ] Add `get_target_position()` for each piece type
+**File:** `CommutatorNxNSolver.py` (update existing stub)
 
-#### Step 3: Commutator Library
-- [ ] Define basic center commutators (for 4x4, 5x5)
-- [ ] Define basic edge commutators
-- [ ] Define corner commutators (Niklas, A-perm style)
-- [ ] Implement setup move calculation
+```python
+from cube.domain.solver.common.BaseSolver import BaseSolver
+from cube.domain.solver.solver import Solver, SolveStep, SolverResults
+from cube.domain.solver.SolverName import SolverName
 
-#### Step 4: Solver Integration
-- [ ] Implement `solve_centers()`
-- [ ] Implement `solve_edges()`
-- [ ] Implement `solve_corners()`
-- [ ] Wire up main `solve()` method
+class CommutatorNxNSolver(BaseSolver):
+    """Solves NxN cubes using commutators."""
 
-#### Step 5: Testing
-- [ ] Unit tests for commutator execution
-- [ ] Unit tests for piece finding
-- [ ] Integration tests: solve scrambled 4x4
-- [ ] Integration tests: solve scrambled 5x5
+    def __init__(self, op: OperatorProtocol) -> None:
+        super().__init__(op)
+        self._centers = CommutatorCenters(self)
+        self._edges = CommutatorEdges(self)
+        self._corners = CommutatorCorners(self)
+
+    @property
+    def get_code(self) -> SolverName:
+        return SolverName.COMMUTATOR  # Add to enum
+
+    @property
+    def status(self) -> str:
+        if self.is_solved:
+            return "Solved"
+        if not self._centers.is_solved:
+            return f"Centers: {self._centers.status}"
+        if not self._edges.is_solved:
+            return f"Edges: {self._edges.status}"
+        return f"Corners: {self._corners.status}"
+
+    def solve(self, debug=None, animation=True, what=SolveStep.ALL) -> SolverResults:
+        with self.op.with_animation(animation=animation):
+            if not self.cube.is3x3:  # N > 3
+                self._centers.solve()
+                self._edges.solve()
+            self._corners.solve()
+        return SolverResults()
+```
+
+**Tasks:**
+- [ ] Update `CommutatorNxNSolver` class to inherit from `BaseSolver`
+- [ ] Add `SolverName.COMMUTATOR` to `SolverName` enum
+- [ ] Wire up to `Solvers` factory
+
+#### Step 2: Create Center Solver Component
+
+**File:** `CommutatorCenters.py` (new file)
+
+```python
+from cube.domain.solver.common.SolverElement import SolverElement
+
+class CommutatorCenters(SolverElement):
+    """Solves center pieces using commutators."""
+
+    def __init__(self, solver: BaseSolver) -> None:
+        super().__init__(solver)
+        self._set_debug_prefix("CommCenters")
+
+    @property
+    def is_solved(self) -> bool:
+        return all(f.center.is3x3 for f in self.cube.faces)
+
+    @property
+    def status(self) -> str:
+        solved = sum(1 for f in self.cube.faces if f.center.is3x3)
+        return f"{solved}/6 faces"
+
+    def solve(self) -> None:
+        if self.is_solved:
+            return
+
+        with self.ann.annotate(h1="Commutator: Centers"):
+            # Solve each face in order: D, U, F, B, L, R
+            for face in self._face_order():
+                self._solve_face(face)
+
+    def _face_order(self) -> list[Face]:
+        """Order faces for solving (opposite pairs)."""
+        cube = self.cube
+        return [cube.down, cube.up, cube.front, cube.back, cube.left, cube.right]
+
+    def _solve_face(self, target_face: Face) -> None:
+        """Solve all centers on target_face."""
+        target_color = self._get_target_color(target_face)
+
+        with self.ann.annotate(h2=f"Face {target_face.name.value}"):
+            # Bring target face to front
+            self.cmn.bring_face_front(target_face)
+            target_face = self.cube.front
+
+            # For each center position
+            for r in range(self.cube.n_slices):
+                for c in range(self.cube.n_slices):
+                    self._solve_center_at(target_face, r, c, target_color)
+
+    def _solve_center_at(self, face: Face, r: int, c: int, target_color: Color) -> None:
+        """Solve a single center position using commutator."""
+        cs = face.center.get_center_slice((r, c))
+        if cs.color == target_color:
+            return  # Already solved
+
+        # Find a piece of target_color on Up or Back face
+        source = self._find_source_piece(target_color, exclude_face=face)
+        if source is None:
+            raise InternalSWError(f"No source found for {target_color}")
+
+        # Execute commutator to cycle pieces
+        self._center_commutator(face, r, c, source)
+
+    def _center_commutator(self, target_face: Face, tr: int, tc: int,
+                           source: tuple[Face, int, int]) -> None:
+        """Execute center commutator."""
+        # Implementation based on NxNCenters._block_communicator()
+        ...
+```
+
+**Tasks:**
+- [ ] Create `CommutatorCenters.py`
+- [ ] Implement `_solve_face()` for each face
+- [ ] Implement `_find_source_piece()` to locate pieces
+- [ ] Implement `_center_commutator()` based on `NxNCenters._block_communicator()`
+
+#### Step 3: Create Edge Solver Component
+
+**File:** `CommutatorEdges.py` (new file)
+
+```python
+class CommutatorEdges(SolverElement):
+    """Solves edge pieces using commutators."""
+
+    @property
+    def is_solved(self) -> bool:
+        return all(e.is3x3 for e in self.cube.edges)
+
+    def solve(self) -> None:
+        with self.ann.annotate(h1="Commutator: Edges"):
+            while not self.is_solved:
+                edge = self.cqr.find_edge(self.cube.edges, lambda e: not e.is3x3)
+                self._solve_edge(edge)
+
+    def _solve_edge(self, edge: Edge) -> None:
+        """Solve all wings on an edge."""
+        # Bring edge to front-left
+        self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
+        edge = self.cube.front.edge_left
+
+        # For each wing
+        for i in range(edge.n_slices):
+            self._solve_wing(edge, i)
+
+    def _edge_commutator(self, target_edge: Edge, wing_index: int) -> None:
+        """Execute edge commutator."""
+        # Based on NxNEdges patterns
+        ...
+```
+
+**Tasks:**
+- [ ] Create `CommutatorEdges.py`
+- [ ] Implement wing finding and solving
+- [ ] Implement `_edge_commutator()` based on `NxNEdges` patterns
+
+#### Step 4: Create Corner Solver Component
+
+**File:** `CommutatorCorners.py` (new file)
+
+```python
+class CommutatorCorners(SolverElement):
+    """Solves corner pieces using commutators."""
+
+    # Classic corner commutators
+    NIKLAS = "R U' L' U R' U' L U"  # 3-cycle: UFR → UBL → UFL
+    A_PERM = "R' F R' B2 R F' R' B2 R2"  # Another 3-cycle
+
+    def solve(self) -> None:
+        with self.ann.annotate(h1="Commutator: Corners"):
+            self._position_corners()
+            self._orient_corners()
+
+    def _position_corners(self) -> None:
+        """Place all corners in correct positions."""
+        while not self._all_positioned():
+            self._niklas_cycle()
+
+    def _orient_corners(self) -> None:
+        """Twist corners to correct orientation."""
+        while not self._all_oriented():
+            self._twist_corner()
+```
+
+**Tasks:**
+- [ ] Create `CommutatorCorners.py`
+- [ ] Implement Niklas corner 3-cycle
+- [ ] Implement corner orientation algorithms
+
+#### Step 5: Register Solver
+
+**File:** Update `Solvers.py` and `SolverName.py`
+
+```python
+# SolverName.py - add new enum value
+class SolverName(Enum):
+    LBL = "LBL"
+    CFOP = "CFOP"
+    KOCIEMBA = "Kociemba"
+    COMMUTATOR = "Commutator"  # NEW
+
+# Solvers.py - add factory method
+@staticmethod
+def commutator(op: OperatorProtocol) -> Solver:
+    """Get commutator-based solver for NxN cubes."""
+    from .direct import CommutatorNxNSolver
+    return CommutatorNxNSolver(op)
+```
+
+**Tasks:**
+- [ ] Add `COMMUTATOR` to `SolverName` enum
+- [ ] Add `commutator()` factory method to `Solvers`
+- [ ] Update `by_name()` and `next_solver()` in `Solvers`
+
+#### Step 6: Testing
+
+**File:** `tests/solvers/test_commutator_solver.py`
+
+```python
+import pytest
+from cube.domain.model.Cube import Cube
+from cube.domain.solver.Solvers import Solvers
+
+@pytest.fixture
+def scrambled_4x4():
+    cube = Cube(4)
+    cube.scramble()
+    return cube
+
+def test_commutator_solver_4x4(scrambled_4x4):
+    op = Operator(scrambled_4x4)
+    solver = Solvers.commutator(op)
+    solver.solve()
+    assert scrambled_4x4.solved
+
+def test_commutator_solver_5x5():
+    cube = Cube(5)
+    cube.scramble()
+    op = Operator(cube)
+    solver = Solvers.commutator(op)
+    solver.solve()
+    assert cube.solved
+```
+
+**Tasks:**
+- [ ] Create test file for commutator solver
+- [ ] Test on 3x3, 4x4, 5x5 cubes
+- [ ] Test individual phases (centers, edges, corners)
+- [ ] Compare move count with reduction method
 
 ### 7. Key Commutators Reference
 
