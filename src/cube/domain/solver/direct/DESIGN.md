@@ -25,20 +25,290 @@ A **commutator** `[A, B] = A B A' B'` is a move sequence that:
 - Leaves all other pieces unchanged
 - Is always an even permutation (no parity issues)
 
-### 2. Algorithm Overview
+### 2. Algorithm Overview - Detailed Pseudo Code
+
+#### 2.1 Main Solving Flow
 
 ```
 solve():
-    solve_centers()    # For N > 3
-    solve_edges()
+    if cube.size > 3:
+        solve_centers()
+        solve_edges()
     solve_corners()
+```
 
-solve_X():
-    while unsolved_X_pieces exist:
-        piece = find_unsolved_X_piece()
-        target = get_target_position(piece)
-        (setup, A, B) = find_commutator(piece, target)
-        execute([setup: [A, B]])
+#### 2.2 Center Solving Algorithm
+
+The challenge: A commutator is a 3-cycle. We need to cycle pieces without
+destroying already-solved pieces.
+
+**Key concept: Buffer Position**
+- Choose a "buffer" position (e.g., Front face, position (0,0))
+- The buffer participates in every 3-cycle
+- We cycle: buffer → target → source → buffer
+
+```
+solve_centers():
+    # Solve faces in order: first face, opposite, then pairs
+    for target_face in [D, U, F, B, L, R]:
+        target_color = get_color_for_face(target_face)
+
+        # Bring target face to FRONT for easier manipulation
+        bring_face_to_front(target_face)
+
+        for each position (r, c) on front face center:
+            if front.center[r,c].color == target_color:
+                continue  # Already correct
+
+            # This position needs fixing
+            # Find a piece of target_color somewhere else
+            source = find_piece_of_color(target_color, exclude=front)
+
+            if source is None:
+                # All pieces of this color are on front face
+                # but in wrong positions - need internal swap
+                handle_internal_swap(front, r, c, target_color)
+            else:
+                # Standard case: bring source piece to target position
+                # using 3-cycle through buffer
+
+                # Step 1: Setup - rotate source face so piece aligns with buffer column
+                setup_moves = calculate_setup(source)
+                do(setup_moves)
+
+                # Step 2: Execute commutator
+                # Cycles: front[r,c] → buffer → source_piece → front[r,c]
+                execute_center_commutator(target_col=c, source_face, source_col)
+
+                # Step 3: Undo setup
+                do(setup_moves.inverse)
+
+find_piece_of_color(color, exclude_face):
+    # Search order matters for efficiency
+    # Check UP first (easiest to commutate with FRONT)
+    # Then BACK
+    # Then sides (L, R) - require different setup
+
+    for face in [UP, BACK, LEFT, RIGHT, DOWN]:
+        if face == exclude_face or face == exclude_face.opposite:
+            continue
+        for (r, c) in face.center_positions:
+            if face.center[r,c].color == color:
+                return (face, r, c)
+    return None
+
+handle_internal_swap(face, r, c, color):
+    # All pieces of 'color' are on this face but wrong positions
+    # Need to:
+    #   1. Move wrong piece OUT to buffer face (UP)
+    #   2. Move correct piece IN
+    #   3. Move buffer piece to where correct piece was
+
+    correct_piece_pos = find_on_face(face, color)  # Find one with correct color
+
+    # Use commutator to cycle:
+    # face[r,c] (wrong) → UP[buffer] → face[correct_pos] (correct) → face[r,c]
+    ...
+```
+
+#### 2.3 The Center Commutator in Detail
+
+```
+execute_center_commutator(target_col, source_face, source_col):
+    """
+    Cycles 3 center pieces:
+      FRONT[target_col] ↔ SOURCE[source_col] ↔ BUFFER
+
+    The commutator pattern [A, B] = A B A' B':
+      A = slice move (M slice) - moves column up/down
+      B = face move (F) - rotates front face
+
+    For source on UP face:
+      rotate_mul = 1
+    For source on BACK face:
+      rotate_mul = 2 (need to go "through" to back)
+    """
+
+    # Which M slice to use?
+    # M[1] affects column 0, M[2] affects column 1, etc. (1-indexed)
+    target_slice = M[target_col + 1]
+    source_slice = M[source_col + 1]
+
+    # The commutator sequence:
+    # This cycles: front[target_col] → source[source_col] → front[rotated_col]
+
+    if source_face == UP:
+        mul = 1
+    else:  # BACK
+        mul = 2
+
+    sequence = [
+        target_slice' * mul,    # Bring target column up to source face
+        F,                       # Rotate front - target piece now in different column
+        source_slice' * mul,    # Bring source column down
+        F',                      # Undo front rotation
+        target_slice * mul,     # Return target column
+        F,                       # Rotate again
+        source_slice * mul,     # Return source column
+        F'                       # Undo rotation
+    ]
+
+    execute(sequence)
+```
+
+#### 2.4 Edge Solving Algorithm
+
+Edges are more complex because:
+1. Each edge has 2 colors (orientation matters)
+2. On 4x4+, edges have multiple "wings"
+3. The last edge cannot be solved with a 3-cycle alone (parity)
+
+```
+solve_edges():
+    # For each edge position (12 edges total)
+    while not all_edges_solved():
+
+        # Find an unsolved edge
+        target_edge = find_unsolved_edge()
+
+        # Bring it to a working position (e.g., Front-Left)
+        bring_edge_to_front_left(target_edge)
+        target_edge = cube.front.edge_left
+
+        # Determine what colors this edge should have
+        required_colors = get_required_colors_for_position(front_left)
+
+        # For each wing on this edge
+        for wing_index in range(edge.n_slices):
+            wing = target_edge.get_slice(wing_index)
+
+            if wing.colors == required_colors and wing.is_correctly_oriented:
+                continue  # This wing is solved
+
+            # Find a wing with the required colors
+            source_wing = find_wing_with_colors(required_colors, exclude=target_edge)
+
+            if source_wing is None:
+                # Wing is on same edge but wrong position/orientation
+                handle_same_edge_flip(target_edge, wing_index)
+            else:
+                # Bring source wing to target position
+                bring_source_edge_to_front_right(source_wing.parent)
+
+                # Execute edge commutator
+                execute_edge_commutator(wing_index)
+
+    # Handle last edge parity if needed
+    if not all_edges_solved():
+        fix_edge_parity()
+
+execute_edge_commutator(wing_index):
+    """
+    Cycles wings between front-left and front-right edges.
+
+    Uses E slice (horizontal slice) to move wings.
+    """
+
+    slice_alg = E[wing_index + 1]  # Which E slice
+
+    # Insert-Extract pattern:
+    # R F' U R' F  -- this is an "inserter" that swaps edges
+    inserter = R + F' + U + R' + F
+
+    sequence = [
+        slice_alg,        # Move target wing to E slice
+        inserter,         # Swap with right edge
+        slice_alg'        # Return wing
+    ]
+
+    execute(sequence)
+```
+
+#### 2.5 Corner Solving Algorithm
+
+Corners are simpler - always 8 corners, same on any size cube.
+Two phases: Position, then Orient.
+
+```
+solve_corners():
+    position_corners()
+    orient_corners()
+
+position_corners():
+    """
+    Place all corners in correct positions (ignore orientation).
+    Use Niklas commutator for 3-cycles.
+    """
+
+    while not all_corners_positioned():
+        # Find a corner in wrong position
+        wrong_corner = find_mispositioned_corner()
+
+        # Find where it should go
+        target_position = get_target_position(wrong_corner)
+
+        # Find what corner is currently at target position
+        displaced_corner = corner_at(target_position)
+
+        # Setup: bring both corners to positions affected by Niklas
+        # Niklas affects: UFR, UBL, UFL
+        setup = calculate_corner_setup(wrong_corner, target_position)
+        do(setup)
+
+        # Execute Niklas: R U' L' U R' U' L U
+        # Cycles: UFR → UBL → UFL → UFR
+        do(NIKLAS)
+
+        do(setup.inverse)
+
+orient_corners():
+    """
+    Twist corners to correct orientation.
+    All corners are in correct positions now.
+    """
+
+    while not all_corners_oriented():
+        # Find a corner that needs clockwise twist
+        corner_cw = find_corner_needing_cw_twist()
+
+        # Find a corner that needs counter-clockwise twist
+        # (corners twist in pairs to preserve cube state)
+        corner_ccw = find_corner_needing_ccw_twist()
+
+        # Setup both corners to UFR position and twist
+        # Using: (R' D' R D) x 2 for CW twist
+
+        setup1 = bring_corner_to_UFR(corner_cw)
+        do(setup1)
+        do(R' D' R D, R' D' R D)  # Twist CW
+        do(setup1.inverse)
+
+        setup2 = bring_corner_to_UFR(corner_ccw)
+        do(setup2)
+        do(D' R' D R, D' R' D R, D' R' D R)  # Twist CCW (3 times = CCW)
+        do(setup2.inverse)
+```
+
+#### 2.6 Parity Handling
+
+In commutator method, parity manifests differently than in reduction:
+
+```
+Parity situations:
+
+1. LAST CENTER PIECE:
+   - Cannot 3-cycle last piece if only 2 positions wrong
+   - Solution: Use 2-swap algorithm instead of commutator
+
+2. LAST EDGE:
+   - If only 1 edge unsolved with 2 wings flipped
+   - This is "edge parity" - need special algorithm
+   - Use: M' U M' U M' U2 M U M U M U2 (or similar)
+
+3. LAST CORNER:
+   - If 2 corners need swapping (odd permutation)
+   - This means edges have compensating swap
+   - Rare in commutator method if done carefully
 ```
 
 ### 3. Architecture - Reusing Existing Infrastructure
