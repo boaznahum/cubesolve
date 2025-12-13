@@ -432,3 +432,4 @@ for slice_ in all_slices:
 - `src/cube/domain/solver/beginner/L3Cross.py` line 178 - Failing assertion
 
 **Workaround:** Press `+` key before scramble (or use `--speed-up 1+` in tests)
+- dont run tesest after midifcation without asking me i need to review the solution first dont waste my tokens

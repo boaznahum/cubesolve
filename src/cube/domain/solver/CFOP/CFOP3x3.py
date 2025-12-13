@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from cube.domain.exceptions import EvenCubeEdgeParityException, EvenCubeCornerSwapException
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
 from cube.domain.solver.common.BaseSolver import BaseSolver
@@ -184,3 +185,50 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
 
         with self._op.with_animation(animation=animation):
             return self.solve_3x3(debug, what)
+
+    def detect_edge_parity(self) -> bool | None:
+        """
+        Detect if cube has edge parity (OLL parity) without side effects.
+
+        Uses existing OLL detection - if it raises EvenCubeEdgeParityException,
+        parity is detected. All changes are rolled back.
+
+        Returns:
+            True: Edge parity detected
+            False: No edge parity
+        """
+        with self._op.save_history():
+            with self._op.with_animation(animation=False):
+                try:
+                    self.l1_cross.solve()
+                    self.f2l.solve()
+                    self.oll.solve()  # Raises EvenCubeEdgeParityException if parity
+                    return False
+                except EvenCubeEdgeParityException:
+                    return True
+        # save_history context rolls back automatically
+
+    def detect_corner_parity(self) -> bool | None:
+        """
+        Detect if cube has corner parity (PLL parity) without side effects.
+
+        Uses existing PLL detection - if it raises EvenCubeCornerSwapException,
+        parity is detected. All changes are rolled back.
+
+        Note: Call only after edge parity has been fixed.
+
+        Returns:
+            True: Corner parity detected
+            False: No corner parity
+        """
+        with self._op.save_history():
+            with self._op.with_animation(animation=False):
+                try:
+                    self.l1_cross.solve()
+                    self.f2l.solve()
+                    self.oll.solve()
+                    self.pll.solve()  # Raises EvenCubeCornerSwapException if parity
+                    return False
+                except EvenCubeCornerSwapException:
+                    return True
+        # save_history context rolls back automatically

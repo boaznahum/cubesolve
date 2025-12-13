@@ -291,6 +291,35 @@ class Operator:
         finally:
             self._history[:] = _history
 
+    @contextmanager
+    def with_query_restore_state(self):
+        """
+        Context manager for query operations with auto-rollback.
+
+        Combines:
+        - Que2ry mode (_in_query_mode = True, skips texture updates)
+        - Animation disabled
+        - Auto-rollback: undoes all moves on exit
+        - Supports nesting
+        """
+        cube = self._cube
+
+        # Save original states
+        was_in_query_mode = cube._in_query_mode
+        history_len_before = len(self._history)
+
+        cube._in_query_mode = True
+
+        with self.with_animation(animation=False):
+            try:
+                yield None
+            finally:
+                # Rollback: undo all moves made during query
+                while len(self._history) > history_len_before:
+                    self.undo(animation=False)
+
+                cube._in_query_mode = was_in_query_mode
+
     @property
     def is_animation_running(self):
         """
