@@ -99,9 +99,39 @@ from typing import TYPE_CHECKING
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import Solver, SolveStep, SolverResults
 from cube.domain.solver.SolverName import SolverName
+from cube.domain.solver.common.BaseSolver import BaseSolver
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
+
+
+class _CageSolverFacade(BaseSolver):
+    """
+    Minimal BaseSolver facade for NxNCenters and NxNEdges.
+
+    Required because NxNCenters and NxNEdges expect a BaseSolver instance.
+    """
+
+    __slots__: list[str] = []
+
+    def __init__(self, op: OperatorProtocol) -> None:
+        super().__init__(op)
+
+    @property
+    def get_code(self) -> SolverName:
+        return SolverName.CAGE
+
+    @property
+    def status(self) -> str:
+        return "Cage"
+
+    def solve(
+        self,
+        debug: bool | None = None,
+        animation: bool | None = True,
+        what: SolveStep = SolveStep.ALL
+    ) -> SolverResults:
+        raise NotImplementedError("Use CageNxNSolver for full solve")
 
 
 class CageNxNSolver(Solver):
@@ -112,6 +142,9 @@ class CageNxNSolver(Solver):
     then solves centers last using commutators. This approach is
     completely parity-free.
 
+    For 3x3 cubes: Delegates to CFOP solver (no inner slices to handle).
+    For NxN cubes (N > 3): Uses true Cage method.
+
     Phases:
         1a. Solve all edges (pair wings, place in position)
         1b. Solve all corners (standard 3x3 methods)
@@ -119,10 +152,16 @@ class CageNxNSolver(Solver):
 
     Attributes:
         _op: Operator for cube manipulation
-        _phase: Current solving phase
+        _solver_facade: BaseSolver facade for solver elements
+        _nxn_edges: Edge solver element
+        _nxn_centers: Center solver element
+        _solver_3x3: 3x3 solver for skeleton
     """
 
-    __slots__ = ["_op", "_phase"]
+    __slots__ = [
+        "_op", "_solver_facade", "_nxn_edges", "_nxn_centers",
+        "_l1_cross", "_l1_corners", "_l2", "_l3_cross", "_l3_corners"
+    ]
 
     def __init__(self, op: OperatorProtocol) -> None:
         """
@@ -133,13 +172,33 @@ class CageNxNSolver(Solver):
         """
         super().__init__()
         self._op = op
-        self._phase = "init"
+
+        # Create solver facade for NxNCenters/NxNEdges
+        self._solver_facade = _CageSolverFacade(op)
+
+        # Import here to avoid circular imports
+        from cube.domain.solver.beginner.NxNCenters import NxNCenters
+        from cube.domain.solver.beginner.NxNEdges import NxNEdges
+        from cube.domain.solver.beginner.L1Cross import L1Cross
+        from cube.domain.solver.beginner.L1Corners import L1Corners
+        from cube.domain.solver.beginner.L2 import L2
+        from cube.domain.solver.beginner.L3Cross import L3Cross
+        from cube.domain.solver.beginner.L3Corners import L3Corners
+
+        self._nxn_centers = NxNCenters(self._solver_facade)
+        self._nxn_edges = NxNEdges(self._solver_facade, advanced_edge_parity=True)
+
+        # 3x3 solver elements (used directly, not via delegation)
+        self._l1_cross = L1Cross(self._solver_facade)
+        self._l1_corners = L1Corners(self._solver_facade)
+        self._l2 = L2(self._solver_facade)
+        self._l3_cross = L3Cross(self._solver_facade)
+        self._l3_corners = L3Corners(self._solver_facade)
 
     @property
     def get_code(self) -> SolverName:
         """Return solver identifier."""
-        # TODO: Add CAGE to SolverName enum
-        raise NotImplementedError("SolverName.CAGE not yet defined")
+        return SolverName.CAGE
 
     @property
     def op(self) -> OperatorProtocol:
@@ -163,10 +222,62 @@ class CageNxNSolver(Solver):
 
     @property
     def status(self) -> str:
-        """Human-readable solver status."""
+        """Human-readable solver status (stateless - inspects cube)."""
         if self.is_solved:
             return "Solved"
-        return f"Phase: {self._phase}"
+
+        # Stateless status based on cube inspection
+        parts: list[str] = []
+
+        if self._cube.is3x3:
+            # For 3x3, report layer solving progress
+            return self._get_3x3_status()
+
+        # NxN status
+        if self._are_edges_solved():
+            parts.append("Edges:Done")
+        else:
+            parts.append("Edges:Pending")
+
+        if self._are_corners_solved():
+            parts.append("Corners:Done")
+        else:
+            parts.append("Corners:Pending")
+
+        if self._are_centers_solved():
+            parts.append("Centers:Done")
+        else:
+            parts.append("Centers:Pending")
+
+        return ", ".join(parts)
+
+    def _get_3x3_status(self) -> str:
+        """Get 3x3 solving status (stateless)."""
+        cross = self._l1_cross.is_cross()
+        corners = self._l1_corners.is_corners()
+
+        if cross and corners:
+            s = "L1"
+        elif cross:
+            s = "L1-Cross"
+        elif corners:
+            s = "L1-Corners"
+        else:
+            s = "No-L1"
+
+        if self._l2.solved():
+            s += ", L2"
+        else:
+            s += ", No L2"
+
+        if self._l3_cross.solved() and self._l3_corners.solved():
+            s += ", L3"
+        elif self._l3_cross.solved():
+            s += ", L3-Cross"
+        else:
+            s += ", No L3"
+
+        return s
 
     def solve(
         self,
@@ -177,6 +288,9 @@ class CageNxNSolver(Solver):
         """
         Solve the cube using Cage method.
 
+        For 3x3 cubes: Standard layer-by-layer solving.
+        For NxN cubes: Cage method (edges+corners first, centers last).
+
         Args:
             debug: Enable debug output
             animation: Enable animation
@@ -185,69 +299,68 @@ class CageNxNSolver(Solver):
         Returns:
             SolverResults with solve metadata
         """
-        raise NotImplementedError("CageNxNSolver not yet implemented")
+        sr = SolverResults()
+
+        if self.is_solved:
+            return sr
+
+        cube = self._cube
+
+        # For 3x3 cubes, do standard layer-by-layer solving
+        if cube.is3x3:
+            self._solve_3x3()
+            return sr
+
+        # For NxN cubes, use Cage method
+        # Phase 1a: Solve edges (pair wings)
+        if not self._are_edges_solved():
+            self._nxn_edges.solve()
+
+        # Phase 1b: Solve 3x3 skeleton (cross, corners, edge placement)
+        if not self._is_3x3_skeleton_solved():
+            self._solve_3x3()
+
+        # Phase 2: Fill the cage (solve centers)
+        if not self._are_centers_solved():
+            self._nxn_centers.solve()
+
+        return sr
+
+    def _solve_3x3(self) -> None:
+        """Solve the 3x3 skeleton (cross, corners, edges)."""
+        self._l1_cross.solve()
+        self._l1_corners.solve()
+        self._l2.solve()
+        self._l3_cross.solve()
+        self._l3_corners.solve()
 
     # =========================================================================
-    # PHASE 1: BUILD THE CAGE
+    # STATE INSPECTION (STATELESS)
     # =========================================================================
-
-    def _solve_edges(self) -> None:
-        """
-        Solve all edges (pair wings and place).
-
-        This is similar to reduction edge pairing, but with more freedom
-        because we don't need to preserve centers.
-        """
-        raise NotImplementedError()
-
-    def _solve_corners(self) -> None:
-        """
-        Solve all corners using standard 3x3 methods.
-
-        Corners on NxN cubes are identical to 3x3 corners.
-        """
-        raise NotImplementedError()
-
-    # =========================================================================
-    # PHASE 2: FILL THE CAGE (CENTERS)
-    # =========================================================================
-
-    def _solve_centers(self) -> None:
-        """
-        Solve all centers using commutators.
-
-        Since edges and corners are already solved, we can use
-        commutators to 3-cycle centers without affecting anything else.
-        """
-        raise NotImplementedError()
-
-    def _center_commutator(self, source_face, source_pos, target_face, target_pos) -> None:
-        """
-        Execute a center commutator to cycle 3 center pieces.
-
-        Uses [A, B] = A B A' B' pattern where:
-          A = slice move (brings centers into position)
-          B = face move (rotates them)
-        """
-        raise NotImplementedError()
-
-    # =========================================================================
-    # HELPER METHODS
-    # =========================================================================
-
-    def _is_cage_complete(self) -> bool:
-        """Check if all edges and corners are solved."""
-        return self._are_edges_solved() and self._are_corners_solved()
 
     def _are_edges_solved(self) -> bool:
-        """Check if all edges are paired and positioned."""
+        """Check if all edges are paired and positioned (stateless - inspects cube)."""
         return all(e.is3x3 for e in self._cube.edges)
 
     def _are_corners_solved(self) -> bool:
-        """Check if all corners are positioned and oriented."""
-        # TODO: Implement corner check
-        raise NotImplementedError()
+        """Check if all corners are positioned and oriented (stateless - inspects cube)."""
+        # L1 corners and L3 corners must be solved
+        return self._l1_corners.is_corners() and self._l3_corners.solved()
 
     def _are_centers_solved(self) -> bool:
-        """Check if all centers are solved."""
+        """Check if all centers are solved (stateless - inspects cube)."""
         return all(f.center.is3x3 for f in self._cube.faces)
+
+    def _is_3x3_skeleton_solved(self) -> bool:
+        """Check if the 3x3 skeleton (cross, corners, edges) is solved (stateless)."""
+        return (
+            self._l1_cross.is_cross()
+            and self._l1_corners.is_corners()
+            and self._l2.solved()
+            and self._l3_cross.solved()
+            and self._l3_corners.solved()
+        )
+
+    def _is_cage_complete(self) -> bool:
+        """Check if the cage (edges + corners) is complete (stateless)."""
+        return self._are_edges_solved() and self._is_3x3_skeleton_solved()

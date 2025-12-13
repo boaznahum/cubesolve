@@ -91,6 +91,21 @@ class Solvers:
             op, reducer, solver_3x3, SolverName.KOCIEMBA
         )
 
+    @staticmethod
+    def cage(op: OperatorProtocol) -> Solver:
+        """
+        Get Cage Method direct NxN solver.
+
+        Solves big cubes by building edges+corners first (the "cage"),
+        then filling centers last using commutators.
+
+        This approach is completely parity-free.
+        Only works for cubes larger than 3x3.
+        """
+        from .direct.cage import CageNxNSolver
+
+        return CageNxNSolver(op)
+
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
         """
@@ -130,6 +145,9 @@ class Solvers:
 
             case SolverName.KOCIEMBA:
                 return cls.kociemba(op)
+
+            case SolverName.CAGE:
+                return cls.cage(op)
 
             case _:
                 raise InternalSWError(f"Unknown solver: {solver_id}")
