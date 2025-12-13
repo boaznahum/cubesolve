@@ -327,17 +327,20 @@ class CageNxNSolver(Solver):
         """
         Solve the cube using Cage method.
 
-        For 3x3 cubes: Standard layer-by-layer solving.
-        For odd NxN cubes: True Cage method (edges+corners first, centers last).
-        For even NxN cubes (4x4, 6x6): Reduction order (centers establish face colors).
+        For odd cubes (3x3, 5x5, 7x7): True Cage method
+            - Edges first (skipped for 3x3 - already is3x3)
+            - 3x3 skeleton
+            - Centers (skipped for 3x3 - already is3x3)
+            - Re-solve 3x3
+
+        For even cubes (4x4, 6x6): Reduction order
+            - Centers first (to establish face colors)
+            - Then edges + 3x3
+            - Must handle parity
 
         Note: Even cubes REQUIRE centers to be solved first because:
         - They have no center piece to define face color
         - The 3x3 solver elements need white_face/color_2_face
-        - Face colors are only established after centers are solved
-
-        Parity handling: Even cubes may have edge/corner parity which is
-        detected during 3x3 solving and fixed with retry loop.
 
         Args:
             debug: Enable debug output
@@ -354,15 +357,11 @@ class CageNxNSolver(Solver):
 
         cube = self._cube
 
-        # For 3x3 cubes, do standard layer-by-layer solving
-        if cube.is3x3:
-            self._solve_3x3()
-            return sr
-
-        # Odd cubes (5x5, 7x7): TRUE Cage method
-        #   - Edges first, then 3x3 skeleton, then centers
-        #   - CageCenters uses commutators that preserve edge PAIRING
-        #   - Commutators may move edges, so re-solve 3x3 after centers
+        # Odd cubes (3x3, 5x5, 7x7): TRUE Cage method
+        #   - Edges first (NxNEdges skips if already is3x3)
+        #   - 3x3 skeleton
+        #   - Centers (CageCenters skips if already is3x3)
+        #   - Re-solve 3x3
         #   - PARITY FREE: No edge/corner parity on odd cubes
         #
         # Even cubes (4x4, 6x6): Reduction order
@@ -376,7 +375,7 @@ class CageNxNSolver(Solver):
             # Even cubes: reduction order (centers -> edges -> 3x3)
             self._solve_with_reduction_order(sr, is_even)
         else:
-            # Odd cubes: TRUE Cage method (edges -> 3x3 -> centers -> re-3x3)
+            # Odd cubes (including 3x3): TRUE Cage method
             self._solve_with_cage_order()
 
         return sr
