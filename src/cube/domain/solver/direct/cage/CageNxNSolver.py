@@ -359,50 +359,58 @@ class CageNxNSolver(Solver):
             self._solve_3x3()
             return sr
 
-        # NOTE: True Cage method (edges -> 3x3 -> centers) requires
-        # commutators that preserve edge pairing. The existing NxNCenters
-        # uses M-slice commutators that UN-PAIR edges during center solving.
+        # Odd cubes (5x5, 7x7): TRUE Cage method
+        #   - Edges first, then 3x3 skeleton, then centers
+        #   - CageCenters uses commutators that preserve edge PAIRING
+        #   - Commutators may move edges, so re-solve 3x3 after centers
+        #   - PARITY FREE: No edge/corner parity on odd cubes
         #
-        # Until commutators are implemented that use wide moves (Rw, Lw)
-        # instead of M-slice moves, we use REDUCTION order for all cubes.
-        #
-        # Reduction order: centers -> edges -> 3x3
-        # - Works for both even and odd cubes
-        # - Even cubes need parity handling
-        # - Odd cubes: no parity issues
+        # Even cubes (4x4, 6x6): Reduction order
+        #   - Centers first (to establish face colors)
+        #   - Then edges + 3x3
+        #   - Must handle parity
 
         is_even = cube.n_slices % 2 == 0
-        self._solve_with_reduction_order(sr, is_even)
+
+        if is_even:
+            # Even cubes: reduction order (centers -> edges -> 3x3)
+            self._solve_with_reduction_order(sr, is_even)
+        else:
+            # Odd cubes: TRUE Cage method (edges -> 3x3 -> centers -> re-3x3)
+            self._solve_with_cage_order()
 
         return sr
 
     def _solve_with_cage_order(self) -> None:
-        """Solve using TRUE Cage order (edges -> 3x3 -> centers).
+        """Solve using TRUE Cage order (edges -> 3x3 -> centers -> re-3x3).
 
-        For odd cubes only. Solves edges and 3x3 skeleton FIRST,
-        then fills in centers using commutators.
+        For odd cubes only. Uses CageCenters which disables the _swap_slice
+        optimization that would break edge pairing.
 
-        The NxNCenters commutators [A, B] = A B A' B' naturally preserve
-        already-solved edges because non-targeted pieces return to
-        their original positions.
+        The commutators preserve edge PAIRING (wings stay together) but may
+        move edges to different positions. So we re-solve 3x3 after centers.
 
         Advantages:
         - Parity free: odd cubes have no edge/corner parity
-        - Elegant: solves the "cage" first, then fills it
+        - Uses existing commutator logic (just disables _swap_slice)
         """
         # Phase 1: Solve ALL edges (pair wings)
         if not self._are_edges_solved():
             self._nxn_edges.solve()
 
-        # Phase 2: Solve 3x3 skeleton (cross, corners, edges)
+        # Phase 2: Solve 3x3 skeleton (establishes correct edge positions)
         # Note: On odd cubes, center piece defines face color
         self._solve_3x3()
 
         # Phase 3: Fill the cage (solve centers)
-        # Use CageCenters which uses whole-cube rotations (Z) instead of
-        # B-slice rotations, preserving already-solved edges
+        # CageCenters disables _swap_slice which would break edge pairing
+        # Commutators preserve pairing but may move edges
         if not self._are_centers_solved():
             self._cage_centers.solve()
+
+        # Phase 4: Re-solve 3x3 skeleton
+        # Commutators moved edges, so re-solve to get correct positions
+        self._solve_3x3()
 
     def _solve_with_reduction_order(self, sr: SolverResults, is_even: bool) -> None:
         """Solve using reduction order (centers -> edges -> 3x3).
