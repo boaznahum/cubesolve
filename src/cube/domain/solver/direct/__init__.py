@@ -1,11 +1,11 @@
 """Direct NxN solvers - solve big cubes without reduction to 3x3.
 
 Available solvers:
-- CommutatorNxNSolver: Piece-by-piece using commutators
-- LayerByLayerNxNSolver: Spatial solving from bottom to top
+- CommutatorNxNSolver: Piece-by-piece using commutators (centers first)
+- CageNxNSolver: Edges+corners first, centers last (parity-free)
 """
 
 from .commutator import CommutatorNxNSolver
-from .layer_by_layer import LayerByLayerNxNSolver
+from .cage import CageNxNSolver
 
-__all__ = ["CommutatorNxNSolver", "LayerByLayerNxNSolver"]
+__all__ = ["CommutatorNxNSolver", "CageNxNSolver"]
