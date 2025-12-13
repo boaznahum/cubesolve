@@ -4,11 +4,54 @@ This extends NxNCenters but disables the _swap_slice optimization
 which breaks edge pairing. The commutators (_block_communicator)
 preserve edges, but _swap_slice does not.
 
-_swap_slice uses: M * mul + U2 + M' * mul (not a commutator)
-This pattern moves edges temporarily and doesn't restore them.
+=============================================================================
+WHY COMMUTATORS PRESERVE EDGES
+=============================================================================
 
-_block_communicator uses: [M1', F, M2', F', M1, F, M2, F']
-This is a proper commutator that preserves non-targeted pieces.
+The key insight is that _block_communicator uses TWO DIFFERENT non-overlapping
+M-slices (columns), which creates a proper commutator:
+
+    [M1', F, M2', F', M1, F, M2, F']
+
+    where M1 and M2 are different columns (e.g., column 1 and column 2)
+
+This preserves edges because:
+1. M1' moves one column of centers
+2. F rotates the front face
+3. M2' moves a DIFFERENT column
+4. F' undoes the F rotation
+5. M1 undoes M1'
+6. F rotates again
+7. M2 undoes M2'
+8. F' undoes the final F
+
+The net effect is a 3-cycle of center pieces with NO net movement of edges.
+
+=============================================================================
+WHY _swap_slice BREAKS EDGES
+=============================================================================
+
+_swap_slice uses: M * mul + U2 + M' * mul
+
+This pattern is NOT a commutator:
+- M moves a column of centers AND edges
+- U2 swaps pieces on the U face
+- M' restores the column but edges have been swapped
+
+This is efficient for reduction (centers first) but breaks the Cage method
+where edges are solved first.
+
+=============================================================================
+SOLUTION
+=============================================================================
+
+By setting _OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = False,
+we disable _swap_slice and force the solver to use only _block_communicator,
+which preserves edge pairing.
+
+Note: Commutators preserve edge PAIRING (wings stay together) but may MOVE
+edges to different positions. The Cage solver handles this by re-solving
+the 3x3 skeleton after centers are done.
 """
 
 from __future__ import annotations
