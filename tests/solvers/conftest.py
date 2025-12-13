@@ -76,13 +76,8 @@ def get_scramble_params() -> list[tuple[str, int | None]]:
 
 
 def get_solver_names() -> list[SolverName]:
-    """Get all solver names for parametrization.
-
-    Note: CAGE solver is excluded until proper implementation is complete.
-    It's a non-reduction solver that needs more work.
-    """
-    excluded = {SolverName.CAGE}  # WIP - not yet implemented
-    return [s for s in SolverName if s not in excluded]
+    """Get all solver names for parametrization."""
+    return list(SolverName)
 
 
 def get_cube_sizes() -> list[int]:

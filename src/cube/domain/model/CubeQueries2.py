@@ -203,6 +203,8 @@ class CubeQueries2:
         n = 0
         cube = self._cube
         # Skip texture direction updates during query rotations
+        # Save original value to restore later (for headless/testing scenarios)
+        original_skip_texture = cube._skip_texture_updates
         cube._skip_texture_updates = True
         try:
             for _ in range(0, 4):
@@ -212,7 +214,7 @@ class CubeQueries2:
                 n += 1
         finally:
             (alg * n).prime.play(cube)
-            cube._skip_texture_updates = False
+            cube._skip_texture_updates = original_skip_texture
 
         return -1
 
