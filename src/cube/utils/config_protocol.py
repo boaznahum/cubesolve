@@ -61,6 +61,11 @@ class ConfigProtocol(Protocol):
     # Solver settings
     # ==========================================================================
     @property
+    def default_solver(self) -> str:
+        """Default solver name (case-insensitive, prefix matching allowed)."""
+        ...
+
+    @property
     def solver_debug(self) -> bool:
         """Enable solver debug output."""
         ...

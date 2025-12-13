@@ -122,11 +122,11 @@ class CommonOp:
                     return f
             raise KeyError(f"No face with original_color {w}")
         else:
-            f: Face = self.cube.color_2_face(w)
+            face: Face = self.cube.color_2_face(w)
 
-        # self.debug(w, " is on ", f)
+        # self.debug(w, " is on ", face)
 
-        return f
+        return face
 
     def l2_edges(self) -> Sequence[Edge]:
 

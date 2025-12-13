@@ -10,7 +10,7 @@ from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 from cube.domain.algs.SliceAlg import SliceAlg, _M, _E, _S
-from cube.domain.algs.WholeCubeAlg import _X, _Y, _Z
+from cube.domain.algs.WholeCubeAlg import WholeCubeAlg, _X, _Y, _Z
 from cube.domain.algs._parser import parse_alg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import FaceName
@@ -33,23 +33,23 @@ class Algs:
     """
     # When played, it simply refreshes GUI
     # So it used by annotation tools, after they changed some model(text, cube)
-    AN = AnnotationAlg()
+    AN: AnnotationAlg = AnnotationAlg()
 
-    L = _L()
+    L: FaceAlg = _L()
     # noinspection PyPep8Naming
-    Lw = DoubleLayerAlg(L)
+    Lw: DoubleLayerAlg = DoubleLayerAlg(L)
 
-    B = _B()
-    Bw = DoubleLayerAlg(B)
+    B: FaceAlg = _B()
+    Bw: DoubleLayerAlg = DoubleLayerAlg(B)
 
-    D = _D()
-    Dw = DoubleLayerAlg(D)
+    D: FaceAlg = _D()
+    Dw: DoubleLayerAlg = DoubleLayerAlg(D)
 
-    R = _R()
-    Rw = DoubleLayerAlg(R)
-    X = _X()  # Entire cube or R
-    M = _M()  # Middle over L
-    _MM = _M().simple_mul(-1)  # Middle over L
+    R: FaceAlg = _R()
+    Rw: DoubleLayerAlg = DoubleLayerAlg(R)
+    X: WholeCubeAlg = _X()  # Entire cube or R
+    M: SliceAlg = _M()  # Middle over L
+    _MM: SliceAlg = _M().simple_mul(-1)  # Middle over L
 
     # noinspection PyPep8Naming
     @staticmethod
@@ -59,16 +59,16 @@ class Algs:
         return Algs._MM
 
     U: FaceAlg = _U()
-    Uw = DoubleLayerAlg(U)
-    Y = _Y()  # Entire over U
-    E = _E()  # Middle slice over D
+    Uw: DoubleLayerAlg = DoubleLayerAlg(U)
+    Y: WholeCubeAlg = _Y()  # Entire over U
+    E: SliceAlg = _E()  # Middle slice over D
 
-    F = _F()
-    Fw = DoubleLayerAlg(F)
-    Z = _Z()  # Entire over F
-    S = _S()  # Middle over F
+    F: FaceAlg = _F()
+    Fw: DoubleLayerAlg = DoubleLayerAlg(F)
+    Z: WholeCubeAlg = _Z()  # Entire over F
+    S: SliceAlg = _S()  # Middle over F
 
-    _NO_OP = SeqAlg(None)
+    _NO_OP: SeqAlg = SeqAlg(None)
 
     @staticmethod
     def seq_alg(name: str | None, *algs: Alg) -> SeqAlg:

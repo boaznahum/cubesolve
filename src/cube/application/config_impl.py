@@ -52,6 +52,11 @@ class AppConfig(ConfigProtocol):
     # Solver settings
     # ==========================================================================
     @property
+    def default_solver(self) -> str:
+        """Default solver name (case-insensitive, prefix matching allowed)."""
+        return cfg.DEFAULT_SOLVER
+
+    @property
     def solver_debug(self) -> bool:
         """Enable solver debug output."""
         return cfg.SOLVER_DEBUG

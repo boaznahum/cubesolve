@@ -38,6 +38,12 @@ animation_enabled = True
 
 ######### Solvers  ########
 
+# Default solver name - case-insensitive, prefix matching allowed if unambiguous
+# Available solvers: LBL, CFOP, Cage
+# Examples: "lbl", "LBL", "cf" (for CFOP), "ca" (for Cage)
+# Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
+DEFAULT_SOLVER = "Cage"
+
 SOLVER_DEBUG = True
 
 

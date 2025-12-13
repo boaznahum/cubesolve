@@ -9,24 +9,33 @@ class Solvers:
     Factory for creating solver instances.
 
     All solvers use the orchestrator pattern:
-    - beginner(), cfop(), and kociemba() return NxNSolverOrchestrator instances
+    - beginner() and cfop() return NxNSolverOrchestrator instances
       that compose a Reducer + 3x3Solver
+    - cage() returns a direct NxN solver (no reducer)
 
     This design allows:
     - Any reducer to work with any 3x3 solver
     - Easy swapping of reducers without changing solvers
     - Centralized parity handling in orchestrator
     - Consistent behavior across all solver types
+
+    The default() method reads from DEFAULT_SOLVER config setting.
     """
 
-    @staticmethod
-    def default(op: OperatorProtocol) -> Solver:
+    @classmethod
+    def default(cls, op: OperatorProtocol) -> Solver:
         """
-        Get the default solver.
+        Get the default solver based on config setting.
 
-        Returns Kociemba solver for near-optimal solutions (18-22 moves).
+        The solver name is read from DEFAULT_SOLVER in _config.py.
+        Supports case-insensitive matching and unambiguous prefix matching.
+
+        See SolverName.lookup() for matching rules.
         """
-        return Solvers.kociemba(op)
+        from cube.application import _config as cfg
+
+        solver_name = SolverName.lookup(cfg.DEFAULT_SOLVER)
+        return cls.by_name(solver_name, op)
 
     @staticmethod
     def beginner(op: OperatorProtocol) -> Solver:
@@ -70,26 +79,26 @@ class Solvers:
             op, reducer, solver_3x3, SolverName.CFOP
         )
 
-    @staticmethod
-    def kociemba(op: OperatorProtocol) -> Solver:
-        """
-        Get Kociemba near-optimal solver with NxN support.
-
-        For 3x3: Uses Kociemba algorithm (18-22 moves)
-        For NxN: Uses BeginnerReducer + Kociemba3x3
-
-        Uses advanced (R/L-slice) edge parity algorithm.
-        """
-        from .Reducers import Reducers
-        from .Solvers3x3 import Solvers3x3
-        from .NxNSolverOrchestrator import NxNSolverOrchestrator
-
-        solver_3x3 = Solvers3x3.kociemba(op)
-        reducer = Reducers.beginner(op, advanced_edge_parity=True)
-
-        return NxNSolverOrchestrator(
-            op, reducer, solver_3x3, SolverName.KOCIEMBA
-        )
+    # @staticmethod
+    # def kociemba(op: OperatorProtocol) -> Solver:
+    #     """
+    #     Get Kociemba near-optimal solver with NxN support.
+    #
+    #     For 3x3: Uses Kociemba algorithm (18-22 moves)
+    #     For NxN: Uses BeginnerReducer + Kociemba3x3
+    #
+    #     Uses advanced (R/L-slice) edge parity algorithm.
+    #     """
+    #     from .Reducers import Reducers
+    #     from .Solvers3x3 import Solvers3x3
+    #     from .NxNSolverOrchestrator import NxNSolverOrchestrator
+    #
+    #     solver_3x3 = Solvers3x3.kociemba(op)
+    #     reducer = Reducers.beginner(op, advanced_edge_parity=True)
+    #
+    #     return NxNSolverOrchestrator(
+    #         op, reducer, solver_3x3, SolverName.KOCIEMBA
+    #     )
 
     @staticmethod
     def cage(op: OperatorProtocol) -> Solver:
@@ -111,7 +120,7 @@ class Solvers:
         """
         Get the next solver in rotation.
 
-        Cycles through: LBL -> CFOP -> KOCIEMBA -> LBL -> ...
+        Cycles through all available solvers in SolverName enum order.
         """
         _ids = [*SolverName]
         index = _ids.index(current)
@@ -143,8 +152,8 @@ class Solvers:
             case SolverName.CFOP:
                 return cls.cfop(op)
 
-            case SolverName.KOCIEMBA:
-                return cls.kociemba(op)
+            # case SolverName.KOCIEMBA:
+            #     return cls.kociemba(op)
 
             case SolverName.CAGE:
                 return cls.cage(op)
