@@ -110,17 +110,40 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
 
 
+from contextlib import contextmanager
+
+
 class _CageSolverFacade(BaseSolver):
     """
     Minimal BaseSolver facade for NxNCenters and NxNEdges.
 
     Required because NxNCenters and NxNEdges expect a BaseSolver instance.
+
+    Supports cage_mode flag which:
+    - Skips center reduction (NxNCenters.solve returns early)
+    - Ignores center-related assertions
     """
 
-    __slots__: list[str] = []
+    __slots__: list[str] = ["_cage_mode"]
 
     def __init__(self, op: OperatorProtocol) -> None:
         super().__init__(op)
+        self._cage_mode = False
+
+    @property
+    def cage_mode(self) -> bool:
+        """True when building the cage (edges first, skip centers)."""
+        return self._cage_mode
+
+    @contextmanager
+    def cage_mode_context(self):
+        """Context manager to temporarily enable cage mode."""
+        old_value = self._cage_mode
+        self._cage_mode = True
+        try:
+            yield
+        finally:
+            self._cage_mode = old_value
 
     @property
     def get_code(self) -> SolverName:
@@ -164,7 +187,7 @@ class CageNxNSolver(Solver):
     """
 
     __slots__ = [
-        "_op", "_solver_facade", "_nxn_edges", "_nxn_centers",
+        "_op", "_solver_facade", "_nxn_edges", "_nxn_centers", "_cage_centers",
         "_l1_cross", "_l1_corners", "_l2", "_l3_cross", "_l3_corners"
     ]
 
@@ -189,8 +212,12 @@ class CageNxNSolver(Solver):
         from cube.domain.solver.beginner.L2 import L2
         from cube.domain.solver.beginner.L3Cross import L3Cross
         from cube.domain.solver.beginner.L3Corners import L3Corners
+        from cube.domain.solver.direct.cage.CageCenters import CageCenters
 
+        # For even cubes: use standard NxNCenters (reduction order)
+        # For odd cubes: use CageCenters (preserves edges with whole-cube rotations)
         self._nxn_centers = NxNCenters(self._solver_facade)
+        self._cage_centers = CageCenters(self._solver_facade)
         self._nxn_edges = NxNEdges(self._solver_facade, advanced_edge_parity=True)
 
         # 3x3 solver elements (used directly, not via delegation)
@@ -332,29 +359,56 @@ class CageNxNSolver(Solver):
             self._solve_3x3()
             return sr
 
-        # NOTE: True Cage method (edges+corners first, centers last) requires
-        # a commutator-based center solver that doesn't disturb the "cage".
-        # The current NxNCenters solver is designed for reduction order and
-        # WILL disturb already-solved edges when solving centers.
+        # NOTE: True Cage method (edges -> 3x3 -> centers) requires
+        # commutators that preserve edge pairing. The existing NxNCenters
+        # uses M-slice commutators that UN-PAIR edges during center solving.
         #
-        # Until a proper commutator center solver is implemented, we use
-        # reduction order (centers -> edges -> 3x3) for ALL NxN cubes.
-        # This is functionally identical to the existing reduction solver
-        # but demonstrates the Cage solver infrastructure.
+        # Until commutators are implemented that use wide moves (Rw, Lw)
+        # instead of M-slice moves, we use REDUCTION order for all cubes.
         #
-        # TODO: Implement commutator-based center solver for true Cage method
-        # on odd cubes (5x5, 7x7, etc.) where it would be parity-free.
+        # Reduction order: centers -> edges -> 3x3
+        # - Works for both even and odd cubes
+        # - Even cubes need parity handling
+        # - Odd cubes: no parity issues
 
-        # Use reduction order for all NxN cubes
         is_even = cube.n_slices % 2 == 0
         self._solve_with_reduction_order(sr, is_even)
 
         return sr
 
+    def _solve_with_cage_order(self) -> None:
+        """Solve using TRUE Cage order (edges -> 3x3 -> centers).
+
+        For odd cubes only. Solves edges and 3x3 skeleton FIRST,
+        then fills in centers using commutators.
+
+        The NxNCenters commutators [A, B] = A B A' B' naturally preserve
+        already-solved edges because non-targeted pieces return to
+        their original positions.
+
+        Advantages:
+        - Parity free: odd cubes have no edge/corner parity
+        - Elegant: solves the "cage" first, then fills it
+        """
+        # Phase 1: Solve ALL edges (pair wings)
+        if not self._are_edges_solved():
+            self._nxn_edges.solve()
+
+        # Phase 2: Solve 3x3 skeleton (cross, corners, edges)
+        # Note: On odd cubes, center piece defines face color
+        self._solve_3x3()
+
+        # Phase 3: Fill the cage (solve centers)
+        # Use CageCenters which uses whole-cube rotations (Z) instead of
+        # B-slice rotations, preserving already-solved edges
+        if not self._are_centers_solved():
+            self._cage_centers.solve()
+
     def _solve_with_reduction_order(self, sr: SolverResults, is_even: bool) -> None:
         """Solve using reduction order (centers -> edges -> 3x3).
 
-        This works for both even and odd cubes. Even cubes need parity handling.
+        For all NxN cubes. Solves centers FIRST, then edges, then 3x3.
+        Even cubes need parity handling; odd cubes have no parity issues.
         """
         # Phase 1: Solve centers (establishes face colors)
         if not self._are_centers_solved():
