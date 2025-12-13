@@ -37,7 +37,9 @@ class EdgeSliceTracker:
 class CommonOp:
     __slots__ = ["_slv",
                  "_start_color",
-                 "_ann"]
+                 "_ann",
+                 "_use_original_color",
+                 "_white_face_brought_up"]
 
     def __init__(self, solver: BaseSolver) -> None:
         super().__init__()
@@ -45,6 +47,8 @@ class CommonOp:
         self._ann = solver.op.annotation
 
         self._start_color = Color.WHITE
+        self._use_original_color = False  # Use original_color for face mapping (Cage method on even cubes)
+        self._white_face_brought_up = False  # Track if bring_face_up has been called
 
     @property
     def slv(self) -> BaseSolver:
@@ -77,10 +81,48 @@ class CommonOp:
         return self._start_color
 
     @property
+    def use_original_color(self) -> bool:
+        """Whether to use original_color for face mapping (Cage method on even cubes)."""
+        return self._use_original_color
+
+    @use_original_color.setter
+    def use_original_color(self, value: bool) -> None:
+        """Set whether to use original_color for face mapping."""
+        self._use_original_color = value
+        # Reset the brought-up tracking when mode changes
+        self._white_face_brought_up = False
+
+    def reset_white_face_tracking(self) -> None:
+        """Reset the white face tracking state.
+
+        Call this before each 3x3 solve phase in Cage method to ensure
+        bring_face_up is called again if needed.
+        """
+        self._white_face_brought_up = False
+
+    @property
     def white_face(self) -> Face:
         w: Color = self.white
 
-        f: Face = self.cube.color_2_face(w)
+        # Use original_color for even cubes in Cage method (centers not yet solved)
+        if self._use_original_color:
+            # For even cubes with scrambled centers, we can't use center colors.
+            # Instead, we use original_color to identify the "white" face position.
+            #
+            # KEY INSIGHT: Face objects are FIXED in space. After bring_face_up,
+            # the face's PIECES move to U position, but the Face object stays.
+            # We must use cube.up to get the face at U position after rotation.
+            #
+            # If white face has been brought up, return cube.up
+            if self._white_face_brought_up:
+                return self.cube.up
+            # Not brought up yet - find face by original_color for bring_face_up
+            for f in self.cube.faces:
+                if f.original_color == w:
+                    return f
+            raise KeyError(f"No face with original_color {w}")
+        else:
+            f: Face = self.cube.color_2_face(w)
 
         # self.debug(w, " is on ", f)
 
@@ -295,6 +337,10 @@ class CommonOp:
                         raise InternalSWError(f"Unknown face {f}")
 
                 self.op.play(alg)
+
+        # Track that white face has been brought up (for use_original_color mode)
+        if self._use_original_color:
+            self._white_face_brought_up = True
 
 
     def bring_face_front(self, f: Face):

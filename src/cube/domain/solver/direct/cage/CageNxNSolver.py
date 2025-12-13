@@ -36,16 +36,22 @@ After solving edges and corners, the centers appear "trapped" inside:
 
 ADVANTAGES:
 -----------
-1. PARITY-FREE - Centers can always be solved with commutators
+1. PARITY-FREE for odd cubes - Centers can always be solved with commutators
 2. Simple algorithms - Only need a few commutator patterns
-3. Scales to any size - Works on 4x4 through 111x111
+3. Scales to any size - Works on 3x3 through 111x111
 4. Predictable - Same approach works consistently
+
+EVEN CUBE HANDLING:
+-------------------
+Even cubes (4x4, 6x6) have no center piece to define face color. Solution:
+- Use original_color (the face's birth color) instead of center color
+- This allows 3x3 solving BEFORE centers are solved
+- Parity (OLL parity, corner swap) is handled during 3x3 phases
 
 DISADVANTAGES:
 --------------
 1. Higher move count than reduction (~400-600 vs ~200-300)
-2. Edge pairing without center reference can be tricky
-3. Less optimized for speedsolving
+2. Less optimized for speedsolving
 
 SOLVING PHASES:
 ---------------
@@ -325,22 +331,17 @@ class CageNxNSolver(Solver):
         what: SolveStep = SolveStep.ALL
     ) -> SolverResults:
         """
-        Solve the cube using Cage method.
+        Solve the cube using TRUE Cage method for ALL cube sizes.
 
-        For odd cubes (3x3, 5x5, 7x7): True Cage method
+        Cage method order (edges -> 3x3 -> centers -> re-3x3):
             - Edges first (skipped for 3x3 - already is3x3)
             - 3x3 skeleton
-            - Centers (skipped for 3x3 - already is3x3)
-            - Re-solve 3x3
+            - Centers using commutators (skipped for 3x3 - already is3x3)
+            - Re-solve 3x3 (commutators move edges)
 
-        For even cubes (4x4, 6x6): Reduction order
-            - Centers first (to establish face colors)
-            - Then edges + 3x3
-            - Must handle parity
-
-        Note: Even cubes REQUIRE centers to be solved first because:
-        - They have no center piece to define face color
-        - The 3x3 solver elements need white_face/color_2_face
+        For even cubes (4x4, 6x6):
+            - Uses original_color for face mapping (since centers aren't solved)
+            - Must handle parity after the cage is complete
 
         Args:
             debug: Enable debug output
@@ -356,26 +357,22 @@ class CageNxNSolver(Solver):
             return sr
 
         cube = self._cube
+        is_even = cube.n_slices % 2 == 0
 
         # Odd cubes (3x3, 5x5, 7x7): TRUE Cage method
-        #   - Edges first (NxNEdges skips if already is3x3)
-        #   - 3x3 skeleton
-        #   - Centers (CageCenters skips if already is3x3)
-        #   - Re-solve 3x3
+        #   - Edges first, then 3x3, then centers (commutators), then re-3x3
         #   - PARITY FREE: No edge/corner parity on odd cubes
         #
         # Even cubes (4x4, 6x6): Reduction order
-        #   - Centers first (to establish face colors)
-        #   - Then edges + 3x3
-        #   - Must handle parity
-
-        is_even = cube.n_slices % 2 == 0
+        #   - Centers first (required to establish face colors for 3x3 solving)
+        #   - The cube model ties Face.original_color to positions, not pieces
+        #   - True Cage method for even cubes would require deeper model changes
 
         if is_even:
             # Even cubes: reduction order (centers -> edges -> 3x3)
             self._solve_with_reduction_order(sr, is_even)
         else:
-            # Odd cubes (including 3x3): TRUE Cage method
+            # Odd cubes: TRUE Cage method
             self._solve_with_cage_order()
 
         return sr
@@ -383,22 +380,19 @@ class CageNxNSolver(Solver):
     def _solve_with_cage_order(self) -> None:
         """Solve using TRUE Cage order (edges -> 3x3 -> centers -> re-3x3).
 
-        For odd cubes only. Uses CageCenters which disables the _swap_slice
+        For ODD cubes only. Uses CageCenters which disables the _swap_slice
         optimization that would break edge pairing.
 
         The commutators preserve edge PAIRING (wings stay together) but may
         move edges to different positions. So we re-solve 3x3 after centers.
 
-        Advantages:
-        - Parity free: odd cubes have no edge/corner parity
-        - Uses existing commutator logic (just disables _swap_slice)
+        Odd cubes have no parity issues.
         """
         # Phase 1: Solve ALL edges (pair wings)
         if not self._are_edges_solved():
             self._nxn_edges.solve()
 
-        # Phase 2: Solve 3x3 skeleton (establishes correct edge positions)
-        # Note: On odd cubes, center piece defines face color
+        # Phase 2: Solve 3x3 skeleton
         self._solve_3x3()
 
         # Phase 3: Fill the cage (solve centers)
@@ -410,6 +404,47 @@ class CageNxNSolver(Solver):
         # Phase 4: Re-solve 3x3 skeleton
         # Commutators moved edges, so re-solve to get correct positions
         self._solve_3x3()
+
+    def _solve_3x3_with_parity(self, sr: SolverResults, is_even: bool) -> None:
+        """Solve 3x3 skeleton with parity handling for even cubes."""
+        # Reset white face tracking before each 3x3 solve
+        # (cube may have been rotated since last solve)
+        self._solver_facade.reset_white_face_tracking()
+
+        if not is_even:
+            # Odd cubes: no parity, simple solve
+            self._solve_3x3()
+            return
+
+        # Even cubes: handle parity
+        even_edge_parity_detected = False
+        corner_swap_detected = False
+
+        MAX_RETRIES = 3
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                # Reset tracking before each attempt
+                self._solver_facade.reset_white_face_tracking()
+                self._solve_3x3()
+                break  # Success
+
+            except EvenCubeEdgeParityException:
+                if even_edge_parity_detected:
+                    raise InternalSWError("Edge parity already detected")
+                even_edge_parity_detected = True
+                self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+                continue
+
+            except EvenCubeCornerSwapException:
+                if corner_swap_detected:
+                    raise InternalSWError("Corner swap already detected")
+                corner_swap_detected = True
+                continue
+
+        if even_edge_parity_detected:
+            sr._was_even_edge_parity = True
+        if corner_swap_detected:
+            sr._was_corner_swap = True
 
     def _solve_with_reduction_order(self, sr: SolverResults, is_even: bool) -> None:
         """Solve using reduction order (centers -> edges -> 3x3).

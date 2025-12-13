@@ -231,7 +231,8 @@ class L1Cross(SolverElement):
         # it was moved
         source_edge = cube.find_edge_by_color(target_colors_id)
         # now target and source on front top/bottom
-        white_color = wf.color
+        # Use cmn.white for the sticker color (consistent even with original_color mode)
+        white_color = self.cmn.white
         source_face_on_edge = source_edge.face_of_actual_color(white_color)
 
         if source_face_on_edge.is_down:

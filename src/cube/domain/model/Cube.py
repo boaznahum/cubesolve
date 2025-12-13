@@ -337,11 +337,31 @@ class Cube(CubeSupplier):
         self._original_layout: CubeLayout | None = None
         self._skip_texture_updates: bool = False  # Flag for rotate_and_check queries
         self._listeners: list["CubeListener"] = []
+        self._use_original_color_for_face_color: bool = False  # Cage method mode
         self._reset()
 
         from cube.domain.model.CubeQueries2 import CubeQueries2
 
         self._cqr: CubeQueries2 = CubeQueries2(self)
+
+    @property
+    def use_original_color_for_face_color(self) -> bool:
+        """Whether Face.color should return original_color instead of center color.
+
+        Set to True for Cage method on even cubes where centers are scrambled.
+        This affects position_id calculations for edges/corners.
+        """
+        return self._use_original_color_for_face_color
+
+    @use_original_color_for_face_color.setter
+    def use_original_color_for_face_color(self, value: bool) -> None:
+        """Enable/disable original_color mode for Face.color."""
+        self._use_original_color_for_face_color = value
+        # Clear cached position_ids since they depend on face colors
+        for e in self.edges:
+            e.reset_after_faces_changes()
+        for c in self.corners:
+            c.reset_after_faces_changes()
 
     def _reset(self, cube_size=None) -> None:
 
@@ -1454,6 +1474,20 @@ class Cube(CubeSupplier):
             self._color_2_face = {f.color: f for f in self._faces.values()}
 
         return self._color_2_face[c]
+
+    def original_color_2_face(self, c: Color) -> Face:
+        """Map color to face using original_color (stable, never changes).
+
+        Unlike color_2_face which uses center colors (unreliable on scrambled
+        even cubes), this uses the face's birth color which is always stable.
+
+        Useful for Cage method on even cubes where we need face mapping
+        before centers are solved.
+        """
+        for f in self._faces.values():
+            if f.original_color == c:
+                return f
+        raise KeyError(f"No face with original_color {c}")
 
     def find_part_by_colors(self, part_colors_id: PartColorsID) -> Part:
 

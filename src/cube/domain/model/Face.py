@@ -178,9 +178,14 @@ class Face(SuperElement, Hashable):
     @property
     def color(self):
         """
-        The color of center, valid in 3x3 only or for odd cubes !!!
-        :return:
+        The color of this face.
+
+        Normally returns the center color (valid for 3x3 and odd cubes).
+        When cube.use_original_color_for_face_color is True (Cage method),
+        returns original_color instead (for even cubes with scrambled centers).
         """
+        if self.cube.use_original_color_for_face_color:
+            return self._original_color
         return self.center.color
 
     @property
