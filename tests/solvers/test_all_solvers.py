@@ -113,6 +113,9 @@ class TestSolverBasics:
         test_sp,
     ) -> None:
         """Test that solvers correctly identify a fresh cube as solved."""
+        # Check if solver is testable (skip with reason if not)
+        skip_if_not_supported(solver_name, 3)
+
         app = AbstractApp.create_non_default(cube_size=3, animation=False)
         cube = Cube(size=3, sp=test_sp)
         op = Operator(cube, app.vs)
