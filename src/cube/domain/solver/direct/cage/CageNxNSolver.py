@@ -410,7 +410,7 @@ class CageNxNSolver(Solver):
         """Solve 3x3 skeleton with parity handling for even cubes."""
         # Reset white face tracking before each 3x3 solve
         # (cube may have been rotated since last solve)
-        self._solver_facade.reset_white_face_tracking()
+        self._solver_facade.reset_white_face_tracking()  # type: ignore[attr-defined]
 
         if not is_even:
             # Odd cubes: no parity, simple solve
@@ -425,7 +425,7 @@ class CageNxNSolver(Solver):
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 # Reset tracking before each attempt
-                self._solver_facade.reset_white_face_tracking()
+                self._solver_facade.reset_white_face_tracking()  # type: ignore[attr-defined]
                 self._solve_3x3()
                 break  # Success
 

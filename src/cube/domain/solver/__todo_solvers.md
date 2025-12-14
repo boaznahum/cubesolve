@@ -5,5 +5,5 @@ Kociemba test fails due to unable to handle parity, i there is a work on absrqct
  # KOCIEMBA temporarily disabled
 
 
-
+no type checking under direct/ see tag: direct-wip-no-typecheck
 
