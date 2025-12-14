@@ -1,10 +1,6 @@
-"""Solver factory - creates solver instances."""
+"""Solver factory - creates solver instances using orchestrator pattern."""
 
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.beginner.BeginnerSolver import BeginnerSolver
-from .CFOP.CFOP import CFOP
-from .kociemba.KociembaSolver import KociembaSolver
-from .solver import BeginnerLBLReduce
 from .solver import Solver
 from .SolverName import SolverName
 from cube.domain.exceptions import InternalSWError
@@ -14,9 +10,15 @@ class Solvers:
     """
     Factory for creating solver instances.
 
-    - LBL: Uses original BeginnerSolver (handles NxN internally)
-    - CFOP: Uses original CFOP (3x3 only)
-    - KOCIEMBA: Uses NxNSolverOrchestrator with Kociemba3x3 for NxN support
+    All solvers use the orchestrator pattern:
+    - LBL, CFOP, KOCIEMBA return NxNSolverOrchestrator instances
+      that compose a Reducer + 3x3Solver
+
+    This design allows:
+    - Any reducer to work with any 3x3 solver
+    - Easy swapping of reducers without changing solvers
+    - Centralized parity handling in orchestrator
+    - Consistent behavior across all solver types
     """
 
     @classmethod
@@ -28,23 +30,46 @@ class Solvers:
         return cls.by_name(solver_name, op)
 
     @staticmethod
-    def beginner(op: OperatorProtocol) -> BeginnerLBLReduce:
+    def beginner(op: OperatorProtocol) -> Solver:
         """
         Get beginner layer-by-layer solver with NxN support.
 
-        Uses the original BeginnerSolver which handles both reduction
-        and 3x3 solving internally with integrated parity handling.
+        For 3x3: Uses BeginnerSolver3x3 via orchestrator
+        For NxN: Uses BeginnerReducer + BeginnerSolver3x3
+
+        Uses basic (M-slice) edge parity algorithm.
         """
-        return BeginnerSolver(op)
+        from .Reducers import Reducers
+        from .Solvers3x3 import Solvers3x3
+        from .NxNSolverOrchestrator import NxNSolverOrchestrator
+
+        solver_3x3 = Solvers3x3.beginner(op)
+        reducer = Reducers.beginner(op, advanced_edge_parity=False)
+
+        return NxNSolverOrchestrator(
+            op, reducer, solver_3x3, SolverName.LBL
+        )
 
     @staticmethod
     def cfop(op: OperatorProtocol) -> Solver:
         """
-        Get CFOP (Fridrich) solver.
+        Get CFOP (Fridrich) solver with NxN support.
 
-        Currently only supports 3x3 cubes. For NxN, use beginner() instead.
+        For 3x3: Uses CFOP3x3 via orchestrator
+        For NxN: Uses BeginnerReducer + CFOP3x3
+
+        Uses advanced (R/L-slice) edge parity algorithm.
         """
-        return CFOP(op)
+        from .Reducers import Reducers
+        from .Solvers3x3 import Solvers3x3
+        from .NxNSolverOrchestrator import NxNSolverOrchestrator
+
+        solver_3x3 = Solvers3x3.cfop(op)
+        reducer = Reducers.beginner(op, advanced_edge_parity=True)
+
+        return NxNSolverOrchestrator(
+            op, reducer, solver_3x3, SolverName.CFOP
+        )
 
     @staticmethod
     def kociemba(op: OperatorProtocol) -> Solver:
@@ -52,7 +77,9 @@ class Solvers:
         Get Kociemba near-optimal solver with NxN support.
 
         For 3x3: Uses Kociemba algorithm (18-22 moves)
-        For NxN: Uses BeginnerReducer + Kociemba3x3 via orchestrator
+        For NxN: Uses BeginnerReducer + Kociemba3x3
+
+        Uses advanced (R/L-slice) edge parity algorithm.
         """
         from .Reducers import Reducers
         from .Solvers3x3 import Solvers3x3

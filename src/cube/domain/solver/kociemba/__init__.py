@@ -1,5 +1,5 @@
 """Kociemba optimal solver package."""
 
-from .KociembaSolver import KociembaSolver
+from .Kociemba3x3 import Kociemba3x3
 
-__all__ = ["KociembaSolver"]
+__all__ = ["Kociemba3x3"]

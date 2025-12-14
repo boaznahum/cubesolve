@@ -248,49 +248,57 @@ class NxNSolverOrchestrator(Solver):
 
     def _detect_and_fix_parity_if_needed(self, debug: bool) -> "_ParityResult":
         """
-        Detect and fix parity if the 3x3 solver can't handle it.
+        Detect and fix parity BEFORE calling solve_3x3.
 
-        Some solvers (like Kociemba) can't detect parity - they just get an
-        invalid cube state and fail. For these solvers, we use a helper
-        solver (BeginnerSolver3x3) to detect parity, then fix it before
-        calling the actual solver.
+        This is called for all solvers to ensure parity is handled uniformly.
+        The solver's detect_edge_parity() is used if it returns True/False,
+        otherwise a helper solver is used.
+
+        Pre-fixing parity (instead of exception-retry) ensures solve_3x3()
+        starts with a valid cube state, which is required for solvers like
+        BeginnerSolver3x3 that can't resume from an arbitrary state.
 
         Returns:
             _ParityResult with flags indicating what was fixed
         """
         result = _ParityResult()
 
-        # Check if solver can detect parity
-        can_detect = self._solver_3x3.detect_edge_parity()
-        if can_detect is not None:
-            # Solver can detect parity - use normal exception-based flow
-            self._debug("Solver can detect parity, using exception-based flow")
-            return result
+        # Try to detect edge parity using the solver's own method
+        edge_parity: bool | None = self._solver_3x3.detect_edge_parity()
 
-        # Solver can't detect parity - use helper solver
-        self._debug("Solver can't detect parity, using helper for detection")
+        if edge_parity is None:
+            # Solver can't detect parity - use helper solver
+            self._debug("Solver can't detect parity, using helper for detection")
+            from cube.domain.solver.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
+            helper: BeginnerSolver3x3 = BeginnerSolver3x3(self._op)
+            edge_parity = helper.detect_edge_parity()
+        else:
+            self._debug(f"Solver detected edge parity: {edge_parity}")
 
-        from cube.domain.solver.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
-        helper = BeginnerSolver3x3(self._op)
-
-        # Detect and fix edge parity
-        if helper.detect_edge_parity():
-            self._debug("Edge parity detected by helper, fixing...")
+        # Fix edge parity if detected
+        if edge_parity:
+            self._debug("Edge parity detected, fixing BEFORE solve_3x3...")
             self._reducer.fix_edge_parity()
+            # IMPORTANT: Re-reduce after parity fix - the fix may have affected edges
+            self._debug("Re-reducing after edge parity fix...")
+            self._reducer.reduce()
             result.edge_parity_fixed = True
 
-        # Detect and fix corner parity (only after edge parity is fixed)
-        # Note: For corner parity, we need to actually DO the fix.
-        # The helper's detect_corner_parity will solve through L3Corners
-        # which does the fix before raising the exception. But we're in
-        # query mode so it rolls back. We need to do the actual fix.
-        if helper.detect_corner_parity():
-            self._debug("Corner parity detected by helper, fixing...")
-            # Corner parity fix: Use L3Corners to do the swap
-            # This is a bit tricky - we need to solve to the point where
-            # L3Corners can do the swap, let it do the swap, then the
-            # cube will be in a valid state for Kociemba.
-            self._fix_corner_parity_via_helper(helper)
+        # Detect corner parity (only after edge parity is fixed)
+        corner_parity: bool | None = self._solver_3x3.detect_corner_parity()
+
+        if corner_parity is None:
+            # Solver can't detect - use helper
+            from cube.domain.solver.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
+            helper_corner: BeginnerSolver3x3 = BeginnerSolver3x3(self._op)
+            corner_parity = helper_corner.detect_corner_parity()
+
+        if corner_parity:
+            self._debug("Corner parity detected, fixing BEFORE solve_3x3...")
+            # Corner parity fix: Use helper to solve through L3Corners
+            from cube.domain.solver.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
+            helper_fix: BeginnerSolver3x3 = BeginnerSolver3x3(self._op)
+            self._fix_corner_parity_via_helper(helper_fix)
             result.corner_parity_fixed = True
 
         return result

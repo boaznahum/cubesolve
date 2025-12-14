@@ -4,7 +4,7 @@ Commands registry - central access point for all command instances.
 Provides convenient access to commands like Commands.ROTATE_R
 while maintaining type safety.
 """
-from cube.domain.algs import Algs
+from cube.domain.algs.Algs import Algs
 from cube.domain.model.cube_boy import FaceName
 from cube.domain.solver import SolveStep
 

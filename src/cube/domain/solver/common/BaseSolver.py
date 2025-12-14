@@ -3,8 +3,9 @@ from typing import TypeAlias, TYPE_CHECKING, final
 
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.protocols import OperatorProtocol
+from cube.domain.algs.Alg import Alg
+from cube.domain.algs.Algs import Algs
 from .. import Solver
-from ...algs import Algs
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
@@ -61,12 +62,12 @@ class BaseSolver(Solver, ABC):
     def cmn(self) -> _Common:
         return self.common
 
-    def solution(self):
+    def solution(self) -> Alg:
         if self.is_solved:
             return Algs.alg(None)
 
         n = len(self.op.history())
-        solution_algs = []
+        solution_algs: list[Alg] = []
 
         with self._op.with_animation(animation=False):
 

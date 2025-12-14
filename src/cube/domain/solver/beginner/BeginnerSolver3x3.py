@@ -209,7 +209,6 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
                     return False
                 except EvenCubeEdgeParityException:
                     return True
-        # save_history context rolls back automatically
 
     def detect_corner_parity(self) -> bool | None:
         """
