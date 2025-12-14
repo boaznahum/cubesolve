@@ -68,7 +68,7 @@ class Solver(ABC):
 
     @property
     @abstractmethod
-    def is_solved(self):
+    def is_solved(self) -> bool:
         pass
 
     @property

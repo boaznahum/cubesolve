@@ -203,7 +203,9 @@ class CubeQueries2:
         n = 0
         cube = self._cube
         # Skip texture direction updates during query rotations
-        cube._skip_texture_updates = True
+        # Save original value to support nesting
+        was_in_query_mode = cube._in_query_mode
+        cube._in_query_mode = True
         try:
             for _ in range(0, 4):
                 if pred():
@@ -212,7 +214,7 @@ class CubeQueries2:
                 n += 1
         finally:
             (alg * n).prime.play(cube)
-            cube._skip_texture_updates = False
+            cube._in_query_mode = was_in_query_mode
 
         return -1
 

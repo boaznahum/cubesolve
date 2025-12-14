@@ -326,8 +326,8 @@ class Face(SuperElement, Hashable):
         Args:
             quarter_turns: Number of 90° CW rotations (1 for CW, -1 for CCW)
         """
-        # Skip texture updates during query rotations (rotate_and_check)
-        if self.cube._skip_texture_updates:
+        # Skip texture updates during query mode (rotate_and_check, parity detection)
+        if self.cube._in_query_mode:
             return
 
         # Load config from YAML (cached, reloads on file change)

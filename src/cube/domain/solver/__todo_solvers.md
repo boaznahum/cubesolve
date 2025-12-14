@@ -1,9 +1,5 @@
-merge from abstract_reducer, some tests fail
-make sure all queries use new context manager in operator that suspend animation and undo operation.
-Kociemba test fails due to unable to handle parity, i there is a work on absrqct_reducer, it was removed from list 
+# Solver TODOs
 
- # KOCIEMBA temporarily disabled
-
-
-no type checking under direct/ see tag: direct-wip-no-typecheck
-
+- Finish orchestrator to handle 3x3 solvers that cannot detect parity errors (see __branch_state.md in this package)
+- Make sure all queries use new context manager in Operator that suspends animation and undoes operations
+- Kociemba test fails due to inability to handle parity - work on abstract_reducer addresses this

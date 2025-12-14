@@ -45,6 +45,18 @@ class OperatorProtocol(Protocol):
         """Context manager to save and restore history."""
         ...
 
+    def with_query_restore_state(self) -> ContextManager[None]:
+        """
+        Context manager for query operations with auto-rollback.
+
+        Combines:
+        - Query mode (_in_query_mode = True, skips texture updates)
+        - Animation disabled
+        - Auto-rollback: undoes all moves on exit
+        - Supports nesting
+        """
+        ...
+
     @property
     def annotation(self) -> "AnnotationProtocol":
         """Get the annotation object."""
