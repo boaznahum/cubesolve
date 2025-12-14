@@ -5,7 +5,5 @@ Kociemba test fails due to unable to handle parity, i there is a work on absrqct
  # KOCIEMBA temporarily disabled
 
 
-learnnew property _use_original_color to support cage
-what is th fuck thi spatch      if hasattr(self._solver, 'cage_mode') and self._solver.cage_mode:
-            return
+
 

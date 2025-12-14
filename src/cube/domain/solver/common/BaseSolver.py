@@ -3,8 +3,8 @@ from typing import TypeAlias, TYPE_CHECKING, final
 
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.algs.Algs import Algs
 from .. import Solver
+from ...algs import Algs
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
@@ -60,20 +60,6 @@ class BaseSolver(Solver, ABC):
     @final
     def cmn(self) -> _Common:
         return self.common
-
-    @property
-    def use_original_color(self) -> bool:
-        """Whether to use original_color for face mapping (Cage method on even cubes)."""
-        return self.common.use_original_color
-
-    @use_original_color.setter
-    def use_original_color(self, value: bool) -> None:
-        """Set whether to use original_color for face mapping."""
-        self.common.use_original_color = value
-
-    def reset_white_face_tracking(self) -> None:
-        """Reset the white face tracking state for Cage method."""
-        self.common.reset_white_face_tracking()
 
     def solution(self):
         if self.is_solved:

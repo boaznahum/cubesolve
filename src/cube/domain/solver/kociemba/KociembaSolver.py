@@ -166,7 +166,7 @@ class KociembaSolver(BaseSolver):
 
     @property
     def get_code(self) -> SolverName:
-        return SolverName.KOCIEMBA  # type: ignore[attr-defined]  # KOCIEMBA temporarily disabled
+        return SolverName.KOCIEMBA
 
     @property
     def status(self) -> str:

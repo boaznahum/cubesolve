@@ -383,8 +383,9 @@ class CageNxNSolver(Solver):
         For ODD cubes only. Uses CageCenters which disables the _swap_slice
         optimization that would break edge pairing.
 
-        The commutators preserve edge PAIRING (wings stay together) but may
-        move edges to different positions. So we re-solve 3x3 after centers.
+        NOTE: Currently requires re-3x3 because _bring_face_up_preserve_front
+        in NxNCenters uses wide moves (B[1:n]) instead of whole-cube rotations,
+        which breaks edge positions. TODO: Fix CageCenters to use Z rotations.
 
         Odd cubes have no parity issues.
         """
@@ -392,17 +393,17 @@ class CageNxNSolver(Solver):
         if not self._are_edges_solved():
             self._nxn_edges.solve()
 
-        # Phase 2: Solve 3x3 skeleton
+        # Phase 2: Solve 3x3 skeleton (the "cage")
         self._solve_3x3()
 
-        # Phase 3: Fill the cage (solve centers)
-        # CageCenters disables _swap_slice which would break edge pairing
-        # Commutators preserve pairing but may move edges
+        # Phase 3: Fill the cage (solve centers with commutators)
+        # CageCenters only uses _block_communicator which preserves edges
         if not self._are_centers_solved():
             self._cage_centers.solve()
 
         # Phase 4: Re-solve 3x3 skeleton
-        # Commutators moved edges, so re-solve to get correct positions
+        # TODO: Remove this once CageCenters uses whole-cube rotations
+        # Currently needed because _bring_face_up_preserve_front breaks edges
         self._solve_3x3()
 
     def _solve_3x3_with_parity(self, sr: SolverResults, is_even: bool) -> None:

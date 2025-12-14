@@ -23,11 +23,11 @@ if TYPE_CHECKING:
 # =============================================================================
 
 # Cube sizes to test (start with 3, can extend to [3, 4, 5] later)
-CUBE_SIZES: list[int] = [3, 4, 5, 6, 7]
+CUBE_SIZES: list[int] = [3, 4,5,8]
 
 # Predefined scramble seeds for reproducible tests
 # Each seed produces the same scramble every time
-PREDEFINED_SCRAMBLE_SEEDS: list[int] = [101, 202]#, 303]
+PREDEFINED_SCRAMBLE_SEEDS: list[int] = [101, 202, 303]
 
 
 # =============================================================================
