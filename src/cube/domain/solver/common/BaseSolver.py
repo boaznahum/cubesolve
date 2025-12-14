@@ -5,6 +5,7 @@ from cube.domain.model.Cube import Cube
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
+from .AbstractSolver import AbstractSolver
 from .. import Solver
 
 if TYPE_CHECKING:
@@ -13,16 +14,13 @@ if TYPE_CHECKING:
 _Common: TypeAlias = "CommonOp"
 
 
-class BaseSolver(Solver, ABC):
+class BaseSolver(AbstractSolver, ABC):
     __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override"]
 
     def __init__(self, op) -> None:
-        super().__init__()
-        self._op = op
-        self._cube = op.cube
+        super().__init__(op)
         from .CommonOp import CommonOp
         self.common: _Common = CommonOp(self)
-        self._debug_override: bool | None = None
 
     @property
     def is_solved(self):
@@ -42,20 +40,9 @@ class BaseSolver(Solver, ABC):
     def debug(self, *args):
         if self._is_debug_enabled:
             prefix = self.name + ":"
-            print("Solver:", prefix, *(str(x) for x in args) )
+            print("Solver:", prefix, *(str(x) for x in args))
 
             self.op.log("Solver:", prefix, *args)
-
-
-    @property
-    @final
-    def cube(self) -> Cube:
-        return self._cube
-
-    @property
-    @final
-    def op(self) -> OperatorProtocol:
-        return self._op
 
     @property
     @final

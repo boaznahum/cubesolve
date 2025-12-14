@@ -74,6 +74,10 @@ class SolverName(Enum):
         """Return the solver metadata."""
         return self.value
 
+    def __str__(self) -> str:
+        """Return string representation of the solver name."""
+        return self.display_name
+
     @classmethod
     def lookup(cls, name: str) -> "SolverName":
         """

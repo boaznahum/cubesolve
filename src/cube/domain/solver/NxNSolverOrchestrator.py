@@ -10,17 +10,18 @@ from cube.domain.exceptions import (
     EvenCubeCornerSwapException,
     InternalSWError,
 )
+from cube.domain.solver.SolverName import SolverName
+from cube.domain.solver.common.AbstractSolver import AbstractSolver
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReducerProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
-from cube.domain.solver.solver import Solver, SolveStep, SolverResults
-from cube.domain.solver.SolverName import SolverName
+from cube.domain.solver.solver import SolveStep, SolverResults
 
 if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
+    pass
 
 
-class NxNSolverOrchestrator(Solver):
+class NxNSolverOrchestrator(AbstractSolver):
     """
     Orchestrates NxN cube solving by composing:
     - A Reducer (NxN -> 3x3 reduction)
@@ -55,7 +56,7 @@ class NxNSolverOrchestrator(Solver):
             solver_3x3: Solver for 3x3 cube
             solver_name: Name identifier for this solver
         """
-        super().__init__()
+        super().__init__(op)
         self._op = op
         self._reducer = reducer
         self._solver_3x3 = solver_3x3
@@ -66,41 +67,6 @@ class NxNSolverOrchestrator(Solver):
     def get_code(self) -> SolverName:
         """Return solver identifier."""
         return self._solver_name
-
-    @property
-    def op(self) -> OperatorProtocol:
-        """The operator for cube manipulation."""
-        return self._op
-
-    @property
-    def _cube(self) -> "Cube":
-        """Internal access to the cube."""
-        return self._op.cube
-
-    @property
-    def is_solved(self) -> bool:
-        """Check if cube is solved."""
-        return self._cube.solved
-
-    @property
-    def is_debug_config_mode(self) -> bool:
-        """Whether debug mode is enabled in config."""
-        return self._cube.config.solver_debug
-
-    @property
-    def _is_debug_enabled(self) -> bool:
-        """Check if debug is currently enabled."""
-        if self._debug_override is None:
-            return self.is_debug_config_mode
-        else:
-            return self._debug_override
-
-    def _debug(self, *args) -> None:
-        """Print debug output if enabled."""
-        if self._is_debug_enabled:
-            prefix = f"Orchestrator[{self._solver_name.value}]:"
-            print("Solver:", prefix, *(str(x) for x in args))
-            self._op.log("Solver:", prefix, *args)
 
     @property
     def status(self) -> str:
@@ -213,7 +179,7 @@ class NxNSolverOrchestrator(Solver):
                 if self._cube.solved:
                     break
 
-                self._debug(f"@@@@ Iteration # {attempt}")
+                self.debug(f"@@@@ Iteration # {attempt}")
 
                 try:
                     if parity_detector is not None:
@@ -229,12 +195,12 @@ class NxNSolverOrchestrator(Solver):
                         self._solver_3x3.solve_3x3(debug, what)
 
                 except EvenCubeEdgeParityException:
-                    self._debug(f"Catch even edge parity in iteration #{attempt}")
+                    self.debug(f"Catch even edge parity in iteration #{attempt}")
                     if even_edge_parity_detected:
                         # Already fixed edge parity - this might be corner parity
                         # that Kociemba can't distinguish. Let CFOP handle it.
                         if parity_detector is not None:
-                            self._debug("Falling back to CFOP for remaining parity")
+                            self.debug("Falling back to CFOP for remaining parity")
                             parity_detector.solve_3x3(debug, what)
                             break
                         raise InternalSWError("already even_edge_parity_was_detected")
@@ -244,7 +210,7 @@ class NxNSolverOrchestrator(Solver):
                     continue  # retry
 
                 except EvenCubeCornerSwapException:
-                    self._debug(f"Catch corner swap in iteration #{attempt}")
+                    self.debug(f"Catch corner swap in iteration #{attempt}")
                     if corner_swap_detected:
                         raise InternalSWError("already even_corner_swap_was_detected")
                     corner_swap_detected = True
@@ -270,6 +236,6 @@ class NxNSolverOrchestrator(Solver):
 
         # Report parity results
         if sr.has_parity:
-            self._debug(sr.parity_summary())
+            self.debug(sr.parity_summary())
 
         return sr
