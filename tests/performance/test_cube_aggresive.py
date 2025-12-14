@@ -15,8 +15,13 @@ def _get_default_solver() -> SolverName:
     return SolverName.lookup(config.DEFAULT_SOLVER)
 
 
+def _size_id(size: int) -> str:
+    """Generate test ID including solver name from config."""
+    return f"{config.DEFAULT_SOLVER}-size_{size}"
+
+
 @pytest.mark.slow
-@pytest.mark.parametrize("cube_size", config.AGGRESSIVE_TEST_NUMBER_SIZES, ids=lambda s: f"size_{s}")
+@pytest.mark.parametrize("cube_size", config.AGGRESSIVE_TEST_NUMBER_SIZES, ids=_size_id)
 def test_aggressive_multiple_sizes(cube_size: int) -> None:
     """Test default solver across multiple cube sizes with multiple scrambles."""
     solver_name = _get_default_solver()
