@@ -17,7 +17,7 @@ def _get_default_solver() -> SolverName:
 
 def _size_id(size: int) -> str:
     """Generate test ID including solver name from config."""
-    return f"{config.DEFAULT_SOLVER}-size_{size}"
+    return f"{_get_default_solver().display_name}-size_{size}"
 
 
 @pytest.mark.slow
