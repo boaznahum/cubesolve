@@ -12,13 +12,15 @@ class SolverMeta:
     Reasons are checked in priority order (top to bottom).
     None = supported, string = skip reason.
 
-    1. not_testable - if set, skip all tests
+    0. implemented - if False, solver is not available (app or tests)
+    1. not_testable - if set, skip all tests (but solver may work in app)
     2. only_3x3 - if set, skip non-3x3 tests
     3. skip_3x3 - if set, skip 3x3 tests
     4. skip_even - if set, skip even-sized cube tests (4x4, 6x6, ...)
     5. skip_odd - if set, skip odd-sized cube tests (5x5, 7x7, ...)
     """
     display_name: str
+    implemented: bool = True  # If False, solver not available anywhere
     not_testable: str | None = None
     only_3x3: str | None = None
     skip_3x3: str | None = None
@@ -31,6 +33,8 @@ class SolverMeta:
 
         Returns skip reason string if should skip, None if supported.
         """
+        if not self.implemented:
+            return "Not implemented"
         if self.not_testable:
             return self.not_testable
         if self.only_3x3 and cube_size != 3:
@@ -58,7 +62,7 @@ class SolverName(Enum):
     LBL = SolverMeta("LBL")
     CFOP = SolverMeta("CFOP", only_3x3="CFOP use same reducer as LBL")
     KOCIEMBA = SolverMeta("Kociemba")
-    CAGE = SolverMeta("Cage", not_testable="Not implemented yet")  # Cage method: edges+corners first, centers last (parity-free)
+    CAGE = SolverMeta("Cage", implemented=False)  # Cage method: edges+corners first, centers last (parity-free)
 
     @property
     def display_name(self) -> str:

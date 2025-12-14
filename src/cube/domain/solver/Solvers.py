@@ -94,13 +94,19 @@ class Solvers:
 
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
-        """Get the next solver in rotation."""
-        _ids = [*SolverName]
-        index = _ids.index(current)
+        """Get the next solver in rotation (skips unimplemented solvers)."""
+        all_solvers = [*SolverName]
+        index = all_solvers.index(current)
 
-        next_s = _ids[(index + 1) % len(_ids)]
+        # Find next implemented solver
+        for _ in range(len(all_solvers)):
+            index = (index + 1) % len(all_solvers)
+            candidate = all_solvers[index]
+            if candidate.meta.implemented:
+                return cls.by_name(candidate, op)
 
-        return cls.by_name(next_s, op)
+        # All solvers are unimplemented (shouldn't happen)
+        raise InternalSWError("No implemented solvers available")
 
     @classmethod
     def by_name(cls, solver_id: SolverName, op: OperatorProtocol) -> Solver:
