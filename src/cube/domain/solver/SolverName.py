@@ -57,7 +57,7 @@ class SolverName(Enum):
     """
     LBL = SolverMeta("LBL")
     CFOP = SolverMeta("CFOP", only_3x3="CFOP use same reducer as LBL")
-    KOCIEMBA = SolverMeta("Kociemba", only_3x3="Kociemba algorithm only works on 3x3")
+    KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage", not_testable="Not implemented yet")  # Cage method: edges+corners first, centers last (parity-free)
 
     @property
