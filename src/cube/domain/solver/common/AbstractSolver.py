@@ -12,12 +12,13 @@ class AbstractSolver(Solver, ABC):
     """Abstract base class for all solvers."""
     __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override"]
 
-    def __init__(self, op) -> None:
+    def __init__(self, op: OperatorProtocol) -> None:
         super().__init__()
         self._op = op
         self._cube = op.cube
         self._debug_override: bool | None = None
 
+    @final
     @property
     def is_solved(self):
         return self._cube.solved
@@ -26,6 +27,7 @@ class AbstractSolver(Solver, ABC):
     def is_debug_config_mode(self) -> bool:
         return self._cube.config.solver_debug
 
+
     @property
     def _is_debug_enabled(self) -> bool:
         if self._debug_override is None:
@@ -33,8 +35,13 @@ class AbstractSolver(Solver, ABC):
         else:
             return self._debug_override
 
+    @property
+    def is_debug_enabled(self):
+        return self.op.app_state.is_debug(self._is_debug_enabled)
+
     def debug(self, *args):
-        if self._is_debug_enabled:
+
+        if self.is_debug_enabled:
             prefix = self.name + ":"
             print("Solver:", prefix, *(str(x) for x in args))
 

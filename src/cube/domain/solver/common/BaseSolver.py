@@ -22,27 +22,7 @@ class BaseSolver(AbstractSolver, ABC):
         from .CommonOp import CommonOp
         self.common: _Common = CommonOp(self)
 
-    @property
-    def is_solved(self):
-        return self._cube.solved
 
-    @property
-    def is_debug_config_mode(self) -> bool:
-        return self._cube.config.solver_debug
-
-    @property
-    def _is_debug_enabled(self) -> bool:
-        if self._debug_override is None:
-            return self.is_debug_config_mode
-        else:
-            return self._debug_override
-
-    def debug(self, *args):
-        if self._is_debug_enabled:
-            prefix = self.name + ":"
-            print("Solver:", prefix, *(str(x) for x in args))
-
-            self.op.log("Solver:", prefix, *args)
 
     @property
     @final

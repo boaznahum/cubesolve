@@ -112,6 +112,32 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
 
         return sr
 
+    def solve(
+            self,
+            debug: bool | None = None,
+            animation: bool | None = True,
+            what: SolveStep = SolveStep.ALL
+    ) -> SolverResults:
+        """
+        Solve the cube (Solver interface).
+
+        This method exists for backward compatibility and direct usage.
+        For NxN cubes, use NxNSolverOrchestrator instead.
+
+        Args:
+            debug: Enable debug output
+            animation: Enable animation
+            what: Which step to solve
+
+        Returns:
+            SolverResults with solve metadata
+        """
+        if debug is None:
+            debug = self._is_debug_enabled
+
+        with self._op.with_animation(animation=animation):
+            return self.solve_3x3(debug, what)
+
     @property
     def status_3x3(self) -> str:
         """Human-readable 3x3 solving status."""
@@ -165,31 +191,7 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
         """Human-readable solver status."""
         return self.status_3x3
 
-    def solve(
-        self,
-        debug: bool | None = None,
-        animation: bool | None = True,
-        what: SolveStep = SolveStep.ALL
-    ) -> SolverResults:
-        """
-        Solve the cube (Solver interface).
 
-        This method exists for backward compatibility and direct usage.
-        For NxN cubes, use NxNSolverOrchestrator instead.
-
-        Args:
-            debug: Enable debug output
-            animation: Enable animation
-            what: Which step to solve
-
-        Returns:
-            SolverResults with solve metadata
-        """
-        if debug is None:
-            debug = self._is_debug_enabled
-
-        with self._op.with_animation(animation=animation):
-            return self.solve_3x3(debug, what)
 
     def detect_edge_parity(self) -> bool | None:
         """

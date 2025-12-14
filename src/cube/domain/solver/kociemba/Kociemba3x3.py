@@ -130,6 +130,8 @@ import kociemba  # type: ignore[import-not-found]
 from cube.domain.algs._parser import parse_alg
 from cube.domain.exceptions import EvenCubeEdgeParityException
 from cube.domain.model.cube_boy import Color, FaceName
+from cube.domain.solver.SolverName import SolverName
+from cube.domain.solver.common.AbstractSolver import AbstractSolver
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
 from cube.domain.solver.solver import SolveStep, SolverResults
@@ -150,7 +152,7 @@ _FACE_ORDER: list[FaceName] = [
 ]
 
 
-class Kociemba3x3(Solver3x3Protocol):
+class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
     """
     Pure 3x3 solver using Kociemba's two-phase algorithm.
 
@@ -164,40 +166,21 @@ class Kociemba3x3(Solver3x3Protocol):
     Note: Works on actual 3x3 cubes OR reduced NxN cubes (treated as virtual 3x3).
     """
 
+
+
     __slots__ = ["_op", "_debug_override"]
 
     def __init__(self, op: OperatorProtocol) -> None:
+        super().__init__(op)
+        self._op = op
         self._op = op
         self._debug_override: bool | None = None
 
     @property
-    def op(self) -> OperatorProtocol:
-        """The operator for cube manipulation."""
-        return self._op
+    def get_code(self) -> SolverName:
+        """Return solver identifier."""
+        return SolverName.KOCIEMBA
 
-    @property
-    def _cube(self) -> "Cube":
-        """Internal access to the cube."""
-        return self._op.cube
-
-    @property
-    def is_solved(self) -> bool:
-        """Check if cube is solved."""
-        return self._cube.solved
-
-    @property
-    def _is_debug_enabled(self) -> bool:
-        """Check if debug is currently enabled."""
-        if self._debug_override is None:
-            return self._cube.config.solver_debug
-        else:
-            return self._debug_override
-
-    def _debug(self, *args) -> None:
-        """Print debug output if enabled."""
-        if self._is_debug_enabled:
-            print("Solver: Kociemba3x3:", *(str(x) for x in args))
-            self._op.log("Solver: Kociemba3x3:", *args)
 
     @property
     def status_3x3(self) -> str:
@@ -205,6 +188,10 @@ class Kociemba3x3(Solver3x3Protocol):
         if self._cube.solved:
             return "Solved"
         return "Unsolved (Kociemba)"
+
+    @property
+    def status(self) -> str:
+        return self.status_3x3
 
     @property
     def can_detect_parity(self) -> bool:
@@ -245,7 +232,7 @@ class Kociemba3x3(Solver3x3Protocol):
             cube_string = self._cube_to_kociemba_string(self._cube)
 
             if debug:
-                self._debug("Cube state:", cube_string)
+                self.debug("Cube state:", cube_string)
 
             # Get solution from Kociemba
             try:
@@ -254,15 +241,16 @@ class Kociemba3x3(Solver3x3Protocol):
                 # Invalid cube string usually means edge parity on even cubes
                 # The orchestrator will catch this, fix parity, and retry
                 if debug:
-                    self._debug("Invalid cube state (likely parity):", str(e))
+                    self.debug("Invalid cube state (likely parity):", str(e))
+                    #it is a bug we must not reach here orchstrator must handle it
                 raise EvenCubeEdgeParityException(
                     "Kociemba: Invalid cube state - likely edge parity on even cube"
                 ) from e
 
-            if debug:
-                self._debug("Solution:", solution)
+            if self.is_debug_enabled:
+                self.debug("Solution:", solution)
                 move_count = len(solution.split())
-                self._debug("Move count:", move_count)
+                self.debug("Move count:", move_count)
 
             # Parse and execute the solution
             if solution:
@@ -273,6 +261,32 @@ class Kociemba3x3(Solver3x3Protocol):
             self._debug_override = _d
 
         return sr
+
+    def solve(
+            self,
+            debug: bool | None = None,
+            animation: bool | None = True,
+            what: SolveStep = SolveStep.ALL
+    ) -> SolverResults:
+        """
+        Solve the cube (Solver interface).
+
+        This method exists for backward compatibility and direct usage.
+        For NxN cubes, use NxNSolverOrchestrator instead.
+
+        Args:
+            debug: Enable debug output
+            animation: Enable animation
+            what: Which step to solve
+
+        Returns:
+            SolverResults with solve metadata
+        """
+        if debug is None:
+            debug = self._is_debug_enabled
+
+        with self._op.with_animation(animation=animation):
+            return self.solve_3x3(debug, what)
 
     def _cube_to_kociemba_string(self, cube: Cube) -> str:
         """

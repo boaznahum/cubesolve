@@ -394,9 +394,5 @@ class Operator(OperatorProtocol):
         self._aborted = True
 
     @property
-    def app_state(self) -> ApplicationAndViewState:
-        return self._app_state
-
-    @property
     def annotation(self) -> "OpAnnotation":
         return self._annotation

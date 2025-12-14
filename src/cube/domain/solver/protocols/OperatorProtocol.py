@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from abc import ABCMeta
 from collections.abc import Sequence
-from contextlib import contextmanager
 from typing import Protocol, TYPE_CHECKING, Any, ContextManager
+
+from cube.application.state import ApplicationAndViewState
 
 if TYPE_CHECKING:
     from cube.domain.algs.Alg import Alg
@@ -12,7 +14,7 @@ if TYPE_CHECKING:
     from .AnnotationProtocol import AnnotationProtocol
 
 
-class OperatorProtocol(Protocol):
+class OperatorProtocol(Protocol, metaclass=ABCMeta):
     """
     Protocol defining what domain solvers need from an operator.
 
@@ -69,4 +71,9 @@ class OperatorProtocol(Protocol):
     @property
     def animation_enabled(self) -> bool:
         """Whether animation is enabled."""
+        ...
+
+    @property
+    def app_state(self) -> ApplicationAndViewState:
+        """Application and view state."""
         ...
