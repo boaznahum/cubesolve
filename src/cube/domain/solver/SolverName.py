@@ -1,4 +1,29 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from enum import unique, Enum
+
+
+@dataclass(frozen=True)
+class SolverMeta:
+    """
+    Metadata for a solver, including test configuration.
+
+    Reasons are checked in priority order (top to bottom).
+    None = supported, string = skip reason.
+
+    1. not_testable - if set, skip all tests
+    2. only_3x3 - if set, skip non-3x3 tests
+    3. skip_3x3 - if set, skip 3x3 tests
+    4. skip_even - if set, skip even-sized cube tests (4x4, 6x6, ...)
+    5. skip_odd - if set, skip odd-sized cube tests (5x5, 7x7, ...)
+    """
+    display_name: str
+    not_testable: str | None = None
+    only_3x3: str | None = None
+    skip_3x3: str | None = None
+    skip_even: str | None = None
+    skip_odd: str | None = None
 
 
 @unique
@@ -9,11 +34,23 @@ class SolverName(Enum):
     IMPORTANT: When modifying this enum (adding/removing solvers), you MUST also update:
     - src/cube/application/_config.py: Update the DEFAULT_SOLVER comment with available names
     - src/cube/domain/solver/Solvers.py: Update the by_name() match statement
+
+    Each enum value contains SolverMeta with test skip reasons (None = supported).
     """
-    LBL = "LBL"
-    CFOP = "CFOP"
-    KOCIEMBA = "Kociemba"  # Near-optimal solver (18-22 moves)
-    CAGE = "Cage"  # Cage method: edges+corners first, centers last (parity-free)
+    LBL = SolverMeta("LBL")
+    CFOP = SolverMeta("CFOP", only_3x3="CFOP use same reducer as LBL")
+    KOCIEMBA = SolverMeta("Kociemba", only_3x3="Kociemba algorithm only works on 3x3")
+    CAGE = SolverMeta("Cage", not_testable="Not implemented yet")  # Cage method: edges+corners first, centers last (parity-free)
+
+    @property
+    def display_name(self) -> str:
+        """Return the display name of the solver."""
+        return self.value.display_name
+
+    @property
+    def meta(self) -> SolverMeta:
+        """Return the solver metadata."""
+        return self.value
 
     @classmethod
     def lookup(cls, name: str) -> "SolverName":
@@ -38,19 +75,19 @@ class SolverName(Enum):
 
         # Try exact match first (case-insensitive)
         for solver in cls:
-            if solver.value.lower() == name_lower:
+            if solver.display_name.lower() == name_lower:
                 return solver
 
         # Try prefix match
         matches: list[SolverName] = []
         for solver in cls:
-            if solver.value.lower().startswith(name_lower):
+            if solver.display_name.lower().startswith(name_lower):
                 matches.append(solver)
 
         if len(matches) == 1:
             return matches[0]
         elif len(matches) > 1:
-            match_names = ", ".join(s.value for s in matches)
+            match_names = ", ".join(s.display_name for s in matches)
             raise ValueError(
                 f"Ambiguous solver name '{name}' matches: {match_names}. "
                 f"Available: {cls.available_names()}"
@@ -63,4 +100,4 @@ class SolverName(Enum):
     @classmethod
     def available_names(cls) -> str:
         """Return comma-separated list of available solver names."""
-        return ", ".join(s.value for s in cls)
+        return ", ".join(s.display_name for s in cls)

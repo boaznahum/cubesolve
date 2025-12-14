@@ -25,6 +25,7 @@ from tests.solvers.conftest import (
     get_scramble_params,
     get_solver_names,
     get_cube_sizes,
+    skip_if_not_supported,
 )
 
 
@@ -57,6 +58,9 @@ class TestAllSolvers:
             session_random_seed: Unique random seed for this test session
             test_sp: Test service provider fixture
         """
+        # Check if solver supports this cube size (skip with reason if not)
+        skip_if_not_supported(solver_name, cube_size)
+
         # Determine actual seed (use session random if not predefined)
         actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
 
