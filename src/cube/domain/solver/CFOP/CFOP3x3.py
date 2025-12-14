@@ -57,6 +57,11 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
         """Return solver identifier."""
         return SolverName.CFOP
 
+    @property
+    def can_detect_parity(self) -> bool:
+        """CFOP3x3 detects parity via exceptions in OLL/PLL."""
+        return True
+
     def solve_3x3(
         self,
         debug: bool = False,

@@ -59,6 +59,11 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         """Return solver identifier."""
         return SolverName.LBL
 
+    @property
+    def can_detect_parity(self) -> bool:
+        """BeginnerSolver3x3 detects parity via exceptions in L3Cross/L3Corners."""
+        return True
+
     def solve_3x3(
         self,
         debug: bool = False,

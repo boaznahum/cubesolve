@@ -206,6 +206,11 @@ class Kociemba3x3(Solver3x3Protocol):
             return "Solved"
         return "Unsolved (Kociemba)"
 
+    @property
+    def can_detect_parity(self) -> bool:
+        """Kociemba cannot detect parity - it just fails with invalid cube state."""
+        return False
+
     def solve_3x3(
         self,
         debug: bool = False,

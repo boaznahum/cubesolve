@@ -30,6 +30,20 @@ class Solver3x3Protocol(Protocol):
         """The operator for cube manipulation."""
         ...
 
+    @property
+    def can_detect_parity(self) -> bool:
+        """
+        Whether this solver can detect parity via exceptions during solve_3x3().
+
+        If True: solve_3x3() will raise EvenCubeEdgeParityException or
+                 EvenCubeCornerSwapException when parity is encountered.
+                 Orchestrator can use exception-retry loop.
+
+        If False: solve_3x3() cannot detect parity (e.g., Kociemba just fails).
+                  Orchestrator must pre-detect and fix parity before calling.
+        """
+        ...
+
     def solve_3x3(
         self,
         debug: bool = False,
