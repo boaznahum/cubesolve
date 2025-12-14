@@ -31,16 +31,36 @@ class SolverResults:
         self._was_even_edge_parity = False
 
     @property
-    def was_corner_swap(self):
+    def was_corner_swap(self) -> bool:
         return self._was_corner_swap
 
     @property
-    def was_even_edge_parity(self):
+    def was_even_edge_parity(self) -> bool:
         return self._was_even_edge_parity
 
     @property
-    def was_partial_edge_parity(self):
+    def was_partial_edge_parity(self) -> bool:
         return self._was_partial_edge_parity
+
+    @property
+    def has_parity(self) -> bool:
+        """Check if any parity was detected."""
+        return (self._was_corner_swap or
+                self._was_even_edge_parity or
+                self._was_partial_edge_parity)
+
+    def parity_summary(self) -> str:
+        """Return a summary of detected parities."""
+        parities: list[str] = []
+        if self._was_even_edge_parity:
+            parities.append("Edge(OLL)")
+        if self._was_corner_swap:
+            parities.append("Corner(PLL)")
+        if self._was_partial_edge_parity:
+            parities.append("PartialEdge")
+        if parities:
+            return "Parity: " + ", ".join(parities)
+        return "Parity: None"
 
 
 class Solver(ABC):

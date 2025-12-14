@@ -268,4 +268,8 @@ class NxNSolverOrchestrator(Solver):
         if partial_edge_detected:
             sr._was_partial_edge_parity = True
 
+        # Report parity results
+        if sr.has_parity:
+            self._debug(sr.parity_summary())
+
         return sr
