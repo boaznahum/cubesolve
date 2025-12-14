@@ -17,12 +17,18 @@ def run_solvers_sizes(solvers: Collection[SolverName], cube_sizes: Collection[in
                       first_scramble_key: Any,
                       number_of_loops: int, debug: bool):
     for cube_size in cube_sizes:
-        for SolverName in solvers:
+        for solver_name in solvers:
+            # Check if solver supports this cube size
+            skip_reason = solver_name.meta.get_skip_reason(cube_size)
+            if skip_reason:
+                print(f"SKIP: {solver_name.display_name} size={cube_size}: {skip_reason}")
+                continue
+
             cube = Cube(cube_size, sp=_test_sp)
             config = AppConfig()
             vs = ApplicationAndViewState(config)
             op: Operator = Operator(cube, vs)
-            slv: Solver = Solvers.by_name(SolverName, op)
+            slv: Solver = Solvers.by_name(solver_name, op)
 
             run_tests(slv, first_scramble_key,
                                  number_of_loops,

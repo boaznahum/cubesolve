@@ -25,6 +25,24 @@ class SolverMeta:
     skip_even: str | None = None
     skip_odd: str | None = None
 
+    def get_skip_reason(self, cube_size: int) -> str | None:
+        """
+        Check if solver should be skipped for given cube size.
+
+        Returns skip reason string if should skip, None if supported.
+        """
+        if self.not_testable:
+            return self.not_testable
+        if self.only_3x3 and cube_size != 3:
+            return self.only_3x3
+        if self.skip_3x3 and cube_size == 3:
+            return self.skip_3x3
+        if self.skip_even and cube_size != 3 and cube_size % 2 == 0:
+            return self.skip_even
+        if self.skip_odd and cube_size != 3 and cube_size % 2 == 1:
+            return self.skip_odd
+        return None
+
 
 @unique
 class SolverName(Enum):

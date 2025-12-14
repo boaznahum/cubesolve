@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from cube.domain.solver.SolverName import SolverName, SolverMeta
+from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:
     pass
@@ -63,47 +63,9 @@ def all_solver_names() -> list[SolverName]:
 # Solver Skip Logic
 # =============================================================================
 
-def check_solver_skip(solver_name: SolverName, cube_size: int) -> str | None:
-    """
-    Check if a solver should be skipped for a given cube size.
-
-    Returns skip reason if should skip, None otherwise.
-
-    Checks reasons in priority order:
-    1. not_testable
-    2. only_3x3
-    3. skip_3x3
-    4. skip_even
-    5. skip_odd
-    """
-    meta: SolverMeta = solver_name.meta
-
-    # 1. Check if not testable at all
-    if meta.not_testable:
-        return meta.not_testable
-
-    # 2. Check if solver only supports 3x3
-    if meta.only_3x3 and cube_size != 3:
-        return meta.only_3x3
-
-    # 3. Check if 3x3 should be skipped
-    if meta.skip_3x3 and cube_size == 3:
-        return meta.skip_3x3
-
-    # 4. Check even-sized cubes (4x4, 6x6, 8x8, ...)
-    if meta.skip_even and cube_size != 3 and cube_size % 2 == 0:
-        return meta.skip_even
-
-    # 5. Check odd-sized cubes > 3 (5x5, 7x7, 9x9, ...)
-    if meta.skip_odd and cube_size != 3 and cube_size % 2 == 1:
-        return meta.skip_odd
-
-    return None
-
-
 def skip_if_not_supported(solver_name: SolverName, cube_size: int) -> None:
     """Skip test if solver doesn't support this cube size."""
-    skip_reason = check_solver_skip(solver_name, cube_size)
+    skip_reason = solver_name.meta.get_skip_reason(cube_size)
     if skip_reason:
         pytest.skip(skip_reason)
 
