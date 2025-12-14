@@ -13,13 +13,14 @@ from cube.domain.algs.SeqAlg import SeqAlg
 from cube.application.exceptions.app_exceptions import OpAborted
 from cube.application.state import ApplicationAndViewState
 from cube.domain.model.Cube import Cube
+from ...domain.solver.protocols.OperatorProtocol import OperatorProtocol
 
 if TYPE_CHECKING:
     from ..animation.AnimationManager import AnimationManager, OpProtocol
     from cube.application.commands.op_annotation import OpAnnotation
 
 
-class Operator:
+class Operator(OperatorProtocol):
     __slots__ = ["_cube",
                  "_history",
                  "_recording",
@@ -62,6 +63,10 @@ class Operator:
         # Get config from app_state
         cfg = app_state.config
         self._log_path = cfg.operation_log_path if cfg.operation_log else None
+
+    @property
+    def app_state(self) -> ApplicationAndViewState:
+        return self._app_state
 
     def check_clear_rais_abort(self):
         if self._aborted:
@@ -141,7 +146,8 @@ class Operator:
                     algs: list[SimpleAlg] = [*alg.flatten()]
 
                     if self._app_state.single_step_mode:
-                        self._app_state.debug_lazy(True, lambda: f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
+                        self._app_state.debug_lazy(True,
+                                                   lambda: f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
 
                     cube = self.cube
                     op = self.play
@@ -294,13 +300,33 @@ class Operator:
     @contextmanager
     def with_query_restore_state(self):
         """
-        Context manager for query operations with auto-rollback.
+        Context manager for "what-if" queries that auto-rollback cube state.
 
-        Combines:
-        - Que2ry mode (_in_query_mode = True, skips texture updates)
-        - Animation disabled
-        - Auto-rollback: undoes all moves on exit
-        - Supports nesting
+        Use this to test solving strategies, detect parity, or check conditions
+        without permanently modifying the cube. All moves made inside the context
+        are automatically undone on exit.
+
+        Behavior:
+            - Enables query mode (skips texture/GUI updates for performance)
+            - Disables animation
+            - Records history length on entry
+            - On exit: undoes all moves back to original state
+            - Supports nesting
+
+        Example:
+            with op.with_query_restore_state():
+                solver.solve()  # Try solving
+                if cube.solved:
+                    detected_parity = False
+            # Cube is back to original state here
+
+        Warning:
+            Direct cube manipulation (cube.rotate() without operator) inside
+            the context will NOT be rolled back - only operator moves are tracked.
+
+        See Also:
+            CubeQueries2.rotate_and_check: Similar but operates directly on cube
+            without operator (no history tracking).
         """
         cube = self._cube
 

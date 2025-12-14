@@ -193,11 +193,22 @@ class CubeQueries2:
 
     def rotate_and_check(self, alg: NSimpleAlg, pred: Callable[[], bool]) -> int:
         """
-        Apply and check condition
-        :param alg:
-        :param pred:
-        :return: number of rotation, -1 if check fails
-        restore cube state before returning, this is not count as solve step
+        Find how many times `alg` must be applied for `pred` to become True.
+
+        Checks predicate before each rotation, up to 4 times (0, 1, 2, 3 applications).
+        Cube state is always restored before returning (query mode - no side effects).
+
+        Args:
+            alg: The algorithm to apply repeatedly (typically a face rotation).
+            pred: Predicate to check after each rotation. Takes no args, returns bool.
+
+        Returns:
+            0-3: Number of times `alg` needs to be applied for `pred` to be True.
+            -1: Predicate never became True within 4 rotations.
+
+        Note:
+            Bypasses Operator - no history tracking. Similar to
+            Operator.with_query_restore_state but operates directly on cube.
         """
 
         n = 0
