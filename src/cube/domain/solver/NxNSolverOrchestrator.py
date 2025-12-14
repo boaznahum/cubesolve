@@ -217,8 +217,13 @@ class NxNSolverOrchestrator(Solver):
 
                 try:
                     if parity_detector is not None:
-                        # Use CFOP to detect parity (throws if parity exists)
-                        parity_detector.solve_3x3(debug, what)
+                        # Use CFOP to detect parity (in query mode - state restored)
+                        # please note it use smae slef._op
+                        with self._op.with_query_restore_state():
+                            parity_detector.solve_3x3(debug, what)
+                        # No exception - no parity, state restored
+                        # Now let actual solver solve
+                        self._solver_3x3.solve_3x3(debug, what)
                     else:
                         # Solver can detect parity itself
                         self._solver_3x3.solve_3x3(debug, what)
@@ -226,6 +231,12 @@ class NxNSolverOrchestrator(Solver):
                 except EvenCubeEdgeParityException:
                     self._debug(f"Catch even edge parity in iteration #{attempt}")
                     if even_edge_parity_detected:
+                        # Already fixed edge parity - this might be corner parity
+                        # that Kociemba can't distinguish. Let CFOP handle it.
+                        if parity_detector is not None:
+                            self._debug("Falling back to CFOP for remaining parity")
+                            parity_detector.solve_3x3(debug, what)
+                            break
                         raise InternalSWError("already even_edge_parity_was_detected")
                     even_edge_parity_detected = True
                     self._reducer.fix_edge_parity()
