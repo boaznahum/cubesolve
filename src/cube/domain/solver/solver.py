@@ -52,7 +52,7 @@ class Solver(ABC):
 
     @property
     def name(self) -> str:
-        return str(self.get_code.value)
+        return self.get_code.display_name
 
     @abstractmethod
     def solve(self, debug: bool | None = None, animation: bool | None = True,
