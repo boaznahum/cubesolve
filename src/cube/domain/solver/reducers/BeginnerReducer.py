@@ -59,7 +59,7 @@ class BeginnerReducer(ReducerProtocol):
     of implementations inheriting from protocols.
     """
 
-    __slots__ = ["_op", "_solver_facade", "_nxn_centers", "_nxn_edges"]
+    __slots__ = ["_op", "_solver_facade", "_nxn_centers", "_nxn_edges", "_l3_corners"]
 
     def __init__(
         self,
@@ -76,15 +76,17 @@ class BeginnerReducer(ReducerProtocol):
         """
         self._op = op
 
-        # Create minimal solver facade for NxNCenters/NxNEdges
+        # Create minimal solver facade for NxNCenters/NxNEdges/L3Corners
         self._solver_facade = _ReducerSolverFacade(op)
 
         # Import here to avoid circular imports
         from cube.domain.solver.beginner.NxNCenters import NxNCenters
         from cube.domain.solver.beginner.NxNEdges import NxNEdges
+        from cube.domain.solver.beginner.L3Corners import L3Corners
 
         self._nxn_centers = NxNCenters(self._solver_facade)
         self._nxn_edges = NxNEdges(self._solver_facade, advanced_edge_parity)
+        self._l3_corners = L3Corners(self._solver_facade)
 
     @property
     def op(self) -> OperatorProtocol:
@@ -152,6 +154,18 @@ class BeginnerReducer(ReducerProtocol):
         during L3 solving.
         """
         self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+
+    def fix_corner_parity(self) -> None:
+        """Fix even cube corner swap parity (PLL parity).
+
+        Called by orchestrator when 3x3 solver detects corner swap parity.
+        Uses inner slice moves to swap two diagonal corners.
+
+        Note:
+            After this fix, a re-reduction is typically needed because the
+            inner slice moves disturb the reduced edge pairing.
+        """
+        self._l3_corners._do_corner_swap()
 
     def centers_solved(self) -> bool:
         """Check if centers are reduced."""

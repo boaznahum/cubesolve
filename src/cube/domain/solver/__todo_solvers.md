@@ -1,21 +1,23 @@
 # Solver TODOs
 
-- Make sure all queries use new context manager in Operator that suspends animation and undoes operations
+## CFOP parity detection (TODO)
 
-find ead code in solvers
+CFOP doesn't detect and raise parity exceptions like BeginnerSolver3x3 does:
+- **Edge parity (OLL):** CFOP silently fixes it in `OLL._check_and_do_oll_edge_parity()`
+  instead of raising `EvenCubeEdgeParityException`
+- **Corner parity (PLL):** Similar issue - CFOP fixes instead of raising
+  `EvenCubeCornerSwapException`
 
-bug !!!
-        try:
-                solution = kociemba.solve(cube_string)
-            except ValueError as e:
-                # Invalid cube string usually means edge parity on even cubes
-                # The orchestrator will catch this, fix parity, and retry
-                if debug:
-                    self.debug("Invalid cube state (likely parity):", str(e))
-                    #it is a bug we must not reach here orchstrator must handle it
-                raise EvenCubeEdgeParityException(
-                    "Kociemba: Invalid cube state - likely edge parity on even cube"
-                ) from e
+For now, the orchestrator uses BeginnerSolver3x3 as the parity detector.
+To use CFOP as parity detector, it needs to be modified to raise exceptions
+instead of silently fixing parity.
+
+See: `OLL.py` lines 108-126 (`_check_and_do_oll_edge_parity`)
+
+---
+
+find dead code in solvers
+
 
 
 why we need bith solve and  solve_3x3 ??

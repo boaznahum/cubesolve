@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cube.domain.solver.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
+
 from cube.domain.exceptions import (
     OpAborted,
     EvenCubeEdgeParityException,
@@ -29,8 +31,12 @@ class NxNSolverOrchestrator(AbstractSolver):
 
     Handles parity exceptions by:
     1. Catching EvenCubeEdgeParityException and calling reducer.fix_edge_parity()
-    2. Catching EvenCubeCornerSwapException and retrying (swap done by solver)
+    2. Catching EvenCubeCornerSwapException and calling reducer.fix_corner_parity()
     3. Retrying the solve after fixing parity
+
+    Parity detection uses a helper solver (BeginnerSolver3x3) in query mode with
+    dont_fix_corner_parity flag, so it detects parity without fixing it. The
+    orchestrator then handles the fix via the reducer.
 
     This design allows:
     - Any reducer to work with any 3x3 solver
@@ -169,7 +175,7 @@ class NxNSolverOrchestrator(AbstractSolver):
 
             if use_cfop_for_parity:
                 from cube.domain.solver.CFOP.CFOP3x3 import CFOP3x3
-                parity_detector: CFOP3x3 | None = CFOP3x3(self._op)
+                parity_detector: Solver3x3Protocol | None = BeginnerSolver3x3(self._op)
             else:
                 parity_detector = None
 
@@ -183,10 +189,13 @@ class NxNSolverOrchestrator(AbstractSolver):
 
                 try:
                     if parity_detector is not None:
-                        # Use CFOP to detect parity (in query mode - state restored)
-                        # please note it use smae slef._op
+                        # Use parity detector (in query mode - state restored after)
+                        # Note: with_dont_fix_corner_parity() prevents the solver from
+                        # fixing corner parity internally - it will just raise the exception
+                        # so the orchestrator can handle the fix after state restoration.
                         with self._op.with_query_restore_state():
-                            parity_detector.solve_3x3(debug, what)
+                            with self._cube.with_dont_fix_corner_parity():
+                                parity_detector.solve_3x3(debug, what)
                         # No exception - no parity, state restored
                         # Now let actual solver solve
                         self._solver_3x3.solve_3x3(debug, what)
@@ -214,6 +223,12 @@ class NxNSolverOrchestrator(AbstractSolver):
                     if corner_swap_detected:
                         raise InternalSWError("already even_corner_swap_was_detected")
                     corner_swap_detected = True
+                    # Only call fix_corner_parity if using separate parity detector
+                    # (in query mode with dont_fix_corner_parity flag).
+                    # If the solver can detect parity itself (BeginnerSolver3x3),
+                    # it already fixed the parity before raising the exception.
+                    if parity_detector is not None:
+                        self._reducer.fix_corner_parity()
                     self._reducer.reduce(debug)
                     continue  # retry
 

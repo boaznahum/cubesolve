@@ -78,6 +78,14 @@ class ReducerProtocol(Protocol):
         """
         ...
 
+    def fix_corner_parity(self) -> None:
+        """Fix even cube corner swap parity (PLL parity).
+
+        Called by orchestrator when 3x3 solver detects corner swap parity.
+        Uses inner slice moves to swap two diagonal corners.
+        """
+        ...
+
     def solve_centers(self) -> None:
         """Solve only centers (first part of reduction)."""
         ...

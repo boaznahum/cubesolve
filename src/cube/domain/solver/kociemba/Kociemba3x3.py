@@ -127,6 +127,7 @@ from typing import TYPE_CHECKING
 
 import kociemba  # type: ignore[import-not-found]
 
+from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs._parser import parse_alg
 from cube.domain.exceptions import EvenCubeEdgeParityException
 from cube.domain.model.cube_boy import Color, FaceName
@@ -243,8 +244,8 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
                 if debug:
                     self.debug("Invalid cube state (likely parity):", str(e))
                     #it is a bug we must not reach here orchstrator must handle it
-                raise EvenCubeEdgeParityException(
-                    "Kociemba: Invalid cube state - likely edge parity on even cube"
+                raise InternalSWError(
+                    "Kociemba: Invalid cube state - orchstrator must handle it"
                 ) from e
 
             if self.is_debug_enabled:

@@ -63,9 +63,9 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
         return True
 
     def solve_3x3(
-        self,
-        debug: bool = False,
-        what: SolveStep | None = None
+            self,
+            debug: bool = False,
+            what: SolveStep | None = None
     ) -> SolverResults:
         """
         Solve 3x3 cube using CFOP method.
@@ -190,8 +190,6 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
     def status(self) -> str:
         """Human-readable solver status."""
         return self.status_3x3
-
-
 
     def detect_edge_parity(self) -> bool | None:
         """
