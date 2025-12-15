@@ -221,13 +221,121 @@ FUNCTION orchestrator_solve(cube, what=ALL):
 
 ## Edge Parity Handling
 
-### Detection
+### Two Different Cases: Odd vs Even Cubes
+
+Edge parity is handled **differently** depending on cube size:
+
+| Cube Type | When Handled | Where Handled | Exception? |
+|-----------|--------------|---------------|------------|
+| **Odd (5x5, 7x7)** | During reduction | `NxNEdges.solve()` in reducer | No |
+| **Even (4x4, 6x6)** | During 3x3 solve | L3Cross → Orchestrator | Yes |
+
+---
+
+## Odd Cube Edge Parity (Handled in Reducer)
+
+### Why Odd Cubes Are Different
+
+On odd cubes, the **center slice of each edge is fixed** - it cannot be flipped. This gives us a reference point during edge pairing:
+
+```
+5x5 Edge cross-section:
+  [slice 0][slice 1][CENTER][slice 3][slice 4]
+                       ↑
+            Fixed reference - cannot be flipped
+```
+
+### Detection During Edge Pairing
+
+The reducer's `NxNEdges.solve()` detects parity when exactly **1 edge remains unsolved** after pairing 11 edges:
+
+```python
+# In BeginnerReducer._nxn_edges.solve()
+def solve(self) -> bool:
+    self._do_first_11()            # Pair first 11 edges
+
+    if self._is_solved():
+        return False               # All 12 paired - no parity
+
+    assert self._left_to_fix == 1   # 1 remaining = PARITY
+
+    self._do_last_edge_parity()     # Fix using simple or advanced algo
+
+    self._do_first_11()             # Re-pair if needed
+
+    return True                     # Signal: parity was fixed
+```
+
+### The Two Fix Algorithms
+
+**Controlled by `advanced_edge_parity` flag in reducer construction:**
+
+#### Simple Algorithm (`advanced_edge_parity=False`)
+
+```python
+# M-slice based - fast but disturbs edge pairing
+for _ in range(4):
+    M'[inner_slices] U2
+M'[inner_slices]
+```
+
+**After fix**: Some edges become unpaired → `_do_first_11()` re-pairs them.
+
+#### Advanced Algorithm (`advanced_edge_parity=True`)
+
+```python
+# R/L-slice based - preserves edge pairing
+# From https://speedcubedb.com/a/6x6/6x6L2E
+Rw' U2 Lw F2 Lw' F2 Rw2 U2 Rw U2 Rw' U2 F2 Rw2 F2
+```
+
+**After fix**: Edges remain paired → `_do_first_11()` finds nothing to do.
+
+### Flow in Orchestrator
+
+```
+Orchestrator._solve()
+    │
+    ├─→ reducer.reduce()
+    │       │
+    │       ├─→ solve_centers()
+    │       │
+    │       └─→ solve_edges()  ←── ODD CUBE PARITY HANDLED HERE
+    │               │
+    │               ├─ Pair 11 edges
+    │               ├─ If 1 remaining: FIX PARITY (no exception!)
+    │               ├─ Re-pair if needed (simple algo)
+    │               └─ Return True if parity was fixed
+    │
+    └─→ solver_3x3.solve_3x3()  ←── Cube is already parity-free
+```
+
+**Key point**: Orchestrator never sees odd cube parity - it's fully handled inside the reducer. The `reduce()` method returns `ReductionResults.partial_edge_parity_detected = True` for tracking.
+
+---
+
+## Even Cube Edge Parity (Handled by Orchestrator)
+
+### Why Even Cubes Need Special Handling
+
+On even cubes (4x4, 6x6), there's **no center slice** - all slices can be flipped:
+
+```
+4x4 Edge cross-section:
+  [slice 0][slice 1][slice 2][slice 3]
+         ↑
+  No fixed reference - ALL could be flipped!
+```
+
+If all slices are flipped identically, the edge **appears paired** during reduction but is actually "wrong" relative to the 3x3 structure.
+
+### Detection in L3Cross
 
 Same as before - L3Cross counts edges matching yellow face:
 - If n ∈ {0, 2, 4}: Valid 3x3 state
 - If n ∈ {1, 3}: Invalid → `EvenCubeEdgeParityException`
 
-### Fix
+### Fix by Orchestrator
 
 **Orchestrator catches exception and calls:**
 ```python
@@ -236,6 +344,44 @@ self._reducer.reduce(debug)       # Re-reduce (fix disturbs pairing)
 ```
 
 The fix is **position-independent** - can be done on any edge at any time.
+
+### Flow in Orchestrator
+
+```
+Orchestrator._solve()
+    │
+    ├─→ reducer.reduce()
+    │       │
+    │       └─→ solve_edges() returns False (no parity detected)
+    │           # Even cube full parity is INVISIBLE during pairing!
+    │
+    └─→ solver_3x3.solve_3x3()
+            │
+            └─→ L3Cross detects 1 or 3 edges flipped
+                    │
+                    └─→ Raises EvenCubeEdgeParityException
+                            │
+    ┌───────────────────────┘
+    │
+    ▼ (catch in orchestrator)
+    reducer.fix_edge_parity()   # Flip all inner slices
+    reducer.reduce()            # Re-reduce (edges disturbed)
+    RETRY solve_3x3()           # Now parity-free
+```
+
+---
+
+## Summary: Edge Parity Handling
+
+| Aspect | Odd Cube | Even Cube |
+|--------|----------|-----------|
+| **Reference point** | Center slice (fixed) | None |
+| **When detected** | During edge pairing | During L3Cross |
+| **Who detects** | Reducer (NxNEdges) | 3x3 Solver (L3Cross) |
+| **Exception?** | No | Yes (`EvenCubeEdgeParityException`) |
+| **Who fixes?** | Reducer (internally) | Orchestrator → Reducer |
+| **Re-reduction** | Maybe (simple) / No (advanced) | Always |
+| **Algorithm** | Simple OR Advanced (configurable) | Full edge flip only |
 
 ---
 

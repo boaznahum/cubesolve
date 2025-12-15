@@ -214,7 +214,147 @@ FUNCTION solve(cube, what=ALL):
 | **Partial (even cube)** | During last edge pairing | Use first slice (reversed) as guess | No |
 | **Full (even cube)** | During L3 Cross (1 or 3 edges flipped) | Flip all inner slices | Yes |
 
-### Detection Logic in L3Cross
+---
+
+## Odd Cube Edge Parity - Detailed Flow
+
+### Why Odd Cubes Are Different
+
+On odd cubes (5x5, 7x7, etc.), the **center slice of each edge is fixed** - it cannot be flipped because it's directly attached to the fixed center piece. This gives us a **reference point** during edge pairing.
+
+```
+5x5 Edge cross-section:
+  [slice 0][slice 1][CENTER][slice 3][slice 4]
+                       ↑
+            Fixed reference - cannot be flipped
+```
+
+**Key insight**: On odd cubes, we can DETECT parity during edge pairing because we know which slices are "wrong" (flipped relative to the center). On even cubes, there's no center reference, so all slices could be flipped the same way and we wouldn't know.
+
+### When Parity Is Detected
+
+Parity is detected in `NxNEdges.solve()` when exactly **1 edge remains unsolved** after solving the first 11:
+
+```python
+# NxNEdges.solve() - nxn_edges.py:48-72
+def solve(self) -> bool:
+    self._do_first_11()           # Solve first 11 edges
+
+    if self._is_solved():
+        return False              # All 12 solved - no parity
+
+    assert self._left_to_fix == 1  # Exactly 1 unsolved = PARITY!
+
+    self._do_last_edge_parity()    # Fix parity
+
+    self._do_first_11()            # Re-pair if needed (simple algo case)
+
+    assert self._is_solved()
+    return True                    # Parity was detected and fixed
+```
+
+### The Two Algorithms: Simple vs Advanced
+
+The `advanced_edge_parity` flag (set during `NxNEdges` construction) controls which algorithm is used:
+
+#### CASE 1: Simple Algorithm (`advanced_edge_parity=False`)
+
+Uses **M-slice** moves to flip the misoriented slices:
+
+```python
+# nxn_edges.py:426-431
+if not self._advanced_edge_parity:
+    # M-slice based algorithm
+    for _ in range(4):
+        M'[slices] U2
+    M'[slices]
+```
+
+**Consequence**: This algorithm **DISTURBS the edge pairing**. After the fix, some edges that were previously paired become unpaired again.
+
+**Flow after simple fix:**
+```
+1. Parity detected (1 edge unsolved)
+2. _do_last_edge_parity() flips slices using M-slice
+3. Edge pairing is disturbed!
+4. _do_first_11() is called AGAIN to re-pair edges
+5. Now all 12 edges solved
+```
+
+#### CASE 2: Advanced Algorithm (`advanced_edge_parity=True`)
+
+Uses **R/L-slice** moves that preserve edge pairing:
+
+```python
+# nxn_edges.py:432-453
+else:
+    # From https://speedcubedb.com/a/6x6/6x6L2E
+    # Rw' U2 Lw F2 Lw' F2 Rw2 U2 Rw U2 Rw' U2 F2 Rw2 F2
+
+    Rs = Algs.R[plus_one]  # Inner R slices
+    Ls = Algs.L[plus_one]  # Inner L slices
+
+    alg = Rs' U2 Ls F2 Ls' F2 Rs2 U2 Rs U2 Rs' U2 F2 Rs2 F2
+    self.op.play(alg)
+```
+
+**Consequence**: This algorithm **PRESERVES edge pairing**. No re-pairing needed.
+
+**Flow after advanced fix:**
+```
+1. Parity detected (1 edge unsolved)
+2. _do_last_edge_parity() flips slices using R/L-slice
+3. Edge pairing is PRESERVED
+4. _do_first_11() runs but finds all edges already solved
+5. Solve continues normally
+```
+
+### Slice Selection Logic
+
+The algorithm determines WHICH slices need to be flipped by comparing each slice to the center:
+
+```python
+# nxn_edges.py:389-411
+if n_slices % 2:  # ODD cube
+    required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
+    # Center slice is the reference - it's always "correct"
+
+for i in range(n_slices // 2):
+    s = edge.get_slice(i)
+    color = self._get_slice_ordered_color(face, s)
+    if color != required_color:
+        slices_indices_to_fix.append(i)  # This slice is flipped
+```
+
+### Why No Exception Is Thrown
+
+Unlike even cube full parity (which throws `EvenCubeEdgeParityException`), odd cube parity is handled **silently** during reduction:
+
+1. **No L3Cross involvement** - parity is fixed before 3x3 solving begins
+2. **Return value signals** - `solve()` returns `True` if parity was fixed
+3. **Results tracking** - `partial_edge_parity` flag is set for reporting
+
+```python
+# In BeginnerSolver._solve() - beginner_solver.py
+def _edges():
+    partial_edge_parity = self.nxn_edges.solve()  # True if parity fixed
+```
+
+### Summary: Odd vs Even Cube Edge Parity
+
+| Aspect | Odd Cube | Even Cube |
+|--------|----------|-----------|
+| **Reference point** | Center slice (fixed) | None |
+| **When detected** | During edge pairing | During L3Cross |
+| **Who detects** | NxNEdges | L3Cross |
+| **Exception?** | No - handled silently | Yes - `EvenCubeEdgeParityException` |
+| **Who fixes?** | NxNEdges | Orchestrator/BeginnerSolver |
+| **Re-reduction needed?** | Maybe (simple algo) or No (advanced algo) | Yes (always) |
+| **Algorithm choice** | Simple M-slice OR Advanced R/L-slice | Always uses full edge flip |
+
+---
+
+### Detection Logic in L3Cross (Even Cubes Only)
 
 ```python
 # Count edges with yellow facing up

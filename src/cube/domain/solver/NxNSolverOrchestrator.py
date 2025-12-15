@@ -180,8 +180,23 @@ class NxNSolverOrchestrator(AbstractSolver):
             # STEP 1: REDUCE NxN TO 3x3
             # =================================================================
             # Equivalent to original: _reduce() which called _centers() + _edges()
-            # During edge pairing, partial edge parity may be detected and fixed
-            # silently (odd cubes use center slice as reference, even cubes guess)
+            #
+            # ODD CUBE EDGE PARITY IS HANDLED HERE (not in the retry loop below):
+            # - Odd cubes (5x5, 7x7) have a FIXED CENTER SLICE on each edge
+            # - During edge pairing, if 1 edge remains unsolved after 11 are done,
+            #   it means parity - but we can SEE which slices are wrong
+            # - NxNEdges.solve() fixes it using one of two algorithms:
+            #   * Simple (M-slice): Fast but disturbs edges -> re-pairs after
+            #   * Advanced (R/L-slice): Preserves pairing -> no re-pair needed
+            # - This is handled SILENTLY - no exception, no orchestrator involvement
+            # - The return value signals if parity was fixed (for tracking only)
+            #
+            # EVEN CUBE FULL EDGE PARITY is NOT detected here:
+            # - Even cubes (4x4, 6x6) have NO center slice reference
+            # - All slices could be flipped the same way -> LOOKS paired
+            # - Only detected later in L3Cross when 1 or 3 edges are flipped
+            # - Handled by the retry loop below via EvenCubeEdgeParityException
+            #
             reduction_results = self._reducer.reduce(debug)
             if reduction_results.partial_edge_parity_detected:
                 partial_edge_detected = True
