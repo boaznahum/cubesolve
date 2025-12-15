@@ -98,6 +98,20 @@ def get_scramble_params() -> list[tuple[str, int | None]]:
     return params
 
 
+def get_scramble_params_first_third() -> list[tuple[str, int | None]]:
+    """Get first 1/3 of scramble params for quick sanity checks."""
+    all_params = get_scramble_params()
+    split_point = len(all_params) // 3
+    return all_params[:split_point]
+
+
+def get_scramble_params_remaining() -> list[tuple[str, int | None]]:
+    """Get remaining 2/3 of scramble params."""
+    all_params = get_scramble_params()
+    split_point = len(all_params) // 3
+    return all_params[split_point:]
+
+
 def get_solver_names() -> list[SolverName]:
     """Get all solver names for parametrization."""
     return list(SolverName)
