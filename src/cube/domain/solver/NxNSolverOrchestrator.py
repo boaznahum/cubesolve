@@ -22,6 +22,7 @@ from cube.domain.exceptions import (
     EvenCubeCornerSwapException,
     InternalSWError,
 )
+from cube.utils.SSCode import SSCode
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.AbstractSolver import AbstractSolver
 from cube.domain.solver.protocols import OperatorProtocol
@@ -275,6 +276,7 @@ class NxNSolverOrchestrator(AbstractSolver):
                     if even_edge_parity_detected:
                         raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
                     even_edge_parity_detected = True
+                    self._op.enter_single_step_mode(SSCode.NxN_EDGE_PARITY_FIX)
                     self._reducer.fix_edge_parity()  # Flip all inner slices of any edge
                     self._reducer.reduce(debug)       # Re-reduce (fix disturbs pairing)
                     continue  # retry
@@ -293,6 +295,7 @@ class NxNSolverOrchestrator(AbstractSolver):
                     if corner_swap_detected:
                         raise InternalSWError("Corner parity detected twice - fix_corner_parity failed")
                     corner_swap_detected = True
+                    self._op.enter_single_step_mode(SSCode.NxN_CORNER_PARITY_FIX)
                     self._reducer.fix_corner_parity()  # Swap diagonal corners
                     self._reducer.reduce(debug)         # Re-reduce (fix disturbs edges)
                     continue  # retry

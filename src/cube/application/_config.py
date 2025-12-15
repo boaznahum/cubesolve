@@ -36,6 +36,21 @@ CHECK_CUBE_SANITY = False
 # Only initial value, can be changed
 animation_enabled = True
 
+# Single-step mode codes - enable specific breakpoints for debugging
+# Import SSCode here to avoid circular imports (config is loaded early)
+from cube.utils.SSCode import SSCode
+SS_CODES: dict[SSCode, bool] = {
+    SSCode.NxN_CORNER_PARITY_FIX: True,  # Pause before corner parity fix
+    SSCode.NxN_EDGE_PARITY_FIX: False,
+    SSCode.REDUCER_CENTERS_DONE: False,
+    SSCode.REDUCER_EDGES_DONE: False,
+    SSCode.L1_CROSS_DONE: False,
+    SSCode.L1_CORNERS_DONE: False,
+    SSCode.L2_DONE: False,
+    SSCode.L3_CROSS_DONE: False,
+    SSCode.L3_CORNERS_DONE: False,
+}
+
 ######### Solvers  ########
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous

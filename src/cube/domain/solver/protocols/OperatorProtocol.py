@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from typing import Protocol, TYPE_CHECKING, Any, ContextManager
 
 from cube.application.state import ApplicationAndViewState
+from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
     from cube.domain.algs.Alg import Alg
@@ -76,4 +77,21 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
     @property
     def app_state(self) -> ApplicationAndViewState:
         """Application and view state."""
+        ...
+
+    def enter_single_step_mode(self, code: SSCode | None = None) -> None:
+        """
+        Enable single-step mode for debugging.
+
+        When enabled, animation will pause after each algorithm and wait
+        for user input (Space key or GUI button) before continuing.
+
+        Args:
+            code: Optional SSCode identifying the trigger point. If provided,
+                  single-step mode is only enabled if the code is enabled in
+                  config (SS_CODES). If None, always enters single-step mode.
+
+        Use this at critical points in solver code to inspect cube state:
+            self._op.enter_single_step_mode(SSCode.NxN_CORNER_PARITY_FIX)
+        """
         ...

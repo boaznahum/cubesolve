@@ -14,6 +14,7 @@ from cube.application.exceptions.app_exceptions import OpAborted
 from cube.application.state import ApplicationAndViewState
 from cube.domain.model.Cube import Cube
 from ...domain.solver.protocols.OperatorProtocol import OperatorProtocol
+from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
     from ..animation.AnimationManager import AnimationManager, OpProtocol
@@ -376,6 +377,24 @@ class Operator(OperatorProtocol):
         :return: converted to bool true if animation is enabled and animation manager is set
         """
         return bool(self._animation_enabled and self._animation_manager)
+
+    def enter_single_step_mode(self, code: SSCode | None = None) -> None:
+        """
+        Enable single-step mode for debugging.
+
+        When enabled, animation will pause after each algorithm and wait
+        for user input (Space key or GUI button) before continuing.
+
+        Args:
+            code: Optional SSCode identifying the trigger point. If provided,
+                  single-step mode is only enabled if the code is enabled in
+                  config (SS_CODES). If None, always enters single-step mode.
+
+        Use this at critical points in solver code to inspect cube state:
+            self._op.enter_single_step_mode(SSCode.NxN_CORNER_PARITY_FIX)
+        """
+        if code is None or self._app_state.config.is_ss_code_enabled(code):
+            self._app_state.single_step_mode = True
 
     def toggle_animation_on(self, enable: bool | None = None):
 

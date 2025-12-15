@@ -7,7 +7,10 @@ IMPORTANT: Only config_impl.py should import _config directly.
 All other code must access config through this protocol via context.
 """
 
-from typing import Protocol, runtime_checkable, Tuple
+from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cube.utils.SSCode import SSCode
 
 
 # Type alias for marker definition: (color, outer_radius, thick, height)
@@ -300,6 +303,20 @@ class ConfigProtocol(Protocol):
     @property
     def input_mouse_rotate_adjusted_face(self) -> bool:
         """Rotate adjusted face on edge/corner drag."""
+        ...
+
+    # ==========================================================================
+    # Single-step mode settings
+    # ==========================================================================
+    def is_ss_code_enabled(self, code: "SSCode") -> bool:
+        """Check if a single-step mode code is enabled.
+
+        Args:
+            code: The SSCode to check
+
+        Returns:
+            True if the code is enabled in SS_CODES config, False otherwise
+        """
         ...
 
 
