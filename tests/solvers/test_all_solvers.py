@@ -6,21 +6,17 @@ Each test verifies that a solver can successfully solve a scrambled cube.
 
 Test Matrix:
 - Solvers: LBL, CFOP, KOCIEMBA (all from SolverName enum)
-- Cube sizes: 3 (extensible to 4, 5, etc.)
-- Scrambles: Predefined seeds (101, 202, 303) + one random per session
+- Cube sizes: 3, 4, 5, 8
+- Scrambles: GUI seeds 0-9 (same as keyboard keys) + seeds 101, 202, 303 + random
 """
 from __future__ import annotations
 
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
-from cube.application.commands.Operator import Operator
-from cube.domain.algs.Algs import Algs
-from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solvers
 from cube.domain.solver.SolverName import SolverName
 
-from tests.conftest import _test_sp
 from tests.solvers.conftest import (
     get_scramble_params,
     get_solver_names,
@@ -46,7 +42,6 @@ class TestAllSolvers:
         scramble_name: str,
         scramble_seed: int | None,
         session_random_seed: int,
-        test_sp,
     ) -> None:
         """Test that a solver can solve a scrambled cube.
 
@@ -56,7 +51,6 @@ class TestAllSolvers:
             scramble_name: Human-readable scramble identifier
             scramble_seed: Seed for scramble (None means use session random)
             session_random_seed: Unique random seed for this test session
-            test_sp: Test service provider fixture
         """
         # Check if solver supports this cube size (skip with reason if not)
         skip_if_not_supported(solver_name, cube_size)
@@ -64,19 +58,16 @@ class TestAllSolvers:
         # Determine actual seed (use session random if not predefined)
         actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
 
-        # Create app (provides vs with config) and cube
+        # Create app (provides vs with config, operator, and cube)
         app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
-        cube = Cube(size=cube_size, sp=test_sp)
 
-        # Create operator using app's vs (which has config)
-        op = Operator(cube, app.vs)
+        # Create solver using app's operator (same as GUI)
+        solver = Solvers.by_name(solver_name, app.op)
 
-        # Create solver
-        solver = Solvers.by_name(solver_name, op)
-
-        # Generate and apply scramble
-        scramble = Algs.scramble(cube_size, seed=actual_seed)
-        scramble.play(cube)
+        # Scramble using app.scramble() - equivalent to GUI command:
+        #   Commands.SCRAMBLE_0 through SCRAMBLE_9 (keys 0-9)
+        #   ScrambleCommand(seed).execute(ctx) calls ctx.app.scramble(seed, None, ...)
+        app.scramble(actual_seed, None, animation=False, verbose=False)
 
         # Verify cube is scrambled (not solved)
         assert not solver.is_solved, (
@@ -110,16 +101,14 @@ class TestSolverBasics:
     def test_solver_reports_solved_for_fresh_cube(
         self,
         solver_name: SolverName,
-        test_sp,
     ) -> None:
         """Test that solvers correctly identify a fresh cube as solved."""
         # Check if solver is testable (skip with reason if not)
         skip_if_not_supported(solver_name, 3)
 
+        # Use app's operator (same as GUI)
         app = AbstractApp.create_non_default(cube_size=3, animation=False)
-        cube = Cube(size=3, sp=test_sp)
-        op = Operator(cube, app.vs)
-        solver = Solvers.by_name(solver_name, op)
+        solver = Solvers.by_name(solver_name, app.op)
 
         assert solver.is_solved, (
             f"Solver {solver_name.value} should report fresh cube as solved"

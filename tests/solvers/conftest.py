@@ -32,9 +32,14 @@ if TYPE_CHECKING:
 # Cube sizes to test (start with 3, can extend to [3, 4, 5] later)
 CUBE_SIZES: list[int] = [3, 4, 5, 8]
 
-# Predefined scramble seeds for reproducible tests
-# Each seed produces the same scramble every time
-PREDEFINED_SCRAMBLE_SEEDS: list[int] = [101, 202, 303]
+# GUI keyboard scramble seeds (keys 0-9) - same as ScrambleCommand(0-9)
+GUI_SCRAMBLE_SEEDS: list[int] = list(range(10))  # 0, 1, 2, ..., 9
+
+# Additional test seeds for extra coverage
+ADDITIONAL_SCRAMBLE_SEEDS: list[int] = [101, 202, 303]
+
+# All predefined scramble seeds
+PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_SEEDS
 
 
 # =============================================================================
