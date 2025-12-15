@@ -243,7 +243,7 @@ class Slice(SuperElement):
             return
 
         # Load config from YAML
-        from cube.presentation.gui.backends.pyglet2 import texture_rotation_loader as trl
+        from cube.presentation.gui import texture_rotation_loader as trl
         slice_name = self._name.name  # SliceName.M -> "M"
 
         s_range = self._get_index_range(slices_indexes)

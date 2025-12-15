@@ -331,7 +331,7 @@ class Face(SuperElement, Hashable):
             return
 
         # Load config from YAML (cached, reloads on file change)
-        from cube.presentation.gui.backends.pyglet2 import texture_rotation_loader as trl
+        from cube.presentation.gui import texture_rotation_loader as trl
         face_name = self.name.name  # FaceName.F -> "F"
         n_slices = self.cube.n_slices
 
