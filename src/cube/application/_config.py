@@ -18,7 +18,7 @@ from typing import Tuple
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 4  # Using debug4x4 texture set for 4x4 debugging
+CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
 
 SOLVER_CFOP=False
 
@@ -39,10 +39,10 @@ animation_enabled = True
 ######### Solvers  ########
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
-# Available solvers: LBL, CFOP, Kociemba
+# Available solvers: LBL, CFOP, Kociemba,cage
 # Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "Kociemba"
+DEFAULT_SOLVER = "cage"
 
 SOLVER_DEBUG = True
 

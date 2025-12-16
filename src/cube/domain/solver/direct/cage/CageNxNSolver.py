@@ -1,155 +1,52 @@
-"""Cage Method NxN Solver - solves big cubes by building a cage first, then filling centers.
+"""Cage Method NxN Solver - solves big cubes step by step.
 
-This solver uses the Cage method: solve edges and corners FIRST (the "cage"),
-then solve centers LAST using commutators.
+Cage method for odd cubes (5x5, 7x7):
+1. Solve centers one face at a time (starting face configurable)
+2. ... (more steps to come)
 
-=============================================================================
-CAGE METHOD FOR NxN CUBES
-=============================================================================
-
-CONCEPT:
---------
-Instead of reducing the cube (solving centers first, then edges),
-this method solves the OUTER pieces first, creating a "cage" around the centers.
-
-The centers are then solved last using commutators, which avoids all parity issues.
-
-COMPARISON WITH REDUCTION METHOD:
----------------------------------
-  Reduction Method:              Cage Method:
-  ----------------               -----------
-  1. Solve ALL centers           1. Solve ALL edges (pair wings)
-  2. Solve ALL edges             2. Solve ALL corners
-  3. Solve as 3x3                3. Solve centers (commutators)
-
-WHY "CAGE"?
------------
-After solving edges and corners, the centers appear "trapped" inside:
-
-    ┌─────────────────┐
-    │  E ─── E ─── E  │     E = solved edge/corner
-    │  │           │  │
-    │  E   [???]   E  │     ??? = unsolved centers (caged!)
-    │  │           │  │
-    │  E ─── E ─── E  │
-    └─────────────────┘
-
-ADVANTAGES:
------------
-1. PARITY-FREE for odd cubes - Centers can always be solved with commutators
-2. Simple algorithms - Only need a few commutator patterns
-3. Scales to any size - Works on 3x3 through 111x111
-4. Predictable - Same approach works consistently
-
-EVEN CUBE HANDLING:
--------------------
-Even cubes (4x4, 6x6) have no center piece to define face color. Solution:
-- Use original_color (the face's birth color) instead of center color
-- This allows 3x3 solving BEFORE centers are solved
-- Parity (OLL parity, corner swap) is handled during 3x3 phases
-
-DISADVANTAGES:
---------------
-1. Higher move count than reduction (~400-600 vs ~200-300)
-2. Less optimized for speedsolving
-
-SOLVING PHASES:
----------------
-
-Phase 1: Build the Cage (Edges + Corners)
-
-  Step 1a: Solve all edges
-    - Pair wings together (like reduction, but ignore centers)
-    - You have FREEDOM to use any slice moves
-    - Place edges in correct positions
-
-  Step 1b: Solve all corners
-    - Use standard 3x3 corner methods
-    - Corners are identical to 3x3 corners
-
-Phase 2: Fill the Cage (Centers)
-
-  Step 2: Solve centers with commutators
-    - For each face, cycle centers into position
-    - Use [A, B] = A B A' B' commutator patterns
-    - No parity possible - any permutation is solvable
-
-KEY ALGORITHMS:
----------------
-
-Edge pairing (with slice freedom):
-  - Standard edge pairing but can use any inner slices
-  - No need to preserve centers
-
-Corner solving:
-  - Standard 3x3 algorithms (F2L, OLL, PLL for corners)
-
-Center commutators:
-  [Rw U Rw', D2] = Rw U Rw' D2 Rw U' Rw' D2
-  - 3-cycles centers between faces
-  - Doesn't affect edges or corners (already solved)
-
-=============================================================================
-
-References:
-- https://www.speedsolving.com/wiki/index.php?title=Cage_Method
-- https://www.speedsolving.com/threads/cage-method-for-the-5x5x5.51209/
-
-=============================================================================
+For odd cubes, the center piece defines the face color.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.exceptions import (
-    EvenCubeEdgeParityException,
-    EvenCubeCornerSwapException,
-    InternalSWError,
-)
+from cube.domain.model import Color
+from cube.domain.model.Face import Face
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import Solver, SolveStep, SolverResults
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
+from cube.domain.solver.beginner.NxNCenters import NxNCenters
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
 
+# Configuration: which face to start with
+START_FACE_COLOR: Color = Color.WHITE
 
-from contextlib import contextmanager
+
+class _FaceLoc:
+    """Face locator for _do_center - provides face and color properties."""
+
+    def __init__(self, cube: Cube, color: Color) -> None:
+        self._cube = cube
+        self._color = color
+
+    @property
+    def face(self) -> Face:
+        return self._cube.color_2_face(self._color)
+
+    @property
+    def color(self) -> Color:
+        return self._color
 
 
-class _CageSolverFacade(BaseSolver):
-    """
-    Minimal BaseSolver facade for NxNCenters and NxNEdges.
-
-    Required because NxNCenters and NxNEdges expect a BaseSolver instance.
-
-    Supports cage_mode flag which:
-    - Skips center reduction (NxNCenters.solve returns early)
-    - Ignores center-related assertions
-    """
-
-    __slots__: list[str] = ["_cage_mode"]
+class _CageFacade(BaseSolver):
+    """Minimal BaseSolver facade for NxNCenters."""
 
     def __init__(self, op: OperatorProtocol) -> None:
         super().__init__(op)
-        self._cage_mode = False
-
-    @property
-    def cage_mode(self) -> bool:
-        """True when building the cage (edges first, skip centers)."""
-        return self._cage_mode
-
-    @contextmanager
-    def cage_mode_context(self):
-        """Context manager to temporarily enable cage mode."""
-        old_value = self._cage_mode
-        self._cage_mode = True
-        try:
-            yield
-        finally:
-            self._cage_mode = old_value
 
     @property
     def get_code(self) -> SolverName:
@@ -165,164 +62,80 @@ class _CageSolverFacade(BaseSolver):
         animation: bool | None = True,
         what: SolveStep = SolveStep.ALL
     ) -> SolverResults:
-        raise NotImplementedError("Use CageNxNSolver for full solve")
+        raise NotImplementedError("Use CageNxNSolver.solve()")
 
 
 class CageNxNSolver(Solver):
     """
-    Solves NxN cubes using the Cage method.
+    Cage method solver for odd NxN cubes.
 
-    The Cage method solves edges and corners first (creating a "cage"),
-    then solves centers last using commutators. This approach is
-    completely parity-free.
-
-    For 3x3 cubes: Delegates to CFOP solver (no inner slices to handle).
-    For NxN cubes (N > 3): Uses true Cage method.
-
-    Phases:
-        1a. Solve all edges (pair wings, place in position)
-        1b. Solve all corners (standard 3x3 methods)
-        2.  Solve centers (commutators)
-
-    Attributes:
-        _op: Operator for cube manipulation
-        _solver_facade: BaseSolver facade for solver elements
-        _nxn_edges: Edge solver element
-        _nxn_centers: Center solver element
-        _solver_3x3: 3x3 solver for skeleton
+    Solves step by step:
+    - Step 1: White face centers
+    - (more steps to come)
     """
 
-    __slots__ = [
-        "_op", "_solver_facade", "_nxn_edges", "_nxn_centers", "_cage_centers",
-        "_l1_cross", "_l1_corners", "_l2", "_l3_cross", "_l3_corners"
-    ]
-
     def __init__(self, op: OperatorProtocol) -> None:
-        """
-        Create a Cage Method NxN solver.
-
-        Args:
-            op: Operator for cube manipulation
-        """
         super().__init__()
         self._op = op
-
-        # Create solver facade for NxNCenters/NxNEdges
-        self._solver_facade = _CageSolverFacade(op)
-
-        # Import here to avoid circular imports
-        from cube.domain.solver.beginner.NxNCenters import NxNCenters
-        from cube.domain.solver.beginner.NxNEdges import NxNEdges
-        from cube.domain.solver.beginner.L1Cross import L1Cross
-        from cube.domain.solver.beginner.L1Corners import L1Corners
-        from cube.domain.solver.beginner.L2 import L2
-        from cube.domain.solver.beginner.L3Cross import L3Cross
-        from cube.domain.solver.beginner.L3Corners import L3Corners
-        from cube.domain.solver.direct.cage.CageCenters import CageCenters
-
-        # For even cubes: use standard NxNCenters (reduction order)
-        # For odd cubes: use CageCenters (preserves edges with whole-cube rotations)
-        self._nxn_centers = NxNCenters(self._solver_facade)
-        self._cage_centers = CageCenters(self._solver_facade)
-        self._nxn_edges = NxNEdges(self._solver_facade, advanced_edge_parity=True)
-
-        # 3x3 solver elements (used directly, not via delegation)
-        self._l1_cross = L1Cross(self._solver_facade)
-        self._l1_corners = L1Corners(self._solver_facade)
-        self._l2 = L2(self._solver_facade)
-        self._l3_cross = L3Cross(self._solver_facade)
-        self._l3_corners = L3Corners(self._solver_facade)
+        self._facade = _CageFacade(op)
+        self._centers = NxNCenters(self._facade)
 
     @property
     def get_code(self) -> SolverName:
-        """Return solver identifier."""
         return SolverName.CAGE
 
     @property
     def op(self) -> OperatorProtocol:
-        """The operator for cube manipulation."""
         return self._op
 
     @property
-    def _cube(self) -> "Cube":
-        """Internal access to the cube."""
+    def _cube(self) -> Cube:
         return self._op.cube
 
     @property
     def is_solved(self) -> bool:
-        """Check if cube is solved."""
         return self._cube.solved
 
     @property
     def is_debug_config_mode(self) -> bool:
-        """Whether debug mode is enabled in config."""
         return self._cube.config.solver_debug
 
     @property
     def status(self) -> str:
-        """Human-readable solver status (stateless - inspects cube)."""
+        """Return current solving status."""
         if self.is_solved:
             return "Solved"
 
-        # Stateless status based on cube inspection
-        parts: list[str] = []
+        if self._cube.size == 3:
+            return "3x3"
 
-        if self._cube.is3x3:
-            # For 3x3, report layer solving progress
-            return self._get_3x3_status()
-
-        # NxN status
-        if self._are_edges_solved():
-            parts.append("Edges:Done")
+        # Check start face
+        start_face = self._cube.color_2_face(START_FACE_COLOR)
+        color_name = START_FACE_COLOR.name.capitalize()
+        if start_face.center.is3x3:
+            return f"{color_name}:Done"
         else:
-            parts.append("Edges:Pending")
+            return f"{color_name}:Pending"
 
-        if self._are_corners_solved():
-            parts.append("Corners:Done")
-        else:
-            parts.append("Corners:Pending")
+    def _is_face_center_solved(self, color: Color) -> bool:
+        """Check if a face's centers are reduced to 3x3."""
+        face = self._cube.color_2_face(color)
+        return self._centers._is_face_solved(face, color)
 
-        if self._are_centers_solved():
-            parts.append("Centers:Done")
-        else:
-            parts.append("Centers:Pending")
+    def _solve_face_center(self, color: Color) -> None:
+        """Solve one face's centers to 3x3.
 
-        return ", ".join(parts)
-
-    def _get_3x3_status(self) -> str:
-        """Get 3x3 solving status (stateless).
-
-        Note: On even cubes, L1/L3 checks rely on color_2_face which isn't set.
+        Uses NxNCenters._do_center which:
+        1. Brings face to front (cmn.bring_face_front)
+        2. Pulls matching pieces from adjacent faces
+        3. Uses commutators to place them
         """
-        # Even cubes can't use standard L1/L3 status checks
-        if self._cube.n_slices % 2 == 0:
-            return "3x3 (even cube - status unavailable)"
+        if self._is_face_center_solved(color):
+            return
 
-        cross = self._l1_cross.is_cross()
-        corners = self._l1_corners.is_corners()
-
-        if cross and corners:
-            s = "L1"
-        elif cross:
-            s = "L1-Cross"
-        elif corners:
-            s = "L1-Corners"
-        else:
-            s = "No-L1"
-
-        if self._l2.solved():
-            s += ", L2"
-        else:
-            s += ", No L2"
-
-        if self._l3_cross.solved() and self._l3_corners.solved():
-            s += ", L3"
-        elif self._l3_cross.solved():
-            s += ", L3-Cross"
-        else:
-            s += ", No L3"
-
-        return s
+        face_loc = _FaceLoc(self._cube, color)
+        # _do_center handles bring_face_front internally
+        self._centers._do_center(face_loc, minimal_bring_one_color=False, use_back_too=True)  # type: ignore[arg-type]
 
     def solve(
         self,
@@ -330,239 +143,23 @@ class CageNxNSolver(Solver):
         animation: bool | None = True,
         what: SolveStep = SolveStep.ALL
     ) -> SolverResults:
-        """
-        Solve the cube using TRUE Cage method for ALL cube sizes.
-
-        Cage method order (edges -> 3x3 -> centers -> re-3x3):
-            - Edges first (skipped for 3x3 - already is3x3)
-            - 3x3 skeleton
-            - Centers using commutators (skipped for 3x3 - already is3x3)
-            - Re-solve 3x3 (commutators move edges)
-
-        For even cubes (4x4, 6x6):
-            - Uses original_color for face mapping (since centers aren't solved)
-            - Must handle parity after the cage is complete
-
-        Args:
-            debug: Enable debug output
-            animation: Enable animation
-            what: Which step to solve
-
-        Returns:
-            SolverResults with solve metadata
-        """
+        """Solve using Cage method."""
         sr = SolverResults()
 
         if self.is_solved:
             return sr
 
         cube = self._cube
-        is_even = cube.n_slices % 2 == 0
 
-        # Odd cubes (3x3, 5x5, 7x7): TRUE Cage method
-        #   - Edges first, then 3x3, then centers (commutators), then re-3x3
-        #   - PARITY FREE: No edge/corner parity on odd cubes
-        #
-        # Even cubes (4x4, 6x6): Reduction order
-        #   - Centers first (required to establish face colors for 3x3 solving)
-        #   - The cube model ties Face.original_color to positions, not pieces
-        #   - True Cage method for even cubes would require deeper model changes
+        # Only odd cubes supported
+        if cube.size % 2 == 0:
+            raise ValueError("Cage method only supports odd cubes (5x5, 7x7, ...)")
 
-        if is_even:
-            # Even cubes: reduction order (centers -> edges -> 3x3)
-            self._solve_with_reduction_order(sr, is_even)
-        else:
-            # Odd cubes: TRUE Cage method
-            self._solve_with_cage_order()
+        # 3x3 has no inner slices to reduce
+        if cube.size == 3:
+            return sr
+
+        # Step 1: Solve start face centers
+        self._solve_face_center(START_FACE_COLOR)
 
         return sr
-
-    def _solve_with_cage_order(self) -> None:
-        """Solve using TRUE Cage order (edges -> 3x3 -> centers -> re-3x3).
-
-        For ODD cubes only. Uses CageCenters which disables the _swap_slice
-        optimization that would break edge pairing.
-
-        NOTE: Currently requires re-3x3 because _bring_face_up_preserve_front
-        in NxNCenters uses wide moves (B[1:n]) instead of whole-cube rotations,
-        which breaks edge positions. TODO: Fix CageCenters to use Z rotations.
-
-        Odd cubes have no parity issues.
-        """
-        # Phase 1: Solve ALL edges (pair wings)
-        if not self._are_edges_solved():
-            self._nxn_edges.solve()
-
-        # Phase 2: Solve 3x3 skeleton (the "cage")
-        self._solve_3x3()
-
-        # Phase 3: Fill the cage (solve centers with commutators)
-        # CageCenters only uses _block_communicator which preserves edges
-        if not self._are_centers_solved():
-            self._cage_centers.solve()
-
-        # Phase 4: Re-solve 3x3 skeleton
-        # TODO: Remove this once CageCenters uses whole-cube rotations
-        # Currently needed because _bring_face_up_preserve_front breaks edges
-        self._solve_3x3()
-
-    def _solve_3x3_with_parity(self, sr: SolverResults, is_even: bool) -> None:
-        """Solve 3x3 skeleton with parity handling for even cubes."""
-        # Reset white face tracking before each 3x3 solve
-        # (cube may have been rotated since last solve)
-        self._solver_facade.reset_white_face_tracking()  # type: ignore[attr-defined]
-
-        if not is_even:
-            # Odd cubes: no parity, simple solve
-            self._solve_3x3()
-            return
-
-        # Even cubes: handle parity
-        even_edge_parity_detected = False
-        corner_swap_detected = False
-
-        MAX_RETRIES = 3
-        for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                # Reset tracking before each attempt
-                self._solver_facade.reset_white_face_tracking()  # type: ignore[attr-defined]
-                self._solve_3x3()
-                break  # Success
-
-            except EvenCubeEdgeParityException:
-                if even_edge_parity_detected:
-                    raise InternalSWError("Edge parity already detected")
-                even_edge_parity_detected = True
-                self._nxn_edges.do_even_full_edge_parity_on_any_edge()
-                continue
-
-            except EvenCubeCornerSwapException:
-                if corner_swap_detected:
-                    raise InternalSWError("Corner swap already detected")
-                corner_swap_detected = True
-                continue
-
-        if even_edge_parity_detected:
-            sr._was_even_edge_parity = True
-        if corner_swap_detected:
-            sr._was_corner_swap = True
-
-    def _solve_with_reduction_order(self, sr: SolverResults, is_even: bool) -> None:
-        """Solve using reduction order (centers -> edges -> 3x3).
-
-        For all NxN cubes. Solves centers FIRST, then edges, then 3x3.
-        Even cubes need parity handling; odd cubes have no parity issues.
-        """
-        # Phase 1: Solve centers (establishes face colors)
-        if not self._are_centers_solved():
-            self._nxn_centers.solve()
-
-        if is_even:
-            # Even cubes need parity handling
-            self._solve_with_parity_handling(sr)
-        else:
-            # Odd cubes: no parity issues
-            if not self._are_edges_solved():
-                self._nxn_edges.solve()
-            self._solve_3x3()
-
-    def _solve_with_parity_handling(self, sr: SolverResults) -> None:
-        """Solve with parity handling for even cubes (4x4, 6x6).
-
-        Centers should already be solved before calling this method.
-        Handles edge and corner parity with retry loop.
-        """
-        even_edge_parity_detected = False
-        corner_swap_detected = False
-
-        # Parity retry loop (max 3 attempts)
-        MAX_RETRIES = 3
-        for attempt in range(1, MAX_RETRIES + 1):
-            if self.is_solved:
-                break
-
-            try:
-                # Phase 2: Solve edges
-                if not self._are_edges_solved():
-                    self._nxn_edges.solve()
-
-                # Phase 3: Solve 3x3 skeleton
-                self._solve_3x3()
-
-            except EvenCubeEdgeParityException:
-                if even_edge_parity_detected:
-                    raise InternalSWError("Edge parity already detected")
-                even_edge_parity_detected = True
-                # Fix edge parity using the proper method for OLL parity
-                self._nxn_edges.do_even_full_edge_parity_on_any_edge()
-                continue  # retry
-
-            except EvenCubeCornerSwapException:
-                if corner_swap_detected:
-                    raise InternalSWError("Corner swap already detected")
-                corner_swap_detected = True
-                continue  # retry (swap was done by l3_corners)
-
-        # Record results
-        if even_edge_parity_detected:
-            sr._was_even_edge_parity = True
-        if corner_swap_detected:
-            sr._was_corner_swap = True
-
-    def _solve_3x3(self) -> None:
-        """Solve the 3x3 skeleton (cross, corners, edges)."""
-        self._l1_cross.solve()
-        self._l1_corners.solve()
-        self._l2.solve()
-        self._l3_cross.solve()
-        self._l3_corners.solve()
-
-    # =========================================================================
-    # STATE INSPECTION (STATELESS)
-    # =========================================================================
-
-    def _are_edges_solved(self) -> bool:
-        """Check if all edges are paired and positioned (stateless - inspects cube)."""
-        return all(e.is3x3 for e in self._cube.edges)
-
-    def _are_corners_solved(self) -> bool:
-        """Check if all corners are positioned and oriented (stateless - inspects cube).
-
-        Note: On even cubes (4x4, 6x6), we can't use L1/L3 corner checks
-        because face colors aren't determined until centers are solved.
-        For the Cage method, we solve corners BEFORE centers, so we need
-        an alternative check.
-        """
-        # For even cubes, we can't use the standard L1/L3 checks
-        # because they rely on color_2_face which isn't set yet
-        if self._cube.n_slices % 2 == 0:
-            # On even cubes, check if all corners match adjacent edges
-            # This is a simplified check - proper implementation would
-            # use face tracking
-            return self._cube.solved  # Fallback: only true when fully solved
-        # For odd cubes, use standard checks
-        return self._l1_corners.is_corners() and self._l3_corners.solved()
-
-    def _are_centers_solved(self) -> bool:
-        """Check if all centers are solved (stateless - inspects cube)."""
-        return all(f.center.is3x3 for f in self._cube.faces)
-
-    def _is_3x3_skeleton_solved(self) -> bool:
-        """Check if the 3x3 skeleton (cross, corners, edges) is solved (stateless).
-
-        Note: On even cubes, L1/L3 checks rely on color_2_face which isn't set.
-        """
-        # For even cubes, can't use standard checks before centers solved
-        if self._cube.n_slices % 2 == 0:
-            return self._cube.solved  # Fallback
-        return (
-            self._l1_cross.is_cross()
-            and self._l1_corners.is_corners()
-            and self._l2.solved()
-            and self._l3_cross.solved()
-            and self._l3_corners.solved()
-        )
-
-    def _is_cage_complete(self) -> bool:
-        """Check if the cage (edges + corners) is complete (stateless)."""
-        return self._are_edges_solved() and self._is_3x3_skeleton_solved()

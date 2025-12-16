@@ -92,6 +92,18 @@ class Solvers:
             op, reducer, solver_3x3, SolverName.KOCIEMBA
         )
 
+    @staticmethod
+    def cage(op: OperatorProtocol) -> Solver:
+        """
+        Get Cage method solver (odd cubes only).
+
+        Solves centers one face at a time, starting with white.
+        For odd cubes (5x5, 7x7) only - even cubes not supported.
+        """
+        from .direct.cage.CageNxNSolver import CageNxNSolver
+
+        return CageNxNSolver(op)
+
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
         """Get the next solver in rotation (skips unimplemented solvers)."""
@@ -123,7 +135,7 @@ class Solvers:
                 return cls.kociemba(op)
 
             case SolverName.CAGE:
-                raise InternalSWError("CAGE solver not implemented yet")
+                return cls.cage(op)
 
             case _:
                 raise InternalSWError(f"Unknown solver: {solver_id}")
