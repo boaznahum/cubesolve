@@ -21,7 +21,7 @@
       <excludeFolder url="file://$MODULE_DIR$/.venvx" />
     </content>
     <content url="file://$MODULE_DIR$/../../../temp/pyglet-1.5.23/pyglet-1.5.23/examples" />
-    <orderEntry type="jdk" jdkName="Python 3.14 (cubesolve2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.14 (cubesolve2) (4)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

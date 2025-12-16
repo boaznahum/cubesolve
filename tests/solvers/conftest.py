@@ -32,9 +32,14 @@ if TYPE_CHECKING:
 # Cube sizes to test (start with 3, can extend to [3, 4, 5] later)
 CUBE_SIZES: list[int] = [3, 4, 5, 8]
 
-# Predefined scramble seeds for reproducible tests
-# Each seed produces the same scramble every time
-PREDEFINED_SCRAMBLE_SEEDS: list[int] = [101, 202, 303]
+# GUI keyboard scramble seeds (keys 0-9) - same as ScrambleCommand(0-9)
+GUI_SCRAMBLE_SEEDS: list[int] = list(range(10))  # 0, 1, 2, ..., 9
+
+# Additional test seeds for extra coverage
+ADDITIONAL_SCRAMBLE_SEEDS: list[int] = [101, 202, 303]
+
+# All predefined scramble seeds
+PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_SEEDS
 
 
 # =============================================================================
@@ -91,6 +96,20 @@ def get_scramble_params() -> list[tuple[str, int | None]]:
     params.append(("random", None))
 
     return params
+
+
+def get_scramble_params_first_third() -> list[tuple[str, int | None]]:
+    """Get first 1/3 of scramble params for quick sanity checks."""
+    all_params = get_scramble_params()
+    split_point = len(all_params) // 3
+    return all_params[:split_point]
+
+
+def get_scramble_params_remaining() -> list[tuple[str, int | None]]:
+    """Get remaining 2/3 of scramble params."""
+    all_params = get_scramble_params()
+    split_point = len(all_params) // 3
+    return all_params[split_point:]
 
 
 def get_solver_names() -> list[SolverName]:

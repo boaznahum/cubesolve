@@ -6,3 +6,4 @@ __pycache__/
 cubesolve.egg-info/
 .venv312/
 __next_session.md
+.venv/
