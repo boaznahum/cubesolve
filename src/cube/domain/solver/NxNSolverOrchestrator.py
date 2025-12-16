@@ -50,13 +50,16 @@ class NxNSolverOrchestrator(AbstractSolver):
     3. EvenCubeCornerSwapException: Raised by L3Corners when 2 corners in position
     4. Recovery uses a RETRY LOOP - fix parity, re-reduce, retry solve
 
-    WHY CORNER FIX IS IMMEDIATE BUT EDGE FIX IS NOT:
-    - Corner swap algorithm is POSITION-SENSITIVE: uses inner R[2:nh+1] and U[1:nh+1]
-      slices assuming L3 position. Must fix while in L3 state before retry.
-    - Edge flip algorithm is POSITION-INDEPENDENT: can flip any edge's inner slices
-      at any time. Orchestrator handles it after catching exception.
+    PARITY FIX PATTERN (unified for both parities):
+    1. Detector (L3Cross/L3Corners) raises exception
+    2. Orchestrator catches exception
+    3. Reducer fixes parity (fix_edge_parity / fix_corner_parity)
+    4. Re-reduce and retry solve
 
-    See PARITY_HANDLING_BEFORE_ORCHESTRATOR.md for detailed analysis.
+    Both algorithms work as long as cube is in 3x3 state (yellow up).
+    Corner swap works after Y rotation because any diagonal swap fixes parity.
+
+    See PARITY_HANDLING_ORCHESTRATOR.md for details.
     """
 
     __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name", "_debug_override"]
@@ -251,16 +254,9 @@ class NxNSolverOrchestrator(AbstractSolver):
                     if parity_detector is not None:
                         # Use parity detector in QUERY MODE:
                         # - with_query_restore_state(): All moves are rolled back after
-                        # - with_dont_fix_corner_parity(): L3Corners throws WITHOUT fixing
-                        #
-                        # WHY dont_fix_corner_parity?
-                        # Normally L3Corners fixes corner parity BEFORE throwing because
-                        # the algorithm is POSITION-SENSITIVE (needs L3 state).
-                        # But in query mode we restore state, so we need orchestrator
-                        # to call fix_corner_parity() on the restored state.
+                        # - Parity detector raises exceptions, orchestrator catches and fixes
                         with self._op.with_query_restore_state():
-                            with self._cube.with_dont_fix_corner_parity():
-                                parity_detector.solve_3x3(debug, what)
+                            parity_detector.solve_3x3(debug, what)
                         # No exception = no parity, state restored
                         # Now let actual solver solve
                         self._solver_3x3.solve_3x3(debug, what)
@@ -273,24 +269,12 @@ class NxNSolverOrchestrator(AbstractSolver):
                     # EDGE PARITY HANDLING
                     # =============================================================
                     # Detected by L3Cross: 1 or 3 edges flipped (impossible on 3x3)
-                    # This means ALL slices of some edge are flipped together.
-                    #
-                    # WHY FIX HERE (not in L3Cross)?
-                    # Edge flip is POSITION-INDEPENDENT - can flip any edge's inner
-                    # slices at any time. The algorithm just needs some edge at FU.
-                    # So L3Cross only throws, orchestrator catches and fixes.
-                    #
+                    # L3Cross throws, orchestrator catches and fixes via reducer.
                     # After fix, edges are disturbed -> need to re-reduce
                     self.debug(f"Catch even edge parity in iteration #{attempt}")
                     if even_edge_parity_detected:
-                        # Edge parity should only be detected once per solve.
-                        # If we get here again, it's a bug in the parity fix or reducer.
                         raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
                     even_edge_parity_detected = True
-                    # Edge flip is POSITION-INDEPENDENT: the algorithm flips inner slices
-                    # of any edge at FU position. Unlike corner swap which uses specific
-                    # inner R/U slices assuming L3 state, edge flip just needs ANY edge
-                    # at FU. So we can fix it here after catching the exception.
                     self._reducer.fix_edge_parity()  # Flip all inner slices of any edge
                     self._reducer.reduce(debug)       # Re-reduce (fix disturbs pairing)
                     continue  # retry
@@ -300,40 +284,17 @@ class NxNSolverOrchestrator(AbstractSolver):
                     # CORNER PARITY HANDLING
                     # =============================================================
                     # Detected by L3Corners: exactly 2 corners in position (impossible)
+                    # L3Corners throws, orchestrator catches and fixes via reducer.
+                    # Same pattern as edge parity for consistency.
                     #
-                    # WHY CORNER IS FIXED IMMEDIATELY (in L3Corners) BUT EDGE IS NOT?
-                    #
-                    # Corner swap algorithm is POSITION-SENSITIVE:
-                    #   alg = R[2:nh+1]×2 U×2 R[2:nh+1]×2 U[1:nh+1]×2 R[2:nh+1]×2 U[1:nh+1]×2
-                    # It uses inner R and U slices assuming:
-                    #   - Yellow face is UP (L3 position)
-                    #   - Corners are in specific positions
-                    #
-                    # If we throw first and fix later, retry starts from reduction,
-                    # LOSING the L3 position. Algorithm wouldn't work.
-                    #
-                    # So L3Corners does: _do_corner_swap() THEN raise exception
-                    # Exception means "retry needed" not "fix needed"
-                    #
-                    # EXCEPTION: When using parity detector (query mode with
-                    # dont_fix_corner_parity), L3Corners throws WITHOUT fixing.
-                    # Orchestrator must call fix_corner_parity() on restored state.
+                    # The corner swap algorithm swaps diagonal corners on U face.
+                    # Any diagonal swap fixes parity - only requirement is yellow up.
                     self.debug(f"Catch corner swap in iteration #{attempt}")
                     if corner_swap_detected:
-                        raise InternalSWError("already even_corner_swap_was_detected")
+                        raise InternalSWError("Corner parity detected twice - fix_corner_parity failed")
                     corner_swap_detected = True
-
-                    if parity_detector is not None:
-                        # Using parity detector - corner was NOT fixed (dont_fix flag)
-                        # Orchestrator must fix via reducer
-                        #
-                        # NOTE: The corner swap algorithm is robust to Y rotations because
-                        # it swaps diagonal corners on U face, and ANY diagonal swap fixes
-                        # corner parity. Only requirement is yellow stays up (L3 position).
-                        self._reducer.fix_corner_parity()
-
-                    # In both cases, corner swap disturbs edges -> need to re-reduce
-                    self._reducer.reduce(debug)
+                    self._reducer.fix_corner_parity()  # Swap diagonal corners
+                    self._reducer.reduce(debug)         # Re-reduce (fix disturbs edges)
                     continue  # retry
 
                 # Verify solved after ALL step (same check as original)

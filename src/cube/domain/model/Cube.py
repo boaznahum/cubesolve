@@ -316,8 +316,7 @@ class Cube(CubeSupplier):
         "_last_sanity_counter",
         "_original_layout",
         "_cqr",
-        "_sp",
-        "_dont_fix_corner_parity"
+        "_sp"
     ]
 
     _front: Face
@@ -338,7 +337,6 @@ class Cube(CubeSupplier):
         self._last_sanity_counter = 0
         self._original_layout: CubeLayout | None = None
         self._in_query_mode: bool = False  # Skip texture updates during query operations
-        self._dont_fix_corner_parity: bool = False  # For parity detection without fixing
         self._listeners: list["CubeListener"] = []
         self._reset()
 
@@ -1737,27 +1735,6 @@ class Cube(CubeSupplier):
     @property
     def is_boy(self):
         return self.current_layout.same(self.original_layout)
-
-    @property
-    def dont_fix_corner_parity(self) -> bool:
-        """Check if corner parity fix should be skipped (for parity detection)."""
-        return self._dont_fix_corner_parity
-
-    @contextmanager
-    def with_dont_fix_corner_parity(self) -> Iterator[None]:
-        """
-        Context manager to temporarily suppress corner parity fix.
-
-        Used by orchestrator when running a parity detector in query mode.
-        The solver will detect and raise the parity exception without fixing it,
-        allowing the orchestrator to handle the fix.
-        """
-        old_value = self._dont_fix_corner_parity
-        self._dont_fix_corner_parity = True
-        try:
-            yield
-        finally:
-            self._dont_fix_corner_parity = old_value
 
 
 def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:

@@ -103,13 +103,9 @@ class L3Corners(SolverElement):
                 n = sum(c.in_position for c in yf.corners)
                 if n == 2:
                     # Corner swap parity detected on even cube
-                    # If dont_fix_corner_parity is set (parity detection mode),
-                    # just raise without fixing - orchestrator will handle the fix
-                    self.debug(f"L3 cross-color: Found PLL(Corner swap Parity), doing corner swap")
-
-                    if not self.cube.dont_fix_corner_parity:
-                        self._do_corner_swap()
-                    self.debug(f"L3 cross-color: Found PLL(Corner swap Parity), raising EvenCubeCornerSwapException")
+                    # Raise exception - orchestrator will call reducer.fix_corner_parity()
+                    # This matches the edge parity pattern: detect -> throw -> catch -> fix
+                    self.debug(f"L3 corners: PLL parity detected (2 corners in position)")
                     raise EvenCubeCornerSwapException()
 
                 raise InternalSWError("Cube not all corners in position, don't know why")

@@ -2,7 +2,7 @@ from typing import Tuple
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs import Algs, FaceAlg
-from cube.domain.exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError, EvenCubeCornerSwapException
 from cube.domain.model import Part
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import StepSolver
@@ -70,17 +70,19 @@ class PLL(StepSolver):
         return rotate_alg
 
     def _do_pll(self):
-
         description_alg = self._search_pll_alg()
 
         if description_alg is None:
+            # Unknown PLL state - check what type of parity
+            if self._is_corner_parity():
+                # Corner parity: raise exception for orchestrator to fix
+                self.debug(f"PLL: Corner parity detected (2 corners in position)")
+                raise EvenCubeCornerSwapException()
 
-            self._do_pll_parity()
-            # in rare cases after parity it is solved with rotation only
-            # so we don't recognize the state
+            # Edge swap parity: fix internally and retry
+            self._do_edge_swap_parity()
             if self._rotate_and_solve():
-                return True  # done
-
+                return
             description_alg = self._search_pll_alg()
 
         if description_alg is None:
@@ -95,6 +97,67 @@ class PLL(StepSolver):
         self._rotate_and_solve()  # because all our searching U
 
         assert self.is_solved
+
+    def _is_corner_parity(self) -> bool:
+        """
+        Check if cube has corner parity (2 corners in position on even cube).
+
+        Also brings a corner to front-right position (same as L3Corners).
+        This ensures the cube is in the expected state for fix_corner_parity().
+
+        Returns:
+            True if corner parity detected (2 corners in position on even cube)
+        """
+        if self.cube.n_slices % 2 != 0:
+            return False  # Only even cubes can have parity
+
+        yf = self.yellow_face
+
+        # Find a corner in position and bring to front-right (like L3Corners does)
+        in_position = None
+        for c in yf.corners:
+            if c.in_position:
+                in_position = c
+                break
+
+        if in_position:
+            # Bring to front-right via Y rotation
+            if yf.corner_top_right is in_position:
+                self.play(Algs.Y)
+            elif yf.corner_top_left is in_position:
+                self.play(Algs.Y * 2)
+            elif yf.corner_bottom_left is in_position:
+                self.play(Algs.Y.prime)
+            # If corner_bottom_right, already in position
+
+        corners_in_position = sum(c.in_position for c in yf.corners)
+        return corners_in_position == 2
+
+    def _do_edge_swap_parity(self) -> None:
+        """
+        Handle edge swap parity in PLL.
+
+        This fixes the "Swap 2 Edges Diagonal" case that can occur on even cubes
+        when edges are in an impossible permutation.
+
+        Note: This is handled internally (not via exception) because the reducer
+        doesn't have a separate edge swap parity fix for PLL. OLL edge parity
+        (orientation) is different from PLL edge parity (permutation).
+        """
+        size = self.cube.size
+        assert size % 2 == 0
+
+        U: FaceAlg = Algs.U
+        rw: Alg = Algs.R[2:size // 2]
+        rw2: Alg = rw * 2
+        uwx: Alg = U[1:size // 2]
+        uwy = U[2:size // 2]
+
+        with self.annotate(h2="PLL Edge Swap Parity"):
+            # Swap 2 Edges Diagonal algorithm
+            # https://cubingcheatsheet.com/algs6x.html
+            alg = rw2 + U * 2 + rw2 + uwx * 2 + rw2 + uwx + uwy + Algs.parse("R2 (U R U) (R' U' R' U') (R' U R' U')")
+            self.play(alg)
 
     def _search_pll_alg(self) -> Tuple[Alg, str, Alg] | None:
 
@@ -277,34 +340,3 @@ class PLL(StepSolver):
 
         else:
             return None
-
-    def _do_pll_parity(self)  -> None:
-        """
-        I'm handing only Swap 2 Edges Diagonal and repeating PLL
-        :return:
-        """
-        #  https://cubingcheatsheet.com/algs6x.html
-
-        # Swap 2 Edges Diagonal
-        # 6x6
-        # 2-3Rw2 U2 2-3Rw2 1-3Uw2 2-3Rw2 1-3Uw 2-3Uw R2 (U R U) (R' U' R' U') (R' U R' U')
-
-        # 4x4
-
-        size = self.cube.size
-        assert size % 2 == 0
-
-        U: FaceAlg = Algs.U
-        R = Algs.R
-        rw: Alg = Algs.R[2:size // 2]
-        rw2: Alg = rw * 2
-        uwx: Alg = U[1:size // 2]
-        uwy = U[2:size // 2]
-
-        with self.annotate(h2="PLL Parity"):
-            #     2-3Rw2 U2    2-3Rw2 1-3Uw2  2-3Rw2 1-3Uw 2-3Uw R2 (U R U) (R' U' R' U') (R' U R' U')
-            # I tried to remove the last part
-            #  but in some case it doesn't bring again to pre PLL
-            # In this way I handle only
-            alg = rw2 + U * 2 + rw2 + uwx * 2 + rw2 + uwx + uwy + Algs.parse("R2 (U R U) (R' U' R' U') (R' U R' U')")
-            self.play(alg)

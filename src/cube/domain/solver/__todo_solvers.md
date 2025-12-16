@@ -77,6 +77,42 @@ diagonal pair. After Y rotation:
 **Conclusion:** NOT a bug. The algorithm is robust to Y rotations. The only requirement
 is that yellow face stays up, which is always true in L3 position.
 
+---
+
+## Corner swap vs edge parity asymmetry (COMPLETED - 2025-12-16)
+
+The user noted: "why we need different behaviour for corner swap and edge,
+it seems that detector can simply raise the exception and reducer can fix it exactly
+like in edge parity"
+
+### Unified Pattern (Implemented)
+
+| Parity Type | Who Detects | Who Fixes | Pattern |
+|-------------|-------------|-----------|---------|
+| **Edge** | L3Cross | Orchestrator → Reducer | Throw → Catch → Fix |
+| **Corner** | L3Corners | Orchestrator → Reducer | Throw → Catch → Fix |
+
+Both parities now follow the same consistent pattern:
+1. Detector raises exception (L3Cross / L3Corners)
+2. Orchestrator catches exception
+3. Reducer fixes parity (`fix_edge_parity()` / `fix_corner_parity()`)
+4. Re-reduce and retry solve
+
+### Changes Made
+
+1. **L3Corners.py**: Removed `_do_corner_swap()` call before throwing exception
+2. **NxNSolverOrchestrator.py**: Always calls `reducer.fix_corner_parity()` when catching exception
+3. **Cube.py**: Removed `dont_fix_corner_parity` flag and `with_dont_fix_corner_parity()` context manager
+
+### Benefits Achieved
+
+- Consistent pattern for both parities
+- Simpler L3Corners (just detects and throws)
+- Eliminated the `dont_fix_corner_parity` flag entirely
+- Clearer separation of concerns (detection vs fixing)
+
+---
+
 # new enties
 
 i dont like facades 

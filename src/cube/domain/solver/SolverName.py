@@ -60,7 +60,7 @@ class SolverName(Enum):
     Each enum value contains SolverMeta with test skip reasons (None = supported).
     """
     LBL = SolverMeta("LBL")
-    CFOP = SolverMeta("CFOP", only_3x3="CFOP use same reducer as LBL")
+    CFOP = SolverMeta("CFOP")#, only_3x3="CFOP use same reducer as LBL")
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage", implemented=False)  # Cage method: edges+corners first, centers last (parity-free)
 
