@@ -283,13 +283,14 @@ class NxNSolverOrchestrator(AbstractSolver):
                     # After fix, edges are disturbed -> need to re-reduce
                     self.debug(f"Catch even edge parity in iteration #{attempt}")
                     if even_edge_parity_detected:
-                        # Already fixed edge parity - shouldn't happen twice
-                        if parity_detector is not None:
-                            self.debug("Falling back to parity detector for remaining parity")
-                            parity_detector.solve_3x3(debug, what)
-                            break
-                        raise InternalSWError("already even_edge_parity_was_detected")
+                        # Edge parity should only be detected once per solve.
+                        # If we get here again, it's a bug in the parity fix or reducer.
+                        raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
                     even_edge_parity_detected = True
+                    # Edge flip is POSITION-INDEPENDENT: the algorithm flips inner slices
+                    # of any edge at FU position. Unlike corner swap which uses specific
+                    # inner R/U slices assuming L3 state, edge flip just needs ANY edge
+                    # at FU. So we can fix it here after catching the exception.
                     self._reducer.fix_edge_parity()  # Flip all inner slices of any edge
                     self._reducer.reduce(debug)       # Re-reduce (fix disturbs pairing)
                     continue  # retry
@@ -325,6 +326,10 @@ class NxNSolverOrchestrator(AbstractSolver):
                     if parity_detector is not None:
                         # Using parity detector - corner was NOT fixed (dont_fix flag)
                         # Orchestrator must fix via reducer
+                        #
+                        # NOTE: The corner swap algorithm is robust to Y rotations because
+                        # it swaps diagonal corners on U face, and ANY diagonal swap fixes
+                        # corner parity. Only requirement is yellow stays up (L3 position).
                         self._reducer.fix_corner_parity()
 
                     # In both cases, corner swap disturbs edges -> need to re-reduce
