@@ -163,7 +163,7 @@ LIGHTING_BACKGROUND = 0.15  # Default background (black)
 # List of texture sets to cycle through with Ctrl+Shift+T
 # Can be preset names ("set1", "family"), paths, or None for solid colors
 # Ctrl+Shift+T cycles: debug4x4 → debug3x3 → arrows → ... → None (solid) → debug4x4 → ...
-TEXTURE_SETS: list[str | None] | None = ["debug4x4", "debug3x3", "arrows", "family", "letters", "numbers", "set2", None]
+TEXTURE_SETS: list[str | None] | None = None # ["debug4x4", "debug3x3", "arrows", "family", "letters", "numbers", "set2", None]
 # Index of initial texture set (0 = first in list, or None to start with solid colors)
 TEXTURE_SET_INDEX: int = 0  # Start with debug4x4 for 4x4 cube debugging
 # Debug texture loading/assignment (controlled by vs.debug with this flag)

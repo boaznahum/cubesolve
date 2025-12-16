@@ -48,3 +48,28 @@ def test_cage_solver_rejects_even_cubes(size: int) -> None:
 
     with pytest.raises(ValueError, match="only supports odd cubes"):
         solver.solve()
+
+
+@pytest.mark.parametrize("size", [5, 7])
+def test_find_edges_with_color(size: int) -> None:
+    """Test finding edges with a specific color (uses middle slice for odd cubes)."""
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    solver = CageNxNSolver(app.op)
+
+    # Find edges with WHITE color (unscrambled cube)
+    white_edges = solver._find_edges_with_color(Color.WHITE)
+
+    # WHITE face is adjacent to 4 edges: WB, WR, WG, WO
+    assert len(white_edges) == 4, f"Expected 4 white edges, got {len(white_edges)}"
+
+    # Verify each edge has WHITE in its middle slice
+    for edge in white_edges:
+        middle_idx = edge.n_slices // 2
+        middle_slice = edge.get_slice(middle_idx)
+        assert Color.WHITE in middle_slice.colors_id, f"Edge {edge} should have WHITE"
+
+    # After scramble, still should find 4 edges with WHITE
+    app.scramble(42, None, animation=False, verbose=False)
+    white_edges_scrambled = solver._find_edges_with_color(Color.WHITE)
+    assert len(white_edges_scrambled) == 4, "Should still find 4 white edges after scramble"

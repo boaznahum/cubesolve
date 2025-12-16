@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cube.domain.model import Color
+from cube.domain.model.Edge import Edge
 from cube.domain.model.Face import Face
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import Solver, SolveStep, SolverResults
@@ -118,6 +119,28 @@ class CageNxNSolver(Solver):
         """Check if a face's centers are reduced to 3x3."""
         face = self._cube.color_2_face(color)
         return self._centers._is_face_solved(face, color)
+
+    def _find_edges_with_color(self, color: Color) -> list[Edge]:
+        """Find all edges that contain the given color.
+
+        For odd cubes, the middle slice (at n_slices // 2) defines the edge identity.
+        This slice has a fixed position and known colors.
+
+        Args:
+            color: The color to search for
+
+        Returns:
+            List of edges where the middle slice contains the color
+        """
+        cube = self._cube
+        result: list[Edge] = []
+        for edge in cube.edges:
+            # For odd cubes, middle slice defines edge identity
+            middle_idx = edge.n_slices // 2
+            middle_slice = edge.get_slice(middle_idx)
+            if color in middle_slice.colors_id:
+                result.append(edge)
+        return result
 
     def _solve_face_center(self, color: Color) -> None:
         """Solve one face's centers to 3x3.

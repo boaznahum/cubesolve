@@ -297,6 +297,7 @@ class CommonOp:
                 self.op.play(alg)
 
 
+
     def bring_face_front(self, f: Face):
 
         """
@@ -330,6 +331,7 @@ class CommonOp:
 
                     case _:
                         raise InternalSWError(f"Unknown face {f}")
+
 
     def bring_edge_to_front_by_e_rotate(self, edge: Edge) -> Alg | None:
         """
