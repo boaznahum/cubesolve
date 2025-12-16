@@ -7,6 +7,7 @@
 | B1 | Bug | HIGH | GUI Animation Solver Bug (Lazy Cache Initialization) |
 | B5 | Bug | - | Missing debug output when running with `--debug-all` |
 | B6 | Bug | - | Celebration effect triggers on reset/resize |
+| B8 | Bug | - | Default texture shows wrong face colors (YELLOW on front instead of WHITE) |
 | G2 | GUI | - | Investigate pyopengltk for tkinter backend |
 | G5 | GUI | - | Comprehensive Command Testing Plan |
 | G6 | GUI | - | Additional lighting improvements (pyglet2) |

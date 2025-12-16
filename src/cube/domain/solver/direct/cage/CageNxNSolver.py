@@ -64,7 +64,7 @@ class _CageFacade(BaseSolver):
     ) -> SolverResults:
         raise NotImplementedError("Use CageNxNSolver.solve()")
 
-
+#claude: yu can inherit from AbstractSolver no need for all this mess
 class CageNxNSolver(Solver):
     """
     Cage method solver for odd NxN cubes.
@@ -106,10 +106,7 @@ class CageNxNSolver(Solver):
         if self.is_solved:
             return "Solved"
 
-        if self._cube.size == 3:
-            return "3x3"
-
-        # Check start face
+        # Check start face center reduction
         start_face = self._cube.color_2_face(START_FACE_COLOR)
         color_name = START_FACE_COLOR.name.capitalize()
         if start_face.center.is3x3:
@@ -154,10 +151,6 @@ class CageNxNSolver(Solver):
         # Only odd cubes supported
         if cube.size % 2 == 0:
             raise ValueError("Cage method only supports odd cubes (5x5, 7x7, ...)")
-
-        # 3x3 has no inner slices to reduce
-        if cube.size == 3:
-            return sr
 
         # Step 1: Solve start face centers
         self._solve_face_center(START_FACE_COLOR)
