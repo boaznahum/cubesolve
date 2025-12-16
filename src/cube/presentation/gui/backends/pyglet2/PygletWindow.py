@@ -73,3 +73,7 @@ class PygletWindow(pyglet.window.Window):
     def on_mouse_scroll(self, x: int, y: int, scroll_x: float, scroll_y: float):
         """Delegate mouse scroll event to parent."""
         return self._parent.on_mouse_scroll(x, y, scroll_x, scroll_y)
+
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
+        """Delegate mouse motion event to parent."""
+        return self._parent.on_mouse_motion(x, y, dx, dy)

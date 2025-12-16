@@ -27,6 +27,7 @@ from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCu
 from cube.presentation.gui.commands import Command, CommandContext, Commands
 from cube.presentation.gui.key_bindings import lookup_command
 from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
+from cube.presentation.gui.backends.pyglet2.GUIToolbar import GUIToolbar, create_toolbar
 from cube.application.protocols import AnimatableViewer
 from cube.presentation.viewer.GViewerExt import GViewerExt
 
@@ -135,6 +136,10 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             event_loop=backend.event_loop,
             backend_name="pyglet2",
         )
+
+        # Native GUI toolbar (replaces ImGui complexity)
+        # All button setup is centralized in create_toolbar() in GUIToolbar.py
+        self._toolbar = create_toolbar(self)
 
         # Initial GUI update
         self.update_gui_elements()
@@ -452,6 +457,9 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         for t in self.animation_text:
             t.draw()
 
+        # Draw native GUI toolbar
+        self._toolbar.draw()
+
         # Re-enable depth testing for next frame
         gl.glEnable(gl.GL_DEPTH_TEST)
 
@@ -464,6 +472,9 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         # Update adapter's window size for screen_to_world (B4 fix)
         if self._renderer_adapter:
             self._renderer_adapter.update_window_size(width, height)
+        # Update toolbar position
+        if hasattr(self, '_toolbar'):
+            self._toolbar.update_window_size(width, height)
 
     def on_key_press(self, symbol: int, modifiers: int) -> None:
         """Handle key press event (delegated from PygletWindow).
@@ -494,6 +505,12 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         """Handle mouse press event (delegated from PygletWindow)."""
+        # Check toolbar click first
+        cmd = self._toolbar.handle_click(x, y)
+        if cmd:
+            self.inject_command(cmd)
+            return  # Don't pass to cube rotation handler
+
         abstract_mods = _convert_modifiers(modifiers)
         return main_g_mouse.on_mouse_press(self, self._app.vs, x, y, abstract_mods)
 
@@ -504,6 +521,10 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
     def on_mouse_scroll(self, x: int, y: int, scroll_x: float, scroll_y: float):
         """Handle mouse scroll event (delegated from PygletWindow)."""
         return main_g_mouse.on_mouse_scroll(self, scroll_y)
+
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
+        """Handle mouse motion event (delegated from PygletWindow)."""
+        self._toolbar.handle_motion(x, y)
 
     # === Key Injection ===
 
