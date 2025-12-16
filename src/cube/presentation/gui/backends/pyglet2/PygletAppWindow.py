@@ -70,6 +70,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         # (pyglet calls on_resize during __init__ before we can create the renderer)
         self._modern_renderer: ModernGLRenderer | None = None
         self._renderer_adapter: ModernGLRendererAdapter | None = None
+        self._toolbar: GUIToolbar | None = None
 
         # Create the pyglet window (composition pattern)
         # Pass self as parent so events are delegated back to us
@@ -282,7 +283,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
                 return texture_set
         return None
 
-    def cycle_texture_set(self) -> str | None:
+    def next_texture_set(self) -> str | None:
         """Cycle to the next texture set.
 
         Returns:
@@ -315,9 +316,56 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         if Path(texture_path).exists():
             # Set new texture directory, then reset - on_reset() will load it
             self._modern_viewer.set_texture_directory(texture_path)
+            self._modern_viewer.set_textures_enabled(True)  # Enable textures when cycling
             self._app.cube.reset()
             return texture_set
         return None
+
+    def prev_texture_set(self) -> str | None:
+        """Cycle to the previous texture set.
+
+        Returns:
+            Name of new texture set, "solid" if None, or None if not supported.
+        """
+        from pathlib import Path
+        from cube.resources.faces import get_texture_set_path
+
+        if not self._texture_sets:
+            return None
+
+        # Move to previous set
+        self._texture_set_index = (self._texture_set_index - 1) % len(self._texture_sets)
+        texture_set = self._texture_sets[self._texture_set_index]
+
+        if texture_set is None:
+            # Solid colors mode
+            self._modern_viewer.set_texture_directory(None)
+            self._modern_viewer.set_texture_mode(False)
+            self._app.cube.reset()
+            return "solid"
+
+        # Resolve texture path
+        texture_path = texture_set
+        if not Path(texture_path).exists():
+            preset_path = get_texture_set_path(texture_path)
+            if preset_path:
+                texture_path = str(preset_path)
+
+        if Path(texture_path).exists():
+            # Set new texture directory, then reset - on_reset() will load it
+            self._modern_viewer.set_texture_directory(texture_path)
+            self._modern_viewer.set_textures_enabled(True)  # Enable textures when cycling
+            self._app.cube.reset()
+            return texture_set
+        return None
+
+    def toggle_texture(self) -> bool:
+        """Toggle texture mode on/off.
+
+        Returns:
+            True if textures are now enabled, False if disabled.
+        """
+        return self._modern_viewer.toggle_texture_mode()
 
     def load_texture_set(self, directory: str) -> int:
         """Load all face textures from a directory.
@@ -458,7 +506,8 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             t.draw()
 
         # Draw native GUI toolbar
-        self._toolbar.draw()
+        if self._toolbar:
+            self._toolbar.draw()
 
         # Re-enable depth testing for next frame
         gl.glEnable(gl.GL_DEPTH_TEST)
@@ -473,7 +522,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         if self._renderer_adapter:
             self._renderer_adapter.update_window_size(width, height)
         # Update toolbar position
-        if hasattr(self, '_toolbar'):
+        if self._toolbar:
             self._toolbar.update_window_size(width, height)
 
     def on_key_press(self, symbol: int, modifiers: int) -> None:
@@ -506,10 +555,11 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         """Handle mouse press event (delegated from PygletWindow)."""
         # Check toolbar click first
-        cmd = self._toolbar.handle_click(x, y)
-        if cmd:
-            self.inject_command(cmd)
-            return  # Don't pass to cube rotation handler
+        if self._toolbar:
+            cmd = self._toolbar.handle_click(x, y)
+            if cmd:
+                self.inject_command(cmd)
+                return  # Don't pass to cube rotation handler
 
         abstract_mods = _convert_modifiers(modifiers)
         return main_g_mouse.on_mouse_press(self, self._app.vs, x, y, abstract_mods)
@@ -524,7 +574,8 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
         """Handle mouse motion event (delegated from PygletWindow)."""
-        self._toolbar.handle_motion(x, y)
+        if self._toolbar:
+            self._toolbar.handle_motion(x, y)
 
     # === Key Injection ===
 

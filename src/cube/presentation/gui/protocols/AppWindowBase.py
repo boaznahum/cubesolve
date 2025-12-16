@@ -455,7 +455,7 @@ class AppWindowBase(ABC):
         """
         return None
 
-    def cycle_texture_set(self) -> str | None:
+    def next_texture_set(self) -> str | None:
         """Cycle to the next texture set (if supported by backend).
 
         Default implementation returns None (not supported).
@@ -465,6 +465,28 @@ class AppWindowBase(ABC):
             Name of new texture set, "solid" if None, or None if not supported.
         """
         return None
+
+    def prev_texture_set(self) -> str | None:
+        """Cycle to the previous texture set (if supported by backend).
+
+        Default implementation returns None (not supported).
+        Override in backends with texture support (e.g., pyglet2).
+
+        Returns:
+            Name of new texture set, "solid" if None, or None if not supported.
+        """
+        return None
+
+    def toggle_texture(self) -> bool:
+        """Toggle texture mode on/off (if supported by backend).
+
+        Default implementation returns False (not supported).
+        Override in backends with texture support (e.g., pyglet2).
+
+        Returns:
+            True if textures are now enabled, False otherwise.
+        """
+        return False
 
     def load_texture_set(self, directory: str) -> int:
         """Load all face textures from a directory (if supported by backend).

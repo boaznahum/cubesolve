@@ -246,9 +246,17 @@ class WebAppWindow(AppWindow):
         """Get current background gray level (not supported in web backend)."""
         return None
 
-    def cycle_texture_set(self) -> str | None:
+    def next_texture_set(self) -> str | None:
         """Cycle to the next texture set (not supported in web backend)."""
         return None
+
+    def prev_texture_set(self) -> str | None:
+        """Cycle to the previous texture set (not supported in web backend)."""
+        return None
+
+    def toggle_texture(self) -> bool:
+        """Toggle texture mode on/off (not supported in web backend)."""
+        return False
 
     def load_texture_set(self, directory: str) -> int:
         """Load all face textures from a directory (not supported in web backend)."""

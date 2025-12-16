@@ -24,9 +24,17 @@ BUTTON_HEIGHT = 32
 BUTTON_PADDING = 8
 BUTTON_MARGIN = 5
 ROW_MARGIN = 4
+BEVEL_WIDTH = 2  # Width of 3D bevel effect
+
+# Button colors
 BUTTON_BG_COLOR = (70, 130, 180, 255)      # Steel blue
 BUTTON_BG_HOVER = (100, 160, 210, 255)     # Lighter blue on hover
 BUTTON_BG_DISABLED = (80, 80, 80, 200)     # Gray when disabled
+BUTTON_HIGHLIGHT = (130, 180, 220, 255)    # Light edge (top/left) - raised look
+BUTTON_SHADOW = (30, 70, 110, 255)         # Dark edge (bottom/right) - raised look
+BUTTON_HIGHLIGHT_DISABLED = (110, 110, 110, 200)
+BUTTON_SHADOW_DISABLED = (50, 50, 50, 200)
+
 BUTTON_TEXT_COLOR = (255, 255, 255, 255)   # White text
 BUTTON_TEXT_DISABLED = (140, 140, 140, 255)
 TOOLBAR_BG_COLOR = (40, 40, 40, 240)       # Dark background
@@ -96,6 +104,7 @@ class GUIToolbar:
         self._shapes_dirty = True
         self._bg_rect: shapes.Rectangle | None = None
         self._button_rects: list[shapes.Rectangle | None] = []
+        self._button_bevels: list[list[shapes.Line]] = []  # Bevel lines per button
         self._button_labels: list[pyglet.text.Label | None] = []
 
     def add_button(
@@ -155,6 +164,7 @@ class GUIToolbar:
         """Rebuild all shapes."""
         self._batch = pyglet.graphics.Batch()
         self._button_rects.clear()
+        self._button_bevels.clear()
         self._button_labels.clear()
 
         if not self._buttons:
@@ -214,8 +224,9 @@ class GUIToolbar:
             current_label = btn.get_label()
 
             if btn.is_label:
-                # Non-clickable label - no background rectangle
+                # Non-clickable label - no background rectangle or bevel
                 self._button_rects.append(None)
+                self._button_bevels.append([])
             else:
                 enabled = btn.is_enabled()
                 bg_color = BUTTON_BG_COLOR if enabled else BUTTON_BG_DISABLED
@@ -227,6 +238,39 @@ class GUIToolbar:
                 )
                 rect.opacity = bg_color[3]
                 self._button_rects.append(rect)
+
+                # Add 3D bevel effect (highlight top/left, shadow bottom/right)
+                highlight = BUTTON_HIGHLIGHT if enabled else BUTTON_HIGHLIGHT_DISABLED
+                shadow = BUTTON_SHADOW if enabled else BUTTON_SHADOW_DISABLED
+                x1, y1 = btn.x, btn.y
+                x2, y2 = btn.x + btn.width, btn.y + BUTTON_HEIGHT
+                bevels: list[shapes.Line] = []
+
+                # Top highlight line
+                line_top = shapes.Line(x1, y2, x2, y2, thickness=BEVEL_WIDTH,
+                                       color=highlight[:3], batch=self._batch)
+                line_top.opacity = highlight[3]
+                bevels.append(line_top)
+
+                # Left highlight line
+                line_left = shapes.Line(x1, y1, x1, y2, thickness=BEVEL_WIDTH,
+                                        color=highlight[:3], batch=self._batch)
+                line_left.opacity = highlight[3]
+                bevels.append(line_left)
+
+                # Bottom shadow line
+                line_bottom = shapes.Line(x1, y1, x2, y1, thickness=BEVEL_WIDTH,
+                                          color=shadow[:3], batch=self._batch)
+                line_bottom.opacity = shadow[3]
+                bevels.append(line_bottom)
+
+                # Right shadow line
+                line_right = shapes.Line(x2, y1, x2, y2, thickness=BEVEL_WIDTH,
+                                         color=shadow[:3], batch=self._batch)
+                line_right.opacity = shadow[3]
+                bevels.append(line_right)
+
+                self._button_bevels.append(bevels)
 
             # Text label
             if current_label:
@@ -387,6 +431,29 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
         "Stop",
         Commands.STOP_ANIMATION,
         enabled_fn=lambda: window.animation_running,
+    )
+
+    toolbar.add_separator()
+
+    # Texture controls
+    toolbar.add_label("Tex")
+    toolbar.add_button("<", Commands.TEXTURE_SET_PREV)
+    toolbar.add_button(">", Commands.TEXTURE_SET_NEXT)
+    toolbar.add_button(
+        "On",
+        Commands.TEXTURE_TOGGLE,
+        label_fn=lambda: "ON" if window._modern_viewer.textures_enabled else "OFF",
+        min_width=40,
+    )
+
+    toolbar.add_separator()
+
+    # Solver
+    toolbar.add_button(
+        "Solver",
+        Commands.SWITCH_SOLVER,
+        label_fn=lambda: f"Slv:{app.slv.name[:6]}",
+        min_width=75,
     )
 
     toolbar.add_separator()

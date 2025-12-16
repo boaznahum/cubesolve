@@ -40,7 +40,9 @@ from .concrete import (
     BrightnessDownCommand,
     BackgroundUpCommand,
     BackgroundDownCommand,
-    TextureSetCycleCommand,
+    TextureSetNextCommand,
+    TextureSetPrevCommand,
+    TextureToggleCommand,
     # Shadow
     ShadowToggleCommand,
     # Size
@@ -204,7 +206,9 @@ class Commands:
     # =========================================================================
     # TEXTURE SET CYCLING (pyglet2 backend only)
     # =========================================================================
-    TEXTURE_SET_CYCLE = TextureSetCycleCommand()
+    TEXTURE_SET_NEXT = TextureSetNextCommand()
+    TEXTURE_SET_PREV = TextureSetPrevCommand()
+    TEXTURE_TOGGLE = TextureToggleCommand()
 
     # =========================================================================
     # SHADOW TOGGLES

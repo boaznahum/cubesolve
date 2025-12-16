@@ -172,7 +172,7 @@ KEY_BINDINGS_NORMAL: list[KeyBinding] = [
     (Keys.BRACKETRIGHT, Modifiers.CTRL, Commands.BRIGHTNESS_UP),
     (Keys.BRACKETLEFT, Modifiers.CTRL | Modifiers.SHIFT, Commands.BACKGROUND_DOWN),
     (Keys.BRACKETRIGHT, Modifiers.CTRL | Modifiers.SHIFT, Commands.BACKGROUND_UP),
-    (Keys.T, Modifiers.CTRL | Modifiers.SHIFT, Commands.TEXTURE_SET_CYCLE),
+    (Keys.T, Modifiers.CTRL | Modifiers.SHIFT, Commands.TEXTURE_SET_NEXT),
 
     # -------------------------------------------------------------------------
     # Recording
@@ -266,7 +266,7 @@ KEY_BINDINGS_ANIMATION: list[KeyBinding] = [
     (Keys.BRACKETRIGHT, Modifiers.CTRL, Commands.BRIGHTNESS_UP),
     (Keys.BRACKETLEFT, Modifiers.CTRL | Modifiers.SHIFT, Commands.BACKGROUND_DOWN),
     (Keys.BRACKETRIGHT, Modifiers.CTRL | Modifiers.SHIFT, Commands.BACKGROUND_UP),
-    (Keys.T, Modifiers.CTRL | Modifiers.SHIFT, Commands.TEXTURE_SET_CYCLE),
+    (Keys.T, Modifiers.CTRL | Modifiers.SHIFT, Commands.TEXTURE_SET_NEXT),
 
     # -------------------------------------------------------------------------
     # Solver Switch (works during animation)

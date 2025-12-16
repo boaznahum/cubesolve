@@ -64,7 +64,7 @@ def _inject_commands(window: "AppWindow", commands_str: str) -> None:
 def create_app_window(
     app: AbstractApp,
     backend_name: str = "pyglet",
-    width: int = 720,
+    width: int = 900,
     height: int = 720,
     title: str = "Cube Solver",
 ) -> "AppWindow":
@@ -101,7 +101,7 @@ def create_app_window(
 def run_with_backend(
     backend_name: str = "pyglet",
     *,
-    width: int = 720,
+    width: int = 900,
     height: int = 720,
     title: str = "Cube Solver",
     cube_size: int | None = None,
@@ -221,8 +221,8 @@ def main(args: list[str] | None = None) -> int:
     parser.add_argument(
         "--width", "-W",
         type=int,
-        default=720,
-        help="Window width in pixels (default: 720)"
+        default=900,
+        help="Window width in pixels (default: 900)"
     )
     parser.add_argument(
         "--height", "-H",

@@ -202,7 +202,7 @@ class AppWindow(Protocol):
         """
         ...
 
-    def cycle_texture_set(self) -> str | None:
+    def next_texture_set(self) -> str | None:
         """Cycle to the next texture set (if supported by backend).
 
         Cycles through TEXTURE_SETS from config (can include None for solid colors).
@@ -211,6 +211,29 @@ class AppWindow(Protocol):
 
         Returns:
             Name of new texture set, "solid" if None/disabled, or None if not supported.
+        """
+        ...
+
+    def prev_texture_set(self) -> str | None:
+        """Cycle to the previous texture set (if supported by backend).
+
+        Cycles backwards through TEXTURE_SETS from config.
+        Only implemented by backends with texture support (pyglet2).
+        Other backends return None (no-op).
+
+        Returns:
+            Name of new texture set, "solid" if None/disabled, or None if not supported.
+        """
+        ...
+
+    def toggle_texture(self) -> bool:
+        """Toggle texture mode on/off (if supported by backend).
+
+        Only implemented by backends with texture support (pyglet2).
+        Other backends return False (no-op).
+
+        Returns:
+            True if textures are now enabled, False otherwise.
         """
         ...
 

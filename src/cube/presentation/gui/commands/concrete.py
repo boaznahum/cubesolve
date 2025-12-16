@@ -305,13 +305,34 @@ class BackgroundDownCommand(Command):
 
 
 @dataclass(frozen=True)
-class TextureSetCycleCommand(Command):
-    """Command to cycle texture sets."""
+class TextureSetNextCommand(Command):
+    """Command to cycle to next texture set."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        texture_set = ctx.window.cycle_texture_set()
+        texture_set = ctx.window.next_texture_set()
         if texture_set is not None:
             ctx.vs.debug(False, f"Texture: {texture_set}")
+        return CommandResult()
+
+
+@dataclass(frozen=True)
+class TextureSetPrevCommand(Command):
+    """Command to cycle to previous texture set."""
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        texture_set = ctx.window.prev_texture_set()
+        if texture_set is not None:
+            ctx.vs.debug(False, f"Texture: {texture_set}")
+        return CommandResult()
+
+
+@dataclass(frozen=True)
+class TextureToggleCommand(Command):
+    """Command to toggle texture mode on/off."""
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        enabled = ctx.window.toggle_texture()
+        ctx.vs.debug(False, f"Texture: {'ON' if enabled else 'OFF'}")
         return CommandResult()
 
 

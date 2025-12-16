@@ -124,6 +124,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         # Texture mode state
         self._texture_mode: bool = False
         self._face_textures: dict[FaceName, int] = {}
+        self._textures_enabled: bool = True  # Master switch for all texture rendering
 
         # Per-cell texture mode (new system: textures stored in c_attributes)
         self._use_per_cell_textures: bool = False
@@ -226,12 +227,12 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             self._dirty = False
 
         # Draw filled faces with lighting
-        if self._use_per_cell_textures:
+        if self._textures_enabled and self._use_per_cell_textures:
             # Per-cell texture mode: each cell has its own texture from c_attributes
             for texture_handle, triangles in self._triangles_per_texture.items():
                 if len(triangles) > 0:
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
-        elif self._texture_mode:
+        elif self._textures_enabled and self._texture_mode:
             # Old textured mode: draw each color group with its face texture
             for color, triangles in self._triangles_per_color.items():
                 if len(triangles) > 0:
@@ -239,7 +240,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                     texture_handle = self._face_textures.get(home_face) if home_face else None
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
         else:
-            # Solid color mode
+            # Solid color mode (or textures disabled)
             if self._face_triangles is not None and len(self._face_triangles) > 0:
                 self._renderer.draw_lit_triangles(self._face_triangles)
 
@@ -255,12 +256,15 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         Args:
             model_view: The 4x4 rotation matrix to apply
         """
+        # Check for animated geometry (considering texture enabled state)
+        use_per_cell = self._textures_enabled and self._use_per_cell_textures
+        use_old_tex = self._textures_enabled and self._texture_mode
         has_animated_geometry = (
-            (self._use_per_cell_textures and len(self._animated_triangles_per_texture) > 0) or
-            (not self._use_per_cell_textures and not self._texture_mode
+            (use_per_cell and len(self._animated_triangles_per_texture) > 0) or
+            (not use_per_cell and not use_old_tex
              and self._animated_face_triangles is not None
              and len(self._animated_face_triangles) > 0) or
-            (not self._use_per_cell_textures and self._texture_mode
+            (not use_per_cell and use_old_tex
              and len(self._animated_triangles_per_color) > 0)
         )
         if not has_animated_geometry:
@@ -269,12 +273,12 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         self._renderer.push_matrix()
         self._renderer.multiply_matrix(model_view)
 
-        if self._use_per_cell_textures:
+        if use_per_cell:
             # Per-cell texture mode
             for texture_handle, triangles in self._animated_triangles_per_texture.items():
                 if len(triangles) > 0:
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
-        elif self._texture_mode:
+        elif use_old_tex:
             # Old textured mode
             for color, triangles in self._animated_triangles_per_color.items():
                 if len(triangles) > 0:
@@ -282,6 +286,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                     texture_handle = self._face_textures.get(home_face) if home_face else None
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
         else:
+            # Solid color mode (or textures disabled)
             if self._animated_face_triangles is not None:
                 self._renderer.draw_lit_triangles(self._animated_face_triangles)
 
@@ -315,7 +320,11 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             self._debug_texture_lazy(lambda: self._format_cell_texture_state())
 
         # Generate geometry (board separates static/animated)
-        if self._use_per_cell_textures:
+        # Consider _textures_enabled master switch when deciding which geometry to build
+        use_per_cell = self._textures_enabled and self._use_per_cell_textures
+        use_old_tex = self._textures_enabled and self._texture_mode
+
+        if use_per_cell:
             # Per-cell texture mode: group by texture handle from c_attributes
             (
                 self._triangles_per_texture,
@@ -330,7 +339,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
 
             # Debug texture handles used in geometry
             self._debug_texture_lazy(lambda: self._format_geometry_debug())
-        elif self._texture_mode:
+        elif use_old_tex:
             (
                 self._triangles_per_color,
                 self._line_data,
@@ -342,6 +351,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             self._triangles_per_texture.clear()
             self._animated_triangles_per_texture.clear()
         else:
+            # Solid color mode (or textures disabled)
             (
                 self._face_triangles,
                 self._line_data,
@@ -566,16 +576,27 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         """Check if texture mode is enabled."""
         return self._texture_mode
 
+    @property
+    def textures_enabled(self) -> bool:
+        """Check if texture rendering is enabled (master switch)."""
+        return self._textures_enabled
+
     def set_texture_mode(self, enabled: bool) -> None:
         """Enable or disable texture mode."""
         if self._texture_mode != enabled:
             self._texture_mode = enabled
             self._dirty = True
 
+    def set_textures_enabled(self, enabled: bool) -> None:
+        """Enable or disable all texture rendering (master switch)."""
+        if self._textures_enabled != enabled:
+            self._textures_enabled = enabled
+            self._dirty = True
+
     def toggle_texture_mode(self) -> bool:
-        """Toggle texture mode on/off. Returns new state."""
-        self.set_texture_mode(not self._texture_mode)
-        return self._texture_mode
+        """Toggle texture rendering on/off. Returns new state."""
+        self.set_textures_enabled(not self._textures_enabled)
+        return self._textures_enabled
 
     def load_face_texture(self, face_name: FaceName, file_path: str) -> bool:
         """Load a texture for a specific face."""
