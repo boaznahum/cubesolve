@@ -82,8 +82,8 @@ def test_cage_solver_solves_edges(size: int) -> None:
     # Edges should be solved after
     assert solver._are_edges_solved(), "Edges should be solved after solve()"
 
-    # Status should show Cage:Done (edges AND corners solved after solve())
-    assert "Cage:Done" in solver.status
+    # Cube should be fully solved now (Phase 2 centers complete)
+    assert solver.status == "Solved", f"Expected 'Solved', got '{solver.status}'"
 
     # Print parity info for visibility
     print(f"\n  Size {size}x{size}: parity={results._was_partial_edge_parity}")
@@ -110,12 +110,12 @@ def test_cage_solver_parity_detection(seed: int) -> None:
 
 @pytest.mark.parametrize("size", [5, 7])
 def test_cage_solver_solves_corners(size: int) -> None:
-    """Test that cage solver solves corners after edges (Phase 1b).
+    """Test that cage solver solves corners and the entire cube.
 
     After solve():
     - Edges: paired AND positioned correctly
     - Corners: positioned correctly
-    - Centers: still scrambled (Phase 2 TODO)
+    - Centers: SOLVED (Phase 2 complete)
     """
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
@@ -137,8 +137,10 @@ def test_cage_solver_solves_corners(size: int) -> None:
     # Corners should be solved
     assert solver._are_corners_solved(), "Corners should be solved"
 
-    # But centers should still be scrambled (for NxN > 3)
-    if size > 3:
-        assert not solver._are_centers_solved(), "Centers should NOT be solved yet (Phase 2)"
+    # Centers should also be solved (Phase 2 complete)
+    assert solver._are_centers_solved(), "Centers should be solved (Phase 2 complete)"
 
-    print(f"\n  Size {size}x{size}: corners solved, centers still scrambled")
+    # Cube should be fully solved
+    assert app.cube.solved, "Cube should be fully solved"
+
+    print(f"\n  Size {size}x{size}: fully solved")
