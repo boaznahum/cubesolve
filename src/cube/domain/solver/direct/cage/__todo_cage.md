@@ -13,6 +13,7 @@
 - Access via ConfigProtocol (not `_config` directly) - see `config_protocol.py`
 - After edges are paired, 3x3 solver positions corners AND edges correctly
 - **ODD CUBES ONLY** - face center defines face color
+- **Beginner solver works, CFOP does NOT** (see bug below)
 
 ### Phase 2: Center Solving - TODO (NEXT SESSION)
 - Need commutators that preserve edges/corners
@@ -59,3 +60,32 @@ Currently using `advanced_edge_parity=False` (M-slice algorithm).
 Consider switching to `True` (R/L-slice algorithm) which:
 - Preserves edge pairing better
 - May be better for cage method
+
+---
+
+## BUG: CFOP Solver Fails on Big Cubes with Scrambled Centers
+
+**Status:** Confirmed - CFOP fails, Beginner works
+
+**Symptom:** When using CFOP solver for Phase 1b on 5x5/7x7:
+- `F2L.solve()` fails with `assert self.solved()` at line 151
+- `self.solved()` calls `_l1_l2_solved()` which checks `wf.solved` (white face)
+- `Face.solved` returns `False` because `is3x3=False` (centers scrambled)
+
+**Root Cause:** `Face.solved` (line 377-378) has early return:
+```python
+def solved(self):
+    if not self.is3x3:
+        return False  # Always false when centers scrambled!
+```
+
+**Why Beginner Works but CFOP Doesn't:**
+- Beginner solver doesn't use `Face.solved` in the same way
+- CFOP's F2L explicitly checks `face.solved` in its completion assertion
+
+**Fix Options (for future CFOP support):**
+1. Modify `Face.solved` to have a `virtual_3x3` mode
+2. Add `Face.solved_as_3x3` method that ignores center state
+3. Modify CFOP's `_l1_l2_solved()` to use different check for big cubes
+
+**Current Workaround:** Use `CAGE_3X3_SOLVER = "beginner"` (default)
