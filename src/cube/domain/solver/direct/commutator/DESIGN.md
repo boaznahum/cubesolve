@@ -319,24 +319,32 @@ a commutator pattern! We can learn from and reuse this.
 #### 3.1 Class Hierarchy
 
 ```
-Solver (ABC)                           # Base interface
-└── BaseSolver                         # Common solver functionality
-    └── CommutatorNxNSolver            # Our new solver
-        ├── CommutatorCenters          # SolverElement for centers
-        ├── CommutatorEdges            # SolverElement for edges
-        └── CommutatorCorners          # SolverElement for corners
+SolverElementsProvider (Protocol)      # Minimal interface for solver components
+├── BaseSolver                         # Common solver functionality
+│   └── CommutatorNxNSolver            # Our new solver
+│       ├── CommutatorCenters          # SolverElement for centers
+│       ├── CommutatorEdges            # SolverElement for edges
+│       └── CommutatorCorners          # SolverElement for corners
+│
+└── AbstractReducer                    # Base class for reducers
+    └── BeginnerReducer                # Uses NxNCenters, NxNEdges
 
-SolverElement                          # Base for solver components
+SolverElement(provider: SolverElementsProvider)  # Base for solver components
 ├── Provides: cube, op, ann, cmn, cqr
 ├── CommutatorCenters(SolverElement)
 ├── CommutatorEdges(SolverElement)
 └── CommutatorCorners(SolverElement)
 ```
 
+**Note:** `SolverElement` accepts any `SolverElementsProvider` (not just `BaseSolver`),
+allowing both solvers and reducers to use the same component infrastructure.
+See: `SOLVER_ARCHITECTURE.md` for details.
+
 #### 3.2 Reusable Components from Existing Code
 
 | Component | Location | What it provides |
 |-----------|----------|------------------|
+| `SolverElementsProvider` | `protocols/SolverElementsProvider.py` | Minimal interface for solver components |
 | `SolverElement` | `common/SolverElement.py` | Base class with cube, op, annotations |
 | `BaseSolver` | `common/BaseSolver.py` | Solver base with debug, solve interface |
 | `CommonOp` | `common/CommonOp.py` | `bring_face_front()`, `bring_edge_to_front_left_by_whole_rotate()` |
@@ -685,11 +693,12 @@ class CommutatorNxNSolver(BaseSolver):
 
 ```python
 from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.protocols import SolverElementsProvider
 
 class CommutatorCenters(SolverElement):
     """Solves center pieces using commutators."""
 
-    def __init__(self, solver: BaseSolver) -> None:
+    def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)
         self._set_debug_prefix("CommCenters")
 

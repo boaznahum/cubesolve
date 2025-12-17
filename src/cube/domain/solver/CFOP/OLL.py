@@ -3,10 +3,9 @@ from typing import Tuple
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs import Algs
-from cube.domain.exceptions import InternalSWError
+from cube.domain.exceptions import InternalSWError, EvenCubeEdgeParityException
 from cube.domain.model import FaceName, Part
 from cube.domain.model.Face import Face
-from cube.domain.solver.common.AdvancedEvenOLLBigCubeParity import AdvancedEdgeEdgeParity
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import StepSolver
 
@@ -28,8 +27,6 @@ class OLL(StepSolver):
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
         self._set_debug_prefix("OLL")
-        self._oll_parity = AdvancedEdgeEdgeParity(slv)
-
         self._algs_db: list[Tuple[str, str, str]] = []
 
     @property
@@ -69,10 +66,9 @@ class OLL(StepSolver):
         # yf is no longer valid - need to track
         assert self.white_face.opposite.name == FaceName.U
 
-        if self._check_and_do_oll_edge_parity():
-            if self.is_solved:
-                # in some rare cases, after OLL parity, OLL is solved, and this is a state we don't know to detect
-                return
+        # Check for edge parity - raises EvenCubeEdgeParityException if detected
+        # Orchestrator will catch, fix via reducer, and retry
+        self._check_edge_parity()
 
         self._do_oll()
 
@@ -105,25 +101,28 @@ class OLL(StepSolver):
 
         assert self.is_solved
 
-    def _check_and_do_oll_edge_parity(self) -> bool:
+    def _check_edge_parity(self) -> None:
         """
-        Assume 'yellow' on top
-        :return:
-        """
+        Check for edge parity and raise exception if detected.
 
+        Assumes yellow face is up. Counts edges matching yellow:
+        - 0, 2, 4: Valid 3x3 state
+        - 1, 3: Edge parity on even cube -> raise exception
+
+        Raises:
+            EvenCubeEdgeParityException: If edge parity detected on even cube
+            InternalSWError: If edge parity detected on odd cube (should not happen)
+        """
         up = self.cube.up
         n_edges = sum(e.match_face(up) for e in up.edges)
 
         if n_edges not in [0, 2, 4]:
             if self.cube.n_slices % 2 == 0:
-                self.debug(f"Found OLL(Edge Parity)")
-                self._oll_parity.do_full_even_edge_parity()
-                return True
+                self.debug(f"OLL: Edge parity detected ({n_edges} edges matching)")
+                raise EvenCubeEdgeParityException()
             else:
-                # on odd cube it should be soled by edges
+                # on odd cube it should be solved by edges
                 raise InternalSWError("Edge parity on odd cube")
-
-        return False
 
     def _encode_state(self) -> str:
 

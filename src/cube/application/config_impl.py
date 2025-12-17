@@ -6,6 +6,7 @@ All other code must access config through ConfigProtocol via context (app.config
 
 from cube.application import _config as cfg
 from cube.utils.config_protocol import ConfigProtocol, MarkerDef, AnimationTextDef
+from cube.utils.SSCode import SSCode
 
 
 class AppConfig(ConfigProtocol):
@@ -292,3 +293,17 @@ class AppConfig(ConfigProtocol):
     def input_mouse_rotate_adjusted_face(self) -> bool:
         """Rotate adjusted face on edge/corner drag."""
         return cfg.INPUT_MOUSE_ROTATE_ADJUSTED_FACE
+
+    # ==========================================================================
+    # Single-step mode settings
+    # ==========================================================================
+    def is_ss_code_enabled(self, code: SSCode) -> bool:
+        """Check if a single-step mode code is enabled.
+
+        Args:
+            code: The SSCode to check
+
+        Returns:
+            True if the code is enabled in SS_CODES config, False otherwise
+        """
+        return cfg.SS_CODES.get(code, False)

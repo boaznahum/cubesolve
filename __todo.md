@@ -32,6 +32,7 @@
 > - ✅ Completed - search "check"
 >
 > **Claude instructions:**
+> - Always searchf or new entries in this file under "new entries" and process them as instruct in claud.md 
 > - Update the summary table above when adding/completing tasks
 > - When starting work, change status to ♾️ BEFORE beginning
 > - When done, move task to "Done Tasks" section, preserving ID
@@ -434,3 +435,7 @@
   - **Solution:** Updated `AppWindow.viewer` to return `AnimatableViewer` protocol type
   - `AnimatableViewer` is implemented by both `GCubeViewer` and `ModernGLCubeViewer`
   - **Files:** `src/cube/presentation/gui/protocols/AppWindow.py:50`
+
+
+# new entries
+- Make sure no code is leak outside backends layer

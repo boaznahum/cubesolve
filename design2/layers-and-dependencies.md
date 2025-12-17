@@ -43,7 +43,8 @@ This document describes the package structure of `src/cube/` and the dependencie
 | `solver/beginner/` | Layer-by-layer beginner method |
 | `solver/CFOP/` | CFOP speedcubing method |
 | `solver/common/` | Shared solver utilities (Tracker, CommonOp) |
-| `solver/protocols/` | Protocol interfaces for dependency inversion |
+| `solver/protocols/` | Protocol interfaces (OperatorProtocol, SolverElementsProvider, ReducerProtocol) |
+| `solver/reducers/` | NxN to 3x3 cube reducers (AbstractReducer, BeginnerReducer) |
 | `exceptions/` | Domain-specific exceptions |
 
 ### presentation/
@@ -144,4 +145,4 @@ python generate_layers_diagrams.py
 
 ---
 
-*Last updated: 2025-12-07*
+*Last updated: 2025-12-17*

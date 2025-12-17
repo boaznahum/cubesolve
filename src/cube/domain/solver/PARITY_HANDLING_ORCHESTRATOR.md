@@ -390,38 +390,35 @@ Orchestrator._solve()
 ### Detection
 
 Same as before - L3Corners counts corners in position:
-- If n = 2: Parity → fix and raise `EvenCubeCornerSwapException`
+- If n = 2: Parity → raise `EvenCubeCornerSwapException`
 
-### Two Different Behaviors
+### Unified Pattern (Same as Edge Parity)
 
-**When solver CAN detect parity (BeginnerSolver3x3, CFOP3x3):**
 ```python
-# In L3Corners (same as old design):
+# In L3Corners:
 if n == 2:
-    self._do_corner_swap()  # FIX IMMEDIATELY (position-sensitive!)
-    raise EvenCubeCornerSwapException()  # Signal retry needed
-```
-
-**When solver CANNOT detect parity (Kociemba) - using parity detector:**
-```python
-# Orchestrator uses query mode with dont_fix_corner_parity flag:
-with self._cube.with_dont_fix_corner_parity():
-    parity_detector.solve_3x3()  # Will raise exception WITHOUT fixing
+    raise EvenCubeCornerSwapException()  # Just signal, don't fix
 
 # Orchestrator catches and fixes via reducer:
 except EvenCubeCornerSwapException:
-    self._reducer.fix_corner_parity()  # Fix here instead
+    self._reducer.fix_corner_parity()  # Fix here
+    self._reducer.reduce(debug)         # Re-reduce
+    continue  # Retry
 ```
+
+This matches the edge parity pattern exactly - both parities use:
+detector raises → orchestrator catches → reducer fixes → re-reduce → retry
 
 ---
 
-## Why Corner Fix Happens Immediately But Edge Fix Doesn't
+## Corner Swap vs Edge Flip - Both Work in 3x3 State
 
-This design constraint is preserved from the old architecture:
+> **UPDATE (2025-12-16):** Testing on real cubes confirmed that both algorithms
+> work as long as the cube is in 3x3 state (yellow up). The corner swap is NOT
+> truly "position-sensitive" - any diagonal swap fixes parity regardless of Y rotation.
 
-### Corner Swap is POSITION-SENSITIVE
+### Corner Swap Algorithm
 
-The algorithm uses inner R and U slices assuming L3 position:
 ```python
 # From BeginnerReducer.fix_corner_parity() → L3Corners._do_corner_swap()
 alg = R[2:nh+1]×2  U×2
@@ -429,24 +426,33 @@ alg = R[2:nh+1]×2  U×2
       R[2:nh+1]×2  U[1:nh+1]×2
 ```
 
-**If we throw first without fixing:**
-- Retry restarts from reduction
-- L3 position is lost
-- Algorithm wouldn't work
+This swaps **diagonal corners** on the U face. After Y rotation:
+- Yellow is still up (Y rotates around up axis)
+- Different corners are in R-side positions, so different diagonal pair gets swapped
+- But **any diagonal swap** flips corner permutation parity from odd to even
 
-**Solution:**
-- Self-detecting solvers: Fix immediately in L3Corners, then throw
-- Parity detector mode: Use `dont_fix_corner_parity` flag, orchestrator calls `reducer.fix_corner_parity()` which delegates to L3Corners while still in L3 position (query mode preserves state)
+**Conclusion:** Works with any Y rotation. Only requirement is yellow stays up.
 
-### Edge Flip is POSITION-INDEPENDENT
+### Edge Flip Algorithm
 
 ```python
 def fix_edge_parity(self) -> None:
     self._nxn_edges.do_even_full_edge_parity_on_any_edge()
-    # Just flips front-left edge - any edge works!
+    # Flips any edge at FU position
 ```
 
-Can be done anytime, anywhere. Orchestrator handles it after catching exception.
+Can be done on any edge.
+
+### Unified Pattern (Implemented 2025-12-16)
+
+Both edge and corner parity now use the same clean pattern:
+1. Detector raises exception (L3Cross / L3Corners)
+2. Orchestrator catches
+3. Reducer fixes (`fix_edge_parity()` / `fix_corner_parity()`)
+4. Re-reduce and retry
+
+The old asymmetry (L3Corners fixing before throwing) and the `dont_fix_corner_parity`
+flag have been removed. The code is now consistent and simpler.
 
 ---
 
@@ -463,32 +469,15 @@ Some 3x3 solvers (like Kociemba two-phase algorithm) cannot detect parity:
 ```python
 if use_parity_detector:
     with self._op.with_query_restore_state():  # Save state, restore after
-        with self._cube.with_dont_fix_corner_parity():  # Don't fix, just detect
-            parity_detector.solve_3x3(debug, what)
+        parity_detector.solve_3x3(debug, what)
     # If no exception: no parity, state restored
     # If exception: state restored, orchestrator handles fix
     self._solver_3x3.solve_3x3(debug, what)  # Now let actual solver work
 ```
 
-### Why `dont_fix_corner_parity`?
-
-Without this flag, L3Corners would fix corner parity before throwing:
-```python
-if n == 2:
-    self._do_corner_swap()  # This modifies the cube!
-    raise EvenCubeCornerSwapException()
-```
-
-But in query mode, we restore state after detection. If corner swap was done,
-the restored state still has parity, but we've "used up" the exception.
-
-With the flag, L3Corners just throws without fixing:
-```python
-if self.cube.dont_fix_corner_parity:
-    raise EvenCubeCornerSwapException()  # Just signal, don't fix
-```
-
-Orchestrator then calls `reducer.fix_corner_parity()` on the restored state.
+With the unified parity handling pattern, L3Corners always just throws without fixing.
+The orchestrator catches the exception and calls `reducer.fix_corner_parity()` on
+the restored state. No special flag needed.
 
 ---
 
@@ -499,7 +488,7 @@ Orchestrator then calls `reducer.fix_corner_parity()` on the restored state.
 | **Architecture** | Monolithic | Composed (Reducer + Solver3x3) |
 | **Parity loop** | In solver | In orchestrator |
 | **Edge parity fix** | `nxn_edges.do_even_full_edge_parity_on_any_edge()` | `reducer.fix_edge_parity()` |
-| **Corner parity fix** | Always in L3Corners | L3Corners OR orchestrator via reducer |
+| **Corner parity fix** | In L3Corners before throw | Orchestrator via `reducer.fix_corner_parity()` |
 | **Non-detecting solvers** | N/A | Query mode with parity detector |
 | **Flexibility** | Fixed LBL method | Any reducer + any 3x3 solver |
 

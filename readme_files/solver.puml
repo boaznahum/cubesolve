@@ -20,41 +20,101 @@ class SolverResults {
     was_partial_edge_parity: bool
 }
 
-interface Solver {
+class ReductionResults {
+    partial_edge_parity_detected: bool
+}
+
+' ============ PROTOCOLS ============
+
+interface SolverElementsProvider <<protocol>> {
+    {abstract} op: OperatorProtocol
+    {abstract} cube: Cube
+    {abstract} cmn: CommonOp
+    {abstract} debug(*args): None
+}
+
+interface ReducerProtocol <<protocol>> {
+    {abstract} op: OperatorProtocol
+    {abstract} is_reduced(): bool
+    {abstract} reduce(): ReductionResults
+    {abstract} fix_edge_parity(): None
+    {abstract} fix_corner_parity(): None
+}
+
+interface Solver3x3Protocol <<protocol>> {
     {abstract} solve(what: SolveStep): SolverResults
     {abstract} is_solved: bool
     {abstract} status: str
-    {abstract} is_debug_config_mode: bool
-    {abstract} op: Operator
-    name: str
+    {abstract} op: OperatorProtocol
 }
 
-interface ReductionSolver
-interface BeginnerLBLReduce
+' ============ SOLVERS ============
 
-Solver ..> SolveStep : uses
-Solver ..> SolverResults : returns
+abstract class BaseSolver {
+    _op: OperatorProtocol
+    _cmn: CommonOp
+    {abstract} get_code: SolverName
+}
 
-Solver <|-- ReductionSolver
+class BeginnerSolver3x3
+class CFOP3x3
+class Kociemba3x3
 
+' BaseSolver implements SolverElementsProvider
+SolverElementsProvider <|.. BaseSolver
 
+' Solvers extend BaseSolver
+BaseSolver <|-- BeginnerSolver3x3
+BaseSolver <|-- CFOP3x3
+BaseSolver <|-- Kociemba3x3
 
+Solver3x3Protocol <|.. BeginnerSolver3x3
+Solver3x3Protocol <|.. CFOP3x3
+Solver3x3Protocol <|.. Kociemba3x3
 
-Solver <|-- BeginnerLBLReduce
-ReductionSolver <|-- BeginnerLBLReduce
+Solver3x3Protocol ..> SolveStep : uses
+Solver3x3Protocol ..> SolverResults : returns
 
-class BeginnerSolver
+' ============ REDUCERS ============
 
-BeginnerLBLReduce <|-- BeginnerSolver
-BaseSolver <|-- BeginnerSolver
+abstract class AbstractReducer {
+    _op: OperatorProtocol
+    _cube: Cube
+    _cmn: CommonOp
+}
 
-CommonOp *.. Operator
-CommonOp *.. BaseSolver
-CommonOp *.. Cube
+class BeginnerReducer {
+    _nxn_centers: NxNCenters
+    _nxn_edges: NxNEdges
+    _l3_corners: L3Corners
+}
 
-SolverElement *.. Operator
+' AbstractReducer implements both protocols
+SolverElementsProvider <|.. AbstractReducer
+ReducerProtocol <|.. AbstractReducer
 
-SolverElement <|-- CommonOp
+' BeginnerReducer extends AbstractReducer
+AbstractReducer <|-- BeginnerReducer
+
+ReducerProtocol ..> ReductionResults : returns
+
+' ============ SOLVER ELEMENTS ============
+
+abstract class SolverElement {
+    _solver: SolverElementsProvider
+    _cmn: CommonOp
+    _ann: AnnotationProtocol
+}
+
+' SolverElement uses SolverElementsProvider (composition)
+SolverElement o-- SolverElementsProvider : uses
+
+class CommonOp {
+    _slv: SolverElementsProvider
+}
+
+CommonOp o-- SolverElementsProvider : uses
+
 SolverElement <|-- L1Cross
 SolverElement <|-- L1Corners
 SolverElement <|-- L2
@@ -62,13 +122,32 @@ SolverElement <|-- L3Cross
 SolverElement <|-- L3Corners
 SolverElement <|-- NxNCenters
 SolverElement <|-- NxNEdges
+SolverElement <|-- OLL
+SolverElement <|-- PLL
 
-BeginnerSolver *-- CommonOp
-BeginnerSolver *-- L1Cross
-BeginnerSolver *-- L1Corners
-BeginnerSolver *-- L2
-BeginnerSolver *-- L3Cross
-BeginnerSolver *-- L3Corners
-BeginnerSolver *-- NxNCenters
-BeginnerSolver *-- NxNEdges
+' ============ COMPOSITION ============
+
+BeginnerSolver3x3 *-- CommonOp
+BeginnerSolver3x3 *-- L1Cross
+BeginnerSolver3x3 *-- L1Corners
+BeginnerSolver3x3 *-- L2
+BeginnerSolver3x3 *-- L3Cross
+BeginnerSolver3x3 *-- L3Corners
+
+BeginnerReducer *-- NxNCenters
+BeginnerReducer *-- NxNEdges
+BeginnerReducer *-- L3Corners
+
+note right of SolverElementsProvider
+  Minimal interface that SolverElement
+  and CommonOp need. Implemented by
+  both BaseSolver and AbstractReducer.
+end note
+
+note right of AbstractReducer
+  Base class for reducers that provides
+  SolverElementsProvider interface.
+  Eliminates need for facade classes.
+end note
+
 @enduml

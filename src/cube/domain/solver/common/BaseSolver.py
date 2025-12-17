@@ -1,12 +1,9 @@
 from abc import ABC
-from typing import TypeAlias, TYPE_CHECKING, final
+from typing import TypeAlias, TYPE_CHECKING
 
-from cube.domain.model.Cube import Cube
-from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
 from .AbstractSolver import AbstractSolver
-from .. import Solver
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
@@ -15,19 +12,10 @@ _Common: TypeAlias = "CommonOp"
 
 
 class BaseSolver(AbstractSolver, ABC):
-    __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override"]
+    __slots__: list[str] = ["_op", "_cube", "_debug_override"]
 
     def __init__(self, op) -> None:
         super().__init__(op)
-        from .CommonOp import CommonOp
-        self.common: _Common = CommonOp(self)
-
-
-
-    @property
-    @final
-    def cmn(self) -> _Common:
-        return self.common
 
     def solution(self) -> Alg:
         if self.is_solved:

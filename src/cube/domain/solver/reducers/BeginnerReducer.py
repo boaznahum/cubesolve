@@ -2,50 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.protocols.ReducerProtocol import ReducerProtocol, ReductionResults
-from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.SolverName import SolverName
-from cube.domain.solver.solver import SolverResults, SolveStep
-
-if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
+from cube.domain.solver.protocols.ReducerProtocol import ReductionResults
+from cube.domain.solver.reducers.AbstractReducer import AbstractReducer
 
 
-class _ReducerSolverFacade(BaseSolver):
-    """
-    Minimal BaseSolver facade for NxNCenters and NxNEdges.
-
-    NxNCenters and NxNEdges require a BaseSolver instance, but we don't
-    want BeginnerReducer to be a full solver. This facade provides the
-    minimum interface needed.
-    """
-
-    __slots__: list[str] = []
-
-    def __init__(self, op: OperatorProtocol) -> None:
-        super().__init__(op)
-
-    @property
-    def get_code(self) -> SolverName:
-        return SolverName.LBL
-
-    @property
-    def status(self) -> str:
-        return "Reducer"
-
-    def solve(
-        self,
-        debug: bool | None = None,
-        animation: bool | None = True,
-        what: SolveStep = SolveStep.ALL
-    ) -> SolverResults:
-        raise NotImplementedError("Use orchestrator for full solve")
-
-
-class BeginnerReducer(ReducerProtocol):
+class BeginnerReducer(AbstractReducer):
     """
     Standard NxN to 3x3 reducer using beginner method.
 
@@ -55,11 +17,12 @@ class BeginnerReducer(ReducerProtocol):
 
     Supports both basic and advanced edge parity algorithms.
 
-    Inherits from ReducerProtocol to satisfy the project's convention
-    of implementations inheriting from protocols.
+    Inherits from AbstractReducer which provides the SolverElementsProvider
+    interface, allowing this reducer to use solver components (NxNCenters,
+    NxNEdges, L3Corners) directly without needing a facade class.
     """
 
-    __slots__ = ["_op", "_solver_facade", "_nxn_centers", "_nxn_edges", "_l3_corners"]
+    __slots__ = ["_nxn_centers", "_nxn_edges", "_l3_corners"]
 
     def __init__(
         self,
@@ -74,29 +37,17 @@ class BeginnerReducer(ReducerProtocol):
             advanced_edge_parity: If True, use advanced R/L-slice parity algorithm.
                                   If False, use simple M-slice parity algorithm.
         """
-        self._op = op
-
-        # Create minimal solver facade for NxNCenters/NxNEdges/L3Corners
-        self._solver_facade = _ReducerSolverFacade(op)
+        super().__init__(op)
 
         # Import here to avoid circular imports
         from cube.domain.solver.beginner.NxNCenters import NxNCenters
         from cube.domain.solver.beginner.NxNEdges import NxNEdges
         from cube.domain.solver.beginner.L3Corners import L3Corners
 
-        self._nxn_centers = NxNCenters(self._solver_facade)
-        self._nxn_edges = NxNEdges(self._solver_facade, advanced_edge_parity)
-        self._l3_corners = L3Corners(self._solver_facade)
-
-    @property
-    def op(self) -> OperatorProtocol:
-        """The operator for cube manipulation."""
-        return self._op
-
-    @property
-    def _cube(self) -> "Cube":
-        """Internal access to the cube."""
-        return self._op.cube
+        # Pass self (we implement SolverElementsProvider via AbstractReducer)
+        self._nxn_centers = NxNCenters(self)
+        self._nxn_edges = NxNEdges(self, advanced_edge_parity)
+        self._l3_corners = L3Corners(self)
 
     def is_reduced(self) -> bool:
         """Check if cube is already reduced to 3x3 state.
@@ -105,7 +56,7 @@ class BeginnerReducer(ReducerProtocol):
         - Cube is already 3x3, or
         - All centers and edges are solved (reduced)
         """
-        if self._cube.is3x3:
+        if self.cube.is3x3:
             return True
         return self.centers_solved() and self.edges_solved()
 
@@ -178,7 +129,7 @@ class BeginnerReducer(ReducerProtocol):
     @property
     def status(self) -> str:
         """Human-readable status of reduction state."""
-        cube = self._cube
+        cube = self.cube
 
         if cube.is3x3:
             return "3x3"

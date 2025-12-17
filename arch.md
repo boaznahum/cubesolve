@@ -222,24 +222,28 @@ Part (Abstract Base)
 
 **Responsibility:** Implement solving algorithms
 
-**Strategy Pattern:**
+**Architecture:**
 ```
-Solver (ABC)
-├── BeginnerSolver (Layer-By-Layer)
-│   ├── L1Cross (First layer cross)
-│   ├── L1Corners (First layer corners)
-│   ├── L2 (Second layer edges)
-│   ├── L3Cross (Last layer cross)
-│   ├── L3Corners (Last layer corners)
-│   ├── NxNCenters (Big cube centers)
-│   └── NxNEdges (Big cube edges)
+SolverElementsProvider (Protocol)    <- Minimal interface for solver components
+├── BaseSolver                       <- Base class for 3x3 solvers
+│   ├── BeginnerSolver3x3
+│   ├── CFOP3x3
+│   └── Kociemba3x3
 │
-└── CFOP (Fridrich Method)
-    ├── F2L (First Two Layers)
-    ├── OLL (Orient Last Layer)
-    ├── PLL (Permute Last Layer)
-    └── NxN support (centers/edges)
+└── AbstractReducer                  <- Base class for NxN reducers
+    └── BeginnerReducer
+
+SolverElement(provider: SolverElementsProvider)  <- All step solvers
+├── L1Cross, L1Corners, L2           (Layer 1-2)
+├── L3Cross, L3Corners               (Layer 3)
+├── OLL, PLL                         (CFOP steps)
+└── NxNCenters, NxNEdges             (Big cube reduction)
 ```
+
+**Key Design:** `SolverElementsProvider` protocol allows both solvers and reducers
+to use the same solver elements (NxNCenters, NxNEdges, etc.) without facade classes.
+
+See: `src/cube/domain/solver/SOLVER_ARCHITECTURE.md` for detailed class hierarchy.
 
 ##### d. Operator Layer (`operator/`)
 
@@ -782,26 +786,31 @@ class _App(AbstractApp):
 
 **Structure:**
 ```
-┌──────────────────────────────────┐
-│       BaseSolver                 │
-│  + solve() [template method]     │
-│  + solution() [hook method]      │
-└────────────▲─────────────────────┘
-             │
-        ┌────┴─────┐
-        │          │
-┌───────┴──────┐ ┌─┴──────────┐
-│BeginnerSolver│ │    CFOP    │
-│              │ │            │
-│+ solve()     │ │+ solve()   │
-└──────────────┘ └────────────┘
+┌────────────────────────────────────┐
+│   SolverElementsProvider (Proto)   │
+│  + op: OperatorProtocol            │
+│  + cube: Cube                      │
+│  + cmn: CommonOp                   │
+│  + debug(*args): None              │
+└────────────▲───────────────────────┘
+             │ implements
+    ┌────────┴─────────┐
+    │                  │
+┌───┴──────────────┐ ┌─┴──────────────┐
+│   BaseSolver     │ │ AbstractReducer│
+│ (3x3 solvers)    │ │ (NxN reducers) │
+└───────▲──────────┘ └───────▲────────┘
+        │                    │
+   ┌────┴────┐          ┌────┴────┐
+   │         │          │         │
+Beginner   CFOP    BeginnerReducer
 ```
 
 **Implementation:**
 ```python
 # Location: cube/solver/common/base_solver.py
 
-class BaseSolver(Solver, ABC):
+class BaseSolver(SolverElementsProvider, ABC):
     def solution(self):
         """Template method"""
         with self._op.save_history():
@@ -819,6 +828,7 @@ class BaseSolver(Solver, ABC):
 - ✅ Common functionality in base class
 - ✅ Subclasses only override what's needed
 - ✅ Enforces structure
+- ✅ Both solvers and reducers can use SolverElement subclasses
 
 ### 7. Flyweight Pattern (Part IDs)
 

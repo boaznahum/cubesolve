@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.domain.solver.SolverName import SolverName
 
@@ -63,7 +64,13 @@ class SolverResults:
         return "Parity: None"
 
 
-class Solver(ABC):
+class Solver(SolverElementsProvider, ABC):
+    """
+    Base solver interface.
+
+    Implements SolverElementsProvider to allow solver elements (SolverElement subclasses)
+    to work with any Solver implementation. See SOLVER_ARCHITECTURE.md for class hierarchy.
+    """
 
     @property
     @abstractmethod

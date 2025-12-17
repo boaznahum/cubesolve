@@ -8,9 +8,8 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Edge, Color, FaceName, EdgeWing
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from cube.domain.solver.protocols import OperatorProtocol, AnnotationProtocol, SupportsAnnotation
+from cube.domain.solver.protocols import OperatorProtocol, AnnotationProtocol, SupportsAnnotation, SolverElementsProvider
 from cube.domain.solver.AnnWhat import AnnWhat
-from .BaseSolver import BaseSolver
 from ...model.CubeQueries2 import Pred, Pred0
 
 TRACE_UNIQUE_ID: int = 0
@@ -39,15 +38,15 @@ class CommonOp:
                  "_start_color",
                  "_ann"]
 
-    def __init__(self, solver: BaseSolver) -> None:
+    def __init__(self, provider: SolverElementsProvider) -> None:
         super().__init__()
-        self._slv = solver
-        self._ann = solver.op.annotation
+        self._slv = provider
+        self._ann = provider.op.annotation
 
         self._start_color = Color.WHITE
 
     @property
-    def slv(self) -> BaseSolver:
+    def slv(self) -> SolverElementsProvider:
         return self._slv
 
     @property

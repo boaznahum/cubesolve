@@ -352,21 +352,3 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
 
         # Convert colors to Kociemba characters using dynamic mapping
         return "".join(color_to_face[c] for c in colors)
-
-    def detect_edge_parity(self) -> bool | None:
-        """
-        Kociemba cannot detect edge parity - it solves all-at-once.
-
-        Returns:
-            None: This solver cannot detect parity
-        """
-        return None
-
-    def detect_corner_parity(self) -> bool | None:
-        """
-        Kociemba cannot detect corner parity - it solves all-at-once.
-
-        Returns:
-            None: This solver cannot detect parity
-        """
-        return None

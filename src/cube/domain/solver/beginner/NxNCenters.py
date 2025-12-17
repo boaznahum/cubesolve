@@ -13,8 +13,8 @@ from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.FaceTracker import FaceTracker
 from cube.domain.solver.beginner.NxnCentersFaceTracker import NxNCentersFaceTrackers
-from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
 
@@ -48,7 +48,7 @@ class _CompleteSlice:
 
 
 class NxNCenters(SolverElement):
-    def __init__(self, slv: BaseSolver) -> None:
+    def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv)
 
         self._faces: Sequence[FaceTracker] = []

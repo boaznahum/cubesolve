@@ -6,14 +6,14 @@ from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.Face import Face
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.solver.common.FaceTracker import FaceTracker
-from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
 
 class NxNCentersFaceTrackers(SolverElement):
 
-    def __init__(self, solver: BaseSolver) -> None:
+    def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)
 
     def track_no_1(self) -> FaceTracker:
@@ -34,7 +34,7 @@ class NxNCentersFaceTrackers(SolverElement):
 
         # WHY NOT USE SET ? BECAUSE the order is unpredictable, and we want the solution to be such
         #left = list({*cube.faces} - {two_first[0].face, two_first[1].face})
-        left = { f:None for f in cube.faces}
+        left = {f: None for f in cube.faces}
         # don't try left.keys() - again it will be converted to set
         left.pop(two_first[0].face)
         left.pop(two_first[1].face)
@@ -159,17 +159,20 @@ class NxNCentersFaceTrackers(SolverElement):
         for f in self.cube.faces:
             FaceTracker.remove_face_track_slices(f)
 
-    # noinspection PyUnreachableCode,PyUnusedLocal
-    def _debug_print_track_slices(self, message: str):
+    # Using a variable instead of `if True:` so mypy/pyright will type-check
+    # the disabled debug code. Set to False to enable debug output.
+    _SKIP_DEBUG = True
 
-        if True:
+    def _debug_print_track_slices(self, message: str):
+        """Print track slices for debugging. Disabled by default via _SKIP_DEBUG."""
+        if self._SKIP_DEBUG:
             return
 
         print(f"=== track slices: {message}================================")
         for f in self.cube.faces:
             for s in f.center.all_slices:
 
-                if self.is_track_slice(s):
+                if self._is_track_slice(s):
                     print(f"Track slice: {s} {s.color} on {f}")
         print("===================================")
 

@@ -403,16 +403,19 @@ The `L3Corners` class performs the corner swap **before** raising the exception.
 
 ---
 
-## Why Corner Fix Happens Immediately But Edge Fix Doesn't
+## Corner Fix vs Edge Fix - Historical Asymmetry
 
-This is a key design difference that deserves explanation:
+> **UPDATE (2025-12-16):** Testing on real cubes confirmed that the corner swap
+> algorithm is NOT truly "position-sensitive". It works as long as yellow is up
+> because any diagonal corner swap fixes parity. The original asymmetry was based
+> on a misunderstanding.
 
-### Corner Parity: Fix First, Then Throw
+### Corner Parity: Fix First, Then Throw (Historical)
 
 ```python
 # In L3Corners._do_positions() (l3_corners.py:104-108)
 if n == 2:  # Parity detected
-    self._do_corner_swap()                    # FIX IMMEDIATELY
+    self._do_corner_swap()                    # FIX FIRST
     raise EvenCubeCornerSwapException()       # THEN signal retry
 ```
 
@@ -420,7 +423,7 @@ if n == 2:  # Parity detected
 # In BeginnerSolver._solve() (beginner_solver.py:203-209)
 except EvenCubeCornerSwapException:
     even_corner_swap_was_detected = True
-    continue  # Just retry - NO FIX NEEDED HERE
+    continue  # Just retry - fix already done
 ```
 
 ### Edge Parity: Only Throw, Fix Later
@@ -439,49 +442,31 @@ except EvenCubeEdgeParityException:
     continue  # Then retry
 ```
 
-### The Reason: Position Sensitivity vs Position Independence
+### Why Both Actually Work the Same Way
 
-**Corner swap is POSITION-SENSITIVE:**
+**Corner swap algorithm:**
+- Swaps diagonal corners on the U face
+- Any diagonal swap flips corner permutation parity from odd to even
+- Works after Y rotation because different diagonal pair still fixes parity
+- Only requirement: yellow face is up (true in 3x3 state)
 
-The corner swap algorithm requires:
-- Corners must be in L3 position (yellow face up)
-- The algorithm uses `R[2:nh+1]` (inner R slices) and `U[1:nh+1]` (inner U slices)
-- These slice indices assume specific cube orientation and corner positions
-- If we throw first and fix later, the retry would start from reduction, losing the L3 position
-
-```python
-# Corner swap algorithm (l3_corners.py:194-198)
-alg = Algs.alg(None,
-               Algs.R[2:nh + 1] * 2, Algs.U * 2,           # Inner R² U²
-               Algs.R[2:nh + 1] * 2 + Algs.U[1:nh + 1] * 2,# Inner R² Uw²
-               Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2  # Inner R² Uw²
-               )
-```
-
-**Edge flip is POSITION-INDEPENDENT:**
-
-The edge parity fix can be done on ANY edge:
-- Just needs some edge at front-up position
-- Works on any edge's inner slices
-- Doesn't matter which edge is "wrong" - any edge flip will correct the parity
-- Can be done at any time, so `NxNEdges` class handles it
-
-```python
-# Edge parity fix (nxn_edges.py:480-483)
-def do_even_full_edge_parity_on_any_edge(self):
-    assert self.cube.n_slices % 2 == 0
-    self._do_edge_parity_on_edge(self.cube.front.edge_left)  # Any edge works!
-```
+**Edge flip algorithm:**
+- Flips all inner slices of any edge
+- Can be done on any edge at FU position
 
 ### Summary Table
 
 | Aspect | Corner Parity | Edge Parity |
 |--------|---------------|-------------|
-| **Position-sensitive?** | Yes - needs L3 position | No - any edge works |
+| **Requires yellow up?** | Yes | Yes |
+| **Works after Y rotation?** | Yes | Yes |
 | **Who detects?** | L3Corners | L3Cross |
-| **Who fixes?** | L3Corners (before throw) | NxNEdges (after catch) |
-| **Fix timing** | Must fix while in L3 state | Can fix anytime |
-| **Exception means** | "Retry needed" (already fixed) | "Fix needed, then retry" |
+| **Who fixes?** | Orchestrator → Reducer | Orchestrator → Reducer |
+| **Pattern** | Throw → Catch → Fix | Throw → Catch → Fix |
+
+> **NOTE (2025-12-16):** The code has been refactored to use a unified pattern.
+> L3Corners now just throws without fixing, matching L3Cross. See
+> PARITY_HANDLING_ORCHESTRATOR.md for the current implementation.
 
 ### Fix Algorithm
 

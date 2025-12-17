@@ -4,6 +4,7 @@ from .OperatorProtocol import OperatorProtocol
 from .AnnotationProtocol import AnnotationProtocol, SupportsAnnotation
 from .ReducerProtocol import ReducerProtocol, ReductionResults
 from .Solver3x3Protocol import Solver3x3Protocol
+from .SolverElementsProvider import SolverElementsProvider
 
 __all__ = [
     'OperatorProtocol',
@@ -12,4 +13,5 @@ __all__ = [
     'ReducerProtocol',
     'ReductionResults',
     'Solver3x3Protocol',
+    'SolverElementsProvider',
 ]
