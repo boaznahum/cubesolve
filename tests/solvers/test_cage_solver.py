@@ -1,75 +1,108 @@
-"""Tests for CageNxNSolver - step by step cage method."""
+"""Tests for CageNxNSolver - cage method (edges first, then corners, then centers)."""
 
 import pytest
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.model import Color
-from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver, START_FACE_COLOR
+from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 
 
 @pytest.mark.parametrize("size", [5, 7])
-def test_cage_solver_start_face(size: int) -> None:
-    """Test solving start face centers on odd cubes."""
+def test_cage_solver_status_on_solved_cube(size: int) -> None:
+    """Test status reporting on a solved cube."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
-    cube = app.cube
+
+    solver = CageNxNSolver(app.op)
+
+    # Solved cube should report "Solved"
+    assert solver.status == "Solved"
+
+
+@pytest.mark.parametrize("size", [5, 7])
+def test_cage_solver_status_on_scrambled_cube(size: int) -> None:
+    """Test status reporting on a scrambled cube."""
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
 
     solver = CageNxNSolver(app.op)
 
-    # Status should show start face pending
-    color_name = START_FACE_COLOR.name.capitalize()
-    assert f"{color_name}:Pending" in solver.status
-
-    # Start face should NOT be solved before
-    start_face = cube.color_2_face(START_FACE_COLOR)
-    assert not start_face.center.is3x3, f"{color_name} face should not be 3x3 before solving"
-
-    # Solve
-    solver.solve()
-
-    # Start face SHOULD be solved after
-    start_face = cube.color_2_face(START_FACE_COLOR)
-    assert start_face.center.is3x3, f"{color_name} face should be 3x3 after solving"
-
-    # Status should show start face done
-    assert f"{color_name}:Done" in solver.status
-
-
-@pytest.mark.parametrize("size", [4, 6])
-def test_cage_solver_rejects_even_cubes(size: int) -> None:
-    """Test that CageNxNSolver rejects even cubes."""
-    app = AbstractApp.create_non_default(cube_size=size, animation=False)
-
-    solver = CageNxNSolver(app.op)
-
-    # Scramble first
-    app.scramble(42, None, animation=False, verbose=False)
-
-    with pytest.raises(ValueError, match="only supports odd cubes"):
-        solver.solve()
+    # After scramble, status should show pending phases
+    status = solver.status
+    assert "E:Pending" in status  # Edges pending
+    assert "Ctr:Pending" in status  # Centers pending
 
 
 @pytest.mark.parametrize("size", [5, 7])
-def test_find_edges_with_color(size: int) -> None:
-    """Test finding edges with a specific color (uses middle slice for odd cubes)."""
+def test_cage_solver_state_inspection(size: int) -> None:
+    """Test stateless inspection methods."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    solver = CageNxNSolver(app.op)
+
+    # On solved cube
+    assert solver._are_edges_solved()
+    assert solver._are_centers_solved()
+
+    # Scramble
+    app.scramble(42, None, animation=False, verbose=False)
+
+    # On scrambled cube, at least edges or centers should be unsolved
+    edges_solved = solver._are_edges_solved()
+    centers_solved = solver._are_centers_solved()
+    # At least one should be False after scramble
+    assert not (edges_solved and centers_solved)
+
+
+@pytest.mark.parametrize("size", [3])
+def test_cage_solver_on_3x3(size: int) -> None:
+    """Test that 3x3 cube is trivially solved (no edges/centers to reduce)."""
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    solver = CageNxNSolver(app.op)
+
+    # 3x3 has no edge/center reduction needed - is3x3 is always True
+    assert solver._are_edges_solved()
+    assert solver._are_centers_solved()
+
+
+@pytest.mark.parametrize("size", [5, 7])
+def test_cage_solver_solves_edges(size: int) -> None:
+    """Test that cage solver can solve edges on odd cubes."""
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    # Scramble
+    app.scramble(42, None, animation=False, verbose=False)
 
     solver = CageNxNSolver(app.op)
 
-    # Find edges with WHITE color (unscrambled cube)
-    white_edges = solver._find_edges_with_color(Color.WHITE)
+    # Edges should not be solved before
+    assert not solver._are_edges_solved(), "Edges should not be solved after scramble"
 
-    # WHITE face is adjacent to 4 edges: WB, WR, WG, WO
-    assert len(white_edges) == 4, f"Expected 4 white edges, got {len(white_edges)}"
+    # Solve
+    results = solver.solve()
 
-    # Verify each edge has WHITE in its middle slice
-    for edge in white_edges:
-        middle_idx = edge.n_slices // 2
-        middle_slice = edge.get_slice(middle_idx)
-        assert Color.WHITE in middle_slice.colors_id, f"Edge {edge} should have WHITE"
+    # Edges should be solved after
+    assert solver._are_edges_solved(), "Edges should be solved after solve()"
 
-    # After scramble, still should find 4 edges with WHITE
-    app.scramble(42, None, animation=False, verbose=False)
-    white_edges_scrambled = solver._find_edges_with_color(Color.WHITE)
-    assert len(white_edges_scrambled) == 4, "Should still find 4 white edges after scramble"
+    # Status should show E:Done
+    assert "E:Done" in solver.status
+
+    # Print parity info for visibility
+    print(f"\n  Size {size}x{size}: parity={results._was_partial_edge_parity}")
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_cage_solver_parity_detection(seed: int) -> None:
+    """Test parity detection across multiple scrambles on 5x5."""
+    app = AbstractApp.create_non_default(cube_size=5, animation=False)
+
+    # Scramble with different seeds
+    app.scramble(seed, None, animation=False, verbose=False)
+
+    solver = CageNxNSolver(app.op)
+    results = solver.solve()
+
+    # Edges should be solved
+    assert solver._are_edges_solved()
+
+    # Print parity for each seed
+    parity = "YES" if results._was_partial_edge_parity else "no"
+    print(f"  seed={seed}: parity={parity}")

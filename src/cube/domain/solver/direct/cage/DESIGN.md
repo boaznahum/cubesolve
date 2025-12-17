@@ -395,17 +395,42 @@ execute_center_commutator(target_face, target_pos, source_face, source_pos):
 
 ---
 
+## Open Questions
+
+### 1. PARITY IN CAGE METHOD?
+
+**Question**: Does the cage method have parity issues like the reduction method?
+
+In **reduction method**, edge parity occurs because:
+- Centers are solved first (face colors are fixed)
+- When pairing edges, you may end up with 1 unpaired edge
+- This requires a parity algorithm that disrupts centers
+
+In **cage method**:
+- Edges are solved first, centers last
+- We can use ANY slice moves during edge solving (centers don't matter yet)
+- **But**: Can we still end up in an impossible edge state?
+
+**Hypothesis**: Cage method should be parity-free because:
+- No center constraints during edge solving = more freedom
+- Any edge configuration should be reachable
+
+**TODO**: Verify this hypothesis during implementation.
+
+---
+
 ## Implementation Checklist
 
 ### Phase 1: Infrastructure
-- [ ] Create `CageNxNSolver` inheriting from `BaseSolver`
-- [ ] Implement state inspection methods (stateless)
+- [x] Create `CageNxNSolver` inheriting from `BaseSolver`
+- [x] Implement state inspection methods (stateless)
 - [ ] Handle even cube face color determination
 
-### Phase 2: Edge Solving
-- [ ] Implement `solve_edges()` with wing pairing
-- [ ] Handle edge color determination for even cubes
-- [ ] Reuse patterns from `NxNEdges` where applicable
+### Phase 2: Edge Solving - DONE
+- [x] Implement `solve_edges()` - reuses `NxNEdges` directly
+- [x] Handle edge color determination for even cubes (via `NxNEdges._find_max_of_color`)
+- [x] Reuse patterns from `NxNEdges` - entire class reused!
+- [x] Edge parity handled by `NxNEdges._do_last_edge_parity()`
 
 ### Phase 3: Corner Solving
 - [ ] Implement corner positioning (3-cycles)

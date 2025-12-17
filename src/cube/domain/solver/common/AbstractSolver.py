@@ -1,13 +1,15 @@
 from abc import ABC
-from typing import final
+from typing import final, TYPE_CHECKING
 
 from cube.domain.algs.Algs import Algs
 from cube.domain.algs.Alg import Alg
 from cube.domain.model import Cube
 from cube.domain.solver import Solver
-from cube.domain.solver.common.BaseSolver import _Common
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
+
+if TYPE_CHECKING:
+    from cube.domain.solver.common.CommonOp import CommonOp as _CommonOp
 
 
 class AbstractSolver(Solver, ABC):
@@ -16,10 +18,11 @@ class AbstractSolver(Solver, ABC):
 
     def __init__(self, op: OperatorProtocol) -> None:
         super().__init__()
-        self.common: _Common = CommonOp(self)
+        # Set _op and _cube BEFORE CommonOp - CommonOp needs self.op
         self._op = op
         self._cube = op.cube
         self._debug_override: bool | None = None
+        self.common: CommonOp = CommonOp(self)
 
     @final
     @property
@@ -81,5 +84,5 @@ class AbstractSolver(Solver, ABC):
 
     @property
     @final
-    def cmn(self) -> _Common:
+    def cmn(self) -> CommonOp:
         return self.common

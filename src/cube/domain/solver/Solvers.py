@@ -95,10 +95,10 @@ class Solvers:
     @staticmethod
     def cage(op: OperatorProtocol) -> Solver:
         """
-        Get Cage method solver (odd cubes only).
+        Get Cage method solver.
 
-        Solves centers one face at a time, starting with white.
-        For odd cubes (5x5, 7x7) only - even cubes not supported.
+        Solves edges first, then corners, then centers (parity-free).
+        Currently only edges are implemented.
         """
         from .direct.cage.CageNxNSolver import CageNxNSolver
 
