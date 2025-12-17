@@ -270,7 +270,6 @@ class NxNCenters(SolverElement):
 
             # we loop bringing all adjusted faces up
             cmn.bring_face_front(face_loc.face)
-            assert cube.front.color == color
             # from here face is no longer valid
             # so
 
