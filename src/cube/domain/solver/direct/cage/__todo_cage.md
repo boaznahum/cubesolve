@@ -15,10 +15,32 @@
 - **ODD CUBES ONLY** - face center defines face color
 - **Beginner solver works, CFOP does NOT** (see bug below)
 
-### Phase 2: Center Solving - TODO (NEXT SESSION)
-- Need commutators that preserve edges/corners
-- Centers remain scrambled after Phase 1b
-- See DESIGN.md for commutator approach
+### Phase 2: Center Solving - IN PROGRESS
+
+**Goal:** Solve all center pieces using commutators that preserve edges/corners.
+
+**Key Insight:** After Phase 1, edges and corners are SOLVED. Commutators that only
+use slice moves (M, E, S) and face rotations will PRESERVE the cage while cycling centers.
+
+**Implementation Plan:**
+
+1. **Reuse NxNCenters from beginner solver**
+   - `NxNCenters` already solves centers face-by-face
+   - Uses slice moves that should preserve edges (since edges are already paired)
+   - Need to verify it doesn't break corners
+
+2. **If NxNCenters breaks corners:**
+   - Use pure commutators: [M', U, M, U'] pattern
+   - These cycle 3 center pieces without affecting edges/corners
+   - See DESIGN.md for commutator details
+
+3. **Face solving order:**
+   - For odd cubes: use face.center.color as target
+   - Solve opposite faces together (W/Y, R/O, B/G)
+
+4. **Test strategy:**
+   - Add test that verifies corners/edges stay solved after center solving
+   - Test on 5x5 and 7x7
 
 ---
 
@@ -60,6 +82,21 @@ Currently using `advanced_edge_parity=False` (M-slice algorithm).
 Consider switching to `True` (R/L-slice algorithm) which:
 - Preserves edge pairing better
 - May be better for cage method
+
+---
+
+## TODO: Centralize Animation Handling
+
+**Status:** Fixed for cage solver (uses `with_animation()` wrapper)
+
+**Current approach:** Each solver wraps its logic in `with self._op.with_animation(animation):`
+- Works but requires every solver to remember to do this
+- Duplicated pattern across all solvers
+
+**Better approach (future):**
+- Handle animation at a higher level (command layer or operator)
+- So solvers don't need to care about animation parameter
+- Single point of control for animation enable/disable
 
 ---
 

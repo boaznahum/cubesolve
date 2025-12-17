@@ -214,6 +214,11 @@ class CageNxNSolver(BaseSolver):
         if self.is_solved:
             return sr
 
+        with self._op.with_animation(animation=animation):
+            return self._solve_impl(sr)
+
+    def _solve_impl(self, sr: SolverResults) -> SolverResults:
+        """Internal solve implementation."""
         # =====================================================================
         # PHASE 1a: EDGE SOLVING
         # =====================================================================
