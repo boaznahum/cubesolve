@@ -59,6 +59,10 @@ SS_CODES: dict[SSCode, bool] = {
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
 DEFAULT_SOLVER = "cage"
 
+# 3x3 solver used by cage method for corner solving (Phase 1b)
+# Options: "beginner", "cfop", "kociemba"
+CAGE_3X3_SOLVER = "cfop"
+
 SOLVER_DEBUG = True
 
 

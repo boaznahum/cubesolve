@@ -87,6 +87,11 @@ class AppConfig(ConfigProtocol):
         """Check if cube is in BOY orientation."""
         return cfg.SOLVER_SANITY_CHECK_IS_A_BOY
 
+    @property
+    def cage_3x3_solver(self) -> str:
+        """3x3 solver used by cage method for corner solving (Phase 1b)."""
+        return cfg.CAGE_3X3_SOLVER
+
     # ==========================================================================
     # Optimization settings
     # ==========================================================================

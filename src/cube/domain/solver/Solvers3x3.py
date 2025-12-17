@@ -70,3 +70,29 @@ class Solvers3x3:
         """
         from cube.domain.solver.kociemba.Kociemba3x3 import Kociemba3x3
         return Kociemba3x3(op)
+
+    @classmethod
+    def by_name(cls, name: str, op: OperatorProtocol) -> Solver3x3Protocol:
+        """
+        Get a 3x3 solver by its name.
+
+        Args:
+            name: Solver name - "beginner", "cfop", or "kociemba"
+            op: Operator for cube manipulation
+
+        Returns:
+            Solver3x3Protocol instance
+
+        Raises:
+            ValueError: If name is not recognized
+        """
+        match name:
+            case "beginner":
+                return cls.beginner(op)
+            case "cfop":
+                return cls.cfop(op)
+            case "kociemba":
+                return cls.kociemba(op)
+            case _:
+                raise ValueError(f"Unknown 3x3 solver: {name}. "
+                                 f"Options: beginner, cfop, kociemba")

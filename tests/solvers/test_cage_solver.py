@@ -28,7 +28,7 @@ def test_cage_solver_status_on_scrambled_cube(size: int) -> None:
 
     # After scramble, status should show pending phases
     status = solver.status
-    assert "E:Pending" in status  # Edges pending
+    assert "Cage:Pending" in status  # Cage (edges+corners) pending
     assert "Ctr:Pending" in status  # Centers pending
 
 
@@ -82,8 +82,8 @@ def test_cage_solver_solves_edges(size: int) -> None:
     # Edges should be solved after
     assert solver._are_edges_solved(), "Edges should be solved after solve()"
 
-    # Status should show E:Done
-    assert "E:Done" in solver.status
+    # Status should show Cage:Done (edges AND corners solved after solve())
+    assert "Cage:Done" in solver.status
 
     # Print parity info for visibility
     print(f"\n  Size {size}x{size}: parity={results._was_partial_edge_parity}")
@@ -106,3 +106,39 @@ def test_cage_solver_parity_detection(seed: int) -> None:
     # Print parity for each seed
     parity = "YES" if results._was_partial_edge_parity else "no"
     print(f"  seed={seed}: parity={parity}")
+
+
+@pytest.mark.parametrize("size", [5, 7])
+def test_cage_solver_solves_corners(size: int) -> None:
+    """Test that cage solver solves corners after edges (Phase 1b).
+
+    After solve():
+    - Edges: paired AND positioned correctly
+    - Corners: positioned correctly
+    - Centers: still scrambled (Phase 2 TODO)
+    """
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    # Scramble
+    app.scramble(42, None, animation=False, verbose=False)
+
+    solver = CageNxNSolver(app.op)
+
+    # Before solve - corners and edges should be scrambled
+    assert not solver._are_corners_solved(), "Corners should not be solved after scramble"
+
+    # Solve
+    solver.solve()
+
+    # After solve - edges should be paired AND positioned
+    assert solver._are_edges_solved(), "Edges should be paired"
+    assert solver._are_edges_positioned(), "Edges should be positioned correctly"
+
+    # Corners should be solved
+    assert solver._are_corners_solved(), "Corners should be solved"
+
+    # But centers should still be scrambled (for NxN > 3)
+    if size > 3:
+        assert not solver._are_centers_solved(), "Centers should NOT be solved yet (Phase 2)"
+
+    print(f"\n  Size {size}x{size}: corners solved, centers still scrambled")

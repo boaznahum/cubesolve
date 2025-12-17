@@ -98,6 +98,15 @@ class ConfigProtocol(Protocol):
         """Check if cube is in BOY orientation."""
         ...
 
+    @property
+    def cage_3x3_solver(self) -> str:
+        """3x3 solver used by cage method for corner solving (Phase 1b).
+
+        Options: "beginner", "cfop", "kociemba"
+        Default: "beginner"
+        """
+        ...
+
     # ==========================================================================
     # Optimization settings
     # ==========================================================================

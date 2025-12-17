@@ -72,9 +72,15 @@ class CageNxNSolver(BaseSolver):
     - For even cubes, additional "full" edge parity may exist (TODO)
     """
 
-    __slots__ = ["_nxn_edges"]
+    __slots__ = ["_nxn_edges", "_solver_3x3"]
 
     def __init__(self, op: OperatorProtocol) -> None:
+        """
+        Create a Cage method solver.
+
+        Args:
+            op: Operator for cube manipulation
+        """
         super().__init__(op)
         # =====================================================================
         # EDGE SOLVER SETUP
@@ -93,31 +99,63 @@ class CageNxNSolver(BaseSolver):
         # =====================================================================
         self._nxn_edges = NxNEdges(self, advanced_edge_parity=False)
 
+        # =====================================================================
+        # 3x3 SOLVER FOR CORNERS (Phase 1b)
+        # =====================================================================
+        # After edges are paired, use standard 3x3 solver for corners.
+        # The 3x3 solver will solve L1, L2, L3 - treating the cube as a
+        # virtual 3x3.
+        #
+        # WHY THIS WORKS (ODD CUBES ONLY):
+        # - Face center IS fixed for odd cubes (5x5, 7x7)
+        # - 3x3 solver uses face.center.color to determine face colors
+        # - Scrambled inner center pieces don't affect corner placement
+        #
+        # WHY 3x3 SOLVER DOESN'T COMPLAIN:
+        # - It never checks cube.is3x3
+        # - Corners are identical on all cube sizes
+        # - After Phase 1a, edges are paired (is3x3) - look like 3x3 edges
+        # - It uses face.center.color which works for odd cubes
+        #
+        # EVEN CUBES NOT SUPPORTED:
+        # - Even cubes have NO fixed center → face color undefined
+        # - Would need FaceTracker to establish color mapping first
+        # - See __todo_cage.md for future work
+        # =====================================================================
+        from cube.domain.solver.Solvers3x3 import Solvers3x3
+        solver_name = self._cube.config.cage_3x3_solver
+        self._solver_3x3 = Solvers3x3.by_name(solver_name, self._op)
+
     @property
     def get_code(self) -> SolverName:
         return SolverName.CAGE
 
     @property
     def status(self) -> str:
-        """Return current solving status."""
+        """Return current solving status.
+
+        Shows cage (edges + corners) status and center status separately.
+        """
         if self.is_solved:
             return "Solved"
 
-        # Check phases in order
-        edges_done = self._are_edges_solved()
+        # Check cage status (edges paired + corners positioned)
+        edges_paired = self._are_edges_solved()
+        edges_positioned = self._are_edges_positioned()
         corners_done = self._are_corners_solved()
         centers_done = self._are_centers_solved()
 
-        parts: list[str] = []
-        if edges_done:
-            parts.append("E:Done")
-        else:
-            parts.append("E:Pending")
+        # Cage = edges + corners
+        cage_done = edges_paired and edges_positioned and corners_done
 
-        if corners_done:
-            parts.append("C:Done")
+        parts: list[str] = []
+
+        if cage_done:
+            parts.append("Cage:Done")
+        elif edges_paired:
+            parts.append("Cage:Edges")  # Edges paired, corners pending
         else:
-            parts.append("C:Pending")
+            parts.append("Cage:Pending")
 
         if centers_done:
             parts.append("Ctr:Done")
@@ -134,19 +172,24 @@ class CageNxNSolver(BaseSolver):
         """Check if all edges are reduced to 3x3 (all wings paired)."""
         return all(e.is3x3 for e in self._cube.edges)
 
+    def _are_edges_positioned(self) -> bool:
+        """Check if all edges are in correct position (matching face colors).
+
+        This is stronger than _are_edges_solved() which only checks pairing.
+        After the 3x3 solver runs, edges should be both paired AND positioned.
+        """
+        return all(e.match_faces for e in self._cube.edges)
+
     def _are_corners_solved(self) -> bool:
-        """Check if all corners are in correct position with correct orientation."""
-        # For now, we check if the cube would be solved if we ignore centers
-        # This is a simplified check - proper implementation needs to verify
-        # each corner is in its correct position
-        cube = self._cube
-        for corner in cube.corners:
-            # Check if corner colors match the expected colors for its position
-            # For odd cubes, use face center colors
-            # For even cubes, need face color mapping (TODO)
-            pass
-        # Simplified: just check if 3x3 corners would be correct
-        return True  # TODO: implement proper check
+        """Check if all corners are in correct position with correct orientation.
+
+        A corner is "solved" when all its stickers match the face center colors.
+        Uses Part.match_faces which checks each sticker against its face's center.
+
+        NOTE: Only works for ODD cubes where face center is fixed.
+        """
+        # Part.match_faces checks if all stickers match their face colors
+        return all(corner.match_faces for corner in self._cube.corners)
 
     def _are_centers_solved(self) -> bool:
         """Check if all centers are reduced to 3x3 (uniform color per face)."""
@@ -188,8 +231,26 @@ class CageNxNSolver(BaseSolver):
             if had_parity:
                 sr._was_partial_edge_parity = True
 
-        # TODO: Phase 1b - corners
-        # TODO: Phase 2 - centers
+        # =====================================================================
+        # PHASE 1b: CORNER SOLVING (via 3x3 solver)
+        # =====================================================================
+        # After edges are paired, the cube is a "virtual 3x3".
+        # Use standard 3x3 solver to solve L1, L2, L3.
+        #
+        # After this phase:
+        # - Corners: SOLVED (correct position and orientation)
+        # - Edges: SOLVED (paired and in correct position)
+        # - Centers: SCRAMBLED (inner center pieces still mixed)
+        #
+        # NOTE: Only works for ODD cubes (5x5, 7x7) where face center
+        # defines the face color. Even cubes need FaceTracker first.
+        # =====================================================================
+        if not self._cube.solved:
+            self._solve_corners()
+
+        # TODO: Phase 2 - centers (commutators)
+        # Centers remain scrambled after Phase 1b.
+        # Need commutators that preserve edges/corners.
 
         return sr
 
@@ -229,19 +290,37 @@ class CageNxNSolver(BaseSolver):
         return self._nxn_edges.solve()
 
     # =========================================================================
-    # Phase 1b: Corner solving (TODO)
+    # Phase 1b: Corner solving (uses 3x3 solver)
     # =========================================================================
 
     def _solve_corners(self) -> None:
         """
-        Solve all corners using standard 3x3 methods.
+        Solve corners using standard 3x3 solver.
 
-        Corners are identical to 3x3 corners on any size cube.
+        IMPLEMENTATION:
+        ==============
+        After edges are paired (Phase 1a), the cube is a "virtual 3x3".
+        We use BeginnerSolver3x3.solve_3x3() which solves:
+        - L1: White cross + white corners
+        - L2: Middle layer edges
+        - L3: Yellow cross, yellow corners (OLL + PLL)
+
+        WHY THIS WORKS (ODD CUBES):
+        - Face center IS fixed (defines face color)
+        - 3x3 solver uses face.center.color correctly
+        - Corners are identical on all cube sizes
+
+        AFTER THIS METHOD:
+        - Corners: SOLVED
+        - Edges: SOLVED (were already paired)
+        - Centers: SCRAMBLED (inner pieces still mixed)
+
+        NOTE: Even cubes not supported - face color undefined.
         """
-        self.debug("Starting corner solving")
-        # TODO: Implement corner solving
-        # Can reuse 3x3 corner algorithms
-        pass
+        self.debug("Starting corner solving (using 3x3 solver)")
+        # solve_3x3() solves the cube as if it were a 3x3
+        # Since edges are already paired, this effectively solves corners
+        self._solver_3x3.solve_3x3()
 
     # =========================================================================
     # Phase 2: Center solving (TODO)
