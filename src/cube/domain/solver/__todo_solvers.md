@@ -113,49 +113,56 @@ Both parities now follow the same consistent pattern:
 
 ---
 
-# new enties
+## SolverElementsProvider Refactoring (COMPLETED - 2025-12-17)
 
-i dont like facades 
+### Problem
+`SolverElement` and `CommonOp` required `BaseSolver` as constructor parameter.
+This forced reducers like `BeginnerReducer` to use a `_ReducerSolverFacade` hack
+to satisfy the type requirement, even though reducers only need a subset of
+BaseSolver's interface.
 
-class BeginnerReducer(ReducerProtocol):
-    """
-    Standard NxN to 3x3 reducer using beginner method.
+### Solution
+Created minimal protocol and abstract base class:
 
-    Reduces an NxN cube (4x4, 5x5, etc.) to a virtual 3x3 by:
-    1. Solving centers (grouping center pieces by color)
-    2. Solving edges (pairing edge pieces)
+1. **`SolverElementsProvider` (Protocol)** - Minimal interface with:
+   - `op: OperatorProtocol`
+   - `cube: Cube`
+   - `cmn: CommonOp`
+   - `debug(*args): None`
 
-    Supports both basic and advanced edge parity algorithms.
+2. **`AbstractReducer`** - Base class for reducers implementing `SolverElementsProvider`:
+   - Implements `ReducerProtocol`
+   - Implements `SolverElementsProvider`
+   - Provides `_op`, `_cube`, `_cmn` infrastructure
+   - Creates `CommonOp(self)` in constructor
 
-    Inherits from ReducerProtocol to satisfy the project's convention
-    of implementations inheriting from protocols.
-    """
+### Files Changed
 
-    __slots__ = ["_op", "_solver_facade", "_nxn_centers", "_nxn_edges", "_l3_corners"]
+**New Files:**
+- `protocols/SolverElementsProvider.py` - New protocol
+- `reducers/AbstractReducer.py` - New base class
+- `SOLVER_ARCHITECTURE.md` - Class hierarchy documentation
 
-    def __init__(
-        self,
-        op: OperatorProtocol,
-        advanced_edge_parity: bool = False
-    ) -> None:
-        """
-        Create a BeginnerReducer.
+**Updated:**
+- `protocols/__init__.py` - Export `SolverElementsProvider`
+- `common/SolverElement.py` - Accept `SolverElementsProvider` instead of `BaseSolver`
+- `common/CommonOp.py` - Accept `SolverElementsProvider` instead of `BaseSolver`
+- `reducers/BeginnerReducer.py` - Extend `AbstractReducer`, removed `_ReducerSolverFacade`
+- `beginner/NxNCenters.py` - Accept `SolverElementsProvider`
+- `beginner/NxNEdges.py` - Accept `SolverElementsProvider`
+- `beginner/L3Corners.py` - Accept `SolverElementsProvider`
+- `beginner/NxnCentersFaceTracker.py` - Accept `SolverElementsProvider`
+- `common/AdvancedEvenOLLBigCubeParity.py` - Accept `SolverElementsProvider`
 
-        Args:
-            op: Operator for cube manipulation
-            advanced_edge_parity: If True, use advanced R/L-slice parity algorithm.
-                                  If False, use simple M-slice parity algorithm.
-        """
-        self._op = op
+### Benefits
+- Eliminated `_ReducerSolverFacade` hack
+- Reducers can pass `self` directly to solver elements
+- Clear separation between solver and reducer hierarchies
+- Both hierarchies share common infrastructure through protocol
 
-        # Create minimal solver facade for NxNCenters/NxNEdges/L3Corners
-        self._solver_facade = _ReducerSolverFacade(op)
+See: `SOLVER_ARCHITECTURE.md` for detailed class diagrams.
 
-        # Import here to avoid circular imports
-        from cube.domain.solver.beginner.NxNCenters import NxNCenters
-        from cube.domain.solver.beginner.NxNEdges import NxNEdges
-        from cube.domain.solver.beginner.L3Corners import L3Corners
+---
 
-        self._nxn_centers = NxNCenters(self._solver_facade)
-        self._nxn_edges = NxNEdges(self._solver_facade, advanced_edge_parity)
-        self._l3_corners = L3Corners(self._solver_facade)
+# new entries
+

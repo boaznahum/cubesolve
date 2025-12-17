@@ -6,14 +6,14 @@ from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.Face import Face
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.solver.common.FaceTracker import FaceTracker
-from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
 
 class NxNCentersFaceTrackers(SolverElement):
 
-    def __init__(self, solver: BaseSolver) -> None:
+    def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)
 
     def track_no_1(self) -> FaceTracker:
@@ -34,7 +34,7 @@ class NxNCentersFaceTrackers(SolverElement):
 
         # WHY NOT USE SET ? BECAUSE the order is unpredictable, and we want the solution to be such
         #left = list({*cube.faces} - {two_first[0].face, two_first[1].face})
-        left = { f:None for f in cube.faces}
+        left = {f: None for f in cube.faces}
         # don't try left.keys() - again it will be converted to set
         left.pop(two_first[0].face)
         left.pop(two_first[1].face)
@@ -169,6 +169,7 @@ class NxNCentersFaceTrackers(SolverElement):
         for f in self.cube.faces:
             for s in f.center.all_slices:
 
+                #claude: why pycharm says is_track_slice is undefined
                 if self.is_track_slice(s):
                     print(f"Track slice: {s} {s.color} on {f}")
         print("===================================")
@@ -191,6 +192,7 @@ class NxNCentersFaceTrackers(SolverElement):
 
         for f in faces:
             for c in colors:
+                #claude: why cqr is red ?
                 n = self.cqr.count_color_on_face(f, c)
                 if n > n_max:
                     n_max = n

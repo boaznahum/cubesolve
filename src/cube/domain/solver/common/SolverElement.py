@@ -3,8 +3,7 @@ from typing import final, TYPE_CHECKING, TypeAlias, Tuple, ContextManager, Calla
 
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
-from cube.domain.solver.protocols import OperatorProtocol, AnnotationProtocol, SupportsAnnotation
-from cube.domain.solver.common.BaseSolver import BaseSolver
+from cube.domain.solver.protocols import OperatorProtocol, AnnotationProtocol, SupportsAnnotation, SolverElementsProvider
 from cube.domain.solver.AnnWhat import AnnWhat
 from ...algs import Alg
 from ...model.CubeQueries2 import CubeQueries2
@@ -23,9 +22,9 @@ class SolverElement(CubeSupplier):
                  "_cqr"
                  ]
 
-    _solver: BaseSolver
+    _solver: SolverElementsProvider
 
-    def __init__(self, solver: BaseSolver) -> None:
+    def __init__(self, solver: SolverElementsProvider) -> None:
         self._solver = solver
         self._ann = solver.op.annotation
         self._cmn = solver.cmn
@@ -89,7 +88,7 @@ class SolverElement(CubeSupplier):
 
 
 class StepSolver(SolverElement):
-    def __init__(self, solver: BaseSolver) -> None:
+    def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)
 
     @abstractmethod

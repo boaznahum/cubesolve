@@ -7,9 +7,9 @@ from cube.domain.model import Color, Edge, PartColorsID, EdgeWing
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
 from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
 
@@ -25,7 +25,7 @@ class NxNEdges(SolverElement):
 
     D_LEVEL = 3
 
-    def __init__(self, slv: BaseSolver, advanced_edge_parity: bool) -> None:
+    def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool) -> None:
         super().__init__(slv)
         self._advanced_edge_parity = advanced_edge_parity
 

@@ -5,6 +5,8 @@ from cube.domain.algs.Algs import Algs
 from cube.domain.algs.Alg import Alg
 from cube.domain.model import Cube
 from cube.domain.solver import Solver
+from cube.domain.solver.common.BaseSolver import _Common
+from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 
 
@@ -14,6 +16,7 @@ class AbstractSolver(Solver, ABC):
 
     def __init__(self, op: OperatorProtocol) -> None:
         super().__init__()
+        self.common: _Common = CommonOp(self)
         self._op = op
         self._cube = op.cube
         self._debug_override: bool | None = None
@@ -75,3 +78,8 @@ class AbstractSolver(Solver, ABC):
                         solution_algs.insert(0, step)
 
             return Algs.alg(None, *solution_algs)
+
+    @property
+    @final
+    def cmn(self) -> _Common:
+        return self.common

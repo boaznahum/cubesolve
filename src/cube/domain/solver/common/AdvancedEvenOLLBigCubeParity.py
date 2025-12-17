@@ -1,12 +1,12 @@
 from cube.domain.algs import Algs
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.protocols import SolverElementsProvider
 
 
 class AdvancedEdgeEdgeParity(SolverElement):
 
-    def __init__(self, solver: BaseSolver) -> None:
+    def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)
 
     def do_full_even_edge_parity(self):
