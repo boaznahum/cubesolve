@@ -44,6 +44,8 @@ from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.solver import SolveStep, SolverResults
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.beginner.NxNEdges import NxNEdges
+from cube.domain.solver.direct.cage.CageCenters import CageCenters
+from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -253,9 +255,14 @@ class CageNxNSolver(BaseSolver):
         if not self._cube.solved:
             self._solve_corners()
 
-        # TODO: Phase 2 - centers (commutators)
-        # Centers remain scrambled after Phase 1b.
-        # Need commutators that preserve edges/corners.
+        # =====================================================================
+        # PHASE 2: CENTER SOLVING
+        # =====================================================================
+        # Use NxNCenters to solve centers.
+        # WARNING: NxNCenters may break edges/corners - testing with SS mode.
+        # =====================================================================
+        if not self._are_centers_solved():
+            self._solve_centers()
 
         return sr
 
@@ -333,11 +340,29 @@ class CageNxNSolver(BaseSolver):
 
     def _solve_centers(self) -> None:
         """
-        Solve all centers using commutators.
+        Solve all centers using CageCenters.
 
-        Since edges/corners are fixed, commutators only affect centers.
+        CageCenters is a modified NxNCenters that UNDOES setup moves
+        to preserve the cage (paired edges and solved corners).
         """
-        self.debug("Starting center solving")
-        # TODO: Implement center solving with commutators
-        # Key: Must use only commutators that preserve edges
+        self.debug("Starting center solving (using CageCenters)")
+
+        # SS breakpoint BEFORE - inspect cage state
+        self._op.enter_single_step_mode(SSCode.CAGE_CENTERS_START)
+
+        # Log cage state before
+        self.debug(f"Before CageCenters: edges={self._are_edges_solved()}, "
+                   f"corners={self._are_corners_solved()}")
+
+        # Use CageCenters which preserves paired edges
+        cage_centers = CageCenters(self)
+        cage_centers.solve()
+
+        # Log cage state after
+        self.debug(f"After CageCenters: edges={self._are_edges_solved()}, "
+                   f"corners={self._are_corners_solved()}, "
+                   f"centers={self._are_centers_solved()}")
+
+        # SS breakpoint AFTER - inspect result
+        self._op.enter_single_step_mode(SSCode.CAGE_CENTERS_DONE)
         pass

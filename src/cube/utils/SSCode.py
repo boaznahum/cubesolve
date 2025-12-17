@@ -54,3 +54,10 @@ class SSCode(Enum):
 
     L3_CORNERS_DONE = auto()
     """Pause after L3 corners are solved."""
+
+    # Cage solver phases
+    CAGE_CENTERS_START = auto()
+    """Pause before solving centers in cage method."""
+
+    CAGE_CENTERS_DONE = auto()
+    """Pause after solving centers in cage method."""

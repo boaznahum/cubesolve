@@ -69,6 +69,7 @@ class Algs:
     S = _S()  # Middle over F
 
     _NO_OP = SeqAlg(None)
+    NOOP = _NO_OP  # Public alias for no-op algorithm
 
     @staticmethod
     def seq_alg(name: str | None, *algs: Alg) -> SeqAlg:
