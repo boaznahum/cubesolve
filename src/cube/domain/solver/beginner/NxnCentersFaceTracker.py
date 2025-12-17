@@ -159,18 +159,20 @@ class NxNCentersFaceTrackers(SolverElement):
         for f in self.cube.faces:
             FaceTracker.remove_face_track_slices(f)
 
-    # noinspection PyUnreachableCode,PyUnusedLocal
-    def _debug_print_track_slices(self, message: str):
+    # Using a variable instead of `if True:` so mypy/pyright will type-check
+    # the disabled debug code. Set to False to enable debug output.
+    _SKIP_DEBUG = True
 
-        if True:
+    def _debug_print_track_slices(self, message: str):
+        """Print track slices for debugging. Disabled by default via _SKIP_DEBUG."""
+        if self._SKIP_DEBUG:
             return
 
         print(f"=== track slices: {message}================================")
         for f in self.cube.faces:
             for s in f.center.all_slices:
 
-                #claude: why pycharm says is_track_slice is undefined
-                if self.is_track_slice(s):
+                if self._is_track_slice(s):
                     print(f"Track slice: {s} {s.color} on {f}")
         print("===================================")
 
@@ -192,7 +194,6 @@ class NxNCentersFaceTrackers(SolverElement):
 
         for f in faces:
             for c in colors:
-                #claude: why cqr is red ?
                 n = self.cqr.count_color_on_face(f, c)
                 if n > n_max:
                     n_max = n
