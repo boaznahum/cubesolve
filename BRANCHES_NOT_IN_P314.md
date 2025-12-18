@@ -6,6 +6,17 @@ Generated: 2025-12-18
 
 ---
 
+## TODO: Actions Required
+
+1. [ ] **cpof-fix2** → Merge into cage-solver, then merge cage-solver into p314
+2. [ ] **solvertodo1** → Merge the settings fix into p314
+3. [ ] **origin/claude/fix-cage-cfop-solver-9b2IT** → Archive (superseded by cpof-fix2)
+4. [ ] **origin/claude/learn-project-structure-*** → Archive (contained in parity-docs-cAG7u)
+5. [ ] **origin/claude/parity-docs-cAG7u** → Review docs, cherry-pick useful commits
+6. [ ] **origin/claude/parity-docs-orchestrator-cAG7u** → Review test improvements, cherry-pick useful commits
+
+---
+
 ## Local Branches
 
 ### cage-solver (10+ commits ahead)
@@ -42,26 +53,6 @@ Fork of cage-solver with CFOP support fix.
 
 ---
 
-### imgui-controls (10+ commits ahead)
-ImGui-based control panel for the GUI.
-
-```
-c886860 Show Next/Stop buttons always (disabled when not applicable)
-49fe94a Make ImGui toolbar fully horizontal with 2 compact rows
-2fb3aae Fix ImGui toolbar to auto-size width based on content
-e2fe4a7 Redesign ImGui controls as horizontal toolbar at top
-90e2758 Make Scramble and Solve sections expanded by default in ImGui panel
-6ca1130 improve gui
-cfed358 Fix ImGui Solve button animation and Q command crash
-b8ef9e2 Fix ImGui panel rendering on HiDPI displays and improve layout
-80ae75d Add separate texture prev/next/toggle controls to ImGui panel
-a71c05c Add SSCode enum for configurable single-step breakpoints
-```
-
-**Status:** Horizontal toolbar with scramble/solve controls, texture selection, HiDPI support.
-
----
-
 ### solvertodo1 (1 commit ahead)
 Minor fix branch.
 
@@ -83,12 +74,24 @@ a7c979a Fix F2L to work when centers aren't solved (enables CFOP for Cage)
 9a5bcbc Fix AbstractSolver bugs and enable Cage solver
 ```
 
-**Status:** Merged into cpof-fix2. Can be archived.
+**Status:** Superseded by cpof-fix2. Can be archived.
+
+---
+
+### origin/claude/learn-project-structure-01WYYtkueCTRzNjpBziMJtBB (2 commits ahead)
+Project structure documentation.
+
+```
+378bc87 Document GUI abstraction migration state
+e7eae80 Add comprehensive project structure learning documentation
+```
+
+**Status:** Documentation only. Contained in parity-docs-cAG7u. Can be archived.
 
 ---
 
 ### origin/claude/parity-docs-cAG7u (5 commits ahead)
-Parity documentation improvements.
+Parity documentation improvements. Contains learn-project-structure commits.
 
 ```
 12a89d3 Document why corner parity is fixed immediately but edge is not
@@ -103,7 +106,7 @@ e7eae80 Add comprehensive project structure learning documentation
 ---
 
 ### origin/claude/parity-docs-orchestrator-cAG7u (6 commits ahead)
-More parity documentation and solver test improvements.
+Parity documentation and solver test improvements.
 
 ```
 b698815 Add GUI scramble seeds 0-9 to solver tests
@@ -118,27 +121,22 @@ df45c76 Add comprehensive parity handling documentation for both designs
 
 ---
 
-## Branches Already Contained in p314
+## Branches Already Contained in p314 (Cleaned Up)
 
-These branches have **all their commits already in p314** (p314 is ahead of or equal to them).
-They can be safely deleted or archived:
+These branches were deleted or archived because p314 already contains all their commits:
 
-- `before-remove-pyglet1`
+**Deleted:**
 - `fix-even-cube-tests`
 - `golden-solver`
 - `image-texture-bug`
-- `main`
 - `new-opengl`
-- `pyglet-native-toolbar`
+- `pyglet-native-toolbar` (local + remote)
 - `solver-tests-and-docs`
-- `origin/gui-controls`
+- `gui-controls` (remote)
+- `imgui-controls` (local + remote)
 
----
+**Archived:**
+- `before-remove-pyglet1` → `archive/before-remove-pyglet1`
 
-## Recommended Actions
-
-1. **cpof-fix2** → Merge into cage-solver, then merge cage-solver into p314
-2. **imgui-controls** → Review and merge into p314 when ready
-3. **origin/claude/fix-cage-cfop-solver-9b2IT** → Archive (superseded by cpof-fix2)
-4. **origin/claude/parity-docs-*** → Review docs, cherry-pick useful commits
-5. **solvertodo1** → Merge the settings fix into p314
+**Kept:**
+- `main` (main branch, always keep)
