@@ -32,11 +32,12 @@ class F2L(SolverElement):
     Credits to https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
 
     """
-    __slots__: list[str] = []
+    __slots__: list[str] = ["_ignore_center_check"]
 
-    def __init__(self, slv: BaseSolver) -> None:
+    def __init__(self, slv: BaseSolver, *, ignore_center_check: bool = False) -> None:
         super().__init__(slv)
         self._set_debug_prefix("F2L")
+        self._ignore_center_check = ignore_center_check
 
     def solved(self) -> bool:
         """
@@ -46,7 +47,11 @@ class F2L(SolverElement):
         return self._l1_l2_solved()
 
     def is_l1(self):
-        return self.cmn.white_face.solved
+        wf = self.cmn.white_face
+        if self._ignore_center_check:
+            # Check edges and corners directly, bypassing is3x3 check
+            return Part.all_match_faces([*wf.edges, *wf.corners])
+        return wf.solved
 
     def is_l2(self):
 
@@ -56,7 +61,13 @@ class F2L(SolverElement):
 
     def _l1_l2_solved(self):
         wf = self.cmn.white_face
-        if not wf.solved:
+
+        if self._ignore_center_check:
+            # Check edges and corners directly, bypassing is3x3 check
+            l1_parts = [*wf.edges, *wf.corners]
+            if not Part.all_match_faces(l1_parts):
+                return False
+        elif not wf.solved:
             return False
 
         edges = [*self.cmn.l2_edges(), *wf.edges]
