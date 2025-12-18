@@ -41,12 +41,16 @@ def pytest_addoption(parser):
         default=3,
         help="Number of times to increase animation speed (default: 3)"
     )
-    parser.addoption(
-        "--backend",
-        action="store",
-        default="all",
-        help="Backend to use: pyglet2, headless, console, or 'all' (default: all)"
-    )
+    # Check if option already exists (may be added by tests/backends/conftest.py)
+    try:
+        parser.addoption(
+            "--backend",
+            action="store",
+            default="all",
+            help="Backend to use: pyglet2, headless, console, or 'all' (default: all)"
+        )
+    except ValueError:
+        pass  # Option already added by another conftest
 
 
 @pytest.fixture

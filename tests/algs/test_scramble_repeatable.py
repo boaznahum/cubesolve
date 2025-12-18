@@ -5,12 +5,20 @@ from cube.application.AbstractApp import AbstractApp
 from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
+from cube.domain.solver.SolverName import SolverName
+from cube.application import _config as cfg
 from tests.conftest import _test_sp
 
 
 def test_scramble_repeatable():
     """Test that scramble with same key produces identical results."""
     size = 6
+
+    # Check if default solver supports the cube size
+    solver_name = SolverName.lookup(cfg.DEFAULT_SOLVER)
+    skip_reason = solver_name.meta.get_skip_reason(size)
+    if skip_reason:
+        pytest.skip(f"Default solver {solver_name} doesn't support {size}x{size}: {skip_reason}")
 
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 

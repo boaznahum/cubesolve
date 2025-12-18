@@ -44,7 +44,7 @@ from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.solver import SolveStep, SolverResults
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.beginner.NxNEdges import NxNEdges
-from cube.domain.solver.direct.cage.CageCenters import CageCenters
+from cube.domain.solver.beginner.NxNCentersV3 import NxNCentersV3
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
@@ -340,26 +340,26 @@ class CageNxNSolver(BaseSolver):
 
     def _solve_centers(self) -> None:
         """
-        Solve all centers using CageCenters.
+        Solve all centers using NxNCentersV3 with preserve_3x3_state=True.
 
-        CageCenters is a modified NxNCenters that UNDOES setup moves
+        When preserve_3x3_state=True, NxNCentersV3 UNDOES all setup moves
         to preserve the cage (paired edges and solved corners).
         """
-        self.debug("Starting center solving (using CageCenters)")
+        self.debug("Starting center solving (using NxNCentersV3 with preserve_3x3_state=True)")
 
         # SS breakpoint BEFORE - inspect cage state
         self._op.enter_single_step_mode(SSCode.CAGE_CENTERS_START)
 
         # Log cage state before
-        self.debug(f"Before CageCenters: edges={self._are_edges_solved()}, "
+        self.debug(f"Before center solving: edges={self._are_edges_solved()}, "
                    f"corners={self._are_corners_solved()}")
 
-        # Use CageCenters which preserves paired edges
-        cage_centers = CageCenters(self)
+        # Use NxNCentersV3 with preserve_3x3_state=True to preserve paired edges
+        cage_centers = NxNCentersV3(self, preserve_3x3_state=True)
         cage_centers.solve()
 
         # Log cage state after
-        self.debug(f"After CageCenters: edges={self._are_edges_solved()}, "
+        self.debug(f"After center solving: edges={self._are_edges_solved()}, "
                    f"corners={self._are_corners_solved()}, "
                    f"centers={self._are_centers_solved()}")
 

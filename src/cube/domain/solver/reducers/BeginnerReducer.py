@@ -40,12 +40,13 @@ class BeginnerReducer(AbstractReducer):
         super().__init__(op)
 
         # Import here to avoid circular imports
-        from cube.domain.solver.beginner.NxNCenters import NxNCenters
+        from cube.domain.solver.beginner.NxNCentersV3 import NxNCentersV3
         from cube.domain.solver.beginner.NxNEdges import NxNEdges
         from cube.domain.solver.beginner.L3Corners import L3Corners
 
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
-        self._nxn_centers = NxNCenters(self)
+        # preserve_3x3_state=False: Standard reduction method (centers before edges)
+        self._nxn_centers = NxNCentersV3(self, preserve_3x3_state=False)
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)
         self._l3_corners = L3Corners(self)
 

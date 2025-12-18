@@ -440,3 +440,4 @@
 # new entries
 - Make sure no code is leak outside backends layer
 - Centralize animation handling so solvers don't need to wrap with_animation() themselves
+- go over all debug(f") and 

@@ -18,6 +18,7 @@ from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.domain.algs import Algs
 from cube.domain.solver import Solvers
+from cube.domain.solver.SolverName import SolverName
 from tests.conftest import _test_sp
 
 
@@ -110,9 +111,15 @@ class CubeTestDriver:
 
     @property
     def solver(self) -> Solvers:
-        """Get or create solver."""
+        """Get or create solver. Raises if default solver doesn't support cube size."""
         if self._solver is None:
-            self._solver = Solvers.default(self.operator)
+            cube_size = self.cube.size
+            default_solver = SolverName.CAGE  # The default solver
+            skip_reason = default_solver.meta.get_skip_reason(cube_size)
+            if skip_reason:
+                import pytest
+                pytest.skip(f"Default solver {default_solver} doesn't support {cube_size}x{cube_size}: {skip_reason}")
+            self._solver = Solvers.by_name(default_solver, self.operator)
         return self._solver
 
     @property
@@ -309,12 +316,16 @@ def get_available_backends() -> list[str]:
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add --backend option to pytest."""
-    parser.addoption(
-        "--backend",
-        action="store",
-        default="headless",
-        help="Backend to test: headless, pyglet2, tkinter, or 'all' for all available",
-    )
+    # Check if option already exists (may be added by tests/gui/conftest.py)
+    try:
+        parser.addoption(
+            "--backend",
+            action="store",
+            default="headless",
+            help="Backend to test: headless, pyglet2, tkinter, or 'all' for all available",
+        )
+    except ValueError:
+        pass  # Option already added by another conftest
 
 
 def pytest_configure(config: pytest.Config) -> None:
