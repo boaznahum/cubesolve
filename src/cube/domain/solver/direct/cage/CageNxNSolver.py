@@ -126,7 +126,7 @@ class CageNxNSolver(BaseSolver):
         # =====================================================================
         from cube.domain.solver.Solvers3x3 import Solvers3x3
         solver_name = self._cube.config.cage_3x3_solver
-        self._solver_3x3 = Solvers3x3.by_name(solver_name, self._op)
+        self._solver_3x3 = Solvers3x3.by_name(solver_name, self._op, ignore_center_check=True)
 
     @property
     def get_code(self) -> SolverName:

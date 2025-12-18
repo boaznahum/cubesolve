@@ -38,7 +38,11 @@ class Solvers3x3:
         return BeginnerSolver3x3(op)
 
     @staticmethod
-    def cfop(op: OperatorProtocol) -> Solver3x3Protocol:
+    def cfop(
+        op: OperatorProtocol,
+        *,
+        ignore_center_check: bool = False
+    ) -> Solver3x3Protocol:
         """
         Get CFOP (Fridrich) 3x3 solver.
 
@@ -47,12 +51,14 @@ class Solvers3x3:
 
         Args:
             op: Operator for cube manipulation
+            ignore_center_check: If True, F2L bypasses is3x3 check on centers.
+                               Use for Cage solver where edges are solved before centers.
 
         Returns:
             CFOP3x3 instance
         """
         from cube.domain.solver.CFOP.CFOP3x3 import CFOP3x3
-        return CFOP3x3(op)
+        return CFOP3x3(op, ignore_center_check=ignore_center_check)
 
     @staticmethod
     def kociemba(op: OperatorProtocol) -> Solver3x3Protocol:
@@ -72,13 +78,21 @@ class Solvers3x3:
         return Kociemba3x3(op)
 
     @classmethod
-    def by_name(cls, name: str, op: OperatorProtocol) -> Solver3x3Protocol:
+    def by_name(
+        cls,
+        name: str,
+        op: OperatorProtocol,
+        *,
+        ignore_center_check: bool = False
+    ) -> Solver3x3Protocol:
         """
         Get a 3x3 solver by its name.
 
         Args:
             name: Solver name - "beginner", "cfop", or "kociemba"
             op: Operator for cube manipulation
+            ignore_center_check: If True (and using CFOP), F2L bypasses is3x3 check.
+                               Use for Cage solver where edges are solved before centers.
 
         Returns:
             Solver3x3Protocol instance
@@ -90,7 +104,7 @@ class Solvers3x3:
             case "beginner":
                 return cls.beginner(op)
             case "cfop":
-                return cls.cfop(op)
+                return cls.cfop(op, ignore_center_check=ignore_center_check)
             case "kociemba":
                 return cls.kociemba(op)
             case _:
