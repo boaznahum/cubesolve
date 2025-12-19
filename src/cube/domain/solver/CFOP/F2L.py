@@ -315,6 +315,15 @@ class F2L(SolverElement):
 
             self.debug(f"Case corner is {corner.actual.name}, edge is {edge.actual.name}, Running alg:{alg}")
             play(alg)
+            if not corner.match:
+                # Debug: show what went wrong
+                print(f"F2L corner.match FAILED after alg {alg}")
+                print(f"  Looking for corner with colors: {corner._color_id}")
+                print(f"  FRD position has corner: {cube.front.corner_bottom_right}")
+                print(f"  FRD position_id: {cube.front.corner_bottom_right.position_id}")
+                print(f"  FRD colors_id: {cube.front.corner_bottom_right.colors_id}")
+                print(f"  Face colors: F={cube.front.color}, R={cube.right.color}, D={cube.down.color}")
+                print(f"  corner.actual: {corner.actual}")
             assert corner.match
             assert edge.match
 
@@ -380,7 +389,8 @@ class F2L(SolverElement):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        d = Algs.D[1:1 + cube.n_slices]
+        # d = inner D layers only (NOT the D face) - slice 0 is D face, slices 1+ are inner
+        d = Algs.D[2:1 + cube.n_slices]
 
         ################################################################
         # 1st: Easy cases: edge at top
@@ -616,7 +626,8 @@ class F2L(SolverElement):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        d = Algs.D[1:1 + cube.n_slices]
+        # d = inner D layers only (NOT the D face) - slice 0 is D face, slices 1+ are inner
+        d = Algs.D[2:1 + cube.n_slices]
 
         e_front_c = e.get_face_edge(front).color
 
@@ -767,7 +778,8 @@ class F2L(SolverElement):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        d = Algs.D[1:1 + cube.n_slices]
+        # d = inner D layers only (NOT the D face) - slice 0 is D face, slices 1+ are inner
+        d = Algs.D[2:1 + cube.n_slices]
 
         c_front_color = c.get_face_edge(front).color
         c_right_color = c.get_face_edge(right).color

@@ -31,7 +31,6 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
     @final
     def play(self, cube: Cube, inv: bool = False):
         start_stop: Iterable[int] = self.normalize_slice_index(n_max=1 + cube.n_slices, _default=[1])
-
         cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
 
     def get_animation_objects(self, cube) -> Tuple[FaceName, Collection[PartSlice]]:

@@ -45,6 +45,10 @@ from cube.domain.solver.solver import SolveStep, SolverResults
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.beginner.NxNEdges import NxNEdges
 from cube.domain.solver.beginner.NxNCentersV3 import NxNCentersV3
+from cube.domain.solver.common.VirtualFaceColor import (
+    create_even_cube_face_trackers,
+    virtual_face_colors_with_op,
+)
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
@@ -220,7 +224,17 @@ class CageNxNSolver(BaseSolver):
             return self._solve_impl(sr)
 
     def _solve_impl(self, sr: SolverResults) -> SolverResults:
-        """Internal solve implementation."""
+        """Internal solve implementation.
+
+        EVEN CUBE SUPPORT:
+        =================
+        Even cubes (4x4, 6x6) have no fixed center, so face.center.color
+        returns an arbitrary color after scrambling. To solve corners correctly,
+        we use virtual_face_colors() to temporarily set face colors based on
+        FaceTracker analysis.
+
+        See CageFaceColorMapper.py for detailed documentation.
+        """
         # =====================================================================
         # PHASE 1a: EDGE SOLVING
         # =====================================================================
@@ -239,32 +253,127 @@ class CageNxNSolver(BaseSolver):
                 sr._was_partial_edge_parity = True
 
         # =====================================================================
-        # PHASE 1b: CORNER SOLVING (via 3x3 solver)
+        # PHASE 1b + 2: CORNER AND CENTER SOLVING
         # =====================================================================
-        # After edges are paired, the cube is a "virtual 3x3".
-        # Use standard 3x3 solver to solve L1, L2, L3.
+        # For ODD cubes (5x5, 7x7):
+        #   - face.center.color is correct (fixed middle piece)
+        #   - No virtual colors needed
         #
-        # After this phase:
-        # - Corners: SOLVED (correct position and orientation)
-        # - Edges: SOLVED (paired and in correct position)
-        # - Centers: SCRAMBLED (inner center pieces still mixed)
+        # For EVEN cubes (4x4, 6x6):
+        #   - face.center.color returns arbitrary color (WRONG!)
+        #   - Use virtual_face_colors() to set correct face colors
+        #   - FaceTracker determines which color each face SHOULD be
+        #   - This allows Part.match_faces() to work correctly
         #
-        # NOTE: Only works for ODD cubes (5x5, 7x7) where face center
-        # defines the face color. Even cubes need FaceTracker first.
+        # The context manager saves/restores _virtual_color on exit,
+        # so there are no permanent side effects on Face objects.
         # =====================================================================
+        is_even_cube = self._cube.n_slices % 2 == 0
+
+        if is_even_cube:
+            # -----------------------------------------------------------------
+            # EVEN CUBE: Use virtual colors for correct face.color
+            # -----------------------------------------------------------------
+            # IMPORTANT: Cube rotations (X, Y, Z) move pieces between faces,
+            # but Face objects are fixed. Virtual colors are set on Face objects,
+            # so they don't move with the pieces!
+            #
+            # SOLUTION: Rotate cube FIRST to bring "white face" to U position,
+            # THEN set virtual colors. This way the 3x3 solver doesn't need to
+            # do cube rotations (white is already at U).
+            #
+            # Step 1: Create trackers (find which face should be which color)
+            # Step 2: Find which face should be WHITE
+            # Step 3: Rotate cube to bring that face to U
+            # Step 4: Re-create trackers (markers moved during rotation!)
+            # Step 5: Set virtual colors
+            # Step 6: Solve corners and centers
+            # -----------------------------------------------------------------
+            self._prepare_even_cube_orientation()
+
+            # After rotation, create fresh trackers (old markers moved)
+            trackers = create_even_cube_face_trackers(self)
+
+            with virtual_face_colors_with_op(self._cube, trackers, self._op):
+                # Inside this block, face.color returns the "correct" color
+                # Cube rotations (X, Y, Z) are tracked automatically
+                # Virtual colors are updated after each rotation
+                self._solve_corners_and_centers()
+        else:
+            # -----------------------------------------------------------------
+            # ODD CUBE: No virtual colors needed
+            # -----------------------------------------------------------------
+            # face.center.color is correct because odd cubes have a fixed
+            # middle piece that defines the face color.
+            # -----------------------------------------------------------------
+            self._solve_corners_and_centers()
+
+        return sr
+
+    def _prepare_even_cube_orientation(self) -> None:
+        """Rotate cube to bring the "white face" to U position for even cubes.
+
+        WHY THIS IS NEEDED:
+        ==================
+        Virtual colors are set on Face objects, but Face objects don't move
+        during cube rotations (X, Y, Z). Only pieces move between faces.
+
+        If we set virtual colors first and then call the 3x3 solver, it will
+        rotate the cube to bring white to U. But after rotation, the virtual
+        colors are on wrong faces!
+
+        SOLUTION:
+        ========
+        1. Create temporary trackers to find which face should be WHITE
+        2. Rotate cube to bring that face to U
+        3. THEN set virtual colors (after rotation is done)
+        4. Now the 3x3 solver won't need to rotate (white already at U)
+
+        This method handles steps 1-2. The caller handles steps 3-4.
+        """
+        from cube.domain.model import Color
+        from cube.domain.algs import Algs
+
+        # Create temporary trackers to find face colors
+        trackers = create_even_cube_face_trackers(self)
+
+        # Find the tracker for WHITE
+        white_tracker = None
+        for tracker in trackers:
+            if tracker.color == Color.WHITE:
+                white_tracker = tracker
+                break
+
+        if white_tracker is None:
+            # Fallback - shouldn't happen with valid BOY cube
+            self.debug("Warning: No WHITE tracker found for even cube")
+            return
+
+        # Get the face that should be WHITE (where the marker currently is)
+        white_face = white_tracker.face
+
+        self.debug(f"Even cube: WHITE should be on {white_face.name}, bringing to U")
+
+        # Rotate cube to bring this face to U position
+        # The FaceTracker markers will move with the pieces
+        self.cmn.bring_face_up(white_face)
+
+        self.debug(f"Even cube: Rotation complete, WHITE face now at U")
+
+    def _solve_corners_and_centers(self) -> None:
+        """Solve corners (Phase 1b) and centers (Phase 2).
+
+        This is extracted to a separate method so it can be called either:
+        - Directly (odd cubes)
+        - Inside virtual_face_colors context (even cubes)
+        """
+        # Phase 1b: Corner solving
         if not self._cube.solved:
             self._solve_corners()
 
-        # =====================================================================
-        # PHASE 2: CENTER SOLVING
-        # =====================================================================
-        # Use NxNCenters to solve centers.
-        # WARNING: NxNCenters may break edges/corners - testing with SS mode.
-        # =====================================================================
+        # Phase 2: Center solving
         if not self._are_centers_solved():
             self._solve_centers()
-
-        return sr
 
     # =========================================================================
     # Phase 1a: Edge solving (reuses NxNEdges)

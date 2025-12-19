@@ -120,12 +120,34 @@ class NxNEdges(SolverElement):
             self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             edge = self.cube.front.edge_left
 
-            # We can't do  it before  bringing to front because we don't know which edge will be on front
+            # =================================================================
+            # DETERMINE TARGET COLOR FOR THIS EDGE
+            # =================================================================
+            # We need to know what color this edge SHOULD be to pair its slices.
+            # The approach differs for odd vs even cubes:
+            #
+            # ODD CUBE (5x5, 7x7): Use middle slice as reference
+            #   - Middle slice index = n_slices // 2
+            #   - Example: 5x5 has 3 slices (0,1,2), middle is index 1
+            #   - The middle slice color IS the edge's target color
+            #   - This works because middle slice is unique/fixed
+            #
+            # EVEN CUBE (4x4, 6x6): Use majority color (no middle slice!)
+            #   - Example: 4x4 has 2 slices (0,1), NO middle slice
+            #   - Find the most common color among all slices on this edge
+            #   - Use that as the target color for pairing
+            #   - This handles the case where slices have mixed colors
+            #
+            # NOTE: We must do this AFTER bringing edge to front because
+            # the color order (front-color, other-color) depends on position.
+            # =================================================================
             if n_slices % 2:
+                # ODD CUBE: middle slice defines the edge color
                 _slice = edge.get_slice(n_slices // 2)
                 color_un_ordered = _slice.colors_id
                 ordered_color = self._get_slice_ordered_color(face, _slice)
             else:
+                # EVEN CUBE: majority color defines the edge color
                 ordered_color = self._find_max_of_color(face, edge)
                 color_un_ordered = frozenset(ordered_color)
 

@@ -28,7 +28,8 @@ class Face(SuperElement, Hashable):
                  "_parts",
                  "_edges",
                  "_corners",
-                 "_opposite"
+                 "_opposite",
+                 "_virtual_color"  # For even cube support in cage solver
                  ]
 
     _center: Center
@@ -49,6 +50,9 @@ class Face(SuperElement, Hashable):
 
     _opposite: _Face
 
+    # Virtual color for even cube support - see color property docstring
+    _virtual_color: Color | None
+
     def __init__(self, cube: _Cube, name: FaceName, color: Color) -> None:
         super().__init__(cube)
 
@@ -57,6 +61,7 @@ class Face(SuperElement, Hashable):
         self._center = self._create_center(color)
         self._direction = Direction.D0
         self._parts: Tuple[Part]
+        self._virtual_color: Color | None = None  # Set by cage solver for even cubes
 
         # all others are created by Cube#reset
 
@@ -176,11 +181,32 @@ class Face(SuperElement, Hashable):
         return self._corner_bottom_left
 
     @property
-    def color(self):
+    def color(self) -> Color:
         """
-        The color of center, valid in 3x3 only or for odd cubes !!!
-        :return:
+        The color this face SHOULD be (for solving purposes).
+
+        Returns:
+            - If _virtual_color is set: Returns the virtual color
+            - Otherwise: Returns center.color (the actual center piece color)
+
+        VIRTUAL COLOR MECHANISM (for even cube support):
+        ================================================
+        On odd cubes (3x3, 5x5, 7x7):
+            - The center has a fixed middle piece
+            - face.center.color IS the correct face color
+            - _virtual_color is not needed (stays None)
+
+        On even cubes (4x4, 6x6) in cage method:
+            - Centers are scrambled when solving corners
+            - face.center.color returns an ARBITRARY color (wrong!)
+            - _virtual_color is set via FaceTracker before corner solving
+            - This allows Part.match_faces() to work correctly
+
+        The _virtual_color is set/restored using the virtual_face_colors()
+        context manager in CageNxNSolver.
         """
+        if self._virtual_color is not None:
+            return self._virtual_color
         return self.center.color
 
     @property

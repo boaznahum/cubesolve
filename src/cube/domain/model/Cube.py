@@ -133,7 +133,7 @@ The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
 
 from collections.abc import Iterable, MutableSequence
 from contextlib import contextmanager
-from typing import Collection, Iterator, Protocol, Tuple, TYPE_CHECKING
+from typing import Callable, Collection, Iterator, Protocol, Tuple, TYPE_CHECKING
 
 from cube.domain.exceptions import InternalSWError
 from .Edge import Edge
@@ -338,6 +338,7 @@ class Cube(CubeSupplier):
         self._original_layout: CubeLayout | None = None
         self._in_query_mode: bool = False  # Skip texture updates during query operations
         self._listeners: list["CubeListener"] = []
+        self._rotation_hooks: list["Callable[[AxisName, int], None]"] = []  # For virtual color updates
         self._reset()
 
         from cube.domain.model.CubeQueries2 import CubeQueries2
@@ -943,6 +944,10 @@ class Cube(CubeSupplier):
 
             case _:
                 raise RuntimeError(f"Unknown Axis {axis_name}")
+
+        # Notify rotation hooks (used for virtual color updates)
+        for hook in self._rotation_hooks:
+            hook(axis_name, n)
 
     def rotate_slice(self, slice_name: SliceName, n: int, slices: Iterable[int] | None = None):
         """
