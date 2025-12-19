@@ -50,6 +50,7 @@ from cube.domain.solver.solver import SolveStep, SolverResults
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.beginner.NxNEdges import NxNEdges
 from cube.domain.solver.beginner.NxnCentersFaceTracker import NxNCentersFaceTrackers
+from cube.domain.solver.common.FaceTracker import FaceTracker
 from cube.domain.solver.direct.cage.CageCenters import CageCenters
 from cube.utils.SSCode import SSCode
 
@@ -80,7 +81,7 @@ class CageNxNSolver(BaseSolver):
     - For even cubes, additional "full" edge parity may exist (TODO)
     """
 
-    __slots__ = ["_nxn_edges", "_solver_3x3"]
+    __slots__ = ["_nxn_edges", "_solver_3x3", "_face_trackers"]
 
     def __init__(self, op: OperatorProtocol) -> None:
         """
@@ -133,6 +134,9 @@ class CageNxNSolver(BaseSolver):
         from cube.domain.solver.Solvers3x3 import Solvers3x3
         solver_name = self._cube.config.cage_3x3_solver
         self._solver_3x3 = Solvers3x3.by_name(solver_name, self._op, ignore_center_check=True)
+
+        # Face trackers - created once per solve, used for corners and centers
+        self._face_trackers: list[FaceTracker] | None = None
 
     @property
     def get_code(self) -> SolverName:
@@ -329,38 +333,38 @@ class CageNxNSolver(BaseSolver):
 
     def _solve_corners_even(self) -> None:
         """Solve corners on EVEN cubes using shadow cube approach."""
-        from cube.domain.exceptions import InternalSWError
         from cube.domain.exceptions import EvenCubeEdgeParityException
 
         self.debug("Starting corner solving (EVEN cube - using shadow cube)")
 
-        # Step 1: Determine face colors and fix any flipped edges FIRST
-        face_colors = self._get_even_cube_face_colors()
-        self.debug(f"Initial face colors: {face_colors}")
+        # Step 1: Create trackers ONCE - they track faces dynamically as cube rotates
+        self._create_face_trackers()
+        self.debug(f"Created trackers: {self._face_trackers}")
 
-        # Fix ALL flipped edges before building shadow cube
+        # Step 2: Fix flipped edges using the trackers
+        # Trackers stay valid even when cube orientation changes from parity fix
         for attempt in range(3):
+            face_colors = self._get_face_colors_from_trackers()
+            self.debug(f"Face colors (attempt {attempt}): {face_colors}")
+
             flipped = self._find_flipped_edges(face_colors)
             if not flipped:
                 break
-            self.debug(f"Pre-fix: Found {len(flipped)} flipped edges, fixing first one")
+            self.debug(f"Found {len(flipped)} flipped edges, fixing first one: {flipped[0]._name}")
             self._nxn_edges._do_edge_parity_on_edge(flipped[0])
-            # Recalculate face colors after each fix since cube orientation may change
-            face_colors = self._get_even_cube_face_colors()
-            self.debug(f"Recalculated face colors: {face_colors}")
 
+        # Step 3: Build and solve shadow cube
+        face_colors = self._get_face_colors_from_trackers()
         self.debug(f"Final face colors: {face_colors}")
 
-        # Now build and solve shadow cube - should work without parity issues
         alg: Alg | None = None
         try:
             alg = self._solve_shadow_3x3(face_colors)
         except EvenCubeEdgeParityException as e:
-            # This shouldn't happen if we fixed all flipped edges above
             self.debug(f"Unexpected parity after pre-fix: {e}")
             raise
 
-        # Apply algorithm to original cube
+        # Step 4: Apply algorithm to original cube
         if alg:
             self.debug("Applying shadow algorithm to original cube")
             self._op.play(alg)
@@ -385,18 +389,42 @@ class CageNxNSolver(BaseSolver):
                 flipped.append(edge)
         return flipped
 
-    def _get_even_cube_face_colors(self) -> dict[FaceName, Color]:
-        """Determine face colors for even cube using FaceTrackers."""
-        trackers = NxNCentersFaceTrackers(self)
+    def _create_face_trackers(self) -> None:
+        """Create face trackers once - works for both odd and even cubes.
 
-        t1 = trackers.track_no_1()
-        t2 = t1.track_opposite()
-        t3 = trackers._track_no_3([t1, t2])
-        t4 = t3.track_opposite()
-        t5, t6 = trackers._track_two_last([t1, t2, t3, t4])
+        For odd cubes: Simple tracker using fixed center slice
+        For even cubes: Tracker using majority color on each face
+
+        Trackers dynamically track the face even when cube orientation changes.
+        Edge parity fix doesn't destroy centers, so trackers remain valid.
+        """
+        cube = self._cube
+
+        if cube.n_slices % 2:
+            # Odd cube - simple trackers using center color
+            self._face_trackers = [FaceTracker.track_odd(f) for f in cube.faces]
+        else:
+            # Even cube - use NxNCentersFaceTrackers to find majority colors
+            trackers_helper = NxNCentersFaceTrackers(self)
+
+            t1 = trackers_helper.track_no_1()
+            t2 = t1.track_opposite()
+            t3 = trackers_helper._track_no_3([t1, t2])
+            t4 = t3.track_opposite()
+            t5, t6 = trackers_helper._track_two_last([t1, t2, t3, t4])
+
+            self._face_trackers = [t1, t2, t3, t4, t5, t6]
+
+    def _get_face_colors_from_trackers(self) -> dict[FaceName, Color]:
+        """Get current face colors from trackers.
+
+        Trackers dynamically resolve to the current face, so this always
+        returns the correct mapping even after cube rotations.
+        """
+        assert self._face_trackers is not None, "Must call _create_face_trackers first"
 
         face_colors: dict[FaceName, Color] = {}
-        for tracker in [t1, t2, t3, t4, t5, t6]:
+        for tracker in self._face_trackers:
             face_colors[tracker.face.name] = tracker.color
         return face_colors
 
