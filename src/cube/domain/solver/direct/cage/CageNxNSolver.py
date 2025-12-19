@@ -409,6 +409,13 @@ class CageNxNSolver(BaseSolver):
         shadow_cube.is_even_cube_shadow = True
         self._copy_state_to_shadow(shadow_cube, face_colors)
 
+        assert shadow_cube.is_boy, f"Shadow cube must be valid boy pattern, face_colors={face_colors}"
+
+        # Debug: print all edges on shadow cube
+        self.debug(f"Shadow cube edges:")
+        for edge in shadow_cube.edges:
+            self.debug(f"  {edge._name}: {edge.e1.color}-{edge.e2.color}")
+
         if shadow_cube.solved:
             self.debug("Shadow cube is already solved")
             return None
