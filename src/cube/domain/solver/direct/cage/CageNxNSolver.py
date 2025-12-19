@@ -252,6 +252,20 @@ class CageNxNSolver(BaseSolver):
             if had_parity:
                 sr._was_partial_edge_parity = True
 
+        # Sanity check after edge reduction
+        self._cube.sanity(force_check=True)
+        self.debug("Cube sanity check passed after edge reduction")
+
+        # Debug: verify all edges are paired and show their colors
+        for edge in self._cube.edges:
+            s0 = edge.get_slice(0)
+            s1 = edge.get_slice(1) if edge.n_slices > 1 else None
+            s0_colors = (s0.edges[0].color, s0.edges[1].color)
+            s1_colors = (s1.edges[0].color, s1.edges[1].color) if s1 else None
+            self.debug(f"Edge {edge._name}: is3x3={edge.is3x3}, "
+                      f"e1={edge.e1.color}, e2={edge.e2.color}, "
+                      f"slice0={s0_colors}, slice1={s1_colors}")
+
         # =====================================================================
         # PHASE 1b: CORNER SOLVING (via 3x3 solver)
         # =====================================================================
@@ -356,6 +370,16 @@ class CageNxNSolver(BaseSolver):
         # Step 3: Build and solve shadow cube
         face_colors = self._get_face_colors_from_trackers()
         self.debug(f"Final face colors: {face_colors}")
+
+        # Debug: show edge colors after parity fix (with slice details)
+        self.debug("Edges after parity fix:")
+        for edge in self._cube.edges:
+            s0 = edge.get_slice(0)
+            s1 = edge.get_slice(1) if edge.n_slices > 1 else None
+            s0_colors = (s0.edges[0].color, s0.edges[1].color)
+            s1_colors = (s1.edges[0].color, s1.edges[1].color) if s1 else None
+            self.debug(f"  {edge._name}: e1={edge.e1.color}, e2={edge.e2.color}, "
+                      f"is3x3={edge.is3x3}, s0={s0_colors}, s1={s1_colors}")
 
         alg: Alg | None = None
         try:
