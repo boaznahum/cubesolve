@@ -94,7 +94,7 @@ class L3Cross(SolverElement):
         self.debug(f"L3 cross-color: {n} match {yf}")
 
         if n not in [0, 2, 4]:
-            if self.cube.n_slices % 2 == 0:
+            if self.cube.n_slices % 2 == 0 or self.cube.is_even_cube_shadow:
                 self.debug(f"L3 cross-color: Found OLL(Edge Parity), raising EvenCubeEdgeParityException")
                 raise EvenCubeEdgeParityException()
 

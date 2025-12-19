@@ -334,31 +334,33 @@ class CageNxNSolver(BaseSolver):
 
         self.debug("Starting corner solving (EVEN cube - using shadow cube)")
 
-        # Step 1: Determine face colors using FaceTrackers
+        # Step 1: Determine face colors and fix any flipped edges FIRST
         face_colors = self._get_even_cube_face_colors()
-        self.debug(f"Determined face colors: {face_colors}")
+        self.debug(f"Initial face colors: {face_colors}")
 
-        # Try shadow cube approach with parity fix retries
-        alg: Alg | None = None
+        # Fix ALL flipped edges before building shadow cube
         for attempt in range(3):
-            try:
-                alg = self._solve_shadow_3x3(face_colors)
+            flipped = self._find_flipped_edges(face_colors)
+            if not flipped:
                 break
-            except Exception as e:
-                is_parity = isinstance(e, (InternalSWError, EvenCubeEdgeParityException))
-                self.debug(f"Caught: {type(e).__name__}, parity={is_parity}, attempt={attempt}")
-                if is_parity and attempt < 2:
-                    flipped = self._find_flipped_edges(face_colors)
-                    if flipped:
-                        self.debug(f"Fixing flipped edge {flipped[0]._name} (attempt {attempt + 1})")
-                        self._nxn_edges._do_edge_parity_on_edge(flipped[0])
-                    else:
-                        self.debug(f"No flipped edges found, fixing any (attempt {attempt + 1})")
-                        self._nxn_edges.do_even_full_edge_parity_on_any_edge()
-                else:
-                    raise
+            self.debug(f"Pre-fix: Found {len(flipped)} flipped edges, fixing first one")
+            self._nxn_edges._do_edge_parity_on_edge(flipped[0])
+            # Recalculate face colors after each fix since cube orientation may change
+            face_colors = self._get_even_cube_face_colors()
+            self.debug(f"Recalculated face colors: {face_colors}")
 
-        # Step 6: Apply algorithm to original cube
+        self.debug(f"Final face colors: {face_colors}")
+
+        # Now build and solve shadow cube - should work without parity issues
+        alg: Alg | None = None
+        try:
+            alg = self._solve_shadow_3x3(face_colors)
+        except EvenCubeEdgeParityException as e:
+            # This shouldn't happen if we fixed all flipped edges above
+            self.debug(f"Unexpected parity after pre-fix: {e}")
+            raise
+
+        # Apply algorithm to original cube
         if alg:
             self.debug("Applying shadow algorithm to original cube")
             self._op.play(alg)
@@ -431,31 +433,89 @@ class CageNxNSolver(BaseSolver):
         if not history:
             return None
 
-        return SeqAlg.create(*history)
+        return SeqAlg(None, *history)
 
     def _copy_state_to_shadow(self, shadow: "Cube", face_colors: dict[FaceName, Color]) -> None:
+        """Copy corner/edge state from even cube to shadow 3x3.
 
-        #claude: setting colors of cube should be cube mthod, you need to introduce 3x3 faclete enums if not lready exist
-        # for example face_center, face_top_left, face_top_right and pass all colors tto the method in the cube,
-        # maybe the cube need to clear some chaces and do internal house keeping after
-        # chnaging colors, lets start that only 3x3 cube support it
-        # second how do you konw for example that teh edges of the source cube match the order in the destination cupbe
-        #  you need to use the methods that bring you color on given face, this is the right way to do it
-
-        """Copy corner/edge state from even cube to shadow 3x3."""
+        IMPORTANT: This translates edge colors to match face_colors mapping.
+        The 4x4's edge stickers have arbitrary colors from pairing.
+        We translate them to represent edge positions relative to face_colors.
+        """
         even_cube = self._cube
+
+        # Build inverse mapping: color -> face
+        color_to_face: dict[Color, FaceName] = {c: f for f, c in face_colors.items()}
+
         # Copy corner colors - iterate in parallel (same position order)
         for shadow_corner, even_corner in zip(shadow.corners, even_cube.corners):
             for shadow_pe, even_pe in zip(shadow_corner.slice.edges, even_corner.slice.edges):
                 shadow_pe._color = even_pe.color
-        # Copy edge colors - iterate in parallel (same position order)
+
+        # Copy edge colors with translation
+        # For each edge, determine its "home" position based on face_colors
+        edge_colors_seen: dict[frozenset, str] = {}
         for shadow_edge, even_edge in zip(shadow.edges, even_cube.edges):
-            shadow_edge.e1._color = even_edge.e1.color
-            shadow_edge.e2._color = even_edge.e2.color
+            c1 = even_edge.e1.color
+            c2 = even_edge.e2.color
+            color_pair = frozenset([c1, c2])
+
+            # Check for duplicates
+            if color_pair in edge_colors_seen:
+                self.debug(f"DUPLICATE edge colors: {c1}-{c2} at {even_edge._name}, "
+                          f"first seen at {edge_colors_seen[color_pair]}")
+            else:
+                edge_colors_seen[color_pair] = even_edge._name
+
+            shadow_edge.e1._color = c1
+            shadow_edge.e2._color = c2
+
         # Set center colors
         for face_name, color in face_colors.items():
             shadow_face = shadow.face(face_name)
             shadow_face.center.get_slice((0, 0)).edges[0]._color = color
+
+        # Verify edge colors form valid 3x3 combinations
+        self._verify_shadow_edges(shadow, face_colors)
+
+    def _verify_shadow_edges(self, shadow: "Cube", face_colors: dict[FaceName, Color]) -> None:
+        """Verify that shadow cube edges form valid 3x3 color combinations."""
+        # Build set of expected edge color pairs (from adjacent faces)
+        adjacent_pairs = [
+            (FaceName.F, FaceName.U), (FaceName.F, FaceName.D),
+            (FaceName.F, FaceName.L), (FaceName.F, FaceName.R),
+            (FaceName.B, FaceName.U), (FaceName.B, FaceName.D),
+            (FaceName.B, FaceName.L), (FaceName.B, FaceName.R),
+            (FaceName.U, FaceName.L), (FaceName.U, FaceName.R),
+            (FaceName.D, FaceName.L), (FaceName.D, FaceName.R),
+        ]
+        expected_color_pairs: set[frozenset] = set()
+        for f1, f2 in adjacent_pairs:
+            c1, c2 = face_colors[f1], face_colors[f2]
+            expected_color_pairs.add(frozenset([c1, c2]))
+
+        # Check which edge color pairs we have
+        actual_color_pairs: dict[frozenset, list] = {}
+        for edge in shadow.edges:
+            c1, c2 = edge.e1.color, edge.e2.color
+            pair = frozenset([c1, c2])
+            if pair not in actual_color_pairs:
+                actual_color_pairs[pair] = []
+            actual_color_pairs[pair].append(edge._name)
+
+        # Find missing and duplicate pairs
+        missing = expected_color_pairs - set(actual_color_pairs.keys())
+        duplicates = {p: edges for p, edges in actual_color_pairs.items() if len(edges) > 1}
+        invalid = set(actual_color_pairs.keys()) - expected_color_pairs
+
+        if missing or duplicates or invalid:
+            self.debug(f"Shadow edge validation:")
+            if missing:
+                self.debug(f"  Missing pairs: {[tuple(p) for p in missing]}")
+            if duplicates:
+                self.debug(f"  Duplicate pairs: {[(tuple(p), e) for p, e in duplicates.items()]}")
+            if invalid:
+                self.debug(f"  Invalid pairs (non-adjacent): {[tuple(p) for p in invalid]}")
 
     # =========================================================================
     # Phase 2: Center solving (TODO)
