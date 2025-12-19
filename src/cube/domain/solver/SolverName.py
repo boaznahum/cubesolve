@@ -62,7 +62,7 @@ class SolverName(Enum):
     LBL = SolverMeta("LBL")
     CFOP = SolverMeta("CFOP")#, only_3x3="CFOP use same reducer as LBL")
     KOCIEMBA = SolverMeta("Kociemba")
-    CAGE = SolverMeta("Cage", skip_even="Cage method only supports odd cubes")  # Cage method: parity-free for odd cubes
+    CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
 
     @property
     def display_name(self) -> str:

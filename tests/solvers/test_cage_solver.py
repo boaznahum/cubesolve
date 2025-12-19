@@ -162,7 +162,6 @@ def test_cage_solver_even_cube_status(size: int) -> None:
     assert solver._is_even_cube(), f"Size {size} should be even"
 
 
-@pytest.mark.xfail(reason="Shadow cube approach has face color mismatch with edge solver")
 @pytest.mark.parametrize("size", [4, 6])
 def test_cage_solver_even_cube_solves(size: int) -> None:
     """Test that cage solver can solve even cubes using shadow cube approach."""
@@ -181,7 +180,6 @@ def test_cage_solver_even_cube_solves(size: int) -> None:
     print(f"\n  Even cube {size}x{size}: fully solved")
 
 
-@pytest.mark.xfail(reason="Shadow cube approach has face color mismatch with edge solver")
 @pytest.mark.parametrize("seed", range(5))
 def test_cage_solver_even_cube_multiple_scrambles(seed: int) -> None:
     """Test even cube solving with multiple scramble seeds."""
