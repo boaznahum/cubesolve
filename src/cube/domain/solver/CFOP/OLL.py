@@ -117,7 +117,7 @@ class OLL(StepSolver):
         n_edges = sum(e.match_face(up) for e in up.edges)
 
         if n_edges not in [0, 2, 4]:
-            if self.cube.n_slices % 2 == 0:
+            if self.cube.n_slices % 2 == 0 or self.cube.is_even_cube_shadow:
                 self.debug(f"OLL: Edge parity detected ({n_edges} edges matching)")
                 raise EvenCubeEdgeParityException()
             else:

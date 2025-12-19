@@ -144,3 +144,55 @@ def test_cage_solver_solves_corners(size: int) -> None:
     assert app.cube.solved, "Cube should be fully solved"
 
     print(f"\n  Size {size}x{size}: fully solved")
+
+
+# ===========================================================================
+# Even cube tests (4x4, 6x6) - using shadow cube approach
+# ===========================================================================
+
+@pytest.mark.parametrize("size", [4, 6])
+def test_cage_solver_even_cube_status(size: int) -> None:
+    """Test status reporting on even cubes."""
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    solver = CageNxNSolver(app.op)
+
+    # Solved cube should report "Solved"
+    assert solver.status == "Solved"
+    assert solver._is_even_cube(), f"Size {size} should be even"
+
+
+@pytest.mark.xfail(reason="Shadow cube approach has face color mismatch with edge solver")
+@pytest.mark.parametrize("size", [4, 6])
+def test_cage_solver_even_cube_solves(size: int) -> None:
+    """Test that cage solver can solve even cubes using shadow cube approach."""
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    # Scramble
+    app.scramble(42, None, animation=False, verbose=False)
+
+    solver = CageNxNSolver(app.op)
+
+    # Solve
+    solver.solve()
+
+    # Cube should be fully solved
+    assert app.cube.solved, f"Even cube {size}x{size} should be fully solved"
+    print(f"\n  Even cube {size}x{size}: fully solved")
+
+
+@pytest.mark.xfail(reason="Shadow cube approach has face color mismatch with edge solver")
+@pytest.mark.parametrize("seed", range(5))
+def test_cage_solver_even_cube_multiple_scrambles(seed: int) -> None:
+    """Test even cube solving with multiple scramble seeds."""
+    app = AbstractApp.create_non_default(cube_size=4, animation=False)
+
+    # Scramble with different seeds
+    app.scramble(seed, None, animation=False, verbose=False)
+
+    solver = CageNxNSolver(app.op)
+    solver.solve()
+
+    # Cube should be solved
+    assert app.cube.solved, f"4x4 should be solved with seed={seed}"
+    print(f"  4x4 seed={seed}: solved")

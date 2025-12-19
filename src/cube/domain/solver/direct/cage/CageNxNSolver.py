@@ -37,13 +37,19 @@ This is simpler than the reduction method because:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from cube.domain.algs import Alg
+from cube.domain.algs.SeqAlg import SeqAlg
+from cube.domain.model import Color
+from cube.domain.model.FaceName import FaceName
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.solver import SolveStep, SolverResults
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.beginner.NxNEdges import NxNEdges
+from cube.domain.solver.beginner.NxnCentersFaceTracker import NxNCentersFaceTrackers
 from cube.domain.solver.direct.cage.CageCenters import CageCenters
 from cube.utils.SSCode import SSCode
 
@@ -169,6 +175,10 @@ class CageNxNSolver(BaseSolver):
     # =========================================================================
     # State inspection methods (STATELESS - inspect cube only)
     # =========================================================================
+
+    def _is_even_cube(self) -> bool:
+        """Check if this is an even cube (4x4, 6x6, etc.)."""
+        return self._cube.n_slices % 2 == 0
 
     def _are_edges_solved(self) -> bool:
         """Check if all edges are reduced to 3x3 (all wings paired)."""
@@ -306,33 +316,139 @@ class CageNxNSolver(BaseSolver):
     # =========================================================================
 
     def _solve_corners(self) -> None:
-        """
-        Solve corners using standard 3x3 solver.
+        """Solve corners. ODD: direct 3x3. EVEN: shadow cube approach."""
+        if self._is_even_cube():
+            self._solve_corners_even()
+        else:
+            self._solve_corners_odd()
 
-        IMPLEMENTATION:
-        ==============
-        After edges are paired (Phase 1a), the cube is a "virtual 3x3".
-        We use BeginnerSolver3x3.solve_3x3() which solves:
-        - L1: White cross + white corners
-        - L2: Middle layer edges
-        - L3: Yellow cross, yellow corners (OLL + PLL)
-
-        WHY THIS WORKS (ODD CUBES):
-        - Face center IS fixed (defines face color)
-        - 3x3 solver uses face.center.color correctly
-        - Corners are identical on all cube sizes
-
-        AFTER THIS METHOD:
-        - Corners: SOLVED
-        - Edges: SOLVED (were already paired)
-        - Centers: SCRAMBLED (inner pieces still mixed)
-
-        NOTE: Even cubes not supported - face color undefined.
-        """
-        self.debug("Starting corner solving (using 3x3 solver)")
-        # solve_3x3() solves the cube as if it were a 3x3
-        # Since edges are already paired, this effectively solves corners
+    def _solve_corners_odd(self) -> None:
+        """Solve corners on ODD cubes using 3x3 solver directly."""
+        self.debug("Starting corner solving (ODD cube - using 3x3 solver)")
         self._solver_3x3.solve_3x3()
+
+    def _solve_corners_even(self) -> None:
+        """Solve corners on EVEN cubes using shadow cube approach."""
+        from cube.domain.exceptions import InternalSWError
+        from cube.domain.exceptions import EvenCubeEdgeParityException
+
+        self.debug("Starting corner solving (EVEN cube - using shadow cube)")
+
+        # Step 1: Determine face colors using FaceTrackers
+        face_colors = self._get_even_cube_face_colors()
+        self.debug(f"Determined face colors: {face_colors}")
+
+        # Try shadow cube approach with parity fix retries
+        alg: Alg | None = None
+        for attempt in range(3):
+            try:
+                alg = self._solve_shadow_3x3(face_colors)
+                break
+            except Exception as e:
+                is_parity = isinstance(e, (InternalSWError, EvenCubeEdgeParityException))
+                self.debug(f"Caught: {type(e).__name__}, parity={is_parity}, attempt={attempt}")
+                if is_parity and attempt < 2:
+                    flipped = self._find_flipped_edges(face_colors)
+                    if flipped:
+                        self.debug(f"Fixing flipped edge {flipped[0]._name} (attempt {attempt + 1})")
+                        self._nxn_edges._do_edge_parity_on_edge(flipped[0])
+                    else:
+                        self.debug(f"No flipped edges found, fixing any (attempt {attempt + 1})")
+                        self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+                else:
+                    raise
+
+        # Step 6: Apply algorithm to original cube
+        if alg:
+            self.debug("Applying shadow algorithm to original cube")
+            self._op.play(alg)
+
+    def _fix_all_flipped_edges(self, face_colors: dict[FaceName, Color]) -> None:
+        """Find and fix all edges that are flipped relative to face colors."""
+        flipped = self._find_flipped_edges(face_colors)
+        self.debug(f"Found {len(flipped)} flipped edges")
+        for edge in flipped:
+            self.debug(f"Fixing flipped edge: {edge._name}")
+            self._nxn_edges._do_edge_parity_on_edge(edge)
+
+    def _find_flipped_edges(self, face_colors: dict[FaceName, Color]) -> list:
+        """Find edges that are flipped relative to expected face colors."""
+        from cube.domain.model.Edge import Edge
+        flipped: list[Edge] = []
+        for edge in self._cube.edges:
+            f1, f2 = edge.e1.face, edge.e2.face
+            exp1 = face_colors.get(f1.name)
+            exp2 = face_colors.get(f2.name)
+            if edge.e1.color == exp2 and edge.e2.color == exp1:
+                flipped.append(edge)
+        return flipped
+
+    def _get_even_cube_face_colors(self) -> dict[FaceName, Color]:
+        """Determine face colors for even cube using FaceTrackers."""
+        trackers = NxNCentersFaceTrackers(self)
+
+        t1 = trackers.track_no_1()
+        t2 = t1.track_opposite()
+        t3 = trackers._track_no_3([t1, t2])
+        t4 = t3.track_opposite()
+        t5, t6 = trackers._track_two_last([t1, t2, t3, t4])
+
+        face_colors: dict[FaceName, Color] = {}
+        for tracker in [t1, t2, t3, t4, t5, t6]:
+            face_colors[tracker.face.name] = tracker.color
+        return face_colors
+
+    def _solve_shadow_3x3(self, face_colors: dict[FaceName, Color]) -> Alg | None:
+        """Create shadow 3x3, set state, solve, return algorithm."""
+        from cube.domain.model.Cube import Cube
+        from cube.application.commands.Operator import Operator
+        from cube.application.state import ApplicationAndViewState
+        from cube.domain.solver.Solvers3x3 import Solvers3x3
+
+        shadow_cube = Cube(size=3, sp=self._cube.sp)
+        shadow_cube.is_even_cube_shadow = True
+        self._copy_state_to_shadow(shadow_cube, face_colors)
+
+        if shadow_cube.solved:
+            self.debug("Shadow cube is already solved")
+            return None
+
+        shadow_app_state = ApplicationAndViewState(self._cube.config)
+        shadow_op = Operator(shadow_cube, shadow_app_state, None, False)
+
+        solver_name = self._cube.config.cage_3x3_solver
+        shadow_solver = Solvers3x3.by_name(solver_name, shadow_op, ignore_center_check=True)
+        shadow_solver.solve_3x3()
+
+        history: Sequence[Alg] = shadow_op.history()
+        if not history:
+            return None
+
+        return SeqAlg.create(*history)
+
+    def _copy_state_to_shadow(self, shadow: "Cube", face_colors: dict[FaceName, Color]) -> None:
+
+        #claude: setting colors of cube should be cube mthod, you need to introduce 3x3 faclete enums if not lready exist
+        # for example face_center, face_top_left, face_top_right and pass all colors tto the method in the cube,
+        # maybe the cube need to clear some chaces and do internal house keeping after
+        # chnaging colors, lets start that only 3x3 cube support it
+        # second how do you konw for example that teh edges of the source cube match the order in the destination cupbe
+        #  you need to use the methods that bring you color on given face, this is the right way to do it
+
+        """Copy corner/edge state from even cube to shadow 3x3."""
+        even_cube = self._cube
+        # Copy corner colors - iterate in parallel (same position order)
+        for shadow_corner, even_corner in zip(shadow.corners, even_cube.corners):
+            for shadow_pe, even_pe in zip(shadow_corner.slice.edges, even_corner.slice.edges):
+                shadow_pe._color = even_pe.color
+        # Copy edge colors - iterate in parallel (same position order)
+        for shadow_edge, even_edge in zip(shadow.edges, even_cube.edges):
+            shadow_edge.e1._color = even_edge.e1.color
+            shadow_edge.e2._color = even_edge.e2.color
+        # Set center colors
+        for face_name, color in face_colors.items():
+            shadow_face = shadow.face(face_name)
+            shadow_face.center.get_slice((0, 0)).edges[0]._color = color
 
     # =========================================================================
     # Phase 2: Center solving (TODO)

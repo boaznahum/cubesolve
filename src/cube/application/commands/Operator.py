@@ -335,6 +335,7 @@ class Operator(OperatorProtocol):
         was_in_query_mode = cube._in_query_mode
         history_len_before = len(self._history)
 
+        #claude: move the query mode context manager to cubeitslef, this is not OOP programmint
         cube._in_query_mode = True
 
         with self.with_animation(animation=False):

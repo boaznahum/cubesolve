@@ -338,6 +338,7 @@ class Cube(CubeSupplier):
         self._original_layout: CubeLayout | None = None
         self._in_query_mode: bool = False  # Skip texture updates during query operations
         self._listeners: list["CubeListener"] = []
+        self._is_even_cube_shadow: bool = False
         self._reset()
 
         from cube.domain.model.CubeQueries2 import CubeQueries2
@@ -474,6 +475,15 @@ class Cube(CubeSupplier):
     @property
     def cqr(self) -> "CubeQueries2":
         return self._cqr
+
+    @property
+    def is_even_cube_shadow(self) -> bool:
+        """True if this is a shadow 3x3 of an even cube for parity handling."""
+        return self._is_even_cube_shadow
+
+    @is_even_cube_shadow.setter
+    def is_even_cube_shadow(self, value: bool) -> None:
+        self._is_even_cube_shadow = value
 
     def add_listener(self, listener: "CubeListener") -> None:
         """Register a listener to be notified of cube events.
