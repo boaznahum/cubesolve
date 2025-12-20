@@ -30,9 +30,10 @@ This is simpler than the reduction method because:
 
 4. For EVEN cubes (4x4, 6x6):
    - "Partial" edge parity (detectable during pairing) is handled
-   - "Full" edge parity (all slices flipped same way) may remain
-   - Full parity would be detected later during L3Cross solving
-   - TODO: Decide if/how to handle this in cage method
+   - "Full" edge parity may appear as OLL/PLL parity on shadow cube
+   - Solution: Use beginner solver for even cube shadows (not CFOP)
+   - Beginner solver doesn't detect/raise parity exceptions
+   - CFOP would cause oscillation: fix parity -> re-pair -> new parity
 """
 
 from __future__ import annotations
