@@ -98,7 +98,7 @@ class L3Corners(SolverElement):
                         self.op.play(self._ur)
 
         if not Part.all_in_position(yf.corners):
-            if self.cube.n_slices % 2 == 0:
+            if self.cube.n_slices % 2 == 0 or self.cube.is_even_cube_shadow:
                 # Even cube
                 n = sum(c.in_position for c in yf.corners)
                 if n == 2:

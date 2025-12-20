@@ -234,61 +234,72 @@ class CageNxNSolver(BaseSolver):
             return self._solve_impl(sr)
 
     def _solve_impl(self, sr: SolverResults) -> SolverResults:
-        """Internal solve implementation."""
-        # =====================================================================
-        # PHASE 1a: EDGE SOLVING
-        # =====================================================================
-        # Edge parity is handled INSIDE NxNEdges.solve():
-        # - Solves 11 edges first
-        # - If 1 edge left unsolved -> parity
-        # - Fixes parity using M-slice or R/L-slice algorithm
-        # - Re-solves remaining edges
-        # - Returns True if parity was detected/fixed
-        #
-        # See module docstring and NxNEdges.solve() for details.
-        # =====================================================================
-        if not self._are_edges_solved():
-            had_parity = self._solve_edges()
-            if had_parity:
-                sr._was_partial_edge_parity = True
+        """Internal solve implementation.
 
-        # Sanity check after edge reduction
-        self._cube.sanity(force_check=True)
-        self.debug("Cube sanity check passed after edge reduction")
+        For even cubes, parity may be detected during corner solving:
+        - EvenCubeEdgeParityException: 1 or 3 edges flipped (edge parity)
+        - EvenCubeCornerSwapException: 2 corners in position (corner parity)
 
-        # Debug: verify all edges are paired and show their colors
-        for edge in self._cube.edges:
-            s0 = edge.get_slice(0)
-            s1 = edge.get_slice(1) if edge.n_slices > 1 else None
-            s0_colors = (s0.edges[0].color, s0.edges[1].color)
-            s1_colors = (s1.edges[0].color, s1.edges[1].color) if s1 else None
-            self.debug(f"Edge {edge._name}: is3x3={edge.is3x3}, "
-                      f"e1={edge.e1.color}, e2={edge.e2.color}, "
-                      f"slice0={s0_colors}, slice1={s1_colors}")
+        When either happens, we fix parity and RE-PAIR edges before retrying.
+        """
+        from cube.domain.exceptions import EvenCubeEdgeParityException, EvenCubeCornerSwapException
 
-        # =====================================================================
-        # PHASE 1b: CORNER SOLVING (via 3x3 solver)
-        # =====================================================================
-        # After edges are paired, the cube is a "virtual 3x3".
-        # Use standard 3x3 solver to solve L1, L2, L3.
-        #
-        # After this phase:
-        # - Corners: SOLVED (correct position and orientation)
-        # - Edges: SOLVED (paired and in correct position)
-        # - Centers: SCRAMBLED (inner center pieces still mixed)
-        #
-        # NOTE: Only works for ODD cubes (5x5, 7x7) where face center
-        # defines the face color. Even cubes need FaceTracker first.
-        # =====================================================================
-        if not self._cube.solved:
-            self._solve_corners()
+        # Create face trackers once (for even cubes, used throughout)
+        if self._is_even_cube():
+            self._create_face_trackers()
+            self.debug(f"Created trackers: {self._face_trackers}")
 
-        # =====================================================================
+        # Main solve loop with parity retry
+        for attempt in range(3):
+            self.debug(f"=== Solve attempt {attempt} ===")
+
+            # PHASE 1a: EDGE SOLVING (pair all edges)
+            if not self._are_edges_solved():
+                had_parity = self._solve_edges()
+                if had_parity:
+                    sr._was_partial_edge_parity = True
+
+            # Verify edges are paired
+            self._cube.sanity(force_check=True)
+            self.debug("Edges paired, sanity check passed")
+
+            # PHASE 1b: CORNER SOLVING
+            try:
+                if not self._cube.solved:
+                    self._solve_corners()
+                break  # Success - exit retry loop
+
+            except EvenCubeEdgeParityException:
+                if attempt >= 2:
+                    raise  # Give up after 3 attempts
+
+                self.debug(f"Edge parity detected during corner solve, fixing...")
+
+                # Fix parity using the edge parity algorithm
+                face_colors = self._get_face_colors_from_trackers()
+                flipped = self._find_flipped_edges(face_colors)
+                if flipped:
+                    self.debug(f"Fixing flipped edge: {flipped[0]._name}")
+                    self._nxn_edges._do_edge_parity_on_edge(flipped[0])
+                else:
+                    self.debug("No flipped edges found, fixing any edge")
+                    self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+
+                # Parity fix broke edge pairing - loop will re-pair them
+
+            except EvenCubeCornerSwapException:
+                if attempt >= 2:
+                    raise  # Give up after 3 attempts
+
+                self.debug(f"Corner swap parity detected during corner solve, fixing...")
+
+                # Fix corner parity using the corner swap algorithm
+                self._fix_corner_parity()
+
+                # Corner swap uses inner slice moves - breaks edge pairing
+                # Loop will re-pair them
+
         # PHASE 2: CENTER SOLVING
-        # =====================================================================
-        # Use NxNCenters to solve centers.
-        # WARNING: NxNCenters may break edges/corners - testing with SS mode.
-        # =====================================================================
         if not self._are_centers_solved():
             self._solve_centers()
 
@@ -346,49 +357,27 @@ class CageNxNSolver(BaseSolver):
         self._solver_3x3.solve_3x3()
 
     def _solve_corners_even(self) -> None:
-        """Solve corners on EVEN cubes using shadow cube approach."""
-        from cube.domain.exceptions import EvenCubeEdgeParityException
+        """Solve corners on EVEN cubes using shadow cube approach.
 
+        Trackers are created in _solve_impl before calling this.
+        If EvenCubeEdgeParityException is raised, _solve_impl will
+        fix parity and re-pair edges before retrying.
+        """
         self.debug("Starting corner solving (EVEN cube - using shadow cube)")
 
-        # Step 1: Create trackers ONCE - they track faces dynamically as cube rotates
-        self._create_face_trackers()
-        self.debug(f"Created trackers: {self._face_trackers}")
-
-        # Step 2: Fix flipped edges using the trackers
-        # Trackers stay valid even when cube orientation changes from parity fix
-        for attempt in range(3):
-            face_colors = self._get_face_colors_from_trackers()
-            self.debug(f"Face colors (attempt {attempt}): {face_colors}")
-
-            flipped = self._find_flipped_edges(face_colors)
-            if not flipped:
-                break
-            self.debug(f"Found {len(flipped)} flipped edges, fixing first one: {flipped[0]._name}")
-            self._nxn_edges._do_edge_parity_on_edge(flipped[0])
-
-        # Step 3: Build and solve shadow cube
+        # Get face colors from trackers (created in _solve_impl)
         face_colors = self._get_face_colors_from_trackers()
-        self.debug(f"Final face colors: {face_colors}")
+        self.debug(f"Face colors: {face_colors}")
 
-        # Debug: show edge colors after parity fix (with slice details)
-        self.debug("Edges after parity fix:")
+        # Debug: show current edge state
+        self.debug("Current edges:")
         for edge in self._cube.edges:
-            s0 = edge.get_slice(0)
-            s1 = edge.get_slice(1) if edge.n_slices > 1 else None
-            s0_colors = (s0.edges[0].color, s0.edges[1].color)
-            s1_colors = (s1.edges[0].color, s1.edges[1].color) if s1 else None
-            self.debug(f"  {edge._name}: e1={edge.e1.color}, e2={edge.e2.color}, "
-                      f"is3x3={edge.is3x3}, s0={s0_colors}, s1={s1_colors}")
+            self.debug(f"  {edge._name}: {edge.e1.color}-{edge.e2.color}, is3x3={edge.is3x3}")
 
-        alg: Alg | None = None
-        try:
-            alg = self._solve_shadow_3x3(face_colors)
-        except EvenCubeEdgeParityException as e:
-            self.debug(f"Unexpected parity after pre-fix: {e}")
-            raise
+        # Build and solve shadow cube - may raise EvenCubeEdgeParityException
+        alg = self._solve_shadow_3x3(face_colors)
 
-        # Step 4: Apply algorithm to original cube
+        # Apply algorithm to original cube
         if alg:
             self.debug("Applying shadow algorithm to original cube")
             self._op.play(alg)
@@ -412,6 +401,31 @@ class CageNxNSolver(BaseSolver):
             if edge.e1.color == exp2 and edge.e2.color == exp1:
                 flipped.append(edge)
         return flipped
+
+    def _fix_corner_parity(self) -> None:
+        """Fix even cube corner swap parity (PLL parity).
+
+        Uses inner slice moves to swap two diagonal corners.
+        This will disturb edge pairing, so edges need to be re-paired after.
+        """
+        from cube.domain.algs import Algs
+
+        n_slices = self._cube.n_slices
+        assert n_slices % 2 == 0, "Corner parity fix only applies to even cubes"
+
+        self.debug("Fixing corner swap parity")
+
+        nh = n_slices // 2
+
+        # PLL parity algorithm using inner slices:
+        # 2-kRw2 U2  2-kRw2 kUw2  2-kRw2 kUw2
+        alg = Algs.alg(None,
+                       Algs.R[2:nh + 1] * 2, Algs.U * 2,
+                       Algs.R[2:nh + 1] * 2 + Algs.U[1:nh + 1] * 2,
+                       Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2
+                       )
+
+        self._op.play(alg)
 
     def _create_face_trackers(self) -> None:
         """Create face trackers once - works for both odd and even cubes.
@@ -590,7 +604,9 @@ class CageNxNSolver(BaseSolver):
                    f"corners={self._are_corners_solved()}")
 
         # Use CageCenters which preserves paired edges
-        cage_centers = CageCenters(self)
+        # For even cubes, pass the face trackers so it knows which color goes where
+        face_trackers = self._face_trackers if self._is_even_cube() else None
+        cage_centers = CageCenters(self, face_trackers=face_trackers)
         cage_centers.solve()
 
         # Log cage state after

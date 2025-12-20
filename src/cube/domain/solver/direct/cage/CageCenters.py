@@ -167,10 +167,11 @@ class CageCenters(SolverElement):
     - Face color is determined by fixed center piece
     - Even cubes not yet supported (need FaceTracker)
     """
-    def __init__(self, slv: SolverElementsProvider) -> None:
+    def __init__(self, slv: SolverElementsProvider, face_trackers: Sequence[FaceTracker] | None = None) -> None:
         super().__init__(slv)
 
         self._faces: Sequence[FaceTracker] = []
+        self._provided_face_trackers = face_trackers  # For even cubes, from CageNxNSolver
 
         self._trackers = NxNCentersFaceTrackers(slv)
 
@@ -277,44 +278,58 @@ class CageCenters(SolverElement):
             faces = [FaceTracker.track_odd(f) for f in cube.faces]
 
         else:
+            # =================================================================
+            # EVEN CUBE (4x4, 6x6, etc.)
+            # =================================================================
+            # For cage method, face trackers are provided by CageNxNSolver
+            # which created them during edge pairing (before corners moved them).
+            # The trackers know which color belongs on which face.
+            # =================================================================
 
-            f1: FaceTracker = self._trackers.track_no_1()
+            if self._provided_face_trackers:
+                # Use provided trackers from CageNxNSolver
+                faces = list(self._provided_face_trackers)
+                self._faces = faces
+                self.debug(f"Using provided face trackers: {faces}", level=1)
+            else:
+                # Original logic - create trackers from current cube state
+                f1: FaceTracker = self._trackers.track_no_1()
 
-            f2 = f1.track_opposite()
+                f2 = f1.track_opposite()
 
-            # because we find f1 by max colors, then it is clear that it has at least one of such a color
-            # and opposite doesn't need color for tracing
-            # self._do_faces([f1, f2], True, True)
+                # because we find f1 by max colors, then it is clear that it has at least one of such a color
+                # and opposite doesn't need color for tracing
+                # self._do_faces([f1, f2], True, True)
 
-            # now colors of f1/f2 can't be on 4 that left, so we can choose any one
-            f3 = self._trackers._track_no_3([f1, f2])
-            f4 = f3.track_opposite()
+                # now colors of f1/f2 can't be on 4 that left, so we can choose any one
+                f3 = self._trackers._track_no_3([f1, f2])
+                f4 = f3.track_opposite()
 
-            # f3 contains at least one color that is not in f1, f2, so no need to bring at leas one
-            # but there is a question if such f3 always exists
-            self._do_faces([f3, f4], True, True)
+                # f3 contains at least one color that is not in f1, f2, so no need to bring at leas one
+                # but there is a question if such f3 always exists
+                self._do_faces([f3, f4], True, True)
 
-            f5, f6 = self._trackers._track_two_last([f1, f2, f3, f4])
+                f5, f6 = self._trackers._track_two_last([f1, f2, f3, f4])
 
-            # so we don't need this also, otherwise _track_two_last should crash
-            self._do_faces([f5], True, True)
-            self._asserts_is_boy([f1, f2, f3, f4, f5, f6])
+                # so we don't need this also, otherwise _track_two_last should crash
+                self._do_faces([f5], True, True)
+                self._asserts_is_boy([f1, f2, f3, f4, f5, f6])
 
-            FaceTracker.remove_face_track_slices(f5.face)
+                FaceTracker.remove_face_track_slices(f5.face)
 
-            f5 = FaceTracker.search_color_and_track(f5.face, f5.color)
-            f6 = f5.track_opposite()
+                f5 = FaceTracker.search_color_and_track(f5.face, f5.color)
+                f6 = f5.track_opposite()
 
-            faces = [f1, f2, f3, f4, f5, f6]
-            self._faces = faces
+                faces = [f1, f2, f3, f4, f5, f6]
+                self._faces = faces
 
-            self._asserts_is_boy(faces)
+                self._asserts_is_boy(faces)
 
-            self._trackers._debug_print_track_slices("After creating all faces")
+                self._trackers._debug_print_track_slices("After creating all faces")
 
-            # self._faces = faces
+                # self._faces = faces
 
-            # now each face has at least one color, so
+                # now each face has at least one color, so
 
         # SPECIAL_CASE_1
         # A rare case here, when use_back_too is false and complete slice is enabled
@@ -449,7 +464,11 @@ class CageCenters(SolverElement):
 
             # we loop bringing all adjusted faces up
             cmn.bring_face_front(face_loc.face)
-            assert cube.front.color == color
+            # For odd cubes or reduction method: front.color should match expected color
+            # For cage method on even cubes: centers are scrambled, so skip this check
+            # (the tracker ensures we're working on the correct face)
+            if not self._provided_face_trackers:
+                assert cube.front.color == color
             # from here face is no longer valid
             # so
 
