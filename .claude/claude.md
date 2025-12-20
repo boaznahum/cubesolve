@@ -75,23 +75,26 @@ All pyglet imports now only exist in:
 
 ### All Checks (run before committing)
 
-**CRITICAL:** When user says "run all checks", run ALL FOUR of these:
+**CRITICAL:** When user says "run all checks", run ALL FIVE of these:
 
 ```bash
-# 1. Mypy type checker
+# 1. Ruff linter (fast - run first)
+python -m ruff check src/cube
+
+# 2. Mypy type checker
 python -m mypy -p cube
 
-# 2. Pyright type checker
+# 3. Pyright type checker
 python -m pyright src/cube
 
-# 3. Non-GUI tests
+# 4. Non-GUI tests
 python -m pytest tests/ -v --ignore=tests/gui -m "not slow"
 
-# 4. GUI tests
+# 5. GUI tests
 python -m pytest tests/gui -v --speed-up 5
 ```
 
-**ALL FOUR must pass before committing.** Do NOT skip mypy or pyright - they catch different errors than pytest.
+**ALL FIVE must pass before committing.** Ruff is fastest so run it first. Use `ruff check --fix` to auto-fix issues.
 
 **Note:** Pyright uses `typeCheckingMode = "standard"` (configured in `pyproject.toml`), which is stricter than mypy. It catches:
 - Undefined variables that mypy misses

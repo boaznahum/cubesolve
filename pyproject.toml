@@ -68,6 +68,8 @@ dev = [
     "pytest-xdist",
     "mypy",
     "pyright",
+    "vulture",
+    "ruff",
     "types-colorama",
     "types-keyboard",
     "Pillow",  # For generating test face textures (resources/faces/generate_images.py)

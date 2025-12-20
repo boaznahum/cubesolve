@@ -45,14 +45,14 @@ from cube.domain.algs import Alg
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.model import Color
 from cube.domain.model.FaceName import FaceName
-from cube.domain.solver.SolverName import SolverName
-from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.solver import SolveStep, SolverResults
-from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.beginner.NxNEdges import NxNEdges
 from cube.domain.solver.beginner.NxnCentersFaceTracker import NxNCentersFaceTrackers
+from cube.domain.solver.beginner.NxNEdges import NxNEdges
+from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.FaceTracker import FaceTracker
 from cube.domain.solver.direct.cage.CageCenters import CageCenters
+from cube.domain.solver.protocols import OperatorProtocol
+from cube.domain.solver.solver import SolverResults, SolveStep
+from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
@@ -82,7 +82,7 @@ class CageNxNSolver(BaseSolver):
     - For even cubes, additional "full" edge parity may exist (TODO)
     """
 
-    __slots__ = ["_nxn_edges", "_solver_3x3"]
+    __slots__ = ["_nxn_edges"]
 
     def __init__(self, op: OperatorProtocol) -> None:
         """
@@ -108,33 +108,6 @@ class CageNxNSolver(BaseSolver):
         # since we want to preserve edge pairing as much as possible.
         # =====================================================================
         self._nxn_edges = NxNEdges(self, advanced_edge_parity=False)
-
-        # =====================================================================
-        # 3x3 SOLVER FOR CORNERS (Phase 1b)
-        # =====================================================================
-        # After edges are paired, use standard 3x3 solver for corners.
-        # The 3x3 solver will solve L1, L2, L3 - treating the cube as a
-        # virtual 3x3.
-        #
-        # WHY THIS WORKS (ODD CUBES ONLY):
-        # - Face center IS fixed for odd cubes (5x5, 7x7)
-        # - 3x3 solver uses face.center.color to determine face colors
-        # - Scrambled inner center pieces don't affect corner placement
-        #
-        # WHY 3x3 SOLVER DOESN'T COMPLAIN:
-        # - It never checks cube.is3x3
-        # - Corners are identical on all cube sizes
-        # - After Phase 1a, edges are paired (is3x3) - look like 3x3 edges
-        # - It uses face.center.color which works for odd cubes
-        #
-        # EVEN CUBES NOT SUPPORTED:
-        # - Even cubes have NO fixed center → face color undefined
-        # - Would need FaceTracker to establish color mapping first
-        # - See __todo_cage.md for future work
-        # =====================================================================
-        from cube.domain.solver.Solvers3x3 import Solvers3x3
-        solver_name = self._cube.config.cage_3x3_solver
-        self._solver_3x3 = Solvers3x3.by_name(solver_name, self._op, ignore_center_check=True)
 
     @property
     def get_code(self) -> SolverName:
@@ -240,7 +213,9 @@ class CageNxNSolver(BaseSolver):
         Trackers work identically for odd/even - only creation method differs.
         """
         from cube.domain.exceptions import (
-            EvenCubeEdgeParityException, EvenCubeCornerSwapException, EvenCubeEdgeSwapParityException
+            EvenCubeCornerSwapException,
+            EvenCubeEdgeParityException,
+            EvenCubeEdgeSwapParityException,
         )
 
         # Create face trackers - works for both odd and even cubes
@@ -276,7 +251,7 @@ class CageNxNSolver(BaseSolver):
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
-                    self.debug(f"Edge parity detected during corner solve, fixing...")
+                    self.debug("Edge parity detected during corner solve, fixing...")
 
                     # Fix parity by always applying to FR edge for consistency
                     # This avoids oscillation between different parity states
@@ -288,7 +263,7 @@ class CageNxNSolver(BaseSolver):
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
-                    self.debug(f"Corner swap parity detected during corner solve, fixing...")
+                    self.debug("Corner swap parity detected during corner solve, fixing...")
 
                     # Fix corner parity using the corner swap algorithm
                     self._fix_corner_parity()
@@ -300,7 +275,7 @@ class CageNxNSolver(BaseSolver):
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
-                    self.debug(f"Edge swap parity (PLL) detected during corner solve, fixing...")
+                    self.debug("Edge swap parity (PLL) detected during corner solve, fixing...")
 
                     # For PLL edge swap parity, use the same edge flip fix as OLL parity.
                     # Both types of parity are caused by the same underlying issue:
@@ -394,26 +369,6 @@ class CageNxNSolver(BaseSolver):
             self.debug("Applying shadow algorithm to original cube")
             self._op.play(alg)
 
-    def _fix_all_flipped_edges(self, face_colors: dict[FaceName, Color]) -> None:
-        """Find and fix all edges that are flipped relative to face colors."""
-        flipped = self._find_flipped_edges(face_colors)
-        self.debug(f"Found {len(flipped)} flipped edges")
-        for edge in flipped:
-            self.debug(f"Fixing flipped edge: {edge._name}")
-            self._nxn_edges._do_edge_parity_on_edge(edge)
-
-    def _find_flipped_edges(self, face_colors: dict[FaceName, Color]) -> list:
-        """Find edges that are flipped relative to expected face colors."""
-        from cube.domain.model.Edge import Edge
-        flipped: list[Edge] = []
-        for edge in self._cube.edges:
-            f1, f2 = edge.e1.face, edge.e2.face
-            exp1 = face_colors.get(f1.name)
-            exp2 = face_colors.get(f2.name)
-            if edge.e1.color == exp2 and edge.e2.color == exp1:
-                flipped.append(edge)
-        return flipped
-
     def _fix_corner_parity(self) -> None:
         """Fix even cube corner swap parity (PLL parity).
 
@@ -434,43 +389,6 @@ class CageNxNSolver(BaseSolver):
                        Algs.R[2:nh + 1] * 2, Algs.U * 2,
                        Algs.R[2:nh + 1] * 2 + Algs.U[1:nh + 1] * 2,
                        Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2
-                       )
-
-        self._op.play(alg)
-
-    def _fix_edge_swap_parity(self) -> None:
-        """Fix even cube edge swap parity (PLL edge parity).
-
-        This is different from OLL edge flip parity (orientation).
-        PLL edge swap parity is when two edges need to swap but
-        it's an impossible permutation state.
-
-        Uses inner slice moves to swap edge slices.
-        This will disturb edge pairing, so edges need to be re-paired after.
-        """
-        from cube.domain.algs import Algs
-
-        n_slices = self._cube.n_slices
-        assert n_slices % 2 == 0, "Edge swap parity fix only applies to even cubes"
-
-        self.debug("Fixing edge swap parity")
-
-        nh = n_slices // 2
-
-        # PLL edge swap parity algorithm using inner slices
-        # This swaps two diagonal edges on the U layer
-        # Based on: https://cubingcheatsheet.com/algs6x.html
-        # Rw2 U2 Rw2 Uw2 Rw2 Uw2 followed by 3x3 moves
-        rw2 = Algs.R[2:nh + 1] * 2
-        uwx = Algs.U[1:nh + 1] * 2
-        uwy = Algs.U[2:nh + 1]
-
-        # Simplified parity fix: just do the slice moves that change parity
-        # The edge re-pairing will handle the rest
-        alg = Algs.alg(None,
-                       rw2, Algs.U * 2,
-                       rw2, uwx,
-                       rw2, uwy
                        )
 
         self._op.play(alg)
@@ -537,9 +455,9 @@ class CageNxNSolver(BaseSolver):
 
     def _solve_shadow_3x3(self, face_colors: dict[FaceName, Color]) -> Alg | None:
         """Create shadow 3x3, set state, solve, return algorithm."""
-        from cube.domain.model.Cube import Cube
         from cube.application.commands.Operator import Operator
         from cube.application.state import ApplicationAndViewState
+        from cube.domain.model.Cube import Cube
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
         shadow_cube = Cube(size=3, sp=self._cube.sp)
@@ -549,7 +467,7 @@ class CageNxNSolver(BaseSolver):
         assert shadow_cube.is_boy, f"Shadow cube must be valid boy pattern, face_colors={face_colors}"
 
         # Debug: print all edges on shadow cube
-        self.debug(f"Shadow cube edges:")
+        self.debug("Shadow cube edges:")
         for edge in shadow_cube.edges:
             self.debug(f"  {edge._name}: {edge.e1.color}-{edge.e2.color}")
 
@@ -578,7 +496,7 @@ class CageNxNSolver(BaseSolver):
 
         return SeqAlg(None, *history)
 
-    def _copy_state_to_shadow(self, shadow: "Cube", face_colors: dict[FaceName, Color]) -> None:
+    def _copy_state_to_shadow(self, shadow: Cube, face_colors: dict[FaceName, Color]) -> None:
         """Copy corner/edge state from even cube to shadow 3x3.
 
         IMPORTANT: This translates edge colors to match face_colors mapping.
@@ -603,7 +521,7 @@ class CageNxNSolver(BaseSolver):
             # Check for duplicates
             if color_pair in edge_colors_seen:
                 self.debug(f"DUPLICATE edge colors: {c1}-{c2} at {even_edge._name}, "
-                          f"first seen at {edge_colors_seen[color_pair]}")
+                           f"first seen at {edge_colors_seen[color_pair]}")
             else:
                 edge_colors_seen[color_pair] = even_edge._name
 
@@ -618,7 +536,7 @@ class CageNxNSolver(BaseSolver):
         # Verify edge colors form valid 3x3 combinations
         self._verify_shadow_edges(shadow, face_colors)
 
-    def _verify_shadow_edges(self, shadow: "Cube", face_colors: dict[FaceName, Color]) -> None:
+    def _verify_shadow_edges(self, shadow: Cube, face_colors: dict[FaceName, Color]) -> None:
         """Verify that shadow cube edges form valid 3x3 color combinations."""
         # Build set of expected edge color pairs (from adjacent faces)
         adjacent_pairs = [
@@ -649,7 +567,7 @@ class CageNxNSolver(BaseSolver):
         invalid = set(actual_color_pairs.keys()) - expected_color_pairs
 
         if missing or duplicates or invalid:
-            self.debug(f"Shadow edge validation:")
+            self.debug("Shadow edge validation:")
             if missing:
                 self.debug(f"  Missing pairs: {[tuple(p) for p in missing]}")
             if duplicates:

@@ -21,6 +21,8 @@
 | Q10 | Quality | - | Relocate `debug_dump()` to better location |
 | Q13 | Quality | - | Evaluate pyright strict mode (1905 errors) |
 | Q14 | Quality | - | Fix vs.debug() performance (avoid template strings) |
+| Q15 | Quality | - | Clean up protected member access in CageNxNSolver |
+| Q16 | Quality | - | Clean up all dead code (vulture) |
 
 ---
 
@@ -221,6 +223,31 @@
     - Find all usages of `vs.debug()` with non-constant strings
     - Add warning comment to `debug()` method docstring
     - Update CLAUDE.md with instructions
+
+- ❌ **Q15.** Clean up protected member access warnings in CageNxNSolver.py
+  - **Status:** New (2025-12-20)
+  - **Problem:** PyCharm reports ~10 "Access to a protected member" warnings for:
+    - `_name` access on Part objects
+    - `_color` access on PartEdge objects
+    - `_do_edge_parity_on_edge` access
+    - `_track_no_3`, `_track_two_last` access
+  - **Options:**
+    1. Add public accessor methods/properties to the domain classes
+    2. Use `# noinspection PyProtectedMember` comments (PyCharm-specific)
+    3. Leave as-is (internal solver code accessing internal model details is acceptable)
+  - **Files:** `src/cube/domain/solver/direct/cage/CageNxNSolver.py`
+
+- ❌ **Q16.** Clean up all dead code across codebase using vulture
+  - **Status:** New (2025-12-21)
+  - **Tool:** `python -m vulture src/cube`
+  - **Known issues to fix:**
+    - Unused `what` parameter in `CageNxNSolver.solve()` (line 189)
+    - Unused `_was_partial_edge_parity` attribute
+    - Review all 60% confidence findings for real dead code
+  - **Already fixed (2025-12-21):**
+    - `_fix_all_flipped_edges`, `_find_flipped_edges`, `_fix_edge_swap_parity` methods
+    - `_solver_3x3` attribute and related comments
+  - **Run:** `pip install vulture && python -m vulture src/cube`
 
 ---
 
