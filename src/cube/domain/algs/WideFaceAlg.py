@@ -1,67 +1,73 @@
 """
 Wide Face Algorithm - Adaptive wide moves for NxN cubes.
 
-WHY THIS IS NEEDED FOR CFOP
-===========================
+NOTATION REFERENCE
+==================
 
-CFOP's F2L uses "wide" moves (lowercase d, u, r, l, f, b) that move a face
-plus all inner layers, leaving only the opposite face stationary.
+Standard cube notation uses lowercase letters for "wide" moves:
 
-On a 3x3:
-    d = D (just the D face, no inner layers exist)
+    d = D face + all inner layers between D and U (U stays fixed)
+    u = U face + all inner layers between U and D (D stays fixed)
+    r = R face + all inner layers between R and L (L stays fixed)
+    l = L face + all inner layers between L and R (R stays fixed)
+    f = F face + all inner layers between F and B (B stays fixed)
+    b = B face + all inner layers between B and F (F stays fixed)
 
-On a 5x5:
-    d = D + all 3 inner layers = D[0,1,2,3]
-    This keeps edges paired because all layers move together.
+See: https://www.speedsolving.com/wiki/index.php/NxNxN_Notation
+     https://ruwix.com/the-rubiks-cube/notation/advanced/
 
-THE PROBLEM WITH FIXED SLICES
-=============================
+On a 3x3, lowercase = uppercase (no inner layers exist).
+On NxN, lowercase moves ALL layers on one side, keeping opposite face fixed.
 
-When CFOP solves a shadow 3x3 cube, it creates algorithms like:
-
-    d = Algs.D[1:1 + cube.n_slices]  # On 3x3: D[1:2]
-
-The slice range [1:2] is STORED in the algorithm. When this algorithm
-is later played on a 5x5 cube, it still uses [1:2], which only moves
-2 layers instead of all 4. This BREAKS edge pairing:
-
-    5x5 D[0,1]   -> moves 2 of 4 layers -> edges BROKEN
-    5x5 D[0,1,2,3] -> moves all 4 layers -> edges PAIRED
-
-THE SOLUTION: WideFaceAlg
+WHAT EXACTLY DOES 'd' DO?
 =========================
 
-WideFaceAlg computes the slice range at PLAY TIME based on the target
-cube's size, not at creation time. It always moves:
+'d' (lowercase d) rotates:
+  - The D face itself
+  - ALL inner layers between D and U
 
-    [0, 1, 2, ..., size-2]  = face + all inner layers
+The U face does NOT move. This is equivalent to:
+  - Holding the U face fixed
+  - Rotating everything else around the Y axis
 
-This makes the algorithm work correctly on ANY cube size:
+On different cube sizes:
+    3x3: d moves [D]                    = 1 layer  (same as D)
+    4x4: d moves [D, inner1, inner2]    = 3 layers (U stays)
+    5x5: d moves [D, inner1, inner2, inner3] = 4 layers (U stays)
+    NxN: d moves [D, all N-2 inner layers]   = N-1 layers (U stays)
 
-    | Cube | WideFaceAlg(D) moves | Edges |
-    |------|---------------------|-------|
-    | 3x3  | D[0]                | OK    |
-    | 4x4  | D[0,1,2]            | OK    |
-    | 5x5  | D[0,1,2,3]          | OK    |
-    | NxN  | D[0..N-2]           | OK    |
+WHY THIS IS NEEDED FOR CFOP ON NxN
+==================================
+
+CFOP's F2L uses wide moves to manipulate corner-edge pairs while keeping
+the cross layer intact. On a 3x3, the original code used:
+
+    d = Algs.D[1:1 + cube.n_slices]  # Creates D[1:2] on 3x3
+
+PROBLEM: This stores FIXED slice indices [1:2]. When the same algorithm
+is played on a 5x5, it still uses [1:2], moving only 2 of 4 layers:
+
+    5x5 with D[0,1]:     moves 2 layers -> edges BROKEN (unequal pairing)
+    5x5 with D[0,1,2,3]: moves 4 layers -> edges PAIRED (all move together)
+
+SOLUTION: WideFaceAlg computes slices at PLAY TIME based on the target
+cube's size. It always moves face + ALL inner layers:
+
+    | Cube | Algs.d moves     | Layers | Edges  |
+    |------|------------------|--------|--------|
+    | 3x3  | D[0]             | 1      | OK     |
+    | 4x4  | D[0,1,2]         | 3      | OK     |
+    | 5x5  | D[0,1,2,3]       | 4      | OK     |
+    | NxN  | D[0..N-2]        | N-1    | OK     |
 
 USAGE IN F2L
 ============
 
-Before (broken on NxN):
+    # OLD (fixed slices - breaks on NxN):
     d = Algs.D[1:1 + cube.n_slices]
 
-After (works on all sizes):
+    # NEW (adaptive - works on all sizes):
     d = Algs.d  # WideFaceAlg instance
-
-STANDARD NOTATION
-=================
-
-In standard cubing notation:
-    - Uppercase (R, D, U) = outer face only
-    - Lowercase (r, d, u) = wide move (face + inner layers)
-
-This class implements the lowercase wide moves that adapt to cube size.
 """
 
 from typing import Tuple, Collection

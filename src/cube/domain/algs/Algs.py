@@ -10,6 +10,7 @@ from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 from cube.domain.algs.SliceAlg import SliceAlg, _M, _E, _S
+from cube.domain.algs.WideFaceAlg import _wd, _wu, _wr, _wl, _wf, _wb
 from cube.domain.algs.WholeCubeAlg import _X, _Y, _Z
 from cube.domain.algs._parser import parse_alg
 from cube.domain.exceptions import InternalSWError
@@ -67,6 +68,24 @@ class Algs:
     Fw = DoubleLayerAlg(F)
     Z = _Z()  # Entire over F
     S = _S()  # Middle over F
+
+    # =========================================================================
+    # Adaptive Wide Moves (lowercase notation)
+    # =========================================================================
+    # These move face + ALL inner layers, adapting to cube size at play time.
+    # See WideFaceAlg.py for detailed documentation.
+    #
+    # On 3x3: same as uppercase (no inner layers)
+    # On NxN: moves N-1 layers (face + all inner), opposite face stays fixed
+    #
+    # Used by CFOP F2L to work correctly on shadow 3x3 AND real NxN cubes.
+    # =========================================================================
+    d = _wd()  # D + all inner layers (U stays fixed)
+    u = _wu()  # U + all inner layers (D stays fixed)
+    r = _wr()  # R + all inner layers (L stays fixed)
+    l = _wl()  # L + all inner layers (R stays fixed)
+    f = _wf()  # F + all inner layers (B stays fixed)
+    b = _wb()  # B + all inner layers (F stays fixed)
 
     _NO_OP = SeqAlg(None)
     NOOP = _NO_OP  # Public alias for no-op algorithm

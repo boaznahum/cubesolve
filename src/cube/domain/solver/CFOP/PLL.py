@@ -2,7 +2,7 @@ from typing import Tuple
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs import Algs, FaceAlg
-from cube.domain.exceptions import InternalSWError, EvenCubeCornerSwapException
+from cube.domain.exceptions import InternalSWError, EvenCubeCornerSwapException, EvenCubeEdgeSwapParityException
 from cube.domain.model import Part
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import StepSolver
@@ -140,12 +140,21 @@ class PLL(StepSolver):
         This fixes the "Swap 2 Edges Diagonal" case that can occur on even cubes
         when edges are in an impossible permutation.
 
+        For shadow 3x3 cubes (used by cage solver), we raise an exception instead
+        of fixing locally - the cage solver will fix parity on the real cube.
+
         Note: This is handled internally (not via exception) because the reducer
         doesn't have a separate edge swap parity fix for PLL. OLL edge parity
         (orientation) is different from PLL edge parity (permutation).
         """
         size = self.cube.size
-        assert size % 2 == 0
+
+        # On shadow 3x3, raise exception for cage solver to handle
+        if self.cube.is_even_cube_shadow:
+            self.debug("PLL: Edge swap parity on shadow cube - raising exception")
+            raise EvenCubeEdgeSwapParityException()
+
+        assert size % 2 == 0, "Edge swap parity fix only works on even cubes"
 
         U: FaceAlg = Algs.U
         rw: Alg = Algs.R[2:size // 2]

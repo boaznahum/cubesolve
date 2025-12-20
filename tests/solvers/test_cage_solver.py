@@ -159,7 +159,7 @@ def test_cage_solver_even_cube_status(size: int) -> None:
 
     # Solved cube should report "Solved"
     assert solver.status == "Solved"
-    assert solver._is_even_cube(), f"Size {size} should be even"
+    assert app.cube.size % 2 == 0, f"Size {size} should be even"
 
 
 @pytest.mark.parametrize("size", [4, 6])

@@ -238,7 +238,7 @@ class CageNxNSolver(BaseSolver):
         Face trackers are created once at start and cleaned up in finally block.
         Trackers work identically for odd/even - only creation method differs.
         """
-        from cube.domain.exceptions import EvenCubeEdgeParityException, EvenCubeCornerSwapException
+        from cube.domain.exceptions import EvenCubeEdgeParityException, EvenCubeCornerSwapException, EvenCubeEdgeSwapParityException
 
         # Create face trackers - works for both odd and even cubes
         # For odd: simple trackers using fixed center color (no cleanup needed)
@@ -248,7 +248,8 @@ class CageNxNSolver(BaseSolver):
 
         try:
             # Main solve loop with parity retry
-            for attempt in range(3):
+            # Even cubes may need multiple retries due to OLL and PLL parity interaction
+            for attempt in range(5):
                 self.debug(f"=== Solve attempt {attempt} ===")
 
                 # PHASE 1a: EDGE SOLVING (pair all edges)
@@ -267,27 +268,22 @@ class CageNxNSolver(BaseSolver):
                         self._solve_corners(face_trackers)
                     break  # Success - exit retry loop
 
-                except EvenCubeEdgeParityException:
-                    if attempt >= 2:
-                        raise  # Give up after 3 attempts
+                except EvenCubeEdgeParityException as e:
+                    self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}: {type(e)}")
+                    if attempt >= 4:
+                        raise  # Give up after 5 attempts
 
                     self.debug(f"Edge parity detected during corner solve, fixing...")
 
-                    # Fix parity using the edge parity algorithm
-                    face_colors = self._get_face_colors(face_trackers)
-                    flipped = self._find_flipped_edges(face_colors)
-                    if flipped:
-                        self.debug(f"Fixing flipped edge: {flipped[0]._name}")
-                        self._nxn_edges._do_edge_parity_on_edge(flipped[0])
-                    else:
-                        self.debug("No flipped edges found, fixing any edge")
-                        self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+                    # Fix parity by always applying to FR edge for consistency
+                    # This avoids oscillation between different parity states
+                    self._nxn_edges.do_even_full_edge_parity_on_any_edge()
 
                     # Parity fix broke edge pairing - loop will re-pair them
 
                 except EvenCubeCornerSwapException:
-                    if attempt >= 2:
-                        raise  # Give up after 3 attempts
+                    if attempt >= 4:
+                        raise  # Give up after 5 attempts
 
                     self.debug(f"Corner swap parity detected during corner solve, fixing...")
 
@@ -295,6 +291,21 @@ class CageNxNSolver(BaseSolver):
                     self._fix_corner_parity()
 
                     # Corner swap uses inner slice moves - breaks edge pairing
+                    # Loop will re-pair them
+
+                except EvenCubeEdgeSwapParityException:
+                    if attempt >= 4:
+                        raise  # Give up after 5 attempts
+
+                    self.debug(f"Edge swap parity (PLL) detected during corner solve, fixing...")
+
+                    # For PLL edge swap parity, use the same edge flip fix as OLL parity.
+                    # Both types of parity are caused by the same underlying issue:
+                    # edge slices were paired in a way that creates an impossible 3x3 state.
+                    # Flipping an edge slice changes both orientation and permutation parity.
+                    self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+
+                    # Parity fix uses M-slice moves - breaks edge pairing
                     # Loop will re-pair them
 
             # PHASE 2: CENTER SOLVING
@@ -425,6 +436,43 @@ class CageNxNSolver(BaseSolver):
 
         self._op.play(alg)
 
+    def _fix_edge_swap_parity(self) -> None:
+        """Fix even cube edge swap parity (PLL edge parity).
+
+        This is different from OLL edge flip parity (orientation).
+        PLL edge swap parity is when two edges need to swap but
+        it's an impossible permutation state.
+
+        Uses inner slice moves to swap edge slices.
+        This will disturb edge pairing, so edges need to be re-paired after.
+        """
+        from cube.domain.algs import Algs
+
+        n_slices = self._cube.n_slices
+        assert n_slices % 2 == 0, "Edge swap parity fix only applies to even cubes"
+
+        self.debug("Fixing edge swap parity")
+
+        nh = n_slices // 2
+
+        # PLL edge swap parity algorithm using inner slices
+        # This swaps two diagonal edges on the U layer
+        # Based on: https://cubingcheatsheet.com/algs6x.html
+        # Rw2 U2 Rw2 Uw2 Rw2 Uw2 followed by 3x3 moves
+        rw2 = Algs.R[2:nh + 1] * 2
+        uwx = Algs.U[1:nh + 1] * 2
+        uwy = Algs.U[2:nh + 1]
+
+        # Simplified parity fix: just do the slice moves that change parity
+        # The edge re-pairing will handle the rest
+        alg = Algs.alg(None,
+                       rw2, Algs.U * 2,
+                       rw2, uwx,
+                       rw2, uwy
+                       )
+
+        self._op.play(alg)
+
     def _create_trackers(self) -> list[FaceTracker]:
         """Create face trackers - works for both odd and even cubes.
 
@@ -509,7 +557,15 @@ class CageNxNSolver(BaseSolver):
         shadow_app_state = ApplicationAndViewState(self._cube.config)
         shadow_op = Operator(shadow_cube, shadow_app_state, None, False)
 
-        solver_name = self._cube.config.cage_3x3_solver
+        # For even cubes, use beginner solver to avoid CFOP parity detection issues.
+        # CFOP raises exceptions for OLL/PLL parity which causes oscillation when fixing.
+        # Beginner solver handles these states without raising exceptions.
+        if self._cube.n_slices % 2 == 0:
+            solver_name = "beginner"
+            self.debug("Using beginner solver for even cube shadow")
+        else:
+            solver_name = self._cube.config.cage_3x3_solver
+
         shadow_solver = Solvers3x3.by_name(solver_name, shadow_op, ignore_center_check=True)
         shadow_solver.solve_3x3()
 

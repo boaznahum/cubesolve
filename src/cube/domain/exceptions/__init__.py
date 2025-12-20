@@ -7,10 +7,12 @@ from cube.domain.exceptions.InternalSWError import InternalSWError
 from cube.domain.exceptions.OpAborted import OpAborted
 from cube.domain.exceptions.EvenCubeEdgeParityException import EvenCubeEdgeParityException
 from cube.domain.exceptions.EvenCubeCornerSwapException import EvenCubeCornerSwapException
+from cube.domain.exceptions.EvenCubeEdgeSwapParityException import EvenCubeEdgeSwapParityException
 
 __all__ = [
     "InternalSWError",
     "OpAborted",
     "EvenCubeEdgeParityException",
     "EvenCubeCornerSwapException",
+    "EvenCubeEdgeSwapParityException",
 ]

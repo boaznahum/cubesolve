@@ -380,7 +380,11 @@ class F2L(SolverElement):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        d = Algs.D[1:1 + cube.n_slices]
+        # Use adaptive wide move 'd' (lowercase) - moves D + all inner layers.
+        # This adapts to cube size at play time, so algorithms from shadow 3x3
+        # work correctly when applied to NxN cubes without breaking edge pairing.
+        # See WideFaceAlg.py for detailed explanation.
+        d = Algs.d
 
         ################################################################
         # 1st: Easy cases: edge at top
@@ -616,7 +620,8 @@ class F2L(SolverElement):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        d = Algs.D[1:1 + cube.n_slices]
+        # Adaptive wide move - see comment in _4th_case_corner_edge_up
+        d = Algs.d
 
         e_front_c = e.get_face_edge(front).color
 
@@ -767,7 +772,8 @@ class F2L(SolverElement):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        d = Algs.D[1:1 + cube.n_slices]
+        # Adaptive wide move - see comment in _4th_case_corner_edge_up
+        d = Algs.d
 
         c_front_color = c.get_face_edge(front).color
         c_right_color = c.get_face_edge(right).color
