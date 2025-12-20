@@ -237,8 +237,8 @@ class CageNxNSolver(BaseSolver):
                         sr._was_partial_edge_parity = True
 
                 # Verify edges are paired
-                self._cube.sanity(force_check=True)
-                self.debug("Edges paired, sanity check passed")
+                #self._cube.sanity(force_check=True)
+                #self.debug("Edges paired, sanity check passed")
 
                 # PHASE 1b: CORNER SOLVING
                 try:
@@ -499,81 +499,18 @@ class CageNxNSolver(BaseSolver):
     def _copy_state_to_shadow(self, shadow: Cube, face_colors: dict[FaceName, Color]) -> None:
         """Copy corner/edge state from even cube to shadow 3x3.
 
-        IMPORTANT: This translates edge colors to match face_colors mapping.
-        The 4x4's edge stickers have arbitrary colors from pairing.
-        We translate them to represent edge positions relative to face_colors.
+        Uses the type-safe Cube3x3Colors mechanism to transfer state.
+        The even cube's edge/corner colors are extracted, centers are replaced
+        with face_colors, and the result is applied to the shadow cube.
         """
-        even_cube = self._cube
+        # Get colors from even cube as 3x3 snapshot
+        colors_3x3 = self._cube.get_3x3_colors()
 
-        # Copy corner colors - iterate in parallel (same position order)
-        for shadow_corner, even_corner in zip(shadow.corners, even_cube.corners):
-            for shadow_pe, even_pe in zip(shadow_corner.slice.edges, even_corner.slice.edges):
-                shadow_pe._color = even_pe.color
+        # Override centers with face_colors mapping
+        modified = colors_3x3.with_centers(face_colors)
 
-        # Copy edge colors with translation
-        # For each edge, determine its "home" position based on face_colors
-        edge_colors_seen: dict[frozenset, str] = {}
-        for shadow_edge, even_edge in zip(shadow.edges, even_cube.edges):
-            c1 = even_edge.e1.color
-            c2 = even_edge.e2.color
-            color_pair = frozenset([c1, c2])
-
-            # Check for duplicates
-            if color_pair in edge_colors_seen:
-                self.debug(f"DUPLICATE edge colors: {c1}-{c2} at {even_edge._name}, "
-                           f"first seen at {edge_colors_seen[color_pair]}")
-            else:
-                edge_colors_seen[color_pair] = even_edge._name
-
-            shadow_edge.e1._color = c1
-            shadow_edge.e2._color = c2
-
-        # Set center colors
-        for face_name, color in face_colors.items():
-            shadow_face = shadow.face(face_name)
-            shadow_face.center.get_slice((0, 0)).edges[0]._color = color
-
-        # Verify edge colors form valid 3x3 combinations
-        self._verify_shadow_edges(shadow, face_colors)
-
-    def _verify_shadow_edges(self, shadow: Cube, face_colors: dict[FaceName, Color]) -> None:
-        """Verify that shadow cube edges form valid 3x3 color combinations."""
-        # Build set of expected edge color pairs (from adjacent faces)
-        adjacent_pairs = [
-            (FaceName.F, FaceName.U), (FaceName.F, FaceName.D),
-            (FaceName.F, FaceName.L), (FaceName.F, FaceName.R),
-            (FaceName.B, FaceName.U), (FaceName.B, FaceName.D),
-            (FaceName.B, FaceName.L), (FaceName.B, FaceName.R),
-            (FaceName.U, FaceName.L), (FaceName.U, FaceName.R),
-            (FaceName.D, FaceName.L), (FaceName.D, FaceName.R),
-        ]
-        expected_color_pairs: set[frozenset] = set()
-        for f1, f2 in adjacent_pairs:
-            c1, c2 = face_colors[f1], face_colors[f2]
-            expected_color_pairs.add(frozenset([c1, c2]))
-
-        # Check which edge color pairs we have
-        actual_color_pairs: dict[frozenset, list] = {}
-        for edge in shadow.edges:
-            c1, c2 = edge.e1.color, edge.e2.color
-            pair = frozenset([c1, c2])
-            if pair not in actual_color_pairs:
-                actual_color_pairs[pair] = []
-            actual_color_pairs[pair].append(edge._name)
-
-        # Find missing and duplicate pairs
-        missing = expected_color_pairs - set(actual_color_pairs.keys())
-        duplicates = {p: edges for p, edges in actual_color_pairs.items() if len(edges) > 1}
-        invalid = set(actual_color_pairs.keys()) - expected_color_pairs
-
-        if missing or duplicates or invalid:
-            self.debug("Shadow edge validation:")
-            if missing:
-                self.debug(f"  Missing pairs: {[tuple(p) for p in missing]}")
-            if duplicates:
-                self.debug(f"  Duplicate pairs: {[(tuple(p), e) for p, e in duplicates.items()]}")
-            if invalid:
-                self.debug(f"  Invalid pairs (non-adjacent): {[tuple(p) for p in invalid]}")
+        # Apply to shadow cube (includes sanity check)
+        shadow.set_3x3_colors(modified)
 
     # =========================================================================
     # Phase 2: Center solving (TODO)

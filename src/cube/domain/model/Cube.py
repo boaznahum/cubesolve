@@ -151,6 +151,7 @@ from cube.utils.config_protocol import IServiceProvider, ConfigProtocol
 if TYPE_CHECKING:
     from .CubeQueries2 import CubeQueries2
     from .CubeListener import CubeListener
+    from .Cube3x3Colors import Cube3x3Colors
 
 
 class CubeSupplier(Protocol):
@@ -1745,6 +1746,93 @@ class Cube(CubeSupplier):
     @property
     def is_boy(self):
         return self.current_layout.same(self.original_layout)
+
+    def get_3x3_colors(self) -> "Cube3x3Colors":
+        """Extract edge/corner/center colors as a 3x3 snapshot.
+
+        For NxN cubes, uses the representative edge slices (middle slice for edges).
+        Does NOT require cube to actually be 3x3 - works on any NxN cube.
+
+        Returns:
+            Cube3x3Colors containing the colors of all edges, corners, and centers.
+            Each edge/corner has colors keyed by face name.
+        """
+        from .Cube3x3Colors import Cube3x3Colors, EdgeColors, CornerColors
+        from ._part import EdgeName, CornerName, _faces_2_edge_name, _faces_2_corner_name
+
+        edges_dict: dict[EdgeName, EdgeColors] = {}
+        for edge in self.edges:
+            # e1 and e2 are PartEdges, each belongs to a face
+            edge_colors: dict[FaceName, Color] = {
+                edge.e1.face.name: edge.e1.color,
+                edge.e2.face.name: edge.e2.color,
+            }
+            edge_name = _faces_2_edge_name(edge_colors.keys())
+            edges_dict[edge_name] = EdgeColors(edge_colors)
+
+        corners_dict: dict[CornerName, CornerColors] = {}
+        for corner in self.corners:
+            pe = corner.slice.edges
+            corner_colors: dict[FaceName, Color] = {
+                pe[0].face.name: pe[0].color,
+                pe[1].face.name: pe[1].color,
+                pe[2].face.name: pe[2].color,
+            }
+            corner_name = _faces_2_corner_name(corner_colors.keys())
+            corners_dict[corner_name] = CornerColors(corner_colors)
+
+        centers_dict: dict[FaceName, Color] = {}
+        for face in self.faces:
+            centers_dict[face.name] = face.center.get_slice((0, 0)).edges[0].color
+
+        return Cube3x3Colors(edges=edges_dict, corners=corners_dict, centers=centers_dict)
+
+    def set_3x3_colors(self, colors: "Cube3x3Colors") -> None:
+        """Set edge/corner/center colors from a 3x3 snapshot.
+
+        Applies colors to the cube's edges, corners, and centers. For NxN cubes,
+        sets the representative slices (middle slice for edges).
+
+        After applying, resets all color caches and runs sanity check.
+
+        Args:
+            colors: Cube3x3Colors with the colors to apply (face-keyed).
+
+        Raises:
+            AssertionError: If the resulting cube state is invalid.
+        """
+        from ._part import _faces_2_edge_name, _faces_2_corner_name
+
+        # Set edge colors - match by edge name derived from faces
+        for edge in self.edges:
+            # Get the face names from this edge's PartEdges
+            f1_name = edge.e1.face.name
+            f2_name = edge.e2.face.name
+            edge_name = _faces_2_edge_name([f1_name, f2_name])
+            ec = colors.edges[edge_name]
+            edge.e1._color = ec.colors[f1_name]
+            edge.e2._color = ec.colors[f2_name]
+
+        # Set corner colors - match by corner name derived from faces
+        for corner in self.corners:
+            pe = corner.slice.edges
+            f_names = [pe[0].face.name, pe[1].face.name, pe[2].face.name]
+            corner_name = _faces_2_corner_name(f_names)
+            cc = colors.corners[corner_name]
+            pe[0]._color = cc.colors[f_names[0]]
+            pe[1]._color = cc.colors[f_names[1]]
+            pe[2]._color = cc.colors[f_names[2]]
+
+        # Set center colors
+        for face_name, color in colors.centers.items():
+            face = self.face(face_name)
+            face.center.get_slice((0, 0)).edges[0]._color = color
+
+        # Reset caches (required after direct color changes)
+        self.reset_after_faces_changes()
+
+        # Validate
+        assert self.is_sanity(force_check=True), "Invalid cube state after set_3x3_colors"
 
 
 def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:
