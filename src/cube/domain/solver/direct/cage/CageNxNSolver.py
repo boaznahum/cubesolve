@@ -177,10 +177,6 @@ class CageNxNSolver(BaseSolver):
     # State inspection methods (STATELESS - inspect cube only)
     # =========================================================================
 
-    def _is_even_cube(self) -> bool:
-        """Check if this is an even cube (4x4, 6x6, etc.)."""
-        return self._cube.n_slices % 2 == 0
-
     def _are_edges_solved(self) -> bool:
         """Check if all edges are reduced to 3x3 (all wings paired)."""
         return all(e.is3x3 for e in self._cube.edges)
