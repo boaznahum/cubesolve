@@ -37,24 +37,17 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
 
     __slots__ = ["l1_cross", "f2l", "oll", "pll"]
 
-    def __init__(
-        self,
-        op: OperatorProtocol,
-        *,
-        ignore_center_check: bool = False
-    ) -> None:
+    def __init__(self, op: OperatorProtocol) -> None:
         """
         Create a CFOP3x3 solver.
 
         Args:
             op: Operator for cube manipulation
-            ignore_center_check: If True, F2L bypasses is3x3 check on centers.
-                               Use for Cage solver where edges are solved before centers.
         """
         super().__init__(op)
 
         self.l1_cross = L1Cross(self)
-        self.f2l = F2L(self, ignore_center_check=ignore_center_check)
+        self.f2l = F2L(self)
         self.oll = OLL(self)
         self.pll = PLL(self)
 

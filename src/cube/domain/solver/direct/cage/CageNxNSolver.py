@@ -487,7 +487,7 @@ class CageNxNSolver(BaseSolver):
         else:
             solver_name = self._cube.config.cage_3x3_solver
 
-        shadow_solver = Solvers3x3.by_name(solver_name, shadow_op, ignore_center_check=True)
+        shadow_solver = Solvers3x3.by_name(solver_name, shadow_op)
         shadow_solver.solve_3x3()
 
         history: Sequence[Alg] = shadow_op.history()
