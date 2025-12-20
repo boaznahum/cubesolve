@@ -65,6 +65,7 @@ pyglet2 = ["pyglet>=2.0"]
 
 dev = [
     "pytest",
+    "pytest-xdist",
     "mypy",
     "pyright",
     "types-colorama",
@@ -94,7 +95,7 @@ markers = [
     "gui: marks tests as GUI tests (require display, run with 'pytest tests/gui -v')",
     "console: marks tests as console tests (run with 'pytest tests/console -v')",
 ]
-addopts = "--ignore=tests/gui --ignore=tests/console"
+addopts = "-n auto"
 
 [tool.mypy]
 # Mypy configuration - single source of truth (replaces mypy.ini)
