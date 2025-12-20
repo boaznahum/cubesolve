@@ -239,7 +239,9 @@ class CageNxNSolver(BaseSolver):
         Face trackers are created once at start and cleaned up in finally block.
         Trackers work identically for odd/even - only creation method differs.
         """
-        from cube.domain.exceptions import EvenCubeEdgeParityException, EvenCubeCornerSwapException, EvenCubeEdgeSwapParityException
+        from cube.domain.exceptions import (
+            EvenCubeEdgeParityException, EvenCubeCornerSwapException, EvenCubeEdgeSwapParityException
+        )
 
         # Create face trackers - works for both odd and even cubes
         # For odd: simple trackers using fixed center color (no cleanup needed)
@@ -427,8 +429,7 @@ class CageNxNSolver(BaseSolver):
 
         nh = n_slices // 2
 
-        # PLL parity algorithm using inner slices:
-        # 2-kRw2 U2  2-kRw2 kUw2  2-kRw2 kUw2
+        # PLL parity algorithm using inner slices:U2  2-kRw2 kUw2  2-kRw2 kUw2
         alg = Algs.alg(None,
                        Algs.R[2:nh + 1] * 2, Algs.U * 2,
                        Algs.R[2:nh + 1] * 2 + Algs.U[1:nh + 1] * 2,
@@ -516,7 +517,8 @@ class CageNxNSolver(BaseSolver):
         for f in self._cube.faces:
             FaceTracker.remove_face_track_slices(f)
 
-    def _get_face_colors(self, face_trackers: list[FaceTracker]) -> dict[FaceName, Color]:
+    @staticmethod
+    def _get_face_colors(face_trackers: list[FaceTracker]) -> dict[FaceName, Color]:
         """Get current face colors from trackers.
 
         Trackers dynamically resolve to the current face, so this always
@@ -584,9 +586,6 @@ class CageNxNSolver(BaseSolver):
         We translate them to represent edge positions relative to face_colors.
         """
         even_cube = self._cube
-
-        # Build inverse mapping: color -> face
-        color_to_face: dict[Color, FaceName] = {c: f for f, c in face_colors.items()}
 
         # Copy corner colors - iterate in parallel (same position order)
         for shadow_corner, even_corner in zip(shadow.corners, even_cube.corners):

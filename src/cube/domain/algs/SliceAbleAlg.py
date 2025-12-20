@@ -22,7 +22,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         self.slices = other.slices
         return self
 
-    def __getitem__(self: SL, items) -> SL:
+    def __getitem__(self: SL, items: int | slice | Sequence[int]) -> SL:
 
         if not items:
             return self
