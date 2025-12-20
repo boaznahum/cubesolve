@@ -509,6 +509,10 @@ class CageNxNSolver(BaseSolver):
         # Override centers with face_colors mapping
         modified = colors_3x3.with_centers(face_colors)
 
+        # Verify the modified colors represent a valid BOY layout
+        assert modified.is_boy(self._cube.original_layout, self._cube.sp), \
+            "Shadow cube colors must maintain BOY layout"
+
         # Apply to shadow cube (includes sanity check)
         shadow.set_3x3_colors(modified)
 

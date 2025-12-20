@@ -7,6 +7,8 @@ from dataclasses import dataclass, replace
 from cube.domain.model._part import CornerName, EdgeName
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
+from cube.domain.model.CubeLayout import CubeLayout
+from cube.utils.config_protocol import IServiceProvider
 
 
 @dataclass(frozen=True)
@@ -106,21 +108,32 @@ class Cube3x3Colors:
         new_corners[corner] = self.corners[corner].with_color(face, color)
         return replace(self, corners=new_corners)
 
-    def is_boy(self, original_layout: dict[FaceName, Color]) -> bool:
-        """Check if centers match the original cube layout.
-
-        The "BOY" check compares current center colors against the cube's
-        original layout. A cube is "in BOY state" when its centers haven't
-        been permuted from the original configuration.
+    def get_layout(self, sp: IServiceProvider) -> CubeLayout:
+        """Create a CubeLayout from these center colors.
 
         Args:
-            original_layout: The original face-to-color mapping from the cube.
-                             Get this from cube.original_layout or similar.
+            sp: Service provider for configuration.
 
         Returns:
-            True if centers match the original layout.
+            CubeLayout representing the current center configuration.
         """
-        return self.centers == original_layout
+        return CubeLayout(False, self.centers, sp)
+
+    def is_boy(self, original_layout: CubeLayout, sp: IServiceProvider) -> bool:
+        """Check if centers match the original cube layout.
+
+        Uses CubeLayout.same() for proper comparison that handles
+        cube rotations correctly.
+
+        Args:
+            original_layout: The original layout from the cube (cube.original_layout).
+            sp: Service provider for configuration.
+
+        Returns:
+            True if this layout is equivalent to the original.
+        """
+        current = self.get_layout(sp)
+        return current.same(original_layout)
 
     def is_complete(self) -> bool:
         """Check if this has all required entries.
