@@ -70,14 +70,16 @@ USAGE IN F2L
     d = Algs.d  # WideFaceAlg instance
 """
 
-from typing import Tuple, Collection
+from abc import ABC
+from typing import Tuple, Collection, Self
 
-from cube.domain.algs.FaceAlg import FaceAlg
-from cube.domain.algs._internal_utils import _inv
+from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
+from cube.domain.algs.SimpleAlg import NSimpleAlg
+from cube.domain.algs._internal_utils import _inv, n_to_str
 from cube.domain.model import FaceName, Cube, PartSlice
 
 
-class WideFaceAlg(FaceAlg):
+class WideFaceAlg(AnimationAbleAlg, ABC):
     """
     Wide face move that adapts to cube size at play time.
 
@@ -86,12 +88,24 @@ class WideFaceAlg(FaceAlg):
 
     This is essential for CFOP algorithms that need to work on both
     shadow 3x3 cubes and real NxN cubes without breaking edge pairing.
+
+    Inheritance: AnimationAbleAlg -> NSimpleAlg -> SimpleAlg -> Alg
+    (NOT SliceAbleAlg - wide moves are not sliceable, they adapt dynamically)
     """
 
     def __init__(self, face: FaceName, n: int = 1) -> None:
-        super().__init__(face, n)
+        # Use lowercase face letter as the code
+        super().__init__(face.value.lower(), n)
+        self._face: FaceName = face
 
-    def play(self, cube: Cube, inv: bool = False):
+    def copy(self, other: NSimpleAlg) -> Self:
+        """Copy state from another WideFaceAlg."""
+        assert isinstance(other, WideFaceAlg)
+        super().copy(other)
+        self._face = other._face
+        return self
+
+    def play(self, cube: Cube, inv: bool = False) -> None:
         """
         Play the wide move, computing slices based on target cube size.
 
@@ -112,12 +126,8 @@ class WideFaceAlg(FaceAlg):
         return self._face, parts
 
     def atomic_str(self) -> str:
-        """Return lowercase letter to indicate wide move (standard notation)."""
-        return self._face.value.lower()
-
-    def clone(self) -> "WideFaceAlg":
-        """Create a copy of this algorithm."""
-        return WideFaceAlg(self._face, self._n)
+        """Return lowercase letter with prime/double notation (standard notation)."""
+        return n_to_str(self._face.value.lower(), self._n)
 
 
 # Pre-defined wide move instances (lowercase notation)

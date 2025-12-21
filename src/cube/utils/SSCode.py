@@ -61,3 +61,7 @@ class SSCode(Enum):
 
     CAGE_CENTERS_DONE = auto()
     """Pause after solving centers in cage method."""
+
+    # CFOP F2L phases
+    F2L_WIDE_MOVE = auto()
+    """Pause before executing a wide move (d, u, r, l, f, b) in F2L."""

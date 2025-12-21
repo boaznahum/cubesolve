@@ -59,7 +59,7 @@ class Algs:
 
         return Algs._MM
 
-    U: FaceAlg = _U()
+    U = _U()
     Uw = DoubleLayerAlg(U)
     Y = _Y()  # Entire over U
     E = _E()  # Middle slice over D

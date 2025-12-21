@@ -6,7 +6,6 @@ from cube.domain.exceptions import InternalSWError
 
 if TYPE_CHECKING:
     from cube.domain.algs.SimpleAlg import SimpleAlg
-SL = TypeVar("SL", bound="SliceAbleAlg")
 
 
 class SliceAbleAlg(NSimpleAlg, ABC):
@@ -22,7 +21,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         self.slices = other.slices
         return self
 
-    def __getitem__(self: SL, items: int | slice | Sequence[int]) -> SL:
+    def __getitem__(self, items: int | slice | Sequence[int]) -> Self:
 
         if not items:
             return self
@@ -96,7 +95,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         :default in [1,n] space
         :return: below - (1,1)
 
-            [i] -> (i,i)  - by  get_item
+            [i] -> (i, i)  - by  get_item
             None -> (None, None)
 
             (None, None) -> default
@@ -162,7 +161,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         # todo: optimize it, [1:2] are the same as [1,2]
         # but it become more complicated when it is [1: ] because we don't know
         # the size of the cube
-        if type(my) != type(other):
+        if my is not other:
             return False
 
         if isinstance(my, slice):

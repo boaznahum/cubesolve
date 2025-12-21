@@ -1,14 +1,16 @@
 from enum import Enum
 
 from cube.domain.algs import Algs, Alg
+from cube.domain.algs.WideFaceAlg import WideFaceAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Part, Edge, Corner, Color
-from cube.domain.model.Face import Face
 from cube.domain.model.CubeQueries2 import Pred0
+from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.Tracker import EdgeTracker, CornerTracker
+from cube.utils.SSCode import SSCode
 
 
 class EdgePreserveMode(Enum):
@@ -36,6 +38,16 @@ class F2L(SolverElement):
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)
         self._set_debug_prefix("F2L")
+
+    @staticmethod
+    def _contains_wide_move(alg: Alg) -> bool:
+        """Check if the algorithm contains any WideFaceAlg (d, u, r, l, f, b)."""
+        from cube.domain.algs.SeqAlg import SeqAlg
+        if isinstance(alg, WideFaceAlg):
+            return True
+        if isinstance(alg, SeqAlg):
+            return any(F2L._contains_wide_move(a) for a in alg.algs)
+        return False
 
     def solved(self) -> bool:
         """
@@ -304,6 +316,11 @@ class F2L(SolverElement):
                 raise InternalSWError(f"Unknown case, corner is {corner.actual.name}, edge is {edge.actual.name}")
 
             self.debug(f"Case corner is {corner.actual.name}, edge is {edge.actual.name}, Running alg:{alg}")
+
+            # Pause before wide move so user can observe WideFaceAlg behavior
+            if self._contains_wide_move(alg):
+                self.op.enter_single_step_mode(SSCode.F2L_WIDE_MOVE)
+
             play(alg)
             assert corner.match
             assert edge.match

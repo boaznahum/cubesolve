@@ -49,6 +49,7 @@ SS_CODES: dict[SSCode, bool] = {
     SSCode.L2_DONE: False,
     SSCode.L3_CROSS_DONE: False,
     SSCode.L3_CORNERS_DONE: False,
+    SSCode.F2L_WIDE_MOVE: True,  # Pause before wide move in F2L
 }
 
 ######### Solvers  ########
