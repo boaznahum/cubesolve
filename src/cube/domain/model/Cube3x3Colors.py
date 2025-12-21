@@ -133,7 +133,7 @@ class Cube3x3Colors:
             True if this layout matches the BOY color scheme.
         """
         from cube.domain.model import cube_boy
-        current = self.get_layout(sp)
+        current: CubeLayout = self.get_layout(sp)
         return current.same(cube_boy.get_boy_layout(sp))
 
     def is_complete(self) -> bool:

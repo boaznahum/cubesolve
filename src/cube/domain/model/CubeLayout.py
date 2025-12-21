@@ -121,6 +121,7 @@ class CubeLayout:
 
         return True  # same layout
 
+
     def clone(self):
 
         return CubeLayout(False, self._faces, self._sp)

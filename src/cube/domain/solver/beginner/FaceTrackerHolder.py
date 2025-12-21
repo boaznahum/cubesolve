@@ -27,6 +27,7 @@ from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 from cube.domain.model import Color
+from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.FaceName import FaceName
 from cube.domain.solver.beginner.NxnCentersFaceTracker import NxNCentersFaceTrackers
 from cube.domain.solver.common.FaceTracker import FaceTracker
@@ -40,13 +41,29 @@ class FaceTrackerHolder:
     """Holds 6 face trackers and provides operations on them.
 
     This class encapsulates the tracker lifecycle:
-    1. Creates trackers on construction (odd or even cube method)
+    1. Creates trackers on construction OR accepts existing ones
     2. Provides get_face_colors() to get current face→color mapping
     3. Cleans up tracker marks when done
 
     The holder tracks which face should have which color, even as the
     cube rotates during solving. This is essential for even cubes where
     there's no fixed center piece.
+
+    USAGE PATTERNS:
+    ===============
+
+    Pattern 1: Create trackers automatically (e.g., BeginnerReducer)
+        with FaceTrackerHolder(solver) as holder:
+            centers = NxNCenters(solver, holder)
+            centers.solve()
+        # cleanup automatic
+
+    Pattern 2: Accept existing trackers (e.g., CageNxNSolver)
+        with FaceTrackerHolder(solver, trackers=my_trackers) as holder:
+            # holder now manages the existing trackers
+            centers = NxNCenters(solver, holder)
+            centers.solve()
+        # cleanup automatic
 
     CONTEXT MANAGER:
     ================
@@ -67,23 +84,33 @@ class FaceTrackerHolder:
 
     __slots__ = ["_cube", "_trackers", "_is_even"]
 
-    def __init__(self, slv: SolverElementsProvider) -> None:
-        """Create face trackers for all 6 faces.
-
-        For odd cubes (5x5, 7x7):
-            Simple trackers using fixed center piece color.
-            No cleanup needed (no slices are marked).
-
-        For even cubes (4x4, 6x6):
-            Trackers mark center slices to track face positions.
-            MUST call cleanup() when done!
+    def __init__(
+        self,
+        slv: SolverElementsProvider,
+        trackers: list[FaceTracker] | None = None
+    ) -> None:
+        """Create or accept face trackers for all 6 faces.
 
         Args:
             slv: Solver elements provider (access to cube and operator).
+            trackers: Optional list of 6 existing FaceTrackers.
+                If provided, the holder manages these trackers.
+                If None, trackers are created automatically:
+                - For odd cubes (5x5, 7x7): Simple trackers using fixed center color.
+                - For even cubes (4x4, 6x6): Trackers mark center slices.
+
+        Note:
+            MUST call cleanup() when done (or use context manager)!
+            Cleanup is needed for even cubes to remove tracking marks.
         """
         self._cube = slv.cube
         self._is_even = self._cube.n_slices % 2 == 0
-        self._trackers = self._create_trackers(slv)
+
+        if trackers is not None:
+            assert len(trackers) == 6, f"Expected 6 trackers, got {len(trackers)}"
+            self._trackers = trackers
+        else:
+            self._trackers = self._create_trackers(slv)
 
     def _create_trackers(self, slv: SolverElementsProvider) -> list[FaceTracker]:
         """Create the 6 face trackers."""
@@ -137,6 +164,34 @@ class FaceTrackerHolder:
         for tracker in self._trackers:
             face_colors[tracker.face.name] = tracker.color
         return face_colors
+
+    def is_boy(self) -> bool:
+        """Check if the current tracker mapping matches valid BOY layout.
+
+        BOY (Blue-Orange-Yellow) is the standard cube layout where:
+        - Opposite faces have complementary colors
+        - Color arrangement follows specific patterns
+
+        Returns:
+            True if trackers represent a valid BOY layout matching original.
+        """
+        layout = {tracker.face.name: tracker.color for tracker in self._trackers}
+        cl = CubeLayout(False, layout, self._cube.sp)
+        return cl.same(self._cube.original_layout)
+
+    def assert_is_boy(self) -> None:
+        """Assert that trackers represent valid BOY layout.
+
+        Raises:
+            AssertionError: If layout is not valid BOY.
+        """
+        if not self.is_boy():
+            layout = {tracker.face.name: tracker.color for tracker in self._trackers}
+            cl = CubeLayout(False, layout, self._cube.sp)
+            import sys
+            print(cl, file=sys.stderr)
+            print(file=sys.stderr)
+        assert self.is_boy(), "Trackers do not represent valid BOY layout"
 
     def cleanup(self) -> None:
         """Remove tracker marks from center slices.
