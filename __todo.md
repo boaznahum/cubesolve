@@ -467,3 +467,5 @@
 # new entries
 - Make sure no code is leak outside backends layer
 - Centralize animation handling so solvers don't need to wrap with_animation() themselves
+- the code in cag eused to create faces in case of even is duplicated in reducer and why it use tracer methods, also  make sure thet the third cneter is also use majority
+- 
