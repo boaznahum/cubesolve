@@ -1,3 +1,115 @@
+"""Face tracker creation for NxN center solving.
+
+THE FACE TRACKING PROBLEM:
+==========================
+
+When solving centers on an NxN cube, we need to know which color belongs on each face.
+This is trivial for ODD cubes (5x5, 7x7) but complex for EVEN cubes (4x4, 6x6).
+
+ODD CUBES - SIMPLE CASE:
+------------------------
+Odd cubes have a FIXED center piece that never moves:
+
+    ┌─┬─┬─┬─┬─┐
+    │ │ │ │ │ │
+    ├─┼─┼─┼─┼─┤
+    │ │ │ │ │ │
+    ├─┼─┼─┼─┼─┤
+    │ │ │█│ │ │  <- Fixed center (always same color)
+    ├─┼─┼─┼─┼─┤
+    │ │ │ │ │ │
+    ├─┼─┼─┼─┼─┤
+    │ │ │ │ │ │
+    └─┴─┴─┴─┴─┘
+
+The face color IS the fixed center piece color. Simple!
+
+
+EVEN CUBES - THE PROBLEM:
+-------------------------
+Even cubes have NO fixed center - all center pieces can move:
+
+    ┌─┬─┬─┬─┐
+    │?│?│?│?│
+    ├─┼─┼─┼─┤
+    │?│?│?│?│  <- No fixed center!
+    ├─┼─┼─┼─┤     Which color belongs here?
+    │?│?│?│?│
+    ├─┼─┼─┼─┤
+    │?│?│?│?│
+    └─┴─┴─┴─┘
+
+After scrambling, the front face might have pieces of ALL 6 colors!
+How do we know which color SHOULD be on this face?
+
+
+WHY MAJORITY COLOR?
+===================
+
+We use MAJORITY COLOR because statistically, a scrambled face is most likely
+to have the most pieces of its "correct" color.
+
+Example - 4x4 scrambled front face (should be RED):
+    ┌─┬─┬─┬─┐
+    │R│B│R│O│
+    ├─┼─┼─┼─┤
+    │R│R│G│R│   Count: R=7, B=2, O=2, G=2, W=2, Y=1
+    ├─┼─┼─┼─┤          ^^^
+    │W│R│R│Y│   RED is majority -> this face should be RED
+    ├─┼─┼─┼─┤
+    │O│B│W│G│
+    └─┴─┴─┴─┘
+
+This heuristic works because:
+1. A random scramble distributes ~16 pieces of each color across 6 faces
+2. Each face has 16 center slots (on 4x4)
+3. Probability favors having more "correct" pieces than any single "wrong" color
+
+
+THE BOY CONSTRAINT:
+===================
+
+BOY = "Blue-Orange-Yellow" - the standard Rubik's cube color arrangement.
+Opposite faces have complementary colors:
+    - White opposite Yellow
+    - Red opposite Orange
+    - Blue opposite Green
+
+When assigning colors to faces, we MUST respect BOY layout!
+We can't just pick any 6 color assignments - they must form a valid cube.
+
+Example of INVALID assignment (not BOY):
+    - Front = Red, Back = Red  <- WRONG! Opposite faces can't be same color
+
+The algorithm ensures BOY by:
+1. Pick face 1 by majority -> face 2 is opposite (automatic)
+2. Pick face 3 by majority from remaining -> face 4 is opposite
+3. Pick face 5 such that (face5, face6) form valid BOY with faces 1-4
+
+
+TRACKING MECHANISM:
+===================
+
+Once we determine which color belongs on a face, we need to TRACK that face
+even as the cube rotates during solving.
+
+For even cubes, we MARK a specific center slice as the "tracker":
+    ┌─┬─┬─┬─┐
+    │ │ │ │ │
+    ├─┼─┼─┼─┤
+    │ │★│ │ │  <- This slice is marked as tracker
+    ├─┼─┼─┼─┤     It remembers: "wherever I am, that face should be RED"
+    │ │ │ │ │
+    ├─┼─┼─┼─┤
+    │ │ │ │ │
+    └─┴─┴─┴─┘
+
+When the cube rotates, the tracker slice moves with it, always pointing
+to the correct face for that color.
+
+CLEANUP: After solving, these tracker marks must be removed (cleanup_trackers).
+"""
+
 from collections.abc import Sequence, Iterable, Collection
 from typing import Tuple
 
@@ -12,12 +124,81 @@ from cube.utils.OrderedSet import OrderedSet
 
 
 class NxNCentersFaceTrackers(SolverElement):
+    """Creates face trackers for NxN center solving.
+
+    This class determines which color belongs on each face of an even cube
+    by analyzing the current piece distribution and finding majority colors.
+
+    ALGORITHM OVERVIEW:
+    ===================
+
+    Step 1: Find face with highest count of any single color
+            -> This becomes face 1, that color is its "correct" color
+            -> Face 2 = opposite of face 1 (automatic by BOY)
+
+    Step 2: From remaining 4 faces, find the one with highest count
+            of a color NOT used by faces 1-2
+            -> This becomes face 3
+            -> Face 4 = opposite of face 3
+
+    Step 3: The last 2 faces and 2 colors must be matched
+            such that the result is a valid BOY layout
+            -> Try both assignments, pick the valid one
+
+    WHY THIS ORDER?
+    ===============
+
+    We pick faces in order of "confidence" - faces with higher majority
+    counts are more likely to be correctly identified. By assigning
+    the most confident faces first, we reduce error propagation.
+
+    Example:
+        Face A has 12 red pieces (75% majority) <- HIGH confidence
+        Face B has 5 blue pieces (31% majority) <- LOW confidence
+
+        We assign face A first, then use remaining colors for face B.
+
+    USAGE:
+    ======
+        trackers = NxNCentersFaceTrackers(solver)
+        t1 = trackers.track_no_1()        # First face (highest majority)
+        t2 = t1.track_opposite()          # Opposite face
+        t3 = trackers._track_no_3([t1, t2])  # Third face
+        t4 = t3.track_opposite()          # Opposite face
+        t5, t6 = trackers._track_two_last([t1, t2, t3, t4])  # Last two
+    """
 
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)
 
     def track_no_1(self) -> FaceTracker:
+        """Create tracker for face 1 - the face with highest majority color.
 
+        ODD CUBE:
+        ---------
+        Simply uses the front face's fixed center piece.
+
+        EVEN CUBE:
+        ----------
+        Searches ALL faces for the highest count of any single color.
+
+        Example - finding face 1 on a scrambled 4x4:
+            Front: R=5, B=3, O=4, G=2, W=1, Y=1  -> max=5 (Red)
+            Back:  R=2, B=4, O=3, G=3, W=2, Y=2  -> max=4 (Blue)
+            Up:    R=3, B=2, O=2, G=8, W=0, Y=1  -> max=8 (Green) <- WINNER!
+            ...
+
+        Face 1 = Up, Color = Green (highest majority across all faces)
+
+        WHY HIGHEST MAJORITY?
+        ---------------------
+        The face with the strongest majority signal is most likely to be
+        correctly identified. Starting with high-confidence assignments
+        reduces the chance of cascading errors.
+
+        Returns:
+            FaceTracker for face 1 with its assigned color.
+        """
         cube = self.cube
         if cube.n_slices % 2:
             return FaceTracker.track_odd(cube.front)
@@ -27,7 +208,48 @@ class NxNCentersFaceTrackers(SolverElement):
             return FaceTracker.search_color_and_track(f, c)
 
     def _track_no_3(self, two_first: Sequence[FaceTracker]) -> FaceTracker:
+        """Create tracker for face 3 - highest majority from remaining faces/colors.
 
+        After faces 1 and 2 are assigned (face 2 = opposite of face 1),
+        we have 4 remaining faces and 4 remaining colors.
+
+        ALGORITHM:
+        ----------
+        1. Exclude faces 1 and 2 from search
+        2. Exclude colors used by faces 1 and 2
+        3. Find highest majority among remaining (4 faces × 4 colors)
+
+        Example:
+            Face 1 = Up (Green), Face 2 = Down (Blue)  <- already assigned
+            Remaining faces: Front, Back, Left, Right
+            Remaining colors: Red, Orange, White, Yellow
+
+            Search:
+                Front: R=6, O=3, W=4, Y=3  -> max=6 (Red) <- WINNER!
+                Back:  R=2, O=5, W=3, Y=5  -> max=5 (Orange/Yellow tie)
+                Left:  R=4, O=4, W=5, Y=3  -> max=5 (White)
+                Right: R=4, O=4, W=4, Y=5  -> max=5 (Yellow)
+
+            Face 3 = Front, Color = Red
+
+        WHY EXCLUDE USED COLORS?
+        ------------------------
+        Each color can only appear on ONE face (BOY constraint).
+        If Green is assigned to Up, no other face can be Green.
+        By excluding used colors, we ensure valid assignments.
+
+        WHY THIS ALWAYS WORKS:
+        ----------------------
+        Faces 1+2 contain only 2/6 = 1/3 of all center pieces.
+        The remaining 4 faces contain 4/6 = 2/3 of pieces.
+        At least one face among them MUST have pieces of an unused color.
+
+        Args:
+            two_first: Trackers for faces 1 and 2.
+
+        Returns:
+            FaceTracker for face 3 with its assigned color.
+        """
         cube = self.cube
 
         assert len(two_first) == 2
@@ -53,6 +275,54 @@ class NxNCentersFaceTrackers(SolverElement):
         return FaceTracker.search_color_and_track(f3, f3_color)
 
     def _track_two_last(self, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
+        """Create trackers for faces 5 and 6 - the final BOY-constrained assignment.
+
+        After 4 faces are assigned, we have:
+        - 2 remaining faces (f5, f6)
+        - 2 remaining colors (c5, c6)
+
+        THE CRITICAL BOY CONSTRAINT:
+        ============================
+
+        We can't just randomly assign colors to the last 2 faces!
+        The assignment must result in a valid BOY (Blue-Orange-Yellow) layout.
+
+        Example - why this matters:
+            Already assigned:
+                Up = Green, Down = Blue       (opposites ✓)
+                Front = Red, Back = Orange    (opposites ✓)
+
+            Remaining:
+                Faces: Left, Right
+                Colors: White, Yellow
+
+            Two possible assignments:
+                Option A: Left=White, Right=Yellow
+                Option B: Left=Yellow, Right=White
+
+            Only ONE of these creates a valid BOY cube!
+            (In standard layout: Left=Yellow opposite Right=White is wrong)
+
+        ALGORITHM:
+        ----------
+        1. Get remaining 2 faces and 2 colors
+        2. Try assigning color c5 to face f5
+        3. Check if this creates valid BOY layout using CubeLayout.same()
+        4. If not valid, swap: assign c6 to f5 instead
+        5. f6 automatically gets the remaining color (opposite of f5)
+
+        WHY THIS WORKS:
+        ---------------
+        With 2 faces and 2 colors, there are only 2 possible assignments.
+        Exactly ONE of them is valid BOY (or both if cube was not properly shuffled).
+        We try one, verify with CubeLayout, and use the other if invalid.
+
+        Args:
+            four_first: Trackers for faces 1-4.
+
+        Returns:
+            Tuple of (face_5_tracker, face_6_tracker).
+        """
         cube = self.cube
 
         assert cube.n_slices % 2 == 0
@@ -88,15 +358,29 @@ class NxNCentersFaceTrackers(SolverElement):
 
         return f5_track, f6_track
 
-    def _create_f5_pred(self, four_first: Sequence[FaceTracker], color) -> Pred[Face]:
+    def _create_f5_pred(self, four_first: Sequence[FaceTracker], color: Color) -> Pred[Face]:
+        """Create a predicate that tests if a face/color assignment makes valid BOY.
 
+        This predicate is used by FaceTracker.by_pred() to dynamically track face 5.
+        It returns True if assigning `color` to face `f` creates a valid BOY layout.
+
+        The predicate is evaluated each time we need to locate face 5, allowing
+        the tracker to follow the face even as the cube rotates.
+
+        Args:
+            four_first: Already assigned trackers for faces 1-4.
+            color: The color we're testing for face 5.
+
+        Returns:
+            Predicate function that takes a Face and returns bool.
+        """
         cube = self.cube
 
         four_first = [*four_first]
 
         first_4_colors: set[Color] = set((f.color for f in four_first))
 
-        def _pred(f: Face):
+        def _pred(f: Face) -> bool:
 
             """
 
@@ -146,15 +430,37 @@ class NxNCentersFaceTrackers(SolverElement):
         return _pred
 
     @staticmethod
-    def _is_track_slice(s: CenterSlice):
+    def _is_track_slice(s: CenterSlice) -> bool:
+        """Check if a center slice is marked as a tracker."""
         return FaceTracker.is_track_slice(s)
 
-    # noinspection PyUnreachableCode
-    def _remove_all_track_slices(self):
+    def _remove_all_track_slices(self) -> None:
+        """Remove tracker marks from all center slices on all faces.
 
-        """
-        Track slices prevent swapping of whole slices and big blocks
-        :return:
+        WHEN TO CALL:
+        =============
+        After center solving is complete. Tracker marks prevent certain
+        optimizations (complete slice swaps, big block moves) because we
+        can't move the marked slice - it's our reference point.
+
+        Once solving is done, marks are no longer needed and should be
+        removed to avoid interfering with subsequent operations.
+
+        WHY MARKS PREVENT SWAPS:
+        ------------------------
+        If we swap a complete row/column that contains a tracker slice,
+        we lose our reference point for that face's color!
+
+        Example:
+            ┌─┬─┬─┬─┐
+            │R│R│★│R│  <- ★ is tracker (marks this face as RED)
+            ├─┼─┼─┼─┤
+            │R│R│R│R│
+            ...
+
+        If we swap the top row with UP face, the ★ moves to UP,
+        and we'd now think UP should be RED (wrong!).
+        So we skip rows/columns containing trackers.
         """
         for f in self.cube.faces:
             FaceTracker.remove_face_track_slices(f)
@@ -178,7 +484,44 @@ class NxNCentersFaceTrackers(SolverElement):
 
     def _find_face_with_max_colors(self, faces: Iterable[Face] | None = None,
                                    colors: Collection[Color] | None = None) -> Tuple[Face, Color]:
+        """Find the face with the highest count of any single color.
 
+        THE CORE MAJORITY ALGORITHM:
+        ============================
+
+        This is the heart of the even-cube face tracking algorithm.
+        It searches all (face, color) combinations and returns the pair
+        with the highest count.
+
+        Example search on 4x4:
+            Searching faces=[Front, Back, Up, Down, Left, Right]
+            Searching colors=[R, O, B, G, W, Y]
+
+            Results matrix (count of each color on each face):
+                      R   O   B   G   W   Y
+            Front:    5   3   4   2   1   1   -> max = 5 (R)
+            Back:     2   4   3   3   2   2   -> max = 4 (O)
+            Up:       3   2   2   8   0   1   -> max = 8 (G) <- GLOBAL MAX
+            Down:     2   3   2   1   3   5   -> max = 5 (Y)
+            Left:     2   2   3   1   5   3   -> max = 5 (W)
+            Right:    2   2   2   1   5   4   -> max = 5 (W)
+
+            Winner: (Up, Green) with count 8
+
+        OPTIONAL FILTERING:
+        -------------------
+        - `faces` parameter: Search only these faces (exclude already assigned)
+        - `colors` parameter: Search only these colors (exclude already used)
+
+        This is used when assigning face 3 (exclude faces 1-2 and their colors).
+
+        Args:
+            faces: Faces to search (default: all 6 faces).
+            colors: Colors to search (default: all 6 colors).
+
+        Returns:
+            Tuple of (face, color) with highest count.
+        """
         n_max = -1
         f_max: Face | None = None
         c_max: Color | None = None
