@@ -354,7 +354,7 @@ class CageNxNSolver(BaseSolver):
         self.debug("Starting corner solving (using shadow cube)")
 
         # Get face colors from trackers - same code for odd and even
-        face_colors = self._get_face_colors(face_trackers)
+        face_colors = NxNCentersHelper.get_face_colors(face_trackers)
         self.debug(f"Face colors: {face_colors}")
 
         # Debug: show current edge state
@@ -393,24 +393,6 @@ class CageNxNSolver(BaseSolver):
                        )
 
         self._op.play(alg)
-
-    @staticmethod
-    def _get_face_colors(face_trackers: list[FaceTracker]) -> dict[FaceName, Color]:
-        """Get current face colors from trackers.
-
-        Trackers dynamically resolve to the current face, so this always
-        returns the correct mapping even after cube rotations.
-
-        Args:
-            face_trackers: List of face trackers created by _create_trackers
-
-        Returns:
-            Dictionary mapping face names to their target colors
-        """
-        face_colors: dict[FaceName, Color] = {}
-        for tracker in face_trackers:
-            face_colors[tracker.face.name] = tracker.color
-        return face_colors
 
     def _solve_shadow_3x3(self, face_colors: dict[FaceName, Color]) -> Alg | None:
         """Create shadow 3x3, set state, solve, return algorithm."""

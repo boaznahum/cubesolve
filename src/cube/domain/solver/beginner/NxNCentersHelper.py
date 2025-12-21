@@ -36,6 +36,7 @@ from typing import Tuple, TypeAlias
 from cube.domain.model import Color
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
+from cube.domain.model.FaceName import FaceName
 from cube.domain.solver.beginner.NxnCentersFaceTracker import NxNCentersFaceTrackers
 from cube.domain.solver.common.FaceTracker import FaceTracker
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -132,6 +133,34 @@ class NxNCentersHelper:
         for f in cube.faces:
             FaceTracker.remove_face_track_slices(f)
 
+    @staticmethod
+    def get_face_colors(face_trackers: list[FaceTracker]) -> dict[FaceName, Color]:
+        """Get current face colors from trackers.
+
+        Trackers dynamically resolve to the current face, so this always
+        returns the correct mapping even after cube rotations.
+
+        This is the companion method to create_trackers() - after creating
+        trackers, use this to get the color assignments for shadow cube solving.
+
+        Example:
+            helper = NxNCentersHelper(solver)
+            trackers = helper.create_trackers()
+            # ... cube may rotate during solving ...
+            face_colors = helper.get_face_colors(trackers)
+            # face_colors = {FaceName.F: Color.RED, FaceName.U: Color.WHITE, ...}
+
+        Args:
+            face_trackers: List of face trackers created by create_trackers().
+
+        Returns:
+            Dictionary mapping face names to their target colors.
+        """
+        face_colors: dict[FaceName, Color] = {}
+        for tracker in face_trackers:
+            face_colors[tracker.face.name] = tracker.color
+        return face_colors
+
     # =========================================================================
     # STATIC GEOMETRY UTILITIES
     # =========================================================================
@@ -139,7 +168,7 @@ class NxNCentersHelper:
     # They don't depend on any solver state - only on coordinates and colors.
 
     @staticmethod
-    def is_face_solved(face: Face, color: Color) -> bool:
+    def _is_face_solved(face: Face, color: Color) -> bool:
         """Check if a face's center is solved with the specified color.
 
         A face is "solved" when:
@@ -158,7 +187,7 @@ class NxNCentersHelper:
         return is_3x3 and slice_color == color
 
     @staticmethod
-    def count_missing(face: Face, color: Color) -> int:
+    def _count_missing(face: Face, color: Color) -> int:
         """Count how many center pieces are NOT the expected color.
 
         Useful for measuring how much work remains on a face.
@@ -177,7 +206,7 @@ class NxNCentersHelper:
         return n
 
     @staticmethod
-    def has_color_on_face(face: Face, color: Color) -> bool:
+    def _has_color_on_face(face: Face, color: Color) -> bool:
         """Check if a face has at least one piece of the specified color.
 
         Args:
@@ -193,7 +222,7 @@ class NxNCentersHelper:
         return False
 
     @staticmethod
-    def block_size(rc1: Point, rc2: Point) -> int:
+    def _block_size(rc1: Point, rc2: Point) -> int:
         """Calculate the number of pieces in a rectangular block.
 
         Args:
@@ -206,7 +235,7 @@ class NxNCentersHelper:
         return (abs(rc2[0] - rc1[0]) + 1) * (abs(rc2[1] - rc1[1]) + 1)
 
     @staticmethod
-    def block_dimensions(rc1: Point, rc2: Point) -> Tuple[int, int]:
+    def _block_dimensions(rc1: Point, rc2: Point) -> Tuple[int, int]:
         """Get the dimensions (rows, columns) of a block.
 
         Args:
@@ -219,7 +248,7 @@ class NxNCentersHelper:
         return (abs(rc2[0] - rc1[0]) + 1), (abs(rc2[1] - rc1[1]) + 1)
 
     @staticmethod
-    def ranges_intersect(range_1: Tuple[int, int], range_2: Tuple[int, int]) -> bool:
+    def _ranges_intersect(range_1: Tuple[int, int], range_2: Tuple[int, int]) -> bool:
         """Check if two 1D ranges overlap.
 
         Used to determine if two blocks would interfere during a commutator.
@@ -253,7 +282,7 @@ class NxNCentersHelper:
         return True
 
     @staticmethod
-    def iter_2d_range(rc1: Point, rc2: Point) -> Iterator[Point]:
+    def _iter_2d_range(rc1: Point, rc2: Point) -> Iterator[Point]:
         """Iterate over all points in a 2D rectangular block.
 
         Points are yielded row by row, columns advancing faster.
@@ -278,9 +307,9 @@ class NxNCentersHelper:
                 yield r, c
 
     @staticmethod
-    def count_colors_on_block(color: Color, source_face: Face,
-                              rc1: Point, rc2: Point,
-                              ignore_if_back: bool = False) -> int:
+    def _count_colors_on_block(color: Color, source_face: Face,
+                               rc1: Point, rc2: Point,
+                               ignore_if_back: bool = False) -> int:
         """Count pieces matching a color within a block on a face.
 
         Args:
@@ -293,13 +322,13 @@ class NxNCentersHelper:
         Returns:
             Number of pieces in the block matching color.
         """
-        count, _ = NxNCentersHelper.count_colors_and_trackers_on_block(
+        count, _ = NxNCentersHelper._count_colors_and_trackers_on_block(
             color, source_face, rc1, rc2, ignore_if_back
         )
         return count
 
     @staticmethod
-    def count_colors_and_trackers_on_block(
+    def _count_colors_and_trackers_on_block(
         color: Color, source_face: Face,
         rc1: Point, rc2: Point,
         ignore_if_back: bool = False
