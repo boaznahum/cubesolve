@@ -45,11 +45,11 @@ from cube.domain.algs import Alg
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.model import Color
 from cube.domain.model.FaceName import FaceName
+from cube.domain.solver.beginner.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver.beginner.L3Corners import L3Corners
 from cube.domain.solver.beginner.NxNCenters import NxNCenters
-from cube.domain.solver.beginner.NxNCentersHelper import NxNCentersHelper
 from cube.domain.solver.beginner.NxNEdges import NxNEdges
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.FaceTracker import FaceTracker
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
@@ -82,7 +82,7 @@ class CageNxNSolver(BaseSolver):
     - For even cubes, additional "full" edge parity may exist (TODO)
     """
 
-    __slots__ = ["_nxn_edges"]
+    __slots__ = ["_nxn_edges", "_l3_corners"]
 
     def __init__(self, op: OperatorProtocol) -> None:
         """
@@ -92,6 +92,10 @@ class CageNxNSolver(BaseSolver):
             op: Operator for cube manipulation
         """
         super().__init__(op)
+
+        # L3Corners provides corner swap parity fix algorithm
+        self._l3_corners = L3Corners(self)
+
         # =====================================================================
         # EDGE SOLVER SETUP
         # =====================================================================
@@ -218,14 +222,13 @@ class CageNxNSolver(BaseSolver):
             EvenCubeEdgeSwapParityException,
         )
 
-        # Create face trackers - works for both odd and even cubes
+        # Create face tracker holder - works for both odd and even cubes
         # For odd: simple trackers using fixed center color (no cleanup needed)
-        # For even: trackers mark center slices (cleanup required)
-        helper = NxNCentersHelper(self)
-        face_trackers = helper.create_trackers()
-        self.debug(f"Created trackers: {face_trackers}")
+        # For even: trackers mark center slices (cleanup on exit)
+        # Use context manager for automatic cleanup on exit
+        with FaceTrackerHolder(self) as tracker_holder:
+            self.debug(f"Created trackers: {list(tracker_holder)}")
 
-        try:
             # Main solve loop with parity retry
             # Even cubes may need multiple retries due to OLL and PLL parity interaction
             for attempt in range(5):
@@ -237,14 +240,10 @@ class CageNxNSolver(BaseSolver):
                     if had_parity:
                         sr._was_partial_edge_parity = True
 
-                # Verify edges are paired
-                #self._cube.sanity(force_check=True)
-                #self.debug("Edges paired, sanity check passed")
-
                 # PHASE 1b: CORNER SOLVING
                 try:
                     if not self._cube.solved:
-                        self._solve_corners(face_trackers)
+                        self._solve_corners(tracker_holder)
                     break  # Success - exit retry loop
 
                 except EvenCubeEdgeParityException as e:
@@ -266,8 +265,8 @@ class CageNxNSolver(BaseSolver):
 
                     self.debug("Corner swap parity detected during corner solve, fixing...")
 
-                    # Fix corner parity using the corner swap algorithm
-                    self._fix_corner_parity()
+                    # Fix corner parity using L3Corners (shared algorithm)
+                    self._l3_corners._do_corner_swap()
 
                     # Corner swap uses inner slice moves - breaks edge pairing
                     # Loop will re-pair them
@@ -289,12 +288,7 @@ class CageNxNSolver(BaseSolver):
 
             # PHASE 2: CENTER SOLVING
             if not self._are_centers_solved():
-                self._solve_centers(face_trackers)
-
-        finally:
-            # Cleanup: remove tracker markers from center slices (even cubes only)
-            # Odd cube trackers don't mark slices, so cleanup is a no-op
-            helper.cleanup_trackers()
+                self._solve_centers(tracker_holder)
 
         return sr
 
@@ -337,7 +331,7 @@ class CageNxNSolver(BaseSolver):
     # Phase 1b: Corner solving (uses 3x3 solver)
     # =========================================================================
 
-    def _solve_corners(self, face_trackers: list[FaceTracker]) -> None:
+    def _solve_corners(self, tracker_holder: FaceTrackerHolder) -> None:
         """Solve corners using shadow cube approach.
 
         Works identically for odd and even cubes:
@@ -353,8 +347,8 @@ class CageNxNSolver(BaseSolver):
         """
         self.debug("Starting corner solving (using shadow cube)")
 
-        # Get face colors from trackers - same code for odd and even
-        face_colors = NxNCentersHelper.get_face_colors(face_trackers)
+        # Get face colors from tracker holder
+        face_colors = tracker_holder.get_face_colors()
         self.debug(f"Face colors: {face_colors}")
 
         # Debug: show current edge state
@@ -369,30 +363,6 @@ class CageNxNSolver(BaseSolver):
         if alg:
             self.debug("Applying shadow algorithm to original cube")
             self._op.play(alg)
-
-    def _fix_corner_parity(self) -> None:
-        """Fix even cube corner swap parity (PLL parity).
-
-        Uses inner slice moves to swap two diagonal corners.
-        This will disturb edge pairing, so edges need to be re-paired after.
-        """
-        from cube.domain.algs import Algs
-
-        n_slices = self._cube.n_slices
-        assert n_slices % 2 == 0, "Corner parity fix only applies to even cubes"
-
-        self.debug("Fixing corner swap parity")
-
-        nh = n_slices // 2
-
-        # PLL parity algorithm using inner slices:U2  2-kRw2 kUw2  2-kRw2 kUw2
-        alg = Algs.alg(None,
-                       Algs.R[2:nh + 1] * 2, Algs.U * 2,
-                       Algs.R[2:nh + 1] * 2 + Algs.U[1:nh + 1] * 2,
-                       Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2
-                       )
-
-        self._op.play(alg)
 
     def _solve_shadow_3x3(self, face_colors: dict[FaceName, Color]) -> Alg | None:
         """Create shadow 3x3, set state, solve, return algorithm."""
@@ -461,7 +431,7 @@ class CageNxNSolver(BaseSolver):
     # Phase 2: Center solving (TODO)
     # =========================================================================
 
-    def _solve_centers(self, face_trackers: list[FaceTracker]) -> None:
+    def _solve_centers(self, tracker_holder: FaceTrackerHolder) -> None:
         """
         Solve all centers using NxNCenters with preserve_cage=True.
 
@@ -469,8 +439,7 @@ class CageNxNSolver(BaseSolver):
         to preserve the cage (paired edges and solved corners).
 
         Args:
-            face_trackers: Trackers that know which color belongs on each face.
-                           Same trackers used for corner solving.
+            tracker_holder: Holder containing trackers for face colors.
         """
         self.debug("Starting center solving (using NxNCenters with preserve_cage=True)")
 
@@ -482,8 +451,8 @@ class CageNxNSolver(BaseSolver):
                    f"corners={self._are_corners_solved()}")
 
         # Use NxNCenters with preserve_cage=True to preserve paired edges
-        # Pass trackers so solver knows which color belongs on each face
-        cage_centers = NxNCenters(self, preserve_cage=True, face_trackers=face_trackers)
+        # Pass trackers from holder so solver knows which color belongs on each face
+        cage_centers = NxNCenters(self, preserve_cage=True, face_trackers=tracker_holder.trackers)
         cage_centers.solve()
 
         # Log cage state after
