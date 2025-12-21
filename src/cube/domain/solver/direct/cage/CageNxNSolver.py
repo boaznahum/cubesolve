@@ -45,11 +45,11 @@ from cube.domain.algs import Alg
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.model import Color
 from cube.domain.model.FaceName import FaceName
-from cube.domain.solver.beginner.NxnCentersFaceTracker import NxNCentersFaceTrackers
+from cube.domain.solver.beginner.NxNCenters import NxNCenters
+from cube.domain.solver.beginner.NxNCentersHelper import NxNCentersHelper
 from cube.domain.solver.beginner.NxNEdges import NxNEdges
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.FaceTracker import FaceTracker
-from cube.domain.solver.direct.cage.CageCenters import CageCenters
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
@@ -221,7 +221,8 @@ class CageNxNSolver(BaseSolver):
         # Create face trackers - works for both odd and even cubes
         # For odd: simple trackers using fixed center color (no cleanup needed)
         # For even: trackers mark center slices (cleanup required)
-        face_trackers = self._create_trackers()
+        helper = NxNCentersHelper(self)
+        face_trackers = helper.create_trackers()
         self.debug(f"Created trackers: {face_trackers}")
 
         try:
@@ -293,7 +294,7 @@ class CageNxNSolver(BaseSolver):
         finally:
             # Cleanup: remove tracker markers from center slices (even cubes only)
             # Odd cube trackers don't mark slices, so cleanup is a no-op
-            self._cleanup_trackers()
+            helper.cleanup_trackers()
 
         return sr
 
@@ -393,48 +394,6 @@ class CageNxNSolver(BaseSolver):
 
         self._op.play(alg)
 
-    def _create_trackers(self) -> list[FaceTracker]:
-        """Create face trackers - works for both odd and even cubes.
-
-        For odd cubes: Simple tracker using fixed center slice (no cleanup needed)
-        For even cubes: Tracker marks center slices (cleanup required via _cleanup_trackers)
-
-        Trackers dynamically track the face even when cube orientation changes.
-        Edge parity fix doesn't destroy centers, so trackers remain valid.
-
-        Returns:
-            List of 6 FaceTrackers, one per face
-        """
-        cube = self._cube
-
-        if cube.n_slices % 2:
-            # Odd cube - simple trackers using center color
-            # These don't mark any slices, so no cleanup needed
-            return [FaceTracker.track_odd(f) for f in cube.faces]
-        else:
-            # Even cube - use NxNCentersFaceTrackers to find majority colors
-            # These mark center slices - must call _cleanup_trackers when done
-            trackers_helper = NxNCentersFaceTrackers(self)
-
-            t1 = trackers_helper.track_no_1()
-            t2 = t1.track_opposite()
-            t3 = trackers_helper._track_no_3([t1, t2])
-            t4 = t3.track_opposite()
-            t5, t6 = trackers_helper._track_two_last([t1, t2, t3, t4])
-
-            return [t1, t2, t3, t4, t5, t6]
-
-    def _cleanup_trackers(self) -> None:
-        """Remove tracker markers from center slices.
-
-        For even cubes: Removes the tracking attributes that were added to center slices.
-        For odd cubes: No-op (odd cube trackers don't mark any slices).
-
-        This should be called in a finally block after solving is complete.
-        """
-        for f in self._cube.faces:
-            FaceTracker.remove_face_track_slices(f)
-
     @staticmethod
     def _get_face_colors(face_trackers: list[FaceTracker]) -> dict[FaceName, Color]:
         """Get current face colors from trackers.
@@ -522,31 +481,31 @@ class CageNxNSolver(BaseSolver):
 
     def _solve_centers(self, face_trackers: list[FaceTracker]) -> None:
         """
-        Solve all centers using CageCenters.
+        Solve all centers using NxNCenters with preserve_cage=True.
 
-        CageCenters is a modified NxNCenters that UNDOES setup moves
+        NxNCenters with preserve_cage=True UNDOES setup moves
         to preserve the cage (paired edges and solved corners).
 
         Args:
             face_trackers: Trackers that know which color belongs on each face.
                            Same trackers used for corner solving.
         """
-        self.debug("Starting center solving (using CageCenters)")
+        self.debug("Starting center solving (using NxNCenters with preserve_cage=True)")
 
         # SS breakpoint BEFORE - inspect cage state
         self._op.enter_single_step_mode(SSCode.CAGE_CENTERS_START)
 
         # Log cage state before
-        self.debug(f"Before CageCenters: edges={self._are_edges_solved()}, "
+        self.debug(f"Before centers: edges={self._are_edges_solved()}, "
                    f"corners={self._are_corners_solved()}")
 
-        # Use CageCenters which preserves paired edges
-        # Pass trackers so CageCenters knows which color belongs on each face
-        cage_centers = CageCenters(self, face_trackers=face_trackers)
+        # Use NxNCenters with preserve_cage=True to preserve paired edges
+        # Pass trackers so solver knows which color belongs on each face
+        cage_centers = NxNCenters(self, preserve_cage=True, face_trackers=face_trackers)
         cage_centers.solve()
 
         # Log cage state after
-        self.debug(f"After CageCenters: edges={self._are_edges_solved()}, "
+        self.debug(f"After centers: edges={self._are_edges_solved()}, "
                    f"corners={self._are_corners_solved()}, "
                    f"centers={self._are_centers_solved()}")
 

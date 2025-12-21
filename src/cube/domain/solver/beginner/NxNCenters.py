@@ -48,19 +48,129 @@ class _CompleteSlice:
 
 
 class NxNCenters(SolverElement):
-    def __init__(self, slv: SolverElementsProvider) -> None:
+    """
+    Solves center pieces on NxN cubes (N > 3).
+
+    This solver brings center pieces from source faces to target faces using:
+    1. Complete slice swaps (swap entire row/column between faces)
+    2. Block commutators (3-cycle blocks of center pieces)
+    3. Single-piece commutators (3-cycle individual center pieces)
+
+    MODES OF OPERATION:
+    ===================
+
+    preserve_cage=False (default): REDUCTION METHOD
+    ------------------------------------------------
+    Centers are solved BEFORE edges are paired.
+    Setup moves (face rotations for alignment) are NOT undone.
+    This is more efficient but BREAKS paired edges.
+    Use this when: Centers are solved first, edges paired after.
+
+    preserve_cage=True: CAGE METHOD
+    --------------------------------
+    Centers are solved AFTER edges and corners.
+    Setup moves ARE undone to preserve the "cage" (paired edges + solved corners).
+    This is slightly less efficient but preserves the 3x3 solution.
+    Use this when: Edges and corners are solved first, then centers.
+
+    WHY SETUP MOVES BREAK THE CAGE:
+    ===============================
+
+    The commutator algorithm itself is BALANCED:
+        [M', F, M', F', M, F, M, F']
+    This has 2 F rotations and 2 F' rotations, so corners return to position.
+
+    However, SETUP MOVES are used to align pieces before the commutator:
+    - In _swap_slice: F' to convert row alignment to column
+    - In _swap_slice: source_face * n_rotate to align columns
+    - In _block_communicator: source_face * n_rotate to align blocks
+    - In __do_center: B[1:n] rotations to bring faces up
+
+    These setup moves are NOT balanced - they permanently move corners.
+    When preserve_cage=True, we track these moves and UNDO them after.
+
+    ALGORITHM ANALYSIS - WHAT AFFECTS WHAT:
+    =======================================
+
+    | Move      | Centers | Edges (paired) | Corners |
+    |-----------|---------|----------------|---------|
+    | M, M'     | YES     | NO (inner)     | NO      |
+    | M2        | YES     | NO             | NO      |
+    | F, F'     | YES     | **BREAKS!**    | MOVES   |
+    | F2        | YES     | NO (symmetric) | MOVES   |
+    | U, U'     | YES     | **BREAKS!**    | MOVES   |
+    | B[1:n]    | YES     | **BREAKS!**    | MOVES   |
+
+    EXAMPLE - What preserve_cage=True does:
+    =======================================
+
+    Without preserve_cage (reduction method):
+        play(F')           # Setup: convert row to column
+        play(commutator)   # Balanced, corners return
+        # F' is NOT undone - corners are permanently rotated
+
+    With preserve_cage (cage method):
+        play(F')           # Setup: convert row to column
+        play(commutator)   # Balanced, corners return
+        play(F)            # UNDO: restore corners to original position
+    """
+
+    def __init__(
+        self,
+        slv: SolverElementsProvider,
+        preserve_cage: bool = False,
+        face_trackers: Sequence[FaceTracker] | None = None
+    ) -> None:
+        """
+        Initialize the center solver.
+
+        Args:
+            slv: Solver elements provider (cube, operator, etc.)
+
+            preserve_cage: Controls whether setup moves are undone.
+
+                False (default): REDUCTION METHOD
+                    - Centers solved BEFORE edges
+                    - Setup moves are NOT undone (more efficient)
+                    - BREAKS paired edges - don't use if edges are already paired!
+
+                True: CAGE METHOD
+                    - Centers solved AFTER edges and corners
+                    - Setup moves ARE undone (preserves 3x3 solution)
+                    - Disables certain optimizations that break the cage:
+                      * _OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES
+                      * _OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS
+
+            face_trackers: Pre-created face trackers for even cubes.
+                If provided, these trackers are used instead of creating new ones.
+                Required for cage method on even cubes because:
+                - Even cubes don't have a fixed center piece
+                - Trackers must be created BEFORE corners are solved
+                - CageNxNSolver creates trackers and passes them here
+        """
         super().__init__(slv)
 
         self._faces: Sequence[FaceTracker] = []
+        self._preserve_cage = preserve_cage
+        self._provided_face_trackers = face_trackers
 
         self._trackers = NxNCentersFaceTrackers(slv)
 
         cfg = self.cube.config
         self._sanity_check_is_a_boy = cfg.solver_sanity_check_is_a_boy
-        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = cfg.optimize_big_cube_centers_search_complete_slices
+
+        if preserve_cage:
+            # CAGE METHOD: Disable optimizations that break the cage!
+            # _do_complete_slices uses U2/B2 which permanently moves corners.
+            # _swap_entire_face_odd_cube also uses moves that break the cage.
+            self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = False
+            self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False
+        else:
+            self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = cfg.optimize_big_cube_centers_search_complete_slices
+            self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = cfg.optimize_odd_cube_centers_switch_centers
+
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = cfg.optimize_big_cube_centers_search_complete_slices_only_target_zero
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
-        self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = cfg.optimize_odd_cube_centers_switch_centers
 
     def debug(self, *args, level=3):
         if level <= NxNCenters.D_LEVEL:
@@ -90,19 +200,47 @@ class NxNCenters(SolverElement):
                 self._trackers._debug_print_track_slices("After removal")
 
     def _solve(self) -> None:
+        """
+        Main solving algorithm - creates face trackers and solves all centers.
 
+        FACE TRACKER CREATION:
+        ======================
+        - Odd cubes: Face color = fixed center piece color (simple)
+        - Even cubes with provided trackers: Use those directly (cage method)
+        - Even cubes without trackers: Complex logic to find face colors (reduction method)
+
+        For cage method (preserve_cage=True), face_trackers are required because:
+        1. Even cubes don't have a fixed center piece to determine face color
+        2. Trackers must be created BEFORE corners are solved (they track slice positions)
+        3. CageNxNSolver creates trackers during edge pairing and passes them here
+        """
         cube = self.cube
 
         faces: list[FaceTracker]
 
-        if cube.n_slices % 2:
-            # odd cube
+        if self._provided_face_trackers:
+            # =========================================================
+            # CAGE METHOD (or any caller providing trackers)
+            # =========================================================
+            # Use provided trackers directly - no complex initialization needed.
+            # For cage method: trackers were created by CageNxNSolver before
+            # corners were solved, so they correctly track which color belongs
+            # on each face even though centers are scrambled.
+            faces = list(self._provided_face_trackers)
+            self._faces = faces
+            self.debug(f"Using provided face trackers: {faces}", level=1)
 
-            # do without back as long as there is work to do
+        elif cube.n_slices % 2:
+            # =========================================================
+            # ODD CUBE (5x5, 7x7, etc.)
+            # =========================================================
+            # Face color is determined by the fixed center piece.
             faces = [FaceTracker.track_odd(f) for f in cube.faces]
 
         else:
-
+            # =========================================================
+            # EVEN CUBE - REDUCTION METHOD (create trackers from scratch)
+            # =========================================================
             f1: FaceTracker = self._trackers.track_no_1()
 
             f2 = f1.track_opposite()
@@ -136,8 +274,6 @@ class NxNCenters(SolverElement):
             self._asserts_is_boy(faces)
 
             self._trackers._debug_print_track_slices("After creating all faces")
-
-            # self._faces = faces
 
             # now each face has at least one color, so
 
@@ -240,20 +376,45 @@ class NxNCenters(SolverElement):
         return work_done
 
     def __do_center(self, face_loc: FaceTracker, minimal_bring_one_color: bool, use_back_too: bool) -> bool:
-
         """
+        Process one face - bring correct colored pieces from adjacent faces.
 
-        :return: if nay work was done
+        CAGE METHOD (preserve_cage=True):
+        =================================
+        Tracks all _bring_face_up_preserve_front rotations and undoes them before return.
 
+        WHY THIS MATTERS - VISUAL EXAMPLE:
+        -----------------------------------
+        Initial cube orientation (looking at front):
 
+            ┌───┐
+            │ U │  <- UP face (source)
+        ┌───┼───┼───┐
+        │ L │ F │ R │  <- FRONT face (target), LEFT, RIGHT
+        └───┼───┼───┘
+            │ D │  <- DOWN face
+            └───┘
+
+        The algorithm loops through L, D, R faces, bringing each to UP:
+        - Iteration 1: Process UP (already up)
+        - Iteration 2: B'[1:n] -> brings LEFT to UP
+        - Iteration 3: B'[1:n] -> brings DOWN to UP
+        - Iteration 4: B'[1:n] -> brings RIGHT to UP (now done)
+
+        After 3 B'[1:n] rotations, cube is rotated 270° around front axis.
+        This BREAKS paired edges and moves corners.
+
+        With preserve_cage=True: We undo these rotations before returning.
+        setup_alg = B'[1:n] + B'[1:n] + B'[1:n] = B'[1:n] * 3
+        undo = setup_alg.prime = B[1:n] * 3
+
+        :return: if any work was done
         """
-
         face: Face = face_loc.face
         color: Color = face_loc.color
 
         if self._is_face_solved(face, color):
-            self.debug(f"Face is already done {face}",
-                       level=1)
+            self.debug(f"Face is already done {face}", level=1)
             return False
 
         if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
@@ -262,8 +423,7 @@ class NxNCenters(SolverElement):
 
         cmn = self.cmn
 
-        self.debug(f"Working on face {face}",
-                   level=1)
+        self.debug(f"Working on face {face}", level=1)
 
         with self.ann.annotate(h2=f"{color2long(face_loc.color).value} face"):
             cube = self.cube
@@ -271,34 +431,52 @@ class NxNCenters(SolverElement):
             # we loop bringing all adjusted faces up
             cmn.bring_face_front(face_loc.face)
             # from here face is no longer valid
-            # so
 
             work_done = False
 
             if any(self._has_color_on_face(f, color) for f in cube.front.adjusted_faces()):
-                for _ in range(3):  # 3 faces
-                    # need to optimize ,maybe no sources on this face
+                # =========================================================
+                # CAGE METHOD: Track setup rotations for undo
+                # =========================================================
+                setup_alg = Algs.NOOP
 
+                for _ in range(3):  # 3 faces: L, D, R brought to UP
                     # don't use face - it was moved !!!
                     if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up):
                         work_done = True
                         if minimal_bring_one_color:
+                            if self._preserve_cage:
+                                self.op.play(setup_alg.prime)  # UNDO before return!
                             return work_done
 
                     if self._is_face_solved(face_loc.face, color):
+                        if self._preserve_cage:
+                            self.op.play(setup_alg.prime)  # UNDO before return!
                         return work_done
 
-                    self._bring_face_up_preserve_front(cube.left)
+                    # Rotate to bring next adjacent face to UP
+                    # Track the algorithm so we can undo
+                    setup_alg = setup_alg + self._bring_face_up_preserve_front(cube.left)
 
-                # on the last face
+                # on the last face (4th iteration)
                 # don't use face - it was moved !!!
                 if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up):
                     work_done = True
                     if minimal_bring_one_color:
+                        if self._preserve_cage:
+                            self.op.play(setup_alg.prime)  # UNDO before return!
                         return work_done
 
                 if self._is_face_solved(face_loc.face, color):
+                    if self._preserve_cage:
+                        self.op.play(setup_alg.prime)  # UNDO before return!
                     return work_done
+
+                # =========================================================
+                # CAGE METHOD: Undo all setup rotations
+                # =========================================================
+                if self._preserve_cage:
+                    self.op.play(setup_alg.prime)
 
             if use_back_too:
                 # now from back
@@ -459,7 +637,7 @@ class NxNCenters(SolverElement):
                     # _sf: FaceLoc = next(_f for _f in self._faces if _f.face is source_face)
                     # print(f"@@@ to {color} {_tf} from {_sf} n={source_slice.n_matches}")
 
-                    with self.ann.annotate(h2=f", Swap complete slice"):
+                    with self.ann.annotate(h2=", Swap complete slice"):
                         self._swap_slice(min_target_slice, target_face, source_slice, source_face)
 
                     # print("after", end="")
@@ -483,11 +661,40 @@ class NxNCenters(SolverElement):
     def _swap_slice(self, target_slice: _CompleteSlice,
                     target_face: Face,
                     source_slice: _CompleteSlice, source_face: Face):
+        """
+        Swap a complete slice (row or column) between target and source faces.
 
+        CAGE METHOD (preserve_cage=True):
+        =================================
+        Undoes setup moves (F' and source rotation) after the swap.
+
+        WHY THIS MATTERS - VISUAL EXAMPLE:
+        -----------------------------------
+        To swap slices, we need them aligned as COLUMNS.
+        If target is a ROW, we first play F' to rotate it to a column.
+
+        Before F':              After F':
+        ┌─┬─┬─┐                ┌─┬─┬─┐
+        │ │█│ │ <- row         │ │ │ │
+        ├─┼─┼─┤                ├─┼─┼─┤
+        │ │█│ │                │█│█│█│ <- now column
+        ├─┼─┼─┤                ├─┼─┼─┤
+        │ │█│ │                │ │ │ │
+        └─┴─┴─┘                └─┴─┴─┘
+
+        The F' move BREAKS paired edges (rotates front wings).
+        With preserve_cage=True: We undo F' after the swap.
+
+        Similarly, source rotation (U * n_rotate) aligns source with target.
+        This also needs to be undone for cage method.
+        """
         cube = self.cube
         n_slices = cube.n_slices
 
         target_index: int
+
+        # Track if we did F' setup (for cage undo)
+        did_f_prime_setup = False
 
         # slice must be vertical
         op = self.op
@@ -495,6 +702,7 @@ class NxNCenters(SolverElement):
             target_slice_block_1 = cube.cqr.rotate_point_counterclockwise((target_slice.index, 0))
             target_index = target_slice_block_1[1]
             op.play(Algs.F.prime)
+            did_f_prime_setup = True  # Track for cage undo
         else:
             # column
             target_index = target_slice.index
@@ -557,6 +765,18 @@ class NxNCenters(SolverElement):
                   slice_source_alg.prime * mul
                   )
 
+        # =========================================================
+        # CAGE METHOD: Undo setup moves to preserve paired edges
+        # =========================================================
+        if self._preserve_cage:
+            if n_rotate:
+                self.debug(f"  [CAGE] Undoing source rotation: {rotate_source_alg.prime * n_rotate}", level=1)
+                op.play(rotate_source_alg.prime * n_rotate)
+
+            if did_f_prime_setup:
+                self.debug("  [CAGE] Undoing F' setup: F", level=1)
+                op.play(Algs.F)
+
     def _do_blocks(self, color, face, source_face):
 
         work_done = False
@@ -606,10 +826,21 @@ class NxNCenters(SolverElement):
 
         return x and slice__color == color
 
-    def _bring_face_up_preserve_front(self, face):
+    def _bring_face_up_preserve_front(self, face) -> algs.Alg:
+        """
+        Bring an adjacent face to the UP position while preserving front.
 
+        Returns the algorithm played so caller can undo with alg.prime if needed.
+        For cage method: __do_center tracks these and undoes them at the end.
+
+        Args:
+            face: The face to bring to UP position (must be L, D, or R)
+
+        Returns:
+            The algorithm that was played (Algs.NOOP if face was already UP)
+        """
         if face.name == FaceName.U:
-            return
+            return Algs.NOOP  # Already UP, no rotation needed
 
         if face.name == FaceName.B or face.name == FaceName.F:
             raise InternalSWError(f"{face.name} is not supported, can't bring them to up preserving front")
@@ -619,22 +850,23 @@ class NxNCenters(SolverElement):
         # rotate back with all slices clockwise
         rotate = Algs.B[1:self.cube.n_slices + 1]
 
+        alg_to_play: algs.Alg
         match face.name:
 
             case FaceName.L:
-                # todo open range should be supported by slicing
-                self.op.play(rotate.prime)
+                alg_to_play = rotate.prime
 
             case FaceName.D:
-                # todo open range should be supported by slicing
-                self.op.play(rotate.prime * 2)
+                alg_to_play = rotate.prime * 2
 
             case FaceName.R:
-                # todo open range should be supported by slicing
-                self.op.play(rotate)
+                alg_to_play = rotate
 
             case _:
                 raise InternalSWError(f" Unknown face {face.name}")
+
+        self.op.play(alg_to_play)
+        return alg_to_play
 
     def _find_matching_slice(self, f: Face, r: int, c: int, required_color: Color) -> CenterSlice | None:
 
@@ -719,13 +951,47 @@ class NxNCenters(SolverElement):
                             face: Face, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
                             mode: _SearchBlockMode) -> bool:
         """
+        Execute block commutator to move pieces from source to target.
 
-        :param face:
-        :param source_face:
+        The commutator is: [M', F, M', F', M, F, M, F']
+        This is BALANCED (2 F + 2 F' = 0), so corners return to their position.
+
+        CAGE METHOD (preserve_cage=True):
+        =================================
+        The commutator itself is balanced, but the SOURCE ROTATION setup move
+        (line: source_face * n_rotate) is NOT balanced. This permanently moves corners.
+        With preserve_cage=True: We undo this rotation after the commutator.
+
+        WHY THE COMMUTATOR IS BALANCED - VISUAL:
+        ----------------------------------------
+        The commutator cycles 3 positions:
+
+           Source (UP)          Front (F)
+           ┌─┬─┬─┐              ┌─┬─┬─┐
+           │ │A│ │              │ │C│ │
+           ├─┼─┼─┤              ├─┼─┼─┤
+           │ │ │ │              │ │ │ │
+           ├─┼─┼─┤              ├─┼─┼─┤
+           │ │ │ │              │ │B│ │
+           └─┴─┴─┘              └─┴─┴─┘
+
+        After [M', F, M', F', M, F, M, F']:
+        - A (from UP) -> C position (on F)
+        - C (from F)  -> B position (on F after rotation)
+        - B (from F)  -> A position (on UP)
+
+        The F rotations happen in pairs: F + F' and F + F' = 0 net rotation.
+        So corners end up back where they started.
+
+        BUT: If we first played source_face * n_rotate to align the block,
+        that rotation is NOT undone by the commutator. We must undo it manually.
+
+        :param face: Target face (must be front)
+        :param source_face: Source face (must be up or back)
         :param rc1: one corner of block, center slices indexes [0..n)
         :param rc2: other corner of block, center slices indexes [0..n)
         :param mode: to search complete block or with colors more than mine
-        :return: False if block not found (or no work need to be done), no communicator was done
+        :return: False if block not found (or no work need to be done)
         """
         cube: Cube = face.cube
         assert face is cube.front
@@ -820,6 +1086,16 @@ class NxNCenters(SolverElement):
             if n_rotate:
                 self.op.play(Algs.of_face(source_face.name) * n_rotate)
             self.op.play(Algs.seq_alg(None, *cum))
+
+        # =========================================================
+        # CAGE METHOD: Undo source rotation to preserve paired edges
+        # =========================================================
+        # The commutator itself is balanced (F rotations cancel out).
+        # But the source face rotation setup is NOT balanced - undo it.
+        if self._preserve_cage and n_rotate:
+            undo_alg = Algs.of_face(source_face.name).prime * n_rotate
+            self.debug(f"  [CAGE] Undoing source rotation: {undo_alg}", level=1)
+            self.op.play(undo_alg)
 
         return True
 
