@@ -31,6 +31,10 @@ class CubeLayout:
         """Get configuration via service provider."""
         return self._sp.config
 
+    def __getitem__(self, face: FaceName) -> Color:
+        """Get the color for a specific face."""
+        return self._faces[face]
+
     def colors(self) -> Collection[Color]:
         return [*self._faces.values()]
 

@@ -359,23 +359,18 @@ class Cube(CubeSupplier):
 
         self._color_2_face = {}
 
-        f: Face = Face(self, FaceName.F, Color.BLUE)
-        l: Face = Face(self, FaceName.L, Color.ORANGE)
-        u: Face = Face(self, FaceName.U, Color.YELLOW)
-        r: Face = Face(self, FaceName.R, Color.RED)
-        d: Face = Face(self, FaceName.D, Color.WHITE)
-        b: Face = Face(self, FaceName.B, Color.GREEN)
+        # Use centralized BOY layout instance
+        from . import cube_boy
+        from .CubeLayout import CubeLayout
 
-        f.set_opposite(b)
-        u.set_opposite(d)
-        r.set_opposite(l)
+        boy = cube_boy.get_boy_layout(self._sp)
 
-        self._front = f
-        self._left = l
-        self._up = u
-        self._right = r
-        self._down = d
-        self._back = b
+        f: Face = Face(self, FaceName.F, boy[FaceName.F])
+        l: Face = Face(self, FaceName.L, boy[FaceName.L])
+        u: Face = Face(self, FaceName.U, boy[FaceName.U])
+        r: Face = Face(self, FaceName.R, boy[FaceName.R])
+        d: Face = Face(self, FaceName.D, boy[FaceName.D])
+        b: Face = Face(self, FaceName.B, boy[FaceName.B])
 
         self._faces = {
             FaceName.F: f,
@@ -385,6 +380,23 @@ class Cube(CubeSupplier):
             FaceName.D: d,
             FaceName.B: b
         }
+
+        # Set opposite face relationships using CubeLayout.opposite()
+        # Only set once per pair to avoid duplicate calls
+        set_pairs: set[frozenset[FaceName]] = set()
+        for fn, face in self._faces.items():
+            opposite_fn = CubeLayout.opposite(fn)
+            pair = frozenset([fn, opposite_fn])
+            if pair not in set_pairs:
+                face.set_opposite(self._faces[opposite_fn])
+                set_pairs.add(pair)
+
+        self._front = f
+        self._left = l
+        self._up = u
+        self._right = r
+        self._down = d
+        self._back = b
 
         e: Edge
 
@@ -1744,8 +1756,13 @@ class Cube(CubeSupplier):
         return CubeLayout(False, faces, self._sp)
 
     @property
-    def is_boy(self):
-        return self.current_layout.same(self.original_layout)
+    def is_boy(self) -> bool:
+        """Check if cube is in standard BOY orientation.
+
+        Compares current center colors against the global BOY definition.
+        """
+        from . import cube_boy
+        return self.current_layout.same(cube_boy.get_boy_layout(self._sp))
 
     def get_3x3_colors(self) -> "Cube3x3Colors":
         """Extract edge/corner/center colors as a 3x3 snapshot.

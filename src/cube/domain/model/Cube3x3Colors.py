@@ -119,21 +119,22 @@ class Cube3x3Colors:
         """
         return CubeLayout(False, self.centers, sp)
 
-    def is_boy(self, original_layout: CubeLayout, sp: IServiceProvider) -> bool:
-        """Check if centers match the original cube layout.
+    def is_boy(self, sp: IServiceProvider) -> bool:
+        """Check if centers match the standard BOY layout.
 
         Uses CubeLayout.same() for proper comparison that handles
-        cube rotations correctly.
+        cube rotations correctly. Compares against the global BOY
+        instance from cube_boy.
 
         Args:
-            original_layout: The original layout from the cube (cube.original_layout).
             sp: Service provider for configuration.
 
         Returns:
-            True if this layout is equivalent to the original.
+            True if this layout matches the BOY color scheme.
         """
+        from cube.domain.model import cube_boy
         current = self.get_layout(sp)
-        return current.same(original_layout)
+        return current.same(cube_boy.get_boy_layout(sp))
 
     def is_complete(self) -> bool:
         """Check if this has all required entries.
