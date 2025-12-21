@@ -165,19 +165,17 @@ class FaceTrackerHolder:
             face_colors[tracker.face.name] = tracker.color
         return face_colors
 
-    def is_boy(self) -> bool:
-        """Check if the current tracker mapping matches valid BOY layout.
+    def _trackers_layout(self) -> CubeLayout:
+        """Get the current tracker mapping as a CubeLayout.
 
-        BOY (Blue-Orange-Yellow) is the standard cube layout where:
-        - Opposite faces have complementary colors
-        - Color arrangement follows specific patterns
+        Builds a CubeLayout from the trackers' face→color mapping.
+        Can be used to check is_boy() or compare with other layouts.
 
         Returns:
-            True if trackers represent a valid BOY layout matching original.
+            CubeLayout representing current tracker state.
         """
         layout = {tracker.face.name: tracker.color for tracker in self._trackers}
-        cl = CubeLayout(False, layout, self._cube.sp)
-        return cl.same(self._cube.original_layout)
+        return CubeLayout(False, layout, self._cube.sp)
 
     def assert_is_boy(self) -> None:
         """Assert that trackers represent valid BOY layout.
@@ -185,13 +183,12 @@ class FaceTrackerHolder:
         Raises:
             AssertionError: If layout is not valid BOY.
         """
-        if not self.is_boy():
-            layout = {tracker.face.name: tracker.color for tracker in self._trackers}
-            cl = CubeLayout(False, layout, self._cube.sp)
+        cl = self._trackers_layout()
+        if not cl.is_boy():
             import sys
             print(cl, file=sys.stderr)
             print(file=sys.stderr)
-        assert self.is_boy(), "Trackers do not represent valid BOY layout"
+        assert cl.is_boy(), "Trackers do not represent valid BOY layout"
 
     def cleanup(self) -> None:
         """Remove tracker marks from center slices.

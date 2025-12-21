@@ -1762,7 +1762,7 @@ class Cube(CubeSupplier):
         Compares current center colors against the global BOY definition.
         """
         from . import cube_boy
-        return self.current_layout.same(cube_boy.get_boy_layout(self._sp))
+        return self.current_layout.is_boy()
 
     def get_3x3_colors(self) -> "Cube3x3Colors":
         """Extract edge/corner/center colors as a 3x3 snapshot.

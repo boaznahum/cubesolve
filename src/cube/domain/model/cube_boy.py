@@ -23,8 +23,8 @@ Usage:
     # Access colors via indexing
     front_color = boy[FaceName.F]  # Color.BLUE
 
-    # Check if a cube matches BOY layout
-    is_boy = cube.current_layout.same(boy)
+    # Check if a layout matches BOY (preferred method)
+    is_boy = some_layout.is_boy()
 
     # Get opposite faces (via CubeLayout)
     opposite = CubeLayout.opposite(FaceName.F)  # FaceName.B
@@ -60,9 +60,34 @@ def get_boy_layout(sp: IServiceProvider) -> CubeLayout:
     """Get the global BOY layout instance (cached singleton).
 
     This is the SINGLE SOURCE OF TRUTH for the standard cube color scheme.
-    The returned CubeLayout is read-only and defines:
-        - Face colors: F=Blue, R=Red, U=Yellow, L=Orange, D=White, B=Green
-        - Opposite relationships: F<->B, U<->D, L<->R (via CubeLayout.opposite)
+    BOY = Blue-Orange-Yellow (the Front-Left-Up corner colors).
+
+    UNFOLDED CUBE LAYOUT:
+    ====================
+                ┌───────┐
+                │   Y   │
+                │   U   │  Yellow (Up)
+                │       │
+        ┌───────┼───────┼───────┬───────┐
+        │   O   │   B   │   R   │   G   │
+        │   L   │   F   │   R   │   B   │
+        │       │       │       │       │
+        └───────┼───────┼───────┴───────┘
+                │   W   │
+                │   D   │  White (Down)
+                │       │
+                └───────┘
+
+    FACE COLORS:
+        Front=Blue, Right=Red, Up=Yellow, Left=Orange, Down=White, Back=Green
+
+    OPPOSITE FACES:
+        F (Blue)   <-> B (Green)
+        U (Yellow) <-> D (White)
+        L (Orange) <-> R (Red)
+
+    ADJACENT COLORS (clockwise around Up face):
+        Front=Blue -> Right=Red -> Back=Green -> Left=Orange
 
     Args:
         sp: Service provider for configuration access.
@@ -73,7 +98,7 @@ def get_boy_layout(sp: IServiceProvider) -> CubeLayout:
     Example:
         boy = get_boy_layout(sp)
         front_color = boy[FaceName.F]  # Color.BLUE
-        is_match = some_layout.same(boy)
+        is_match = some_layout.is_boy()  # Preferred way to check BOY
     """
     global _boy_layout
     if _boy_layout is None:

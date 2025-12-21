@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from cube.domain.model._part import CornerName, EdgeName
 from cube.domain.model.Color import Color
-from cube.domain.model.FaceName import FaceName
 from cube.domain.model.CubeLayout import CubeLayout
+from cube.domain.model.FaceName import FaceName
+from cube.domain.model._part import CornerName, EdgeName
 from cube.utils.config_protocol import IServiceProvider
 
 
@@ -132,9 +132,8 @@ class Cube3x3Colors:
         Returns:
             True if this layout matches the BOY color scheme.
         """
-        from cube.domain.model import cube_boy
         current: CubeLayout = self.get_layout(sp)
-        return current.same(cube_boy.get_boy_layout(sp))
+        return current.is_boy()
 
     def is_complete(self) -> bool:
         """Check if this has all required entries.

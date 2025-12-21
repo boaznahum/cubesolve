@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from typing import Mapping, TYPE_CHECKING
+from typing import Mapping
 
 from cube.domain.exceptions import InternalSWError
 from cube.utils.config_protocol import IServiceProvider, ConfigProtocol
@@ -121,6 +121,51 @@ class CubeLayout:
 
         return True  # same layout
 
+    def is_boy(self) -> bool:
+        """Check if this layout matches the standard BOY color scheme.
+
+        BOY (Blue-Orange-Yellow) is the standard Rubik's cube color arrangement.
+        The name comes from the Front-Left-Up corner colors: Blue-Orange-Yellow.
+
+        UNFOLDED CUBE LAYOUT:
+        ====================
+                    ┌───────┐
+                    │   Y   │
+                    │   U   │  Yellow (Up)
+                    │       │
+            ┌───────┼───────┼───────┬───────┐
+            │   O   │   B   │   R   │   G   │
+            │   L   │   F   │   R   │   B   │
+            │       │       │       │       │
+            └───────┼───────┼───────┴───────┘
+                    │   W   │
+                    │   D   │  White (Down)
+                    │       │
+                    └───────┘
+
+        OPPOSITE FACES:
+            F (Blue)   <-> B (Green)
+            U (Yellow) <-> D (White)
+            L (Orange) <-> R (Red)
+
+        ADJACENT COLORS (clockwise around Up face):
+            Front=Blue -> Right=Red -> Back=Green -> Left=Orange
+
+        CORNER CHIRALITY:
+            Looking at Up-Front-Right corner: Yellow-Blue-Red (clockwise)
+
+        This is the canonical reference for determining if a cube's face colors
+        are correctly oriented. Used by:
+        - Cube.is_boy property
+        - Cube3x3Colors.is_boy()
+        - FaceTrackerHolder.assert_is_boy()
+        - Solver sanity checks
+
+        Returns:
+            True if this layout matches the global BOY definition.
+        """
+        from cube.domain.model import cube_boy
+        return self.same(cube_boy.get_boy_layout(self._sp))
 
     def clone(self):
 
