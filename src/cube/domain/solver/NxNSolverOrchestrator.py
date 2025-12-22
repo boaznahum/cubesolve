@@ -321,3 +321,14 @@ class NxNSolverOrchestrator(AbstractSolver):
             self.debug(sr.parity_summary())
 
         return sr
+
+    def supported_steps(self) -> list[SolveStep]:
+        """Return list of solve steps this solver supports.
+
+        Combines NxN reduction steps with the 3x3 solver's steps.
+        """
+        # Start with NxN reduction steps
+        steps: list[SolveStep] = [SolveStep.NxNCenters, SolveStep.NxNEdges]
+        # Add 3x3 solver's steps
+        steps.extend(self._solver_3x3.supported_steps())
+        return steps

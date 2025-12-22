@@ -125,6 +125,16 @@ class SolveAllNoAnimationCommand(Command):
 
 
 @dataclass(frozen=True)
+class SolveStepNoAnimationCommand(Command):
+    """Command to execute a solve step without animation."""
+    step: SolveStep
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        ctx.slv.solve(what=self.step, animation=False)
+        return CommandResult()
+
+
+@dataclass(frozen=True)
 class SolveEdgesCommand(Command):
     """Command to solve NxN edges and track count."""
 
@@ -603,6 +613,13 @@ class SwitchSolverCommand(Command):
     def execute(self, ctx: CommandContext) -> CommandResult:
         ctx.app.switch_to_next_solver()
         ctx.op.reset()
+
+        # Rebuild toolbar solver buttons for new solver
+        # Use getattr to safely access optional _toolbar attribute (pyglet2 only)
+        toolbar = getattr(ctx.window, '_toolbar', None)
+        if toolbar is not None:
+            toolbar.rebuild_solver_buttons(ctx.app)
+
         return CommandResult()
 
 

@@ -74,3 +74,11 @@ class Solver3x3Protocol(Protocol):
     def status_3x3(self) -> str:
         """Human-readable 3x3 solving status."""
         ...
+
+    def supported_steps(self) -> list["SolveStep"]:
+        """Return list of solve steps this 3x3 solver supports.
+
+        Steps should be returned in the order they should appear in UI.
+        Does NOT include SolveStep.ALL (implied for all solvers).
+        """
+        ...

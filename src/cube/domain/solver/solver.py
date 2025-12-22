@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from enum import Enum
 
@@ -6,7 +8,25 @@ from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsPr
 from cube.domain.solver.SolverName import SolverName
 
 
+# Metadata for each SolveStep: (short_code, description)
+_SOLVE_STEP_META: dict[str, tuple[str, str]] = {
+    "ALL": ("Solve", "Solve Complete Cube"),
+    "L1x": ("L1x", "Layer 1 Cross"),
+    "L1": ("L1", "Layer 1 Complete"),
+    "L2": ("L2", "Layer 2"),
+    "L3x": ("L3x", "Layer 3 Cross"),
+    "L3": ("L3", "Layer 3 Complete"),
+    "F2L": ("F2L", "First Two Layers"),
+    "OLL": ("OLL", "Orientation Last Layer"),
+    "PLL": ("PLL", "Permutation Last Layer"),
+    "NxNCenters": ("Ctr", "NxN Centers"),
+    "NxNEdges": ("Edg", "NxN Edges"),
+    "Cage": ("Cage", "Cage (Edges + Corners)"),
+}
+
+
 class SolveStep(Enum):
+    """Solve steps with short code and description for UI display."""
     ALL = "ALL"
     L1x = "L1x"
     L1 = "L1"
@@ -14,13 +34,27 @@ class SolveStep(Enum):
     L3 = "L3"
     L3x = "L3x"
 
-    # CFOP
+    # CFOP-specific steps
     F2L = "F2L"
-    OLL = L3x
-    PLL = L3
+    OLL = "OLL"
+    PLL = "PLL"
 
+    # NxN reduction steps
     NxNCenters = "NxNCenters"
     NxNEdges = "NxNEdges"
+
+    # Cage method step
+    Cage = "Cage"
+
+    @property
+    def short_code(self) -> str:
+        """Short code for button label (e.g., 'L1x', 'F2L')."""
+        return _SOLVE_STEP_META.get(self.value, (self.value, ""))[0]
+
+    @property
+    def description(self) -> str:
+        """Long description for tooltip (e.g., 'Layer 1 Cross')."""
+        return _SOLVE_STEP_META.get(self.value, ("", self.value))[1]
 
 
 class SolverResults:
@@ -115,6 +149,15 @@ class Solver(SolverElementsProvider, ABC):
     @property
     @abstractmethod
     def op(self) -> OperatorProtocol:
+        pass
+
+    @abstractmethod
+    def supported_steps(self) -> list[SolveStep]:
+        """Return list of solve steps this solver supports.
+
+        Steps should be returned in the order they should appear in UI.
+        Does NOT include SolveStep.ALL (implied for all solvers).
+        """
         pass
 
 

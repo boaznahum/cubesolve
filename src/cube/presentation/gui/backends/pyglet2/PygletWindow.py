@@ -58,6 +58,10 @@ class PygletWindow(pyglet.window.Window):
         """Delegate key press event to parent."""
         self._parent.on_key_press(symbol, modifiers)
 
+    def on_key_release(self, symbol: int, modifiers: int) -> None:
+        """Delegate key release event to parent."""
+        self._parent.on_key_release(symbol, modifiers)
+
     def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
         """Delegate mouse drag event to parent."""
         return self._parent.on_mouse_drag(x, y, dx, dy, buttons, modifiers)

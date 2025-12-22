@@ -192,3 +192,17 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
 
         with self._op.with_animation(animation=animation):
             return self.solve_3x3(debug, what)
+
+    def supported_steps(self) -> list[SolveStep]:
+        """Return list of solve steps this solver supports.
+
+        BeginnerSolver3x3 uses layer-by-layer method with these steps:
+        L1x (cross), L1 (complete), L2, L3x (cross), L3 (complete).
+        """
+        return [
+            SolveStep.L1x,
+            SolveStep.L1,
+            SolveStep.L2,
+            SolveStep.L3x,
+            SolveStep.L3,
+        ]

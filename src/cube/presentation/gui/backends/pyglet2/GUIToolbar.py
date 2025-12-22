@@ -16,6 +16,7 @@ import pyglet
 from pyglet import shapes
 
 if TYPE_CHECKING:
+    from cube.application.AbstractApp import AbstractApp
     from cube.presentation.gui.backends.pyglet2.PygletAppWindow import PygletAppWindow
     from cube.presentation.gui.commands import Command
 
@@ -58,9 +59,14 @@ class GUIButton:
     label_fn: Callable[[], str] | None = None  # Dynamic label
     is_label: bool = False  # True for non-clickable text labels
     min_width: int = 0  # Minimum width for the button
+    tooltip: str | None = None  # Hover tooltip text
+    shift_label: str | None = None  # Alternative label when Shift is held
+    shift_command: "Command | None" = None  # Alternative command for Shift+click
 
-    def get_label(self) -> str:
-        """Get current label (static or dynamic)."""
+    def get_label(self, shift_held: bool = False) -> str:
+        """Get current label (static, dynamic, or shift-modified)."""
+        if shift_held and self.shift_label:
+            return self.shift_label
         if self.label_fn:
             return self.label_fn()
         return self.label
@@ -107,6 +113,16 @@ class GUIToolbar:
         self._button_bevels: list[list[shapes.Line]] = []  # Bevel lines per button
         self._button_labels: list[pyglet.text.Label | None] = []
 
+        # Shift key state (for dynamic labels and shift+click)
+        self._shift_held: bool = False
+
+        # Index where solver buttons start (for dynamic rebuild)
+        self._solver_row_start: int = -1
+
+        # Tooltip rendering
+        self._tooltip_label: pyglet.text.Label | None = None
+        self._tooltip_bg: shapes.Rectangle | None = None
+
     def add_button(
         self,
         label: str,
@@ -114,6 +130,9 @@ class GUIToolbar:
         enabled_fn: Callable[[], bool] | None = None,
         label_fn: Callable[[], str] | None = None,
         min_width: int = 0,
+        tooltip: str | None = None,
+        shift_label: str | None = None,
+        shift_command: "Command | None" = None,
     ) -> None:
         """Add a clickable button to current row."""
         self._buttons.append(GUIButton(
@@ -123,6 +142,9 @@ class GUIToolbar:
             enabled_fn=enabled_fn,
             label_fn=label_fn,
             min_width=min_width,
+            tooltip=tooltip,
+            shift_label=shift_label,
+            shift_command=shift_command,
         ))
         self._shapes_dirty = True
 
@@ -183,7 +205,7 @@ class GUIToolbar:
         for row_buttons in rows:
             row_width = TOOLBAR_PADDING
             for btn in row_buttons:
-                current_label = btn.get_label()
+                current_label = btn.get_label(self._shift_held)
                 text_width = len(current_label) * 9 + BUTTON_PADDING * 2
                 btn.width = max(text_width, btn.min_width, 36)
                 row_width += btn.width + BUTTON_MARGIN
@@ -221,7 +243,7 @@ class GUIToolbar:
 
         # Create button shapes and labels
         for btn in self._buttons:
-            current_label = btn.get_label()
+            current_label = btn.get_label(self._shift_held)
 
             if btn.is_label:
                 # Non-clickable label - no background rectangle or bevel
@@ -324,11 +346,20 @@ class GUIToolbar:
 
         self._batch.draw()
 
+        # Draw tooltip on top of everything
+        self.draw_tooltip()
+
     def handle_click(self, x: int, y: int) -> Command | None:
-        """Handle mouse click. Returns command to execute or None."""
+        """Handle mouse click. Returns command to execute or None.
+
+        If Shift is held and button has shift_command, returns that instead.
+        """
         for btn in self._buttons:
-            if btn.contains(x, y) and btn.is_enabled() and btn.command:
-                return btn.command
+            if btn.contains(x, y) and btn.is_enabled():
+                if self._shift_held and btn.shift_command:
+                    return btn.shift_command
+                if btn.command:
+                    return btn.command
         return None
 
     def handle_motion(self, x: int, y: int) -> None:
@@ -338,6 +369,99 @@ class GUIToolbar:
             if btn.contains(x, y) and not btn.is_label:
                 self._hover_button = btn
                 break
+
+    def set_shift_state(self, shift_held: bool) -> None:
+        """Update Shift key state (called from window on key events)."""
+        if self._shift_held != shift_held:
+            self._shift_held = shift_held
+            self._shapes_dirty = True  # Rebuild to update labels
+
+    def rebuild_solver_buttons(self, app: "AbstractApp") -> None:
+        """Rebuild Row 3 solver buttons based on current solver's supported steps.
+
+        Called when:
+        - Toolbar is first created
+        - Solver is switched
+        """
+        from cube.presentation.gui.commands.concrete import (
+            SolveAllCommand,
+            SolveAllNoAnimationCommand,
+            SolveStepCommand,
+            SolveStepNoAnimationCommand,
+        )
+
+        # Remove existing Row 3 buttons (if any)
+        if self._solver_row_start >= 0:
+            self._buttons = self._buttons[:self._solver_row_start]
+
+        # Mark start of solver buttons
+        self._solver_row_start = len(self._buttons)
+
+        # Ensure we're on Row 3 (0-indexed, so row 2)
+        self._current_row = 2
+
+        # Add "Solve" button with Shift = Instant
+        self.add_button(
+            label="Solve",
+            command=SolveAllCommand(),
+            tooltip="Solve complete cube (Shift: instant)",
+            shift_label="Instant",
+            shift_command=SolveAllNoAnimationCommand(),
+            min_width=55,
+        )
+
+        # Add step buttons for current solver
+        solver = app.slv
+        steps = solver.supported_steps()
+
+        for step in steps:
+            self.add_button(
+                label=step.short_code,
+                command=SolveStepCommand(step),
+                tooltip=step.description,
+                shift_label=f"{step.short_code}!",
+                shift_command=SolveStepNoAnimationCommand(step),
+            )
+
+        self._shapes_dirty = True
+
+    def draw_tooltip(self) -> None:
+        """Draw tooltip for hovered button (called after batch.draw)."""
+        if not self._hover_button or not self._hover_button.tooltip:
+            return
+
+        text = self._hover_button.tooltip
+        btn = self._hover_button
+
+        # Position tooltip below button
+        tooltip_x = btn.x
+        tooltip_y = btn.y - 22
+
+        # Ensure tooltip stays on screen
+        if tooltip_y < 10:
+            tooltip_y = btn.y + BUTTON_HEIGHT + 5
+
+        # Calculate text width (approximate)
+        text_width = len(text) * 7 + 10
+
+        # Draw background
+        self._tooltip_bg = shapes.Rectangle(
+            tooltip_x, tooltip_y, text_width, 18,
+            color=(50, 50, 50),
+        )
+        self._tooltip_bg.opacity = 230
+        self._tooltip_bg.draw()
+
+        # Draw text
+        self._tooltip_label = pyglet.text.Label(
+            text,
+            font_size=10,
+            x=tooltip_x + 5,
+            y=tooltip_y + 9,
+            anchor_y='center',
+            color=(255, 255, 200, 255),
+        )
+        self._tooltip_label.draw()
 
 
 def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
@@ -382,9 +506,7 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
 
     toolbar.add_separator()
 
-    # Solve controls
-    toolbar.add_button("Solve", Commands.SOLVE_ALL)
-    toolbar.add_button("Instant", Commands.SOLVE_ALL_NO_ANIMATION)
+    # Reset button only (Solve moved to Row 3)
     toolbar.add_button("Reset", Commands.RESET_CUBE)
 
     # === ROW 2: Animation, Speed, Debug, SS, Stop, Quit ===
@@ -459,5 +581,9 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
     toolbar.add_separator()
 
     toolbar.add_button("Quit", Commands.QUIT)
+
+    # === ROW 3: Solver Step Buttons (dynamic based on current solver) ===
+    toolbar.new_row()
+    toolbar.rebuild_solver_buttons(app)
 
     return toolbar

@@ -190,3 +190,15 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
     def status(self) -> str:
         """Human-readable solver status."""
         return self.status_3x3
+
+    def supported_steps(self) -> list[SolveStep]:
+        """Return list of solve steps this solver supports.
+
+        CFOP method uses: Cross (L1x), F2L, OLL, PLL.
+        """
+        return [
+            SolveStep.L1x,  # Cross
+            SolveStep.F2L,
+            SolveStep.OLL,
+            SolveStep.PLL,
+        ]

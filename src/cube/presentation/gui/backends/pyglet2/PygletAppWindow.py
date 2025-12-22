@@ -10,6 +10,7 @@ from __future__ import annotations
 try:
     import pyglet
     from pyglet import gl
+    from pyglet.window import key as pyglet_key
 except ImportError as e:
     raise ImportError("pyglet2 backend requires: pip install 'pyglet>=2.0'") from e
 
@@ -543,9 +544,25 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         Converts native pyglet keys to abstract Keys and calls handle_key().
         """
         self._vs.debug(False, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
+
+        # Track Shift key for toolbar button label updates
+        if self._toolbar and (modifiers & pyglet_key.MOD_SHIFT):
+            self._toolbar.set_shift_state(True)
+
         abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
         abstract_mods = _convert_modifiers(modifiers)
         self.handle_key(abstract_symbol, abstract_mods)
+
+    def on_key_release(self, symbol: int, modifiers: int) -> None:
+        """Handle key release event (delegated from PygletWindow).
+
+        Tracks Shift key release for toolbar label updates.
+        """
+        # Track Shift key release for toolbar button label updates
+        if self._toolbar:
+            # If Shift is no longer held, update toolbar state
+            if not (modifiers & pyglet_key.MOD_SHIFT):
+                self._toolbar.set_shift_state(False)
 
     def handle_key(self, symbol: int, modifiers: int) -> None:
         """Handle abstract key press.

@@ -351,3 +351,10 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
 
         # Convert colors to Kociemba characters using dynamic mapping
         return "".join(color_to_face[c] for c in colors)
+
+    def supported_steps(self) -> list[SolveStep]:
+        """Return list of solve steps this solver supports.
+
+        Kociemba always solves the entire cube at once - no partial solving.
+        """
+        return []

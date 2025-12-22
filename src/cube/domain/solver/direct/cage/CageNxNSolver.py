@@ -195,6 +195,15 @@ class CageNxNSolver(BaseSolver):
         """Solve using Cage method.
 
         Order: Edges -> Corners -> Centers
+
+        Args:
+            debug: Enable debug output
+            animation: Enable animation
+            what: Which step to solve:
+                - SolveStep.ALL: Full solve (edges, corners, centers)
+                - SolveStep.NxNEdges: Edges only (pair wings)
+                - SolveStep.Cage: Edges + Corners (no centers)
+                - SolveStep.NxNCenters: Centers only (assumes cage done)
         """
         sr = SolverResults()
 
@@ -202,7 +211,15 @@ class CageNxNSolver(BaseSolver):
             return sr
 
         with self._op.with_animation(animation=animation):
-            return self._solve_impl(sr)
+            match what:
+                case SolveStep.NxNEdges:
+                    return self._solve_edges_only(sr)
+                case SolveStep.Cage:
+                    return self._solve_cage_only(sr)
+                case SolveStep.NxNCenters:
+                    return self._solve_centers_only(sr)
+                case SolveStep.ALL | _:
+                    return self._solve_impl(sr)
 
     def _solve_impl(self, sr: SolverResults) -> SolverResults:
         """Internal solve implementation.
@@ -289,6 +306,91 @@ class CageNxNSolver(BaseSolver):
             # PHASE 2: CENTER SOLVING
             if not self._are_centers_solved():
                 self._solve_centers(tracker_holder)
+
+        return sr
+
+    def _solve_edges_only(self, sr: SolverResults) -> SolverResults:
+        """Solve edges only (Phase 1a).
+
+        Pairs all wing edges without solving corners or centers.
+        """
+        if self._are_edges_solved():
+            return sr
+
+        had_parity = self._solve_edges()
+        if had_parity:
+            sr._was_partial_edge_parity = True
+        return sr
+
+    def _solve_cage_only(self, sr: SolverResults) -> SolverResults:
+        """Solve cage only (Phase 1a + 1b): edges + corners, no centers.
+
+        This is the full _solve_impl without the center-solving step.
+        Includes parity detection and retry logic for even cubes.
+        """
+        from cube.domain.exceptions import (
+            EvenCubeCornerSwapException,
+            EvenCubeEdgeParityException,
+            EvenCubeEdgeSwapParityException,
+        )
+
+        # Check if cage is already done
+        if (self._are_edges_solved() and self._are_edges_positioned()
+                and self._are_corners_solved()):
+            return sr
+
+        with FaceTrackerHolder(self) as tracker_holder:
+            self.debug(f"Created trackers: {list(tracker_holder)}")
+
+            for attempt in range(5):
+                self.debug(f"=== Cage solve attempt {attempt} ===")
+
+                # PHASE 1a: EDGE SOLVING
+                if not self._are_edges_solved():
+                    had_parity = self._solve_edges()
+                    if had_parity:
+                        sr._was_partial_edge_parity = True
+
+                # PHASE 1b: CORNER SOLVING
+                try:
+                    if not (self._are_edges_positioned() and self._are_corners_solved()):
+                        self._solve_corners(tracker_holder)
+                    break  # Success - exit retry loop
+
+                except EvenCubeEdgeParityException as e:
+                    self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}: {type(e)}")
+                    if attempt >= 4:
+                        raise
+
+                    self.debug("Edge parity detected during corner solve, fixing...")
+                    self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+
+                except EvenCubeCornerSwapException:
+                    if attempt >= 4:
+                        raise
+
+                    self.debug("Corner swap parity detected during corner solve, fixing...")
+                    self._nxn_corners.fix_corner_parity()
+
+                except EvenCubeEdgeSwapParityException:
+                    if attempt >= 4:
+                        raise
+
+                    self.debug("Edge swap parity (PLL) detected during corner solve, fixing...")
+                    self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+
+        return sr
+
+    def _solve_centers_only(self, sr: SolverResults) -> SolverResults:
+        """Solve centers only (Phase 2).
+
+        Assumes cage (edges + corners) is already solved.
+        """
+        if self._are_centers_solved():
+            return sr
+
+        with FaceTrackerHolder(self) as tracker_holder:
+            self._solve_centers(tracker_holder)
 
         return sr
 
@@ -462,3 +564,14 @@ class CageNxNSolver(BaseSolver):
 
         # SS breakpoint AFTER - inspect result
         self._op.enter_single_step_mode(SSCode.CAGE_CENTERS_DONE)
+
+    def supported_steps(self) -> list[SolveStep]:
+        """Return list of solve steps this solver supports.
+
+        Cage method solves edges first, then corners (via shadow 3x3),
+        then centers. Steps are:
+        - NxNEdges: Pair all wing edges
+        - Cage: Edges + Corners (no centers)
+        - NxNCenters: Centers only
+        """
+        return [SolveStep.NxNEdges, SolveStep.Cage, SolveStep.NxNCenters]
