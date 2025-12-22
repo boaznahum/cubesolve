@@ -9,7 +9,6 @@ from cube.application.AbstractApp import AbstractApp
 from cube.application.animation.AnimationManager import AnimationWindow
 from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.protocols import AppWindow
-from cube.presentation.gui.types import Keys
 from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
 

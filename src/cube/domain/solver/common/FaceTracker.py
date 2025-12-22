@@ -39,7 +39,8 @@ class FaceTracker:
     @staticmethod
     def by_pred(cube: Cube, color: Color, pred: Pred[Face]) -> _FaceLoc:
 
-        t: _FaceSearcher = lambda: cube.cqr.find_face(pred)
+        def t():
+            return cube.cqr.find_face(pred)
 
         return FaceTracker(color, t)
 

@@ -216,7 +216,6 @@ class NxNCenters(SolverElement):
         This may be slightly less accurate than tracking colors as faces are solved,
         but simplifies the code and ownership model significantly.
         """
-        cube = self.cube
 
         faces: list[FaceTracker] = list(holder)
 

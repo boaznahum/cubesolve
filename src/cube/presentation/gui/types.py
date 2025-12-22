@@ -4,7 +4,6 @@ Common types for the GUI abstraction layer.
 This module defines backend-independent types used across all GUI protocols.
 """
 
-from dataclasses import dataclass
 from typing import TypeAlias, Tuple, NewType
 
 import numpy as np

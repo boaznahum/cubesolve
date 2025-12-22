@@ -19,7 +19,7 @@ from cube.domain.model import Part, Corner, Edge, Center
 from cube.domain.model import PartSlice, EdgeWing, CenterSlice
 from ..gui.protocols import Renderer
 from ..gui.ViewSetup import ViewSetup
-from ..gui.types import DisplayList, TextureCoord, TextureMap, Point3D, Color3
+from ..gui.types import DisplayList, TextureCoord, TextureMap, Point3D
 from cube.utils.config_protocol import ConfigProtocol
 
 _VColor = Tuple[int, int, int]
@@ -173,7 +173,6 @@ class _Cell:
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
-        marker = ""
 
         self._left_bottom_v3 = vertexes[0]
         self._right_top_v3 = vertexes[2]
@@ -603,7 +602,7 @@ class _Cell:
         center += self._face_board.ortho_direction * 30
 
         p1 = center + self._face_board.ortho_direction * height
-        p2 = center - self._face_board.ortho_direction * height
+        center - self._face_board.ortho_direction * height
 
         # this is also supported by glCallLine
         # shapes.cylinder(p1, p2, r1, r2, marker_color)

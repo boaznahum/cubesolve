@@ -6,7 +6,6 @@ from cube.domain.model._part_slice import CenterSlice
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.model._elements import SliceIndex, CenterSliceIndex
 from cube.domain.model.cube_boy import FaceName
-from .Part import TPartType
 
 if TYPE_CHECKING:
     from .Face import Face

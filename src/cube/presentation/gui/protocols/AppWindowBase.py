@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from cube.domain.algs import Algs, Alg
 from cube.application.exceptions.app_exceptions import AppExit
-from cube.presentation.gui.types import Keys, parse_key_string, Color4
+from cube.presentation.gui.types import Color4
 from cube.presentation.gui.commands import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
 

@@ -4,7 +4,6 @@ from cube.domain.algs import Algs
 from cube.domain.model import PartColorsID, Part, Corner
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 

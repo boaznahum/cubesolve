@@ -4,8 +4,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cube.presentation.gui.protocols.Renderer import Renderer
-    from cube.application.state import ApplicationAndViewState
+    pass
 
 
 @runtime_checkable

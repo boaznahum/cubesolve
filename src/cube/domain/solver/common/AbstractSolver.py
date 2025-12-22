@@ -9,7 +9,7 @@ from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 
 if TYPE_CHECKING:
-    from cube.domain.solver.common.CommonOp import CommonOp as _CommonOp
+    pass
 
 
 class AbstractSolver(Solver, ABC):

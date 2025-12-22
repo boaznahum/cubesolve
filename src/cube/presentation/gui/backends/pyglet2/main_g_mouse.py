@@ -10,7 +10,7 @@ from typing import Tuple, Any
 import numpy as np
 from numpy import ndarray
 
-from cube.presentation.gui.types import Keys, Modifiers, MouseButton
+from cube.presentation.gui.types import Modifiers, MouseButton
 
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.algs.Alg import Alg
@@ -102,7 +102,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     vs.debug(mouse_debug, f"[DRAG] Handler: x={x}, y={y}, dx={dx}, dy={dy}")
 
     if _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING:
-        vs.debug(mouse_debug, f"[DRAG] Skipped - already running")
+        vs.debug(mouse_debug, "[DRAG] Skipped - already running")
         return
 
     global _DRAG_VECTOR_DETECTION_DATA
@@ -211,7 +211,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
             vs.debug(mouse_debug, f"[ROTATE] Playing: {alg}")
             _play(window, alg)
         else:
-            vs.debug(mouse_debug, f"[ROTATE] No alg to play")
+            vs.debug(mouse_debug, "[ROTATE] No alg to play")
 
     finally:
         _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = False
@@ -623,7 +623,7 @@ def _get_selected_slice(vs, window, x, y) -> Tuple[PartEdge, np.ndarray, np.ndar
     )
 
     if result is None:
-        vs.debug(mouse_debug, f"[PICK] No hit")
+        vs.debug(mouse_debug, "[PICK] No hit")
         return None
 
     part_edge, right_dir, up_dir = result

@@ -76,7 +76,7 @@ class PLL(StepSolver):
             # Unknown PLL state - check what type of parity
             if self._is_corner_parity():
                 # Corner parity: raise exception for orchestrator to fix
-                self.debug(f"PLL: Corner parity detected (2 corners in position)")
+                self.debug("PLL: Corner parity detected (2 corners in position)")
                 raise EvenCubeCornerSwapException()
 
             # Edge swap parity: fix internally and retry
@@ -86,7 +86,7 @@ class PLL(StepSolver):
             description_alg = self._search_pll_alg()
 
         if description_alg is None:
-            raise InternalSWError(f"Unknown PLL state")
+            raise InternalSWError("Unknown PLL state")
 
         search_alg, description, alg = description_alg
 

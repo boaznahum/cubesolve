@@ -17,7 +17,7 @@ def parse_alg(s: str) -> _Alg:
     Currently doesn't support exp N and exp '  (only U2, U',...)
     """
 
-    # We capture, so we get the spliteres two, such as '(' ')', we need to ignore the spaces
+    # We capture, so we get the splitters two, such as '(' ')', we need to ignore the spaces
     # Empty matches for the pattern split the string only when not adjacent to a previous empty match.
     # https://docs.python.org/3/library/re.html#re.split
     # example:
@@ -46,10 +46,6 @@ class _Parser:
         return Algs.seq_alg(None, *result)
 
     def _parse(self, result: list[_Alg], nested: bool):
-
-        from cube.domain.algs.Algs import Algs
-
-        alg = Algs.no_op()
 
         while True:
             token = self.next_token()

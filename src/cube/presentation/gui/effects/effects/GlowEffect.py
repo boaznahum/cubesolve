@@ -1,7 +1,6 @@
 """Glow/pulse celebration effect."""
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING
 
 from cube.presentation.gui.effects.BaseEffect import BaseEffect

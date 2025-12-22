@@ -1,11 +1,10 @@
 from collections.abc import Iterator, Iterable
-from typing import TYPE_CHECKING, TypeAlias, Sequence, Self
+from typing import TYPE_CHECKING, TypeAlias, Sequence
 
 from cube.domain.model.Part import Part
 from cube.domain.model._part_slice import EdgeWing, PartSlice
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.model._elements import SliceIndex
-from .Part import TPartType
 from ._elements import EdgeSliceIndex
 from ._part import EdgeName, _faces_2_edge_name
 from cube.domain.exceptions import InternalSWError

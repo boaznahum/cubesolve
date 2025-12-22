@@ -132,8 +132,7 @@ The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
 """
 
 from collections.abc import Iterable, MutableSequence
-from contextlib import contextmanager
-from typing import Collection, Iterator, Protocol, Tuple, TYPE_CHECKING
+from typing import Collection, Protocol, Tuple, TYPE_CHECKING
 
 from cube.domain.exceptions import InternalSWError
 from .Edge import Edge
@@ -1761,7 +1760,6 @@ class Cube(CubeSupplier):
 
         Compares current center colors against the global BOY definition.
         """
-        from . import cube_boy
         return self.current_layout.is_boy()
 
     def get_3x3_colors(self) -> "Cube3x3Colors":

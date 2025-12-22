@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
-from collections.abc import Iterator, MutableSequence, Sequence
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, final, Self
 
 from cube.domain.model.Cube import Cube
 
 if TYPE_CHECKING:
-    from .Inv import _Inv
-    from .Mul import _Mul
     from .SeqAlg import SeqSimpleAlg, SeqAlg
     from .SimpleAlg import SimpleAlg
 

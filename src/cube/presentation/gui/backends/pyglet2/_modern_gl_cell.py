@@ -26,7 +26,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
 from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color

@@ -42,11 +42,8 @@ from numpy import ndarray
 from cube.domain.model.cube_boy import Color, FaceName
 from ._modern_gl_face import ModernGLFace
 from ._modern_gl_constants import (
-    HALF_CUBE_SIZE,
     FACE_TRANSFORMS,
     SHADOW_OFFSETS,
-    COLOR_TO_HOME_FACE,
-    BORDER_LINE_WIDTH,
 )
 
 if TYPE_CHECKING:

@@ -5,7 +5,7 @@ Provides key/modifier conversion and text rendering utilities.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pyglet.window import Window as PygletWindow
@@ -21,7 +21,7 @@ try:
 except ImportError as e:
     raise ImportError("pyglet2 backend requires: pip install 'pyglet>=2.0'") from e
 
-from cube.presentation.gui.types import KeyEvent, MouseEvent, Keys, Modifiers, MouseButton, Color4
+from cube.presentation.gui.types import Keys, Modifiers, MouseButton, Color4
 from cube.presentation.gui.protocols import TextRenderer
 
 

@@ -5,7 +5,7 @@ from .Alg import Alg
 from cube.domain.model.Cube import Cube
 
 if TYPE_CHECKING:
-    from .SimpleAlg import SimpleAlg, NSimpleAlg
+    from .SimpleAlg import SimpleAlg
     from .SeqAlg import SeqSimpleAlg
 
 

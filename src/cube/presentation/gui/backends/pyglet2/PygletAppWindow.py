@@ -24,7 +24,7 @@ from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase, TextLab
 from cube.presentation.gui.protocols.AppWindow import AppWindow
 from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer, ModernGLRendererAdapter
 from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCubeViewer
-from cube.presentation.gui.commands import Command, CommandContext, Commands
+from cube.presentation.gui.commands import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
 from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
 from cube.presentation.gui.backends.pyglet2.GUIToolbar import GUIToolbar, create_toolbar

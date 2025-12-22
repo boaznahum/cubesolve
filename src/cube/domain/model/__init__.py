@@ -10,7 +10,6 @@ from .Edge import Edge
 from .Corner import Corner
 from .Cube import Cube
 from .CubeListener import CubeListener
-from .cube_boy import Color
 from .Face import Face
 from .Cube3x3Colors import Cube3x3Colors, EdgeColors, CornerColors
 

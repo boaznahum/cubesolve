@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.application.protocols.AnimatableViewer import AnimatableViewer
     from cube.presentation.gui.protocols.Renderer import Renderer
-    from cube.presentation.gui.commands import Command, Commands
+    from cube.presentation.gui.commands import Command
 
 
 @runtime_checkable

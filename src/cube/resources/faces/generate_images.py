@@ -181,7 +181,7 @@ def generate_debug4x4(output_dir: Path, size: int = 256) -> None:
         # Fonts
         face_font = get_font(cell_size // 4)
         coord_font = get_font(cell_size // 5)
-        tiny_font = get_font(cell_size // 8)
+        get_font(cell_size // 8)
 
         # Draw grid lines
         for i in range(grid_size + 1):

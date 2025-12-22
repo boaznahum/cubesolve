@@ -18,7 +18,7 @@ Vertex3D = Union[Sequence[float], ndarray]
 
 from cube.presentation.gui.backends.pyglet2.shaders import ShaderProgram
 from cube.presentation.gui.backends.pyglet2.matrix import (
-    Mat4, identity, perspective, multiply, MatrixStack
+    Mat4, perspective, multiply, MatrixStack
 )
 from cube.presentation.gui.protocols.ViewStateManager import ViewStateManager
 from cube.presentation.gui.protocols.AbstractShapeRenderer import AbstractShapeRenderer

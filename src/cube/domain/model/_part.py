@@ -1,5 +1,4 @@
 from collections.abc import Iterable
-from collections.abc import Iterable
 from enum import Enum, unique
 from typing import TypeAlias, TYPE_CHECKING
 

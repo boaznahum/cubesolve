@@ -1,6 +1,6 @@
 import warnings
 from contextlib import contextmanager
-from typing import Callable, Generator, Sequence, Tuple, ContextManager, TYPE_CHECKING
+from typing import Callable, Generator, Sequence, Tuple, ContextManager
 from typing_extensions import deprecated
 
 from cube.domain.algs import Algs, Alg

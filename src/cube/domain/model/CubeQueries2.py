@@ -5,7 +5,7 @@ from typing import Callable, TypeVar, Tuple
 from cube.domain.exceptions import InternalSWError
 from . import PartEdge, Edge, Part
 from .Part import TPartType
-from ._elements import PartColorsID, PartSliceHashID, PartSliceColors, CubeState
+from ._elements import PartColorsID, CubeState
 from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
 from .Cube import Cube
 from .cube_boy import Color

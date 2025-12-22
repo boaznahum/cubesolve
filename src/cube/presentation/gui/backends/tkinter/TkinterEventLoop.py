@@ -6,7 +6,7 @@ Wraps tk.Tk.mainloop() to implement the EventLoop protocol.
 
 import time
 from typing import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from cube.presentation.gui.protocols import EventLoop
 

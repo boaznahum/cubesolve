@@ -130,7 +130,7 @@ class _Board:
 
         lists -= hidden
 
-        n = len(lists)
+        len(lists)
 
         self._prepare_view_state()
 

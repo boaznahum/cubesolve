@@ -19,7 +19,6 @@ from typing import Callable, Sequence
 
 from cube.presentation.gui.types import KeyEvent, MouseEvent
 from cube.presentation.gui.protocols.AbstractWindow import AbstractWindow
-from cube.presentation.gui.protocols.TextRenderer import TextRenderer
 
 
 class WindowBase(AbstractWindow):
