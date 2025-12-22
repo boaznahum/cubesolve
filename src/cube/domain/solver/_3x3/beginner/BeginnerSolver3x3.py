@@ -7,10 +7,10 @@ from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.solver import SolveStep, SolverResults
 from cube.domain.solver.SolverName import SolverName
+from cube.domain.solver._3x3.shared.L1Cross import L1Cross
+from cube.domain.solver._3x3.shared.L3Corners import L3Corners
 from .L1Corners import L1Corners
-from .L1Cross import L1Cross
 from .L2 import L2
-from .L3Corners import L3Corners
 from .L3Cross import L3Cross
 
 

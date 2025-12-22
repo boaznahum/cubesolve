@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.solver.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
+from cube.domain.solver._3x3.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
 
 from cube.domain.exceptions import (
     OpAborted,

@@ -34,7 +34,7 @@ class Solvers3x3:
         Returns:
             BeginnerSolver3x3 instance
         """
-        from cube.domain.solver.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
+        from cube.domain.solver._3x3.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
         return BeginnerSolver3x3(op)
 
     @staticmethod
@@ -51,7 +51,7 @@ class Solvers3x3:
         Returns:
             CFOP3x3 instance
         """
-        from cube.domain.solver.CFOP.CFOP3x3 import CFOP3x3
+        from cube.domain.solver._3x3.cfop.CFOP3x3 import CFOP3x3
         return CFOP3x3(op)
 
     @staticmethod
@@ -68,7 +68,7 @@ class Solvers3x3:
         Returns:
             Kociemba3x3 instance
         """
-        from cube.domain.solver.kociemba.Kociemba3x3 import Kociemba3x3
+        from cube.domain.solver._3x3.kociemba.Kociemba3x3 import Kociemba3x3
         return Kociemba3x3(op)
 
     @classmethod

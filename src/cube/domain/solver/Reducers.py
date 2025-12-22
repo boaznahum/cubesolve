@@ -50,7 +50,7 @@ class Reducers:
         Returns:
             BeginnerReducer instance
         """
-        from cube.domain.solver.reducers.BeginnerReducer import BeginnerReducer
+        from cube.domain.solver.reducers.beginner.BeginnerReducer import BeginnerReducer
         return BeginnerReducer(op, advanced_edge_parity)
 
     @staticmethod

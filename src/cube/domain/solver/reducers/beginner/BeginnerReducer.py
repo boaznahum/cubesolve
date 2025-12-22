@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from cube.domain.solver.beginner.FaceTrackerHolder import FaceTrackerHolder
-from cube.domain.solver.beginner.NxNCenters import NxNCenters
+from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReductionResults
 from cube.domain.solver.reducers.AbstractReducer import AbstractReducer
@@ -42,8 +42,8 @@ class BeginnerReducer(AbstractReducer):
         super().__init__(op)
 
         # Import here to avoid circular imports
-        from cube.domain.solver.beginner.NxNEdges import NxNEdges
-        from cube.domain.solver.beginner.L3Corners import L3Corners
+        from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
+        from cube.domain.solver._3x3.shared.L3Corners import L3Corners
 
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)

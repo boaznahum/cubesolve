@@ -45,10 +45,10 @@ from cube.domain.algs import Alg
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.model import Color
 from cube.domain.model.FaceName import FaceName
-from cube.domain.solver.beginner.FaceTrackerHolder import FaceTrackerHolder
-from cube.domain.solver.beginner.L3Corners import L3Corners
-from cube.domain.solver.beginner.NxNCenters import NxNCenters
-from cube.domain.solver.beginner.NxNEdges import NxNEdges
+from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver._3x3.shared.L3Corners import L3Corners
+from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
+from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
