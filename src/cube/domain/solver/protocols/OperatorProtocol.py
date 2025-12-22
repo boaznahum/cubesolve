@@ -6,10 +6,10 @@ from abc import ABCMeta
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ContextManager, Protocol
 
-from cube.application.state import ApplicationAndViewState
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
+    from cube.application.state import ApplicationAndViewState
     from cube.domain.algs.Alg import Alg
     from cube.domain.model.Cube import Cube
 
@@ -76,7 +76,7 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
         ...
 
     @property
-    def app_state(self) -> ApplicationAndViewState:
+    def app_state(self) -> "ApplicationAndViewState":
         """Application and view state."""
         ...
 

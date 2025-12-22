@@ -127,7 +127,7 @@ from typing import TYPE_CHECKING
 
 import kociemba  # type: ignore[import-not-found]
 
-from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
+from cube.domain.exceptions.InternalSWError import InternalSWError
 from cube.domain.algs._parser import parse_alg
 from cube.domain.model.cube_boy import Color, FaceName
 from cube.domain.solver.common.AbstractSolver import AbstractSolver
