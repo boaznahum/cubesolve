@@ -176,27 +176,3 @@ class L3Corners(SolverElement):
 
             # before U'
             self.op.play(Algs.U.prime)
-
-    def _do_corner_swap(self):
-
-        n_slices = self.cube.n_slices
-        assert n_slices % 2 == 0
-
-        # self.op.toggle_animation_on(enable=True)
-
-        self.debug("Doing corner swap")
-
-        nh = n_slices // 2
-
-        # 2-kRw2 U2
-        # 2-kRw2  kUw2   // half cube
-        # 2-kRw2 kUw2  // half cube
-
-        alg = Algs.alg(None,
-                       Algs.R[2:nh + 1] * 2, Algs.U * 2,
-                       Algs.R[2:nh + 1] * 2 + Algs.U[1:nh + 1] * 2,
-                       Algs.R[2:nh + 1] * 2, Algs.U[1:nh + 1] * 2
-                       )
-
-        with self.ann.annotate(h1="Corner swap(PLL Parity)"):
-            self.op.play(alg)

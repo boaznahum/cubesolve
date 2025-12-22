@@ -21,10 +21,10 @@ class BeginnerReducer(AbstractReducer):
 
     Inherits from AbstractReducer which provides the SolverElementsProvider
     interface, allowing this reducer to use solver components (NxNCenters,
-    NxNEdges, L3Corners) directly without needing a facade class.
+    NxNEdges, NxNCorners) directly without needing a facade class.
     """
 
-    __slots__ = ["_nxn_edges", "_l3_corners"]
+    __slots__ = ["_nxn_edges", "_nxn_corners"]
 
     def __init__(
         self,
@@ -43,11 +43,11 @@ class BeginnerReducer(AbstractReducer):
 
         # Import here to avoid circular imports
         from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
-        from cube.domain.solver._3x3.shared.L3Corners import L3Corners
+        from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)
-        self._l3_corners = L3Corners(self)
+        self._nxn_corners = NxNCorners(self)
 
     def is_reduced(self) -> bool:
         """Check if cube is already reduced to 3x3 state.
@@ -118,7 +118,7 @@ class BeginnerReducer(AbstractReducer):
             After this fix, a re-reduction is typically needed because the
             inner slice moves disturb the reduced edge pairing.
         """
-        self._l3_corners._do_corner_swap()
+        self._nxn_corners.fix_corner_parity()
 
     def centers_solved(self) -> bool:
         """Check if centers are reduced."""

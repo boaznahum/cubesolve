@@ -52,7 +52,7 @@ solver/
 │ kociemba/      │  │   Reducer.py   │  │                    │
 │ shared/        │  │                │  │ commutator/        │
 │   L1Cross      │  │                │  │   CommutatorNxN    │
-│   L3Corners    │  │                │  │   Solver           │
+│                │  │                │  │   Solver           │
 │                │  │                │  │                    │
 │ CANNOT import  │  │ CANNOT import  │  │ CANNOT import      │
 │ reducers/,     │  │ _3x3/, direct/ │  │ _3x3/, reducers/   │
@@ -67,10 +67,10 @@ solver/
         │   • SolverElement                         │
         │   • CommonOp, Tracker, FaceTracker        │
         │   • big_cube/                             │
-        │       NxNCenters, NxNEdges                │
+        │       NxNCenters, NxNEdges, NxNCorners    │
         │       FaceTrackerHolder                   │
-        │       NxNCentersFaceTracker               │
-        │       NxNCentersHelper                    │
+        │       _NxNCentersFaceTracker (private)    │
+        │       _NxNCentersHelper (private)         │
         │   Can import: Layer 1 only                │
         └───────────────────┬───────────────────────┘
                             ▼
@@ -132,9 +132,12 @@ Shared utilities and base classes:
 Big cube (NxN) solving utilities shared by reducers and direct solvers:
 - `NxNCenters` - Center piece solving for NxN cubes
 - `NxNEdges` - Edge pairing for NxN cubes
-- `NxNCentersHelper` - Helper methods for center solving
-- `NxNCentersFaceTracker` - Face tracking for center solving
+- `NxNCorners` - Corner parity fix for even NxN cubes
 - `FaceTrackerHolder` - Container for face trackers
+
+Private implementation details (prefixed with `_`):
+- `_NxNCentersHelper` - Helper methods for center solving
+- `_NxNCentersFaceTracker` - Face tracking for center solving
 
 ### Layer 3a: _3x3/
 
@@ -144,19 +147,22 @@ Pure 3x3 solving algorithms (work on actual 3x3 or reduced cubes):
 
 Components shared between multiple 3x3 solvers:
 - `L1Cross` - Layer 1 cross (used by beginner and CFOP)
-- `L3Corners` - Layer 3 corner positioning (used by beginner and reducers)
 
 #### _3x3/beginner/
 
 Beginner layer-by-layer method:
 - `BeginnerSolver3x3` - Main solver class
-- `L1Corners`, `L2`, `L3Cross` - Layer-specific solvers
+
+Private implementation details (prefixed with `_`):
+- `_L1Corners`, `_L2`, `_L3Cross`, `_L3Corners` - Layer-specific solvers
 
 #### _3x3/cfop/
 
 CFOP (Fridrich) method:
 - `CFOP3x3` - Main solver class
-- `F2L`, `OLL`, `PLL` - Method-specific solvers
+
+Private implementation details (prefixed with `_`):
+- `_F2L`, `_OLL`, `_PLL` - Method-specific solvers
 
 #### _3x3/kociemba/
 
@@ -235,6 +241,17 @@ centers = NxNCenters(op, face_tracker_holder)
 edges = NxNEdges(op)
 ```
 
+## File Naming Convention
+
+Private implementation files are prefixed with `_` following Python convention:
+- Files starting with `_` are internal implementation details
+- They should not be imported directly from outside their package
+- Only public API classes are exported from `__init__.py`
+
+Examples:
+- `common/big_cube/_NxNCentersHelper.py` - internal helper
+- `_3x3/beginner/_L1Corners.py` - internal solver component
+
 ## Migration Notes
 
 The package was restructured in December 2024 to enforce layer isolation:
@@ -245,10 +262,11 @@ The package was restructured in December 2024 to enforce layer isolation:
 | `beginner/NxNEdges.py` | `common/big_cube/NxNEdges.py` |
 | `beginner/FaceTrackerHolder.py` | `common/big_cube/FaceTrackerHolder.py` |
 | `beginner/L1Cross.py` | `_3x3/shared/L1Cross.py` |
-| `beginner/L3Corners.py` | `_3x3/shared/L3Corners.py` |
+| `beginner/L3Corners.py` | `_3x3/beginner/_L3Corners.py` |
 | `beginner/BeginnerSolver3x3.py` | `_3x3/beginner/BeginnerSolver3x3.py` |
 | `CFOP/CFOP3x3.py` | `_3x3/cfop/CFOP3x3.py` |
 | `kociemba/Kociemba3x3.py` | `_3x3/kociemba/Kociemba3x3.py` |
 | `reducers/BeginnerReducer.py` | `reducers/beginner/BeginnerReducer.py` |
+| (new) | `common/big_cube/NxNCorners.py` |
 
 Note: `_3x3` is prefixed with underscore because Python identifiers cannot start with digits.

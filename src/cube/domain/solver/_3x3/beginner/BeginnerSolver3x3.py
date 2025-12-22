@@ -8,10 +8,10 @@ from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.solver import SolveStep, SolverResults
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver._3x3.shared.L1Cross import L1Cross
-from cube.domain.solver._3x3.shared.L3Corners import L3Corners
-from .L1Corners import L1Corners
-from .L2 import L2
-from .L3Cross import L3Cross
+from ._L1Corners import L1Corners
+from ._L2 import L2
+from ._L3Corners import L3Corners
+from ._L3Cross import L3Cross
 
 
 class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):

@@ -8,9 +8,9 @@ from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.solver import SolveStep, SolverResults
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver._3x3.shared.L1Cross import L1Cross
-from .F2L import F2L
-from .OLL import OLL
-from .PLL import PLL
+from ._F2L import F2L
+from ._OLL import OLL
+from ._PLL import PLL
 
 
 class CFOP3x3(BaseSolver, Solver3x3Protocol):

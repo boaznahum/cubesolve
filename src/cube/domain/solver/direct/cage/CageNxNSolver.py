@@ -46,8 +46,8 @@ from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.model import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
-from cube.domain.solver._3x3.shared.L3Corners import L3Corners
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
+from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.protocols import OperatorProtocol
@@ -82,7 +82,7 @@ class CageNxNSolver(BaseSolver):
     - For even cubes, additional "full" edge parity may exist (TODO)
     """
 
-    __slots__ = ["_nxn_edges", "_l3_corners"]
+    __slots__ = ["_nxn_edges", "_nxn_corners"]
 
     def __init__(self, op: OperatorProtocol) -> None:
         """
@@ -93,8 +93,8 @@ class CageNxNSolver(BaseSolver):
         """
         super().__init__(op)
 
-        # L3Corners provides corner swap parity fix algorithm
-        self._l3_corners = L3Corners(self)
+        # NxNCorners provides corner swap parity fix algorithm
+        self._nxn_corners = NxNCorners(self)
 
         # =====================================================================
         # EDGE SOLVER SETUP
@@ -265,8 +265,8 @@ class CageNxNSolver(BaseSolver):
 
                     self.debug("Corner swap parity detected during corner solve, fixing...")
 
-                    # Fix corner parity using L3Corners (shared algorithm)
-                    self._l3_corners._do_corner_swap()
+                    # Fix corner parity using NxNCorners
+                    self._nxn_corners.fix_corner_parity()
 
                     # Corner swap uses inner slice moves - breaks edge pairing
                     # Loop will re-pair them
