@@ -452,8 +452,8 @@ class CageNxNSolver(BaseSolver):
 
         # Use NxNCenters with preserve_cage=True to preserve paired edges
         # Pass trackers from holder so solver knows which color belongs on each face
-        cage_centers = NxNCenters(self, preserve_cage=True, face_trackers=tracker_holder.trackers)
-        cage_centers.solve()
+        cage_centers = NxNCenters(self, preserve_cage=True)
+        cage_centers.solve(tracker_holder)
 
         # Log cage state after
         self.debug(f"After centers: edges={self._are_edges_solved()}, "

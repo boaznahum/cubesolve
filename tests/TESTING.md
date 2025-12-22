@@ -277,10 +277,12 @@ Fixtures provide reusable setup code:
 ```python
 import pytest
 
+
 @pytest.fixture
 def cube():
     """Create a fresh cube for each test."""
     return Cube(3)
+
 
 @pytest.fixture
 def scrambled_cube(cube):
@@ -289,11 +291,12 @@ def scrambled_cube(cube):
     alg.play(cube)
     return cube
 
+
 # Using fixtures (just add as parameter)
 def test_solve(scrambled_cube):
     """Test uses the scrambled_cube fixture."""
     solver = Solver(scrambled_cube)
-    solver.solve()
+    solver.solve(holder)
     assert scrambled_cube.solved
 ```
 
@@ -460,7 +463,7 @@ def test_solve():
     alg.play(cube)
 
     # Solve
-    app.slv.solve()
+    app.slv.solve(holder)
 
     # Verify
     assert cube.solved

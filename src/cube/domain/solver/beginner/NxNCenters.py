@@ -11,8 +11,8 @@ from cube.domain.model.Cube import Cube
 from cube.domain.model.cube_boy import CubeLayout, color2long
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
+from cube.domain.solver.beginner.FaceTrackerHolder import FaceTrackerHolder
 from cube.domain.solver.common.FaceTracker import FaceTracker
-from cube.domain.solver.beginner.NxnCentersFaceTracker import NxNCentersFaceTrackers
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
@@ -119,7 +119,6 @@ class NxNCenters(SolverElement):
         self,
         slv: SolverElementsProvider,
         preserve_cage: bool = False,
-        face_trackers: Sequence[FaceTracker] | None = None
     ) -> None:
         """
         Initialize the center solver.
@@ -140,21 +139,10 @@ class NxNCenters(SolverElement):
                     - Disables certain optimizations that break the cage:
                       * _OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES
                       * _OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS
-
-            face_trackers: Pre-created face trackers for even cubes.
-                If provided, these trackers are used instead of creating new ones.
-                Required for cage method on even cubes because:
-                - Even cubes don't have a fixed center piece
-                - Trackers must be created BEFORE corners are solved
-                - CageNxNSolver creates trackers and passes them here
         """
         super().__init__(slv)
 
-        self._faces: Sequence[FaceTracker] = []
         self._preserve_cage = preserve_cage
-        self._provided_face_trackers = face_trackers
-
-        self._trackers = NxNCentersFaceTrackers(slv)
 
         cfg = self.cube.config
         self._sanity_check_is_a_boy = cfg.solver_sanity_check_is_a_boy
@@ -179,6 +167,10 @@ class NxNCenters(SolverElement):
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy
 
+    @staticmethod
+    def is_cube_solved(cube: Cube):
+        return all((f.center.is3x3 for f in cube.faces)) and cube.is_boy
+
     def solved(self) -> bool:
         """
 
@@ -187,93 +179,52 @@ class NxNCenters(SolverElement):
 
         return self._is_solved()
 
-    def solve(self):
+    def solve(self, holder: FaceTrackerHolder) -> None:
+        """
+        Solve all centers using the provided face tracker holder.
+
+        The holder provides face trackers that map faces to target colors.
+        Cleanup of tracker slices is handled by the holder's context manager,
+        NOT by this method.
+
+        Args:
+            holder: FaceTrackerHolder containing trackers for each face.
+                    The caller is responsible for cleanup via context manager.
+        """
         if self._is_solved():
             return  # avoid rotating cube
 
         with self.ann.annotate(h1="Big cube centers"):
-            try:
-                self._solve()
-            finally:
-                self._trackers._debug_print_track_slices("After solving")
-                self._trackers._remove_all_track_slices()
-                self._trackers._debug_print_track_slices("After removal")
+            self._solve(holder)
 
-    def _solve(self) -> None:
+    def _solve(self, holder: FaceTrackerHolder) -> None:
         """
-        Main solving algorithm - creates face trackers and solves all centers.
+        Main solving algorithm - uses provided face trackers to solve all centers.
 
-        FACE TRACKER CREATION:
-        ======================
+        FACE TRACKERS (provided by holder):
+        ===================================
         - Odd cubes: Face color = fixed center piece color (simple)
-        - Even cubes with provided trackers: Use those directly (cage method)
-        - Even cubes without trackers: Complex logic to find face colors (reduction method)
+        - Even cubes: Face color determined by majority color counting
 
-        For cage method (preserve_cage=True), face_trackers are required because:
-        1. Even cubes don't have a fixed center piece to determine face color
-        2. Trackers must be created BEFORE corners are solved (they track slice positions)
-        3. CageNxNSolver creates trackers during edge pairing and passes them here
+        The holder is created by the caller at solve-time (not at construction),
+        ensuring the cube state is correct when trackers are initialized.
+
+        PERFORMANCE NOTE:
+        =================
+        Because the holder is created at solve-time rather than during face-by-face
+        solving, even cube trackers use majority color counting on the initial state.
+        This may be slightly less accurate than tracking colors as faces are solved,
+        but simplifies the code and ownership model significantly.
         """
         cube = self.cube
 
-        faces: list[FaceTracker]
+        faces: list[FaceTracker] = list(holder)
 
-        if self._provided_face_trackers:
-            # =========================================================
-            # CAGE METHOD (or any caller providing trackers)
-            # =========================================================
-            # Use provided trackers directly - no complex initialization needed.
-            # For cage method: trackers were created by CageNxNSolver before
-            # corners were solved, so they correctly track which color belongs
-            # on each face even though centers are scrambled.
-            faces = list(self._provided_face_trackers)
-            self._faces = faces
-            self.debug(f"Using provided face trackers: {faces}", level=1)
+        #self._faces = faces
 
-        elif cube.n_slices % 2:
-            # =========================================================
-            # ODD CUBE (5x5, 7x7, etc.)
-            # =========================================================
-            # Face color is determined by the fixed center piece.
-            faces = [FaceTracker.track_odd(f) for f in cube.faces]
+        self._asserts_is_boy(faces)
 
-        else:
-            # =========================================================
-            # EVEN CUBE - REDUCTION METHOD (create trackers from scratch)
-            # =========================================================
-            f1: FaceTracker = self._trackers.track_no_1()
-
-            f2 = f1.track_opposite()
-
-            # because we find f1 by max colors, then it is clear that it has at least one of such a color
-            # and opposite doesn't need color for tracing
-            # self._do_faces([f1, f2], True, True)
-
-            # now colors of f1/f2 can't be on 4 that left, so we can choose any one
-            f3 = self._trackers._track_no_3([f1, f2])
-            f4 = f3.track_opposite()
-
-            # f3 contains at least one color that is not in f1, f2, so no need to bring at leas one
-            # but there is a question if such f3 always exists
-            self._do_faces([f3, f4], True, True)
-
-            f5, f6 = self._trackers._track_two_last([f1, f2, f3, f4])
-
-            # so we don't need this also, otherwise _track_two_last should crash
-            self._do_faces([f5], True, True)
-            self._asserts_is_boy([f1, f2, f3, f4, f5, f6])
-
-            FaceTracker.remove_face_track_slices(f5.face)
-
-            f5 = FaceTracker.search_color_and_track(f5.face, f5.color)
-            f6 = f5.track_opposite()
-
-            faces = [f1, f2, f3, f4, f5, f6]
-            self._faces = faces
-
-            self._asserts_is_boy(faces)
-
-            self._trackers._debug_print_track_slices("After creating all faces")
+        #    self._trackers._debug_print_track_slices("After creating all faces")
 
             # now each face has at least one color, so
 
@@ -318,11 +269,11 @@ class NxNCenters(SolverElement):
 
         return work_done
 
-    def _print_faces(self):
-
-        for f in self._faces:
-            print(f.face, f.color, " ", end="")
-        print()
+    # def _print_faces(self):
+    #
+    #     for f in self._faces:
+    #         print(f.face, f.color, " ", end="")
+    #     print()
 
     # noinspection PyUnreachableCode,PyUnusedLocal
     def _asserts_is_boy(self, faces: Iterable[FaceTracker]):

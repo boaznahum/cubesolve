@@ -337,7 +337,7 @@ Unlike even cube full parity (which throws `EvenCubeEdgeParityException`), odd c
 ```python
 # In BeginnerSolver._solve() - beginner_solver.py
 def _edges():
-    partial_edge_parity = self.nxn_edges.solve()  # True if parity fixed
+    partial_edge_parity = self.nxn_edges.solve(holder)  # True if parity fixed
 ```
 
 ### Summary: Odd vs Even Cube Edge Parity

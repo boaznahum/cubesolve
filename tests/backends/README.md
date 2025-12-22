@@ -202,8 +202,9 @@ def test_scramble_and_solve(cube_driver: CubeTestDriver, backend_name: str):
     cube_driver.scramble(seed=42)
     assert not cube_driver.solved
 
-    cube_driver.solve()
+    cube_driver.solve(holder)
     assert cube_driver.solved
+
 
 def test_rotation_sequence(cube_driver: CubeTestDriver, backend_name: str):
     # Execute moves via string notation
@@ -214,9 +215,10 @@ def test_rotation_sequence(cube_driver: CubeTestDriver, backend_name: str):
     cube_driver.execute("U'L'R'")
     assert cube_driver.solved
 
+
 def test_chaining(cube_driver: CubeTestDriver, backend_name: str):
     # Method chaining
-    cube_driver.scramble(seed=1).render_frame().solve().render_frame()
+    cube_driver.scramble(seed=1).render_frame().solve(holder).render_frame()
     assert cube_driver.solved
 ```
 
@@ -225,7 +227,7 @@ def test_chaining(cube_driver: CubeTestDriver, backend_name: str):
 ```python
 def test_large_cube(cube_driver_factory, backend_name: str):
     driver = cube_driver_factory(5)  # 5x5 cube
-    driver.scramble(seed=42).solve()
+    driver.scramble(seed=42).solve(holder)
     assert driver.solved
 ```
 

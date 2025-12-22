@@ -46,9 +46,10 @@ with FaceTrackerHolder(self) as tracker_holder:
 
 ### Problem 1: Duplicate Cleanup
 When CageNxNSolver passes trackers to NxNCenters:
+
 ```python
 cage_centers = NxNCenters(self, preserve_cage=True, face_trackers=tracker_holder.trackers)
-cage_centers.solve()
+cage_centers.solve(holder)
 ```
 
 Cleanup happens **twice**:
@@ -87,14 +88,14 @@ Unify around `FaceTrackerHolder`:
 # BeginnerReducer (reduction method)
 with FaceTrackerHolder(self) as holder:
     centers = NxNCenters(self, holder)
-    centers.solve()
+    centers.solve(holder)
 # cleanup automatic
 
 # CageNxNSolver (cage method)
 with FaceTrackerHolder(self) as holder:
     # ... solve edges and corners ...
     centers = NxNCenters(self, holder, preserve_cage=True)
-    centers.solve()
+    centers.solve(holder)
 # cleanup automatic
 ```
 

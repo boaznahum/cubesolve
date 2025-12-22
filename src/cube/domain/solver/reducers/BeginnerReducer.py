@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from cube.domain.solver.beginner.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver.beginner.NxNCenters import NxNCenters
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReductionResults
 from cube.domain.solver.reducers.AbstractReducer import AbstractReducer
@@ -22,7 +24,7 @@ class BeginnerReducer(AbstractReducer):
     NxNEdges, L3Corners) directly without needing a facade class.
     """
 
-    __slots__ = ["_nxn_centers", "_nxn_edges", "_l3_corners"]
+    __slots__ = ["_nxn_edges", "_l3_corners"]
 
     def __init__(
         self,
@@ -40,12 +42,10 @@ class BeginnerReducer(AbstractReducer):
         super().__init__(op)
 
         # Import here to avoid circular imports
-        from cube.domain.solver.beginner.NxNCenters import NxNCenters
         from cube.domain.solver.beginner.NxNEdges import NxNEdges
         from cube.domain.solver.beginner.L3Corners import L3Corners
 
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
-        self._nxn_centers = NxNCenters(self)
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)
         self._l3_corners = L3Corners(self)
 
@@ -88,7 +88,9 @@ class BeginnerReducer(AbstractReducer):
 
     def solve_centers(self) -> None:
         """Solve only centers (first part of reduction)."""
-        self._nxn_centers.solve()
+        with FaceTrackerHolder(self) as holder:
+            centers = NxNCenters(self)
+            centers.solve(holder)
 
     def solve_edges(self) -> bool:
         """Solve only edges (second part of reduction).
@@ -120,7 +122,10 @@ class BeginnerReducer(AbstractReducer):
 
     def centers_solved(self) -> bool:
         """Check if centers are reduced."""
-        return self._nxn_centers.solved()
+
+
+
+        return NxNCenters.is_cube_solved(self.cube)
 
     def edges_solved(self) -> bool:
         """Check if edges are reduced."""

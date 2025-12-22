@@ -650,6 +650,7 @@ from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.solver import Solver, SolveStep, SolverResults
 from cube.domain.solver.SolverName import SolverName
 
+
 class CommutatorNxNSolver(BaseSolver):
     """Solves NxN cubes using commutators."""
 
@@ -676,9 +677,9 @@ class CommutatorNxNSolver(BaseSolver):
     def solve(self, debug=None, animation=True, what=SolveStep.ALL) -> SolverResults:
         with self.op.with_animation(animation=animation):
             if not self.cube.is3x3:  # N > 3
-                self._centers.solve()
-                self._edges.solve()
-            self._corners.solve()
+                self._centers.solve(holder)
+                self._edges.solve(holder)
+            self._corners.solve(holder)
         return SolverResults()
 ```
 
@@ -872,24 +873,27 @@ import pytest
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.Solvers import Solvers
 
+
 @pytest.fixture
 def scrambled_4x4():
     cube = Cube(4)
     cube.scramble()
     return cube
 
+
 def test_commutator_solver_4x4(scrambled_4x4):
     op = Operator(scrambled_4x4)
     solver = Solvers.commutator(op)
-    solver.solve()
+    solver.solve(holder)
     assert scrambled_4x4.solved
+
 
 def test_commutator_solver_5x5():
     cube = Cube(5)
     cube.scramble()
     op = Operator(cube)
     solver = Solvers.commutator(op)
-    solver.solve()
+    solver.solve(holder)
     assert cube.solved
 ```
 
