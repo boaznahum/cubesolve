@@ -7,6 +7,7 @@ for use with shaders. All matrices are 4x4 column-major (OpenGL convention).
 from __future__ import annotations
 
 import math
+
 import numpy as np
 from numpy.typing import NDArray
 

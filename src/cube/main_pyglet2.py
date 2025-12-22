@@ -11,6 +11,7 @@ Usage:
     python -m cube.main_pyglet --cube-size 5
 """
 import sys
+
 from cube.main_any_backend import main as main_any
 
 

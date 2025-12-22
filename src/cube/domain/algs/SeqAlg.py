@@ -1,6 +1,6 @@
 import functools
 import typing
-from collections.abc import MutableSequence, Iterator, Sequence
+from collections.abc import Iterator, MutableSequence, Sequence
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.model.Cube import Cube

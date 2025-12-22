@@ -1,6 +1,5 @@
 # Presentation Layer - View/UI components
 
-from cube.presentation import gui
-from cube.presentation import viewer
+from cube.presentation import gui, viewer
 
 __all__ = ["gui", "viewer"]

@@ -1,12 +1,12 @@
 from collections.abc import Iterable
 from enum import Enum, unique
-from typing import TypeAlias, TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from cube.domain.model.cube_boy import FaceName
 
 if TYPE_CHECKING:
-    from .Face import Face
     from .Cube import Cube
+    from .Face import Face
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore

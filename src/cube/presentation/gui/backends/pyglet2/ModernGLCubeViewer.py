@@ -51,26 +51,26 @@ from typing import TYPE_CHECKING, Tuple
 import numpy as np
 from numpy import ndarray
 
-from cube.domain.model.cube_boy import Color, FaceName
-from cube.domain.model._part_slice import PartSlice
-from cube.domain.model.CubeListener import CubeListener
 from cube.application.protocols import AnimatableViewer
+from cube.domain.model._part_slice import PartSlice
+from cube.domain.model.cube_boy import Color, FaceName
+from cube.domain.model.CubeListener import CubeListener
 
 from ._modern_gl_board import ModernGLBoard
 from ._modern_gl_constants import (
-    HALF_CUBE_SIZE,
-    FACE_TRANSFORMS,
-    COLOR_TO_HOME_FACE,
     BORDER_LINE_WIDTH,
-    CELL_TEXTURE_KEY,
     CELL_DEBUG_KEY,
+    CELL_TEXTURE_KEY,
+    COLOR_TO_HOME_FACE,
+    FACE_TRANSFORMS,
+    HALF_CUBE_SIZE,
 )
 
 if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
-    from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
-    from cube.application.state import ApplicationAndViewState
     from cube.application.animation.AnimationManager import Animation
+    from cube.application.state import ApplicationAndViewState
+    from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
+    from cube.domain.model.Cube import Cube
     from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer
 
 

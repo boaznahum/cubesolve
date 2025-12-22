@@ -5,11 +5,11 @@ Use this for partial implementations that only need a subset of Renderer methods
 """
 from __future__ import annotations
 
-from cube.presentation.gui.types import Color4, TextureHandle
+from cube.presentation.gui.protocols.DisplayListManager import DisplayListManager
 from cube.presentation.gui.protocols.Renderer import Renderer
 from cube.presentation.gui.protocols.ShapeRenderer import ShapeRenderer
-from cube.presentation.gui.protocols.DisplayListManager import DisplayListManager
 from cube.presentation.gui.protocols.ViewStateManager import ViewStateManager
+from cube.presentation.gui.types import Color4, TextureHandle
 
 
 class AbstractRenderer(Renderer):

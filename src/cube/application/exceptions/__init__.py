@@ -9,10 +9,10 @@ from cube.application.exceptions.ExceptionRunStop import RunStop
 
 # Re-export domain exceptions for backward compatibility
 from cube.domain.exceptions import (
+    EvenCubeCornerSwapException,
+    EvenCubeEdgeParityException,
     InternalSWError,
     OpAborted,
-    EvenCubeEdgeParityException,
-    EvenCubeCornerSwapException,
 )
 
 __all__ = [

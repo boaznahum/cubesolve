@@ -1,15 +1,22 @@
 import warnings
 from contextlib import contextmanager
-from typing import Callable, Generator, Sequence, Tuple, ContextManager
+from typing import Callable, ContextManager, Generator, Sequence, Tuple
+
 from typing_extensions import deprecated
 
-from cube.domain.algs import Algs, Alg
+from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model import Edge, Color, FaceName, EdgeWing
+from cube.domain.model import Color, Edge, EdgeWing, FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from cube.domain.solver.protocols import OperatorProtocol, AnnotationProtocol, SupportsAnnotation, SolverElementsProvider
 from cube.domain.solver.AnnWhat import AnnWhat
+from cube.domain.solver.protocols import (
+    AnnotationProtocol,
+    OperatorProtocol,
+    SolverElementsProvider,
+    SupportsAnnotation,
+)
+
 from ...model.CubeQueries2 import Pred, Pred0
 
 TRACE_UNIQUE_ID: int = 0

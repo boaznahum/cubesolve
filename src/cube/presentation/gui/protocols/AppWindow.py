@@ -7,13 +7,13 @@ combines GUI window functionality with application logic. All backends
 a unified entry point (main_any_backend.py).
 """
 
-from typing import Protocol, runtime_checkable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.application.protocols.AnimatableViewer import AnimatableViewer
-    from cube.presentation.gui.protocols.Renderer import Renderer
     from cube.presentation.gui.commands import Command
+    from cube.presentation.gui.protocols.Renderer import Renderer
 
 
 @runtime_checkable

@@ -14,21 +14,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.solver._3x3.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
-
 from cube.domain.exceptions import (
-    OpAborted,
-    EvenCubeEdgeParityException,
     EvenCubeCornerSwapException,
+    EvenCubeEdgeParityException,
     InternalSWError,
+    OpAborted,
 )
-from cube.utils.SSCode import SSCode
-from cube.domain.solver.SolverName import SolverName
+from cube.domain.solver._3x3.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
 from cube.domain.solver.common.AbstractSolver import AbstractSolver
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReducerProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
-from cube.domain.solver.solver import SolveStep, SolverResults
+from cube.domain.solver.solver import SolverResults, SolveStep
+from cube.domain.solver.SolverName import SolverName
+from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
     pass

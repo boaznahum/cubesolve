@@ -1,13 +1,13 @@
 """Slice class for cube rotations."""
 
-from typing import Iterable, Tuple, Sequence, TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Iterable, Sequence, Tuple, TypeAlias
 
-from .Edge import Edge
+from ._part_slice import CenterSlice, EdgeWing, PartSlice
 from .Center import Center
+from .Edge import Edge
 from .Face import Face
-from ._part_slice import EdgeWing, CenterSlice, PartSlice
-from .SuperElement import SuperElement
 from .SliceName import SliceName
+from .SuperElement import SuperElement
 
 if TYPE_CHECKING:
     # noinspection PyUnresolvedReferences

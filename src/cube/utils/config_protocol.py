@@ -7,7 +7,7 @@ IMPORTANT: Only config_impl.py should import _config directly.
 All other code must access config through this protocol via context.
 """
 
-from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, Tuple, runtime_checkable
 
 if TYPE_CHECKING:
     from cube.utils.SSCode import SSCode

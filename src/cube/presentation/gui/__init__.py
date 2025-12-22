@@ -16,18 +16,18 @@ Usage:
     backend = BackendRegistry.get_backend()
 """
 
-from cube.presentation.gui.factory import BackendRegistry, GUIBackendFactory, GUIBackend
+from cube.presentation.gui.factory import BackendRegistry, GUIBackend, GUIBackendFactory
 from cube.presentation.gui.protocols import AppWindow
 from cube.presentation.gui.types import (
-    Point3D,
-    Matrix4x4,
     Color3,
     Color4,
     DisplayList,
     KeyEvent,
-    MouseEvent,
     Keys,
+    Matrix4x4,
     Modifiers,
+    MouseEvent,
+    Point3D,
 )
 
 __all__ = [

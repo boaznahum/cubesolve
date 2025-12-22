@@ -10,12 +10,12 @@ See: src/cube/domain/solver/SOLVER_ARCHITECTURE.md for class hierarchy.
 from __future__ import annotations
 
 from abc import ABCMeta
-from typing import Protocol, TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
-    from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
     from cube.domain.solver.common.CommonOp import CommonOp
+    from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 
 
 class SolverElementsProvider(Protocol, metaclass=ABCMeta):

@@ -14,8 +14,8 @@ Available effects:
 from __future__ import annotations
 
 from cube.presentation.gui.effects.CelebrationEffect import CelebrationEffect
-from cube.presentation.gui.effects.EffectRegistry import EffectRegistry
 from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
+from cube.presentation.gui.effects.EffectRegistry import EffectRegistry
 
 __all__ = [
     "CelebrationEffect",

@@ -6,8 +6,21 @@ A null renderer for console mode - uses text-based output instead of graphics.
 
 from typing import Sequence
 
-from cube.presentation.gui.protocols import Renderer, ShapeRenderer, DisplayListManager, ViewStateManager
-from cube.presentation.gui.types import Point3D, Color3, Color4, DisplayList as DisplayListType, Matrix4x4, TextureHandle, TextureMap
+from cube.presentation.gui.protocols import (
+    DisplayListManager,
+    Renderer,
+    ShapeRenderer,
+    ViewStateManager,
+)
+from cube.presentation.gui.types import (
+    Color3,
+    Color4,
+    Matrix4x4,
+    Point3D,
+    TextureHandle,
+    TextureMap,
+)
+from cube.presentation.gui.types import DisplayList as DisplayListType
 
 
 class ConsoleShapeRenderer(ShapeRenderer):

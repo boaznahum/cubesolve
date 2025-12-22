@@ -1,4 +1,4 @@
-from typing import Tuple, Collection, Self
+from typing import Collection, Self, Tuple
 
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.FaceAlg import FaceAlg

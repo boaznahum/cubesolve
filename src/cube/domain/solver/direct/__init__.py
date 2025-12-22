@@ -5,7 +5,7 @@ Available solvers:
 - CageNxNSolver: Edges+corners first, centers last (parity-free)
 """
 
-from .commutator import CommutatorNxNSolver
 from .cage import CageNxNSolver
+from .commutator import CommutatorNxNSolver
 
 __all__ = ["CommutatorNxNSolver", "CageNxNSolver"]

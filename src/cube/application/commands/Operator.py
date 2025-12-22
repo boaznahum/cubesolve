@@ -1,24 +1,27 @@
 import functools
 import warnings
-from collections.abc import MutableSequence, Sequence, Reversible
+from collections.abc import MutableSequence, Reversible, Sequence
 from contextlib import contextmanager
-from typing import Callable, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
+
 from typing_extensions import deprecated
 
-from cube.domain.algs.Alg import Alg
-from cube.domain.algs.AnnotationAlg import AnnotationAlg
-from cube.domain.algs.SimpleAlg import SimpleAlg
-from cube.domain.algs.Algs import Algs
-from cube.domain.algs.SeqAlg import SeqAlg
 from cube.application.exceptions.app_exceptions import OpAborted
 from cube.application.state import ApplicationAndViewState
+from cube.domain.algs.Alg import Alg
+from cube.domain.algs.Algs import Algs
+from cube.domain.algs.AnnotationAlg import AnnotationAlg
+from cube.domain.algs.SeqAlg import SeqAlg
+from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.model.Cube import Cube
-from ...domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.utils.SSCode import SSCode
 
+from ...domain.solver.protocols.OperatorProtocol import OperatorProtocol
+
 if TYPE_CHECKING:
-    from ..animation.AnimationManager import AnimationManager, OpProtocol
     from cube.application.commands.op_annotation import OpAnnotation
+
+    from ..animation.AnimationManager import AnimationManager, OpProtocol
 
 
 class Operator(OperatorProtocol):

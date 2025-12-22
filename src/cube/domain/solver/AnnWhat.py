@@ -1,6 +1,6 @@
 """Annotation type enumeration."""
 
-from enum import unique, Enum
+from enum import Enum, unique
 
 
 @unique

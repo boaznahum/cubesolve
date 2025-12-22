@@ -1,17 +1,18 @@
-from collections.abc import Sequence, Iterator, Iterable
-from typing import TYPE_CHECKING, TypeAlias, Tuple
+from collections.abc import Iterable, Iterator, Sequence
+from typing import TYPE_CHECKING, Tuple, TypeAlias
 
-from .PartEdge import PartEdge
-from ._elements import SliceIndex
-from .cube_boy import Color
-from .Part import Part
-from ._part import CornerName, _faces_2_corner_name
-from ._part_slice import CornerSlice, PartSlice
 from cube.domain.exceptions import InternalSWError
 
+from ._elements import SliceIndex
+from ._part import CornerName, _faces_2_corner_name
+from ._part_slice import CornerSlice, PartSlice
+from .cube_boy import Color
+from .Part import Part
+from .PartEdge import PartEdge
+
 if TYPE_CHECKING:
-    from .Face import Face
     from .Cube import Cube
+    from .Face import Face
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore

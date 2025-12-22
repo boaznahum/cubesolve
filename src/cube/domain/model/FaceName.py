@@ -1,6 +1,6 @@
 """Face name enumeration."""
 
-from enum import unique, Enum
+from enum import Enum, unique
 
 
 @unique

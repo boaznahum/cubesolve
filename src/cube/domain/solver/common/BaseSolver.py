@@ -1,8 +1,9 @@
 from abc import ABC
-from typing import TypeAlias, TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
+
 from .AbstractSolver import AbstractSolver
 
 if TYPE_CHECKING:

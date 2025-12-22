@@ -1,10 +1,16 @@
 from abc import abstractmethod
-from typing import final, TYPE_CHECKING, TypeAlias, Tuple, ContextManager, Callable
+from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
 
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
-from cube.domain.solver.protocols import OperatorProtocol, AnnotationProtocol, SupportsAnnotation, SolverElementsProvider
 from cube.domain.solver.AnnWhat import AnnWhat
+from cube.domain.solver.protocols import (
+    AnnotationProtocol,
+    OperatorProtocol,
+    SolverElementsProvider,
+    SupportsAnnotation,
+)
+
 from ...algs import Alg
 from ...model.CubeQueries2 import CubeQueries2
 

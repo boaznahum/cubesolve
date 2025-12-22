@@ -1,13 +1,13 @@
-from collections.abc import MutableSequence, Iterable, Sequence
-from typing import Callable, Tuple, TYPE_CHECKING
+from collections.abc import Iterable, MutableSequence, Sequence
+from typing import TYPE_CHECKING, Callable, Tuple
 
 import numpy as np
 from numpy import ndarray
 
-from cube.domain.model import Part, Corner, Edge, Center
-from cube.domain.model import PartFixedID
+from cube.domain.model import Center, Corner, Edge, Part, PartFixedID
 from cube.domain.model.Face import Face
 from cube.utils.config_protocol import ConfigProtocol
+
 from ._cell import _Cell
 
 _FACE_SIZE = 3

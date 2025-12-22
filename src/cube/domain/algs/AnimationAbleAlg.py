@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Collection
+from typing import Collection, Tuple
 
 from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.model.Cube import Cube, FaceName, PartSlice

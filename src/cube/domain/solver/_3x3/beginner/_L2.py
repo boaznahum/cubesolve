@@ -1,7 +1,7 @@
 from typing import Sequence
 
-from cube.domain.algs import Algs, Alg
-from cube.domain.model import PartColorsID, Part, Edge, Color
+from cube.domain.algs import Alg, Algs
+from cube.domain.model import Color, Edge, Part, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver

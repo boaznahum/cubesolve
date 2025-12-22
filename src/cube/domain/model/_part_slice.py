@@ -1,19 +1,27 @@
-import sys
 import itertools
+import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Hashable, MutableSequence, Sequence
-from typing import TypeAlias, Any, Tuple, TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Tuple, TypeAlias, TypeVar
 
+from cube.domain.model.cube_boy import Color, FaceName
 from cube.domain.model.PartEdge import PartEdge
-from cube.domain.model.cube_boy import FaceName, Color
-from ._elements import SliceIndex, PartColorsID, PartSliceHashID, EdgeSliceIndex, CenterSliceIndex, PartSliceColors
+
+from ._elements import (
+    CenterSliceIndex,
+    EdgeSliceIndex,
+    PartColorsID,
+    PartSliceColors,
+    PartSliceHashID,
+    SliceIndex,
+)
 
 if TYPE_CHECKING:
-    from .Face import Face
     from .Cube import Cube
-    from .Part import Part
     from .Edge import Edge
+    from .Face import Face
+    from .Part import Part
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore

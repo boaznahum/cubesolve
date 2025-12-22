@@ -1,15 +1,22 @@
 import sys
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Sequence, Iterator, Iterable
-from typing import Tuple, TypeVar, Self
+from collections.abc import Iterable, Iterator, Sequence
+from typing import Self, Tuple, TypeVar
+
 from typing_extensions import deprecated
 
+from cube.domain.model._elements import (
+    CubeElement,
+    PartColorsID,
+    PartFixedID,
+    SliceIndex,
+    _Cube,
+    _Face,
+)
 from cube.domain.model._part_slice import PartSlice
+from cube.domain.model.cube_boy import Color, FaceName, color2long
 from cube.domain.model.PartEdge import PartEdge
-from cube.domain.model._elements import CubeElement, PartColorsID, PartFixedID, _Face, _Cube, SliceIndex
-from cube.domain.model.cube_boy import FaceName, Color
-from cube.domain.model.cube_boy import color2long
 
 TPartType = TypeVar("TPartType", bound="Part")
 

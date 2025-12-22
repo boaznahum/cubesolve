@@ -1,6 +1,6 @@
 from cube.domain.algs import Algs
 from cube.domain.exceptions import EvenCubeEdgeParityException
-from cube.domain.model import FaceName, Part, Edge
+from cube.domain.model import Edge, FaceName, Part
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver

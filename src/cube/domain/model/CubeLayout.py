@@ -6,9 +6,10 @@ from collections.abc import Collection
 from typing import Mapping
 
 from cube.domain.exceptions import InternalSWError
-from cube.utils.config_protocol import IServiceProvider, ConfigProtocol
-from .FaceName import FaceName
+from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
+
 from .Color import Color
+from .FaceName import FaceName
 
 
 class CubeLayout:

@@ -14,21 +14,28 @@ except ImportError as e:
     raise ImportError("pyglet2 backend requires: pip install 'pyglet>=2.0'") from e
 
 from cube.application.AbstractApp import AbstractApp
-from cube.application.exceptions.app_exceptions import AppExit
 from cube.application.animation.AnimationManager import AnimationWindow
-from cube.presentation.gui.factory import GUIBackend
-from cube.presentation.gui.backends.pyglet2.pyglet_utils import _PYGLET_TO_KEYS, _convert_modifiers, _convert_mouse_buttons
-from cube.presentation.gui.backends.pyglet2 import main_g_mouse
-from cube.presentation.gui.backends.pyglet2.PygletWindow import PygletWindow
-from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase, TextLabel
-from cube.presentation.gui.protocols.AppWindow import AppWindow
-from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import ModernGLRenderer, ModernGLRendererAdapter
-from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCubeViewer
-from cube.presentation.gui.commands import Command, CommandContext
-from cube.presentation.gui.key_bindings import lookup_command
-from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
-from cube.presentation.gui.backends.pyglet2.GUIToolbar import GUIToolbar, create_toolbar
+from cube.application.exceptions.app_exceptions import AppExit
 from cube.application.protocols import AnimatableViewer
+from cube.presentation.gui.backends.pyglet2 import main_g_mouse
+from cube.presentation.gui.backends.pyglet2.GUIToolbar import GUIToolbar, create_toolbar
+from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCubeViewer
+from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import (
+    ModernGLRenderer,
+    ModernGLRendererAdapter,
+)
+from cube.presentation.gui.backends.pyglet2.pyglet_utils import (
+    _PYGLET_TO_KEYS,
+    _convert_modifiers,
+    _convert_mouse_buttons,
+)
+from cube.presentation.gui.backends.pyglet2.PygletWindow import PygletWindow
+from cube.presentation.gui.commands import Command, CommandContext
+from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
+from cube.presentation.gui.factory import GUIBackend
+from cube.presentation.gui.key_bindings import lookup_command
+from cube.presentation.gui.protocols.AppWindow import AppWindow
+from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase, TextLabel
 from cube.presentation.viewer.GViewerExt import GViewerExt
 
 
@@ -163,7 +170,9 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         Returns:
             Formatted string with OpenGL version, GLSL, renderer, vendor.
         """
-        from cube.presentation.gui.backends.common_gl_utils import get_opengl_info_string
+        from cube.presentation.gui.backends.common_gl_utils import (
+            get_opengl_info_string,
+        )
         return get_opengl_info_string()
 
     @property
@@ -254,6 +263,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             Name of loaded set, "solid" if None, or None on error.
         """
         from pathlib import Path
+
         from cube.resources.faces import get_texture_set_path
 
         if not self._texture_sets:
@@ -290,6 +300,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             Name of new texture set, "solid" if None, or None if not supported.
         """
         from pathlib import Path
+
         from cube.resources.faces import get_texture_set_path
 
         if not self._texture_sets:
@@ -328,6 +339,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             Name of new texture set, "solid" if None, or None if not supported.
         """
         from pathlib import Path
+
         from cube.resources.faces import get_texture_set_path
 
         if not self._texture_sets:

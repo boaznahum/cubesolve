@@ -3,12 +3,27 @@
 import sys
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
-from typing import TypeAlias, TYPE_CHECKING, Callable, Tuple, Literal, ContextManager, Any, Hashable, Generator
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ContextManager,
+    Generator,
+    Hashable,
+    Literal,
+    Tuple,
+    TypeAlias,
+)
 
-from cube.domain.algs.Algs import Algs
 from cube.application.exceptions.app_exceptions import InternalSWError
-from cube.domain.model import Part, PartColorsID, PartEdge, Corner, Edge, PartSlice
-from cube.domain.model.VMarker import VMarker, viewer_add_view_marker, viewer_remove_view_marker
+from cube.domain.algs.Algs import Algs
+from cube.domain.model import Corner, Edge, Part, PartColorsID, PartEdge, PartSlice
+from cube.domain.model.VMarker import (
+    VMarker,
+    viewer_add_view_marker,
+    viewer_remove_view_marker,
+)
+
 from .AnnWhat import AnnWhat
 
 if TYPE_CHECKING:

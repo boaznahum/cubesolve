@@ -1,8 +1,12 @@
 from typing import Tuple
 
-from cube.domain.algs.Alg import Alg
 from cube.domain.algs import Algs, FaceAlg
-from cube.domain.exceptions import InternalSWError, EvenCubeCornerSwapException, EvenCubeEdgeSwapParityException
+from cube.domain.algs.Alg import Alg
+from cube.domain.exceptions import (
+    EvenCubeCornerSwapException,
+    EvenCubeEdgeSwapParityException,
+    InternalSWError,
+)
 from cube.domain.model import Part
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import StepSolver

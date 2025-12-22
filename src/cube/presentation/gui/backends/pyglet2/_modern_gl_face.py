@@ -32,16 +32,17 @@ import numpy as np
 from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color, FaceName
+
 from ._modern_gl_cell import ModernGLCell
 from ._modern_gl_constants import (
-    HALF_CUBE_SIZE,
     CELL_GAP_RATIO,
     COLOR_TO_RGB,
+    HALF_CUBE_SIZE,
 )
 
 if TYPE_CHECKING:
-    from cube.domain.model.Face import Face
     from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model.Face import Face
     from cube.domain.model.PartEdge import PartEdge
 
 

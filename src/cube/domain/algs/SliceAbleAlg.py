@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Sequence, Self, Iterable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable, Self, Sequence
 
 from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.exceptions import InternalSWError

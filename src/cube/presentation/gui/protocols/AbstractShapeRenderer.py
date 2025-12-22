@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from cube.presentation.gui.types import Point3D, Color3, TextureHandle, TextureMap
 from cube.presentation.gui.protocols.ShapeRenderer import ShapeRenderer
+from cube.presentation.gui.types import Color3, Point3D, TextureHandle, TextureMap
 
 
 class AbstractShapeRenderer(ShapeRenderer):

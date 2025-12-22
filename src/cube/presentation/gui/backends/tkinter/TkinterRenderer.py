@@ -4,12 +4,26 @@ Tkinter renderer implementation.
 Provides 2D canvas-based rendering using isometric projection.
 """
 
-from typing import Sequence, Callable
-import numpy as np
-from math import cos, sin, radians
+from math import cos, radians, sin
+from typing import Callable, Sequence
 
-from cube.presentation.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
-from cube.presentation.gui.protocols import ShapeRenderer, DisplayListManager, ViewStateManager, Renderer
+import numpy as np
+
+from cube.presentation.gui.protocols import (
+    DisplayListManager,
+    Renderer,
+    ShapeRenderer,
+    ViewStateManager,
+)
+from cube.presentation.gui.types import (
+    Color3,
+    Color4,
+    DisplayList,
+    Matrix4x4,
+    Point3D,
+    TextureHandle,
+    TextureMap,
+)
 
 
 class TkinterShapeRenderer(ShapeRenderer):

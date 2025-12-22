@@ -1,8 +1,8 @@
 from abc import ABC
-from typing import final, TYPE_CHECKING
+from typing import TYPE_CHECKING, final
 
-from cube.domain.algs.Algs import Algs
 from cube.domain.algs.Alg import Alg
+from cube.domain.algs.Algs import Algs
 from cube.domain.model import Cube
 from cube.domain.solver import Solver
 from cube.domain.solver.common.CommonOp import CommonOp

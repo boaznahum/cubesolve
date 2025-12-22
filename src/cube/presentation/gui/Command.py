@@ -15,8 +15,8 @@ from cube.presentation.gui.commands import (
     Command,
     CommandContext,
     CommandResult,
-    CommandSequence,
     Commands,
+    CommandSequence,
 )
 
 __all__ = [

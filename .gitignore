@@ -5,5 +5,5 @@ __pycache__/
 /build/
 cubesolve.egg-info/
 .venv312/
-__next_session.md
+__todo/__next_session.md
 .venv/

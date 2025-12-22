@@ -2,9 +2,9 @@ import sys
 import traceback
 from typing import Any
 
-from cube.domain.algs import Algs, Alg
 from cube.application.AbstractApp import AbstractApp
 from cube.application.commands.Operator import Operator
+from cube.domain.algs import Alg, Algs
 
 
 def scramble(app:AbstractApp,

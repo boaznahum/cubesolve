@@ -1,9 +1,9 @@
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Any
 
-from cube.domain.algs import Alg
-from cube.application.state import ApplicationAndViewState
 from cube.application.commands.Operator import Operator
+from cube.application.state import ApplicationAndViewState
+from cube.domain.algs import Alg
 from cube.domain.solver import Solver
 from cube.domain.solver.SolverName import SolverName
 from cube.utils.config_protocol import ConfigProtocol

@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 from cube.presentation.gui.effects.BaseEffect import BaseEffect
 from cube.presentation.gui.effects.effects.ConfettiEffect import ConfettiEffect
-from cube.presentation.gui.effects.effects.VictorySpinEffect import VictorySpinEffect
 from cube.presentation.gui.effects.effects.SparkleEffect import SparkleEffect
+from cube.presentation.gui.effects.effects.VictorySpinEffect import VictorySpinEffect
 
 if TYPE_CHECKING:
-    from cube.presentation.gui.protocols.Renderer import Renderer
     from cube.application.state import ApplicationAndViewState
+    from cube.presentation.gui.protocols.Renderer import Renderer
 
 
 class ComboEffect(BaseEffect):

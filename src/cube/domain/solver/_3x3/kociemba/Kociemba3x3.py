@@ -130,11 +130,11 @@ import kociemba  # type: ignore[import-not-found]
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs._parser import parse_alg
 from cube.domain.model.cube_boy import Color, FaceName
-from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.AbstractSolver import AbstractSolver
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
-from cube.domain.solver.solver import SolveStep, SolverResults
+from cube.domain.solver.solver import SolverResults, SolveStep
+from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

@@ -1,12 +1,12 @@
 from random import Random
 from typing import Any
 
-from cube.domain.algs.Inv import _Inv
-from cube.domain.algs.Mul import _Mul
-from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.FaceAlg import FaceAlg
+from cube.domain.algs.Inv import _Inv
+from cube.domain.algs.Mul import _Mul
 from cube.domain.algs.SeqAlg import SeqAlg
+from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 
 

@@ -42,8 +42,8 @@ class BeginnerReducer(AbstractReducer):
         super().__init__(op)
 
         # Import here to avoid circular imports
-        from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
         from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
+        from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)

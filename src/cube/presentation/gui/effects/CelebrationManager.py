@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cube.presentation.gui.effects.CelebrationEffect import CelebrationEffect
     from cube.application.protocols import EventLoop
-    from cube.presentation.gui.protocols.Renderer import Renderer
     from cube.application.state import ApplicationAndViewState
+    from cube.presentation.gui.effects.CelebrationEffect import CelebrationEffect
+    from cube.presentation.gui.protocols.Renderer import Renderer
 
 
 class CelebrationManager:

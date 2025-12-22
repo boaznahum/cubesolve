@@ -1,11 +1,11 @@
-from cube.domain.algs import Algs, Alg
-from cube.domain.exceptions import InternalSWError, EvenCubeCornerSwapException
-from cube.domain.model import FaceName, Part, Corner
+from cube.domain.algs import Alg, Algs
+from cube.domain.exceptions import EvenCubeCornerSwapException, InternalSWError
+from cube.domain.model import Corner, FaceName, Part
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.solver.common.Tracker import CornerTracker
+from cube.domain.solver.protocols import SolverElementsProvider
 
 
 def use(_):

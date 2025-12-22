@@ -189,7 +189,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.solver import Solver, SolveStep, SolverResults
+from cube.domain.solver.solver import Solver, SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:

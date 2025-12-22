@@ -14,6 +14,7 @@ else:
 
 try:
     import pyglet
+
     # Pyglet 2.0 uses modern OpenGL by default - use gl_compat for legacy functions
     from pyglet.gl import gl_compat as gl
     from pyglet.window import key as pyglet_key
@@ -21,9 +22,8 @@ try:
 except ImportError as e:
     raise ImportError("pyglet2 backend requires: pip install 'pyglet>=2.0'") from e
 
-from cube.presentation.gui.types import Keys, Modifiers, MouseButton, Color4
 from cube.presentation.gui.protocols import TextRenderer
-
+from cube.presentation.gui.types import Color4, Keys, Modifiers, MouseButton
 
 # Mapping from pyglet key codes to our abstract Keys
 _PYGLET_TO_KEYS: dict[int, int] = {
@@ -122,7 +122,7 @@ class PygletTextRenderer(TextRenderer):
         # pyglet 2.x uses weight='bold' instead of bold=True
         weight = 'bold' if bold else 'normal'
         # Cast anchor values to satisfy mypy Literal types
-        from typing import cast, Literal
+        from typing import Literal, cast
         ax = cast(Literal['left', 'center', 'right'], anchor_x)
         ay = cast(Literal['top', 'bottom', 'center', 'baseline'], anchor_y)
         label = pyglet.text.Label(

@@ -6,7 +6,7 @@ Represents the browser window/canvas state.
 
 from __future__ import annotations
 
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from cube.presentation.gui.protocols.TextRenderer import TextRenderer
 from cube.presentation.gui.protocols.Window import Window
@@ -191,7 +191,7 @@ class WebWindow(Window):
     def simulate_mouse_drag(self, x: int, y: int, dx: int, dy: int) -> None:
         """Simulate a mouse drag event."""
         if self._mouse_drag_handler:
-            from cube.presentation.gui.types import MouseEvent, MouseButton
+            from cube.presentation.gui.types import MouseButton, MouseEvent
             event = MouseEvent(x=x, y=y, button=MouseButton.LEFT, dx=dx, dy=dy)
             self._mouse_drag_handler(event)
 

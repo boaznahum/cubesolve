@@ -42,12 +42,12 @@ Consumers:
     - CageNxNSolver: Asserts shadow cube maintains BOY layout
 """
 
-from .FaceName import FaceName
+from cube.utils.config_protocol import IServiceProvider
+
 from .Color import Color
 from .ColorLong import ColorLong
 from .CubeLayout import CubeLayout
-from cube.utils.config_protocol import IServiceProvider
-
+from .FaceName import FaceName
 
 # ============================================================================
 # BOY Layout - Global Cached Singleton

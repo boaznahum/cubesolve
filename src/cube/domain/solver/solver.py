@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
+from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 from cube.domain.solver.SolverName import SolverName
 
 

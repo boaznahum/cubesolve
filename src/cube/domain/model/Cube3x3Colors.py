@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from cube.domain.model._part import CornerName, EdgeName
 from cube.domain.model.Color import Color
 from cube.domain.model.CubeLayout import CubeLayout
 from cube.domain.model.FaceName import FaceName
-from cube.domain.model._part import CornerName, EdgeName
 from cube.utils.config_protocol import IServiceProvider
 
 
@@ -181,7 +181,7 @@ class Cube3x3Colors:
         Useful as a starting point when building from face tracker input.
         Note: The resulting structure won't be valid until all colors are set.
         """
-        from cube.domain.model._part import EdgeName, CornerName
+        from cube.domain.model._part import CornerName, EdgeName
 
         # Create empty edge colors for all 12 edges
         # Edge names: FL, FU, FR, FD, BL, BU, BR, BD, UR, RD, DL, LU

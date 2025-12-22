@@ -1,6 +1,6 @@
-import numpy as np
-
 from collections.abc import Sequence
+
+import numpy as np
 
 
 def in_box(x, y, z, bottom_quad: Sequence[np.ndarray],

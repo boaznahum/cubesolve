@@ -1,13 +1,13 @@
 from collections import defaultdict
 from collections.abc import Hashable
-from typing import Any, TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from .cube_boy import Color
 
 if TYPE_CHECKING:
-    from .Face import Face
-    from .Cube import Cube
     from ._part_slice import PartSlice
+    from .Cube import Cube
+    from .Face import Face
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore

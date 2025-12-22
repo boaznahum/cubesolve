@@ -1,10 +1,10 @@
-from typing import Callable, Any, TypeAlias
+from typing import Any, Callable, TypeAlias
 
-from cube.domain.model import Color, CenterSlice, CenterSliceIndex
+from cube.domain.model import CenterSlice, CenterSliceIndex, Color
 from cube.domain.model.Cube import Cube
-from cube.domain.model.Face import Face
 from cube.domain.model.CubeQueries2 import Pred
-from cube.domain.model.VMarker import viewer_add_view_marker, VMarker
+from cube.domain.model.Face import Face
+from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
 
 _TRACKER_KEY_PREFIX = "_nxn_centers_track:"
 

@@ -10,71 +10,71 @@ from cube.domain.solver import SolveStep
 
 from .base import Command
 from .concrete import (
-    # Rotation
-    RotateCommand,
-    RotateWideCommand,
-    CubeRotateCommand,
-    # Scramble
-    ScrambleCommand,
-    ScrambleF9Command,
-    # Solve
-    SolveStepCommand,
-    SolveAllCommand,
-    SolveAllNoAnimationCommand,
-    SolveEdgesCommand,
-    # View
-    ViewRotateCommand,
-    PanCommand,
-    ZoomInCommand,
-    ZoomOutCommand,
-    ViewResetCommand,
-    # Animation
-    SpeedUpCommand,
-    SpeedDownCommand,
-    PauseToggleCommand,
-    SingleStepToggleCommand,
-    StopAnimationCommand,
-    ToggleAnimationCommand,
+    # Special
+    AnnotateCommand,
+    BackgroundDownCommand,
+    BackgroundUpCommand,
+    BrightnessDownCommand,
     # Lighting
     BrightnessUpCommand,
-    BrightnessDownCommand,
-    BackgroundUpCommand,
-    BackgroundDownCommand,
-    TextureSetNextCommand,
-    TextureSetPrevCommand,
-    TextureToggleCommand,
-    # Shadow
-    ShadowToggleCommand,
-    # Size
-    SizeIncCommand,
-    SizeDecCommand,
-    # Slice
-    SliceStartIncCommand,
-    SliceStartDecCommand,
-    SliceStopIncCommand,
-    SliceStopDecCommand,
-    SliceResetCommand,
+    CubeRotateCommand,
+    DebugInfoCommand,
+    PanCommand,
+    PauseToggleCommand,
+    # Application
+    QuitCommand,
+    RecordingClearCommand,
     # Recording
     RecordingPlayCommand,
     RecordingToggleCommand,
-    RecordingClearCommand,
-    # Debug
-    ToggleDebugCommand,
-    ToggleSanityCheckCommand,
-    DebugInfoCommand,
+    ResetCubeAndViewCommand,
+    ResetCubeCommand,
+    # Rotation
+    RotateCommand,
+    RotateWideCommand,
+    # Scramble
+    ScrambleCommand,
+    ScrambleF9Command,
+    # Shadow
+    ShadowToggleCommand,
+    SingleStepToggleCommand,
+    SizeDecCommand,
+    # Size
+    SizeIncCommand,
+    SliceResetCommand,
+    SliceStartDecCommand,
+    # Slice
+    SliceStartIncCommand,
+    SliceStopDecCommand,
+    SliceStopIncCommand,
+    SolveAllCommand,
+    SolveAllNoAnimationCommand,
+    SolveEdgesCommand,
+    # Solve
+    SolveStepCommand,
+    SpecialAlgCommand,
+    SpeedDownCommand,
+    # Animation
+    SpeedUpCommand,
+    StopAnimationCommand,
+    SwitchSolverCommand,
     # Testing
     TestRunCommand,
     TestRunLastCommand,
     TestScrambleLastCommand,
-    # Application
-    QuitCommand,
-    ResetCubeCommand,
-    ResetCubeAndViewCommand,
+    TextureSetNextCommand,
+    TextureSetPrevCommand,
+    TextureToggleCommand,
+    ToggleAnimationCommand,
+    # Debug
+    ToggleDebugCommand,
+    ToggleSanityCheckCommand,
     UndoCommand,
-    SwitchSolverCommand,
-    # Special
-    AnnotateCommand,
-    SpecialAlgCommand,
+    ViewResetCommand,
+    # View
+    ViewRotateCommand,
+    ZoomInCommand,
+    ZoomOutCommand,
 )
 
 

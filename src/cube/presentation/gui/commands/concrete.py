@@ -6,12 +6,13 @@ Each command type is a frozen dataclass with type-safe attributes.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from cube.domain.model.cube_boy import FaceName
 from cube.domain.solver import SolveStep
-from .base import Command, CommandContext, CommandResult
+
 from ..ViewSetup import ViewSetup
+from .base import Command, CommandContext, CommandResult
 
 if TYPE_CHECKING:
     from cube.domain.algs.Alg import Alg

@@ -4,12 +4,12 @@ AnimationBackend protocol definition.
 This protocol defines the interface for animation support in GUI backends.
 """
 
-from typing import Protocol, Callable, Collection, TYPE_CHECKING, runtime_checkable
+from typing import TYPE_CHECKING, Callable, Collection, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from cube.domain.model._part_slice import PartSlice
     from cube.domain.model.Cube import Cube
     from cube.domain.model.cube_boy import FaceName
-    from cube.domain.model._part_slice import PartSlice
 
 
 @runtime_checkable

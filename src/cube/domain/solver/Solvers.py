@@ -1,9 +1,10 @@
 """Solver factory - creates solver instances using orchestrator pattern."""
 
+from cube.domain.exceptions import InternalSWError
 from cube.domain.solver.protocols import OperatorProtocol
+
 from .solver import Solver
 from .SolverName import SolverName
-from cube.domain.exceptions import InternalSWError
 
 
 class Solvers:
@@ -39,9 +40,9 @@ class Solvers:
 
         Uses basic (M-slice) edge parity algorithm.
         """
+        from .NxNSolverOrchestrator import NxNSolverOrchestrator
         from .Reducers import Reducers
         from .Solvers3x3 import Solvers3x3
-        from .NxNSolverOrchestrator import NxNSolverOrchestrator
 
         solver_3x3 = Solvers3x3.beginner(op)
         reducer = Reducers.beginner(op, advanced_edge_parity=False)
@@ -60,9 +61,9 @@ class Solvers:
 
         Uses advanced (R/L-slice) edge parity algorithm.
         """
+        from .NxNSolverOrchestrator import NxNSolverOrchestrator
         from .Reducers import Reducers
         from .Solvers3x3 import Solvers3x3
-        from .NxNSolverOrchestrator import NxNSolverOrchestrator
 
         solver_3x3 = Solvers3x3.cfop(op)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
@@ -81,9 +82,9 @@ class Solvers:
 
         Uses advanced (R/L-slice) edge parity algorithm.
         """
+        from .NxNSolverOrchestrator import NxNSolverOrchestrator
         from .Reducers import Reducers
         from .Solvers3x3 import Solvers3x3
-        from .NxNSolverOrchestrator import NxNSolverOrchestrator
 
         solver_3x3 = Solvers3x3.kociemba(op)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)

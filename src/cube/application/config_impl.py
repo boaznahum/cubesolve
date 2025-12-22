@@ -5,7 +5,7 @@ All other code must access config through ConfigProtocol via context (app.config
 """
 
 from cube.application import _config as cfg
-from cube.utils.config_protocol import ConfigProtocol, MarkerDef, AnimationTextDef
+from cube.utils.config_protocol import AnimationTextDef, ConfigProtocol, MarkerDef
 from cube.utils.SSCode import SSCode
 
 

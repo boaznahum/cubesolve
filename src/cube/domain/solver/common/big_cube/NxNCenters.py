@@ -1,18 +1,18 @@
 import sys
-from collections.abc import Iterator, Sequence, Iterable, Set
+from collections.abc import Iterable, Iterator, Sequence, Set
 from enum import Enum, unique
 from typing import Tuple, TypeAlias
 
 from cube.domain import algs
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model import FaceName, Color, CenterSlice
+from cube.domain.model import CenterSlice, Color, FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.cube_boy import CubeLayout, color2long
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
 from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
+from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet

@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from .cube_boy import color2long, Color
+from .cube_boy import Color, color2long
 
 
 class ModelHelper:

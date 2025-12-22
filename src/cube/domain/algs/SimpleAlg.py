@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from typing import Self, final, override
 
+from cube.domain.algs._internal_utils import _normalize_for_count, n_to_str
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.SeqAlg import SeqSimpleAlg
-from cube.domain.algs._internal_utils import n_to_str, _normalize_for_count
 
 
 class SimpleAlg(Alg, ABC):

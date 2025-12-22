@@ -1,16 +1,25 @@
 from collections import defaultdict
-from collections.abc import Iterator, Hashable, Sequence, MutableSequence, Mapping, MutableMapping, Iterable
-from typing import Callable, TypeVar, Tuple
+from collections.abc import (
+    Hashable,
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+    MutableSequence,
+    Sequence,
+)
+from typing import Callable, Tuple, TypeVar
 
 from cube.domain.exceptions import InternalSWError
-from . import PartEdge, Edge, Part
-from .Part import TPartType
-from ._elements import PartColorsID, CubeState
-from ._part_slice import PartSlice, CenterSlice, EdgeWing, CornerSlice
+
+from ..algs import Alg, Algs, NSimpleAlg
+from . import Edge, Part, PartEdge
+from ._elements import CubeState, PartColorsID
+from ._part_slice import CenterSlice, CornerSlice, EdgeWing, PartSlice
 from .Cube import Cube
 from .cube_boy import Color
 from .Face import Face
-from ..algs import NSimpleAlg, Alg, Algs
+from .Part import TPartType
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]

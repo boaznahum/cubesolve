@@ -14,11 +14,11 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.application.commands.Operator import Operator
+    from cube.application.protocols.AnimatableViewer import AnimatableViewer
     from cube.application.state import ApplicationAndViewState
     from cube.domain.model.Cube import Cube
     from cube.domain.solver import Solver
     from cube.presentation.gui.protocols.AppWindow import AppWindow
-    from cube.application.protocols.AnimatableViewer import AnimatableViewer
 
 
 # =============================================================================

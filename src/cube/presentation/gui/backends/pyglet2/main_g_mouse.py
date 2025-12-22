@@ -5,24 +5,31 @@
 #
 import functools
 import math
-from typing import Tuple, Any
+from typing import Any, Tuple
 
 import numpy as np
 from numpy import ndarray
 
-from cube.presentation.gui.types import Modifiers, MouseButton
-
-from cube.domain.algs.SliceAlg import SliceAlg
-from cube.domain.algs.Alg import Alg
-from cube.domain.algs.Algs import Algs
 from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import InternalSWError
 from cube.application.state import ApplicationAndViewState
-from cube.presentation.gui.protocols import AppWindow
-from cube.presentation.gui.ViewSetup import ViewSetup
+from cube.domain.algs.Alg import Alg
+from cube.domain.algs.Algs import Algs
+from cube.domain.algs.SliceAlg import SliceAlg
+from cube.domain.model import (
+    CenterSlice,
+    Corner,
+    Edge,
+    EdgeWing,
+    Part,
+    PartEdge,
+    PartSlice,
+)
 from cube.domain.model.cube_boy import FaceName
 from cube.domain.model.Face import Face
-from cube.domain.model import PartEdge, PartSlice, Part, Corner, Edge, EdgeWing, CenterSlice
+from cube.presentation.gui.protocols import AppWindow
+from cube.presentation.gui.types import Modifiers, MouseButton
+from cube.presentation.gui.ViewSetup import ViewSetup
 
 # to avoid the case we start another handling while animation is running
 _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = False

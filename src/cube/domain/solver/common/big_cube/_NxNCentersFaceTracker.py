@@ -110,13 +110,13 @@ to the correct face for that color.
 CLEANUP: After solving, these tracker marks must be removed (cleanup_trackers).
 """
 
-from collections.abc import Sequence, Iterable, Collection
+from collections.abc import Collection, Iterable, Sequence
 from typing import Tuple
 
-from cube.domain.model import Color, CenterSlice
+from cube.domain.model import CenterSlice, Color
+from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
-from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider

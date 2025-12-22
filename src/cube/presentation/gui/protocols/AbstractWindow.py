@@ -14,9 +14,9 @@ Hierarchy:
 
 from typing import Callable
 
-from cube.presentation.gui.types import KeyEvent, MouseEvent
-from cube.presentation.gui.protocols.Window import Window
 from cube.presentation.gui.protocols.TextRenderer import TextRenderer
+from cube.presentation.gui.protocols.Window import Window
+from cube.presentation.gui.types import KeyEvent, MouseEvent
 
 
 class AbstractTextRenderer(TextRenderer):

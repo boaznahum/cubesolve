@@ -1,27 +1,33 @@
 from collections import defaultdict
-from collections.abc import Set, MutableSequence, Sequence, Iterable, Collection, Mapping
+from collections.abc import (
+    Collection,
+    Iterable,
+    Mapping,
+    MutableSequence,
+    Sequence,
+    Set,
+)
 from typing import Callable, Tuple
 
 import numpy as np
 from numpy import ndarray
 
 from cube.application.state import ApplicationAndViewState
-from cube.domain.model import PartFixedID
-from cube.domain.model import PartSlice
+from cube.domain.model import PartEdge, PartFixedID, PartSlice
 from cube.domain.model.Cube import Cube
+from cube.domain.model.cube_boy import FaceName
 from cube.domain.model.Face import Face
+
+from ..gui.protocols import Renderer
+from ..gui.types import DisplayList
+from ..gui.ViewSetup import ViewSetup
 from ._cell import _Cell
 from ._faceboard import _FACE_SIZE, _FaceBoard
+
 #
 #   update  --update----|           -*update--------|-------------------|
 #                                                   <-----draw_init-----|
 from .TextureData import TextureData
-from cube.domain.model import PartEdge
-from cube.domain.model.cube_boy import FaceName
-from ..gui.protocols import Renderer
-from ..gui.ViewSetup import ViewSetup
-from ..gui.types import DisplayList
-
 
 ##########################################################################
 # Sequence diagram  $ todo:update sequence was improved

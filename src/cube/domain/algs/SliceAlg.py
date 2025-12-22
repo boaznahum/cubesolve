@@ -1,9 +1,9 @@
 from abc import ABC
-from typing import final, Tuple, Collection, Iterable
+from typing import Collection, Iterable, Tuple, final
 
+from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
-from cube.domain.algs._internal_utils import _inv
 from cube.domain.model.Cube import Cube, FaceName, PartSlice
 from cube.domain.model.cube_slice import SliceName
 

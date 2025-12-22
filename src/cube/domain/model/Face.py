@@ -1,16 +1,17 @@
 from collections.abc import Hashable, Iterable, Sequence
 from typing import Callable, Tuple, TypeAlias
 
-from .cube_boy import FaceName, Color
+from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
+
+from ._elements import Direction, PartColorsID
+from ._part_slice import CenterSlice, PartSlice
 from .Center import Center
 from .Corner import Corner
+from .cube_boy import Color, FaceName
 from .Edge import Edge
-from .PartEdge import PartEdge
 from .Part import Part
-from ._elements import Direction, PartColorsID
-from ._part_slice import PartSlice, CenterSlice
+from .PartEdge import PartEdge
 from .SuperElement import SuperElement
-from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore  # noqa: F821

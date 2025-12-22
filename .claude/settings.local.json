@@ -3,7 +3,9 @@
     "allow": [
       "Bash",
       "mcp__ide__getDiagnostics",
-      "WebSearch"
+      "WebSearch",
+      "Skill(skill-creator)",
+      "Skill(check)"
     ],
     "deny": [],
     "ask": []

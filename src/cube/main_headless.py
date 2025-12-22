@@ -17,6 +17,7 @@ Usage:
     python -m cube.main_headless --quiet
 """
 import sys
+
 from cube.main_any_backend import main as main_any
 
 

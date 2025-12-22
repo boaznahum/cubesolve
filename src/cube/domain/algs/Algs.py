@@ -1,18 +1,18 @@
 import warnings
 from typing import Sequence
 
+from cube.domain.algs._parser import parse_alg
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
 from cube.domain.algs.DoubleLayerAlg import DoubleLayerAlg
-from cube.domain.algs.FaceAlg import FaceAlg, _L, _B, _D, _R, _U, _F
-from cube.domain.algs.Scramble import _scramble, _Scramble
+from cube.domain.algs.FaceAlg import _B, _D, _F, _L, _R, _U, FaceAlg
+from cube.domain.algs.Scramble import _Scramble, _scramble
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
-from cube.domain.algs.SliceAlg import SliceAlg, _M, _E, _S
-from cube.domain.algs.WideFaceAlg import _wd, _wu, _wr, _wl, _wf, _wb
+from cube.domain.algs.SliceAlg import _E, _M, _S, SliceAlg
 from cube.domain.algs.WholeCubeAlg import _X, _Y, _Z
-from cube.domain.algs._parser import parse_alg
+from cube.domain.algs.WideFaceAlg import _wb, _wd, _wf, _wl, _wr, _wu
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import FaceName
 from cube.domain.model.cube_slice import SliceName

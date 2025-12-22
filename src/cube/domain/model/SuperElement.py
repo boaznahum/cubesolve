@@ -1,14 +1,14 @@
 from abc import abstractmethod
-from collections.abc import Sequence, Iterable
-from typing import TYPE_CHECKING, TypeAlias, Tuple
+from collections.abc import Iterable, Sequence
+from typing import TYPE_CHECKING, Tuple, TypeAlias
 
-from .Part import Part
 from ._elements import CubeElement
 from ._part_slice import PartSlice
+from .Part import Part
 
 if TYPE_CHECKING:
-    from .Face import Face
     from .Cube import Cube
+    from .Face import Face
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore

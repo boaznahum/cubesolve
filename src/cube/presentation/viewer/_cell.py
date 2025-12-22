@@ -1,26 +1,34 @@
 import sys
 from collections import defaultdict
-from collections.abc import MutableSequence, Iterable
+from collections.abc import Iterable, MutableSequence
 from contextlib import contextmanager
-from typing import Tuple, TYPE_CHECKING, Callable, Any, Hashable, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence, Tuple
 
 import numpy as np
 from numpy import ndarray
 
 from cube.application.state import ApplicationAndViewState
+from cube.domain.model import (
+    Center,
+    CenterSlice,
+    Corner,
+    Edge,
+    EdgeWing,
+    Part,
+    PartEdge,
+    PartSlice,
+    PartSliceHashID,
+)
 from cube.domain.model.cube_boy import Color
 from cube.domain.model.Face import Face
-from cube.utils import geometry
-from .TextureData import TextureData
 from cube.domain.model.VMarker import VMarker, viewer_get_markers
-from cube.domain.model import PartEdge
-from cube.domain.model import PartSliceHashID
-from cube.domain.model import Part, Corner, Edge, Center
-from cube.domain.model import PartSlice, EdgeWing, CenterSlice
-from ..gui.protocols import Renderer
-from ..gui.ViewSetup import ViewSetup
-from ..gui.types import DisplayList, TextureCoord, TextureMap, Point3D
+from cube.utils import geometry
 from cube.utils.config_protocol import ConfigProtocol
+
+from ..gui.protocols import Renderer
+from ..gui.types import DisplayList, Point3D, TextureCoord, TextureMap
+from ..gui.ViewSetup import ViewSetup
+from .TextureData import TextureData
 
 _VColor = Tuple[int, int, int]
 

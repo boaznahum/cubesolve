@@ -2,11 +2,11 @@ from abc import ABC
 from collections.abc import Iterator
 from typing import final, override
 
+from cube.domain.algs._internal_utils import _normalize_for_count
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
 from cube.domain.algs.SeqAlg import SeqAlg, SeqSimpleAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg, SimpleAlg
-from cube.domain.algs._internal_utils import _normalize_for_count
 from cube.domain.model.Cube import Cube
 
 

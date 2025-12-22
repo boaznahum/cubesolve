@@ -4,10 +4,10 @@ Window protocol definition.
 This protocol defines the interface for window management.
 """
 
-from typing import Protocol, Callable, runtime_checkable
+from typing import Callable, Protocol, runtime_checkable
 
-from cube.presentation.gui.types import KeyEvent, MouseEvent
 from cube.presentation.gui.protocols.TextRenderer import TextRenderer
+from cube.presentation.gui.types import KeyEvent, MouseEvent
 
 
 @runtime_checkable

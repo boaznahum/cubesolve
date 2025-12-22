@@ -6,10 +6,10 @@ This is the main renderer protocol combining all rendering capabilities.
 
 from typing import Protocol, runtime_checkable
 
-from cube.presentation.gui.types import Color4, TextureHandle
-from cube.presentation.gui.protocols.ShapeRenderer import ShapeRenderer
 from cube.presentation.gui.protocols.DisplayListManager import DisplayListManager
+from cube.presentation.gui.protocols.ShapeRenderer import ShapeRenderer
 from cube.presentation.gui.protocols.ViewStateManager import ViewStateManager
+from cube.presentation.gui.types import Color4, TextureHandle
 
 
 @runtime_checkable

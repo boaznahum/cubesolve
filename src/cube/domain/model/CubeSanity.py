@@ -1,10 +1,11 @@
 import sys
-from typing import Mapping, Hashable, Sequence
+from typing import Hashable, Mapping, Sequence
 
 from cube.domain.exceptions import InternalSWError
+
+from ._elements import CHelper, PartColorsID
 from .Cube import Cube
 from .cube_boy import Color
-from ._elements import CHelper, PartColorsID
 
 
 class CubeSanity:

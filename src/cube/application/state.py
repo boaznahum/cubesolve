@@ -3,12 +3,12 @@ import tempfile
 from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Literal, Any, Tuple, Callable
+from typing import Any, Callable, Literal, Tuple
+
+from cube.application.animation.AnimationText import AnimationText
 
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
-
-from cube.application.animation.AnimationText import AnimationText
 from cube.domain.model.Cube import Cube
 from cube.domain.model.cube_boy import FaceName
 from cube.utils.config_protocol import ConfigProtocol

@@ -4,9 +4,15 @@ GUI Backend Factory.
 Provides a unified interface to access all components of a GUI backend.
 """
 
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
-from cube.presentation.gui.protocols import Renderer, Window, EventLoop, AnimationBackend, AppWindow
+from cube.presentation.gui.protocols import (
+    AnimationBackend,
+    AppWindow,
+    EventLoop,
+    Renderer,
+    Window,
+)
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp

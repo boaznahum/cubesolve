@@ -1,9 +1,10 @@
-from collections.abc import Iterable, Hashable
+from collections.abc import Hashable, Iterable
 from enum import Enum, unique
-from typing import TypeAlias, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Tuple, TypeAlias, Union
+
+from cube.utils.config_protocol import ConfigProtocol
 
 from .cube_boy import Color
-from cube.utils.config_protocol import ConfigProtocol
 
 
 @unique

@@ -7,9 +7,16 @@ Provides a tk.Tk window with Canvas for 2D rendering.
 import tkinter as tk
 from typing import Callable
 
-from cube.presentation.gui.types import KeyEvent, MouseEvent, Color4, Keys, Modifiers, MouseButton
-from cube.presentation.gui.protocols import Window as WindowProtocol, TextRenderer
-
+from cube.presentation.gui.protocols import TextRenderer
+from cube.presentation.gui.protocols import Window as WindowProtocol
+from cube.presentation.gui.types import (
+    Color4,
+    KeyEvent,
+    Keys,
+    Modifiers,
+    MouseButton,
+    MouseEvent,
+)
 
 # Key mapping from Tkinter keysyms to abstract Keys
 _TK_KEY_MAP = {

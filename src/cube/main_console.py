@@ -13,6 +13,7 @@ Usage:
     python -m cube.main_console_new --quiet
 """
 import sys
+
 from cube.main_any_backend import main as main_any
 
 

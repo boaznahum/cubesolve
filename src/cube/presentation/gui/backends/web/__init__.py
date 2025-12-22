@@ -17,9 +17,9 @@ Usage:
 
 from typing import TYPE_CHECKING
 
-from cube.presentation.gui.backends.web.WebRenderer import WebRenderer
-from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
 from cube.presentation.gui.backends.web.WebAppWindow import WebAppWindow
+from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
+from cube.presentation.gui.backends.web.WebRenderer import WebRenderer
 
 if TYPE_CHECKING:
     from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory

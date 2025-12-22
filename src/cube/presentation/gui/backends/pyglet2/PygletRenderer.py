@@ -6,21 +6,37 @@ Uses pyglet.gl.gl_compat for legacy OpenGL functions and PyOpenGL for GLU.
 """
 
 from typing import Sequence
+
 import numpy as np
 
 try:
     import pyglet
-    # Pyglet 2.0 uses modern OpenGL by default - use gl_compat for legacy functions
-    from pyglet.gl import gl_compat as gl
+
     # GLU functions are not in pyglet 2.0 - use PyOpenGL instead
     from OpenGL import GLU as glu
+
+    # Pyglet 2.0 uses modern OpenGL by default - use gl_compat for legacy functions
+    from pyglet.gl import gl_compat as gl
 except ImportError as e:
     raise ImportError(
         "pyglet2 backend requires: pip install 'pyglet>=2.0' PyOpenGL"
     ) from e
 
-from cube.presentation.gui.types import Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
-from cube.presentation.gui.protocols import ShapeRenderer, DisplayListManager, ViewStateManager, Renderer
+from cube.presentation.gui.protocols import (
+    DisplayListManager,
+    Renderer,
+    ShapeRenderer,
+    ViewStateManager,
+)
+from cube.presentation.gui.types import (
+    Color3,
+    Color4,
+    DisplayList,
+    Matrix4x4,
+    Point3D,
+    TextureHandle,
+    TextureMap,
+)
 
 
 class PygletShapeRenderer(ShapeRenderer):
@@ -323,7 +339,7 @@ class PygletShapeRenderer(ShapeRenderer):
         stacks: int = 25,
     ) -> None:
         """Draw a hollow cylinder with capped ends."""
-        from math import sqrt, pi, acos
+        from math import acos, pi, sqrt
 
         # Convert to numpy arrays for easier math
         _p1 = np.array([float(p1[0]), float(p1[1]), float(p1[2])])

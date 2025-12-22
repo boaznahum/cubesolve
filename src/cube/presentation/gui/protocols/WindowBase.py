@@ -17,8 +17,8 @@ the Window protocol via duck typing.
 
 from typing import Callable, Sequence
 
-from cube.presentation.gui.types import KeyEvent, MouseEvent
 from cube.presentation.gui.protocols.AbstractWindow import AbstractWindow
+from cube.presentation.gui.types import KeyEvent, MouseEvent
 
 
 class WindowBase(AbstractWindow):

@@ -132,25 +132,26 @@ The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
 """
 
 from collections.abc import Iterable, MutableSequence
-from typing import Collection, Protocol, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Collection, Protocol, Tuple
 
 from cube.domain.exceptions import InternalSWError
-from .Edge import Edge
-from .Corner import Corner
-from .Center import Center
-from .PartEdge import PartEdge
-from .Part import Part
+from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
+
 from ._elements import AxisName, PartColorsID
-from ._part_slice import PartSlice, EdgeWing, CornerSlice
-from .cube_boy import CubeLayout, Color, FaceName
-from .Face import Face
+from ._part_slice import CornerSlice, EdgeWing, PartSlice
+from .Center import Center
+from .Corner import Corner
+from .cube_boy import Color, CubeLayout, FaceName
 from .cube_slice import Slice, SliceName
-from cube.utils.config_protocol import IServiceProvider, ConfigProtocol
+from .Edge import Edge
+from .Face import Face
+from .Part import Part
+from .PartEdge import PartEdge
 
 if TYPE_CHECKING:
-    from .CubeQueries2 import CubeQueries2
-    from .CubeListener import CubeListener
     from .Cube3x3Colors import Cube3x3Colors
+    from .CubeListener import CubeListener
+    from .CubeQueries2 import CubeQueries2
 
 
 class CubeSupplier(Protocol):
@@ -1764,8 +1765,13 @@ class Cube(CubeSupplier):
             Cube3x3Colors containing the colors of all edges, corners, and centers.
             Each edge/corner has colors keyed by face name.
         """
-        from .Cube3x3Colors import Cube3x3Colors, EdgeColors, CornerColors
-        from ._part import EdgeName, CornerName, _faces_2_edge_name, _faces_2_corner_name
+        from ._part import (
+            CornerName,
+            EdgeName,
+            _faces_2_corner_name,
+            _faces_2_edge_name,
+        )
+        from .Cube3x3Colors import CornerColors, Cube3x3Colors, EdgeColors
 
         edges_dict: dict[EdgeName, EdgeColors] = {}
         for edge in self.edges:
@@ -1808,7 +1814,7 @@ class Cube(CubeSupplier):
         Raises:
             AssertionError: If the resulting cube state is invalid.
         """
-        from ._part import _faces_2_edge_name, _faces_2_corner_name
+        from ._part import _faces_2_corner_name, _faces_2_edge_name
 
         # Set edge colors - match by edge name derived from faces
         for edge in self.edges:

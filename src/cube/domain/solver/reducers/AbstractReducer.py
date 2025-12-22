@@ -12,8 +12,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
+from cube.domain.solver.protocols.ReducerProtocol import (
+    ReducerProtocol,
+    ReductionResults,
+)
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
-from cube.domain.solver.protocols.ReducerProtocol import ReducerProtocol, ReductionResults
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

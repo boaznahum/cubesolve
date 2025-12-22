@@ -1,15 +1,15 @@
 from enum import Enum
 
-from cube.domain.algs import Algs, Alg
+from cube.domain.algs import Alg, Algs
 from cube.domain.algs.WideFaceAlg import WideFaceAlg
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model import Part, Edge, Corner, Color
+from cube.domain.model import Color, Corner, Edge, Part
 from cube.domain.model.CubeQueries2 import Pred0
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.solver.common.Tracker import EdgeTracker, CornerTracker
+from cube.domain.solver.common.Tracker import CornerTracker, EdgeTracker
 from cube.utils.SSCode import SSCode
 
 

@@ -16,11 +16,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Sequence
 
-from cube.domain.algs import Algs, Alg
 from cube.application.exceptions.app_exceptions import AppExit
-from cube.presentation.gui.types import Color4
+from cube.domain.algs import Alg, Algs
 from cube.presentation.gui.commands import Command, CommandContext
 from cube.presentation.gui.key_bindings import lookup_command
+from cube.presentation.gui.types import Color4
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp

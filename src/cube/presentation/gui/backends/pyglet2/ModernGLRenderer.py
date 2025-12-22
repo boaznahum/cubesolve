@@ -16,14 +16,24 @@ from pyglet import gl
 # Type alias for 3D point: accepts both tuples and numpy arrays
 Vertex3D = Union[Sequence[float], ndarray]
 
-from cube.presentation.gui.backends.pyglet2.shaders import ShaderProgram  # noqa: E402 TODO: fix
 from cube.presentation.gui.backends.pyglet2.matrix import (  # noqa: E402 TODO: fix
-    Mat4, perspective, multiply, MatrixStack
+    Mat4,
+    MatrixStack,
+    multiply,
+    perspective,
 )
-from cube.presentation.gui.protocols.ViewStateManager import ViewStateManager  # noqa: E402 TODO: fix
-from cube.presentation.gui.protocols.AbstractShapeRenderer import AbstractShapeRenderer  # noqa: E402 TODO: fix
-from cube.presentation.gui.protocols.AbstractRenderer import AbstractRenderer  # noqa: E402 TODO: fix
-
+from cube.presentation.gui.backends.pyglet2.shaders import (  # noqa: E402 TODO: fix
+    ShaderProgram,
+)
+from cube.presentation.gui.protocols.AbstractRenderer import (  # noqa: E402 TODO: fix
+    AbstractRenderer,
+)
+from cube.presentation.gui.protocols.AbstractShapeRenderer import (  # noqa: E402 TODO: fix
+    AbstractShapeRenderer,
+)
+from cube.presentation.gui.protocols.ViewStateManager import (  # noqa: E402 TODO: fix
+    ViewStateManager,
+)
 
 # Solid color shader - position only, color from uniform
 SOLID_VERTEX_SHADER = """
@@ -1031,7 +1041,8 @@ class ModernGLRenderer:
         """
         try:
             from PIL import Image
-            from PIL.Image import Image as PILImage, Transpose
+            from PIL.Image import Image as PILImage
+            from PIL.Image import Transpose
 
             # Load image and convert to RGBA for consistent format
             loaded_img = Image.open(file_path)
@@ -1248,7 +1259,9 @@ class ModernGLViewStateManager(ViewStateManager):
         This method computes the look-at matrix and applies it.
         """
         # Compute look-at matrix
-        from cube.presentation.gui.backends.pyglet2.matrix import look_at as compute_look_at
+        from cube.presentation.gui.backends.pyglet2.matrix import (
+            look_at as compute_look_at,
+        )
         look_at_matrix = compute_look_at(
             (eye_x, eye_y, eye_z),
             (center_x, center_y, center_z),

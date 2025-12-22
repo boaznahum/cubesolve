@@ -17,9 +17,9 @@ from collections.abc import Collection
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
-    from cube.domain.model._part_slice import PartSlice
     from cube.domain.model._elements import PartColorsID
+    from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model.Cube import Cube
 
 
 def dump_cube_state(cube: Cube, label: str = "Cube State") -> None:

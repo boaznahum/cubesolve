@@ -1,9 +1,9 @@
 import re
 from typing import Tuple
 
-from cube.domain.algs.Alg import Alg
 from cube.domain.algs import Algs
-from cube.domain.exceptions import InternalSWError, EvenCubeEdgeParityException
+from cube.domain.algs.Alg import Alg
+from cube.domain.exceptions import EvenCubeEdgeParityException, InternalSWError
 from cube.domain.model import FaceName, Part
 from cube.domain.model.Face import Face
 from cube.domain.solver.common.BaseSolver import BaseSolver

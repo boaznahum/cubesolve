@@ -40,17 +40,18 @@ import numpy as np
 from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color, FaceName
-from ._modern_gl_face import ModernGLFace
+
 from ._modern_gl_constants import (
     FACE_TRANSFORMS,
     SHADOW_OFFSETS,
 )
+from ._modern_gl_face import ModernGLFace
 
 if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
-    from cube.domain.model._part_slice import PartSlice
-    from cube.domain.model.PartEdge import PartEdge
     from cube.application.state import ApplicationAndViewState
+    from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model.Cube import Cube
+    from cube.domain.model.PartEdge import PartEdge
 
 
 class ModernGLBoard:

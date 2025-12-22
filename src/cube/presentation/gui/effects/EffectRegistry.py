@@ -1,12 +1,12 @@
 """Registry for celebration effect types."""
 from __future__ import annotations
 
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
+    from cube.application.state import ApplicationAndViewState
     from cube.presentation.gui.effects.CelebrationEffect import CelebrationEffect
     from cube.presentation.gui.protocols.Renderer import Renderer
-    from cube.application.state import ApplicationAndViewState
 
 # Factory function type: (renderer, vs, backend_name) -> CelebrationEffect
 EffectFactory = Callable[["Renderer", "ApplicationAndViewState", str], "CelebrationEffect"]
@@ -37,12 +37,14 @@ class EffectRegistry:
         cls._initialized = True
 
         # Import and register default effects
-        from cube.presentation.gui.effects.effects.NoneEffect import NoneEffect
-        from cube.presentation.gui.effects.effects.ConfettiEffect import ConfettiEffect
-        from cube.presentation.gui.effects.effects.VictorySpinEffect import VictorySpinEffect
-        from cube.presentation.gui.effects.effects.SparkleEffect import SparkleEffect
-        from cube.presentation.gui.effects.effects.GlowEffect import GlowEffect
         from cube.presentation.gui.effects.effects.ComboEffect import ComboEffect
+        from cube.presentation.gui.effects.effects.ConfettiEffect import ConfettiEffect
+        from cube.presentation.gui.effects.effects.GlowEffect import GlowEffect
+        from cube.presentation.gui.effects.effects.NoneEffect import NoneEffect
+        from cube.presentation.gui.effects.effects.SparkleEffect import SparkleEffect
+        from cube.presentation.gui.effects.effects.VictorySpinEffect import (
+            VictorySpinEffect,
+        )
 
         cls.register("none", lambda r, vs, b: NoneEffect(r, vs, b))
         cls.register("confetti", lambda r, vs, b: ConfettiEffect(r, vs, b))

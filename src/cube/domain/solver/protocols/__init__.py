@@ -1,7 +1,7 @@
 """Solver protocols - interfaces for dependency inversion."""
 
-from .OperatorProtocol import OperatorProtocol
 from .AnnotationProtocol import AnnotationProtocol, SupportsAnnotation
+from .OperatorProtocol import OperatorProtocol
 from .ReducerProtocol import ReducerProtocol, ReductionResults
 from .Solver3x3Protocol import Solver3x3Protocol
 from .SolverElementsProvider import SolverElementsProvider

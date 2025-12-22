@@ -1,10 +1,10 @@
 from abc import ABC
-from typing import final, Iterable, Tuple, Collection, Any
+from typing import Any, Collection, Iterable, Tuple, final
 
+from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
-from cube.domain.algs._internal_utils import _inv
-from cube.domain.model import FaceName, Cube, PartSlice
+from cube.domain.model import Cube, FaceName, PartSlice
 
 
 class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):

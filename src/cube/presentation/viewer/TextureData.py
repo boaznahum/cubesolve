@@ -2,8 +2,9 @@ import importlib.resources as pkg_resources
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from . import res
 from cube.presentation.gui.types import TextureHandle
+
+from . import res
 
 if TYPE_CHECKING:
     from cube.presentation.gui.protocols.Renderer import Renderer

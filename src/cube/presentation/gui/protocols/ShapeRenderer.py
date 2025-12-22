@@ -6,7 +6,7 @@ This protocol defines the interface for rendering geometric primitives.
 
 from typing import Protocol, Sequence, runtime_checkable
 
-from cube.presentation.gui.types import Point3D, Color3, TextureHandle, TextureMap
+from cube.presentation.gui.types import Color3, Point3D, TextureHandle, TextureMap
 
 
 @runtime_checkable

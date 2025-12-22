@@ -5,7 +5,7 @@ This protocol defines the interface for the main application event loop.
 Presentation layer backends implement this protocol.
 """
 
-from typing import Protocol, Callable, runtime_checkable
+from typing import Callable, Protocol, runtime_checkable
 
 
 @runtime_checkable

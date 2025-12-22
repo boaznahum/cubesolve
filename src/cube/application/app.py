@@ -1,13 +1,13 @@
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from cube.utils.config_protocol import ConfigProtocol
-from cube.domain.algs import Alg
 from cube.application.AbstractApp import AbstractApp
-from cube.application.state import ApplicationAndViewState
-from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
+from cube.application.state import ApplicationAndViewState
+from cube.domain.algs import Alg
+from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solver, Solvers
 from cube.domain.solver.SolverName import SolverName
+from cube.utils.config_protocol import ConfigProtocol
 
 if TYPE_CHECKING:
     from cube.application.animation.AnimationManager import AnimationManager

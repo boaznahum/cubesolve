@@ -1,6 +1,7 @@
 """Generate debug textures for 3x3 cube with clear directional information."""
-from PIL import Image, ImageDraw, ImageFont
 import os
+
+from PIL import Image, ImageDraw, ImageFont
 
 # Configuration
 CELL_SIZE = 100  # pixels per cell

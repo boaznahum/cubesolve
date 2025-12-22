@@ -6,8 +6,9 @@ Provides a mock window for testing without actual GUI display.
 
 from typing import Callable, Sequence
 
-from cube.presentation.gui.types import KeyEvent, MouseEvent, Color4
-from cube.presentation.gui.protocols import Window as WindowProtocol, TextRenderer
+from cube.presentation.gui.protocols import TextRenderer
+from cube.presentation.gui.protocols import Window as WindowProtocol
+from cube.presentation.gui.types import Color4, KeyEvent, MouseEvent
 
 
 class HeadlessTextRenderer(TextRenderer):

@@ -11,8 +11,8 @@ import numpy as np
 from cube.presentation.gui.effects.BaseEffect import BaseEffect
 
 if TYPE_CHECKING:
-    from cube.presentation.gui.protocols.Renderer import Renderer
     from cube.application.state import ApplicationAndViewState
+    from cube.presentation.gui.protocols.Renderer import Renderer
 
 
 @dataclass

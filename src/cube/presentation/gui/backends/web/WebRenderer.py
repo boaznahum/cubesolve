@@ -7,14 +7,23 @@ Uses WebGL2 on the browser side for proper depth handling.
 
 from __future__ import annotations
 
-from typing import Sequence, TYPE_CHECKING
 import json
+from typing import TYPE_CHECKING, Sequence
 
-from cube.presentation.gui.types import (
-    Point3D, Color3, Color4, DisplayList, Matrix4x4, TextureHandle, TextureMap
-)
 from cube.presentation.gui.protocols import (
-    ShapeRenderer, DisplayListManager, ViewStateManager, Renderer
+    DisplayListManager,
+    Renderer,
+    ShapeRenderer,
+    ViewStateManager,
+)
+from cube.presentation.gui.types import (
+    Color3,
+    Color4,
+    DisplayList,
+    Matrix4x4,
+    Point3D,
+    TextureHandle,
+    TextureMap,
 )
 
 if TYPE_CHECKING:

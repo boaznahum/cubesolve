@@ -17,8 +17,8 @@ Usage:
     cmd = lookup_command(Keys.R, Modifiers.SHIFT, animation_running=False)
     # Returns Commands.ROTATE_R_PRIME
 """
-from cube.presentation.gui.types import Keys, Modifiers
 from cube.presentation.gui.commands import Command, Commands
+from cube.presentation.gui.types import Keys, Modifiers
 
 # Type alias for binding tuple: (key, modifiers, command)
 KeyBinding = tuple[int, int, Command]

@@ -11,18 +11,15 @@ Key Handling:
 """
 
 from cube.application.AbstractApp import AbstractApp
+from cube.presentation.gui.backends.console import ConsoleViewer as console_viewer
+from cube.presentation.gui.backends.console.ConsoleEventLoop import ConsoleEventLoop
+from cube.presentation.gui.backends.console.ConsoleKeys import Keys as ConsoleKeys
+from cube.presentation.gui.backends.console.ConsoleRenderer import ConsoleRenderer
+from cube.presentation.gui.backends.console.NullViewer import NullViewer
 from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.protocols import AppWindow
-from cube.presentation.gui.types import Keys, Modifiers
 from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase
-
-from cube.presentation.gui.backends.console import ConsoleViewer as console_viewer
-from cube.presentation.gui.backends.console.ConsoleKeys import Keys as ConsoleKeys
-
-from cube.presentation.gui.backends.console.ConsoleRenderer import ConsoleRenderer
-from cube.presentation.gui.backends.console.ConsoleEventLoop import ConsoleEventLoop
-from cube.presentation.gui.backends.console.NullViewer import NullViewer
-
+from cube.presentation.gui.types import Keys, Modifiers
 
 # Mapping from console key characters to abstract Keys
 _CONSOLE_TO_KEYS: dict[str, int] = {

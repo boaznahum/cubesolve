@@ -11,7 +11,7 @@ import json
 import time
 import webbrowser
 from pathlib import Path
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from cube.presentation.gui.protocols import EventLoop
 

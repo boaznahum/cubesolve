@@ -2,30 +2,32 @@ from __future__ import annotations
 
 import math
 import time
-from typing import Tuple, Iterable, TYPE_CHECKING
 from collections.abc import Collection, Set
+from typing import TYPE_CHECKING, Iterable, Tuple
 
 import numpy as np
 from numpy import ndarray
 
+from cube.application.protocols import AnimatableViewer
 from cube.application.state import ApplicationAndViewState
-from cube.domain.model.Cube import Cube
-from cube.domain.model.Face import Face
-from cube.domain.model.cube_boy import FaceName
 from cube.domain.model._part_slice import PartSlice
+from cube.domain.model.Cube import Cube
+from cube.domain.model.cube_boy import FaceName
+from cube.domain.model.Face import Face
 from cube.domain.model.PartEdge import PartEdge
+
 # noinspection PyMethodMayBeStatic
 from cube.utils import prof
+
+from ..gui.protocols.Renderer import Renderer
+from ..gui.types import DisplayList
+from ..gui.ViewSetup import ViewSetup
 from ._board import _Board
 from ._faceboard import _FaceBoard
-from ..gui.protocols.Renderer import Renderer
-from cube.application.protocols import AnimatableViewer
-from ..gui.ViewSetup import ViewSetup
-from ..gui.types import DisplayList
 
 if TYPE_CHECKING:
-    from cube.domain.algs import AnimationAbleAlg
     from cube.application.animation.AnimationManager import Animation
+    from cube.domain.algs import AnimationAbleAlg
 
 
 class GCubeViewer(AnimatableViewer):

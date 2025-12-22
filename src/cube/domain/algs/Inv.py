@@ -1,17 +1,18 @@
 from typing import TYPE_CHECKING, Iterator
 
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
-from .Alg import Alg
 from cube.domain.model.Cube import Cube
 
+from .Alg import Alg
+
 if TYPE_CHECKING:
-    from .SimpleAlg import SimpleAlg
     from .SeqAlg import SeqSimpleAlg
+    from .SimpleAlg import SimpleAlg
 
 
 class _Inv(Alg):
-    from .SimpleAlg import NSimpleAlg
     from .SeqAlg import SeqAlg
+    from .SimpleAlg import NSimpleAlg
 
     __slots__ = "_alg"
 

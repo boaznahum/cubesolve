@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING
 from cube.application.protocols import AnimatableViewer
 
 if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
-    from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
-    from cube.application.state import ApplicationAndViewState
     from cube.application.animation.AnimationManager import Animation
+    from cube.application.state import ApplicationAndViewState
+    from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
+    from cube.domain.model.Cube import Cube
 
 
 class NullViewer(AnimatableViewer):

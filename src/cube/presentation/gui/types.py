@@ -4,17 +4,17 @@ Common types for the GUI abstraction layer.
 This module defines backend-independent types used across all GUI protocols.
 """
 
-from typing import TypeAlias, Tuple, NewType
+from typing import NewType, Tuple, TypeAlias
 
 import numpy as np
 from numpy import ndarray
 
 # Re-export classes from split files
 from .KeyEvent import KeyEvent
-from .MouseEvent import MouseEvent
 from .Keys import Keys
 from .Modifiers import Modifiers
 from .MouseButton import MouseButton
+from .MouseEvent import MouseEvent
 from .TextureCoord import TextureCoord
 
 # Geometric types

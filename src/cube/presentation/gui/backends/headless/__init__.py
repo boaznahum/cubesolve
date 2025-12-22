@@ -16,9 +16,9 @@ Usage:
 
 from typing import TYPE_CHECKING
 
-from cube.presentation.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
-from cube.presentation.gui.backends.headless.HeadlessEventLoop import HeadlessEventLoop
 from cube.presentation.gui.backends.headless.HeadlessAppWindow import HeadlessAppWindow
+from cube.presentation.gui.backends.headless.HeadlessEventLoop import HeadlessEventLoop
+from cube.presentation.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
 from cube.presentation.gui.backends.headless.HeadlessWindow import HeadlessWindow
 
 if TYPE_CHECKING:

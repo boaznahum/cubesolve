@@ -5,15 +5,14 @@ Provides a no-output application window for testing and automation.
 """
 
 from cube.application.AbstractApp import AbstractApp
-from cube.presentation.gui.factory import GUIBackend
-from cube.presentation.gui.protocols import AppWindow
-from cube.presentation.gui.types import KeyEvent
-from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase
 from cube.application.protocols import AnimatableViewer
-
+from cube.presentation.gui.backends.headless.HeadlessEventLoop import HeadlessEventLoop
 from cube.presentation.gui.backends.headless.HeadlessRenderer import HeadlessRenderer
 from cube.presentation.gui.backends.headless.HeadlessWindow import HeadlessWindow
-from cube.presentation.gui.backends.headless.HeadlessEventLoop import HeadlessEventLoop
+from cube.presentation.gui.factory import GUIBackend
+from cube.presentation.gui.protocols import AppWindow
+from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase
+from cube.presentation.gui.types import KeyEvent
 from cube.presentation.viewer.GCubeViewer import GCubeViewer
 
 

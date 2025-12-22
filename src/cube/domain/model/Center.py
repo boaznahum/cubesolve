@@ -1,11 +1,11 @@
-from collections.abc import Sequence, Iterator, Iterable
-from typing import TypeAlias, TYPE_CHECKING, Self
+from collections.abc import Iterable, Iterator, Sequence
+from typing import TYPE_CHECKING, Self, TypeAlias
 
-from cube.domain.model.Part import Part
+from cube.domain.model._elements import CenterSliceIndex, SliceIndex
 from cube.domain.model._part_slice import CenterSlice
-from cube.domain.model.PartEdge import PartEdge
-from cube.domain.model._elements import SliceIndex, CenterSliceIndex
 from cube.domain.model.cube_boy import FaceName
+from cube.domain.model.Part import Part
+from cube.domain.model.PartEdge import PartEdge
 
 if TYPE_CHECKING:
     from .Face import Face

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, TypeAlias, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, TypeAlias
 
+from cube.application.protocols import AnimatableViewer, EventLoop
+from cube.application.state import ApplicationAndViewState
 from cube.domain import algs
 from cube.domain.algs import SimpleAlg
-from cube.application.state import ApplicationAndViewState
-from cube.application.protocols import EventLoop, AnimatableViewer
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

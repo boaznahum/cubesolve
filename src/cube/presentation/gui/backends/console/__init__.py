@@ -22,11 +22,10 @@ Usage:
 
 from typing import TYPE_CHECKING
 
-from cube.presentation.gui.backends.console.ConsoleRenderer import ConsoleRenderer
-from cube.presentation.gui.backends.console.ConsoleEventLoop import ConsoleEventLoop
+from cube.presentation.gui.backends.console import ConsoleKeys, ConsoleViewer
 from cube.presentation.gui.backends.console.ConsoleAppWindow import ConsoleAppWindow
-from cube.presentation.gui.backends.console import ConsoleViewer
-from cube.presentation.gui.backends.console import ConsoleKeys
+from cube.presentation.gui.backends.console.ConsoleEventLoop import ConsoleEventLoop
+from cube.presentation.gui.backends.console.ConsoleRenderer import ConsoleRenderer
 
 if TYPE_CHECKING:
     from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory

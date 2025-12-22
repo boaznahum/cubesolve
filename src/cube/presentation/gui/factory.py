@@ -1,6 +1,6 @@
 # Re-exports for convenience
-from .GUIBackendFactory import GUIBackendFactory
 from .BackendRegistry import BackendRegistry
+from .GUIBackendFactory import GUIBackendFactory
 
 # Backward compatibility alias
 GUIBackend = GUIBackendFactory

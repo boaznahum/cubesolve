@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import unique, Enum
+from enum import Enum, unique
 
 
 @dataclass(frozen=True)
