@@ -70,7 +70,6 @@ solver/
         │       NxNCenters, NxNEdges, NxNCorners    │
         │       FaceTrackerHolder                   │
         │       _NxNCentersFaceTracker (private)    │
-        │       _NxNCentersHelper (private)         │
         │   Can import: Layer 1 only                │
         └───────────────────┬───────────────────────┘
                             ▼
@@ -136,7 +135,6 @@ Big cube (NxN) solving utilities shared by reducers and direct solvers:
 - `FaceTrackerHolder` - Container for face trackers
 
 Private implementation details (prefixed with `_`):
-- `_NxNCentersHelper` - Helper methods for center solving
 - `_NxNCentersFaceTracker` - Face tracking for center solving
 
 ### Layer 3a: _3x3/
@@ -249,7 +247,7 @@ Private implementation files are prefixed with `_` following Python convention:
 - Only public API classes are exported from `__init__.py`
 
 Examples:
-- `common/big_cube/_NxNCentersHelper.py` - internal helper
+- `common/big_cube/_NxNCentersFaceTracker.py` - internal helper
 - `_3x3/beginner/_L1Corners.py` - internal solver component
 
 ## Migration Notes

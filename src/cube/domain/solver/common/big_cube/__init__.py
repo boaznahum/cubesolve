@@ -7,7 +7,6 @@ This package contains shared utilities for NxN cube solving:
 - Face tracking for even cubes (FaceTrackerHolder)
 
 Private implementation details (prefixed with _):
-- _NxNCentersHelper - Helper methods for center solving
 - _NxNCentersFaceTracker - Face tracking implementation
 
 These are used by:
