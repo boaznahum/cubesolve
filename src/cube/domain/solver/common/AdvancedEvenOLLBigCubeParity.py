@@ -16,7 +16,6 @@ class AdvancedEdgeEdgeParity(SolverElement):
         """
         cube = self.cube
 
-
         # https://cubingcheatsheet.com/algs6x.html
         # 2-3Rw' U2 2-3Lw F2 2-3Lw' F2 2-3Rw2 U2 2-3Rw U2 2-3Rw' U2 F2 2-3Rw2 F2
 

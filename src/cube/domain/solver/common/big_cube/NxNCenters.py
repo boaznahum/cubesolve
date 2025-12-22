@@ -12,7 +12,7 @@ from cube.domain.model.cube_boy import CubeLayout, color2long
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
-from cube.domain.solver.common.FaceTracker import FaceTracker
+from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
@@ -216,7 +216,6 @@ class NxNCenters(SolverElement):
         This may be slightly less accurate than tracking colors as faces are solved,
         but simplifies the code and ownership model significantly.
         """
-
         faces: list[FaceTracker] = list(holder)
 
         #self._faces = faces

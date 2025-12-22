@@ -10,8 +10,8 @@ class Keys:
 
     # Letters (using ASCII-like values for convenience)
     A, B, C, D, E, F = 65, 66, 67, 68, 69, 70
-    G, H, I, J, K, L = 71, 72, 73, 74, 75, 76
-    M, N, O, P, Q, R = 77, 78, 79, 80, 81, 82
+    G, H, I, J, K, L = 71, 72, 73, 74, 75, 76  # noqa: E741 TODO: fix
+    M, N, O, P, Q, R = 77, 78, 79, 80, 81, 82  # noqa: E741 TODO: fix
     S, T, U, V, W, X = 83, 84, 85, 86, 87, 88
     Y, Z = 89, 90
 

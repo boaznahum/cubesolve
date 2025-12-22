@@ -65,10 +65,11 @@ solver/
         │ Layer 2: common/                          │
         │   • BaseSolver, AbstractSolver            │
         │   • SolverElement                         │
-        │   • CommonOp, Tracker, FaceTracker        │
+        │   • CommonOp, Tracker                     │
         │   • big_cube/                             │
         │       NxNCenters, NxNEdges, NxNCorners    │
         │       FaceTrackerHolder                   │
+        │       _FaceTracker (private)              │
         │       _NxNCentersFaceTracker (private)    │
         │   Can import: Layer 1 only                │
         └───────────────────┬───────────────────────┘

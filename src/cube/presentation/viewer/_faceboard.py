@@ -126,9 +126,6 @@ class _FaceBoard:
 
         center_size = face_size - 2 * corner_size
 
-        cell_width: float
-        cell_height: float
-
         x0: float
         y0: float
 

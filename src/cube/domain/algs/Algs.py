@@ -83,7 +83,7 @@ class Algs:
     d = _wd()  # D + all inner layers (U stays fixed)
     u = _wu()  # U + all inner layers (D stays fixed)
     r = _wr()  # R + all inner layers (L stays fixed)
-    l = _wl()  # L + all inner layers (R stays fixed)
+    l = _wl()  # L + all inner layers (R stays fixed)  # noqa: E741 TODO: fix
     f = _wf()  # F + all inner layers (B stays fixed)
     b = _wb()  # B + all inner layers (F stays fixed)
 

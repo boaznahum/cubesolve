@@ -847,15 +847,18 @@ class F2L(SolverElement):
         preserve_cond: Pred0
 
         if mode == EdgePreserveMode.PreserveAny:
-            preserve_cond = lambda: not self.belong_to_middle(edge_to_preserve.required_position)
+            def preserve_cond() -> bool:
+                return not self.belong_to_middle(edge_to_preserve.required_position)
 
         elif mode == EdgePreserveMode.PreserveMatching:  # only preservers matching edge
 
             matching_edge = self._matching_edge(corner).colors_id
 
-            preserve_cond = lambda: edge_to_preserve.colors_id != matching_edge
+            def preserve_cond() -> bool:
+                return edge_to_preserve.colors_id != matching_edge
         else:
-            preserve_cond = lambda: True
+            def preserve_cond() -> bool:
+                return True
 
         pre = self.cqr.rotate_face_and_check_get_alg(cube.up, preserve_cond)
 

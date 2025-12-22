@@ -365,7 +365,7 @@ class Cube(CubeSupplier):
         boy = cube_boy.get_boy_layout(self._sp)
 
         f: Face = Face(self, FaceName.F, boy[FaceName.F])
-        l: Face = Face(self, FaceName.L, boy[FaceName.L])
+        l: Face = Face(self, FaceName.L, boy[FaceName.L])  # noqa: E741 TODO: fix
         u: Face = Face(self, FaceName.U, boy[FaceName.U])
         r: Face = Face(self, FaceName.R, boy[FaceName.R])
         d: Face = Face(self, FaceName.D, boy[FaceName.D])
@@ -396,8 +396,6 @@ class Cube(CubeSupplier):
         self._right = r
         self._down = d
         self._back = b
-
-        e: Edge
 
         edges: list[Edge] = []
 
@@ -1265,7 +1263,7 @@ class Cube(CubeSupplier):
         try:
             self.sanity(force_check)
             return True
-        except:
+        except Exception:
             return False
 
     def sanity(self, force_check=False):
@@ -1731,9 +1729,6 @@ class Cube(CubeSupplier):
         """
 
         if not self._original_layout:
-            from .Face import Face
-            f: Face
-
             faces: dict[FaceName, Color] = {f.name: f.original_color for f in self._faces.values()}
             lo = CubeLayout(True, faces, self._sp)
 
@@ -1747,9 +1742,6 @@ class Cube(CubeSupplier):
 
         :return: current layout, valid only in case of 3x3, guess center color by taking middle slice
         """
-
-        from .Face import Face
-        f: Face
 
         faces: dict[FaceName, Color] = {f.name: f.center.color for f in self._faces.values()}
         return CubeLayout(False, faces, self._sp)

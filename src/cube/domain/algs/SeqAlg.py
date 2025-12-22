@@ -78,7 +78,7 @@ class SeqAlg(Alg):
                     continue
 
                 if prev:
-                    if type(prev) == type(a) and prev.same_form(a):
+                    if type(prev) is type(a) and prev.same_form(a):
 
                         assert isinstance(prev, SimpleAlg)
 

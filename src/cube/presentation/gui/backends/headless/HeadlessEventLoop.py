@@ -112,7 +112,6 @@ class HeadlessEventLoop(EventLoop):
         """
         processed = False
         current_time = self.get_time()
-        current_time + timeout
 
         # Process immediate callbacks
         while self._immediate_callbacks:

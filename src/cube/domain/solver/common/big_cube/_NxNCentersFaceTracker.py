@@ -117,7 +117,7 @@ from cube.domain.model import Color, CenterSlice
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.model.cube_boy import CubeLayout
-from cube.domain.solver.common.FaceTracker import FaceTracker
+from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet

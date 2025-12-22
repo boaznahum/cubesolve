@@ -16,13 +16,13 @@ from pyglet import gl
 # Type alias for 3D point: accepts both tuples and numpy arrays
 Vertex3D = Union[Sequence[float], ndarray]
 
-from cube.presentation.gui.backends.pyglet2.shaders import ShaderProgram
-from cube.presentation.gui.backends.pyglet2.matrix import (
+from cube.presentation.gui.backends.pyglet2.shaders import ShaderProgram  # noqa: E402 TODO: fix
+from cube.presentation.gui.backends.pyglet2.matrix import (  # noqa: E402 TODO: fix
     Mat4, perspective, multiply, MatrixStack
 )
-from cube.presentation.gui.protocols.ViewStateManager import ViewStateManager
-from cube.presentation.gui.protocols.AbstractShapeRenderer import AbstractShapeRenderer
-from cube.presentation.gui.protocols.AbstractRenderer import AbstractRenderer
+from cube.presentation.gui.protocols.ViewStateManager import ViewStateManager  # noqa: E402 TODO: fix
+from cube.presentation.gui.protocols.AbstractShapeRenderer import AbstractShapeRenderer  # noqa: E402 TODO: fix
+from cube.presentation.gui.protocols.AbstractRenderer import AbstractRenderer  # noqa: E402 TODO: fix
 
 
 # Solid color shader - position only, color from uniform

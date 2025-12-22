@@ -188,10 +188,6 @@ class PartSlice(ABC, Hashable):
         :param other:
         :return:
         """
-
-        e1: PartEdge
-        e2: PartEdge
-
         return all(e1.color == e2.color for e1, e2 in itertools.zip_longest(self.edges, other._edges))
 
     def f_color(self, f: _Face):

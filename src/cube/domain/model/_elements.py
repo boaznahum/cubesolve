@@ -24,7 +24,7 @@ class AxisName(Enum):
     Z = "Z"
 
 
-_Face: TypeAlias = "Face"  # type: ignore
+_Face: TypeAlias = "Face"  # type: ignore  # noqa: F821
 
 if TYPE_CHECKING:
     from .Cube import Cube
@@ -32,12 +32,12 @@ if TYPE_CHECKING:
 # noinspection PyUnresolvedReferences
 _Cube: TypeAlias = "Cube"  # type: ignore
 
-type PartColorsID = frozenset[Color]
-type PartSliceHashID = frozenset[Hashable]
-type PartFixedID = frozenset[PartSliceHashID]
+PartColorsID: TypeAlias = frozenset[Color]
+PartSliceHashID: TypeAlias = frozenset[Hashable]
+PartFixedID: TypeAlias = "frozenset[PartSliceHashID]"
 
 # order is important
-type PartSliceColors = Union[Tuple[Color], Tuple[Color, Color], Tuple[Color, Color, Color]]
+PartSliceColors: TypeAlias = Union[Tuple[Color], Tuple[Color, Color], Tuple[Color, Color, Color]]
 
 CubeState = dict[PartSliceHashID, PartSliceColors]
 

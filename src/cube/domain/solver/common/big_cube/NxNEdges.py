@@ -251,7 +251,6 @@ class NxNEdges(SolverElement):
             # start from one on right - to optimize
             edge_right = face.edge_right
             _other_edges = [edge_right, *(other_edges - {edge_right})]
-            s:EdgeWing
             source_slice = self.cqr.find_slice_in_edges(_other_edges,
                                                            lambda s: s.colors_id == color_un_ordered)
 

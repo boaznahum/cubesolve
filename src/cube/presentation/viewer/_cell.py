@@ -8,7 +8,7 @@ import numpy as np
 from numpy import ndarray
 
 from cube.application.state import ApplicationAndViewState
-from cube.domain.model.cube_boy import Color, FaceName
+from cube.domain.model.cube_boy import Color
 from cube.domain.model.Face import Face
 from cube.utils import geometry
 from .TextureData import TextureData
@@ -173,7 +173,6 @@ class _Cell:
 
         # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
 
-
         self._left_bottom_v3 = vertexes[0]
         self._right_top_v3 = vertexes[2]
 
@@ -200,8 +199,6 @@ class _Cell:
         self._update_polygon(self.gl_lists_unmovable, False)
 
     def get_all_gui_elements(self, dest: set[int]):
-        m: dict[frozenset[FaceName], MutableSequence[int]]
-
         dicts: list[dict[PartSliceHashID, MutableSequence[int]]] = [self.gl_lists_movable, self.gl_lists_unmovable]
 
         # when we try to use values() pycharm complains
@@ -294,7 +291,6 @@ class _Cell:
 
             n = part.n_slices
 
-            nn: int
             left_bottom = vertexes[0]
             right_bottom = vertexes[1]
             left_top = vertexes[3]
@@ -465,8 +461,6 @@ class _Cell:
         elif isinstance(part, Edge):
             # shapes.quad_with_line(vertexes, color, lw, lc)
 
-            nn: int
-
             for i in range(n):
                 ix = i
 
@@ -602,7 +596,6 @@ class _Cell:
         center += self._face_board.ortho_direction * 30
 
         p1 = center + self._face_board.ortho_direction * height
-        center - self._face_board.ortho_direction * height
 
         # this is also supported by glCallLine
         # shapes.cylinder(p1, p2, r1, r2, marker_color)

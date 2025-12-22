@@ -28,7 +28,6 @@ class CubeQueries2:
 
         cube = self._cube
 
-        s: PartSlice
         for f in cube.faces:
             if pred(f):
                 return f

@@ -30,7 +30,7 @@ from cube.domain.model import Color
 from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.FaceName import FaceName
 from cube.domain.solver.common.big_cube._NxNCentersFaceTracker import NxNCentersFaceTrackers
-from cube.domain.solver.common.FaceTracker import FaceTracker
+from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
