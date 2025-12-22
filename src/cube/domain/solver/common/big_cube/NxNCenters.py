@@ -17,13 +17,6 @@ from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
-
-def use(_):
-    pass
-
-
-_status = None
-
 Point: TypeAlias = Tuple[int, int]
 Block: TypeAlias = Tuple[Point, Point]
 

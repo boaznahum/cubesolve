@@ -9,10 +9,6 @@ from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.Tracker import EdgeTracker
 
 
-def use(_):
-    pass
-
-
 class L2(SolverElement):
     __slots__: list[str] = []
 
@@ -114,11 +110,6 @@ class L2(SolverElement):
         assert self.cube.front.edge_top is st.actual
 
         assert st.position.on_face(cube.front) and (st.position.on_face(cube.right) or st.position.on_face(cube.left))
-
-        _te = st.position  # don't track
-        _se = st.actual  # don't track
-        _te_id = _te.colors_id
-        _se_id = _se.colors_id
 
         if st.position.on_face(cube.right):
             alg = self._ur_alg  # U R U' R' U' F' U F

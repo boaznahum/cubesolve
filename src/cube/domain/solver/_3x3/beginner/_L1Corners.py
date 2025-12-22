@@ -8,10 +8,6 @@ from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
-def use(_):
-    pass
-
-
 class L1Corners(SolverElement):
     __slots__: list[str] = []
 

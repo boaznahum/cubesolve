@@ -8,13 +8,6 @@ from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.Tracker import EdgeTracker
 
 
-def use(_):
-    pass
-
-
-_status = None
-
-
 class L3Cross(SolverElement):
 
     def __init__(self, slv: BaseSolver) -> None:

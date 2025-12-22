@@ -8,13 +8,6 @@ from cube.domain.solver.common.Tracker import CornerTracker
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
-def use(_):
-    pass
-
-
-_status = None
-
-
 class L3Corners(SolverElement):
 
     def __init__(self, slv: SolverElementsProvider) -> None:

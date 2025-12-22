@@ -13,13 +13,6 @@ from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
 
-def use(_):
-    pass
-
-
-_status = None
-
-
 class NxNEdges(SolverElement):
     work_on_b: bool = True
 

@@ -24,10 +24,6 @@ class EdgePreserveMode(Enum):
     PreserveNone = "3"
 
 
-def use(_):
-    pass
-
-
 class F2L(SolverElement):
     """
     Credits to https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/

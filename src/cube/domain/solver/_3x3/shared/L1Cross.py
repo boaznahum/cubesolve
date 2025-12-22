@@ -9,13 +9,6 @@ from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
 
 
-def use(_):
-    pass
-
-
-_status = None
-
-
 class L1Cross(SolverElement):
 
     def __init__(self, slv: BaseSolver) -> None:
@@ -58,22 +51,9 @@ class L1Cross(SolverElement):
 
         self.cmn.bring_face_up(self.white_face)
 
-    def __print_cross_status(self):
-
-        return
-
-        # noinspection PyUnreachableCode
-        wf = self.white_face
-        es: Sequence[Edge] = wf.edges
-        color_codes = [e.colors_id_by_pos for e in es]
-        status = [self.cube.find_edge_by_color(c).match_faces for c in color_codes]
-
-        print("Cross Status:", status)
-
-        global _status
-        _status = status
-
-        return status
+    def __print_cross_status(self) -> None:
+        """Debug method - currently disabled."""
+        pass
 
     def _do_cross(self) -> None:
 
@@ -82,13 +62,10 @@ class L1Cross(SolverElement):
 
         color_codes: Sequence[PartColorsID] = Part.parts_id_by_pos(wf.edges)
         for color_id in color_codes:
-            st = self.__print_cross_status()
-            use(st)
+            self.__print_cross_status()
             # we can't use edge, alg change them
             self._fix_edge(wf, color_id)
-            st = self.__print_cross_status()
-            use(st)
-            # assert e.match_faces
+            self.__print_cross_status()
 
     def _fix_edge(self, wf: Face, target_colors_id: PartColorsID):
         with self.ann.annotate(
@@ -172,21 +149,18 @@ class L1Cross(SolverElement):
                 # target_edge is where we want to bring
                 target_face = target_edge.get_other_face(wf)
 
-                st = self.__print_cross_status()
-                use(st)
+                self.__print_cross_status()
 
                 # bring target face to front by rotating all cube
                 cmn.bring_face_to_front_by_y_rotate(target_face)
                 assert target_colors_id == cube.front.edge_top.position_id
 
-                st = self.__print_cross_status()
-                use(st)
+                self.__print_cross_status()
 
                 source_edge = cube.find_edge_by_color(target_colors_id)
                 e_alg: Alg = cmn.bring_edge_to_front_by_e_rotate(source_edge)  # type: ignore
 
-                st = self.__print_cross_status()
-                use(st)
+                self.__print_cross_status()
 
                 # was moved
                 source_edge = cube.find_edge_by_color(target_colors_id)
@@ -194,20 +168,17 @@ class L1Cross(SolverElement):
 
                 if cube.front.edge_right is source_edge:
                     self.op.play(Algs.F)
-                    st = self.__print_cross_status()
-                    use(st)
+                    self.__print_cross_status()
                 elif cube.front.edge_left is source_edge:
                     self.op.play(-Algs.F)
-                    st = self.__print_cross_status()
-                    use(st)
+                    self.__print_cross_status()
                 else:
                     raise ValueError(f"{source_edge} is not L-F nor R-F")
 
                 if e_alg:
                     # bring centers to match the cross
                     self.op.play(-e_alg)
-                st = self.__print_cross_status()
-                use(st)
+                self.__print_cross_status()
 
                 # now it is on bottom, so we can continue with case C3
                 return self._fix_edge(wf, target_colors_id)

@@ -12,13 +12,6 @@ from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import StepSolver
 
 
-def use(_):
-    pass
-
-
-_status = None
-
-
 class PLL(StepSolver):
     """
     Credits:

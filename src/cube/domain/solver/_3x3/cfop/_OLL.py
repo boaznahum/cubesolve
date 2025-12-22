@@ -9,13 +9,6 @@ from cube.domain.model.Face import Face
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import StepSolver
 
-
-def use(_):
-    pass
-
-
-_status = None
-
 _algs: dict[str, Alg | str] = {}
 
 
