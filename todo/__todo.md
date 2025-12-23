@@ -8,6 +8,8 @@
 | B5 | Bug | MEDIUM | Missing debug output when running with `--debug-all` | Open |
 | B6 | Bug | MEDIUM | Celebration effect triggers on reset/resize | Open |
 | B8 | Bug | MEDIUM | Default texture shows wrong face colors | Open |
+| B9 | Bug | MEDIUM | Solve completes instantly (animation skipped) | Open |
+| B10 | Bug | MEDIUM | Markers don't show source/destination during commutator | Open |
 | G2 | GUI | LOW | Investigate pyopengltk for tkinter backend | Open |
 | G5 | GUI | MEDIUM | Comprehensive Command Testing Plan | Open |
 | G6 | GUI | LOW | Additional lighting improvements (pyglet2) | Open |
@@ -73,6 +75,16 @@
 - ❌ **B8.** Default texture shows wrong face colors (YELLOW on front instead of WHITE)
   - **Status:** Open
   - **Related to:** G7 texture work
+
+- ❌ **B9.** Solve completes instantly (animation skipped)
+  - **Status:** Open (2025-12-23)
+  - **Symptom:** Sometimes when solving, cube goes directly to solved state without animation
+  - **Likely cause:** Animation not enabled or DualOperator/shadow cube issue
+
+- ❌ **B10.** Markers don't show source/destination during commutator
+  - **Status:** Open (2025-12-23)
+  - **Symptom:** During commutator algorithm, markers should show which pieces are source/destination
+  - **Related to:** OpAnnotation, DualAnnotation, marker rendering
 
 ---
 
