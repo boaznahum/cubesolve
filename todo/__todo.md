@@ -14,7 +14,7 @@
 | G7 | GUI | IN PROGRESS | Texture mapping for cube faces | In Progress |
 | A7 | Architecture | MEDIUM | Investigate circular import issues | Open |
 | A8 | Architecture | MEDIUM | No code leak outside backends layer | Open |
-| A9 | Architecture | MEDIUM | Centralize animation handling | Open |
+| A9 | Architecture | MEDIUM | Centralize animation handling | Done |
 | D1 | Documentation | LOW | Improve keyboard_and_commands.md diagram | Open |
 | Q5 | Quality | LOW | Review all `# type: ignore` comments | Open |
 | Q6 | Quality | LOW | Evaluate `disable_error_code = import-untyped` | Open |
@@ -27,6 +27,7 @@
 | Q16 | Quality | MEDIUM | Clean up all dead code (vulture) | Open |
 | S1 | Solver | MEDIUM | Unify tracker cleanup code | Open |
 | S2 | Solver | LOW | Cage face creation duplication | Open |
+| S3 | Solver | HIGH | OpAnnotation marker cleanup fails during OpAborted | Open |
 
 ---
 
@@ -104,9 +105,11 @@
   - **Status:** Open
   - All backend-specific code should be in backends folder
 
-- ❌ **A9.** Centralize animation handling
-  - **Status:** Open
-  - Solvers shouldn't need to wrap with `with_animation()` themselves
+- ✅ **A9.** Centralize animation handling
+  - **Status:** Done (2025-12-23)
+  - Implemented Template Method pattern in `AbstractSolver.solve()`
+  - All solvers now inherit `with_animation()` wrapper and `OpAborted` handling
+  - Solvers implement `_solve_impl()` instead of `solve()`
 
 ---
 
@@ -155,6 +158,12 @@
 - ❌ **S2.** Cage face creation duplication
   - Code duplicated in reducer, uses tracer methods
   - Ensure third center uses majority
+
+- ❌ **S3.** OpAnnotation marker cleanup fails during OpAborted [HIGH]
+  - **Status:** Open (2025-12-23)
+  - **File:** `src/cube/application/commands/OpAnnotation.py:169`
+  - **Repro:** Scramble → Solve with animation → Press ESC mid-solve
+  - **See:** `src/cube/domain/solver/__todo_solvers.md` for details and solutions
 
 ---
 

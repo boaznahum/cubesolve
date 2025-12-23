@@ -164,5 +164,56 @@ See: `SOLVER_ARCHITECTURE.md` for detailed class diagrams.
 
 ---
 
+## S3. OpAnnotation marker cleanup fails during OpAborted [HIGH]
+
+**Status:** Open (2025-12-23)
+**File:** `src/cube/application/commands/OpAnnotation.py:169`
+
+### Problem
+
+When user aborts mid-solve (presses ESC during animation), `OpAborted` is raised.
+The annotation context manager's `__exit__` tries to clean up markers, but
+`find_slice_edge()` throws `InternalSWError` because the marker can't be found.
+
+### Reproduction Steps
+
+1. Start GUI: `python -m cube.main_pyglet`
+2. Scramble: Press `s` (or `Shift+S` for big scramble)
+3. Solve with animation: Press `Ctrl+Shift+S`
+4. While solving: Press `ESC` to abort mid-solve
+5. Observe: `InternalSWError` is raised from `OpAnnotation.__annotate()`
+
+### Root Cause
+
+The annotation cleanup code assumes all markers exist:
+```python
+# OpAnnotation.py:169
+e = cqr.find_slice_edge(parts, _c_pred(i, key))  # Throws if marker not found
+```
+
+During abort, cube state may be inconsistent - marker attributes might not match
+what was stored when the annotation started.
+
+### Possible Solutions
+
+1. **Suppress during abort context:** Wrap cleanup in try/except only when
+   inside an abort scenario (need to detect abort context somehow)
+
+2. **Track annotations differently:** Store references to annotated parts
+   instead of searching by predicate
+
+3. **Clear all annotations on abort:** Instead of per-marker cleanup, have
+   a global "clear all annotations" that runs on abort
+
+4. **Make find_slice_edge return None:** Instead of raising, return None
+   and check for it
+
+### Related
+
+- Template Method handles `OpAborted` in `AbstractSolver.solve()`
+- Annotation cleanup runs in context manager `__exit__` before OpAborted reaches template method
+
+---
+
 # new entries
 
