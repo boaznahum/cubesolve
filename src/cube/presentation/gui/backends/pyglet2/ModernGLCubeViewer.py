@@ -56,6 +56,7 @@ from cube.domain.model._part_slice import PartSlice
 from cube.domain.model.cube_boy import Color, FaceName
 from cube.domain.model.CubeListener import CubeListener
 
+from ._modern_gl_arrow import Arrow3D
 from ._modern_gl_board import ModernGLBoard
 from ._modern_gl_constants import (
     BORDER_LINE_WIDTH,
@@ -122,6 +123,14 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         # Marker geometry (solver annotations like "swap these edges")
         self._marker_triangles: np.ndarray | None = None
         self._animated_marker_triangles: np.ndarray | None = None
+
+        # Arrow state (3D arrows showing source-to-destination direction)
+        self._arrows: list[Arrow3D] = []
+        self._arrow_triangles: np.ndarray | None = None
+        self._arrow_animation_time: float = 0.0
+        self._arrows_dirty: bool = True  # Rebuild arrows when markers change
+        self._last_draw_time: float = 0.0  # For arrow animation dt calculation
+        self._current_animation_transform: ndarray | None = None  # Transform for animated source
 
         # Texture mode state
         self._texture_mode: bool = False
@@ -224,6 +233,14 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
 
         Rebuilds geometry if cube state changed, then renders with lighting.
         """
+        # Update arrow animation (time-based grow effect)
+        current_time = time.time()
+        if self._last_draw_time > 0 and self._arrows:
+            dt = current_time - self._last_draw_time
+            if self.update_arrow_animation(dt):
+                pass  # Animation still in progress, geometry already updated
+        self._last_draw_time = current_time
+
         if self._dirty:
             self._rebuild_geometry()
             self._dirty = False
@@ -253,6 +270,10 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         # Draw markers (solver annotations - rings/circles on pieces being tracked)
         if self._marker_triangles is not None and len(self._marker_triangles) > 0:
             self._renderer.draw_lit_triangles(self._marker_triangles)
+
+        # Draw arrows (3D arrows from source to destination)
+        if self._arrow_triangles is not None and len(self._arrow_triangles) > 0:
+            self._renderer.draw_lit_triangles(self._arrow_triangles)
 
     def draw_animated(self, model_view: ndarray) -> None:
         """Draw animated parts with the given model-view matrix.
@@ -381,6 +402,102 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             self._triangles_per_texture.clear()
             self._animated_triangles_per_texture.clear()
 
+        # Generate arrows from marker annotations
+        self._rebuild_arrows()
+
+    def _rebuild_arrows(self) -> None:
+        """Rebuild 3D arrows from current marker annotations.
+
+        Creates arrows connecting source markers (c_attributes) to
+        destination markers (f_attributes).
+        """
+        # Get arrow config via protocol (proper architecture)
+        arrow_config = self._vs.config.arrow_config
+
+        # Early exit if arrows are disabled - no cost at all
+        if not arrow_config.enabled:
+            self._arrows = []
+            self._arrow_triangles = None
+            return
+
+        # Create new arrows from current markers (pass animated parts and config color)
+        new_arrows = self._board.create_arrows(
+            self._animated_parts,
+            arrow_color=arrow_config.color,
+        )
+
+        # Check if arrows changed (different count or source cells changed)
+        arrows_changed = len(new_arrows) != len(self._arrows)
+
+        if arrows_changed:
+            # Reset animation for new arrows
+            self._arrows = new_arrows
+            self._arrow_animation_time = 0.0
+
+        # Update arrow animation progress
+        if self._arrows:
+            progress = min(1.0, self._arrow_animation_time / arrow_config.animation_duration)
+            for arrow in self._arrows:
+                arrow.animation_progress = progress
+
+            # Generate arrow geometry with current animation transform
+            self._arrow_triangles = self._board.generate_arrow_geometry(
+                self._arrows,
+                self._current_animation_transform,
+            )
+        else:
+            self._arrow_triangles = None
+
+    def update_arrow_animation(self, dt: float) -> bool:
+        """Update arrow animation state.
+
+        Args:
+            dt: Time delta since last update in seconds
+
+        Returns:
+            True if animation is still in progress (arrows changed)
+        """
+        if not self._arrows:
+            return False
+
+        # Get animation duration from config
+        animation_duration = self._vs.config.arrow_config.animation_duration
+
+        # Advance animation time
+        self._arrow_animation_time += dt
+
+        # Calculate progress (0.0 to 1.0)
+        progress = min(1.0, self._arrow_animation_time / animation_duration)
+
+        # Update all arrows with new progress
+        for arrow in self._arrows:
+            arrow.animation_progress = progress
+
+        # Regenerate arrow geometry with new progress and current transform
+        self._arrow_triangles = self._board.generate_arrow_geometry(
+            self._arrows,
+            self._current_animation_transform,
+        )
+
+        # Return True if animation still in progress
+        return progress < 1.0
+
+    def set_animation_transform(self, transform: ndarray | None) -> None:
+        """Set the current animation transform for arrow source positions.
+
+        Called by animation system to update arrow geometry during rotation.
+
+        Args:
+            transform: 4x4 transform matrix, or None to clear
+        """
+        self._current_animation_transform = transform
+        # Regenerate arrow geometry with new transform
+        if self._arrows:
+            self._arrow_triangles = self._board.generate_arrow_geometry(
+                self._arrows,
+                transform,
+            )
+
     # =========================================================================
     # Animation Interface (AnimatableViewer protocol)
     # =========================================================================
@@ -432,6 +549,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         self._animated_marker_triangles = None  # Clear animated markers
         self._animated_triangles_per_color.clear()
         self._animated_triangles_per_texture.clear()  # BUG FIX: was missing for per-cell textures!
+        self._current_animation_transform = None  # Clear arrow transform
         self._dirty = True
 
     def is_animating(self) -> bool:
@@ -522,6 +640,10 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             ], dtype=float)
 
             model_view: ndarray = mt @ Rz @ m
+
+            # Update arrow source positions with current animation transform
+            self.set_animation_transform(model_view)
+
             self.draw_animated(model_view)
 
         animation.delay = animation_speed.delay_between_steps

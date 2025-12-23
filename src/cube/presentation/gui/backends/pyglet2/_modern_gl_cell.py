@@ -325,6 +325,31 @@ class ModernGLCell:
         markers = self.get_markers()
         return markers is not None and len(markers) > 0
 
+    def get_center_position(self) -> ndarray:
+        """Get the 3D center position of this cell.
+
+        Returns:
+            3D position as numpy array [x, y, z].
+        """
+        lb, rb, rt, lt = self._corners
+        return (lb + rb + rt + lt) / 4.0
+
+    def get_normal(self) -> ndarray:
+        """Get the face normal vector for this cell.
+
+        Returns:
+            Normal vector as numpy array [nx, ny, nz].
+        """
+        return self._normal.copy()
+
+    def get_color(self) -> tuple[float, float, float]:
+        """Get the face color of this cell.
+
+        Returns:
+            RGB tuple (0.0-1.0 range).
+        """
+        return self._color
+
     def generate_marker_vertices(self, dest: list[float]) -> None:
         """Generate triangle vertices for 3D raised marker rings/circles.
 

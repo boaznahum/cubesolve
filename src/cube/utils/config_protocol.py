@@ -10,7 +10,12 @@ All other code must access config through this protocol via context.
 from typing import TYPE_CHECKING, Protocol, Tuple, runtime_checkable
 
 if TYPE_CHECKING:
+    from cube.application._config import ArrowConfig
     from cube.utils.SSCode import SSCode
+
+
+# Re-export ArrowConfig for type hints elsewhere
+# Use this pattern: from cube.utils.config_protocol import ArrowConfig (TYPE_CHECKING only)
 
 
 # Type alias for marker definition: (color, outer_radius, thick, height)
@@ -176,6 +181,15 @@ class ConfigProtocol(Protocol):
     @property
     def markers(self) -> dict[str, MarkerDef]:
         """Marker definitions by name."""
+        ...
+
+    @property
+    def arrow_config(self) -> "ArrowConfig":
+        """Get 3D arrow configuration for solver annotations.
+
+        Returns an ArrowConfig dataclass with all arrow settings.
+        Access via app.config.arrow_config or vs.config.arrow_config.
+        """
         ...
 
     # ==========================================================================

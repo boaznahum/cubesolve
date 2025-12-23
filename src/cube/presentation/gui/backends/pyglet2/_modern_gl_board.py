@@ -40,7 +40,9 @@ import numpy as np
 from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color, FaceName
+from cube.domain.model.VMarker import viewer_get_markers
 
+from ._modern_gl_arrow import Arrow3D, create_arrows_from_markers
 from ._modern_gl_constants import (
     FACE_TRANSFORMS,
     SHADOW_OFFSETS,
@@ -52,6 +54,8 @@ if TYPE_CHECKING:
     from cube.domain.model._part_slice import PartSlice
     from cube.domain.model.Cube import Cube
     from cube.domain.model.PartEdge import PartEdge
+
+    from ._modern_gl_cell import ModernGLCell
 
 
 class ModernGLBoard:
@@ -439,3 +443,75 @@ class ModernGLBoard:
     def faces(self) -> dict[FaceName, ModernGLFace]:
         """Get all main faces."""
         return self._faces
+
+    def collect_arrow_endpoints(self) -> tuple[list["ModernGLCell"], list["ModernGLCell"]]:
+        """Collect cells with source and destination markers.
+
+        Source cells have c_attributes markers (moving pieces).
+        Destination cells have f_attributes markers (fixed positions).
+
+        Returns:
+            Tuple of (source_cells, destination_cells)
+        """
+        source_cells: list["ModernGLCell"] = []
+        dest_cells: list["ModernGLCell"] = []
+
+        for gl_face in self._faces.values():
+            for cell in gl_face.cells:
+                if cell.part_edge is None:
+                    continue
+
+                # Check c_attributes for source markers (moving pieces)
+                c_markers = viewer_get_markers(cell.part_edge.c_attributes)
+                if c_markers:
+                    source_cells.append(cell)
+
+                # Check f_attributes for destination markers (fixed positions)
+                f_markers = viewer_get_markers(cell.part_edge.f_attributes)
+                if f_markers:
+                    dest_cells.append(cell)
+
+        return source_cells, dest_cells
+
+    def create_arrows(
+        self,
+        animated_parts: "set[PartSlice] | None" = None,
+        arrow_color: tuple[float, float, float] | None = None,
+    ) -> list[Arrow3D]:
+        """Create Arrow3D objects from current marker annotations.
+
+        Args:
+            animated_parts: Set of PartSlices currently being animated
+            arrow_color: Optional arrow color from config
+
+        Returns:
+            List of arrows connecting source to destination markers.
+        """
+        source_cells, dest_cells = self.collect_arrow_endpoints()
+        return create_arrows_from_markers(source_cells, dest_cells, animated_parts, arrow_color)
+
+    def generate_arrow_geometry(
+        self,
+        arrows: list[Arrow3D],
+        source_transform: "ndarray | None" = None,
+    ) -> np.ndarray | None:
+        """Generate vertex data for all arrows.
+
+        Args:
+            arrows: List of Arrow3D objects with current animation progress
+            source_transform: Optional 4x4 transform matrix for animated source positions
+
+        Returns:
+            NumPy array of vertex data, or None if no arrows
+        """
+        if not arrows:
+            return None
+
+        verts: list[float] = []
+        for arrow in arrows:
+            arrow.generate_vertices(verts, source_transform)
+
+        if not verts:
+            return None
+
+        return np.array(verts, dtype=np.float32)

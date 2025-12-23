@@ -2,34 +2,37 @@
 
 ## Open Tasks Summary
 
-| ID | Category | Priority | Title | Status |
-|----|----------|----------|-------|--------|
-| B1 | Bug | HIGH | GUI Animation Solver Bug (Lazy Cache Initialization) | Investigating |
-| B5 | Bug | MEDIUM | Missing debug output when running with `--debug-all` | Open |
-| B6 | Bug | MEDIUM | Celebration effect triggers on reset/resize | Open |
-| B8 | Bug | MEDIUM | Default texture shows wrong face colors | Open |
-| B9 | Bug | MEDIUM | Solve completes instantly (animation skipped) | Open |
+| ID | Category | Priority | Title                                                   | Status |
+|----|----------|----------|---------------------------------------------------------|--------|
+| B1 | Bug | HIGH | GUI Animation Solver Bug (Lazy Cache Initialization)    | Investigating |
+| B5 | Bug | MEDIUM | Missing debug output when running with `--debug-all`    | Open |
+| B6 | Bug | MEDIUM | Celebration effect triggers on reset/resize             | Open |
+| B8 | Bug | MEDIUM | Default texture shows wrong face colors                 | Open |
+| B9 | Bug | MEDIUM | Solve completes instantly (animation skipped)           | Open |
 | B10 | Bug | MEDIUM | Markers don't show source/destination during commutator | Open |
-| G2 | GUI | LOW | Investigate pyopengltk for tkinter backend | Open |
-| G5 | GUI | MEDIUM | Comprehensive Command Testing Plan | Open |
-| G6 | GUI | LOW | Additional lighting improvements (pyglet2) | Open |
-| G7 | GUI | IN PROGRESS | Texture mapping for cube faces | In Progress |
-| A7 | Architecture | MEDIUM | Investigate circular import issues | Open |
-| A8 | Architecture | MEDIUM | No code leak outside backends layer | Open |
-| A9 | Architecture | MEDIUM | Centralize animation handling | Done |
-| D1 | Documentation | LOW | Improve keyboard_and_commands.md diagram | Open |
-| Q5 | Quality | LOW | Review all `# type: ignore` comments | Open |
-| Q6 | Quality | LOW | Evaluate `disable_error_code = import-untyped` | Open |
-| Q7 | Quality | LOW | Add type annotations to lambda callbacks | Open |
-| Q9 | Quality | LOW | Clean up dead code debug prints in solver | Open |
-| Q10 | Quality | LOW | Relocate `debug_dump()` to better location | Open |
-| Q13 | Quality | LOW | Evaluate pyright strict mode | Open |
-| Q14 | Quality | MEDIUM | Fix vs.debug() performance issue | Open |
-| Q15 | Quality | LOW | Clean up protected member access warnings | Open |
-| Q16 | Quality | MEDIUM | Clean up all dead code (vulture) | Open |
-| S1 | Solver | MEDIUM | Unify tracker cleanup code | Open |
-| S2 | Solver | LOW | Cage face creation duplication | Open |
-| S3 | Solver | HIGH | OpAnnotation marker cleanup fails during OpAborted | Open |
+| B11 | Bug | MEDIUM | Axes disapeared when moving to pyglet2                  | Open |
+| G2 | GUI | LOW | Investigate pyopengltk for tkinter backend              | Open |
+| G5 | GUI | MEDIUM | Comprehensive Command Testing Plan                      | Open |
+| G6 | GUI | LOW | Additional lighting improvements (pyglet2)              | Open |
+| G7 | GUI | IN PROGRESS | Texture mapping for cube faces                          | In Progress |
+| G8 | GUI | IN PROGRESS | 3D Arrows for solver annotations                        | In Progress |
+| A7 | Architecture | MEDIUM | Investigate circular import issues                      | Open |
+| A8 | Architecture | MEDIUM | No code leak outside backends layer                     | Open |
+| A10 | Architecture | HIGH | Check for _config direct imports in presentation layer  | Open |
+| A9 | Architecture | MEDIUM | Centralize animation handling                           | Done |
+| D1 | Documentation | LOW | Improve keyboard_and_commands.md diagram                | Open |
+| Q5 | Quality | LOW | Review all `# type: ignore` comments                    | Open |
+| Q6 | Quality | LOW | Evaluate `disable_error_code = import-untyped`          | Open |
+| Q7 | Quality | LOW | Add type annotations to lambda callbacks                | Open |
+| Q9 | Quality | LOW | Clean up dead code debug prints in solver               | Open |
+| Q10 | Quality | LOW | Relocate `debug_dump()` to better location              | Open |
+| Q13 | Quality | LOW | Evaluate pyright strict mode                            | Open |
+| Q14 | Quality | MEDIUM | Fix vs.debug() performance issue                        | Open |
+| Q15 | Quality | LOW | Clean up protected member access warnings               | Open |
+| Q16 | Quality | MEDIUM | Clean up all dead code (vulture)                        | Open |
+| S1 | Solver | MEDIUM | Unify tracker cleanup code                              | Open |
+| S2 | Solver | LOW | Cage face creation duplication                          | Open |
+| S3 | Solver | HIGH | OpAnnotation marker cleanup fails during OpAborted      | Open |
 
 ---
 
@@ -86,6 +89,11 @@
   - **Symptom:** During commutator algorithm, markers should show which pieces are source/destination
   - **Related to:** OpAnnotation, DualAnnotation, marker rendering
 
+- ❌ **B11.** Axes disappeared when moving to pyglet2
+  - **Status:** Open (2025-12-23)
+  - **Symptom:** Axes visual display disappeared when using pyglet2 modern GL backend
+  - **Related to:** pyglet2 modernGL renderer, axis rendering
+
 ---
 
 ## GUI & Testing
@@ -105,6 +113,25 @@
   - **Approach:** Hardcoded sample images first
   - **Files:** `ModernGLRenderer.py`, `ModernGLCubeViewer.py`
 
+- ♾️ **G8.** 3D Arrows for solver annotations
+  - **Status:** In progress (2025-12-23)
+  - **Current State:** Basic implementation complete but needs improvement
+    - Arrows show source-to-destination direction during solve
+    - Bright gold color (configurable in `_config.py`)
+    - Grow animation from source to destination
+    - Source position updates during piece rotation
+  - **Known Issues:**
+    - Arrow endpoints may not connect properly in all cases
+    - Need to verify arrow is visible above cube surface
+    - Animation timing may need tuning
+  - **Future Improvements:**
+    - Curved arrow style (Bezier)
+    - Compound arrow style (multiple segments)
+    - Better endpoint matching (by part_slice identity)
+    - Fade/pulse animation options
+  - **Config:** `_config.py` has `ARROWS_ENABLED`, `ARROW_STYLE`, `ARROW_COLOR`, etc.
+  - **Files:** `_modern_gl_arrow.py`, `_modern_gl_board.py`, `ModernGLCubeViewer.py`
+
 ---
 
 ## Architecture
@@ -116,6 +143,13 @@
 - ❌ **A8.** Ensure no code leaks outside backends layer
   - **Status:** Open
   - All backend-specific code should be in backends folder
+
+- ❌ **A10.** Check for _config direct imports in presentation layer [HIGH]
+  - **Status:** Open (2025-12-23)
+  - **Rule:** `_config.py` must ONLY be accessed via ConfigProtocol
+  - **Check:** `grep -r "from cube.application import _config" src/cube/presentation`
+  - **Check:** `grep -r "from cube.application._config" src/cube/presentation`
+  - Any matches are architecture violations that must be fixed
 
 - ✅ **A9.** Centralize animation handling
   - **Status:** Done (2025-12-23)
