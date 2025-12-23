@@ -156,7 +156,6 @@ class Edge(Part):
             if face is self._f1:
                 return i  # arbitrary f1 was chosen
             else:
-                # todo make it generic
                 return self.inv_index(i)  # type: ignore
 
     def get_slice_index_from_ltr_index(self, face: _Face, ltr_i: int) -> int:
@@ -185,7 +184,6 @@ class Edge(Part):
             if face is self._f1:
                 si = ltr_i  # arbitrary f1 was chosen
             else:
-                # todo make it generic
                 si = self.inv_index(ltr_i)  # type: ignore
 
         assert ltr_i == self.get_ltr_index_from_slice_index(face, si)
@@ -194,13 +192,12 @@ class Edge(Part):
 
     def get_slice_by_ltr_index(self, face: _Face, i) -> EdgeWing:
         """
-
-        # todo: combine and optimize with get_face_edge
         Given an index of slice in direction from left to right, or left to top
-        find it's actual slice
-        :param face:
-        :param i:
-        :return:
+        find it's actual slice.
+
+        :param face: The face perspective
+        :param i: Left-to-right index
+        :return: The edge wing at that position
         """
         return self.get_slice(self.get_ltr_index_from_slice_index(face, i))
 
@@ -425,7 +422,6 @@ class Edge(Part):
 
     @property
     def name(self) -> EdgeName:
-        # todo: optimize it
         return _faces_2_edge_name((self.e1.face.name, self.e2.face.name))
 
     @property

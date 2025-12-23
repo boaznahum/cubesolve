@@ -511,7 +511,6 @@ class CenterSlice(PartSlice):
 
     @property
     def index(self) -> CenterSliceIndex:
-        # todo: how to assert
         return self._index  # type: ignore
 
     @property

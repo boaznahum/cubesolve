@@ -415,7 +415,6 @@ def _handle_slice_on_corner_adjusted_face(slice_face: Face,
     else:  # bottom right
         edge = slice_face.edge_bottom if it_left_to_right else slice_face.edge_right
 
-    # todo: the caller process edged again, can be optimized
     return _handle_slice_on_edge_adjusted_face(slice_face,
                                                edge,
                                                on_left_to_right,

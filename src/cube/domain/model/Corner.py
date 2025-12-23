@@ -97,7 +97,6 @@ class Corner(Part):
 
     @property
     def name(self) -> CornerName:
-        # todo: optimize it
         return _faces_2_corner_name((e.face.name for e in self._slice.edges))
 
     @property

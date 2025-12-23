@@ -146,7 +146,7 @@ class Operator(OperatorProtocol):
                     an: Callable[[Cube, OpProtocol, SimpleAlg], None] | None = self._animation_manager.run_animation
                     assert an  # just to make mypy happy
 
-                    # todo: Patch - move single step mode into operator
+                    # TODO [TC1]: Move single step mode handling into operator
                     algs: list[SimpleAlg] = [*alg.flatten()]
 
                     if self._app_state.single_step_mode:

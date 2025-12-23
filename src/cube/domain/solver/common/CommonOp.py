@@ -451,7 +451,6 @@ class CommonOp:
         with self.track_e_slice(edge.get_slice(0)) as s_tracker:
 
             for _ in range(max_n):
-                # todo: why we sure to call the_slice_nl
                 _slice = s_tracker.the_slice_nl
 
                 edge = _slice.parent

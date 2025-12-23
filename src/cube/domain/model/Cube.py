@@ -1382,7 +1382,6 @@ class Cube(CubeSupplier):
 
     @property
     def is3x3(self):
-        # todo: Optimize it !!!
         return all(f.is3x3 for f in self.faces) and self.is_boy
 
     def reset(self, cube_size=None):

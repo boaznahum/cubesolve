@@ -38,7 +38,7 @@ animation_enabled = True
 
 # Single-step mode codes - enable specific breakpoints for debugging
 # Import SSCode here to avoid circular imports (config is loaded early)
-from cube.utils.SSCode import SSCode  # noqa: E402 TODO: fix
+from cube.utils.SSCode import SSCode  # noqa: E402
 
 SS_CODES: dict[SSCode, bool] = {
     SSCode.NxN_CORNER_PARITY_FIX: True,  # Pause before corner parity fix

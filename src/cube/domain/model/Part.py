@@ -57,10 +57,6 @@ class Part(ABC, CubeElement):
         for s in self.all_slices:
             s.set_parent(self)
 
-        # todo - check that all slices matches faces
-        #   all edges with same index has the same face, see is3x3
-        # all edges with same size (1, 2, 3)
-
     @property
     @abstractmethod
     def _3x3_representative_edges(self) -> Sequence[PartEdge]:
@@ -79,7 +75,6 @@ class Part(ABC, CubeElement):
     def get_slice(self, index: SliceIndex) -> PartSlice:
         pass
 
-    # todo: fix to iterator
     @abstractmethod
     def get_slices(self, index: SliceIndex | None) -> Iterable[PartSlice]:
         pass
@@ -193,7 +188,6 @@ class Part(ABC, CubeElement):
         source_slices: Iterable[PartSlice]
         dest_slices: Iterable[PartSlice]
 
-        # for debug only unpack todo:
         source_slices = source_part.get_slices(source_index)
         dest_slices = self.get_slices(index)
 

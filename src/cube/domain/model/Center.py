@@ -23,8 +23,6 @@ class Center(Part):
 
     @property
     def face(self) -> _Face:
-        # always true, even for non 3x3
-        # todo: can be optimized, it is always the same name
         return self._slices[0][0].edges[0].face
 
     @property

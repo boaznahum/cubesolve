@@ -91,7 +91,6 @@ class L2(SolverElement):
 
             assert self.cube.front.edge_right is st.actual
 
-            # replace it with something on top  todo: optimize, try to bring yellow edge
             self.op.play(self._ur_alg)
 
             assert st.actual.on_face(up)

@@ -24,8 +24,6 @@ class NSimpleAlg(SimpleAlg, ABC):
 
     __slots__ = ["_n", "_code"]
 
-    # todo: most of the code in this lags should be moved into NSimpleAlg
-
     def __init__(self, code: str, n: int = 1) -> None:
         super().__init__()
         self._code = code

@@ -55,10 +55,7 @@ class Slice(SuperElement):
         )
 
     def _get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
-
-        # First we need to decide with which edge to start, to get consist results
-        # todo replace with abstract method
-
+        # First we need to decide with which edge to start, to get consistent results
         current_edge: Edge  # this determines the direction of rotation
         current_index: int
         current_face: Face
@@ -202,11 +199,10 @@ class Slice(SuperElement):
         if n == 0:
             return
 
-        # todo: bug, due to a bug in the algorithm
-        # but we have a problem with M, according to https://alg.cubing.net/?alg=m and
-        # https://ruwix.com/the-rubiks-cube/notation/advanced/
+        # TODO [TC3]: BUG - M slice direction is inverted compared to standard notation
+        # See: https://alg.cubing.net/?alg=m and https://ruwix.com/the-rubiks-cube/notation/advanced/
         if self._name != SliceName.M:
-            n = - n  # still
+            n = -n
 
         def _p():
             # f: Face

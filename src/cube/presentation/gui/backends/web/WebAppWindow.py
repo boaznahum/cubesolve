@@ -70,7 +70,7 @@ class WebAppWindow(AppWindow):
 
         # Disable animation for web backend - async event loop doesn't support
         # the blocking animation loop used by AnimationManager.run_animation()
-        # TODO: Implement async animation support for web backend
+        # TODO [TC5]: Implement async animation support for web backend
         app.op.toggle_animation_on(False)
 
         # Set up event handlers

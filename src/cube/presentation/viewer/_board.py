@@ -30,7 +30,7 @@ from ._faceboard import _FACE_SIZE, _FaceBoard
 from .TextureData import TextureData
 
 ##########################################################################
-# Sequence diagram  $ todo:update sequence was improved
+# Sequence diagram
 #
 # Viewer              Board                       _Face                        _Cell
 #  init     -->        init

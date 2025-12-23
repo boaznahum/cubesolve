@@ -238,21 +238,17 @@ class Face(SuperElement, Hashable):
             # - so bottom and right are in reverse left-top-right direction, see right-top-left-coordinates.jpg
             #  So when copying from LEFT<--BOTTOM and RIGHT<-TOP we need to switch indexes
             #
-            # todo if it works, replace with slices
             saved_top: Edge = self._edge_top.copy()
             # saved_right: Edge = self._edge_right.copy()
             # saved_bottom: Edge = self._edge_bottom.copy()
             # saved_left: Edge = self._edge_left.copy()
 
-            # not clear why is needed, but without it when rotating front, left face is not correctly colord
-            # TODO: CHECK AND IMPROVE
+            # TODO [TC2]: Unclear why these copies are needed - without them front rotation breaks left face colors
             e_right: Edge = self._edge_right.copy()
             e_bottom: Edge = self._edge_bottom.copy()
             e_left: Edge = self._edge_left.copy()
 
             for index in range(n_slices):
-                # todo: optimize - we can calc only once
-
                 top_ltr_index = saved_top.get_ltr_index_from_slice_index(self, index)
 
                 i_left = e_left.get_slice_index_from_ltr_index(self, top_ltr_index)
@@ -392,7 +388,6 @@ class Face(SuperElement, Hashable):
 
     @property
     def is3x3(self):
-        # todo: Optimize it !!!, reset after slice rotation
         return all(p.is3x3 for p in self.edges) and self.center.is3x3
 
     def reset_after_faces_changes(self):
@@ -454,8 +449,6 @@ class Face(SuperElement, Hashable):
         return None
 
     def adjusted_faces(self) -> Iterable[_Face]:
-
-        # todo: optimize
         for e in self.edges:
             yield e.get_other_face(self)
 

@@ -367,8 +367,7 @@ class NxNEdges(SolverElement):
             self.debug(f"Doing parity on {edge}", level=1)
             edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             assert edge is face.edge_left
-            # todo: optimize it , use directly bring to up
-            assert  edge is cube.fl
+            assert edge is cube.fl
             self.op.play(Algs.F)
 
             # not true on even, edge is OK

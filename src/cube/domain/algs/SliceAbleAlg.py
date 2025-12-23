@@ -158,9 +158,6 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         if my is None and other is None:
             return True
 
-        # todo: optimize it, [1:2] are the same as [1,2]
-        # but it become more complicated when it is [1: ] because we don't know
-        # the size of the cube
         if my is not other:
             return False
 
