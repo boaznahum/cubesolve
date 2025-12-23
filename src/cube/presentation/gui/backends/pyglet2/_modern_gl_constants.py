@@ -15,6 +15,8 @@ The cube is centered at the origin with faces at distance HALF_CUBE_SIZE.
 """
 from __future__ import annotations
 
+from enum import Enum, auto
+
 from cube.domain.model.cube_boy import Color, FaceName
 
 # =============================================================================
@@ -183,3 +185,49 @@ FACE_TRANSFORMS: dict[FaceName, tuple[
         (0, 0, 1),                # up is +Z
     ),
 }
+
+# =============================================================================
+# Arrow Configuration (3D arrows for solver annotations)
+# =============================================================================
+
+
+class ArrowStyle(Enum):
+    """Style of arrow connecting source to destination."""
+    SIMPLE = auto()    # Straight arrow shaft + cone head
+    CURVED = auto()    # Bezier curved arrow (future)
+    COMPOUND = auto()  # Multiple segment arrow (future)
+
+
+class ArrowAnimation(Enum):
+    """Animation style for arrows."""
+    GROW = auto()      # Arrow grows from source to destination
+    PULSE = auto()     # Arrow pulses/glows (future)
+    FADE_IN = auto()   # Arrow fades in (future)
+
+
+class ArrowHead(Enum):
+    """Arrowhead style."""
+    CONE_3D = auto()      # 3D solid cone
+    PYRAMID = auto()      # 3D pyramid (future)
+    TRIANGLE_2D = auto()  # Flat billboard triangle (future)
+
+
+# Current arrow configuration (change these to modify arrow appearance)
+ARROW_STYLE = ArrowStyle.SIMPLE
+ARROW_ANIMATION = ArrowAnimation.GROW
+ARROW_HEAD = ArrowHead.CONE_3D
+
+# Arrow geometry parameters
+# NOTE: These are DEFAULTS for backwards compatibility.
+# Runtime values should come from ArrowConfig via ConfigProtocol.
+# The viewer gets config values properly and passes them to arrow functions.
+
+# Default values (used when config not passed)
+ARROW_SHAFT_RADIUS = 2.0      # Radius of arrow shaft cylinder
+ARROW_HEAD_RADIUS = 5.0       # Radius of cone base
+ARROW_HEAD_LENGTH = 12.0      # Length of cone
+ARROW_SEGMENTS = 16           # Smoothness of cylinders (more = smoother)
+ARROW_HEIGHT_OFFSET = 25.0    # Height above cube surface
+ARROW_ANIMATION_DURATION = 0.5  # Seconds for grow animation
+ARROW_COLOR = (1.0, 0.78, 0.0)  # Bright gold (255, 200, 0) / 255
+ARROWS_ENABLED = True         # Master switch (default on)

@@ -40,7 +40,9 @@ import numpy as np
 from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color, FaceName
+from cube.domain.model.VMarker import viewer_get_markers
 
+from ._modern_gl_arrow import Arrow3D, create_arrows_from_markers
 from ._modern_gl_constants import (
     FACE_TRANSFORMS,
     SHADOW_OFFSETS,
@@ -52,6 +54,8 @@ if TYPE_CHECKING:
     from cube.domain.model._part_slice import PartSlice
     from cube.domain.model.Cube import Cube
     from cube.domain.model.PartEdge import PartEdge
+
+    from ._modern_gl_cell import ModernGLCell
 
 
 class ModernGLBoard:
@@ -173,6 +177,8 @@ class ModernGLBoard:
         np.ndarray,  # static line data
         np.ndarray | None,  # animated face triangles
         np.ndarray | None,  # animated line data
+        np.ndarray | None,  # static marker triangles
+        np.ndarray | None,  # animated marker triangles
     ]:
         """Generate all vertex data for rendering.
 
@@ -182,12 +188,15 @@ class ModernGLBoard:
             animated_parts: Set of PartSlices being animated, or None
 
         Returns:
-            Tuple of (face_triangles, line_data, animated_faces, animated_lines)
+            Tuple of (face_triangles, line_data, animated_faces, animated_lines,
+                      marker_triangles, animated_marker_triangles)
         """
         face_verts: list[float] = []
         line_verts: list[float] = []
         animated_face_verts: list[float] = []
         animated_line_verts: list[float] = []
+        marker_verts: list[float] = []
+        animated_marker_verts: list[float] = []
 
         # Main faces
         for gl_face in self._faces.values():
@@ -195,6 +204,7 @@ class ModernGLBoard:
                 gl_face, animated_parts,
                 face_verts, line_verts,
                 animated_face_verts, animated_line_verts,
+                marker_verts, animated_marker_verts,
             )
 
         # Shadow faces (never animated - they're static copies)
@@ -203,6 +213,7 @@ class ModernGLBoard:
                 gl_face, None,  # No animation for shadows
                 face_verts, line_verts,
                 [], [],  # Don't collect animated verts
+                marker_verts, [],  # Markers only on static for shadow
             )
 
         return (
@@ -210,6 +221,8 @@ class ModernGLBoard:
             np.array(line_verts, dtype=np.float32),
             np.array(animated_face_verts, dtype=np.float32) if animated_face_verts else None,
             np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None,
+            np.array(marker_verts, dtype=np.float32) if marker_verts else None,
+            np.array(animated_marker_verts, dtype=np.float32) if animated_marker_verts else None,
         )
 
     def generate_textured_geometry(
@@ -268,6 +281,8 @@ class ModernGLBoard:
         line_verts: list[float],
         animated_face_verts: list[float],
         animated_line_verts: list[float],
+        marker_verts: list[float] | None = None,
+        animated_marker_verts: list[float] | None = None,
     ) -> None:
         """Generate vertices for one face."""
         for cell in gl_face.cells:
@@ -281,9 +296,15 @@ class ModernGLBoard:
             if is_animated:
                 cell.generate_face_vertices(animated_face_verts)
                 cell.generate_line_vertices(animated_line_verts)
+                # Collect animated marker geometry
+                if animated_marker_verts is not None:
+                    cell.generate_marker_vertices(animated_marker_verts)
             else:
                 cell.generate_face_vertices(face_verts)
                 cell.generate_line_vertices(line_verts)
+                # Collect static marker geometry
+                if marker_verts is not None:
+                    cell.generate_marker_vertices(marker_verts)
 
     def _generate_textured_face_verts(
         self,
@@ -422,3 +443,75 @@ class ModernGLBoard:
     def faces(self) -> dict[FaceName, ModernGLFace]:
         """Get all main faces."""
         return self._faces
+
+    def collect_arrow_endpoints(self) -> tuple[list["ModernGLCell"], list["ModernGLCell"]]:
+        """Collect cells with source and destination markers.
+
+        Source cells have c_attributes markers (moving pieces).
+        Destination cells have f_attributes markers (fixed positions).
+
+        Returns:
+            Tuple of (source_cells, destination_cells)
+        """
+        source_cells: list["ModernGLCell"] = []
+        dest_cells: list["ModernGLCell"] = []
+
+        for gl_face in self._faces.values():
+            for cell in gl_face.cells:
+                if cell.part_edge is None:
+                    continue
+
+                # Check c_attributes for source markers (moving pieces)
+                c_markers = viewer_get_markers(cell.part_edge.c_attributes)
+                if c_markers:
+                    source_cells.append(cell)
+
+                # Check f_attributes for destination markers (fixed positions)
+                f_markers = viewer_get_markers(cell.part_edge.f_attributes)
+                if f_markers:
+                    dest_cells.append(cell)
+
+        return source_cells, dest_cells
+
+    def create_arrows(
+        self,
+        animated_parts: "set[PartSlice] | None" = None,
+        arrow_color: tuple[float, float, float] | None = None,
+    ) -> list[Arrow3D]:
+        """Create Arrow3D objects from current marker annotations.
+
+        Args:
+            animated_parts: Set of PartSlices currently being animated
+            arrow_color: Optional arrow color from config
+
+        Returns:
+            List of arrows connecting source to destination markers.
+        """
+        source_cells, dest_cells = self.collect_arrow_endpoints()
+        return create_arrows_from_markers(source_cells, dest_cells, animated_parts, arrow_color)
+
+    def generate_arrow_geometry(
+        self,
+        arrows: list[Arrow3D],
+        source_transform: "ndarray | None" = None,
+    ) -> np.ndarray | None:
+        """Generate vertex data for all arrows.
+
+        Args:
+            arrows: List of Arrow3D objects with current animation progress
+            source_transform: Optional 4x4 transform matrix for animated source positions
+
+        Returns:
+            NumPy array of vertex data, or None if no arrows
+        """
+        if not arrows:
+            return None
+
+        verts: list[float] = []
+        for arrow in arrows:
+            arrow.generate_vertices(verts, source_transform)
+
+        if not verts:
+            return None
+
+        return np.array(verts, dtype=np.float32)

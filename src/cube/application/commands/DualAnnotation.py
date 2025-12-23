@@ -154,6 +154,23 @@ class DualAnnotation:
         # Unknown type - return as-is (may cause issues downstream)
         return element  # type: ignore[return-value]
 
+    # Mapping from EdgeName.value to Cube property name
+    # EdgeName uses ordering like "UR" but Cube uses "ru"
+    _EDGE_NAME_TO_PROPERTY: dict[str, str] = {
+        "FL": "fl",
+        "FU": "fu",
+        "FR": "fr",
+        "FD": "fd",
+        "BL": "bl",
+        "BU": "bu",
+        "BR": "br",
+        "BD": "bd",
+        "UR": "ru",  # EdgeName.UR -> cube.ru
+        "RD": "rd",
+        "DL": "dl",
+        "LU": "lu",
+    }
+
     def _map_part(self, shadow_part: Part) -> Part:
         """
         Map a Part from shadow cube to real cube by position.
@@ -167,7 +184,9 @@ class DualAnnotation:
         if isinstance(shadow_part, Edge):
             # Edge.name returns EdgeName enum (e.g., EdgeName.FU)
             # EdgeName.value is the string (e.g., "FU")
-            accessor = shadow_part.name.value.lower()
+            # Need to map to Cube property name (some are different, e.g., UR -> ru)
+            edge_name = shadow_part.name.value
+            accessor = self._EDGE_NAME_TO_PROPERTY.get(edge_name, edge_name.lower())
         elif isinstance(shadow_part, Corner):
             # Corner.name returns CornerName enum (e.g., CornerName.FLU)
             # CornerName.value is the string (e.g., "FLU")

@@ -12,6 +12,7 @@ DO NOT use `from cube.application._config import X` in production code.
 Access config values through the ConfigProtocol interface instead.
 """
 
+from dataclasses import dataclass
 from typing import Tuple
 
 #from cube.domain.solver.SolverName import SolverName
@@ -41,7 +42,7 @@ animation_enabled = True
 from cube.utils.SSCode import SSCode  # noqa: E402
 
 SS_CODES: dict[SSCode, bool] = {
-    SSCode.NxN_CORNER_PARITY_FIX: True,  # Pause before corner parity fix
+    SSCode.NxN_CORNER_PARITY_FIX: False,  # Pause before corner parity fix
     SSCode.NxN_EDGE_PARITY_FIX: False,
     SSCode.REDUCER_CENTERS_DONE: False,
     SSCode.REDUCER_EDGES_DONE: False,
@@ -50,7 +51,7 @@ SS_CODES: dict[SSCode, bool] = {
     SSCode.L2_DONE: False,
     SSCode.L3_CROSS_DONE: False,
     SSCode.L3_CORNERS_DONE: False,
-    SSCode.F2L_WIDE_MOVE: True,  # Pause before wide move in F2L
+    SSCode.F2L_WIDE_MOVE: False,  # Pause before wide move in F2L
 }
 
 ######### Solvers  ########
@@ -105,6 +106,42 @@ MARKERS = {
     "C1": ((199, 21, 133), 0.6, 1, 0.1), # mediumvioletred	#C71585	rgb(199,21,133),
     "C2": ((0, 100, 0), 1.0, 0.3, 0.1)  # darkgreen	#006400	rgb(0,100,0)
 }
+
+################ 3D Arrows (source-to-destination direction indicators)
+
+
+@dataclass
+class ArrowConfig:
+    """Configuration for 3D arrows showing source-to-destination direction.
+
+    Access via ConfigProtocol.arrow_config property.
+    """
+    # Master switch to enable/disable 3D arrows
+    enabled: bool = False
+
+    # Arrow style: "simple" (straight), "curved" (bezier), "compound" (multiple segments)
+    style: str = "simple"
+
+    # Arrow animation: "grow" (extends from source), "fade" (fades in), "none" (instant)
+    animation: str = "grow"
+
+    # Arrow head style: "cone" (3D cone), "pyramid" (3D pyramid), "flat" (2D triangle)
+    head_style: str = "cone"
+
+    # Arrow color (RGB 0.0-1.0) - bright gold to stand out from markers
+    color: Tuple[float, float, float] = (1.0, 0.78, 0.0)
+
+    # Arrow geometry
+    shaft_radius: float = 2.0       # Radius of arrow shaft cylinder
+    head_radius: float = 5.0        # Radius of cone base
+    head_length: float = 12.0       # Length of cone/head
+    height_offset: float = 25.0     # Height above cube surface (floating effect)
+    animation_duration: float = 0.5  # Seconds for grow animation
+    segments: int = 16               # Smoothness of cylinders
+
+
+# Default arrow configuration instance - modify this to change arrow settings
+ARROW_CONFIG = ArrowConfig()
 
 # text animation properties
 ANIMATION_TEXT: list[Tuple[int, int, int, Tuple[int, int, int, int], bool]] = [

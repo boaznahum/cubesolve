@@ -5,7 +5,7 @@ All other code must access config through ConfigProtocol via context (app.config
 """
 
 from cube.application import _config as cfg
-from cube.utils.config_protocol import AnimationTextDef, ConfigProtocol, MarkerDef
+from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, MarkerDef
 from cube.utils.SSCode import SSCode
 
 
@@ -162,6 +162,11 @@ class AppConfig(ConfigProtocol):
     def markers(self) -> dict[str, MarkerDef]:
         """Marker definitions by name."""
         return cfg.MARKERS  # type: ignore[return-value]
+
+    @property
+    def arrow_config(self) -> ArrowConfigProtocol:
+        """Get 3D arrow configuration for solver annotations."""
+        return cfg.ARROW_CONFIG
 
     # ==========================================================================
     # GUI settings
