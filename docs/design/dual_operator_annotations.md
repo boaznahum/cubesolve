@@ -150,8 +150,10 @@ with the piece via `c_attributes`:
 def _map_piece(self, shadow_piece: Part) -> Part:
     """Map a shadow cube piece to corresponding real cube piece by position."""
     if isinstance(shadow_piece, Edge):
-        accessor = shadow_piece._name.lower()  # e.g., "fu"
+        # Edge.name returns EdgeName enum (e.g., EdgeName.FU)
+        accessor = shadow_piece.name.value.lower()  # e.g., "fu"
     elif isinstance(shadow_piece, Corner):
+        # Corner.name returns CornerName enum (e.g., CornerName.FLU)
         accessor = shadow_piece.name.value.lower()  # e.g., "flu"
     else:
         raise ValueError(f"Unsupported piece type: {type(shadow_piece)}")
