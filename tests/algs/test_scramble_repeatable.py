@@ -5,7 +5,7 @@ from cube.application.AbstractApp import AbstractApp
 from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
-from tests.conftest import _test_sp
+from tests.test_utils import _test_sp
 
 
 def test_scramble_repeatable():

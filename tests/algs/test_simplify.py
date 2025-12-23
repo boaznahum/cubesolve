@@ -6,7 +6,7 @@ from cube.application import _config as config
 from cube.domain import algs
 from cube.domain.algs import Algs, Alg
 from cube.domain.model.Cube import Cube
-from tests.conftest import _test_sp
+from tests.test_utils import _test_sp
 
 
 def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]):

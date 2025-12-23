@@ -16,7 +16,7 @@ from cube.application.commands.Operator import Operator
 from cube.domain.algs.Algs import Algs
 from cube.domain.model.Cube import Cube
 
-from tests.conftest import _test_sp
+from tests.test_utils import _test_sp
 
 
 class TestQueryRestoreState:

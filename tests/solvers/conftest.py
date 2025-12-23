@@ -21,6 +21,9 @@ from typing import TYPE_CHECKING
 import pytest
 
 from cube.domain.solver.SolverName import SolverName
+from cube.utils.config_protocol import IServiceProvider
+
+from tests.test_utils import _test_sp
 
 if TYPE_CHECKING:
     pass
@@ -62,6 +65,12 @@ def session_random_seed() -> int:
 def all_solver_names() -> list[SolverName]:
     """Return all available solver names."""
     return list(SolverName)
+
+
+@pytest.fixture
+def test_sp() -> IServiceProvider:
+    """Fixture providing a TestServiceProvider for tests that create Cube directly."""
+    return _test_sp
 
 
 # =============================================================================

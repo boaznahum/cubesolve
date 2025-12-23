@@ -10,7 +10,7 @@ from cube.domain.model.Cube import Cube
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
 from cube.domain.solver.SolverName import SolverName
-from tests.conftest import _test_sp
+from tests.test_utils import _test_sp
 
 
 def run_solvers_sizes(solvers: Collection[SolverName], cube_sizes: Collection[int],

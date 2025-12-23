@@ -3,7 +3,7 @@ import pytest
 from cube.domain import algs
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.model.Cube import Cube
-from tests.conftest import _test_sp
+from tests.test_utils import _test_sp
 
 
 def test_scramble1_preserves_boy_large_cube() -> None:

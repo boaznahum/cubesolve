@@ -18,7 +18,7 @@ from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.domain.algs import Algs
 from cube.domain.solver import Solvers
-from tests.conftest import _test_sp
+from tests.test_utils import _test_sp
 
 
 # Standard key-to-algorithm mapping for cube operations
@@ -309,12 +309,17 @@ def get_available_backends() -> list[str]:
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add --backend option to pytest."""
-    parser.addoption(
-        "--backend",
-        action="store",
-        default="headless",
-        help="Backend to test: headless, pyglet2, tkinter, or 'all' for all available",
-    )
+    # Check if --backend already registered (by tests/gui/conftest.py)
+    try:
+        parser.addoption(
+            "--backend",
+            action="store",
+            default="headless",
+            help="Backend to test: headless, pyglet2, tkinter, or 'all' for all available",
+        )
+    except ValueError:
+        # Option already registered by another conftest
+        pass
 
 
 def pytest_configure(config: pytest.Config) -> None:
