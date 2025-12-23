@@ -5,7 +5,8 @@
       "mcp__ide__getDiagnostics",
       "WebSearch",
       "Skill(skill-creator)",
-      "Skill(check)"
+      "Skill(check)",
+      "Skill(clean-branches)"
     ],
     "deny": [],
     "ask": []
