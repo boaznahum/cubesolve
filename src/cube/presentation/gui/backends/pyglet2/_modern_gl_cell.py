@@ -42,18 +42,52 @@ if TYPE_CHECKING:
 from ._modern_gl_constants import CELL_TEXTURE_KEY
 
 # Number of segments for ring geometry (more = smoother circle)
-_RING_SEGMENTS = 24
+_RING_SEGMENTS = 32  # Increased for smoother 3D rings
 
-# Marker definitions from config: name -> (color_rgb, radius, thick, height)
-# We'll use these defaults, matching _config.py MARKERS
-_MARKER_DEFS: dict[str, tuple[tuple[float, float, float], float, float, float]] = {
-    "C0": ((199/255, 21/255, 133/255), 1.0, 0.8, 0.1),  # mediumvioletred, full ring
-    "C1": ((199/255, 21/255, 133/255), 0.6, 1.0, 0.1),  # mediumvioletred, filled circle
-    "C2": ((0/255, 100/255, 0/255), 1.0, 0.3, 0.1),     # darkgreen, thin ring
+# Marker definitions: name -> (radius_factor, thickness, height_offset)
+# Color is now determined dynamically based on face color (complementary)
+_MARKER_DEFS: dict[str, tuple[float, float, float]] = {
+    "C0": (1.0, 0.8, 0.15),   # Full ring, raised
+    "C1": (0.6, 1.0, 0.15),   # Filled circle, raised
+    "C2": (1.0, 0.3, 0.15),   # Thin ring, raised
 }
+
+# Complementary colors for each cube face color (RGB 0.0-1.0)
+# These provide maximum contrast for visibility
+_COMPLEMENTARY_COLORS: dict[tuple[float, float, float], tuple[float, float, float]] = {
+    # Red face -> Cyan marker
+    (1.0, 0.0, 0.0): (0.0, 1.0, 1.0),
+    # Green face -> Magenta marker
+    (0.0, 1.0, 0.0): (1.0, 0.0, 1.0),
+    # Blue face -> Yellow marker
+    (0.0, 0.0, 1.0): (1.0, 1.0, 0.0),
+    # Yellow face -> Blue/Purple marker
+    (1.0, 1.0, 0.0): (0.4, 0.2, 1.0),
+    # Orange face -> Cyan marker
+    (1.0, 0.5, 0.0): (0.0, 1.0, 1.0),
+    # White face -> Dark magenta marker
+    (1.0, 1.0, 1.0): (0.6, 0.0, 0.6),
+}
+
+# Default marker color if face color not found (bright magenta)
+_DEFAULT_MARKER_COLOR = (1.0, 0.0, 1.0)
 
 # Border line color (black)
 _LINE_COLOR = (0.0, 0.0, 0.0)
+
+
+def _get_complementary_color(face_color: tuple[float, float, float]) -> tuple[float, float, float]:
+    """Get a complementary marker color for maximum contrast.
+
+    Args:
+        face_color: RGB tuple (0.0-1.0) of the face color
+
+    Returns:
+        RGB tuple for the marker color
+    """
+    # Round to handle floating point imprecision
+    rounded = (round(face_color[0], 1), round(face_color[1], 1), round(face_color[2], 1))
+    return _COMPLEMENTARY_COLORS.get(rounded, _DEFAULT_MARKER_COLOR)
 
 
 class ModernGLCell:
@@ -278,10 +312,15 @@ class ModernGLCell:
         return markers is not None and len(markers) > 0
 
     def generate_marker_vertices(self, dest: list[float]) -> None:
-        """Generate triangle vertices for marker rings/circles.
+        """Generate triangle vertices for 3D raised marker rings/circles.
 
-        Creates ring geometry for each marker on this cell.
-        The ring is positioned slightly above the cell surface.
+        Creates 3D cylinder/ring geometry for each marker on this cell.
+        The marker is a raised cylinder above the cell surface with:
+        - Top face (ring or filled circle)
+        - Outer cylinder wall
+        - Inner cylinder wall (for rings)
+
+        Uses complementary colors for maximum contrast against the face color.
 
         Appends triangles to dest.
         Each vertex: x, y, z, nx, ny, nz, r, g, b (9 floats)
@@ -303,7 +342,10 @@ class ModernGLCell:
         cell_size = min(width, height)
 
         # Normal vector (already normalized)
-        nx, ny, nz = float(self._normal[0]), float(self._normal[1]), float(self._normal[2])
+        normal = (float(self._normal[0]), float(self._normal[1]), float(self._normal[2]))
+
+        # Get complementary color based on face color for maximum contrast
+        marker_color = _get_complementary_color(self._color)
 
         # Generate geometry for each marker
         for marker in markers:
@@ -311,66 +353,71 @@ class ModernGLCell:
             if marker_def is None:
                 continue
 
-            color, radius_factor, thick, height_offset = marker_def
+            radius_factor, thick, height_offset = marker_def
 
             # Calculate actual radius
             base_radius = cell_size * 0.4  # 40% of cell size
             outer_radius = base_radius * radius_factor
             inner_radius = outer_radius * (1.0 - thick)
 
-            # Offset center above the surface
-            offset_center = center + self._normal * (height_offset * cell_size)
+            # Height of the 3D cylinder
+            marker_height = height_offset * cell_size
 
-            # Generate ring triangles
-            self._generate_ring_triangles(
+            # Generate 3D raised ring/cylinder
+            self._generate_3d_ring(
                 dest,
-                offset_center,
+                center,
                 inner_radius,
                 outer_radius,
-                (nx, ny, nz),
-                color,
+                marker_height,
+                normal,
+                marker_color,
             )
 
-    def _generate_ring_triangles(
+    def _generate_3d_ring(
         self,
         dest: list[float],
-        center: ndarray,
+        base_center: ndarray,
         inner_radius: float,
         outer_radius: float,
+        height: float,
         normal: tuple[float, float, float],
         color: tuple[float, float, float],
     ) -> None:
-        """Generate triangles for a ring (annulus) shape.
+        """Generate a 3D raised ring/cylinder shape.
 
-        Creates a ring as a series of trapezoid segments, each made of 2 triangles.
+        Creates a cylinder with:
+        - Top face (ring or filled circle)
+        - Outer cylinder wall
+        - Inner cylinder wall (for rings with inner_radius > 0)
 
         Args:
             dest: List to append vertex data to
-            center: Center point of the ring
+            base_center: Center point at the base (cell surface)
             inner_radius: Inner radius (0 for filled circle)
             outer_radius: Outer radius
-            normal: Normal vector (nx, ny, nz)
+            height: Height of the cylinder above the surface
+            normal: Face normal vector (nx, ny, nz)
             color: RGB color (0.0-1.0 range)
         """
         nx, ny, nz = normal
         r, g, b = color
-
-        # Create two perpendicular vectors in the plane of the ring
-        # Using the face normal to determine the ring plane
         normal_vec = np.array([nx, ny, nz])
 
-        # Find a perpendicular vector (use cross product with a non-parallel vector)
+        # Top center is offset by height along the normal
+        top_center = base_center + normal_vec * height
+
+        # Create two perpendicular vectors in the plane of the ring
         if abs(nx) < 0.9:
             up = np.array([1.0, 0.0, 0.0])
         else:
             up = np.array([0.0, 1.0, 0.0])
 
-        # tangent1 and tangent2 are perpendicular to normal and to each other
         tangent1 = np.cross(normal_vec, up)
         tangent1 = tangent1 / np.linalg.norm(tangent1)
         tangent2 = np.cross(normal_vec, tangent1)
 
-        # Generate ring segments
+        # Generate segments
         for i in range(_RING_SEGMENTS):
             angle1 = 2 * math.pi * i / _RING_SEGMENTS
             angle2 = 2 * math.pi * (i + 1) / _RING_SEGMENTS
@@ -378,19 +425,53 @@ class ModernGLCell:
             cos1, sin1 = math.cos(angle1), math.sin(angle1)
             cos2, sin2 = math.cos(angle2), math.sin(angle2)
 
-            # Points on outer circle
-            outer1 = center + outer_radius * (cos1 * tangent1 + sin1 * tangent2)
-            outer2 = center + outer_radius * (cos2 * tangent1 + sin2 * tangent2)
+            # Direction vectors for this segment
+            dir1 = cos1 * tangent1 + sin1 * tangent2
+            dir2 = cos2 * tangent1 + sin2 * tangent2
 
-            # Points on inner circle
-            inner1 = center + inner_radius * (cos1 * tangent1 + sin1 * tangent2)
-            inner2 = center + inner_radius * (cos2 * tangent1 + sin2 * tangent2)
+            # Points on outer circle (top and bottom)
+            outer_top1 = top_center + outer_radius * dir1
+            outer_top2 = top_center + outer_radius * dir2
+            outer_bot1 = base_center + outer_radius * dir1
+            outer_bot2 = base_center + outer_radius * dir2
 
-            # Two triangles per segment (forming a trapezoid)
-            # Triangle 1: outer1, outer2, inner1
-            for p in [outer1, outer2, inner1]:
+            # Points on inner circle (top and bottom)
+            inner_top1 = top_center + inner_radius * dir1
+            inner_top2 = top_center + inner_radius * dir2
+            inner_bot1 = base_center + inner_radius * dir1
+            inner_bot2 = base_center + inner_radius * dir2
+
+            # === TOP FACE (ring) ===
+            # Triangle 1: outer_top1, outer_top2, inner_top1
+            for p in [outer_top1, outer_top2, inner_top1]:
+                dest.extend([p[0], p[1], p[2], nx, ny, nz, r, g, b])
+            # Triangle 2: inner_top1, outer_top2, inner_top2
+            for p in [inner_top1, outer_top2, inner_top2]:
                 dest.extend([p[0], p[1], p[2], nx, ny, nz, r, g, b])
 
-            # Triangle 2: inner1, outer2, inner2
-            for p in [inner1, outer2, inner2]:
-                dest.extend([p[0], p[1], p[2], nx, ny, nz, r, g, b])
+            # === OUTER WALL ===
+            # Outward-facing normal for outer wall
+            out_norm1 = dir1
+            out_norm2 = dir2
+            out_norm_avg = (out_norm1 + out_norm2) / 2
+            out_norm_avg = out_norm_avg / np.linalg.norm(out_norm_avg)
+            onx, ony, onz = float(out_norm_avg[0]), float(out_norm_avg[1]), float(out_norm_avg[2])
+
+            # Triangle 1: outer_top1, outer_bot1, outer_top2
+            for p in [outer_top1, outer_bot1, outer_top2]:
+                dest.extend([p[0], p[1], p[2], onx, ony, onz, r, g, b])
+            # Triangle 2: outer_top2, outer_bot1, outer_bot2
+            for p in [outer_top2, outer_bot1, outer_bot2]:
+                dest.extend([p[0], p[1], p[2], onx, ony, onz, r, g, b])
+
+            # === INNER WALL (only if inner_radius > 0) ===
+            if inner_radius > 0.001:
+                # Inward-facing normal for inner wall (negative of outward)
+                inx, iny, inz = -onx, -ony, -onz
+
+                # Triangle 1: inner_top1, inner_top2, inner_bot1
+                for p in [inner_top1, inner_top2, inner_bot1]:
+                    dest.extend([p[0], p[1], p[2], inx, iny, inz, r, g, b])
+                # Triangle 2: inner_top2, inner_bot2, inner_bot1
+                for p in [inner_top2, inner_bot2, inner_bot1]:
+                    dest.extend([p[0], p[1], p[2], inx, iny, inz, r, g, b])
