@@ -1,0 +1,1 @@
+critical : markers disparead from cube when solving

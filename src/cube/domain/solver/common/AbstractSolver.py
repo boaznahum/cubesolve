@@ -1,12 +1,14 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, final
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
+from cube.domain.exceptions import OpAborted
 from cube.domain.model import Cube
 from cube.domain.solver import Solver
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
+from cube.domain.solver.solver import SolverResults, SolveStep
 
 if TYPE_CHECKING:
     pass
@@ -23,6 +25,64 @@ class AbstractSolver(Solver, ABC):
         self._cube = op.cube
         self._debug_override: bool | None = None
         self.common: CommonOp = CommonOp(self)
+
+    # =========================================================================
+    # Template Method Pattern: solve() + _solve_impl()
+    # =========================================================================
+
+    @final
+    def solve(
+        self,
+        debug: bool | None = None,
+        animation: bool | None = True,
+        what: SolveStep = SolveStep.ALL
+    ) -> SolverResults:
+        """Public entry point for solving - handles animation and OpAborted.
+
+        DO NOT OVERRIDE. Implement _solve_impl() instead.
+
+        This template method ensures:
+        1. Animation flag is properly applied via with_animation()
+        2. OpAborted is caught and handled cleanly (no red traceback)
+        3. Debug flag is managed
+
+        Args:
+            debug: Override debug mode (None = use config)
+            animation: Override animation (None = use config, True/False = force)
+            what: Which step to solve (ALL, L1x, etc.)
+
+        Returns:
+            SolverResults with parity information
+        """
+        if debug is not None:
+            self._debug_override = debug
+
+        try:
+            with self._op.with_animation(animation=animation):
+                try:
+                    return self._solve_impl(what)
+                except OpAborted:
+                    # User aborted - this is normal, not an error
+                    return SolverResults()
+        finally:
+            self._debug_override = None
+
+    @abstractmethod
+    def _solve_impl(self, what: SolveStep) -> SolverResults:
+        """Implement solver logic here. Called by solve().
+
+        Animation and OpAborted are handled by the template method solve().
+        Just implement the solving logic.
+
+        Args:
+            what: Which step to solve
+
+        Returns:
+            SolverResults with parity information
+        """
+        pass
+
+    # =========================================================================
 
     @final
     @property

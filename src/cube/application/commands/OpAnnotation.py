@@ -1,6 +1,5 @@
 """Operator annotation support."""
 
-import sys
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from typing import (
@@ -167,11 +166,8 @@ class OpAnnotation:
 
                 key = _key(i)
 
-                try:
-                    e = cqr.find_slice_edge(parts, _c_pred(i, key))
-                except:
-                    print("", file=sys.stderr)
-                    raise
+                # TODO [S3]: Marker cleanup fails during OpAborted - see __todo_solvers.md
+                e = cqr.find_slice_edge(parts, _c_pred(i, key))
 
                 if i < 0:
                     # if have a bug, nested annimation in __fixed_edge, so key already deleted

@@ -118,12 +118,22 @@ class Solver(SolverElementsProvider, ABC):
     @abstractmethod
     def solve(self, debug: bool | None = None, animation: bool | None = True,
               what: SolveStep = SolveStep.ALL) -> SolverResults:
-        """
-        :param debug:
-        :param animation: not None force True/ False, you can create Application without animation,
-                so you don't need to pass False to solver
-        :param what:
-        :return:
+        """Solve the cube.
+
+        AbstractSolver provides a @final template method implementation that:
+        1. Handles animation flag via with_animation()
+        2. Catches OpAborted for clean user abort handling
+        3. Manages debug flag
+
+        Subclasses should NOT override this method. Instead, implement _solve_impl().
+
+        Args:
+            debug: Enable debug output (None = use config)
+            animation: Enable animation (None = use current, True/False = force)
+            what: Which step to solve
+
+        Returns:
+            SolverResults with parity information
         """
         pass
 

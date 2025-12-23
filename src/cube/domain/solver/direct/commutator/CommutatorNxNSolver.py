@@ -262,18 +262,12 @@ class CommutatorNxNSolver(Solver):
             return "Solved"
         return f"Phase: {self._phase}"
 
-    def solve(
-        self,
-        debug: bool | None = None,
-        animation: bool | None = True,
-        what: SolveStep = SolveStep.ALL
-    ) -> SolverResults:
-        """
-        Solve the cube using commutator-based method.
+    def _solve_impl(self, what: SolveStep) -> SolverResults:
+        """Solve the cube using commutator-based method. Called by AbstractSolver.solve().
+
+        Animation and OpAborted are handled by the template method.
 
         Args:
-            debug: Enable debug output
-            animation: Enable animation
             what: Which step to solve
 
         Returns:

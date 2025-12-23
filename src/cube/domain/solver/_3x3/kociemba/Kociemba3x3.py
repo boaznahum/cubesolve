@@ -262,31 +262,18 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
 
         return sr
 
-    def solve(
-            self,
-            debug: bool | None = None,
-            animation: bool | None = True,
-            what: SolveStep = SolveStep.ALL
-    ) -> SolverResults:
-        """
-        Solve the cube (Solver interface).
+    def _solve_impl(self, what: SolveStep) -> SolverResults:
+        """Solve the cube. Called by AbstractSolver.solve().
 
-        This method exists for backward compatibility and direct usage.
-        For NxN cubes, use NxNSolverOrchestrator instead.
+        Animation and OpAborted are handled by the template method.
 
         Args:
-            debug: Enable debug output
-            animation: Enable animation
             what: Which step to solve
 
         Returns:
             SolverResults with solve metadata
         """
-        if debug is None:
-            debug = self._is_debug_enabled
-
-        with self._op.with_animation(animation=animation):
-            return self.solve_3x3(debug, what)
+        return self.solve_3x3(self._is_debug_enabled, what)
 
     def _cube_to_kociemba_string(self, cube: Cube) -> str:
         """

@@ -183,19 +183,14 @@ class CageNxNSolver(BaseSolver):
     # Main solve method
     # =========================================================================
 
-    def solve(
-        self,
-        debug: bool | None = None,
-        animation: bool | None = True,
-        what: SolveStep = SolveStep.ALL
-    ) -> SolverResults:
-        """Solve using Cage method.
+    def _solve_impl(self, what: SolveStep) -> SolverResults:
+        """Solve using Cage method. Called by AbstractSolver.solve().
+
+        Animation and OpAborted are handled by the template method.
 
         Order: Edges -> Corners -> Centers
 
         Args:
-            debug: Enable debug output
-            animation: Enable animation
             what: Which step to solve:
                 - SolveStep.ALL: Full solve (edges, corners, centers)
                 - SolveStep.NxNEdges: Edges only (pair wings)
@@ -207,18 +202,17 @@ class CageNxNSolver(BaseSolver):
         if self.is_solved:
             return sr
 
-        with self._op.with_animation(animation=animation):
-            match what:
-                case SolveStep.NxNEdges:
-                    return self._solve_edges_only(sr)
-                case SolveStep.Cage:
-                    return self._solve_cage_only(sr)
-                case SolveStep.NxNCenters:
-                    return self._solve_centers_only(sr)
-                case SolveStep.ALL | _:
-                    return self._solve_impl(sr)
+        match what:
+            case SolveStep.NxNEdges:
+                return self._solve_edges_only(sr)
+            case SolveStep.Cage:
+                return self._solve_cage_only(sr)
+            case SolveStep.NxNCenters:
+                return self._solve_centers_only(sr)
+            case SolveStep.ALL | _:
+                return self._solve_all(sr)
 
-    def _solve_impl(self, sr: SolverResults) -> SolverResults:
+    def _solve_all(self, sr: SolverResults) -> SolverResults:
         """Internal solve implementation.
 
         For even cubes, parity may be detected during corner solving:
