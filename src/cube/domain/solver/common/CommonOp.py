@@ -123,6 +123,9 @@ class CommonOp:
         restore cube state before returning, this is not count as solve step
         """
 
+        #new todo use cube.application.commands.Operator.Operator.with_query_restore_state
+
+
         warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
 
 

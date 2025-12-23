@@ -172,6 +172,8 @@ class PLL(StepSolver):
         :return:
         """
 
+        #new todo use cube.application.commands.Operator.Operator.with_query_restore_state
+
         rotate_while_search = self.cube.config.solver_pll_rotate_while_search
 
         search_alg: Alg = Algs.no_op()
