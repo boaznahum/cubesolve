@@ -244,10 +244,17 @@ def print_report(data: dict) -> None:
     # WIP branches
     print(f"\n### Work in Progress ({len(wip)})\n")
     if wip:
-        print("| Branch | Last Commit | Age |")
-        print("|--------|-------------|-----|")
+        print("| Branch | Last Commit | Age | Contained In | Action |")
+        print("|--------|-------------|-----|--------------|--------|")
         for b in wip:
-            print(f"| `{b.name}` | {b.last_commit_hash} {b.last_commit_msg} | {b.last_commit_age} |")
+            contained = ", ".join(b.contained_in) if b.contained_in else "-"
+            if default_branch in b.contained_in:
+                action = f"-> archive/completed (merged to {default_branch})"
+            elif b.contained_in:
+                action = f"Review (in {b.contained_in[0]})"
+            else:
+                action = "Keep (active)"
+            print(f"| `{b.name}` | {b.last_commit_hash} {b.last_commit_msg} | {b.last_commit_age} | {contained} | {action} |")
     else:
         print("*No WIP branches*")
 
@@ -264,8 +271,19 @@ def print_report(data: dict) -> None:
     # Recommendations
     standard_branches = {"main", "master", "develop", "dev"}
     needs_action = [b for b in active if b.name not in (default_branch, current_branch) and b.name not in standard_branches]
-    if needs_action:
+
+    # WIP branches that are merged to default branch need action
+    wip_needs_action = [b for b in wip if default_branch in b.contained_in]
+
+    if needs_action or wip_needs_action:
         print(f"\n### Recommendations\n")
+
+        # WIP branches merged to default
+        for b in wip_needs_action:
+            short_name = b.name.replace("wip/", "")
+            print(f"- `{b.name}`: **Merged to {default_branch}** -> move to `archive/completed/{short_name}`")
+
+        # Active branches
         for b in needs_action:
             if b.contained_in:
                 if b.is_local and not b.is_remote:
