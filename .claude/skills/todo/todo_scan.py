@@ -120,12 +120,16 @@ def find_todo_files(project_root: Path) -> list[TodoFile]:
 
             in_todo_folder = rel_path.startswith('todo/') or rel_path.startswith('todo\\')
 
+            # Skip requirements/documentation/settings files for "new entries" detection
+            is_docs_file = any(x in rel_path.lower() for x in ['requirements', 'readme', 'settings', 'skill.md'])
+
             has_new_entries = False
-            try:
-                content = file_path.read_text(encoding='utf-8').lower()
-                has_new_entries = 'new entries' in content or 'new entry' in content
-            except (UnicodeDecodeError, PermissionError):
-                pass
+            if not is_docs_file:
+                try:
+                    content = file_path.read_text(encoding='utf-8').lower()
+                    has_new_entries = 'new entries' in content or 'new entry' in content
+                except (UnicodeDecodeError, PermissionError):
+                    pass
 
             todo_files.append(TodoFile(
                 path=rel_path,

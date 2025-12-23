@@ -59,6 +59,19 @@ Run `/todo track` to create issues for untracked items
 
 ## Commands
 
+### `/todo help`
+Show quick reference of available commands:
+
+```
+/todo              Quick report (open issues, priorities, in-progress)
+/todo scan         Full codebase scan for TODOs
+/todo track        Create GitHub Issues for untracked TODOs
+/todo analyze #id  Analyze TODO and update its GitHub Issue
+/todo start #id    Mark issue as in-progress
+/todo done #id     Close the issue
+/todo reject #id   Close with wontfix label
+```
+
 ### `/todo` or `/todo report`
 Quick report from script output and GitHub Issues.
 

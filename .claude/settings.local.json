@@ -6,7 +6,8 @@
       "WebSearch",
       "Skill(skill-creator)",
       "Skill(check)",
-      "Skill(clean-branches)"
+      "Skill(clean-branches)",
+      "Skill(todo)"
     ],
     "deny": [],
     "ask": []
