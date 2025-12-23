@@ -99,18 +99,64 @@ def cube(self) -> Cube:
 
 #### D2: How to map shadow pieces to real pieces?
 
-**Decision**: Map by position (accessor name).
+**Decision**: Map by position (accessor name) at annotation start. Markers then travel with pieces.
 
-**Rationale**: In the Cage method, the shadow 3x3 represents the "virtual 3x3" of the NxN cube:
-- Shadow corner `flu` → Real corner `flu`
-- Shadow edge `fu` → Real edge `fu`
+**Rationale**: In the Cage method, the shadow 3x3 represents the "virtual 3x3" of the NxN cube.
+Position is the common language between the two cubes.
+
+```
+Shadow 3x3 Cube                Real 5x5 Cube
+┌───┬───┬───┐                  ┌───┬───┬───┬───┬───┐
+│   │FU │   │                  │   │   │FU │   │   │  (3 slices)
+├───┼───┼───┤                  ├───┼───┼───┼───┼───┤
+│FL │   │FR │                  │   │   │   │   │   │
+├───┼───┼───┤       MAP        ├───┼───┼───┼───┼───┤
+│   │FD │   │    ─────────►    │FL │   │   │   │FR │
+└───┴───┴───┘                  ├───┼───┼───┼───┼───┤
+                               │   │   │   │   │   │
+shadow.fu (1 slice)            ├───┼───┼───┼───┼───┤
+       │                       │   │   │FD │   │   │
+       └──────────────────────►└───┴───┴───┴───┴───┘
+                               real.fu (3 slices, all annotated)
+```
+
+**Slice handling**: When we map `shadow.fu` (1 slice) → `real.fu` (3 slices on 5x5),
+the annotation system iterates ALL slices of the real edge. The entire paired edge
+lights up with markers.
+
+**Marker behavior with `AnnWhat.Moved`**:
+
+The position mapping happens **once at annotation start**. After that, markers travel
+with the piece via `c_attributes`:
+
+```
+1. Annotation starts:
+   - Map shadow.fu → real.fu (position-based, ONE TIME)
+   - Attach VMarker to real.fu's c_attributes (all slices)
+
+2. Algorithm plays (e.g., R U R'):
+   - real.fu piece physically moves to new position
+   - VMarker travels WITH it (attached to c_attributes)
+   - Pink circles follow the piece around the cube!
+
+3. Annotation ends:
+   - Find piece by tracking key (searches all pieces)
+   - Remove VMarker from wherever piece ended up
+```
+
+**Implementation**:
 
 ```python
 def _map_piece(self, shadow_piece: Part) -> Part:
-    # Get the position accessor (e.g., "flu", "fu")
-    position_name = shadow_piece.position_name
-    # Get corresponding piece from real cube
-    return getattr(self._real_cube, position_name)
+    """Map a shadow cube piece to corresponding real cube piece by position."""
+    if isinstance(shadow_piece, Edge):
+        accessor = shadow_piece._name.lower()  # e.g., "fu"
+    elif isinstance(shadow_piece, Corner):
+        accessor = shadow_piece.name.value.lower()  # e.g., "flu"
+    else:
+        raise ValueError(f"Unsupported piece type: {type(shadow_piece)}")
+
+    return getattr(self._real_cube, accessor)
 ```
 
 #### D3: How to handle annotation context?
@@ -153,6 +199,52 @@ def play(self, alg: Alg, inv: bool = False, animation: bool = True) -> None:
 def history(self, *, remove_scramble: bool = False) -> Sequence[Alg]:
     return self._real_op.history(remove_scramble=remove_scramble)
 ```
+
+#### D6: What about undo()?
+
+**Decision**: Delegate to real operator only. Don't undo on shadow cube.
+
+**Rationale**: When the user presses undo, the solver is already done. The shadow cube
+is no longer needed - it was only used during the solve. The real cube's undo is what
+matters for the user.
+
+```python
+def undo(self, animation: bool = True) -> Alg | None:
+    # Shadow cube state becomes stale, but that's OK - solver is done
+    return self._real_op.undo(animation)
+```
+
+#### D7: How to handle `with_animation(False)` in solver?
+
+**Decision**: Respect the solver's choice - pass through to real operator.
+
+**Rationale**: If a solver explicitly disables animation for certain moves (e.g., boring
+setup moves, reorientations), that's intentional. The solver author knows which moves
+are interesting to show.
+
+```python
+def with_animation(self, animation: bool | None = None) -> ContextManager[None]:
+    # Pass through to real operator
+    return self._real_op.with_animation(animation)
+```
+
+#### D8: How to handle PartColorsID in annotations?
+
+**Decision**: Find piece by colors on the **real** cube, not shadow cube.
+
+**Rationale**: `PartColorsID` is a frozenset of colors (e.g., `{Color.WHITE, Color.GREEN}`).
+The annotation system needs to find which piece has those colors. Since we want to
+annotate the real cube, we search the real cube.
+
+```python
+# In DualAnnotation._map_element():
+if isinstance(element, frozenset):  # PartColorsID
+    # Find on REAL cube, not shadow
+    return self._real_cube.find_part_by_colors(element)
+```
+
+Note: For Cage method, shadow 3x3 uses tracked face colors that match the real cube,
+so colors_id values are valid for both cubes.
 
 ## Class Diagram
 
@@ -410,21 +502,23 @@ For Cage method, the shadow 3x3 uses **tracked face colors**, so mapping by colo
 | Performance impact | Low | Medium | Shadow cube in query mode (no texture updates) |
 | Annotation nesting breaks | Medium | Medium | Test nested annotation scenarios |
 
-## Open Questions
+## Resolved Design Questions
 
-1. **Should DualOperator support `undo()`?**
-   - Option A: Undo on both cubes
-   - Option B: Undo on real only (shadow state drifts)
-   - Option C: Don't support undo (throw exception)
+All design questions have been resolved and documented in D1-D8 above:
 
-2. **What about solver-specific cube access?**
-   - Some solvers access `cube.front`, `cube.up`, etc.
-   - These return Face objects from shadow cube
-   - Annotations using these faces need mapping too
+| Question | Resolution | See |
+|----------|------------|-----|
+| Which cube does `op.cube` return? | Shadow cube (for solver logic) | D1 |
+| How to map shadow → real pieces? | By position, markers travel via c_attributes | D2 |
+| How to handle annotation context? | DualAnnotation wraps real annotation | D3 |
+| How to sync cube states? | Play on both in sequence | D4 |
+| How to handle history()? | Delegate to real operator | D5 |
+| How to handle undo()? | Delegate to real operator only | D6 |
+| How to handle with_animation(False)? | Respect solver's choice, pass through | D7 |
+| How to handle PartColorsID? | Find by colors on real cube | D8 |
 
-3. **How to handle `with_animation(False)` in solver?**
-   - Some solver steps disable animation temporarily
-   - DualOperator should respect this for real operator
+**Face-based annotations** (e.g., `cube.front.edges`): Work correctly because we receive
+Part objects which we map by position. The recursive element processing handles iterables.
 
 ## Files to Create/Modify
 
