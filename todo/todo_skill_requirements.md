@@ -25,9 +25,12 @@ Consolidate and organize all TODOs from the codebase into a unified tracking sys
   ```
 
 ### 2. Todo Files
-- **Definition:** Any file with "todo" in its filename (case insensitive)
-- **Examples:** `__todo.md`, `__todo_cage.md`, `__todo_solvers.md`
-- **Location:** Should be moved to `todo/` folder if found elsewhere
+- **Location:** `todo/` folder
+- **Files:**
+  - `todo_open.md` - Active non-code TODOs (table with GitHub links)
+  - `todo_code_comments.md` - Active code TODOs (table with GitHub links)
+  - `todo_new_entries.md` - Inbox for quick notes
+  - `todo_completed.md` - Completed items (reference)
 
 ---
 
@@ -187,11 +190,11 @@ Reject a TODO:
 ## Token-Saving Strategies
 
 ### Python Helper Script
-Create `scripts/todo_scan.py` to:
-- Scan code for TODO/CLAUDE comments (fast, no AI tokens)
-- Output JSON with file, line, content, has_id
-- Compare with `gh issue list` output
-- Report discrepancies
+Script: `.claude/skills/todo/todo_scan.py`
+- Scans code for TODO/CLAUDE comments (fast, no AI tokens)
+- Outputs formatted report or JSON (`--json` flag)
+- Compares with GitHub Issues
+- Reports untracked items
 
 ### Cached Queries
 - Cache `gh issue list` results for quick report
@@ -223,67 +226,35 @@ gh label create "priority:low" --color "0E8A16" --description "Low priority"
 
 ```
 todo/
-├── todo_skill_requirements.md    # This file
-├── todo_code_comments.md         # Legacy - migrate to GH Issues
-├── todo_open.md                  # Legacy - migrate to GH Issues
-├── todo_completed.md             # Legacy - reference only
-├── __todo_new_entries.md         # Inbox for quick notes
-└── ...other todo files...
+├── todo_skill_requirements.md    # This file (requirements doc)
+├── todo_open.md                  # Non-code TODOs (table with GH links)
+├── todo_code_comments.md         # Code TODOs (table with GH links)
+├── todo_new_entries.md           # Inbox for quick notes
+├── todo_completed.md             # Completed items (reference)
+├── __dead_code.md                # Dead code tracking
+└── __next_session.md             # Session notes
 
-scripts/
+.claude/skills/todo/
+├── SKILL.md                      # The skill definition
 └── todo_scan.py                  # Python helper for scanning
-
-.claude/commands/
-└── todo.md                       # The skill definition
 ```
 
 ---
 
-## Migration from Current System
+## Migration Status
+
+**Completed:** 2025-12-24
+
+### What Was Done
+1. ✅ Created GitHub labels (todo, todo:code, todo:file, priority:*, etc.)
+2. ✅ Created GitHub Issues #3-#15 for code TODOs
+3. ✅ Created GitHub Issues #16-#45 for non-code TODOs
+4. ✅ Updated code comments with issue numbers `[#N]`
+5. ✅ Simplified todo files (detailed descriptions moved to GitHub)
+6. ✅ Deleted redundant files (`__todo.md`, `__todo_cage.md`, etc.)
 
 ### Current State
-- `todo_code_comments.md` - TC1-TC6 tracked
-- `todo_open.md` - B1, G2, A7, etc. tracked
-- Various `__todo*.md` files scattered
-
-### Migration Steps
-1. Create GitHub labels
-2. Create GitHub Issues for all items in `todo_open.md`
-3. Create GitHub Issues for TC1-TC6 in `todo_code_comments.md`
-4. Update code comments with GitHub issue numbers
-5. Archive old todo files (keep for reference)
-
----
-
-## Alternative: File-Based Approach
-
-If GitHub Issues doesn't work out, fall back to file-based:
-
-### Files
-- `todo/todo_active.md` - All active TODOs
-- `todo/todo_completed.md` - Completed items
-- `todo/todo_rejected.md` - Rejected items
-
-### Same workflow, but:
-- IDs stay as TC#, B#, G#, etc.
-- Status tracked in markdown tables
-- Python script updates files instead of GitHub
-
----
-
-## Implementation Notes
-
-### Phase 1: Setup
-- [ ] Create GitHub labels
-- [ ] Create `scripts/todo_scan.py`
-- [ ] Create `.claude/commands/todo.md` skill
-
-### Phase 2: Migration
-- [ ] Migrate `todo_open.md` items to GitHub Issues
-- [ ] Migrate `todo_code_comments.md` items to GitHub Issues
-- [ ] Update code comments with issue numbers
-
-### Phase 3: Daily Use
-- [ ] `/todo` shows quick report
-- [ ] `/todo scan` finds new items
-- [ ] `/todo analyze` processes unanalyzed items
+- **45 GitHub Issues** with `todo` label
+- **Code TODOs:** Tracked in `todo_code_comments.md` with GitHub links
+- **Non-code TODOs:** Tracked in `todo_open.md` with GitHub links
+- **Detailed descriptions:** In GitHub Issues (not in files)
