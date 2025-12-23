@@ -6,33 +6,33 @@ This is the master list of all open tasks. Last updated: 2025-12-23
 
 ## Summary Table
 
-| ID | Category | Priority | Title | Status |
-|----|----------|----------|-------|--------|
-| B1 | Bug | HIGH | GUI Animation Solver Bug (Lazy Cache) | Investigating |
-| B5 | Bug | MEDIUM | Missing debug output with `--debug-all` | Open |
-| B6 | Bug | MEDIUM | Celebration effect triggers incorrectly | Open |
-| B8 | Bug | MEDIUM | Default texture shows wrong face colors | Open |
-| G2 | GUI | LOW | Investigate pyopengltk for tkinter | Open |
-| G5 | GUI | MEDIUM | Comprehensive Command Testing Plan | Open |
-| G6 | GUI | LOW | Additional lighting improvements (pyglet2) | Open |
-| G7 | GUI | IN PROGRESS | Texture mapping for cube faces | In Progress |
-| A7 | Architecture | MEDIUM | Circular import investigation | Open |
-| A8 | Architecture | MEDIUM | No code leak outside backends layer | Open |
-| A9 | Architecture | MEDIUM | Centralize animation handling | Open |
-| D1 | Documentation | LOW | Improve keyboard_and_commands.md diagram | Open |
-| Q5 | Quality | LOW | Review all `# type: ignore` comments | Open |
-| Q6 | Quality | LOW | Evaluate `disable_error_code = import-untyped` | Open |
-| Q7 | Quality | LOW | Add type annotations to lambda callbacks | Open |
-| Q9 | Quality | LOW | Clean up dead code debug prints in solver | Open |
-| Q10 | Quality | LOW | Relocate `debug_dump()` to better location | Open |
-| Q13 | Quality | LOW | Evaluate pyright strict mode | Open |
-| Q14 | Quality | MEDIUM | Fix vs.debug() performance issue | Open |
-| Q15 | Quality | LOW | Clean up protected member access warnings | Open |
-| Q16 | Quality | MEDIUM | Clean up all dead code (vulture) | Open |
-| S1 | Solver | LOW | CFOP parity detection | Open |
-| S2 | Solver | LOW | advanced_edge_parity flag evaluation | Open |
-| S3 | Solver | MEDIUM | Unify tracker cleanup code | Open |
-| S4 | Solver | LOW | Cage face creation duplication | Open |
+| ID | GitHub | Category | Priority | Title | Status |
+|----|--------|----------|----------|-------|--------|
+| B1 | [#16](https://github.com/boaznahum/cubesolve/issues/16) | Bug | HIGH | GUI Animation Solver Bug (Lazy Cache) | Investigating |
+| B5 | [#17](https://github.com/boaznahum/cubesolve/issues/17) | Bug | MEDIUM | Missing debug output with `--debug-all` | Open |
+| B6 | [#18](https://github.com/boaznahum/cubesolve/issues/18) | Bug | MEDIUM | Celebration effect triggers incorrectly | Open |
+| B8 | [#19](https://github.com/boaznahum/cubesolve/issues/19) | Bug | MEDIUM | Default texture shows wrong face colors | Open |
+| G2 | [#20](https://github.com/boaznahum/cubesolve/issues/20) | GUI | LOW | Investigate pyopengltk for tkinter | Open |
+| G5 | [#21](https://github.com/boaznahum/cubesolve/issues/21) | GUI | MEDIUM | Comprehensive Command Testing Plan | Open |
+| G6 | [#22](https://github.com/boaznahum/cubesolve/issues/22) | GUI | LOW | Additional lighting improvements (pyglet2) | Open |
+| G7 | [#23](https://github.com/boaznahum/cubesolve/issues/23) | GUI | IN PROGRESS | Texture mapping for cube faces | In Progress |
+| A7 | [#24](https://github.com/boaznahum/cubesolve/issues/24) | Architecture | MEDIUM | Circular import investigation | Open |
+| A8 | [#25](https://github.com/boaznahum/cubesolve/issues/25) | Architecture | MEDIUM | No code leak outside backends layer | Open |
+| A9 | [#26](https://github.com/boaznahum/cubesolve/issues/26) | Architecture | MEDIUM | Centralize animation handling | Open |
+| D1 | [#27](https://github.com/boaznahum/cubesolve/issues/27) | Documentation | LOW | Improve keyboard_and_commands.md diagram | Open |
+| Q5 | [#28](https://github.com/boaznahum/cubesolve/issues/28) | Quality | LOW | Review all `# type: ignore` comments | Open |
+| Q6 | [#29](https://github.com/boaznahum/cubesolve/issues/29) | Quality | LOW | Evaluate `disable_error_code = import-untyped` | Open |
+| Q7 | [#30](https://github.com/boaznahum/cubesolve/issues/30) | Quality | LOW | Add type annotations to lambda callbacks | Open |
+| Q9 | [#31](https://github.com/boaznahum/cubesolve/issues/31) | Quality | LOW | Clean up dead code debug prints in solver | Open |
+| Q10 | [#32](https://github.com/boaznahum/cubesolve/issues/32) | Quality | LOW | Relocate `debug_dump()` to better location | Open |
+| Q13 | [#33](https://github.com/boaznahum/cubesolve/issues/33) | Quality | LOW | Evaluate pyright strict mode | Open |
+| Q14 | [#34](https://github.com/boaznahum/cubesolve/issues/34) | Quality | MEDIUM | Fix vs.debug() performance issue | Open |
+| Q15 | [#35](https://github.com/boaznahum/cubesolve/issues/35) | Quality | LOW | Clean up protected member access warnings | Open |
+| Q16 | [#36](https://github.com/boaznahum/cubesolve/issues/36) | Quality | MEDIUM | Clean up all dead code (vulture) | Open |
+| S1 | [#37](https://github.com/boaznahum/cubesolve/issues/37) | Solver | LOW | CFOP parity detection | Open |
+| S2 | [#38](https://github.com/boaznahum/cubesolve/issues/38) | Solver | LOW | advanced_edge_parity flag evaluation | Open |
+| S3 | [#15](https://github.com/boaznahum/cubesolve/issues/15) | Solver | MEDIUM | Unify tracker cleanup code | Open |
+| S4 | [#39](https://github.com/boaznahum/cubesolve/issues/39) | Solver | LOW | Cage face creation duplication | Open |
 
 ---
 

@@ -58,7 +58,7 @@ def run_single_test(app: AbstractApp,
         raise
 
 
-# todo: Replace with :class:`cube.tests.tetser.TestRunner.run_tests`
+# TODO [#3]: Replace with :class:`cube.tests.tetser.TestRunner.run_tests`
 def run_tests(app: AbstractApp,
               first_key: int,
               number_of_loops: int,

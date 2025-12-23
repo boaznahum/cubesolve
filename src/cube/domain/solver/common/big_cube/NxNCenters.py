@@ -857,7 +857,7 @@ class NxNCenters(SolverElement):
         if source is cube.back:
             rotate_mul = 2
 
-        # TODO [TC4]: MM algorithm broken - needs fix before odd cube face swap can work
+        # TODO [#12]: MM algorithm broken - needs fix before odd cube face swap can work
         raise InternalSWError("Need to fix MM")
 
         swap_faces = [Algs.MM()[1:mid_pls_1 - 1].prime * rotate_mul, Algs.F.prime * 2,

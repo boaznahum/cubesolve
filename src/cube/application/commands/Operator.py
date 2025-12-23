@@ -146,7 +146,7 @@ class Operator(OperatorProtocol):
                     an: Callable[[Cube, OpProtocol, SimpleAlg], None] | None = self._animation_manager.run_animation
                     assert an  # just to make mypy happy
 
-                    # TODO [TC1]: Move single step mode handling into operator
+                    # TODO [#9]: Move single step mode handling into operator
                     algs: list[SimpleAlg] = [*alg.flatten()]
 
                     if self._app_state.single_step_mode:
@@ -338,7 +338,7 @@ class Operator(OperatorProtocol):
         was_in_query_mode = cube._in_query_mode
         history_len_before = len(self._history)
 
-        #claude: move the query mode context manager to cubeitslef, this is not OOP programmint
+        # CLAUDE [#8]: move the query mode context manager to cube itself, this is not OOP programming
         cube._in_query_mode = True
 
         with self.with_animation(animation=False):

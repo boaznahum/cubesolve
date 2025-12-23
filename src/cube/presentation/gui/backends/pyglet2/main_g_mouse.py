@@ -156,7 +156,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
 
     vs.debug(mouse_debug, f"[ROTATE] Selected: face={slice_edge.face.name}, left_to_right={left_to_right}, left_to_top={left_to_top}")
 
-    p0 = _screen_to_model(app.vs, window, x, y)  # todo we already in selected !!!
+    p0 = _screen_to_model(app.vs, window, x, y)  # TODO [#4]: we already in selected !!!
     p1 = _screen_to_model(app.vs, window, x + dx, y + dy)
     d_vector: ndarray = p1 - p0
 

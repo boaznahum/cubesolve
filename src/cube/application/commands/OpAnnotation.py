@@ -166,7 +166,7 @@ class OpAnnotation:
 
                 key = _key(i)
 
-                # TODO [S3]: Marker cleanup fails during OpAborted - see __todo_solvers.md
+                # TODO [#15]: Marker cleanup fails during OpAborted - see __todo_solvers.md
                 e = cqr.find_slice_edge(parts, _c_pred(i, key))
 
                 if i < 0:

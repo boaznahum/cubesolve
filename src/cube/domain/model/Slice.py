@@ -199,7 +199,7 @@ class Slice(SuperElement):
         if n == 0:
             return
 
-        # TODO [TC3]: BUG - M slice direction is inverted compared to standard notation
+        # TODO [#11]: BUG - M slice direction is inverted compared to standard notation
         # See: https://alg.cubing.net/?alg=m and https://ruwix.com/the-rubiks-cube/notation/advanced/
         if self._name != SliceName.M:
             n = -n

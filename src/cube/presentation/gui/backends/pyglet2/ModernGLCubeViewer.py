@@ -367,7 +367,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             self._animated_face_triangles = None
             self._triangles_per_color.clear()
             self._animated_triangles_per_color.clear()
-            # TODO: Add marker support for per-cell textured mode
+            # TODO [#5]: Add marker support for per-cell textured mode
             self._marker_triangles = None
             self._animated_marker_triangles = None
 
@@ -384,7 +384,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             self._animated_face_triangles = None
             self._triangles_per_texture.clear()
             self._animated_triangles_per_texture.clear()
-            # TODO: Add marker support for old textured mode
+            # TODO [#6]: Add marker support for old textured mode
             self._marker_triangles = None
             self._animated_marker_triangles = None
         else:

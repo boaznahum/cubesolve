@@ -243,7 +243,7 @@ class Face(SuperElement, Hashable):
             # saved_bottom: Edge = self._edge_bottom.copy()
             # saved_left: Edge = self._edge_left.copy()
 
-            # TODO [TC2]: Unclear why these copies are needed - without them front rotation breaks left face colors
+            # TODO [#10]: Unclear why these copies are needed - without them front rotation breaks left face colors
             e_right: Edge = self._edge_right.copy()
             e_bottom: Edge = self._edge_bottom.copy()
             e_left: Edge = self._edge_left.copy()

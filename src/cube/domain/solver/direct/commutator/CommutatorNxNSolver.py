@@ -232,7 +232,7 @@ class CommutatorNxNSolver(Solver):
     @property
     def get_code(self) -> SolverName:
         """Return solver identifier."""
-        # TODO: Add COMMUTATOR to SolverName enum
+        # TODO [#7]: Add COMMUTATOR to SolverName enum
         raise NotImplementedError("SolverName.COMMUTATOR not yet defined")
 
     @property
