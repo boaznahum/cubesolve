@@ -117,7 +117,7 @@ class ArrowConfig:
     Access via ConfigProtocol.arrow_config property.
     """
     # Master switch to enable/disable 3D arrows
-    enabled: bool = True
+    enabled: bool = False
 
     # Arrow style: "simple" (straight), "curved" (bezier), "compound" (multiple segments)
     style: str = "simple"

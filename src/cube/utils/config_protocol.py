@@ -10,12 +10,71 @@ All other code must access config through this protocol via context.
 from typing import TYPE_CHECKING, Protocol, Tuple, runtime_checkable
 
 if TYPE_CHECKING:
-    from cube.application._config import ArrowConfig
     from cube.utils.SSCode import SSCode
 
 
-# Re-export ArrowConfig for type hints elsewhere
-# Use this pattern: from cube.utils.config_protocol import ArrowConfig (TYPE_CHECKING only)
+@runtime_checkable
+class ArrowConfigProtocol(Protocol):
+    """Protocol for 3D arrow configuration.
+
+    Defines the interface for arrow settings. The actual ArrowConfig
+    dataclass in _config.py implements this protocol.
+    """
+
+    @property
+    def enabled(self) -> bool:
+        """Master switch to enable/disable 3D arrows."""
+        ...
+
+    @property
+    def style(self) -> str:
+        """Arrow style: 'simple', 'curved', 'compound'."""
+        ...
+
+    @property
+    def animation(self) -> str:
+        """Arrow animation: 'grow', 'fade', 'none'."""
+        ...
+
+    @property
+    def head_style(self) -> str:
+        """Arrow head style: 'cone', 'pyramid', 'flat'."""
+        ...
+
+    @property
+    def color(self) -> Tuple[float, float, float]:
+        """Arrow color (RGB 0.0-1.0)."""
+        ...
+
+    @property
+    def shaft_radius(self) -> float:
+        """Radius of arrow shaft cylinder."""
+        ...
+
+    @property
+    def head_radius(self) -> float:
+        """Radius of cone base."""
+        ...
+
+    @property
+    def head_length(self) -> float:
+        """Length of cone/head."""
+        ...
+
+    @property
+    def height_offset(self) -> float:
+        """Height above cube surface."""
+        ...
+
+    @property
+    def animation_duration(self) -> float:
+        """Seconds for grow animation."""
+        ...
+
+    @property
+    def segments(self) -> int:
+        """Smoothness of cylinders."""
+        ...
 
 
 # Type alias for marker definition: (color, outer_radius, thick, height)
@@ -184,10 +243,10 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
-    def arrow_config(self) -> "ArrowConfig":
+    def arrow_config(self) -> ArrowConfigProtocol:
         """Get 3D arrow configuration for solver annotations.
 
-        Returns an ArrowConfig dataclass with all arrow settings.
+        Returns an ArrowConfigProtocol with all arrow settings.
         Access via app.config.arrow_config or vs.config.arrow_config.
         """
         ...

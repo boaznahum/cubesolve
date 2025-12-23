@@ -117,9 +117,10 @@
   - **Status:** In progress (2025-12-23)
   - **Current State:** Basic implementation complete but needs improvement
     - Arrows show source-to-destination direction during solve
-    - Bright gold color (configurable in `_config.py`)
+    - Bright gold color (configurable via ArrowConfig)
     - Grow animation from source to destination
     - Source position updates during piece rotation
+    - ArrowConfigProtocol defined in config_protocol.py (architecture-compliant)
   - **Known Issues:**
     - Arrow endpoints may not connect properly in all cases
     - Need to verify arrow is visible above cube surface
@@ -129,8 +130,9 @@
     - Compound arrow style (multiple segments)
     - Better endpoint matching (by part_slice identity)
     - Fade/pulse animation options
-  - **Config:** `_config.py` has `ARROWS_ENABLED`, `ARROW_STYLE`, `ARROW_COLOR`, etc.
-  - **Files:** `_modern_gl_arrow.py`, `_modern_gl_board.py`, `ModernGLCubeViewer.py`
+    - Read config values dynamically from ArrowConfigProtocol in _modern_gl_arrow.py
+  - **Config:** `_config.py` has `ArrowConfig` dataclass, accessed via `config.arrow_config`
+  - **Files:** `_modern_gl_arrow.py`, `_modern_gl_board.py`, `ModernGLCubeViewer.py`, `config_protocol.py`
 
 ---
 
