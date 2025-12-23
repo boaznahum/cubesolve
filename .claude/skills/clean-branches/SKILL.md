@@ -12,6 +12,21 @@ description: |
 
 This skill provides an iterative workflow for cleaning up git branches by analyzing their merge status and organizing them into appropriate namespaces.
 
+## Quick Start - Run Analysis Script
+
+**ALWAYS run this script first to save tokens:**
+
+```bash
+python .claude/skills/clean-branches/analyze_branches.py
+```
+
+This script:
+- Fetches all branches and analyzes merge/containment status
+- Outputs a formatted markdown report
+- Identifies branches needing action with recommendations
+
+After reviewing the output, proceed with user approval for any actions (delete, move, archive).
+
 ## Branch Organization Schema
 
 | Namespace | Purpose | Example |
