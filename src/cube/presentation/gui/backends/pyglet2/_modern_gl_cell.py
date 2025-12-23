@@ -21,20 +21,36 @@ Vertex Format:
     Non-textured: 9 floats per vertex (x, y, z, nx, ny, nz, r, g, b)
     Textured: 11 floats per vertex (x, y, z, nx, ny, nz, r, g, b, u, v)
     Lines: 6 floats per vertex (x, y, z, r, g, b)
+    Markers: 9 floats per vertex (x, y, z, nx, ny, nz, r, g, b) - same as faces
 """
 from __future__ import annotations
 
+import math
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+import numpy as np
 from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color
+from cube.domain.model.VMarker import VMarker, viewer_get_markers
 
 if TYPE_CHECKING:
     from cube.domain.model._part_slice import PartSlice
     from cube.domain.model.PartEdge import PartEdge
 
 from ._modern_gl_constants import CELL_TEXTURE_KEY
+
+# Number of segments for ring geometry (more = smoother circle)
+_RING_SEGMENTS = 24
+
+# Marker definitions from config: name -> (color_rgb, radius, thick, height)
+# We'll use these defaults, matching _config.py MARKERS
+_MARKER_DEFS: dict[str, tuple[tuple[float, float, float], float, float, float]] = {
+    "C0": ((199/255, 21/255, 133/255), 1.0, 0.8, 0.1),  # mediumvioletred, full ring
+    "C1": ((199/255, 21/255, 133/255), 0.6, 1.0, 0.1),  # mediumvioletred, filled circle
+    "C2": ((0/255, 100/255, 0/255), 1.0, 0.3, 0.1),     # darkgreen, thin ring
+}
 
 # Border line color (black)
 _LINE_COLOR = (0.0, 0.0, 0.0)
@@ -238,3 +254,143 @@ class ModernGLCell:
         if self.part_edge is None:
             return None
         return self.part_edge.c_attributes.get(CELL_TEXTURE_KEY)
+
+    def get_markers(self) -> Sequence[VMarker] | None:
+        """Get markers for this cell from c_attributes.
+
+        Markers are visual annotations added by the solver during animation
+        to highlight pieces being tracked (e.g., edges being swapped).
+
+        Returns:
+            Sequence of VMarker enums, or None if no markers.
+        """
+        if self.part_edge is None:
+            return None
+        return viewer_get_markers(self.part_edge.c_attributes)
+
+    def has_markers(self) -> bool:
+        """Check if this cell has any markers.
+
+        Returns:
+            True if cell has markers to render.
+        """
+        markers = self.get_markers()
+        return markers is not None and len(markers) > 0
+
+    def generate_marker_vertices(self, dest: list[float]) -> None:
+        """Generate triangle vertices for marker rings/circles.
+
+        Creates ring geometry for each marker on this cell.
+        The ring is positioned slightly above the cell surface.
+
+        Appends triangles to dest.
+        Each vertex: x, y, z, nx, ny, nz, r, g, b (9 floats)
+
+        Args:
+            dest: List to append vertex data to
+        """
+        markers = self.get_markers()
+        if not markers:
+            return
+
+        # Calculate cell center and size
+        lb, rb, rt, lt = self._corners
+        center = (lb + rb + rt + lt) / 4.0
+
+        # Cell size (use minimum of width/height for radius)
+        width = float(np.linalg.norm(rb - lb))
+        height = float(np.linalg.norm(lt - lb))
+        cell_size = min(width, height)
+
+        # Normal vector (already normalized)
+        nx, ny, nz = float(self._normal[0]), float(self._normal[1]), float(self._normal[2])
+
+        # Generate geometry for each marker
+        for marker in markers:
+            marker_def = _MARKER_DEFS.get(marker.value)
+            if marker_def is None:
+                continue
+
+            color, radius_factor, thick, height_offset = marker_def
+
+            # Calculate actual radius
+            base_radius = cell_size * 0.4  # 40% of cell size
+            outer_radius = base_radius * radius_factor
+            inner_radius = outer_radius * (1.0 - thick)
+
+            # Offset center above the surface
+            offset_center = center + self._normal * (height_offset * cell_size)
+
+            # Generate ring triangles
+            self._generate_ring_triangles(
+                dest,
+                offset_center,
+                inner_radius,
+                outer_radius,
+                (nx, ny, nz),
+                color,
+            )
+
+    def _generate_ring_triangles(
+        self,
+        dest: list[float],
+        center: ndarray,
+        inner_radius: float,
+        outer_radius: float,
+        normal: tuple[float, float, float],
+        color: tuple[float, float, float],
+    ) -> None:
+        """Generate triangles for a ring (annulus) shape.
+
+        Creates a ring as a series of trapezoid segments, each made of 2 triangles.
+
+        Args:
+            dest: List to append vertex data to
+            center: Center point of the ring
+            inner_radius: Inner radius (0 for filled circle)
+            outer_radius: Outer radius
+            normal: Normal vector (nx, ny, nz)
+            color: RGB color (0.0-1.0 range)
+        """
+        nx, ny, nz = normal
+        r, g, b = color
+
+        # Create two perpendicular vectors in the plane of the ring
+        # Using the face normal to determine the ring plane
+        normal_vec = np.array([nx, ny, nz])
+
+        # Find a perpendicular vector (use cross product with a non-parallel vector)
+        if abs(nx) < 0.9:
+            up = np.array([1.0, 0.0, 0.0])
+        else:
+            up = np.array([0.0, 1.0, 0.0])
+
+        # tangent1 and tangent2 are perpendicular to normal and to each other
+        tangent1 = np.cross(normal_vec, up)
+        tangent1 = tangent1 / np.linalg.norm(tangent1)
+        tangent2 = np.cross(normal_vec, tangent1)
+
+        # Generate ring segments
+        for i in range(_RING_SEGMENTS):
+            angle1 = 2 * math.pi * i / _RING_SEGMENTS
+            angle2 = 2 * math.pi * (i + 1) / _RING_SEGMENTS
+
+            cos1, sin1 = math.cos(angle1), math.sin(angle1)
+            cos2, sin2 = math.cos(angle2), math.sin(angle2)
+
+            # Points on outer circle
+            outer1 = center + outer_radius * (cos1 * tangent1 + sin1 * tangent2)
+            outer2 = center + outer_radius * (cos2 * tangent1 + sin2 * tangent2)
+
+            # Points on inner circle
+            inner1 = center + inner_radius * (cos1 * tangent1 + sin1 * tangent2)
+            inner2 = center + inner_radius * (cos2 * tangent1 + sin2 * tangent2)
+
+            # Two triangles per segment (forming a trapezoid)
+            # Triangle 1: outer1, outer2, inner1
+            for p in [outer1, outer2, inner1]:
+                dest.extend([p[0], p[1], p[2], nx, ny, nz, r, g, b])
+
+            # Triangle 2: inner1, outer2, inner2
+            for p in [inner1, outer2, inner2]:
+                dest.extend([p[0], p[1], p[2], nx, ny, nz, r, g, b])

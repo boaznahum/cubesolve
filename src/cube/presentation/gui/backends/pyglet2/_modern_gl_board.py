@@ -173,6 +173,8 @@ class ModernGLBoard:
         np.ndarray,  # static line data
         np.ndarray | None,  # animated face triangles
         np.ndarray | None,  # animated line data
+        np.ndarray | None,  # static marker triangles
+        np.ndarray | None,  # animated marker triangles
     ]:
         """Generate all vertex data for rendering.
 
@@ -182,12 +184,15 @@ class ModernGLBoard:
             animated_parts: Set of PartSlices being animated, or None
 
         Returns:
-            Tuple of (face_triangles, line_data, animated_faces, animated_lines)
+            Tuple of (face_triangles, line_data, animated_faces, animated_lines,
+                      marker_triangles, animated_marker_triangles)
         """
         face_verts: list[float] = []
         line_verts: list[float] = []
         animated_face_verts: list[float] = []
         animated_line_verts: list[float] = []
+        marker_verts: list[float] = []
+        animated_marker_verts: list[float] = []
 
         # Main faces
         for gl_face in self._faces.values():
@@ -195,6 +200,7 @@ class ModernGLBoard:
                 gl_face, animated_parts,
                 face_verts, line_verts,
                 animated_face_verts, animated_line_verts,
+                marker_verts, animated_marker_verts,
             )
 
         # Shadow faces (never animated - they're static copies)
@@ -203,6 +209,7 @@ class ModernGLBoard:
                 gl_face, None,  # No animation for shadows
                 face_verts, line_verts,
                 [], [],  # Don't collect animated verts
+                marker_verts, [],  # Markers only on static for shadow
             )
 
         return (
@@ -210,6 +217,8 @@ class ModernGLBoard:
             np.array(line_verts, dtype=np.float32),
             np.array(animated_face_verts, dtype=np.float32) if animated_face_verts else None,
             np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None,
+            np.array(marker_verts, dtype=np.float32) if marker_verts else None,
+            np.array(animated_marker_verts, dtype=np.float32) if animated_marker_verts else None,
         )
 
     def generate_textured_geometry(
@@ -268,6 +277,8 @@ class ModernGLBoard:
         line_verts: list[float],
         animated_face_verts: list[float],
         animated_line_verts: list[float],
+        marker_verts: list[float] | None = None,
+        animated_marker_verts: list[float] | None = None,
     ) -> None:
         """Generate vertices for one face."""
         for cell in gl_face.cells:
@@ -281,9 +292,15 @@ class ModernGLBoard:
             if is_animated:
                 cell.generate_face_vertices(animated_face_verts)
                 cell.generate_line_vertices(animated_line_verts)
+                # Collect animated marker geometry
+                if animated_marker_verts is not None:
+                    cell.generate_marker_vertices(animated_marker_verts)
             else:
                 cell.generate_face_vertices(face_verts)
                 cell.generate_line_vertices(line_verts)
+                # Collect static marker geometry
+                if marker_verts is not None:
+                    cell.generate_marker_vertices(marker_verts)
 
     def _generate_textured_face_verts(
         self,
