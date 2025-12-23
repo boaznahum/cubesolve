@@ -290,17 +290,31 @@ class ModernGLCell:
         return self.part_edge.c_attributes.get(CELL_TEXTURE_KEY)
 
     def get_markers(self) -> Sequence[VMarker] | None:
-        """Get markers for this cell from c_attributes.
+        """Get markers for this cell from both c_attributes and f_attributes.
 
         Markers are visual annotations added by the solver during animation
-        to highlight pieces being tracked (e.g., edges being swapped).
+        to highlight pieces being tracked:
+        - c_attributes: markers on moving pieces (follow the piece)
+        - f_attributes: markers on fixed positions (stay in place)
 
         Returns:
             Sequence of VMarker enums, or None if no markers.
         """
         if self.part_edge is None:
             return None
-        return viewer_get_markers(self.part_edge.c_attributes)
+
+        # Get markers from both moving (c_attributes) and fixed (f_attributes)
+        c_markers = viewer_get_markers(self.part_edge.c_attributes)
+        f_markers = viewer_get_markers(self.part_edge.f_attributes)
+
+        # Combine both lists
+        if c_markers and f_markers:
+            return list(c_markers) + list(f_markers)
+        elif c_markers:
+            return c_markers
+        elif f_markers:
+            return f_markers
+        return None
 
     def has_markers(self) -> bool:
         """Check if this cell has any markers.
