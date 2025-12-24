@@ -25,6 +25,7 @@ from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
+from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
@@ -69,6 +70,8 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         # Reuse NxNEdges for edge solving
         self._nxn_edges = NxNEdges(self, advanced_edge_parity=False)
+
+        self._shadow_helper = ShadowCubeHelper(self)
 
     # =========================================================================
     # Public properties/methods (Solver protocol order)
@@ -277,14 +280,11 @@ class LayerByLayerNxNSolver(BaseSolver):
         :param th:
         """
         from cube.application.commands.DualOperator import DualOperator
-        from cube.domain.model.Cube import Cube
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
         # this is a copy of cage is doing, why not add an helper for shadow operations !!!
         # Create shadow 3x3 cube
-        shadow_cube = Cube(size=3, sp=self._cube.sp)
-        shadow_cube.is_even_cube_shadow = True  # claude: who told you it is even ###
-        self._copy_state_to_shadow(shadow_cube, th)
+        shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
 
         if shadow_cube.solved:
             self.debug("Shadow cube already solved")

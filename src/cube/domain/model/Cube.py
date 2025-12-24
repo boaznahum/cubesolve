@@ -1754,6 +1754,10 @@ class Cube(CubeSupplier):
         """
         return self.current_layout.is_boy()
 
+    @property
+    def is_even(self) -> bool:
+        return self.size % 2 == 0
+
     def get_3x3_colors(self) -> "Cube3x3Colors":
         """Extract edge/corner/center colors as a 3x3 snapshot.
 
