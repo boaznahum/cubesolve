@@ -283,8 +283,9 @@ class LayerByLayerNxNSolver(BaseSolver):
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
         # this is a copy of cage is doing, why not add an helper for shadow operations !!!
-        # Create shadow 3x3 cube
+        # Create shadow 3x3 cube (includes sanity check via set_3x3_colors)
         shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
+        assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid before solving"
 
         if shadow_cube.solved:
             self.debug("Shadow cube already solved")
@@ -312,6 +313,9 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         # Solve only L1 (cross + corners)
         shadow_solver.solve_3x3(what=what)
+
+        # Verify shadow cube is still valid after solving
+        assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid after solving"
 
     def _copy_state_to_shadow(self, shadow: "Cube", th: FacesTrackerHolder) -> None:
         """Copy corner/edge state from NxN cube to shadow 3x3."""
