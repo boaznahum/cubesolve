@@ -1348,7 +1348,7 @@ class Cube(CubeSupplier):
         CubeSanity.do_sanity : Actual validation implementation
         """
 
-        if self._modify_counter == self._last_sanity_counter:
+        if not force_check and self._modify_counter == self._last_sanity_counter:
             return
 
         # if True:
@@ -1846,6 +1846,7 @@ class Cube(CubeSupplier):
 
         # Reset caches (required after direct color changes)
         self.reset_after_faces_changes()
+        self.modified()  # Increment counter so sanity cache works correctly
 
         # Validate
         assert self.is_sanity(force_check=True), "Invalid cube state after set_3x3_colors"
