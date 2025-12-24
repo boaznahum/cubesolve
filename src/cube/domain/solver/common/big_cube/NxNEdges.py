@@ -76,11 +76,9 @@ class NxNEdges(SolverElement):
         Returns:
             True if edge parity was performed, False otherwise.
         """
-        # Find edges by COLOR, not by position
-        # Layer 1 edges are the 4 edges that have slices containing the Layer 1 color
-        l1_color = face_tracker.color
-        target_edges = [e for e in self.cube.edges
-                        if any(l1_color in s.colors_id for s in e.all_slices)]
+        # Find the 4 edges adjacent to Layer 1 face (by position)
+        # These are the edges that need to be solved for Layer 1
+        target_edges = list(face_tracker.face.edges)
 
         # Check if all target edges are already solved
         if all(e.is3x3 for e in target_edges):
@@ -94,11 +92,11 @@ class NxNEdges(SolverElement):
                 if not unsolved:
                     break
 
-                # Check if this is the LAST unsolved edge in the whole cube
-                # (can happen when solving the last face)
-                total_unsolved = sum(1 for e in self.cube.edges if not e.is3x3)
-                if total_unsolved == 1 and len(unsolved) == 1:
-                    # Last edge in cube AND it's one of our targets - parity
+                # Check if this is the LAST unsolved edge in the WHOLE cube
+                # (parity can only happen when all other 11 edges are solved)
+                total_cube_unsolved = sum(1 for e in self.cube.edges if not e.is3x3)
+                if total_cube_unsolved == 1 and len(unsolved) == 1:
+                    # Last edge in whole cube AND it's one of our targets - parity
                     self._do_last_edge_parity()
                     parity_done = True
                     continue
