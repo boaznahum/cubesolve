@@ -85,7 +85,7 @@ class FacesTrackerHolder:
             print(f"{tracker.face.name} -> {tracker.color}")
     """
 
-    __slots__ = ["_cube", "_trackers", "_is_even"]
+    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter"]
 
     def __init__(
         self,
@@ -108,6 +108,8 @@ class FacesTrackerHolder:
         """
         self._cube = slv.cube
         self._is_even = self._cube.n_slices % 2 == 0
+        self._face_colors_cache: dict[FaceName, Color] | None = None
+        self._cache_modify_counter: int = -1  # Invalid counter to force first rebuild
 
         if trackers is not None:
             assert len(trackers) == 6, f"Expected 6 trackers, got {len(trackers)}"
@@ -152,33 +154,58 @@ class FacesTrackerHolder:
         return self._trackers
 
     def get_face_colors(self) -> dict[FaceName, Color]:
-        """Get current face→color mapping from trackers.
+        """Get current face→color mapping from trackers (cached with auto-invalidation).
 
-        Trackers dynamically resolve to the current face, so this always
-        returns the correct mapping even after cube rotations.
+        Cache Invalidation Pattern:
+        ===========================
+        Uses cube._modify_counter to detect when cube has changed:
 
-        Note: This rebuilds the dictionary each call since cube rotations
-        change which face each tracker points to. For performance-critical
-        loops, call once and reuse the returned dict.
+            ┌─────────────────────────────────────────────────────────────┐
+            │  cube._modify_counter: 42                                   │
+            │  self._cache_modify_counter: 42  ← Same? Use cache ✓        │
+            │                                                             │
+            │  After cube rotation (Y move):                              │
+            │  cube._modify_counter: 43        ← Incremented!             │
+            │  self._cache_modify_counter: 42  ← Stale! Rebuild cache     │
+            └─────────────────────────────────────────────────────────────┘
+
+        Why Cache Invalidation Is Needed:
+        ==================================
+        Trackers mark center slices. On whole-cube rotation, slices move:
+
+            Before Y rotation:           After Y rotation:
+            ┌───┐                        ┌───┐
+            │ U │                        │ U │
+            ├───┼───┬───┬───┐            ├───┼───┬───┬───┐
+            │ L │[F]│ R │ B │            │ L │ F │[R]│ B │
+            ├───┼───┴───┴───┘            ├───┼───┴───┴───┘
+            │ D │  ↑                     │ D │      ↑
+            └───┘  WHITE tracker here    └───┘      WHITE tracker moved!
+
+            Cache: {F: WHITE}            Cache STALE! Should be {R: WHITE}
 
         Returns:
             Dictionary mapping face names to their target colors.
-
-        Example:
-            {FaceName.F: Color.RED, FaceName.U: Color.WHITE, ...}
         """
-        # Always rebuild - trackers follow cube rotations so their .face changes
-        face_colors: dict[FaceName, Color] = {}
+        # Check if cache is valid using cube's modification counter
+        # noinspection PyProtectedMember
+        current_counter = self._cube._modify_counter
+        if self._face_colors_cache is not None and self._cache_modify_counter == current_counter:
+            return self._face_colors_cache
+
+        # Rebuild cache - trackers may have moved to different faces
+        self._face_colors_cache = {}
         for tracker in self._trackers:
-            face_colors[tracker.face.name] = tracker.color
-        return face_colors
+            self._face_colors_cache[tracker.face.name] = tracker.color
+        self._cache_modify_counter = current_counter
+        return self._face_colors_cache
 
     @property
     def face_colors(self) -> dict[FaceName, Color]:
-        """Current face→color mapping (property shortcut for get_face_colors).
+        """Current face→color mapping (cached property).
 
-        Note: Rebuilds the dictionary each call since cube rotations
-        change tracker face references. Cache locally for tight loops.
+        Uses cube._modify_counter for automatic cache invalidation.
+        Safe to call repeatedly - returns cached result if cube unchanged.
         """
         return self.get_face_colors()
 

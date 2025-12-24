@@ -136,10 +136,6 @@ def test_lbl_solver_layer1_centers_multiple_scrambles(seed: int) -> None:
 
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_solves_layer1_cross(size: int) -> None:
-
-    if size % 2 == 0:
-          pytest.skip("LBL solver does not yet support even cubes")
-
     """Test that LBL solver can solve Layer 1 cross (centers + edges positioned)."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
@@ -189,10 +185,6 @@ def test_lbl_solver_layer1_cross_multiple_scrambles(seed: int) -> None:
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_solves_layer1_complete(size: int) -> None:
     """Test that LBL solver can solve complete Layer 1 (centers + edges + corners)."""
-
-    if size % 2 == 0:
-          pytest.skip("LBL solver does not yet support even cubes")
-
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
