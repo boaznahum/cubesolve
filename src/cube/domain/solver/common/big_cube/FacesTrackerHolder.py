@@ -249,8 +249,12 @@ class FacesTrackerHolder:
         Example:
             If tracker says F→ORANGE and U→WHITE, then an edge at F-U
             must have ORANGE sticker on F and WHITE sticker on U.
+
+        See Also:
+            solver/direct/lbl/EVEN_CUBE_MATCHING.md for detailed explanation
+            with diagrams of why this is needed for even cubes.
         """
-        face_colors = self.face_colors  # Use cached dict
+        face_colors = self.face_colors  # Get current mapping (not cached)
         for edge in part._3x3_representative_edges:
             expected_color = face_colors.get(edge.face.name)
             if expected_color is None or edge.color != expected_color:

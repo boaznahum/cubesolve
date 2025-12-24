@@ -205,6 +205,8 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         Uses tracker's face→color mapping for even cubes where only L1 centers
         are solved (other centers are still scrambled).
+
+        See: EVEN_CUBE_MATCHING.md for why we can't use Part.match_faces here.
         """
         if not self._is_layer1_edges_solved(th):
             return False
@@ -218,6 +220,8 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         Uses tracker's face→color mapping for even cubes where only L1 centers
         are solved (other centers are still scrambled).
+
+        See: EVEN_CUBE_MATCHING.md for why we can't use Part.match_faces here.
         """
         l1_face = self._get_layer1_tracker(th).face
         # Use tracker colors instead of center colors for matching
