@@ -131,6 +131,17 @@ This file contains all tasks that have been completed. Moved from `__todo.md`.
 - **Files:** `src/cube/presentation/gui/backends/pyglet2/`
 - **Docs:** `docs/design/migration_state.md` (A5 section)
 
+### A10. Check for _config direct imports (#44)
+- **Status:** COMPLETED (2025-12-24)
+- **Problem:** `_config.py` was imported directly in presentation and domain layers
+- **Rule:** `_config.py` must ONLY be accessed via ConfigProtocol
+- **Violations fixed:**
+  - `web/__init__.py` - Removed `_config` import, use lazy `gui_test_mode` setter
+  - `WebEventLoop.py` - Added `gui_test_mode` property with lazy port resolution
+  - `WebAppWindow.py` - Configure event loop from `app.config.gui_test_mode`
+  - `Solvers.py` - Use `op.app_state.config.default_solver` instead of `_config.DEFAULT_SOLVER`
+- **Files:** `backends/web/__init__.py`, `WebEventLoop.py`, `WebAppWindow.py`, `domain/solver/Solvers.py`
+
 ### A6. AnimationManager layer violation (application layer knowing presentation details)
 - **Status:** COMPLETED (2025-12-02)
 - **Problem:** `AnimationManager` (application layer) used duck-typing to detect viewer type:

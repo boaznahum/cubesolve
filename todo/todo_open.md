@@ -16,7 +16,6 @@
 | [#43](https://github.com/boaznahum/cubesolve/issues/43) | in-progress | gui | 3D Arrows for solver annotations |
 | [#24](https://github.com/boaznahum/cubesolve/issues/24) | open | architecture | Circular import investigation |
 | [#25](https://github.com/boaznahum/cubesolve/issues/25) | open | architecture | No code leak outside backends layer |
-| [#44](https://github.com/boaznahum/cubesolve/issues/44) | open | architecture | Check for _config direct imports in presentation |
 | [#27](https://github.com/boaznahum/cubesolve/issues/27) | open | docs | Improve keyboard_and_commands.md diagram |
 | [#28](https://github.com/boaznahum/cubesolve/issues/28) | open | quality | Review all type: ignore comments |
 | [#29](https://github.com/boaznahum/cubesolve/issues/29) | open | quality | Evaluate disable_error_code = import-untyped |

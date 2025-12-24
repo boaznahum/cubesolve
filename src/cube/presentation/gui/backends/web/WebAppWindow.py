@@ -50,6 +50,10 @@ class WebAppWindow(AppWindow):
         self._event_loop: WebEventLoop = backend.event_loop  # type: ignore[assignment]
         self._window: WebWindow = WebWindow(width, height, title)
 
+        # Configure event loop with test mode from app config
+        # (Must be done before run() is called so port selection works correctly)
+        self._event_loop.gui_test_mode = app.config.gui_test_mode
+
         # Wire renderer to event loop for WebSocket communication
         self._renderer.set_event_loop(self._event_loop)
 
