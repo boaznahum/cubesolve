@@ -471,7 +471,7 @@ class CageNxNSolver(BaseSolver):
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
         # Create shadow 3x3 cube
-        shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(self._cube, th)
+        shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
 
         # Debug: print all edges on shadow cube
         self.debug("Shadow cube edges:")
