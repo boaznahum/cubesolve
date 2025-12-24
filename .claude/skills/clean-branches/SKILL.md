@@ -212,7 +212,39 @@ git push origin archive/stopped/<branch>
 git push origin --delete <branch>
 ```
 
-### Step 10: Iterate
+### Step 10: Clean Up Synced Archive Branches
+
+Local archive branches that are synced with remote are redundant - they're safely backed up. Offer to delete them:
+
+1. **Identify synced archive branches**:
+   ```bash
+   # Find local archive branches that have matching remote
+   for branch in $(git branch --list 'archive/*'); do
+     branch_name=$(echo "$branch" | sed 's/^[* ]*//')
+     if git ls-remote --heads origin "$branch_name" | grep -q .; then
+       echo "$branch_name"  # Has remote backup, safe to delete locally
+     fi
+   done
+   ```
+
+2. **Present to user**:
+   | Local Archive Branch | Remote Status | Recommendation |
+   |---------------------|---------------|----------------|
+   | archive/completed/feature-x | ✅ Synced | Delete local (backed up) |
+   | archive/image-bug | ✅ Synced | Delete local (backed up) |
+
+3. **Offer bulk deletion**:
+   Ask using AskUserQuestion:
+   - **Delete all synced**: Remove all local archive branches that have remote backups
+   - **Review each**: Go through them one by one
+   - **Keep all**: Leave local copies
+
+4. **Execute deletion**:
+   ```bash
+   git branch -D <archive-branch>  # Safe - remote copy exists
+   ```
+
+### Step 11: Iterate
 
 After processing, show updated branch list and ask if further cleanup is needed. Repeat until the user is satisfied.
 
@@ -223,6 +255,10 @@ After processing, show updated branch list and ask if further cleanup is needed.
 - Never batch multiple branch operations - ask for approval for each branch individually or show a clear list and get explicit confirmation
 - Even if analysis shows a branch is "safe to delete", still ask the user first
 - Skip branches that are already in `archive/` or `wip/` namespaces (no action needed)
+- **Archive branches**: When analyzing, distinguish between:
+  - Local-only archives: May want to push to remote first or delete
+  - Synced archives: Safe to delete locally (backed up on remote)
+  - Remote-only archives: No action needed (already clean locally)
 - Handle branches that only exist locally or only on remote
 - If a branch has no remote tracking, note this in the report
 - Preserve the current checked-out branch (cannot delete/rename it while on it)
