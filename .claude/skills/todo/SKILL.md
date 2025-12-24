@@ -65,6 +65,7 @@ Show quick reference of available commands:
 ```
 /todo              Quick report (open issues, priorities, in-progress)
 /todo scan         Full codebase scan for TODOs
+/todo sync         Find inconsistencies between code and GitHub
 /todo track        Create GitHub Issues for untracked TODOs
 /todo analyze #id  Analyze TODO and update its GitHub Issue
 /todo start #id    Mark issue as in-progress
@@ -79,6 +80,42 @@ Quick report from script output and GitHub Issues.
 Full scan with detailed output:
 ```bash
 python .claude/skills/todo/todo_scan.py
+```
+
+### `/todo sync`
+Find inconsistencies between code/files and GitHub Issues:
+```bash
+python .claude/skills/todo/todo_scan.py --sync
+```
+
+**Checks performed:**
+
+**Code TODOs:**
+1. **Missing in GitHub** - Code TODO has `[#X]` but issue doesn't exist or lacks `todo` label
+2. **Missing in Code** - GitHub Issue with `todo:code` label has no matching code TODO
+3. **Stale TODOs** - Code TODO references a CLOSED issue (should be removed)
+
+**File Entries:**
+4. **Missing in GitHub** - File entry references issue that doesn't exist or lacks `todo` label
+5. **Missing in File** - GitHub Issue with `todo:file` label has no matching file entry
+6. **Stale Entries** - File entry references a CLOSED issue (should be removed)
+7. **Status Mismatch** - File says `in-progress` but GitHub lacks label, or vice versa
+
+**Output format:**
+```
+=== SYNC REPORT ===
+
+Code: Missing in GitHub (1):
+  src/file.py:42 - [#999] issue does not exist
+
+Code: Stale TODOs (1):
+  src/old.py:20 - [#30] issue is CLOSED - remove this TODO
+
+File: Status Mismatch (2):
+  todo/todo_open.md:5 - [#16] file says 'investigating' but GitHub has 'in-progress' label
+  todo/todo_open.md:15 - [#23] file says 'in-progress' but GitHub lacks label
+
+Synced: 13 code TODOs, 25 file entries
 ```
 
 ### `/todo track`

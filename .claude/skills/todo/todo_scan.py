@@ -38,6 +38,16 @@ class TodoFile:
     in_todo_folder: bool
 
 
+@dataclass
+class TodoFileEntry:
+    """An entry in a todo file that references a GitHub Issue."""
+    file: str
+    line: int
+    issue_num: str
+    status: str  # open, in-progress, investigating, etc.
+    description: str
+
+
 def find_project_root() -> Path:
     """Find project root by looking for .git or .claude folder."""
     current = Path(__file__).resolve().parent
@@ -140,6 +150,45 @@ def find_todo_files(project_root: Path) -> list[TodoFile]:
     return todo_files
 
 
+def parse_todo_file_entries(todo_files: list[TodoFile], project_root: Path) -> list[TodoFileEntry]:
+    """Parse todo files for entries that reference GitHub Issues."""
+    entries: list[TodoFileEntry] = []
+
+    # Pattern for markdown table rows with issue links: | [#123](url) | status | ... |
+    # or just | #123 | status | ... |
+    table_pattern = re.compile(
+        r'\|\s*\[?#?(\d+)\]?(?:\([^)]+\))?\s*\|\s*(\w+(?:-\w+)?)\s*\|.*\|\s*(.+?)\s*\|',
+        re.IGNORECASE
+    )
+
+    for todo_file in todo_files:
+        file_path = project_root / todo_file.path
+        if not file_path.exists():
+            continue
+
+        try:
+            lines = file_path.read_text(encoding='utf-8').splitlines()
+        except (UnicodeDecodeError, PermissionError):
+            continue
+
+        for i, line in enumerate(lines):
+            match = table_pattern.search(line)
+            if match:
+                issue_num = match.group(1)
+                status = match.group(2).lower()
+                description = match.group(3).strip()
+
+                entries.append(TodoFileEntry(
+                    file=todo_file.path,
+                    line=i + 1,
+                    issue_num=issue_num,
+                    status=status,
+                    description=description
+                ))
+
+    return entries
+
+
 def get_github_issues() -> list[dict]:
     """Get list of GitHub issues with 'todo' label."""
     try:
@@ -153,6 +202,200 @@ def get_github_issues() -> list[dict]:
     except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError):
         pass
     return []
+
+
+@dataclass
+class SyncResult:
+    """Result of sync check between code/files and GitHub."""
+    # Code TODOs
+    code_missing_in_github: list[tuple[TodoItem, str]]  # (todo, reason)
+    code_missing_in_code: list[dict]  # GitHub issues with todo:code but no code ref
+    code_stale: list[tuple[TodoItem, dict]]  # (todo, closed_issue)
+    code_synced: int
+    # File entries
+    file_missing_in_github: list[tuple[TodoFileEntry, str]]  # (entry, reason)
+    file_missing_in_file: list[dict]  # GitHub issues with todo:file but no file entry
+    file_stale: list[tuple[TodoFileEntry, dict]]  # (entry, closed_issue)
+    file_status_mismatch: list[tuple[TodoFileEntry, dict, str]]  # (entry, issue, expected)
+    file_synced: int
+
+
+def check_sync(
+    code_todos: list[TodoItem],
+    file_entries: list[TodoFileEntry],
+    github_issues: list[dict]
+) -> SyncResult:
+    """Check for inconsistencies between code/files and GitHub Issues."""
+    # Build lookup maps
+    github_by_num: dict[str, dict] = {str(i['number']): i for i in github_issues}
+    github_with_todo_label = {
+        str(i['number']): i for i in github_issues
+        if any(l.get('name') == 'todo' for l in i.get('labels', []))
+    }
+    github_with_code_label = {
+        str(i['number']): i for i in github_issues
+        if any(l.get('name') == 'todo:code' for l in i.get('labels', []))
+    }
+    github_with_file_label = {
+        str(i['number']): i for i in github_issues
+        if any(l.get('name') == 'todo:file' for l in i.get('labels', []))
+    }
+
+    # === Check code TODOs ===
+    code_missing_in_github: list[tuple[TodoItem, str]] = []
+    code_stale: list[tuple[TodoItem, dict]] = []
+    code_synced = 0
+    code_issue_refs: set[str] = set()
+
+    for todo in code_todos:
+        if not todo.issue_id:
+            continue
+
+        # Normalize issue ID (remove # prefix)
+        issue_num = todo.issue_id.lstrip('#')
+
+        # Skip non-numeric IDs (like TC1, TC2)
+        if not issue_num.isdigit():
+            continue
+
+        code_issue_refs.add(issue_num)
+
+        if issue_num not in github_by_num:
+            code_missing_in_github.append((todo, "issue does not exist"))
+        elif issue_num not in github_with_todo_label:
+            code_missing_in_github.append((todo, "issue exists but missing 'todo' label"))
+        else:
+            issue = github_by_num[issue_num]
+            if issue.get('state') == 'CLOSED':
+                code_stale.append((todo, issue))
+            else:
+                code_synced += 1
+
+    # Find GitHub issues with todo:code label but no code reference
+    code_missing_in_code: list[dict] = []
+    for issue_num, issue in github_with_code_label.items():
+        if issue_num not in code_issue_refs and issue.get('state') != 'CLOSED':
+            code_missing_in_code.append(issue)
+
+    # === Check file entries ===
+    file_missing_in_github: list[tuple[TodoFileEntry, str]] = []
+    file_stale: list[tuple[TodoFileEntry, dict]] = []
+    file_status_mismatch: list[tuple[TodoFileEntry, dict, str]] = []
+    file_synced = 0
+    file_issue_refs: set[str] = set()
+
+    for entry in file_entries:
+        issue_num = entry.issue_num
+        file_issue_refs.add(issue_num)
+
+        if issue_num not in github_by_num:
+            file_missing_in_github.append((entry, "issue does not exist"))
+        elif issue_num not in github_with_todo_label:
+            file_missing_in_github.append((entry, "issue exists but missing 'todo' label"))
+        else:
+            issue = github_by_num[issue_num]
+            gh_state = issue.get('state', '').upper()
+            gh_labels = [l.get('name', '') for l in issue.get('labels', [])]
+            gh_in_progress = 'in-progress' in gh_labels
+
+            if gh_state == 'CLOSED':
+                file_stale.append((entry, issue))
+            else:
+                # Check status mismatch
+                file_status = entry.status.lower()
+                if file_status == 'in-progress' and not gh_in_progress:
+                    file_status_mismatch.append((entry, issue, "file says 'in-progress' but GitHub lacks label"))
+                elif file_status in ('open', 'investigating') and gh_in_progress:
+                    file_status_mismatch.append((entry, issue, f"file says '{file_status}' but GitHub has 'in-progress' label"))
+                else:
+                    file_synced += 1
+
+    # Find GitHub issues with todo:file label but no file entry
+    file_missing_in_file: list[dict] = []
+    for issue_num, issue in github_with_file_label.items():
+        if issue_num not in file_issue_refs and issue.get('state') != 'CLOSED':
+            file_missing_in_file.append(issue)
+
+    return SyncResult(
+        code_missing_in_github=code_missing_in_github,
+        code_missing_in_code=code_missing_in_code,
+        code_stale=code_stale,
+        code_synced=code_synced,
+        file_missing_in_github=file_missing_in_github,
+        file_missing_in_file=file_missing_in_file,
+        file_stale=file_stale,
+        file_status_mismatch=file_status_mismatch,
+        file_synced=file_synced
+    )
+
+
+def print_sync_report(sync_result: SyncResult) -> None:
+    """Print sync report."""
+    print("=" * 60)
+    print("SYNC REPORT")
+    print("=" * 60)
+    print()
+
+    has_issues = False
+
+    # === Code TODOs ===
+    if sync_result.code_missing_in_github:
+        has_issues = True
+        print(f"Code: Missing in GitHub ({len(sync_result.code_missing_in_github)}):")
+        for todo, reason in sync_result.code_missing_in_github:
+            print(f"  {todo.file}:{todo.line} - [{todo.issue_id}] {reason}")
+        print()
+
+    if sync_result.code_missing_in_code:
+        has_issues = True
+        print(f"Code: Missing in Code ({len(sync_result.code_missing_in_code)}):")
+        for issue in sync_result.code_missing_in_code:
+            print(f"  #{issue['number']} \"{issue['title']}\" - has todo:code label but no code reference")
+        print()
+
+    if sync_result.code_stale:
+        has_issues = True
+        print(f"Code: Stale TODOs ({len(sync_result.code_stale)}):")
+        for todo, issue in sync_result.code_stale:
+            print(f"  {todo.file}:{todo.line} - [{todo.issue_id}] issue is CLOSED - remove this TODO")
+        print()
+
+    # === File entries ===
+    if sync_result.file_missing_in_github:
+        has_issues = True
+        print(f"File: Missing in GitHub ({len(sync_result.file_missing_in_github)}):")
+        for entry, reason in sync_result.file_missing_in_github:
+            print(f"  {entry.file}:{entry.line} - [#{entry.issue_num}] {reason}")
+        print()
+
+    if sync_result.file_missing_in_file:
+        has_issues = True
+        print(f"File: Missing in File ({len(sync_result.file_missing_in_file)}):")
+        for issue in sync_result.file_missing_in_file:
+            print(f"  #{issue['number']} \"{issue['title']}\" - has todo:file label but no file entry")
+        print()
+
+    if sync_result.file_stale:
+        has_issues = True
+        print(f"File: Stale Entries ({len(sync_result.file_stale)}):")
+        for entry, issue in sync_result.file_stale:
+            print(f"  {entry.file}:{entry.line} - [#{entry.issue_num}] issue is CLOSED - remove this entry")
+        print()
+
+    if sync_result.file_status_mismatch:
+        has_issues = True
+        print(f"File: Status Mismatch ({len(sync_result.file_status_mismatch)}):")
+        for entry, issue, expected in sync_result.file_status_mismatch:
+            print(f"  {entry.file}:{entry.line} - [#{entry.issue_num}] {expected}")
+        print()
+
+    # === Summary ===
+    if not has_issues:
+        print("No inconsistencies found!")
+        print()
+
+    print(f"Synced: {sync_result.code_synced} code TODOs, {sync_result.file_synced} file entries")
+    print()
 
 
 def print_report(
@@ -243,6 +486,7 @@ def main() -> int:
     parser.add_argument('--json', action='store_true', help='Output as JSON')
     parser.add_argument('--untracked-only', action='store_true', help='Only show untracked TODOs')
     parser.add_argument('--no-github', action='store_true', help='Skip GitHub API call')
+    parser.add_argument('--sync', action='store_true', help='Check sync between code and GitHub')
     args = parser.parse_args()
 
     project_root = find_project_root()
@@ -251,6 +495,54 @@ def main() -> int:
     code_todos = scan_code_todos(directories, project_root)
     todo_files = find_todo_files(project_root)
     github_issues = [] if args.no_github else get_github_issues()
+
+    if args.sync:
+        if args.no_github:
+            print("Error: --sync requires GitHub access (cannot use --no-github)")
+            return 1
+        file_entries = parse_todo_file_entries(todo_files, project_root)
+        sync_result = check_sync(code_todos, file_entries, github_issues)
+        if args.json:
+            output = {
+                'code': {
+                    'missing_in_github': [
+                        {'file': t.file, 'line': t.line, 'issue_id': t.issue_id, 'reason': r}
+                        for t, r in sync_result.code_missing_in_github
+                    ],
+                    'missing_in_code': [
+                        {'number': i['number'], 'title': i['title']}
+                        for i in sync_result.code_missing_in_code
+                    ],
+                    'stale': [
+                        {'file': t.file, 'line': t.line, 'issue_id': t.issue_id}
+                        for t, _ in sync_result.code_stale
+                    ],
+                    'synced': sync_result.code_synced
+                },
+                'file': {
+                    'missing_in_github': [
+                        {'file': e.file, 'line': e.line, 'issue_num': e.issue_num, 'reason': r}
+                        for e, r in sync_result.file_missing_in_github
+                    ],
+                    'missing_in_file': [
+                        {'number': i['number'], 'title': i['title']}
+                        for i in sync_result.file_missing_in_file
+                    ],
+                    'stale': [
+                        {'file': e.file, 'line': e.line, 'issue_num': e.issue_num}
+                        for e, _ in sync_result.file_stale
+                    ],
+                    'status_mismatch': [
+                        {'file': e.file, 'line': e.line, 'issue_num': e.issue_num, 'reason': r}
+                        for e, _, r in sync_result.file_status_mismatch
+                    ],
+                    'synced': sync_result.file_synced
+                }
+            }
+            print(json.dumps(output, indent=2))
+        else:
+            print_sync_report(sync_result)
+        return 0
 
     if args.json:
         output = {
