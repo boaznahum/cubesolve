@@ -177,17 +177,32 @@ git branch -d <branch>
 
 ### Step 8: Process Merged Branches (with remotes)
 
-For branches that have remotes and are confirmed as merged, move to `archive/completed/`:
+For branches that have remotes and are confirmed as merged, offer these options:
 
+**Options (in order of preference):**
+1. **Archive remote + delete local** (Recommended) - Move remote to archive, delete local copy
+2. **Delete both** - Delete both local and remote (work already in target branch)
+3. **Keep** - Leave as-is
+
+**Archive remote + delete local** (best option - preserves history on remote):
 ```bash
-# Rename local branch
-git branch -m <branch> archive/completed/<branch>
-
-# Push new branch name
-git push origin archive/completed/<branch>
+# Move remote branch to archive
+git push origin origin/<branch>:refs/heads/archive/completed/<branch>
 
 # Delete old remote branch
 git push origin --delete <branch>
+
+# Delete local branch
+git branch -D <branch>
+```
+
+**Delete both** (when you don't need the branch history):
+```bash
+# Delete remote
+git push origin --delete <branch>
+
+# Delete local
+git branch -D <branch>
 ```
 
 ### Step 9: Handle Truly Unmerged Branches
