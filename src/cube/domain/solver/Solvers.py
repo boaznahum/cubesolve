@@ -108,6 +108,23 @@ class Solvers:
 
         return CageNxNSolver(op)
 
+    @staticmethod
+    def lbl_direct(op: OperatorProtocol) -> Solver:
+        """
+        Get Layer-by-Layer direct solver for NxN cubes.
+
+        Solves the cube one horizontal layer at a time:
+        - Layer 1: Centers → Edges → Corners (on configured face)
+        - Layer 2 to n-1: Centers ring → Edge wings
+        - Layer n: Centers → Edges → Corners
+
+        Unlike reduction method, each layer is fully solved before
+        moving to the next.
+        """
+        from .direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+
+        return LayerByLayerNxNSolver(op)
+
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
         """Get the next solver in rotation (skips unimplemented solvers)."""
@@ -140,6 +157,9 @@ class Solvers:
 
             case SolverName.CAGE:
                 return cls.cage(op)
+
+            case SolverName.LBL_DIRECT:
+                return cls.lbl_direct(op)
 
             case _:
                 raise InternalSWError(f"Unknown solver: {solver_id}")

@@ -12,6 +12,8 @@ from __future__ import annotations
 from abc import ABCMeta
 from typing import TYPE_CHECKING, Protocol
 
+from cube.utils.config_protocol import ConfigProtocol
+
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.solver.common.CommonOp import CommonOp
@@ -52,3 +54,7 @@ class SolverElementsProvider(Protocol, metaclass=ABCMeta):
     def debug(self, *args) -> None:
         """Output debug information."""
         ...
+
+    @property
+    def config(self) -> ConfigProtocol:
+        return  self.op.app_state.config

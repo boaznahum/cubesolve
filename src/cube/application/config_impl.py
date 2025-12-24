@@ -5,6 +5,7 @@ All other code must access config through ConfigProtocol via context (app.config
 """
 
 from cube.application import _config as cfg
+from cube.domain.model.Color import Color
 from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, MarkerDef
 from cube.utils.SSCode import SSCode
 
@@ -91,6 +92,11 @@ class AppConfig(ConfigProtocol):
     def cage_3x3_solver(self) -> str:
         """3x3 solver used by cage method for corner solving (Phase 1b)."""
         return cfg.CAGE_3X3_SOLVER
+
+    @property
+    def first_face_color(self) -> Color:
+        """First face color for Layer 1 in beginner and LBL solvers."""
+        return cfg.FIRST_FACE_COLOR
 
     # ==========================================================================
     # Optimization settings

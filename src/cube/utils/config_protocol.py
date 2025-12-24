@@ -10,6 +10,7 @@ All other code must access config through this protocol via context.
 from typing import TYPE_CHECKING, Protocol, Tuple, runtime_checkable
 
 if TYPE_CHECKING:
+    from cube.domain.model.Color import Color
     from cube.utils.SSCode import SSCode
 
 
@@ -168,6 +169,16 @@ class ConfigProtocol(Protocol):
 
         Options: "beginner", "cfop", "kociemba"
         Default: "beginner"
+        """
+        ...
+
+    @property
+    def first_face_color(self) -> "Color":
+        """First face color for Layer 1 in beginner and LBL solvers.
+
+        This determines which face is treated as Layer 1 (bottom layer).
+        The solver finds the face with this color and starts solving from there.
+        Default: WHITE
         """
         ...
 

@@ -50,7 +50,8 @@ class CommonOp:
         self._slv = provider
         self._ann = provider.op.annotation
 
-        self._start_color = Color.WHITE
+        # Get first face color from config (default: WHITE)
+        self._start_color = provider.op.app_state.config.first_face_color
 
     @property
     def slv(self) -> SolverElementsProvider:

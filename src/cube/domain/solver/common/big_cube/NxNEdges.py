@@ -64,6 +64,47 @@ class NxNEdges(SolverElement):
 
             return True
 
+    def solve_face_edges(self, face: "Face") -> bool:
+        """Solve only the 4 edges adjacent to a specific face.
+
+        Used by layer-by-layer solver to solve one layer's edges at a time.
+
+        Args:
+            face: The face whose edges should be solved (e.g., D face for Layer 1).
+
+        Returns:
+            True if edge parity was performed, False otherwise.
+        """
+        target_edges = list(face.edges)  # 4 edges for this face
+
+        # Check if all target edges are already solved
+        if all(e.is3x3 for e in target_edges):
+            return False
+
+        with self.ann.annotate(h1=f"Edges for {face.name.name}"):
+            # Solve only the target edges
+            parity_done = False
+            while True:
+                # Find an unsolved edge among target edges
+                unsolved = [e for e in target_edges if not e.is3x3]
+                if not unsolved:
+                    break
+
+                # Count total unsolved edges (for parity detection)
+                total_unsolved = sum(not e.is3x3 for e in self.cube.edges)
+
+                if total_unsolved == 1:
+                    # Only one edge left - this is parity
+                    self._do_last_edge_parity()
+                    parity_done = True
+                    continue
+
+                # Solve one edge
+                edge = unsolved[0]
+                self._do_edge(edge)
+
+            return parity_done
+
     def _do_first_11(self):
         """
 

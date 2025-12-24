@@ -190,6 +190,42 @@ class NxNCenters(SolverElement):
         with self.ann.annotate(h1="Big cube centers"):
             self._solve(holder)
 
+    def solve_single_face(self, holder: FaceTrackerHolder, target_face: Face) -> None:
+        """
+        Solve centers for a single target face only.
+
+        Used by layer-by-layer solver to solve one face at a time.
+
+        Args:
+            holder: FaceTrackerHolder containing trackers for all faces
+                    (needed to know face colors and for source pieces).
+            target_face: The face whose centers should be solved.
+        """
+        if self._is_face_solved(target_face, holder.get_face_color(target_face.name)):
+            return
+
+        with self.ann.annotate(h1=f"Centers for {target_face.name.name}"):
+            # Get the tracker for the target face
+            target_tracker = holder.get_tracker(target_face.name)
+            if target_tracker is None:
+                return
+
+            # Get all trackers for sanity checking
+            all_faces: list[FaceTracker] = list(holder)
+
+            # Solve only the target face
+            while True:
+                if not self._do_faces([target_tracker], False, False):
+                    break
+                self._asserts_is_boy(all_faces)
+
+            self._asserts_is_boy(all_faces)
+
+            # Final pass with back face too
+            self._do_faces([target_tracker], False, True)
+
+            self._asserts_is_boy(all_faces)
+
     def _solve(self, holder: FaceTrackerHolder) -> None:
         """
         Main solving algorithm - uses provided face trackers to solve all centers.

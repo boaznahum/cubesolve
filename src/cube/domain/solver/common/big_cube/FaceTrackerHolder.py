@@ -167,6 +167,37 @@ class FaceTrackerHolder:
             face_colors[tracker.face.name] = tracker.color
         return face_colors
 
+    def get_face_color(self, face_name: FaceName) -> Color:
+        """Get the target color for a specific face.
+
+        Args:
+            face_name: The face to query.
+
+        Returns:
+            The target color for that face.
+
+        Raises:
+            KeyError: If no tracker exists for that face.
+        """
+        for tracker in self._trackers:
+            if tracker.face.name == face_name:
+                return tracker.color
+        raise KeyError(f"No tracker for face {face_name}")
+
+    def get_tracker(self, face_name: FaceName) -> FaceTracker | None:
+        """Get the tracker for a specific face.
+
+        Args:
+            face_name: The face to query.
+
+        Returns:
+            The FaceTracker for that face, or None if not found.
+        """
+        for tracker in self._trackers:
+            if tracker.face.name == face_name:
+                return tracker
+        return None
+
     def _trackers_layout(self) -> CubeLayout:
         """Get the current tracker mapping as a CubeLayout.
 
