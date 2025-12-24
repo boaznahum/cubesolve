@@ -280,9 +280,10 @@ class LayerByLayerNxNSolver(BaseSolver):
         from cube.domain.model.Cube import Cube
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
+        # this is a copy of cage is doing, why not add an helper for shadow operations !!!
         # Create shadow 3x3 cube
         shadow_cube = Cube(size=3, sp=self._cube.sp)
-        shadow_cube.is_even_cube_shadow = True
+        shadow_cube.is_even_cube_shadow = True  # claude: who told you it is even ###
         self._copy_state_to_shadow(shadow_cube, th)
 
         if shadow_cube.solved:
@@ -290,6 +291,7 @@ class LayerByLayerNxNSolver(BaseSolver):
             return
 
         # Check if requested step is already done on shadow
+        # claude: we computing costly but maybe using it , any way the
         shadow_l1_face = shadow_cube.color_2_face(self.config.first_face_color)
         edges_solved = all(e.match_faces for e in shadow_l1_face.edges)
         corners_solved = all(c.match_faces for c in shadow_l1_face.corners)
@@ -305,7 +307,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         dual_op = DualOperator(shadow_cube, self._op)
 
         # Use a real 3x3 solver - beginner method for L1
-        # cluad: use the smae confuration as cage used for solver helper
+        # claud: use the same configuration as cage used for solver helper
         shadow_solver = Solvers3x3.beginner(dual_op)
 
         # Solve only L1 (cross + corners)
