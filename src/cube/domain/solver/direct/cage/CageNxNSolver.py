@@ -43,7 +43,7 @@ from typing import TYPE_CHECKING
 from cube.domain.model import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
@@ -234,7 +234,7 @@ class CageNxNSolver(BaseSolver):
         # For odd: simple trackers using fixed center color (no cleanup needed)
         # For even: trackers mark center slices (cleanup on exit)
         # Use context manager for automatic cleanup on exit
-        with FaceTrackerHolder(self) as tracker_holder:
+        with FacesTrackerHolder(self) as tracker_holder:
             self.debug(f"Created trackers: {list(tracker_holder)}")
 
             # Main solve loop with parity retry
@@ -330,7 +330,7 @@ class CageNxNSolver(BaseSolver):
                 and self._are_corners_solved()):
             return sr
 
-        with FaceTrackerHolder(self) as tracker_holder:
+        with FacesTrackerHolder(self) as tracker_holder:
             self.debug(f"Created trackers: {list(tracker_holder)}")
 
             for attempt in range(5):
@@ -380,7 +380,7 @@ class CageNxNSolver(BaseSolver):
         if self._are_centers_solved():
             return sr
 
-        with FaceTrackerHolder(self) as tracker_holder:
+        with FacesTrackerHolder(self) as tracker_holder:
             self._solve_centers(tracker_holder)
 
         return sr
@@ -424,7 +424,7 @@ class CageNxNSolver(BaseSolver):
     # Phase 1b: Corner solving (uses 3x3 solver)
     # =========================================================================
 
-    def _solve_corners(self, tracker_holder: FaceTrackerHolder) -> None:
+    def _solve_corners(self, tracker_holder: FacesTrackerHolder) -> None:
         """Solve corners using shadow cube approach with DualOperator.
 
         Works identically for odd and even cubes:
@@ -532,7 +532,7 @@ class CageNxNSolver(BaseSolver):
     # Phase 2: Center solving
     # =========================================================================
 
-    def _solve_centers(self, tracker_holder: FaceTrackerHolder) -> None:
+    def _solve_centers(self, tracker_holder: FacesTrackerHolder) -> None:
         """
         Solve all centers using NxNCenters with preserve_cage=True.
 

@@ -18,13 +18,13 @@ Can import: protocols/ (Layer 1), common/ utilities
 Cannot import: solver implementations (Layer 3)
 """
 
-from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 
 __all__ = [
-    "FaceTrackerHolder",
+    "FacesTrackerHolder",
     "NxNCenters",
     "NxNCorners",
     "NxNEdges",

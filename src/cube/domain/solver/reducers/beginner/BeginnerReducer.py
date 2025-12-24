@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReductionResults
@@ -88,7 +88,7 @@ class BeginnerReducer(AbstractReducer):
 
     def solve_centers(self) -> None:
         """Solve only centers (first part of reduction)."""
-        with FaceTrackerHolder(self) as holder:
+        with FacesTrackerHolder(self) as holder:
             centers = NxNCenters(self)
             centers.solve(holder)
 

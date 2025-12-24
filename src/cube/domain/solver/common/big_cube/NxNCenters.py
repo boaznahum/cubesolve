@@ -12,7 +12,7 @@ from cube.domain.model.cube_boy import CubeLayout, color2long
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
-from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
@@ -172,7 +172,7 @@ class NxNCenters(SolverElement):
 
         return self._is_solved()
 
-    def solve(self, holder: FaceTrackerHolder) -> None:
+    def solve(self, holder: FacesTrackerHolder) -> None:
         """
         Solve all centers using the provided face tracker holder.
 
@@ -190,7 +190,7 @@ class NxNCenters(SolverElement):
         with self.ann.annotate(h1="Big cube centers"):
             self._solve(holder)
 
-    def solve_single_face(self, holder: FaceTrackerHolder, target_face: Face) -> None:
+    def solve_single_face(self, holder: FacesTrackerHolder, target_face: Face) -> None:
         """
         Solve centers for a single target face only.
 
@@ -226,7 +226,7 @@ class NxNCenters(SolverElement):
 
             self._asserts_is_boy(all_faces)
 
-    def _solve(self, holder: FaceTrackerHolder) -> None:
+    def _solve(self, holder: FacesTrackerHolder) -> None:
         """
         Main solving algorithm - uses provided face trackers to solve all centers.
 

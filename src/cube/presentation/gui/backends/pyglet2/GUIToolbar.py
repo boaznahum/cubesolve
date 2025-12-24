@@ -414,6 +414,8 @@ class GUIToolbar:
         solver = app.slv
         steps = solver.supported_steps()
 
+        # claude: remove SolverStep.ALL from the list above
+
         for step in steps:
             self.add_button(
                 label=step.short_code,

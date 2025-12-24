@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from cube.domain.solver.protocols import SolverElementsProvider
 
 
-class FaceTrackerHolder:
+class FacesTrackerHolder:
     """Holds 6 face trackers and provides operations on them.
 
     This class encapsulates the tracker lifecycle:
@@ -263,7 +263,7 @@ class FaceTrackerHolder:
         """Return number of trackers (always 6)."""
         return len(self._trackers)
 
-    def __enter__(self) -> FaceTrackerHolder:
+    def __enter__(self) -> FacesTrackerHolder:
         """Enter context manager."""
         return self
 
