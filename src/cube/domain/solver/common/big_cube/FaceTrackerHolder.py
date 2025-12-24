@@ -198,6 +198,24 @@ class FaceTrackerHolder:
                 return tracker
         return None
 
+    def get_tracker_by_color(self, color: Color) -> FaceTracker:
+        """Get the tracker for a face with the specified color.
+
+        Args:
+            color: The target color to find.
+
+        Returns:
+            The FaceTracker for the face with that color.
+
+        Raises:
+            KeyError: If no tracker exists for that color.
+        """
+        for tracker in self._trackers:
+            if tracker.color == color:
+                return tracker
+        raise KeyError(f"No tracker for color {color}")
+
+
     def _trackers_layout(self) -> CubeLayout:
         """Get the current tracker mapping as a CubeLayout.
 
@@ -252,3 +270,5 @@ class FaceTrackerHolder:
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit context manager - cleanup trackers."""
         self.cleanup()
+
+
