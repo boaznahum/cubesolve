@@ -8,7 +8,7 @@
 | [#19](https://github.com/boaznahum/cubesolve/issues/19) | open | bug | Default texture shows wrong face colors |
 | [#40](https://github.com/boaznahum/cubesolve/issues/40) | open | bug | Solve completes instantly (animation skipped) |
 | [#41](https://github.com/boaznahum/cubesolve/issues/41) | open | bug | Markers don't show source/destination during commutator |
-| [#42](https://github.com/boaznahum/cubesolve/issues/42) | open | bug | Axes disappeared when moving to pyglet2 |
+| [#47](https://github.com/boaznahum/cubesolve/issues/47) | open | bug | **HIGH** pyglet2: Move axis to corner + fix broken fonts (continues #42) |
 | [#20](https://github.com/boaznahum/cubesolve/issues/20) | open | gui | Investigate pyopengltk for tkinter |
 | [#21](https://github.com/boaznahum/cubesolve/issues/21) | open | gui | Comprehensive Command Testing Plan |
 | [#22](https://github.com/boaznahum/cubesolve/issues/22) | open | gui | Additional lighting improvements (pyglet2) |
