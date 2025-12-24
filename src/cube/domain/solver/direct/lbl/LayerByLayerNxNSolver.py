@@ -20,8 +20,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.model import Color
-from cube.domain.model.FaceName import FaceName
+from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
@@ -29,7 +28,6 @@ from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
-from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -138,9 +136,10 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_layer1_centers(th)
 
                 case SolveStep.L1x:
-                    # Layer 1 cross (centers + edges)
+                    # Layer 1 cross (centers + edges paired + edges positioned)
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
+                    self._solve_layer1_cross(th)
 
                 case SolveStep.ALL | SolveStep.LBL_L1:
                     # Layer 1 complete (centers + edges + corners)
@@ -173,6 +172,14 @@ class LayerByLayerNxNSolver(BaseSolver):
         """Check if all Layer 1 face edges are paired (reduced to 3x3)."""
         l1_face = self._get_layer1_tracker(th).face
         return all(e.is3x3 for e in l1_face.edges)
+
+    def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:
+        """Check if Layer 1 cross is solved (edges paired AND in correct position)."""
+        if not self._is_layer1_edges_solved(th):
+            return False
+
+        l1_face = self._get_layer1_tracker(th).face
+        return all(e.match_faces for e in l1_face.edges)
 
     def _is_layer1_corners_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if all Layer 1 corners are in correct position with correct orientation."""
@@ -235,6 +242,18 @@ class LayerByLayerNxNSolver(BaseSolver):
             # Use solve_face_edges to solve only Layer 1 face edges
             self._nxn_edges.solve_face_edges(l1_tracker)
 
+    def _solve_layer1_cross(self, th: FacesTrackerHolder) -> None:
+        """Solve Layer 1 cross (position edges) using shadow 3x3 approach."""
+        if self._is_layer1_cross_solved(th):
+            return
+
+        l1_tracker = self._get_layer1_tracker(th)
+        self.debug(f"Solving Layer 1 cross ({l1_tracker.color.name} layer)")
+
+        with self.op.annotation.annotate(h2=f"L1 cross ({l1_tracker.color.name})"):
+            # Solve using shadow cube approach with Solvers3x3
+            self._solve_layer1_with_shadow(th, SolveStep.L1x)
+
     def _solve_layer1_corners(self, th: FacesTrackerHolder) -> None:
         """Solve Layer 1 corners using shadow 3x3 approach."""
         if self._is_layer1_corners_solved(th):
@@ -244,13 +263,10 @@ class LayerByLayerNxNSolver(BaseSolver):
         self.debug(f"Solving Layer 1 corners ({l1_tracker.color.name} layer)")
 
         with self.op.annotation.annotate(h2=f"L1 corners ({l1_tracker.color.name})"):
-            # Get face colors from tracker holder
-            face_colors = th.get_face_colors()
-
             # Solve using shadow cube approach with Solvers3x3
-            self._solve_layer1_with_shadow(face_colors)
+            self._solve_layer1_with_shadow(th, SolveStep.L1)
 
-    def _solve_layer1_with_shadow(self, face_colors: dict[FaceName, Color]) -> None:
+    def _solve_layer1_with_shadow(self, th: FacesTrackerHolder, what: SolveStep) -> None:
         """Create shadow 3x3 and solve Layer 1 using beginner method.
 
         Uses the proper pattern from CageNxNSolver:
@@ -258,6 +274,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         2. Create DualOperator (wraps shadow + real operator)
         3. Use Solvers3x3.beginner() - a real 3x3 solver
         4. Solve with SolveStep.L1 to only do cross + corners
+        :param th:
         """
         from cube.application.commands.DualOperator import DualOperator
         from cube.domain.model.Cube import Cube
@@ -266,17 +283,21 @@ class LayerByLayerNxNSolver(BaseSolver):
         # Create shadow 3x3 cube
         shadow_cube = Cube(size=3, sp=self._cube.sp)
         shadow_cube.is_even_cube_shadow = True
-        self._copy_state_to_shadow(shadow_cube, face_colors)
+        self._copy_state_to_shadow(shadow_cube, th)
 
         if shadow_cube.solved:
             self.debug("Shadow cube already solved")
             return
 
-        # Check if Layer 1 is already done on shadow
-        # Use config.first_face_color to get the L1 face on shadow cube
+        # Check if requested step is already done on shadow
         shadow_l1_face = shadow_cube.color_2_face(self.config.first_face_color)
-        if (all(c.match_faces for c in shadow_l1_face.corners) and
-                all(e.match_faces for e in shadow_l1_face.edges)):
+        edges_solved = all(e.match_faces for e in shadow_l1_face.edges)
+        corners_solved = all(c.match_faces for c in shadow_l1_face.corners)
+
+        if what == SolveStep.L1x and edges_solved:
+            self.debug("Shadow cube L1 cross already solved")
+            return
+        if what == SolveStep.L1 and edges_solved and corners_solved:
             self.debug("Shadow cube Layer 1 already solved")
             return
 
@@ -284,18 +305,19 @@ class LayerByLayerNxNSolver(BaseSolver):
         dual_op = DualOperator(shadow_cube, self._op)
 
         # Use a real 3x3 solver - beginner method for L1
+        # cluad: use the smae confuration as cage used for solver helper
         shadow_solver = Solvers3x3.beginner(dual_op)
 
         # Solve only L1 (cross + corners)
-        shadow_solver.solve_3x3(what=SolveStep.L1)
+        shadow_solver.solve_3x3(what=what)
 
-    def _copy_state_to_shadow(self, shadow: "Cube", face_colors: dict[FaceName, Color]) -> None:
+    def _copy_state_to_shadow(self, shadow: "Cube", th: FacesTrackerHolder) -> None:
         """Copy corner/edge state from NxN cube to shadow 3x3."""
         # Get colors from NxN cube as 3x3 snapshot
         colors_3x3 = self._cube.get_3x3_colors()
 
         # Override centers with face_colors mapping
-        modified = colors_3x3.with_centers(face_colors)
+        modified = colors_3x3.with_centers(th.get_face_colors())
 
         # Apply to shadow cube
         shadow.set_3x3_colors(modified)
