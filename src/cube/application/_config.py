@@ -60,7 +60,7 @@ SS_CODES: dict[SSCode, bool] = {
 # Available solvers: LBL, CFOP, Kociemba, Cage, LBL-Direct
 # Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "lbl-d" (for LBL-Direct)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "lbl-d"
+DEFAULT_SOLVER = "cage"
 
 # First face color - the color that determines Layer 1 for 3x3 beginner and LBL solvers
 # This is the color to start with, not a fixed face position (cube may be rotated)
