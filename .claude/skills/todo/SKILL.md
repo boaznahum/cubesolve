@@ -66,6 +66,7 @@ Show quick reference of available commands:
 /todo              Quick report (open issues, priorities, in-progress)
 /todo scan         Full codebase scan for TODOs
 /todo sync         Find inconsistencies between code and GitHub
+/todo search       Search issues by keyword or label
 /todo track        Create GitHub Issues for untracked TODOs
 /todo analyze #id  Analyze TODO and update its GitHub Issue
 /todo start #id    Mark issue as in-progress
@@ -151,6 +152,57 @@ Found 1 inconsistency:
     B) Remove 'in-progress' label from GitHub
     C) Skip
 ```
+
+### `/todo search [query] [--label <label>]`
+Search GitHub Issues by keyword and/or label filter.
+
+**Usage:**
+```bash
+/todo search animation          # Search for "animation" in title/body
+/todo search --label bug        # Filter by label
+/todo search gui --label high   # Combined: keyword + label
+/todo search --label in-progress  # Find all in-progress issues
+```
+
+**Implementation:**
+```bash
+# Keyword search (searches title and body)
+gh issue list --label todo --search "animation" --state open --json number,title,labels,state
+
+# Label filter (can use partial match)
+gh issue list --label todo --label "priority:high" --state open --json number,title,labels,state
+
+# Combined
+gh issue list --label todo --label bug --search "animation" --state open --json number,title,labels,state
+
+# Include closed issues
+gh issue list --label todo --search "animation" --state all --json number,title,labels,state
+```
+
+**Output format:**
+```
+=== Search Results: "animation" ===
+
+| #   | State  | Labels                  | Title                    |
+|-----|--------|-------------------------|--------------------------|
+| #45 | open   | bug, priority:high      | GUI Animation Bug        |
+| #12 | closed | enhancement             | Animation speed control  |
+
+Found 2 issues. Use `/todo start #id`, `/todo done #id`, or `/todo analyze #id` to operate on results.
+```
+
+**Common label filters:**
+- `--label bug` - Bug issues
+- `--label enhancement` - Feature requests
+- `--label priority:high` / `priority:medium` / `priority:low` - By priority
+- `--label in-progress` - Currently being worked on
+- `--label analyzed` - Already analyzed by Claude
+- `--label todo:code` - From code comments
+- `--label todo:file` - From todo files
+
+**Options:**
+- `--all` - Include closed issues (default: open only)
+- `--limit N` - Limit results (default: 30)
 
 ### `/todo track`
 For each untracked code TODO:
