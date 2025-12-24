@@ -240,10 +240,6 @@ def test_lbl_solver_layer1_complete_multiple_scrambles(seed: int) -> None:
 # =============================================================================
 @pytest.mark.parametrize("size", [4, 6])
 def test_lbl_solver_even_cube_layer1(size: int) -> None:
-
-    if size % 2 == 0:
-          pytest.skip("LBL solver does not yet support even cubes")
-
     """Test Layer 1 solving on even cubes (uses shadow cube approach)."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
