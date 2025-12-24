@@ -65,7 +65,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         Note:
             Layer 1 color is determined by FIRST_FACE_COLOR config
-            (accessed via cmn.white_face).
+            (accessed via config.first_face_color and FaceTracker).
         """
         super().__init__(op)
 
@@ -86,27 +86,30 @@ class LayerByLayerNxNSolver(BaseSolver):
         if self.is_solved:
             return "Solved"
 
-        # Check layer-by-layer status
-        layer1_done = self._is_layer1_solved()
+        # Create temporary tracker for status checks (needed for even cubes)
+        with FacesTrackerHolder(self) as th:
+            layer1_done = self._is_layer1_solved(th)
 
-        if layer1_done:
-            return "L1:Done"
-        else:
-            # Check sub-steps
-            centers_done = self._is_layer1_centers_solved()
-            edges_done = self._is_layer1_edges_solved()
-
-            if centers_done and edges_done:
-                return "L1:Ctr+Edg"
-            elif centers_done:
-                return "L1:Ctr"
+            if layer1_done:
+                return "L1:Done"
             else:
-                return "L1:Pending"
+                # Check sub-steps
+                centers_done = self._is_layer1_centers_solved(th)
+                edges_done = self._is_layer1_edges_solved(th)
+
+                if centers_done and edges_done:
+                    return "L1:Ctr+Edg"
+                elif centers_done:
+                    return "L1:Ctr"
+                else:
+                    return "L1:Pending"
 
     def supported_steps(self) -> list[SolveStep]:
-        """Return list of solve steps this solver supports."""
+        """Return list of solve steps this solver supports.
+
+        Note: SolveStep.ALL is implicit for all solvers (not listed here).
+        """
         return [
-            SolveStep.ALL,
             SolveStep.LBL_L1_Ctr,   # Layer 1 centers only
             SolveStep.LBL_L1_Edg,   # Layer 1 edges only
             SolveStep.LBL_L1,       # Layer 1 complete
@@ -128,25 +131,22 @@ class LayerByLayerNxNSolver(BaseSolver):
             return sr
 
         # Create face tracker holder for center solving
-        with FacesTrackerHolder(self) as tracker_holder:
+        with FacesTrackerHolder(self) as th:
             match what:
-                case SolveStep.ALL:
-                    # Full solve - Layer 1 for now
-                    self._solve_layer1(sr, tracker_holder)
-
-                case SolveStep.LBL_L1:
-                    # Layer 1 complete
-                    self._solve_layer1(sr, tracker_holder)
-
                 case SolveStep.LBL_L1_Ctr:
                     # Layer 1 centers only
-                    if not self._is_layer1_centers_solved():
-                        self._solve_layer1_centers(tracker_holder)
+                    self._solve_layer1_centers(th)
 
                 case SolveStep.LBL_L1_Edg:
-                    # Layer 1 edges only (requires centers to be solved first)
-                    if not self._is_layer1_edges_solved():
-                        self._solve_layer1_edges(tracker_holder)
+                    # Layer 1 edges (includes centers)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+
+                case SolveStep.ALL | SolveStep.LBL_L1:
+                    # Layer 1 complete (centers + edges + corners)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+                    self._solve_layer1_corners(th)
 
                 case _:
                     raise ValueError(f"Unsupported step: {what}")
@@ -154,7 +154,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         return sr
 
     # =========================================================================
-    # Private methods - State inspection (use cmn.white_face for status checks)
+    # Private methods - State inspection (use tracker for even cube support)
     # =========================================================================
 
     def _get_layer1_tracker(self, th: FacesTrackerHolder) -> FaceTracker:
@@ -164,26 +164,26 @@ class LayerByLayerNxNSolver(BaseSolver):
         """
         return th.get_tracker_by_color(self.config.first_face_color)
 
-    def _is_layer1_centers_solved(self) -> bool:
+    def _is_layer1_centers_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 face centers are all the same color."""
-        l1_face = self.cmn.white_face
+        l1_face = self._get_layer1_tracker(th).face
         return l1_face.center.is3x3
 
-    def _is_layer1_edges_solved(self) -> bool:
+    def _is_layer1_edges_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if all Layer 1 face edges are paired (reduced to 3x3)."""
-        l1_face = self.cmn.white_face
+        l1_face = self._get_layer1_tracker(th).face
         return all(e.is3x3 for e in l1_face.edges)
 
-    def _is_layer1_corners_solved(self) -> bool:
+    def _is_layer1_corners_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if all Layer 1 corners are in correct position with correct orientation."""
-        l1_face = self.cmn.white_face
+        l1_face = self._get_layer1_tracker(th).face
         return all(c.match_faces for c in l1_face.corners)
 
-    def _is_layer1_solved(self) -> bool:
+    def _is_layer1_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 is completely solved (centers + edges + corners)."""
-        return (self._is_layer1_centers_solved() and
-                self._is_layer1_edges_solved() and
-                self._is_layer1_corners_solved())
+        return (self._is_layer1_centers_solved(th) and
+                self._is_layer1_edges_solved(th) and
+                self._is_layer1_corners_solved(th))
 
     # =========================================================================
     # Private methods - Layer 1 solving
@@ -192,49 +192,58 @@ class LayerByLayerNxNSolver(BaseSolver):
     def _solve_layer1(self, sr: SolverResults, th: FacesTrackerHolder) -> None:
         """Solve Layer 1: centers → edges → corners."""
 
-        if self._is_layer1_solved():
+        if self._is_layer1_solved(th):
             self.debug("Layer 1 already solved")
             return
 
         l1_tracker = self._get_layer1_tracker(th)
         with self.op.annotation.annotate(h1=f"Layer 1 ({l1_tracker.color.name} face)"):
             # Step 1: Solve Layer 1 centers
-            if not self._is_layer1_centers_solved():
+            if not self._is_layer1_centers_solved(th):
                 self._solve_layer1_centers(th)
 
             # Step 2: Solve Layer 1 edges
-            if not self._is_layer1_edges_solved():
+            if not self._is_layer1_edges_solved(th):
                 self._solve_layer1_edges(th)
 
             # Step 3: Solve Layer 1 corners using shadow 3x3
-            if not self._is_layer1_corners_solved():
+            if not self._is_layer1_corners_solved(th):
                 self._solve_layer1_corners(th)
 
     def _solve_layer1_centers(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 1 face centers."""
-        l1_tracker = self._get_layer1_tracker(th)
-        self.debug(f"Solving Layer 1 centers ({l1_tracker.face.name.name} face only)")
+        if self._is_layer1_centers_solved(th):
+            return
 
-        with self.op.annotation.annotate(h2="L1 centers"):
+        l1_tracker = self._get_layer1_tracker(th)
+        self.debug(f"Solving Layer 1 centers ({l1_tracker.color.name} face only)")
+
+        with self.op.annotation.annotate(h2=f"L1 centers ({l1_tracker.color.name})"):
             # Use NxNCenters.solve_single_face to solve just the Layer 1 face
             centers = NxNCenters(self, preserve_cage=False)
-            centers.solve_single_face(th, l1_tracker.face)
+            centers.solve_single_face(th, l1_tracker)
 
     def _solve_layer1_edges(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 1 face edges."""
-        l1_tracker = self._get_layer1_tracker(th)
-        self.debug(f"Solving Layer 1 edges ({l1_tracker.face.name.name} face only)")
+        if self._is_layer1_edges_solved(th):
+            return
 
-        with self.op.annotation.annotate(h2="L1 edges"):
+        l1_tracker = self._get_layer1_tracker(th)
+        self.debug(f"Solving Layer 1 edges ({l1_tracker.color.name} face only)")
+
+        with self.op.annotation.annotate(h2=f"L1 edges ({l1_tracker.color.name})"):
             # Use solve_face_edges to solve only Layer 1 face edges
-            self._nxn_edges.solve_face_edges(l1_tracker.face)
+            self._nxn_edges.solve_face_edges(l1_tracker)
 
     def _solve_layer1_corners(self, th: FacesTrackerHolder) -> None:
         """Solve Layer 1 corners using shadow 3x3 approach."""
-        l1_tracker = self._get_layer1_tracker(th)
-        self.debug(f"Solving Layer 1 corners ({l1_tracker.face.name.name} layer)")
+        if self._is_layer1_corners_solved(th):
+            return
 
-        with self.op.annotation.annotate(h2="L1 corners"):
+        l1_tracker = self._get_layer1_tracker(th)
+        self.debug(f"Solving Layer 1 corners ({l1_tracker.color.name} layer)")
+
+        with self.op.annotation.annotate(h2=f"L1 corners ({l1_tracker.color.name})"):
             # Get face colors from tracker holder
             face_colors = th.get_face_colors()
 
@@ -264,9 +273,8 @@ class LayerByLayerNxNSolver(BaseSolver):
             return
 
         # Check if Layer 1 is already done on shadow
-        # Use cmn.white_face to get the L1 face on shadow cube
-        # (DualOperator will sync this with the real cube)
-        shadow_l1_face = shadow_cube.color_2_face(self.cmn.white)
+        # Use config.first_face_color to get the L1 face on shadow cube
+        shadow_l1_face = shadow_cube.color_2_face(self.config.first_face_color)
         if (all(c.match_faces for c in shadow_l1_face.corners) and
                 all(e.match_faces for e in shadow_l1_face.edges)):
             self.debug("Shadow cube Layer 1 already solved")

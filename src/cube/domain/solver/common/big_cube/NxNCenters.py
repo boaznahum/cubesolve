@@ -190,7 +190,7 @@ class NxNCenters(SolverElement):
         with self.ann.annotate(h1="Big cube centers"):
             self._solve(holder)
 
-    def solve_single_face(self, holder: FacesTrackerHolder, target_face: Face) -> None:
+    def solve_single_face(self, holder: FacesTrackerHolder, target_tracker: FaceTracker) -> None:
         """
         Solve centers for a single target face only.
 
@@ -199,17 +199,13 @@ class NxNCenters(SolverElement):
         Args:
             holder: FaceTrackerHolder containing trackers for all faces
                     (needed to know face colors and for source pieces).
-            target_face: The face whose centers should be solved.
+            target_tracker: FaceTracker for the target face (tracks by color).
         """
-        if self._is_face_solved(target_face, holder.get_face_color(target_face.name)):
+        target_face = target_tracker.face
+        if self._is_face_solved(target_face, target_tracker.color):
             return
 
-        with self.ann.annotate(h1=f"Centers for {target_face.name.name}"):
-            # Get the tracker for the target face
-            target_tracker = holder.get_tracker(target_face.name)
-            if target_tracker is None:
-                return
-
+        with self.ann.annotate(h1=f"Centers for {target_tracker.color.name}"):
             # Get all trackers for sanity checking
             all_faces: list[FaceTracker] = list(holder)
 

@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Callable
 import pyglet
 from pyglet import shapes
 
+from cube.domain.solver import SolveStep
+
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.presentation.gui.backends.pyglet2.PygletAppWindow import PygletAppWindow
@@ -28,20 +30,20 @@ ROW_MARGIN = 4
 BEVEL_WIDTH = 2  # Width of 3D bevel effect
 
 # Button colors
-BUTTON_BG_COLOR = (70, 130, 180, 255)      # Steel blue
-BUTTON_BG_HOVER = (100, 160, 210, 255)     # Lighter blue on hover
-BUTTON_BG_DISABLED = (80, 80, 80, 200)     # Gray when disabled
-BUTTON_HIGHLIGHT = (130, 180, 220, 255)    # Light edge (top/left) - raised look
-BUTTON_SHADOW = (30, 70, 110, 255)         # Dark edge (bottom/right) - raised look
+BUTTON_BG_COLOR = (70, 130, 180, 255)  # Steel blue
+BUTTON_BG_HOVER = (100, 160, 210, 255)  # Lighter blue on hover
+BUTTON_BG_DISABLED = (80, 80, 80, 200)  # Gray when disabled
+BUTTON_HIGHLIGHT = (130, 180, 220, 255)  # Light edge (top/left) - raised look
+BUTTON_SHADOW = (30, 70, 110, 255)  # Dark edge (bottom/right) - raised look
 BUTTON_HIGHLIGHT_DISABLED = (110, 110, 110, 200)
 BUTTON_SHADOW_DISABLED = (50, 50, 50, 200)
 
-BUTTON_TEXT_COLOR = (255, 255, 255, 255)   # White text
+BUTTON_TEXT_COLOR = (255, 255, 255, 255)  # White text
 BUTTON_TEXT_DISABLED = (140, 140, 140, 255)
-TOOLBAR_BG_COLOR = (40, 40, 40, 240)       # Dark background
+TOOLBAR_BG_COLOR = (40, 40, 40, 240)  # Dark background
 TOOLBAR_PADDING = 10
 SEPARATOR_WIDTH = 15
-LABEL_COLOR = (200, 200, 200, 255)         # Light gray for labels
+LABEL_COLOR = (200, 200, 200, 255)  # Light gray for labels
 FONT_SIZE = 12
 
 
@@ -124,15 +126,15 @@ class GUIToolbar:
         self._tooltip_bg: shapes.Rectangle | None = None
 
     def add_button(
-        self,
-        label: str,
-        command: Command,
-        enabled_fn: Callable[[], bool] | None = None,
-        label_fn: Callable[[], str] | None = None,
-        min_width: int = 0,
-        tooltip: str | None = None,
-        shift_label: str | None = None,
-        shift_command: "Command | None" = None,
+            self,
+            label: str,
+            command: Command,
+            enabled_fn: Callable[[], bool] | None = None,
+            label_fn: Callable[[], str] | None = None,
+            min_width: int = 0,
+            tooltip: str | None = None,
+            shift_label: str | None = None,
+            shift_command: "Command | None" = None,
     ) -> None:
         """Add a clickable button to current row."""
         self._buttons.append(GUIButton(
@@ -413,6 +415,8 @@ class GUIToolbar:
         # Add step buttons for current solver
         solver = app.slv
         steps = solver.supported_steps()
+
+        assert SolveStep.ALL not in steps, 'All solvers solve All'
 
         # claude: remove SolverStep.ALL from the list above
 

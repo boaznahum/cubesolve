@@ -6,6 +6,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
+from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
 from cube.domain.solver.common.SolverElement import SolverElement
@@ -64,24 +65,24 @@ class NxNEdges(SolverElement):
 
             return True
 
-    def solve_face_edges(self, face: "Face") -> bool:
+    def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
         """Solve only the 4 edges adjacent to a specific face.
 
         Used by layer-by-layer solver to solve one layer's edges at a time.
 
         Args:
-            face: The face whose edges should be solved (e.g., D face for Layer 1).
+            face_tracker: FaceTracker for the target face (tracks by color).
 
         Returns:
             True if edge parity was performed, False otherwise.
         """
-        target_edges = list(face.edges)  # 4 edges for this face
+        target_edges = list(face_tracker.face.edges)  # 4 edges for this face
 
         # Check if all target edges are already solved
         if all(e.is3x3 for e in target_edges):
             return False
 
-        with self.ann.annotate(h1=f"Edges for {face.name.name}"):
+        with self.ann.annotate(h1=f"Edges for {face_tracker.color.name}"):
             # Solve only the target edges
             parity_done = False
             while True:
