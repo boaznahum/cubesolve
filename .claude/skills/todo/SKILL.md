@@ -118,6 +118,40 @@ File: Status Mismatch (2):
 Synced: 13 code TODOs, 25 file entries
 ```
 
+**Interactive Resolution:**
+
+When inconsistencies are found, ask the user how to resolve each one:
+
+1. **Status Mismatch** - Ask: "Update file to match GitHub, or update GitHub to match file?"
+   - Option A: Update file entry status to match GitHub label
+   - Option B: Add/remove `in-progress` label on GitHub to match file
+   - Option C: Skip (do nothing)
+
+2. **Stale TODOs/Entries** - Ask: "Issue is closed. Remove the TODO/entry?"
+   - Option A: Remove the code comment or file entry
+   - Option B: Skip (keep it)
+
+3. **Missing in GitHub** - Ask: "Create GitHub Issue for this TODO?"
+   - Option A: Create issue with `todo` label
+   - Option B: Skip
+
+4. **Missing in Code/File** - Ask: "GitHub Issue has label but no local reference. What to do?"
+   - Option A: Remove the `todo:code` or `todo:file` label from GitHub
+   - Option B: Skip (leave as is)
+
+**Example interaction:**
+```
+Found 1 inconsistency:
+
+[1] Status Mismatch: todo/todo_open.md:5
+    Issue #16: file says 'investigating' but GitHub has 'in-progress' label
+
+    How to resolve?
+    A) Update file to 'in-progress'
+    B) Remove 'in-progress' label from GitHub
+    C) Skip
+```
+
 ### `/todo track`
 For each untracked code TODO:
 1. Assign next available ID (check existing TC# numbers)
