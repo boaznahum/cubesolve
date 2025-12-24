@@ -48,9 +48,17 @@
 
 ## TODO - Future Layers
 
-- [ ] Layer 2 to n-1 (middle slices): centers + edge wings
-- [ ] Layer n (opposite face): like Layer 1 but restricted moves
-- [ ] Even cube support: verify FaceTracker works correctly
+### Layer 2 (Next Step)
+- [ ] **Centers**: Use simple commutator from `NxNCenters`
+  - Solve center ring on 4 side faces for this slice level
+  - NxNCenters already has the commutator logic
+
+- [ ] **Edge wings**: Pair the 4 edge wings at this slice level
+
+### Remaining
+- [ ] Layer 3 to n-1: Repeat Layer 2 pattern for each slice
+- [ ] Layer n (opposite face): Like Layer 1 but restricted moves
+- [ ] Even cube support: Verify FaceTracker works correctly
 - [ ] Parity handling for partial solves
 
 ## Files
