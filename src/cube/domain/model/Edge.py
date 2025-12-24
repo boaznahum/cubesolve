@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
 
+
 class Edge(Part):
     """
     An edge part shared by exactly two faces.

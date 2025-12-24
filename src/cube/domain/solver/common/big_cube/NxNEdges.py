@@ -66,7 +66,7 @@ class NxNEdges(SolverElement):
             return True
 
     def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
-        """Solve only the 4 edges adjacent to a specific face.
+        """Solve only the 4 edges that contain a specific color.
 
         Used by layer-by-layer solver to solve one layer's edges at a time.
 
@@ -76,14 +76,17 @@ class NxNEdges(SolverElement):
         Returns:
             True if edge parity was performed, False otherwise.
         """
-        target_edges = list(face_tracker.face.edges)  # 4 edges for this face
+        # Find edges by COLOR, not by position
+        # Layer 1 edges are the 4 edges that have slices containing the Layer 1 color
+        l1_color = face_tracker.color
+        target_edges = [e for e in self.cube.edges
+                        if any(l1_color in s.colors_id for s in e.all_slices)]
 
         # Check if all target edges are already solved
         if all(e.is3x3 for e in target_edges):
             return False
 
         with self.ann.annotate(h1=f"Edges for {face_tracker.color.name}"):
-            # Solve only the target edges
             parity_done = False
             while True:
                 # Find an unsolved edge among target edges
@@ -91,11 +94,11 @@ class NxNEdges(SolverElement):
                 if not unsolved:
                     break
 
-                # Count total unsolved edges (for parity detection)
-                total_unsolved = sum(not e.is3x3 for e in self.cube.edges)
-
-                if total_unsolved == 1:
-                    # Only one edge left - this is parity
+                # Check if this is the LAST unsolved edge in the whole cube
+                # (can happen when solving the last face)
+                total_unsolved = sum(1 for e in self.cube.edges if not e.is3x3)
+                if total_unsolved == 1 and len(unsolved) == 1:
+                    # Last edge in cube AND it's one of our targets - parity
                     self._do_last_edge_parity()
                     parity_done = True
                     continue
