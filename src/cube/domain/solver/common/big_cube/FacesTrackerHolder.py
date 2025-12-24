@@ -36,6 +36,7 @@ from cube.domain.solver.common.big_cube._NxNCentersFaceTracker import (
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
+    from cube.domain.model.Part import Part
     from cube.domain.solver.protocols import SolverElementsProvider
 
 
@@ -156,16 +157,30 @@ class FacesTrackerHolder:
         Trackers dynamically resolve to the current face, so this always
         returns the correct mapping even after cube rotations.
 
+        Note: This rebuilds the dictionary each call since cube rotations
+        change which face each tracker points to. For performance-critical
+        loops, call once and reuse the returned dict.
+
         Returns:
             Dictionary mapping face names to their target colors.
 
         Example:
             {FaceName.F: Color.RED, FaceName.U: Color.WHITE, ...}
         """
+        # Always rebuild - trackers follow cube rotations so their .face changes
         face_colors: dict[FaceName, Color] = {}
         for tracker in self._trackers:
             face_colors[tracker.face.name] = tracker.color
         return face_colors
+
+    @property
+    def face_colors(self) -> dict[FaceName, Color]:
+        """Current face→color mapping (property shortcut for get_face_colors).
+
+        Note: Rebuilds the dictionary each call since cube rotations
+        change tracker face references. Cache locally for tight loops.
+        """
+        return self.get_face_colors()
 
     def get_face_color(self, face_name: FaceName) -> Color:
         """Get the target color for a specific face.
@@ -214,6 +229,33 @@ class FacesTrackerHolder:
             if tracker.color == color:
                 return tracker
         raise KeyError(f"No tracker for color {color}")
+
+    def part_match_faces(self, part: "Part") -> bool:
+        """Check if a part's colors match the tracker-assigned face colors.
+
+        Unlike Part.match_faces which uses actual center colors, this method
+        uses the tracker's face→color mapping. This is essential for even
+        cubes where only some centers are solved.
+
+        A part matches if every sticker's color equals the tracker's expected
+        color for the face that sticker is on.
+
+        Args:
+            part: The Part (Edge or Corner) to check.
+
+        Returns:
+            True if all part stickers match their face's tracker color.
+
+        Example:
+            If tracker says F→ORANGE and U→WHITE, then an edge at F-U
+            must have ORANGE sticker on F and WHITE sticker on U.
+        """
+        face_colors = self.face_colors  # Use cached dict
+        for edge in part._3x3_representative_edges:
+            expected_color = face_colors.get(edge.face.name)
+            if expected_color is None or edge.color != expected_color:
+                return False
+        return True
 
 
     def _trackers_layout(self) -> CubeLayout:

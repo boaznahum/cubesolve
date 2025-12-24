@@ -201,17 +201,27 @@ class LayerByLayerNxNSolver(BaseSolver):
         return all(e.is3x3 for e in l1_face.edges)
 
     def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:
-        """Check if Layer 1 cross is solved (edges paired AND in correct position)."""
+        """Check if Layer 1 cross is solved (edges paired AND in correct position).
+
+        Uses tracker's face→color mapping for even cubes where only L1 centers
+        are solved (other centers are still scrambled).
+        """
         if not self._is_layer1_edges_solved(th):
             return False
 
         l1_face = self._get_layer1_tracker(th).face
-        return all(e.match_faces for e in l1_face.edges)
+        # Use tracker colors instead of center colors for matching
+        return all(th.part_match_faces(e) for e in l1_face.edges)
 
     def _is_layer1_corners_solved(self, th: FacesTrackerHolder) -> bool:
-        """Check if all Layer 1 corners are in correct position with correct orientation."""
+        """Check if all Layer 1 corners are in correct position with correct orientation.
+
+        Uses tracker's face→color mapping for even cubes where only L1 centers
+        are solved (other centers are still scrambled).
+        """
         l1_face = self._get_layer1_tracker(th).face
-        return all(c.match_faces for c in l1_face.corners)
+        # Use tracker colors instead of center colors for matching
+        return all(th.part_match_faces(c) for c in l1_face.corners)
 
     def _is_layer1_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 is completely solved (centers + edges + corners)."""
