@@ -53,7 +53,7 @@ class LayerByLayerNxNSolver(BaseSolver):
     - Like Layer 1 but with restricted moves
     """
 
-    __slots__ = ["_nxn_edges"]
+    __slots__ = ["_nxn_edges", "_shadow_helper", "_tracker_holder"]
 
     def __init__(self, op: OperatorProtocol) -> None:
         """
@@ -73,9 +73,32 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         self._shadow_helper = ShadowCubeHelper(self)
 
+        # Persistent tracker holder - created once, reused for all operations
+        self._tracker_holder: FacesTrackerHolder | None = None
+
     # =========================================================================
     # Public properties/methods (Solver protocol order)
     # =========================================================================
+
+    @property
+    def tracker_holder(self) -> FacesTrackerHolder:
+        """Get or create the persistent tracker holder.
+
+        Creates trackers on first access and reuses them for all operations.
+        This ensures consistent face tracking throughout solving and status checks.
+        """
+        if self._tracker_holder is None:
+            self._tracker_holder = FacesTrackerHolder(self)
+        return self._tracker_holder
+
+    def cleanup_trackers(self) -> None:
+        """Clean up tracker marks from center slices.
+
+        Call this when done with the solver to remove tracking attributes.
+        """
+        if self._tracker_holder is not None:
+            self._tracker_holder.cleanup()
+            self._tracker_holder = None
 
     @property
     def get_code(self) -> SolverName:
@@ -87,23 +110,23 @@ class LayerByLayerNxNSolver(BaseSolver):
         if self.is_solved:
             return "Solved"
 
-        # Create temporary tracker for status checks (needed for even cubes)
-        with FacesTrackerHolder(self) as th:
-            layer1_done = self._is_layer1_solved(th)
+        # Use persistent tracker for status checks
+        th = self.tracker_holder
+        layer1_done = self._is_layer1_solved(th)
 
-            if layer1_done:
-                return "L1:Done"
+        if layer1_done:
+            return "L1:Done"
+        else:
+            # Check sub-steps
+            centers_done = self._is_layer1_centers_solved(th)
+            edges_done = self._is_layer1_edges_solved(th)
+
+            if centers_done and edges_done:
+                return "L1:Ctr+Edg"
+            elif centers_done:
+                return "L1:Ctr"
             else:
-                # Check sub-steps
-                centers_done = self._is_layer1_centers_solved(th)
-                edges_done = self._is_layer1_edges_solved(th)
-
-                if centers_done and edges_done:
-                    return "L1:Ctr+Edg"
-                elif centers_done:
-                    return "L1:Ctr"
-                else:
-                    return "L1:Pending"
+                return "L1:Pending"
 
     def supported_steps(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
@@ -131,27 +154,28 @@ class LayerByLayerNxNSolver(BaseSolver):
         if self.is_solved:
             return sr
 
-        # Create face tracker holder for center solving
-        with FacesTrackerHolder(self) as th:
-            match what:
-                case SolveStep.LBL_L1_Ctr:
-                    # Layer 1 centers only
-                    self._solve_layer1_centers(th)
+        # Use persistent tracker holder (created once, reused for all operations)
+        th = self.tracker_holder
 
-                case SolveStep.L1x:
-                    # Layer 1 cross (centers + edges paired + edges positioned)
-                    self._solve_layer1_centers(th)
-                    self._solve_layer1_edges(th)
-                    self._solve_layer1_cross(th)
+        match what:
+            case SolveStep.LBL_L1_Ctr:
+                # Layer 1 centers only
+                self._solve_layer1_centers(th)
 
-                case SolveStep.ALL | SolveStep.LBL_L1:
-                    # Layer 1 complete (centers + edges + corners)
-                    self._solve_layer1_centers(th)
-                    self._solve_layer1_edges(th)
-                    self._solve_layer1_corners(th)
+            case SolveStep.L1x:
+                # Layer 1 cross (centers + edges paired + edges positioned)
+                self._solve_layer1_centers(th)
+                self._solve_layer1_edges(th)
+                self._solve_layer1_cross(th)
 
-                case _:
-                    raise ValueError(f"Unsupported step: {what}")
+            case SolveStep.ALL | SolveStep.LBL_L1:
+                # Layer 1 complete (centers + edges + corners)
+                self._solve_layer1_centers(th)
+                self._solve_layer1_edges(th)
+                self._solve_layer1_corners(th)
+
+            case _:
+                raise ValueError(f"Unsupported step: {what}")
 
         return sr
 

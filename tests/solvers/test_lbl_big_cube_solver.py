@@ -251,10 +251,12 @@ def test_lbl_solver_even_cube_layer1(size: int) -> None:
     # Solve complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    # Use solver's persistent tracker (same one used during solving)
+    th = solver.tracker_holder
+    assert solver._is_layer1_solved(th), f"Even cube {size}x{size} Layer 1 should be solved"
 
-    with FacesTrackerHolder(solver) as th:
-        assert solver._is_layer1_solved(th), f"Even cube {size}x{size} Layer 1 should be solved"
+    # Cleanup trackers when done
+    solver.cleanup_trackers()
 
     print(f"\n  Even cube {size}x{size}: Layer 1 solved")
 
