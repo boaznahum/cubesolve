@@ -218,6 +218,8 @@ class SyncResult:
     file_stale: list[tuple[TodoFileEntry, dict]]  # (entry, closed_issue)
     file_status_mismatch: list[tuple[TodoFileEntry, dict, str]]  # (entry, issue, expected)
     file_synced: int
+    # Orphan issues (have 'todo' label but no source label)
+    orphan_issues: list[dict]  # GitHub issues with todo but no todo:code or todo:file
 
 
 def check_sync(
@@ -316,6 +318,16 @@ def check_sync(
         if issue_num not in file_issue_refs and issue.get('state') != 'CLOSED':
             file_missing_in_file.append(issue)
 
+    # Find orphan issues: have 'todo' label but no 'todo:code' or 'todo:file' label
+    orphan_issues: list[dict] = []
+    for issue_num, issue in github_with_todo_label.items():
+        if issue.get('state') == 'CLOSED':
+            continue
+        has_code_label = issue_num in github_with_code_label
+        has_file_label = issue_num in github_with_file_label
+        if not has_code_label and not has_file_label:
+            orphan_issues.append(issue)
+
     return SyncResult(
         code_missing_in_github=code_missing_in_github,
         code_missing_in_code=code_missing_in_code,
@@ -325,7 +337,8 @@ def check_sync(
         file_missing_in_file=file_missing_in_file,
         file_stale=file_stale,
         file_status_mismatch=file_status_mismatch,
-        file_synced=file_synced
+        file_synced=file_synced,
+        orphan_issues=orphan_issues
     )
 
 
@@ -387,6 +400,15 @@ def print_sync_report(sync_result: SyncResult) -> None:
         print(f"File: Status Mismatch ({len(sync_result.file_status_mismatch)}):")
         for entry, issue, expected in sync_result.file_status_mismatch:
             print(f"  {entry.file}:{entry.line} - [#{entry.issue_num}] {expected}")
+        print()
+
+    # === Orphan issues ===
+    if sync_result.orphan_issues:
+        has_issues = True
+        print(f"Orphan Issues ({len(sync_result.orphan_issues)}):")
+        print("  (have 'todo' label but missing 'todo:code' or 'todo:file' source label)")
+        for issue in sync_result.orphan_issues:
+            print(f"  #{issue['number']} \"{issue['title']}\"")
         print()
 
     # === Summary ===
@@ -537,7 +559,11 @@ def main() -> int:
                         for e, _, r in sync_result.file_status_mismatch
                     ],
                     'synced': sync_result.file_synced
-                }
+                },
+                'orphan_issues': [
+                    {'number': i['number'], 'title': i['title']}
+                    for i in sync_result.orphan_issues
+                ]
             }
             print(json.dumps(output, indent=2))
         else:
