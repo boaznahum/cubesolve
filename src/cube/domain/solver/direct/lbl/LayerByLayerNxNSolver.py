@@ -320,6 +320,14 @@ class LayerByLayerNxNSolver(BaseSolver):
         # Verify shadow cube is still valid after solving
         assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid after solving"
 
+        # Verify Layer 1 is actually solved on shadow cube
+        shadow_l1 = shadow_cube.color_2_face(self.config.first_face_color)
+        if what == SolveStep.L1x:
+            assert all(e.match_faces for e in shadow_l1.edges), "Shadow cube L1 cross not solved after solve_3x3"
+        elif what == SolveStep.L1:
+            assert all(e.match_faces for e in shadow_l1.edges), "Shadow cube L1 edges not solved after solve_3x3"
+            assert all(c.match_faces for c in shadow_l1.corners), "Shadow cube L1 corners not solved after solve_3x3"
+
     def _copy_state_to_shadow(self, shadow: "Cube", th: FacesTrackerHolder) -> None:
         """Copy corner/edge state from NxN cube to shadow 3x3."""
         # Get colors from NxN cube as 3x3 snapshot
