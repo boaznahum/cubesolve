@@ -111,7 +111,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         """
         return [
             SolveStep.LBL_L1_Ctr,   # Layer 1 centers only
-            SolveStep.LBL_L1_Edg,   # Layer 1 edges only
+            SolveStep.L1x,          # Layer 1 cross (centers + edges)
             SolveStep.LBL_L1,       # Layer 1 complete
         ]
 
@@ -123,7 +123,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         """Solve using Layer-by-Layer method.
 
         Args:
-            what: Which step to solve (ALL, LBL_L1, LBL_L1_Ctr, LBL_L1_Edg)
+            what: Which step to solve (ALL, LBL_L1, LBL_L1_Ctr, L1x)
         """
         sr = SolverResults()
 
@@ -137,8 +137,8 @@ class LayerByLayerNxNSolver(BaseSolver):
                     # Layer 1 centers only
                     self._solve_layer1_centers(th)
 
-                case SolveStep.LBL_L1_Edg:
-                    # Layer 1 edges (includes centers)
+                case SolveStep.L1x:
+                    # Layer 1 cross (centers + edges)
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
 
