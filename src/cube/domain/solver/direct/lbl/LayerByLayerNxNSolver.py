@@ -282,6 +282,9 @@ class LayerByLayerNxNSolver(BaseSolver):
         from cube.application.commands.DualOperator import DualOperator
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
+        # Verify source cube is valid before creating shadow
+        assert self.cube.is_sanity(force_check=True), "Source NxN cube invalid before shadow creation"
+
         # this is a copy of cage is doing, why not add an helper for shadow operations !!!
         # Create shadow 3x3 cube (includes sanity check via set_3x3_colors)
         shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
