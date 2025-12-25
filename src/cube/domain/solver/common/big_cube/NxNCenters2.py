@@ -6,12 +6,12 @@ from typing import Tuple, TypeAlias
 from cube.domain import algs
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model import CenterSlice, Color, FaceName
+from cube.domain.model import Color
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.tracker._base import FaceTracker
 from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.tracker._base import FaceTracker
 from cube.domain.solver.protocols import SolverElementsProvider
 
 Point: TypeAlias = Tuple[int, int]
@@ -149,7 +149,9 @@ class NxNCenters2(SolverElement):
             #claqude please document this method
         """
 
-        assert l1_white_tracker.face.center.is3x3 # solved
+        work_was_done: bool = False
+
+        assert l1_white_tracker.face.center.is3x3  # solved
         # now check is there slice on my target
         for rc in self._2d_center_row_slice_iter(slice_row_index):
             n_rotate = self._search_block(target_face.face, target_face.face, target_face.color,
@@ -172,24 +174,25 @@ class NxNCenters2(SolverElement):
 
                 original_face = target_face.face
 
-                  # setup again
+                # setup again
                 self.cmn.bring_face_front(temp_target_face.face)
-
 
                 if target_face.face is self.cube.back:
                     print("how can it be")
 
-
                 self.cmn.bring_face_up_preserve_front(target_face.face)
 
-                self._block_communicator(target_face.color,
-                                         temp_target_face.face,
-                                         target_face.face,
-                                         rc, rc,
-                                         _SearchBlockMode.CompleteBlock)
+                if self._block_communicator(target_face.color,
+                                            temp_target_face.face,
+                                            target_face.face,
+                                            rc, rc,
+                                            _SearchBlockMode.CompleteBlock):
+                    work_was_done = True
 
                 # we destroy it
                 assert l1_white_tracker.face.center.is3x3  # solved
+
+        return work_was_done
 
     def _solve_single_center_piece_from_source_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                     source_face: FaceTracker,
@@ -206,7 +209,27 @@ class NxNCenters2(SolverElement):
         :return: True if work was done
         """
 
-        self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, source_face, slice_row_index)
+        max_iter = 100
+        iter = 0
+
+        while True:
+            iter += 1
+            if iter > max_iter:
+                raise InternalSWError(f"Maximum number of iterations reached")
+
+            work_was_done = self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, source_face,
+                                                                     slice_row_index)
+
+            if self._solve_single_center_piece_from_source_face_impl(l1_white_tracker, target_face, source_face,
+                                                                     slice_row_index):
+                work_was_done = True
+
+            if not work_was_done:
+                break
+
+    def _solve_single_center_piece_from_source_face_impl(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
+                                                         source_face: FaceTracker,
+                                                         slice_row_index: int) -> bool:
 
         self.cmn.bring_face_front(target_face.face)
 
