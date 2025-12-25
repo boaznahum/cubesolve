@@ -110,10 +110,15 @@ to the correct face for that color.
 CLEANUP: After solving, these tracker marks must be removed (cleanup_trackers).
 """
 
+from __future__ import annotations
+
 from collections.abc import Collection, Iterable, Sequence
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
 
 from cube.domain.model import CenterSlice, Color
+
+if TYPE_CHECKING:
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
@@ -211,11 +216,11 @@ class NxNCentersFaceTrackers(SolverElement):
 
         return MarkedFaceTracker(cube, parent_container, _slice.color, key)
 
-    def _create_tracker_by_color(self, face: Face, color: Color) -> MarkedFaceTracker:
+    def _create_tracker_by_color(self, parent_container: FacesTrackerHolder, face: Face, color: Color) -> MarkedFaceTracker:
         """Find slice with color on face and create tracker for it."""
         _slice = face.cube.cqr.find_slice_in_face_center(face, lambda s: s.color == color)
         assert _slice
-        return self._create_tracker_by_center_piece(_slice)
+        return self._create_tracker_by_center_piece(parent_container, _slice)
 
     def _create_tracker_odd(self, parent_container: FacesTrackerHolder, f: Face) -> SimpleFaceTracker:
         """Create tracker for odd cube using fixed center."""
@@ -229,7 +234,7 @@ class NxNCentersFaceTrackers(SolverElement):
         def pred(_f: Face) -> bool:
             return _f.center.get_center_slice(rc).color == color
 
-        return self._create_tracker(color, pred)
+        return self._create_tracker(parent_container, color, pred)
 
     # =========================================================================
     # Tracker creation for BOY layout
@@ -266,12 +271,12 @@ class NxNCentersFaceTrackers(SolverElement):
         """
         cube = self.cube
         if cube.n_slices % 2:
-            return self._create_tracker_odd(cube.front)
+            return self._create_tracker_odd(parent_container, cube.front)
         else:
             f, c = self._find_face_with_max_colors()
-            return self._create_tracker_by_color(f, c)
+            return self._create_tracker_by_color(parent_container, f, c)
 
-    def _track_no_3(self, two_first: Sequence[FaceTracker]) -> FaceTracker:
+    def _track_no_3(self, parent_container: FacesTrackerHolder, two_first: Sequence[FaceTracker]) -> FaceTracker:
         """Create tracker for face 3 - highest majority from remaining faces/colors.
 
         After faces 1 and 2 are assigned (face 2 = opposite of face 1),
@@ -309,6 +314,7 @@ class NxNCentersFaceTrackers(SolverElement):
         At least one face among them MUST have pieces of an unused color.
 
         Args:
+            parent_container: The FacesTrackerHolder that owns this tracker.
             two_first: Trackers for faces 1 and 2.
 
         Returns:
@@ -336,9 +342,9 @@ class NxNCentersFaceTrackers(SolverElement):
         # because f1, f2 contains only 1/3 of all pieces
         f3, f3_color = self._find_face_with_max_colors(left, left_colors)
 
-        return self._create_tracker_by_color(f3, f3_color)
+        return self._create_tracker_by_color(parent_container, f3, f3_color)
 
-    def _track_two_last(self, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
+    def _track_two_last(self, parent_container: FacesTrackerHolder, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
         """Create trackers for faces 5 and 6 - the final BOY-constrained assignment.
 
         After 4 faces are assigned, we have:
@@ -382,6 +388,7 @@ class NxNCentersFaceTrackers(SolverElement):
         We try one, verify with CubeLayout, and use the other if invalid.
 
         Args:
+            parent_container: The FacesTrackerHolder that owns this tracker.
             four_first: Trackers for faces 1-4.
 
         Returns:
@@ -417,7 +424,7 @@ class NxNCentersFaceTrackers(SolverElement):
             pred = self._create_f5_pred(four_first, color)
             assert pred(f5)
 
-        f5_track = self._create_tracker(color, pred)
+        f5_track = self._create_tracker(parent_container, color, pred)
         f6_track = f5_track._track_opposite()
 
         return f5_track, f6_track

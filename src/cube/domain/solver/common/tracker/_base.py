@@ -17,6 +17,8 @@ SimpleFaceTracker is used for trackers that don't mark slices:
 MarkedFaceTracker is used when a center slice is marked with a tracking key.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
@@ -26,10 +28,10 @@ from cube.domain.model import CenterSlice, Color
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.model.PartEdge import PartEdge
-from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 # Key prefix for tracker markers in c_attributes
 # Format: "_nxn_centers_track:h{holder_id}:{color}{unique_id}"

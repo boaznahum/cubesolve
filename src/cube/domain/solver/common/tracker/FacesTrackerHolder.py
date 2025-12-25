@@ -150,9 +150,9 @@ class FacesTrackerHolder:
             # EVEN CUBE - trackers mark center slices for majority color
             t1 = factory.track_no_1(parent_container)
             t2 = t1._track_opposite()
-            t3 = factory._track_no_3([t1, t2])
+            t3 = factory._track_no_3(parent_container, [t1, t2])
             t4 = t3._track_opposite()
-            t5, t6 = factory._track_two_last([t1, t2, t3, t4])
+            t5, t6 = factory._track_two_last(parent_container, [t1, t2, t3, t4])
 
             return [t1, t2, t3, t4, t5, t6]
 
