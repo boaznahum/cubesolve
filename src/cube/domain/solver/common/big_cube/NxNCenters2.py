@@ -1,5 +1,6 @@
 import sys
 from collections.abc import Iterator
+from contextlib import contextmanager
 from enum import Enum, unique
 from typing import Tuple, TypeAlias
 
@@ -188,6 +189,38 @@ class NxNCenters2(SolverElement):
 
         print()
 
+    def _position_l1_and_target(self, l1_white_tracker: FaceTracker, target_face: FaceTracker):
+        """Position L1 down and target face to front."""
+        assert target_face is not l1_white_tracker
+        assert target_face is not l1_white_tracker.opposite
+
+        self.cmn.bring_face_down(l1_white_tracker.face)
+        self.cmn.bring_face_front_preserve_down(target_face.face)
+
+        assert l1_white_tracker.face is self.cube.down
+        assert target_face.face is self.cube.front
+
+
+    @contextmanager
+    def _track_row_slices(self, target_face: FaceTracker, slice_index: int):
+        """Track center slices in a row, cleanup on exit."""
+        for rc in self._2d_center_row_slice_iter(slice_index):
+            slice_piece = target_face.face.center.get_center_slice(rc)
+            self._tracke_center_slice(slice_piece, rc[1])
+        try:
+            yield
+        finally:
+            self._clear_all_tracking()
+
+    @contextmanager
+    def _setup_l1_and_target_and_track_slices(self, l1_white_tracker: FaceTracker,
+                                               target_face: FaceTracker, slice_index: int):
+        """Combined: position faces AND track slices."""
+        self._position_l1_and_target(l1_white_tracker, target_face)
+        with self._track_row_slices(target_face, slice_index):
+            yield
+
+
     def _remove_all_pieces_from_target_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                             source_face: FaceTracker,
                                             slice_row_index: int) -> bool:
@@ -196,6 +229,7 @@ class NxNCenters2(SolverElement):
         """
 
         return False
+
 
         work_was_done: bool = False
 
@@ -244,29 +278,6 @@ class NxNCenters2(SolverElement):
 
         return work_was_done
 
-    def _setup_slices_on_target_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int):
-
-        # we alwas want same position, we assume on front 0 .. n-1 ileft to right to left and botton up
-
-        assert target_face is not l1_white_tracker
-        assert target_face is not l1_white_tracker.opposite
-
-        self.cmn.bring_face_down(l1_white_tracker.face)
-        self.cmn.bring_face_front_preserve_down(target_face.face)
-
-        if not (l1_white_tracker.face is self.cube.down) :
-            self.cmn.bring_face_down(l1_white_tracker.face)
-            self.cmn.bring_face_front_preserve_down(target_face.face)
-
-        assert l1_white_tracker.face is self.cube.down
-        assert target_face.face is self.cube.front
-
-        # now collect indices always in same position
-        # boaz: we can hide it under query !!!
-        for rc in self._2d_center_row_slice_iter(slice_index):
-            slice_pice = target_face.face.center.get_center_slice(rc)
-
-            self._tracke_center_slice(slice_pice, rc[1])
 
     def _solve_single_center_piece_from_source_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                     source_face: FaceTracker,
@@ -284,10 +295,7 @@ class NxNCenters2(SolverElement):
         """
 
 
-        # claude: convert it context manager
-        self._setup_slices_on_target_face(l1_white_tracker, target_face, slice_row_index)
-
-        try:
+        with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
 
             self._print_all_tracked_slices(f"before working on {slice_row_index}")
 
@@ -295,11 +303,11 @@ class NxNCenters2(SolverElement):
 
             # maybe not need iterations
             max_iter = 10
-            iter = 0
+            iter_count = 0
 
             while True:
-                iter += 1
-                if iter > max_iter:
+                iter_count += 1
+                if iter_count > max_iter:
                     raise InternalSWError(f"Maximum number of iterations reached")
 
                 work_was_done = self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, source_face,
@@ -312,12 +320,7 @@ class NxNCenters2(SolverElement):
                 if not work_was_done:
                     break
 
-
-        finally:
-
-            self._clear_all_tracking()
-
-        return work_was_done
+            return work_was_done
 
     def _solve_single_center_piece_from_source_face_impl(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                          source_face: FaceTracker,
