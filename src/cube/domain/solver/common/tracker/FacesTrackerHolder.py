@@ -29,7 +29,7 @@ Or manually:
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Iterable
 from typing import TYPE_CHECKING
 
 from cube.domain.model import CenterSlice, Color
@@ -136,22 +136,22 @@ class FacesTrackerHolder:
             assert len(trackers) == 6, f"Expected 6 trackers, got {len(trackers)}"
             self._trackers = trackers
         else:
-            self._trackers = self._create_trackers(slv)
+            self._trackers = self._create_trackers(self, slv)
 
-    def _create_trackers(self, slv: SolverElementsProvider) -> list[FaceTracker]:
+    def _create_trackers(self, parent_container: FacesTrackerHolder, slv: SolverElementsProvider) -> list[FaceTracker]:
         """Create the 6 face trackers using NxNCentersFaceTrackers factory."""
         cube = self._cube
         factory = NxNCentersFaceTrackers(slv, self._holder_id)
 
         if not self._is_even:
             # ODD CUBE - simple trackers using fixed center color
-            return [factory._create_tracker_odd(f) for f in cube.faces]
+            return [factory._create_tracker_odd(self, f) for f in cube.faces]
         else:
             # EVEN CUBE - trackers mark center slices for majority color
-            t1 = factory.track_no_1()
-            t2 = t1.track_opposite()
+            t1 = factory.track_no_1(parent_container)
+            t2 = t1._track_opposite()
             t3 = factory._track_no_3([t1, t2])
-            t4 = t3.track_opposite()
+            t4 = t3._track_opposite()
             t5, t6 = factory._track_two_last([t1, t2, t3, t4])
 
             return [t1, t2, t3, t4, t5, t6]
@@ -305,6 +305,19 @@ class FacesTrackerHolder:
             if expected_color is None or edge.color != expected_color:
                 return False
         return True
+
+    def adjusted_faces(self, of_face: FaceTracker) -> Iterable[FaceTracker]:
+        # boaz: improve this
+
+        l1_opposite_face = of_face.face.opposite
+        return [t for t in self.trackers
+                if t.face is not of_face.face and t.face is not l1_opposite_face]
+
+    def other_faces(self, of_face: FaceTracker) -> Iterable[FaceTracker]:
+        # boaz: improve this
+
+        return [t for t in self.trackers
+                if t.face is not of_face.face ]
 
 
     def _trackers_layout(self) -> CubeLayout:

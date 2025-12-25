@@ -52,6 +52,10 @@ class SolverElement(CubeSupplier):
         return self._cube
 
     @property
+    def n_slices(self) -> int:
+        return self._cube.n_slices
+
+    @property
     def cqr(self) -> CubeQueries2:
         return self._cqr
 

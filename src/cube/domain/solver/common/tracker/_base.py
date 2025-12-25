@@ -18,12 +18,15 @@ MarkedFaceTracker is used when a center slice is marked with a tracking key.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
+from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.model import CenterSlice, Color
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.model.PartEdge import PartEdge
+from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -55,11 +58,12 @@ class FaceTracker(ABC):
     For holder-specific operations, use the instance methods.
     """
 
-    __slots__ = ["_cube", "_color"]
+    __slots__ = ["_cube", "_color", "_parent"]
 
-    def __init__(self, cube: "Cube", color: Color) -> None:
+    def __init__(self, cube: "Cube", parent: FacesTrackerHolder, color: Color) -> None:
         self._cube = cube
         self._color = color
+        self._parent = parent
 
     @property
     @abstractmethod
@@ -82,14 +86,14 @@ class FaceTracker(ABC):
         """Remove any marks this tracker created. Abstract - must be implemented."""
         pass
 
-    def track_opposite(self) -> "SimpleFaceTracker":
+    def _track_opposite(self) -> "SimpleFaceTracker":
         """Create tracker for the opposite face."""
         second_color = self._cube.original_layout.opposite_color(self._color)
 
         def _pred(_f: Face) -> bool:
             return _f.opposite is self.face
 
-        return SimpleFaceTracker(self._cube, second_color, _pred)
+        return SimpleFaceTracker(self._cube, self.parent, second_color, _pred)
 
     @staticmethod
     def is_track_slice(s: CenterSlice) -> bool:
@@ -151,6 +155,26 @@ class FaceTracker(ABC):
                 return value  # Value is the Color enum
         return None
 
+    @property
+    def parent(self) -> FacesTrackerHolder:
+        return self._parent
+
+
+    def other_faces(self) -> Iterable[FaceTracker]:
+        # boaz: improve this
+
+        return [t for t in self.parent.trackers
+                if t.face is not self.face]
+
+    @property
+    def opposite(self) -> FaceTracker:
+        # boaz: improve it
+        for t in self.parent.trackers:
+            if t.face.opposite is self.face:
+                return t
+
+        raise InternalSWError(f"Cant find opposite for {self} in {self.parent.trackers} ")
+
 
 class SimpleFaceTracker(FaceTracker):
     """Tracker that doesn't mark slices. No cleanup needed.
@@ -165,8 +189,8 @@ class SimpleFaceTracker(FaceTracker):
 
     __slots__ = ["_pred"]
 
-    def __init__(self, cube: "Cube", color: Color, pred: Pred[Face]) -> None:
-        super().__init__(cube, color)
+    def __init__(self, cube: "Cube", parent: FacesTrackerHolder, color: Color, pred: Pred[Face]) -> None:
+        super().__init__(cube, parent, color)
         self._pred = pred
 
     @property
@@ -191,13 +215,14 @@ class MarkedFaceTracker(FaceTracker):
 
     __slots__ = ["_key"]
 
-    def __init__(self, cube: "Cube", color: Color, key: str) -> None:
-        super().__init__(cube, color)
+    def __init__(self, cube: "Cube", parent: FacesTrackerHolder, color: Color, key: str) -> None:
+        super().__init__(cube, parent, color)
         self._key = key
 
     @property
     def face(self) -> Face:
         """Find face containing the marked slice."""
+
         def _slice_pred(s: CenterSlice) -> bool:
             return self._key in s.edge.c_attributes
 

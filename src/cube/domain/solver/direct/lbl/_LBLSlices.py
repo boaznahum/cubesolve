@@ -20,9 +20,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cube.domain.model.cube_boy import Color
+from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.tracker._base import FaceTracker
-from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
+from cube.domain.solver.common.big_cube.NxNCenters2 import NxNCenters2
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 
 if TYPE_CHECKING:
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 
 
-class _LBLSlices:
+class _LBLSlices(SolverElement):
     """Helper for solving middle slices in layer-by-layer method.
 
     Wraps NxNCenters and NxNEdges with slice-based operations.
@@ -44,6 +45,9 @@ class _LBLSlices:
     __slots__ = ["_slv", "_centers", "_edges"]
 
     def __init__(self, slv: SolverElementsProvider) -> None:
+
+        super().__init__(slv)
+
         """Create LBL slices helper.
 
         Args:
@@ -51,15 +55,11 @@ class _LBLSlices:
         """
         self._slv = slv
         # preserve_cage=True to preserve Layer 1 edges during center solving
-        self._centers = NxNCenters(slv, preserve_cage=True)
+        self._centers = NxNCenters2(slv, preserve_cage=True)
         self._edges = NxNEdges(slv, advanced_edge_parity=False)
 
     @property
-    def cube(self) -> Cube:
-        return self._slv.cube
-
-    @property
-    def centers(self) -> NxNCenters:
+    def centers(self) -> NxNCenters2:
         """Access to NxNCenters helper."""
         return self._centers
 
@@ -67,11 +67,6 @@ class _LBLSlices:
     def edges(self) -> NxNEdges:
         """Access to NxNEdges helper."""
         return self._edges
-
-    @property
-    def n_slices(self) -> int:
-        """Number of middle slices (n-2 for NxN cube)."""
-        return self.cube.n_slices
 
     # =========================================================================
     # Coordinate conversion
@@ -101,7 +96,7 @@ class _LBLSlices:
     # =========================================================================
 
     def get_side_face_trackers(
-        self, th: FacesTrackerHolder, l1_tracker: FaceTracker
+            self, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> list[FaceTracker]:
         """Get trackers for side faces (not Layer 1 or its opposite).
 
@@ -121,7 +116,7 @@ class _LBLSlices:
     # =========================================================================
 
     def is_slice_centers_solved(
-        self, slice_index: int, th: FacesTrackerHolder, l1_tracker: FaceTracker
+            self, slice_index: int, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> bool:
         """Check if all ring centers for a specific slice are solved.
 
@@ -147,7 +142,7 @@ class _LBLSlices:
         return True
 
     def count_solved_slice_centers(
-        self, th: FacesTrackerHolder, l1_tracker: FaceTracker
+            self, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> int:
         """Count how many slices have their ring centers solved (from bottom up).
 
@@ -167,7 +162,7 @@ class _LBLSlices:
     # =========================================================================
 
     def solve_slice_centers(
-        self, slice_index: int, th: FacesTrackerHolder, l1_tracker: FaceTracker
+            self, slice_index: int, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> None:
         """Solve ring centers for a single slice.
 
@@ -188,6 +183,7 @@ class _LBLSlices:
         row = self.slice_to_row(slice_index)
         ann = self._slv.op.annotation
 
+        #boaz: it may related to cube orinatation
         if self.is_slice_centers_solved(slice_index, th, l1_tracker):
             return
 
@@ -210,33 +206,10 @@ class _LBLSlices:
             self._report_stuck(slice_index, row, side_trackers)
 
     def _solve_face_row_simple(
-        self, face_tracker: FaceTracker, row: int, slice_index: int
+            self, face_tracker: FaceTracker, row: int, slice_index: int
     ) -> None:
-        """Solve one face's center using the existing NxNCenters method.
 
-        Uses _do_center which properly:
-        1. Brings target face to front
-        2. Rotates through all 4 adjacent faces to UP
-        3. Uses BACK if use_back_too=True
-        4. Undoes rotations to preserve cage
-
-        Args:
-            face_tracker: Face to solve
-            row: Row index to solve (unused - we solve entire center)
-            slice_index: Slice index (for annotations)
-        """
-        target_color = face_tracker.color
-
-        # Skip if face center already solved
-        if self._centers._is_face_solved(face_tracker.face, target_color):
-            return
-
-        # Use the existing _do_center method which properly handles:
-        # - Bringing face to front
-        # - Rotating through adjacent faces
-        # - Using BACK as source
-        # - Undoing rotations (preserve_cage)
-        self._centers._do_center(face_tracker, False, True)
+        self._centers.solve_single_center_row_slice(face_tracker, slice_index)
 
     def _is_face_row_solved(self, face: Face, row: int, target_color: Color) -> bool:
         """Check if a specific row on a face has all correct colors."""
@@ -246,7 +219,7 @@ class _LBLSlices:
         return True
 
     def _report_stuck(
-        self, slice_index: int, row: int, side_trackers: list[FaceTracker]
+            self, slice_index: int, row: int, side_trackers: list[FaceTracker]
     ) -> None:
         """Report which face is stuck and show state."""
         for face_tracker in side_trackers:
@@ -268,7 +241,7 @@ class _LBLSlices:
                 )
 
     def solve_all_slice_centers(
-        self, th: FacesTrackerHolder, l1_tracker: FaceTracker
+            self, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> None:
         """Solve all middle slice ring centers (bottom to top).
 
@@ -284,14 +257,6 @@ class _LBLSlices:
         l1_face = l1_tracker.face
         cube = self.cube
         op = self._slv.op
-
-
-        if l1_face is cube.up:
-            #claud: if this is preconditon and i dont understand why then it mus tbe takenn in th einner methods
-            # also there methods to bring face down, please xpalin why you need it
-            # Flip cube: Layer 1 is on UP, need it on DOWN
-            op.play(Algs.X * 2)  # 180 degree rotation around X axis
-            print(f"     Flipped cube: Layer 1 now on DOWN")
 
         # Solve all slices from bottom to top
         if True:

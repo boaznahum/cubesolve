@@ -187,11 +187,11 @@ class NxNCentersFaceTrackers(SolverElement):
     # Factory methods - create FaceTrackers using self._holder_id
     # =========================================================================
 
-    def _create_tracker(self, color: Color, pred: Pred[Face]) -> SimpleFaceTracker:
+    def _create_tracker(self, parent_container: "FacesTrackerHolder", color: Color, pred: Pred[Face]) -> SimpleFaceTracker:
         """Create a SimpleFaceTracker."""
-        return SimpleFaceTracker(self.cube, color, pred)
+        return SimpleFaceTracker(self.cube, parent_container, color, pred)
 
-    def _create_tracker_by_center_piece(self, _slice: CenterSlice) -> MarkedFaceTracker:
+    def _create_tracker_by_center_piece(self, parent_container: "FacesTrackerHolder",_slice: CenterSlice) -> MarkedFaceTracker:
         """Mark a center slice and create a MarkedFaceTracker for it.
 
         Returns MarkedFaceTracker which stores the key for cleanup.
@@ -209,7 +209,7 @@ class NxNCentersFaceTrackers(SolverElement):
         if cube.config.solver_annotate_trackers:
             viewer_add_view_marker(edge.c_attributes, VMarker.C0)
 
-        return MarkedFaceTracker(cube, _slice.color, key)
+        return MarkedFaceTracker(cube, parent_container, _slice.color, key)
 
     def _create_tracker_by_color(self, face: Face, color: Color) -> MarkedFaceTracker:
         """Find slice with color on face and create tracker for it."""
@@ -217,7 +217,7 @@ class NxNCentersFaceTrackers(SolverElement):
         assert _slice
         return self._create_tracker_by_center_piece(_slice)
 
-    def _create_tracker_odd(self, f: Face) -> SimpleFaceTracker:
+    def _create_tracker_odd(self, parent_container: FacesTrackerHolder, f: Face) -> SimpleFaceTracker:
         """Create tracker for odd cube using fixed center."""
         cube = f.cube
         n_slices = cube.n_slices
@@ -235,7 +235,7 @@ class NxNCentersFaceTrackers(SolverElement):
     # Tracker creation for BOY layout
     # =========================================================================
 
-    def track_no_1(self) -> FaceTracker:
+    def track_no_1(self, parent_container: "FacesTrackerHolder") -> FaceTracker:
         """Create tracker for face 1 - the face with highest majority color.
 
         ODD CUBE:
@@ -262,6 +262,7 @@ class NxNCentersFaceTrackers(SolverElement):
 
         Returns:
             FaceTracker for face 1 with its assigned color.
+            :param container:
         """
         cube = self.cube
         if cube.n_slices % 2:
@@ -417,7 +418,7 @@ class NxNCentersFaceTrackers(SolverElement):
             assert pred(f5)
 
         f5_track = self._create_tracker(color, pred)
-        f6_track = f5_track.track_opposite()
+        f6_track = f5_track._track_opposite()
 
         return f5_track, f6_track
 

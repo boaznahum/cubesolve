@@ -126,9 +126,7 @@ class CommonOp:
 
         #new todo use cube.application.commands.Operator.Operator.with_query_restore_state
 
-
         warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
-
 
         n = 0
         cube = self.cube
@@ -165,7 +163,6 @@ class CommonOp:
                 return alg * n
         else:
             return None
-
 
     @deprecated("Use CubeQueries2 instead")
     def rotate_face_and_check(self, f: Face, pred: Callable[[], bool]) -> int:
@@ -229,10 +226,6 @@ class CommonOp:
                 return alg * n
         else:
             return None
-
-
-
-
 
     def rotate_till(self, alg: Alg, pred: Callable[[], bool]) -> int:
         """
@@ -321,12 +314,11 @@ class CommonOp:
 
                 self.op.play(alg)
 
-
-
     def bring_face_front(self, f: Face):
 
         """
         By Whole cube rotation
+        #claude: dcumnet it nicely like above
         :param f:
         :return:
         """
@@ -357,6 +349,44 @@ class CommonOp:
                     case _:
                         raise InternalSWError(f"Unknown face {f}")
 
+    def bring_face_up_preserve_front(self, f: Face) -> None:
+
+        #claude: documnet it like niceother whole cube roatation
+        if f.name != FaceName.U:
+
+            self.debug("Need to bring ", f, 'to', FaceName.U)
+
+
+            front = self.cube.front
+
+            with self.ann.annotate(h2=f"Bringing face preserve front{f.name.value} up"):
+
+                alg: Alg
+
+                match f.name:
+
+                    case FaceName.F:
+                        raise InternalSWError(f"You cannot bring front  {f} up and preserve front{f.name.value} ")
+
+                    case FaceName.B:
+                        raise InternalSWError(f"You cannot bring back {f} up and preserve front{f.name.value} ")
+
+                    case FaceName.D:
+                        alg = Algs.X * 2
+
+                    case FaceName.L:
+                        alg = Algs.X
+
+                    case FaceName.R:
+                        alg = Algs.X.prime
+
+                    case _:
+                        raise InternalSWError(f"Unknown face {f}")
+
+                self.op.play(alg)
+
+                assert self.cube.front is front
+                assert self.cube.up is f
 
     def bring_edge_to_front_by_e_rotate(self, edge: Edge) -> Alg | None:
         """

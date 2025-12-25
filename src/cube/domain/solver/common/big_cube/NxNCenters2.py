@@ -109,9 +109,9 @@ class NxNCenters2(SolverElement):
     """
 
     def __init__(
-        self,
-        slv: SolverElementsProvider,
-        preserve_cage: bool = False,
+            self,
+            slv: SolverElementsProvider,
+            preserve_cage: bool = False,
     ) -> None:
         """
         Initialize the center solver.
@@ -154,7 +154,8 @@ class NxNCenters2(SolverElement):
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
 
     def debug(self, *args, level=3):
-        if level <= NxNCenters.D_LEVEL:
+        # fix use debug
+        if level <= NxNCenters2.D_LEVEL:
             super().debug("NxX Centers:", args)
 
     def _is_solved(self):
@@ -171,132 +172,6 @@ class NxNCenters2(SolverElement):
         """
 
         return self._is_solved()
-
-    def solve(self, holder: FacesTrackerHolder) -> None:
-        """
-        Solve all centers using the provided face tracker holder.
-
-        The holder provides face trackers that map faces to target colors.
-        Cleanup of tracker slices is handled by the holder's context manager,
-        NOT by this method.
-
-        Args:
-            holder: FaceTrackerHolder containing trackers for each face.
-                    The caller is responsible for cleanup via context manager.
-        """
-        if self._is_solved():
-            return  # avoid rotating cube
-
-        with self.ann.annotate(h1="Big cube centers"):
-            self._solve(holder)
-
-    def solve_single_face(self, holder: FacesTrackerHolder, target_tracker: FaceTracker) -> None:
-        """
-        Solve centers for a single target face only.
-
-        Used by layer-by-layer solver to solve one face at a time.
-
-        Args:
-            holder: FaceTrackerHolder containing trackers for all faces
-                    (needed to know face colors and for source pieces).
-            target_tracker: FaceTracker for the target face (tracks by color).
-        """
-        target_face = target_tracker.face
-        if self._is_face_solved(target_face, target_tracker.color):
-            return
-
-        with self.ann.annotate(h1=f"Centers for {target_tracker.color.name}"):
-            # Get all trackers for sanity checking
-            all_faces: list[FaceTracker] = list(holder)
-
-            # Solve only the target face
-            while True:
-                if not self._do_faces([target_tracker], False, False):
-                    break
-                self._asserts_is_boy(all_faces)
-
-            self._asserts_is_boy(all_faces)
-
-            # Final pass with back face too
-            self._do_faces([target_tracker], False, True)
-
-            self._asserts_is_boy(all_faces)
-
-    def _solve(self, holder: FacesTrackerHolder) -> None:
-        """
-        Main solving algorithm - uses provided face trackers to solve all centers.
-
-        FACE TRACKERS (provided by holder):
-        ===================================
-        - Odd cubes: Face color = fixed center piece color (simple)
-        - Even cubes: Face color determined by majority color counting
-
-        The holder is created by the caller at solve-time (not at construction),
-        ensuring the cube state is correct when trackers are initialized.
-
-        PERFORMANCE NOTE:
-        =================
-        Because the holder is created at solve-time rather than during face-by-face
-        solving, even cube trackers use majority color counting on the initial state.
-        This may be slightly less accurate than tracking colors as faces are solved,
-        but simplifies the code and ownership model significantly.
-        """
-        faces: list[FaceTracker] = list(holder)
-
-        #self._faces = faces
-
-        self._asserts_is_boy(faces)
-
-        #    self._trackers._debug_print_track_slices("After creating all faces")
-
-            # now each face has at least one color, so
-
-        # SPECIAL_CASE_1
-        # A rare case here, when use_back_too is false and complete slice is enabled
-        # We have two slices, that have no source other on of the other and on back(but back is not is used)
-        # These sources are on the same slice S
-        # Face RED finds two colors on S
-        # Face Orange finds two colors S
-        # what happens is that RED takes slice from ORANGE
-        # then ORANGE take from RED, infinite loop
-        # It is very rare:
-        #   there should be empty target slice in the target face (see config)
-        #   this slice is swapped, and not filled by other step(becuase it's sources are on back)
-        # To overcome it we swap only if number sources is > n//2
-        while True:
-            if not self._do_faces(faces, False, False):
-                break
-            self._asserts_is_boy(faces)
-
-        self._asserts_is_boy(faces)
-
-        self._do_faces(faces, False, True)
-
-        self._asserts_is_boy(faces)
-
-        assert self._is_solved()
-
-    def _do_faces(self, faces: Sequence[FaceTracker], minimal_bring_one_color, use_back_too: bool) -> bool:
-        # while True:
-        self.debug("_do_faces:", *faces)
-        work_done = False
-        for f in faces:
-            # we must trace faces, because they are moved by algorith
-            # we need to locate the face by original_color, b ut on odd cube, the color is of the center
-            if self._do_center(f, minimal_bring_one_color, use_back_too):
-                work_done = True
-                if len(faces) == 6:
-                    self._asserts_is_boy(faces)
-            # if NxNCenters.work_on_b or not work_done:
-            #     break
-
-        return work_done
-
-    # def _print_faces(self):
-    #
-    #     for f in self._faces:
-    #         print(f.face, f.color, " ", end="")
-    #     print()
 
     # noinspection PyUnreachableCode,PyUnusedLocal
     def _asserts_is_boy(self, faces: Iterable[FaceTracker]):
@@ -316,238 +191,102 @@ class NxNCenters2(SolverElement):
 
         assert is_boy
 
-    def _do_center(self, face_loc: FaceTracker, minimal_bring_one_color, use_back_too: bool) -> bool:
+    def solve_single_center_row_slice(
+            self, face_tracker: FaceTracker, row_slice_index: int
+    ) -> None:
 
-        if self._is_face_solved(face_loc.face, face_loc.color):
-            self.debug(f"Face is already done {face_loc.face}",
-                       level=1)
-            return False
-
-        color = face_loc.color
-
-        if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
-            self.debug(f"{face_loc.face} already has at least one {color}")
-            return False
-
-        sources:Set[Face] = OrderedSet(self.cube.faces) - {face_loc.face}
-        if not use_back_too:
-            sources -= {face_loc.face.opposite}
-
-        if all(not self._has_color_on_face(f, color) for f in sources):
-            self.debug(f"For face {face_loc.face}, No color {color} available on  {sources}",
-                       level=1)
-            return False
-
-        self.debug(f"Need to work on {face_loc.face}",
-                   level=1)
-
-        work_done = self.__do_center(face_loc, minimal_bring_one_color, use_back_too)
-
-        self.debug(f"After working on {face_loc.face} {work_done=}, "
-                   f"solved={self._is_face_solved(face_loc.face, face_loc.color)}",
-                   level=1)
-
-        return work_done
-
-    def __do_center(self, face_loc: FaceTracker, minimal_bring_one_color: bool, use_back_too: bool) -> bool:
         """
-        Process one face - bring correct colored pieces from adjacent faces.
 
-        CAGE METHOD (preserve_cage=True):
-        =================================
-        Tracks all _bring_face_up_preserve_front rotations and undoes them before return.
+        Uses _do_center which properly:
+        1. Brings target face to front
+        2. Rotates through all 4 adjacent faces to UP
+        3. Uses BACK if use_back_too=True
+        4. Undoes rotations to preserve cage
 
-        WHY THIS MATTERS - VISUAL EXAMPLE:
-        -----------------------------------
-        Initial cube orientation (looking at front):
-
-            ┌───┐
-            │ U │  <- UP face (source)
-        ┌───┼───┼───┐
-        │ L │ F │ R │  <- FRONT face (target), LEFT, RIGHT
-        └───┼───┼───┘
-            │ D │  <- DOWN face
-            └───┘
-
-        The algorithm loops through L, D, R faces, bringing each to UP:
-        - Iteration 1: Process UP (already up)
-        - Iteration 2: B'[1:n] -> brings LEFT to UP
-        - Iteration 3: B'[1:n] -> brings DOWN to UP
-        - Iteration 4: B'[1:n] -> brings RIGHT to UP (now done)
-
-        After 3 B'[1:n] rotations, cube is rotated 270° around front axis.
-        This BREAKS paired edges and moves corners.
-
-        With preserve_cage=True: We undo these rotations before returning.
-        setup_alg = B'[1:n] + B'[1:n] + B'[1:n] = B'[1:n] * 3
-        undo = setup_alg.prime = B[1:n] * 3
-
-        :return: if any work was done
+        Args:
+            face_tracker: Face to solve
+            row: Row index to solve (unused - we solve entire center)
+            row_slice_index: Slice index (for annotations)
         """
-        face: Face = face_loc.face
-        color: Color = face_loc.color
 
-        if self._is_face_solved(face, color):
-            self.debug(f"Face is already done {face}", level=1)
-            return False
+        self._solve_single_center_row_slice(face_tracker, row_slice_index)
 
-        if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
-            self.debug(f"{face_loc.face} already has at least one {color}")
-            return False
+    def _solve_single_center_row_slice(self, target_face: FaceTracker, slice_row_index: int):
 
-        cmn = self.cmn
+        source_faces = target_face.other_faces()
 
-        self.debug(f"Working on face {face}", level=1)
+        for source_face in source_faces:
+            self._solve_single_center_piece_from_source_face(target_face, source_face, slice_row_index)
 
-        with self.ann.annotate(h2=f"{color2long(face_loc.color).value} face"):
-            cube = self.cube
-
-            # we loop bringing all adjusted faces up
-            cmn.bring_face_front(face_loc.face)
-            # from here face is no longer valid
-
-            work_done = False
-
-            if any(self._has_color_on_face(f, color) for f in cube.front.adjusted_faces()):
-                # =========================================================
-                # CAGE METHOD: Track setup rotations for undo
-                # =========================================================
-                setup_alg = Algs.NOOP
-
-                for _ in range(3):  # 3 faces: L, D, R brought to UP
-                    # don't use face - it was moved !!!
-                    if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up):
-                        work_done = True
-                        if minimal_bring_one_color:
-                            if self._preserve_cage:
-                                self.op.play(setup_alg.prime)  # UNDO before return!
-                            return work_done
-
-                    if self._is_face_solved(face_loc.face, color):
-                        if self._preserve_cage:
-                            self.op.play(setup_alg.prime)  # UNDO before return!
-                        return work_done
-
-                    # Rotate to bring next adjacent face to UP
-                    # Track the algorithm so we can undo
-                    setup_alg = setup_alg + self._bring_face_up_preserve_front(cube.left)
-
-                # on the last face (4th iteration)
-                # don't use face - it was moved !!!
-                if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up):
-                    work_done = True
-                    if minimal_bring_one_color:
-                        if self._preserve_cage:
-                            self.op.play(setup_alg.prime)  # UNDO before return!
-                        return work_done
-
-                if self._is_face_solved(face_loc.face, color):
-                    if self._preserve_cage:
-                        self.op.play(setup_alg.prime)  # UNDO before return!
-                    return work_done
-
-                # =========================================================
-                # CAGE METHOD: Undo all setup rotations
-                # =========================================================
-                if self._preserve_cage:
-                    self.op.play(setup_alg.prime)
-
-            if use_back_too:
-                # now from back
-                # don't use face - it was moved !!!
-                if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.back):
-                    work_done = True
-
-            return work_done
-
-    def solve_single_center_piece(self, face_tracker: FaceTracker, slice_row_index:int, colum:int):
-        pass
-
-    def _do_center_from_face(self, face: Face, minimal_bring_one_color, color: Color, source_face: Face) -> bool:
+    def _solve_single_center_piece_from_source_face(self, face: FaceTracker, source_face: FaceTracker,
+                                                    slice_row_index: int) -> bool:
 
         """
         The sources are on source_face !!! source face is in its location up /back
         The target face is on front !!!
-        :param face:
+        :param face: target face
         :param color:
         :param source_face:
         :return:
         """
+
+        # Very not optimized !!!
+        # now we need to bring face to front and source to up or back with whole cube operations
+
+        self.cmn.bring_face_front(face.face)
+
+        if source_face.face is not face.opposite:
+            self.cmn.bring_face_up(source_face.face)
 
         cube = self.cube
 
         assert face is cube.front
         assert source_face in [cube.up, cube.back]
 
-        if self.count_color_on_face(source_face, color) == 0:
+        color = face.color
+
+        #boaz improve this, we need to tkae to account the slice row index !!
+        if self.count_color_on_face(source_face.face, color) == 0:
             return False  # nothing can be done here
 
         work_done = False
 
-        center = face.center
+        for rc in self._2d_center_row_slice_iter(slice_row_index):
 
-        n = cube.n_slices
+            # boaz - does it preserve cage ?
 
-        if n % 2 and self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
+            if self._block_communicator(color,
+                                        face.face,
+                                        source_face.face,
+                                        rc, rc,
+                                        _SearchBlockMode.CompleteBlock):
 
-            ok_on_this = self.count_color_on_face(face, color)
+                after_fixed_color = face.face.center.get_center_slice(rc).color
 
-            on_source = self.count_color_on_face(source_face, color)
+                if after_fixed_color != color:
+                    raise InternalSWError(f"Slice was not fixed {rc}, " +
+                                          f"required={color}, " +
+                                          f"actual={after_fixed_color}")
 
-            if on_source - ok_on_this > 2:  # swap two faces is about two communicators
-                self._swap_entire_face_odd_cube(color, face, source_face)
+                self.debug(f"Fixed slice {rc}")
+
                 work_done = True
-
-        if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
-            if self._do_complete_slices(color, face, source_face):
-                work_done = True
-                if minimal_bring_one_color:
-                    return work_done
-
-        if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
-            # should move minimal_bring_one_color into _do_blocks, because ein case of back, it can do too much
-            if self._do_blocks(color, face, source_face):
-                work_done = True
-                if minimal_bring_one_color:
-                    return work_done
-
-        else:
-
-            # the above also did a 1 size block
-            for rc in self._2d_center_slice_iter():
-
-                if self._block_communicator(color,
-                                            face,
-                                            source_face,
-                                            rc, rc,
-                                            _SearchBlockMode.CompleteBlock):
-
-                    after_fixed_color = center.get_center_slice(rc).color
-
-                    if after_fixed_color != color:
-                        raise InternalSWError(f"Slice was not fixed {rc}, " +
-                                              f"required={color}, " +
-                                              f"actual={after_fixed_color}")
-
-                    self.debug(f"Fixed slice {rc}")
-
-                    work_done = True
-                    if minimal_bring_one_color:
-                        return work_done
-
-        if not work_done:
-            self.debug(f"Internal error, no work was done on face {face} required color {color}, "
-                       f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}")
-            for rc in self._2d_center_iter():
-                if center.get_center_slice(rc).color != color:
-                    print(f"Missing: {rc}  {[*self._get_four_center_points(rc[0], rc[1])]}")
-            for rc in self._2d_center_iter():
-                if source_face.center.get_center_slice(rc).color == color:
-                    print(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
-
-            raise InternalSWError("See error in log")
 
         return work_done
+
+        # if not work_done:
+        #     self.debug(f"Internal error, no work was done on face {face} required color {color}, "
+        #                f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}")
+        #     for rc in self._2d_center_iter():
+        #         if center.get_center_slice(rc).color != color:
+        #             print(f"Missing: {rc}  {[*self._get_four_center_points(rc[0], rc[1])]}")
+        #     for rc in self._2d_center_iter():
+        #         if source_face.center.get_center_slice(rc).color == color:
+        #             print(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
+        #
+        #     raise InternalSWError("See error in log")
+        #
+        # return work_done
 
     def _do_complete_slices(self, color, face, source_face) -> bool:
 
@@ -599,7 +338,7 @@ class NxNCenters2(SolverElement):
                 if (
                         (min_target_slice.n_matches == 0 or
                          not self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO) and
-                          source_slice.n_matches > 0 / 2.0  # SEE SPECIAL_CASE_1 above
+                        source_slice.n_matches > 0 / 2.0  # SEE SPECIAL_CASE_1 above
                 ) and source_slice.n_matches > min_target_slice.n_matches:
                     # ok now swap
 
@@ -738,9 +477,9 @@ class NxNCenters2(SolverElement):
 
         with self.ann.annotate((ann_source(), AnnWhat.Moved), (ann_target(), AnnWhat.FixedPosition)):
             op.play(slice_source_alg * mul +
-                  rotate_source_alg * 2 +  # this replaces source slice with target
-                  slice_source_alg.prime * mul
-                  )
+                    rotate_source_alg * 2 +  # this replaces source slice with target
+                    slice_source_alg.prime * mul
+                    )
 
         # =========================================================
         # CAGE METHOD: Undo setup moves to preserve paired edges
@@ -1183,7 +922,7 @@ class NxNCenters2(SolverElement):
     def _count_colors_on_block(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
                                ignore_if_back=False) -> int:
 
-        n, _ = NxNCenters._count_colors_on_block_and_tracker(color, source_face, rc1, rc2, ignore_if_back)
+        n, _ = NxNCenters2._count_colors_on_block_and_tracker(color, source_face, rc1, rc2, ignore_if_back)
 
         return n
 
@@ -1399,7 +1138,7 @@ class NxNCenters2(SolverElement):
             for c in range(n):
                 yield r, c
 
-    def _2d_center_slice_iter(self, slice_index: int) -> Iterator[Point]:
+    def _2d_center_row_slice_iter(self, slice_index: int) -> Iterator[Point]:
 
         """
         Walk on all points in center of size n_slices

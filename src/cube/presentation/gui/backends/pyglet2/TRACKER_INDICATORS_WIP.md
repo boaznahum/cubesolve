@@ -330,7 +330,7 @@ class FacesTrackerHolder:
         if trackers is None:
             # Create trackers via factory (passes holder_id to factory)
             factory = NxNCentersFaceTrackers(slv, self._holder_id)
-            self._trackers = [factory.track_no_1(), ...]
+            self._trackers = [factory.track_no_1(xxx), ...]
         else:
             self._trackers = trackers
 
