@@ -213,7 +213,7 @@ class NxNCenters2(SolverElement):
 
     def _solve_single_center_row_slice(self, target_face: FaceTracker, slice_row_index: int):
 
-        source_faces = target_face.other_faces()
+        source_faces = target_face.other_faces() #boaz: remove "white" face
 
         for source_face in source_faces:
             self._solve_single_center_piece_from_source_face(target_face, source_face, slice_row_index)
@@ -236,12 +236,12 @@ class NxNCenters2(SolverElement):
         self.cmn.bring_face_front(face.face)
 
         if source_face.face is not face.opposite:
-            self.cmn.bring_face_up(source_face.face)
+            self.cmn.bring_face_up_preserve_front(source_face.face)
 
         cube = self.cube
 
-        assert face is cube.front
-        assert source_face in [cube.up, cube.back]
+        assert face.face is cube.front
+        assert source_face.face in [cube.up, cube.back]
 
         color = face.color
 
@@ -808,7 +808,9 @@ class NxNCenters2(SolverElement):
         # The commutator itself is balanced (F rotations cancel out).
         # But the source face rotation setup is NOT balanced - undo it.
         if self._preserve_cage and n_rotate:
+            #boaz simply *3  -> 1
             undo_alg = Algs.of_face(source_face.name).prime * n_rotate
+            undo_alg = undo_alg.simplify()
             self.debug(f"  [CAGE] Undoing source rotation: {undo_alg}", level=1)
             self.op.play(undo_alg)
 

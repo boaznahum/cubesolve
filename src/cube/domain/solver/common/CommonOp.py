@@ -349,44 +349,44 @@ class CommonOp:
                     case _:
                         raise InternalSWError(f"Unknown face {f}")
 
-    def bring_face_up_preserve_front(self, f: Face) -> None:
+    def bring_face_up_preserve_front(self, face: Face) -> None:
 
         #claude: documnet it like niceother whole cube roatation
-        if f.name != FaceName.U:
+        if face.name != FaceName.U:
 
-            self.debug("Need to bring ", f, 'to', FaceName.U)
+            self.debug("Need to bring ", face, 'to', FaceName.U)
 
 
             front = self.cube.front
 
-            with self.ann.annotate(h2=f"Bringing face preserve front{f.name.value} up"):
+            with self.ann.annotate(h2=f"Bringing face preserve front{face.name.value} up"):
 
                 alg: Alg
 
-                match f.name:
+                match face.name:
 
                     case FaceName.F:
-                        raise InternalSWError(f"You cannot bring front  {f} up and preserve front{f.name.value} ")
+                        raise InternalSWError(f"You cannot bring front  {face} up and preserve front{face.name.value} ")
 
                     case FaceName.B:
-                        raise InternalSWError(f"You cannot bring back {f} up and preserve front{f.name.value} ")
+                        raise InternalSWError(f"You cannot bring back {face} up and preserve front{face.name.value} ")
 
                     case FaceName.D:
-                        alg = Algs.X * 2
+                        alg = Algs.Z * 2
 
                     case FaceName.L:
-                        alg = Algs.X
+                        alg = Algs.Z
 
                     case FaceName.R:
-                        alg = Algs.X.prime
+                        alg = Algs.D.prime
 
                     case _:
-                        raise InternalSWError(f"Unknown face {f}")
+                        raise InternalSWError(f"Unknown face {face}")
 
                 self.op.play(alg)
 
                 assert self.cube.front is front
-                assert self.cube.up is f
+
 
     def bring_edge_to_front_by_e_rotate(self, edge: Edge) -> Alg | None:
         """
