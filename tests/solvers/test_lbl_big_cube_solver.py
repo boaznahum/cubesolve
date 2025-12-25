@@ -139,6 +139,8 @@ def test_lbl_solver_solves_layer1_cross(size: int) -> None:
     """Test that LBL solver can solve Layer 1 cross (centers + edges positioned)."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
+
+
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
 
@@ -326,7 +328,56 @@ def test_lbl_solver_status_progression() -> None:
     # After complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
     status_after_l1 = solver.status
-    # Status should show L1 done
-    assert status_after_l1 == "L1:Done", f"Expected 'L1:Done', got '{status_after_l1}'"
+    # Status should show L1 done (format: "L1:Done|Sl:X/N" where X=solved slices, N=total)
+    assert status_after_l1.startswith("L1:Done"), f"Expected status starting with 'L1:Done', got '{status_after_l1}'"
 
     print(f"\n  Status progression: {status_before} -> {status_after_centers} -> {status_after_l1}")
+
+
+# =============================================================================
+# Slice Center Tests
+# =============================================================================
+
+@pytest.mark.parametrize("size", [5, 7])
+def test_lbl_solver_solves_slice_centers(size: int) -> None:
+    """Test that LBL solver can solve middle slice centers."""
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    # Scramble
+    app.scramble(42, None, animation=False, verbose=False)
+
+    solver = LayerByLayerNxNSolver(app.op)
+    cube = app.cube
+
+    # First solve Layer 1
+    solver.solve(what=SolveStep.LBL_L1, animation=False)
+    assert solver.status.startswith("L1:Done"), f"Layer 1 not solved: {solver.status}"
+
+    # Now solve slice centers
+    solver.solve(what=SolveStep.LBL_SLICES_CTR, animation=False)
+
+    # Check status shows all slices done
+    n_slices = cube.n_slices
+    expected_status = f"L1:Done|Sl:{n_slices}/{n_slices}"
+    assert solver.status == expected_status, f"Expected '{expected_status}', got '{solver.status}'"
+
+
+@pytest.mark.parametrize("size", [5])
+def test_lbl_solver_slice_centers_multiple_scrambles(size: int) -> None:
+    """Test slice center solving with multiple scrambles."""
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    for seed in range(5):
+        # Reset and scramble
+        app.reset()
+        app.scramble(seed, None, animation=False, verbose=False)
+
+        solver = LayerByLayerNxNSolver(app.op)
+
+        # Solve Layer 1 + slice centers
+        solver.solve(what=SolveStep.LBL_SLICES_CTR, animation=False)
+
+        # Check all slices are solved
+        n_slices = app.cube.n_slices
+        assert solver.status == f"L1:Done|Sl:{n_slices}/{n_slices}", \
+            f"Seed {seed}: Expected all slices solved, got '{solver.status}'"

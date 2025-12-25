@@ -26,6 +26,7 @@ _SOLVE_STEP_META: dict[str, tuple[str, str]] = {
     "LBL_L1_Ctr": ("L1Ctr", "Layer 1 Centers"),
     "LBL_L1_Edg": ("L1Edg", "Layer 1 Edges"),
     "LBL_L1": ("L1", "Layer 1 Complete"),
+    "LBL_SLICES_CTR": ("SlCtr", "Middle Slices Centers"),
 }
 
 
@@ -54,6 +55,7 @@ class SolveStep(Enum):
     LBL_L1_Ctr = "LBL_L1_Ctr"  # Layer 1 centers only
     LBL_L1_Edg = "LBL_L1_Edg"  # Layer 1 edges only
     LBL_L1 = "LBL_L1"          # Layer 1 complete (centers + edges + corners)
+    LBL_SLICES_CTR = "LBL_SLICES_CTR"  # Middle slices centers only (for debugging)
 
     @property
     def short_code(self) -> str:

@@ -285,6 +285,262 @@ class Layer:
 
 ---
 
+## Layer 2 Center Solving - Detailed Design
+
+> **Status:** Planning (2025-12-25)
+
+### Coordinate System Mapping
+
+Understanding how horizontal layers map to center slice coordinates is critical.
+
+#### Center Slice Coordinate System
+
+Each face uses `(row, column)` indexing:
+- `row` ranges from 0 to n_slices-1 (top to bottom when looking at face)
+- `column` ranges from 0 to n_slices-1 (left to right)
+- Origin `(0,0)` is **top-left** of the face
+
+```
+Looking at F face (from outside):
+    ┌───────────────────┐
+    │ (0,0) (0,1) (0,2) │  ← row 0 (TOP)
+    │ (1,0) (1,1) (1,2) │  ← row 1 (MIDDLE)
+    │ (2,0) (2,1) (2,2) │  ← row 2 (BOTTOM)
+    └───────────────────┘
+       ↑                ↑
+    col 0            col 2
+```
+
+#### Horizontal Slice to Center Row Mapping
+
+**Important:** Slice indices are 0-based: `slice_index = 0 to n_slices-1`
+
+For a 5x5 cube (n=5, n_slices=3):
+
+```
+Side view (looking at cube from right):
+
+    U face (top)
+    ┌─────────────────┐
+    │     row 0       │  ← slice_index = 2 (closest to U)
+    │     row 1       │  ← slice_index = 1 (middle)
+    │     row 2       │  ← slice_index = 0 (closest to D)
+    └─────────────────┘
+    D face (bottom, Layer 1 - already solved)
+
+Mapping formula (for side faces F, R, B, L):
+    slice_index = 0 to n_slices-1
+    row_index = n_slices - 1 - slice_index
+             = (n - 2) - 1 - slice_index
+             = n - 3 - slice_index
+
+Example for 5x5 (n=5, n_slices=3):
+    slice 0 → row = 3 - 1 - 0 = 2 (bottom row, closest to D)
+    slice 1 → row = 3 - 1 - 1 = 1 (middle row)
+    slice 2 → row = 3 - 1 - 2 = 0 (top row, closest to U)
+```
+
+**Key insight:** We solve slices bottom-up (0 → n_slices-1), which means:
+- First solve row 2 (bottom) on all side faces
+- Then solve row 1 (middle)
+- Finally solve row 0 (top)
+
+#### Ring Centers Definition
+
+For slice s (0 to n_slices-1), "ring centers" means:
+- The row of centers at `row = n_slices - 1 - s` on faces F, R, B, L
+- Total pieces: `4 × n_slices` per slice (one row on each of 4 faces)
+
+```
+Ring for slice 0 on 5x5 (row 2 of each side face):
+
+         ┌───────────┐
+         │  U face   │
+    ┌────┴───────────┴────┐
+    │ L  │    F      │  R │
+    │    │ [2,0][2,1][2,2] │ ← slice 0 ring (bottom row)
+    └────┬───────────┬────┘
+         │  D face   │  (Layer 1 - already solved)
+         └───────────┘
+
+Ring for slice 1 on 5x5 (row 1 of each side face):
+
+         ┌───────────┐
+         │  U face   │
+    ┌────┴───────────┴────┐
+    │ L  │    F      │  R │
+    │    │ [1,0][1,1][1,2] │ ← slice 1 ring (middle row)
+    └────┬───────────┬────┘
+         │  D face   │
+         └───────────┘
+```
+
+---
+
+### Layer 2 Center Solving Challenges
+
+#### Challenge 1: Partial Face Solving
+
+**Problem:** `NxNCenters.solve_single_face()` solves the **entire** face center. For Layer 2, we only need to solve **one row** on each of 4 faces.
+
+**Impact:** Cannot directly reuse `solve_single_face()` for middle layers.
+
+**Approach:** Create a new method `solve_ring_centers(layer_index)` that:
+- Iterates only over centers in the target row
+- Uses commutators to bring pieces from source positions
+
+#### Challenge 2: Move Restrictions
+
+**Problem:** After Layer 1 is solved, D face cannot be rotated. Some commutators in `NxNCenters` use D face rotations.
+
+**Current NxNCenters behavior:**
+- Brings faces to front position
+- Rotates cube to access all source faces
+- Uses `B[1:n]` rotations which DON'T disturb D corners/edges
+
+**Good news:** The `_block_communicator()` and `_swap_slice()` methods use inner slices and F rotations, which preserve D face.
+
+**Approach:** Use `preserve_cage=True` mode which already exists in NxNCenters for cage solver.
+
+#### Challenge 3: Source Center Location
+
+**Problem:** Where are the source centers for Layer 2?
+
+**Analysis for Layer 2:**
+```
+Needed: Centers with correct colors for F/R/B/L row 2
+
+Possible sources:
+1. U face centers (any position)
+2. Other rows on F/R/B/L (rows 0, 1)
+3. D face centers (BUT D is already solved - these are correct!)
+```
+
+**Key insight:** D face centers are already solved, so:
+- D face has the correct white (Layer 1 color) centers
+- Source centers for Layer 2 must come from U face or other rows on side faces
+
+#### Challenge 4: Face Orientation During Solving
+
+**Problem:** NxNCenters works by:
+1. Bringing target face to front
+2. Bringing source faces to up/back
+3. Using commutators
+
+For ring solving:
+- We're solving 4 faces at once (the ring)
+- Each face's row 2 needs correct colors
+
+**Approach options:**
+1. **Rotate cube:** Bring each face to front, solve that row, rotate to next
+2. **Work in place:** Use slice moves without rotating cube
+3. **Hybrid:** Minimal cube rotation with adapted algorithms
+
+#### Challenge 5: Even Cube Face Tracking
+
+**Problem:** On even cubes (4x4, 6x6), there's no fixed center piece. The FaceTracker uses majority voting to determine which color belongs to which face.
+
+For Layer 2:
+- Layer 1 centers are solved (face color is now fixed for D)
+- But other faces still have scrambled centers
+- How do we know what color goes on F row 2?
+
+**Solution:** Use existing FaceTracker system - it tracks face colors even on scrambled cubes.
+
+---
+
+### Proposed Approach for Slice Centers
+
+#### High-Level Strategy
+
+```python
+def _solve_slice_centers(self, slice_index: int, th: FacesTrackerHolder) -> None:
+    """Solve the ring of centers for a middle slice.
+
+    Args:
+        slice_index: 0 to n_slices-1 (0 = closest to D, n_slices-1 = closest to U)
+        th: FacesTrackerHolder for face color tracking
+    """
+    # Calculate which row on side faces corresponds to this slice
+    n_slices = self.cube.n_slices
+    row_index = n_slices - 1 - slice_index  # slice 0 → bottom row
+
+    # For each side face (F, R, B, L)
+    for face_tracker in self._get_side_face_trackers(th):
+        target_face = face_tracker.face
+        target_color = face_tracker.color
+
+        # Check which centers in this row need fixing
+        for col in range(n_slices):
+            center = target_face.center.get_center_slice((row_index, col))
+            if center.color != target_color:
+                # Find and move correct piece using commutator
+                self._fix_ring_center(target_face, row_index, col, target_color, th)
+
+def _solve_all_middle_slices(self, th: FacesTrackerHolder) -> None:
+    """Solve all middle slice centers, bottom to top."""
+    for slice_index in range(self.cube.n_slices):
+        self._solve_slice_centers(slice_index, th)
+```
+
+#### Key Components Needed
+
+1. **Slice-to-row conversion:**
+   ```python
+   def slice_to_row(self, slice_index: int) -> int:
+       """Convert slice index (0=bottom) to row index on side faces."""
+       return self.cube.n_slices - 1 - slice_index
+   ```
+
+2. **Row-based center query:**
+   ```python
+   def get_row_centers(face: Face, row: int) -> list[CenterSlice]:
+       return [face.center.get_center_slice((row, c))
+               for c in range(face.center.n_slices)]
+   ```
+
+3. **Source center finder:**
+   ```python
+   def find_source_center(color: Color, exclude_rows: set[int], th: FacesTrackerHolder) -> tuple[Face, int, int]:
+       # Search U face first (best source - no restrictions)
+       # Then search rows ABOVE current slice on side faces
+       # Never use D face (Layer 1 is solved)
+       # Never use already-solved rows (below current slice)
+       ...
+   ```
+
+4. **Ring-preserving commutator:**
+   - Adapt `_block_communicator()` to work with row constraints
+   - Ensure moves don't disturb completed slices (rows below current)
+
+#### Implementation Order
+
+1. **Add `slice_to_row()` helper**
+2. **Create `_solve_slice_centers(slice_index)` method**
+3. **Create `_is_slice_centers_solved(slice_index)` check**
+4. **Add `SolveStep.LBL_SLICE_CTR` enum value**
+5. **Write tests for various cube sizes**
+6. **Generalize to solve all slices in order**
+
+---
+
+### E-Slice Relationship
+
+The E slice (horizontal middle) directly relates to ring centers:
+
+```python
+# E slice index → center row index
+# For Slice.E with slice_index=i:
+#   - Affects row i on some faces (depends on face orientation)
+
+# Example: E[0] slice on 5x5
+# - When rotated, centers in certain rows move between F/R/B/L
+```
+
+**Key insight:** E slice moves preserve Layer 1 (D face) completely. We can use E slices freely for Layer 2+ solving.
+
+---
+
 ## References
 
 - [PuzzleMax13 YouTube Channel](https://www.youtube.com/@puzzlemax13)
