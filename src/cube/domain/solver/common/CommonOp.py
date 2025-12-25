@@ -314,6 +314,54 @@ class CommonOp:
 
                 self.op.play(alg)
 
+    # NEVER TESTED !!
+    def bring_face_down(self, f: Face) -> None:
+        """Bring the given face to the DOWN position using whole-cube rotations.
+
+        This method uses only whole-cube rotations (X, Y, Z) which change the
+        cube's viewing orientation without moving any pieces relative to each other.
+        All edges, corners, and centers stay in their same relative positions -
+        only the perspective changes.
+
+        This is safe to call at any point during solving because it doesn't
+        disturb any solved pieces or relationships between pieces.
+
+        Args:
+            f: The face to bring to UP position
+
+        Raises:
+            InternalSWError: If f is not a valid face
+        """
+        if f.name != FaceName.D:
+
+            self.debug("Need to bring ", f, 'to', FaceName.D)
+
+            with self.ann.annotate(h2=f"Bringing face {f.name.value} down"):
+
+                alg: Alg
+
+                match f.name:
+
+                    case FaceName.F:
+                        alg = Algs.X.prime
+
+                    case FaceName.B:
+                        alg = Algs.X
+
+                    case FaceName.U:
+                        alg = Algs.X * 2
+
+                    case FaceName.L:
+                        alg = -Algs.Y + -Algs.X
+
+                    case FaceName.R:
+                        alg = Algs.Y -  Algs.X
+
+                    case _:
+                        raise InternalSWError(f"Unknown face {f}")
+
+                self.op.play(alg)
+
     def bring_face_front(self, f: Face):
 
         """
@@ -372,6 +420,81 @@ class CommonOp:
                         raise InternalSWError(f"You cannot bring back {face} up and preserve front{face.name.value} ")
 
                     case FaceName.D:
+                        alg = Algs.Z * 2
+
+                    case FaceName.L:
+                        alg = Algs.Z
+
+                    case FaceName.R:
+                        alg = Algs.Z.prime
+
+                    case _:
+                        raise InternalSWError(f"Unknown face {face}")
+
+                self.op.play(alg)
+
+                assert self.cube.front is front
+
+    # NEVER TESTED
+    def bring_face_down_preserve_front(self, face: Face) -> None:
+
+        #claude: documnet it like niceother whole cube roatation
+        if face.name != FaceName.U:
+
+            self.debug("Need to bring ", face, 'to', FaceName.U)
+
+
+            front = self.cube.front
+
+            with self.ann.annotate(h2=f"Bringing face preserve front{face.name.value} up"):
+
+                alg: Alg
+
+                match face.name:
+
+                    case FaceName.F:
+                        raise InternalSWError(f"You cannot bring front  {face} up and preserve front{face.name.value} ")
+
+                    case FaceName.B:
+                        raise InternalSWError(f"You cannot bring back {face} up and preserve front{face.name.value} ")
+
+                    case FaceName.D:
+                        alg = Algs.Z * 2
+
+                    case FaceName.L:
+                        alg = Algs.Z
+
+                    case FaceName.R:
+                        alg = Algs.Z.prime
+
+                    case _:
+                        raise InternalSWError(f"Unknown face {face}")
+
+                self.op.play(alg)
+
+                assert self.cube.front is front
+
+    def bring_face_front_preserve_down(self, face: Face) -> None:
+
+        #claude: documnet it like niceother whole cube roatation
+        if face.name != FaceName.F:
+
+            self.debug("Need to bring ", face, 'to', FaceName.U)
+
+
+            front = self.cube.front
+
+            with self.ann.annotate(h2=f"Bringing face preserve front{face.name.value} up"):
+
+                alg: Alg
+
+                match face.name:
+
+                    case FaceName.D | FaceName.U:
+                        raise InternalSWError(f"You cannot bring front  {face} up down preserve front{face.name.value} ")
+
+
+                    case FaceName.U:
                         alg = Algs.Z * 2
 
                     case FaceName.L:
