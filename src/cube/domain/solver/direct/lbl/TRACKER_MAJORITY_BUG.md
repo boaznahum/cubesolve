@@ -1,6 +1,9 @@
 # Potential Issue: Tracker Majority Algorithm with Even Color Distribution
 
-**STATUS: Investigated - Bug does NOT manifest in practice**
+**STATUS: Under Review - See [#51](https://github.com/boaznahum/cubesolve/issues/51)**
+
+> **Note:** Initial investigation concluded bug does not manifest, but the test scenario
+> may not have correctly reproduced the problematic state. Further investigation needed.
 
 ## Scenario
 
@@ -113,7 +116,10 @@ def test_tracker_even_distribution_bug():
 
 ## Investigation Results
 
-Testing revealed that the bug does NOT actually manifest because:
+> **Under Review:** See [#51](https://github.com/boaznahum/cubesolve/issues/51) - the test scenario
+> may not have correctly reproduced the problematic state.
+
+Initial testing suggested the bug does NOT manifest because:
 
 1. **track_no_1** finds faces with clear majority first (U=YELLOW:4, D=WHITE:4)
 2. **_track_no_3** excludes already-used colors before searching remaining faces
@@ -138,9 +144,9 @@ All tests pass, confirming:
 - Fresh trackers after rotation give equivalent BOY layout
 - Random scrambles always produce valid trackers
 
-## Original Proposed Fix (Not Needed)
+## Proposed Fix (May Still Be Needed)
 
-The following fix was proposed but is NOT required:
+The following fix was proposed and may still be required pending [#51](https://github.com/boaznahum/cubesolve/issues/51):
 
 1. When creating trackers, validate result is BOY-consistent
 2. If tie in majority, use BOY constraints to break tie:

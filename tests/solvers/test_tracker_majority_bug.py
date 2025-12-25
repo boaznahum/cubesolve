@@ -1,5 +1,7 @@
 """Tests for tracker behavior with even color distribution.
 
+GitHub Issue: https://github.com/boaznahum/cubesolve/issues/51
+
 SCENARIO:
 =========
 When creating trackers on an even cube (4x4, 6x6) where:
@@ -9,17 +11,13 @@ When creating trackers on an even cube (4x4, 6x6) where:
 The majority algorithm in _find_face_with_max_colors has no clear winner
 when all colors have the same count (1) on each side face.
 
-HYPOTHETICAL BUG (documented but NOT observed):
-==============================================
-The concern was that arbitrary tie-breaking could assign the same color
-to multiple faces. However, testing shows the algorithm handles this correctly:
+BUG STATUS: Under Review (#51)
+==============================
+Initial investigation suggested the bug does not manifest due to BOY constraints,
+but the test scenario may not correctly reproduce the problematic state.
 
-1. track_no_1: Finds faces with clear majority (U=YELLOW:4, D=WHITE:4)
-2. _track_no_3: Excludes already-used colors before searching
-3. _track_two_last: Uses BOY constraints to validate final assignment
-
-The BOY constraint check in _track_two_last ensures the final layout is always
-valid, even when earlier choices were arbitrary due to ties.
+The concern is that arbitrary tie-breaking could assign the same color
+to multiple faces, resulting in only 5 unique colors instead of 6.
 
 WHAT THESE TESTS VERIFY:
 ========================
@@ -106,17 +104,15 @@ def _print_tracker_assignment(trackers: list) -> None:
 
 
 class TestTrackerMajorityBug:
-    """Tests demonstrating the tracker majority algorithm bug."""
+    """Tests for tracker majority algorithm bug (#51)."""
 
     def test_even_distribution_creates_valid_trackers(self) -> None:
         """Test that trackers on even distribution cube produce valid BOY layout.
 
-        This test EXPOSES the bug: with even color distribution, the majority
-        algorithm may assign the same color to multiple faces, resulting in
-        fewer than 6 unique colors.
+        This test attempts to expose the bug (#51): with even color distribution,
+        the majority algorithm may assign the same color to multiple faces.
 
-        EXPECTED BEHAVIOR: 6 unique colors (valid BOY)
-        ACTUAL BEHAVIOR (BUG): May get only 5 unique colors!
+        Note: Current test passes but may not correctly reproduce the bug scenario.
         """
         app = AbstractApp.create_non_default(cube_size=4, animation=False)
 
