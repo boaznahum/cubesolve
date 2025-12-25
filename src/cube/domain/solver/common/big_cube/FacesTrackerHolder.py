@@ -58,6 +58,16 @@ class FacesTrackerHolder:
     cube rotates during solving. This is essential for even cubes where
     there's no fixed center piece.
 
+    HOLDER-SPECIFIC MARKER IDs:
+    ===========================
+    Each holder instance gets a unique ID. Tracker keys include this holder ID:
+
+        Key format: "_nxn_centers_track:h{holder_id}:{color}{unique_id}"
+        Example: "_nxn_centers_track:h42:WHITE1"
+
+    This allows multiple holders to coexist safely - each cleanup() only
+    removes markers belonging to THAT holder, not markers from other holders.
+
     USAGE PATTERNS:
     ===============
 
@@ -91,7 +101,9 @@ class FacesTrackerHolder:
             print(f"{tracker.face.name} -> {tracker.color}")
     """
 
-    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter"]
+    _holder_unique_id: int = 0  # Class variable for generating unique holder IDs
+
+    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter", "_holder_id"]
 
     def __init__(
         self,
@@ -112,6 +124,10 @@ class FacesTrackerHolder:
             MUST call cleanup() when done (or use context manager)!
             Cleanup is needed for even cubes to remove tracking marks.
         """
+        # Generate unique holder ID for this instance
+        FacesTrackerHolder._holder_unique_id += 1
+        self._holder_id = FacesTrackerHolder._holder_unique_id
+
         self._cube = slv.cube
         self._is_even = self._cube.n_slices % 2 == 0
         self._face_colors_cache: dict[FaceName, Color] | None = None
@@ -124,23 +140,20 @@ class FacesTrackerHolder:
             self._trackers = self._create_trackers(slv)
 
     def _create_trackers(self, slv: SolverElementsProvider) -> list[FaceTracker]:
-        """Create the 6 face trackers."""
+        """Create the 6 face trackers using NxNCentersFaceTrackers factory."""
         cube = self._cube
+        factory = NxNCentersFaceTrackers(slv, self._holder_id)
 
         if not self._is_even:
-            # ODD CUBE - simple trackers using center color
-            # These don't mark any slices, so no cleanup needed
-            return [FaceTracker.track_odd(f) for f in cube.faces]
+            # ODD CUBE - simple trackers using fixed center color
+            return [factory._create_tracker_odd(f) for f in cube.faces]
         else:
-            # EVEN CUBE - use NxNCentersFaceTrackers to find majority colors
-            # These mark center slices - must call cleanup() when done
-            trackers_helper = NxNCentersFaceTrackers(slv)
-
-            t1 = trackers_helper.track_no_1()
+            # EVEN CUBE - trackers mark center slices for majority color
+            t1 = factory.track_no_1()
             t2 = t1.track_opposite()
-            t3 = trackers_helper._track_no_3([t1, t2])
+            t3 = factory._track_no_3([t1, t2])
             t4 = t3.track_opposite()
-            t5, t6 = trackers_helper._track_two_last([t1, t2, t3, t4])
+            t5, t6 = factory._track_two_last([t1, t2, t3, t4])
 
             return [t1, t2, t3, t4, t5, t6]
 
@@ -323,16 +336,14 @@ class FacesTrackerHolder:
     def cleanup(self) -> None:
         """Remove tracker marks from center slices.
 
-        For even cubes:
-            Removes the tracking attributes that were added to center slices.
-
-        For odd cubes:
-            No-op (odd cube trackers don't mark any slices).
+        Calls cleanup() on each tracker polymorphically:
+        - MarkedFaceTracker: Removes its specific key from the marked edge
+        - FaceTracker (base): No-op (odd, opposite, f5 trackers don't mark)
 
         This MUST be called when done with the holder (or use context manager).
         """
-        for f in self._cube.faces:
-            FaceTracker.remove_face_track_slices(f)
+        for tracker in self._trackers:
+            tracker.cleanup()
 
     def __iter__(self) -> Iterator[FaceTracker]:
         """Iterate over the 6 face trackers."""

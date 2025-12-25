@@ -368,8 +368,9 @@ class ModernGLCell:
         per face as an anchor. This method detects if this cell is such an
         anchor and returns the tracker's assigned color.
 
-        The tracker key format is: "_nxn_centers_track:Color.WHITE1"
-        where the color is parsed from the key suffix.
+        The tracker key format can be:
+        - Old: "_nxn_centers_track:Color.WHITE1"
+        - New: "_nxn_centers_track:h42:Color.WHITE1" (with holder ID)
 
         Returns:
             The Color enum of the tracker's assigned color, or None if not tracked.
@@ -383,13 +384,9 @@ class ModernGLCell:
         if not c_attrs:
             return None
 
-        for key in c_attrs.keys():
+        for key, value in c_attrs.items():
             if isinstance(key, str) and key.startswith(_TRACKER_KEY_PREFIX):
-                # Parse color from key: "_nxn_centers_track:Color.WHITE1"
-                key_suffix = key[len(_TRACKER_KEY_PREFIX):]
-                for color in Color:
-                    if key_suffix.startswith(str(color)):
-                        return color
+                return value  # Value is the Color
         return None
 
     def generate_marker_vertices(self, dest: list[float]) -> None:

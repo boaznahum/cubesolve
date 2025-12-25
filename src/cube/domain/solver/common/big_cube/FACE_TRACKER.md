@@ -2,8 +2,10 @@
 
 **Related Classes:**
 - `FacesTrackerHolder` - Main interface (this directory)
-- `FaceTracker` - Individual face tracker (`_FaceTracker.py`)
-- `NxNCentersFaceTrackers` - Tracker creation for even cubes (`_NxNCentersFaceTracker.py`)
+- `FaceTracker` - Abstract base tracker (`_FaceTracker.py`)
+- `SimpleFaceTracker` - Tracker with predicate, no cleanup (`_FaceTracker.py`)
+- `MarkedFaceTracker` - Tracker with marked slice, needs cleanup (`_FaceTracker.py`)
+- `NxNCentersFaceTrackers` - Factory for creating trackers (`_NxNCentersFaceTracker.py`)
 
 **Used By:**
 - `LayerByLayerNxNSolver` (`solver/direct/lbl/`) - Layer-by-layer big cube solver
@@ -121,6 +123,218 @@ For **odd cubes**, the center piece is fixed and unique - its color defines the 
 
 For **even cubes**, there's no single center - trackers mark a specific slice and
 follow it through rotations.
+
+---
+
+## Tracker Class Hierarchy
+
+```
+                    ┌─────────────────────────────┐
+                    │   FaceTracker (ABC)         │
+                    │   _FaceTracker.py           │
+                    ├─────────────────────────────┤
+                    │ __slots__ = [_cube, _color] │
+                    │                             │
+                    │ @property @abstractmethod   │
+                    │ def face(self) -> Face      │
+                    │                             │
+                    │ @abstractmethod             │
+                    │ def cleanup(self) -> None   │
+                    │                             │
+                    │ def track_opposite()        │
+                    │ @staticmethod is_track_slice│
+                    └─────────────┬───────────────┘
+                                  │
+              ┌───────────────────┴───────────────────┐
+              │                                       │
+              ▼                                       ▼
+┌─────────────────────────────┐     ┌─────────────────────────────┐
+│   SimpleFaceTracker         │     │   MarkedFaceTracker         │
+│   (no cleanup needed)       │     │   (needs cleanup)           │
+├─────────────────────────────┤     ├─────────────────────────────┤
+│ __slots__ = [_pred]         │     │ __slots__ = [_key]          │
+│                             │     │                             │
+│ face: uses stored predicate │     │ face: searches for _key     │
+│       _cube.cqr.find_face() │     │       in c_attributes       │
+│                             │     │                             │
+│ cleanup(): pass (no-op)     │     │ cleanup(): searches all     │
+│                             │     │   slices, removes _key      │
+└─────────────────────────────┘     └─────────────────────────────┘
+
+Used for:                           Used for:
+- Odd cube trackers                 - Even cube marked centers
+- Opposite trackers                 - (Future: Edge trackers)
+- f5/f6 BOY-based trackers
+```
+
+### SimpleFaceTracker
+
+Used when face can be found via a predicate (no marking needed):
+
+```python
+class SimpleFaceTracker(FaceTracker):
+    __slots__ = ["_pred"]
+
+    def __init__(self, cube: Cube, color: Color, pred: Pred[Face]) -> None:
+        super().__init__(cube, color)
+        self._pred = pred
+
+    @property
+    def face(self) -> Face:
+        return self._cube.cqr.find_face(self._pred)
+
+    def cleanup(self) -> None:
+        pass  # No-op - nothing to clean
+```
+
+**Use cases:**
+- **Odd cube trackers**: Predicate checks `face.center.color == target_color`
+- **Opposite trackers**: Predicate checks `face.opposite is first_tracker.face`
+- **f5/f6 trackers**: Predicate uses BOY constraints
+
+### MarkedFaceTracker
+
+Used when a center slice must be marked with a key in `c_attributes`:
+
+```python
+class MarkedFaceTracker(FaceTracker):
+    __slots__ = ["_key"]
+
+    def __init__(self, cube: Cube, color: Color, key: str) -> None:
+        super().__init__(cube, color)
+        self._key = key
+
+    @property
+    def face(self) -> Face:
+        # Search for which face contains the marked slice
+        def _slice_pred(s: CenterSlice) -> bool:
+            return self._key in s.edge.c_attributes
+
+        def _face_pred(_f: Face) -> bool:
+            return _f.cube.cqr.find_slice_in_face_center(_f, _slice_pred) is not None
+
+        return self._cube.cqr.find_face(_face_pred)
+
+    def cleanup(self) -> None:
+        # Search and remove the key
+        for f in self._cube.faces:
+            for s in f.center.all_slices:
+                if self._key in s.edge.c_attributes:
+                    del s.edge.c_attributes[self._key]
+                    return
+```
+
+**Key points:**
+- Stores only the `_key` string, NOT an edge reference
+- Edge references become stale during rotations - must search each time
+- `cleanup()` searches all slices to find and remove its specific key
+
+---
+
+## Per-Holder Marker IDs
+
+Each `FacesTrackerHolder` instance gets a unique ID. Tracker keys include this ID
+so multiple holders can coexist safely.
+
+### Why Per-Holder IDs?
+
+**Problem:** With context managers, multiple holders exist simultaneously:
+- `status` property creates a holder to check solve state
+- `_solve_impl` creates a holder for actual solving
+- When `status` cleans up, it was removing `_solve_impl` markers!
+
+**Solution:** Each holder only cleans up its OWN markers:
+
+```
+Key format: "_nxn_centers_track:h{holder_id}:{color}{unique_id}"
+Example:    "_nxn_centers_track:h42:WHITE1"
+                                ^^^ holder_id
+```
+
+### Implementation
+
+```python
+class FacesTrackerHolder:
+    _holder_unique_id: int = 0  # Class counter
+
+    def __init__(self, slv, trackers=None):
+        # Generate unique ID
+        FacesTrackerHolder._holder_unique_id += 1
+        self._holder_id = FacesTrackerHolder._holder_unique_id
+
+        if trackers is None:
+            # Factory receives holder_id for key creation
+            factory = NxNCentersFaceTrackers(slv, self._holder_id)
+            self._trackers = self._create_trackers(factory)
+
+    def cleanup(self):
+        # Polymorphic - each tracker knows what to clean
+        for tracker in self._trackers:
+            tracker.cleanup()
+```
+
+### Factory Creates Keys
+
+Only the factory (`NxNCentersFaceTrackers`) needs `holder_id`:
+
+```python
+class NxNCentersFaceTrackers:
+    _global_tracer_id: int = 0  # For unique keys
+
+    def __init__(self, slv, holder_id: int):
+        self._holder_id = holder_id
+
+    def _create_tracker_by_center_piece(self, _slice: CenterSlice) -> MarkedFaceTracker:
+        NxNCentersFaceTrackers._global_tracer_id += 1
+        unique_id = NxNCentersFaceTrackers._global_tracer_id
+
+        # Key includes holder_id for safe multi-holder cleanup
+        key = f"{TRACKER_KEY_PREFIX}h{self._holder_id}:{_slice.color}{unique_id}"
+
+        # Store Color as VALUE (renderer reads directly)
+        _slice.edge.c_attributes[key] = _slice.color
+
+        return MarkedFaceTracker(_slice.parent.cube, _slice.color, key)
+```
+
+---
+
+## Renderer Integration (GUI)
+
+The renderer shows small colored circles on tracked center slices.
+
+### How Renderer Finds Tracked Slices
+
+```python
+# In _modern_gl_cell.py
+_TRACKER_KEY_PREFIX = "_nxn_centers_track:"
+
+def get_tracker_color(self) -> Color | None:
+    """Get tracker color if this cell is marked."""
+    c_attrs = self._part_edge.c_attributes
+    for key, value in c_attrs.items():
+        if isinstance(key, str) and key.startswith(_TRACKER_KEY_PREFIX):
+            return value  # Value IS the Color enum
+    return None
+```
+
+### Color Storage
+
+Color is stored as the VALUE, not encoded in the key:
+
+```python
+# In factory:
+edge.c_attributes[key] = _slice.color  # Color enum as value
+
+# In renderer:
+for key, value in c_attrs.items():
+    if key.startswith(_TRACKER_KEY_PREFIX):
+        return value  # Just read the Color directly
+```
+
+This avoids parsing key strings and keeps the design clean.
+
+---
 
 ### part_match_faces Implementation
 

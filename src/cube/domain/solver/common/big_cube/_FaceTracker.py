@@ -1,35 +1,57 @@
 """Face tracker - tracks which color belongs to which face during solving.
 
 See FACE_TRACKER.md in this directory for detailed documentation.
+
+Each FaceTracker belongs to a FacesTrackerHolder identified by holder_id.
+The holder_id is embedded in marker keys for per-holder cleanup.
+
+TRACKER HIERARCHY:
+==================
+
+    FaceTracker (abstract base)      # Never instantiated directly
+        │
+        ├── SimpleFaceTracker        # For odd, opposite, f5 (no cleanup)
+        │
+        └── MarkedFaceTracker        # For marked slices (needs cleanup)
+
+SimpleFaceTracker is used for trackers that don't mark slices:
+- Odd cube trackers (use fixed center color)
+- Opposite trackers (find opposite face)
+- f5 trackers (use BOY predicate)
+
+MarkedFaceTracker is used when a center slice is marked with a tracking key.
 """
 
-from typing import Any, Callable, TypeAlias
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
-from cube.domain.model import CenterSlice, CenterSliceIndex, Color
-from cube.domain.model.Cube import Cube
+from cube.domain.model import CenterSlice, Color
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
-from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
+
+if TYPE_CHECKING:
+    from cube.domain.model.Cube import Cube
 
 _TRACKER_KEY_PREFIX = "_nxn_centers_track:"
 
-_FaceSearcher = Callable[[], Face]
 
-_FaceLoc: TypeAlias = "FaceTracker"
+class FaceTracker(ABC):
+    """Abstract base tracker - holds cube reference and color.
 
+    Never instantiated directly. Use SimpleFaceTracker or MarkedFaceTracker.
+    """
 
-class FaceTracker:
-    _tracer_unique_id: int = 0
+    __slots__ = ["_cube", "_color"]
 
-    def __init__(self, color: Color, tracker: _FaceSearcher) -> None:
-        super().__init__()
-        self._tracker = tracker
+    def __init__(self, cube: "Cube", color: Color) -> None:
+        self._cube = cube
         self._color = color
-        self._attributes: dict[Any, Any] = {}
 
     @property
+    @abstractmethod
     def face(self) -> Face:
-        return self._tracker()
+        """Find and return the tracked face. Abstract - must be implemented."""
+        pass
 
     @property
     def color(self) -> Color:
@@ -41,122 +63,90 @@ class FaceTracker:
     def __repr__(self) -> str:
         return self.__str__()
 
-    @staticmethod
-    def by_pred(cube: Cube, color: Color, pred: Pred[Face]) -> _FaceLoc:
+    @abstractmethod
+    def cleanup(self) -> None:
+        """Remove any marks this tracker created. Abstract - must be implemented."""
+        pass
 
-        def t() -> Face:
-            return cube.cqr.find_face(pred)
+    def track_opposite(self) -> "SimpleFaceTracker":
+        """Create tracker for the opposite face."""
+        second_color = self._cube.original_layout.opposite_color(self._color)
 
-        return FaceTracker(color, t)
+        def _pred(_f: Face) -> bool:
+            return _f.opposite is self.face
 
-    @staticmethod
-    def by_center_piece(_slice: CenterSlice) -> _FaceLoc:
-
-        """
-        Put a marker on __slice and track it
-        :param _slice:
-        :return:
-        """
-
-        FaceTracker._tracer_unique_id += 1
-
-        key = _TRACKER_KEY_PREFIX + str(_slice.color) + str(FaceTracker._tracer_unique_id)
-        edge = _slice.edge
-        edge.c_attributes[key] = True
-
-        cube = _slice.parent.cube
-        if cube.config.solver_annotate_trackers:
-            viewer_add_view_marker(edge.c_attributes, VMarker.C0)  # to debug if alg move trackers
-
-        def _slice_pred(s: CenterSlice):
-            return key in s.edge.c_attributes
-
-        def _face_pred(_f: Face):
-            return _f.cube.cqr.find_slice_in_face_center(_f, _slice_pred) is not None
-
-        color = _slice.color
-        cube = _slice.parent.cube
-
-        return FaceTracker.by_pred(cube, color, _face_pred)
+        return SimpleFaceTracker(self._cube, second_color, _pred)
 
     @staticmethod
-    def search_color_and_track(face: Face, color: Color):
-        """
-        Find slice on face that has a specific color and track it
-        :param face:
-        :param color:
-        :return:
-        """
-
-        _slice = face.cube.cqr.find_slice_in_face_center(face, lambda s: s.color == color)
-        assert _slice
-
-        return FaceTracker.by_center_piece(_slice)
-
-    @staticmethod
-    def search_by_index_and_track(f: Face, rc: CenterSliceIndex) -> _FaceLoc:
-
-        # Why can't we track by slice index ? because when moving from face to face
-        #  index may be changed
-        _slice = f.center.get_center_slice(rc)
-        return FaceTracker.by_center_piece(_slice)
-
-    @staticmethod
-    def track_odd(f: Face) -> _FaceLoc:
-
-        cube = f.cube
-        n_slices = cube.n_slices
-
-        assert n_slices % 2  # see comment below
-        rc = (n_slices // 2, n_slices // 2)
-
-        # only middle in odd, doesn't change index when moving from face to face
-
-        #        return self._track_slice(f, rc)
-        color = f.center.get_center_slice(rc).color
-
-        # This can be done only on odd cube and indexes n/2, n/2
-        # because when moving from face to face slice coordinate are changed
-        # and only on odd cube center slice is unique !!!
-        def pred(_f: Face):
-            return _f.center.get_center_slice(rc).color == color
-
-        return FaceTracker.by_pred(cube, color, pred)
-
-    def track_opposite(self) -> "FaceTracker":
-
-        f: FaceTracker = self
-
-        f_color = f.color
-
-        cube = f.face.cube
-
-        second_color = cube.original_layout.opposite_color(f_color)
-
-        def _pred() -> Face:
-            _f: Face
-            return cube.cqr.find_face(lambda _f: _f.opposite is f.face)
-
-        return FaceTracker(second_color, _pred)
-
-    @staticmethod
-    def is_track_slice(s: CenterSlice):
-
+    def is_track_slice(s: CenterSlice) -> bool:
         for k in s.edge.c_attributes.keys():
             if isinstance(k, str) and k.startswith(_TRACKER_KEY_PREFIX):
                 return True
-
         return False
 
-    @staticmethod
-    def remove_face_track_slices(f: Face):
-        """
-        Track slices prevent swapping of whole slices and big blocks
-        :param f:
-        :return:
-        """
-        for s in f.center.all_slices:
-            cs = s.edge.c_attributes
-            for k in [*cs.keys()]:  # need to copy, we modify it
-                if isinstance(k, str) and k.startswith(_TRACKER_KEY_PREFIX):
-                    del cs[k]
+
+class SimpleFaceTracker(FaceTracker):
+    """Tracker that doesn't mark slices. No cleanup needed.
+
+    Used for:
+    - Odd cube trackers (use fixed center color predicate)
+    - Opposite trackers (find opposite face)
+    - f5 trackers (use BOY predicate)
+
+    TODO: Revisit this design - storing a predicate callable feels inelegant.
+    """
+
+    __slots__ = ["_pred"]
+
+    def __init__(self, cube: "Cube", color: Color, pred: Pred[Face]) -> None:
+        super().__init__(cube, color)
+        self._pred = pred
+
+    @property
+    def face(self) -> Face:
+        """Find face using stored predicate."""
+        return self._cube.cqr.find_face(self._pred)
+
+    def cleanup(self) -> None:
+        """No-op - simple trackers don't mark anything."""
+        pass
+
+
+class MarkedFaceTracker(FaceTracker):
+    """Tracker that marks a center slice. Needs cleanup.
+
+    Created by _create_tracker_by_center_piece() when a center slice
+    is marked with a tracking key in its c_attributes.
+
+    Stores the key used to mark the slice.
+    cleanup() searches for and removes that specific key.
+    """
+
+    __slots__ = ["_key"]
+
+    def __init__(self, cube: "Cube", color: Color, key: str) -> None:
+        super().__init__(cube, color)
+        self._key = key
+
+    @property
+    def face(self) -> Face:
+        """Find face containing the marked slice."""
+        def _slice_pred(s: CenterSlice) -> bool:
+            return self._key in s.edge.c_attributes
+
+        def _face_pred(_f: Face) -> bool:
+            return _f.cube.cqr.find_slice_in_face_center(_f, _slice_pred) is not None
+
+        return self._cube.cqr.find_face(_face_pred)
+
+    def cleanup(self) -> None:
+        """Search for and remove the specific key from the marked slice."""
+        for f in self._cube.faces:
+            for s in f.center.all_slices:
+                if self._key in s.edge.c_attributes:
+                    del s.edge.c_attributes[self._key]
+                    return
+
+
+# Export prefix for TrackerFactory
+TRACKER_KEY_PREFIX = _TRACKER_KEY_PREFIX
