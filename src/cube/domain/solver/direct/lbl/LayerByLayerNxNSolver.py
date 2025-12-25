@@ -27,6 +27,7 @@ from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
+from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 
@@ -53,7 +54,7 @@ class LayerByLayerNxNSolver(BaseSolver):
     - Like Layer 1 but with restricted moves
     """
 
-    __slots__ = ["_nxn_edges", "_shadow_helper", "_tracker_holder"]
+    __slots__ = ["_nxn_edges", "_shadow_helper", "_tracker_holder", "_lbl_slices"]
 
     def __init__(self, op: OperatorProtocol) -> None:
         """
@@ -75,6 +76,9 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         # Persistent tracker holder - created once, reused for all operations
         self._tracker_holder: FacesTrackerHolder | None = None
+
+        # LBL slices helper - wraps NxNCenters and NxNEdges for slice operations
+        self._lbl_slices = _LBLSlices(self)
 
     # =========================================================================
     # Public properties/methods (Solver protocol order)
@@ -114,10 +118,8 @@ class LayerByLayerNxNSolver(BaseSolver):
         th = self.tracker_holder
         layer1_done = self._is_layer1_solved(th)
 
-        if layer1_done:
-            return "L1:Done"
-        else:
-            # Check sub-steps
+        if not layer1_done:
+            # Check Layer 1 sub-steps
             centers_done = self._is_layer1_centers_solved(th)
             edges_done = self._is_layer1_edges_solved(th)
 
@@ -128,15 +130,28 @@ class LayerByLayerNxNSolver(BaseSolver):
             else:
                 return "L1:Pending"
 
+        # Layer 1 done - check middle slices
+        n_slices = self.cube.n_slices
+        l1_tracker = self._get_layer1_tracker(th)
+        solved_slices = self._lbl_slices.count_solved_slice_centers(th, l1_tracker)
+
+        if solved_slices == n_slices:
+            return f"L1:Done|Sl:{solved_slices}/{n_slices}"
+        elif solved_slices > 0:
+            return f"L1:Done|Sl:{solved_slices}/{n_slices}"
+        else:
+            return "L1:Done|Sl:0"
+
     def supported_steps(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
         Note: SolveStep.ALL is implicit for all solvers (not listed here).
         """
         return [
-            SolveStep.LBL_L1_Ctr,   # Layer 1 centers only
-            SolveStep.L1x,          # Layer 1 cross (centers + edges)
-            SolveStep.LBL_L1,       # Layer 1 complete
+            SolveStep.LBL_L1_Ctr,     # Layer 1 centers only
+            SolveStep.L1x,            # Layer 1 cross (centers + edges)
+            SolveStep.LBL_L1,         # Layer 1 complete
+            SolveStep.LBL_SLICES_CTR, # Middle slices centers (debugging)
         ]
 
     # =========================================================================
@@ -168,11 +183,26 @@ class LayerByLayerNxNSolver(BaseSolver):
                 self._solve_layer1_edges(th)
                 self._solve_layer1_cross(th)
 
-            case SolveStep.ALL | SolveStep.LBL_L1:
+            case SolveStep.LBL_L1:
                 # Layer 1 complete (centers + edges + corners)
                 self._solve_layer1_centers(th)
                 self._solve_layer1_edges(th)
                 self._solve_layer1_corners(th)
+
+            case SolveStep.LBL_SLICES_CTR:
+                # Layer 1 + middle slices centers only (for debugging)
+                self._solve_layer1_centers(th)
+                self._solve_layer1_edges(th)
+                self._solve_layer1_corners(th)
+                self._solve_slices_centers(th)
+
+            case SolveStep.ALL:
+                # Full solve (currently only up to Layer 1 + slices centers)
+                self._solve_layer1_centers(th)
+                self._solve_layer1_edges(th)
+                self._solve_layer1_corners(th)
+                self._solve_slices_centers(th)
+                # TODO: Add slice edges, last layer
 
             case _:
                 raise ValueError(f"Unsupported step: {what}")
@@ -376,3 +406,17 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         # Apply to shadow cube
         shadow.set_3x3_colors(modified)
+
+    # =========================================================================
+    # Private methods - Middle slices solving
+    # =========================================================================
+
+    def _solve_slices_centers(self, th: FacesTrackerHolder) -> None:
+        """Solve all middle slice ring centers (bottom to top).
+
+        Delegates to _LBLSlices helper which wraps NxNCenters and NxNEdges.
+        """
+        l1_tracker = self._get_layer1_tracker(th)
+
+        with self.op.annotation.annotate(h2="Middle slices centers"):
+            self._lbl_slices.solve_all_slice_centers(th, l1_tracker)
