@@ -171,169 +171,72 @@ class _LBLSlices:
     ) -> None:
         """Solve ring centers for a single slice.
 
-        Algorithm:
-        1. For each side face, bring it to front
-        2. Use NxNCenters to fix centers in the target row only
-        3. Repeat until row is solved
+        Simple approach (no optimization):
+        1. For each side face, bring to front
+        2. For each piece in row that needs fixing:
+           - Search on UP (rotate adjacent faces to UP)
+           - Search on BACK
+           - If still missing, move from same face to adjacent, then bring from there
+        3. Repeat until all 4 faces are solved (may need multiple iterations
+           because solving one face can disturb others)
 
         Args:
             slice_index: Which slice to solve (0 = closest to D)
             th: FacesTrackerHolder for face color tracking
             l1_tracker: Layer 1 face tracker
         """
+        row = self.slice_to_row(slice_index)
+        ann = self._slv.op.annotation
+
         if self.is_slice_centers_solved(slice_index, th, l1_tracker):
             return
-
-        row = self.slice_to_row(slice_index)
 
         # Get side face trackers (excluding L1 and opposite)
         side_trackers = self.get_side_face_trackers(th, l1_tracker)
 
-        # Keep iterating until slice is solved (may need multiple passes)
-        max_iterations = 20  # Safety limit
-        for iteration in range(max_iterations):
-            if self.is_slice_centers_solved(slice_index, th, l1_tracker):
-                return
+        # === HEADLINE 1: SLICE ===
+        with ann.annotate(h1=f"Slice {slice_index} (row {row})"):
+            # Multiple iterations needed because solving one face can disturb others
+            max_iterations = 10
+            for _iteration in range(max_iterations):
+                if self.is_slice_centers_solved(slice_index, th, l1_tracker):
+                    return
 
-            work_done = False
-            for face_tracker in side_trackers:
-                if self._solve_face_row(face_tracker, row, th, l1_tracker):
-                    work_done = True
-                    # Check if fully solved after each face
-                    if self.is_slice_centers_solved(slice_index, th, l1_tracker):
-                        return
+                for face_tracker in side_trackers:
+                    self._solve_face_row_simple(face_tracker, row, slice_index)
 
-            if not work_done:
-                # No progress made - might need different strategy
-                break
-
-        # If we get here, slice might not be fully solved
+        # Verify solved
         if not self.is_slice_centers_solved(slice_index, th, l1_tracker):
-            raise RuntimeError(
-                f"Failed to solve slice {slice_index} (row {row}) after {max_iterations} iterations"
-            )
+            self._report_stuck(slice_index, row, side_trackers)
 
-    def _solve_face_row(
-        self,
-        face_tracker: FaceTracker,
-        row: int,
-        th: FacesTrackerHolder,
-        l1_tracker: FaceTracker
-    ) -> bool:
-        """Solve a single row on a single face.
+    def _solve_face_row_simple(
+        self, face_tracker: FaceTracker, row: int, slice_index: int
+    ) -> None:
+        """Solve one face's center using the existing NxNCenters method.
 
-        Brings the face to front, then tries sources in this order:
-        1. UP face (already in position)
-        2. BACK face (commutator supports this directly)
-        3. LEFT face (brought to UP)
-        4. RIGHT face (brought to UP)
-        5. Same face different row (move piece out first)
+        Uses _do_center which properly:
+        1. Brings target face to front
+        2. Rotates through all 4 adjacent faces to UP
+        3. Uses BACK if use_back_too=True
+        4. Undoes rotations to preserve cage
 
-        Note: D face is Layer 1 (solved) - we skip it.
-
-        Returns True if any work was done.
+        Args:
+            face_tracker: Face to solve
+            row: Row index to solve (unused - we solve entire center)
+            slice_index: Slice index (for annotations)
         """
-        from cube.domain.algs import Algs
-
         target_color = face_tracker.color
-        face = face_tracker.face
 
-        # Check if this row is already solved
-        if self._is_face_row_solved(face, row, target_color):
-            return False
+        # Skip if face center already solved
+        if self._centers._is_face_solved(face_tracker.face, target_color):
+            return
 
-        # Bring target face to front
-        self._centers.cmn.bring_face_front(face)
-
-        # Now work on the row (face is now at front position)
-        cube = self.cube
-        front = cube.front
-        op = self._slv.op
-
-        work_done = False
-
-        # First try UP and BACK as sources (no rotation needed)
-        for source in [cube.up, cube.back]:
-            if self._is_face_row_solved(front, row, target_color):
-                return work_done
-            if self._try_source_for_row(front, row, target_color, source):
-                work_done = True
-
-        # Try L and R by bringing to UP (track and undo rotations)
-        setup_alg = Algs.NOOP
-        for adj_face in [cube.left, cube.right]:
-            if self._is_face_row_solved(front, row, target_color):
-                break
-
-            # Bring adjacent face to UP
-            rotate_alg = self._centers._bring_face_up_preserve_front(adj_face)
-            setup_alg = setup_alg + rotate_alg
-
-            # Now cube.up has our source
-            if self._try_source_for_row(front, row, target_color, cube.up):
-                work_done = True
-
-        # Undo all setup rotations
-        if setup_alg != Algs.NOOP:
-            op.play(setup_alg.prime)
-
-        return work_done
-
-    def _try_source_for_row(
-        self,
-        front: Face,
-        row: int,
-        target_color: Color,
-        source_face: Face
-    ) -> bool:
-        """Try to fix centers in row using pieces from source_face.
-
-        Returns True if any work was done.
-        """
-        work_done = False
-        for col in range(self.n_slices):
-            center = front.center.get_center_slice((row, col))
-            if center.color == target_color:
-                continue  # Already correct
-
-            if self._fix_single_center(front, row, col, target_color, source_face):
-                work_done = True
-
-        return work_done
-
-    def _fix_single_center(
-        self,
-        target_face: Face,
-        row: int,
-        col: int,
-        target_color: Color,
-        source_face: Face
-    ) -> bool:
-        """Fix a single center position using block commutator.
-
-        Uses NxNCenters._block_communicator internally.
-
-        Returns True if successful.
-        """
-        # Check if source face has the color we need
-        if not self._has_color_on_face(source_face, target_color):
-            return False
-
-        # Use a 1x1 block commutator targeting (row, col)
-        from cube.domain.solver.common.big_cube.NxNCenters import _SearchBlockMode
-
-        # The block is just the single position
-        rc1 = (row, col)
-        rc2 = (row, col)
-
-        # Try the commutator - it will search for matching source
-        return self._centers._block_communicator(
-            target_color,
-            target_face,
-            source_face,
-            rc1, rc2,
-            _SearchBlockMode.BigThanSource
-        )
+        # Use the existing _do_center method which properly handles:
+        # - Bringing face to front
+        # - Rotating through adjacent faces
+        # - Using BACK as source
+        # - Undoing rotations (preserve_cage)
+        self._centers._do_center(face_tracker, False, True)
 
     def _is_face_row_solved(self, face: Face, row: int, target_color: Color) -> bool:
         """Check if a specific row on a face has all correct colors."""
@@ -342,26 +245,58 @@ class _LBLSlices:
                 return False
         return True
 
-    def _has_color_on_face(self, face: Face, color: Color) -> bool:
-        """Check if face has at least one center of the given color."""
-        for row in range(self.n_slices):
-            for col in range(self.n_slices):
-                if face.center.get_center_slice((row, col)).color == color:
-                    return True
-        return False
+    def _report_stuck(
+        self, slice_index: int, row: int, side_trackers: list[FaceTracker]
+    ) -> None:
+        """Report which face is stuck and show state."""
+        for face_tracker in side_trackers:
+            if not self._is_face_row_solved(face_tracker.face, row, face_tracker.color):
+                needed = face_tracker.color.name
+                print(f"\n=== STUCK: Need {needed} on row {row} ===")
+                cube = self.cube
+                for face in [cube.front, cube.right, cube.back, cube.left, cube.up, cube.down]:
+                    positions = []
+                    for r in range(self.n_slices):
+                        for c in range(self.n_slices):
+                            center = face.center.get_center_slice((r, c))
+                            if center.color.name == needed:
+                                positions.append(f"({r},{c})")
+                    if positions:
+                        print(f"  {face.name}: {needed} at {positions}")
+                raise RuntimeError(
+                    f"Failed to solve slice {slice_index} (row {row}) on face {face_tracker.color.name}"
+                )
 
     def solve_all_slice_centers(
         self, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> None:
-        """Solve all middle slice ring centers.
+        """Solve all middle slice ring centers (bottom to top).
 
-        Uses NxNCenters.solve_single_face for each side face.
-        The commutator affects multiple rows, so we solve entire faces
-        rather than row by row.
+        Solves slices in order: 0, 1, 2, ... n_slices-1
+        Each slice = one row on each of the 4 side faces.
+
+        IMPORTANT: Layer 1 must be on DOWN for the commutator to work correctly.
+        The commutator uses UP as source, so if Layer 1 is on UP, we'll mess it up.
         """
-        # Get all side face trackers (not L1 or its opposite)
-        side_trackers = self.get_side_face_trackers(th, l1_tracker)
+        from cube.domain.algs import Algs
 
-        # Solve each side face completely
-        for face_tracker in side_trackers:
-            self._centers.solve_single_face(th, face_tracker)
+        # Ensure Layer 1 is on DOWN (commutator uses UP as source)
+        l1_face = l1_tracker.face
+        cube = self.cube
+        op = self._slv.op
+
+
+        if l1_face is cube.up:
+            #claud: if this is preconditon and i dont understand why then it mus tbe takenn in th einner methods
+            # also there methods to bring face down, please xpalin why you need it
+            # Flip cube: Layer 1 is on UP, need it on DOWN
+            op.play(Algs.X * 2)  # 180 degree rotation around X axis
+            print(f"     Flipped cube: Layer 1 now on DOWN")
+
+        # Solve all slices from bottom to top
+        if True:
+            r = range(1)
+        else:
+            r = range(self.n_slices)
+        for slice_index in r:
+            self.solve_slice_centers(slice_index, th, l1_tracker)

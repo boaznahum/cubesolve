@@ -17,7 +17,7 @@ from typing import Tuple
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 4  # Using debug4x4 texture set for 4x4 debugging
+CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
 # Available solvers: LBL, CFOP, Kociemba, Cage, LBL-Direct

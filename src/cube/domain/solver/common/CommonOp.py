@@ -274,8 +274,23 @@ class CommonOp:
 
         return self.rotate_till(Algs.of_face(f.name), pred)
 
-    def bring_face_up(self, f: Face):
+    def bring_face_up(self, f: Face) -> None:
+        """Bring the given face to the UP position using whole-cube rotations.
 
+        This method uses only whole-cube rotations (X, Y, Z) which change the
+        cube's viewing orientation without moving any pieces relative to each other.
+        All edges, corners, and centers stay in their same relative positions -
+        only the perspective changes.
+
+        This is safe to call at any point during solving because it doesn't
+        disturb any solved pieces or relationships between pieces.
+
+        Args:
+            f: The face to bring to UP position
+
+        Raises:
+            InternalSWError: If f is not a valid face
+        """
         if f.name != FaceName.U:
 
             self.debug("Need to bring ", f, 'to', FaceName.U)
