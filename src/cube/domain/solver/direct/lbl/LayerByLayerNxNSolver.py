@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cube.domain.model.CubeListener import CubeListener
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
@@ -37,9 +38,13 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
 
 
-class LayerByLayerNxNSolver(BaseSolver):
+class LayerByLayerNxNSolver(BaseSolver, CubeListener):
     """
     Layer-by-Layer solver for NxN cubes.
+
+    Implements CubeListener to handle cube reset events - when the cube is
+    reset, the tracker holder must be invalidated because the c_attributes
+    marking tracked center slices are cleared.
 
     Solves the cube one horizontal layer at a time.
 
@@ -79,6 +84,11 @@ class LayerByLayerNxNSolver(BaseSolver):
         # Persistent tracker holder - created once, reused for all operations
         self._tracker_holder: FacesTrackerHolder | None = None
 
+        # Register as cube listener to handle reset events
+        # When cube is reset, our tracker holder becomes invalid because
+        # the c_attributes marking tracked center slices are cleared
+        self._cube.add_listener(self)
+
     # =========================================================================
     # Public properties/methods (Solver protocol order)
     # =========================================================================
@@ -102,6 +112,22 @@ class LayerByLayerNxNSolver(BaseSolver):
         if self._tracker_holder is not None:
             self._tracker_holder.cleanup()
             self._tracker_holder = None
+
+    # =========================================================================
+    # CubeListener implementation
+    # =========================================================================
+
+    def on_reset(self) -> None:
+        """Handle cube reset - invalidate tracker holder.
+
+        Called by cube when it's reset (e.g., before scramble).
+        The tracker holder becomes invalid because c_attributes are cleared.
+
+        We just set to None instead of calling cleanup() because:
+        1. The c_attributes are already cleared by reset
+        2. cleanup() would try to delete already-deleted keys
+        """
+        self._tracker_holder = None
 
     @property
     def get_code(self) -> SolverName:

@@ -18,18 +18,9 @@ from typing import Tuple
 #from cube.domain.solver.SolverName import SolverName
 
 ########## Some top important
-
 # Only initial value, can be changed
-CUBE_SIZE = 4  # Using debug4x4 texture set for 4x4 debugging
+CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
 
-# Default solver name - case-insensitive, prefix matching allowed if unambiguous
-# Available solvers: LBL, CFOP, Kociemba, Cage, LBL-Direct
-# Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "lbl-d" (for LBL-Direct)
-# Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "cage"
-DEFAULT_SOLVER = "lbl-d"
-
-#claude: where it is used ?
 SOLVER_CFOP=False
 
 ######### Model  ########
@@ -65,6 +56,11 @@ SS_CODES: dict[SSCode, bool] = {
 
 ######### Solvers  ########
 
+# Default solver name - case-insensitive, prefix matching allowed if unambiguous
+# Available solvers: LBL, CFOP, Kociemba, Cage, LBL-Direct
+# Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "lbl-d" (for LBL-Direct)
+# Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
+DEFAULT_SOLVER = "cage"
 
 # First face color - the color that determines Layer 1 for 3x3 beginner and LBL solvers
 # This is the color to start with, not a fixed face position (cube may be rotated)

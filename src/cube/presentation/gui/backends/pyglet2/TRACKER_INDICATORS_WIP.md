@@ -1,6 +1,6 @@
 # Tracker Indicators Feature (WIP)
 
-**Status:** Work in Progress - Basic implementation complete, shadow faces issue pending
+**Status:** Work in Progress - Basic implementation complete, second scramble crash FIXED, shadow faces issue pending
 
 ## Overview
 
@@ -56,20 +56,24 @@ Small filled circle indicators that appear on center slices marked as tracker an
 
 Shadow faces (L, D, B rendered at offset positions) don't display tracker indicators. Main faces work correctly. The shadow faces use the same `_generate_face_verts()` function, so they should work. Need to investigate why they don't.
 
-### 2. Second Scramble Causes Crash (BLOCKING)
+### 2. Second Scramble Causes Crash (FIXED)
 
-**Status:** Under investigation - See separate section below
+**Status:** FIXED - See solution section below
 
-When running a second scramble after solving, the solver crashes with:
+When running a second scramble after solving, the solver crashed with:
 ```
 InternalSWError: Can't find face with pred <function FaceTracker.by_center_piece.<locals>._face_pred>
 ```
 
-This is NOT caused by the indicator feature - it's a pre-existing bug in the tracker system.
+This was NOT caused by the indicator feature - it was a pre-existing bug in the tracker system.
+
+**Solution:** Made `LayerByLayerNxNSolver` implement `CubeListener` and register with the cube.
+When `on_reset()` is called, the solver invalidates its tracker holder (`_tracker_holder = None`).
+This allows fresh trackers to be created on the next solve/status access.
 
 ## TODO
 
-- [ ] Fix second scramble crash bug (blocking)
+- [x] Fix second scramble crash bug (blocking) - DONE: CubeListener pattern
 - [ ] Investigate shadow faces issue
 - [ ] Move constants to ConfigProtocol for runtime configurability
 - [ ] Add toggle to enable/disable tracker indicators
@@ -124,8 +128,18 @@ LayerByLayerNxNSolver.status
 - `src/cube/domain/solver/common/big_cube/_FaceTracker.py`
 - `src/cube/domain/solver/common/big_cube/FacesTrackerHolder.py`
 
-## Investigation Points
+## Solution (IMPLEMENTED)
 
-1. Where should trackers be cleaned up when cube is reset/scrambled?
-2. Should `status` property handle missing trackers gracefully?
-3. Is there a cube reset event that should trigger tracker cleanup?
+The fix was implemented in `LayerByLayerNxNSolver`:
+
+1. Import `CubeListener` protocol
+2. Make class implement `CubeListener`
+3. Register as listener in `__init__`: `self._cube.add_listener(self)`
+4. Implement `on_reset()` to invalidate tracker: `self._tracker_holder = None`
+
+Key insight: The cube already has a listener mechanism (`add_listener()`, `on_reset()`) used by
+`ModernGLCubeViewer` to reload textures on reset. Solvers with persistent state (like trackers)
+can use the same mechanism to invalidate their state on cube reset.
+
+**Files Modified:**
+- `src/cube/domain/solver/direct/lbl/LayerByLayerNxNSolver.py`
