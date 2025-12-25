@@ -162,7 +162,7 @@ class _LBLSlices(SolverElement):
     # =========================================================================
 
     def solve_slice_centers(
-            self, slice_index: int, th: FacesTrackerHolder, l1_tracker: FaceTracker
+            self, slice_index: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
     ) -> None:
         """Solve ring centers for a single slice.
 
@@ -178,38 +178,38 @@ class _LBLSlices(SolverElement):
         Args:
             slice_index: Which slice to solve (0 = closest to D)
             th: FacesTrackerHolder for face color tracking
-            l1_tracker: Layer 1 face tracker
+            l1_white_tracker: Layer 1 face tracker
         """
         row = self.slice_to_row(slice_index)
         ann = self._slv.op.annotation
 
         #boaz: it may related to cube orinatation
-        if self.is_slice_centers_solved(slice_index, th, l1_tracker):
+        if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
             return
 
         # Get side face trackers (excluding L1 and opposite)
-        side_trackers = self.get_side_face_trackers(th, l1_tracker)
+        side_trackers = self.get_side_face_trackers(th, l1_white_tracker)
 
         # === HEADLINE 1: SLICE ===
-        with ann.annotate(h1=f"Slice {slice_index} (row {row})"):
+        with ann.annotate(h1=f"Slice {slice_index}"):
             # Multiple iterations needed because solving one face can disturb others
 
-            if self.is_slice_centers_solved(slice_index, th, l1_tracker):
+            if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
                 return
 
             for face_tracker in side_trackers:
-                self._solve_face_row_simple(face_tracker, row, slice_index)
+                self._solve_face_row_simple(l1_white_tracker, face_tracker, slice_index)
 
         # Verify solved
         # boaz: currently we cant do it, because our index system is wrong, slice_index is depends on cube orientation
-        if False and not self.is_slice_centers_solved(slice_index, th, l1_tracker):
+        if False and not self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
             self._report_stuck(slice_index, row, side_trackers)
 
     def _solve_face_row_simple(
-            self, face_tracker: FaceTracker, row: int, slice_index: int
+            self, l1_white_tracker: FaceTracker, face_tracker: FaceTracker, slice_index: int
     ) -> None:
 
-        self._centers.solve_single_center_row_slice(face_tracker, slice_index)
+        self._centers.solve_single_center_row_slice(l1_white_tracker,face_tracker, slice_index)
 
     def _is_face_row_solved(self, face: Face, row: int, target_color: Color) -> bool:
         """Check if a specific row on a face has all correct colors."""
@@ -241,7 +241,7 @@ class _LBLSlices(SolverElement):
                 )
 
     def solve_all_slice_centers(
-            self, th: FacesTrackerHolder, l1_tracker: FaceTracker
+            self, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
     ) -> None:
         """Solve all middle slice ring centers (bottom to top).
 
@@ -254,7 +254,7 @@ class _LBLSlices(SolverElement):
         from cube.domain.algs import Algs
 
         # Ensure Layer 1 is on DOWN (commutator uses UP as source)
-        l1_face = l1_tracker.face
+        l1_face = l1_white_tracker.face
         cube = self.cube
         op = self._slv.op
 
@@ -264,4 +264,4 @@ class _LBLSlices(SolverElement):
         else:
             r = range(self.n_slices)
         for slice_index in r:
-            self.solve_slice_centers(slice_index, th, l1_tracker)
+            self.solve_slice_centers(slice_index, th, l1_white_tracker)

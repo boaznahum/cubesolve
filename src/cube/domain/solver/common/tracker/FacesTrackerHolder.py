@@ -313,11 +313,6 @@ class FacesTrackerHolder:
         return [t for t in self.trackers
                 if t.face is not of_face.face and t.face is not l1_opposite_face]
 
-    def other_faces(self, of_face: FaceTracker) -> Iterable[FaceTracker]:
-        # boaz: improve this
-
-        return [t for t in self.trackers
-                if t.face is not of_face.face ]
 
 
     def _trackers_layout(self) -> CubeLayout:

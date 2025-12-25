@@ -68,10 +68,6 @@ class AppConfig(ConfigProtocol):
         """Set solver debug flag."""
         cfg.SOLVER_DEBUG = value
 
-    @property
-    def solver_cfop(self) -> bool:
-        """Use CFOP solver instead of beginner."""
-        return cfg.SOLVER_CFOP
 
     @property
     def solver_annotate_trackers(self) -> bool:

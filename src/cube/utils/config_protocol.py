@@ -144,11 +144,6 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
-    def solver_cfop(self) -> bool:
-        """Use CFOP solver instead of beginner."""
-        ...
-
-    @property
     def solver_annotate_trackers(self) -> bool:
         """Annotate trackers during solve."""
         ...

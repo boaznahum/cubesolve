@@ -166,7 +166,13 @@ class FaceTracker(ABC):
         # boaz: improve this
 
         return [t for t in self.parent.trackers
-                if t.face is not self.face]
+                if t is not self]
+
+    def adjusted_faces(self) -> Iterable[FaceTracker]:
+        # boaz: improve this
+
+        return [t for t in self.parent.trackers
+                if t is not self and t is not self.opposite]
 
     @property
     def opposite(self) -> FaceTracker:
