@@ -163,31 +163,29 @@ class TestTrackerMajorityBug:
 
         solver = LayerByLayerNxNSolver(app.op)
 
-        # Get the persistent tracker holder from solver
-        th = solver.tracker_holder
+        # Create a tracker holder and keep it across Y rotation
+        # The trackers should move with the rotation
+        with FacesTrackerHolder(solver) as th:
+            # Check if L1 is currently solved (it might not be with our setup)
+            # The point is: if it IS solved, it should remain solved after Y rotation
+            is_l1_solved_before = solver._is_layer1_solved(th)
+            print(f"\nL1 solved before Y: {is_l1_solved_before}")
 
-        # Check if L1 is currently solved (it might not be with our setup)
-        # The point is: if it IS solved, it should remain solved after Y rotation
-        is_l1_solved_before = solver._is_layer1_solved(th)
-        print(f"\nL1 solved before Y: {is_l1_solved_before}")
+            # Perform a Y rotation (whole cube)
+            from cube.domain.algs import Algs
+            app.op.play(Algs.Y)
 
-        # Perform a Y rotation (whole cube)
-        from cube.domain.algs import Algs
-        app.op.play(Algs.Y)
+            # Check L1 again with the SAME tracker holder
+            # The trackers should have moved with the rotation
+            is_l1_solved_after = solver._is_layer1_solved(th)
+            print(f"L1 solved after Y: {is_l1_solved_after}")
 
-        # Check L1 again with the SAME tracker holder (persistent)
-        # The trackers should have moved with the rotation
-        is_l1_solved_after = solver._is_layer1_solved(th)
-        print(f"L1 solved after Y: {is_l1_solved_after}")
-
-        # The solved state should be consistent!
-        assert is_l1_solved_before == is_l1_solved_after, (
-            f"L1 solved state changed after Y rotation! "
-            f"Before: {is_l1_solved_before}, After: {is_l1_solved_after}. "
-            f"This indicates a tracker consistency bug."
-        )
-
-        solver.cleanup_trackers()
+            # The solved state should be consistent!
+            assert is_l1_solved_before == is_l1_solved_after, (
+                f"L1 solved state changed after Y rotation! "
+                f"Before: {is_l1_solved_before}, After: {is_l1_solved_after}. "
+                f"This indicates a tracker consistency bug."
+            )
 
     def test_fresh_trackers_after_y_rotation_same_assignment(self) -> None:
         """Test that fresh trackers after Y rotation give equivalent BOY layout.

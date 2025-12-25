@@ -58,7 +58,7 @@ Shadow faces (L, D, B rendered at offset positions) don't display tracker indica
 
 ### 2. Second Scramble Causes Crash (FIXED)
 
-**Status:** FIXED - See solution section below
+**Status:** FIXED - Removed persistent tracker holder from solver
 
 When running a second scramble after solving, the solver crashed with:
 ```
@@ -67,13 +67,21 @@ InternalSWError: Can't find face with pred <function FaceTracker.by_center_piece
 
 This was NOT caused by the indicator feature - it was a pre-existing bug in the tracker system.
 
-**Solution:** Made `LayerByLayerNxNSolver` implement `CubeListener` and register with the cube.
-When `on_reset()` is called, the solver invalidates its tracker holder (`_tracker_holder = None`).
-This allows fresh trackers to be created on the next solve/status access.
+**Root cause:** Solver held a persistent `_tracker_holder` that became stale after cube reset.
+
+**Solution:** Removed the persistent tracker holder entirely. Now `status` and `_solve_impl`
+each create a fresh `FacesTrackerHolder` using a context manager:
+```python
+with FacesTrackerHolder(self) as th:
+    # use th for all operations
+```
+
+This design is safer - no stale references possible. We rely on the tracker majority
+algorithm being deterministic (see issue #51 for potential concerns).
 
 ## TODO
 
-- [x] Fix second scramble crash bug (blocking) - DONE: CubeListener pattern
+- [x] Fix second scramble crash bug (blocking) - DONE: Fresh trackers per entry point
 - [ ] Investigate shadow faces issue
 - [ ] Move constants to ConfigProtocol for runtime configurability
 - [ ] Add toggle to enable/disable tracker indicators
@@ -132,14 +140,19 @@ LayerByLayerNxNSolver.status
 
 The fix was implemented in `LayerByLayerNxNSolver`:
 
-1. Import `CubeListener` protocol
-2. Make class implement `CubeListener`
-3. Register as listener in `__init__`: `self._cube.add_listener(self)`
-4. Implement `on_reset()` to invalidate tracker: `self._tracker_holder = None`
+1. Removed `_tracker_holder` field from `__slots__`
+2. Removed `tracker_holder` property and `cleanup_trackers()` method
+3. Wrapped `status` property with `with FacesTrackerHolder(self) as th:`
+4. Wrapped `_solve_impl` method with `with FacesTrackerHolder(self) as th:`
 
-Key insight: The cube already has a listener mechanism (`add_listener()`, `on_reset()`) used by
-`ModernGLCubeViewer` to reload textures on reset. Solvers with persistent state (like trackers)
-can use the same mechanism to invalidate their state on cube reset.
+Key insight: Solvers should NOT hold persistent tracker holders - they become stale on cube reset.
+Instead, create fresh trackers at each entry point (`status`, `_solve_impl`) using context managers.
+
+**Design decision:** We rely on the tracker majority algorithm being deterministic.
+If issue #51 (tracker majority bug) is real, fresh trackers might give inconsistent
+face→color assignments across calls.
 
 **Files Modified:**
 - `src/cube/domain/solver/direct/lbl/LayerByLayerNxNSolver.py`
+- `tests/solvers/test_lbl_big_cube_solver.py`
+- `tests/solvers/test_tracker_majority_bug.py`

@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.model.CubeListener import CubeListener
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
@@ -38,13 +37,9 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
 
 
-class LayerByLayerNxNSolver(BaseSolver, CubeListener):
+class LayerByLayerNxNSolver(BaseSolver):
     """
     Layer-by-Layer solver for NxN cubes.
-
-    Implements CubeListener to handle cube reset events - when the cube is
-    reset, the tracker holder must be invalidated because the c_attributes
-    marking tracked center slices are cleared.
 
     Solves the cube one horizontal layer at a time.
 
@@ -61,7 +56,7 @@ class LayerByLayerNxNSolver(BaseSolver, CubeListener):
     - Like Layer 1 but with restricted moves
     """
 
-    __slots__ = ["_nxn_edges", "_shadow_helper", "_tracker_holder"]
+    __slots__ = ["_nxn_edges", "_shadow_helper"]
 
     def __init__(self, op: OperatorProtocol) -> None:
         """
@@ -81,53 +76,9 @@ class LayerByLayerNxNSolver(BaseSolver, CubeListener):
 
         self._shadow_helper = ShadowCubeHelper(self)
 
-        # Persistent tracker holder - created once, reused for all operations
-        self._tracker_holder: FacesTrackerHolder | None = None
-
-        # Register as cube listener to handle reset events
-        # When cube is reset, our tracker holder becomes invalid because
-        # the c_attributes marking tracked center slices are cleared
-        self._cube.add_listener(self)
-
     # =========================================================================
     # Public properties/methods (Solver protocol order)
     # =========================================================================
-
-    @property
-    def tracker_holder(self) -> FacesTrackerHolder:
-        """Get or create the persistent tracker holder.
-
-        Creates trackers on first access and reuses them for all operations.
-        This ensures consistent face tracking throughout solving and status checks.
-        """
-        if self._tracker_holder is None:
-            self._tracker_holder = FacesTrackerHolder(self)
-        return self._tracker_holder
-
-    def cleanup_trackers(self) -> None:
-        """Clean up tracker marks from center slices.
-
-        Call this when done with the solver to remove tracking attributes.
-        """
-        if self._tracker_holder is not None:
-            self._tracker_holder.cleanup()
-            self._tracker_holder = None
-
-    # =========================================================================
-    # CubeListener implementation
-    # =========================================================================
-
-    def on_reset(self) -> None:
-        """Handle cube reset - invalidate tracker holder.
-
-        Called by cube when it's reset (e.g., before scramble).
-        The tracker holder becomes invalid because c_attributes are cleared.
-
-        We just set to None instead of calling cleanup() because:
-        1. The c_attributes are already cleared by reset
-        2. cleanup() would try to delete already-deleted keys
-        """
-        self._tracker_holder = None
 
     @property
     def get_code(self) -> SolverName:
@@ -139,23 +90,26 @@ class LayerByLayerNxNSolver(BaseSolver, CubeListener):
         if self.is_solved:
             return "Solved"
 
-        # Use persistent tracker for status checks
-        th = self.tracker_holder
-        layer1_done = self._is_layer1_solved(th)
+        # Create fresh tracker holder for status check
+        # Note: We rely on tracker majority algorithm being deterministic.
+        # If issue #51 (tracker majority bug) is real, trackers might not be
+        # reproducible across calls, causing inconsistent status reports.
+        with FacesTrackerHolder(self) as th:
+            layer1_done = self._is_layer1_solved(th)
 
-        if layer1_done:
-            return "L1:Done"
-        else:
-            # Check sub-steps
-            centers_done = self._is_layer1_centers_solved(th)
-            edges_done = self._is_layer1_edges_solved(th)
-
-            if centers_done and edges_done:
-                return "L1:Ctr+Edg"
-            elif centers_done:
-                return "L1:Ctr"
+            if layer1_done:
+                return "L1:Done"
             else:
-                return "L1:Pending"
+                # Check sub-steps
+                centers_done = self._is_layer1_centers_solved(th)
+                edges_done = self._is_layer1_edges_solved(th)
+
+                if centers_done and edges_done:
+                    return "L1:Ctr+Edg"
+                elif centers_done:
+                    return "L1:Ctr"
+                else:
+                    return "L1:Pending"
 
     def supported_steps(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
@@ -183,28 +137,30 @@ class LayerByLayerNxNSolver(BaseSolver, CubeListener):
         if self.is_solved:
             return sr
 
-        # Use persistent tracker holder (created once, reused for all operations)
-        th = self.tracker_holder
+        # Create fresh tracker holder for this solve operation
+        # Note: We rely on tracker majority algorithm being deterministic.
+        # If issue #51 (tracker majority bug) is real, trackers might not be
+        # reproducible across calls, causing solving to fail.
+        with FacesTrackerHolder(self) as th:
+            match what:
+                case SolveStep.LBL_L1_Ctr:
+                    # Layer 1 centers only
+                    self._solve_layer1_centers(th)
 
-        match what:
-            case SolveStep.LBL_L1_Ctr:
-                # Layer 1 centers only
-                self._solve_layer1_centers(th)
+                case SolveStep.L1x:
+                    # Layer 1 cross (centers + edges paired + edges positioned)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+                    self._solve_layer1_cross(th)
 
-            case SolveStep.L1x:
-                # Layer 1 cross (centers + edges paired + edges positioned)
-                self._solve_layer1_centers(th)
-                self._solve_layer1_edges(th)
-                self._solve_layer1_cross(th)
+                case SolveStep.ALL | SolveStep.LBL_L1:
+                    # Layer 1 complete (centers + edges + corners)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+                    self._solve_layer1_corners(th)
 
-            case SolveStep.ALL | SolveStep.LBL_L1:
-                # Layer 1 complete (centers + edges + corners)
-                self._solve_layer1_centers(th)
-                self._solve_layer1_edges(th)
-                self._solve_layer1_corners(th)
-
-            case _:
-                raise ValueError(f"Unsupported step: {what}")
+                case _:
+                    raise ValueError(f"Unsupported step: {what}")
 
         return sr
 
@@ -213,10 +169,7 @@ class LayerByLayerNxNSolver(BaseSolver, CubeListener):
     # =========================================================================
 
     def _get_layer1_tracker(self, th: FacesTrackerHolder) -> FaceTracker:
-        """Get the Layer 1 tracker (determined by FIRST_FACE_COLOR config).
-
-        Use this during solving when tracker_holder is available.
-        """
+        """Get the Layer 1 tracker (determined by FIRST_FACE_COLOR config)."""
         return th.get_tracker_by_color(self.config.first_face_color)
 
     def _is_layer1_centers_solved(self, th: FacesTrackerHolder) -> bool:
