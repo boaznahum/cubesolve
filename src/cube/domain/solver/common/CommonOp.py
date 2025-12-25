@@ -378,7 +378,7 @@ class CommonOp:
                         alg = Algs.Z
 
                     case FaceName.R:
-                        alg = Algs.D.prime
+                        alg = Algs.Z.prime
 
                     case _:
                         raise InternalSWError(f"Unknown face {face}")

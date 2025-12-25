@@ -43,6 +43,10 @@ CHECK_CUBE_SANITY = False
 # Only initial value, can be changed
 animation_enabled = True
 
+# Default animation speed index (0-7, higher is faster)
+# Speed presets: 0=45°/s, 1=90°/s, 2=180°/s, 3=360°/s, 4=540°/s, 5=900°/s, 6=1800°/s, 7=3000°/s
+ANIMATION_SPEED = 7
+
 # Single-step mode codes - enable specific breakpoints for debugging
 # Import SSCode here to avoid circular imports (config is loaded early)
 from cube.utils.SSCode import SSCode  # noqa: E402

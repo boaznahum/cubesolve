@@ -207,6 +207,12 @@ class AppConfig(ConfigProtocol):
         """Whether animation is enabled by default."""
         return cfg.animation_enabled
 
+    @property
+    def animation_speed(self) -> int:
+        """Default animation speed index (0-7, higher is faster)."""
+        # Clamp to valid range (0-7)
+        return max(0, min(7, cfg.ANIMATION_SPEED))
+
     # ==========================================================================
     # Texture settings
     # ==========================================================================

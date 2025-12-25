@@ -235,7 +235,7 @@ class NxNCenters2(SolverElement):
 
         self.cmn.bring_face_front(face.face)
 
-        if source_face.face is not face.opposite:
+        if source_face is not face.opposite:
             self.cmn.bring_face_up_preserve_front(source_face.face)
 
         cube = self.cube

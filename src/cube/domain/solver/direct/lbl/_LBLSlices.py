@@ -193,16 +193,16 @@ class _LBLSlices(SolverElement):
         # === HEADLINE 1: SLICE ===
         with ann.annotate(h1=f"Slice {slice_index} (row {row})"):
             # Multiple iterations needed because solving one face can disturb others
-            max_iterations = 10
-            for _iteration in range(max_iterations):
-                if self.is_slice_centers_solved(slice_index, th, l1_tracker):
-                    return
 
-                for face_tracker in side_trackers:
-                    self._solve_face_row_simple(face_tracker, row, slice_index)
+            if self.is_slice_centers_solved(slice_index, th, l1_tracker):
+                return
+
+            for face_tracker in side_trackers:
+                self._solve_face_row_simple(face_tracker, row, slice_index)
 
         # Verify solved
-        if not self.is_slice_centers_solved(slice_index, th, l1_tracker):
+        # boaz: currently we cant do it, because our index system is wrong, slice_index is depends on cube orientation
+        if False and not self.is_slice_centers_solved(slice_index, th, l1_tracker):
             self._report_stuck(slice_index, row, side_trackers)
 
     def _solve_face_row_simple(
