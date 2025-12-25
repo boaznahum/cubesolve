@@ -3,16 +3,19 @@ from collections.abc import Iterator
 from enum import Enum, unique
 from typing import Tuple, TypeAlias
 
+import cube
 from cube.domain import algs
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model import Color
+from cube.domain.model import Color, CenterSlice
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.tracker._base import FaceTracker
 from cube.domain.solver.protocols import SolverElementsProvider
+
+CENTER_SLICE_TRACK_KEY = "xxxxxxx"
 
 Point: TypeAlias = Tuple[int, int]
 
@@ -115,7 +118,7 @@ class NxNCenters2(SolverElement):
 
     def debug(self, *args, level=3):
         if level <= NxNCenters2.D_LEVEL:
-            super().debug("NxX Centers:", args)
+            super().debug("NxX 2 Centers:", args)
 
     def solve_single_center_row_slice(
             self, l1_white_tracker: FaceTracker, face_tracker: FaceTracker, row_slice_index: int
@@ -139,8 +142,51 @@ class NxNCenters2(SolverElement):
 
         for source_face in source_faces:
             if source_face is not l1_white_tracker:
-                self._solve_single_center_piece_from_source_face(l1_white_tracker, target_face, source_face,
-                                                                 slice_row_index)
+                # === HEADLINE 1: SLICE ===
+                with self.ann.annotate(
+                        h1=lambda: f"Face {target_face.color} Slice {slice_row_index} Source {source_face.face.color}"):
+                    self._solve_single_center_piece_from_source_face(l1_white_tracker, target_face, source_face,
+                                                                     slice_row_index)
+
+    def _tracke_center_slice(self, cs: CenterSlice, column: int):
+
+        # self.debug(f"Tracking cent slice {cs.index} column {column}")
+
+        cs.c_attributes[CENTER_SLICE_TRACK_KEY] = column
+
+    def _is_center_slice(self, cs: CenterSlice) -> int | None:
+
+        # the default is boolean False !!!
+        x = cs.c_attributes[CENTER_SLICE_TRACK_KEY]
+
+        #print(f"x: {x}")
+
+        if type(x) is int:
+            return x
+        else:
+            return None
+
+    def _clear_center_slice(self, cs: CenterSlice) -> None:
+        cs.c_attributes.pop(CENTER_SLICE_TRACK_KEY, None)
+
+    def _clear_all_tracking(self):
+
+        for c in self.cube.centers:
+            for cc in c.all_slices:
+                self._clear_center_slice(cc)
+
+    def _print_all_tracked_slices(self, s) -> None:
+
+        return
+
+        print(f"{s} xxxxx pieces:", end="")
+
+        for c in self.cube.centers:
+            for cs in c.all_slices:
+                if self._is_center_slice(cs) is not None:
+                    print(cs.index, end="")
+
+        print()
 
     def _remove_all_pieces_from_target_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                             source_face: FaceTracker,
@@ -149,10 +195,14 @@ class NxNCenters2(SolverElement):
             #claqude please document this method
         """
 
+        return False
+
         work_was_done: bool = False
 
         assert l1_white_tracker.face.center.is3x3  # solved
+
         # now check is there slice on my target
+
         for rc in self._2d_center_row_slice_iter(slice_row_index):
             n_rotate = self._search_block(target_face.face, target_face.face, target_face.color,
                                           _SearchBlockMode.CompleteBlock, rc, rc)
@@ -194,6 +244,30 @@ class NxNCenters2(SolverElement):
 
         return work_was_done
 
+    def _setup_slices_on_target_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int):
+
+        # we alwas want same position, we assume on front 0 .. n-1 ileft to right to left and botton up
+
+        assert target_face is not l1_white_tracker
+        assert target_face is not l1_white_tracker.opposite
+
+        self.cmn.bring_face_down(l1_white_tracker.face)
+        self.cmn.bring_face_front_preserve_down(target_face.face)
+
+        if not (l1_white_tracker.face is self.cube.down) :
+            self.cmn.bring_face_down(l1_white_tracker.face)
+            self.cmn.bring_face_front_preserve_down(target_face.face)
+
+        assert l1_white_tracker.face is self.cube.down
+        assert target_face.face is self.cube.front
+
+        # now collect indices always in same position
+        # boaz: we can hide it under query !!!
+        for rc in self._2d_center_row_slice_iter(slice_index):
+            slice_pice = target_face.face.center.get_center_slice(rc)
+
+            self._tracke_center_slice(slice_pice, rc[1])
+
     def _solve_single_center_piece_from_source_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                     source_face: FaceTracker,
                                                     slice_row_index: int) -> bool:
@@ -209,23 +283,41 @@ class NxNCenters2(SolverElement):
         :return: True if work was done
         """
 
-        max_iter = 100
-        iter = 0
 
-        while True:
-            iter += 1
-            if iter > max_iter:
-                raise InternalSWError(f"Maximum number of iterations reached")
+        # claude: convert it context manager
+        self._setup_slices_on_target_face(l1_white_tracker, target_face, slice_row_index)
 
-            work_was_done = self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, source_face,
-                                                                     slice_row_index)
+        try:
 
-            if self._solve_single_center_piece_from_source_face_impl(l1_white_tracker, target_face, source_face,
-                                                                     slice_row_index):
-                work_was_done = True
+            self._print_all_tracked_slices(f"before working on {slice_row_index}")
 
-            if not work_was_done:
-                break
+            work_was_done = False
+
+            # maybe not need iterations
+            max_iter = 10
+            iter = 0
+
+            while True:
+                iter += 1
+                if iter > max_iter:
+                    raise InternalSWError(f"Maximum number of iterations reached")
+
+                work_was_done = self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, source_face,
+                                                                         slice_row_index)
+
+                if self._solve_single_center_piece_from_source_face_impl(l1_white_tracker, target_face, source_face,
+                                                                         slice_row_index):
+                    work_was_done = True
+
+                if not work_was_done:
+                    break
+
+
+        finally:
+
+            self._clear_all_tracking()
+
+        return work_was_done
 
     def _solve_single_center_piece_from_source_face_impl(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                          source_face: FaceTracker,
@@ -248,24 +340,35 @@ class NxNCenters2(SolverElement):
 
         work_done = False
 
-        for rc in self._2d_center_row_slice_iter(slice_row_index):
+        for cs in target_face.face.center.all_slices:
 
-            if self._block_communicator(color,
-                                        target_face.face,
-                                        source_face.face,
-                                        rc, rc,
-                                        _SearchBlockMode.CompleteBlock):
+            if self._is_center_slice(cs) is not None:
 
-                after_fixed_color = target_face.face.center.get_center_slice(rc).color
+                rc = cs.index
 
-                if after_fixed_color != color:
-                    raise InternalSWError(f"Slice was not fixed {rc}, " +
-                                          f"required={color}, " +
-                                          f"actual={after_fixed_color}")
+                self.debug(f"Working on slice {slice_row_index} Found piece {rc}")
 
-                self.debug(f"Fixed slice {rc}")
+                self._print_all_tracked_slices(f"before working on {rc} {slice_row_index}")
 
-                work_done = True
+                wd = self._block_communicator(color,
+                                              target_face.face,
+                                              source_face.face,
+                                              rc, rc,
+                                              _SearchBlockMode.CompleteBlock)
+                if wd:
+
+                    after_fixed_color = target_face.face.center.get_center_slice(rc).color
+
+                    if after_fixed_color != color:
+                        raise InternalSWError(f"Slice was not fixed {rc}, " +
+                                              f"required={color}, " +
+                                              f"actual={after_fixed_color}")
+
+                    self.debug(f"Fixed slice {rc}")
+
+                    work_done = True
+
+                self._print_all_tracked_slices(f"after working on {rc} {slice_row_index} wd={wd}")
 
         return work_done
 
@@ -520,6 +623,18 @@ class NxNCenters2(SolverElement):
         n = self.cube.n_slices
         for c in range(n):
             yield slice_index, c
+
+    def _2d_center_iter(self) -> Iterator[Point]:
+
+        """
+        Walk on all points in center of size n_slices
+        """
+
+        n = self.cube.n_slices
+
+        for r in range(n):
+            for c in range(n):
+                yield r, c
 
     @staticmethod
     def _block_size(rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int:

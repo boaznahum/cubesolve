@@ -190,15 +190,12 @@ class _LBLSlices(SolverElement):
         # Get side face trackers (excluding L1 and opposite)
         side_trackers = self.get_side_face_trackers(th, l1_white_tracker)
 
-        # === HEADLINE 1: SLICE ===
-        with ann.annotate(h1=f"Slice {slice_index}"):
-            # Multiple iterations needed because solving one face can disturb others
 
-            if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
-                return
+        if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
+            return
 
-            for face_tracker in side_trackers:
-                self._solve_face_row_simple(l1_white_tracker, face_tracker, slice_index)
+        for face_tracker in side_trackers:
+            self._solve_face_row_simple(l1_white_tracker, face_tracker, slice_index)
 
         # Verify solved
         # boaz: currently we cant do it, because our index system is wrong, slice_index is depends on cube orientation

@@ -18,7 +18,7 @@ from cube.domain.solver.solver import SolveStep
 # Status Tests
 # =============================================================================
 
-@pytest.mark.parametrize("size", [4, 5, 7])
+@pytest.mark.parametrize("size", [4, 5, 7], ids=lambda s: f"size_{s}")
 def test_lbl_solver_status_on_solved_cube(size: int) -> None:
     """Test status reporting on a solved cube."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
@@ -139,8 +139,6 @@ def test_lbl_solver_solves_layer1_cross(size: int) -> None:
     """Test that LBL solver can solve Layer 1 cross (centers + edges positioned)."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
-
-
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
 
@@ -157,6 +155,21 @@ def test_lbl_solver_solves_layer1_cross(size: int) -> None:
         assert solver._is_layer1_cross_solved(th), "Layer 1 cross should be solved"
 
     print(f"\n  Size {size}x{size}: Layer 1 cross solved")
+
+
+@pytest.mark.parametrize("size", [7, 8, 9, 11], ids=lambda size: f"size_{size}")
+@pytest.mark.parametrize("scramble", range(9), ids=lambda s: f"scramble{s}")
+def test_lbl_solver_solves_slice_0(scramble: int, size: int) -> None:
+    """Just check that solver doesnt fails"""
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    # Scramble
+    app.scramble(scramble, None, animation=False, verbose=False)
+
+    solver = LayerByLayerNxNSolver(app.op)
+
+    # Solve Layer 1 cross (centers + edges paired + edges positioned)
+    solver.solve(animation=False)
 
 
 @pytest.mark.parametrize("seed", range(5))

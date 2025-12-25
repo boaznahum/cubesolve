@@ -288,7 +288,7 @@ class CommonOp:
 
             self.debug("Need to bring ", f, 'to', FaceName.U)
 
-            with self.ann.annotate(h2=f"Bringing face {f.name.value} up"):
+            with self.ann.annotate(h2=f"Bringing face {f.name.value} {f.color} up"):
 
                 alg: Alg
 
@@ -336,7 +336,7 @@ class CommonOp:
 
             self.debug("Need to bring ", f, 'to', FaceName.D)
 
-            with self.ann.annotate(h2=f"Bringing face {f.name.value} down"):
+            with self.ann.annotate(h2=f"Bringing face {f.name.value} {f.color} down"):
 
                 alg: Alg
 
@@ -375,7 +375,7 @@ class CommonOp:
 
             self.debug("Need to bring ", f, 'to', FaceName.F)
 
-            with self.ann.annotate(h2=f"Bringing face {f.name.value} to front"):
+            with self.ann.annotate(h2=f"Bringing face {f.name.value} {f.color} to front"):
 
                 match f.name:
 
@@ -407,7 +407,7 @@ class CommonOp:
 
             front = self.cube.front
 
-            with self.ann.annotate(h2=f"Bringing face preserve front{face.name.value} up"):
+            with self.ann.annotate(h2=f"Bringing face preserve front{face.name.value} {face.color} up"):
 
                 alg: Alg
 
@@ -446,7 +446,7 @@ class CommonOp:
 
             front = self.cube.front
 
-            with self.ann.annotate(h2=f"Bringing face preserve front{face.name.value} up"):
+            with self.ann.annotate(h2=f"Bringing face preserve front{face.name.value} {face.color} up"):
 
                 alg: Alg
 
@@ -484,24 +484,25 @@ class CommonOp:
 
             front = self.cube.front
 
-            with self.ann.annotate(h2=f"Bringing face preserve front{face.name.value} up"):
+            with self.ann.annotate(h2=f"Bringing face {face.name.value} {face.color}  preserving front up"):
 
                 alg: Alg
 
                 match face.name:
 
                     case FaceName.D | FaceName.U:
-                        raise InternalSWError(f"You cannot bring front  {face} up down preserve front{face.name.value} ")
+                        raise InternalSWError(f"You cannot bring front  {face}  front  "
+                                              f"preserving down {front} ")
 
 
-                    case FaceName.U:
-                        alg = Algs.Z * 2
+                    case FaceName.B:
+                        alg = Algs.Y * 2
 
                     case FaceName.L:
-                        alg = Algs.Z
+                        alg = -Algs.Y
 
                     case FaceName.R:
-                        alg = Algs.Z.prime
+                        alg = Algs.Y
 
                     case _:
                         raise InternalSWError(f"Unknown face {face}")
