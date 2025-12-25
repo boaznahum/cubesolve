@@ -118,11 +118,11 @@ from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
-from cube.domain.solver.common.big_cube._FaceTracker import (
+from cube.domain.solver.common.tracker._base import (
     FaceTracker,
     MarkedFaceTracker,
     SimpleFaceTracker,
-    TRACKER_KEY_PREFIX,
+    get_tracker_key_prefix,
 )
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -199,7 +199,8 @@ class NxNCentersFaceTrackers(SolverElement):
         NxNCentersFaceTrackers._global_tracer_id += 1
         unique_id = NxNCentersFaceTrackers._global_tracer_id
 
-        key = f"{TRACKER_KEY_PREFIX}h{self._holder_id}:{_slice.color}{unique_id}"
+        prefix = get_tracker_key_prefix()
+        key = f"{prefix}h{self._holder_id}:{_slice.color}{unique_id}"
 
         edge = _slice.edge
         edge.c_attributes[key] = _slice.color  # Store Color for renderer

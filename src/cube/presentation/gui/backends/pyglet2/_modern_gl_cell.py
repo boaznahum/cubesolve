@@ -34,6 +34,7 @@ from numpy import ndarray
 
 from cube.domain.model.cube_boy import Color
 from cube.domain.model.VMarker import VMarker, viewer_get_markers
+from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
     from cube.domain.model._part_slice import PartSlice
@@ -79,9 +80,6 @@ _TRACKER_INDICATOR_RADIUS_FACTOR = 0.25  # 25% of cell size (smaller than marker
 _TRACKER_INDICATOR_HEIGHT = 0.10         # Height offset above surface
 _TRACKER_INDICATOR_OUTLINE_WIDTH = 0.15  # Black outline width as fraction of radius
 _TRACKER_INDICATOR_OUTLINE_COLOR = (0.0, 0.0, 0.0)  # Black outline for visibility
-
-# Prefix for tracker keys in c_attributes (imported from _FaceTracker for parsing)
-_TRACKER_KEY_PREFIX = "_nxn_centers_track:"
 
 # Border line color (black)
 _LINE_COLOR = (0.0, 0.0, 0.0)
@@ -368,9 +366,8 @@ class ModernGLCell:
         per face as an anchor. This method detects if this cell is such an
         anchor and returns the tracker's assigned color.
 
-        The tracker key format can be:
-        - Old: "_nxn_centers_track:Color.WHITE1"
-        - New: "_nxn_centers_track:h42:Color.WHITE1" (with holder ID)
+        Uses FacesTrackerHolder.get_tracked_edge_color() which is holder-agnostic
+        (returns color from ANY holder that marked this edge).
 
         Returns:
             The Color enum of the tracker's assigned color, or None if not tracked.
@@ -378,16 +375,7 @@ class ModernGLCell:
         if self.part_edge is None:
             return None
 
-        # Quick check: only center slices can have tracker keys
-        # c_attributes is a dict, typically with 0-3 keys, so iteration is fast
-        c_attrs = self.part_edge.c_attributes
-        if not c_attrs:
-            return None
-
-        for key, value in c_attrs.items():
-            if isinstance(key, str) and key.startswith(_TRACKER_KEY_PREFIX):
-                return value  # Value is the Color
-        return None
+        return FacesTrackerHolder.get_tracked_edge_color(self.part_edge)
 
     def generate_marker_vertices(self, dest: list[float]) -> None:
         """Generate triangle vertices for 3D raised marker rings/circles.

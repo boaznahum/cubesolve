@@ -6,7 +6,7 @@ Uses FacesTrackerHolder for even cube matching - see:
 
 from __future__ import annotations
 
-from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReductionResults

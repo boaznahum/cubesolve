@@ -55,7 +55,7 @@ def test_lbl_solver_state_inspection_on_solved_cube(size: int) -> None:
     solver = LayerByLayerNxNSolver(app.op)
 
     # On solved cube, use FacesTrackerHolder for inspection
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_centers_solved(th)
@@ -73,7 +73,7 @@ def test_lbl_solver_state_inspection_on_scrambled_cube(size: int) -> None:
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         # On scrambled cube, Layer 1 should not be solved
@@ -94,7 +94,7 @@ def test_lbl_solver_solves_layer1_centers(size: int) -> None:
 
     solver = LayerByLayerNxNSolver(app.op)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     # Before solve - centers might or might not be solved
     # (could be solved by chance on small scrambles)
@@ -122,7 +122,7 @@ def test_lbl_solver_layer1_centers_multiple_scrambles(seed: int) -> None:
     # Solve Layer 1 centers
     solver.solve(what=SolveStep.LBL_L1_Ctr, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_centers_solved(th), f"5x5 Layer 1 centers should be solved (seed={seed})"
@@ -147,7 +147,7 @@ def test_lbl_solver_solves_layer1_cross(size: int) -> None:
     # Solve Layer 1 cross (centers + edges paired + edges positioned)
     solver.solve(what=SolveStep.L1x, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_centers_solved(th), "Layer 1 centers should be solved"
@@ -170,7 +170,7 @@ def test_lbl_solver_layer1_cross_multiple_scrambles(seed: int) -> None:
     # Solve Layer 1 cross
     solver.solve(what=SolveStep.L1x, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_cross_solved(th), f"5x5 Layer 1 cross should be solved (seed={seed})"
@@ -195,7 +195,7 @@ def test_lbl_solver_solves_layer1_complete(size: int) -> None:
     # Solve complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_centers_solved(th), "Layer 1 centers should be solved"
@@ -219,7 +219,7 @@ def test_lbl_solver_layer1_complete_multiple_scrambles(seed: int) -> None:
     # Solve complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_solved(th), f"5x5 Layer 1 should be solved (seed={seed})"
@@ -244,7 +244,7 @@ def test_lbl_solver_even_cube_layer1(size: int) -> None:
     solver.solve(what=SolveStep.LBL_L1, animation=False)
 
     # Create fresh tracker holder to verify Layer 1 is solved
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_solved(th), f"Even cube {size}x{size} Layer 1 should be solved"
@@ -265,7 +265,7 @@ def test_lbl_solver_even_cube_multiple_scrambles(seed: int) -> None:
     # Solve complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_solved(th), f"4x4 Layer 1 should be solved (seed={seed})"

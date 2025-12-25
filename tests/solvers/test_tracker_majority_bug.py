@@ -35,7 +35,7 @@ import pytest
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.model import Color
 from cube.domain.model.FaceName import FaceName
-from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 
 

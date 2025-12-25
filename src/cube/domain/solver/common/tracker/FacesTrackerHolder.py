@@ -32,13 +32,12 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
-from cube.domain.model import Color
+from cube.domain.model import CenterSlice, Color
 from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.FaceName import FaceName
-from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
-from cube.domain.solver.common.big_cube._NxNCentersFaceTracker import (
-    NxNCentersFaceTrackers,
-)
+from cube.domain.model.PartEdge import PartEdge
+from cube.domain.solver.common.tracker._base import FaceTracker
+from cube.domain.solver.common.tracker._factory import NxNCentersFaceTrackers
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -361,4 +360,59 @@ class FacesTrackerHolder:
         """Exit context manager - cleanup trackers."""
         self.cleanup()
 
+    # =========================================================================
+    # STATIC METHODS - Holder-agnostic, for display purposes
+    # =========================================================================
 
+    @staticmethod
+    def is_tracked_slice(s: CenterSlice) -> bool:
+        """Check if ANY tracker has marked this slice.
+
+        WARNING: This is HOLDER-AGNOSTIC. Returns True if ANY holder
+        has marked this slice, not a specific holder.
+
+        Use for display purposes where holder identity doesn't matter.
+
+        Args:
+            s: CenterSlice to check.
+
+        Returns:
+            True if any tracker has marked this slice.
+        """
+        return FaceTracker.is_track_slice(s)
+
+    @staticmethod
+    def get_tracked_slice_color(s: CenterSlice) -> Color | None:
+        """Get the tracker color for a marked slice.
+
+        WARNING: This is HOLDER-AGNOSTIC. Returns color from ANY holder
+        that has marked this slice.
+
+        Use for display purposes (e.g., renderer showing tracker indicators)
+        where holder identity doesn't matter.
+
+        Args:
+            s: CenterSlice to check.
+
+        Returns:
+            The Color enum if tracked, None otherwise.
+        """
+        return FaceTracker.get_slice_tracker_color(s)
+
+    @staticmethod
+    def get_tracked_edge_color(edge: PartEdge) -> Color | None:
+        """Get the tracker color for a PartEdge.
+
+        WARNING: This is HOLDER-AGNOSTIC. Returns color from ANY holder
+        that has marked this edge.
+
+        Use for display purposes (e.g., renderer showing tracker indicators)
+        where holder identity doesn't matter.
+
+        Args:
+            edge: PartEdge to check (typically from a center slice).
+
+        Returns:
+            The Color enum if tracked, None otherwise.
+        """
+        return FaceTracker.get_edge_tracker_color(edge)

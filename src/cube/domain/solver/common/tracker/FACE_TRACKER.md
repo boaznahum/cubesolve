@@ -1,11 +1,69 @@
 # Face Tracker: Tracking Face→Color Mapping for Even Cubes
 
-**Related Classes:**
-- `FacesTrackerHolder` - Main interface (this directory)
-- `FaceTracker` - Abstract base tracker (`_FaceTracker.py`)
-- `SimpleFaceTracker` - Tracker with predicate, no cleanup (`_FaceTracker.py`)
-- `MarkedFaceTracker` - Tracker with marked slice, needs cleanup (`_FaceTracker.py`)
-- `NxNCentersFaceTrackers` - Factory for creating trackers (`_NxNCentersFaceTracker.py`)
+## Package Structure
+
+```
+big_cube/                         # Public package
+    FacesTrackerHolder.py         # PUBLIC API - the only class to import
+    _FaceTracker.py               # Internal - re-exports from tracker package
+    _NxNCentersFaceTracker.py     # Internal - factory implementation
+    ...
+
+tracker/                          # Internal package - DO NOT IMPORT DIRECTLY
+    _base.py                      # Implementation (FaceTracker classes)
+    __init__.py                   # Empty __all__ - no public exports
+```
+
+## Public API
+
+**For Solving (holder-specific):**
+```python
+from cube.domain.solver.common.big_cube import FacesTrackerHolder
+
+with FacesTrackerHolder(solver) as holder:
+    face_colors = holder.face_colors
+    if holder.part_match_faces(edge):
+        # edge is correctly positioned
+```
+
+**For Display (holder-agnostic static methods):**
+```python
+from cube.domain.solver.common.big_cube import FacesTrackerHolder
+
+# Check if a PartEdge is marked by ANY tracker
+color = FacesTrackerHolder.get_tracked_edge_color(part_edge)
+if color is not None:
+    # Display indicator with this color
+```
+
+**Type Hints Only:**
+```python
+from cube.domain.solver.common.tracker._base import FaceTracker
+
+def get_tracker(holder: FacesTrackerHolder) -> FaceTracker:
+    return holder.trackers[0]
+```
+
+## Static Methods (Holder-Agnostic)
+
+These methods are for **display purposes only**. They detect markers from
+ANY holder, not a specific one. Use when holder identity doesn't matter.
+
+| Method | Args | Returns | Description |
+|--------|------|---------|-------------|
+| `is_tracked_slice(s)` | CenterSlice | bool | True if ANY holder marked this slice |
+| `get_tracked_slice_color(s)` | CenterSlice | Color \| None | Color from ANY holder |
+| `get_tracked_edge_color(edge)` | PartEdge | Color \| None | Color from ANY holder |
+
+**WARNING:** Do NOT use these for solver logic - they ignore holder identity!
+
+---
+
+**Internal Classes (don't import directly):**
+- `FaceTracker` - Abstract base tracker (`tracker/_base.py`)
+- `SimpleFaceTracker` - Tracker with predicate, no cleanup
+- `MarkedFaceTracker` - Tracker with marked slice, needs cleanup
+- `NxNCentersFaceTrackers` - Factory for creating trackers
 
 **Used By:**
 - `LayerByLayerNxNSolver` (`solver/direct/lbl/`) - Layer-by-layer big cube solver
@@ -13,6 +71,7 @@
 - `BeginnerReducer` (`solver/reducers/beginner/`) - Center and edge reduction
 - `NxNCenters` (this directory) - Common center solving logic
 - `ShadowCubeHelper` (this directory) - Shadow cube creation
+- `_modern_gl_cell.py` (renderer) - Display tracker indicators
 
 ---
 
