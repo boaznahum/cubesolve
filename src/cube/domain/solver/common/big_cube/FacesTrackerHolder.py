@@ -1,5 +1,11 @@
 """Face tracker holder - encapsulates 6 face trackers for NxN center solving.
 
+See FACE_TRACKER.md in this directory for detailed documentation on:
+- Why trackers are needed for even cubes
+- How tracker-based matching works vs center-based matching
+- Cache invalidation with modify_counter
+- Usage patterns across different solvers
+
 This class provides a clean OOP interface for managing face trackers:
 - Creates trackers on construction
 - Provides methods to work with trackers (get_face_colors, etc.)
@@ -278,7 +284,7 @@ class FacesTrackerHolder:
             must have ORANGE sticker on F and WHITE sticker on U.
 
         See Also:
-            solver/direct/lbl/EVEN_CUBE_MATCHING.md for detailed explanation
+            FACE_TRACKER.md in this directory for detailed explanation
             with diagrams of why this is needed for even cubes.
         """
         face_colors = self.face_colors  # Get current mapping (not cached)

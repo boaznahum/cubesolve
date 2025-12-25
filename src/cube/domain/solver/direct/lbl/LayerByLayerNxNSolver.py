@@ -13,6 +13,9 @@ For Layer 1, we:
 2. Solve white-face edges using NxNEdges (only edges on white face)
 3. Create a shadow 3x3 cube and solve Layer 1 (cross + corners) using Solvers3x3
 
+Uses FacesTrackerHolder for even cube matching - see:
+    solver/common/big_cube/FACE_TRACKER.md
+
 See docs/design/layer_by_layer_nxn.md for detailed design.
 """
 

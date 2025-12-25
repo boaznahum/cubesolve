@@ -1,3 +1,8 @@
+"""Face tracker - tracks which color belongs to which face during solving.
+
+See FACE_TRACKER.md in this directory for detailed documentation.
+"""
+
 from typing import Any, Callable, TypeAlias
 
 from cube.domain.model import CenterSlice, CenterSliceIndex, Color
