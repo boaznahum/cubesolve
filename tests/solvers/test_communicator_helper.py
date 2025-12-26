@@ -129,7 +129,7 @@ def _get_center_slice_edge_by_ltr(face: Face, ltr_y: int, ltr_x: int) -> "PartEd
 # Tests
 # =============================================================================
 
-@pytest.mark.parametrize("cube_size", [5, 7])
+@pytest.mark.parametrize("cube_size", [5, 7])  # Even cubes have known inner 2x2 issues
 def test_create_helper(cube_size: int) -> None:
     """Create a cube and instantiate the helper via a solver."""
     app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
@@ -141,7 +141,7 @@ def test_create_helper(cube_size: int) -> None:
 
 
 
-@pytest.mark.parametrize("cube_size", [5, 7])
+@pytest.mark.parametrize("cube_size", [5, 7])  # Even cubes have known inner 2x2 issues
 def test_communicator_supported_pairs(cube_size: int) -> None:
     """
     Test communicator for currently supported face pairs.

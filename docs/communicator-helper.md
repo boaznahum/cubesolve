@@ -421,12 +421,46 @@ Sources:
 
 ---
 
+## Support Matrix
+
+> **Instructions:** Update this table after testing new cube sizes or face pairs.
+
+### By Cube Size (Target = Front)
+
+| Cube | Type | U→F | D→F | B→F | L→F | R→F | Notes |
+|------|------|-----|-----|-----|-----|-----|-------|
+| 5x5 | Odd | ✅ | ✅ | ✅ | ✅ | ✅ | All positions work |
+| 6x6 | Even | ⚠️ | ⚠️ | ⚠️ | ⚠️ | ⚠️ | Inner 2x2 fails (see below) |
+| 7x7 | Odd | ✅ | ✅ | ✅ | ✅ | ✅ | All positions work |
+
+### 6x6 Even Cube Limitation
+
+On 6x6 cubes (4x4 center grid), the **inner 2x2 positions** fail:
+- Failing positions: (1,1), (1,2), (2,1), (2,2)
+- Symptom: Attribute moves to target, but cube state NOT preserved (edges disturbed)
+- Outer positions work correctly: corners (0,0), (0,3), (3,0), (3,3) and edges
+
+| Source→Front | Total Tests | Failed | Fail Positions |
+|--------------|-------------|--------|----------------|
+| U→F | 64 | 7 | (1,1), (1,2), (2,1), (2,2) |
+| D→F | 64 | 7 | (1,1), (1,2), (2,1), (2,2) |
+| B→F | 64 | 7 | (1,1), (1,2), (2,1), (2,2) |
+| L→F | 64 | 7 | (1,1), (1,2), (2,1), (2,2) |
+| R→F | 64 | 7 | (1,1), (1,2), (2,1), (2,2) |
+
+**Root Cause**: The commutator algorithm [M', F, M', F', M, F, M, F'] is not edge-preserving for certain inner positions on even cubes. The M slices used pass through the cube center in a way that affects edge pieces.
+
+**TODO**: Investigate if there's a different algorithm variant for even cube inner positions.
+
+---
+
 ## Next Steps
 
-1. ✅ All 5 sources → Front complete!
-2. Consider adding other target faces (currently only Front is supported)
-3. Integration: ensure existing tests still pass
-4. Optional: Refactor NxNCenters to use CommunicatorHelper
+1. ✅ All 5 sources → Front complete for odd cubes!
+2. ⚠️ Fix even cube inner 2x2 position issue
+3. Consider adding other target faces (currently only Front is supported)
+4. Integration: ensure existing tests still pass
+5. Optional: Refactor NxNCenters to use CommunicatorHelper
 
 ---
 

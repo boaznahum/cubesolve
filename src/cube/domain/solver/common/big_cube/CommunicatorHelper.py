@@ -327,7 +327,8 @@ class CommunicatorHelper(SolverElement):
         if source is target:
             raise ValueError("Source and target must be different faces")
 
-        if source_block is None:
+        source_block_was_none = source_block is None
+        if source_block_was_none:
             source_block = target_block
 
         # Check if this pair is supported
@@ -361,6 +362,14 @@ class CommunicatorHelper(SolverElement):
 
         # Find rotation to align actual source to expected source
         n_rotate = self._find_rotation_idx(actual_source_idx, expected_source_idx)
+
+        # Invariant: if source_block was None, n_rotate must be 0
+        # (source defaults to expected position)
+        if source_block_was_none and n_rotate != 0:
+            raise ValueError(
+                f"source_block=None requires n_rotate=0, but got {n_rotate}. "
+                f"actual={actual_source_idx}, expected={expected_source_idx}"
+            )
 
         r1, c1 = rc1
         r2, c2 = rc2
