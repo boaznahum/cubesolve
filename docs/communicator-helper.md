@@ -81,7 +81,7 @@ for source_face in all_cube_faces:
 
 ## Current Status
 
-**Phase:** Session 2 - Starting new implementation
+**Phase:** Session 2 - Test written, awaiting review
 **Last Updated:** 2025-12-26
 **Session:** 2
 
@@ -97,10 +97,10 @@ for source_face in all_cube_faces:
 - [x] Instantiate 7x7 cube in test
 - [x] Instantiate helper in test and verify basic functionality
 
-### Phase 2: Understand Coordinate Systems
-- [ ] Study bottom-up, left-to-right coordinate system in existing code
-- [ ] Understand how to translate BULR to face index
-- [ ] Document coordinate transformation formulas
+### Phase 2: Understand Coordinate Systems (COMPLETE)
+- [x] Study bottom-up, left-to-right coordinate system in existing code
+- [x] Understand how to translate BULR to face index
+- [x] Document coordinate transformation formulas
 
 ### Phase 3: Core Helper Methods
 - [ ] Implement `inv(i)` - index inversion (adapted for BULR)
@@ -114,13 +114,14 @@ for source_face in all_cube_faces:
 - [ ] Validate block can be mapped with 0-3 rotations (throw exception if not)
 - [ ] Implement cage preservation option
 
-### Phase 5: Comprehensive Tests
-- [ ] Test iterating all source faces
-- [ ] Test iterating all target faces
-- [ ] Test all slice positions (y, x in BULR system)
-- [ ] Test all 4 rotation positions on source
-- [ ] Verify attribute moves from source to target
-- [ ] Verify cube state preserved (edges in position)
+### Phase 5: Comprehensive Tests (IN PROGRESS)
+- [x] Test iterating all source faces
+- [x] Test iterating all target faces
+- [x] Test all slice positions (y, x in BULR system)
+- [x] Test all 4 rotation positions on source
+- [x] Verify attribute moves from source to target
+- [x] Verify cube state preserved (edges in position)
+- [ ] Run tests and verify they fail (helper not implemented)
 
 ### Phase 6: Integration
 - [ ] Ensure all existing tests still pass
@@ -269,16 +270,23 @@ The helper is a standalone class that:
 - Key insight: New helper supports ANY source/target face pair
 - Key insight: Uses Bottom-Up Left-Right coordinate system
 - Key insight: NO face positioning - this is the challenge
-- Updated this tracking document with new requirements
+- Documented coordinate translation methods from CubeQueries2
+- Documented rotation usage from old helper (_search_block pattern)
+- **Wrote comprehensive test** `test_communicator_all_face_pairs`:
+  - Iterates all 30 face pairs (6×5)
+  - Tests all (y, x) positions in BULR coordinates
+  - Tests all 4 rotations for source positions
+  - Sets unique c_attribute on source, verifies it moves to target
+  - Verifies cube state preserved (edges/corners in position)
+- Test calls `helper.do_communicator()` which needs to be implemented
 
 ---
 
 ## Next Steps
 
-1. Study the BULR coordinate system in existing code
-2. Understand face index translation
-3. Start implementing core coordinate methods
-4. Build comprehensive test structure
+1. User reviews test code
+2. Implement `do_communicator()` method in CommunicatorHelper
+3. Run tests and iterate until passing
 
 ---
 
