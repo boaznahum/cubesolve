@@ -9,7 +9,7 @@ block commutator algorithm: [M', F, M', F', M, F, M, F']
 
 See Also
 --------
-- docs/cube-coordinates-helper.md : Development tracking document
+- docs/communicator-helper.md : Development tracking document
 - src/cube/domain/solver/common/big_cube/CommunicatorHelper.py : The helper class
 """
 

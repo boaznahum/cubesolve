@@ -57,7 +57,7 @@ See Also
 --------
 - NxNCenters : Uses these utilities for solving centers
 - NxNEdges : Uses similar coordinate logic for edges
-- docs/cube-coordinates-helper.md : Development tracking document
+- docs/communicator-helper.md : Development tracking document
 """
 
 from typing import Iterator, Tuple
