@@ -205,11 +205,34 @@ for n in range(4):
     rc2 = cube.cqr.rotate_point_clockwise(rc2)
 ```
 
+### LTR to Center Index Translation
+
+**Key Insight:** Use edge methods to translate between LTR and center index coordinates!
+
+- **edge_left** → translates Y (ltr_y ↔ idx_row)
+- **edge_bottom** → translates X (ltr_x ↔ idx_col)
+
+```python
+def ltr_to_center_index(face: Face, ltr_y: int, ltr_x: int) -> tuple[int, int]:
+    """Translate LTR (y, x) to center index (row, col)."""
+    idx_row = face.edge_left.get_slice_index_from_ltr_index(face, ltr_y)
+    idx_col = face.edge_bottom.get_slice_index_from_ltr_index(face, ltr_x)
+    return idx_row, idx_col
+
+def center_index_to_ltr(face: Face, idx_row: int, idx_col: int) -> tuple[int, int]:
+    """Translate center index (row, col) to LTR (y, x)."""
+    ltr_y = face.edge_left.get_ltr_index_from_slice_index(face, idx_row)
+    ltr_x = face.edge_bottom.get_ltr_index_from_slice_index(face, idx_col)
+    return ltr_y, ltr_x
+```
+
+Reference: `Edge.py:127-191` for the `get_ltr_index_from_slice_index` / `get_slice_index_from_ltr_index` methods.
+
 ### Attribute System
 
 To set/get attributes on center pieces that move with the color:
 ```python
-part_edge = face.center.get_center_slice((row, col))
+part_edge = face.center.get_center_slice((idx_row, idx_col))
 part_edge.c_attributes["test_key"] = value  # Moves with color during rotation
 ```
 
@@ -274,19 +297,26 @@ The helper is a standalone class that:
 - Documented rotation usage from old helper (_search_block pattern)
 - **Wrote comprehensive test** `test_communicator_all_face_pairs`:
   - Iterates all 30 face pairs (6×5)
-  - Tests all (y, x) positions in BULR coordinates
+  - Tests all (y, x) positions in LTR coordinates
   - Tests all 4 rotations for source positions
   - Sets unique c_attribute on source, verifies it moves to target
   - Verifies cube state preserved (edges/corners in position)
 - Test calls `helper.do_communicator()` which needs to be implemented
+- **Key discovery: LTR ↔ Index translation using edge methods!**
+  - Use `edge_left` for Y translation
+  - Use `edge_bottom` for X translation
+  - This leverages existing `get_slice_index_from_ltr_index` / `get_ltr_index_from_slice_index`
+- Updated helper to extend `SolverElement` (standard pattern)
+- Updated test to use `cube.faces` iterator instead of custom function
+- Added clear variable naming: `ltr_y`, `ltr_x`, `idx_row`, `idx_col`
 
 ---
 
 ## Next Steps
 
-1. User reviews test code
-2. Implement `do_communicator()` method in CommunicatorHelper
-3. Run tests and iterate until passing
+1. Implement `do_communicator()` method in CommunicatorHelper
+2. Run tests and iterate until passing
+3. Consider moving translation methods to Face if needed elsewhere
 
 ---
 
