@@ -8,6 +8,7 @@
 > 3. Mark completed items in the checklist
 > 4. Add new insights to the "Key Insights" section
 > 5. Update "Next Steps" before ending the session
+> 6. **COMMIT AND PUSH FREQUENTLY** after each progress step
 
 ---
 
@@ -17,24 +18,77 @@ Create a `CommunicatorHelper` class that provides utilities for working with the
 
 The core commutator is: `[M', F, M', F', M, F, M, F']`
 
-This helper will be located near `NxNCenters.py` and serve as a reusable component for:
-- Understanding cube coordinates
-- Executing commutator operations
-- Visualizing the 3-cycle effect
+---
+
+## User Instructions (Session 2)
+
+### Key Differences: Old vs New Helper
+
+| Aspect | Old (NxNCenters) | New (CommunicatorHelper) |
+|--------|------------------|--------------------------|
+| Target face | Front only | Any face |
+| Source face | Up or Back only | Any face (different from target) |
+| Coordinate system | Row-column, (0,0) at top-left | **Bottom-up, Left-to-right** |
+| Face positioning | Positions faces first, then executes | **NO face positioning** - this is the challenge |
+| Cage preservation | Optional via `preserve_cage` flag | Optional - preserves cube state |
+
+### New Helper Requirements
+
+1. **Method signature**: Accepts `source: Face` and `target: Face`
+2. **Block specification**:
+   - Block on source and destination
+   - If source block not given, assumes same coordinates as target block
+3. **No face positioning**: The helper does the communicator WITHOUT first rotating to position faces - this is the core challenge
+4. **Cage preservation**: If requested, preserve cube state (faces and edges return to original position)
+5. **Coordinate system**: **Bottom-up, Left-to-right** - this is important!
+6. **Rotation mapping**: If source block cannot be mapped to target block by 0..3 rotations, throw exception
+
+### Test Structure
+
+```python
+for source_face in all_cube_faces:
+    for target_face in all_cube_faces:
+        if source_face == target_face:
+            continue
+
+        for y in all_slices:  # bottom-up, left-right
+            for x in all_slices:
+                for rotation in range(4):  # 4 possible source locations
+                    # Create sy, sx from y, x, rotation
+
+                    # Block size = 1 (extend later)
+
+                    # Using translation from BULR system to face index:
+                    # Put random attribute on source piece (key and value random)
+
+                    # Call the helper
+
+                    # Verify:
+                    # 1. New attribute is on target block
+                    # 2. Attribute is NO LONGER on source
+                    # 3. Cube state is preserved (all edges are 3x3 and in position)
+```
+
+### Key Points
+
+- The new helper supports **everything** - any source to any target
+- Block coordinates use **bottom-up, left-to-right** coordinate system
+- Can copy methods from old helper (`NxNCenters`) as starting point
+- There are existing methods to check if edges are in position and cube state preserved
 
 ---
 
 ## Current Status
 
-**Phase:** Phase 1 Complete
+**Phase:** Session 2 - Starting new implementation
 **Last Updated:** 2025-12-26
-**Session:** 1
+**Session:** 2
 
 ---
 
 ## Checklist
 
-### Phase 1: Foundation
+### Phase 1: Foundation (COMPLETE)
 - [x] Explore existing test structure and patterns
 - [x] Create this tracking document
 - [x] Create `CommunicatorHelper` class skeleton
@@ -42,34 +96,34 @@ This helper will be located near `NxNCenters.py` and serve as a reusable compone
 - [x] Instantiate 7x7 cube in test
 - [x] Instantiate helper in test and verify basic functionality
 
-### Phase 2: Core Coordinate Functions (COMPLETE)
-- [x] Implement `inv(i)` - index inversion
-- [x] Implement `rotate_point_clockwise(r, c, n)` - clockwise rotation
-- [x] Implement `rotate_point_counterclockwise(r, c, n)` - counter-clockwise rotation
-- [x] Implement `point_on_source(is_back, rc)` - front-to-source coordinate mapping
-- [x] Implement `point_on_target(is_back, rc)` - source-to-target coordinate mapping
-- [x] Add comprehensive tests for each function
+### Phase 2: Understand Coordinate Systems
+- [ ] Study bottom-up, left-to-right coordinate system in existing code
+- [ ] Understand how to translate BULR to face index
+- [ ] Document coordinate transformation formulas
 
-### Phase 3: Block Operations (COMPLETE)
-- [x] Implement `range_2d(rc1, rc2)` - iterate over 2D block
-- [x] Implement `block_size(rc1, rc2)` - calculate block size
-- [x] Implement `ranges_intersect_1d(range1, range2)` - check 1D range intersection
-- [x] Implement `block_on_source(is_back, rc1, rc2)` - convert block to source coords
+### Phase 3: Core Helper Methods
+- [ ] Implement `inv(i)` - index inversion (adapted for BULR)
+- [ ] Implement coordinate translation: BULR <-> face index
+- [ ] Implement rotation point mapping for any face pair
+- [ ] Implement block mapping between arbitrary faces
 
-### Phase 4: Visualization & Debug (PARTIAL)
-- [x] Implement `visualize_grid()` - ASCII visualization of center
-- [ ] Implement `visualize_rotation()` - show before/after rotation
-- [ ] Add debug logging utilities
+### Phase 4: Communicator Implementation
+- [ ] Implement main communicator method accepting any source/target
+- [ ] Handle all face pair combinations
+- [ ] Validate block can be mapped with 0-3 rotations (throw exception if not)
+- [ ] Implement cage preservation option
 
-### Phase 5: Commutator Operations
-- [ ] Implement `get_commutator_algorithm(block)` - generate the commutator moves
-- [ ] Implement `validate_block_for_commutator(rc1, rc2)` - check block validity
-- [ ] Implement `find_non_intersecting_rotation(rc1, rc2)` - find valid F/F' direction
+### Phase 5: Comprehensive Tests
+- [ ] Test iterating all source faces
+- [ ] Test iterating all target faces
+- [ ] Test all slice positions (y, x in BULR system)
+- [ ] Test all 4 rotation positions on source
+- [ ] Verify attribute moves from source to target
+- [ ] Verify cube state preserved (edges in position)
 
 ### Phase 6: Integration
-- [ ] Refactor `NxNCenters.py` to use `CommunicatorHelper`
 - [ ] Ensure all existing tests still pass
-- [ ] Performance benchmarking
+- [ ] Optional: Refactor `NxNCenters.py` to use `CommunicatorHelper`
 
 ---
 
@@ -110,30 +164,29 @@ M rotations:  M' + M' + M + M = 0 (edges preserved in reduction mode)
 
 ## Key Insights
 
-### Coordinate System Fundamentals
+### Old Coordinate System (NxNCenters)
 
 1. **`inv()` function:** `inv(i) = n_slices - 1 - i`
-   - For 5x5: `n_slices = 3`, so `inv(0)=2, inv(1)=1, inv(2)=0`
-   - This is the foundation of all mirroring operations
-
 2. **Center coordinates:** `(row, column)` with `(0,0)` at top-left
    - Row increases downward
    - Column increases rightward
 
-3. **Rotation transformations:**
-   - Clockwise: `(r, c) → (inv(c), r)`
-   - Counter-clockwise: `(r, c) → (c, inv(r))`
+### New Coordinate System (CommunicatorHelper)
 
-4. **Front-Up-Back mapping:**
-   - UP face: same coordinates as Front
-   - BACK face: mirrored in both axes → `(inv(r), inv(c))`
+**Bottom-Up, Left-to-Right (BULR):**
+- `(0,0)` is at **bottom-left**
+- Y increases **upward**
+- X increases **rightward**
 
-5. **Slice index to M-algorithm:** Center index is 0-based, M alg is 1-based
-   - `Algs.M[c+1:c+2]` for center column `c`
+This needs to be mapped to face indices correctly.
 
-### Block Validity for Commutator
+### Face Pair Handling
 
-A block is valid for the commutator if after rotating by F (or F'), the rotated block's columns don't intersect with the original block's columns. This is checked with `ranges_intersect_1d()`.
+The old helper only handled:
+- Front (target) ← Up (source): same coordinates
+- Front (target) ← Back (source): mirrored both axes
+
+The new helper must handle ALL 30 face pairs (6 faces × 5 other faces).
 
 ---
 
@@ -141,17 +194,18 @@ A block is valid for the commutator if after rotating by F (or F'), the rotated 
 
 ```
 src/cube/domain/solver/common/big_cube/
-├── NxNCenters.py           # Existing - solves centers (uses commutator)
-├── CommunicatorHelper.py   # NEW - commutator utilities
+├── NxNCenters.py           # Old - solves centers (uses commutator)
+├── CommunicatorHelper.py   # NEW - general commutator utilities
 ├── NxNEdges.py             # Existing - solves edges
 ├── ...
 ```
 
 The helper is a standalone class that:
-- Takes a `Cube` instance (for `n_slices` and `inv()`)
-- Provides pure coordinate transformation functions
-- Has no side effects (query-only)
-- Can be used by `NxNCenters`, `NxNEdges`, and tests
+- Takes a `Cube` instance
+- Accepts any source and target Face
+- Uses BULR coordinate system
+- Performs commutator WITHOUT positioning faces first
+- Optionally preserves cage (cube state)
 
 ---
 
@@ -160,26 +214,25 @@ The helper is a standalone class that:
 ### Session 1 (2025-12-26)
 - Explored codebase structure
 - Analyzed `NxNCenters.py` in detail (1487 lines)
-- Understood coordinate system: `inv()`, rotation transforms, front/back mapping
-- Identified key methods to extract into helper
-- Created this tracking document
-- Created `CommunicatorHelper` class with full implementation:
-  - `inv()`, `rotate_point_clockwise()`, `rotate_point_counterclockwise()`
-  - `point_on_source()`, `point_on_target()`, `block_on_source()`
-  - `range_2d()`, `range_2d_on_source()`
-  - `block_size()`, `block_dimensions()`, `ranges_intersect_1d()`
-  - `get_four_symmetric_points()`, `is_center_point()`
-  - `visualize_grid()` for debugging
-- Created comprehensive test file with 7x7, 5x5, and 4x4 cube tests
+- Created tracking document
+- Created `CommunicatorHelper` class skeleton
+- Created basic test file
+
+### Session 2 (2025-12-26)
+- Received detailed user instructions for new helper requirements
+- Key insight: New helper supports ANY source/target face pair
+- Key insight: Uses Bottom-Up Left-Right coordinate system
+- Key insight: NO face positioning - this is the challenge
+- Updated this tracking document with new requirements
 
 ---
 
 ## Next Steps
 
-1. Run tests to verify implementation
-2. Add commutator-specific operations (Phase 5)
-3. Begin integration with `NxNCenters.py`
-4. Add visualization for rotation effects
+1. Study the BULR coordinate system in existing code
+2. Understand face index translation
+3. Start implementing core coordinate methods
+4. Build comprehensive test structure
 
 ---
 
@@ -187,7 +240,7 @@ The helper is a standalone class that:
 
 | File | Purpose |
 |------|---------|
-| `docs/cube-coordinates-helper.md` | This tracking document |
+| `docs/communicator-helper.md` | This tracking document |
 | `src/cube/domain/solver/common/big_cube/CommunicatorHelper.py` | The helper class |
 | `tests/solvers/test_communicator_helper.py` | Test file |
 
@@ -195,8 +248,7 @@ The helper is a standalone class that:
 
 ## References
 
-- `NxNCenters.py:832-838` - `rotate_point_clockwise/counterclockwise`
-- `NxNCenters.py:890-1041` - `_block_communicator()` - the core algorithm
+- `NxNCenters.py:890-1041` - `_block_communicator()` - the old algorithm
 - `NxNCenters.py:1282-1308` - `_point_on_source/_point_on_target`
-- `CubeQueries2.py:173-190` - Original rotation implementations
 - `Cube.py:570-571` - `inv()` function definition
+- `Face.py` - Face class definition
