@@ -143,7 +143,7 @@ class CommunicatorHelper(SolverElement):
         # Translate target LTR to target index
         target_idx = self.ltr_to_index(target, target_ltr[0], target_ltr[1])
         # Get expected source index (face-specific mapping)
-        expected_source_idx = self._point_on_source_idx(source, target_idx)
+        expected_source_idx = self._point_on_source_idx(source, target, target_idx)
         # Translate back to source LTR
         return self.index_to_ltr(source, expected_source_idx[0], expected_source_idx[1])
 
@@ -171,6 +171,25 @@ class CommunicatorHelper(SolverElement):
         if x3 > x4:
             x3, x4 = x4, x3
         return not (x3 > x2 or x4 < x1)
+
+    def _is_inner_position(self, r: int, c: int) -> bool:
+        """
+        Check if (r, c) is in the inner 2x2 center of an even cube.
+
+        On even cubes, inner 2x2 positions have adjacent M slices that share
+        edge wings. These positions need special M slice ordering.
+
+        - 4x4 (n_slices=2): ALL positions are inner (0,0) to (1,1)
+        - 6x6 (n_slices=4): inner is (1,1) to (2,2)
+        - 8x8 (n_slices=6): inner is (2,2) to (3,3)
+        """
+        n = self.n_slices
+        if n % 2 != 0:
+            return False  # Only even cubes have inner 2x2 issues
+        # Inner 2x2 is at [n//2 - 1, n//2] for each dimension
+        inner_min = n // 2 - 1
+        inner_max = n // 2
+        return inner_min <= r <= inner_max and inner_min <= c <= inner_max
 
     def _get_slice_m_alg(self, c1: int, c2: int):
         """
@@ -216,33 +235,100 @@ class CommunicatorHelper(SolverElement):
         # E[n:n] notation works for single slice at position n
         return Algs.E[r1 + 1:r2 + 1].prime
 
-    def _point_on_source_idx(self, source: Face, rc: Point) -> Point:
+    def _get_slice_s_alg(self, r1: int, r2: int):
+        """
+        Get S slice algorithm for row range.
+
+        Returns S' (prime) for use in commutator pattern when Right is target.
+        The algorithm uses s.prime and s directly, where s = S':
+        [s', R, s2', R', s, R, s2, R'] = [S, R, S, R', S', R, S', R']
+
+        S slice follows F direction: U→R→D→L (clockwise looking at F).
+        S' direction: U→L→D→R (counter-clockwise looking at F).
+
+        For Right target with Up source: S' brings U→R (since S' moves U→L not U→R)
+        Wait, need to verify the direction...
+
+        Actually S (positive) moves: U→R (pieces on U face move to R face)
+        So for Up→Right, we need S, not S'.
+        But to match the pattern of other methods, we return S' and let the caller
+        use .prime to get S.
+
+        Args:
+            r1: Center slice index [0, n)
+            r2: Center slice index [0, n)
+
+        Returns:
+            S' slice algorithm for the range
+        """
+        if r1 > r2:
+            r1, r2 = r2, r1
+        # S[n:n] notation works for single slice at position n
+        return Algs.S[r1 + 1:r2 + 1].prime
+
+    def _point_on_source_idx(self, source: Face, target: Face, rc: Point) -> Point:
         """
         Convert target index coordinates to source index coordinates.
 
-        For Up source: same coordinates (Front and Up share coordinate system)
-        For Back source: both axes inverted
-        For Down source: same coordinates as Up
-        For Left source: same coordinates (E brings Left to Front directly)
-        For Right source: same coordinates (E' brings Right to Front directly)
+        The mapping depends on both source and target faces.
+
+        For Front target:
+            - Up source: same coordinates (Front and Up share coordinate system)
+            - Back source: both axes inverted
+            - Down source: same coordinates as Up
+            - Left source: same coordinates (E brings Left to Front directly)
+            - Right source: same coordinates (E' brings Right to Front directly)
+
+        For Right target:
+            - Up source: columns swap with rows (S slice rotates 90°)
+            - Down source: columns swap with rows, one axis inverted
+            - Front source: same coordinates (E' brings Front to Right directly)
+            - Back source: both axes inverted
+            - Left source: both axes inverted (E2 brings Left to Right)
         """
         cube = self.cube
         inv = cube.inv
 
-        if source is cube.back:
-            return inv(rc[0]), inv(rc[1])
-        elif source is cube.down:
-            # Down→Front: M brings pieces, same coordinates as Up
-            return rc
-        elif source is cube.left:
-            # Left→Front: E brings pieces, identity mapping
-            return rc
-        elif source is cube.right:
-            # Right→Front: E' brings pieces, identity mapping
-            return rc
+        if target is cube.front:
+            # Original Front target logic
+            if source is cube.back:
+                return inv(rc[0]), inv(rc[1])
+            elif source is cube.down:
+                # Down→Front: M brings pieces, same coordinates as Up
+                return rc
+            elif source is cube.left:
+                # Left→Front: E brings pieces, identity mapping
+                return rc
+            elif source is cube.right:
+                # Right→Front: E' brings pieces, identity mapping
+                return rc
+            else:
+                # Up source: same coordinates
+                return rc
+        elif target is cube.right:
+            # Right target logic
+            if source is cube.up:
+                # Up→Right: S slice brings pieces, 90° rotation
+                # Looking at Right face: the row on Up becomes a column on Right
+                # (row, col) on Up → (inv(col), row) on Right
+                return inv(rc[1]), rc[0]
+            elif source is cube.down:
+                # Down→Right: S' slice brings pieces
+                # (row, col) on Down → (col, inv(row)) on Right
+                return rc[1], inv(rc[0])
+            elif source is cube.front:
+                # Front→Right: E' brings pieces, identity mapping
+                return rc
+            elif source is cube.back:
+                # Back→Right: E brings pieces, both axes inverted
+                return inv(rc[0]), inv(rc[1])
+            elif source is cube.left:
+                # Left→Right: E2 brings pieces (180°), both axes inverted
+                return inv(rc[0]), inv(rc[1])
+            else:
+                raise ValueError(f"Unsupported source {source.name} for Right target")
         else:
-            # Up source: same coordinates
-            return rc
+            raise ValueError(f"Unsupported target {target.name}")
 
     def _find_rotation_idx(self, actual_source_idx: Point, expected_source_idx: Point) -> int:
         """
@@ -287,11 +373,12 @@ class CommunicatorHelper(SolverElement):
         """
         cube = self.cube
         return [
+            # Front as target (M/E slice based)
             (cube.up, cube.front),    # Source=Up, Target=Front
             (cube.back, cube.front),  # Source=Back, Target=Front
             (cube.down, cube.front),  # Source=Down, Target=Front
-            (cube.left, cube.front),  # Source=Left, Target=Front (via z conjugate)
-            (cube.right, cube.front), # Source=Right, Target=Front (via z' conjugate)
+            (cube.left, cube.front),  # Source=Left, Target=Front (E slice)
+            (cube.right, cube.front), # Source=Right, Target=Front (E' slice)
         ]
 
     def is_supported(self, source: Face, target: Face) -> bool:
@@ -370,16 +457,7 @@ class CommunicatorHelper(SolverElement):
 
         cube = self.cube
 
-        # Currently only support Front as target
-        assert target is cube.front
-
-        # Detect source type for algorithm selection
-        is_left = source is cube.left
-        is_right = source is cube.right
-        uses_e_slice = is_left or is_right
-
         # Convert LTR to index coordinates
-        # Target index is on Front face
         target_idx_block = self.ltr_block_to_index(target, target_block)
         rc1, rc2 = self._normalize_block(target_idx_block[0], target_idx_block[1])
 
@@ -389,7 +467,7 @@ class CommunicatorHelper(SolverElement):
 
         # Expected source position: derived from target using face mapping
         target_idx = target_idx_block[0]
-        expected_source_idx = self._point_on_source_idx(source, target_idx)
+        expected_source_idx = self._point_on_source_idx(source, target, target_idx)
 
         # Find rotation to align actual source to expected source
         n_rotate = self._find_rotation_idx(actual_source_idx, expected_source_idx)
@@ -404,6 +482,49 @@ class CommunicatorHelper(SolverElement):
 
         r1, c1 = rc1
         r2, c2 = rc2
+
+        # Build commutator based on target and source faces
+        if target is cube.front:
+            commutator = self._build_front_target_commutator(
+                source, rc1, rc2, r1, r2, c1, c2
+            )
+        elif target is cube.right:
+            commutator = self._build_right_target_commutator(
+                source, rc1, rc2, r1, r2, c1, c2
+            )
+        else:
+            raise NotImplementedError(f"Target {target.name} not implemented")
+
+        # Execute: first rotate source to align, then commutator
+        if n_rotate:
+            self.op.play(Algs.of_face(source.name) * n_rotate)
+
+        self.op.play(Algs.seq_alg(None, *commutator))
+
+        # Preserve state: undo source rotation if requested
+        if preserve_state and n_rotate:
+            undo_alg = Algs.of_face(source.name).prime * n_rotate
+            self.op.play(undo_alg)
+
+        return True
+
+    def _build_front_target_commutator(
+        self,
+        source: Face,
+        rc1: Point,
+        rc2: Point,
+        r1: int,
+        r2: int,
+        c1: int,
+        c2: int
+    ) -> list:
+        """Build commutator for Front as target face."""
+        cube = self.cube
+
+        # Detect source type for algorithm selection
+        is_left = source is cube.left
+        is_right = source is cube.right
+        uses_e_slice = is_left or is_right
 
         if uses_e_slice:
             # E-based algorithm for Left/Right sources
@@ -429,7 +550,7 @@ class CommunicatorHelper(SolverElement):
             if is_left:
                 # Left: E brings L→F
                 # Algorithm structure mirrors Up→Front but with E instead of M
-                commutator = [
+                return [
                     rotate_on_cell.prime,     # E
                     on_front_rotate,
                     rotate_on_second.prime,   # E
@@ -441,7 +562,7 @@ class CommunicatorHelper(SolverElement):
                 ]
             else:
                 # Right: E' brings R→F (swap E and E')
-                commutator = [
+                return [
                     rotate_on_cell,           # E'
                     on_front_rotate,
                     rotate_on_second,         # E'
@@ -472,35 +593,34 @@ class CommunicatorHelper(SolverElement):
                 on_front_rotate = Algs.F.prime
                 rotated_col = rc1_f_ccw[1]
             else:
-                # BOTH directions cause intersection - position cannot be handled
-                raise ValueError(
-                    f"Position ({r1},{c1}) cannot be handled: both F and F' cause "
-                    f"column intersection. This is a limitation of the commutator "
-                    f"algorithm for inner positions on even cubes."
-                )
+                # BOTH directions cause intersection - inner position on even cube
+                # Choose F direction based on M slice ordering rule:
+                # - F': inner slice first (when c1 is inner, i.e., c1 < rotated_col)
+                # - F: outer slice first (when c1 is outer, i.e., c1 > rotated_col)
+                # This prevents M slices from "crossing over" each other
+                if rc1_f_ccw[1] > c1:
+                    # With F', rotated_col > c1, so c1 is inner (closer to center)
+                    # F' gives us inner-first ordering naturally
+                    on_front_rotate = Algs.F.prime
+                    rotated_col = rc1_f_ccw[1]
+                else:
+                    # With F, rotated_col < c1, so c1 is outer
+                    # F gives us outer-first ordering naturally
+                    on_front_rotate = Algs.F
+                    rotated_col = rc1_f_cw[1]
 
-            # Get M slice algorithms matching NxNCenters behavior:
-            # - rotate_on_cell: M slice for ORIGINAL column position
-            # - rotate_on_second: M slice for ROTATED column position (after F)
-            #
-            # The algorithm is: [m.prime, F, m2.prime, F', m, F, m2, F']
-            # where m and m2 are M' slices from _get_slice_m_alg.
+            # Get M slice algorithms matching NxNCenters behavior
             rotate_on_cell = self._get_slice_m_alg(c1, c2)
             rotate_on_second = self._get_slice_m_alg(rotated_col, rotated_col)
 
-            # M slice handling based on source face:
-            # - Up: algorithm [m.prime, F, m2.prime, F', m, F, m2, F']
-            #       where m=M' moves Up→Front
-            # - Back: M'*2 = M2 brings Back→Front (180°)
-            # - Down: M (not M') brings Down→Front, inverted primes
+            # M slice handling based on source face
             is_down = source is cube.down
             is_back = source is cube.back
 
             if is_back:
                 # Back: double M moves (180°)
-                # Same pattern but with *2 multiplier
                 rotate_mul = 2
-                commutator = [
+                return [
                     rotate_on_cell.prime * rotate_mul,
                     on_front_rotate,
                     rotate_on_second.prime * rotate_mul,
@@ -512,8 +632,7 @@ class CommunicatorHelper(SolverElement):
                 ]
             elif is_down:
                 # Down: M (not M') brings Down→Front
-                # Invert the prime pattern: m becomes m.prime and vice versa
-                commutator = [
+                return [
                     rotate_on_cell,           # M (instead of M')
                     on_front_rotate,
                     rotate_on_second,         # M (instead of M')
@@ -524,9 +643,8 @@ class CommunicatorHelper(SolverElement):
                     on_front_rotate.prime
                 ]
             else:
-                # Up: standard algorithm [m.prime, F, m2.prime, F', m, F, m2, F']
-                # where m and m2 are already M' from _get_slice_m_alg
-                commutator = [
+                # Up: standard algorithm
+                return [
                     rotate_on_cell.prime,
                     on_front_rotate,
                     rotate_on_second.prime,
@@ -537,15 +655,159 @@ class CommunicatorHelper(SolverElement):
                     on_front_rotate.prime
                 ]
 
-        # Execute: first rotate source to align, then commutator
-        if n_rotate:
-            self.op.play(Algs.of_face(source.name) * n_rotate)
+    def _build_right_target_commutator(
+        self,
+        source: Face,
+        rc1: Point,
+        rc2: Point,
+        r1: int,
+        r2: int,
+        c1: int,
+        c2: int
+    ) -> list:
+        """
+        Build commutator for Right as target face.
 
-        self.op.play(Algs.seq_alg(None, *commutator))
+        For Right target:
+        - Up/Down sources: use S slices and R rotation
+        - Front/Back/Left sources: use E slices and R rotation
+        """
+        cube = self.cube
 
-        # Preserve state: undo source rotation if requested
-        if preserve_state and n_rotate:
-            undo_alg = Algs.of_face(source.name).prime * n_rotate
-            self.op.play(undo_alg)
+        # For Right target, we use R rotation instead of F
+        # S slice moves pieces between Up/Right/Down/Left (like M for Front target)
+        # E slice moves pieces between Front/Right/Back/Left (like E for Front target)
 
-        return True
+        is_up = source is cube.up
+        is_down = source is cube.down
+        is_front = source is cube.front
+        is_back = source is cube.back
+        is_left = source is cube.left
+
+        uses_s_slice = is_up or is_down
+
+        if uses_s_slice:
+            # S-based algorithm for Up/Down sources
+            # S slice operates on rows (from Right face perspective), check row intersection
+
+            rc1_r_cw = cube.cqr.rotate_point_clockwise(rc1)
+            rc2_r_cw = cube.cqr.rotate_point_clockwise(rc2)
+            rc1_r_ccw = cube.cqr.rotate_point_counterclockwise(rc1)
+            rc2_r_ccw = cube.cqr.rotate_point_counterclockwise(rc2)
+
+            # For S slice, we check row intersection (S operates on rows)
+            cw_intersect = self._1d_intersect((r1, r2), (rc1_r_cw[0], rc2_r_cw[0]))
+            ccw_intersect = self._1d_intersect((r1, r2), (rc1_r_ccw[0], rc2_r_ccw[0]))
+
+            if not cw_intersect:
+                on_right_rotate = Algs.R
+                rotated_row = rc1_r_cw[0]
+            elif not ccw_intersect:
+                on_right_rotate = Algs.R.prime
+                rotated_row = rc1_r_ccw[0]
+            else:
+                raise ValueError(
+                    f"Position ({r1},{c1}) cannot be handled: both R and R' cause "
+                    f"row intersection. This is a limitation of the commutator "
+                    f"algorithm for inner positions on even cubes."
+                )
+
+            # Get S slice algorithms for the rows
+            rotate_on_cell = self._get_slice_s_alg(r1, r2)
+            rotate_on_second = self._get_slice_s_alg(rotated_row, rotated_row)
+
+            if is_up:
+                # Up→Right: S brings U→R
+                # Algorithm: [s', R, s2', R', s, R, s2, R']
+                # where s = S' from _get_slice_s_alg, so s' = S
+                return [
+                    rotate_on_cell.prime,     # S
+                    on_right_rotate,
+                    rotate_on_second.prime,   # S
+                    on_right_rotate.prime,
+                    rotate_on_cell,           # S'
+                    on_right_rotate,
+                    rotate_on_second,         # S'
+                    on_right_rotate.prime
+                ]
+            else:
+                # Down→Right: S' brings D→R (invert primes like Down→Front)
+                return [
+                    rotate_on_cell,           # S' (instead of S)
+                    on_right_rotate,
+                    rotate_on_second,         # S' (instead of S)
+                    on_right_rotate.prime,
+                    rotate_on_cell.prime,     # S (instead of S')
+                    on_right_rotate,
+                    rotate_on_second.prime,   # S (instead of S')
+                    on_right_rotate.prime
+                ]
+        else:
+            # E-based algorithm for Front/Back/Left sources
+            # E slice operates on columns (from Right face perspective)
+
+            rc1_r_cw = cube.cqr.rotate_point_clockwise(rc1)
+            rc2_r_cw = cube.cqr.rotate_point_clockwise(rc2)
+            rc1_r_ccw = cube.cqr.rotate_point_counterclockwise(rc1)
+            rc2_r_ccw = cube.cqr.rotate_point_counterclockwise(rc2)
+
+            # For E slice affecting Right, we check column intersection
+            cw_intersect = self._1d_intersect((c1, c2), (rc1_r_cw[1], rc2_r_cw[1]))
+            ccw_intersect = self._1d_intersect((c1, c2), (rc1_r_ccw[1], rc2_r_ccw[1]))
+
+            if not cw_intersect:
+                on_right_rotate = Algs.R
+                rotated_col = rc1_r_cw[1]
+            elif not ccw_intersect:
+                on_right_rotate = Algs.R.prime
+                rotated_col = rc1_r_ccw[1]
+            else:
+                raise ValueError(
+                    f"Position ({r1},{c1}) cannot be handled: both R and R' cause "
+                    f"column intersection. This is a limitation of the commutator "
+                    f"algorithm for inner positions on even cubes."
+                )
+
+            # Get E slice algorithms for the columns
+            # Note: E slice for Right target uses column, unlike E for Front target which uses row
+            rotate_on_cell = self._get_slice_e_alg(c1, c2)
+            rotate_on_second = self._get_slice_e_alg(rotated_col, rotated_col)
+
+            if is_front:
+                # Front→Right: E' brings F→R
+                # Use inverted primes (like Right→Front)
+                return [
+                    rotate_on_cell,           # E'
+                    on_right_rotate,
+                    rotate_on_second,         # E'
+                    on_right_rotate.prime,
+                    rotate_on_cell.prime,     # E
+                    on_right_rotate,
+                    rotate_on_second.prime,   # E
+                    on_right_rotate.prime
+                ]
+            elif is_back:
+                # Back→Right: E brings B→R
+                return [
+                    rotate_on_cell.prime,     # E
+                    on_right_rotate,
+                    rotate_on_second.prime,   # E
+                    on_right_rotate.prime,
+                    rotate_on_cell,           # E'
+                    on_right_rotate,
+                    rotate_on_second,         # E'
+                    on_right_rotate.prime
+                ]
+            else:
+                # Left→Right: E2 brings L→R (180°)
+                rotate_mul = 2
+                return [
+                    rotate_on_cell.prime * rotate_mul,
+                    on_right_rotate,
+                    rotate_on_second.prime * rotate_mul,
+                    on_right_rotate.prime,
+                    rotate_on_cell * rotate_mul,
+                    on_right_rotate,
+                    rotate_on_second * rotate_mul,
+                    on_right_rotate.prime
+                ]
