@@ -8,7 +8,7 @@ import cube
 from cube.domain import algs
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model import Color, CenterSlice
+from cube.domain.model import Color, CenterSlice, CenterSliceIndex
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -139,15 +139,53 @@ class NxNCenters2(SolverElement):
     def _solve_single_center_row_slice(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                        slice_row_index: int):
 
+        work_was_done = False
+
+        # maybe not need iterations
+        max_iter = 10
+        iter_count = 0
+
+        while True:
+            iter_count += 1
+            if iter_count > max_iter:
+                raise InternalSWError(f"Maximum number of iterations reached")
+
+            with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
+
+                # positon and tracking need go inside
+                if self._solve_single_center_row_slice_all_slices(l1_white_tracker, target_face,
+                                                                  slice_row_index):
+                    work_was_done = True
+
+                # this does position and tracking again !!!
+                if self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, slice_row_index):
+                    work_was_done = True
+
+            if not work_was_done:
+                break
+
+            return work_was_done
+
+        self._solve_single_center_row_slice_all_slices(l1_white_tracker, slice_row_index, target_face)
+
+    def _solve_single_center_row_slice_all_slices(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
+                                                  slice_row_index: int
+                                                  ) -> bool:
         source_faces = target_face.other_faces()
+
+        work_was_done = False
 
         for source_face in source_faces:
             if source_face is not l1_white_tracker:
                 # === HEADLINE 1: SLICE ===
                 with self.ann.annotate(
                         h1=lambda: f"Face {target_face.color} Slice {slice_row_index} Source {source_face.face.color}"):
-                    self._solve_single_center_piece_from_source_face(l1_white_tracker, target_face, source_face,
-                                                                     slice_row_index)
+
+                    if self._solve_single_center_piece_from_source_face(l1_white_tracker, target_face, source_face,
+                                                                        slice_row_index):
+                        work_was_done = True
+
+        return work_was_done
 
     def _tracke_center_slice(self, cs: CenterSlice, column: int):
 
@@ -176,6 +214,25 @@ class NxNCenters2(SolverElement):
             for cc in c.all_slices:
                 self._clear_center_slice(cc)
 
+    def _iterate_all_tracked_slices_index(self, target_face: FaceTracker) -> Iterator[CenterSliceIndex]:
+
+        for cs in target_face.face.center.all_slices:
+
+            if self._is_center_slice(cs) is not None:
+                rc = cs.index
+
+                yield rc
+
+    def _iterate_all_tracked_slices_and_index(self, target_face: FaceTracker) -> Iterator[
+        Tuple[CenterSlice, CenterSliceIndex]]:
+
+        for cs in target_face.face.center.all_slices:
+
+            if self._is_center_slice(cs) is not None:
+                rc = cs.index
+
+                yield cs, rc
+
     def _print_all_tracked_slices(self, s) -> None:
 
         return
@@ -200,7 +257,6 @@ class NxNCenters2(SolverElement):
         assert l1_white_tracker.face is self.cube.down
         assert target_face.face is self.cube.front
 
-
     @contextmanager
     def _track_row_slices(self, target_face: FaceTracker, slice_index: int):
         """Track center slices in a row, cleanup on exit."""
@@ -214,22 +270,17 @@ class NxNCenters2(SolverElement):
 
     @contextmanager
     def _setup_l1_and_target_and_track_slices(self, l1_white_tracker: FaceTracker,
-                                               target_face: FaceTracker, slice_index: int):
+                                              target_face: FaceTracker, slice_index: int):
         """Combined: position faces AND track slices."""
         self._position_l1_and_target(l1_white_tracker, target_face)
         with self._track_row_slices(target_face, slice_index):
             yield
 
-
     def _remove_all_pieces_from_target_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
-                                            source_face: FaceTracker,
                                             slice_row_index: int) -> bool:
         """
             #claqude please document this method
         """
-
-        return False
-
 
         work_was_done: bool = False
 
@@ -237,47 +288,60 @@ class NxNCenters2(SolverElement):
 
         # now check is there slice on my target
 
-        for rc in self._2d_center_row_slice_iter(slice_row_index):
-            n_rotate = self._search_block(target_face.face, target_face.face, target_face.color,
-                                          _SearchBlockMode.CompleteBlock, rc, rc)
-            if n_rotate is not None:
-                # found,lets try to bring it some where, it might break our face, but start with something
+        target_color: Color = target_face.color
 
-                self.cmn.bring_face_front(target_face.face)
+        with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
 
-                # search a target
-                temp_target_face: FaceTracker | None = None
+            for cs, rc in self._iterate_all_tracked_slices_and_index(target_face):
 
-                for t in target_face.adjusted_faces():
-                    # dont try to move to white
-                    if t is not l1_white_tracker:
-                        temp_target_face = t
+                if cs.color == target_color:
+                    continue
+
+                # now search source on my face
+                source_rc = rc
+                for _ in range(3):
+                    source_rc = self.rotate_point_clockwise(source_rc[0], source_rc[1], 1)
+
+                    source_color = target_face.face.center.get_center_slice(source_rc).color
+
+                    if source_color == target_color:
+                        self.cmn.bring_face_front(target_face.face)
+
+                        # search a target where to move it
+                        temp_target_face: FaceTracker | None = None
+
+                        for t in target_face.adjusted_faces():
+                            # dont try to move to white
+                            if t is not l1_white_tracker:
+                                temp_target_face = t
+                                break
+
+                        assert temp_target_face is not None
+
+                        # setup again
+                        self.cmn.bring_face_front(temp_target_face.face)
+                        assert temp_target_face.face is self.cube.front
+
+                        assert target_face.face is not self.cube.back, f"how can it be {target_face.face} is back"
+
+                        self.cmn.bring_face_up_preserve_front(target_face.face)
+
+                        if self._block_communicator(target_face.color,
+                                                    temp_target_face.face,
+                                                    target_face.face,
+                                                    rc, rc,
+                                                    _SearchBlockMode.CompleteBlock):
+                            work_was_done = True
+
+                        # restore original setup, need to improve
+                        self._position_l1_and_target(l1_white_tracker, target_face)
+
                         break
-
-                assert temp_target_face is not None
-
-                original_face = target_face.face
-
-                # setup again
-                self.cmn.bring_face_front(temp_target_face.face)
-
-                if target_face.face is self.cube.back:
-                    print("how can it be")
-
-                self.cmn.bring_face_up_preserve_front(target_face.face)
-
-                if self._block_communicator(target_face.color,
-                                            temp_target_face.face,
-                                            target_face.face,
-                                            rc, rc,
-                                            _SearchBlockMode.CompleteBlock):
-                    work_was_done = True
 
                 # we destroy it
                 assert l1_white_tracker.face.center.is3x3  # solved
 
         return work_was_done
-
 
     def _solve_single_center_piece_from_source_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                     source_face: FaceTracker,
@@ -294,33 +358,11 @@ class NxNCenters2(SolverElement):
         :return: True if work was done
         """
 
-
         with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
+            # positon and tracking need go inside
+            return self._solve_single_center_piece_from_source_face_impl(l1_white_tracker, target_face, source_face,
+                                                                     slice_row_index)
 
-            self._print_all_tracked_slices(f"before working on {slice_row_index}")
-
-            work_was_done = False
-
-            # maybe not need iterations
-            max_iter = 10
-            iter_count = 0
-
-            while True:
-                iter_count += 1
-                if iter_count > max_iter:
-                    raise InternalSWError(f"Maximum number of iterations reached")
-
-                work_was_done = self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, source_face,
-                                                                         slice_row_index)
-
-                if self._solve_single_center_piece_from_source_face_impl(l1_white_tracker, target_face, source_face,
-                                                                         slice_row_index):
-                    work_was_done = True
-
-                if not work_was_done:
-                    break
-
-            return work_was_done
 
     def _solve_single_center_piece_from_source_face_impl(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                          source_face: FaceTracker,
@@ -343,35 +385,31 @@ class NxNCenters2(SolverElement):
 
         work_done = False
 
-        for cs in target_face.face.center.all_slices:
+        for rc in self._iterate_all_tracked_slices_index(target_face):
 
-            if self._is_center_slice(cs) is not None:
+            self.debug(f"Working on slice {slice_row_index} Found piece {rc}")
 
-                rc = cs.index
+            self._print_all_tracked_slices(f"before working on {rc} {slice_row_index}")
 
-                self.debug(f"Working on slice {slice_row_index} Found piece {rc}")
+            wd = self._block_communicator(color,
+                                          target_face.face,
+                                          source_face.face,
+                                          rc, rc,
+                                          _SearchBlockMode.CompleteBlock)
+            if wd:
 
-                self._print_all_tracked_slices(f"before working on {rc} {slice_row_index}")
+                after_fixed_color = target_face.face.center.get_center_slice(rc).color
 
-                wd = self._block_communicator(color,
-                                              target_face.face,
-                                              source_face.face,
-                                              rc, rc,
-                                              _SearchBlockMode.CompleteBlock)
-                if wd:
+                if after_fixed_color != color:
+                    raise InternalSWError(f"Slice was not fixed {rc}, " +
+                                          f"required={color}, " +
+                                          f"actual={after_fixed_color}")
 
-                    after_fixed_color = target_face.face.center.get_center_slice(rc).color
+                self.debug(f"Fixed slice {rc}")
 
-                    if after_fixed_color != color:
-                        raise InternalSWError(f"Slice was not fixed {rc}, " +
-                                              f"required={color}, " +
-                                              f"actual={after_fixed_color}")
+                work_done = True
 
-                    self.debug(f"Fixed slice {rc}")
-
-                    work_done = True
-
-                self._print_all_tracked_slices(f"after working on {rc} {slice_row_index} wd={wd}")
+            self._print_all_tracked_slices(f"after working on {rc} {slice_row_index} wd={wd}")
 
         return work_done
 
