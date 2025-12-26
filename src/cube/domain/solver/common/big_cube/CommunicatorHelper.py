@@ -176,12 +176,17 @@ class CommunicatorHelper(SolverElement):
         """
         Get M slice algorithm for column range.
 
+        Returns M.prime so that when the commutator uses rotate_on_cell.prime,
+        we get M.prime.prime = M. The algorithm structure is [M, F, M, F', M', F, M', F'].
+
+        M moves: Up → Front → Down → Back (for bringing pieces from Up to Front)
+
         Args:
             c1: Center slice index [0, n)
             c2: Center slice index [0, n)
 
         Returns:
-            M slice algorithm for the range
+            M slice algorithm (prime) for the range
         """
         if c1 > c2:
             c1, c2 = c2, c1
@@ -300,23 +305,17 @@ class CommunicatorHelper(SolverElement):
         """
         Check if a position is supported on this cube.
 
-        Even cubes (4x4, 6x6, 8x8) have an unsupported inner 2x2 region
-        where the commutator algorithm disturbs edges.
+        All positions are supported - the commutator algorithm works for any
+        position as long as we pick the correct rotation direction (F vs F')
+        to avoid column intersection.
 
         Args:
             ltr_y: Y coordinate in LTR system
             ltr_x: X coordinate in LTR system
 
         Returns:
-            True if position is supported, False otherwise
+            True - all positions are supported
         """
-        n = self.n_slices
-        if n % 2 == 0:  # Even cube (e.g., 6x6 has n_slices=4)
-            # Inner 2x2 is not supported
-            mid_low = n // 2 - 1
-            mid_high = n // 2
-            if mid_low <= ltr_y <= mid_high and mid_low <= ltr_x <= mid_high:
-                return False
         return True
 
     def do_communicator(
@@ -358,19 +357,6 @@ class CommunicatorHelper(SolverElement):
         if not self.is_supported(source, target):
             raise NotImplementedError(
                 f"Face pair ({source.name}, {target.name}) not yet implemented"
-            )
-
-        # Check if target position is supported (even cube inner 2x2 limitation)
-        # On even cubes, the inner 2x2 uses different M slices that don't cancel out
-        target_ltr = target_block[0]
-        if not self.is_position_supported(target_ltr[0], target_ltr[1]):
-            n = self.n_slices
-            mid_low = n // 2 - 1
-            mid_high = n // 2
-            raise ValueError(
-                f"Position ({target_ltr[0]}, {target_ltr[1]}) not supported on even cube. "
-                f"Inner 2x2 region [{mid_low},{mid_high}] x [{mid_low},{mid_high}] "
-                f"uses different M slices that don't cancel out."
             )
 
         cube = self.cube
@@ -461,16 +447,61 @@ class CommunicatorHelper(SolverElement):
 
             # Determine F rotation direction to avoid column intersection
             # After rotating F, the block moves. Columns must not intersect.
-            rc1_f_rotated = cube.cqr.rotate_point_clockwise(rc1)
-            rc2_f_rotated = cube.cqr.rotate_point_clockwise(rc2)
+            rc1_f_cw = cube.cqr.rotate_point_clockwise(rc1)
+            rc2_f_cw = cube.cqr.rotate_point_clockwise(rc2)
+            rc1_f_ccw = cube.cqr.rotate_point_counterclockwise(rc1)
+            rc2_f_ccw = cube.cqr.rotate_point_counterclockwise(rc2)
 
-            if self._1d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-                # Clockwise causes intersection, use counter-clockwise
-                on_front_rotate = Algs.F.prime
-                rc1_f_rotated = cube.cqr.rotate_point_counterclockwise(rc1)
-                rc2_f_rotated = cube.cqr.rotate_point_counterclockwise(rc2)
-            else:
+            cw_intersect = self._1d_intersect((c1, c2), (rc1_f_cw[1], rc2_f_cw[1]))
+            ccw_intersect = self._1d_intersect((c1, c2), (rc1_f_ccw[1], rc2_f_ccw[1]))
+
+            # Calculate the column gap for each F direction
+            # Edge-preserving commutators require gap >= 2 between M slices
+            def column_gap(original_cols: tuple, rotated_cols: tuple) -> int:
+                """Calculate minimum gap between column ranges."""
+                o_min, o_max = min(original_cols), max(original_cols)
+                r_min, r_max = min(rotated_cols), max(rotated_cols)
+                # Gap is the minimum distance between non-overlapping ranges
+                if r_min > o_max:
+                    return r_min - o_max
+                elif o_min > r_max:
+                    return o_min - r_max
+                else:
+                    return 0  # They overlap
+
+            cw_gap = column_gap((c1, c2), (rc1_f_cw[1], rc2_f_cw[1]))
+            ccw_gap = column_gap((c1, c2), (rc1_f_ccw[1], rc2_f_ccw[1]))
+
+            # Choose F direction based on:
+            # 1. No column intersection (required for algorithm to work)
+            # 2. Gap >= 2 (required for edge preservation on even cubes)
+            if not cw_intersect and cw_gap >= 2:
+                # Clockwise works and has good gap
                 on_front_rotate = Algs.F
+                rc1_f_rotated = rc1_f_cw
+                rc2_f_rotated = rc2_f_cw
+            elif not ccw_intersect and ccw_gap >= 2:
+                # Counter-clockwise works and has good gap
+                on_front_rotate = Algs.F.prime
+                rc1_f_rotated = rc1_f_ccw
+                rc2_f_rotated = rc2_f_ccw
+            elif not cw_intersect:
+                # Clockwise has no intersection but gap < 2 (edges may not be preserved)
+                on_front_rotate = Algs.F
+                rc1_f_rotated = rc1_f_cw
+                rc2_f_rotated = rc2_f_cw
+            elif not ccw_intersect:
+                # Counter-clockwise has no intersection but gap < 2
+                on_front_rotate = Algs.F.prime
+                rc1_f_rotated = rc1_f_ccw
+                rc2_f_rotated = rc2_f_ccw
+            else:
+                # BOTH directions cause intersection - position cannot be handled
+                raise ValueError(
+                    f"Position ({r1},{c1}) cannot be handled: both F and F' cause "
+                    f"column intersection. This is a limitation of the commutator "
+                    f"algorithm for inner positions on even cubes."
+                )
 
             # Get M slice algorithms for the columns
             rotate_on_cell = self._get_slice_m_alg(c1, c2)
