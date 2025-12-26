@@ -176,8 +176,8 @@ class CommunicatorHelper(SolverElement):
         """
         Get M slice algorithm for column range.
 
-        Returns M.prime so that when the commutator uses rotate_on_cell.prime,
-        we get M.prime.prime = M. The algorithm structure is [M, F, M, F', M', F, M', F'].
+        Returns M (not M') for use in commutator pattern:
+        [Ma', F, Mb', F', Ma, F, Mb, F']
 
         M moves: Up → Front → Down → Back (for bringing pieces from Up to Front)
 
@@ -186,15 +186,18 @@ class CommunicatorHelper(SolverElement):
             c2: Center slice index [0, n)
 
         Returns:
-            M slice algorithm (prime) for the range
+            M slice algorithm for the range
         """
         if c1 > c2:
             c1, c2 = c2, c1
-        return Algs.M[c1 + 1:c2 + 1].prime
+        # M[n:n] notation works for single slice at position n
+        return Algs.M[c1 + 1:c2 + 1]
 
     def _get_slice_e_alg(self, r1: int, r2: int):
         """
         Get E slice algorithm for row range.
+
+        Returns E (not E') for use in commutator pattern.
 
         Args:
             r1: Center slice index [0, n)
@@ -205,7 +208,8 @@ class CommunicatorHelper(SolverElement):
         """
         if r1 > r2:
             r1, r2 = r2, r1
-        return Algs.E[r1 + 1:r2 + 1].prime
+        # E[n:n] notation works for single slice at position n
+        return Algs.E[r1 + 1:r2 + 1]
 
     def _point_on_source_idx(self, source: Face, rc: Point) -> Point:
         """
@@ -455,46 +459,15 @@ class CommunicatorHelper(SolverElement):
             cw_intersect = self._1d_intersect((c1, c2), (rc1_f_cw[1], rc2_f_cw[1]))
             ccw_intersect = self._1d_intersect((c1, c2), (rc1_f_ccw[1], rc2_f_ccw[1]))
 
-            # Calculate the column gap for each F direction
-            # Edge-preserving commutators require gap >= 2 between M slices
-            def column_gap(original_cols: tuple, rotated_cols: tuple) -> int:
-                """Calculate minimum gap between column ranges."""
-                o_min, o_max = min(original_cols), max(original_cols)
-                r_min, r_max = min(rotated_cols), max(rotated_cols)
-                # Gap is the minimum distance between non-overlapping ranges
-                if r_min > o_max:
-                    return r_min - o_max
-                elif o_min > r_max:
-                    return o_min - r_max
-                else:
-                    return 0  # They overlap
-
-            cw_gap = column_gap((c1, c2), (rc1_f_cw[1], rc2_f_cw[1]))
-            ccw_gap = column_gap((c1, c2), (rc1_f_ccw[1], rc2_f_ccw[1]))
-
-            # Choose F direction based on:
-            # 1. No column intersection (required for algorithm to work)
-            # 2. Gap >= 2 (required for edge preservation on even cubes)
-            if not cw_intersect and cw_gap >= 2:
-                # Clockwise works and has good gap
+            # Choose F direction based on no column intersection
+            if not cw_intersect:
                 on_front_rotate = Algs.F
-                rc1_f_rotated = rc1_f_cw
-                rc2_f_rotated = rc2_f_cw
-            elif not ccw_intersect and ccw_gap >= 2:
-                # Counter-clockwise works and has good gap
-                on_front_rotate = Algs.F.prime
-                rc1_f_rotated = rc1_f_ccw
-                rc2_f_rotated = rc2_f_ccw
-            elif not cw_intersect:
-                # Clockwise has no intersection but gap < 2 (edges may not be preserved)
-                on_front_rotate = Algs.F
-                rc1_f_rotated = rc1_f_cw
-                rc2_f_rotated = rc2_f_cw
+                rotated_col = rc1_f_cw[1]
+                use_f_prime = False
             elif not ccw_intersect:
-                # Counter-clockwise has no intersection but gap < 2
                 on_front_rotate = Algs.F.prime
-                rc1_f_rotated = rc1_f_ccw
-                rc2_f_rotated = rc2_f_ccw
+                rotated_col = rc1_f_ccw[1]
+                use_f_prime = True
             else:
                 # BOTH directions cause intersection - position cannot be handled
                 raise ValueError(
@@ -503,51 +476,78 @@ class CommunicatorHelper(SolverElement):
                     f"algorithm for inner positions on even cubes."
                 )
 
-            # Get M slice algorithms for the columns
-            rotate_on_cell = self._get_slice_m_alg(c1, c2)
-            rotate_on_second = self._get_slice_m_alg(rc1_f_rotated[1], rc2_f_rotated[1])
+            # Key insight for edge preservation on even cubes:
+            # The order of M slices matters based on F direction:
+            # - F' (counter-clockwise): inner column first, outer column second
+            # - F  (clockwise): outer column first, inner column second
+            #
+            # "Inner" = smaller M slice index (closer to R face)
+            # "Outer" = larger M slice index (closer to L face)
+            #
+            # This prevents adjacent M slices from interfering with shared edge wings.
+            original_col = c1
+            if use_f_prime:
+                # F': inner first, outer second
+                if original_col < rotated_col:
+                    # original is inner, rotated is outer - correct order
+                    col_first, col_second = original_col, rotated_col
+                else:
+                    # original is outer, rotated is inner - swap
+                    col_first, col_second = rotated_col, original_col
+            else:
+                # F: outer first, inner second
+                if original_col > rotated_col:
+                    # original is outer, rotated is inner - correct order
+                    col_first, col_second = original_col, rotated_col
+                else:
+                    # original is inner, rotated is outer - swap
+                    col_first, col_second = rotated_col, original_col
+
+            # Get M slice algorithms with correct ordering
+            m_first = self._get_slice_m_alg(col_first, col_first)
+            m_second = self._get_slice_m_alg(col_second, col_second)
 
             # M slice handling based on source face:
-            # - Up: M' brings Up→Front, standard algorithm [M', F, M', F', M, F, M, F']
+            # - Up: M' brings Up→Front, algorithm [Ma', F, Mb', F', Ma, F, Mb, F']
             # - Back: M'*2 = M2 brings Back→Front (180°)
-            # - Down: M brings Down→Front, inverted algorithm [M, F, M, F', M', F, M', F']
+            # - Down: M brings Down→Front, inverted algorithm
             is_down = source is cube.down
             is_back = source is cube.back
 
             if is_down:
                 # Down: swap prime/non-prime for M moves
                 commutator = [
-                    rotate_on_cell,               # M (instead of M')
+                    m_first,               # M (instead of M')
                     on_front_rotate,
-                    rotate_on_second,             # M (instead of M')
+                    m_second,              # M (instead of M')
                     on_front_rotate.prime,
-                    rotate_on_cell.prime,         # M' (instead of M)
+                    m_first.prime,         # M' (instead of M)
                     on_front_rotate,
-                    rotate_on_second.prime,       # M' (instead of M)
+                    m_second.prime,        # M' (instead of M)
                     on_front_rotate.prime
                 ]
             elif is_back:
                 # Back: double M moves (180°)
                 commutator = [
-                    rotate_on_cell.prime * 2,
+                    m_first.prime * 2,
                     on_front_rotate,
-                    rotate_on_second.prime * 2,
+                    m_second.prime * 2,
                     on_front_rotate.prime,
-                    rotate_on_cell * 2,
+                    m_first * 2,
                     on_front_rotate,
-                    rotate_on_second * 2,
+                    m_second * 2,
                     on_front_rotate.prime
                 ]
             else:
-                # Up: standard algorithm
+                # Up: standard algorithm [Ma', F, Mb', F', Ma, F, Mb, F']
                 commutator = [
-                    rotate_on_cell.prime,
+                    m_first.prime,
                     on_front_rotate,
-                    rotate_on_second.prime,
+                    m_second.prime,
                     on_front_rotate.prime,
-                    rotate_on_cell,
+                    m_first,
                     on_front_rotate,
-                    rotate_on_second,
+                    m_second,
                     on_front_rotate.prime
                 ]
 
