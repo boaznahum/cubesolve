@@ -180,6 +180,19 @@ M rotations:  M' + M' + M + M = 0 (edges preserved in reduction mode)
 
 Reference: See `docs/design2/face-slice-rotation.md` for detailed diagrams showing row 0 at bottom.
 
+### Coordinate Translation Methods (CubeQueries2.py:173-190)
+
+```python
+# Rotate point clockwise n times: (r, c) -> (inv(c), r)
+cube.cqr.rotate_point_clockwise(rc, n)
+
+# Rotate point counter-clockwise n times: (r, c) -> (c, inv(r))
+cube.cqr.rotate_point_counterclockwise(rc, n)
+
+# Get all 4 symmetric center points
+cube.cqr.get_four_center_points(r, c)
+```
+
 ### Attribute System
 
 To set/get attributes on center pieces that move with the color:
