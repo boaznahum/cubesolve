@@ -117,22 +117,23 @@ def _is_inner_center_position(n_slices: int, ltr_y: int, ltr_x: int) -> bool:
     gap < 2, which can cause edge disturbance with some source/rotation
     combinations.
 
-    Position (n//2, n//2) on even cubes is completely unsupported - no source
-    face can handle it at any rotation because all M slice directions have
-    column intersection.
+    For 4x4 cube (n_slices=2): ALL positions are in the inner 2x2.
+    For 6x6 cube (n_slices=4): inner 2x2 is at (1,1), (1,2), (2,1), (2,2).
+    For 8x8 cube (n_slices=6): inner 2x2 is at (2,2), (2,3), (3,2), (3,3).
 
     Args:
         n_slices: Number of center slices (cube_size - 2)
         ltr_y, ltr_x: Position in LTR coordinates
 
     Returns:
-        True if this is the innermost position on an even cube
+        True if this position is in the inner 2x2 of an even cube
     """
-    if n_slices % 2 != 0 or n_slices < 4:
-        return False  # Only even cubes with 4+ slices have this issue
+    if n_slices % 2 != 0:
+        return False  # Only even cubes have inner 2x2 issues
 
     # Inner 2x2 is at indices [n//2 - 1, n//2] for each dimension
-    # For n=4: inner 2x2 is (1,1), (1,2), (2,1), (2,2)
+    # For n=2 (4x4): inner is (0,0) to (1,1) - ALL positions
+    # For n=4 (6x6): inner is (1,1) to (2,2)
     inner_min = n_slices // 2 - 1
     inner_max = n_slices // 2
 
@@ -199,7 +200,7 @@ def test_create_helper(cube_size: int) -> None:
 
 
 
-@pytest.mark.parametrize("cube_size", [5, 6, 7])  # Includes even cubes
+@pytest.mark.parametrize("cube_size", [4, 5, 6, 7, 8])  # All cube sizes
 def test_communicator_supported_pairs(cube_size: int) -> None:
     """
     Test communicator for currently supported face pairs.
@@ -229,7 +230,16 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
     # Use helper's announcement of supported pairs
     supported_pairs = helper.get_supported_pairs()
 
-    for source_face, target_face in supported_pairs:
+    # Map from FaceName to cube attribute name
+    face_name_to_attr = {
+        'U': 'up', 'D': 'down', 'F': 'front', 'B': 'back', 'L': 'left', 'R': 'right'
+    }
+
+    # Track source face names since we need to get fresh references after reset
+    source_target_names = [(face_name_to_attr[src.name.name], face_name_to_attr[tgt.name.name])
+                           for src, tgt in supported_pairs]
+
+    for source_name, target_name in source_target_names:
 
             for ltr_y in range(n_slices):
                 for ltr_x in range(n_slices):
@@ -242,6 +252,17 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
                         continue
 
                     for rotation in range(4):
+                        # Reset cube to pristine state for each test iteration
+                        # This ensures center pieces are in their original positions
+                        app.reset()
+                        cube = app.cube
+                        solver = CageNxNSolver(app.op)
+                        helper = CommunicatorHelper(solver)
+
+                        # Get fresh face references after reset
+                        source_face = getattr(cube, source_name)
+                        target_face = getattr(cube, target_name)
+
                         # Get expected source LTR by mapping target → source
                         expected_src_ltr = helper.get_expected_source_ltr(
                             source_face, target_face, (ltr_y, ltr_x)
@@ -368,7 +389,11 @@ def test_communicator_simple_case(cube_size: int) -> None:
     # Test position (0, 1) - NOT the center (center is invariant for odd cubes)
     # For 5x5 cube with 3x3 center, (1,1) is the exact center which can't be moved
     ltr_y, ltr_x = 0, 1
-    src_ltr_y, src_ltr_x = ltr_y, ltr_x  # rotation=0, same position
+
+    # Get expected source LTR - this accounts for the different coordinate
+    # translations between Up and Front faces
+    expected_src_ltr = helper.get_expected_source_ltr(source_face, target_face, (ltr_y, ltr_x))
+    src_ltr_y, src_ltr_x = expected_src_ltr  # rotation=0, expected position
 
     # Set test attribute
     test_key = "simple_test"

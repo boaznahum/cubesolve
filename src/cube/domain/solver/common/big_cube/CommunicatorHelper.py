@@ -176,40 +176,45 @@ class CommunicatorHelper(SolverElement):
         """
         Get M slice algorithm for column range.
 
-        Returns M (not M') for use in commutator pattern:
-        [Ma', F, Mb', F', Ma, F, Mb, F']
+        Returns M' (prime) for use in commutator pattern. The algorithm uses
+        m.prime and m directly, where m = M':
+        [m', F, m', F', m, F, m, F'] = [M, F, M, F', M', F, M', F']
 
-        M moves: Up → Front → Down → Back (for bringing pieces from Up to Front)
+        This matches NxNCenters._get_slice_m_alg() behavior.
 
         Args:
             c1: Center slice index [0, n)
             c2: Center slice index [0, n)
 
         Returns:
-            M slice algorithm for the range
+            M' slice algorithm for the range
         """
         if c1 > c2:
             c1, c2 = c2, c1
         # M[n:n] notation works for single slice at position n
-        return Algs.M[c1 + 1:c2 + 1]
+        return Algs.M[c1 + 1:c2 + 1].prime
 
     def _get_slice_e_alg(self, r1: int, r2: int):
         """
         Get E slice algorithm for row range.
 
-        Returns E (not E') for use in commutator pattern.
+        Returns E' (prime) for use in commutator pattern. The algorithm uses
+        e.prime and e directly, where e = E':
+        [e', F, e2', F', e, F, e2, F'] = [E, F, E, F', E', F, E', F']
+
+        This matches the pattern used by _get_slice_m_alg for M slices.
 
         Args:
             r1: Center slice index [0, n)
             r2: Center slice index [0, n)
 
         Returns:
-            E slice algorithm for the range
+            E' slice algorithm for the range
         """
         if r1 > r2:
             r1, r2 = r2, r1
         # E[n:n] notation works for single slice at position n
-        return Algs.E[r1 + 1:r2 + 1]
+        return Algs.E[r1 + 1:r2 + 1].prime
 
     def _point_on_source_idx(self, source: Face, rc: Point) -> Point:
         """
@@ -463,11 +468,9 @@ class CommunicatorHelper(SolverElement):
             if not cw_intersect:
                 on_front_rotate = Algs.F
                 rotated_col = rc1_f_cw[1]
-                use_f_prime = False
             elif not ccw_intersect:
                 on_front_rotate = Algs.F.prime
                 rotated_col = rc1_f_ccw[1]
-                use_f_prime = True
             else:
                 # BOTH directions cause intersection - position cannot be handled
                 raise ValueError(
@@ -476,78 +479,61 @@ class CommunicatorHelper(SolverElement):
                     f"algorithm for inner positions on even cubes."
                 )
 
-            # Key insight for edge preservation on even cubes:
-            # The order of M slices matters based on F direction:
-            # - F' (counter-clockwise): inner column first, outer column second
-            # - F  (clockwise): outer column first, inner column second
+            # Get M slice algorithms matching NxNCenters behavior:
+            # - rotate_on_cell: M slice for ORIGINAL column position
+            # - rotate_on_second: M slice for ROTATED column position (after F)
             #
-            # "Inner" = smaller M slice index (closer to R face)
-            # "Outer" = larger M slice index (closer to L face)
-            #
-            # This prevents adjacent M slices from interfering with shared edge wings.
-            original_col = c1
-            if use_f_prime:
-                # F': inner first, outer second
-                if original_col < rotated_col:
-                    # original is inner, rotated is outer - correct order
-                    col_first, col_second = original_col, rotated_col
-                else:
-                    # original is outer, rotated is inner - swap
-                    col_first, col_second = rotated_col, original_col
-            else:
-                # F: outer first, inner second
-                if original_col > rotated_col:
-                    # original is outer, rotated is inner - correct order
-                    col_first, col_second = original_col, rotated_col
-                else:
-                    # original is inner, rotated is outer - swap
-                    col_first, col_second = rotated_col, original_col
-
-            # Get M slice algorithms with correct ordering
-            m_first = self._get_slice_m_alg(col_first, col_first)
-            m_second = self._get_slice_m_alg(col_second, col_second)
+            # The algorithm is: [m.prime, F, m2.prime, F', m, F, m2, F']
+            # where m and m2 are M' slices from _get_slice_m_alg.
+            rotate_on_cell = self._get_slice_m_alg(c1, c2)
+            rotate_on_second = self._get_slice_m_alg(rotated_col, rotated_col)
 
             # M slice handling based on source face:
-            # - Up: M' brings Up→Front, algorithm [Ma', F, Mb', F', Ma, F, Mb, F']
+            # - Up: algorithm [m.prime, F, m2.prime, F', m, F, m2, F']
+            #       where m=M' moves Up→Front
             # - Back: M'*2 = M2 brings Back→Front (180°)
-            # - Down: M brings Down→Front, inverted algorithm
+            # - Down: M (not M') brings Down→Front, inverted primes
             is_down = source is cube.down
             is_back = source is cube.back
 
-            if is_down:
-                # Down: swap prime/non-prime for M moves
+            if is_back:
+                # Back: double M moves (180°)
+                # Same pattern but with *2 multiplier
+                rotate_mul = 2
                 commutator = [
-                    m_first,               # M (instead of M')
+                    rotate_on_cell.prime * rotate_mul,
                     on_front_rotate,
-                    m_second,              # M (instead of M')
+                    rotate_on_second.prime * rotate_mul,
                     on_front_rotate.prime,
-                    m_first.prime,         # M' (instead of M)
+                    rotate_on_cell * rotate_mul,
                     on_front_rotate,
-                    m_second.prime,        # M' (instead of M)
+                    rotate_on_second * rotate_mul,
                     on_front_rotate.prime
                 ]
-            elif is_back:
-                # Back: double M moves (180°)
+            elif is_down:
+                # Down: M (not M') brings Down→Front
+                # Invert the prime pattern: m becomes m.prime and vice versa
                 commutator = [
-                    m_first.prime * 2,
+                    rotate_on_cell,           # M (instead of M')
                     on_front_rotate,
-                    m_second.prime * 2,
+                    rotate_on_second,         # M (instead of M')
                     on_front_rotate.prime,
-                    m_first * 2,
+                    rotate_on_cell.prime,     # M' (instead of M)
                     on_front_rotate,
-                    m_second * 2,
+                    rotate_on_second.prime,   # M' (instead of M)
                     on_front_rotate.prime
                 ]
             else:
-                # Up: standard algorithm [Ma', F, Mb', F', Ma, F, Mb, F']
+                # Up: standard algorithm [m.prime, F, m2.prime, F', m, F, m2, F']
+                # where m and m2 are already M' from _get_slice_m_alg
                 commutator = [
-                    m_first.prime,
+                    rotate_on_cell.prime,
                     on_front_rotate,
-                    m_second.prime,
+                    rotate_on_second.prime,
                     on_front_rotate.prime,
-                    m_first,
+                    rotate_on_cell,
                     on_front_rotate,
-                    m_second,
+                    rotate_on_second,
                     on_front_rotate.prime
                 ]
 
