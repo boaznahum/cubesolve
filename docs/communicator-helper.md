@@ -338,6 +338,24 @@ The helper is a standalone class that:
   - Refactored `_point_on_source_idx` to accept `source: Face` instead of `is_back: bool`
 - **Debugging approach**: Instead of guessing coordinate mappings, traced where attributes actually move
 - **All tests pass** for Up→Front, Back→Front, and Down→Front (3 out of 30 pairs implemented)
+- **Visual debugging**: Added console display to show markers moving between faces
+
+## Known Bugs
+
+### BUG: `cube.reset()` invalidates helper face references
+After calling `cube.reset()`, the helper's `is_supported()` check fails because face object references change.
+
+**Workaround**: Create a fresh cube/helper instead of using `cube.reset()`. Or re-fetch faces from cube after reset.
+
+**To clear attributes without reset**, iterate all pieces:
+```python
+for face in cube.faces:
+    for y in range(n_slices):
+        for x in range(n_slices):
+            idx = helper.ltr_to_index(face, y, x)
+            cs = face.center.get_center_slice(idx)
+            cs.edge.c_attributes.clear()
+```
 
 ---
 
