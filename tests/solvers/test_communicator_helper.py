@@ -175,10 +175,13 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
                         continue
 
                     for rotation in range(4):
-                        # Rotate target LTR to get source LTR position
-                        # Helper handles all coordinate translations internally
-                        src_ltr_y, src_ltr_x = cube.cqr.rotate_point_clockwise(
-                            (ltr_y, ltr_x), rotation
+                        # Get expected source LTR by mapping target → source
+                        expected_src_ltr = helper.get_expected_source_ltr(
+                            source_face, target_face, (ltr_y, ltr_x)
+                        )
+                        # Rotate on SOURCE face (physical rotation)
+                        src_ltr_y, src_ltr_x = helper.rotate_ltr_on_face(
+                            source_face, expected_src_ltr, rotation
                         )
 
                         # Create unique test attribute

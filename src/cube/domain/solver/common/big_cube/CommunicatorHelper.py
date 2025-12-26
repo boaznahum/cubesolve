@@ -42,8 +42,9 @@ class CommunicatorHelper(SolverElement):
 
     Key methods:
     - do_communicator(): Execute commutator with LTR block coordinates
-    - get_expected_source_ltr(): Get source position for a target position
-    - rotate_ltr_point(): Rotate an LTR point clockwise
+    - get_expected_source_ltr(): Map target LTR to source LTR
+    - rotate_ltr_on_face(): Rotate LTR on a face (physical rotation)
+    - ltr_to_index() / index_to_ltr(): Coordinate translation
     """
 
     def __init__(self, solver: SolverElementsProvider) -> None:
@@ -95,21 +96,32 @@ class CommunicatorHelper(SolverElement):
         p2 = self.ltr_to_index(face, ltr_block[1][0], ltr_block[1][1])
         return p1, p2
 
-    def rotate_ltr_point(self, point: Point, n: int = 1) -> Point:
+    def rotate_ltr_on_face(self, face: Face, ltr: Point, n: int = 1) -> Point:
         """
-        Rotate an LTR point clockwise n times.
+        Rotate an LTR point on a specific face n times clockwise.
 
-        This uses the standard rotation formula for an n_slices x n_slices grid:
-        (y, x) CW → (n_slices-1-x, y)
+        This performs PHYSICAL rotation on the face:
+        1. Translate LTR to Index on the face
+        2. Rotate in Index space (physical rotation)
+        3. Translate back to LTR on the same face
+
+        Different faces have different LTR→Index mappings, so the same
+        LTR rotation looks different on different faces.
 
         Args:
-            point: (ltr_y, ltr_x) coordinate
+            face: The face to rotate on
+            ltr: (ltr_y, ltr_x) coordinate on the face
             n: Number of 90° clockwise rotations (0-3)
 
         Returns:
-            Rotated (ltr_y, ltr_x) coordinate
+            Rotated (ltr_y, ltr_x) coordinate on the same face
         """
-        return self.cube.cqr.rotate_point_clockwise(point, n)
+        # LTR → Index
+        idx = self.ltr_to_index(face, ltr[0], ltr[1])
+        # Rotate in Index space (physical rotation)
+        rotated_idx = self.cube.cqr.rotate_point_clockwise(idx, n)
+        # Index → LTR
+        return self.index_to_ltr(face, rotated_idx[0], rotated_idx[1])
 
     def get_expected_source_ltr(
         self, source: Face, target: Face, target_ltr: Point
