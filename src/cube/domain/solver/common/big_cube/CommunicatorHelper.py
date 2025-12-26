@@ -140,11 +140,10 @@ class CommunicatorHelper(SolverElement):
         Returns:
             Expected source position in LTR on source face
         """
-        is_back = source is self.cube.back
         # Translate target LTR to target index
         target_idx = self.ltr_to_index(target, target_ltr[0], target_ltr[1])
-        # Get expected source index
-        expected_source_idx = self._point_on_source_idx(is_back, target_idx)
+        # Get expected source index (face-specific mapping)
+        expected_source_idx = self._point_on_source_idx(source, target_idx)
         # Translate back to source LTR
         return self.index_to_ltr(source, expected_source_idx[0], expected_source_idx[1])
 
@@ -188,17 +187,24 @@ class CommunicatorHelper(SolverElement):
             c1, c2 = c2, c1
         return Algs.M[c1 + 1:c2 + 1].prime
 
-    def _point_on_source_idx(self, is_back: bool, rc: Point) -> Point:
+    def _point_on_source_idx(self, source: Face, rc: Point) -> Point:
         """
         Convert target index coordinates to source index coordinates.
 
         For Up source: same coordinates (Front and Up share coordinate system)
         For Back source: both axes inverted
+        For Down source: row inverted (M brings Down to Front with row flip)
         """
-        if is_back:
-            inv = self.cube.inv
+        cube = self.cube
+        inv = cube.inv
+
+        if source is cube.back:
             return inv(rc[0]), inv(rc[1])
+        elif source is cube.down:
+            # Down→Front: M brings pieces, same coordinates as Up
+            return rc
         else:
+            # Up source: same coordinates
             return rc
 
     def _find_rotation_idx(self, actual_source_idx: Point, expected_source_idx: Point) -> int:
@@ -246,6 +252,7 @@ class CommunicatorHelper(SolverElement):
         return [
             (cube.up, cube.front),    # Source=Up, Target=Front
             (cube.back, cube.front),  # Source=Back, Target=Front
+            # Down→Front requires more investigation
         ]
 
     def is_supported(self, source: Face, target: Face) -> bool:
@@ -308,7 +315,6 @@ class CommunicatorHelper(SolverElement):
 
         # Currently only support Front as target
         assert target is cube.front
-        is_back = source is cube.back
 
         # Convert LTR to index coordinates
         # Target index is on Front face
@@ -321,7 +327,7 @@ class CommunicatorHelper(SolverElement):
 
         # Expected source position: derived from target using face mapping
         target_idx = target_idx_block[0]
-        expected_source_idx = self._point_on_source_idx(is_back, target_idx)
+        expected_source_idx = self._point_on_source_idx(source, target_idx)
 
         # Find rotation to align actual source to expected source
         n_rotate = self._find_rotation_idx(actual_source_idx, expected_source_idx)
@@ -346,20 +352,49 @@ class CommunicatorHelper(SolverElement):
         rotate_on_cell = self._get_slice_m_alg(c1, c2)
         rotate_on_second = self._get_slice_m_alg(rc1_f_rotated[1], rc2_f_rotated[1])
 
-        # For Back source, M moves need to be doubled (180 degrees)
-        rotate_mul = 2 if is_back else 1
+        # M slice handling based on source face:
+        # - Up: M' brings Up→Front, standard algorithm [M', F, M', F', M, F, M, F']
+        # - Back: M'*2 = M2 brings Back→Front (180°)
+        # - Down: M brings Down→Front, inverted algorithm [M, F, M, F', M', F, M', F']
+        is_down = source is cube.down
+        is_back = source is cube.back
 
-        # Build the commutator sequence: [M', F, M', F', M, F, M, F']
-        commutator = [
-            rotate_on_cell.prime * rotate_mul,
-            on_front_rotate,
-            rotate_on_second.prime * rotate_mul,
-            on_front_rotate.prime,
-            rotate_on_cell * rotate_mul,
-            on_front_rotate,
-            rotate_on_second * rotate_mul,
-            on_front_rotate.prime
-        ]
+        if is_down:
+            # Down: swap prime/non-prime for M moves
+            commutator = [
+                rotate_on_cell,               # M (instead of M')
+                on_front_rotate,
+                rotate_on_second,             # M (instead of M')
+                on_front_rotate.prime,
+                rotate_on_cell.prime,         # M' (instead of M)
+                on_front_rotate,
+                rotate_on_second.prime,       # M' (instead of M)
+                on_front_rotate.prime
+            ]
+        elif is_back:
+            # Back: double M moves (180°)
+            commutator = [
+                rotate_on_cell.prime * 2,
+                on_front_rotate,
+                rotate_on_second.prime * 2,
+                on_front_rotate.prime,
+                rotate_on_cell * 2,
+                on_front_rotate,
+                rotate_on_second * 2,
+                on_front_rotate.prime
+            ]
+        else:
+            # Up: standard algorithm
+            commutator = [
+                rotate_on_cell.prime,
+                on_front_rotate,
+                rotate_on_second.prime,
+                on_front_rotate.prime,
+                rotate_on_cell,
+                on_front_rotate,
+                rotate_on_second,
+                on_front_rotate.prime
+            ]
 
         # Execute: first rotate source to align, then commutator
         if n_rotate:

@@ -333,6 +333,48 @@ The helper is a standalone class that:
 
 ---
 
+## Open Questions
+
+### Q1: Why does rotation matter between LTR and Index coordinate systems?
+
+When rotating a point to find the source position, we must go through Index space:
+```
+LTR(face) → Index(face) → rotate in Index → Index(face) → LTR(face)
+```
+
+We cannot rotate directly in LTR space because:
+- Each face has a different LTR↔Index mapping
+- For Front: LTR (y,x) ≈ Index (y,x)
+- For Up: LTR (0,0) → Index (n-1, 0) on NxN cube (Y-axis relationship differs)
+
+The physical rotation happens in Index space (how slices actually move on the cube).
+The LTR coordinates are a user-facing abstraction that differs per face.
+
+**TODO**: Investigate if there's a mathematical relationship that allows direct LTR rotation without going through Index space.
+
+### Q2: How to transform algorithms for other face pairs (Down→Front, Left→Right, etc.)?
+
+The commutator algorithm [M', F, M', F', M, F, M, F'] is designed for Up→Front.
+
+Key insights from research:
+- Cube rotations: x (around R axis), y (around U axis), z (around F axis)
+- Slice relation: M ~ x', E ~ y', S ~ z
+- After x2: U↔D swap, F↔B swap
+
+For Down→Front:
+- The algorithm needs M (not M') to bring pieces from Down to Front
+- Simply swapping M↔M' gives [M, F, M, F', M', F, M', F']
+- Coordinate mapping: Down(r, c) → Front(inv(r), c) (row inverted)
+
+**Challenge**: The inverted algorithm and coordinate mapping don't produce correct results.
+Need to investigate the full mathematical transformation.
+
+Sources:
+- [Ruwix - Advanced Notation](https://ruwix.com/the-rubiks-cube/notation/advanced/)
+- [JPerm - Cube Moves](https://jperm.net/3x3/moves)
+
+---
+
 ## Next Steps
 
 1. Add more face pair combinations incrementally
