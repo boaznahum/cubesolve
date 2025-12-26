@@ -360,6 +360,19 @@ class CommunicatorHelper(SolverElement):
                 f"Face pair ({source.name}, {target.name}) not yet implemented"
             )
 
+        # Check if target position is supported (even cube inner 2x2 limitation)
+        # On even cubes, the inner 2x2 uses different M slices that don't cancel out
+        target_ltr = target_block[0]
+        if not self.is_position_supported(target_ltr[0], target_ltr[1]):
+            n = self.n_slices
+            mid_low = n // 2 - 1
+            mid_high = n // 2
+            raise ValueError(
+                f"Position ({target_ltr[0]}, {target_ltr[1]}) not supported on even cube. "
+                f"Inner 2x2 region [{mid_low},{mid_high}] x [{mid_low},{mid_high}] "
+                f"uses different M slices that don't cancel out."
+            )
+
         cube = self.cube
 
         # Currently only support Front as target
