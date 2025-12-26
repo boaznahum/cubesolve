@@ -54,7 +54,8 @@ for source_face in all_cube_faces:
         for y in all_slices:  # bottom-up, left-right
             for x in all_slices:
                 for rotation in range(4):  # 4 possible source locations
-                    # Create sy, sx from y, x, rotation
+                    # Get source position by rotating target position
+                    sy, sx = rotate_point_clockwise((y, x), rotation)
 
                     # Block size = 1 (extend later)
 
@@ -191,6 +192,16 @@ cube.cqr.rotate_point_counterclockwise(rc, n)
 
 # Get all 4 symmetric center points
 cube.cqr.get_four_center_points(r, c)
+```
+
+**Old helper usage** (NxNCenters._search_block:1461-1466):
+```python
+# Search for matching block by trying 4 rotations
+for n in range(4):
+    if self._is_block(source_face, ...):
+        return (-n) % 4  # How many rotations needed
+    rc1 = cube.cqr.rotate_point_clockwise(rc1)
+    rc2 = cube.cqr.rotate_point_clockwise(rc2)
 ```
 
 ### Attribute System
