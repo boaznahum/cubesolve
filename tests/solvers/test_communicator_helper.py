@@ -274,3 +274,37 @@ def test_communicator_simple_case(cube_size: int) -> None:
 
     # State should be preserved
     assert _check_cube_state_preserved(cube)
+
+
+@pytest.mark.parametrize("cube_size", [5])
+def test_communicator_raises_on_incompatible_blocks(cube_size: int) -> None:
+    """
+    Test that ValueError is raised when source block cannot be mapped
+    to target block with 0-3 rotations.
+
+    On a 3x3 center grid (5x5 cube), corner positions (0,0) and edge
+    positions (0,1) are in different rotation orbits and cannot be aligned.
+    """
+    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    solver = CageNxNSolver(app.op)
+    helper = CommunicatorHelper(solver)
+    cube = app.cube
+
+    source_face = cube.up
+    target_face = cube.front
+
+    # Target at corner position (0,0) - corner orbit: (0,0)→(2,0)→(2,2)→(0,2)
+    # Source at edge position (0,1) - edge orbit: (0,1)→(1,0)→(2,1)→(1,2)
+    # These are in different rotation orbits and cannot be aligned
+
+    target_block = ((0, 0), (0, 0))  # Corner in LTR
+    source_block = ((0, 1), (0, 1))  # Edge in LTR (different orbit)
+
+    with pytest.raises(ValueError, match="Cannot align"):
+        helper.do_communicator(
+            source=source_face,
+            target=target_face,
+            target_block=target_block,
+            source_block=source_block,
+            preserve_state=True
+        )
