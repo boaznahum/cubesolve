@@ -38,6 +38,38 @@ class CommunicatorHelper(SolverElement):
     def n_slices(self) -> int:
         return self.cube.n_slices
 
+    def get_supported_pairs(self) -> list[tuple[Face, Face]]:
+        """
+        Return list of (source, target) face pairs that are currently supported.
+
+        These are the combinations that do_communicator() can handle.
+        Other combinations will raise NotImplementedError.
+
+        Returns:
+            List of (source_face, target_face) tuples
+        """
+        cube = self.cube
+        return [
+            (cube.up, cube.front),    # Source=Up, Target=Front
+            (cube.back, cube.front),  # Source=Back, Target=Front
+        ]
+
+    def is_supported(self, source: Face, target: Face) -> bool:
+        """
+        Check if a source/target face pair is currently supported.
+
+        Args:
+            source: Source face
+            target: Target face
+
+        Returns:
+            True if this combination is implemented, False otherwise
+        """
+        for src, tgt in self.get_supported_pairs():
+            if source is src and target is tgt:
+                return True
+        return False
+
     def do_communicator(
         self,
         source: Face,

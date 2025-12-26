@@ -81,9 +81,9 @@ for source_face in all_cube_faces:
 
 ## Current Status
 
-**Phase:** Session 2 - Test written, awaiting review
+**Phase:** Session 3 - Helper announces supported pairs
 **Last Updated:** 2025-12-26
-**Session:** 2
+**Session:** 3
 
 ---
 
@@ -310,13 +310,23 @@ The helper is a standalone class that:
 - Updated test to use `cube.faces` iterator instead of custom function
 - Added clear variable naming: `ltr_y`, `ltr_x`, `idx_row`, `idx_col`
 
+### Session 3 (2025-12-26)
+- **Added helper announcement methods**:
+  - `get_supported_pairs()` - returns list of (source, target) face pairs
+  - `is_supported(source, target)` - checks if a specific pair is supported
+- Currently supported pairs (from old helper):
+  - (Up, Front) - Source=Up, Target=Front
+  - (Back, Front) - Source=Back, Target=Front
+- Updated test to use `helper.get_supported_pairs()` instead of local function
+- Incremental implementation approach: test supported pairs only, add more as implemented
+
 ---
 
 ## Next Steps
 
-1. Implement `do_communicator()` method in CommunicatorHelper
-2. Run tests and iterate until passing
-3. Consider moving translation methods to Face if needed elsewhere
+1. Implement `do_communicator()` for the 2 supported pairs (Up→Front, Back→Front)
+2. Run tests and verify they pass for supported combinations
+3. Add more face pair combinations incrementally
 
 ---
 

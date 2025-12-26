@@ -119,10 +119,12 @@ def test_create_helper(cube_size: int) -> None:
     assert helper.n_slices == cube_size - 2
 
 
+
+
 @pytest.mark.parametrize("cube_size", [5, 7])
-def test_communicator_all_face_pairs(cube_size: int) -> None:
+def test_communicator_supported_pairs(cube_size: int) -> None:
     """
-    Test communicator for all face pairs with single piece blocks.
+    Test communicator for currently supported face pairs.
 
     For each source/target pair:
     - Iterate all (ltr_y, ltr_x) positions in LTR coordinates
@@ -141,10 +143,10 @@ def test_communicator_all_face_pairs(cube_size: int) -> None:
     # Verify initial cube state
     assert _check_cube_state_preserved(cube), "Initial cube state should be valid"
 
-    for source_face in cube.faces:
-        for target_face in cube.faces:
-            if source_face is target_face:
-                continue
+    # Use helper's announcement of supported pairs
+    supported_pairs = helper.get_supported_pairs()
+
+    for source_face, target_face in supported_pairs:
 
             for ltr_y in range(n_slices):
                 for ltr_x in range(n_slices):
