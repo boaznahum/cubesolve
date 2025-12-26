@@ -296,6 +296,29 @@ class CommunicatorHelper(SolverElement):
                 return True
         return False
 
+    def is_position_supported(self, ltr_y: int, ltr_x: int) -> bool:
+        """
+        Check if a position is supported on this cube.
+
+        Even cubes (4x4, 6x6, 8x8) have an unsupported inner 2x2 region
+        where the commutator algorithm disturbs edges.
+
+        Args:
+            ltr_y: Y coordinate in LTR system
+            ltr_x: X coordinate in LTR system
+
+        Returns:
+            True if position is supported, False otherwise
+        """
+        n = self.n_slices
+        if n % 2 == 0:  # Even cube (e.g., 6x6 has n_slices=4)
+            # Inner 2x2 is not supported
+            mid_low = n // 2 - 1
+            mid_high = n // 2
+            if mid_low <= ltr_y <= mid_high and mid_low <= ltr_x <= mid_high:
+                return False
+        return True
+
     def do_communicator(
         self,
         source: Face,
