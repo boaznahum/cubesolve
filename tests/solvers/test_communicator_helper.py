@@ -89,6 +89,26 @@ def _check_cube_state_preserved(cube: Cube) -> bool:
     return edges_reduced and edges_positioned and corners_positioned
 
 
+def _is_center_position(n_slices: int, ltr_y: int, ltr_x: int) -> bool:
+    """
+    Check if (ltr_y, ltr_x) is the exact center of the grid.
+
+    For odd n_slices, the center is (mid, mid) which is invariant under rotation.
+    The commutator algorithm cannot move the center piece.
+
+    Args:
+        n_slices: Number of center slices (cube_size - 2)
+        ltr_y, ltr_x: Position in LTR coordinates
+
+    Returns:
+        True if this is the center position (for odd n_slices)
+    """
+    if n_slices % 2 == 0:
+        return False  # Even grids have no single center
+    mid = n_slices // 2
+    return ltr_y == mid and ltr_x == mid
+
+
 def _get_center_slice_edge_by_ltr(face: Face, ltr_y: int, ltr_x: int) -> "PartEdge":
     """
     Get the PartEdge for a center slice using LTR coordinates.
@@ -150,10 +170,19 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
 
             for ltr_y in range(n_slices):
                 for ltr_x in range(n_slices):
+                    # Skip center position for odd cubes (invariant under rotation)
+                    if _is_center_position(n_slices, ltr_y, ltr_x):
+                        continue
+
                     for rotation in range(4):
-                        # Get source position by rotating target position
-                        src_ltr_y, src_ltr_x = cube.cqr.rotate_point_clockwise(
-                            (ltr_y, ltr_x), rotation
+                        # Get expected source LTR from helper (handles coord translation)
+                        expected_source_ltr = helper.get_expected_source_ltr(
+                            source_face, target_face, (ltr_y, ltr_x)
+                        )
+
+                        # Rotate to get actual source position
+                        src_ltr_y, src_ltr_x = helper.rotate_ltr_point(
+                            expected_source_ltr, rotation
                         )
 
                         # Create unique test attribute
@@ -218,8 +247,9 @@ def test_communicator_simple_case(cube_size: int) -> None:
     source_face = cube.up
     target_face = cube.front
 
-    # Test position (1, 1) - middle area on 5x5 in LTR coordinates
-    ltr_y, ltr_x = 1, 1
+    # Test position (0, 1) - NOT the center (center is invariant for odd cubes)
+    # For 5x5 cube with 3x3 center, (1,1) is the exact center which can't be moved
+    ltr_y, ltr_x = 0, 1
     src_ltr_y, src_ltr_x = ltr_y, ltr_x  # rotation=0, same position
 
     # Set test attribute

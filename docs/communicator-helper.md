@@ -81,7 +81,7 @@ for source_face in all_cube_faces:
 
 ## Current Status
 
-**Phase:** Session 3 - Helper announces supported pairs
+**Phase:** Session 3 - do_communicator works for Up→Front and Back→Front
 **Last Updated:** 2025-12-26
 **Session:** 3
 
@@ -102,17 +102,18 @@ for source_face in all_cube_faces:
 - [x] Understand how to translate BULR to face index
 - [x] Document coordinate transformation formulas
 
-### Phase 3: Core Helper Methods
-- [ ] Implement `inv(i)` - index inversion (adapted for BULR)
-- [ ] Implement coordinate translation: BULR <-> face index
-- [ ] Implement rotation point mapping for any face pair
-- [ ] Implement block mapping between arbitrary faces
+### Phase 3: Core Helper Methods (COMPLETE)
+- [x] Implement coordinate translation: LTR <-> face index
+- [x] Implement rotation point mapping: rotate_ltr_point()
+- [x] Implement get_expected_source_ltr() for face pair mapping
+- [x] Helper handles all coordinate translations internally
 
-### Phase 4: Communicator Implementation
-- [ ] Implement main communicator method accepting any source/target
-- [ ] Handle all face pair combinations
-- [ ] Validate block can be mapped with 0-3 rotations (throw exception if not)
-- [ ] Implement cage preservation option
+### Phase 4: Communicator Implementation (IN PROGRESS)
+- [x] Implement main communicator method with LTR coordinates
+- [x] Handle Up→Front and Back→Front pairs
+- [x] Validate block can be mapped with 0-3 rotations
+- [x] Implement cage preservation option
+- [ ] Handle remaining 28 face pair combinations
 
 ### Phase 5: Comprehensive Tests (COMPLETE)
 - [x] Test iterating all source faces
@@ -314,24 +315,29 @@ The helper is a standalone class that:
 - **Added helper announcement methods**:
   - `get_supported_pairs()` - returns list of (source, target) face pairs
   - `is_supported(source, target)` - checks if a specific pair is supported
-- Currently supported pairs (from old helper):
-  - (Up, Front) - Source=Up, Target=Front
-  - (Back, Front) - Source=Back, Target=Front
-- Updated test to use `helper.get_supported_pairs()` instead of local function
-- Incremental implementation approach: test supported pairs only, add more as implemented
-- **Ran tests successfully**:
-  - ✅ `test_create_helper[5,7]` - PASSED (helper instantiation works)
-  - ❌ `test_communicator_supported_pairs[5,7]` - FAILED (NotImplementedError as expected)
-  - ❌ `test_communicator_simple_case[5]` - FAILED (NotImplementedError as expected)
-- Test infrastructure confirmed working, ready for `do_communicator()` implementation
+- **Implemented do_communicator() for Up→Front and Back→Front**:
+  - Full LTR coordinate support - helper handles all translations internally
+  - Added `ltr_to_index()` and `index_to_ltr()` translation methods
+  - Added `rotate_ltr_point()` for rotating LTR coordinates
+  - Added `get_expected_source_ltr()` for computing source positions
+  - Implements the block commutator algorithm: [M', F, M', F', M, F, M, F']
+  - Handles cage preservation (undo source rotation after commutator)
+- **Key insight: Center position is invariant for odd cubes**
+  - Position (mid, mid) can't be moved by the commutator
+  - Test skips center positions using `_is_center_position()` helper
+- **All tests pass**:
+  - ✅ `test_create_helper[5,7]` - PASSED
+  - ✅ `test_communicator_supported_pairs[5,7]` - PASSED (all positions, all rotations)
+  - ✅ `test_communicator_simple_case[5]` - PASSED
+- Updated class docstring to document LTR coordinate API
 
 ---
 
 ## Next Steps
 
-1. Implement `do_communicator()` for the 2 supported pairs (Up→Front, Back→Front)
-2. Run tests and verify they pass for supported combinations
-3. Add more face pair combinations incrementally
+1. Add more face pair combinations incrementally
+2. Consider: should get_expected_source_ltr use source-specific rotation?
+3. Integration: ensure existing tests still pass
 
 ---
 
