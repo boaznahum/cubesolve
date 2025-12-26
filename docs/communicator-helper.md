@@ -178,7 +178,29 @@ M rotations:  M' + M' + M + M = 0 (edges preserved in reduction mode)
 - Y increases **upward**
 - X increases **rightward**
 
-This needs to be mapped to face indices correctly.
+Reference: See `docs/design2/face-slice-rotation.md` for detailed diagrams showing row 0 at bottom.
+
+### Attribute System
+
+To set/get attributes on center pieces that move with the color:
+```python
+part_edge = face.center.get_center_slice((row, col))
+part_edge.c_attributes["test_key"] = value  # Moves with color during rotation
+```
+
+### State Checking Methods
+
+From `CageNxNSolver.py`:
+```python
+# Check if edges are reduced (3x3)
+all(e.is3x3 for e in cube.edges)
+
+# Check if edges are in correct position
+all(e.match_faces for e in cube.edges)
+
+# Check if corners are in correct position
+all(corner.match_faces for corner in cube.corners)
+```
 
 ### Face Pair Handling
 
