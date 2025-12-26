@@ -252,7 +252,7 @@ class CommunicatorHelper(SolverElement):
         return [
             (cube.up, cube.front),    # Source=Up, Target=Front
             (cube.back, cube.front),  # Source=Back, Target=Front
-            # Down→Front requires more investigation
+            (cube.down, cube.front),  # Source=Down, Target=Front
         ]
 
     def is_supported(self, source: Face, target: Face) -> bool:

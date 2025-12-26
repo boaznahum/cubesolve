@@ -331,6 +331,14 @@ The helper is a standalone class that:
   - ✅ `test_communicator_simple_case[5]` - PASSED
 - Updated class docstring to document LTR coordinate API
 
+### Session 4 (2025-12-26)
+- **Implemented Down→Front support**:
+  - Algorithm: Swap M↔M' → [M, F, M, F', M', F, M', F']
+  - Coordinate mapping: Identity (same as Up)
+  - Refactored `_point_on_source_idx` to accept `source: Face` instead of `is_back: bool`
+- **Debugging approach**: Instead of guessing coordinate mappings, traced where attributes actually move
+- **All tests pass** for Up→Front, Back→Front, and Down→Front (3 out of 30 pairs implemented)
+
 ---
 
 ## Open Questions
@@ -361,13 +369,10 @@ Key insights from research:
 - Slice relation: M ~ x', E ~ y', S ~ z
 - After x2: U↔D swap, F↔B swap
 
-For Down→Front:
-- The algorithm needs M (not M') to bring pieces from Down to Front
-- Simply swapping M↔M' gives [M, F, M, F', M', F, M', F']
-- Coordinate mapping: Down(r, c) → Front(inv(r), c) (row inverted)
-
-**Challenge**: The inverted algorithm and coordinate mapping don't produce correct results.
-Need to investigate the full mathematical transformation.
+**SOLVED for Down→Front:**
+- Algorithm: Swap M↔M' → [M, F, M, F', M', F, M', F']
+- Coordinate mapping: Identity (same as Up) → Down(r, c) → Front(r, c)
+- All tests pass for 5x5 and 7x7 cubes!
 
 Sources:
 - [Ruwix - Advanced Notation](https://ruwix.com/the-rubiks-cube/notation/advanced/)
