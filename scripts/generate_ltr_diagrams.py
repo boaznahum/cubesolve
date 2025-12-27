@@ -119,79 +119,92 @@ edge translation handles f1/f2 differences!"""
 
 
 def create_slice_rotation_diagram():
-    """Create diagram showing slice rotation with axis exchange."""
+    """Create diagram showing S slice rotation with axis exchange.
+
+    S slice alternates between ROW and COLUMN as it moves around faces:
+    - U: ROW (uses vertical edge_left L-U)
+    - R: COLUMN (uses horizontal edge_top U-R)
+    - D: ROW (uses vertical edge_right D-R)
+    - L: COLUMN (uses horizontal edge_bottom L-D)
+
+    Note: M slice does NOT have axis exchange - it stays as COLUMN on all faces.
+    """
     fig, axes = plt.subplots(1, 2, figsize=(14, 8))
 
-    # Left side: Face F (front view)
+    # Left side: Face U (looking down)
     ax1 = axes[0]
     ax1.set_xlim(-0.5, 5.5)
     ax1.set_ylim(-0.5, 5.5)
     ax1.set_aspect('equal')
     ax1.axis('off')
-    ax1.set_title('Face F (front view)\nM slice is a COLUMN', fontsize=14, fontweight='bold')
+    ax1.set_title('Face U (looking down)\nS slice is a ROW', fontsize=14, fontweight='bold')
 
-    # Draw 3x3 grid for Face F
+    # Draw 3x3 grid for Face U
     for i in range(3):
         for j in range(3):
-            color = '#FFD93D' if j == 1 else 'lightgray'  # Middle column is M slice
+            color = '#FFD93D' if i == 1 else 'lightgray'  # Middle row is S slice
             rect = patches.Rectangle((1 + j * 1.2, 1 + i * 1.2), 1.1, 1.1,
                                      facecolor=color, edgecolor='black', linewidth=2)
             ax1.add_patch(rect)
-            if j == 1:
-                ax1.text(1.55 + j * 1.2, 1.55 + i * 1.2, 'M', fontsize=14,
+            if i == 1:
+                ax1.text(1.55 + j * 1.2, 1.55 + i * 1.2, 'S', fontsize=14,
                         ha='center', va='center', fontweight='bold')
 
-    # Labels for Face F
-    ax1.text(2.8, 0.3, 'M slice (column)', fontsize=11, ha='center', va='center',
+    # Labels for Face U
+    ax1.text(2.8, 0.3, 'S slice (ROW)', fontsize=11, ha='center', va='center',
             color='#E67E22', fontweight='bold')
 
-    # Draw vertical ltr arrow on left
+    # Draw vertical ltr arrow on left (edge_left L-U)
     ax1.annotate('', xy=(0.5, 4), xytext=(0.5, 1.5),
                 arrowprops=dict(arrowstyle='->', color='blue', lw=2))
     ax1.text(0.2, 2.8, 'ltr\n0→2', fontsize=10, ha='center', va='center', color='blue')
 
     # Label edges
-    ax1.text(2.8, 4.8, 'edge_top', fontsize=9, ha='center', va='center', style='italic')
-    ax1.text(2.8, 0.6, 'edge_bottom', fontsize=9, ha='center', va='center', style='italic')
-    ax1.text(0.5, 2.8, 'edge_left\n(vertical)', fontsize=9, ha='center', va='center', style='italic')
+    ax1.text(2.8, 4.8, 'edge_top (U-B)', fontsize=9, ha='center', va='center', style='italic')
+    ax1.text(2.8, 0.6, 'edge_bottom (F-U)', fontsize=9, ha='center', va='center', style='italic')
+    ax1.text(0.3, 2.2, 'edge_left\n(L-U)\nVERTICAL', fontsize=9, ha='center', va='center',
+             style='italic', color='blue', fontweight='bold')
 
-    # Right side: Face U (top view)
+    # Right side: Face R (looking from right side)
     ax2 = axes[1]
     ax2.set_xlim(-0.5, 5.5)
     ax2.set_ylim(-0.5, 5.5)
     ax2.set_aspect('equal')
     ax2.axis('off')
-    ax2.set_title('Face U (top view, looking down)\nM slice is a ROW', fontsize=14, fontweight='bold')
+    ax2.set_title('Face R (looking from right)\nS slice is a COLUMN', fontsize=14, fontweight='bold')
 
-    # Draw 3x3 grid for Face U
+    # Draw 3x3 grid for Face R
     for i in range(3):
         for j in range(3):
-            color = '#FFD93D' if i == 0 else 'lightgray'  # Bottom row is M slice
+            color = '#FFD93D' if j == 1 else 'lightgray'  # Middle column is S slice
             rect = patches.Rectangle((1 + j * 1.2, 1 + i * 1.2), 1.1, 1.1,
                                      facecolor=color, edgecolor='black', linewidth=2)
             ax2.add_patch(rect)
-            if i == 0:
-                ax2.text(1.55 + j * 1.2, 1.55 + i * 1.2, 'M', fontsize=14,
+            if j == 1:
+                ax2.text(1.55 + j * 1.2, 1.55 + i * 1.2, 'S', fontsize=14,
                         ha='center', va='center', fontweight='bold')
 
-    # Labels for Face U
-    ax2.text(2.8, 0.3, 'M slice (row)', fontsize=11, ha='center', va='center',
+    # Labels for Face R
+    ax2.text(2.8, 0.3, 'S slice (COLUMN)', fontsize=11, ha='center', va='center',
             color='#E67E22', fontweight='bold')
 
-    # Draw horizontal ltr arrow on bottom
-    ax2.annotate('', xy=(4, 0.7), xytext=(1.5, 0.7),
+    # Draw horizontal ltr arrow on top (edge_top U-R)
+    ax2.annotate('', xy=(4, 4.7), xytext=(1.5, 4.7),
                 arrowprops=dict(arrowstyle='->', color='blue', lw=2))
-    ax2.text(2.8, 0.4, 'ltr 0 → 1 → 2', fontsize=10, ha='center', va='center', color='blue')
+    ax2.text(2.8, 5.0, 'ltr 0 → 1 → 2', fontsize=10, ha='center', va='center', color='blue')
 
     # Label edges
-    ax2.text(2.8, 4.8, 'edge_top (U-B)', fontsize=9, ha='center', va='center', style='italic')
-    ax2.text(2.8, 0.9, 'edge_bottom (F-U)\n(horizontal)', fontsize=9, ha='center', va='center', style='italic')
+    ax2.text(2.8, 4.4, 'edge_top (U-R)\nHORIZONTAL', fontsize=9, ha='center', va='center',
+             style='italic', color='blue', fontweight='bold')
+    ax2.text(2.8, 0.6, 'edge_bottom (D-R)', fontsize=9, ha='center', va='center', style='italic')
+    ax2.text(0.5, 2.8, 'edge_left\n(F-R)', fontsize=9, ha='center', va='center', style='italic')
 
     # Add connection arrow between the two faces
     fig.text(0.5, 0.15,
-             'AXIS EXCHANGE: Column on F → Row on U\n'
-             'But ltr values align! ltr=0 on F\'s left edge = ltr=0 on U\'s bottom edge\n'
-             'Physical alignment preserved across faces!',
+             'S SLICE AXIS EXCHANGE: ROW on U → COLUMN on R\n'
+             'U uses VERTICAL edge (L-U) → ltr selects ROW\n'
+             'R uses HORIZONTAL edge (U-R) → ltr selects COLUMN\n'
+             'Physical alignment preserved via edge translation!',
              fontsize=12, ha='center', va='center',
              bbox=dict(boxstyle='round', facecolor='#E8F6F3', alpha=0.9, edgecolor='#1ABC9C'),
              fontweight='bold')

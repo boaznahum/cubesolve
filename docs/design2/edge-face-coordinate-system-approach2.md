@@ -283,59 +283,76 @@ See: `Slice.py:112-122` for the implementation.
 ### The Axis Exchange Problem
 
 ![Axis Exchange Diagram](images/slice-rotation-axis-exchange.png)
-*Diagram showing M slice as column on Face F becoming row on Face U*
+*Diagram showing S slice alternating between ROW and COLUMN as it moves around the cube*
 
 **The complexity goes deeper:** Not only does the index change, but the
 **coordinate axis itself changes** as a slice moves between faces!
 
-#### Real Example: M Slice Rotation (F → U)
+#### M Slice: NO Axis Exchange
 
-The M slice is the middle vertical layer between L and R faces.
-It rotates through: F → U → B → D → F
+The M slice uses only horizontal edges (edge_bottom → edge_top on each face).
+It stays as a **COLUMN** on all 4 faces: F → U → B → D → F.
 
 ```
-    Face F (front view)              Face U (top view, looking down)
+    M slice path (all horizontal edges):
+    F: edge_bottom (F-D)  →  U: edge_bottom (F-U)  →  B: edge_top (U-B)  →  D: edge_bottom (D-B)
+    COLUMN                   COLUMN                   COLUMN                COLUMN
+```
 
-         edge_top                         edge_top (U-B)
-        ┌─────────┐                      ┌─────────┐
-        │ · │ · │ ·│                     │ · · · │
-  edge  │───┼───┼──│ edge         edge   │─────────│ edge
-  left  │ · │ M │ ·│ right        left   │ · · · │ right
-  (F-L) │───┼───┼──│ (F-R)        (L-U)  │─────────│ (U-R)
-        │ · │ · │ ·│                     │ M M M │
-        └─────────┘                      └─────────┘
-         edge_bottom                      edge_bottom (F-U)
+#### S Slice: HAS Axis Exchange
 
-    On F: M is a COLUMN              On U: M is a ROW!
-    (vertical, along T axis)         (horizontal, along R axis)
-    ltr on edge_left                 ltr on edge_bottom
+The S slice starts at a vertical edge and alternates between vertical and horizontal:
+
+```
+    S slice path (alternating edge types):
+    U: edge_left (L-U)  →  R: edge_top (U-R)  →  D: edge_right (D-R)  →  L: edge_bottom (L-D)
+    ROW (vertical)         COLUMN (horizontal)   ROW (vertical)          COLUMN (horizontal)
+```
+
+#### Real Example: S Slice Rotation (U → R)
+
+```
+    Face U (looking down)                Face R (looking from right side)
+
+         edge_top (U-B)                       edge_top (U-R)
+        ┌─────────────┐                      ┌─────────────┐
+        │ · · · · · │                        │ S S S S S │  ← S is now TOP ROW!
+  edge  │ S S S S S │  ← S is 2nd ROW  edge  │ · · · · · │  edge
+  left  │ · · · · · │                  left  │ · · · · · │  right
+  (L-U) │ · · · · · │                  (F-R) │ · · · · · │  (R-B)
+        │ · · · · · │                        │ · · · · · │
+        └─────────────┘                      └─────────────┘
+         edge_bottom (F-U)                    edge_bottom (D-R)
+
+    On U: S is a ROW                    On R: S is a COLUMN!
+    (horizontal, ltr on edge_left)      (vertical, ltr on edge_top)
 ```
 
 **What happened?**
-- On Face F: M slice touches edge_left (VERTICAL edge), ltr = bottom→top
-- On Face U: M slice touches edge_bottom (HORIZONTAL edge), ltr = left→right
+- On Face U: S slice uses edge_left (VERTICAL edge), ltr selects ROW
+- On Face R: S slice uses edge_top (HORIZONTAL edge), ltr selects COLUMN
 - The slice moved from a VERTICAL edge to a HORIZONTAL edge!
 
 #### How LTR Handles This
 
-The magic: **ltr=2 on F's vertical edge = ltr=2 on U's horizontal edge**
+The magic: **ltr value is preserved across the edge translation**
 
 ```
-    F's edge_left (vertical)         U's edge_bottom (horizontal)
+    U's edge_left (vertical)          R's edge_top (horizontal)
 
          ltr=2 ─┐                         ┌─────────────┐
-         ltr=1 ─┤                         │ 0   1   2   │
-         ltr=0 ─┘                         └─ltr─────────┘
-              connects to →                 same physical position!
+         ltr=1 ─┤  (S slice)              │ 0   1   2   │  (S slice at ltr=1)
+         ltr=0 ─┘                         └─────────────┘
+              ↓                                   ↓
+         ROW index                          COLUMN index
 ```
 
-The bottom of F's left edge (ltr=0) connects to the left of U's bottom edge (ltr=0).
-The top of F's left edge (ltr=2) connects to the right of U's bottom edge (ltr=2).
+On U (vertical edge): ltr=1 means row 1 (from bottom)
+On R (horizontal edge): ltr=1 means column 1 (from left)
 
-**Physical alignment is preserved** because ltr values match at the connection point,
-even though:
-- On F, ltr represents vertical position (T axis, row index)
-- On U, ltr represents horizontal position (R axis, column index)
+**Physical alignment is preserved** because the ltr translation layer handles
+the index conversion through the shared edge, even though the coordinate axis
+changes from row-selection to column-selection.
 
 This is handled by `Slice.py:98-108` where the code checks if the edge is
 top/bottom (horizontal) vs left/right (vertical) and uses the ltr accordingly:
