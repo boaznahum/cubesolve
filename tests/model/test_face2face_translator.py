@@ -154,27 +154,27 @@ class TestFace2FaceTranslator:
         # Step 1: Get translation
         result: FaceTranslationResult = translator.translate(source_face, dest_face, coord)
 
-        # Step 2: Place marker at dest_coord on dest_face using attributes
-        # (not c_attributes, which get cleared during rotation)
+        # Step 2: Place marker at dest_coord on dest_face using c_attributes
+        # c_attributes move with colors during whole cube rotations
         dest_row, dest_col = result.dest_coord
         marker_value: str = f"MARKER_{source_face.name}_{row}_{col}"
         dest_slice: CenterSlice = dest_face.center.get_center_slice((dest_row, dest_col))
-        dest_slice.edge.attributes["test_marker"] = marker_value
+        dest_slice.edge.c_attributes["test_marker"] = marker_value
 
-        # Step 3: Execute whole cube algorithm (brings dest_face to source_face's position)
+        # Step 3: Execute whole cube algorithm (brings dest_face colors to source_face)
         execute_whole_cube_alg(cube, result.whole_cube_alg)
 
-        # Step 4: After rotation, dest_face is at source_face's screen position.
-        # The marker should now appear at the original (row, col) on dest_face.
-        check_slice: CenterSlice = dest_face.center.get_center_slice((row, col))
+        # Step 4: After rotation, dest_face's colors are now on source_face.
+        # The marker should appear at coord on source_face (same screen position).
+        check_slice: CenterSlice = source_face.center.get_center_slice((row, col))
 
-        assert check_slice.edge.attributes.get("test_marker") == marker_value, (
+        assert check_slice.edge.c_attributes.get("test_marker") == marker_value, (
             f"Translation failed:\n"
             f"  Source: {source_face.name} coord=({row},{col})\n"
             f"  Dest: {dest_face.name} dest_coord={result.dest_coord}\n"
             f"  Algorithm: {result.whole_cube_alg}\n"
-            f"  Expected marker '{marker_value}' at ({row},{col}) on {dest_face.name}\n"
-            f"  Found: {check_slice.c_attributes.get('test_marker')}"
+            f"  Expected marker '{marker_value}' at ({row},{col}) on {source_face.name}\n"
+            f"  Found: {check_slice.edge.c_attributes.get('test_marker')}"
         )
 
 

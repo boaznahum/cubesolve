@@ -158,7 +158,7 @@ class Face2FaceTranslator:
             ValueError: If coord is out of bounds for cube size
 
         Example:
-            >>> translator = FaceCoordinateTranslator(cube)
+            >>> translator = Face2FaceTranslator(cube)
             >>> result = translator.translate(cube.front, cube.right, (1, 2))
             >>> print(result.dest_coord)  # Position on R face
             >>> # Verify: mark both positions, apply Y', both markers align
