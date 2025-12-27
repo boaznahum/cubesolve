@@ -274,6 +274,65 @@ alignment problem for slice rotations.
 
 See: `Slice.py:112-122` for the implementation.
 
+### The Axis Exchange Problem
+
+**The complexity goes deeper:** Not only does the index change, but the
+**coordinate axis itself changes** as a slice moves between faces!
+
+#### Real Example: M Slice Rotation (F → U)
+
+The M slice is the middle vertical layer between L and R faces.
+It rotates through: F → U → B → D → F
+
+```
+    Face F (front view)              Face U (top view, looking down)
+
+         edge_top                         edge_top (U-B)
+        ┌─────────┐                      ┌─────────┐
+        │ · │ · │ ·│                     │ · · · │
+  edge  │───┼───┼──│ edge         edge   │─────────│ edge
+  left  │ · │ M │ ·│ right        left   │ · · · │ right
+  (F-L) │───┼───┼──│ (F-R)        (L-U)  │─────────│ (U-R)
+        │ · │ · │ ·│                     │ M M M │
+        └─────────┘                      └─────────┘
+         edge_bottom                      edge_bottom (F-U)
+
+    On F: M is a COLUMN              On U: M is a ROW!
+    (vertical, along T axis)         (horizontal, along R axis)
+    ltr on edge_left                 ltr on edge_bottom
+```
+
+**What happened?**
+- On Face F: M slice touches edge_left (VERTICAL edge), ltr = bottom→top
+- On Face U: M slice touches edge_bottom (HORIZONTAL edge), ltr = left→right
+- The slice moved from a VERTICAL edge to a HORIZONTAL edge!
+
+#### How LTR Handles This
+
+The magic: **ltr=2 on F's vertical edge = ltr=2 on U's horizontal edge**
+
+```
+    F's edge_left (vertical)         U's edge_bottom (horizontal)
+
+         ltr=2 ─┐                         ┌─────────────┐
+         ltr=1 ─┤                         │ 0   1   2   │
+         ltr=0 ─┘                         └─ltr─────────┘
+              connects to →                 same physical position!
+```
+
+The bottom of F's left edge (ltr=0) connects to the left of U's bottom edge (ltr=0).
+The top of F's left edge (ltr=2) connects to the right of U's bottom edge (ltr=2).
+
+**Physical alignment is preserved** because ltr values match at the connection point,
+even though:
+- On F, ltr represents vertical position (T axis, row index)
+- On U, ltr represents horizontal position (R axis, column index)
+
+This is handled by `Slice.py:98-108` where the code checks if the edge is
+top/bottom (horizontal) vs left/right (vertical) and uses the ltr accordingly:
+- Horizontal edge: `current_index` is the column position
+- Vertical edge: `current_index` is the row position
+
 ---
 
 ## What Determines same_direction?
