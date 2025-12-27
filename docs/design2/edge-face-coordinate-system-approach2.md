@@ -185,5 +185,19 @@ translation is consistent with these assumptions:
 
 ---
 
+## If Code Matches This Interpretation
+
+If verification confirms the code follows these assumptions:
+
+1. **Improve this documentation** - make it the authoritative reference
+2. **Add references at each usage location** - every place that uses ltr ↔ index
+   translation should have a comment referencing this document:
+   ```python
+   # See: docs/design2/edge-face-coordinate-system-approach2.md
+   ```
+3. **Remove obsolete validation** - the "edge agreement" check is unnecessary
+
+---
+
 *Document created: 2025-12-27*
 *Alternative interpretation for Issue #53*
