@@ -89,6 +89,188 @@ else:
 
 ## Proposed Framework
 
+### 0. Central Coordinate Translation API
+
+**Goal:** A single entry point for ALL face-to-face coordinate operations.
+
+```python
+class FaceCoordinateTranslator:
+    """
+    Central API for translating coordinates between faces.
+
+    This is the ONE place that handles:
+    - Adjacent face navigation (share an edge)
+    - Non-adjacent face navigation (opposite faces)
+    - Coordinate transformation with axis exchange
+    - Rotation direction to reach destination
+    """
+
+    def translate_coordinate(
+        self,
+        source_face: Face,
+        dest_face: Face,
+        source_coord: tuple[int, int],  # (row, col) on source face
+        cube_size: int
+    ) -> FaceTranslationResult:
+        """
+        Translate a coordinate from source_face to dest_face.
+
+        Args:
+            source_face: The face where the piece currently is
+            dest_face: The face where we want to find the piece
+            source_coord: (row, col) position on source_face
+            cube_size: Size of cube (3 for 3x3, 5 for 5x5, etc.)
+
+        Returns:
+            FaceTranslationResult containing:
+            - dest_coord: (row, col) on destination face
+            - shared_edge: Edge connecting the faces (if adjacent)
+            - rotation_face: Which face to rotate to move piece
+            - rotation_direction: CW or CCW to reach destination
+            - reverse_direction: Direction to go back
+            - is_adjacent: True if faces share an edge
+            - axis_exchange: True if ROW↔COLUMN swap occurred
+        """
+        pass
+
+    def get_slice_path(
+        self,
+        source_face: Face,
+        dest_face: Face,
+        source_coord: tuple[int, int],
+        direction: RotationDirection  # CW or CCW
+    ) -> list[FaceCoordinate]:
+        """
+        Get the complete path a slice takes from source to destination.
+
+        Returns list of (face, row, col) for each face the slice passes through.
+        Useful for visualizing or validating slice movements.
+        """
+        pass
+
+
+@dataclass
+class FaceTranslationResult:
+    """Result of translating a coordinate between faces."""
+
+    # The destination coordinate
+    dest_coord: tuple[int, int]  # (row, col) on dest_face
+
+    # Navigation information
+    shared_edge: Edge | None      # None if non-adjacent (opposite faces)
+    is_adjacent: bool             # True if faces share an edge
+
+    # Rotation to reach destination
+    rotation_face: Face           # Which face's rotation moves the piece
+    rotation_direction: RotationDirection  # CW or CCW
+    rotation_count: int           # Number of 90° turns (1, 2, or 3)
+
+    # Reverse path
+    reverse_direction: RotationDirection   # Direction to go back
+    reverse_rotation_face: Face            # Face to rotate to go back
+
+    # Axis information
+    axis_exchange: bool           # True if ROW↔COLUMN swap occurred
+    source_axis: Axis             # ROW or COLUMN on source
+    dest_axis: Axis               # ROW or COLUMN on destination
+
+    # LTR translation details
+    source_ltr: int               # LTR index on source edge
+    dest_ltr: int                 # LTR index on dest edge
+```
+
+### Navigation Cases
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    FACE RELATIONSHIP MATRIX                      │
+├─────────┬───────┬───────┬───────┬───────┬───────┬───────────────┤
+│ From\To │   F   │   U   │   R   │   B   │   D   │       L       │
+├─────────┼───────┼───────┼───────┼───────┼───────┼───────────────┤
+│    F    │   -   │  adj  │  adj  │  opp  │  adj  │      adj      │
+│    U    │  adj  │   -   │  adj  │  adj  │  opp  │      adj      │
+│    R    │  adj  │  adj  │   -   │  adj  │  adj  │      opp      │
+│    B    │  opp  │  adj  │  adj  │   -   │  adj  │      adj      │
+│    D    │  adj  │  opp  │  adj  │  adj  │   -   │      adj      │
+│    L    │  adj  │  adj  │  opp  │  adj  │  adj  │       -       │
+└─────────┴───────┴───────┴───────┴───────┴───────┴───────────────┘
+
+adj = adjacent (share edge, 1 rotation)
+opp = opposite (no shared edge, need 2 rotations)
+```
+
+### Algorithm for Adjacent Faces
+
+```python
+def _translate_adjacent(self, source: Face, dest: Face, coord: tuple[int, int]) -> FaceTranslationResult:
+    """
+    For adjacent faces (share an edge):
+
+    1. Find shared edge between source and dest
+    2. Determine edge type on each face:
+       - source_edge_type: TOP/BOTTOM/LEFT/RIGHT on source
+       - dest_edge_type: TOP/BOTTOM/LEFT/RIGHT on dest
+    3. Calculate rotation face (the face whose rotation moves the edge)
+    4. Apply axis rule:
+       - Horizontal edge → COLUMN (ltr selects column)
+       - Vertical edge → ROW (ltr selects row)
+    5. Translate coordinate through edge:
+       - source coord → source ltr → edge internal → dest ltr → dest coord
+    """
+    shared_edge = self._find_shared_edge(source, dest)
+
+    # Determine which edge this is on each face
+    source_edge_pos = source.get_edge_position(shared_edge)  # TOP/BOTTOM/LEFT/RIGHT
+    dest_edge_pos = dest.get_edge_position(shared_edge)
+
+    # Apply axis rule
+    source_axis = COLUMN if source_edge_pos in (TOP, BOTTOM) else ROW
+    dest_axis = COLUMN if dest_edge_pos in (TOP, BOTTOM) else ROW
+
+    # Extract coordinate along the edge
+    if source_axis == ROW:
+        source_ltr = coord[1]  # column index for row selection
+    else:
+        source_ltr = coord[0]  # row index for column selection
+
+    # Translate through edge
+    edge_index = shared_edge.get_slice_index_from_ltr_index(source, source_ltr)
+    dest_ltr = shared_edge.get_ltr_index_from_slice_index(dest, edge_index)
+
+    # Build destination coordinate
+    # ... (depends on dest_edge_pos and dest_axis)
+```
+
+### Algorithm for Opposite Faces
+
+```python
+def _translate_opposite(self, source: Face, dest: Face, coord: tuple[int, int]) -> FaceTranslationResult:
+    """
+    For opposite faces (F↔B, U↔D, L↔R):
+
+    1. Find intermediate face (any adjacent to both)
+    2. Translate source → intermediate
+    3. Translate intermediate → dest
+    4. Combine transformations
+
+    Note: Requires 2 rotations (180° total through intermediate)
+    """
+    # Find a face adjacent to both source and dest
+    intermediate = self._find_intermediate_face(source, dest)
+
+    # Two-step translation
+    step1 = self._translate_adjacent(source, intermediate, coord)
+    step2 = self._translate_adjacent(intermediate, dest, step1.dest_coord)
+
+    # Combine results
+    return FaceTranslationResult(
+        dest_coord=step2.dest_coord,
+        is_adjacent=False,
+        rotation_count=2,
+        # ...
+    )
+```
+
 ### 1. Navigation Context Object
 
 Create a `FaceNavigationContext` that encapsulates:
@@ -201,10 +383,294 @@ All diagrams in `docs/design2/images/`:
 
 - [ ] Design `FaceNavigationContext` class
 - [ ] Design `SlicePath` declarative definition
-- [ ] Implement `FaceToFaceTranslator`
+- [ ] Implement `FaceCoordinateTranslator` (central API)
+- [ ] Implement `FaceTranslationResult` dataclass
 - [ ] Refactor `Slice._get_slices_by_index()` to use new framework
 - [ ] Add comprehensive unit tests for navigation
 - [ ] Update documentation with framework description
+
+---
+
+## Comprehensive Test Design
+
+### Test Strategy: Prove ALL Combinations Work
+
+```python
+class TestFaceCoordinateTranslator:
+    """
+    Comprehensive tests proving all face-to-face translations work correctly.
+
+    Test Matrix:
+    - 6 faces × 6 faces = 36 combinations (30 non-self)
+    - Each combination tested with multiple coordinates
+    - Both directions tested (forward and reverse)
+    - All cube sizes (3×3, 4×4, 5×5)
+    """
+
+    # All 30 face pairs (excluding self-to-self)
+    ALL_FACE_PAIRS = [
+        (F, U), (F, R), (F, D), (F, L), (F, B),  # From F
+        (U, F), (U, R), (U, B), (U, L), (U, D),  # From U
+        (R, F), (R, U), (R, B), (R, D), (R, L),  # From R
+        (B, U), (B, R), (B, D), (B, L), (B, F),  # From B
+        (D, F), (D, R), (D, B), (D, L), (D, U),  # From D
+        (L, F), (L, U), (L, B), (L, D), (L, R),  # From L
+    ]
+
+    # Adjacent pairs (24 total - each face has 4 neighbors)
+    ADJACENT_PAIRS = [
+        (F, U), (F, R), (F, D), (F, L),
+        (U, F), (U, R), (U, B), (U, L),
+        (R, F), (R, U), (R, B), (R, D),
+        (B, U), (B, R), (B, D), (B, L),
+        (D, F), (D, R), (D, B), (D, L),
+        (L, F), (L, U), (L, B), (L, D),
+    ]
+
+    # Opposite pairs (6 total)
+    OPPOSITE_PAIRS = [
+        (F, B), (B, F),
+        (U, D), (D, U),
+        (L, R), (R, L),
+    ]
+```
+
+### Test 1: All Adjacent Face Translations
+
+```python
+@pytest.mark.parametrize("source,dest", ADJACENT_PAIRS)
+@pytest.mark.parametrize("cube_size", [3, 4, 5])
+def test_adjacent_face_translation(self, source, dest, cube_size):
+    """
+    For each adjacent face pair:
+    1. Translate corner coordinates (0,0), (0,n-1), (n-1,0), (n-1,n-1)
+    2. Translate edge midpoints
+    3. Translate center (for odd-sized cubes)
+    4. Verify reverse translation returns to original
+    """
+    translator = FaceCoordinateTranslator()
+    n = cube_size
+
+    # Test coordinates: corners, edge midpoints, center
+    test_coords = [
+        (0, 0), (0, n-1), (n-1, 0), (n-1, n-1),  # corners
+        (0, n//2), (n-1, n//2), (n//2, 0), (n//2, n-1),  # edge midpoints
+        (n//2, n//2),  # center
+    ]
+
+    for coord in test_coords:
+        # Forward translation
+        result = translator.translate_coordinate(source, dest, coord, cube_size)
+
+        # Verify result is valid
+        assert 0 <= result.dest_coord[0] < n
+        assert 0 <= result.dest_coord[1] < n
+        assert result.is_adjacent == True
+        assert result.shared_edge is not None
+
+        # Reverse translation should return to original
+        reverse = translator.translate_coordinate(dest, source, result.dest_coord, cube_size)
+        assert reverse.dest_coord == coord, f"Round-trip failed: {coord} → {result.dest_coord} → {reverse.dest_coord}"
+```
+
+### Test 2: All Opposite Face Translations
+
+```python
+@pytest.mark.parametrize("source,dest", OPPOSITE_PAIRS)
+@pytest.mark.parametrize("cube_size", [3, 4, 5])
+def test_opposite_face_translation(self, source, dest, cube_size):
+    """
+    For each opposite face pair:
+    1. Verify translation requires 2 rotations
+    2. Verify is_adjacent == False
+    3. Verify round-trip works
+    """
+    translator = FaceCoordinateTranslator()
+    n = cube_size
+
+    for row in range(n):
+        for col in range(n):
+            coord = (row, col)
+            result = translator.translate_coordinate(source, dest, coord, cube_size)
+
+            assert result.is_adjacent == False
+            assert result.rotation_count == 2
+            assert result.shared_edge is None
+
+            # Round-trip
+            reverse = translator.translate_coordinate(dest, source, result.dest_coord, cube_size)
+            assert reverse.dest_coord == coord
+```
+
+### Test 3: Axis Exchange Verification
+
+```python
+@pytest.mark.parametrize("source,dest", ADJACENT_PAIRS)
+def test_axis_exchange_correctness(self, source, dest):
+    """
+    Verify axis exchange follows the rule:
+    - Horizontal edge (top/bottom) → COLUMN
+    - Vertical edge (left/right) → ROW
+    """
+    translator = FaceCoordinateTranslator()
+
+    result = translator.translate_coordinate(source, dest, (1, 1), cube_size=3)
+
+    # Get edge positions
+    shared_edge = result.shared_edge
+    source_edge_pos = source.get_edge_position(shared_edge)
+    dest_edge_pos = dest.get_edge_position(shared_edge)
+
+    # Verify axis rule
+    expected_source_axis = COLUMN if source_edge_pos in (TOP, BOTTOM) else ROW
+    expected_dest_axis = COLUMN if dest_edge_pos in (TOP, BOTTOM) else ROW
+
+    assert result.source_axis == expected_source_axis
+    assert result.dest_axis == expected_dest_axis
+    assert result.axis_exchange == (expected_source_axis != expected_dest_axis)
+```
+
+### Test 4: Rotation Direction Verification
+
+```python
+@pytest.mark.parametrize("source,dest", ADJACENT_PAIRS)
+def test_rotation_direction(self, source, dest):
+    """
+    Verify that applying the rotation actually moves the piece.
+
+    1. Get translation result with rotation direction
+    2. Create actual cube
+    3. Place marker at source coord
+    4. Apply rotation
+    5. Verify marker is at dest coord
+    """
+    cube = Cube(3)
+    translator = FaceCoordinateTranslator()
+
+    coord = (1, 1)  # center of 3x3
+    result = translator.translate_coordinate(source, dest, coord, cube_size=3)
+
+    # Mark the source position
+    original_color = source.get_color(coord)
+
+    # Apply the rotation
+    result.rotation_face.rotate(
+        direction=result.rotation_direction,
+        count=result.rotation_count
+    )
+
+    # Verify piece moved to destination
+    new_color = dest.get_color(result.dest_coord)
+    assert new_color == original_color
+```
+
+### Test 5: Slice Path Completeness
+
+```python
+def test_slice_path_covers_all_four_faces(self):
+    """
+    For M, E, S slices, verify the path visits exactly 4 faces.
+    """
+    translator = FaceCoordinateTranslator()
+
+    # M slice: F → U → B → D
+    path = translator.get_slice_path(F, F, (1, 1), direction=CW)
+    faces_visited = [p.face for p in path]
+    assert len(faces_visited) == 4
+    assert set(faces_visited) == {F, U, B, D}
+
+    # S slice: U → R → D → L
+    path = translator.get_slice_path(U, U, (1, 1), direction=CW)
+    faces_visited = [p.face for p in path]
+    assert len(faces_visited) == 4
+    assert set(faces_visited) == {U, R, D, L}
+
+    # E slice: F → R → B → L
+    path = translator.get_slice_path(F, F, (1, 1), direction=CW)
+    faces_visited = [p.face for p in path]
+    assert len(faces_visited) == 4
+```
+
+### Test 6: Physical Alignment Preservation
+
+```python
+@pytest.mark.parametrize("cube_size", [3, 5, 7])
+def test_physical_alignment(self, cube_size):
+    """
+    Verify that a visual line stays aligned across face transitions.
+
+    1. Take a column on Face F
+    2. Follow it through U, B, D
+    3. All coordinates should form a continuous physical line
+    """
+    translator = FaceCoordinateTranslator()
+
+    # Middle column on F
+    column_idx = cube_size // 2
+    f_coords = [(row, column_idx) for row in range(cube_size)]
+
+    # Translate to U
+    u_coords = [translator.translate_coordinate(F, U, c, cube_size).dest_coord for c in f_coords]
+
+    # Verify U coords form a valid line (all same row or all same column)
+    u_rows = set(c[0] for c in u_coords)
+    u_cols = set(c[1] for c in u_coords)
+    assert len(u_rows) == 1 or len(u_cols) == 1, "Translated coords don't form a line on U"
+```
+
+### Test 7: Exhaustive Combination Test
+
+```python
+def test_all_combinations_exhaustive(self):
+    """
+    THE ULTIMATE TEST: Verify every single coordinate on every face
+    can be translated to every other face and back.
+
+    Total tests: 6 faces × 5 destinations × 9 coords (3×3) = 270 translations
+    """
+    translator = FaceCoordinateTranslator()
+    faces = [F, U, R, B, D, L]
+    cube_size = 3
+    failures = []
+
+    for source in faces:
+        for dest in faces:
+            if source == dest:
+                continue
+
+            for row in range(cube_size):
+                for col in range(cube_size):
+                    coord = (row, col)
+                    try:
+                        # Forward
+                        result = translator.translate_coordinate(source, dest, coord, cube_size)
+
+                        # Validate result
+                        assert 0 <= result.dest_coord[0] < cube_size
+                        assert 0 <= result.dest_coord[1] < cube_size
+
+                        # Reverse
+                        reverse = translator.translate_coordinate(dest, source, result.dest_coord, cube_size)
+                        assert reverse.dest_coord == coord
+
+                    except AssertionError as e:
+                        failures.append(f"{source}→{dest} coord={coord}: {e}")
+
+    assert not failures, f"Failed translations:\n" + "\n".join(failures)
+```
+
+### Running the Tests
+
+```bash
+# Run all face-to-face navigation tests
+pytest tests/model/test_face_coordinate_translator.py -v
+
+# Run with coverage
+pytest tests/model/test_face_coordinate_translator.py --cov=src/cube/domain/model
+
+# Run specific test
+pytest tests/model/test_face_coordinate_translator.py::TestFaceCoordinateTranslator::test_all_combinations_exhaustive -v
+```
 
 ---
 
