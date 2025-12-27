@@ -27,13 +27,8 @@ def dump_face(face, n: int) -> list[str]:
     """
     Generate text representation of a face.
 
-    Format:
-           c0  c1  c2   (columns)
-          ─────────────
-       r0 │ G │ G │ G │
-       r1 │ G │ G │ G │
-       r2 │ G │ G │ G │
-          ─────────────
+    Shows c_attributes["n"] - the marker that moves with the color.
+    Format: "color:n" e.g. "G:12" means Green with original position 12
     """
     lines = []
     face_name = face.name.name
@@ -43,29 +38,32 @@ def dump_face(face, n: int) -> list[str]:
     # Face header
     lines.append(f"═══ {face_name} ({face.color.name}) ═══")
 
-    # Column headers
-    col_header = "      " + "  ".join(f"c{c}" for c in range(n_slices))
+    # Column headers - wider to fit "G:00" format
+    col_header = "       " + "   ".join(f"c{c}" for c in range(n_slices))
     lines.append(col_header)
 
     # Top border
-    lines.append("     ┌" + "───┬" * (n_slices - 1) + "───┐")
+    lines.append("      ┌" + "────┬" * (n_slices - 1) + "────┐")
 
-    # Rows with colors
+    # Rows with color:n format
     for row in range(n_slices):
-        row_colors = []
+        row_cells = []
         for col in range(n_slices):
             cs = center.get_center_slice((row, col))
-            row_colors.append(f" {cs.color.name[0]} ")
+            color_char = cs.color.name[0]
+            marker_n = cs.edge.c_attributes.get("n", "?")
+            # Format: "G:02" - color and 2-digit marker
+            row_cells.append(f"{color_char}:{marker_n:02d}" if isinstance(marker_n, int) else f"{color_char}:??")
 
-        row_str = "│".join(row_colors)
-        lines.append(f"  r{row} │{row_str}│")
+        row_str = "│".join(row_cells)
+        lines.append(f"  r{row}  │{row_str}│")
 
         # Row separator (except last)
         if row < n_slices - 1:
-            lines.append("     ├" + "───┼" * (n_slices - 1) + "───┤")
+            lines.append("      ├" + "────┼" * (n_slices - 1) + "────┤")
 
     # Bottom border
-    lines.append("     └" + "───┴" * (n_slices - 1) + "───┘")
+    lines.append("      └" + "────┴" * (n_slices - 1) + "────┘")
 
     return lines
 
@@ -123,23 +121,26 @@ def main():
     from cube.domain.model.Cube import Cube
     from tests.test_utils import _test_sp
 
-    cube = Cube(3, sp=_test_sp)
+    # Use 7x7 cube for better visualization
+    size = 7
+    cube = Cube(size, sp=_test_sp)
 
-    print("INITIAL STATE (SOLVED)")
-    print("=" * 40)
+    print("INITIAL STATE (SOLVED) - 7x7 cube")
+    print("Format: COLOR:n  where n = row * grid_size + col (moves with color)")
+    print("=" * 60)
     print(dump_cube(cube))
 
-    print("\n" + "█" * 40)
-    print("AFTER M ROTATION")
-    print("█" * 40)
+    print("\n" + "█" * 60)
+    print("AFTER M ROTATION (column c2 moves F→U→B→D)")
+    print("█" * 60)
     cube.m.rotate()
     print(dump_cube(cube))
 
     # Reset for S
-    cube = Cube(3, sp=_test_sp)
-    print("\n" + "█" * 40)
-    print("AFTER S ROTATION")
-    print("█" * 40)
+    cube = Cube(size, sp=_test_sp)
+    print("\n" + "█" * 60)
+    print("AFTER S ROTATION (has axis exchange)")
+    print("█" * 60)
     cube.s.rotate()
     print(dump_cube(cube))
 
