@@ -147,6 +147,64 @@ def get_slice_index_from_ltr_index(self, face: Face, ltr_i: int) -> int:
 
 ---
 
+## Face Rotation: How It Uses the Translation Layer
+
+When a face rotates clockwise, colors move: LEFT → TOP → RIGHT → BOTTOM → LEFT
+
+### Face's LTR Coordinate System
+
+```
+┌─────────────────────────────────────┐
+│            TOP (horizontal)         │
+│           ltr: 0 → 1 → 2            │
+│         ┌─────────────┐             │
+│  LEFT   │             │   RIGHT     │
+│  (vert) │      F      │   (vert)    │
+│  ltr:   │             │   ltr:      │
+│   2 ↑   │             │   2 ↑       │
+│   1 │   │             │   1 │       │
+│   0 ┘   │             │   0 ┘       │
+│         └─────────────┘             │
+│           ltr: 0 → 1 → 2            │
+│           BOTTOM (horizontal)       │
+└─────────────────────────────────────┘
+```
+
+### Clockwise Rotation Mapping
+
+```
+LEFT[ltr=0] ──→ TOP[ltr=0]      (bottom of left → left of top)
+LEFT[ltr=2] ──→ TOP[ltr=2]      (top of left → right of top)
+
+TOP[ltr=0]  ──→ RIGHT[ltr=2]    (left of top → TOP of right = INVERTS!)
+TOP[ltr=2]  ──→ RIGHT[ltr=0]    (right of top → bottom of right)
+```
+
+### The Pattern
+
+```
+LEFT[ltr] → TOP[ltr] → RIGHT[inv(ltr)] → BOTTOM[inv(ltr)] → LEFT[ltr]
+```
+
+### Why This Is Brilliant
+
+The face rotation code works **entirely in the face's own ltr system**:
+
+```python
+for index in range(n_slices):
+    top_ltr_index = saved_top.get_ltr_index_from_slice_index(self, index)
+
+    i_left   = e_left.get_slice_index_from_ltr_index(self, top_ltr_index)
+    i_right  = e_right.get_slice_index_from_ltr_index(self, inv(top_ltr_index))
+    i_bottom = e_bottom.get_slice_index_from_ltr_index(self, inv(top_ltr_index))
+```
+
+- The `inv()` handles the rotation geometry (adjacent edges have opposite ltr directions)
+- The `get_slice_index_from_ltr_index()` handles f1/f2 translation automatically
+- The face never needs to know if it's f1 or f2 in any edge!
+
+---
+
 ## What Determines same_direction?
 
 The `same_direction` flag is determined by **geometry**:
