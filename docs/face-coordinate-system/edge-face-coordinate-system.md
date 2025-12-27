@@ -60,7 +60,7 @@ See `Face.get_slice_index_from_ltr_index()` and related methods.
 
 ## Hand-Drawn Reference Diagram
 
-![Edge Coordinate System - Hand-drawn diagram showing R/T directions for all edges](../coor-system-doc/right-top-left-coordinates.jpg)
+![Edge Coordinate System - Hand-drawn diagram showing R/T directions for all edges](images/right-top-left-coordinates.jpg)
 
 *Human-drawn diagram showing the R (right) and T (top) direction arrows for each face, illustrating which edge pairs have same vs opposite indexing directions.*
 

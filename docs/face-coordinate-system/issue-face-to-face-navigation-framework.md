@@ -365,11 +365,11 @@ All diagrams in `docs/design2/images/`:
 | `slice-physical-alignment.png` | Physical alignment across 4 faces |
 
 ### Diagram Generation Scripts
-- `coor-system-doc/generate_edge_diagram.py` - Generates edge-coordinate-system.png
+- `scripts/generate_edge_diagram.py` - Generates edge-coordinate-system.png
 - `scripts/generate_ltr_diagrams.py` - Generates face-rotation and slice-rotation diagrams
 
 ### Hand-drawn Reference
-- `coor-system-doc/right-top-left-coordinates.jpg` - Original hand-drawn R/T coordinate system
+- `images/right-top-left-coordinates.jpg` - Original hand-drawn R/T coordinate system
 
 ## Related Issues
 
