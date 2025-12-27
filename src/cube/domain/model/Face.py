@@ -529,92 +529,83 @@ class Face(SuperElement, Hashable):
 
     def _validate_edge_coordinate_consistency(self) -> None:
         """
-        Validate f1/f2 consistency for edges with same_direction=False.
+        Validate that opposite edges agree on ltr coordinate system.
 
-        When a face appears in multiple edges with same_direction=False,
-        it must be consistently f1 (or consistently f2) in all of them.
-        Otherwise, the face's ltr coordinate system would be inconsistent
-        across those edges.
+        For this face:
+        - left and right edges must interpret ltr the same way
+        - top and bottom edges must interpret ltr the same way
 
         Raises:
-            AssertionError: If this face has inconsistent f1/f2 roles.
+            AssertionError: If edges have inconsistent coordinate systems.
 
         See: docs/design2/edge-face-coordinate-system.md (Issue #53)
         """
-        # Collect all False edges for this face
-        false_edges: list[Edge] = [
-            e for e in self._edges
-            if not e.right_top_left_same_direction
-        ]
+        def _edges_agree(edge1: Edge, edge2: Edge) -> bool:
+            """Check if two edges agree on ltr for this face."""
+            # Check with ltr=0 - if one inverts and other doesn't, they disagree
+            slice1: int = edge1.get_slice_index_from_ltr_index(self, 0)
+            slice2: int = edge2.get_slice_index_from_ltr_index(self, 0)
+            inverted1: bool = (slice1 != 0)
+            inverted2: bool = (slice2 != 0)
+            return inverted1 == inverted2
 
-        if len(false_edges) < 2:
-            return  # No consistency issue possible with 0 or 1 False edges
+        assert _edges_agree(self._edge_left, self._edge_right), \
+            f"Face {self.name}: edge_left and edge_right have inconsistent ltr coordinates"
+        assert _edges_agree(self._edge_top, self._edge_bottom), \
+            f"Face {self.name}: edge_top and edge_bottom have inconsistent ltr coordinates"
 
-        # Check that this face has consistent f1/f2 role across all False edges
-        first_edge: Edge = false_edges[0]
-        is_f1_in_first: bool = (first_edge._f1 is self)
-
-        for edge in false_edges[1:]:
-            is_f1_in_this: bool = (edge._f1 is self)
-            assert is_f1_in_first == is_f1_in_this, \
-                f"Face {self.name}: inconsistent f1/f2 role in False edges. " \
-                f"Is f1 in {first_edge.name}: {is_f1_in_first}, " \
-                f"but is f1 in {edge.name}: {is_f1_in_this}"
-
-    def get_slice_index_from_ltr_index(self, edge: Edge, ltr_i: int) -> int:
+    def get_horizontal_slice_index_from_ltr(self, ltr_i: int) -> int:
         """
-        Convert left-to-right index to internal slice index for given edge.
+        Convert ltr index to slice index for horizontal edges (top/bottom).
 
-        This is a face-centric wrapper around Edge.get_slice_index_from_ltr_index.
-        The ltr coordinate system belongs to the face.
+        Since top and bottom edges agree on ltr, this works for either.
 
         Args:
-            edge: One of this face's edges
             ltr_i: Left-to-right index from this face's perspective
 
         Returns:
-            Internal slice index for the edge
+            Internal slice index
         """
-        return edge.get_slice_index_from_ltr_index(self, ltr_i)
+        return self._edge_top.get_slice_index_from_ltr_index(self, ltr_i)
 
-    def get_ltr_index_from_slice_index(self, edge: Edge, slice_i: int) -> int:
+    def get_horizontal_ltr_from_slice_index(self, slice_i: int) -> int:
         """
-        Convert internal slice index to left-to-right index for given edge.
+        Convert slice index to ltr index for horizontal edges (top/bottom).
 
-        This is a face-centric wrapper around Edge.get_ltr_index_from_slice_index.
-        The ltr coordinate system belongs to the face.
+        Since top and bottom edges agree on ltr, this works for either.
 
         Args:
-            edge: One of this face's edges
             slice_i: Internal slice index
 
         Returns:
             Left-to-right index from this face's perspective
         """
-        return edge.get_ltr_index_from_slice_index(self, slice_i)
+        return self._edge_top.get_ltr_index_from_slice_index(self, slice_i)
 
-    def get_slice_by_ltr_index(self, edge: Edge, ltr_i: int):
+    def get_vertical_slice_index_from_ltr(self, ltr_i: int) -> int:
         """
-        Get the EdgeWing slice at a left-to-right position.
+        Convert ltr index to slice index for vertical edges (left/right).
+
+        Since left and right edges agree on ltr, this works for either.
 
         Args:
-            edge: One of this face's edges
-            ltr_i: Left-to-right index from this face's perspective
+            ltr_i: Bottom-to-top index from this face's perspective
 
         Returns:
-            The EdgeWing at that position
+            Internal slice index
         """
-        return edge.get_slice_by_ltr_index(self, ltr_i)
+        return self._edge_left.get_slice_index_from_ltr_index(self, ltr_i)
 
-    def get_part_edge_by_ltr_index(self, edge: Edge, ltr_i: int) -> PartEdge:
+    def get_vertical_ltr_from_slice_index(self, slice_i: int) -> int:
         """
-        Get the PartEdge at a left-to-right position on this face.
+        Convert slice index to ltr index for vertical edges (left/right).
+
+        Since left and right edges agree on ltr, this works for either.
 
         Args:
-            edge: One of this face's edges
-            ltr_i: Left-to-right index from this face's perspective
+            slice_i: Internal slice index
 
         Returns:
-            The PartEdge on this face at that position
+            Bottom-to-top index from this face's perspective
         """
-        return edge.get_left_top_left_edge(self, ltr_i)
+        return self._edge_left.get_ltr_index_from_slice_index(self, slice_i)
