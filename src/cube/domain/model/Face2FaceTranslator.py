@@ -29,6 +29,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from cube.domain.algs import Algs
+from cube.domain.algs.Alg import Alg
+
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
@@ -62,7 +65,7 @@ class FaceTranslationResult:
     """
 
     dest_coord: tuple[int, int]
-    whole_cube_alg: str
+    whole_cube_alg: Alg
     shared_edge: Edge | None
 
     @property
@@ -88,31 +91,33 @@ _Y_CYCLE: list[FaceName] = [FaceName.F, FaceName.R, FaceName.B, FaceName.L]
 _Z_CYCLE: list[FaceName] = [FaceName.U, FaceName.R, FaceName.D, FaceName.L]
 
 
-def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> str:
+def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Alg:
     """
     Derive the whole-cube algorithm that brings dest to source's screen position.
 
     Uses rotation cycles to compute the minimal algorithm dynamically.
     """
-    for cycle, axis in [(_X_CYCLE, "X"), (_Y_CYCLE, "Y"), (_Z_CYCLE, "Z")]:
+    whole_cube_alg:Alg
+    for cycle, whole_cube_alg in [(_X_CYCLE, Algs.X), (_Y_CYCLE, Algs.Y), (_Z_CYCLE, Algs.Z)]:
         if source in cycle and dest in cycle:
             src_idx = cycle.index(source)
             dst_idx = cycle.index(dest)
             # Steps from dest to source in positive direction
             steps = (src_idx - dst_idx) % 4
             if steps == 1:
-                return axis
+                return whole_cube_alg
             elif steps == 2:
-                return f"{axis}2"
+                return whole_cube_alg * 2
             elif steps == 3:
-                return f"{axis}'"
+                return whole_cube_alg.prime
+
     # Should never reach here for valid face pairs
     raise ValueError(f"No rotation cycle contains both {source} and {dest}")
 
 
 class Face2FaceTranslator:
     """
-    Central API for translating coordinates between cube faces.
+    Utility class for translating coordinates between cube faces.
 
     This is the ONE place that handles all face-to-face coordinate operations,
     ensuring consistency with the viewer-perspective definition.
@@ -126,18 +131,8 @@ class Face2FaceTranslator:
         Uses rotation cycle analysis to derive whole-cube algorithms dynamically.
     """
 
-    def __init__(self, cube: Cube) -> None:
-        """
-        Initialize translator with a cube instance.
-
-        Args:
-            cube: The cube whose faces we're translating between
-        """
-        self._cube = cube
-        self._n = cube.size  # Cube size (3 for 3x3, etc.)
-
+    @staticmethod
     def translate(
-        self,
         source_face: Face,
         dest_face: Face,
         coord: tuple[int, int]
@@ -158,17 +153,17 @@ class Face2FaceTranslator:
             ValueError: If coord is out of bounds for cube size
 
         Example:
-            >>> translator = Face2FaceTranslator(cube)
-            >>> result = translator.translate(cube.front, cube.right, (1, 2))
+            >>> result = Face2FaceTranslator.translate(cube.front, cube.right, (1, 2))
             >>> print(result.dest_coord)  # Position on R face
             >>> # Verify: mark both positions, apply Y', both markers align
         """
         if source_face is dest_face:
             raise ValueError("Cannot translate from a face to itself")
 
+        n = source_face.cube.size
         row, col = coord
-        if not (0 <= row < self._n and 0 <= col < self._n):
-            raise ValueError(f"Coordinate {coord} out of bounds for {self._n}x{self._n} cube")
+        if not (0 <= row < n and 0 <= col < n):
+            raise ValueError(f"Coordinate {coord} out of bounds for {n}x{n} cube")
 
         source_name = source_face.name
         dest_name = dest_face.name
@@ -181,7 +176,7 @@ class Face2FaceTranslator:
         dest_coord = (row, col)
 
         # Find shared edge (None if faces are opposite)
-        shared_edge = self._find_shared_edge(source_face, dest_face)
+        shared_edge = Face2FaceTranslator._find_shared_edge(source_face, dest_face)
 
         return FaceTranslationResult(
             dest_coord=dest_coord,
@@ -189,7 +184,8 @@ class Face2FaceTranslator:
             shared_edge=shared_edge,
         )
 
-    def _find_shared_edge(self, face1: Face, face2: Face) -> Edge | None:
+    @staticmethod
+    def _find_shared_edge(face1: Face, face2: Face) -> Edge | None:
         """
         Find the edge shared by two faces, or None if they're opposite.
 

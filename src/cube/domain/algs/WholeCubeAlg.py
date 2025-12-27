@@ -39,7 +39,7 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
             case _:
                 raise InternalSWError(f"Unknown Axis {self._axis_name}")
 
-        return face_name, cube.get_all_parts()
+        return face_name, cube.get_all_part_slices()
 
 
 @final

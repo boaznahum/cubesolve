@@ -25,52 +25,27 @@ from __future__ import annotations
 import pytest
 from collections.abc import Iterator
 
+from cube.domain.algs import Alg
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult
+# noinspection PyProtectedMember
 from cube.domain.model._part_slice import CenterSlice
+# noinspection PyProtectedMember
 from cube.domain.model._elements import CenterSliceIndex
 from tests.test_utils import _test_sp
 
 
-def execute_whole_cube_alg(cube: Cube, alg: str) -> None:
+def execute_whole_cube_alg(cube: Cube, alg: Alg) -> None:
     """
     Execute a whole-cube algorithm (X, Y, Z moves only).
 
     Args:
         cube: The cube to rotate
-        alg: Algorithm string like "X", "X'", "X2", "Y", "Y'", "Y2", "Z", "Z'", "Z2"
+        alg: Algorithm
     """
-    # Parse the algorithm
-    alg = alg.strip()
 
-    if not alg:
-        return
-
-    # Determine the axis and count
-    if alg.startswith("X"):
-        rotate_fn = cube.x_rotate
-        suffix = alg[1:]
-    elif alg.startswith("Y"):
-        rotate_fn = cube.y_rotate
-        suffix = alg[1:]
-    elif alg.startswith("Z"):
-        rotate_fn = cube.z_rotate
-        suffix = alg[1:]
-    else:
-        raise ValueError(f"Unknown whole-cube algorithm: {alg}")
-
-    # Determine rotation count
-    if suffix == "":
-        count = 1
-    elif suffix == "'":
-        count = -1
-    elif suffix == "2":
-        count = 2
-    else:
-        raise ValueError(f"Unknown algorithm suffix: {suffix} in {alg}")
-
-    rotate_fn(count)
+    alg.play(cube)
 
 
 # Cube sizes to test
@@ -85,13 +60,7 @@ def get_all_dest_faces(source_face: Face) -> Iterator[Face]:
         - 4 adjacent faces (via edges)
         - 1 opposite face
     """
-    # Adjacent faces via edges
-    for edge in [source_face.edge_top, source_face.edge_bottom,
-                 source_face.edge_left, source_face.edge_right]:
-        yield edge.get_other_face(source_face)
-
-    # Opposite face
-    yield source_face.opposite
+    yield from source_face.others_faces
 
 
 class TestFace2FaceTranslator:
@@ -113,32 +82,29 @@ class TestFace2FaceTranslator:
         Test all positions on all face pairs translate correctly.
         """
         cube = Cube(cube_size, sp=_test_sp)
-        translator = Face2FaceTranslator(cube)
 
         for source_face in cube.faces:
             for dest_face in get_all_dest_faces(source_face):
                 for center_slice in source_face.center.all_slices:
                     coord: CenterSliceIndex = center_slice.index
                     self._verify_single_translation(
-                        cube, translator, source_face, dest_face, coord
+                        cube, source_face, dest_face, coord
                     )
-                    # Reset cube for next test
-                    cube.reset()
+                    # Clear markers for next test (avoid stale object references from reset())
+                    cube.clear_c_attributes()
 
+    @staticmethod
     def _verify_single_translation(
-        self,
-        cube: Cube,
-        translator: Face2FaceTranslator,
-        source_face: Face,
-        dest_face: Face,
-        coord: CenterSliceIndex
+            cube: Cube,
+            source_face: Face,
+            dest_face: Face,
+            coord: CenterSliceIndex
     ) -> None:
         """
         Verify a single coordinate translation using the viewer-perspective test.
 
         Args:
             cube: The cube instance
-            translator: The Face2FaceTranslator instance
             source_face: Face where the original coordinate is defined
             dest_face: Face we're translating to
             coord: (row, col) on source_face
@@ -151,8 +117,8 @@ class TestFace2FaceTranslator:
         """
         row, col = coord
 
-        # Step 1: Get translation
-        result: FaceTranslationResult = translator.translate(source_face, dest_face, coord)
+        # Step 1: Get translation (utility class - static method)
+        result: FaceTranslationResult = Face2FaceTranslator.translate(source_face, dest_face, coord)
 
         # Step 2: Place marker at dest_coord on dest_face using c_attributes
         # c_attributes move with colors during whole cube rotations
@@ -184,16 +150,14 @@ class TestEdgeCases:
     def test_translate_same_face_raises_error(self) -> None:
         """Translating from a face to itself should raise ValueError."""
         cube = Cube(3, sp=_test_sp)
-        translator = Face2FaceTranslator(cube)
 
         with pytest.raises(ValueError, match="Cannot translate from a face to itself"):
-            translator.translate(cube.front, cube.front, (1, 1))
+            Face2FaceTranslator.translate(cube.front, cube.front, (1, 1))
 
     @pytest.mark.parametrize("cube_size", CUBE_SIZES)
     def test_out_of_bounds_raises_error(self, cube_size: int) -> None:
         """Coordinates outside face bounds should raise ValueError."""
         cube = Cube(cube_size, sp=_test_sp)
-        translator = Face2FaceTranslator(cube)
 
         invalid_coords: list[tuple[int, int]] = [
             (-1, 0),
@@ -205,7 +169,7 @@ class TestEdgeCases:
 
         for coord in invalid_coords:
             with pytest.raises(ValueError, match="out of bounds"):
-                translator.translate(cube.front, cube.right, coord)
+                Face2FaceTranslator.translate(cube.front, cube.right, coord)
 
 
 class TestRoundTrip:
@@ -215,7 +179,6 @@ class TestRoundTrip:
     def test_round_trip_returns_original(self, cube_size: int) -> None:
         """Translate A→B then B→A should return original coordinate."""
         cube = Cube(cube_size, sp=_test_sp)
-        translator = Face2FaceTranslator(cube)
 
         for source_face in cube.faces:
             for dest_face in get_all_dest_faces(source_face):
@@ -223,12 +186,12 @@ class TestRoundTrip:
                     coord: CenterSliceIndex = center_slice.index
 
                     # A → B
-                    result1: FaceTranslationResult = translator.translate(
+                    result1: FaceTranslationResult = Face2FaceTranslator.translate(
                         source_face, dest_face, coord
                     )
 
                     # B → A
-                    result2: FaceTranslationResult = translator.translate(
+                    result2: FaceTranslationResult = Face2FaceTranslator.translate(
                         dest_face, source_face, result1.dest_coord
                     )
 

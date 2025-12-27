@@ -48,15 +48,14 @@ After X': U comes to front, marker appears at screen position (1,2)
 
 ## API
 
-### Main Class
+### Utility Class (Static Methods)
 
 ```python
 class Face2FaceTranslator:
-    def __init__(self, cube: Cube) -> None:
-        """Initialize with a cube instance."""
+    """Utility class - all methods are static, no instantiation needed."""
 
+    @staticmethod
     def translate(
-        self,
         source_face: Face,
         dest_face: Face,
         coord: tuple[int, int]
@@ -72,6 +71,9 @@ class Face2FaceTranslator:
         Returns:
             FaceTranslationResult with destination coordinate and metadata
         """
+
+# Usage:
+result = Face2FaceTranslator.translate(cube.front, cube.right, (1, 2))
 ```
 
 ### Result Dataclass
@@ -127,18 +129,21 @@ To find the algorithm for (source, dest):
 ### Test Logic
 ```python
 # For each (source_face, dest_face, coord):
-result = translator.translate(source_face, dest_face, coord)
+result = Face2FaceTranslator.translate(source_face, dest_face, coord)
 
-# Place marker at dest_coord on dest_face
+# Place marker at dest_coord on dest_face using c_attributes (moves with color)
 dest_slice = dest_face.center.get_center_slice(result.dest_coord)
-dest_slice.edge.attributes["marker"] = "X"
+dest_slice.edge.c_attributes["marker"] = "X"
 
-# Execute whole-cube rotation
-cube.x_rotate(-1)  # or y_rotate, z_rotate as per whole_cube_alg
+# Execute whole-cube rotation (brings dest_face colors to source_face)
+result.whole_cube_alg.play(cube)
 
-# Verify marker is at original coord on dest_face
-check_slice = dest_face.center.get_center_slice(coord)
-assert check_slice.edge.attributes.get("marker") == "X"
+# Verify marker is at original coord on source_face (where dest colors moved)
+check_slice = source_face.center.get_center_slice(coord)
+assert check_slice.edge.c_attributes.get("marker") == "X"
+
+# Clear markers for next iteration
+cube.clear_c_attributes()
 ```
 
 ---
@@ -151,17 +156,24 @@ assert check_slice.edge.attributes.get("marker") == "X"
 2. **Dynamic Algorithm Derivation:** Whole-cube algorithms are computed from rotation
    cycles, not hardcoded. This reduces maintenance and ensures consistency.
 
-3. **Marker Persistence:** Use `edge.attributes` (not `c_attributes`) for markers
-   during testing, as `c_attributes` are cleared during rotations.
+3. **Marker Types:**
+   - `edge.c_attributes` - Color-associated, MOVES with colors during whole-cube rotations
+   - `edge.attributes` - Structural, STAYS at position (never moves)
+
+   For testing coordinate translation, use `c_attributes` so markers follow the sticker.
 
 4. **Face Objects vs Colors:** Whole-cube rotations move colors between faces but
-   face objects remain fixed. The `dest_face` object stays the same after rotation.
+   face objects remain fixed. After rotation, check `source_face` to find where
+   dest colors ended up.
+
+5. **Clearing Markers:** Use `cube.clear_c_attributes()` to remove all c_attributes
+   between test iterations, avoiding stale marker contamination.
 
 ---
 
 ## Related Files
 
-- `Cube.py` - `x_rotate()`, `y_rotate()`, `z_rotate()` for whole-cube rotations
+- `Cube.py` - `x_rotate()`, `y_rotate()`, `z_rotate()`, `clear_c_attributes()`
 - `Face.py` - Face coordinates and center access
 - `Center.py` - `get_center_slice((row, col))` for accessing positions
-- `_part_slice.py` - CenterSlice with `edge.attributes` for markers
+- `_part_slice.py` - CenterSlice with `c_attributes` for color-moving markers

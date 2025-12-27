@@ -470,6 +470,16 @@ class Face(SuperElement, Hashable):
         for e in self.edges:
             yield e.get_other_face(self)
 
+    @property
+    def others_faces(self) -> Iterable[_Face]:
+        """
+        All other faces adjusted and opposite
+        :return:
+        """
+
+        yield from self.adjusted_faces()
+        yield self.opposite
+
     def is_edge(self, edge: Edge) -> bool:
         """
         This edge belongs to face
