@@ -11,22 +11,30 @@ Replaces scattered methods in Edge.py, Face.py, and Slice.py:
 
 DEFINITION (Viewer Perspective):
     A coordinate (row, col) on Face A translates to (row', col') on Face B if:
-    1. Place a marker at (row, col) on Face A - note where it appears on screen
-    2. Place a marker at (row', col') on Face B
-    3. Perform whole cube rotation to bring Face B to Face A's position
-    4. The marker at (row', col') now appears at the EXACT SAME screen position
-       as (row, col) was originally
+    1. Mark (row, col) on Face A
+    2. Apply whole-cube rotation that brings A to B's position
+    3. The marker now appears at (row', col') on the face that is now at B's position
 
-    The translated coordinate preserves VISUAL POSITION from the viewer's perspective.
+    The transformation accounts for how face coordinate systems align after rotation.
 
 IMPLEMENTATION:
-    Uses rotation cycle analysis to derive whole-cube algorithms dynamically.
-    Coordinates are identity-transformed (viewer-perspective consistency).
+    Uses empirically-derived transformation table based on whole-cube rotations.
+    Each face pair has one of 4 transformation types:
+    - IDENTITY: (r, c) -> (r, c)
+    - ROT_90_CW: (r, c) -> (inv(c), r)
+    - ROT_90_CCW: (r, c) -> (c, inv(r))
+    - ROT_180: (r, c) -> (inv(r), inv(c))
+
+    where inv(x) = n - 1 - x (for an n×n cube).
+
+    See: docs/face-coordinate-system/images/right-top-left-coordinates.jpg
+    for the face coordinate system diagram (R = column direction, T = row direction).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 from cube.domain.algs import Algs
@@ -35,9 +43,78 @@ from cube.domain.algs.Alg import Alg
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
-    from cube.domain.model.Cube import Cube
 
 from cube.domain.model.FaceName import FaceName
+
+
+class TransformType(Enum):
+    """
+    Coordinate transformation types between faces.
+
+    For an n×n cube with inv(x) = n - 1 - x:
+    - IDENTITY: (r, c) -> (r, c) - no change
+    - ROT_90_CW: (r, c) -> (inv(c), r) - 90° clockwise
+    - ROT_90_CCW: (r, c) -> (c, inv(r)) - 90° counter-clockwise
+    - ROT_180: (r, c) -> (inv(r), inv(c)) - 180° rotation
+    """
+    IDENTITY = auto()
+    ROT_90_CW = auto()
+    ROT_90_CCW = auto()
+    ROT_180 = auto()
+
+
+# =============================================================================
+# TRANSFORMATION TABLE - Empirically derived from whole-cube rotations
+# =============================================================================
+#
+# For each (source, dest) pair, this table specifies how coordinates transform
+# when a marker on source face moves to dest face via whole-cube rotation.
+#
+# Derived by: tests/model/test_empirical_transforms.py::test_derive_all_transformations
+#
+_TRANSFORMATION_TABLE: dict[tuple[FaceName, FaceName], TransformType] = {
+    # B face transitions
+    (FaceName.B, FaceName.D): TransformType.ROT_180,    # via X
+    (FaceName.B, FaceName.F): TransformType.ROT_180,    # via X2
+    (FaceName.B, FaceName.L): TransformType.IDENTITY,   # via Y'
+    (FaceName.B, FaceName.R): TransformType.IDENTITY,   # via Y
+    (FaceName.B, FaceName.U): TransformType.ROT_180,    # via X'
+
+    # D face transitions
+    (FaceName.D, FaceName.B): TransformType.ROT_180,    # via X'
+    (FaceName.D, FaceName.F): TransformType.IDENTITY,   # via X
+    (FaceName.D, FaceName.L): TransformType.ROT_90_CW,  # via Z
+    (FaceName.D, FaceName.R): TransformType.ROT_90_CCW, # via Z'
+    (FaceName.D, FaceName.U): TransformType.IDENTITY,   # via X2
+
+    # F face transitions
+    (FaceName.F, FaceName.B): TransformType.ROT_180,    # via X2
+    (FaceName.F, FaceName.D): TransformType.IDENTITY,   # via X'
+    (FaceName.F, FaceName.L): TransformType.IDENTITY,   # via Y
+    (FaceName.F, FaceName.R): TransformType.IDENTITY,   # via Y'
+    (FaceName.F, FaceName.U): TransformType.IDENTITY,   # via X
+
+    # L face transitions
+    (FaceName.L, FaceName.B): TransformType.IDENTITY,   # via Y
+    (FaceName.L, FaceName.D): TransformType.ROT_90_CCW, # via Z'
+    (FaceName.L, FaceName.F): TransformType.IDENTITY,   # via Y'
+    (FaceName.L, FaceName.R): TransformType.IDENTITY,   # via Y2
+    (FaceName.L, FaceName.U): TransformType.ROT_90_CW,  # via Z
+
+    # R face transitions
+    (FaceName.R, FaceName.B): TransformType.IDENTITY,   # via Y'
+    (FaceName.R, FaceName.D): TransformType.ROT_90_CW,  # via Z
+    (FaceName.R, FaceName.F): TransformType.IDENTITY,   # via Y
+    (FaceName.R, FaceName.L): TransformType.IDENTITY,   # via Y2
+    (FaceName.R, FaceName.U): TransformType.ROT_90_CCW, # via Z'
+
+    # U face transitions
+    (FaceName.U, FaceName.B): TransformType.ROT_180,    # via X
+    (FaceName.U, FaceName.D): TransformType.IDENTITY,   # via X2
+    (FaceName.U, FaceName.F): TransformType.IDENTITY,   # via X'
+    (FaceName.U, FaceName.L): TransformType.ROT_90_CCW, # via Z'
+    (FaceName.U, FaceName.R): TransformType.ROT_90_CW,  # via Z
+}
 
 
 @dataclass(frozen=True)
@@ -75,20 +152,54 @@ class FaceTranslationResult:
 
 
 # =============================================================================
-# ROTATION CYCLES - Derived from cube geometry
+# ROTATION CYCLES - Empirically derived from whole-cube rotations
 # =============================================================================
 #
-# Whole cube rotations move faces along these cycles:
-#   X: F→U→B→D→F (rotate around R-L axis)
-#   Y: F→R→B→L→F (rotate around U-D axis)
-#   Z: U→R→D→L→U (rotate around F-B axis)
+# Each cycle lists faces in the direction content MOVES when applying the base alg.
+# After the rotation, content at cycle[i] appears at cycle[i+1].
 #
-# To bring dest face to source face's position, find which cycle contains
-# both faces and count steps from dest to source.
+# Empirical observations:
+#   X: D→F→U→B→D (D's content moves to F, F's to U, etc.)
+#   Y: R→F→L→B→R (R's content moves to F, F's to L, etc.) - NOTE: opposite direction!
+#   Z: L→U→R→D→L (L's content moves to U, U's to R, etc.)
+#
+# Cycles are ordered so that applying the base alg moves content from index i to i+1.
 
-_X_CYCLE: list[FaceName] = [FaceName.F, FaceName.U, FaceName.B, FaceName.D]
-_Y_CYCLE: list[FaceName] = [FaceName.F, FaceName.R, FaceName.B, FaceName.L]
-_Z_CYCLE: list[FaceName] = [FaceName.U, FaceName.R, FaceName.D, FaceName.L]
+_X_CYCLE: list[FaceName] = [FaceName.D, FaceName.F, FaceName.U, FaceName.B]  # X moves +1
+_Y_CYCLE: list[FaceName] = [FaceName.R, FaceName.F, FaceName.L, FaceName.B]  # Y moves +1
+_Z_CYCLE: list[FaceName] = [FaceName.L, FaceName.U, FaceName.R, FaceName.D]  # Z moves +1
+
+
+def _apply_transform(
+    coord: tuple[int, int],
+    transform_type: TransformType,
+    n: int
+) -> tuple[int, int]:
+    """
+    Apply a coordinate transformation.
+
+    Args:
+        coord: (row, col) to transform
+        transform_type: One of IDENTITY, ROT_90_CW, ROT_90_CCW, ROT_180
+        n: Cube size (for computing inv(x) = n - 1 - x)
+
+    Returns:
+        Transformed (row, col)
+    """
+    row, col = coord
+
+    def inv(x: int) -> int:
+        return n - 1 - x
+
+    match transform_type:
+        case TransformType.IDENTITY:
+            return (row, col)
+        case TransformType.ROT_90_CW:
+            return (inv(col), row)
+        case TransformType.ROT_90_CCW:
+            return (col, inv(row))
+        case TransformType.ROT_180:
+            return (inv(row), inv(col))
 
 
 def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Alg:
@@ -96,15 +207,23 @@ def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Alg:
     Derive the whole-cube algorithm that brings dest to source's screen position.
 
     Uses rotation cycles to compute the minimal algorithm dynamically.
+
+    The cycles are ordered so each base_alg application moves content from
+    cycle[i] to cycle[i+1]. To move dest to source's position:
+    - We need (dest_idx + steps) % 4 == src_idx
+    - Therefore: steps = (src_idx - dest_idx) % 4
     """
-    whole_cube_alg:Alg
+    whole_cube_alg: Alg
     for cycle, whole_cube_alg in [(_X_CYCLE, Algs.X), (_Y_CYCLE, Algs.Y), (_Z_CYCLE, Algs.Z)]:
         if source in cycle and dest in cycle:
             src_idx = cycle.index(source)
             dst_idx = cycle.index(dest)
-            # Steps from dest to source in positive direction
+            # Steps needed to move dest to source position
             steps = (src_idx - dst_idx) % 4
-            if steps == 1:
+            if steps == 0:
+                # source == dest (shouldn't happen, but handle gracefully)
+                return Algs.no_op()
+            elif steps == 1:
                 return whole_cube_alg
             elif steps == 2:
                 return whole_cube_alg * 2
@@ -140,6 +259,10 @@ class Face2FaceTranslator:
         """
         Translate a coordinate from source_face to dest_face.
 
+        The transformation is based on where a marker at coord on source_face
+        would appear on dest_face after a whole-cube rotation that brings
+        source_face to dest_face's position.
+
         Args:
             source_face: The face where the coordinate is defined
             dest_face: The face we want the corresponding coordinate on
@@ -154,16 +277,18 @@ class Face2FaceTranslator:
 
         Example:
             >>> result = Face2FaceTranslator.translate(cube.front, cube.right, (1, 2))
-            >>> print(result.dest_coord)  # Position on R face
-            >>> # Verify: mark both positions, apply Y', both markers align
+            >>> print(result.dest_coord)  # Position on R face after F->R translation
         """
         if source_face is dest_face:
             raise ValueError("Cannot translate from a face to itself")
 
-        n = source_face.cube.size
+        # Use center n_slices for coordinate bounds (not cube size)
+        # For 3x3 cube, centers are 1x1 (n_slices=1)
+        # For 5x5 cube, centers are 3x3 (n_slices=3)
+        n_slices = source_face.center.n_slices
         row, col = coord
-        if not (0 <= row < n and 0 <= col < n):
-            raise ValueError(f"Coordinate {coord} out of bounds for {n}x{n} cube")
+        if not (0 <= row < n_slices and 0 <= col < n_slices):
+            raise ValueError(f"Coordinate {coord} out of bounds for center grid (n_slices={n_slices})")
 
         source_name = source_face.name
         dest_name = dest_face.name
@@ -171,9 +296,11 @@ class Face2FaceTranslator:
         # Derive whole-cube algorithm dynamically from rotation cycles
         whole_cube_alg = _derive_whole_cube_alg(source_name, dest_name)
 
-        # For viewer-perspective definition, coordinates are identical on all faces
-        # (the cube's coordinate system is designed this way)
-        dest_coord = (row, col)
+        # Get the transformation type from the empirically-derived table
+        transform_type = _TRANSFORMATION_TABLE[(source_name, dest_name)]
+
+        # Apply the transformation using center grid size
+        dest_coord = _apply_transform(coord, transform_type, n_slices)
 
         # Find shared edge (None if faces are opposite)
         shared_edge = Face2FaceTranslator._find_shared_edge(source_face, dest_face)
