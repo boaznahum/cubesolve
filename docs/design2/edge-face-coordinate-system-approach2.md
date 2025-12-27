@@ -149,6 +149,9 @@ def get_slice_index_from_ltr_index(self, face: Face, ltr_i: int) -> int:
 
 ## Face Rotation: How It Uses the Translation Layer
 
+![Face Rotation LTR Diagram](images/face-rotation-ltr.png)
+*Diagram showing face's ltr coordinate system and clockwise rotation pattern*
+
 When a face rotates clockwise, colors move: LEFT → TOP → RIGHT → BOTTOM → LEFT
 
 ### Face's LTR Coordinate System
@@ -206,6 +209,9 @@ for index in range(n_slices):
 ---
 
 ## Slice Rotation: The Physical Alignment Problem
+
+![Physical Alignment Diagram](images/slice-physical-alignment.png)
+*Diagram showing slice path across 4 faces with physical alignment*
 
 Slice rotation (M, E, S, or any slice) moves colors around **4 faces**.
 
@@ -275,6 +281,9 @@ alignment problem for slice rotations.
 See: `Slice.py:112-122` for the implementation.
 
 ### The Axis Exchange Problem
+
+![Axis Exchange Diagram](images/slice-rotation-axis-exchange.png)
+*Diagram showing M slice as column on Face F becoming row on Face U*
 
 **The complexity goes deeper:** Not only does the index change, but the
 **coordinate axis itself changes** as a slice moves between faces!
