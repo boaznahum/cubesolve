@@ -1,29 +1,23 @@
-#!/usr/bin/env python3
 """
 Cube state text dump with coordinate system visualization.
 
 Shows for each face:
 - Row indexes on left side
 - Column indexes on top
-- LTR numbering on edges
-- Colors at each position
+- c_attributes["n"] markers that move with color
+- Edge information (f1, same_direction)
 
 This is the SOURCE OF TRUTH for verifying coordinate translations.
-
-Usage:
-    python scripts/cube_text_dump.py
 """
 
-import sys
-import os
+from typing import TYPE_CHECKING
 
-# Add project paths
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(project_root, 'src'))
-sys.path.insert(0, project_root)
+if TYPE_CHECKING:
+    from .Cube import Cube
+    from .Face import Face
 
 
-def dump_face(face, n: int) -> list[str]:
+def dump_face(face: "Face", n: int) -> list[str]:
     """
     Generate text representation of a face.
 
@@ -68,7 +62,7 @@ def dump_face(face, n: int) -> list[str]:
     return lines
 
 
-def dump_face_edges(face) -> list[str]:
+def dump_face_edges(face: "Face") -> list[str]:
     """Dump edge info for a face."""
     lines = []
     face_name = face.name.name
@@ -87,7 +81,7 @@ def dump_face_edges(face) -> list[str]:
     return lines
 
 
-def dump_cube(cube) -> str:
+def dump_cube(cube: "Cube") -> str:
     """Complete cube state dump."""
     lines = []
     n = cube.size
@@ -114,37 +108,3 @@ def dump_cube(cube) -> str:
         lines.append("")
 
     return "\n".join(lines)
-
-
-def main():
-    """Generate cube state dumps."""
-    from cube.domain.model.Cube import Cube
-    from cube.domain.model.SliceName import SliceName
-    from tests.test_utils import _test_sp
-
-    # Use 7x7 cube for better visualization
-    size = 7
-    cube = Cube(size, sp=_test_sp)
-
-    print("INITIAL STATE (SOLVED) - 7x7 cube")
-    print("Format: COLOR:n  where n = row * grid_size + col (moves with color)")
-    print("=" * 60)
-    print(dump_cube(cube))
-
-    print("\n" + "█" * 60)
-    print("AFTER M ROTATION (column c2 moves F→U→B→D)")
-    print("█" * 60)
-    cube.rotate_slice(SliceName.M, 1)
-    print(dump_cube(cube))
-
-    # Reset for S
-    cube = Cube(size, sp=_test_sp)
-    print("\n" + "█" * 60)
-    print("AFTER S ROTATION (has axis exchange)")
-    print("█" * 60)
-    cube.rotate_slice(SliceName.S, 1)
-    print(dump_cube(cube))
-
-
-if __name__ == "__main__":
-    main()

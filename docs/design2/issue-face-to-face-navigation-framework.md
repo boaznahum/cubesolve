@@ -689,3 +689,69 @@ pytest tests/model/test_face_coordinate_translator.py::TestFaceCoordinateTransla
 - Edge translation: `Edge.py:127-191`
 - Slice navigation: `Slice.py:112-134`
 - Axis detection: `Slice.py:98-108`
+
+---
+
+## Implementation Progress
+
+### Completed: FaceCoordinateTranslator Framework
+
+**Files Created:**
+
+| File | Description |
+|------|-------------|
+| `src/cube/domain/model/FaceCoordinateTranslator.py` | Central API for face-to-face coordinate translation |
+| `src/cube/domain/model/cube_text_dump.py` | Production code for cube state visualization with c_attributes["n"] markers |
+| `tests/model/test_face_coordinate_translator.py` | Comprehensive unit tests (270 combinations) |
+| `tests/model/test_translation_behavior.py` | Behavioral tests using color tracking |
+| `tests/model/test_translator_vs_slice.py` | Verification tests comparing translator vs Slice |
+| `tests/model/test_translator_visual_verification.py` | Visual verification tests with text output |
+
+**Key Implementation Details:**
+
+1. **FaceTranslationResult dataclass** - Contains all translation metadata:
+   - `dest_coord`: Destination (row, col)
+   - `source_axis` / `dest_axis`: ROW or COLUMN
+   - `axis_exchange`: True if ROW↔COLUMN swap occurred
+   - `source_ltr` / `dest_ltr`: LTR indices on edges
+   - `is_adjacent`: True if faces share an edge
+
+2. **translate_coordinate()** - Single entry point that:
+   - Automatically detects if faces are adjacent or opposite
+   - Finds shared edge and applies Axis Rule
+   - Translates through edge using existing `get_slice_index_from_ltr_index` / `get_ltr_index_from_slice_index`
+   - Handles perpendicular distance preservation
+
+3. **cube_text_dump.py** - Visualization showing:
+   - `c_attributes["n"]` markers that move with color
+   - Format: `COLOR:nn` (e.g., `B:12` = Blue with original position 12)
+   - Edge info: f1 status, same_direction flag
+
+**Verification Approach:**
+
+The `c_attributes["n"]` marker is the **source of truth**:
+- Set during Face initialization: `n = row * grid_size + col`
+- Moves with color during rotations (copied in `copy_color()`)
+- After rotation, compare marker positions to verify correct translation
+
+**Sample Output (7x7 cube):**
+```
+═══ F (BLUE) ═══
+       c0   c1   c2   c3   c4
+      ┌────┬────┬────┬────┬────┐
+  r0  │B:00│B:01│B:02│B:03│B:04│
+  r1  │B:05│B:06│B:07│B:08│B:09│
+  r2  │B:10│B:11│B:12│B:13│B:14│
+  r3  │B:15│B:16│B:17│B:18│B:19│
+  r4  │B:20│B:21│B:22│B:23│B:24│
+      └────┴────┴────┴────┴────┘
+  Edges of F:
+    top    → ltr selects COL, f1=True, same
+    right  → ltr selects ROW, f1=True, same
+    bottom → ltr selects COL, f1=True, same
+    left   → ltr selects ROW, f1=True, same
+```
+
+### Remaining Task
+
+- [ ] Refactor `Slice._get_slices_by_index()` to use new `FaceCoordinateTranslator` framework
