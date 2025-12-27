@@ -1,5 +1,44 @@
 # Issue: Consistent Framework for Face-to-Face Navigation
 
+## Background: Insights from Issue #53
+
+This issue builds on the learnings from Issue #53 "Two edges may not agree in face coordinate system".
+
+### Key Insight: Approach 2
+
+The breakthrough understanding was:
+
+> **Each face's ltr is consistent BY DEFINITION. Edges provide a translation layer.**
+
+- Face ltr coordinates are face-owned, not edge-owned
+- The edge's internal storage arbitrarily matches f1's perspective
+- f2 translates through the edge (inverts if `same_direction=False`)
+- No "agreement check" is needed - consistency is guaranteed by the translation layer
+
+### Critical Discovery: M vs S Slice Behavior
+
+**M Slice: NO Axis Exchange**
+- Uses only horizontal edges: `edge_bottom` → `edge_top` on each face
+- Stays as **COLUMN** on all 4 faces (F → U → B → D)
+- Path: F(edge_bottom) → U(edge_bottom) → B(edge_top) → D(edge_bottom)
+
+**S Slice: HAS Axis Exchange**
+- Alternates between vertical and horizontal edges
+- Switches between **ROW** and **COLUMN**:
+  - U: ROW (vertical edge L-U)
+  - R: COLUMN (horizontal edge U-R)
+  - D: ROW (vertical edge D-R)
+  - L: COLUMN (horizontal edge L-D)
+
+### The Axis Rule
+
+```
+Horizontal edge (top/bottom) → ltr selects COLUMN
+Vertical edge (left/right)   → ltr selects ROW
+```
+
+---
+
 ## Problem Statement
 
 Currently, navigating between faces during slice rotations involves multiple concepts that are handled separately:
@@ -121,14 +160,42 @@ class FaceToFaceTranslator:
 
 ## Related Files
 
-- `src/cube/domain/model/Slice.py` - Main slice rotation logic
-- `src/cube/domain/model/Edge.py` - Edge translation methods
-- `src/cube/domain/model/Face.py` - Face edge relationships
-- `docs/design2/edge-face-coordinate-system-approach2.md` - Current documentation
+### Source Code
+- `src/cube/domain/model/Slice.py` - Main slice rotation logic (lines 63-134)
+- `src/cube/domain/model/Edge.py` - Edge translation methods (`get_ltr_index_from_slice_index`, `get_slice_index_from_ltr_index`)
+- `src/cube/domain/model/Face.py` - Face edge relationships and rotation
+
+### Documentation Created in Issue #53
+- `docs/design2/edge-face-coordinate-system-approach2.md` - **Main documentation** for Approach 2
+  - Face rotation with ltr coordinates
+  - Slice rotation physical alignment
+  - Axis exchange explanation (S slice)
+  - `same_direction` flag determination
+
+### Diagrams
+All diagrams in `docs/design2/images/`:
+
+| Diagram | Description |
+|---------|-------------|
+| `edge-coordinate-system.png` | Unfolded cube with R/T arrows and **ltr numbering (0→1→2)** on each edge |
+| `face-rotation-ltr.png` | Face rotation showing ltr coordinate flow |
+| `slice-rotation-axis-exchange.png` | **S slice** ROW↔COLUMN axis exchange (U→R) |
+| `slice-physical-alignment.png` | Physical alignment across 4 faces |
+
+### Diagram Generation Scripts
+- `coor-system-doc/generate_edge_diagram.py` - Generates edge-coordinate-system.png
+- `scripts/generate_ltr_diagrams.py` - Generates face-rotation and slice-rotation diagrams
+
+### Hand-drawn Reference
+- `coor-system-doc/right-top-left-coordinates.jpg` - Original hand-drawn R/T coordinate system
 
 ## Related Issues
 
-- Issue #53: Two edges may not agree in face coordinate system (CLOSED)
+- Issue #53: Two edges may not agree in face coordinate system (**CLOSED**)
+  - Proved original approach geometrically impossible
+  - Established Approach 2 as correct understanding
+  - Removed obsolete `_validate_edge_coordinate_consistency` method
+  - Deleted obsolete test `tests/model/test_edge_coordinate_consistency.py`
 
 ## Tasks
 
@@ -138,3 +205,21 @@ class FaceToFaceTranslator:
 - [ ] Refactor `Slice._get_slices_by_index()` to use new framework
 - [ ] Add comprehensive unit tests for navigation
 - [ ] Update documentation with framework description
+
+---
+
+## Session Summary (Issue #53 Resolution)
+
+### What Was Done
+1. Analyzed original assumption that opposite edges must "agree" - proved **geometrically impossible**
+2. Established **Approach 2**: Face ltr is consistent by definition, edges translate
+3. Documented 7 usage cases of ltr methods - all match Approach 2
+4. Created comprehensive documentation with ASCII and graphical diagrams
+5. Fixed axis exchange diagram: changed from M slice (wrong) to S slice (correct)
+6. Added ltr numbering (0→1→2) to edge-coordinate-system.png
+7. Removed obsolete validation code and tests
+
+### Key Code Locations
+- Edge translation: `Edge.py:127-191`
+- Slice navigation: `Slice.py:112-134`
+- Axis detection: `Slice.py:98-108`
