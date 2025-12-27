@@ -90,6 +90,9 @@ class Face(SuperElement, Hashable):
         self.set_parts(self._center, *self._edges, *self._corners)
         super().finish_init()
 
+        # Validate edge coordinate consistency (Issue #53)
+        self._validate_edge_coordinate_consistency()
+
         sample_markers = self.config.gui_draw_sample_markers
 
         n = self.cube.n_slices
@@ -515,3 +518,103 @@ class Face(SuperElement, Hashable):
     def slices(self) -> Iterable[PartSlice]:
         for p in self._parts:
             yield from p.all_slices
+
+    # -------------------------------------------------------------------------
+    # Edge Coordinate System Methods (Issue #53)
+    # -------------------------------------------------------------------------
+    # The ltr (left-to-right) coordinate system belongs to the Face, not Edge.
+    # These methods provide face-centric coordinate conversion.
+    # See: docs/design2/edge-face-coordinate-system.md
+    # -------------------------------------------------------------------------
+
+    def _validate_edge_coordinate_consistency(self) -> None:
+        """
+        Validate f1/f2 consistency for edges with same_direction=False.
+
+        When a face appears in multiple edges with same_direction=False,
+        it must be consistently f1 (or consistently f2) in all of them.
+        Otherwise, the face's ltr coordinate system would be inconsistent
+        across those edges.
+
+        Raises:
+            AssertionError: If this face has inconsistent f1/f2 roles.
+
+        See: docs/design2/edge-face-coordinate-system.md (Issue #53)
+        """
+        # Collect all False edges for this face
+        false_edges: list[Edge] = [
+            e for e in self._edges
+            if not e.right_top_left_same_direction
+        ]
+
+        if len(false_edges) < 2:
+            return  # No consistency issue possible with 0 or 1 False edges
+
+        # Check that this face has consistent f1/f2 role across all False edges
+        first_edge: Edge = false_edges[0]
+        is_f1_in_first: bool = (first_edge._f1 is self)
+
+        for edge in false_edges[1:]:
+            is_f1_in_this: bool = (edge._f1 is self)
+            assert is_f1_in_first == is_f1_in_this, \
+                f"Face {self.name}: inconsistent f1/f2 role in False edges. " \
+                f"Is f1 in {first_edge.name}: {is_f1_in_first}, " \
+                f"but is f1 in {edge.name}: {is_f1_in_this}"
+
+    def get_slice_index_from_ltr_index(self, edge: Edge, ltr_i: int) -> int:
+        """
+        Convert left-to-right index to internal slice index for given edge.
+
+        This is a face-centric wrapper around Edge.get_slice_index_from_ltr_index.
+        The ltr coordinate system belongs to the face.
+
+        Args:
+            edge: One of this face's edges
+            ltr_i: Left-to-right index from this face's perspective
+
+        Returns:
+            Internal slice index for the edge
+        """
+        return edge.get_slice_index_from_ltr_index(self, ltr_i)
+
+    def get_ltr_index_from_slice_index(self, edge: Edge, slice_i: int) -> int:
+        """
+        Convert internal slice index to left-to-right index for given edge.
+
+        This is a face-centric wrapper around Edge.get_ltr_index_from_slice_index.
+        The ltr coordinate system belongs to the face.
+
+        Args:
+            edge: One of this face's edges
+            slice_i: Internal slice index
+
+        Returns:
+            Left-to-right index from this face's perspective
+        """
+        return edge.get_ltr_index_from_slice_index(self, slice_i)
+
+    def get_slice_by_ltr_index(self, edge: Edge, ltr_i: int):
+        """
+        Get the EdgeWing slice at a left-to-right position.
+
+        Args:
+            edge: One of this face's edges
+            ltr_i: Left-to-right index from this face's perspective
+
+        Returns:
+            The EdgeWing at that position
+        """
+        return edge.get_slice_by_ltr_index(self, ltr_i)
+
+    def get_part_edge_by_ltr_index(self, edge: Edge, ltr_i: int) -> PartEdge:
+        """
+        Get the PartEdge at a left-to-right position on this face.
+
+        Args:
+            edge: One of this face's edges
+            ltr_i: Left-to-right index from this face's perspective
+
+        Returns:
+            The PartEdge on this face at that position
+        """
+        return edge.get_left_top_left_edge(self, ltr_i)
