@@ -93,6 +93,26 @@ The new approach says: **This question doesn't make sense.**
 - They both translate to the SAME face ltr system
 - The translations may be different, but the result (face ltr) is the same
 
+### The Critical Insight: Edge-Face LTR = Face LTR
+
+When you access an edge from a face, you're accessing that face's **PartEdge** (edge-face).
+The ltr coordinate on that edge-face **IS** the face's ltr coordinate.
+
+This is guaranteed by the translation layer:
+
+```
+    Face F asks edge E: "Give me slice at ltr=2"
+
+    Edge E translates:
+    - If F is f1: slice_index = 2 (direct)
+    - If F is f2 and same_direction=False: slice_index = N-1-2 (inverted)
+
+    The result: F always gets the slice at F's ltr=2 position
+```
+
+**This replaces the old insight.** We don't need edges to "agree" - we need each edge
+to correctly translate the face's ltr to its internal index. The edge serves the face.
+
 ---
 
 ## Translation Functions
