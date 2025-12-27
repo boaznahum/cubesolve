@@ -90,9 +90,6 @@ class Face(SuperElement, Hashable):
         self.set_parts(self._center, *self._edges, *self._corners)
         super().finish_init()
 
-        # Validate edge coordinate consistency (Issue #53)
-        self._validate_edge_coordinate_consistency()
-
         sample_markers = self.config.gui_draw_sample_markers
 
         n = self.cube.n_slices
@@ -540,43 +537,19 @@ class Face(SuperElement, Hashable):
     # -------------------------------------------------------------------------
     # Edge Coordinate System Methods (Issue #53)
     # -------------------------------------------------------------------------
-    # The ltr (left-to-right) coordinate system belongs to the Face, not Edge.
-    # These methods provide face-centric coordinate conversion.
-    # See: docs/design2/edge-face-coordinate-system.md
+    # The ltr (left-to-right) coordinate system belongs to the Face.
+    # Each edge translates between face's ltr and its internal slice index.
+    # See: docs/design2/edge-face-coordinate-system-approach2.md
     # -------------------------------------------------------------------------
-
-    def _validate_edge_coordinate_consistency(self) -> None:
-        """
-        Validate that opposite edges agree on ltr coordinate system.
-
-        For this face:
-        - left and right edges must interpret ltr the same way
-        - top and bottom edges must interpret ltr the same way
-
-        Raises:
-            AssertionError: If edges have inconsistent coordinate systems.
-
-        See: docs/design2/edge-face-coordinate-system.md (Issue #53)
-        """
-        def _edges_agree(edge1: Edge, edge2: Edge) -> bool:
-            """Check if two edges agree on ltr for this face."""
-            # Check with ltr=0 - if one inverts and other doesn't, they disagree
-            slice1: int = edge1.get_slice_index_from_ltr_index(self, 0)
-            slice2: int = edge2.get_slice_index_from_ltr_index(self, 0)
-            inverted1: bool = (slice1 != 0)
-            inverted2: bool = (slice2 != 0)
-            return inverted1 == inverted2
-
-        assert _edges_agree(self._edge_left, self._edge_right), \
-            f"Face {self.name}: edge_left and edge_right have inconsistent ltr coordinates"
-        assert _edges_agree(self._edge_top, self._edge_bottom), \
-            f"Face {self.name}: edge_top and edge_bottom have inconsistent ltr coordinates"
 
     def get_horizontal_slice_index_from_ltr(self, ltr_i: int) -> int:
         """
         Convert ltr index to slice index for horizontal edges (top/bottom).
 
-        Since top and bottom edges agree on ltr, this works for either.
+        The face's ltr system is consistent by definition. The edge translates
+        to its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
 
         Args:
             ltr_i: Left-to-right index from this face's perspective
@@ -590,7 +563,10 @@ class Face(SuperElement, Hashable):
         """
         Convert slice index to ltr index for horizontal edges (top/bottom).
 
-        Since top and bottom edges agree on ltr, this works for either.
+        The face's ltr system is consistent by definition. The edge translates
+        from its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
 
         Args:
             slice_i: Internal slice index
@@ -604,7 +580,10 @@ class Face(SuperElement, Hashable):
         """
         Convert ltr index to slice index for vertical edges (left/right).
 
-        Since left and right edges agree on ltr, this works for either.
+        The face's ltr system is consistent by definition. The edge translates
+        to its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
 
         Args:
             ltr_i: Bottom-to-top index from this face's perspective
@@ -618,7 +597,10 @@ class Face(SuperElement, Hashable):
         """
         Convert slice index to ltr index for vertical edges (left/right).
 
-        Since left and right edges agree on ltr, this works for either.
+        The face's ltr system is consistent by definition. The edge translates
+        from its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
 
         Args:
             slice_i: Internal slice index
