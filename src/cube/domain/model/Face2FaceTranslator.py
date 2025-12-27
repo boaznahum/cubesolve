@@ -1,6 +1,8 @@
 """
 Face2FaceTranslator - Central API for face-to-face coordinate translation.
 
+Documentation: docs/face-coordinate-system/Face2FaceTranslator.md
+
 Replaces scattered methods in Edge.py, Face.py, and Slice.py:
 - Edge.get_slice_index_from_ltr_index()
 - Edge.get_ltr_index_from_slice_index()
@@ -18,15 +20,14 @@ DEFINITION (Viewer Perspective):
     The translated coordinate preserves VISUAL POSITION from the viewer's perspective.
 
 IMPLEMENTATION:
-    Phase 1: All 30 face pairs hardcoded (verification rotations + coordinate transforms)
-    Phase 2: Derive mathematical formulas
+    Uses rotation cycle analysis to derive whole-cube algorithms dynamically.
+    Coordinates are identity-transformed (viewer-perspective consistency).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum, auto
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
@@ -36,215 +37,77 @@ if TYPE_CHECKING:
 from cube.domain.model.FaceName import FaceName
 
 
-class Axis(Enum):
-    """Axis on a face - ROW (horizontal) or COLUMN (vertical)."""
-    ROW = auto()
-    COLUMN = auto()
-
-
-class EdgePosition(Enum):
-    """Position of an edge relative to a face."""
-    TOP = auto()
-    BOTTOM = auto()
-    LEFT = auto()
-    RIGHT = auto()
-
-
 @dataclass(frozen=True)
 class FaceTranslationResult:
     """
     Result of translating a coordinate from one face to another.
 
-    All information needed to:
-    - Know the destination coordinate
-    - Understand the translation path
-    - Verify correctness via whole-cube rotation test
+    Attributes:
+        dest_coord: (row, col) on dest_face where the translated position is.
+                   After applying whole_cube_alg, a marker at dest_coord will
+                   appear at the original coord's screen position.
+
+        whole_cube_alg: Algorithm (X/Y/Z moves) that brings dest_face to source_face's
+                       screen position. Execute this to verify the translation visually.
+
+        shared_edge: Edge connecting source and dest faces.
+                    - Not None: faces are adjacent (share this edge)
+                    - None: faces are opposite (F↔B, U↔D, L↔R)
+
+    Example:
+        >>> result = translator.translate(cube.front, cube.up, (1, 2))
+        >>> # result.dest_coord = (1, 2)  # same for viewer-perspective definition
+        >>> # result.whole_cube_alg = "X'"  # brings U to F's position
+        >>> # result.shared_edge is not None  # F and U are adjacent
     """
 
-    # The destination coordinate (row, col) on dest_face
     dest_coord: tuple[int, int]
+    whole_cube_alg: str
+    shared_edge: Edge | None
 
-    # Navigation information
-    shared_edge: Edge | None  # None if opposite faces (no shared edge)
-    is_adjacent: bool         # True if faces share an edge
-
-    # For verification: which whole-cube rotation brings dest to source position
-    # e.g., if source=F, dest=R, then verification_rotation="Y'" brings R to F's position
-    verification_rotation: str
-
-    # Axis information (for debugging/understanding)
-    source_axis: Axis         # ROW or COLUMN on source face
-    dest_axis: Axis           # ROW or COLUMN on destination face
-    axis_exchanged: bool      # True if ROW↔COLUMN swap occurred
+    @property
+    def is_adjacent(self) -> bool:
+        """True if faces share an edge, False if opposite."""
+        return self.shared_edge is not None
 
 
 # =============================================================================
-# HARDCODED LOOKUP TABLES
+# ROTATION CYCLES - Derived from cube geometry
 # =============================================================================
-
-# Verification rotations: (source, dest) -> whole-cube algorithm
-# The rotation brings dest_face to source_face's position
 #
-# Whole cube rotations:
-#   Y:  F→R, R→B, B→L, L→F  (rotate around U axis, looking from top: CCW)
-#   Y': F→L, L→B, B→R, R→F  (rotate around U axis, looking from top: CW)
-#   X:  F→U, U→B, B→D, D→F  (rotate around R axis, looking from right: forward)
-#   X': F→D, D→B, B→U, U→F  (rotate around R axis, looking from right: backward)
-#   Z:  U→R, R→D, D→L, L→U  (rotate around F axis, looking at front: CW)
-#   Z': U→L, L→D, D→R, R→U  (rotate around F axis, looking at front: CCW)
-
-_VERIFICATION_ROTATIONS: dict[tuple[FaceName, FaceName], str] = {
-    # Source = F (Front)
-    (FaceName.F, FaceName.U): "X'",   # U→F after X'
-    (FaceName.F, FaceName.R): "Y'",   # R→F after Y'
-    (FaceName.F, FaceName.D): "X",    # D→F after X
-    (FaceName.F, FaceName.L): "Y",    # L→F after Y
-    (FaceName.F, FaceName.B): "Y2",   # B→F after Y2
-
-    # Source = U (Up)
-    (FaceName.U, FaceName.F): "X",    # F→U after X
-    (FaceName.U, FaceName.R): "Z'",   # R→U after Z'
-    (FaceName.U, FaceName.B): "X'",   # B→U after X'
-    (FaceName.U, FaceName.L): "Z",    # L→U after Z
-    (FaceName.U, FaceName.D): "X2",   # D→U after X2
-
-    # Source = R (Right)
-    (FaceName.R, FaceName.F): "Y",    # F→R after Y
-    (FaceName.R, FaceName.U): "Z",    # U→R after Z
-    (FaceName.R, FaceName.B): "Y'",   # B→R after Y'
-    (FaceName.R, FaceName.D): "Z'",   # D→R after Z'
-    (FaceName.R, FaceName.L): "Y2",   # L→R after Y2
-
-    # Source = B (Back)
-    (FaceName.B, FaceName.U): "X",    # U→B after X
-    (FaceName.B, FaceName.R): "Y",    # R→B after Y
-    (FaceName.B, FaceName.D): "X'",   # D→B after X'
-    (FaceName.B, FaceName.L): "Y'",   # L→B after Y'
-    (FaceName.B, FaceName.F): "Y2",   # F→B after Y2
-
-    # Source = D (Down)
-    (FaceName.D, FaceName.F): "X'",   # F→D after X'
-    (FaceName.D, FaceName.R): "Z",    # R→D after Z
-    (FaceName.D, FaceName.B): "X",    # B→D after X
-    (FaceName.D, FaceName.L): "Z'",   # L→D after Z'
-    (FaceName.D, FaceName.U): "X2",   # U→D after X2
-
-    # Source = L (Left)
-    (FaceName.L, FaceName.F): "Y'",   # F→L after Y'
-    (FaceName.L, FaceName.U): "Z'",   # U→L after Z'
-    (FaceName.L, FaceName.B): "Y",    # B→L after Y
-    (FaceName.L, FaceName.D): "Z",    # D→L after Z
-    (FaceName.L, FaceName.R): "Y2",   # R→L after Y2
-}
-
-# Coordinate transformation functions: (source, dest) -> function(row, col, n) -> (row', col')
-# These transform coordinates so that after verification rotation, marker appears at same position
+# Whole cube rotations move faces along these cycles:
+#   X: F→U→B→D→F (rotate around R-L axis)
+#   Y: F→R→B→L→F (rotate around U-D axis)
+#   Z: U→R→D→L→U (rotate around F-B axis)
 #
-# CoordTransform = Callable[[int, int, int], tuple[int, int]]
-# Parameters: (row, col, n) where n = cube size
-# Returns: (dest_row, dest_col)
+# To bring dest face to source face's position, find which cycle contains
+# both faces and count steps from dest to source.
 
-def _identity(row: int, col: int, n: int) -> tuple[int, int]:
-    """No change - same coordinates."""
-    return (row, col)
-
-def _rotate_cw(row: int, col: int, n: int) -> tuple[int, int]:
-    """Rotate 90° clockwise: (row, col) → (col, n-1-row)"""
-    return (col, n - 1 - row)
-
-def _rotate_ccw(row: int, col: int, n: int) -> tuple[int, int]:
-    """Rotate 90° counter-clockwise: (row, col) → (n-1-col, row)"""
-    return (n - 1 - col, row)
-
-def _rotate_180(row: int, col: int, n: int) -> tuple[int, int]:
-    """Rotate 180°: (row, col) → (n-1-row, n-1-col)"""
-    return (n - 1 - row, n - 1 - col)
-
-def _flip_horizontal(row: int, col: int, n: int) -> tuple[int, int]:
-    """Flip horizontally: (row, col) → (row, n-1-col)"""
-    return (row, n - 1 - col)
-
-def _flip_vertical(row: int, col: int, n: int) -> tuple[int, int]:
-    """Flip vertically: (row, col) → (n-1-row, col)"""
-    return (n - 1 - row, col)
-
-def _transpose(row: int, col: int, n: int) -> tuple[int, int]:
-    """Transpose: (row, col) → (col, row)"""
-    return (col, row)
-
-def _anti_transpose(row: int, col: int, n: int) -> tuple[int, int]:
-    """Anti-transpose (flip along anti-diagonal): (row, col) → (n-1-col, n-1-row)"""
-    return (n - 1 - col, n - 1 - row)
+_X_CYCLE: list[FaceName] = [FaceName.F, FaceName.U, FaceName.B, FaceName.D]
+_Y_CYCLE: list[FaceName] = [FaceName.F, FaceName.R, FaceName.B, FaceName.L]
+_Z_CYCLE: list[FaceName] = [FaceName.U, FaceName.R, FaceName.D, FaceName.L]
 
 
-# Coordinate transformations for all 30 face pairs
-# TODO: These are placeholders - need to determine correct transformations through testing
-_COORD_TRANSFORMS: dict[tuple[FaceName, FaceName], Callable[[int, int, int], tuple[int, int]]] = {
-    # Source = F (Front)
-    # After X', U comes to F. How do U's coords map to F's view?
-    (FaceName.F, FaceName.U): _identity,           # TODO: verify
-    (FaceName.F, FaceName.R): _identity,           # TODO: verify
-    (FaceName.F, FaceName.D): _identity,           # TODO: verify
-    (FaceName.F, FaceName.L): _identity,           # TODO: verify
-    (FaceName.F, FaceName.B): _identity,           # TODO: verify
+def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> str:
+    """
+    Derive the whole-cube algorithm that brings dest to source's screen position.
 
-    # Source = U (Up)
-    (FaceName.U, FaceName.F): _identity,           # TODO: verify
-    (FaceName.U, FaceName.R): _identity,           # TODO: verify
-    (FaceName.U, FaceName.B): _identity,           # TODO: verify
-    (FaceName.U, FaceName.L): _identity,           # TODO: verify
-    (FaceName.U, FaceName.D): _identity,           # TODO: verify
-
-    # Source = R (Right)
-    (FaceName.R, FaceName.F): _identity,           # TODO: verify
-    (FaceName.R, FaceName.U): _identity,           # TODO: verify
-    (FaceName.R, FaceName.B): _identity,           # TODO: verify
-    (FaceName.R, FaceName.D): _identity,           # TODO: verify
-    (FaceName.R, FaceName.L): _identity,           # TODO: verify
-
-    # Source = B (Back)
-    (FaceName.B, FaceName.U): _identity,           # TODO: verify
-    (FaceName.B, FaceName.R): _identity,           # TODO: verify
-    (FaceName.B, FaceName.D): _identity,           # TODO: verify
-    (FaceName.B, FaceName.L): _identity,           # TODO: verify
-    (FaceName.B, FaceName.F): _identity,           # TODO: verify
-
-    # Source = D (Down)
-    (FaceName.D, FaceName.F): _identity,           # TODO: verify
-    (FaceName.D, FaceName.R): _identity,           # TODO: verify
-    (FaceName.D, FaceName.B): _identity,           # TODO: verify
-    (FaceName.D, FaceName.L): _identity,           # TODO: verify
-    (FaceName.D, FaceName.U): _identity,           # TODO: verify
-
-    # Source = L (Left)
-    (FaceName.L, FaceName.F): _identity,           # TODO: verify
-    (FaceName.L, FaceName.U): _identity,           # TODO: verify
-    (FaceName.L, FaceName.B): _identity,           # TODO: verify
-    (FaceName.L, FaceName.D): _identity,           # TODO: verify
-    (FaceName.L, FaceName.R): _identity,           # TODO: verify
-}
-
-# Adjacent face pairs (share an edge)
-_ADJACENT_PAIRS: set[tuple[FaceName, FaceName]] = {
-    # F adjacent to U, R, D, L
-    (FaceName.F, FaceName.U), (FaceName.F, FaceName.R),
-    (FaceName.F, FaceName.D), (FaceName.F, FaceName.L),
-    # U adjacent to F, R, B, L
-    (FaceName.U, FaceName.F), (FaceName.U, FaceName.R),
-    (FaceName.U, FaceName.B), (FaceName.U, FaceName.L),
-    # R adjacent to F, U, B, D
-    (FaceName.R, FaceName.F), (FaceName.R, FaceName.U),
-    (FaceName.R, FaceName.B), (FaceName.R, FaceName.D),
-    # B adjacent to U, R, D, L
-    (FaceName.B, FaceName.U), (FaceName.B, FaceName.R),
-    (FaceName.B, FaceName.D), (FaceName.B, FaceName.L),
-    # D adjacent to F, R, B, L
-    (FaceName.D, FaceName.F), (FaceName.D, FaceName.R),
-    (FaceName.D, FaceName.B), (FaceName.D, FaceName.L),
-    # L adjacent to F, U, B, D
-    (FaceName.L, FaceName.F), (FaceName.L, FaceName.U),
-    (FaceName.L, FaceName.B), (FaceName.L, FaceName.D),
-}
+    Uses rotation cycles to compute the minimal algorithm dynamically.
+    """
+    for cycle, axis in [(_X_CYCLE, "X"), (_Y_CYCLE, "Y"), (_Z_CYCLE, "Z")]:
+        if source in cycle and dest in cycle:
+            src_idx = cycle.index(source)
+            dst_idx = cycle.index(dest)
+            # Steps from dest to source in positive direction
+            steps = (src_idx - dst_idx) % 4
+            if steps == 1:
+                return axis
+            elif steps == 2:
+                return f"{axis}2"
+            elif steps == 3:
+                return f"{axis}'"
+    # Should never reach here for valid face pairs
+    raise ValueError(f"No rotation cycle contains both {source} and {dest}")
 
 
 class Face2FaceTranslator:
@@ -260,8 +123,7 @@ class Face2FaceTranslator:
         both markers appear at the same screen position.
 
     IMPLEMENTATION:
-        Phase 1: All 30 face pairs hardcoded
-        Phase 2: Derive mathematical formulas
+        Uses rotation cycle analysis to derive whole-cube algorithms dynamically.
     """
 
     def __init__(self, cube: Cube) -> None:
@@ -272,7 +134,7 @@ class Face2FaceTranslator:
             cube: The cube whose faces we're translating between
         """
         self._cube = cube
-        self._n = cube.n  # Cube size (3 for 3x3, etc.)
+        self._n = cube.size  # Cube size (3 for 3x3, etc.)
 
     def translate(
         self,
@@ -311,36 +173,20 @@ class Face2FaceTranslator:
         source_name = source_face.name
         dest_name = dest_face.name
 
-        # Get verification rotation from lookup table
-        key = (source_name, dest_name)
-        verification_rotation = _VERIFICATION_ROTATIONS[key]
+        # Derive whole-cube algorithm dynamically from rotation cycles
+        whole_cube_alg = _derive_whole_cube_alg(source_name, dest_name)
 
-        # Get coordinate transformation from lookup table
-        transform = _COORD_TRANSFORMS[key]
-        dest_coord = transform(row, col, self._n)
+        # For viewer-perspective definition, coordinates are identical on all faces
+        # (the cube's coordinate system is designed this way)
+        dest_coord = (row, col)
 
-        # Determine if faces are adjacent
-        is_adjacent = key in _ADJACENT_PAIRS
-
-        # Get shared edge if adjacent
-        shared_edge: Edge | None = None
-        if is_adjacent:
-            shared_edge = self._find_shared_edge(source_face, dest_face)
-
-        # Determine axis info (simplified for now)
-        # TODO: Calculate based on edge positions
-        source_axis = Axis.ROW
-        dest_axis = Axis.ROW
-        axis_exchanged = False
+        # Find shared edge (None if faces are opposite)
+        shared_edge = self._find_shared_edge(source_face, dest_face)
 
         return FaceTranslationResult(
             dest_coord=dest_coord,
+            whole_cube_alg=whole_cube_alg,
             shared_edge=shared_edge,
-            is_adjacent=is_adjacent,
-            verification_rotation=verification_rotation,
-            source_axis=source_axis,
-            dest_axis=dest_axis,
-            axis_exchanged=axis_exchanged,
         )
 
     def _find_shared_edge(self, face1: Face, face2: Face) -> Edge | None:
@@ -356,15 +202,3 @@ class Face2FaceTranslator:
                 return edge
         return None
 
-    def _get_edge_position(self, face: Face, edge: Edge) -> EdgePosition:
-        """Determine the position of an edge relative to a face."""
-        if edge is face.edge_top:
-            return EdgePosition.TOP
-        elif edge is face.edge_bottom:
-            return EdgePosition.BOTTOM
-        elif edge is face.edge_left:
-            return EdgePosition.LEFT
-        elif edge is face.edge_right:
-            return EdgePosition.RIGHT
-        else:
-            raise ValueError(f"Edge {edge} is not an edge of face {face}")

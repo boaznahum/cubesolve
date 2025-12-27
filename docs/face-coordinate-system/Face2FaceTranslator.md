@@ -13,32 +13,35 @@ Replaces scattered methods:
 
 ## Definition (Viewer Perspective)
 
-**A coordinate (x, y) on Face A translates to (x', y') on Face B if:**
+**A coordinate (row, col) on Face A translates to (row', col') on Face B if:**
 
-1. Place a marker at (x, y) on Face A - note where it appears on screen
-2. Place a marker at (x', y') on Face B
-3. Perform whole cube rotation to bring Face B to Face A's position
-4. The marker at (x', y') now appears at the **EXACT SAME screen position** as (x, y) was originally
+1. Place a marker at (row', col') on Face B
+2. Perform whole cube rotation to bring Face B to Face A's position
+3. The marker now appears at the **EXACT SAME screen position** as (row, col) on A
 
-**The translated coordinate preserves VISUAL POSITION from the viewer's perspective.**
+**Key Finding:** For this definition, `(row', col') = (row, col)` for ALL face pairs!
+
+The cube model's coordinate system is designed so that (row, col) on any face
+corresponds to the same screen position when that face becomes the front.
 
 ---
 
 ## Visual Example
 
 ```
-BEFORE:                           AFTER Y' rotation:
+translate(F, U, (1,2)) → dest_coord=(1,2), whole_cube_alg="X'"
 
-    Front (F)       Right (R)         Front (was R)
+BEFORE:                           AFTER X' rotation:
+
+    Front (F)        Up (U)           Front (was U)
    ┌───────┐       ┌───────┐         ┌───────┐
-   │       │       │       │         │       │
-   │   ●   │       │   ○   │   Y'    │   ○   │  ← marker at same
-   │ (1,2) │       │(x',y')│   →     │       │    screen position!
+   │       │       │   ●   │         │   ●   │  ← marker at same
+   │ (1,2) │       │ (1,2) │   X'    │ (1,2) │    screen position!
+   │       │       │       │   →     │       │
    └───────┘       └───────┘         └───────┘
 
-● = original marker at (1,2) on F
-○ = translated marker at (x',y') on R
-After Y': R comes to front, ○ appears where ● was
+● = marker at (1,2) on U
+After X': U comes to front, marker appears at screen position (1,2)
 ```
 
 ---
@@ -62,8 +65,8 @@ class Face2FaceTranslator:
         Translate a coordinate from source_face to dest_face.
 
         Args:
-            source_face: The face where the coordinate is defined
-            dest_face: The face we want the corresponding coordinate on
+            source_face: Face where the original coordinate is defined
+            dest_face: Face we want the corresponding coordinate on
             coord: (row, col) position on source_face (0-indexed)
 
         Returns:
@@ -76,132 +79,89 @@ class Face2FaceTranslator:
 ```python
 @dataclass(frozen=True)
 class FaceTranslationResult:
-    dest_coord: tuple[int, int]     # (row, col) on dest_face
-    shared_edge: Edge | None        # None if opposite faces
-    is_adjacent: bool               # True if faces share an edge
-    verification_rotation: str      # Whole-cube rotation for testing
-    source_axis: Axis               # ROW or COLUMN on source
-    dest_axis: Axis                 # ROW or COLUMN on dest
-    axis_exchanged: bool            # True if ROW↔COLUMN swap
+    dest_coord: tuple[int, int]  # (row, col) on dest_face
+    whole_cube_alg: str          # Algorithm to bring dest to source's position
+    shared_edge: Edge | None     # Edge connecting faces (None if opposite)
+
+    @property
+    def is_adjacent(self) -> bool:
+        """True if faces share an edge, False if opposite."""
+        return self.shared_edge is not None
 ```
 
 ---
 
-## Face Relationships
+## Whole-Cube Algorithms
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    FACE RELATIONSHIP MATRIX                      │
-├─────────┬───────┬───────┬───────┬───────┬───────┬───────────────┤
-│ From\To │   F   │   U   │   R   │   B   │   D   │       L       │
-├─────────┼───────┼───────┼───────┼───────┼───────┼───────────────┤
-│    F    │   -   │  adj  │  adj  │  opp  │  adj  │      adj      │
-│    U    │  adj  │   -   │  adj  │  adj  │  opp  │      adj      │
-│    R    │  adj  │  adj  │   -   │  adj  │  adj  │      opp      │
-│    B    │  opp  │  adj  │  adj  │   -   │  adj  │      adj      │
-│    D    │  adj  │  opp  │  adj  │  adj  │   -   │      adj      │
-│    L    │  adj  │  adj  │  opp  │  adj  │  adj  │       -       │
-└─────────┴───────┴───────┴───────┴───────┴───────┴───────────────┘
-
-adj = adjacent (share edge, 1 whole-cube rotation to verify)
-opp = opposite (no shared edge, 2 rotations through intermediate)
-```
-
----
-
-## Verification Rotations
-
-The whole-cube rotation that brings `dest` to `source`'s position:
-
-| Source | Dest | Verification Rotation |
-|--------|------|----------------------|
-| F | U | X |
-| F | R | Y' |
-| F | D | X' |
-| F | L | Y |
-| F | B | Y2 (or X2) |
-| U | F | X' |
-| U | R | Z' |
-| U | B | X |
-| U | L | Z |
-| U | D | X2 (or Z2) |
-| R | F | Y |
-| R | U | Z |
-| R | B | Y' |
-| R | D | Z' |
-| R | L | Y2 (or Z2) |
-| ... | ... | ... |
-
----
-
-## Test Strategy
-
-### Test Matrix
-
-| Dimension | Values | Count |
-|-----------|--------|-------|
-| Source faces | F, U, R, B, D, L | 6 |
-| Dest faces | All except source (adjacent + opposite) | 5 per source |
-| Face pairs | 6 × 5 | **30** |
-| Cube sizes | 3, 4, 5, 6, 7, 8 | 6 |
-| Positions per face | n² | 9, 16, 25, 36, 49, 64 |
-
-**Total tests:** 30 pairs × (9+16+25+36+49+64) = 30 × 199 = **5,970 tests**
-
-### Core Test: Viewer Perspective Verification
+The `whole_cube_alg` brings dest_face to source_face's screen position.
+Algorithms are **derived dynamically** from rotation cycles:
 
 ```python
-def test_translation_viewer_perspective(cube, source_face, dest_face, coord):
-    """
-    THE DEFINITIVE TEST:
-
-    1. Get translated coordinate AND whole-cube algorithm
-    2. Put marker (c_attribute) at dest_coord on dest_face
-    3. Execute whole-cube algorithm (brings dest to source position)
-    4. Assert: marker appears at original coord on source face
-    """
-    translator = Face2FaceTranslator(cube)
-    result = translator.translate(source_face, dest_face, coord)
-
-    # Put marker at translated position on dest face
-    dest_cell = dest_face.get_cell(result.dest_coord)
-    dest_cell.c_attributes["marker"] = "HERE"
-
-    # Execute whole-cube rotation (brings dest face to source position)
-    cube.execute_alg(result.verification_rotation)
-
-    # After rotation, check the face now at source's position
-    # The marker should be at the original coord
-    face_now_at_source_position = get_face_at_position(cube, source_face.name)
-    cell = face_now_at_source_position.get_cell(coord)
-
-    assert cell.c_attributes.get("marker") == "HERE"
+X_CYCLE = [F, U, B, D]  # X: F→U→B→D→F
+Y_CYCLE = [F, R, B, L]  # Y: F→R→B→L→F
+Z_CYCLE = [U, R, D, L]  # Z: U→R→D→L→U
 ```
 
-### Test Cases
+To find the algorithm for (source, dest):
+1. Find which cycle contains both faces
+2. Count steps from dest to source in cycle direction
+3. steps=1 → axis, steps=2 → axis2, steps=3 → axis'
 
-1. **All 30 face pairs** (24 adjacent + 6 opposite)
-2. **All cube sizes:** 3, 4, 5, 6, 7, 8
-3. **All positions** on each face (n² positions)
-4. **Round-trip verification:** A→B→A returns original coord
+| Source | Dest | Algorithm | Derivation |
+|--------|------|-----------|------------|
+| F | U | X' | X_CYCLE: U→F is 3 steps |
+| F | R | Y' | Y_CYCLE: R→F is 3 steps |
+| F | D | X | X_CYCLE: D→F is 1 step |
+| F | L | Y | Y_CYCLE: L→F is 1 step |
+| F | B | X2 or Y2 | 2 steps on either cycle |
 
 ---
 
-## Implementation Status
+## Test Coverage
 
-- [x] Class structure created
-- [x] Definition documented
-- [ ] `_find_shared_edge()` - implemented (trivial)
-- [ ] `_get_edge_position()` - implemented (trivial)
-- [ ] `_translate_adjacent()` - TODO
-- [ ] `_translate_opposite()` - TODO
-- [ ] `_get_verification_rotation()` - TODO
-- [ ] Unit tests - TODO (define with user)
+### Test Matrix
+- **Face pairs:** All 30 (6 sources × 5 destinations)
+- **Cube sizes:** 3, 4, 5, 6, 7, 8
+- **Positions:** All center slices on each face
+
+### Test Logic
+```python
+# For each (source_face, dest_face, coord):
+result = translator.translate(source_face, dest_face, coord)
+
+# Place marker at dest_coord on dest_face
+dest_slice = dest_face.center.get_center_slice(result.dest_coord)
+dest_slice.edge.attributes["marker"] = "X"
+
+# Execute whole-cube rotation
+cube.x_rotate(-1)  # or y_rotate, z_rotate as per whole_cube_alg
+
+# Verify marker is at original coord on dest_face
+check_slice = dest_face.center.get_center_slice(coord)
+assert check_slice.edge.attributes.get("marker") == "X"
+```
+
+---
+
+## Implementation Notes
+
+1. **Identity Transform:** All 30 face pairs use identity transform because the cube's
+   coordinate system is consistent across faces from the viewer's perspective.
+
+2. **Dynamic Algorithm Derivation:** Whole-cube algorithms are computed from rotation
+   cycles, not hardcoded. This reduces maintenance and ensures consistency.
+
+3. **Marker Persistence:** Use `edge.attributes` (not `c_attributes`) for markers
+   during testing, as `c_attributes` are cleared during rotations.
+
+4. **Face Objects vs Colors:** Whole-cube rotations move colors between faces but
+   face objects remain fixed. The `dest_face` object stays the same after rotation.
 
 ---
 
 ## Related Files
 
-- `Edge.py` - `get_slice_index_from_ltr_index()`, `get_ltr_index_from_slice_index()`
-- `Face.py` - Edge accessors, coordinate methods
-- `Slice.py` - Current navigation logic (to be refactored)
+- `Cube.py` - `x_rotate()`, `y_rotate()`, `z_rotate()` for whole-cube rotations
+- `Face.py` - Face coordinates and center access
+- `Center.py` - `get_center_slice((row, col))` for accessing positions
+- `_part_slice.py` - CenterSlice with `edge.attributes` for markers
