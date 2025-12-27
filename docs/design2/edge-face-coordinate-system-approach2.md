@@ -205,6 +205,77 @@ for index in range(n_slices):
 
 ---
 
+## Slice Rotation: The Physical Alignment Problem
+
+Slice rotation (M, E, S, or any slice) moves colors around **4 faces**.
+
+### The Problem: Physical Alignment
+
+When a user rotates slice 2, they see a **visual line** going around the cube:
+
+```
+         ┌─────────┐
+         │  Face U │
+         │ slice ? │  ← Must align with F's slice 2!
+         └─────────┘
+              │
+    ┌─────────┼─────────┐
+    │ slice ? │ slice 2 │ slice ?
+    │ Face L  │ Face F  │ Face R
+    └─────────┴─────────┴─────────┘
+              │
+         ┌─────────┐
+         │  Face D │
+         │ slice ? │
+         └─────────┘
+```
+
+**The challenge:** Each face stores slices in its own internal order. Face F's
+internal index 2 might be Face U's internal index 0!
+
+But the user expects them to be **physically aligned** - the same visual line.
+
+### The Solution: Edge as Bridge
+
+Two adjacent faces share an edge. The edge translates between their ltr systems:
+
+```python
+# We're at ltr=2 on current_face, moving to next_face
+# Both faces share next_edge
+
+# Step 1: Convert current_face's ltr to edge's internal index
+next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
+
+# Step 2: Convert edge's internal index to next_face's ltr
+current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
+```
+
+**The edge is the bridge:**
+
+```
+current_face ltr=2
+       │
+       ▼
+edge internal index (via translation)
+       │
+       ▼
+next_face ltr=? (physically aligned!)
+```
+
+### Why This Works
+
+The ltr coordinate system is designed so that:
+- **Same ltr on shared edge = same physical slice**
+- The translation layer handles different internal storage orders
+- Result: physical alignment is preserved across all 4 faces
+
+This is why the ltr ↔ index translation was invented - to solve the physical
+alignment problem for slice rotations.
+
+See: `Slice.py:112-122` for the implementation.
+
+---
+
 ## What Determines same_direction?
 
 The `same_direction` flag is determined by **geometry**:

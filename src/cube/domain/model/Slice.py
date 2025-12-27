@@ -112,13 +112,23 @@ class Slice(SuperElement):
             edge_slice = current_edge.get_slice_by_ltr_index(current_face, current_index)
             edges.append(edge_slice)
 
-            # now compute next face
+            # PHYSICAL ALIGNMENT PROBLEM:
+            # When rotating a slice, the user sees a visual line going around 4 faces.
+            # Each face has its own internal storage order, so Face F's index 2 might
+            # be Face U's index 0. But they must be PHYSICALLY ALIGNED - same visual line!
+            #
+            # SOLUTION: Use the shared edge as a BRIDGE between face ltr systems.
+            # The edge translates: current_face ltr → edge index → next_face ltr
+            # This preserves physical alignment across all 4 faces.
+            #
+            # See: docs/design2/edge-face-coordinate-system-approach2.md
+            #
             next_edge: Edge = current_edge.opposite(current_face)
             next_face = next_edge.get_other_face(current_face)
             assert next_face.is_edge(next_edge)
 
+            # Translate: current_face's ltr → edge internal index → next_face's ltr
             next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
-            # now index on next face
             current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
             current_edge = next_edge
             current_face = next_face
