@@ -462,7 +462,7 @@ class CommunicatorHelper(SolverElement):
             target_block: Block,
             source_block: Block | None = None,
             preserve_state: bool = True
-    ) -> bool:
+    ) -> Alg:
         """
         Execute a block commutator to move pieces from source to target.
 
@@ -538,7 +538,7 @@ class CommunicatorHelper(SolverElement):
 
         # 4x4 U -> F, 0,0
         # M[2] F' M[1] F M[2]' F ' M[1]'
-        cum = [inner_slice_alg, # M[2]
+        cum = Algs.seq_alg(None, inner_slice_alg, # M[2]
                on_front_rotate, # F'
                second_inner_slice_alg, # M[1]
                on_front_rotate.prime,  # F
@@ -546,11 +546,11 @@ class CommunicatorHelper(SolverElement):
                on_front_rotate,        # F'
                second_inner_slice_alg.prime, # M[1]'
                on_front_rotate.prime   # F
-               ]
+                           )
 
         if source_setup_n_rotate:
             self.op.play(source_setup_alg)
-        self.op.play(Algs.seq_alg(None, *cum))
+        self.op.play(cum)
 
         # =========================================================
         # CAGE METHOD: Undo source rotation to preserve paired edges
@@ -560,7 +560,8 @@ class CommunicatorHelper(SolverElement):
         if preserve_state and source_setup_n_rotate:
             self.op.play(source_setup_alg.prime)
 
-        return True
+        return (source_setup_alg + cum + source_setup_alg.prime).simplify()
+
     def _build_front_target_commutator(
             self,
             source: Face,
