@@ -180,8 +180,21 @@ class FaceTranslationResult:
 
 @dataclass(frozen=True)
 class SliceAlgorithmResult:
+    """
+    Result of computing a slice algorithm for face-to-face translation.
+
+    Attributes:
+        whole_slice_alg: The base slice algorithm (M, E, or S) without indexing
+        on_slice: 1-based slice index (see SliceAbleAlg for indexing convention)
+        n: Number of rotations (positive = clockwise, negative = counter-clockwise)
+
+    Note on slice indexing:
+        Slice indices are 1-based in the public API: E[1], E[2], ..., E[n_slices]
+        This matches the convention in SliceAbleAlg where slices are "[1, n]" space.
+        See SliceAbleAlg.normalize_slice_index() which converts to 0-based internally.
+    """
     whole_slice_alg: SliceAlg  # not sliced
-    on_slice: int  # on which slice to operate
+    on_slice: int  # 1-based slice index
     n: int  # n rotations
 
     def get_alg(self) -> Alg:
@@ -209,7 +222,20 @@ class SliceAlgorithmResult:
 #
 
 class _SliceIndexFormula:
-    """Formula types for computing slice index from (row, col)."""
+    """
+    Formula types for computing slice index from (row, col).
+
+    Coordinates (row, col) are 0-based: 0 to n_slices-1
+    Slice indices are 1-based: 1 to n_slices (see SliceAbleAlg)
+
+    Direct formulas add +1 to convert from 0-based to 1-based:
+        ROW: slice_index = row + 1
+        COL: slice_index = col + 1
+
+    Inverse formulas naturally produce 1-based results:
+        INV_ROW: slice_index = n_slices - row  (maps 0 → n_slices, n_slices-1 → 1)
+        INV_COL: slice_index = n_slices - col  (maps 0 → n_slices, n_slices-1 → 1)
+    """
     ROW = "row"           # slice_index = row + 1
     COL = "col"           # slice_index = col + 1
     INV_ROW = "inv_row"   # slice_index = n_slices - row
@@ -244,18 +270,29 @@ def _compute_slice_index(
     n_slices: int
 ) -> int:
     """
-    Compute the slice index for a given source face and coordinate.
+    Compute the 1-based slice index for a given source face and coordinate.
 
-    Uses the empirically-derived lookup table.
+    Uses the empirically-derived lookup table (_SLICE_INDEX_TABLE) to determine
+    which formula maps (row, col) to the correct slice index.
 
     Args:
-        source_face: The source face
+        source_face: The face where the coordinate originates
         slice_name: Which slice type (M, E, S)
-        coord: (row, col) on the source face
-        n_slices: Number of slices (center grid size)
+        coord: 0-based (row, col) on the source face, range [0, n_slices-1]
+        n_slices: Number of inner slices (cube.n_slices = cube.size - 2)
 
     Returns:
-        1-based slice index
+        1-based slice index in range [1, n_slices], suitable for SliceAlg[index]
+
+    Example:
+        For a 5×5 cube (n_slices=3), coord (1, 2) on face F with slice E:
+        - Formula is ROW (from lookup table)
+        - slice_index = row + 1 = 1 + 1 = 2
+        - Result: E[2] operates on the correct slice
+
+    See Also:
+        - SliceAbleAlg: Documents the 1-based slice indexing convention
+        - _SLICE_INDEX_TABLE: The empirically-derived lookup table
     """
     row, col = coord
     formula = _SLICE_INDEX_TABLE.get((slice_name, source_face))

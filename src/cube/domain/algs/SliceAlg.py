@@ -10,15 +10,36 @@ from cube.domain.model.cube_slice import SliceName
 
 class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
     """
-    How M, S and E are sliced:
+    Base class for slice algorithms (M, E, S).
 
-    Assume cube size is NxN, N-2 middle slices, e.g N=5
-    E == E[1:] = R[1:N-2] # all (3) middle slices
+    Slice Indexing Convention (1-based):
+        Slice indices are 1-based, ranging from 1 to n_slices (where n_slices = cube_size - 2).
+        This is the PUBLIC API convention used when indexing slice algorithms.
 
-    So 1 is index of the second lice, and you can rotate up to N-2 Slices
-    E[1:3] # N =5
-    E[1:4] # is an error.
+        For an NxN cube:
+            - n_slices = N - 2 (number of inner slices)
+            - Valid indices: 1, 2, ..., n_slices
 
+        Example for 5x5 cube (n_slices = 3):
+            E[1]  - first inner slice (closest to U face)
+            E[2]  - middle slice
+            E[3]  - last inner slice (closest to D face)
+            E     - all slices (E[1:3] equivalent)
+            E[1:] - slices 1 to n_slices
+            E[:2] - slices 1 to 2
+
+    Internal Conversion:
+        SliceAbleAlg.normalize_slice_index() converts 1-based indices to 0-based
+        for internal cube operations. See that method for details.
+
+    Why 1-based?
+        - Matches standard cube notation (E[1] is the first middle slice)
+        - Outer layers (0 and N-1) are face rotations, not slice moves
+        - Inner slices start at layer 1 from the reference face
+
+    See Also:
+        - SliceAbleAlg: Parent class with slicing/indexing logic
+        - Face2FaceTranslator: Uses 1-based indices when computing slice algorithms
     """
 
     def __init__(self, slice_name: SliceName, n: int = 1) -> None:
