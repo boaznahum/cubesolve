@@ -51,7 +51,6 @@ from typing import TYPE_CHECKING, Tuple
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg, WholeCubeAlg
-from cube.domain.algs.Alg import Alg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.model.CubeLayout import CubeLayout
 
@@ -453,6 +452,7 @@ class Face2FaceTranslator:
 
         return face1.find_shared_edge(face2)
 
+    @staticmethod
     def _compute_slice_algorithms(
             source_name: FaceName,
             dest_name: FaceName,
