@@ -39,12 +39,14 @@ from typing import TYPE_CHECKING
 
 from cube.domain.algs import Algs
 from cube.domain.algs.Alg import Alg
+from cube.domain.algs.SliceAlg import SliceAlg
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
 
 from cube.domain.model.FaceName import FaceName
+from cube.domain.model.cube_slice import SliceName
 
 
 class TransformType(Enum):
@@ -130,6 +132,11 @@ class FaceTranslationResult:
         whole_cube_alg: Algorithm (X/Y/Z moves) that brings dest_face to source_face's
                        screen position. Execute this to verify the translation visually.
 
+        slice_algorithms: Slice algorithms (M/E/S moves) that bring dest content to
+                         source position at coord.
+                         - Adjacent faces: exactly 1 algorithm
+                         - Opposite faces: exactly 2 algorithms
+
         shared_edge: Edge connecting source and dest faces.
                     - Not None: faces are adjacent (share this edge)
                     - None: faces are opposite (F↔B, U↔D, L↔R)
@@ -138,17 +145,50 @@ class FaceTranslationResult:
         >>> result = translator.translate(cube.front, cube.up, (1, 2))
         >>> # result.dest_coord = (1, 2)  # same for viewer-perspective definition
         >>> # result.whole_cube_alg = "X'"  # brings U to F's position
+        >>> # result.slice_algorithms = [M[3]]  # M slice that brings U content to F
         >>> # result.shared_edge is not None  # F and U are adjacent
     """
 
     dest_coord: tuple[int, int]
     whole_cube_alg: Alg
+    slice_algorithms: list[Alg]
     shared_edge: Edge | None
 
     @property
     def is_adjacent(self) -> bool:
         """True if faces share an edge, False if opposite."""
         return self.shared_edge is not None
+
+
+@dataclass(frozen=True)
+class SliceAlgorithmResult:
+    """
+    Result of finding slice algorithm(s) to bring destination face content to source position.
+
+    A slice algorithm (M, E, or S with specific index) rotates an inner layer that,
+    when applied, brings content from dest_face to cover the position at coord on source_face.
+
+    Attributes:
+        algorithms: List of slice algorithms that achieve the transfer.
+                   - Adjacent faces: exactly 1 algorithm (single path)
+                   - Opposite faces: exactly 2 algorithms (two possible paths)
+
+        source_face_name: The face where we want the content to arrive.
+        dest_face_name: The face where the content originates.
+        coord: The (row, col) position on source_face.
+
+    Example:
+        >>> result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.up, (1, 1))
+        >>> # result.algorithms = [M[2]]  # M slice at column 2 brings U content to F
+        >>> len(result.algorithms) == 1  # Adjacent faces have 1 solution
+
+        >>> result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.back, (1, 1))
+        >>> len(result.algorithms) == 2  # Opposite faces have 2 solutions (M or E)
+    """
+    algorithms: list[Alg]
+    source_face_name: FaceName
+    dest_face_name: FaceName
+    coord: tuple[int, int]
 
 
 # =============================================================================
@@ -305,9 +345,15 @@ class Face2FaceTranslator:
         # Find shared edge (None if faces are opposite)
         shared_edge = Face2FaceTranslator._find_shared_edge(source_face, dest_face)
 
+        # Compute slice algorithms
+        slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
+            source_name, dest_name, coord, n_slices
+        )
+
         return FaceTranslationResult(
             dest_coord=dest_coord,
             whole_cube_alg=whole_cube_alg,
+            slice_algorithms=slice_algorithms,
             shared_edge=shared_edge,
         )
 
@@ -319,9 +365,186 @@ class Face2FaceTranslator:
         Returns:
             The shared Edge if faces are adjacent, None if opposite
         """
-        for edge in [face1.edge_top, face1.edge_bottom, face1.edge_left, face1.edge_right]:
-            other_face = edge.get_other_face(face1)
-            if other_face is face2:
-                return edge
-        return None
+
+        return face1.find_shared_edge(face2)
+
+
+    @staticmethod
+    def get_slice_algorithm(
+        source_face: Face,
+        dest_face: Face,
+        coord: tuple[int, int]
+    ) -> SliceAlgorithmResult:
+        """
+        Get slice algorithm(s) that bring content from dest_face to source_face at coord.
+
+        This is a convenience wrapper around translate() that returns just the slice info.
+
+        Args:
+            source_face: The face where we want the content to arrive
+            dest_face: The face where the content currently is
+            coord: (row, col) position on source_face (0-indexed)
+
+        Returns:
+            SliceAlgorithmResult with:
+            - 1 algorithm for adjacent faces (single path)
+            - 2 algorithms for opposite faces (two possible paths)
+
+        Raises:
+            ValueError: If source_face == dest_face
+            ValueError: If coord is out of bounds
+
+        Example:
+            >>> result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.up, (1, 1))
+            >>> result.algorithms[0].play(cube)  # Brings U content to F at (1,1)
+        """
+        if source_face is dest_face:
+            raise ValueError("Cannot get slice algorithm from a face to itself")
+
+        # Delegate to translate() and extract slice algorithms
+        result = Face2FaceTranslator.translate(source_face, dest_face, coord)
+
+        return SliceAlgorithmResult(
+            algorithms=result.slice_algorithms,
+            source_face_name=source_face.name,
+            dest_face_name=dest_face.name,
+            coord=coord,
+        )
+
+    @staticmethod
+    def _compute_slice_algorithms(
+        source_name: FaceName,
+        dest_name: FaceName,
+        coord: tuple[int, int],
+        n_slices: int
+    ) -> list[Alg]:
+        """
+        Compute slice algorithm(s) that bring content from dest to source at coord.
+
+        Returns:
+            List of 1 algorithm for adjacent faces, 2 for opposite faces
+        """
+        algorithms: list[Alg] = []
+
+        # Find all cycles that contain both faces
+        # Each tuple: (cycle, slice_name, base_alg, opposite_direction)
+        # opposite_direction=True means the slice moves opposite to the whole-cube rotation:
+        #   - M is "over L" (opposite to X which is "over R")
+        #   - E is "over D" (opposite to Y which is "over U")
+        #   - S is "over F" (same as Z which is "over F")
+        all_cycles: list[tuple[list[FaceName], SliceName, SliceAlg, bool]] = [
+            (_X_CYCLE, SliceName.M, Algs.M, True),   # M opposite to X
+            (_Y_CYCLE, SliceName.E, Algs.E, True),   # E opposite to Y
+            (_Z_CYCLE, SliceName.S, Algs.S, False),  # S same as Z
+        ]
+
+        for cycle, slice_name, base_slice_alg, opposite_direction in all_cycles:
+            if source_name in cycle and dest_name in cycle:
+                # This cycle connects source and dest
+                src_idx = cycle.index(source_name)
+                dst_idx = cycle.index(dest_name)
+
+                # Steps needed to move dest content to source position
+                # The whole-cube cycle moves content from index i to i+1.
+                # But M and E slices move OPPOSITE to their whole-cube counterparts
+                # (M is "over L" opposite to X/R, E is "over D" opposite to Y/U)
+                # S moves SAME direction as Z (both "over F")
+                #
+                # For same-direction: steps = (src - dst) mod 4
+                # For opposite-direction: steps = (dst - src) mod 4
+                if opposite_direction:
+                    steps = (dst_idx - src_idx) % 4
+                else:
+                    steps = (src_idx - dst_idx) % 4
+
+                if steps == 0:
+                    # Same face - shouldn't happen
+                    continue
+
+                # Get the slice index from the coordinate
+                slice_index = Face2FaceTranslator._get_slice_index(
+                    source_name, slice_name, coord, n_slices
+                )
+
+                # Create the slice algorithm with proper direction
+                slice_alg = base_slice_alg[slice_index]
+                final_alg: Alg
+                if steps == 1:
+                    final_alg = slice_alg
+                elif steps == 2:
+                    final_alg = slice_alg * 2
+                else:  # steps == 3
+                    final_alg = slice_alg.prime
+
+                algorithms.append(final_alg)
+
+        return algorithms
+
+    @staticmethod
+    def _get_slice_index(
+        face_name: FaceName,
+        slice_name: SliceName,
+        coord: tuple[int, int],
+        n_slices: int
+    ) -> int:
+        """
+        Determine which slice index corresponds to the coordinate on the given face.
+
+        The slice index depends on:
+        - Which slice type (M, E, S) - each rotates around a different axis
+        - Which face - determines how the coordinate maps to the slice axis
+        - The coordinate (row, col)
+
+        Args:
+            face_name: The face where the coordinate is defined
+            slice_name: Which slice type (M, E, S)
+            coord: (row, col) on the face
+            n_slices: Number of slices (center grid size)
+
+        Returns:
+            1-based slice index
+        """
+        row, col = coord
+
+        # M slice: rotates around L-R axis (affects columns on F, U, D, B faces)
+        # E slice: rotates around U-D axis (affects rows on F, L, R, B faces)
+        # S slice: rotates around F-B axis (affects L, U, R, D faces)
+
+        match slice_name:
+            case SliceName.M:
+                # M affects D, F, U, B
+                # M[1] is the layer closest to L, M[n_slices] is closest to R
+                # Must account for how each face's column direction aligns with L-R axis
+                if face_name == FaceName.B:
+                    # B's R points toward L: col=0 is closest to R
+                    return n_slices - col
+                else:  # D, F, U
+                    # These faces have col=0 closest to L
+                    return col + 1
+
+            case SliceName.E:
+                # E affects R, F, L, B
+                # E[1] is the layer closest to D, E[n_slices] is closest to U
+                # All affected faces have row→slice mapping: row + 1
+                return row + 1
+
+            case SliceName.S:
+                # S affects L, U, R, D
+                # S[1] is the layer closest to F, S[n_slices] is closest to B
+                # Must account for how each face's coordinate system aligns with F-B axis
+                if face_name == FaceName.U:
+                    # U's T points toward B: row=0 is closest to F
+                    return row + 1
+                elif face_name == FaceName.D:
+                    # D's T points toward F: row=0 is closest to B
+                    return n_slices - row
+                elif face_name == FaceName.L:
+                    # L's R points toward F: col=n_slices-1 is closest to F
+                    return n_slices - col
+                else:  # R
+                    # R's R points toward B: col=0 is closest to F
+                    return col + 1
+
+            case _:
+                raise ValueError(f"Unknown slice name: {slice_name}")
 

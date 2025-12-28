@@ -79,6 +79,7 @@ class Slice(SuperElement):
             case _:
                 raise ValueError(f"Unknown slice name: {self._name}")
 
+        # noinspection PyUnboundLocalVariable no it is not
         assert current_face.is_edge(current_edge)
 
         n_slices = self.n_slices

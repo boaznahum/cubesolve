@@ -484,7 +484,7 @@ class Face(SuperElement, Hashable):
     def opposite(self) -> _Face:
         return self._opposite
 
-    def find_shared_edge(self, face2: Face) -> Edge | None:
+    def find_shared_edge(self, face2: _Face) -> Edge | None:
         """
         Find the edge shared by two faces, or None if they're opposite.
 
