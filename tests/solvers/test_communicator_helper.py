@@ -134,7 +134,7 @@ def test_create_helper(cube_size: int) -> None:
     assert helper.n_slices == cube_size - 2
 
 
-@pytest.mark.parametrize("cube_size", range(4, 9))  # All cube sizes
+@pytest.mark.parametrize("cube_size", range(3, 9))  # All cube sizes
 @pytest.mark.parametrize("face_pair", SUPPORTED_PAIRS, ids=_face_pair_id)
 def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
     """

@@ -23,7 +23,14 @@ def _get_supported_pairs() -> list[tuple[FaceName, FaceName]]:
          (FaceName.B, FaceName.R),
          (FaceName.F, FaceName.R),
          (FaceName.L, FaceName.R),
-         (FaceName.D, FaceName.R)
+         (FaceName.D, FaceName.R),
+
+        #  Source    #Target
+         (FaceName.U, FaceName.L),  # Source=Up, Target=Front
+         (FaceName.B, FaceName.L),
+         (FaceName.F, FaceName.L),
+         (FaceName.R, FaceName.L),
+         (FaceName.D, FaceName.L)
         ]
 
 
