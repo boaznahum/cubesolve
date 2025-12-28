@@ -9,13 +9,25 @@ Replaces scattered methods in Edge.py, Face.py, and Slice.py:
 - Face.is_bottom_or_top() for axis detection
 - Slice navigation logic
 
-DEFINITION (Viewer Perspective):
-    A coordinate (row, col) on Face A translates to (row', col') on Face B if:
-    1. Mark (row, col) on Face A
-    2. Apply whole-cube rotation that brings A to B's position
-    3. The marker now appears at (row', col') on the face that is now at B's position
+DEFINITION:
+    translate(source_face, dest_face, coord) returns a FaceTranslationResult with:
 
-    The transformation accounts for how face coordinate systems align after rotation.
+    - dest_coord: The position on dest_face that corresponds to coord on source_face
+    - whole_cube_alg: Algorithm (X/Y/Z) that brings dest_face to source_face's position
+    - slice_algorithms: Algorithm(s) (M/E/S) that bring content from dest to source
+
+    USAGE CONTRACT:
+        1. Place a marker at dest_coord on dest_face
+        2. Apply any of the returned algorithms (whole_cube_alg or slice_algorithms)
+        3. The marker will appear at coord on source_face
+
+    This is the SINGLE definition that all algorithms must satisfy.
+
+VIEWER PERSPECTIVE:
+    The transformation is derived from: "If I mark coord on source_face and apply
+    the algorithm that brings source to dest's position, where does the marker end up?"
+
+    dest_coord is the answer - it's where source content appears on dest after rotation.
 
 IMPLEMENTATION:
     Uses empirically-derived transformation table based on whole-cube rotations.
@@ -126,14 +138,14 @@ class FaceTranslationResult:
 
     Attributes:
         dest_coord: (row, col) on dest_face where the translated position is.
-                   After applying whole_cube_alg, a marker at dest_coord will
-                   appear at the original coord's screen position.
+                   After applying any algorithm, a marker at dest_coord will
+                   appear at coord on source_face.
 
         whole_cube_alg: Algorithm (X/Y/Z moves) that brings dest_face to source_face's
-                       screen position. Execute this to verify the translation visually.
+                       screen position.
 
         slice_algorithms: Slice algorithms (M/E/S moves) that bring dest content to
-                         source position at coord.
+                         source position at coord. Each uses the same dest_coord.
                          - Adjacent faces: exactly 1 algorithm
                          - Opposite faces: exactly 2 algorithms
 
@@ -141,12 +153,17 @@ class FaceTranslationResult:
                     - Not None: faces are adjacent (share this edge)
                     - None: faces are opposite (F↔B, U↔D, L↔R)
 
-    Example:
-        >>> result = translator.translate(cube.front, cube.up, (1, 2))
-        >>> # result.dest_coord = (1, 2)  # same for viewer-perspective definition
-        >>> # result.whole_cube_alg = "X'"  # brings U to F's position
-        >>> # result.slice_algorithms = [M[3]]  # M slice that brings U content to F
-        >>> # result.shared_edge is not None  # F and U are adjacent
+    USAGE CONTRACT:
+        1. Place marker at dest_coord on dest_face
+        2. Apply any algorithm (whole_cube_alg or any slice_algorithm)
+        3. Marker appears at coord on source_face
+
+    Example::
+
+        result = translator.translate(cube.front, cube.up, (1, 2))
+        # result.dest_coord = (1, 2)
+        # result.whole_cube_alg = X'
+        # result.slice_algorithms = [M[3]]
     """
 
     dest_coord: tuple[int, int]
@@ -169,7 +186,7 @@ class SliceAlgorithmResult:
     when applied, brings content from dest_face to cover the position at coord on source_face.
 
     Attributes:
-        algorithms: List of slice algorithms that achieve the transfer.
+        algorithms: List of Alg objects. Each algorithm brings dest content to source.
                    - Adjacent faces: exactly 1 algorithm (single path)
                    - Opposite faces: exactly 2 algorithms (two possible paths)
 
@@ -177,13 +194,14 @@ class SliceAlgorithmResult:
         dest_face_name: The face where the content originates.
         coord: The (row, col) position on source_face.
 
-    Example:
-        >>> result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.up, (1, 1))
-        >>> # result.algorithms = [M[2]]  # M slice at column 2 brings U content to F
-        >>> len(result.algorithms) == 1  # Adjacent faces have 1 solution
+    Example::
 
-        >>> result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.back, (1, 1))
-        >>> len(result.algorithms) == 2  # Opposite faces have 2 solutions (M or E)
+        result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.up, (1, 1))
+        # result.algorithms[0] = M[2]  # M slice at column 2 brings U content to F
+        len(result.algorithms) == 1  # Adjacent faces have 1 solution
+
+        result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.back, (1, 1))
+        len(result.algorithms) == 2  # Opposite faces have 2 solutions (M or E)
     """
     algorithms: list[Alg]
     source_face_name: FaceName
@@ -315,9 +333,10 @@ class Face2FaceTranslator:
             ValueError: If source_face == dest_face (no translation needed)
             ValueError: If coord is out of bounds for cube size
 
-        Example:
-            >>> result = Face2FaceTranslator.translate(cube.front, cube.right, (1, 2))
-            >>> print(result.dest_coord)  # Position on R face after F->R translation
+        Example::
+
+            result = Face2FaceTranslator.translate(cube.front, cube.right, (1, 2))
+            print(result.dest_coord)  # Position on R face after F->R translation
         """
         if source_face is dest_face:
             raise ValueError("Cannot translate from a face to itself")
@@ -394,9 +413,10 @@ class Face2FaceTranslator:
             ValueError: If source_face == dest_face
             ValueError: If coord is out of bounds
 
-        Example:
-            >>> result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.up, (1, 1))
-            >>> result.algorithms[0].play(cube)  # Brings U content to F at (1,1)
+        Example::
+
+            result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.up, (1, 1))
+            result.algorithms[0].algorithm.play(cube)  # Brings U content to F at (1,1)
         """
         if source_face is dest_face:
             raise ValueError("Cannot get slice algorithm from a face to itself")
@@ -421,17 +441,28 @@ class Face2FaceTranslator:
         """
         Compute slice algorithm(s) that bring content from dest to source at coord.
 
+        All slice algorithms use the SAME dest_coord as the whole-cube algorithm.
+        The slice index is calculated based on which slice passes through the
+        source coordinate position.
+
+        GEOMETRIC CONSTRAINTS:
+        - E slice preserves rows: E can only work if source row == dest row
+        - M slice preserves columns: M can only work if source col == dest col (for faces in cycle)
+        - For opposite faces with ROT_180: only M works when row changes, only E works when col changes
+        - For odd n_slices at center: both row and col are preserved, so both M and E work
+
         Returns:
-            List of 1 algorithm for adjacent faces, 2 for opposite faces
+            List of Alg objects (M, E, or S slice algorithms)
         """
+        row, col = coord
         algorithms: list[Alg] = []
 
-        # Find all cycles that contain both faces
+        # Compute dest_coord to check geometric constraints
+        transform_type = _TRANSFORMATION_TABLE[(source_name, dest_name)]
+        dest_coord = _apply_transform(coord, transform_type, n_slices)
+        dest_row, dest_col = dest_coord
+
         # Each tuple: (cycle, slice_name, base_alg, opposite_direction)
-        # opposite_direction=True means the slice moves opposite to the whole-cube rotation:
-        #   - M is "over L" (opposite to X which is "over R")
-        #   - E is "over D" (opposite to Y which is "over U")
-        #   - S is "over F" (same as Z which is "over F")
         all_cycles: list[tuple[list[FaceName], SliceName, SliceAlg, bool]] = [
             (_X_CYCLE, SliceName.M, Algs.M, True),   # M opposite to X
             (_Y_CYCLE, SliceName.E, Algs.E, True),   # E opposite to Y
@@ -440,34 +471,47 @@ class Face2FaceTranslator:
 
         for cycle, slice_name, base_slice_alg, opposite_direction in all_cycles:
             if source_name in cycle and dest_name in cycle:
+                # GEOMETRIC CONSTRAINT CHECKS:
+                #
+                # E slice preserves rows - can only work if source row == dest row
+                # This is critical for opposite faces (F↔B, L↔R) with even n_slices
+                if slice_name == SliceName.E and row != dest_row:
+                    continue  # E cannot bring dest content to different row
+
+                # S slice has column inversion between L and R
+                # S[i] affects: L col = n_slices - i, R col = i - 1
+                # These match only when i = (n_slices + 1) / 2, which requires odd n_slices
+                # For even n_slices at non-symmetric positions, S cannot work
+                if slice_name == SliceName.S:
+                    source_slice_idx = Face2FaceTranslator._get_slice_index(
+                        source_name, slice_name, coord, n_slices
+                    )
+                    dest_slice_idx = Face2FaceTranslator._get_slice_index(
+                        dest_name, slice_name, dest_coord, n_slices
+                    )
+                    if source_slice_idx != dest_slice_idx:
+                        continue  # S cannot align source and dest at different slice indices
+
+                # Get slice index from source coord
+                source_slice_index = Face2FaceTranslator._get_slice_index(
+                    source_name, slice_name, coord, n_slices
+                )
+
                 # This cycle connects source and dest
                 src_idx = cycle.index(source_name)
                 dst_idx = cycle.index(dest_name)
 
                 # Steps needed to move dest content to source position
-                # The whole-cube cycle moves content from index i to i+1.
-                # But M and E slices move OPPOSITE to their whole-cube counterparts
-                # (M is "over L" opposite to X/R, E is "over D" opposite to Y/U)
-                # S moves SAME direction as Z (both "over F")
-                #
-                # For same-direction: steps = (src - dst) mod 4
-                # For opposite-direction: steps = (dst - src) mod 4
                 if opposite_direction:
                     steps = (dst_idx - src_idx) % 4
                 else:
                     steps = (src_idx - dst_idx) % 4
 
                 if steps == 0:
-                    # Same face - shouldn't happen
                     continue
 
-                # Get the slice index from the coordinate
-                slice_index = Face2FaceTranslator._get_slice_index(
-                    source_name, slice_name, coord, n_slices
-                )
-
                 # Create the slice algorithm with proper direction
-                slice_alg = base_slice_alg[slice_index]
+                slice_alg = base_slice_alg[source_slice_index]
                 final_alg: Alg
                 if steps == 1:
                     final_alg = slice_alg
@@ -525,7 +569,7 @@ class Face2FaceTranslator:
             case SliceName.E:
                 # E affects R, F, L, B
                 # E[1] is the layer closest to D, E[n_slices] is closest to U
-                # All affected faces have row→slice mapping: row + 1
+                # Unlike M, E does NOT invert on B (row stays consistent across all faces)
                 return row + 1
 
             case SliceName.S:
