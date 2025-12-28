@@ -50,29 +50,29 @@ class Algs:
         Internally, normalize_slice_index() converts: public[i] → internal[i-1]
 
         Example for 5x5 cube (n_slices = 3):
-            E[1]  - first inner slice (closest to U face)  → internal index 0
+            E[1]  - first inner slice (closest to D face)  → internal index 0
             E[2]  - middle slice                           → internal index 1
-            E[3]  - last inner slice (closest to D face)   → internal index 2
+            E[3]  - last inner slice (closest to U face)   → internal index 2
             E     - all slices together
 
-        Where Slice[1] begins (opposite of reference face):
-            M[1] - closest to R face (opposite of reference face L)
-            E[1] - closest to U face (opposite of reference face D)
-            S[1] - closest to B face (opposite of reference face F)
+        Where Slice[1] begins (same side as reference face):
+            M[1] - closest to L face (the reference face for M)
+            E[1] - closest to D face (the reference face for E)
+            S[1] - closest to F face (the reference face for S)
 
         Visual for 5x5 cube (M slice example, viewing from front):
 
                       L face                              R face
-                         │    M[1]  M[2]  M[3]               │
+                         │                                   │
+                         │   M[1]  M[2]  M[3]                │
                          │     ↓     ↓     ↓                 │
                          │   ┌───┐ ┌───┐ ┌───┐               │
-                         │   │   │ │   │ │   │               │
                          └───┤   ├─┤   ├─┤   ├───────────────┘
                              │   │ │   │ │   │
                              └───┘ └───┘ └───┘
                               ↑           ↑
                          closest      closest
-                          to R         to L
+                          to L         to R
 
     ================================================================================
     WHOLE-CUBE ROTATIONS (X, Y, Z)

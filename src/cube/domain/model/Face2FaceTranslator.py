@@ -60,27 +60,27 @@ SLICE INDEXING (1-based):
         - Valid indices: 1, 2, ..., n_slices
 
     Example for 5x5 cube (n_slices = 3):
-        E[1]  - first inner slice (closest to U face)
+        E[1]  - first inner slice (closest to D face)
         E[2]  - middle slice
-        E[3]  - last inner slice (closest to D face)
+        E[3]  - last inner slice (closest to U face)
         E     - all slices together
 
-    WHERE SLICE 1 BEGINS (reference face perspective):
+    WHERE SLICE 1 BEGINS (same side as reference face):
         ┌──────┬─────────────────────────────────────────────────────────────────┐
         │Slice │ Slice[1] is closest to...                                       │
         ├──────┼─────────────────────────────────────────────────────────────────┤
-        │  M   │ Closest to R face (opposite of reference face L)                │
-        │  E   │ Closest to U face (opposite of reference face D)                │
-        │  S   │ Closest to B face (opposite of reference face F)                │
+        │  M   │ Closest to L face (the reference face for M)                    │
+        │  E   │ Closest to D face (the reference face for E)                    │
+        │  S   │ Closest to F face (the reference face for S)                    │
         └──────┴─────────────────────────────────────────────────────────────────┘
 
     Visual for 5x5 cube (E slice example, viewing from front):
                          U face
                     ┌─────────────┐
                     │             │
-            E[1] →  ├─────────────┤  ← closest to U
+            E[3] →  ├─────────────┤  ← closest to U
             E[2] →  ├─────────────┤  ← middle
-            E[3] →  ├─────────────┤  ← closest to D
+            E[1] →  ├─────────────┤  ← closest to D
                     │             │
                     └─────────────┘
                          D face
