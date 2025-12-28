@@ -538,14 +538,15 @@ class CommunicatorHelper(SolverElement):
 
         # 4x4 U -> F, 0,0
         # M[0] F' M[1] F M[0]' F ' M[1]'
-        cum = [inner_slice_alg,
-               on_front_rotate,
-               second_inner_slice_alg,
-               on_front_rotate.prime,
-               inner_slice_alg.prime,
-               on_front_rotate,
-               second_inner_slice_alg.prime,
-               on_front_rotate.prime]
+        cum = [inner_slice_alg, # M[0]
+               on_front_rotate, # F'
+               second_inner_slice_alg, # M[1]
+               on_front_rotate.prime,  # F
+               inner_slice_alg.prime,  # M[0]
+               on_front_rotate,        # F'
+               second_inner_slice_alg.prime, # M[1]'
+               on_front_rotate.prime   # F
+               ]
 
         if source_setup_n_rotate:
             self.op.play(source_setup_alg)
