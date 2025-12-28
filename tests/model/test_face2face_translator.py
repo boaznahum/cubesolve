@@ -35,7 +35,7 @@ from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTrans
 # noinspection PyProtectedMember
 from cube.domain.model._elements import CenterSliceIndex
 # noinspection PyProtectedMember
-from cube.domain.model._part_slice import CenterSlice
+from cube.domain.model.PartSlice import CenterSlice
 from tests.test_utils import _test_sp
 
 

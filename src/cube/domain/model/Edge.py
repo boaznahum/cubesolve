@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Sequence, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model._elements import SliceIndex
-from cube.domain.model._part_slice import EdgeWing, PartSlice
+from cube.domain.model.PartSlice import EdgeWing, PartSlice
 from cube.domain.model.Part import Part
 from cube.domain.model.PartEdge import PartEdge
 

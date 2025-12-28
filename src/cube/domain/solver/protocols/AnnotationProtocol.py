@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable, ContextManager, Protocol, Tuple, Typ
 
 if TYPE_CHECKING:
     from cube.domain.model._elements import PartColorsID
-    from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model.PartSlice import PartSlice
     from cube.domain.model.Part import Part
     from cube.domain.model.PartEdge import PartEdge
     from cube.domain.solver.AnnWhat import AnnWhat

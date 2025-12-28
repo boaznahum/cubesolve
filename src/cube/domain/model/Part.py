@@ -14,7 +14,7 @@ from cube.domain.model._elements import (
     _Cube,
     _Face,
 )
-from cube.domain.model._part_slice import PartSlice
+from cube.domain.model.PartSlice import PartSlice
 from cube.domain.model.cube_boy import Color, FaceName, color2long
 from cube.domain.model.PartEdge import PartEdge
 

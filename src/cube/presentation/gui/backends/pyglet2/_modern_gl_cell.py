@@ -36,7 +36,7 @@ from cube.domain.model.cube_boy import Color
 from cube.domain.model.VMarker import VMarker, viewer_get_markers
 
 if TYPE_CHECKING:
-    from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model.PartSlice import PartSlice
     from cube.domain.model.PartEdge import PartEdge
 
 from ._modern_gl_constants import CELL_TEXTURE_KEY

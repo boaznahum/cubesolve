@@ -138,7 +138,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 
 from ._elements import AxisName, PartColorsID
-from ._part_slice import CornerSlice, EdgeWing, PartSlice
+from .PartSlice import CornerSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Corner import Corner
 from .cube_boy import Color, CubeLayout, FaceName

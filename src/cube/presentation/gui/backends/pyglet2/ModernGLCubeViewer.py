@@ -52,7 +52,7 @@ import numpy as np
 from numpy import ndarray
 
 from cube.application.protocols import AnimatableViewer
-from cube.domain.model._part_slice import PartSlice
+from cube.domain.model.PartSlice import PartSlice
 from cube.domain.model.cube_boy import Color, FaceName
 from cube.domain.model.CubeListener import CubeListener
 

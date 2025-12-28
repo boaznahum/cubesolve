@@ -30,7 +30,7 @@ from cube.domain.solver.common.big_cube.CommunicatorHelper import CommunicatorHe
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 
 if TYPE_CHECKING:
-    from cube.domain.model._part_slice import PartEdge
+    from cube.domain.model.PartSlice import PartEdge
 
 
 # =============================================================================
@@ -198,8 +198,6 @@ def test_create_helper(cube_size: int) -> None:
     assert helper.n_slices == cube_size - 2
 
 
-
-
 @pytest.mark.parametrize("cube_size", [4, 5, 6, 7, 8])  # All cube sizes
 def test_communicator_supported_pairs(cube_size: int) -> None:
     """
@@ -241,135 +239,135 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
 
     for source_name, target_name in source_target_names:
 
-            for ltr_y in range(n_slices):
-                for ltr_x in range(n_slices):
-                    # Skip center position for odd cubes (invariant under rotation)
-                    if _is_center_position(n_slices, ltr_y, ltr_x):
-                        continue
+        for ltr_y in range(n_slices):
+            for ltr_x in range(n_slices):
+                # Skip center position for odd cubes (invariant under rotation)
+                if _is_center_position(n_slices, ltr_y, ltr_x):
+                    continue
 
-                    # Skip truly unsupported positions (innermost on even cubes)
-                    if _is_truly_unsupported_position(n_slices, ltr_y, ltr_x):
-                        continue
+                # Skip truly unsupported positions (innermost on even cubes)
+                if _is_truly_unsupported_position(n_slices, ltr_y, ltr_x):
+                    continue
 
-                    for rotation in range(4):
-                        # Reset cube to pristine state for each test iteration
-                        # This ensures center pieces are in their original positions
-                        app.reset()
-                        cube = app.cube
-                        solver = CageNxNSolver(app.op)
-                        helper = CommunicatorHelper(solver)
+                for rotation in range(4):
+                    # Reset cube to pristine state for each test iteration
+                    # This ensures center pieces are in their original positions
+                    app.reset()
+                    cube = app.cube
+                    solver = CageNxNSolver(app.op)
+                    helper = CommunicatorHelper(solver)
 
-                        # Get fresh face references after reset
-                        source_face = getattr(cube, source_name)
-                        target_face = getattr(cube, target_name)
+                    # Get fresh face references after reset
+                    source_face = getattr(cube, source_name)
+                    target_face = getattr(cube, target_name)
 
-                        # Get expected source LTR by mapping target → source
-                        expected_src_ltr = helper.get_expected_source_ltr(
-                            source_face, target_face, (ltr_y, ltr_x)
+                    # Get expected source LTR by mapping target → source
+                    expected_src_ltr = helper.get_expected_source_ltr(
+                        source_face, target_face, (ltr_y, ltr_x)
+                    )
+                    # Rotate on SOURCE face (physical rotation)
+                    src_ltr_y, src_ltr_x = helper.rotate_ltr_on_face(
+                        source_face, expected_src_ltr, rotation
+                    )
+
+                    # Create unique test attribute
+                    test_key = f"test_{uuid.uuid4().hex[:8]}"
+                    test_value = uuid.uuid4().hex
+
+                    # Get the source center slice and set attribute (using LTR coords)
+                    source_slice_edge = _get_center_slice_edge_by_ltr(
+                        source_face, src_ltr_y, src_ltr_x
+                    )
+                    source_slice_edge.c_attributes[test_key] = test_value
+
+                    # Call the communicator helper (with LTR coordinates)
+                    # Some (position, rotation) combinations are unsupported:
+                    # - "cannot be handled": position has column intersection with both F directions
+                    # - "Cannot align": source/target blocks in different rotation orbits
+                    # - Edge disturbance: M slice gap < 2 for specific source/position combos
+                    # These are algorithm limitations, not bugs.
+                    try:
+                        helper.do_communicator(
+                            source=source_face,
+                            target=target_face,
+                            target_block=((ltr_y, ltr_x), (ltr_y, ltr_x)),
+                            source_block=((src_ltr_y, src_ltr_x), (src_ltr_y, src_ltr_x)),
+                            preserve_state=True
                         )
-                        # Rotate on SOURCE face (physical rotation)
-                        src_ltr_y, src_ltr_x = helper.rotate_ltr_on_face(
-                            source_face, expected_src_ltr, rotation
-                        )
-
-                        # Create unique test attribute
-                        test_key = f"test_{uuid.uuid4().hex[:8]}"
-                        test_value = uuid.uuid4().hex
-
-                        # Get the source center slice and set attribute (using LTR coords)
-                        source_slice_edge = _get_center_slice_edge_by_ltr(
-                            source_face, src_ltr_y, src_ltr_x
-                        )
-                        source_slice_edge.c_attributes[test_key] = test_value
-
-                        # Call the communicator helper (with LTR coordinates)
-                        # Some (position, rotation) combinations are unsupported:
-                        # - "cannot be handled": position has column intersection with both F directions
-                        # - "Cannot align": source/target blocks in different rotation orbits
-                        # - Edge disturbance: M slice gap < 2 for specific source/position combos
-                        # These are algorithm limitations, not bugs.
-                        try:
-                            helper.do_communicator(
-                                source=source_face,
-                                target=target_face,
-                                target_block=((ltr_y, ltr_x), (ltr_y, ltr_x)),
-                                source_block=((src_ltr_y, src_ltr_x), (src_ltr_y, src_ltr_x)),
-                                preserve_state=True
-                            )
-                        except ValueError as e:
-                            error_msg = str(e)
-                            if ("cannot be handled" in error_msg or
+                    except ValueError as e:
+                        error_msg = str(e)
+                        if ("cannot be handled" in error_msg or
                                 "Cannot align" in error_msg):
-                                # Clean up and skip this unsupported combination
-                                del source_slice_edge.c_attributes[test_key]
-                                continue
-                            raise
+                            # Clean up and skip this unsupported combination
+                            del source_slice_edge.c_attributes[test_key]
+                            continue
+                        raise
 
-                        # Check cube state - inner positions on even cubes may have
-                        # edge disturbance with certain source/rotation combinations
-                        edges_reduced = all(e.is3x3 for e in cube.edges)
-                        edges_positioned = all(e.match_faces for e in cube.edges)
-                        corners_positioned = all(c.match_faces for c in cube.corners)
-                        state_preserved = edges_reduced and edges_positioned and corners_positioned
+                    # Check cube state - inner positions on even cubes may have
+                    # edge disturbance with certain source/rotation combinations
+                    edges_reduced = all(e.is3x3 for e in cube.edges)
+                    edges_positioned = all(e.match_faces for e in cube.edges)
+                    corners_positioned = all(c.match_faces for c in cube.corners)
+                    state_preserved = edges_reduced and edges_positioned and corners_positioned
 
-                        # For inner positions on even cubes, certain source/rotation combinations
-                        # cause edge disturbance due to slice gap < 2. This affects both:
-                        # - M-slice sources (Up/Down/Back): column gap issues
-                        # - E-slice sources (Left/Right): row gap issues
-                        # Each inner position works with at least one source/rotation combo.
-                        is_inner = _is_inner_center_position(n_slices, ltr_y, ltr_x)
+                    # For inner positions on even cubes, certain source/rotation combinations
+                    # cause edge disturbance due to slice gap < 2. This affects both:
+                    # - M-slice sources (Up/Down/Back): column gap issues
+                    # - E-slice sources (Left/Right): row gap issues
+                    # Each inner position works with at least one source/rotation combo.
+                    is_inner = _is_inner_center_position(n_slices, ltr_y, ltr_x)
 
-                        if not state_preserved:
-                            # Clean up attribute before continuing
-                            if test_key in source_slice_edge.c_attributes:
-                                del source_slice_edge.c_attributes[test_key]
-                            target_slice_edge = _get_center_slice_edge_by_ltr(
-                                target_face, ltr_y, ltr_x
-                            )
-                            if test_key in target_slice_edge.c_attributes:
-                                del target_slice_edge.c_attributes[test_key]
-
-                            # Inner positions have known issues with certain source/rotation combos
-                            # (slice gap < 2). Each position works with at least one source.
-                            if is_inner:
-                                continue  # Known limitation, skip
-
-                            # For other cases, this is unexpected - fail the test
-                            bad_edges = [e.name for e in cube.edges
-                                         if not e.match_faces or not e.is3x3]
-                            bad_corners = [str(i) for i, c in enumerate(cube.corners)
-                                          if not c.match_faces]
-                            assert False, (
-                                f"Cube state NOT preserved: "
-                                f"source={source_face.name.name}, target={target_face.name.name}, "
-                                f"pos=({ltr_y},{ltr_x}), rotation={rotation}, "
-                                f"src_ltr=({src_ltr_y},{src_ltr_x}), "
-                                f"edges_reduced={edges_reduced}, edges_pos={edges_positioned}, "
-                                f"corners_pos={corners_positioned}, "
-                                f"bad_edges={bad_edges}, bad_corners={bad_corners}"
-                            )
-
-                        # Verify attribute moved to target (using LTR coords)
+                    if not state_preserved:
+                        # Clean up attribute before continuing
+                        if test_key in source_slice_edge.c_attributes:
+                            del source_slice_edge.c_attributes[test_key]
                         target_slice_edge = _get_center_slice_edge_by_ltr(
                             target_face, ltr_y, ltr_x
                         )
-                        assert test_key in target_slice_edge.c_attributes, \
-                            f"Attribute should be on target ({target_face.name}, " \
-                            f"ltr_y={ltr_y}, ltr_x={ltr_x})"
-                        assert target_slice_edge.c_attributes[test_key] == test_value, \
-                            "Attribute value should match on target"
-
-                        # Verify attribute no longer on source
-                        source_slice_edge = _get_center_slice_edge_by_ltr(
-                            source_face, src_ltr_y, src_ltr_x
-                        )
-                        assert test_key not in source_slice_edge.c_attributes, \
-                            f"Attribute should NOT be on source ({source_face.name}, " \
-                            f"ltr_y={src_ltr_y}, ltr_x={src_ltr_x})"
-
-                        # Clean up: remove the test attribute for next iteration
                         if test_key in target_slice_edge.c_attributes:
                             del target_slice_edge.c_attributes[test_key]
+
+                        # Inner positions have known issues with certain source/rotation combos
+                        # (slice gap < 2). Each position works with at least one source.
+                        if is_inner:
+                            continue  # Known limitation, skip
+
+                        # For other cases, this is unexpected - fail the test
+                        bad_edges = [e.name for e in cube.edges
+                                     if not e.match_faces or not e.is3x3]
+                        bad_corners = [str(i) for i, c in enumerate(cube.corners)
+                                       if not c.match_faces]
+                        assert False, (
+                            f"Cube state NOT preserved: "
+                            f"source={source_face.name.name}, target={target_face.name.name}, "
+                            f"pos=({ltr_y},{ltr_x}), rotation={rotation}, "
+                            f"src_ltr=({src_ltr_y},{src_ltr_x}), "
+                            f"edges_reduced={edges_reduced}, edges_pos={edges_positioned}, "
+                            f"corners_pos={corners_positioned}, "
+                            f"bad_edges={bad_edges}, bad_corners={bad_corners}"
+                        )
+
+                    # Verify attribute moved to target (using LTR coords)
+                    target_slice_edge = _get_center_slice_edge_by_ltr(
+                        target_face, ltr_y, ltr_x
+                    )
+                    assert test_key in target_slice_edge.c_attributes, \
+                        f"Attribute should be on target ({target_face.name}, " \
+                        f"ltr_y={ltr_y}, ltr_x={ltr_x})"
+                    assert target_slice_edge.c_attributes[test_key] == test_value, \
+                        "Attribute value should match on target"
+
+                    # Verify attribute no longer on source
+                    source_slice_edge = _get_center_slice_edge_by_ltr(
+                        source_face, src_ltr_y, src_ltr_x
+                    )
+                    assert test_key not in source_slice_edge.c_attributes, \
+                        f"Attribute should NOT be on source ({source_face.name}, " \
+                        f"ltr_y={src_ltr_y}, ltr_x={src_ltr_x})"
+
+                    # Clean up: remove the test attribute for next iteration
+                    if test_key in target_slice_edge.c_attributes:
+                        del target_slice_edge.c_attributes[test_key]
 
 
 @pytest.mark.parametrize("cube_size", [5])
@@ -452,5 +450,3 @@ def test_communicator_raises_on_incompatible_blocks(cube_size: int) -> None:
             source_block=source_block,
             preserve_state=True
         )
-
-
