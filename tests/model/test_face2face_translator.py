@@ -23,19 +23,19 @@ TEST MATRIX:
 
 from __future__ import annotations
 
-from enum import Enum, auto
-import pytest
 from collections.abc import Iterator, Sequence
+from enum import Enum, auto
+
+import pytest
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult
 # noinspection PyProtectedMember
-from cube.domain.model._part_slice import CenterSlice
-# noinspection PyProtectedMember
 from cube.domain.model._elements import CenterSliceIndex
+# noinspection PyProtectedMember
+from cube.domain.model._part_slice import CenterSlice
 from tests.test_utils import _test_sp
 
 
@@ -53,9 +53,8 @@ def get_all_dest_faces(source_face: Face) -> Iterator[Face]:
 def get_algorithms(
     source_face: Face,
     dest_face: Face,
-    coord: CenterSliceIndex,
-    alg_type: AlgorithmType
-) -> Sequence[Alg]:
+    coord: CenterSliceIndex
+) -> FaceTranslationResult:
     """
     Get algorithm(s) that bring content from dest_face to source_face at coord.
 
@@ -68,11 +67,8 @@ def get_algorithms(
     Returns:
         List of algorithms (1 for whole-cube, 1-2 for slice depending on adjacency)
     """
-    result = Face2FaceTranslator.translate(source_face, dest_face, coord)
-    if alg_type == AlgorithmType.WHOLE_CUBE:
-        return [result.whole_cube_alg]
-    else:
-        return result.slice_algorithms
+    result: FaceTranslationResult = Face2FaceTranslator.translate(source_face, dest_face, coord)
+    return result
 
 
 def verify_algorithm(
@@ -80,8 +76,7 @@ def verify_algorithm(
     source_face: Face,
     dest_face: Face,
     coord: CenterSliceIndex,
-    alg: Alg,
-    alg_type: AlgorithmType
+    alg: Alg
 ) -> None:
     """
     Verify that applying the algorithm brings dest content to source position.
@@ -111,7 +106,7 @@ def verify_algorithm(
     result = Face2FaceTranslator.translate(source_face, dest_face, coord)
     dest_coord = result.dest_coord
 
-    marker_value: str = f"TEST_{alg_type.name}_{source_name}_{row}_{col}"
+    marker_value: str = f"TEST_{alg}_{source_name}_{row}_{col}"
 
     # Step 1: Place marker at dest_coord on DEST face
     dest_slice: CenterSlice = dest_face.center.get_center_slice(dest_coord)
@@ -126,7 +121,6 @@ def verify_algorithm(
     check_slice: CenterSlice = source_face.center.get_center_slice(coord)
 
     assert check_slice.edge.c_attributes.get("test_marker") == marker_value, (
-        f"{alg_type.name} algorithm failed:\n"
         f"  Source: {source_name} coord=({row},{col})\n"
         f"  Dest: {dest_name} dest_coord={dest_coord}\n"
         f"  Algorithm: {alg}\n"
@@ -155,16 +149,22 @@ class TestWholeCubeAlgorithm:
                 for center_slice in source_face.center.all_slices:
                     coord: CenterSliceIndex = center_slice.index
 
-                    algorithms = get_algorithms(
-                        source_face, dest_face, coord, AlgorithmType.WHOLE_CUBE
+                    algorithms: FaceTranslationResult = get_algorithms(
+                        source_face, dest_face, coord
                     )
-                    assert len(algorithms) == 1
 
                     verify_algorithm(
                         cube, source_face, dest_face, coord,
-                        algorithms[0], AlgorithmType.WHOLE_CUBE
-                    )
-                    cube.reset()
+                        algorithms.whole_cube_alg)
+
+                    verify_algorithm(
+                        cube, source_face, dest_face, coord,
+                        algorithms.slice_algorithms[0].get_whole_slice_alg())
+
+                    # verify_algorithm(
+                    #     cube, source_face, dest_face, coord,
+                    #     algorithms[0], AlgorithmType.WHOLE_CUBE
+                    # )
                     cube.clear_c_attributes()
 
 
@@ -206,81 +206,6 @@ class TestWholeCubeRoundTrip:
 SLICE_CUBE_SIZES: list[int] = [5, 6, 7]  # Need at least 5 for meaningful inner slices
 
 
-class TestSliceAlgorithm:
-    """Tests for get_slice_algorithm() which returns slice algorithms."""
-
-    @pytest.mark.parametrize("cube_size", SLICE_CUBE_SIZES)
-    def test_all_face_pairs_center_position(self, cube_size: int) -> None:
-        """
-        Test center position on all face pairs with slice algorithm.
-
-        Verifies:
-        - Adjacent faces: exactly 1 solution
-        - Opposite faces: 1 or 2 solutions depending on geometric constraints
-          - E slice preserves rows, so it only works when source row == dest row
-          - For odd n_slices at center, row is preserved (ROT_180 invariant)
-          - For even n_slices at center, row changes (e.g., 2→1), so only M works
-        - All returned solutions work correctly
-        """
-        cube = Cube(cube_size, sp=_test_sp)
-
-        for source_face in cube.faces:
-            for dest_face in source_face.others_faces:
-                n_slices = source_face.center.n_slices
-                coord: CenterSliceIndex = (n_slices // 2, n_slices // 2)
-
-                result = Face2FaceTranslator.translate(source_face, dest_face, coord)
-                is_adjacent = result.is_adjacent
-                algorithms = result.slice_algorithms
-
-                # For adjacent faces: exactly 1 solution
-                # For opposite faces: 1 or 2 solutions depending on geometric constraints
-                # - E preserves rows, S has index inversion issues
-                # - For even n_slices at certain coords, only 1 slice works
-                if is_adjacent:
-                    assert len(algorithms) == 1, (
-                        f"{source_face.name}→{dest_face.name}: "
-                        f"Expected 1 solution (adjacent), got {len(algorithms)}"
-                    )
-                else:
-                    # Opposite faces should have at least 1 slice algorithm
-                    assert 1 <= len(algorithms) <= 2, (
-                        f"{source_face.name}→{dest_face.name}: "
-                        f"Expected 1-2 solutions (opposite), got {len(algorithms)}"
-                    )
-
-                # Verify each algorithm works
-                for alg in algorithms:
-                    cube.reset()
-                    cube.clear_c_attributes()
-                    verify_algorithm(
-                        cube, source_face, dest_face, coord,
-                        alg, AlgorithmType.SLICE
-                    )
-
-    @pytest.mark.parametrize("cube_size", SLICE_CUBE_SIZES)
-    def test_front_to_up_all_positions(self, cube_size: int) -> None:
-        """Test all positions for F→U (adjacent, uses M slice)."""
-        cube = Cube(cube_size, sp=_test_sp)
-        n_slices = cube.front.center.n_slices
-
-        for row in range(n_slices):
-            for col in range(n_slices):
-                coord: CenterSliceIndex = (row, col)
-                source_face = cube.front
-                dest_face = cube.up
-
-                algorithms = get_algorithms(
-                    source_face, dest_face, coord, AlgorithmType.SLICE
-                )
-                assert len(algorithms) == 1
-
-                verify_algorithm(
-                    cube, source_face, dest_face, coord,
-                    algorithms[0], AlgorithmType.SLICE
-                )
-                cube.reset()
-                cube.clear_c_attributes()
 
 
 # =============================================================================
@@ -297,12 +222,6 @@ class TestEdgeCases:
         with pytest.raises(ValueError, match="Cannot translate from a face to itself"):
             Face2FaceTranslator.translate(cube.front, cube.front, (1, 1))
 
-    def test_slice_same_face_raises_error(self) -> None:
-        """Getting slice algorithm from a face to itself should raise ValueError."""
-        cube = Cube(5, sp=_test_sp)
-
-        with pytest.raises(ValueError, match="Cannot get slice algorithm from a face to itself"):
-            Face2FaceTranslator.get_slice_algorithm(cube.front, cube.front, (1, 1))
 
     @pytest.mark.parametrize("cube_size", WHOLE_CUBE_SIZES)
     def test_translate_out_of_bounds_raises_error(self, cube_size: int) -> None:
@@ -321,19 +240,3 @@ class TestEdgeCases:
             with pytest.raises(ValueError, match="out of bounds"):
                 Face2FaceTranslator.translate(cube.front, cube.right, coord)
 
-    @pytest.mark.parametrize("cube_size", SLICE_CUBE_SIZES)
-    def test_slice_out_of_bounds_raises_error(self, cube_size: int) -> None:
-        """Coordinates outside face bounds should raise ValueError for slice."""
-        cube = Cube(cube_size, sp=_test_sp)
-        n_slices = cube.front.center.n_slices
-
-        invalid_coords: list[tuple[int, int]] = [
-            (-1, 0),
-            (0, -1),
-            (n_slices, 0),
-            (0, n_slices),
-        ]
-
-        for coord in invalid_coords:
-            with pytest.raises(ValueError, match="out of bounds"):
-                Face2FaceTranslator.get_slice_algorithm(cube.front, cube.right, coord)

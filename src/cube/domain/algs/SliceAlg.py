@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Collection, Iterable, Tuple, final
 
 from cube.domain.algs._internal_utils import _inv
@@ -9,7 +9,6 @@ from cube.domain.model.cube_slice import SliceName
 
 
 class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
-
     """
     How M, S and E are sliced:
 
@@ -54,7 +53,7 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         Return the face that defines the positive rotation direction for this slice.
 
         This is the face that the slice rotates "over" - when the slice rotates,
-        it moves content in the same direction as rotating i think that face clockwise
+        it moves content in the same direction as rotating I think that face clockwise
         (viewed from outside the cube looking at that face).
 
         In terms of the LTR coordinate system (see docs/face-coordinate-system/):
@@ -84,6 +83,11 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
             case _:
                 raise RuntimeError(f"Unknown Slice {self._slice_name}")
 
+    @abstractmethod
+    def get_base_alg(self) -> SliceAbleAlg:
+        """ return whole slice alg that is not yet sliced"""
+        pass
+
 
 @final
 class _M(SliceAlg):
@@ -91,6 +95,9 @@ class _M(SliceAlg):
     def __init__(self) -> None:
         super().__init__(SliceName.M)
 
+    def get_base_alg(self) -> SliceAbleAlg:
+        from cube.domain.algs.Algs import Algs
+        return Algs.M
 
 
 @final
@@ -102,6 +109,11 @@ class _E(SliceAlg):
     def __init__(self) -> None:
         super().__init__(SliceName.E)
 
+    def get_base_alg(self) -> SliceAbleAlg:
+        from cube.domain.algs.Algs import Algs
+        return Algs.E
+
+
 @final
 class _S(SliceAlg):
     """
@@ -110,3 +122,7 @@ class _S(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.S)
+
+    def get_base_alg(self) -> SliceAbleAlg:
+        from cube.domain.algs.Algs import Algs
+        return Algs.E

@@ -47,11 +47,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 
-from cube.domain.algs import Algs
+from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
+from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.SliceAlg import SliceAlg
+from cube.domain.model.CubeLayout import CubeLayout
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
@@ -88,45 +90,45 @@ class TransformType(Enum):
 #
 _TRANSFORMATION_TABLE: dict[tuple[FaceName, FaceName], TransformType] = {
     # B face transitions
-    (FaceName.B, FaceName.D): TransformType.ROT_180,    # via X
-    (FaceName.B, FaceName.F): TransformType.ROT_180,    # via X2
-    (FaceName.B, FaceName.L): TransformType.IDENTITY,   # via Y'
-    (FaceName.B, FaceName.R): TransformType.IDENTITY,   # via Y
-    (FaceName.B, FaceName.U): TransformType.ROT_180,    # via X'
+    (FaceName.B, FaceName.D): TransformType.ROT_180,  # via X
+    (FaceName.B, FaceName.F): TransformType.ROT_180,  # via X2
+    (FaceName.B, FaceName.L): TransformType.IDENTITY,  # via Y'
+    (FaceName.B, FaceName.R): TransformType.IDENTITY,  # via Y
+    (FaceName.B, FaceName.U): TransformType.ROT_180,  # via X'
 
     # D face transitions
-    (FaceName.D, FaceName.B): TransformType.ROT_180,    # via X'
-    (FaceName.D, FaceName.F): TransformType.IDENTITY,   # via X
+    (FaceName.D, FaceName.B): TransformType.ROT_180,  # via X'
+    (FaceName.D, FaceName.F): TransformType.IDENTITY,  # via X
     (FaceName.D, FaceName.L): TransformType.ROT_90_CW,  # via Z
-    (FaceName.D, FaceName.R): TransformType.ROT_90_CCW, # via Z'
-    (FaceName.D, FaceName.U): TransformType.IDENTITY,   # via X2
+    (FaceName.D, FaceName.R): TransformType.ROT_90_CCW,  # via Z'
+    (FaceName.D, FaceName.U): TransformType.IDENTITY,  # via X2
 
     # F face transitions
-    (FaceName.F, FaceName.B): TransformType.ROT_180,    # via X2
-    (FaceName.F, FaceName.D): TransformType.IDENTITY,   # via X'
-    (FaceName.F, FaceName.L): TransformType.IDENTITY,   # via Y
-    (FaceName.F, FaceName.R): TransformType.IDENTITY,   # via Y'
-    (FaceName.F, FaceName.U): TransformType.IDENTITY,   # via X
+    (FaceName.F, FaceName.B): TransformType.ROT_180,  # via X2
+    (FaceName.F, FaceName.D): TransformType.IDENTITY,  # via X'
+    (FaceName.F, FaceName.L): TransformType.IDENTITY,  # via Y
+    (FaceName.F, FaceName.R): TransformType.IDENTITY,  # via Y'
+    (FaceName.F, FaceName.U): TransformType.IDENTITY,  # via X
 
     # L face transitions
-    (FaceName.L, FaceName.B): TransformType.IDENTITY,   # via Y
-    (FaceName.L, FaceName.D): TransformType.ROT_90_CCW, # via Z'
-    (FaceName.L, FaceName.F): TransformType.IDENTITY,   # via Y'
-    (FaceName.L, FaceName.R): TransformType.IDENTITY,   # via Y2
+    (FaceName.L, FaceName.B): TransformType.IDENTITY,  # via Y
+    (FaceName.L, FaceName.D): TransformType.ROT_90_CCW,  # via Z'
+    (FaceName.L, FaceName.F): TransformType.IDENTITY,  # via Y'
+    (FaceName.L, FaceName.R): TransformType.IDENTITY,  # via Y2
     (FaceName.L, FaceName.U): TransformType.ROT_90_CW,  # via Z
 
     # R face transitions
-    (FaceName.R, FaceName.B): TransformType.IDENTITY,   # via Y'
+    (FaceName.R, FaceName.B): TransformType.IDENTITY,  # via Y'
     (FaceName.R, FaceName.D): TransformType.ROT_90_CW,  # via Z
-    (FaceName.R, FaceName.F): TransformType.IDENTITY,   # via Y
-    (FaceName.R, FaceName.L): TransformType.IDENTITY,   # via Y2
-    (FaceName.R, FaceName.U): TransformType.ROT_90_CCW, # via Z'
+    (FaceName.R, FaceName.F): TransformType.IDENTITY,  # via Y
+    (FaceName.R, FaceName.L): TransformType.IDENTITY,  # via Y2
+    (FaceName.R, FaceName.U): TransformType.ROT_90_CCW,  # via Z'
 
     # U face transitions
-    (FaceName.U, FaceName.B): TransformType.ROT_180,    # via X
-    (FaceName.U, FaceName.D): TransformType.IDENTITY,   # via X2
-    (FaceName.U, FaceName.F): TransformType.IDENTITY,   # via X'
-    (FaceName.U, FaceName.L): TransformType.ROT_90_CCW, # via Z'
+    (FaceName.U, FaceName.B): TransformType.ROT_180,  # via X
+    (FaceName.U, FaceName.D): TransformType.IDENTITY,  # via X2
+    (FaceName.U, FaceName.F): TransformType.IDENTITY,  # via X'
+    (FaceName.U, FaceName.L): TransformType.ROT_90_CCW,  # via Z'
     (FaceName.U, FaceName.R): TransformType.ROT_90_CW,  # via Z
 }
 
@@ -168,7 +170,7 @@ class FaceTranslationResult:
 
     dest_coord: tuple[int, int]
     whole_cube_alg: Alg
-    slice_algorithms: list[Alg]
+    slice_algorithms: list[SliceAlgorithmResult]
     shared_edge: Edge | None
 
     @property
@@ -179,34 +181,19 @@ class FaceTranslationResult:
 
 @dataclass(frozen=True)
 class SliceAlgorithmResult:
-    """
-    Result of finding slice algorithm(s) to bring destination face content to source position.
+    whole_slice_alg: SliceAlg  # not sliced
+    on_slice: int  # on which slice to operate
+    n: int  # n rotations
 
-    A slice algorithm (M, E, or S with specific index) rotates an inner layer that,
-    when applied, brings content from dest_face to cover the position at coord on source_face.
+    def get_alg(self) -> Alg:
+        return self.whole_slice_alg[self.on_slice] * self.n
 
-    Attributes:
-        algorithms: List of Alg objects. Each algorithm brings dest content to source.
-                   - Adjacent faces: exactly 1 algorithm (single path)
-                   - Opposite faces: exactly 2 algorithms (two possible paths)
+    def get_whole_slice_alg(self) -> Alg:
+        return self.whole_slice_alg * self.n
 
-        source_face_name: The face where we want the content to arrive.
-        dest_face_name: The face where the content originates.
-        coord: The (row, col) position on source_face.
+    def get_slice_alg(self, slice_index) -> Alg:
+        return self.whole_slice_alg[slice_index] * self.n
 
-    Example::
-
-        result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.up, (1, 1))
-        # result.algorithms[0] = M[2]  # M slice at column 2 brings U content to F
-        len(result.algorithms) == 1  # Adjacent faces have 1 solution
-
-        result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.back, (1, 1))
-        len(result.algorithms) == 2  # Opposite faces have 2 solutions (M or E)
-    """
-    algorithms: list[Alg]
-    source_face_name: FaceName
-    dest_face_name: FaceName
-    coord: tuple[int, int]
 
 
 # =============================================================================
@@ -229,9 +216,9 @@ _Z_CYCLE: list[FaceName] = [FaceName.L, FaceName.U, FaceName.R, FaceName.D]  # Z
 
 
 def _apply_transform(
-    coord: tuple[int, int],
-    transform_type: TransformType,
-    n: int
+        coord: tuple[int, int],
+        transform_type: TransformType,
+        n: int
 ) -> tuple[int, int]:
     """
     Apply a coordinate transformation.
@@ -251,16 +238,16 @@ def _apply_transform(
 
     match transform_type:
         case TransformType.IDENTITY:
-            return (row, col)
+            return row, col
         case TransformType.ROT_90_CW:
-            return (inv(col), row)
+            return inv(col), row
         case TransformType.ROT_90_CCW:
-            return (col, inv(row))
+            return col, inv(row)
         case TransformType.ROT_180:
-            return (inv(row), inv(col))
+            return inv(row), inv(col)
 
 
-def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Alg:
+def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Tuple[WholeCubeAlg, int, Alg]:
     """
     Derive the whole-cube algorithm that brings dest to source's screen position.
 
@@ -271,7 +258,7 @@ def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Alg:
     - We need (dest_idx + steps) % 4 == src_idx
     - Therefore: steps = (src_idx - dest_idx) % 4
     """
-    whole_cube_alg: Alg
+    whole_cube_alg: WholeCubeAlg
     for cycle, whole_cube_alg in [(_X_CYCLE, Algs.X), (_Y_CYCLE, Algs.Y), (_Z_CYCLE, Algs.Z)]:
         if source in cycle and dest in cycle:
             src_idx = cycle.index(source)
@@ -280,13 +267,11 @@ def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Alg:
             steps = (src_idx - dst_idx) % 4
             if steps == 0:
                 # source == dest (shouldn't happen, but handle gracefully)
+                raise InternalSWError("dource == dest")
                 return Algs.no_op()
-            elif steps == 1:
-                return whole_cube_alg
-            elif steps == 2:
-                return whole_cube_alg * 2
-            elif steps == 3:
-                return whole_cube_alg.prime
+
+            return whole_cube_alg, steps, whole_cube_alg * steps
+
 
     # Should never reach here for valid face pairs
     raise ValueError(f"No rotation cycle contains both {source} and {dest}")
@@ -310,9 +295,9 @@ class Face2FaceTranslator:
 
     @staticmethod
     def translate(
-        source_face: Face,
-        dest_face: Face,
-        coord: tuple[int, int]
+            source_face: Face,
+            dest_face: Face,
+            coord: tuple[int, int]
     ) -> FaceTranslationResult:
         """
         Translate a coordinate from source_face to dest_face.
@@ -353,7 +338,7 @@ class Face2FaceTranslator:
         dest_name = dest_face.name
 
         # Derive whole-cube algorithm dynamically from rotation cycles
-        whole_cube_alg = _derive_whole_cube_alg(source_name, dest_name)
+        whole_cube_base_alg, whole_cube_base_n, whole_cube_alg = _derive_whole_cube_alg(source_name, dest_name)
 
         # Get the transformation type from the empirically-derived table
         transform_type = _TRANSFORMATION_TABLE[(source_name, dest_name)]
@@ -366,7 +351,7 @@ class Face2FaceTranslator:
 
         # Compute slice algorithms
         slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
-            source_name, dest_name, coord, n_slices
+            source_name, dest_name, coord, n_slices, whole_cube_base_alg, whole_cube_base_n
         )
 
         return FaceTranslationResult(
@@ -387,57 +372,14 @@ class Face2FaceTranslator:
 
         return face1.find_shared_edge(face2)
 
-
-    @staticmethod
-    def get_slice_algorithm(
-        source_face: Face,
-        dest_face: Face,
-        coord: tuple[int, int]
-    ) -> SliceAlgorithmResult:
-        """
-        Get slice algorithm(s) that bring content from dest_face to source_face at coord.
-
-        This is a convenience wrapper around translate() that returns just the slice info.
-
-        Args:
-            source_face: The face where we want the content to arrive
-            dest_face: The face where the content currently is
-            coord: (row, col) position on source_face (0-indexed)
-
-        Returns:
-            SliceAlgorithmResult with:
-            - 1 algorithm for adjacent faces (single path)
-            - 2 algorithms for opposite faces (two possible paths)
-
-        Raises:
-            ValueError: If source_face == dest_face
-            ValueError: If coord is out of bounds
-
-        Example::
-
-            result = Face2FaceTranslator.get_slice_algorithm(cube.front, cube.up, (1, 1))
-            result.algorithms[0].algorithm.play(cube)  # Brings U content to F at (1,1)
-        """
-        if source_face is dest_face:
-            raise ValueError("Cannot get slice algorithm from a face to itself")
-
-        # Delegate to translate() and extract slice algorithms
-        result = Face2FaceTranslator.translate(source_face, dest_face, coord)
-
-        return SliceAlgorithmResult(
-            algorithms=result.slice_algorithms,
-            source_face_name=source_face.name,
-            dest_face_name=dest_face.name,
-            coord=coord,
-        )
-
-    @staticmethod
     def _compute_slice_algorithms(
-        source_name: FaceName,
-        dest_name: FaceName,
-        coord: tuple[int, int],
-        n_slices: int
-    ) -> list[Alg]:
+            source_name: FaceName,
+            dest_name: FaceName,
+            coord: tuple[int, int],
+            n_slices: int,
+            whole_cube_base_alg: WholeCubeAlg,
+            whole_cube_base_n: int
+    ) -> list[SliceAlgorithmResult]:
         """
         Compute slice algorithm(s) that bring content from dest to source at coord.
 
@@ -454,8 +396,24 @@ class Face2FaceTranslator:
         Returns:
             List of Alg objects (M, E, or S slice algorithms)
         """
+
+        # a patch just to prove ####
+
+        whole_on_face: FaceName = whole_cube_base_alg.get_face_name()
+
+        slice_alg:SliceAlg
+
+        for slice_alg in [Algs.S, Algs.M, Algs.E]:
+            slice_alg_face_name = slice_alg.get_face_name()
+            if whole_on_face == slice_alg_face_name:
+                return [SliceAlgorithmResult(slice_alg, 0, whole_cube_base_n)]
+            elif whole_on_face is CubeLayout.opposite(slice_alg_face_name):
+                return [SliceAlgorithmResult(slice_alg, 0, -whole_cube_base_n)]
+
+        raise InternalSWError(f"Didnt find SliceAlg for {whole_cube_base_alg}")
+
         row, col = coord
-        algorithms: list[Alg] = []
+        algorithms: list[SliceAlgorithmResult] = []
 
         # Compute dest_coord to check geometric constraints
         transform_type = _TRANSFORMATION_TABLE[(source_name, dest_name)]
@@ -464,8 +422,8 @@ class Face2FaceTranslator:
 
         # Each tuple: (cycle, slice_name, base_alg, opposite_direction)
         all_cycles: list[tuple[list[FaceName], SliceName, SliceAlg, bool]] = [
-            (_X_CYCLE, SliceName.M, Algs.M, True),   # M opposite to X
-            (_Y_CYCLE, SliceName.E, Algs.E, True),   # E opposite to Y
+            (_X_CYCLE, SliceName.M, Algs.M, True),  # M opposite to X
+            (_Y_CYCLE, SliceName.E, Algs.E, True),  # E opposite to Y
             (_Z_CYCLE, SliceName.S, Algs.S, False),  # S same as Z
         ]
 
@@ -482,6 +440,8 @@ class Face2FaceTranslator:
                 # S[i] affects: L col = n_slices - i, R col = i - 1
                 # These match only when i = (n_slices + 1) / 2, which requires odd n_slices
                 # For even n_slices at non-symmetric positions, S cannot work
+
+                source_slice_idx = None
                 if slice_name == SliceName.S:
                     source_slice_idx = Face2FaceTranslator._get_slice_index(
                         source_name, slice_name, coord, n_slices
@@ -511,14 +471,14 @@ class Face2FaceTranslator:
                     continue
 
                 # Create the slice algorithm with proper direction
-                slice_alg = base_slice_alg[source_slice_index]
-                final_alg: Alg
+                final_alg: SliceAlgorithmResult
+                assert source_slice_idx is not None
                 if steps == 1:
-                    final_alg = slice_alg
+                    final_alg = SliceAlgorithmResult(base_slice_alg, source_slice_idx, 1)
                 elif steps == 2:
-                    final_alg = slice_alg * 2
+                    final_alg = SliceAlgorithmResult(base_slice_alg, source_slice_idx, 2)
                 else:  # steps == 3
-                    final_alg = slice_alg.prime
+                    final_alg = SliceAlgorithmResult(base_slice_alg, source_slice_idx, -1)
 
                 algorithms.append(final_alg)
 
@@ -526,10 +486,10 @@ class Face2FaceTranslator:
 
     @staticmethod
     def _get_slice_index(
-        face_name: FaceName,
-        slice_name: SliceName,
-        coord: tuple[int, int],
-        n_slices: int
+            face_name: FaceName,
+            slice_name: SliceName,
+            coord: tuple[int, int],
+            n_slices: int
     ) -> int:
         """
         Determine which slice index corresponds to the coordinate on the given face.
@@ -591,4 +551,3 @@ class Face2FaceTranslator:
 
             case _:
                 raise ValueError(f"Unknown slice name: {slice_name}")
-
