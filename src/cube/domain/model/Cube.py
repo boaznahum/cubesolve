@@ -407,7 +407,8 @@ class Cube(CubeSupplier):
         f._edge_right = r._edge_left = _create_edge(edges, f, r, True)
         f._edge_bottom = d._edge_top = _create_edge(edges, f, d, True)
 
-        l._edge_top = u._edge_left = _create_edge(edges, l, u, False)
+        # Note: u must be f1 for consistency with u._edge_top (U-B edge) - see Issue #53
+        l._edge_top = u._edge_left = _create_edge(edges, u, l, False)
         l._edge_bottom = d._edge_left = _create_edge(edges, l, d, True)
 
         d._edge_right = r._edge_bottom = _create_edge(edges, d, r, False)
@@ -755,6 +756,55 @@ class Cube(CubeSupplier):
 
         for f in self.faces:
             f.reset_after_faces_changes()
+
+    def clear_c_attributes(self) -> None:
+        """
+        Clear all color-associated attributes (c_attributes) from all cube parts.
+
+        c_attributes are markers/flags that move WITH the colors during rotations.
+        Unlike structural attributes, c_attributes follow stickers as they move around
+        the cube during face rotations.
+
+        This method clears c_attributes on:
+        - All Centers (via center slices)
+        - All Edges (via edge slices/wings)
+        - All Corners (via corner slices)
+
+        Use Cases
+        ---------
+        - Clearing test markers between test iterations
+        - Resetting debug annotations without full cube reset()
+        - Removing tracking markers after algorithm analysis
+
+        Example
+        -------
+        >>> cube = Cube(3)
+        >>> # Add a marker to front center
+        >>> cube.front.center.get_center_slice((1,1)).c_attributes["marker"] = "X"
+        >>> # Do some operations...
+        >>> cube.front.rotate(1)
+        >>> # Clear all markers
+        >>> cube.clear_c_attributes()
+        >>> # All c_attributes are now empty
+
+        Notes
+        -----
+        This does NOT affect:
+        - Cube colors (use reset() for that)
+        - Structural attributes (edge.attributes) which stay with positions
+        - Cube state or solution status
+
+        See Also
+        --------
+        reset : Full cube reset to solved state (also clears c_attributes via new objects)
+        PartEdge : Has both attributes (positional) and c_attributes (color-following)
+        """
+        for edge in self.edges:
+            edge.clear_c_attributes()
+        for corner in self.corners:
+            corner.clear_c_attributes()
+        for center in self.centers:
+            center.clear_c_attributes()
 
     def x_rotate(self, n):
         """
@@ -1447,6 +1497,27 @@ class Cube(CubeSupplier):
         - All internal objects (faces, parts, slices) are recreated
         - Previous cube state is completely discarded
 
+        **IMPORTANT - Stale References:**
+        After reset(), ALL internal objects (Face, Edge, Part, Slice) are NEW instances.
+        Any references held by client code become stale and point to orphaned objects.
+
+        Example of the bug::
+
+            # WRONG - holds stale references after reset:
+            for source_face in cube.faces:  # Gets face references
+                for dest_face in ...:
+                    # ... do something ...
+                    cube.reset()  # Creates NEW face objects!
+                    # source_face and dest_face are now STALE - they point to old objects
+
+            # CORRECT - refresh references after reset:
+            for source_name in [f.name for f in cube.faces]:  # Store names, not objects
+                source_face = cube.get_face(source_name)  # Get fresh reference
+                for dest_face in ...:
+                    # ... do something ...
+                    cube.reset()
+                    source_face = cube.get_face(source_name)  # Refresh after reset
+
         **BOY Color Scheme:**
         After reset, the default color scheme is:
         - Front = Blue
@@ -1711,15 +1782,18 @@ class Cube(CubeSupplier):
 
         raise ValueError(f"Cube doesn't contain center {str(part_colors_id)}")
 
-    def get_all_parts(self) -> Collection[PartSlice]:
+    def get_all_part_slices(self) -> Collection[PartSlice]:
+        """
+        Get all PartSlice objects in the cube (CenterSlice, EdgeWing, CornerSlice).
 
-        # set - because faces share parts
-        parts: set[PartSlice] = set()
+        Returns a set because faces share slices (e.g., an edge slice belongs to 2 faces).
+        """
+        slices: set[PartSlice] = set()
 
         for f in self.faces:
-            parts.update(f.slices)
+            slices.update(f.slices)
 
-        return parts
+        return slices
 
     @property
     def original_layout(self) -> CubeLayout:
