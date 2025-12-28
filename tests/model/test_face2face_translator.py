@@ -18,32 +18,51 @@ VERIFICATION:
 
 from __future__ import annotations
 
+from itertools import product
+from typing import Iterator
+
 import pytest
 
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
+from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult
 from cube.domain.model._elements import CenterSliceIndex
 from cube.domain.model.PartSlice import CenterSlice
 from tests.test_utils import _test_sp
 
 
-def verify_translation(
+# All face pairs (target, source) - 30 combinations (6 faces * 5 others)
+def _get_face_pairs() -> list[tuple[FaceName, FaceName]]:
+    """Generate all valid (target, source) face pairs."""
+    all_faces = list(FaceName)
+    return [(t, s) for t, s in product(all_faces, all_faces) if t != s]
+
+
+FACE_PAIRS = _get_face_pairs()
+CUBE_SIZES_WHOLE = [3, 5]
+CUBE_SIZES_SLICE = [5]
+
+
+def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:
+    """Generate readable test ID for face pair."""
+    return f"{pair[0].name}->{pair[1].name}"
+
+
+def verify_whole_cube_translation(
     cube: Cube,
     target_face: Face,
     source_face: Face,
     target_coord: CenterSliceIndex,
 ) -> None:
     """
-    Verify that translate() returns correct source_coord and algorithm.
+    Verify whole-cube algorithm translation.
 
     Contract:
-        translate(target, source, target_coord) returns source_coord such that:
-        1. Place marker at source_coord on SOURCE face
-        2. Apply algorithm
-        3. Marker appears at target_coord on TARGET face
+        1. Place marker at source_coord on source_face
+        2. Apply whole_cube_alg
+        3. Marker appears at target_coord on target_face
     """
-    # Get fresh face references
     target_name = target_face.name
     source_name = source_face.name
     target_face = cube.face(target_name)
@@ -52,21 +71,21 @@ def verify_translation(
     result = Face2FaceTranslator.translate(target_face, source_face, target_coord)
     source_coord = result.source_coord
 
-    marker_value = f"TEST_{target_name}_{source_name}_{target_coord}"
+    marker_value = f"WHOLE_{target_name}_{source_name}_{target_coord}"
 
-    # Step 1: Place marker at source_coord on SOURCE face
+    # Place marker at source_coord on source_face
     source_slice: CenterSlice = source_face.center.get_center_slice(source_coord)
     source_slice.edge.c_attributes["test_marker"] = marker_value
 
-    # Step 2: Apply algorithm (should bring source content to target)
+    # Apply whole-cube algorithm
     result.whole_cube_alg.play(cube)
 
-    # Step 3: Verify marker is at target_coord on TARGET face
+    # Verify marker at target_coord on target_face
     target_face = cube.face(target_name)
     check_slice: CenterSlice = target_face.center.get_center_slice(target_coord)
 
     assert check_slice.edge.c_attributes.get("test_marker") == marker_value, (
-        f"Translation failed!\n"
+        f"Whole-cube translation failed!\n"
         f"  Target: {target_name} target_coord={target_coord}\n"
         f"  Source: {source_name} source_coord={source_coord}\n"
         f"  Algorithm: {result.whole_cube_alg}\n"
@@ -75,67 +94,93 @@ def verify_translation(
     )
 
 
+def verify_slice_translation(
+    cube: Cube,
+    target_face: Face,
+    source_face: Face,
+    target_coord: CenterSliceIndex,
+) -> None:
+    """
+    Verify slice algorithm translation.
+
+    Contract:
+        1. Place marker at source_coord on source_face
+        2. Apply slice algorithm
+        3. Marker appears at target_coord on target_face
+    """
+    target_name = target_face.name
+    source_name = source_face.name
+    target_face = cube.face(target_name)
+    source_face = cube.face(source_name)
+
+    result = Face2FaceTranslator.translate(target_face, source_face, target_coord)
+    source_coord = result.source_coord
+
+    marker_value = f"SLICE_{target_name}_{source_name}_{target_coord}"
+
+    # Place marker at source_coord on source_face
+    source_slice: CenterSlice = source_face.center.get_center_slice(source_coord)
+    source_slice.edge.c_attributes["test_marker"] = marker_value
+
+    # Apply slice algorithm
+    slice_alg = result.slice_algorithms[0].get_alg()
+    slice_alg.play(cube)
+
+    # Verify marker at target_coord on target_face
+    target_face = cube.face(target_name)
+    check_slice: CenterSlice = target_face.center.get_center_slice(target_coord)
+
+    assert check_slice.edge.c_attributes.get("test_marker") == marker_value, (
+        f"Slice translation failed!\n"
+        f"  Target: {target_name} target_coord={target_coord}\n"
+        f"  Source: {source_name} source_coord={source_coord}\n"
+        f"  Algorithm: {slice_alg}\n"
+        f"  Expected marker at {target_coord} on {target_name}\n"
+        f"  Found: {check_slice.edge.c_attributes.get('test_marker')}"
+    )
+
+
 class TestWholeCubeAlgorithm:
     """Tests for translate() whole-cube algorithms."""
 
-    @pytest.mark.parametrize("cube_size", [3, 5])
-    def test_all_face_pairs_all_positions(self, cube_size: int) -> None:
-        """Test whole-cube algorithm for all face pairs and positions."""
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_WHOLE)
+    @pytest.mark.parametrize("face_pair", FACE_PAIRS, ids=_face_pair_id)
+    def test_face_pair(self, cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
+        """Test whole-cube algorithm for a specific face pair."""
+        target_name, source_name = face_pair
         cube = Cube(cube_size, sp=_test_sp)
 
-        for target_face in cube.faces:
-            for source_face in target_face.others_faces:
-                for center_slice in target_face.center.all_slices:
-                    target_coord: CenterSliceIndex = center_slice.index
+        target_face = cube.face(target_name)
+        source_face = cube.face(source_name)
 
-                    verify_translation(
-                        cube, target_face, source_face, target_coord
-                    )
+        for center_slice in target_face.center.all_slices:
+            target_coord: CenterSliceIndex = center_slice.index
 
-                    cube.clear_c_attributes()
+            verify_whole_cube_translation(
+                cube, target_face, source_face, target_coord
+            )
+
+            cube.clear_c_attributes()
 
 
 class TestSliceAlgorithm:
     """Tests for translate() slice algorithms."""
 
-    @pytest.mark.parametrize("cube_size", [5])
-    def test_all_face_pairs_all_positions(self, cube_size: int) -> None:
-        """Test slice algorithm for all face pairs and positions."""
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_SLICE)
+    @pytest.mark.parametrize("face_pair", FACE_PAIRS, ids=_face_pair_id)
+    def test_face_pair(self, cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
+        """Test slice algorithm for a specific face pair."""
+        target_name, source_name = face_pair
         cube = Cube(cube_size, sp=_test_sp)
 
-        for target_face in cube.faces:
-            for source_face in target_face.others_faces:
-                for center_slice in target_face.center.all_slices:
-                    target_coord: CenterSliceIndex = center_slice.index
+        target_face = cube.face(target_name)
+        source_face = cube.face(source_name)
 
-                    # Get fresh references
-                    target_face_fresh = cube.face(target_face.name)
-                    source_face_fresh = cube.face(source_face.name)
+        for center_slice in target_face.center.all_slices:
+            target_coord: CenterSliceIndex = center_slice.index
 
-                    result = Face2FaceTranslator.translate(
-                        target_face_fresh, source_face_fresh, target_coord
-                    )
-                    source_coord = result.source_coord
+            verify_slice_translation(
+                cube, target_face, source_face, target_coord
+            )
 
-                    marker_value = f"SLICE_{target_face.name}_{source_face.name}_{target_coord}"
-
-                    # Place marker at source_coord on source
-                    source_slice = source_face_fresh.center.get_center_slice(source_coord)
-                    source_slice.edge.c_attributes["test_marker"] = marker_value
-
-                    # Apply slice algorithm
-                    slice_alg = result.slice_algorithms[0].get_alg()
-                    slice_alg.play(cube)
-
-                    # Verify marker at target_coord on target
-                    target_face_check = cube.face(target_face.name)
-                    check_slice = target_face_check.center.get_center_slice(target_coord)
-
-                    assert check_slice.edge.c_attributes.get("test_marker") == marker_value, (
-                        f"Slice algorithm failed!\n"
-                        f"  Target: {target_face.name} coord={target_coord}\n"
-                        f"  Source: {source_face.name} coord={source_coord}\n"
-                        f"  Algorithm: {slice_alg}\n"
-                    )
-
-                    cube.clear_c_attributes()
+            cube.clear_c_attributes()
