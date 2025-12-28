@@ -124,7 +124,7 @@ def _is_center_position(n_slices: int, ltr_y: int, ltr_x: int) -> bool:
 # Tests
 # =============================================================================
 
-@pytest.mark.parametrize("cube_size", [5, 7])  # Even cubes have known inner 2x2 issues
+@pytest.mark.parametrize("cube_size", [4, 7])  # Even cubes have known inner 2x2 issues
 def test_create_helper(cube_size: int) -> None:
     """Create a cube and instantiate the helper via a solver."""
     app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
@@ -134,7 +134,7 @@ def test_create_helper(cube_size: int) -> None:
     assert helper.n_slices == cube_size - 2
 
 
-@pytest.mark.parametrize("cube_size", range(5, 6))  # All cube sizes
+@pytest.mark.parametrize("cube_size", range(4, 9))  # All cube sizes
 @pytest.mark.parametrize("face_pair", SUPPORTED_PAIRS, ids=_face_pair_id)
 def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
     """

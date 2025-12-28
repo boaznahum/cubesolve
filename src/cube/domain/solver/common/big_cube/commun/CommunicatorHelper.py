@@ -22,6 +22,7 @@ from cube.domain.model.Face import Face
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.big_cube.commun.CubeLayoutGeomtry import CubeLayoutGeomtry, CLGColRow
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -187,8 +188,65 @@ class CommunicatorHelper(SolverElement):
         inner_max = n // 2
         return inner_min <= r <= inner_max and inner_min <= c <= inner_max
 
+
+
     def _get_slice_alg(self, base_slice_alg: SliceAlg,
-                       target_block):
+                       target_block: Block, on_face: FaceName):
+
+        """
+
+        :param target_block_begin_column: Center Slice index [0, n)
+        :param target_block_end_column: Center Slice index [0, n)
+        :return: m slice in range suitable for [c1, c2]
+        """
+
+        def exc(point: Point) -> int:
+            # extract column
+            return point[1]
+
+        def exr(point: Point) -> int:
+            # extract row
+            return point[0]
+
+        if CubeLayoutGeomtry.does_slice_cut_rows_or_columns(base_slice_alg.slice_name, on_face) == CLGColRow.ROW:
+            # cut rows so we extract columns
+            ex = exc
+        else:
+            ex = exr
+
+
+
+        #   index is from left to right, L is from left to right,
+        # so we don't need to invert
+
+
+        v1 = ex(target_block[0]) # begin
+        v2 = ex(target_block[1])
+
+        if v1 > v2:
+            v1, v2 = v2, v1
+
+        # M[n:n] notation works for a single slice at position n
+        return base_slice_alg[v1 + 1:v2 + 1]
+
+
+
+        match base_slice_alg.slice_name:
+
+            case SliceName.M:
+                return self._get_slice_m_alg(target_block[0][1], target_block[1][1])
+
+            case SliceName.S:
+                return self._get_slice_s_alg(target_block[0][0], target_block[1][0])
+
+            case SliceName.E:
+                return self._get_slice_e_alg(target_block[0][0], target_block[1][0])
+
+            case _:
+                raise InternalSWError(f"Unknown slice name {base_slice_alg.slice_name}")
+
+    def _get_slice_algxx(self, base_slice_alg: SliceAlg,
+                       target_block, on_face: FaceName):
 
         """
 
@@ -423,23 +481,11 @@ class CommunicatorHelper(SolverElement):
             # extract row
             return point[0]
 
-        # claude what is the Mathematica of this ???
-        if slice_name == SliceName.M:
-            ex = exc  # slice cut the row so we check column
-
-        elif slice_name == SliceName.E:
-            ex = exr  # slice cut the column so we check row
-
-        elif slice_name == SliceName.S:
-
-            if face_name == FaceName.R:
-                # slice cut the rows so we take columns like in M
-                ex = exc
-            else:
-                ex = exr
-
+        if CubeLayoutGeomtry.does_slice_cut_rows_or_columns(slice_name, face_name) == CLGColRow.ROW:
+            # cut rows so we extract columns
+            ex = exc
         else:
-            assert False
+            ex = exr  # cut columns so we extract rows
 
         target_point_begin = target_block[0]
         target_point_end = target_block[1]
@@ -554,8 +600,8 @@ class CommunicatorHelper(SolverElement):
         # build the communicator
 
         # we want to slice on the target
-        inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block) * slice_alg_data.n
-        second_inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block_after_rotate) * slice_alg_data.n
+        inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block, target_face.name) * slice_alg_data.n
+        second_inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block_after_rotate, target_face.name) * slice_alg_data.n
 
         # 4x4 U -> F, 0,0
         # M[2] F' M[1] F M[2]' F ' M[1]'
