@@ -206,7 +206,7 @@ class CommunicatorHelper(SolverElement):
                 return self._get_slice_m_alg(target_block[0][1], target_block[1][1])
 
             case SliceName.S:
-                raise NotImplementedError(f"{base_slice_alg.slice_name} not implemented")
+                return self._get_slice_s_alg(target_block[0][0], target_block[1][0])
 
             case SliceName.E:
                 return self._get_slice_e_alg(target_block[0][0], target_block[1][0])
@@ -287,7 +287,7 @@ class CommunicatorHelper(SolverElement):
         if r1 > r2:
             r1, r2 = r2, r1
         # S[n:n] notation works for single slice at position n
-        return Algs.S[r1 + 1:r2 + 1].prime
+        return Algs.S[r1 + 1:r2 + 1]
 
     def _find_rotation_idx(self, actual_source_idx: Point, expected_source_idx: Point) -> int:
         """
@@ -416,7 +416,8 @@ class CommunicatorHelper(SolverElement):
         if slice_name == SliceName.M:
             def ex(point: Point) -> int:
                 return point[1]  # the column, slice cut the row
-        elif slice_name == SliceName.E:
+        elif slice_name in  [SliceName.E, SliceName.S]:
+            #claude it mtacth _get_slice_alg  need to understand why
             def ex(point: Point) -> int:  # on all ?
                 return point[0]  # the row, slice cut the columns
         else:
