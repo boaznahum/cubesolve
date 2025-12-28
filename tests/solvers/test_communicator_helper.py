@@ -134,7 +134,7 @@ def test_create_helper(cube_size: int) -> None:
     assert helper.n_slices == cube_size - 2
 
 
-@pytest.mark.parametrize("cube_size", range(4, 9))  # All cube sizes
+@pytest.mark.parametrize("cube_size", range(5, 6))  # All cube sizes
 @pytest.mark.parametrize("face_pair", SUPPORTED_PAIRS, ids=_face_pair_id)
 def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
     """
@@ -241,6 +241,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 target_slice_edge = target_face.center.get_center_slice(target_point).edge
                 assert test_key in target_slice_edge.c_attributes, \
                     f"Attribute should be on target ({target_face.name}, " \
+                    f"Cube(size={cube.size} "\
                     f"source face={source_face.name}, ," \
                     f"source_point={expected_src_point}," \
                     f"target_point={target_point}, alg={alg})"

@@ -403,7 +403,9 @@ class CommunicatorHelper(SolverElement):
 
         return _InternalCommData(translation_result.source_coord, translation_result)
 
-    def _compute_rotate_on_source(self, cube: Cube, slice_name: SliceName, target_block: Block) -> Tuple[int, Block]:
+    def _compute_rotate_on_target(self, cube: Cube,
+                                  face_name: FaceName,
+                                  slice_name: SliceName, target_block: Block) -> Tuple[int, Block]:
 
         """
 
@@ -413,13 +415,29 @@ class CommunicatorHelper(SolverElement):
         :return: [n times to roate, targte blcok after rotate]
         """
 
+        def exc(point: Point) -> int:
+            # extract column
+            return point[1]
+
+        def exr(point: Point) -> int:
+            # extract row
+            return point[0]
+
+        # claude what is the Mathematica of this ???
         if slice_name == SliceName.M:
-            def ex(point: Point) -> int:
-                return point[1]  # the column, slice cut the row
-        elif slice_name in  [SliceName.E, SliceName.S]:
-            #claude it mtacth _get_slice_alg  need to understand why
-            def ex(point: Point) -> int:  # on all ?
-                return point[0]  # the row, slice cut the columns
+            ex = exc  # slice cut the row so we check column
+
+        elif slice_name == SliceName.E:
+            ex = exr  # slice cut the column so we check row
+
+        elif slice_name == SliceName.S:
+
+            if face_name == FaceName.R:
+                # slice cut the rows so we take columns like in M
+                ex = exc
+            else:
+                ex = exr
+
         else:
             assert False
 
@@ -529,7 +547,7 @@ class CommunicatorHelper(SolverElement):
         slice_base_alg: SliceAlg = slice_alg_data.whole_slice_alg
 
         on_front_rotate_n, target_block_after_rotate = \
-            self._compute_rotate_on_source(cube, slice_base_alg.slice_name, target_block)
+            self._compute_rotate_on_target(cube, target_face.name, slice_base_alg.slice_name, target_block)
 
         on_front_rotate: Alg = Algs.of_face(target_face.name) * on_front_rotate_n
 
