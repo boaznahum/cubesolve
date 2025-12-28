@@ -10,16 +10,24 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 - Y increases upward (ltr_y)
 - X increases rightward (ltr_x)
 """
-
+from dataclasses import dataclass
 from typing import Tuple, TypeAlias
 
-from cube.domain.algs import Algs
+from cube.domain.algs import Algs, Alg
+from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.model.Face import Face
+from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 
-Point: TypeAlias = Tuple[int, int]
+Point: TypeAlias = Tuple[int, int]  # row , column
 Block: TypeAlias = Tuple[Point, Point]
+
+
+@dataclass(frozen=True)
+class _InternalCommData:
+    source_coordinate: Point  # point on the source from where communicator will bring the data, before source setup alg
+    trans_data: FaceTranslationResult
 
 
 class CommunicatorHelper(SolverElement):
@@ -96,38 +104,16 @@ class CommunicatorHelper(SolverElement):
         p2 = self.ltr_to_index(face, ltr_block[1][0], ltr_block[1][1])
         return p1, p2
 
-    def rotate_ltr_on_face(self, face: Face, ltr: Point, n: int = 1) -> Point:
-        """
-        Rotate an LTR point on a specific face n times clockwise.
-
-        This performs PHYSICAL rotation on the face:
-        1. Translate LTR to Index on the face
-        2. Rotate in Index space (physical rotation)
-        3. Translate back to LTR on the same face
-
-        Different faces have different LTR→Index mappings, so the same
-        LTR rotation looks different on different faces.
-
-        Args:
-            face: The face to rotate on
-            ltr: (ltr_y, ltr_x) coordinate on the face
-            n: Number of 90° clockwise rotations (0-3)
-
-        Returns:
-            Rotated (ltr_y, ltr_x) coordinate on the same face
-        """
-        # LTR → Index
-        idx = self.ltr_to_index(face, ltr[0], ltr[1])
-        # Rotate in Index space (physical rotation)
-        rotated_idx = self.cube.cqr.rotate_point_clockwise(idx, n)
-        # Index → LTR
-        return self.index_to_ltr(face, rotated_idx[0], rotated_idx[1])
-
     def get_expected_source_ltr(
-        self, source: Face, target: Face, target_ltr: Point
+            self, source: Face, target: Face, target_ltr: Point
     ) -> Point:
         """
+
+        For debug only, it is done by the communicator
+
         Get the expected source LTR position for a given target LTR.
+
+        Before the commincator do the source setup algorithm
 
         This is where the source piece should be (before rotation) to move
         to the target position.
@@ -140,21 +126,26 @@ class CommunicatorHelper(SolverElement):
         Returns:
             Expected source position in LTR on source face
         """
-        # Translate target LTR to target index
-        target_idx = self.ltr_to_index(target, target_ltr[0], target_ltr[1])
-        # Get expected source index (face-specific mapping)
-        expected_source_idx = self._point_on_source_idx(source, target, target_idx)
-        # Translate back to source LTR
-        return self.index_to_ltr(source, expected_source_idx[0], expected_source_idx[1])
+
+        data = self._do_communicator(source, target, (target_ltr, target_ltr))
+
+        return data.source_coordinate
 
     # =========================================================================
     # Helper Methods
     # =========================================================================
 
-    def _normalize_block(self, rc1: Point, rc2: Point) -> tuple[Point, Point]:
+    @staticmethod
+    def _normalize_block(block: Block) -> Block:
         """Normalize block so r1 <= r2 and c1 <= c2."""
-        r1, c1 = rc1
-        r2, c2 = rc2
+
+        #claude documnet this it is critical
+
+        rc1: Point = block[0]
+        rc2 = block[1]
+
+        r1, c1 = block[0]
+        r2, c2 = block[0]
         if r1 > r2:
             r1, r2 = r2, r1
         if c1 > c2:
@@ -374,11 +365,11 @@ class CommunicatorHelper(SolverElement):
         cube = self.cube
         return [
             # Front as target (M/E slice based)
-            (cube.up, cube.front),    # Source=Up, Target=Front
-            (cube.back, cube.front),  # Source=Back, Target=Front
-            (cube.down, cube.front),  # Source=Down, Target=Front
-            (cube.left, cube.front),  # Source=Left, Target=Front (E slice)
-            (cube.right, cube.front), # Source=Right, Target=Front (E' slice)
+            (cube.up, cube.front),  # Source=Up, Target=Front
+            #  (cube.back, cube.front),  # Source=Back, Target=Front
+            #  (cube.down, cube.front),  # Source=Down, Target=Front
+            #  (cube.left, cube.front),  # Source=Left, Target=Front (E slice)
+            #  (cube.right, cube.front),  # Source=Right, Target=Front (E' slice)
         ]
 
     def is_supported(self, source: Face, target: Face) -> bool:
@@ -397,126 +388,187 @@ class CommunicatorHelper(SolverElement):
                 return True
         return False
 
-    def is_position_supported(self, ltr_y: int, ltr_x: int) -> bool:
+    def _do_communicator(
+            self,
+            source_face: Face,
+            target_face: Face,
+            target_block: Block,
+            source_block: Block | None = None,
+            preserve_state: bool = True
+    ) -> _InternalCommData:
         """
-        Check if a position is supported on this cube.
-
-        All positions are supported - the commutator algorithm works for any
-        position as long as we pick the correct rotation direction (F vs F')
-        to avoid column intersection.
-
-        Args:
-            ltr_y: Y coordinate in LTR system
-            ltr_x: X coordinate in LTR system
-
-        Returns:
-            True - all positions are supported
-        """
-        return True
-
-    def do_communicator(
-        self,
-        source: Face,
-        target: Face,
-        target_block: Block,
-        source_block: Block | None = None,
-        preserve_state: bool = True
-    ) -> bool:
-        """
-        Execute block commutator to move pieces from source to target.
+        Execute a block commutator to move pieces from source to target.
 
         The commutator is: [M', F, M', F', M, F, M, F']
         This is BALANCED (2 F + 2 F' = 0), so corners return to their position.
 
         Args:
-            source: Source face (where pieces come from)
-            target: Target face (where pieces go to)
-            target_block: Block coordinates on target face ((y0,x0), (y1,x1)) in BULR
+            source_face: Source face (where pieces come from)
+            target_face: Target face (where pieces go to)
+            target_block: Block coordinates on target face ((y0,x0), (y1,x1))
             source_block: Block coordinates on source face, defaults to target_block
             preserve_state: If True, preserve cube state (edges and corners return)
 
         Returns:
-            True if communicator was executed, False if not needed
+            True if the communicator was executed, False if not needed
 
         Raises:
-            ValueError: If source and target are the same face
+            ValueError: If source and target are the same, face
             ValueError: If blocks cannot be mapped with 0-3 rotations
         """
-        if source is target:
+        if source_face is target_face:
             raise ValueError("Source and target must be different faces")
 
         source_block_was_none = source_block is None
         if source_block_was_none:
             source_block = target_block
 
+        # currently we support  only blockof size 1
+        assert source_block[0] == source_block[1]
+        assert target_block[0] == target_block[1]
+
         # Check if this pair is supported
-        if not self.is_supported(source, target):
+        if not self.is_supported(source_face, target_face):
             raise NotImplementedError(
-                f"Face pair ({source.name}, {target.name}) not yet implemented"
+                f"Face pair ({source_face}, {target_face}) not yet implemented"
             )
 
         cube = self.cube
 
         # Convert LTR to index coordinates
-        target_idx_block = self.ltr_block_to_index(target, target_block)
-        rc1, rc2 = self._normalize_block(target_idx_block[0], target_idx_block[1])
+        # claude see a new document, face is always ltt, no need to convert
+        # target_idx_block = self.ltr_block_to_index(target, target_block)
 
-        # Source: get where the piece actually is (LTR -> source index)
-        source_ltr = source_block[0]
-        actual_source_idx = self.ltr_to_index(source, source_ltr[0], source_ltr[1])
+        source_block_normalized = self._normalize_block(source_block)
+        target_block_normalized = self._normalize_block(target_block)
 
-        # Expected source position: derived from target using face mapping
-        target_idx = target_idx_block[0]
-        expected_source_idx = self._point_on_source_idx(source, target, target_idx)
+        # now we assume block of size 1
+        source_1_point: Point = source_block[0]
 
-        # Find rotation to align actual source to expected source
-        n_rotate = self._find_rotation_idx(actual_source_idx, expected_source_idx)
+        # try a new algorithm
+        translation_result: FaceTranslationResult = Face2FaceTranslator.translate(target_face, source_face,
+                                                                                  source_1_point)
 
-        # Invariant: if source_block was None, n_rotate must be 0
-        # (source defaults to expected position)
-        if source_block_was_none and n_rotate != 0:
-            raise ValueError(
-                f"source_block=None requires n_rotate=0, but got {n_rotate}. "
-                f"actual={actual_source_idx}, expected={expected_source_idx}"
+        new_expected_source_1_point = translation_result.source_coord
+
+        return _InternalCommData(translation_result.source_coord, translation_result)
+
+
+
+    def do_communicator(
+            self,
+            source_face: Face,
+            target_face: Face,
+            target_block: Block,
+            source_block: Block | None = None,
+            preserve_state: bool = True
+    ) -> bool:
+        """
+        Execute a block commutator to move pieces from source to target.
+
+        The commutator is: [M', F, M', F', M, F, M, F']
+        This is BALANCED (2 F + 2 F' = 0), so corners return to their position.
+
+        Args:
+            source_face: Source face (where pieces come from)
+            target_face: Target face (where pieces go to)
+            target_block: Block coordinates on target face ((y0,x0), (y1,x1))
+            source_block: Block coordinates on source face, defaults to target_block
+            preserve_state: If True, preserve cube state (edges and corners return)
+
+        Returns:
+            True if the communicator was executed, False if not needed
+
+        Raises:
+            ValueError: If source and target are the same, face
+            ValueError: If blocks cannot be mapped with 0-3 rotations
+        """
+        if source_face is target_face:
+            raise ValueError("Source and target must be different faces")
+
+        source_block_was_none = source_block is None
+        if source_block_was_none:
+            source_block = target_block
+
+        # currently we support  only blockof size 1
+        assert source_block[0] == source_block[1]
+        assert target_block[0] == target_block[1]
+
+        # Check if this pair is supported
+        if not self.is_supported(source_face, target_face):
+            raise NotImplementedError(
+                f"Face pair ({source_face}, {target_face}) not yet implemented"
             )
 
-        r1, c1 = rc1
-        r2, c2 = rc2
+        cube = self.cube
 
-        # Build commutator based on target and source faces
-        if target is cube.front:
-            commutator = self._build_front_target_commutator(
-                source, rc1, rc2, r1, r2, c1, c2
-            )
-        elif target is cube.right:
-            commutator = self._build_right_target_commutator(
-                source, rc1, rc2, r1, r2, c1, c2
-            )
-        else:
-            raise NotImplementedError(f"Target {target.name} not implemented")
+        # Convert LTR to index coordinates
+        # claude see a new document, face is always ltt, no need to convert
+        # target_idx_block = self.ltr_block_to_index(target, target_block)
 
-        # Execute: first rotate source to align, then commutator
-        if n_rotate:
-            self.op.play(Algs.of_face(source.name) * n_rotate)
+        source_block_normalized = self._normalize_block(source_block)
+        target_block_normalized = self._normalize_block(target_block)
 
-        self.op.play(Algs.seq_alg(None, *commutator))
+        # now we assume a block of size 1
+        source_1_point: Point = source_block[0]
+        expected_source_1_point: Point = self._point_on_source_idx(source_face, target_face, target_block_normalized[0])
 
-        # Preserve state: undo source rotation if requested
-        if preserve_state and n_rotate:
-            undo_alg = Algs.of_face(source.name).prime * n_rotate
-            self.op.play(undo_alg)
+        target_point_1: Point = target_block[0]
+
+        internal_data = self._do_communicator(source_face, target_face, target_block, source_block)
+
+
+        # Find rotation to align the actual source to the expected source
+        source_setup_n_rotate = self._find_rotation_idx(source_1_point, expected_source_1_point)
+
+
+        source_setup_alg = Algs.of_face(source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
+
+        on_front_rotate = Algs.of_face(target_face.name).prime
+
+        if False:
+            target_face_rotate = target_face_rotate.prime
+
+        # build the communicator
+
+        # E, S, M
+        slice_alg_data: SliceAlgorithmResult = internal_data.trans_data.slice_algorithms[0]
+        inner_slice_alg: Alg = slice_alg_data.get_slice_alg(slice_alg_data.on_slice)
+        second_inner_slice_alg: Alg = slice_alg_data.get_slice_alg(cube.inv(slice_alg_data.on_slice))
+
+        # 4x4 U -> F, 0,0
+        # M[0] F' M[1] F M[0]' F ' M[1]'
+        cum = [inner_slice_alg,
+               on_front_rotate,
+               second_inner_slice_alg,
+               on_front_rotate.prime,
+               inner_slice_alg.prime,
+               on_front_rotate,
+               second_inner_slice_alg.prime,
+               on_front_rotate.prime]
+
+        if source_setup_n_rotate:
+            self.op.play(source_setup_alg)
+        self.op.play(Algs.seq_alg(None, *cum))
+
+        # =========================================================
+        # CAGE METHOD: Undo source rotation to preserve paired edges
+        # =========================================================
+        # The commutator itself is balanced (F rotations cancel out).
+        # But the source face rotation setup is NOT balanced - undo it.
+        if preserve_state and source_setup_n_rotate:
+            self.op.play(source_setup_alg.prime)
 
         return True
-
     def _build_front_target_commutator(
-        self,
-        source: Face,
-        rc1: Point,
-        rc2: Point,
-        r1: int,
-        r2: int,
-        c1: int,
-        c2: int
+            self,
+            source: Face,
+            rc1: Point,
+            rc2: Point,
+            r1: int,
+            r2: int,
+            c1: int,
+            c2: int
     ) -> list:
         """Build commutator for Front as target face."""
         cube = self.cube
@@ -551,25 +603,25 @@ class CommunicatorHelper(SolverElement):
                 # Left: E brings L→F
                 # Algorithm structure mirrors Up→Front but with E instead of M
                 return [
-                    rotate_on_cell.prime,     # E
+                    rotate_on_cell.prime,  # E
                     on_front_rotate,
-                    rotate_on_second.prime,   # E
+                    rotate_on_second.prime,  # E
                     on_front_rotate.prime,
-                    rotate_on_cell,           # E'
+                    rotate_on_cell,  # E'
                     on_front_rotate,
-                    rotate_on_second,         # E'
+                    rotate_on_second,  # E'
                     on_front_rotate.prime
                 ]
             else:
                 # Right: E' brings R→F (swap E and E')
                 return [
-                    rotate_on_cell,           # E'
+                    rotate_on_cell,  # E'
                     on_front_rotate,
-                    rotate_on_second,         # E'
+                    rotate_on_second,  # E'
                     on_front_rotate.prime,
-                    rotate_on_cell.prime,     # E
+                    rotate_on_cell.prime,  # E
                     on_front_rotate,
-                    rotate_on_second.prime,   # E
+                    rotate_on_second.prime,  # E
                     on_front_rotate.prime
                 ]
         else:
@@ -633,13 +685,13 @@ class CommunicatorHelper(SolverElement):
             elif is_down:
                 # Down: M (not M') brings Down→Front
                 return [
-                    rotate_on_cell,           # M (instead of M')
+                    rotate_on_cell,  # M (instead of M')
                     on_front_rotate,
-                    rotate_on_second,         # M (instead of M')
+                    rotate_on_second,  # M (instead of M')
                     on_front_rotate.prime,
-                    rotate_on_cell.prime,     # M' (instead of M)
+                    rotate_on_cell.prime,  # M' (instead of M)
                     on_front_rotate,
-                    rotate_on_second.prime,   # M' (instead of M)
+                    rotate_on_second.prime,  # M' (instead of M)
                     on_front_rotate.prime
                 ]
             else:
@@ -656,14 +708,14 @@ class CommunicatorHelper(SolverElement):
                 ]
 
     def _build_right_target_commutator(
-        self,
-        source: Face,
-        rc1: Point,
-        rc2: Point,
-        r1: int,
-        r2: int,
-        c1: int,
-        c2: int
+            self,
+            source: Face,
+            rc1: Point,
+            rc2: Point,
+            r1: int,
+            r2: int,
+            c1: int,
+            c2: int
     ) -> list:
         """
         Build commutator for Right as target face.
@@ -721,25 +773,25 @@ class CommunicatorHelper(SolverElement):
                 # Algorithm: [s', R, s2', R', s, R, s2, R']
                 # where s = S' from _get_slice_s_alg, so s' = S
                 return [
-                    rotate_on_cell.prime,     # S
+                    rotate_on_cell.prime,  # S
                     on_right_rotate,
-                    rotate_on_second.prime,   # S
+                    rotate_on_second.prime,  # S
                     on_right_rotate.prime,
-                    rotate_on_cell,           # S'
+                    rotate_on_cell,  # S'
                     on_right_rotate,
-                    rotate_on_second,         # S'
+                    rotate_on_second,  # S'
                     on_right_rotate.prime
                 ]
             else:
                 # Down→Right: S' brings D→R (invert primes like Down→Front)
                 return [
-                    rotate_on_cell,           # S' (instead of S)
+                    rotate_on_cell,  # S' (instead of S)
                     on_right_rotate,
-                    rotate_on_second,         # S' (instead of S)
+                    rotate_on_second,  # S' (instead of S)
                     on_right_rotate.prime,
-                    rotate_on_cell.prime,     # S (instead of S')
+                    rotate_on_cell.prime,  # S (instead of S')
                     on_right_rotate,
-                    rotate_on_second.prime,   # S (instead of S')
+                    rotate_on_second.prime,  # S (instead of S')
                     on_right_rotate.prime
                 ]
         else:
@@ -777,25 +829,25 @@ class CommunicatorHelper(SolverElement):
                 # Front→Right: E' brings F→R
                 # Use inverted primes (like Right→Front)
                 return [
-                    rotate_on_cell,           # E'
+                    rotate_on_cell,  # E'
                     on_right_rotate,
-                    rotate_on_second,         # E'
+                    rotate_on_second,  # E'
                     on_right_rotate.prime,
-                    rotate_on_cell.prime,     # E
+                    rotate_on_cell.prime,  # E
                     on_right_rotate,
-                    rotate_on_second.prime,   # E
+                    rotate_on_second.prime,  # E
                     on_right_rotate.prime
                 ]
             elif is_back:
                 # Back→Right: E brings B→R
                 return [
-                    rotate_on_cell.prime,     # E
+                    rotate_on_cell.prime,  # E
                     on_right_rotate,
-                    rotate_on_second.prime,   # E
+                    rotate_on_second.prime,  # E
                     on_right_rotate.prime,
-                    rotate_on_cell,           # E'
+                    rotate_on_cell,  # E'
                     on_right_rotate,
-                    rotate_on_second,         # E'
+                    rotate_on_second,  # E'
                     on_right_rotate.prime
                 ]
             else:

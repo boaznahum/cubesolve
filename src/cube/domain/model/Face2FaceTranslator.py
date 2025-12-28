@@ -29,6 +29,78 @@ NAMING CONVENTION:
     - target_coord: Position on target where we want content
     - source_coord: Position on source where content originates
 
+================================================================================
+SLICE ALGORITHMS (M, E, S) - COMPREHENSIVE REFERENCE
+================================================================================
+
+SLICE DEFINITIONS:
+    Each slice rotates the middle layer(s) between two opposite faces.
+    The rotation direction is defined by a "reference face".
+
+    ┌──────┬────────────┬────────────────┬───────────────────────────────────────┐
+    │Slice │   Axis     │ Affects Faces  │ Rotation Direction                    │
+    ├──────┼────────────┼────────────────┼───────────────────────────────────────┤
+    │  M   │  L ↔ R     │  F, U, B, D    │ Like L (clockwise when viewing L)     │
+    │  E   │  U ↔ D     │  F, R, B, L    │ Like D (clockwise when viewing D)     │
+    │  S   │  F ↔ B     │  U, R, D, L    │ Like F (clockwise when viewing F)     │
+    └──────┴────────────┴────────────────┴───────────────────────────────────────┘
+
+    API: Algs.M.get_face_name() → L, Algs.E.get_face_name() → D, Algs.S.get_face_name() → F
+
+SLICE TRAVERSAL (content movement during rotation):
+    M: F → U → B → D → F  (vertical cycle, like L rotation)
+    E: R → B → L → F → R  (horizontal cycle, like D rotation)
+    S: U → R → D → L → U  (around F/B axis, like F rotation)
+
+SLICE INDEXING (1-based):
+    Slice indices are 1-based, ranging from 1 to n_slices (where n_slices = cube_size - 2).
+
+    For an NxN cube:
+        - n_slices = N - 2 (number of inner slices)
+        - Valid indices: 1, 2, ..., n_slices
+
+    Example for 5x5 cube (n_slices = 3):
+        E[1]  - first inner slice (closest to U face)
+        E[2]  - middle slice
+        E[3]  - last inner slice (closest to D face)
+        E     - all slices together
+
+    WHERE SLICE 1 BEGINS (reference face perspective):
+        ┌──────┬─────────────────────────────────────────────────────────────────┐
+        │Slice │ Slice[1] is closest to...                                       │
+        ├──────┼─────────────────────────────────────────────────────────────────┤
+        │  M   │ Closest to R face (opposite of reference face L)                │
+        │  E   │ Closest to U face (opposite of reference face D)                │
+        │  S   │ Closest to B face (opposite of reference face F)                │
+        └──────┴─────────────────────────────────────────────────────────────────┘
+
+    Visual for 5x5 cube (E slice example, viewing from front):
+                         U face
+                    ┌─────────────┐
+                    │             │
+            E[1] →  ├─────────────┤  ← closest to U
+            E[2] →  ├─────────────┤  ← middle
+            E[3] →  ├─────────────┤  ← closest to D
+                    │             │
+                    └─────────────┘
+                         D face
+
+RELATIONSHIP TO WHOLE-CUBE ROTATIONS (X, Y, Z):
+    ┌──────┬─────────────────┬────────────────────────────────────────────────────┐
+    │Whole │ Implementation  │ Rotation Direction                                 │
+    ├──────┼─────────────────┼────────────────────────────────────────────────────┤
+    │  X   │ M' + R + L'     │ Like R (clockwise facing R) - OPPOSITE of M's L!   │
+    │  Y   │ E' + U + D'     │ Like U (clockwise facing U) - OPPOSITE of E's D!   │
+    │  Z   │ S + F + B'      │ Like F (clockwise facing F) - SAME as S's F!       │
+    └──────┴─────────────────┴────────────────────────────────────────────────────┘
+
+    Direction Relationship (used in _compute_slice_algorithms):
+        - M.face (L) is OPPOSITE to X.face (R) → M and X rotate opposite directions
+        - E.face (D) is OPPOSITE to Y.face (U) → E and Y rotate opposite directions
+        - S.face (F) is SAME as Z.face (F) → S and Z rotate same direction
+
+================================================================================
+
 IMPLEMENTATION:
     Uses empirically-derived transformation table based on whole-cube rotations.
     Each face pair has one of 4 transformation types:
