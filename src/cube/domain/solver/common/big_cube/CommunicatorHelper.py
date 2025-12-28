@@ -10,9 +10,11 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 - Y increases upward (ltr_y)
 - X increases rightward (ltr_x)
 """
+import sys
 from dataclasses import dataclass
 from typing import Tuple, TypeAlias
 
+from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.model.Face import Face
@@ -513,7 +515,8 @@ class CommunicatorHelper(SolverElement):
         source_1_point: Point = source_block[0]
         expected_source_1_point: Point = self._point_on_source_idx(source_face, target_face, target_block_normalized[0])
 
-        target_point_1: Point = target_block[0]
+        target_point_begin: Point = target_block[0]
+        target_point_end: Point = target_block[1]
 
         internal_data = self._do_communicator(source_face, target_face, target_block, source_block)
 
@@ -524,28 +527,67 @@ class CommunicatorHelper(SolverElement):
 
         source_setup_alg = Algs.of_face(source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
 
-        on_front_rotate = Algs.of_face(target_face.name).prime
+        on_source_base_rotate_alg = Algs.of_face(target_face.name)
 
-        if False:
-            target_face_rotate = target_face_rotate.prime
+        on_front_rotate: Alg
+
+        # assume we rotate F clockwise
+        cqr = cube.cqr
+        target_begin_rotated_cw = cqr.rotate_point_clockwise(target_point_begin)
+        target_end_rotated_cw = cqr.rotate_point_clockwise(target_point_end)
+
+        # the columns ranges must not intersect
+        # c1 column sart of block
+        # c2 column end of block
+        # rc1_f_rotated[1] columns start  after rotating
+        # rc2_f_rotated[1] columns end  after rotating
+
+        if self._1d_intersect((target_point_begin[1], target_point_end[1]),
+                              (target_begin_rotated_cw[1], target_end_rotated_cw[1])):
+
+            on_front_rotate = on_source_base_rotate_alg.prime
+            target_begin_rotated_ccw = cqr.rotate_point_counterclockwise(target_point_begin)
+            target_end_rotated_ccw = cqr.rotate_point_counterclockwise(target_point_end)
+
+            target_block_after_rotate = (target_begin_rotated_ccw, target_end_rotated_ccw)
+
+            if self._1d_intersect((target_point_begin[1], target_point_end[1]),
+                                  (target_begin_rotated_ccw[1], target_begin_rotated_ccw[1])):
+                print("Intersection still exists after rotation", file=sys.stderr)
+                raise InternalSWError(f"Intersection still exists after rotation "
+                                      
+                                      f"target={target_block}"
+                                              f"r={(target_point_begin[1], target_point_end[1])} "
+                                              f"rcw{(target_begin_rotated_cw[1], target_end_rotated_cw[1])} "
+                                              f"{(target_end_rotated_ccw[1], target_end_rotated_ccw[1])} ")
+        else:
+            # clockwise is OK
+            target_block_after_rotate = (target_begin_rotated_cw, target_end_rotated_cw)
+            on_front_rotate = on_source_base_rotate_alg
 
         # build the communicator
 
         # E, S, M
         slice_alg_data: SliceAlgorithmResult = internal_data.trans_data.slice_algorithms[0]
-        inner_slice_alg: Alg = slice_alg_data.get_slice_alg(slice_alg_data.on_slice)
-        second_inner_slice_alg: Alg = slice_alg_data.get_slice_alg(cube.inv(slice_alg_data.on_slice))
+
+        slice_base_alg: SliceAlg = slice_alg_data.whole_slice_alg
+
+
+        # we want to slice on the target
+        inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block) * slice_alg_data.n
+        second_inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block_after_rotate) * slice_alg_data.n
 
         # 4x4 U -> F, 0,0
         # M[2] F' M[1] F M[2]' F ' M[1]'
-        cum = Algs.seq_alg(None, inner_slice_alg, # M[2]
-               on_front_rotate, # F'
-               second_inner_slice_alg, # M[1]
-               on_front_rotate.prime,  # F
-               inner_slice_alg.prime,  # M[2]
-               on_front_rotate,        # F'
-               second_inner_slice_alg.prime, # M[1]'
-               on_front_rotate.prime   # F
+        cum = Algs.seq_alg(None,
+                           inner_slice_alg,  # M[2]
+                           on_front_rotate,  # F'
+                           second_inner_slice_alg,  # M[1]
+                           on_front_rotate.prime,  # F
+                           inner_slice_alg.prime,  # M[2]
+                           on_front_rotate,  # F'
+                           second_inner_slice_alg.prime,  # M[1]'
+                           on_front_rotate.prime  # F
                            )
 
         if source_setup_n_rotate:
@@ -561,6 +603,28 @@ class CommunicatorHelper(SolverElement):
             self.op.play(source_setup_alg.prime)
 
         return (source_setup_alg + cum + source_setup_alg.prime).simplify()
+
+    def _get_slice_alg(self, base_slice_alg: SliceAlg,
+                       target_block):
+
+
+        """
+
+        :param target_block_begin_column: Center Slice index [0, n)
+        :param target_block_end_column: Center Slice index [0, n)
+        :return: m slice in range suitable for [c1, c2]
+        """
+
+        #   index is from left to right, L is from left to right,
+        # so we don't need to invert
+
+        target_block_begin_column = target_block[0][1]
+        target_block_end_column = target_block[1][1]
+
+        if target_block_begin_column > target_block_end_column:
+            target_block_begin_column, target_block_end_column = target_block_end_column, target_block_begin_column
+
+        return base_slice_alg[target_block_begin_column + 1:target_block_end_column + 1]
 
     def _build_front_target_commutator(
             self,

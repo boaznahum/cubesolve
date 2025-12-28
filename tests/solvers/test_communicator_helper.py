@@ -239,7 +239,9 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
                     target_slice_edge = target_face.center.get_center_slice(target_point).edge
                     assert test_key in target_slice_edge.c_attributes, \
                         f"Attribute should be on target ({target_face.name}, " \
-                        f"ltr_y={ltr_y}, ltr_x={ltr_x} alg={alg})"
+                        f"source_point={expected_src_point}," \
+                        f"target_point={target_point}, alg={alg})"
+
                     assert target_slice_edge.c_attributes[test_key] == test_value, \
                         "Attribute value should match on target"
 
@@ -276,8 +278,8 @@ def test_communicator_raises_on_incompatible_blocks(cube_size: int) -> None:
 
     with pytest.raises(ValueError, match="Cannot align"):
         helper.do_communicator(
-            source=source_face,
-            target=target_face,
+            source_face=source_face,
+            target_face=target_face,
             target_block=target_block,
             source_block=source_block,
             preserve_state=True
