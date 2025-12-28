@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.model import PartEdge, Face
+from cube.domain.model import PartEdge, Face, FaceName
 from cube.domain.model.cube_boy import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
@@ -125,7 +125,7 @@ def test_create_helper(cube_size: int) -> None:
     assert helper.n_slices == cube_size - 2
 
 
-@pytest.mark.parametrize("cube_size", [4, 5, 6, 7, 8])  # All cube sizes
+@pytest.mark.parametrize("cube_size", range(4, 9))  # All cube sizes
 def test_communicator_supported_pairs(cube_size: int) -> None:
     """
     Test communicator for currently supported face pairs.
@@ -153,11 +153,11 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
     assert _check_cube_state_preserved(cube), "Initial cube state should be valid"
 
     # Use helper's announcement of supported pairs
-    supported_pairs = helper.get_supported_pairs()
+    supported_pairs: list[tuple[FaceName, FaceName]] = helper.get_supported_pairs()
 
     # Track source/target FaceNames since we need to get fresh references after reset
     source_target_face_names: list[tuple[FaceName, FaceName]] = [
-        (src.name, tgt.name) for src, tgt in supported_pairs
+        (src, tgt) for src, tgt in supported_pairs
     ]
 
     for source_face_name, target_face_name in source_target_face_names:

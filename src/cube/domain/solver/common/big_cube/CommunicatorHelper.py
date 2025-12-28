@@ -13,17 +13,40 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 import sys
 from dataclasses import dataclass
 from typing import Tuple, TypeAlias
+from unittest import case
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.SliceAlg import SliceAlg
+from cube.domain.model import FaceName
 from cube.domain.model.Face import Face
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
+from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 
 Point: TypeAlias = Tuple[int, int]  # row , column
 Block: TypeAlias = Tuple[Point, Point]
+
+
+def _get_supported_pairs() -> list[tuple[FaceName, FaceName]]:
+    """
+    Return list of (source, target) face pairs that are currently supported.
+
+    These are the combinations that do_communicator() can handle.
+    Other combinations will raise NotImplementedError.
+
+    Returns:
+        List of (source_face, target_face) tuples
+    """
+    return [
+        (FaceName.U, FaceName.F),  # Source=Up, Target=Front
+        (FaceName.B, FaceName.F),
+        #  (cube.back, cube.front),  # Source=Back, Target=Front
+        #  (cube.down, cube.front),  # Source=Down, Target=Front
+        #  (cube.left, cube.front),  # Source=Left, Target=Front (E slice)
+        #  (cube.right, cube.front),  # Source=Right, Target=Front (E' slice)
+    ]
 
 
 @dataclass(frozen=True)
@@ -184,6 +207,41 @@ class CommunicatorHelper(SolverElement):
         inner_max = n // 2
         return inner_min <= r <= inner_max and inner_min <= c <= inner_max
 
+    def _get_slice_alg(self, base_slice_alg: SliceAlg,
+                       target_block):
+
+        """
+
+        :param target_block_begin_column: Center Slice index [0, n)
+        :param target_block_end_column: Center Slice index [0, n)
+        :return: m slice in range suitable for [c1, c2]
+        """
+
+        #   index is from left to right, L is from left to right,
+        # so we don't need to invert
+
+        match base_slice_alg.slice_name:
+
+            case SliceName.M:
+                return self._get_slice_m_alg(target_block[0][1], target_block[1][1])
+
+            case SliceName.S:
+                raise NotImplementedError()
+
+            case SliceName.E:
+                raise NotImplementedError()
+
+            case _:
+                raise InternalSWError(f"Unknown slice name {base_slice_alg.slice_name}")
+
+        target_block_begin_column = target_block[0][1]
+        target_block_end_column = target_block[1][1]
+
+        if target_block_begin_column > target_block_end_column:
+            target_block_begin_column, target_block_end_column = target_block_end_column, target_block_begin_column
+
+        return base_slice_alg[target_block_begin_column + 1:target_block_end_column + 1]
+
     def _get_slice_m_alg(self, c1: int, c2: int):
         """
         Get M slice algorithm for column range.
@@ -203,8 +261,8 @@ class CommunicatorHelper(SolverElement):
         """
         if c1 > c2:
             c1, c2 = c2, c1
-        # M[n:n] notation works for single slice at position n
-        return Algs.M[c1 + 1:c2 + 1].prime
+        # M[n:n] notation works for a single slice at position n
+        return Algs.M[c1 + 1:c2 + 1]
 
     def _get_slice_e_alg(self, r1: int, r2: int):
         """
@@ -354,7 +412,7 @@ class CommunicatorHelper(SolverElement):
     # Supported Pairs
     # =========================================================================
 
-    def get_supported_pairs(self) -> list[tuple[Face, Face]]:
+    def get_supported_pairs(self) -> list[tuple[FaceName, FaceName]]:
         """
         Return list of (source, target) face pairs that are currently supported.
 
@@ -364,15 +422,7 @@ class CommunicatorHelper(SolverElement):
         Returns:
             List of (source_face, target_face) tuples
         """
-        cube = self.cube
-        return [
-            # Front as target (M/E slice based)
-            (cube.up, cube.front),  # Source=Up, Target=Front
-            #  (cube.back, cube.front),  # Source=Back, Target=Front
-            #  (cube.down, cube.front),  # Source=Down, Target=Front
-            #  (cube.left, cube.front),  # Source=Left, Target=Front (E slice)
-            #  (cube.right, cube.front),  # Source=Right, Target=Front (E' slice)
-        ]
+        return _get_supported_pairs()
 
     def is_supported(self, source: Face, target: Face) -> bool:
         """
@@ -386,7 +436,7 @@ class CommunicatorHelper(SolverElement):
             True if this combination is implemented, False otherwise
         """
         for src, tgt in self.get_supported_pairs():
-            if source is src and target is tgt:
+            if source.name is src and target.name is tgt:
                 return True
         return False
 
@@ -394,9 +444,7 @@ class CommunicatorHelper(SolverElement):
             self,
             source_face: Face,
             target_face: Face,
-            target_block: Block,
-            source_block: Block | None = None,
-            preserve_state: bool = True
+            target_block: Block
     ) -> _InternalCommData:
         """
         Execute a block commutator to move pieces from source to target.
@@ -421,12 +469,8 @@ class CommunicatorHelper(SolverElement):
         if source_face is target_face:
             raise ValueError("Source and target must be different faces")
 
-        source_block_was_none = source_block is None
-        if source_block_was_none:
-            source_block = target_block
 
         # currently we support  only blockof size 1
-        assert source_block[0] == source_block[1]
         assert target_block[0] == target_block[1]
 
         # Check if this pair is supported
@@ -441,21 +485,16 @@ class CommunicatorHelper(SolverElement):
         # claude see a new document, face is always ltt, no need to convert
         # target_idx_block = self.ltr_block_to_index(target, target_block)
 
-        source_block_normalized = self._normalize_block(source_block)
-        target_block_normalized = self._normalize_block(target_block)
-
         # now we assume block of size 1
-        source_1_point: Point = source_block[0]
+        target_point_begin: Point = target_block[0]
 
         # try a new algorithm
         translation_result: FaceTranslationResult = Face2FaceTranslator.translate(target_face, source_face,
-                                                                                  source_1_point)
+                                                                                  target_point_begin)
 
         new_expected_source_1_point = translation_result.source_coord
 
         return _InternalCommData(translation_result.source_coord, translation_result)
-
-
 
     def do_communicator(
             self,
@@ -513,19 +552,18 @@ class CommunicatorHelper(SolverElement):
 
         # now we assume a block of size 1
         source_1_point: Point = source_block[0]
-        expected_source_1_point: Point = self._point_on_source_idx(source_face, target_face, target_block_normalized[0])
-
         target_point_begin: Point = target_block[0]
         target_point_end: Point = target_block[1]
 
-        internal_data = self._do_communicator(source_face, target_face, target_block, source_block)
-
+        internal_data = self._do_communicator(source_face, target_face, target_block)
 
         # Find rotation to align the actual source to the expected source
+        expected_source_1_point: Point = internal_data.source_coordinate
+
         source_setup_n_rotate = self._find_rotation_idx(source_1_point, expected_source_1_point)
 
-
-        source_setup_alg = Algs.of_face(source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
+        source_setup_alg = Algs.of_face(
+            source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
 
         on_source_base_rotate_alg = Algs.of_face(target_face.name)
 
@@ -555,11 +593,11 @@ class CommunicatorHelper(SolverElement):
                                   (target_begin_rotated_ccw[1], target_begin_rotated_ccw[1])):
                 print("Intersection still exists after rotation", file=sys.stderr)
                 raise InternalSWError(f"Intersection still exists after rotation "
-                                      
+
                                       f"target={target_block}"
-                                              f"r={(target_point_begin[1], target_point_end[1])} "
-                                              f"rcw{(target_begin_rotated_cw[1], target_end_rotated_cw[1])} "
-                                              f"{(target_end_rotated_ccw[1], target_end_rotated_ccw[1])} ")
+                                      f"r={(target_point_begin[1], target_point_end[1])} "
+                                      f"rcw{(target_begin_rotated_cw[1], target_end_rotated_cw[1])} "
+                                      f"{(target_end_rotated_ccw[1], target_end_rotated_ccw[1])} ")
         else:
             # clockwise is OK
             target_block_after_rotate = (target_begin_rotated_cw, target_end_rotated_cw)
@@ -571,7 +609,6 @@ class CommunicatorHelper(SolverElement):
         slice_alg_data: SliceAlgorithmResult = internal_data.trans_data.slice_algorithms[0]
 
         slice_base_alg: SliceAlg = slice_alg_data.whole_slice_alg
-
 
         # we want to slice on the target
         inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block) * slice_alg_data.n
@@ -603,28 +640,6 @@ class CommunicatorHelper(SolverElement):
             self.op.play(source_setup_alg.prime)
 
         return (source_setup_alg + cum + source_setup_alg.prime).simplify()
-
-    def _get_slice_alg(self, base_slice_alg: SliceAlg,
-                       target_block):
-
-
-        """
-
-        :param target_block_begin_column: Center Slice index [0, n)
-        :param target_block_end_column: Center Slice index [0, n)
-        :return: m slice in range suitable for [c1, c2]
-        """
-
-        #   index is from left to right, L is from left to right,
-        # so we don't need to invert
-
-        target_block_begin_column = target_block[0][1]
-        target_block_end_column = target_block[1][1]
-
-        if target_block_begin_column > target_block_end_column:
-            target_block_begin_column, target_block_end_column = target_block_end_column, target_block_begin_column
-
-        return base_slice_alg[target_block_begin_column + 1:target_block_end_column + 1]
 
     def _build_front_target_commutator(
             self,
