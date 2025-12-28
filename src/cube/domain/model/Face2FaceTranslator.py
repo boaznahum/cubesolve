@@ -414,7 +414,7 @@ class Face2FaceTranslator:
     def translate(
             source_face: Face,
             dest_face: Face,
-            coord: tuple[int, int]
+            source_coord: tuple[int, int]
     ) -> FaceTranslationResult:
         """
         Translate a coordinate from source_face to dest_face.
@@ -426,10 +426,22 @@ class Face2FaceTranslator:
         Args:
             source_face: The face where the coordinate is defined
             dest_face: The face we want the corresponding coordinate on
-            coord: (row, col) position on source_face (0-indexed)
+            source_coord: (row, col) position on source_face (0-indexed)
 
         Returns:
             FaceTranslationResult with the destination coordinate and metadata
+            
+            dest_coord: (row, col) on dest_face where the translated position is.
+                   After applying any algorithm, a marker at dest_coord will
+                   appear at coord on source_face.
+            
+            whole_cube_alg: Algorithm (X/Y/Z moves) that brings dest_face to source_face's
+                       screen position.
+
+            slice_algorithms: Slice algorithms (M/E/S moves) that bring dest content to
+                         source position at coord. Each uses the same dest_coord.
+                         - Adjacent faces: exactly 1 algorithm
+                         - Opposite faces: exactly 2 algorithms
 
         Raises:
             ValueError: If source_face == dest_face (no translation needed)
@@ -447,9 +459,9 @@ class Face2FaceTranslator:
         # For 3x3 cube, centers are 1x1 (n_slices=1)
         # For 5x5 cube, centers are 3x3 (n_slices=3)
         n_slices = source_face.center.n_slices
-        row, col = coord
+        row, col = source_coord
         if not (0 <= row < n_slices and 0 <= col < n_slices):
-            raise ValueError(f"Coordinate {coord} out of bounds for center grid (n_slices={n_slices})")
+            raise ValueError(f"Coordinate {source_coord} out of bounds for center grid (n_slices={n_slices})")
 
         source_name = source_face.name
         dest_name = dest_face.name
@@ -461,14 +473,14 @@ class Face2FaceTranslator:
         transform_type = _TRANSFORMATION_TABLE[(source_name, dest_name)]
 
         # Apply the transformation using center grid size
-        dest_coord = _apply_transform(coord, transform_type, n_slices)
+        dest_coord = _apply_transform(source_coord, transform_type, n_slices)
 
         # Find shared edge (None if faces are opposite)
         shared_edge = Face2FaceTranslator._find_shared_edge(source_face, dest_face)
 
         # Compute slice algorithms
         slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
-            source_name, dest_name, coord, n_slices, whole_cube_base_alg, whole_cube_base_n
+            source_name, dest_name, source_coord, n_slices, whole_cube_base_alg, whole_cube_base_n
         )
 
         return FaceTranslationResult(

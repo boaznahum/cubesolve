@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
+from cube.domain.model.cube_boy import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.common.big_cube.CommunicatorHelper import CommunicatorHelper
@@ -109,63 +110,8 @@ def _is_center_position(n_slices: int, ltr_y: int, ltr_x: int) -> bool:
     return ltr_y == mid and ltr_x == mid
 
 
-def _is_inner_center_position(n_slices: int, ltr_y: int, ltr_x: int) -> bool:
-    """
-    Check if position is in the inner 2x2 center of an even cube.
-
-    On even cubes (4x4, 6x6, 8x8), the inner 2x2 positions have M slice
-    gap < 2, which can cause edge disturbance with some source/rotation
-    combinations.
-
-    For 4x4 cube (n_slices=2): ALL positions are in the inner 2x2.
-    For 6x6 cube (n_slices=4): inner 2x2 is at (1,1), (1,2), (2,1), (2,2).
-    For 8x8 cube (n_slices=6): inner 2x2 is at (2,2), (2,3), (3,2), (3,3).
-
-    Args:
-        n_slices: Number of center slices (cube_size - 2)
-        ltr_y, ltr_x: Position in LTR coordinates
-
-    Returns:
-        True if this position is in the inner 2x2 of an even cube
-    """
-    if n_slices % 2 != 0:
-        return False  # Only even cubes have inner 2x2 issues
-
-    # Inner 2x2 is at indices [n//2 - 1, n//2] for each dimension
-    # For n=2 (4x4): inner is (0,0) to (1,1) - ALL positions
-    # For n=4 (6x6): inner is (1,1) to (2,2)
-    inner_min = n_slices // 2 - 1
-    inner_max = n_slices // 2
-
-    return inner_min <= ltr_y <= inner_max and inner_min <= ltr_x <= inner_max
 
 
-def _is_truly_unsupported_position(n_slices: int, ltr_y: int, ltr_x: int) -> bool:
-    """
-    Check if position is truly unsupported by ANY source face.
-
-    On even cubes, the innermost position (n//2, n//2) in the center grid
-    cannot be handled by the standard commutator algorithm from any source
-    face. This is a fundamental algorithm limitation: both F and F' cause
-    column intersection for this position.
-
-    All other positions can be handled by at least one source face.
-
-    Args:
-        n_slices: Number of center slices (cube_size - 2)
-        ltr_y, ltr_x: Position in LTR coordinates
-
-    Returns:
-        True if this position is unsupported by all source faces
-    """
-    if n_slices % 2 != 0 or n_slices < 4:
-        return False  # Only even cubes have this issue
-
-    # The innermost position (n//2, n//2) is unsupported
-    # For n=4 (6x6 cube): position (2, 2) is unsupported
-    # This is because M[2]+M[2] would affect the same wing slice
-    innermost = n_slices // 2
-    return ltr_y == innermost and ltr_x == innermost
 
 
 def _get_center_slice_edge_by_ltr(face: Face, ltr_y: int, ltr_x: int) -> "PartEdge":
@@ -228,16 +174,12 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
     # Use helper's announcement of supported pairs
     supported_pairs = helper.get_supported_pairs()
 
-    # Map from FaceName to cube attribute name
-    face_name_to_attr = {
-        'U': 'up', 'D': 'down', 'F': 'front', 'B': 'back', 'L': 'left', 'R': 'right'
-    }
+    # Track source/target FaceNames since we need to get fresh references after reset
+    source_target_face_names: list[tuple[FaceName, FaceName]] = [
+        (src.name, tgt.name) for src, tgt in supported_pairs
+    ]
 
-    # Track source face names since we need to get fresh references after reset
-    source_target_names = [(face_name_to_attr[src.name.name], face_name_to_attr[tgt.name.name])
-                           for src, tgt in supported_pairs]
-
-    for source_name, target_name in source_target_names:
+    for source_face_name, target_face_name in source_target_face_names:
 
         for ltr_y in range(n_slices):
             for ltr_x in range(n_slices):
@@ -245,21 +187,20 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
                 if _is_center_position(n_slices, ltr_y, ltr_x):
                     continue
 
-                # Skip truly unsupported positions (innermost on even cubes)
-                if _is_truly_unsupported_position(n_slices, ltr_y, ltr_x):
-                    continue
+
 
                 for rotation in range(4):
                     # Reset cube to pristine state for each test iteration
                     # This ensures center pieces are in their original positions
-                    app.reset()
+
                     cube = app.cube
+                    cube.reset()
                     solver = CageNxNSolver(app.op)
                     helper = CommunicatorHelper(solver)
 
                     # Get fresh face references after reset
-                    source_face = getattr(cube, source_name)
-                    target_face = getattr(cube, target_name)
+                    source_face = cube.face(source_face_name)
+                    target_face = cube.face(target_face_name)
 
                     # Get expected source LTR by mapping target → source
                     expected_src_ltr = helper.get_expected_source_ltr(
@@ -310,12 +251,7 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
                     corners_positioned = all(c.match_faces for c in cube.corners)
                     state_preserved = edges_reduced and edges_positioned and corners_positioned
 
-                    # For inner positions on even cubes, certain source/rotation combinations
-                    # cause edge disturbance due to slice gap < 2. This affects both:
-                    # - M-slice sources (Up/Down/Back): column gap issues
-                    # - E-slice sources (Left/Right): row gap issues
-                    # Each inner position works with at least one source/rotation combo.
-                    is_inner = _is_inner_center_position(n_slices, ltr_y, ltr_x)
+
 
                     if not state_preserved:
                         # Clean up attribute before continuing
@@ -327,10 +263,7 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
                         if test_key in target_slice_edge.c_attributes:
                             del target_slice_edge.c_attributes[test_key]
 
-                        # Inner positions have known issues with certain source/rotation combos
-                        # (slice gap < 2). Each position works with at least one source.
-                        if is_inner:
-                            continue  # Known limitation, skip
+
 
                         # For other cases, this is unexpected - fail the test
                         bad_edges = [e.name for e in cube.edges
