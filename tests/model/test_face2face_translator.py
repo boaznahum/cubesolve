@@ -157,14 +157,11 @@ class TestWholeCubeAlgorithm:
                         cube, source_face, dest_face, coord,
                         algorithms.whole_cube_alg)
 
+                    # Test individual slice algorithm (uses computed slice index)
                     verify_algorithm(
                         cube, source_face, dest_face, coord,
-                        algorithms.slice_algorithms[0].get_whole_slice_alg())
+                        algorithms.slice_algorithms[0].get_alg())
 
-                    # verify_algorithm(
-                    #     cube, source_face, dest_face, coord,
-                    #     algorithms[0], AlgorithmType.WHOLE_CUBE
-                    # )
                     cube.clear_c_attributes()
 
 
