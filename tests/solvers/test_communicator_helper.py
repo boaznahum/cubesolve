@@ -24,15 +24,14 @@ from typing import TYPE_CHECKING
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.model import PartEdge, Face, FaceName
 from cube.domain.model.cube_boy import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from cube.domain.solver.common.big_cube.CommunicatorHelper import CommunicatorHelper
+from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 
 if TYPE_CHECKING:
-    from cube.domain.model.PartSlice import PartEdge, CenterSlice
+    from cube.domain.model.PartSlice import PartEdge
 
 
 # =============================================================================

@@ -22,31 +22,11 @@ from cube.domain.model.Face import Face
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
 
 Point: TypeAlias = Tuple[int, int]  # row , column
 Block: TypeAlias = Tuple[Point, Point]
-
-
-def _get_supported_pairs() -> list[tuple[FaceName, FaceName]]:
-    """
-    Return list of (source, target) face pairs that are currently supported.
-
-    These are the combinations that do_communicator() can handle.
-    Other combinations will raise NotImplementedError.
-
-    Returns:
-        List of (source_face, target_face) tuples
-    """
-    return [
-        (FaceName.U, FaceName.F),  # Source=Up, Target=Front
-        (FaceName.B, FaceName.F),
-        #(FaceName.R, FaceName.F),
-        #  (cube.back, cube.front),  # Source=Back, Target=Front
-        #  (cube.down, cube.front),  # Source=Down, Target=Front
-        #  (cube.left, cube.front),  # Source=Left, Target=Front (E slice)
-        #  (cube.right, cube.front),  # Source=Right, Target=Front (E' slice)
-    ]
 
 
 @dataclass(frozen=True)
@@ -234,8 +214,6 @@ class CommunicatorHelper(SolverElement):
             case _:
                 raise InternalSWError(f"Unknown slice name {base_slice_alg.slice_name}")
 
-
-
     def _get_slice_m_alg(self, c1: int, c2: int):
         """
         Get M slice algorithm for column range.
@@ -310,7 +288,6 @@ class CommunicatorHelper(SolverElement):
             r1, r2 = r2, r1
         # S[n:n] notation works for single slice at position n
         return Algs.S[r1 + 1:r2 + 1].prime
-
 
     def _find_rotation_idx(self, actual_source_idx: Point, expected_source_idx: Point) -> int:
         """
@@ -400,7 +377,6 @@ class CommunicatorHelper(SolverElement):
         if source_face is target_face:
             raise ValueError("Source and target must be different faces")
 
-
         # currently we support  only blockof size 1
         assert target_block[0] == target_block[1]
 
@@ -427,14 +403,25 @@ class CommunicatorHelper(SolverElement):
 
         return _InternalCommData(translation_result.source_coord, translation_result)
 
-    def _compute_rotate_on_source(self, cube: Cube, target_block: Block) -> Tuple[int, Block]:
+    def _compute_rotate_on_source(self, cube: Cube, slice_name: SliceName, target_block: Block) -> Tuple[int, Block]:
 
         """
 
         :param cube:
         :param target_block:
+        :param slice_name: the slice thet is used to do th epeuce move from source to target
         :return: [n times to roate, targte blcok after rotate]
         """
+
+        if slice_name == SliceName.M:
+            def ex(point: Point) -> int:
+                return point[1]  # the column, slice cut the row
+        elif slice_name == SliceName.E:
+            def ex(point: Point) -> int:  # on all ?
+                return point[0]  # the row, slice cut the columns
+        else:
+            assert False
+
         target_point_begin = target_block[0]
         target_point_end = target_block[1]
 
@@ -442,9 +429,8 @@ class CommunicatorHelper(SolverElement):
         target_begin_rotated_cw = cqr.rotate_point_clockwise(target_point_begin)
         target_end_rotated_cw = cqr.rotate_point_clockwise(target_point_end)
 
-
-        if self._1d_intersect((target_point_begin[1], target_point_end[1]),
-                              (target_begin_rotated_cw[1], target_end_rotated_cw[1])):
+        if self._1d_intersect((ex(target_point_begin), ex(target_point_end)),
+                              (ex(target_begin_rotated_cw), ex(target_end_rotated_cw))):
 
             on_front_rotate = -1
             target_begin_rotated_ccw = cqr.rotate_point_counterclockwise(target_point_begin)
@@ -452,8 +438,8 @@ class CommunicatorHelper(SolverElement):
 
             target_block_after_rotate = (target_begin_rotated_ccw, target_end_rotated_ccw)
 
-            if self._1d_intersect((target_point_begin[1], target_point_end[1]),
-                                  (target_begin_rotated_ccw[1], target_begin_rotated_ccw[1])):
+            if self._1d_intersect((ex(target_point_begin), ex(target_point_end)),
+                                  (ex(target_begin_rotated_ccw), ex(target_begin_rotated_ccw))):
                 print("Intersection still exists after rotation", file=sys.stderr)
                 raise InternalSWError(f"Intersection still exists after rotation "
 
@@ -537,21 +523,16 @@ class CommunicatorHelper(SolverElement):
         source_setup_alg = Algs.of_face(
             source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
 
-        on_source_base_rotate_alg = Algs.of_face(target_face.name)
-
-        on_front_rotate_n, target_block_after_rotate = \
-            self._compute_rotate_on_source(cube, target_block)
-
-        on_front_rotate: Alg = on_source_base_rotate_alg * on_front_rotate_n
-
-
-
-        # build the communicator
-
         # E, S, M
         slice_alg_data: SliceAlgorithmResult = internal_data.trans_data.slice_algorithms[0]
-
         slice_base_alg: SliceAlg = slice_alg_data.whole_slice_alg
+
+        on_front_rotate_n, target_block_after_rotate = \
+            self._compute_rotate_on_source(cube, slice_base_alg.slice_name, target_block)
+
+        on_front_rotate: Alg = Algs.of_face(target_face.name) * on_front_rotate_n
+
+        # build the communicator
 
         # we want to slice on the target
         inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block) * slice_alg_data.n
