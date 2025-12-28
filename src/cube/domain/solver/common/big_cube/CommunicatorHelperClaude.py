@@ -13,11 +13,12 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 import sys
 from dataclasses import dataclass
 from typing import Tuple, TypeAlias
+from unittest import case
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.SliceAlg import SliceAlg
-from cube.domain.model import FaceName, Cube
+from cube.domain.model import FaceName
 from cube.domain.model.Face import Face
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
 from cube.domain.model.SliceName import SliceName
@@ -41,7 +42,7 @@ def _get_supported_pairs() -> list[tuple[FaceName, FaceName]]:
     return [
         (FaceName.U, FaceName.F),  # Source=Up, Target=Front
         (FaceName.B, FaceName.F),
-        #(FaceName.R, FaceName.F),
+        (FaceName.R, FaceName.F),
         #  (cube.back, cube.front),  # Source=Back, Target=Front
         #  (cube.down, cube.front),  # Source=Down, Target=Front
         #  (cube.left, cube.front),  # Source=Left, Target=Front (E slice)
@@ -234,7 +235,13 @@ class CommunicatorHelper(SolverElement):
             case _:
                 raise InternalSWError(f"Unknown slice name {base_slice_alg.slice_name}")
 
+        target_block_begin_column = target_block[0][1]
+        target_block_end_column = target_block[1][1]
 
+        if target_block_begin_column > target_block_end_column:
+            target_block_begin_column, target_block_end_column = target_block_end_column, target_block_begin_column
+
+        return base_slice_alg[target_block_begin_column + 1:target_block_end_column + 1]
 
     def _get_slice_m_alg(self, c1: int, c2: int):
         """
@@ -311,6 +318,69 @@ class CommunicatorHelper(SolverElement):
         # S[n:n] notation works for single slice at position n
         return Algs.S[r1 + 1:r2 + 1].prime
 
+    def _point_on_source_idx(self, source: Face, target: Face, rc: Point) -> Point:
+        """
+        Convert target index coordinates to source index coordinates.
+
+        The mapping depends on both source and target faces.
+
+        For Front target:
+            - Up source: same coordinates (Front and Up share coordinate system)
+            - Back source: both axes inverted
+            - Down source: same coordinates as Up
+            - Left source: same coordinates (E brings Left to Front directly)
+            - Right source: same coordinates (E' brings Right to Front directly)
+
+        For Right target:
+            - Up source: columns swap with rows (S slice rotates 90°)
+            - Down source: columns swap with rows, one axis inverted
+            - Front source: same coordinates (E' brings Front to Right directly)
+            - Back source: both axes inverted
+            - Left source: both axes inverted (E2 brings Left to Right)
+        """
+        cube = self.cube
+        inv = cube.inv
+
+        if target is cube.front:
+            # Original Front target logic
+            if source is cube.back:
+                return inv(rc[0]), inv(rc[1])
+            elif source is cube.down:
+                # Down→Front: M brings pieces, same coordinates as Up
+                return rc
+            elif source is cube.left:
+                # Left→Front: E brings pieces, identity mapping
+                return rc
+            elif source is cube.right:
+                # Right→Front: E' brings pieces, identity mapping
+                return rc
+            else:
+                # Up source: same coordinates
+                return rc
+        elif target is cube.right:
+            # Right target logic
+            if source is cube.up:
+                # Up→Right: S slice brings pieces, 90° rotation
+                # Looking at Right face: the row on Up becomes a column on Right
+                # (row, col) on Up → (inv(col), row) on Right
+                return inv(rc[1]), rc[0]
+            elif source is cube.down:
+                # Down→Right: S' slice brings pieces
+                # (row, col) on Down → (col, inv(row)) on Right
+                return rc[1], inv(rc[0])
+            elif source is cube.front:
+                # Front→Right: E' brings pieces, identity mapping
+                return rc
+            elif source is cube.back:
+                # Back→Right: E brings pieces, both axes inverted
+                return inv(rc[0]), inv(rc[1])
+            elif source is cube.left:
+                # Left→Right: E2 brings pieces (180°), both axes inverted
+                return inv(rc[0]), inv(rc[1])
+            else:
+                raise ValueError(f"Unsupported source {source.name} for Right target")
+        else:
+            raise ValueError(f"Unsupported target {target.name}")
 
     def _find_rotation_idx(self, actual_source_idx: Point, expected_source_idx: Point) -> int:
         """
@@ -427,47 +497,6 @@ class CommunicatorHelper(SolverElement):
 
         return _InternalCommData(translation_result.source_coord, translation_result)
 
-    def _compute_rotate_on_source(self, cube: Cube, target_block: Block) -> Tuple[int, Block]:
-
-        """
-
-        :param cube:
-        :param target_block:
-        :return: [n times to roate, targte blcok after rotate]
-        """
-        target_point_begin = target_block[0]
-        target_point_end = target_block[1]
-
-        cqr = cube.cqr
-        target_begin_rotated_cw = cqr.rotate_point_clockwise(target_point_begin)
-        target_end_rotated_cw = cqr.rotate_point_clockwise(target_point_end)
-
-
-        if self._1d_intersect((target_point_begin[1], target_point_end[1]),
-                              (target_begin_rotated_cw[1], target_end_rotated_cw[1])):
-
-            on_front_rotate = -1
-            target_begin_rotated_ccw = cqr.rotate_point_counterclockwise(target_point_begin)
-            target_end_rotated_ccw = cqr.rotate_point_counterclockwise(target_point_end)
-
-            target_block_after_rotate = (target_begin_rotated_ccw, target_end_rotated_ccw)
-
-            if self._1d_intersect((target_point_begin[1], target_point_end[1]),
-                                  (target_begin_rotated_ccw[1], target_begin_rotated_ccw[1])):
-                print("Intersection still exists after rotation", file=sys.stderr)
-                raise InternalSWError(f"Intersection still exists after rotation "
-
-                                      f"target={target_block}"
-                                      f"r={(target_point_begin[1], target_point_end[1])} "
-                                      f"rcw{(target_begin_rotated_cw[1], target_end_rotated_cw[1])} "
-                                      f"{(target_end_rotated_ccw[1], target_end_rotated_ccw[1])} ")
-        else:
-            # clockwise is OK
-            target_block_after_rotate = (target_begin_rotated_cw, target_end_rotated_cw)
-            on_front_rotate = 1
-
-        return on_front_rotate, target_block_after_rotate
-
     def do_communicator(
             self,
             source_face: Face,
@@ -539,12 +568,41 @@ class CommunicatorHelper(SolverElement):
 
         on_source_base_rotate_alg = Algs.of_face(target_face.name)
 
-        on_front_rotate_n, target_block_after_rotate = \
-            self._compute_rotate_on_source(cube, target_block)
+        on_front_rotate: Alg
 
-        on_front_rotate: Alg = on_source_base_rotate_alg * on_front_rotate_n
+        # assume we rotate F clockwise
+        cqr = cube.cqr
+        target_begin_rotated_cw = cqr.rotate_point_clockwise(target_point_begin)
+        target_end_rotated_cw = cqr.rotate_point_clockwise(target_point_end)
 
+        # the columns ranges must not intersect
+        # c1 column sart of block
+        # c2 column end of block
+        # rc1_f_rotated[1] columns start  after rotating
+        # rc2_f_rotated[1] columns end  after rotating
 
+        if self._1d_intersect((target_point_begin[1], target_point_end[1]),
+                              (target_begin_rotated_cw[1], target_end_rotated_cw[1])):
+
+            on_front_rotate = on_source_base_rotate_alg.prime
+            target_begin_rotated_ccw = cqr.rotate_point_counterclockwise(target_point_begin)
+            target_end_rotated_ccw = cqr.rotate_point_counterclockwise(target_point_end)
+
+            target_block_after_rotate = (target_begin_rotated_ccw, target_end_rotated_ccw)
+
+            if self._1d_intersect((target_point_begin[1], target_point_end[1]),
+                                  (target_begin_rotated_ccw[1], target_begin_rotated_ccw[1])):
+                print("Intersection still exists after rotation", file=sys.stderr)
+                raise InternalSWError(f"Intersection still exists after rotation "
+
+                                      f"target={target_block}"
+                                      f"r={(target_point_begin[1], target_point_end[1])} "
+                                      f"rcw{(target_begin_rotated_cw[1], target_end_rotated_cw[1])} "
+                                      f"{(target_end_rotated_ccw[1], target_end_rotated_ccw[1])} ")
+        else:
+            # clockwise is OK
+            target_block_after_rotate = (target_begin_rotated_cw, target_end_rotated_cw)
+            on_front_rotate = on_source_base_rotate_alg
 
         # build the communicator
 

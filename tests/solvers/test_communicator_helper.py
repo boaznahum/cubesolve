@@ -239,6 +239,7 @@ def test_communicator_supported_pairs(cube_size: int) -> None:
                     target_slice_edge = target_face.center.get_center_slice(target_point).edge
                     assert test_key in target_slice_edge.c_attributes, \
                         f"Attribute should be on target ({target_face.name}, " \
+                        f"source face={source_face.name}, ," \
                         f"source_point={expected_src_point}," \
                         f"target_point={target_point}, alg={alg})"
 
