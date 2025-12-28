@@ -266,17 +266,33 @@ class SliceAlgorithmResult:
         See SliceAbleAlg.normalize_slice_index() which converts to 0-based internally.
     """
     whole_slice_alg: SliceAlg  # not sliced
-    on_slice: int  # 1-based slice index
+
+    # claude make a bug here it make it 1 based , now it is hard to fix it
+    # it is in the transfoem table !!!
+    _on_slice: int  # 1-based slice index
     n: int  # n rotations
 
+    @property
+    def on_slice(self):
+        """
+        Zero based !!!
+        :return:
+        """
+        return self._on_slice - 1
     def get_alg(self) -> Alg:
-        return self.whole_slice_alg[self.on_slice] * self.n
+        return self.get_slice_alg(self.on_slice)
 
     def get_whole_slice_alg(self) -> Alg:
         return self.whole_slice_alg * self.n
 
+    # see bug above, but here we accept zero base !!!
     def get_slice_alg(self, slice_index) -> Alg:
-        return self.whole_slice_alg[slice_index] * self.n
+        """
+
+        :param slice_index:  zero based !!!
+        :return:
+        """
+        return self.whole_slice_alg[slice_index+1] * self.n
 
 
 

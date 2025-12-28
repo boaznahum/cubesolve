@@ -184,3 +184,22 @@ class TestSliceAlgorithm:
             )
 
             cube.clear_c_attributes()
+
+    @pytest.mark.parametrize("cube_size", [4])
+    @pytest.mark.parametrize("face_pair", [[FaceName.F, FaceName.U]], ids=_face_pair_id)
+    def test_face_pair_4_U_F(self, cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
+        """Test slice algorithm for a specific face pair."""
+        target_name, source_name = face_pair
+        cube = Cube(cube_size, sp=_test_sp)
+
+        target_face = cube.face(target_name)
+        source_face = cube.face(source_name)
+
+        for center_slice in target_face.center.all_slices:
+            target_coord: CenterSliceIndex = center_slice.index
+
+            verify_slice_translation(
+                cube, target_face, source_face, target_coord
+            )
+
+            cube.clear_c_attributes()

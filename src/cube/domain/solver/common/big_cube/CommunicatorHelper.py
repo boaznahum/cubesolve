@@ -537,12 +537,12 @@ class CommunicatorHelper(SolverElement):
         second_inner_slice_alg: Alg = slice_alg_data.get_slice_alg(cube.inv(slice_alg_data.on_slice))
 
         # 4x4 U -> F, 0,0
-        # M[0] F' M[1] F M[0]' F ' M[1]'
-        cum = [inner_slice_alg, # M[0]
+        # M[2] F' M[1] F M[2]' F ' M[1]'
+        cum = [inner_slice_alg, # M[2]
                on_front_rotate, # F'
                second_inner_slice_alg, # M[1]
                on_front_rotate.prime,  # F
-               inner_slice_alg.prime,  # M[0]
+               inner_slice_alg.prime,  # M[2]
                on_front_rotate,        # F'
                second_inner_slice_alg.prime, # M[1]'
                on_front_rotate.prime   # F
