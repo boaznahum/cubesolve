@@ -156,6 +156,8 @@ class Algs:
                                     F, Fw, Z, S,
                                     B, Bw,
                                     D, Dw,
+                                    # Adaptive wide moves (lowercase)
+                                    f, u, r, l, d, b,
                                     ]
 
     RU = SeqAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)

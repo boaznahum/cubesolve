@@ -15,6 +15,13 @@ def parse_alg(s: str) -> _Alg:
     """
     this is very naive patch version
     Currently doesn't support exp N and exp '  (only U2, U',...)
+
+    Supports:
+    - Simple moves: R, U, R', R2, etc.
+    - Slice moves: M, E, S, M', E2, etc.
+    - Wide moves: Rw, r, Lw', etc.
+    - Slice notation: [1:2]M, [1]R, [1:]S, etc.
+    - Sequences: [R U R' U'], (R U) 2
     """
 
     # We capture, so we get the splitters two, such as '(' ')', we need to ignore the spaces
@@ -22,7 +29,10 @@ def parse_alg(s: str) -> _Alg:
     # https://docs.python.org/3/library/re.html#re.split
     # example:
     #  ["R'", ' ', 'U2', ' ', '', '(', 'R', ' ', 'U', ' ', "R'", ' ', 'U', ')', '', ' ', 'R']
-    pattern = r"(\s+|\(|\))"
+    #
+    # Updated to also split on [ and ] for sequence brackets
+    # Note: Slice notation [1:2]M is handled specially - the [ before digits is not a bracket
+    pattern = r"(\s+|\(|\)|\[|\])"
     tokens = re.split(pattern, s)
 
     p = _Parser(s, tokens)
@@ -45,22 +55,44 @@ class _Parser:
 
         return Algs.seq_alg(None, *result)
 
-    def _parse(self, result: list[_Alg], nested: bool):
+    def _parse(self, result: list[_Alg], nested: bool, bracket_type: str = "("):
 
         while True:
             token = self.next_token()
             if not token:
                 break
 
-            if token == "(":
-                self._parse(result, True)
+            if token == "(" or token == "[":
+                # Check if [ is a slice prefix or sequence bracket
+                if token == "[":
+                    # Peek at next token to see if it's slice notation (starts with digit or :)
+                    next_tok = self.peek_token()
+                    if next_tok and (next_tok[0].isdigit() or next_tok[0] == ":"):
+                        # This is slice notation [1:2]M - collect tokens until ] and build slice
+                        slice_tokens = self._collect_slice_tokens()
+                        # Next token should be the algorithm
+                        alg_token = self.next_token()
+                        if not alg_token:
+                            raise InternalSWError(f"Expected algorithm after slice in {self._original}")
+                        # Combine slice notation with algorithm token
+                        combined = "[" + slice_tokens + "]" + alg_token
+                        at = _token_to_alg(combined)
+                        result.append(at)
+                        continue
+                # Otherwise treat [ as sequence bracket like (
+                self._parse(result, True, token)
 
-            elif token == ')':
+            elif token == ')' or token == ']':
                 if not nested:
-                    raise InternalSWError(f"Un expected ')' in {self._original} ")
+                    raise InternalSWError(f"Unexpected '{token}' in {self._original}")
+                # Verify matching bracket type
+                expected = ']' if bracket_type == '[' else ')'
+                if token != expected:
+                    raise InternalSWError(f"Mismatched brackets: expected '{expected}' but got '{token}' in {self._original}")
+                return  # Exit nested parse
             elif token.isdigit():
                 if not result:
-                    raise InternalSWError(f"Un expected multiplier {token} in {self._original} ")
+                    raise InternalSWError(f"Unexpected multiplier {token} in {self._original}")
                 prev = result.pop()
                 at = prev * int(token)
                 result.append(at)
@@ -68,6 +100,28 @@ class _Parser:
             else:
                 at = _token_to_alg(token)
                 result.append(at)
+
+    def _collect_slice_tokens(self) -> str:
+        """Collect tokens until ] for slice notation."""
+        parts: list[str] = []
+        while True:
+            token = self.next_token()
+            if not token:
+                raise InternalSWError(f"Unclosed slice bracket in {self._original}")
+            if token == "]":
+                break
+            parts.append(token)
+        return "".join(parts)
+
+    def peek_token(self) -> str | None:
+        """Peek at next non-empty token without consuming it."""
+        tokens = self._tokens
+        for i, t in enumerate(tokens):
+            if t:
+                t = t.strip()
+                if t:
+                    return t
+        return None
 
     def next_token(self) -> str | None:
         """
@@ -86,17 +140,127 @@ class _Parser:
         return None
 
 
-def _token_to_alg(t) -> _Alg:
+def _parse_slice_prefix(t: str) -> tuple[str, slice | list[int] | None]:
+    """
+    Parse slice prefix from token.
+
+    Formats:
+        [1:2]M  -> ("M", slice(1, 2))
+        [1:]M   -> ("M", slice(1, None))
+        [1:1]M  -> ("M", slice(1, 1))
+        [1,2,3]M -> ("M", [1, 2, 3])
+        M       -> ("M", None)
+
+    Returns:
+        (base_token, slice_spec) where slice_spec is None if no slice prefix
+    """
+    if not t.startswith("["):
+        return t, None
+
+    # Find closing bracket
+    bracket_end = t.find("]")
+    if bracket_end == -1:
+        raise InternalSWError(f"Unclosed bracket in token: {t}")
+
+    slice_str = t[1:bracket_end]  # Content between [ and ]
+    base_token = t[bracket_end + 1:]  # Everything after ]
+
+    if not base_token:
+        raise InternalSWError(f"No algorithm after slice in token: {t}")
+
+    # Parse slice content
+    if ":" in slice_str:
+        # Range notation: [start:stop] or [start:] or [:stop]
+        parts = slice_str.split(":")
+        if len(parts) != 2:
+            raise InternalSWError(f"Invalid slice format: {slice_str}")
+
+        start_str, stop_str = parts
+        start = int(start_str) if start_str else None
+        stop = int(stop_str) if stop_str else None
+        return base_token, slice(start, stop)
+
+    elif "," in slice_str:
+        # List notation: [1,2,3]
+        indices = [int(x.strip()) for x in slice_str.split(",")]
+        return base_token, indices
+
+    else:
+        # Single index: [1] -> slice(1, 1)
+        index = int(slice_str)
+        return base_token, slice(index, index)
+
+
+def _token_to_alg(t: str) -> _Alg:
+    """
+    Parse a token to algorithm.
+
+    Order of operations:
+    1. Parse slice prefix [start:stop] if present
+    2. Parse modifiers from base token (', 2, '2, '3, etc.)
+    3. Get the simple base algorithm
+    4. Apply slice to base algorithm FIRST
+    5. Apply modifiers (prime, multiply) to sliced algorithm
+
+    Examples:
+        [1:2]M   -> M[1:2]
+        [1:2]M'  -> M[1:2].prime
+        [1:2]M'3 -> (M[1:2].prime) * 3
+        [1:2]M2  -> M[1:2] * 2
+    """
+    # First, check for slice prefix [start:stop]
+    base_token, slice_spec = _parse_slice_prefix(t)
+
+    # Parse modifiers from base token
+    # Format can be: CODE, CODE', CODE2, CODE'2, CODE'3, etc.
+    modifiers: list[str] = []  # List of modifiers to apply in order
+
+    # Extract all trailing modifiers (work backwards)
+    remaining = base_token
+    while remaining:
+        if remaining.endswith("'"):
+            modifiers.insert(0, "prime")  # Insert at front to maintain order
+            remaining = remaining[:-1]
+        elif remaining[-1].isdigit():
+            # Find all trailing digits
+            i = len(remaining) - 1
+            while i > 0 and remaining[i - 1].isdigit():
+                i -= 1
+            num = remaining[i:]
+            modifiers.insert(0, f"mul:{num}")
+            remaining = remaining[:i]
+        else:
+            break
+
+    # Get base simple algorithm
+    if not remaining:
+        raise InternalSWError(f"Empty base token in: {t}")
+
+    base_alg = _token_to_alg_no_slice(remaining)
+
+    # Apply slice to base algorithm FIRST (before modifiers)
+    if slice_spec is not None:
+        if isinstance(slice_spec, slice):
+            base_alg = base_alg[slice_spec.start:slice_spec.stop]
+        else:
+            base_alg = base_alg[slice_spec]
+
+    # Apply modifiers in order
+    result = base_alg
+    for mod in modifiers:
+        if mod == "prime":
+            result = result.prime
+        elif mod.startswith("mul:"):
+            n = int(mod[4:])
+            result = result * n
+
+    return result
+
+
+def _token_to_alg_no_slice(t: str) -> _Alg:
+    """Convert a simple token (no slice, no prime, no x2) to an algorithm."""
     from cube.domain import algs
     from cube.domain.algs import Algs
-
-    if t.endswith("'"):
-        alg = _token_to_alg(t[:-1])
-        return alg.prime
-
-    if t.endswith("2"):
-        alg = _token_to_alg(t[:-1])
-        return alg * 2
 
     simple = Algs.Simple
 
@@ -113,7 +277,6 @@ def _token_to_alg(t) -> _Alg:
 
         if isinstance(s, algs.FaceAlg):
             if code.lower() == t:
-                return _token_to_alg(code + "w")
+                return _token_to_alg_no_slice(code + "w")
 
-    else:
-        raise InternalSWError(f"Unknown token {t}")
+    raise InternalSWError(f"Unknown token {t}")
