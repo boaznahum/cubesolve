@@ -503,7 +503,7 @@ class ApplicationAndViewState:
         self.debug(False, "-" * 60)
         self.debug(False, "SLICES (verbose):")
 
-        all_slices = cube.get_all_parts()
+        all_slices = cube.get_all_part_slices()
         for s in sorted(all_slices, key=lambda p: str(p.fixed_id)):
             # _colors_id_by_colors is initialized in PartSlice.__init__
             colors_cache = s._colors_id_by_colors

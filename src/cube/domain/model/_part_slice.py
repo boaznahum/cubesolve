@@ -190,6 +190,12 @@ class PartSlice(ABC, Hashable):
         self.c_attributes.clear()
         self.c_attributes.update(source_slice.c_attributes)
 
+    def clear_c_attributes(self) -> None:
+        """Clear color-associated attributes from this slice and all its edges."""
+        self.c_attributes.clear()
+        for edge in self._edges:
+            edge.clear_c_attributes()
+
     def same_colors(self, other: "PartSlice"):
         """
         Assume both have the same structure

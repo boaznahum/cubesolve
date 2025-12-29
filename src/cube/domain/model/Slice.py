@@ -1,4 +1,169 @@
-"""Slice class for cube rotations."""
+"""
+Slice class for cube rotations.
+
+This is the SINGLE SOURCE OF TRUTH for slice geometry. Other code should
+derive slice information from here rather than hardcoding cycles/tables.
+
+================================================================================
+CUBE ORIENTATION AND AXES
+================================================================================
+
+Standard cube orientation (viewer looking at Front face):
+
+                 +Y (Up)
+                  │
+                  │    +Z (Back, into screen)
+                  │   /
+                  │  /
+                  │ /
+                  │/
+    +X (Right) ──┼────────
+                /│
+               / │
+              /  │
+             /   │
+   -Z (Front, toward viewer)
+
+Face layout (unfolded):
+
+              ┌─────┐
+              │  U  │
+              │     │
+        ┌─────┼─────┼─────┬─────┐
+        │  L  │  F  │  R  │  B  │
+        │     │     │     │     │
+        └─────┼─────┼─────┴─────┘
+              │  D  │
+              │     │
+              └─────┘
+
+================================================================================
+SLICE DEFINITIONS
+================================================================================
+
+Each slice rotates the 4 faces PERPENDICULAR to its axis.
+The axis faces (and their opposites) stay in place but don't rotate.
+
+┌──────────┬───────────┬─────────────────┬───────────────────────────────────┐
+│  Slice   │   Axis    │  Affects Faces  │  Rotation Direction               │
+├──────────┼───────────┼─────────────────┼───────────────────────────────────┤
+│    M     │   L ↔ R   │   F, U, B, D    │  Like L (clockwise facing L)      │
+│    E     │   U ↔ D   │   F, R, B, L    │  Like D (clockwise facing D)      │
+│    S     │   F ↔ B   │   U, R, D, L    │  Like F (clockwise facing F)      │
+└──────────┴───────────┴─────────────────┴───────────────────────────────────┘
+
+API Reference:
+  - Algs.M.get_face_name() → L  (M rotates like L)
+  - Algs.E.get_face_name() → D  (E rotates like D)
+  - Algs.S.get_face_name() → F  (S rotates like F)
+
+================================================================================
+SLICE TRAVERSAL (used in _get_slices_by_index)
+================================================================================
+
+Each slice traverses 4 faces. The starting face and edge determine the
+traversal order. Traversal uses edge.opposite(face) to find the next face.
+
+M Slice (axis L-R):
+~~~~~~~~~~~~~~~~~~
+    Start: Front face, edge_bottom
+
+           U
+           ↑
+    F → edge_bottom.opposite(F) → U → edge_bottom.opposite(U) → B → ... → D → F
+
+    Traversal: F → U → B → D → F
+
+         ┌───┐
+         │ U │ ←─┐
+         └─┬─┘   │
+           │     │
+    ┌──────↓─────┴───┐
+    │ F    ↓    B    │   (L and R not shown - they're the axis faces)
+    └──────↑─────────┘
+           │
+         ┌─┴─┐
+         │ D │
+         └───┘
+
+E Slice (axis U-D):
+~~~~~~~~~~~~~~~~~~
+    Start: Right face, edge_left
+
+    Traversal: R → B → L → F → R
+
+    ┌───┬───┬───┬───┐
+    │ L │ F │ R │ B │
+    │ ← │ ← │ ← │ ← │←─┐
+    └───┴───┴───┴───┘  │
+      │                │
+      └────────────────┘
+
+    (U and D not shown - they're the axis faces)
+
+S Slice (axis F-B):
+~~~~~~~~~~~~~~~~~~
+    Start: Up face, edge_left
+
+    Traversal: U → R → D → L → U
+
+         ┌───┐
+    ┌───→│ U │
+    │    └─┬─┘
+    │      ↓
+    │ ┌────┴────┐
+    │ │ L     R │
+    │ │ ↑     ↓ │
+    │ └────┬────┘
+    │      ↓
+    │    ┌─┴─┐
+    └────│ D │
+         └───┘
+
+    (F and B not shown - they're the axis faces)
+
+================================================================================
+RELATIONSHIP TO WHOLE-CUBE ROTATIONS (X, Y, Z)
+================================================================================
+
+Whole-cube rotations use slices internally:
+
+┌────────┬─────────────────┬──────────────────────────────────────────────────┐
+│ Whole  │ Implementation  │  Rotation Direction                              │
+├────────┼─────────────────┼──────────────────────────────────────────────────┤
+│   X    │ M' + R + L'     │  Like R (clockwise facing R)                     │
+│   Y    │ E' + U + D'     │  Like U (clockwise facing U)                     │
+│   Z    │ S + F + B'      │  Like F (clockwise facing F)                     │
+└────────┴─────────────────┴──────────────────────────────────────────────────┘
+
+API Reference:
+  - Algs.X.get_face_name() → R  (X rotates like R, OPPOSITE of M's L!)
+  - Algs.Y.get_face_name() → U  (Y rotates like U, OPPOSITE of E's D!)
+  - Algs.Z.get_face_name() → F  (Z rotates like F, SAME as S's F!)
+
+Direction Relationship:
+  - M.face (L) is OPPOSITE to X.face (R) → opposite directions
+  - E.face (D) is OPPOSITE to Y.face (U) → opposite directions
+  - S.face (F) is SAME as Z.face (F) → same direction
+
+This relationship is used to derive rotation cycles without hardcoding.
+
+================================================================================
+FACE CYCLES (derived from traversal)
+================================================================================
+
+Content flow during positive rotation (n=1):
+
+  X rotation: D → F → U → B → D  (content on D moves to F, etc.)
+  Y rotation: R → F → L → B → R  (content on R moves to F, etc.)
+  Z rotation: L → U → R → D → L  (content on L moves to U, etc.)
+
+These cycles can be derived from Slice traversal:
+  1. Get the 4 faces from slice traversal
+  2. Adjust direction based on slice.face vs whole_cube.face relationship
+
+================================================================================
+"""
 
 from typing import TYPE_CHECKING, Iterable, Sequence, Tuple, TypeAlias
 
@@ -79,6 +244,7 @@ class Slice(SuperElement):
             case _:
                 raise ValueError(f"Unknown slice name: {self._name}")
 
+        # noinspection PyUnboundLocalVariable no it is not
         assert current_face.is_edge(current_edge)
 
         n_slices = self.n_slices

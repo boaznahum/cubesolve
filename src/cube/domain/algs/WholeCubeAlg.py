@@ -24,6 +24,31 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
 
     def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
 
+
+        face_name = self.get_face_name()
+
+        return face_name, cube.get_all_part_slices()
+
+    def get_face_name(self) -> FaceName:
+        """
+        Return the face that defines the positive rotation axis.
+
+        This is the face that rotates clockwise when the whole-cube rotation
+        is applied (viewed from outside the cube looking at that face).
+
+        In terms of the LTR coordinate system (see docs/face-coordinate-system/):
+        - Clockwise rotation moves content: T→R→(-T)→(-R)→T
+        - Content flows from the T (top/bottom) direction toward the R (left/right) direction
+
+        Returns:
+            X axis → R face (rotation around L-R axis)
+            Y axis → U face (rotation around U-D axis)
+            Z axis → F face (rotation around F-B axis)
+
+        See also:
+            - docs/face-coordinate-system/edge-face-coordinate-system.md
+            - docs/face-coordinate-system/face-slice-rotation.md
+        """
         face_name: FaceName
         match self._axis_name:
 
@@ -38,8 +63,7 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
 
             case _:
                 raise InternalSWError(f"Unknown Axis {self._axis_name}")
-
-        return face_name, cube.get_all_parts()
+        return face_name
 
 
 @final

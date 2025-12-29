@@ -366,9 +366,9 @@ class CubeQueries2:
 
         state: CubeState = {}
 
-        parts = cube.get_all_parts()
+        slices = cube.get_all_part_slices()
 
-        for p in parts:
+        for p in slices:
                 state[p.fixed_id] = p.colors
 
         return state

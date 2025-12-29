@@ -470,6 +470,33 @@ class Face(SuperElement, Hashable):
         for e in self.edges:
             yield e.get_other_face(self)
 
+    @property
+    def others_faces(self) -> Iterable[_Face]:
+        """
+        All other faces adjusted and opposite
+        :return:
+        """
+
+        yield from self.adjusted_faces()
+        yield self.opposite
+
+    @property
+    def opposite(self) -> _Face:
+        return self._opposite
+
+    def find_shared_edge(self, face2: _Face) -> Edge | None:
+        """
+        Find the edge shared by two faces, or None if they're opposite.
+
+        Returns:
+            The shared Edge if faces are adjacent, None if opposite
+        """
+        for edge in self._edges:
+            other_face = edge.get_other_face(self)
+            if other_face is face2:
+                return edge
+        return None
+
     def is_edge(self, edge: Edge) -> bool:
         """
         This edge belongs to face
@@ -478,9 +505,6 @@ class Face(SuperElement, Hashable):
         """
         return edge in self._edges
 
-    @property
-    def opposite(self) -> _Face:
-        return self._opposite
 
     def set_opposite(self, o: _Face):
         """

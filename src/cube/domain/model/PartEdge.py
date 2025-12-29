@@ -156,6 +156,10 @@ class PartEdge:
 
         return p
 
+    def clear_c_attributes(self) -> None:
+        """Clear color-associated attributes."""
+        self.c_attributes.clear()
+
     def annotate(self, fixed_location: bool):
         if fixed_location:
             self._annotated_fixed_location = True
