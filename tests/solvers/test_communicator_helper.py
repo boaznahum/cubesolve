@@ -220,7 +220,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 corners_positioned = all(c.match_faces for c in cube.corners)
                 state_preserved = edges_reduced and edges_positioned and corners_positioned
 
-                if False and not state_preserved:
+                if not state_preserved:
                     # For other cases, this is unexpected - fail the test
                     bad_edges = [e.name for e in cube.edges
                                  if not e.match_faces or not e.is3x3]
