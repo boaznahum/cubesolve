@@ -10,6 +10,7 @@ Commands:
     reset           Reset cube to solved state
     scramble [n]    Apply random scramble (optional length n)
     size N          Change cube size to NxN
+    status          Show detailed part status (is3x3, match_faces)
     undo            Undo last algorithm
     help            Show this help
     quit/exit       Exit the REPL
@@ -109,6 +110,7 @@ Commands:
   reset           Reset cube to solved state
   scramble [n]    Apply random scramble (optional length n)
   size N          Change cube size to NxN
+  status          Show detailed part status (is3x3, match_faces)
   undo            Undo last algorithm
   help            Show this help
   quit/exit       Exit the REPL
@@ -150,6 +152,76 @@ Algorithm Examples:
     def print_cube(self) -> None:
         """Print the current cube state."""
         print_cube_with_info(self.app.cube)
+
+    def show_status(self) -> None:
+        """Show detailed status of cube parts (is3x3, match_faces)."""
+        cube = self.app.cube
+
+        # Collect edge status
+        edges_3x3: list[str] = []
+        edges_not3x3: list[str] = []
+        edges_match: list[str] = []
+        edges_nomatch: list[str] = []
+
+        for edge in cube.edges:
+            name = f"{edge.e1.face.name.value}{edge.e2.face.name.value}"
+            if edge.is3x3:
+                edges_3x3.append(name)
+            else:
+                edges_not3x3.append(name)
+            if edge.match_faces:
+                edges_match.append(name)
+            else:
+                edges_nomatch.append(name)
+
+        # Collect corner status
+        corners_match: list[str] = []
+        corners_nomatch: list[str] = []
+        for corner in cube.corners:
+            edges = corner._slice.edges
+            name = "".join(e.face.name.value for e in edges)
+            if corner.match_faces:
+                corners_match.append(name)
+            else:
+                corners_nomatch.append(name)
+
+        # Collect center status
+        centers_3x3: list[str] = []
+        centers_not3x3: list[str] = []
+        centers_match: list[str] = []
+        centers_nomatch: list[str] = []
+
+        for center in cube.centers:
+            name = center.face.name.value
+            if center.is3x3:
+                centers_3x3.append(name)
+            else:
+                centers_not3x3.append(name)
+            if center.match_faces:
+                centers_match.append(name)
+            else:
+                centers_nomatch.append(name)
+
+        # Print compact status
+        def fmt_list(lst: list[str], empty: str = "-") -> str:
+            return " ".join(lst) if lst else empty
+
+        solved_str = "SOLVED" if cube.solved else "NOT SOLVED"
+
+        if _HAS_RICH:
+            console.print(f"[cyan]Cube {cube.size}x{cube.size}[/cyan]: {solved_str}")
+            console.print(f"[yellow]Edges[/yellow]  3x3: {fmt_list(edges_3x3)}  not3x3: {fmt_list(edges_not3x3)}")
+            console.print(f"         match: {fmt_list(edges_match)}  nomatch: {fmt_list(edges_nomatch)}")
+            console.print(f"[yellow]Corners[/yellow] match: {fmt_list(corners_match)}  nomatch: {fmt_list(corners_nomatch)}")
+            console.print(f"[yellow]Centers[/yellow] 3x3: {fmt_list(centers_3x3)}  not3x3: {fmt_list(centers_not3x3)}")
+            console.print(f"         match: {fmt_list(centers_match)}  nomatch: {fmt_list(centers_nomatch)}")
+        else:
+            print(f"Cube {cube.size}x{cube.size}: {solved_str}")
+            print(f"Edges   3x3: {fmt_list(edges_3x3)}  not3x3: {fmt_list(edges_not3x3)}")
+            print(f"        match: {fmt_list(edges_match)}  nomatch: {fmt_list(edges_nomatch)}")
+            print(f"Corners match: {fmt_list(corners_match)}  nomatch: {fmt_list(corners_nomatch)}")
+            print(f"Centers 3x3: {fmt_list(centers_3x3)}  not3x3: {fmt_list(centers_not3x3)}")
+            print(f"        match: {fmt_list(centers_match)}  nomatch: {fmt_list(centers_nomatch)}")
 
     def run(self) -> None:
         """Run the REPL loop."""
@@ -220,6 +292,9 @@ Algorithm Examples:
 
                 elif cmd == "show":
                     self.print_cube()
+
+                elif cmd == "status":
+                    self.show_status()
 
                 else:
                     # Treat as algorithm
