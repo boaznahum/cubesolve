@@ -68,10 +68,6 @@ class AppConfig(ConfigProtocol):
         """Set solver debug flag."""
         cfg.SOLVER_DEBUG = value
 
-    @property
-    def solver_cfop(self) -> bool:
-        """Use CFOP solver instead of beginner."""
-        return cfg.SOLVER_CFOP
 
     @property
     def solver_annotate_trackers(self) -> bool:
@@ -206,6 +202,12 @@ class AppConfig(ConfigProtocol):
     def animation_enabled(self) -> bool:
         """Whether animation is enabled by default."""
         return cfg.animation_enabled
+
+    @property
+    def animation_speed(self) -> int:
+        """Default animation speed index (0-7, higher is faster)."""
+        # Clamp to valid range (0-7)
+        return max(0, min(7, cfg.ANIMATION_SPEED))
 
     # ==========================================================================
     # Texture settings

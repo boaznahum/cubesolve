@@ -1,5 +1,11 @@
 """Face tracker holder - encapsulates 6 face trackers for NxN center solving.
 
+See FACE_TRACKER.md in this directory for detailed documentation on:
+- Why trackers are needed for even cubes
+- How tracker-based matching works vs center-based matching
+- Cache invalidation with modify_counter
+- Usage patterns across different solvers
+
 This class provides a clean OOP interface for managing face trackers:
 - Creates trackers on construction
 - Provides methods to work with trackers (get_face_colors, etc.)
@@ -23,16 +29,15 @@ Or manually:
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Iterable
 from typing import TYPE_CHECKING
 
-from cube.domain.model import Color
+from cube.domain.model import CenterSlice, Color
 from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.FaceName import FaceName
-from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
-from cube.domain.solver.common.big_cube._NxNCentersFaceTracker import (
-    NxNCentersFaceTrackers,
-)
+from cube.domain.model.PartEdge import PartEdge
+from cube.domain.solver.common.tracker._base import FaceTracker
+from cube.domain.solver.common.tracker._factory import NxNCentersFaceTrackers
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -51,6 +56,16 @@ class FacesTrackerHolder:
     The holder tracks which face should have which color, even as the
     cube rotates during solving. This is essential for even cubes where
     there's no fixed center piece.
+
+    HOLDER-SPECIFIC MARKER IDs:
+    ===========================
+    Each holder instance gets a unique ID. Tracker keys include this holder ID:
+
+        Key format: "_nxn_centers_track:h{holder_id}:{color}{unique_id}"
+        Example: "_nxn_centers_track:h42:WHITE1"
+
+    This allows multiple holders to coexist safely - each cleanup() only
+    removes markers belonging to THAT holder, not markers from other holders.
 
     USAGE PATTERNS:
     ===============
@@ -85,7 +100,9 @@ class FacesTrackerHolder:
             print(f"{tracker.face.name} -> {tracker.color}")
     """
 
-    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter"]
+    _holder_unique_id: int = 0  # Class variable for generating unique holder IDs
+
+    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter", "_holder_id"]
 
     def __init__(
         self,
@@ -106,6 +123,10 @@ class FacesTrackerHolder:
             MUST call cleanup() when done (or use context manager)!
             Cleanup is needed for even cubes to remove tracking marks.
         """
+        # Generate unique holder ID for this instance
+        FacesTrackerHolder._holder_unique_id += 1
+        self._holder_id = FacesTrackerHolder._holder_unique_id
+
         self._cube = slv.cube
         self._is_even = self._cube.n_slices % 2 == 0
         self._face_colors_cache: dict[FaceName, Color] | None = None
@@ -115,26 +136,23 @@ class FacesTrackerHolder:
             assert len(trackers) == 6, f"Expected 6 trackers, got {len(trackers)}"
             self._trackers = trackers
         else:
-            self._trackers = self._create_trackers(slv)
+            self._trackers = self._create_trackers(self, slv)
 
-    def _create_trackers(self, slv: SolverElementsProvider) -> list[FaceTracker]:
-        """Create the 6 face trackers."""
+    def _create_trackers(self, parent_container: FacesTrackerHolder, slv: SolverElementsProvider) -> list[FaceTracker]:
+        """Create the 6 face trackers using NxNCentersFaceTrackers factory."""
         cube = self._cube
+        factory = NxNCentersFaceTrackers(slv, self._holder_id)
 
         if not self._is_even:
-            # ODD CUBE - simple trackers using center color
-            # These don't mark any slices, so no cleanup needed
-            return [FaceTracker.track_odd(f) for f in cube.faces]
+            # ODD CUBE - simple trackers using fixed center color
+            return [factory._create_tracker_odd(self, f) for f in cube.faces]
         else:
-            # EVEN CUBE - use NxNCentersFaceTrackers to find majority colors
-            # These mark center slices - must call cleanup() when done
-            trackers_helper = NxNCentersFaceTrackers(slv)
-
-            t1 = trackers_helper.track_no_1()
-            t2 = t1.track_opposite()
-            t3 = trackers_helper._track_no_3([t1, t2])
-            t4 = t3.track_opposite()
-            t5, t6 = trackers_helper._track_two_last([t1, t2, t3, t4])
+            # EVEN CUBE - trackers mark center slices for majority color
+            t1 = factory.track_no_1(parent_container)
+            t2 = t1._track_opposite()
+            t3 = factory._track_no_3(parent_container, [t1, t2])
+            t4 = t3._track_opposite()
+            t5, t6 = factory._track_two_last(parent_container, [t1, t2, t3, t4])
 
             return [t1, t2, t3, t4, t5, t6]
 
@@ -278,7 +296,7 @@ class FacesTrackerHolder:
             must have ORANGE sticker on F and WHITE sticker on U.
 
         See Also:
-            solver/direct/lbl/EVEN_CUBE_MATCHING.md for detailed explanation
+            FACE_TRACKER.md in this directory for detailed explanation
             with diagrams of why this is needed for even cubes.
         """
         face_colors = self.face_colors  # Get current mapping (not cached)
@@ -287,6 +305,14 @@ class FacesTrackerHolder:
             if expected_color is None or edge.color != expected_color:
                 return False
         return True
+
+    def adjusted_faces(self, of_face: FaceTracker) -> Iterable[FaceTracker]:
+        # boaz: improve this
+
+        l1_opposite_face = of_face.face.opposite
+        return [t for t in self.trackers
+                if t.face is not of_face.face and t.face is not l1_opposite_face]
+
 
 
     def _trackers_layout(self) -> CubeLayout:
@@ -317,16 +343,14 @@ class FacesTrackerHolder:
     def cleanup(self) -> None:
         """Remove tracker marks from center slices.
 
-        For even cubes:
-            Removes the tracking attributes that were added to center slices.
-
-        For odd cubes:
-            No-op (odd cube trackers don't mark any slices).
+        Calls cleanup() on each tracker polymorphically:
+        - MarkedFaceTracker: Removes its specific key from the marked edge
+        - FaceTracker (base): No-op (odd, opposite, f5 trackers don't mark)
 
         This MUST be called when done with the holder (or use context manager).
         """
-        for f in self._cube.faces:
-            FaceTracker.remove_face_track_slices(f)
+        for tracker in self._trackers:
+            tracker.cleanup()
 
     def __iter__(self) -> Iterator[FaceTracker]:
         """Iterate over the 6 face trackers."""
@@ -344,4 +368,59 @@ class FacesTrackerHolder:
         """Exit context manager - cleanup trackers."""
         self.cleanup()
 
+    # =========================================================================
+    # STATIC METHODS - Holder-agnostic, for display purposes
+    # =========================================================================
 
+    @staticmethod
+    def is_tracked_slice(s: CenterSlice) -> bool:
+        """Check if ANY tracker has marked this slice.
+
+        WARNING: This is HOLDER-AGNOSTIC. Returns True if ANY holder
+        has marked this slice, not a specific holder.
+
+        Use for display purposes where holder identity doesn't matter.
+
+        Args:
+            s: CenterSlice to check.
+
+        Returns:
+            True if any tracker has marked this slice.
+        """
+        return FaceTracker.is_track_slice(s)
+
+    @staticmethod
+    def get_tracked_slice_color(s: CenterSlice) -> Color | None:
+        """Get the tracker color for a marked slice.
+
+        WARNING: This is HOLDER-AGNOSTIC. Returns color from ANY holder
+        that has marked this slice.
+
+        Use for display purposes (e.g., renderer showing tracker indicators)
+        where holder identity doesn't matter.
+
+        Args:
+            s: CenterSlice to check.
+
+        Returns:
+            The Color enum if tracked, None otherwise.
+        """
+        return FaceTracker.get_slice_tracker_color(s)
+
+    @staticmethod
+    def get_tracked_edge_color(edge: PartEdge) -> Color | None:
+        """Get the tracker color for a PartEdge.
+
+        WARNING: This is HOLDER-AGNOSTIC. Returns color from ANY holder
+        that has marked this edge.
+
+        Use for display purposes (e.g., renderer showing tracker indicators)
+        where holder identity doesn't matter.
+
+        Args:
+            edge: PartEdge to check (typically from a center slice).
+
+        Returns:
+            The Color enum if tracked, None otherwise.
+        """
+        return FaceTracker.get_edge_tracker_color(edge)

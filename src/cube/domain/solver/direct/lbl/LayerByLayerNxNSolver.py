@@ -13,6 +13,9 @@ For Layer 1, we:
 2. Solve white-face edges using NxNEdges (only edges on white face)
 3. Create a shadow 3x3 cube and solve Layer 1 (cross + corners) using Solvers3x3
 
+Uses FacesTrackerHolder for even cube matching - see:
+    solver/common/big_cube/FACE_TRACKER.md
+
 See docs/design/layer_by_layer_nxn.md for detailed design.
 """
 
@@ -22,11 +25,12 @@ from typing import TYPE_CHECKING
 
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.solver.common.tracker._base import FaceTracker
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
-from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
+from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 
@@ -53,7 +57,7 @@ class LayerByLayerNxNSolver(BaseSolver):
     - Like Layer 1 but with restricted moves
     """
 
-    __slots__ = ["_nxn_edges", "_shadow_helper", "_tracker_holder"]
+    __slots__ = ["_nxn_edges", "_shadow_helper", "_lbl_slices"]
 
     def __init__(self, op: OperatorProtocol) -> None:
         """
@@ -73,32 +77,12 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         self._shadow_helper = ShadowCubeHelper(self)
 
-        # Persistent tracker holder - created once, reused for all operations
-        self._tracker_holder: FacesTrackerHolder | None = None
+        # LBL slices helper - wraps NxNCenters and NxNEdges for slice operations
+        self._lbl_slices = _LBLSlices(self)
 
     # =========================================================================
     # Public properties/methods (Solver protocol order)
     # =========================================================================
-
-    @property
-    def tracker_holder(self) -> FacesTrackerHolder:
-        """Get or create the persistent tracker holder.
-
-        Creates trackers on first access and reuses them for all operations.
-        This ensures consistent face tracking throughout solving and status checks.
-        """
-        if self._tracker_holder is None:
-            self._tracker_holder = FacesTrackerHolder(self)
-        return self._tracker_holder
-
-    def cleanup_trackers(self) -> None:
-        """Clean up tracker marks from center slices.
-
-        Call this when done with the solver to remove tracking attributes.
-        """
-        if self._tracker_holder is not None:
-            self._tracker_holder.cleanup()
-            self._tracker_holder = None
 
     @property
     def get_code(self) -> SolverName:
@@ -110,23 +94,31 @@ class LayerByLayerNxNSolver(BaseSolver):
         if self.is_solved:
             return "Solved"
 
-        # Use persistent tracker for status checks
-        th = self.tracker_holder
-        layer1_done = self._is_layer1_solved(th)
+        # Create fresh tracker holder for status check
+        # Note: We rely on tracker majority algorithm being deterministic.
+        # If issue #51 (tracker majority bug) is real, trackers might not be
+        # reproducible across calls, causing inconsistent status reports.
+        with FacesTrackerHolder(self) as th:
+            layer1_done = self._is_layer1_solved(th)
 
-        if layer1_done:
-            return "L1:Done"
-        else:
-            # Check sub-steps
-            centers_done = self._is_layer1_centers_solved(th)
-            edges_done = self._is_layer1_edges_solved(th)
+            if not layer1_done:
+                # Check Layer 1 sub-steps
+                centers_done = self._is_layer1_centers_solved(th)
+                edges_done = self._is_layer1_edges_solved(th)
 
-            if centers_done and edges_done:
-                return "L1:Ctr+Edg"
-            elif centers_done:
-                return "L1:Ctr"
-            else:
-                return "L1:Pending"
+                if centers_done and edges_done:
+                    return "L1:Ctr+Edg"
+                elif centers_done:
+                    return "L1:Ctr"
+                else:
+                    return "L1:Pending"
+
+            # Layer 1 done - check middle slices
+            n_slices = self.cube.n_slices
+            l1_tracker = self._get_layer1_tracker(th)
+            solved_slices = self._lbl_slices.count_solved_slice_centers(th, l1_tracker)
+
+            return f"L1:Done|Sl:{solved_slices}/{n_slices}"
 
     def supported_steps(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
@@ -134,9 +126,10 @@ class LayerByLayerNxNSolver(BaseSolver):
         Note: SolveStep.ALL is implicit for all solvers (not listed here).
         """
         return [
-            SolveStep.LBL_L1_Ctr,   # Layer 1 centers only
-            SolveStep.L1x,          # Layer 1 cross (centers + edges)
-            SolveStep.LBL_L1,       # Layer 1 complete
+            SolveStep.LBL_L1_Ctr,     # Layer 1 centers only
+            SolveStep.L1x,            # Layer 1 cross (centers + edges)
+            SolveStep.LBL_L1,         # Layer 1 complete
+            SolveStep.LBL_SLICES_CTR, # Middle slices centers (debugging)
         ]
 
     # =========================================================================
@@ -154,28 +147,45 @@ class LayerByLayerNxNSolver(BaseSolver):
         if self.is_solved:
             return sr
 
-        # Use persistent tracker holder (created once, reused for all operations)
-        th = self.tracker_holder
+        # Create fresh tracker holder for this solve operation
+        # Note: We rely on tracker majority algorithm being deterministic.
+        # If issue #51 (tracker majority bug) is real, trackers might not be
+        # reproducible across calls, causing solving to fail.
+        with FacesTrackerHolder(self) as th:
+            match what:
+                case SolveStep.LBL_L1_Ctr:
+                    # Layer 1 centers only
+                    self._solve_layer1_centers(th)
 
-        match what:
-            case SolveStep.LBL_L1_Ctr:
-                # Layer 1 centers only
-                self._solve_layer1_centers(th)
+                case SolveStep.L1x:
+                    # Layer 1 cross (centers + edges paired + edges positioned)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+                    self._solve_layer1_cross(th)
 
-            case SolveStep.L1x:
-                # Layer 1 cross (centers + edges paired + edges positioned)
-                self._solve_layer1_centers(th)
-                self._solve_layer1_edges(th)
-                self._solve_layer1_cross(th)
+                case SolveStep.LBL_L1:
+                    # Layer 1 complete (centers + edges + corners)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+                    self._solve_layer1_corners(th)
 
-            case SolveStep.ALL | SolveStep.LBL_L1:
-                # Layer 1 complete (centers + edges + corners)
-                self._solve_layer1_centers(th)
-                self._solve_layer1_edges(th)
-                self._solve_layer1_corners(th)
+                case SolveStep.LBL_SLICES_CTR:
+                    # Layer 1 + middle slices centers only (for debugging)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+                    self._solve_layer1_corners(th)
+                    self._solve_slices_centers(th)
 
-            case _:
-                raise ValueError(f"Unsupported step: {what}")
+                case SolveStep.ALL:
+                    # Full solve (currently only up to Layer 1 + slices centers)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+                    self._solve_layer1_corners(th)
+                    self._solve_slices_centers(th)
+                    # TODO: Add slice edges, last layer
+
+                case _:
+                    raise ValueError(f"Unsupported step: {what}")
 
         return sr
 
@@ -184,10 +194,7 @@ class LayerByLayerNxNSolver(BaseSolver):
     # =========================================================================
 
     def _get_layer1_tracker(self, th: FacesTrackerHolder) -> FaceTracker:
-        """Get the Layer 1 tracker (determined by FIRST_FACE_COLOR config).
-
-        Use this during solving when tracker_holder is available.
-        """
+        """Get the Layer 1 tracker (determined by FIRST_FACE_COLOR config)."""
         return th.get_tracker_by_color(self.config.first_face_color)
 
     def _is_layer1_centers_solved(self, th: FacesTrackerHolder) -> bool:
@@ -376,3 +383,17 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         # Apply to shadow cube
         shadow.set_3x3_colors(modified)
+
+    # =========================================================================
+    # Private methods - Middle slices solving
+    # =========================================================================
+
+    def _solve_slices_centers(self, th: FacesTrackerHolder) -> None:
+        """Solve all middle slice ring centers (bottom to top).
+
+        Delegates to _LBLSlices helper which wraps NxNCenters and NxNEdges.
+        """
+        l1_tracker = self._get_layer1_tracker(th)
+
+        with self.op.annotation.annotate(h2="Middle slices centers"):
+            self._lbl_slices.solve_all_slice_centers(th, l1_tracker)

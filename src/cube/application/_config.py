@@ -15,13 +15,16 @@ Access config values through the ConfigProtocol interface instead.
 from dataclasses import dataclass
 from typing import Tuple
 
-#from cube.domain.solver.SolverName import SolverName
-
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
+CUBE_SIZE = 7  # Using debug4x4 texture set for 4x4 debugging
 
-SOLVER_CFOP=False
+# Default solver name - case-insensitive, prefix matching allowed if unambiguous
+# Available solvers: LBL, CFOP, Kociemba, Cage, LBL-Direct
+# Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "lbl-d" (for LBL-Direct)
+# Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
+DEFAULT_SOLVER = "lbl-d"
+
 
 ######### Model  ########
 
@@ -36,6 +39,10 @@ CHECK_CUBE_SANITY = False
 
 # Only initial value, can be changed
 animation_enabled = True
+
+# Default animation speed index (0-7, higher is faster)
+# Speed presets: 0=45°/s, 1=90°/s, 2=180°/s, 3=360°/s, 4=540°/s, 5=900°/s, 6=1800°/s, 7=3000°/s
+ANIMATION_SPEED = 7
 
 # Single-step mode codes - enable specific breakpoints for debugging
 # Import SSCode here to avoid circular imports (config is loaded early)
@@ -56,16 +63,11 @@ SS_CODES: dict[SSCode, bool] = {
 
 ######### Solvers  ########
 
-# Default solver name - case-insensitive, prefix matching allowed if unambiguous
-# Available solvers: LBL, CFOP, Kociemba, Cage, LBL-Direct
-# Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "lbl-d" (for LBL-Direct)
-# Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "cage"
-
 # First face color - the color that determines Layer 1 for 3x3 beginner and LBL solvers
 # This is the color to start with, not a fixed face position (cube may be rotated)
 # Used by: 3x3 beginner solver, LBL-Direct big cube solver
 from cube.domain.model.Color import Color as _Color  # noqa: E402
+
 FIRST_FACE_COLOR: _Color = _Color.WHITE
 
 # 3x3 solver used by cage method for corner solving (Phase 1b)
@@ -74,17 +76,14 @@ CAGE_3X3_SOLVER = "cfop"
 
 SOLVER_DEBUG = True
 
-
 ######  Viewer ########
 
 
-VIEWER_MAX_SIZE_FOR_TEXTURE=10  # All works but very slow
+VIEWER_MAX_SIZE_FOR_TEXTURE = 10  # All works but very slow
 
-
-VIEWER_TRACE_DRAW_UPDATE=False
+VIEWER_TRACE_DRAW_UPDATE = False
 
 PROF_VIEWER_SEARCH_FACET = False
-
 
 GUI_DRAW_MARKERS = False
 GUI_DRAW_SAMPLE_MARKERS = False
@@ -108,10 +107,11 @@ MARKERS = {
     #      radius is - relative to marker size [0.0-1.0]
     #      thick is relative to outer radius , inner - (1-thick)*outer
     #      height in model resolution, +- above/below facet
-    "C0": ((199, 21, 133), 1.0, 0.8, 0.1), # mediumvioletred	#C71585	rgb(199,21,133)
-    "C1": ((199, 21, 133), 0.6, 1, 0.1), # mediumvioletred	#C71585	rgb(199,21,133),
+    "C0": ((199, 21, 133), 1.0, 0.8, 0.1),  # mediumvioletred	#C71585	rgb(199,21,133)
+    "C1": ((199, 21, 133), 0.6, 1, 0.1),  # mediumvioletred	#C71585	rgb(199,21,133),
     "C2": ((0, 100, 0), 1.0, 0.3, 0.1)  # darkgreen	#006400	rgb(0,100,0)
 }
+
 
 ################ 3D Arrows (source-to-destination direction indicators)
 
@@ -138,12 +138,12 @@ class ArrowConfig:
     color: Tuple[float, float, float] = (1.0, 0.78, 0.0)
 
     # Arrow geometry
-    shaft_radius: float = 2.0       # Radius of arrow shaft cylinder
-    head_radius: float = 5.0        # Radius of cone base
-    head_length: float = 12.0       # Length of cone/head
-    height_offset: float = 25.0     # Height above cube surface (floating effect)
+    shaft_radius: float = 2.0  # Radius of arrow shaft cylinder
+    head_radius: float = 5.0  # Radius of cone base
+    head_length: float = 12.0  # Length of cone/head
+    height_offset: float = 25.0  # Height above cube surface (floating effect)
     animation_duration: float = 0.5  # Seconds for grow animation
-    segments: int = 16               # Smoothness of cylinders
+    segments: int = 16  # Smoothness of cylinders
 
 
 # Default arrow configuration instance - modify this to change arrow settings
@@ -170,9 +170,9 @@ QUIT_ON_ERROR_IN_TEST_MODE = True
 INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM = True
 
 # When dragging edge or corner, rotate adjusted face, and not the same face
-INPUT_MOUSE_ROTATE_ADJUSTED_FACE= True
+INPUT_MOUSE_ROTATE_ADJUSTED_FACE = True
 
-INPUT_MOUSE_DEBUG= False
+INPUT_MOUSE_DEBUG = False
 
 ############## Operator ##############
 OPERATOR_SHOW_ALG_ANNOTATION = True
@@ -188,7 +188,7 @@ SOLVER_SANITY_CHECK_IS_A_BOY = False
 
 SOLVER_ANNOTATE_TRACKERS = False
 
-SOLVER_PLL_ROTATE_WHILE_SEARCH=False
+SOLVER_PLL_ROTATE_WHILE_SEARCH = False
 
 ##############  Testing
 TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 20
@@ -202,8 +202,7 @@ SCRAMBLE_KEY_FOR_F9 = int(203)  # should be replaced by persisting of last test
 AGGRESSIVE_2_TEST_NUMBER_SIZES = [3, 6, 7]
 #AGGRESSIVE_2_TEST_SOLVERS = SolverName.all()
 AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_START = 0
-AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 100 # per solver and size
-
+AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 100  # per solver and size
 
 ################ Logging
 OPERATION_LOG = False

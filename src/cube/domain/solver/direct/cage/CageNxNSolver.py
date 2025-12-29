@@ -4,6 +4,9 @@ The Cage method solves big cubes by:
 1. Building the "cage" (edges + corners)
 2. Filling the cage (centers using commutators)
 
+Uses FacesTrackerHolder for even cube matching - see:
+    solver/common/big_cube/FACE_TRACKER.md
+
 See DESIGN.md for detailed algorithm description.
 
 EDGE PARITY HANDLING:
@@ -42,7 +45,7 @@ from typing import TYPE_CHECKING
 
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges

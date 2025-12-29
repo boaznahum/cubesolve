@@ -4,10 +4,7 @@ This package contains shared utilities for NxN cube solving:
 - Center solving components (NxNCenters)
 - Edge pairing components (NxNEdges)
 - Corner parity fix (NxNCorners)
-- Face tracking for even cubes (FaceTrackerHolder)
-
-Private implementation details (prefixed with _):
-- _NxNCentersFaceTracker - Face tracking implementation
+- Face tracking for even cubes (FacesTrackerHolder) - re-exported from tracker/
 
 These are used by:
 - reducers/beginner/BeginnerReducer
@@ -18,7 +15,9 @@ Can import: protocols/ (Layer 1), common/ utilities
 Cannot import: solver implementations (Layer 3)
 """
 
-from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+# Re-export FacesTrackerHolder from tracker package for backward compatibility
+from cube.domain.solver.common.tracker import FacesTrackerHolder
+
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges

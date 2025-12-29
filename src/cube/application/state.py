@@ -80,7 +80,7 @@ class ApplicationAndViewState:
 
         self._debug_all = debug_all
         self._quiet_all = quiet_all
-        self._speed = 3
+        self._speed = config.animation_speed
 
         # self._alpha_x_0: float = 0.3
         # self._alpha_y_0: float = -0.4

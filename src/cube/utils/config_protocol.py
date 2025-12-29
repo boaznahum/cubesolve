@@ -144,11 +144,6 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
-    def solver_cfop(self) -> bool:
-        """Use CFOP solver instead of beginner."""
-        ...
-
-    @property
     def solver_annotate_trackers(self) -> bool:
         """Annotate trackers during solve."""
         ...
@@ -293,6 +288,22 @@ class ConfigProtocol(Protocol):
     @property
     def animation_enabled(self) -> bool:
         """Whether animation is enabled by default."""
+        ...
+
+    @property
+    def animation_speed(self) -> int:
+        """Default animation speed index (0-7, higher is faster).
+
+        Speed presets:
+        0: 45 deg/s (slowest)
+        1: 90 deg/s
+        2: 180 deg/s
+        3: 360 deg/s (default)
+        4: 540 deg/s
+        5: 900 deg/s
+        6: 1800 deg/s
+        7: 3000 deg/s (fastest)
+        """
         ...
 
     # ==========================================================================
