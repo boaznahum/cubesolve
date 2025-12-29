@@ -4,148 +4,284 @@ This document describes the algorithm notation used in this Rubik's cube solver.
 
 ---
 
-## Standard References
+## Quick Reference Card
 
-This notation is based on the widely-accepted **Singmaster notation** used by:
-- [alg.cubing.net](https://alg.cubing.net/) - Algorithm visualizer
-- [SpeedSolving Wiki](https://www.speedsolving.com/wiki/index.php/Notation) - Community reference
+```
+FACES:  R L U D F B    (clockwise when looking at face)
+PRIME:  R' L' U' ...   (counter-clockwise)
+DOUBLE: R2 L2 U2 ...   (180° turn)
+SLICE:  M E S          (middle layers)
+WIDE:   Rw Lw Uw ...   (2 layers)
+CUBE:   X Y Z          (rotate whole cube)
+```
+
+---
+
+## Cube Orientation
+
+```
+                    ┌─────────────┐
+                    │             │
+                    │      U      │   U = Up (White)
+                    │    (top)    │
+                    │             │
+        ┌───────────┼─────────────┼───────────┬─────────────┐
+        │           │             │           │             │
+        │     L     │      F      │     R     │      B      │
+        │  (left)   │  (front)    │  (right)  │   (back)    │
+        │           │             │           │             │
+        └───────────┼─────────────┼───────────┴─────────────┘
+                    │             │
+                    │      D      │   D = Down (Yellow)
+                    │  (bottom)   │
+                    │             │
+                    └─────────────┘
+
+Default colors:  F=Green  B=Blue  R=Red  L=Orange  U=White  D=Yellow
+```
 
 ---
 
 ## Face Moves
 
-### Basic Face Moves (90° clockwise when looking at the face)
+### What is "Clockwise"?
 
-| Move | Face | Direction |
-|------|------|-----------|
-| `R` | Right | Clockwise |
-| `L` | Left | Clockwise |
-| `U` | Up | Clockwise |
-| `D` | Down | Clockwise |
-| `F` | Front | Clockwise |
-| `B` | Back | Clockwise |
+**IMPORTANT:** Clockwise means looking DIRECTLY at that face.
 
-**Agreement with standard:** Full agreement
+```
+    EXAMPLE: R (Right face, clockwise)
 
-### Inverse (Prime) Moves
+    Imagine you are standing to the RIGHT of the cube,
+    looking directly at the R face:
 
-| Notation | Meaning |
-|----------|---------|
-| `R'` | R counter-clockwise (inverse of R) |
-| `U'` | U counter-clockwise (inverse of U) |
+         ↻  ← You see this when looking at R face
+        ┌───┐
+        │ R │  Arrows show movement direction
+        └───┘
 
-**Agreement with standard:** Full agreement
+    From the normal front view, R moves:
+        Front-right edge → Top-right edge
+        Top-right edge → Back-right edge
+        Back-right edge → Bottom-right edge
+        Bottom-right edge → Front-right edge
+```
+
+### All Six Face Moves
+
+```
+┌─────────┬─────────────────────────────────────────────────────┐
+│  Move   │  How to Remember                                    │
+├─────────┼─────────────────────────────────────────────────────┤
+│   R     │  Right hand turns right layer AWAY from you (↻)     │
+│   L     │  Left hand turns left layer TOWARD you (↻)          │
+│   U     │  Top layer turns LEFT when viewed from above (↻)    │
+│   D     │  Bottom layer turns RIGHT when viewed from below    │
+│   F     │  Front layer turns clockwise like a clock (↻)       │
+│   B     │  Back layer turns clockwise (opposite of F view)    │
+└─────────┴─────────────────────────────────────────────────────┘
+```
+
+### Prime (Inverse) Moves
+
+Add `'` to reverse the direction:
+
+```
+    R' = R counter-clockwise
+
+         ↺  ← Counter-clockwise when looking at R face
+        ┌───┐
+        │ R │
+        └───┘
+
+    R + R' = cube unchanged (they cancel out)
+```
 
 ### Double Moves
 
-| Notation | Meaning |
-|----------|---------|
-| `R2` | R twice (180°) |
-| `U2` | U twice (180°) |
-
-**Agreement with standard:** Full agreement
+`R2` = Do R twice (180° turn). Same as R + R. Direction doesn't matter for 180°.
 
 ---
 
 ## Slice Moves (Middle Layers)
 
-Slice moves rotate the middle layer(s) between two opposite faces.
+Slice moves rotate the MIDDLE layer(s) between two opposite faces.
+The outer faces DON'T move - only the inner slices rotate.
 
-### Basic Slice Definitions
-
-| Slice | Axis | Reference Face | Rotation Direction |
-|-------|------|----------------|-------------------|
-| `M` | L ↔ R | **L** | Like L (clockwise when viewing L face) |
-| `E` | U ↔ D | **D** | Like D (clockwise when viewing D face) |
-| `S` | F ↔ B | **F** | Like F (clockwise when viewing F face) |
-
-### Slice Movement (Content Flow)
+### The Three Slice Moves
 
 ```
-M: F → U → B → D → F  (vertical cycle, like L rotation)
-E: R → B → L → F → R  (horizontal cycle, like D rotation)
-S: U → R → D → L → U  (around F/B axis, like F rotation)
+┌──────────────────────────────────────────────────────────────────┐
+│                        M SLICE (Middle)                          │
+│                                                                  │
+│  The slice BETWEEN L and R faces. Rotates like L does.          │
+│                                                                  │
+│       ┌───┬───┬───┐                                              │
+│       │   │ ↑ │   │     Front view of 3x3:                       │
+│       ├───┼───┼───┤     - Left column = L face                   │
+│       │   │ M │   │     - Middle column = M slice                │
+│       ├───┼───┼───┤     - Right column = R face                  │
+│       │   │ ↓ │   │                                              │
+│       └───┴───┴───┘     M moves the middle column UP             │
+│        L   M   R                                                 │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│                        E SLICE (Equator)                         │
+│                                                                  │
+│  The slice BETWEEN U and D faces. Rotates like D does.          │
+│                                                                  │
+│       ┌───┬───┬───┐                                              │
+│       │   │   │   │  ← U (top row)                               │
+│       ├───┼───┼───┤                                              │
+│       │ ← │ E │ → │  ← E slice (middle row)                      │
+│       ├───┼───┼───┤     E moves the middle row to the RIGHT      │
+│       │   │   │   │  ← D (bottom row)                            │
+│       └───┴───┴───┘                                              │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│                        S SLICE (Standing)                        │
+│                                                                  │
+│  The slice BETWEEN F and B faces. Rotates like F does.          │
+│                                                                  │
+│  Top view (looking down):                                        │
+│       ┌───┬───┬───┐                                              │
+│       │   │   │   │  ← B (back)                                  │
+│       ├───┼───┼───┤                                              │
+│       │   │ S │   │  ← S slice (middle depth)                    │
+│       ├───┼───┼───┤     S rotates clockwise (like F)             │
+│       │   │   │   │  ← F (front)                                 │
+│       └───┴───┴───┘                                              │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### API Reference
+### Slice Direction Reference
 
-```python
-Algs.M.get_face_name() → FaceName.L  # M rotates like L
-Algs.E.get_face_name() → FaceName.D  # E rotates like D
-Algs.S.get_face_name() → FaceName.F  # S rotates like F
+**Remember:** Each slice rotates in the SAME direction as its reference face.
+
+```
+┌─────────┬────────────────┬─────────────────────────────────────┐
+│ Slice   │ Reference Face │ Movement Description                │
+├─────────┼────────────────┼─────────────────────────────────────┤
+│   M     │      L         │ Front→Up→Back→Down (like L)         │
+│   E     │      D         │ Front→Left→Back→Right (like D)      │
+│   S     │      F         │ Up→Right→Down→Left (like F)         │
+└─────────┴────────────────┴─────────────────────────────────────┘
 ```
 
 ---
 
 ## Slice Indexing (NxN Cubes)
 
-### CRITICAL: Indexing is 1-Based
+On bigger cubes (4x4 and up), there are MULTIPLE middle slices.
+You can control which slices move using index notation.
 
-**WARNING:** Slice indices start at **1**, NOT 0!
-
-```python
-M[0]  # INVALID! Will cause error
-M[1]  # First inner slice - VALID
-```
-
-### Number of Slices
-
-For an NxN cube: `n_slices = N - 2` inner slices
-
-| Cube Size | n_slices | Valid Indices |
-|-----------|----------|---------------|
-| 3x3 | 1 | `[1]` |
-| 4x4 | 2 | `[1]`, `[2]` |
-| 5x5 | 3 | `[1]`, `[2]`, `[3]` |
-| 6x6 | 4 | `[1]`, `[2]`, `[3]`, `[4]` |
-| 7x7 | 5 | `[1]`, `[2]`, `[3]`, `[4]`, `[5]` |
-
-### Where Slice[1] Starts
-
-**Slice[1] is always closest to the reference face:**
-
-| Slice | Reference Face | Slice[1] Position |
-|-------|----------------|-------------------|
-| `M[1]` | L | Closest to **L** face |
-| `E[1]` | D | Closest to **D** face |
-| `S[1]` | F | Closest to **F** face |
-
-### Visual Example: 5x5 Cube M Slices
-
-Viewing from Front face, looking at L-R cross-section:
+### CRITICAL: Indexing is 1-Based (NOT 0!)
 
 ```
-          L face                              R face
-             │                                   │
-             │   M[1]  M[2]  M[3]                │
-             │     ↓     ↓     ↓                 │
-             │   ┌───┐ ┌───┐ ┌───┐               │
-             └───┤   ├─┤   ├─┤   ├───────────────┘
-                 │   │ │   │ │   │
-                 └───┘ └───┘ └───┘
-                  ↑           ↑
-             closest      closest
-              to L         to R
+┌────────────────────────────────────────────────────────────────┐
+│  ⚠️  WARNING: Indices start at 1, NOT 0!                        │
+│                                                                │
+│     M[0]  ← INVALID! This will cause an error!                 │
+│     M[1]  ← VALID. First inner slice.                          │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-### Visual Example: 6x6 Cube E Slices
-
-Viewing from Front face, looking at U-D cross-section:
+### How Many Slices?
 
 ```
-                    U face
-             ┌─────────────────┐
-             │                 │
-             ├─────────────────┤ ← E[4] (closest to U)
-             │                 │
-             ├─────────────────┤ ← E[3]
-             │                 │
-             ├─────────────────┤ ← E[2]
-             │                 │
-             ├─────────────────┤ ← E[1] (closest to D)
-             │                 │
-             └─────────────────┘
-                    D face
+Formula: n_slices = Cube Size - 2
+
+┌─────────────┬────────────┬─────────────────────────────────────┐
+│ Cube Size   │ n_slices   │ Valid Indices                       │
+├─────────────┼────────────┼─────────────────────────────────────┤
+│    3x3      │     1      │ [1] only                            │
+│    4x4      │     2      │ [1], [2]                            │
+│    5x5      │     3      │ [1], [2], [3]                       │
+│    6x6      │     4      │ [1], [2], [3], [4]                  │
+│    7x7      │     5      │ [1], [2], [3], [4], [5]             │
+└─────────────┴────────────┴─────────────────────────────────────┘
+```
+
+### Where Does Slice[1] Start?
+
+**Slice[1] is ALWAYS closest to the reference face!**
+
+```
+┌─────────┬────────────────┬─────────────────────────────────────┐
+│ Slice   │ Reference Face │ Slice[1] is closest to...           │
+├─────────┼────────────────┼─────────────────────────────────────┤
+│   M     │      L         │ L face (left side)                  │
+│   E     │      D         │ D face (bottom)                     │
+│   S     │      F         │ F face (front)                      │
+└─────────┴────────────────┴─────────────────────────────────────┘
+```
+
+### Visual Example: 5x5 Cube M Slices (Side View)
+
+```
+    Looking at the cube from ABOVE (bird's eye view):
+
+    ┌─────┬─────┬─────┬─────┬─────┐
+    │     │     │     │     │     │
+    │  L  │M[1] │M[2] │M[3] │  R  │   ← Row of the cube
+    │face │     │     │     │face │
+    └─────┴─────┴─────┴─────┴─────┘
+      ↑                       ↑
+    Left                   Right
+    face                   face
+    (doesn't               (doesn't
+     move)                  move)
+
+    M[1] = slice closest to L (reference face for M)
+    M[2] = middle slice (true center)
+    M[3] = slice closest to R
+```
+
+### Visual Example: 6x6 Cube E Slices (Front View)
+
+```
+    ┌─────────────────────────────────────┐
+    │                                     │
+    │              U face                 │  ← Top (doesn't move)
+    │                                     │
+    ├─────────────────────────────────────┤
+    │                                     │ ← E[4] (closest to U)
+    ├─────────────────────────────────────┤
+    │                                     │ ← E[3]
+    ├─────────────────────────────────────┤
+    │                                     │ ← E[2]
+    ├─────────────────────────────────────┤
+    │                                     │ ← E[1] (closest to D)
+    ├─────────────────────────────────────┤
+    │                                     │
+    │              D face                 │  ← Bottom (doesn't move)
+    │                                     │
+    └─────────────────────────────────────┘
+
+    E[1] = closest to D (reference face for E)
+    E[4] = closest to U
+```
+
+### Visual Example: 7x7 Cube S Slices (Side View)
+
+```
+    Looking at cube from the RIGHT side:
+
+    ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+    │     │     │     │     │     │     │     │
+    │  F  │S[1] │S[2] │S[3] │S[4] │S[5] │  B  │
+    │face │     │     │     │     │     │face │
+    └─────┴─────┴─────┴─────┴─────┴─────┴─────┘
+      ↑                                   ↑
+    Front                               Back
+    face                                face
+    (doesn't                           (doesn't
+     move)                              move)
+
+    S[1] = closest to F (reference face for S)
+    S[3] = true center slice
+    S[5] = closest to B
 ```
 
 ### Slice Range Notation
