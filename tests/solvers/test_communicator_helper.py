@@ -90,14 +90,36 @@ def center_index_to_ltr(face: Face, idx_row: int, idx_col: int) -> tuple[int, in
 # Test Helper Functions
 # =============================================================================
 
+def _edge_matches_original(edge) -> bool:
+    """Check if edge stickers match face ORIGINAL colors (not dynamic center)."""
+    for part_edge in edge._3x3_representative_edges:
+        if part_edge.color != part_edge.face.original_color:
+            return False
+    return True
+
+
+def _corner_matches_original(corner) -> bool:
+    """Check if corner stickers match face ORIGINAL colors (not dynamic center)."""
+    for part_edge in corner._3x3_representative_edges:
+        if part_edge.color != part_edge.face.original_color:
+            return False
+    return True
+
+
 def _check_cube_state_preserved(cube: Cube) -> bool:
-    """Check if cube state is preserved (edges and corners in position)."""
+    """Check if cube state is preserved (edges and corners in position).
+
+    IMPORTANT: Uses face.original_color instead of face.color because:
+    - The commutator moves center pieces, which changes face.color
+    - But edges/corners should still match their ORIGINAL face positions
+    - Using match_faces (which uses face.color) gives false negatives
+    """
     # All edges should be reduced (3x3)
     edges_reduced = all(e.is3x3 for e in cube.edges)
-    # All edges should be in correct position
-    edges_positioned = all(e.match_faces for e in cube.edges)
-    # All corners should be in correct position
-    corners_positioned = all(corner.match_faces for corner in cube.corners)
+    # All edges should match original face colors
+    edges_positioned = all(_edge_matches_original(e) for e in cube.edges)
+    # All corners should match original face colors
+    corners_positioned = all(_corner_matches_original(c) for c in cube.corners)
 
     return edges_reduced and edges_positioned and corners_positioned
 
@@ -188,13 +210,16 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
             )
 
             for rotation in range(4):
-                # Reset cube to pristine state for each test iteration
-                # This ensures center pieces are in their original positions
-
+                # Create a completely NEW cube for each test iteration
+                # to ensure clean state (previous iteration's algorithm doesn't affect this one)
+                app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
                 cube = app.cube
-                cube.clear_c_attributes()
                 solver = CageNxNSolver(app.op)
                 helper = CommunicatorHelper(solver)
+
+                # Re-get faces from new cube
+                source_face = cube.face(source_face_name)
+                target_face = cube.face(target_face_name)
 
                 target_block = (target_point, target_point)
 
@@ -222,12 +247,8 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                                              preserve_state=True
                                              )
 
-                # Check cube state - inner positions on even cubes may have
-                # edge disturbance with certain source/rotation combinations
-                edges_reduced = all(e.is3x3 for e in cube.edges)
-                edges_positioned = all(e.match_faces for e in cube.edges)
-                corners_positioned = all(c.match_faces for c in cube.corners)
-                state_preserved = edges_reduced and edges_positioned and corners_positioned
+                # Check cube state using fixed helper (uses original_color, not dynamic face.color)
+                state_preserved = _check_cube_state_preserved(cube)
 
                 # Common record data
                 record = {
