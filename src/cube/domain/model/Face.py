@@ -224,19 +224,37 @@ class Face(SuperElement, Hashable):
             top: Face = self._get_other_face(self._edge_top)
             bottom: Face = self._get_other_face(self._edge_bottom)
 
-            # top -> right -> bottom -> left -> top
-
-            #           -->
-            #           TOP
-            #          0 1 2
-            #       2         2
-            # ^ LEFT  1         1 RIGHT  ^
-            #       0         0
-            #          0 1 2
-            #          BOTTOM
-            #          -->
-            # - so bottom and right are in reverse left-top-right direction, see right-top-left-coordinates.jpg
-            #  So when copying from LEFT<--BOTTOM and RIGHT<-TOP we need to switch indexes
+            # CLOCKWISE ROTATION: left → top → right → bottom → left
+            #
+            # Face's LTR coordinate system:
+            # ┌─────────────────────────────────────┐
+            # │            TOP (horizontal)         │
+            # │           ltr: 0 → 1 → 2            │
+            # │         ┌─────────────┐             │
+            # │  LEFT   │             │   RIGHT     │
+            # │  (vert) │      F      │   (vert)    │
+            # │  ltr:   │             │   ltr:      │
+            # │   2 ↑   │             │   2 ↑       │
+            # │   1 │   │             │   1 │       │
+            # │   0 ┘   │             │   0 ┘       │
+            # │         └─────────────┘             │
+            # │           ltr: 0 → 1 → 2            │
+            # │           BOTTOM (horizontal)       │
+            # └─────────────────────────────────────┘
+            #
+            # Clockwise rotation mapping (in face's ltr):
+            #   LEFT[ltr=0] → TOP[ltr=0]      (bottom-left corner stays at ltr=0)
+            #   LEFT[ltr=2] → TOP[ltr=2]      (top-left corner stays at ltr=2)
+            #
+            #   TOP[ltr=0]  → RIGHT[ltr=2]    (left of top → TOP of right = ltr inverts!)
+            #   TOP[ltr=2]  → RIGHT[ltr=0]    (right of top → BOTTOM of right)
+            #
+            # Pattern: LEFT[ltr] → TOP[ltr] → RIGHT[inv(ltr)] → BOTTOM[inv(ltr)] → LEFT[ltr]
+            #
+            # The edge translation layer (get_slice_index_from_ltr_index) handles f1/f2
+            # differences automatically. The face only works in its own ltr system!
+            #
+            # See: docs/design2/edge-face-coordinate-system-approach2.md
             #
             saved_top: Edge = self._edge_top.copy()
             # saved_right: Edge = self._edge_right.copy()
@@ -515,3 +533,79 @@ class Face(SuperElement, Hashable):
     def slices(self) -> Iterable[PartSlice]:
         for p in self._parts:
             yield from p.all_slices
+
+    # -------------------------------------------------------------------------
+    # Edge Coordinate System Methods (Issue #53)
+    # -------------------------------------------------------------------------
+    # The ltr (left-to-right) coordinate system belongs to the Face.
+    # Each edge translates between face's ltr and its internal slice index.
+    # See: docs/design2/edge-face-coordinate-system-approach2.md
+    # -------------------------------------------------------------------------
+
+    def get_horizontal_slice_index_from_ltr(self, ltr_i: int) -> int:
+        """
+        Convert ltr index to slice index for horizontal edges (top/bottom).
+
+        The face's ltr system is consistent by definition. The edge translates
+        to its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            ltr_i: Left-to-right index from this face's perspective
+
+        Returns:
+            Internal slice index
+        """
+        return self._edge_top.get_slice_index_from_ltr_index(self, ltr_i)
+
+    def get_horizontal_ltr_from_slice_index(self, slice_i: int) -> int:
+        """
+        Convert slice index to ltr index for horizontal edges (top/bottom).
+
+        The face's ltr system is consistent by definition. The edge translates
+        from its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            slice_i: Internal slice index
+
+        Returns:
+            Left-to-right index from this face's perspective
+        """
+        return self._edge_top.get_ltr_index_from_slice_index(self, slice_i)
+
+    def get_vertical_slice_index_from_ltr(self, ltr_i: int) -> int:
+        """
+        Convert ltr index to slice index for vertical edges (left/right).
+
+        The face's ltr system is consistent by definition. The edge translates
+        to its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            ltr_i: Bottom-to-top index from this face's perspective
+
+        Returns:
+            Internal slice index
+        """
+        return self._edge_left.get_slice_index_from_ltr_index(self, ltr_i)
+
+    def get_vertical_ltr_from_slice_index(self, slice_i: int) -> int:
+        """
+        Convert slice index to ltr index for vertical edges (left/right).
+
+        The face's ltr system is consistent by definition. The edge translates
+        from its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            slice_i: Internal slice index
+
+        Returns:
+            Bottom-to-top index from this face's perspective
+        """
+        return self._edge_left.get_ltr_index_from_slice_index(self, slice_i)

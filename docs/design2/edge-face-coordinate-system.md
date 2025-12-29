@@ -1,9 +1,62 @@
-# Edge Coordinate System: right_top_left_same_direction
+# Edge-Face Coordinate System: right_top_left_same_direction
 
 This document explains the most complex concept in the cube model - the edge coordinate system
 and the `right_top_left_same_direction` flag.
 
 **Reference:** See the hand-drawn diagram below.
+
+---
+
+## Critical Insight: Face Coordinate Consistency (Issue #53)
+
+### The Problem: Two Edges Must Agree
+
+Each face has 4 edges. When we use left-to-right (ltr) coordinates on a face, **all edges
+of that face must interpret ltr the same way**. Otherwise, code that uses ltr coordinates
+to access different edges would get inconsistent results.
+
+For example, on Face U:
+- If `edge_left.get_slice_index_from_ltr_index(U, 0)` returns slice 0
+- Then `edge_right.get_slice_index_from_ltr_index(U, 0)` must ALSO behave consistently
+
+The ltr coordinate system belongs to the **Face**, not to individual edges!
+
+### Why Edges Need the `right_top_left_same_direction` Flag
+
+An edge is shared by exactly two faces. Each face has its own coordinate system (R→ and T↑).
+The edge must store a single array of slices, but the two faces may "see" this array in
+opposite directions.
+
+The flag tells us: do both faces see the slices in the same order, or reversed?
+
+### The Arbitrary f1 Choice - And Its Constraint
+
+When `right_top_left_same_direction=False`, we must pick ONE face as the "reference" (f1)
+where indices are used directly, and the OTHER face (f2) gets inverted indices.
+
+**Critical constraint:** For any face F that appears in multiple edges with `same_direction=False`,
+F must be consistently f1 (or consistently f2) across ALL such edges. Otherwise, F's coordinate
+system would be inconsistent.
+
+Example of the bug that was fixed:
+```python
+# BEFORE (inconsistent - U is f2 in one, f1 in other):
+l._edge_top = u._edge_left = _create_edge(edges, l, u, False)  # U is f2
+u._edge_top = b._edge_top = _create_edge(edges, u, b, False)   # U is f1  ← WRONG!
+
+# AFTER (consistent - U is always f1):
+l._edge_top = u._edge_left = _create_edge(edges, u, l, False)  # U is f1  ← FIXED!
+u._edge_top = b._edge_top = _create_edge(edges, u, b, False)   # U is f1
+```
+
+### Coordinate Conversion: Face Methods (Preferred)
+
+Since the ltr coordinate system belongs to the Face, the conversion methods should
+ideally be on Face, not Edge. The Face can delegate to its edges but ensures consistency.
+
+See `Face.get_slice_index_from_ltr_index()` and related methods.
+
+---
 
 ## Hand-Drawn Reference Diagram
 

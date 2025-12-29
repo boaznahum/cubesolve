@@ -112,7 +112,7 @@ face_colors = {
 }
 
 def draw_face(ax, x, y, label, color):
-    """Draw a face with R and T direction arrows."""
+    """Draw a face with R and T direction arrows and ltr numbering on edges."""
     # Face rectangle
     rect = patches.Rectangle((x, y), 3, 3, linewidth=2,
                               edgecolor='black', facecolor=color)
@@ -131,6 +131,30 @@ def draw_face(ax, x, y, label, color):
     ax.annotate('', xy=(x + 1.5, y + 2.8), xytext=(x + 1.5, y + 0.2),
                 arrowprops=dict(arrowstyle='->', color='red', lw=2))
     ax.text(x + 1.5, y + 2.9, 'T', fontsize=10, color='red', fontweight='bold', ha='center')
+
+    # LTR numbering on each edge (0→1→2)
+    # Dark green for ltr labels
+    ltr_color = '#006400'
+
+    # Bottom edge (horizontal): ltr 0→1→2 from left to right
+    for i in range(3):
+        ax.text(x + 0.5 + i, y - 0.15, str(i), fontsize=8, ha='center', va='top',
+                color=ltr_color, fontweight='bold')
+
+    # Top edge (horizontal): ltr 0→1→2 from left to right
+    for i in range(3):
+        ax.text(x + 0.5 + i, y + 3.15, str(i), fontsize=8, ha='center', va='bottom',
+                color=ltr_color, fontweight='bold')
+
+    # Left edge (vertical): ltr 0→1→2 from bottom to top
+    for i in range(3):
+        ax.text(x - 0.15, y + 0.5 + i, str(i), fontsize=8, ha='right', va='center',
+                color=ltr_color, fontweight='bold')
+
+    # Right edge (vertical): ltr 0→1→2 from bottom to top
+    for i in range(3):
+        ax.text(x + 3.15, y + 0.5 + i, str(i), fontsize=8, ha='left', va='center',
+                color=ltr_color, fontweight='bold')
 
 # Draw all faces
 for face, (x, y) in face_positions.items():
@@ -173,6 +197,6 @@ ax2.text(0.5, 8.5, summary_text, fontsize=9,
 plt.tight_layout()
 plt.savefig('/home/user/cubesolve/coor-system-doc/edge-coordinate-system.png',
             dpi=150, bbox_inches='tight', facecolor='white')
-plt.savefig('/home/user/cubesolve/design2/images/edge-coordinate-system.png',
+plt.savefig('/home/user/cubesolve/docs/design2/images/edge-coordinate-system.png',
             dpi=150, bbox_inches='tight', facecolor='white')
 print("Diagram saved!")

@@ -407,7 +407,8 @@ class Cube(CubeSupplier):
         f._edge_right = r._edge_left = _create_edge(edges, f, r, True)
         f._edge_bottom = d._edge_top = _create_edge(edges, f, d, True)
 
-        l._edge_top = u._edge_left = _create_edge(edges, l, u, False)
+        # Note: u must be f1 for consistency with u._edge_top (U-B edge) - see Issue #53
+        l._edge_top = u._edge_left = _create_edge(edges, u, l, False)
         l._edge_bottom = d._edge_left = _create_edge(edges, l, d, True)
 
         d._edge_right = r._edge_bottom = _create_edge(edges, d, r, False)
