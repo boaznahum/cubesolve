@@ -40,6 +40,7 @@ def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:
     source, target = pair
     return f"{target.name}<-{source.name}"
 
+
 if TYPE_CHECKING:
     from cube.domain.model.PartSlice import PartEdge
 
@@ -161,6 +162,9 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
     cube = app.cube
     n_slices = cube.n_slices
 
+    # Collect all failures instead of failing immediately
+    failures: list[dict[str, object]] = []
+
     # Verify initial cube state
     assert _check_cube_state_preserved(cube), "Initial cube state should be valid"
 
@@ -169,6 +173,17 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
             # Skip center position for odd cubes (invariant under rotation)
             if _is_center_position(n_slices, ltr_y, ltr_x):
                 continue
+
+            source_face: Face = cube.face(source_face_name)
+            target_face: Face = cube.face(target_face_name)
+
+            target_point = (ltr_y, ltr_x)
+
+            # Get expected source LTR by mapping target → source
+            # see helper
+            natural_source_point = helper.get_natural_source_ltr(
+                source_face, target_face, target_point
+            )
 
             for rotation in range(4):
                 # Reset cube to pristine state for each test iteration
@@ -179,24 +194,16 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 solver = CageNxNSolver(app.op)
                 helper = CommunicatorHelper(solver)
 
-                target_point = (ltr_y, ltr_x)
                 target_block = (target_point, target_point)
-
-                # Get fresh face references after reset
-                source_face: Face = cube.face(source_face_name)
-                target_face: Face = cube.face(target_face_name)
-
-                # Get expected source LTR by mapping target → source
-                expected_src_point = helper.get_natural_source_ltr(
-                    source_face, target_face, target_point
-                )
 
                 # Create a unique test attribute
                 test_key = f"test_{uuid.uuid4().hex[:8]}"
                 test_value = uuid.uuid4().hex
 
+                rotated_source_point = cube.cqr.rotate_point_clockwise(natural_source_point, rotation)
+
                 # Get the source center slice and set attribute (using LTR coords)
-                source_slice_piece: PartEdge = source_face.center.get_center_slice(expected_src_point).edge
+                source_slice_piece: PartEdge = source_face.center.get_center_slice(rotated_source_point).edge
 
                 source_slice_piece.c_attributes[test_key] = test_value
 
@@ -208,51 +215,88 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 # These are algorithm limitations, not bugs.
 
                 alg = helper.do_communicator(source_face, target_face,
-                                       target_block=target_block,
-                                       source_block=(expected_src_point, expected_src_point),
-                                       preserve_state=True
-                                       )
+                                             target_block=target_block,
+                                             source_block=(rotated_source_point, rotated_source_point),
+                                             preserve_state=True
+                                             )
 
-                if True:
-                    # Check cube state - inner positions on even cubes may have
-                    # edge disturbance with certain source/rotation combinations
-                    edges_reduced = all(e.is3x3 for e in cube.edges)
-                    edges_positioned = all(e.match_faces for e in cube.edges)
-                    corners_positioned = all(c.match_faces for c in cube.corners)
-                    state_preserved = edges_reduced and edges_positioned and corners_positioned
+                # Check cube state - inner positions on even cubes may have
+                # edge disturbance with certain source/rotation combinations
+                edges_reduced = all(e.is3x3 for e in cube.edges)
+                edges_positioned = all(e.match_faces for e in cube.edges)
+                corners_positioned = all(c.match_faces for c in cube.corners)
+                state_preserved = edges_reduced and edges_positioned and corners_positioned
 
-                    if not state_preserved:
-                        # For other cases, this is unexpected - fail the test
-                        bad_edges = [e.name for e in cube.edges
-                                     if not e.match_faces or not e.is3x3]
-                        bad_corners = [str(i) for i, c in enumerate(cube.corners)
-                                       if not c.match_faces]
-                        assert False, (
-                            f"Cube(size={cube.size} state NOT preserved: "
-                            f"source={source_face.name.name}, target={target_face.name.name}, "
-                            f"target point=({target_point}), rotation={rotation}, "
-                            f"source point=({expected_src_point}), "
-                            f"edges_reduced={edges_reduced}, edges_pos={edges_positioned}, "
-                            f"corners_pos={corners_positioned}, "
-                            f"bad_edges={bad_edges}, bad_corners={bad_corners}"
-                            f"alg={alg}"
-                        )
+                if not state_preserved:
+                    failures.append({
+                        "type": "state_not_preserved",
+                        "rotation": rotation,
+                        "source_point": rotated_source_point,
+                        "target_point": target_point,
+                        "alg": alg,
+                    })
+                    continue  # Skip further checks for this iteration
 
                 # Verify attribute moved to target (using LTR coords)
                 target_slice_edge = target_face.center.get_center_slice(target_point).edge
-                assert test_key in target_slice_edge.c_attributes, \
-                    f"Cube(size={cube.size}: {target_face.name} <-- {source_face.name} <--  "\
-                    f"source_point={source_face.name}:{expected_src_point}," \
-                    f"target_point={target_face.name}:{target_point}, alg={alg})"
+                if test_key not in target_slice_edge.c_attributes:
+                    failures.append({
+                        "type": "attr_not_on_target",
+                        "rotation": rotation,
+                        "source_point": rotated_source_point,
+                        "target_point": target_point,
+                        "alg": alg,
+                    })
+                    continue
 
-                assert target_slice_edge.c_attributes[test_key] == test_value, \
-                    "Attribute value should match on target"
+                if target_slice_edge.c_attributes[test_key] != test_value:
+                    failures.append({
+                        "type": "attr_value_mismatch",
+                        "rotation": rotation,
+                        "source_point": rotated_source_point,
+                        "target_point": target_point,
+                        "alg": alg,
+                    })
+                    continue
 
                 # Verify attribute no longer on the source
-                source_slice_piece = source_face.center.get_center_slice(expected_src_point).edge
-                assert test_key not in source_slice_piece.c_attributes, \
-                    f"Attribute should NOT be on source ({source_face.name}, " \
-                    f"@={expected_src_point})"
+                source_slice_piece = source_face.center.get_center_slice(rotated_source_point).edge
+                if test_key in source_slice_piece.c_attributes:
+                    failures.append({
+                        "type": "attr_still_on_source",
+                        "rotation": rotation,
+                        "source_point": rotated_source_point,
+                        "target_point": target_point,
+                        "alg": alg,
+                    })
+
+    # At end of test, report all failures in a table
+    if failures:
+        # Sort failures by target point for grouping
+        failures.sort(key=lambda x: (x['target_point'], x['rotation']))
+
+        # Build failure table
+        header = f"Cube size={cube_size}, {source_face_name.name} -> {target_face_name.name}"
+        table_lines = [
+            header,
+            "-" * len(header),
+            f"{'Type':<22} {'Target Point':<14} {'Rot':>3} {'Source Point':<14} {'Algorithm'}",
+            "-" * 80,
+        ]
+        prev_target: object = None
+        for f in failures:
+            # Add separator between different target points
+            if prev_target is not None and f['target_point'] != prev_target:
+                table_lines.append("-" * 80)
+            prev_target = f['target_point']
+
+            table_lines.append(
+                f"{f['type']:<22} {str(f['target_point']):<14} {f['rotation']:>3} "
+                f"{str(f['source_point']):<14} {f['alg']}"
+            )
+        table_lines.append(f"\nTotal failures: {len(failures)}")
+
+        assert False, "\n" + "\n".join(table_lines)
 
 
 @pytest.mark.parametrize("cube_size", [5])
