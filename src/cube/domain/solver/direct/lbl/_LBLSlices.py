@@ -181,7 +181,6 @@ class _LBLSlices(SolverElement):
             l1_white_tracker: Layer 1 face tracker
         """
         row = self.slice_to_row(slice_index)
-        ann = self._slv.op.annotation
 
         #boaz: it may related to cube orinatation
         if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
@@ -189,7 +188,6 @@ class _LBLSlices(SolverElement):
 
         # Get side face trackers (excluding L1 and opposite)
         side_trackers = self.get_side_face_trackers(th, l1_white_tracker)
-
 
         if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
             return
@@ -206,7 +204,7 @@ class _LBLSlices(SolverElement):
             self, l1_white_tracker: FaceTracker, face_tracker: FaceTracker, slice_index: int
     ) -> None:
 
-        self._centers.solve_single_center_row_slice(l1_white_tracker,face_tracker, slice_index)
+        self._centers.solve_single_center_row_slice(l1_white_tracker, face_tracker, slice_index)
 
     def _is_face_row_solved(self, face: Face, row: int, target_color: Color) -> bool:
         """Check if a specific row on a face has all correct colors."""
@@ -256,7 +254,7 @@ class _LBLSlices(SolverElement):
         op = self._slv.op
 
         # Solve all slices from bottom to top
-        if True:
+        if False:
             r = range(1)
         else:
             r = range(self.n_slices)

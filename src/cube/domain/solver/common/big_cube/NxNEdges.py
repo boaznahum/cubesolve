@@ -84,11 +84,14 @@ class NxNEdges(SolverElement):
         if all(e.is3x3 for e in target_edges):
             return False
 
+        # because the move !!!
+        by_name = [ t.name_n_colors for t in target_edges]
+
         with self.ann.annotate(h1=f"Edges for {face_tracker.color.name}"):
             parity_done = False
             while True:
                 # Find an unsolved edge among target edges
-                unsolved = [e for e in target_edges if not e.is3x3]
+                unsolved = [e for e in target_edges if e.name_n_colors in by_name and  not e.is3x3]
                 if not unsolved:
                     break
 
