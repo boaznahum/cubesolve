@@ -494,16 +494,18 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         self._modern_renderer.rotate(math.degrees(vs.alpha_z), 0, 0, 1)
 
         # Draw axis using modern GL renderer
-        self._modern_renderer.draw_axis(length=5.0)
+        self._modern_renderer.draw_axis(length=150.0, width=5.0)
 
-        # Draw the Rubik's cube using modern GL viewer
-        # This draws only non-animated parts when animation is active
-        self._modern_viewer.draw()
+        # DEBUG: Toggle cube drawing (set to False to see only axis)
+        if True:
+            # Draw the Rubik's cube using modern GL viewer
+            # This draws only non-animated parts when animation is active
+            self._modern_viewer.draw()
 
-        # Draw animated parts if animation is running
-        # The animation's _draw() closure will render rotating parts with transform
-        if self._animation_manager:
-            self._animation_manager.draw()
+            # Draw animated parts if animation is running
+            # The animation's _draw() closure will render rotating parts with transform
+            if self._animation_manager:
+                self._animation_manager.draw()
 
         # Draw celebration effect (if running)
         if self._celebration_manager:
