@@ -22,6 +22,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 import pytest
+from tabulate import tabulate
 
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.model.cube_boy import FaceName
@@ -162,8 +163,9 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
     cube = app.cube
     n_slices = cube.n_slices
 
-    # Collect all failures instead of failing immediately
+    # Collect all failures and successes
     failures: list[dict[str, object]] = []
+    successes: list[dict[str, object]] = []
 
     # Verify initial cube state
     assert _check_cube_state_preserved(cube), "Initial cube state should be valid"
@@ -227,76 +229,81 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 corners_positioned = all(c.match_faces for c in cube.corners)
                 state_preserved = edges_reduced and edges_positioned and corners_positioned
 
+                # Common record data
+                record = {
+                    "rotation": rotation,
+                    "natural_source_point": natural_source_point,
+                    "source_point": rotated_source_point,
+                    "target_point": target_point,
+                    "alg": alg,
+                }
+
                 if not state_preserved:
-                    failures.append({
-                        "type": "state_not_preserved",
-                        "rotation": rotation,
-                        "source_point": rotated_source_point,
-                        "target_point": target_point,
-                        "alg": alg,
-                    })
+                    failures.append({**record, "type": "state_not_preserved"})
                     continue  # Skip further checks for this iteration
 
                 # Verify attribute moved to target (using LTR coords)
                 target_slice_edge = target_face.center.get_center_slice(target_point).edge
                 if test_key not in target_slice_edge.c_attributes:
-                    failures.append({
-                        "type": "attr_not_on_target",
-                        "rotation": rotation,
-                        "source_point": rotated_source_point,
-                        "target_point": target_point,
-                        "alg": alg,
-                    })
+                    failures.append({**record, "type": "attr_not_on_target"})
                     continue
 
                 if target_slice_edge.c_attributes[test_key] != test_value:
-                    failures.append({
-                        "type": "attr_value_mismatch",
-                        "rotation": rotation,
-                        "source_point": rotated_source_point,
-                        "target_point": target_point,
-                        "alg": alg,
-                    })
+                    failures.append({**record, "type": "attr_value_mismatch"})
                     continue
 
                 # Verify attribute no longer on the source
                 source_slice_piece = source_face.center.get_center_slice(rotated_source_point).edge
                 if test_key in source_slice_piece.c_attributes:
-                    failures.append({
-                        "type": "attr_still_on_source",
-                        "rotation": rotation,
-                        "source_point": rotated_source_point,
-                        "target_point": target_point,
-                        "alg": alg,
-                    })
+                    failures.append({**record, "type": "attr_still_on_source"})
+                    continue
+
+                # All checks passed - record success
+                successes.append({**record, "type": "OK"})
 
     # At end of test, report all failures in a table
     if failures:
-        # Sort failures by target point for grouping
-        failures.sort(key=lambda x: (x['target_point'], x['rotation']))
+        # Get target points that have failures
+        failed_targets = {f['target_point'] for f in failures}
 
-        # Build failure table
+        # Get successes for failed target points
+        relevant_successes = [s for s in successes if s['target_point'] in failed_targets]
+
+        # Combine failures and successes, sort by target point then type (failures first) then rotation
+        all_records = failures + relevant_successes
+        all_records.sort(key=lambda x: (
+            x['target_point'],
+            0 if x['type'] != "OK" else 1,  # Failures before successes
+            x['rotation']
+        ))
+
+        # Build failure table using tabulate
         header = f"Cube size={cube_size}, {source_face_name.name} -> {target_face_name.name}"
-        table_lines = [
-            header,
-            "-" * len(header),
-            f"{'Type':<22} {'Target Point':<14} {'Rot':>3} {'Source Point':<14} {'Algorithm'}",
-            "-" * 80,
-        ]
+
+        # Build table rows, inserting separator rows between target point groups
+        table_data: list[list[object]] = []
         prev_target: object = None
-        for f in failures:
+        for r in all_records:
             # Add separator between different target points
-            if prev_target is not None and f['target_point'] != prev_target:
-                table_lines.append("-" * 80)
-            prev_target = f['target_point']
+            if prev_target is not None and r['target_point'] != prev_target:
+                table_data.append(["---", "---", "---", "---", "---", "---"])
+            prev_target = r['target_point']
 
-            table_lines.append(
-                f"{f['type']:<22} {str(f['target_point']):<14} {f['rotation']:>3} "
-                f"{str(f['source_point']):<14} {f['alg']}"
-            )
-        table_lines.append(f"\nTotal failures: {len(failures)}")
+            table_data.append([
+                r['type'],
+                r['target_point'],
+                r['rotation'],
+                r['natural_source_point'],
+                r['source_point'],
+                r['alg'],
+            ])
 
-        assert False, "\n" + "\n".join(table_lines)
+        # Use multi-line headers to keep table narrow
+        headers = ["Type", "Target\nPoint", "Rot", "Natural\nSrc", "Rotated\nSrc", "Algorithm"]
+        table_str = tabulate(table_data, headers=headers, tablefmt="simple")
+
+        msg = f"\n{header}\n{'=' * len(header)}\n{table_str}\n\nTotal failures: {len(failures)}"
+        assert False, msg
 
 
 @pytest.mark.parametrize("cube_size", [5])
