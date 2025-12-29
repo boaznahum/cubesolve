@@ -11,7 +11,7 @@ def _get_supported_pairs() -> list[tuple[FaceName, FaceName]]:
     Returns:
         List of (source_face, target_face) tuples
     """
-    return [
+    worked = [
         #  Source    #Target
          (FaceName.U, FaceName.F),  # Source=Up, Target=Front
          (FaceName.B, FaceName.F),
@@ -25,12 +25,23 @@ def _get_supported_pairs() -> list[tuple[FaceName, FaceName]]:
          (FaceName.L, FaceName.R),
          (FaceName.D, FaceName.R),
 
-        #  Source    #Target
-         (FaceName.U, FaceName.L),  # Source=Up, Target=Front
-         (FaceName.B, FaceName.L),
-         (FaceName.F, FaceName.L),
-         (FaceName.R, FaceName.L),
-         (FaceName.D, FaceName.L)
-        ]
+        (FaceName.U, FaceName.L),  # Source=Up, Target=Front
+        (FaceName.B, FaceName.L),
+        (FaceName.F, FaceName.L),
+        (FaceName.R, FaceName.L),
+        (FaceName.D, FaceName.L)
+    ]
+
+    working = [
+
+
+       #  Source    #Target
+
+         ]
+
+    if True:
+        return worked + working
+    else:
+        return working
 
 

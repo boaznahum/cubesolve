@@ -187,7 +187,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 target_face: Face = cube.face(target_face_name)
 
                 # Get expected source LTR by mapping target → source
-                expected_src_point = helper.get_expected_source_ltr(
+                expected_src_point = helper.get_natural_source_ltr(
                     source_face, target_face, target_point
                 )
 
@@ -240,11 +240,9 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 # Verify attribute moved to target (using LTR coords)
                 target_slice_edge = target_face.center.get_center_slice(target_point).edge
                 assert test_key in target_slice_edge.c_attributes, \
-                    f"Attribute should be on target ({target_face.name}, " \
-                    f"Cube(size={cube.size} "\
-                    f"source face={source_face.name}, ," \
-                    f"source_point={expected_src_point}," \
-                    f"target_point={target_point}, alg={alg})"
+                    f"Cube(size={cube.size}: {target_face.name} <-- {source_face.name} <--  "\
+                    f"source_point={source_face.name}:{expected_src_point}," \
+                    f"target_point={target_face.name}:{target_point}, alg={alg})"
 
                 assert target_slice_edge.c_attributes[test_key] == test_value, \
                     "Attribute value should match on target"

@@ -46,7 +46,7 @@ CUBE_SIZES_SLICE = [5]
 
 def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:
     """Generate readable test ID for face pair."""
-    return f"{pair[0].name}->{pair[1].name}"
+    return f"{pair[0].name}<-{pair[1].name}"
 
 
 def verify_whole_cube_translation(
@@ -185,9 +185,9 @@ class TestSliceAlgorithm:
 
             cube.clear_c_attributes()
 
-    @pytest.mark.parametrize("cube_size", [4])
-    @pytest.mark.parametrize("face_pair", [[FaceName.F, FaceName.U]], ids=_face_pair_id)
-    def test_face_pair_4_U_F(self, cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
+    @pytest.mark.parametrize("cube_size", [5])
+    @pytest.mark.parametrize("face_pair", [[FaceName.L, FaceName.U]], ids=_face_pair_id)
+    def test_face_pair_4_single(self, cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
         """Test slice algorithm for a specific face pair."""
         target_name, source_name = face_pair
         cube = Cube(cube_size, sp=_test_sp)

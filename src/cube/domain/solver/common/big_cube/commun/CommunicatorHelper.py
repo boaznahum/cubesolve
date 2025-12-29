@@ -110,7 +110,7 @@ class CommunicatorHelper(SolverElement):
         p2 = self.ltr_to_index(face, ltr_block[1][0], ltr_block[1][1])
         return p1, p2
 
-    def get_expected_source_ltr(
+    def get_natural_source_ltr(
             self, source: Face, target: Face, target_ltr: Point
     ) -> Point:
         """
@@ -119,7 +119,10 @@ class CommunicatorHelper(SolverElement):
 
         Get the expected source LTR position for a given target LTR.
 
-        Before the commincator do the source setup algorithm
+        Given a target LTR return the source on target that a single slice movemnt brinngs
+        into target without source setup.
+
+        Before the communicator do the source setup algorithm
 
         This is where the source piece should be (before rotation) to move
         to the target position.
@@ -208,11 +211,14 @@ class CommunicatorHelper(SolverElement):
             # extract row
             return point[0]
 
-        if CubeLayoutGeomtry.does_slice_cut_rows_or_columns(base_slice_alg.slice_name, on_face) == CLGColRow.ROW:
+        slice_name = base_slice_alg.slice_name
+        if CubeLayoutGeomtry.does_slice_cut_rows_or_columns(slice_name, on_face) == CLGColRow.ROW:
             # cut rows so we extract columns
             ex = exc
         else:
             ex = exr
+
+        slice_match_face_ltr = CubeLayoutGeomtry.does_slice_of_face_start_with_face(slice_name, on_face)
 
 
 
@@ -222,6 +228,10 @@ class CommunicatorHelper(SolverElement):
 
         v1 = ex(target_block[0]) # begin
         v2 = ex(target_block[1])
+
+        if not slice_match_face_ltr:
+            v1 = self.cube.inv(v1)
+            v2 = self.cube.inv(v2)
 
         if v1 > v2:
             v1, v2 = v2, v1
@@ -575,8 +585,6 @@ class CommunicatorHelper(SolverElement):
 
         # now we assume a block of size 1
         source_1_point: Point = source_block[0]
-        target_point_begin: Point = target_block[0]
-        target_point_end: Point = target_block[1]
 
         internal_data = self._do_communicator(source_face, target_face, target_block)
 
