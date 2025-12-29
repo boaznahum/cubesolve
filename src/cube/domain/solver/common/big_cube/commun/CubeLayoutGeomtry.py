@@ -12,6 +12,15 @@ class CLGColRow(Enum):
 class CubeLayoutGeomtry:
     """
     All un solved geometry questions
+
+        I think if we start from F as known, and travel on slice  path  that we can say it is hardcoded
+            then we can calculate this values, bit not now
+
+        the idea is to hardcode the cuve layout in CubeLayout, use Cube to build it
+        and use this class to use it too, I think once we have slice path and the
+        ltr system of each edge we can answer this question, it is good thinking.
+        meanwhile i'm harcoding it
+
     """
 
 
@@ -54,6 +63,11 @@ class CubeLayoutGeomtry:
 
             I'm sure this can be figured from other cube properties, but im so tired
 
+            See right-top-left-coordinates
+
+            I think if we start from F as known, and travel on slice  path  that we can say it is hardcoded
+            then we can calculate this values, bit not now
+
            Slice Traversal (content movement during rotation):
                 M: F → U → B → D → F  (vertical cycle, like L rotation)
                 E: R → B → L → F → R  (horizontal cycle, like D rotation)
@@ -71,6 +85,9 @@ class CubeLayoutGeomtry:
             if face_name in [FaceName.L]:
                 # slice cut the rows so we take columns like in M
                 return False #S[1] is on L[last]
+        elif slice_name == SliceName.M:
+            if face_name in [FaceName.B]:
+                return False
 
         return True
 
