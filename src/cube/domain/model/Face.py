@@ -196,7 +196,8 @@ class Face(SuperElement, Hashable):
         - Valid: On odd cubes (center piece is fixed)
         - INVALID: During center solving on even cubes
 
-        For face identity during big cube solving, use original_color instead.
+        For checking state during center solving, use relative consistency
+        between edges and corners instead of comparing to face colors.
 
         :return: Color of center piece at (n_slices//2, n_slices//2)
         """

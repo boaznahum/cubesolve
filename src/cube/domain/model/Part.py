@@ -252,10 +252,9 @@ class Part(ABC, CubeElement):
         commutators, face.color changes dynamically. This causes match_faces
         to return FALSE even when edges/corners are NOT disturbed!
 
-        For checking if edges/corners are preserved during center operations:
-        - Use face.original_color instead of face.color, OR
-        - Check relative consistency: verify each edge's colors match the
-          colors of its adjacent corners on the shared faces
+        For checking if edges/corners are preserved during center operations,
+        use relative consistency: verify each edge's colors match the colors
+        of its adjacent corners on the shared faces.
 
         See: design2/model-id-system.md section "Key State Check Properties"
         """

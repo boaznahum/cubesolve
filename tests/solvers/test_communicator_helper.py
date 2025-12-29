@@ -90,38 +90,74 @@ def center_index_to_ltr(face: Face, idx_row: int, idx_col: int) -> tuple[int, in
 # Test Helper Functions
 # =============================================================================
 
-def _edge_matches_original(edge) -> bool:
-    """Check if edge stickers match face ORIGINAL colors (not dynamic center)."""
-    for part_edge in edge._3x3_representative_edges:
-        if part_edge.color != part_edge.face.original_color:
-            return False
-    return True
-
-
-def _corner_matches_original(corner) -> bool:
-    """Check if corner stickers match face ORIGINAL colors (not dynamic center)."""
-    for part_edge in corner._3x3_representative_edges:
-        if part_edge.color != part_edge.face.original_color:
-            return False
-    return True
-
-
 def _check_cube_state_preserved(cube: Cube) -> bool:
-    """Check if cube state is preserved (edges and corners in position).
+    """Check if edges and corners form a consistent solved-like state.
 
-    IMPORTANT: Uses face.original_color instead of face.color because:
-    - The commutator moves center pieces, which changes face.color
-    - But edges/corners should still match their ORIGINAL face positions
-    - Using match_faces (which uses face.color) gives false negatives
+    WHY NOT USE match_faces?
+    ========================
+    The obvious approach would be to use Part.match_faces which checks if
+    edge/corner colors match their face colors. However, match_faces uses
+    face.color which reads from center position (n_slices//2, n_slices//2).
+
+    On even cubes (4x4, 6x6, etc.), this is just ONE of several center pieces.
+    When the commutator algorithm moves that specific center piece to another
+    face, face.color changes! This causes match_faces to return False even
+    though the edges and corners are completely undisturbed.
+
+    Example on 4x4 cube:
+    - Before: U face has Yellow centers, face.color = YELLOW
+    - Commutator moves center at (1,1) from U to F
+    - After: U face.color = BLUE (reads the piece now at position (1,1))
+    - Edge on U still has YELLOW sticker
+    - match_faces compares YELLOW != BLUE → returns False (WRONG!)
+
+    THE SOLUTION: RELATIVE CONSISTENCY
+    ==================================
+    Instead of comparing to face colors, check that edges and corners are
+    consistent WITH EACH OTHER - like a human would verify a solved cube.
+
+    For each corner (which has 3 colors on 3 faces):
+    - Find the 3 edges adjacent to this corner
+    - Each edge shares 2 faces with the corner
+    - The edge's colors on those faces must match the corner's colors
+
+    Example: Corner at F-U-L has colors (Blue, Yellow, Orange)
+    - F-U edge must have Blue on F, Yellow on U
+    - F-L edge must have Blue on F, Orange on L
+    - U-L edge must have Yellow on U, Orange on L
+
+    If all these relationships hold, the edges and corners are in a valid
+    solved configuration - regardless of what the center pieces show.
     """
-    # All edges should be reduced (3x3)
-    edges_reduced = all(e.is3x3 for e in cube.edges)
-    # All edges should match original face colors
-    edges_positioned = all(_edge_matches_original(e) for e in cube.edges)
-    # All corners should match original face colors
-    corners_positioned = all(_corner_matches_original(c) for c in cube.corners)
+    # All edges should be reduced (is3x3)
+    if not all(e.is3x3 for e in cube.edges):
+        return False
 
-    return edges_reduced and edges_positioned and corners_positioned
+    # For each corner, check that adjacent edges have matching colors
+    for corner in cube.corners:
+        corner_edges = corner._3x3_representative_edges  # 3 PartEdges
+
+        # Check each pair of faces on this corner
+        for i in range(3):
+            for j in range(i + 1, 3):
+                face_i = corner_edges[i].face
+                face_j = corner_edges[j].face
+                corner_color_on_i = corner_edges[i].color
+                corner_color_on_j = corner_edges[j].color
+
+                # Find the edge shared by face_i and face_j
+                shared_edge = face_i.find_shared_edge(face_j)
+                if shared_edge is None:
+                    continue  # Shouldn't happen, but be safe
+
+                # Check edge colors match corner colors on those faces
+                edge_color_on_i = shared_edge.get_face_edge(face_i).color
+                edge_color_on_j = shared_edge.get_face_edge(face_j).color
+
+                if edge_color_on_i != corner_color_on_i or edge_color_on_j != corner_color_on_j:
+                    return False
+
+    return True
 
 
 def _is_center_position(n_slices: int, ltr_y: int, ltr_x: int) -> bool:
@@ -210,14 +246,13 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
             )
 
             for rotation in range(4):
-                # Create a completely NEW cube for each test iteration
-                # to ensure clean state (previous iteration's algorithm doesn't affect this one)
-                app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+                # Reset cube to pristine state for each test iteration
                 cube = app.cube
+                cube.reset()
                 solver = CageNxNSolver(app.op)
                 helper = CommunicatorHelper(solver)
 
-                # Re-get faces from new cube
+                # Re-get faces from reset cube
                 source_face = cube.face(source_face_name)
                 target_face = cube.face(target_face_name)
 
@@ -247,7 +282,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                                              preserve_state=True
                                              )
 
-                # Check cube state using fixed helper (uses original_color, not dynamic face.color)
+                # Check cube state using relative consistency (not face.color)
                 state_preserved = _check_cube_state_preserved(cube)
 
                 # Common record data
