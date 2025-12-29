@@ -213,29 +213,30 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                                        preserve_state=True
                                        )
 
-                # Check cube state - inner positions on even cubes may have
-                # edge disturbance with certain source/rotation combinations
-                edges_reduced = all(e.is3x3 for e in cube.edges)
-                edges_positioned = all(e.match_faces for e in cube.edges)
-                corners_positioned = all(c.match_faces for c in cube.corners)
-                state_preserved = edges_reduced and edges_positioned and corners_positioned
+                if True:
+                    # Check cube state - inner positions on even cubes may have
+                    # edge disturbance with certain source/rotation combinations
+                    edges_reduced = all(e.is3x3 for e in cube.edges)
+                    edges_positioned = all(e.match_faces for e in cube.edges)
+                    corners_positioned = all(c.match_faces for c in cube.corners)
+                    state_preserved = edges_reduced and edges_positioned and corners_positioned
 
-                if not state_preserved:
-                    # For other cases, this is unexpected - fail the test
-                    bad_edges = [e.name for e in cube.edges
-                                 if not e.match_faces or not e.is3x3]
-                    bad_corners = [str(i) for i, c in enumerate(cube.corners)
-                                   if not c.match_faces]
-                    assert False, (
-                        f"Cube(size={cube.size} state NOT preserved: "
-                        f"source={source_face.name.name}, target={target_face.name.name}, "
-                        f"target point=({target_point}), rotation={rotation}, "
-                        f"source point=({expected_src_point}), "
-                        f"edges_reduced={edges_reduced}, edges_pos={edges_positioned}, "
-                        f"corners_pos={corners_positioned}, "
-                        f"bad_edges={bad_edges}, bad_corners={bad_corners}"
-                        f"alg={alg}"
-                    )
+                    if not state_preserved:
+                        # For other cases, this is unexpected - fail the test
+                        bad_edges = [e.name for e in cube.edges
+                                     if not e.match_faces or not e.is3x3]
+                        bad_corners = [str(i) for i, c in enumerate(cube.corners)
+                                       if not c.match_faces]
+                        assert False, (
+                            f"Cube(size={cube.size} state NOT preserved: "
+                            f"source={source_face.name.name}, target={target_face.name.name}, "
+                            f"target point=({target_point}), rotation={rotation}, "
+                            f"source point=({expected_src_point}), "
+                            f"edges_reduced={edges_reduced}, edges_pos={edges_positioned}, "
+                            f"corners_pos={corners_positioned}, "
+                            f"bad_edges={bad_edges}, bad_corners={bad_corners}"
+                            f"alg={alg}"
+                        )
 
                 # Verify attribute moved to target (using LTR coords)
                 target_slice_edge = target_face.center.get_center_slice(target_point).edge
