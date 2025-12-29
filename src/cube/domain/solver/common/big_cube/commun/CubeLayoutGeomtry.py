@@ -82,7 +82,7 @@ class CubeLayoutGeomtry:
         # claude what is the Mathematica of this ???
         if slice_name == SliceName.S:
 
-            if face_name in [FaceName.L]:
+            if face_name in [FaceName.L, FaceName.D]:
                 # slice cut the rows so we take columns like in M
                 return False #S[1] is on L[last]
         elif slice_name == SliceName.M:
