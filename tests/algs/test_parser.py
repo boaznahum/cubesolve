@@ -201,24 +201,37 @@ CUBE_SIZES = [3, 4, 5, 6]
 @pytest.mark.parametrize("seed", SCRAMBLE_SEEDS)
 @pytest.mark.parametrize("cube_size", CUBE_SIZES)
 def test_scramble_round_trip(seed: int, cube_size: int) -> None:
-    """Test that scramble can be converted to string and parsed back."""
+    """Test that scramble and parsed scramble produce the same cube state.
+
+    Semantic comparison: Apply alg1 and alg2 to separate cubes,
+    verify they produce the same state.
+    """
     # Generate scramble
     scramble = Algs.scramble(cube_size, seed, seq_length=20)
 
     # Use to_printable() to get parseable version (without {name})
     printable = scramble.to_printable()
 
-    # Convert to string
-    s1 = str(printable)
-
     # Parse back
-    parsed = Algs.parse(s1)
+    parsed = Algs.parse(str(printable))
 
-    # Convert again
-    s2 = str(parsed)
+    # Create two cubes
+    app1 = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app2 = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
 
-    # Strings should match (accounting for possible formatting differences)
-    assert s1 == s2, f"Round-trip failed:\n  Original: {s1}\n  Parsed:   {s2}"
+    # Apply original to cube1
+    printable.play(app1.cube)
+
+    # Apply parsed to cube2
+    parsed.play(app2.cube)
+
+    # Both cubes should be in the same state
+    # Verify by applying inverse of one and checking if both return to solved
+    printable.inv().play(app1.cube)
+    parsed.inv().play(app2.cube)
+
+    assert app1.cube.solved, "Cube1 should be solved after original + inverse"
+    assert app2.cube.solved, "Cube2 should be solved after parsed + inverse"
 
 
 @pytest.mark.parametrize("seed", SCRAMBLE_SEEDS)

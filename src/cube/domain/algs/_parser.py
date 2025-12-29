@@ -30,9 +30,9 @@ def parse_alg(s: str) -> _Alg:
     # example:
     #  ["R'", ' ', 'U2', ' ', '', '(', 'R', ' ', 'U', ' ', "R'", ' ', 'U', ')', '', ' ', 'R']
     #
-    # Updated to also split on [ and ] for sequence brackets
+    # Updated to also split on [ and ] for sequence brackets, and ' for prime modifiers
     # Note: Slice notation [1:2]M is handled specially - the [ before digits is not a bracket
-    pattern = r"(\s+|\(|\)|\[|\])"
+    pattern = r"(\s+|\(|\)|\[|\]|')"
     tokens = re.split(pattern, s)
 
     p = _Parser(s, tokens)
@@ -80,7 +80,13 @@ class _Parser:
                         result.append(at)
                         continue
                 # Otherwise treat [ as sequence bracket like (
-                self._parse(result, True, token)
+                # Create a new result list for the nested sequence
+                nested_result: list[Alg] = []
+                self._parse(nested_result, True, token)
+                # Wrap nested items in a SeqAlg so it can be multiplied as a unit
+                from cube.domain.algs.Algs import Algs
+                nested_seq = Algs.seq_alg(None, *nested_result)
+                result.append(nested_seq)
 
             elif token == ')' or token == ']':
                 if not nested:
@@ -90,6 +96,13 @@ class _Parser:
                 if token != expected:
                     raise InternalSWError(f"Mismatched brackets: expected '{expected}' but got '{token}' in {self._original}")
                 return  # Exit nested parse
+            elif token == "'":
+                # Prime modifier for previous result (e.g., [R U]')
+                if not result:
+                    raise InternalSWError(f"Unexpected prime modifier in {self._original}")
+                prev = result.pop()
+                at = prev.prime
+                result.append(at)
             elif token.isdigit():
                 if not result:
                     raise InternalSWError(f"Unexpected multiplier {token} in {self._original}")
@@ -264,19 +277,23 @@ def _token_to_alg_no_slice(t: str) -> _Alg:
 
     simple = Algs.Simple
 
+    # First pass: check exact matches (including WideFaceAlg like 'r', 'u', etc.)
     for s in simple:
-        code = s.code
-
-        if code == t:
+        if s.code == t:
             return s
 
+    # Second pass: check case-insensitive matches for WholeCubeAlg (x == X)
+    for s in simple:
         if isinstance(s, algs.WholeCubeAlg):
-            # x==X
-            if code.lower() == t:
+            if s.code.lower() == t:
                 return s
 
+    # Third pass: check if lowercase face letter should map to wide (r -> Rw)
+    # This is for backward compatibility, but only if not already matched
+    # as WideFaceAlg in the first pass
+    for s in simple:
         if isinstance(s, algs.FaceAlg):
-            if code.lower() == t:
-                return _token_to_alg_no_slice(code + "w")
+            if s.code.lower() == t:
+                return _token_to_alg_no_slice(s.code + "w")
 
     raise InternalSWError(f"Unknown token {t}")
