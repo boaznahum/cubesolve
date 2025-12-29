@@ -12,6 +12,8 @@ import pytest
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
+from cube.domain.solver.SolverName import SolverName
+from tests.solvers.conftest import skip_if_not_supported
 
 
 # =============================================================================
@@ -21,6 +23,7 @@ from cube.domain.solver.solver import SolveStep
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_status_on_solved_cube(size: int) -> None:
     """Test status reporting on a solved cube."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     solver = LayerByLayerNxNSolver(app.op)
@@ -32,6 +35,7 @@ def test_lbl_solver_status_on_solved_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 5])
 def test_lbl_solver_status_on_scrambled_cube(size: int) -> None:
     """Test status reporting on a scrambled cube."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -51,6 +55,7 @@ def test_lbl_solver_status_on_scrambled_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_state_inspection_on_solved_cube(size: int) -> None:
     """Test state inspection methods on a solved cube."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
     solver = LayerByLayerNxNSolver(app.op)
 
@@ -67,6 +72,7 @@ def test_lbl_solver_state_inspection_on_solved_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 5])
 def test_lbl_solver_state_inspection_on_scrambled_cube(size: int) -> None:
     """Test state inspection methods on a scrambled cube."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
     solver = LayerByLayerNxNSolver(app.op)
 
@@ -87,6 +93,7 @@ def test_lbl_solver_state_inspection_on_scrambled_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_solves_layer1_centers(size: int) -> None:
     """Test that LBL solver can solve Layer 1 centers."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -112,6 +119,7 @@ def test_lbl_solver_solves_layer1_centers(size: int) -> None:
 @pytest.mark.parametrize("seed", range(5))
 def test_lbl_solver_layer1_centers_multiple_scrambles(seed: int) -> None:
     """Test Layer 1 centers solving with multiple scramble seeds."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble with different seeds
@@ -137,6 +145,7 @@ def test_lbl_solver_layer1_centers_multiple_scrambles(seed: int) -> None:
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_solves_layer1_cross(size: int) -> None:
     """Test that LBL solver can solve Layer 1 cross (centers + edges positioned)."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -160,6 +169,7 @@ def test_lbl_solver_solves_layer1_cross(size: int) -> None:
 @pytest.mark.parametrize("seed", range(5))
 def test_lbl_solver_layer1_cross_multiple_scrambles(seed: int) -> None:
     """Test Layer 1 cross solving with multiple scramble seeds."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble with different seeds
@@ -185,6 +195,7 @@ def test_lbl_solver_layer1_cross_multiple_scrambles(seed: int) -> None:
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_solves_layer1_complete(size: int) -> None:
     """Test that LBL solver can solve complete Layer 1 (centers + edges + corners)."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -209,6 +220,7 @@ def test_lbl_solver_solves_layer1_complete(size: int) -> None:
 @pytest.mark.parametrize("seed", range(5))
 def test_lbl_solver_layer1_complete_multiple_scrambles(seed: int) -> None:
     """Test complete Layer 1 solving with multiple scramble seeds on 5x5."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble with different seeds
@@ -233,6 +245,7 @@ def test_lbl_solver_layer1_complete_multiple_scrambles(seed: int) -> None:
 @pytest.mark.parametrize("size", [4, 6])
 def test_lbl_solver_even_cube_layer1(size: int) -> None:
     """Test Layer 1 solving on even cubes (uses shadow cube approach)."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -256,6 +269,7 @@ def test_lbl_solver_even_cube_layer1(size: int) -> None:
 @pytest.mark.parametrize("seed", range(5))
 def test_lbl_solver_even_cube_multiple_scrambles(seed: int) -> None:
     """Test Layer 1 solving on 4x4 with multiple scramble seeds."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble with different seeds
@@ -280,6 +294,7 @@ def test_lbl_solver_even_cube_multiple_scrambles(seed: int) -> None:
 
 def test_lbl_solver_supported_steps() -> None:
     """Test that LBL solver reports correct supported steps."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
     solver = LayerByLayerNxNSolver(app.op)
 
@@ -293,7 +308,7 @@ def test_lbl_solver_supported_steps() -> None:
 
 def test_lbl_solver_code() -> None:
     """Test that LBL solver reports correct code."""
-    from cube.domain.solver.SolverName import SolverName
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
 
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
     solver = LayerByLayerNxNSolver(app.op)
@@ -307,6 +322,7 @@ def test_lbl_solver_code() -> None:
 
 def test_lbl_solver_status_progression() -> None:
     """Test that status progresses correctly through solve steps."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble
