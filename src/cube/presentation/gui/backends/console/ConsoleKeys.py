@@ -26,6 +26,7 @@ class Keys:
 
     # Modifiers
     INV = "'"  # Toggle inverse mode (prime)
+    WIDE = "W"  # Toggle wide mode (lowercase moves like r, f, u)
 
     # Scramble
     SCRAMBLE_RANDOM = "0"  # Random scramble
@@ -40,8 +41,10 @@ class Keys:
     SOLVE = "?"  # Solve the cube
     UNDO = "<"  # Undo last move
     CLEAR = "C"  # Clear/reset cube
-    ALGS = "A"  # Select algorithm from library
+    ALGS = "A"  # Enter algorithm input mode
+    STATUS = "S"  # Show detailed part status
     TEST = "T"  # Run test (50 scramble-solve cycles)
+    HELP = "H"  # Show help
 
     # Control
     QUIT = "Q"  # Quit application
