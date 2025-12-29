@@ -23,17 +23,17 @@ class FaceTracker:
         self._attributes: dict[Any, Any] = {}
 
     @property
-    def face(self):
+    def face(self) -> Face:
         return self._tracker()
 
     @property
-    def color(self):
+    def color(self) -> Color:
         return self._color
 
     def __str__(self) -> str:
         return f"{self.color.name}@{self.face}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
     @staticmethod

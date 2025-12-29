@@ -40,20 +40,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.model import Color
-from cube.domain.model.FaceName import FaceName
+from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
+from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
-from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
+    pass
 
 
 class CageNxNSolver(BaseSolver):
@@ -92,6 +91,8 @@ class CageNxNSolver(BaseSolver):
 
         # NxNCorners provides corner swap parity fix algorithm
         self._nxn_corners = NxNCorners(self)
+
+        self._shadow_helper = ShadowCubeHelper(self)
 
         # =====================================================================
         # EDGE SOLVER SETUP
@@ -234,7 +235,7 @@ class CageNxNSolver(BaseSolver):
         # For odd: simple trackers using fixed center color (no cleanup needed)
         # For even: trackers mark center slices (cleanup on exit)
         # Use context manager for automatic cleanup on exit
-        with FaceTrackerHolder(self) as tracker_holder:
+        with FacesTrackerHolder(self) as tracker_holder:
             self.debug(f"Created trackers: {list(tracker_holder)}")
 
             # Main solve loop with parity retry
@@ -330,7 +331,7 @@ class CageNxNSolver(BaseSolver):
                 and self._are_corners_solved()):
             return sr
 
-        with FaceTrackerHolder(self) as tracker_holder:
+        with FacesTrackerHolder(self) as tracker_holder:
             self.debug(f"Created trackers: {list(tracker_holder)}")
 
             for attempt in range(5):
@@ -380,7 +381,7 @@ class CageNxNSolver(BaseSolver):
         if self._are_centers_solved():
             return sr
 
-        with FaceTrackerHolder(self) as tracker_holder:
+        with FacesTrackerHolder(self) as tracker_holder:
             self._solve_centers(tracker_holder)
 
         return sr
@@ -424,7 +425,7 @@ class CageNxNSolver(BaseSolver):
     # Phase 1b: Corner solving (uses 3x3 solver)
     # =========================================================================
 
-    def _solve_corners(self, tracker_holder: FaceTrackerHolder) -> None:
+    def _solve_corners(self, tracker_holder: FacesTrackerHolder) -> None:
         """Solve corners using shadow cube approach with DualOperator.
 
         Works identically for odd and even cubes:
@@ -453,9 +454,9 @@ class CageNxNSolver(BaseSolver):
             self.debug(f"  {edge._name}: {edge.e1.color}-{edge.e2.color}, is3x3={edge.is3x3}")
 
         # Solve using DualOperator - moves are applied to real cube automatically
-        self._solve_with_dual_operator(face_colors)
+        self._solve_with_dual_operator(tracker_holder)
 
-    def _solve_with_dual_operator(self, face_colors: dict[FaceName, Color]) -> None:
+    def _solve_with_dual_operator(self, th: FacesTrackerHolder) -> None:
         """Create shadow 3x3 and solve using DualOperator.
 
         DualOperator wraps both the shadow cube and real operator:
@@ -467,15 +468,10 @@ class CageNxNSolver(BaseSolver):
         This replaces the old approach of collecting history and playing at once.
         """
         from cube.application.commands.DualOperator import DualOperator
-        from cube.domain.model.Cube import Cube
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
         # Create shadow 3x3 cube
-        shadow_cube = Cube(size=3, sp=self._cube.sp)
-        shadow_cube.is_even_cube_shadow = True
-        self._copy_state_to_shadow(shadow_cube, face_colors)
-
-        assert shadow_cube.is_boy, f"Shadow cube must be valid boy pattern, face_colors={face_colors}"
+        shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
 
         # Debug: print all edges on shadow cube
         self.debug("Shadow cube edges:")
@@ -508,31 +504,12 @@ class CageNxNSolver(BaseSolver):
 
         # No need to apply history - DualOperator already played on real cube!
 
-    def _copy_state_to_shadow(self, shadow: Cube, face_colors: dict[FaceName, Color]) -> None:
-        """Copy corner/edge state from even cube to shadow 3x3.
-
-        Uses the type-safe Cube3x3Colors mechanism to transfer state.
-        The even cube's edge/corner colors are extracted, centers are replaced
-        with face_colors, and the result is applied to the shadow cube.
-        """
-        # Get colors from even cube as 3x3 snapshot
-        colors_3x3 = self._cube.get_3x3_colors()
-
-        # Override centers with face_colors mapping
-        modified = colors_3x3.with_centers(face_colors)
-
-        # Verify the modified colors represent a valid BOY layout
-        assert modified.is_boy(self._cube.sp), \
-            "Shadow cube colors must maintain BOY layout"
-
-        # Apply to shadow cube (includes sanity check)
-        shadow.set_3x3_colors(modified)
 
     # =========================================================================
     # Phase 2: Center solving
     # =========================================================================
 
-    def _solve_centers(self, tracker_holder: FaceTrackerHolder) -> None:
+    def _solve_centers(self, tracker_holder: FacesTrackerHolder) -> None:
         """
         Solve all centers using NxNCenters with preserve_cage=True.
 

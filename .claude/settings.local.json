@@ -7,7 +7,12 @@
       "Skill(skill-creator)",
       "Skill(check)",
       "Skill(clean-branches)",
-      "Skill(todo)"
+      "Skill(todo)",
+      "WebFetch(domain:www.speedsolving.com)",
+      "WebFetch(domain:ruwix.com)",
+      "WebFetch(domain:www.youtube.com)",
+      "WebFetch(domain:charlesreid1.com)",
+      "WebFetch(domain:www.reddit.com)"
     ],
     "deny": [],
     "ask": []

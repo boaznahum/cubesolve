@@ -36,10 +36,11 @@ from cube.domain.solver.common.big_cube._NxNCentersFaceTracker import (
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
+    from cube.domain.model.Part import Part
     from cube.domain.solver.protocols import SolverElementsProvider
 
 
-class FaceTrackerHolder:
+class FacesTrackerHolder:
     """Holds 6 face trackers and provides operations on them.
 
     This class encapsulates the tracker lifecycle:
@@ -84,7 +85,7 @@ class FaceTrackerHolder:
             print(f"{tracker.face.name} -> {tracker.color}")
     """
 
-    __slots__ = ["_cube", "_trackers", "_is_even"]
+    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter"]
 
     def __init__(
         self,
@@ -107,6 +108,8 @@ class FaceTrackerHolder:
         """
         self._cube = slv.cube
         self._is_even = self._cube.n_slices % 2 == 0
+        self._face_colors_cache: dict[FaceName, Color] | None = None
+        self._cache_modify_counter: int = -1  # Invalid counter to force first rebuild
 
         if trackers is not None:
             assert len(trackers) == 6, f"Expected 6 trackers, got {len(trackers)}"
@@ -151,21 +154,140 @@ class FaceTrackerHolder:
         return self._trackers
 
     def get_face_colors(self) -> dict[FaceName, Color]:
-        """Get current face→color mapping from trackers.
+        """Get current face→color mapping from trackers (cached with auto-invalidation).
 
-        Trackers dynamically resolve to the current face, so this always
-        returns the correct mapping even after cube rotations.
+        Cache Invalidation Pattern:
+        ===========================
+        Uses cube._modify_counter to detect when cube has changed:
+
+            ┌─────────────────────────────────────────────────────────────┐
+            │  cube._modify_counter: 42                                   │
+            │  self._cache_modify_counter: 42  ← Same? Use cache ✓        │
+            │                                                             │
+            │  After cube rotation (Y move):                              │
+            │  cube._modify_counter: 43        ← Incremented!             │
+            │  self._cache_modify_counter: 42  ← Stale! Rebuild cache     │
+            └─────────────────────────────────────────────────────────────┘
+
+        Why Cache Invalidation Is Needed:
+        ==================================
+        Trackers mark center slices. On whole-cube rotation, slices move:
+
+            Before Y rotation:           After Y rotation:
+            ┌───┐                        ┌───┐
+            │ U │                        │ U │
+            ├───┼───┬───┬───┐            ├───┼───┬───┬───┐
+            │ L │[F]│ R │ B │            │ L │ F │[R]│ B │
+            ├───┼───┴───┴───┘            ├───┼───┴───┴───┘
+            │ D │  ↑                     │ D │      ↑
+            └───┘  WHITE tracker here    └───┘      WHITE tracker moved!
+
+            Cache: {F: WHITE}            Cache STALE! Should be {R: WHITE}
 
         Returns:
             Dictionary mapping face names to their target colors.
+        """
+        # Check if cache is valid using cube's modification counter
+        # noinspection PyProtectedMember
+        current_counter = self._cube._modify_counter
+        if self._face_colors_cache is not None and self._cache_modify_counter == current_counter:
+            return self._face_colors_cache
+
+        # Rebuild cache - trackers may have moved to different faces
+        self._face_colors_cache = {}
+        for tracker in self._trackers:
+            self._face_colors_cache[tracker.face.name] = tracker.color
+        self._cache_modify_counter = current_counter
+        return self._face_colors_cache
+
+    @property
+    def face_colors(self) -> dict[FaceName, Color]:
+        """Current face→color mapping (cached property).
+
+        Uses cube._modify_counter for automatic cache invalidation.
+        Safe to call repeatedly - returns cached result if cube unchanged.
+        """
+        return self.get_face_colors()
+
+    def get_face_color(self, face_name: FaceName) -> Color:
+        """Get the target color for a specific face.
+
+        Args:
+            face_name: The face to query.
+
+        Returns:
+            The target color for that face.
+
+        Raises:
+            KeyError: If no tracker exists for that face.
+        """
+        for tracker in self._trackers:
+            if tracker.face.name == face_name:
+                return tracker.color
+        raise KeyError(f"No tracker for face {face_name}")
+
+    def get_tracker(self, face_name: FaceName) -> FaceTracker | None:
+        """Get the tracker for a specific face.
+
+        Args:
+            face_name: The face to query.
+
+        Returns:
+            The FaceTracker for that face, or None if not found.
+        """
+        for tracker in self._trackers:
+            if tracker.face.name == face_name:
+                return tracker
+        return None
+
+    def get_tracker_by_color(self, color: Color) -> FaceTracker:
+        """Get the tracker for a face with the specified color.
+
+        Args:
+            color: The target color to find.
+
+        Returns:
+            The FaceTracker for the face with that color.
+
+        Raises:
+            KeyError: If no tracker exists for that color.
+        """
+        for tracker in self._trackers:
+            if tracker.color == color:
+                return tracker
+        raise KeyError(f"No tracker for color {color}")
+
+    def part_match_faces(self, part: "Part") -> bool:
+        """Check if a part's colors match the tracker-assigned face colors.
+
+        Unlike Part.match_faces which uses actual center colors, this method
+        uses the tracker's face→color mapping. This is essential for even
+        cubes where only some centers are solved.
+
+        A part matches if every sticker's color equals the tracker's expected
+        color for the face that sticker is on.
+
+        Args:
+            part: The Part (Edge or Corner) to check.
+
+        Returns:
+            True if all part stickers match their face's tracker color.
 
         Example:
-            {FaceName.F: Color.RED, FaceName.U: Color.WHITE, ...}
+            If tracker says F→ORANGE and U→WHITE, then an edge at F-U
+            must have ORANGE sticker on F and WHITE sticker on U.
+
+        See Also:
+            solver/direct/lbl/EVEN_CUBE_MATCHING.md for detailed explanation
+            with diagrams of why this is needed for even cubes.
         """
-        face_colors: dict[FaceName, Color] = {}
-        for tracker in self._trackers:
-            face_colors[tracker.face.name] = tracker.color
-        return face_colors
+        face_colors = self.face_colors  # Get current mapping (not cached)
+        for edge in part._3x3_representative_edges:
+            expected_color = face_colors.get(edge.face.name)
+            if expected_color is None or edge.color != expected_color:
+                return False
+        return True
+
 
     def _trackers_layout(self) -> CubeLayout:
         """Get the current tracker mapping as a CubeLayout.
@@ -214,10 +336,12 @@ class FaceTrackerHolder:
         """Return number of trackers (always 6)."""
         return len(self._trackers)
 
-    def __enter__(self) -> FaceTrackerHolder:
+    def __enter__(self) -> FacesTrackerHolder:
         """Enter context manager."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit context manager - cleanup trackers."""
         self.cleanup()
+
+

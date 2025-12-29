@@ -1348,7 +1348,7 @@ class Cube(CubeSupplier):
         CubeSanity.do_sanity : Actual validation implementation
         """
 
-        if self._modify_counter == self._last_sanity_counter:
+        if not force_check and self._modify_counter == self._last_sanity_counter:
             return
 
         # if True:
@@ -1754,6 +1754,10 @@ class Cube(CubeSupplier):
         """
         return self.current_layout.is_boy()
 
+    @property
+    def is_even(self) -> bool:
+        return self.size % 2 == 0
+
     def get_3x3_colors(self) -> "Cube3x3Colors":
         """Extract edge/corner/center colors as a 3x3 snapshot.
 
@@ -1842,6 +1846,7 @@ class Cube(CubeSupplier):
 
         # Reset caches (required after direct color changes)
         self.reset_after_faces_changes()
+        self.modified()  # Increment counter so sanity cache works correctly
 
         # Validate
         assert self.is_sanity(force_check=True), "Invalid cube state after set_3x3_colors"

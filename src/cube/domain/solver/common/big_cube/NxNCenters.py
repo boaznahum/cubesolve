@@ -12,7 +12,7 @@ from cube.domain.model.cube_boy import CubeLayout, color2long
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
-from cube.domain.solver.common.big_cube.FaceTrackerHolder import FaceTrackerHolder
+from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
@@ -172,7 +172,7 @@ class NxNCenters(SolverElement):
 
         return self._is_solved()
 
-    def solve(self, holder: FaceTrackerHolder) -> None:
+    def solve(self, holder: FacesTrackerHolder) -> None:
         """
         Solve all centers using the provided face tracker holder.
 
@@ -190,7 +190,39 @@ class NxNCenters(SolverElement):
         with self.ann.annotate(h1="Big cube centers"):
             self._solve(holder)
 
-    def _solve(self, holder: FaceTrackerHolder) -> None:
+    def solve_single_face(self, holder: FacesTrackerHolder, target_tracker: FaceTracker) -> None:
+        """
+        Solve centers for a single target face only.
+
+        Used by layer-by-layer solver to solve one face at a time.
+
+        Args:
+            holder: FaceTrackerHolder containing trackers for all faces
+                    (needed to know face colors and for source pieces).
+            target_tracker: FaceTracker for the target face (tracks by color).
+        """
+        target_face = target_tracker.face
+        if self._is_face_solved(target_face, target_tracker.color):
+            return
+
+        with self.ann.annotate(h1=f"Centers for {target_tracker.color.name}"):
+            # Get all trackers for sanity checking
+            all_faces: list[FaceTracker] = list(holder)
+
+            # Solve only the target face
+            while True:
+                if not self._do_faces([target_tracker], False, False):
+                    break
+                self._asserts_is_boy(all_faces)
+
+            self._asserts_is_boy(all_faces)
+
+            # Final pass with back face too
+            self._do_faces([target_tracker], False, True)
+
+            self._asserts_is_boy(all_faces)
+
+    def _solve(self, holder: FacesTrackerHolder) -> None:
         """
         Main solving algorithm - uses provided face trackers to solve all centers.
 

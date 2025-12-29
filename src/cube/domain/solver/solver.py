@@ -22,6 +22,10 @@ _SOLVE_STEP_META: dict[str, tuple[str, str]] = {
     "NxNCenters": ("Ctr", "NxN Centers"),
     "NxNEdges": ("Edg", "NxN Edges"),
     "Cage": ("Cage", "Cage (Edges + Corners)"),
+    # LBL-Direct method steps
+    "LBL_L1_Ctr": ("L1Ctr", "Layer 1 Centers"),
+    "LBL_L1_Edg": ("L1Edg", "Layer 1 Edges"),
+    "LBL_L1": ("L1", "Layer 1 Complete"),
 }
 
 
@@ -45,6 +49,11 @@ class SolveStep(Enum):
 
     # Cage method step
     Cage = "Cage"
+
+    # LBL-Direct method steps (layer-by-layer for big cubes)
+    LBL_L1_Ctr = "LBL_L1_Ctr"  # Layer 1 centers only
+    LBL_L1_Edg = "LBL_L1_Edg"  # Layer 1 edges only
+    LBL_L1 = "LBL_L1"          # Layer 1 complete (centers + edges + corners)
 
     @property
     def short_code(self) -> str:

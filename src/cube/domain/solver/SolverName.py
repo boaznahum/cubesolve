@@ -63,6 +63,8 @@ class SolverName(Enum):
     CFOP = SolverMeta("CFOP")#, only_3x3="CFOP use same reducer as LBL")
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
+    LBL_DIRECT = SolverMeta("LBL-Direct", skip_3x3="LBL-Direct is for NxN cubes only",
+                            not_testable="WIP: Only Layer 1 implemented")  # Layer-by-layer direct method
 
     @property
     def display_name(self) -> str:

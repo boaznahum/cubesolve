@@ -232,7 +232,7 @@ reducer = Reducers.beginner(op, advanced_edge_parity=True)
 from cube.domain.solver.common.big_cube import (
     NxNCenters,
     NxNEdges,
-    FaceTrackerHolder
+    FacesTrackerHolder
 )
 
 # These are used by reducers and direct solvers

@@ -6,6 +6,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
+from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
 from cube.domain.solver.common.SolverElement import SolverElement
@@ -63,6 +64,48 @@ class NxNEdges(SolverElement):
             assert self._is_solved()
 
             return True
+
+    def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
+        """Solve only the 4 edges that contain a specific color.
+
+        Used by layer-by-layer solver to solve one layer's edges at a time.
+
+        Args:
+            face_tracker: FaceTracker for the target face (tracks by color).
+
+        Returns:
+            True if edge parity was performed, False otherwise.
+        """
+        # Find the 4 edges adjacent to Layer 1 face (by position)
+        # These are the edges that need to be solved for Layer 1
+        target_edges = list(face_tracker.face.edges)
+
+        # Check if all target edges are already solved
+        if all(e.is3x3 for e in target_edges):
+            return False
+
+        with self.ann.annotate(h1=f"Edges for {face_tracker.color.name}"):
+            parity_done = False
+            while True:
+                # Find an unsolved edge among target edges
+                unsolved = [e for e in target_edges if not e.is3x3]
+                if not unsolved:
+                    break
+
+                # Check if this is the LAST unsolved edge in the WHOLE cube
+                # (parity can only happen when all other 11 edges are solved)
+                total_cube_unsolved = sum(1 for e in self.cube.edges if not e.is3x3)
+                if total_cube_unsolved == 1 and len(unsolved) == 1:
+                    # Last edge in whole cube AND it's one of our targets - parity
+                    self._do_last_edge_parity()
+                    parity_done = True
+                    continue
+
+                # Solve one edge
+                edge = unsolved[0]
+                self._do_edge(edge)
+
+            return parity_done
 
     def _do_first_11(self):
         """
