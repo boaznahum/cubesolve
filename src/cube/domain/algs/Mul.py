@@ -1,6 +1,7 @@
 from abc import ABC
 from collections.abc import Iterator
-from typing import final, override
+from typing import final
+from typing_extensions import override
 
 from cube.domain.algs._internal_utils import _normalize_for_count
 from cube.domain.algs.Alg import Alg

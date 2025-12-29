@@ -1,6 +1,7 @@
 import functools
 import typing
 from collections.abc import Iterator, MutableSequence, Sequence
+from typing_extensions import override
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.model.Cube import Cube
@@ -128,7 +129,7 @@ class SeqAlg(Alg):
         return SeqAlg(None)
 
 
-    @typing.override
+    @override
     def to_printable(self) -> "SeqAlg":
         """
         Return a printable version of this alg
