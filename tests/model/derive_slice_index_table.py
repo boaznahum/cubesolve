@@ -12,7 +12,7 @@ from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, _TRANSFORMATION_TABLE, _apply_transform
 from cube.domain.model.cube_slice import SliceName
 # noinspection PyProtectedMember
-from cube.domain.model._part_slice import CenterSlice
+from cube.domain.model.PartSlice import CenterSlice
 from cube.application.main_app import MainApp
 
 _test_sp = MainApp.create_non_default_service_provider()

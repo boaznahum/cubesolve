@@ -401,6 +401,40 @@ cum = [
 
 This is actually a **double commutator** that cycles 3 center blocks!
 
+### 3.5 Inner Position Handling on Even Cubes
+
+On even cubes (4x4, 6x6, 8x8), inner 2x2 center positions have adjacent M slices
+that share edge wings. The standard commutator order can disturb these wings.
+
+**Inner 2x2 positions:**
+- 4x4 (n_slices=2): ALL positions are inner (0,0) to (1,1)
+- 6x6 (n_slices=4): inner is (1,1) to (2,2)
+- 8x8 (n_slices=6): inner is (2,2) to (3,3)
+
+**M Slice Ordering Rule for Inner Positions:**
+
+When the original column (c1) and rotated column (c2) are adjacent (gap < 2),
+order the M slices based on F direction to prevent edge disturbance:
+
+| F Direction | M Slice Order |
+|-------------|---------------|
+| F (clockwise) | Outer slice first, inner slice second |
+| F' (counter-clockwise) | Inner slice first, outer slice second |
+
+Where:
+- **Outer slice**: The M slice further from the cube center
+- **Inner slice**: The M slice closer to the cube center
+
+This ordering prevents the slices from "crossing over" each other during the
+commutator execution, which would disturb shared edge wings.
+
+**Example for 6x6 cube, position (1,1) with F rotation:**
+- c1 = 1 (column index) → M[2]
+- After F, column rotates to c2 = 2 → M[3]
+- M[2] is inner (closer to center), M[3] is outer
+- With F: use M[3] first (outer), then M[2] (inner)
+- Swap the slice assignments in the commutator
+
 ### 4. Solving Phases - Detailed Implementation
 
 #### Phase 1: Centers (for N > 3)

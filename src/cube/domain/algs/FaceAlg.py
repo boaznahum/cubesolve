@@ -43,6 +43,10 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
         return face, parts
 
+    @property
+    def face_name(self) -> FaceName:
+        return self._face
+
 
 @final
 class _U(FaceAlg):

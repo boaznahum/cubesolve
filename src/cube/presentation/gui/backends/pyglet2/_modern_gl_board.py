@@ -51,7 +51,7 @@ from ._modern_gl_face import ModernGLFace
 
 if TYPE_CHECKING:
     from cube.application.state import ApplicationAndViewState
-    from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model.PartSlice import PartSlice
     from cube.domain.model.Cube import Cube
     from cube.domain.model.PartEdge import PartEdge
 

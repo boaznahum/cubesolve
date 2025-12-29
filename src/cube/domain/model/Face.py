@@ -4,7 +4,7 @@ from typing import Callable, Tuple, TypeAlias
 from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
 
 from ._elements import Direction, PartColorsID
-from ._part_slice import CenterSlice, PartSlice
+from .PartSlice import CenterSlice, PartSlice
 from .Center import Center
 from .Corner import Corner
 from .cube_boy import Color, FaceName

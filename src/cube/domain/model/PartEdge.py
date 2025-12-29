@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 from .cube_boy import Color
 
 if TYPE_CHECKING:
-    from ._part_slice import PartSlice
+    from .PartSlice import PartSlice
     from .Cube import Cube
     from .Face import Face
 
