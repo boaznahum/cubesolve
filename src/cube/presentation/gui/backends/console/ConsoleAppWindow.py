@@ -28,14 +28,10 @@ from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase
 from cube.presentation.gui.types import Keys, Modifiers
 from cube.utils.text_cube_viewer import print_cube_with_info
 
-try:
-    from rich.console import Console
-    from rich.prompt import Prompt
-    _HAS_RICH = True
-    _console = Console()
-except ImportError:
-    _HAS_RICH = False
-    _console = None
+from rich.console import Console
+from rich.prompt import Prompt
+
+_console = Console()
 
 # Mapping from console key characters to abstract Keys
 _CONSOLE_TO_KEYS: dict[str, int] = {
@@ -306,37 +302,21 @@ Press any key to continue...
 
         solved_str = "SOLVED" if cube.solved else "NOT SOLVED"
 
-        if _HAS_RICH and _console:
-            _console.print(f"[cyan]Cube {cube.size}x{cube.size}[/cyan]: {solved_str}")
-            _console.print(f"[yellow]Edges[/yellow]  3x3: {fmt_list(edges_3x3)}  not3x3: {fmt_list(edges_not3x3)}")
-            _console.print(f"         match: {fmt_list(edges_match)}  nomatch: {fmt_list(edges_nomatch)}")
-            _console.print(f"[yellow]Corners[/yellow] match: {fmt_list(corners_match)}  nomatch: {fmt_list(corners_nomatch)}")
-            _console.print(f"[yellow]Centers[/yellow] 3x3: {fmt_list(centers_3x3)}  not3x3: {fmt_list(centers_not3x3)}")
-            _console.print(f"         match: {fmt_list(centers_match)}  nomatch: {fmt_list(centers_nomatch)}")
-        else:
-            print(f"Cube {cube.size}x{cube.size}: {solved_str}")
-            print(f"Edges   3x3: {fmt_list(edges_3x3)}  not3x3: {fmt_list(edges_not3x3)}")
-            print(f"        match: {fmt_list(edges_match)}  nomatch: {fmt_list(edges_nomatch)}")
-            print(f"Corners match: {fmt_list(corners_match)}  nomatch: {fmt_list(corners_nomatch)}")
-            print(f"Centers 3x3: {fmt_list(centers_3x3)}  not3x3: {fmt_list(centers_not3x3)}")
-            print(f"        match: {fmt_list(centers_match)}  nomatch: {fmt_list(centers_nomatch)}")
+        _console.print(f"[cyan]Cube {cube.size}x{cube.size}[/cyan]: {solved_str}")
+        _console.print(f"[yellow]Edges[/yellow]  3x3: {fmt_list(edges_3x3)}  not3x3: {fmt_list(edges_not3x3)}")
+        _console.print(f"         match: {fmt_list(edges_match)}  nomatch: {fmt_list(edges_nomatch)}")
+        _console.print(f"[yellow]Corners[/yellow] match: {fmt_list(corners_match)}  nomatch: {fmt_list(corners_nomatch)}")
+        _console.print(f"[yellow]Centers[/yellow] 3x3: {fmt_list(centers_3x3)}  not3x3: {fmt_list(centers_not3x3)}")
+        _console.print(f"         match: {fmt_list(centers_match)}  nomatch: {fmt_list(centers_nomatch)}")
 
     def _prompt_algorithm(self) -> None:
         """Prompt user to enter an algorithm and apply it."""
-        if _HAS_RICH and _console:
-            _console.print("\n[cyan]Enter algorithm (e.g., R U R' U'):[/cyan]")
-            try:
-                alg_str = Prompt.ask("[bold cyan]>>>[/bold cyan]")
-            except (EOFError, KeyboardInterrupt):
-                _console.print("[yellow]Cancelled[/yellow]")
-                return
-        else:
-            print("\nEnter algorithm (e.g., R U R' U'):")
-            try:
-                alg_str = input(">>> ").strip()
-            except (EOFError, KeyboardInterrupt):
-                print("Cancelled")
-                return
+        _console.print("\n[cyan]Enter algorithm (e.g., R U R' U'):[/cyan]")
+        try:
+            alg_str = Prompt.ask("[bold cyan]>>>[/bold cyan]")
+        except (EOFError, KeyboardInterrupt):
+            _console.print("[yellow]Cancelled[/yellow]")
+            return
 
         if not alg_str:
             return
@@ -344,15 +324,9 @@ Press any key to continue...
         try:
             alg = Algs.parse(alg_str)
             alg.play(self._app.cube)
-            if _HAS_RICH and _console:
-                _console.print(f"[green]Applied:[/green] {alg}")
-            else:
-                print(f"Applied: {alg}")
+            _console.print(f"[green]Applied:[/green] {alg}")
         except Exception as e:
-            if _HAS_RICH and _console:
-                _console.print(f"[red]Parse error:[/red] {e}")
-            else:
-                print(f"Parse error: {e}")
+            _console.print(f"[red]Parse error:[/red] {e}")
 
     # Face keys that support wide mode
     _FACE_KEYS = {ConsoleKeys.R, ConsoleKeys.L, ConsoleKeys.U, ConsoleKeys.D, ConsoleKeys.F, ConsoleKeys.B}
@@ -406,10 +380,7 @@ Press any key to continue...
                 alg = Algs.parse(move)
                 alg.play(self._app.cube)
             except Exception as e:
-                if _HAS_RICH and _console:
-                    _console.print(f"[red]Error:[/red] {e}")
-                else:
-                    print(f"Error: {e}")
+                _console.print(f"[red]Error:[/red] {e}")
             # Reset modes after operation
             self._inv_mode = False
             self._wide_mode = False

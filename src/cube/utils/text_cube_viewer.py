@@ -5,18 +5,12 @@ Simple ASCII art renderer. Uses the same approach as ConsoleViewer but simpler.
 Direction/orientation may need adjustment based on user testing.
 """
 
-from typing import TYPE_CHECKING, Sequence
+from typing import Sequence
 
-if TYPE_CHECKING:
-    from rich.text import Text
+from rich.console import Console
+from rich.text import Text
 
-try:
-    from rich.console import Console
-    from rich.text import Text
-    _HAS_RICH = True
-    _console = Console()
-except ImportError:
-    _HAS_RICH = False
+_console = Console()
 
 from cube.domain.model.Color import Color
 from cube.domain.model.Cube import Cube
@@ -263,29 +257,17 @@ def cube_to_text(cube: Cube) -> str:
 
 def print_cube(cube: Cube, title: str | None = None) -> None:
     """Print a cube to the console with rich formatting."""
-    if _HAS_RICH:
-        if title:
-            _console.print(f"[cyan]=== {title} ===[/cyan]")
-        text = cube_to_rich_text(cube)
-        _console.print(text)
-    else:
-        if title:
-            print(f"=== {title} ===")
-        print(cube_to_text(cube))
+    if title:
+        _console.print(f"[cyan]=== {title} ===[/cyan]")
+    text = cube_to_rich_text(cube)
+    _console.print(text)
 
 
 def print_cube_with_info(cube: Cube, alg_str: str = "") -> None:
     """Print cube with status information."""
-    if _HAS_RICH:
-        status = "[green]SOLVED[/green]" if cube.solved else "[yellow]SCRAMBLED[/yellow]"
-        _console.print(f"Size: {cube.size}x{cube.size}  Status: {status}")
-        if alg_str:
-            _console.print(f"Algorithm: [cyan]{alg_str}[/cyan]")
-        text = cube_to_rich_text(cube)
-        _console.print(text)
-    else:
-        status = "SOLVED" if cube.solved else "SCRAMBLED"
-        print(f"Size: {cube.size}x{cube.size}  Status: {status}")
-        if alg_str:
-            print(f"Algorithm: {alg_str}")
-        print_cube(cube)
+    status = "[green]SOLVED[/green]" if cube.solved else "[yellow]SCRAMBLED[/yellow]"
+    _console.print(f"Size: {cube.size}x{cube.size}  Status: {status}")
+    if alg_str:
+        _console.print(f"Algorithm: [cyan]{alg_str}[/cyan]")
+    text = cube_to_rich_text(cube)
+    _console.print(text)
