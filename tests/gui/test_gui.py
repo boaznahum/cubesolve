@@ -66,7 +66,7 @@ def test_scramble_and_solve(cube_size: int, enable_animation: bool, speed_up_cou
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
 
 
-@pytest.mark.skip(reason="B1: Lazy cache initialization bug - fails intermittently with animation")
+#@pytest.mark.skip(reason="B1: Lazy cache initialization bug - fails intermittently with animation")
 @pytest.mark.parametrize("cube_size", [3])
 def test_multiple_scrambles(cube_size: int, enable_animation: bool, speed_up_count: int, backend: str):
     """
