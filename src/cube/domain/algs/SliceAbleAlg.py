@@ -15,6 +15,15 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         # sorted sequence
         self.slices: slice | Sequence[int] | None = None  # [1 n]
 
+    @property
+    def _hide_single_slice(self) -> bool:
+        """Whether to hide [1] in string representation.
+
+        FaceAlg overrides to True because R = R[1].
+        SliceAlg keeps False because M ≠ M[1].
+        """
+        return False
+
     def copy(self, other: NSimpleAlg) -> Self:
         assert isinstance(other, SliceAbleAlg)
         super(SliceAbleAlg, self).copy(other)
@@ -69,9 +78,9 @@ class SliceAbleAlg(NSimpleAlg, ABC):
             if not start and not stop:
                 return s
 
-            # todo: bug in represnation of sliceable algs, we have a bug here this is not true for all algs
-            # if 1 == start and 1 == stop:
-            #     return s
+            # Hide [1:1] for FaceAlg (R = R[1]), but show for SliceAlg (M ≠ M[1])
+            if self._hide_single_slice and 1 == start and 1 == stop:
+                return s
 
             if start and not stop:
                 return "[" + str(start) + ":" + "]" + s
