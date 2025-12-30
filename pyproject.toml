@@ -33,6 +33,7 @@ dependencies = [
     "numpy",
     "PyYAML",
     "colorama",
+    "rich",  # Console colored output for text_cube_viewer
     "vecrec",
     "typeguard>=4.4.0",  # override signature_dispatch's ~=3.0 constraint for Python 3.14 compatibility
     "typing_extensions>=4.14.0",  # for @deprecated decorator

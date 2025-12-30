@@ -23,7 +23,7 @@ CUBE_SIZE = 7  # Using debug4x4 texture set for 4x4 debugging
 # Available solvers: LBL, CFOP, Kociemba, Cage, LBL-Direct
 # Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "lbl-d" (for LBL-Direct)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "lbl-d"
+DEFAULT_SOLVER = "lbl"
 
 
 ######### Model  ########
