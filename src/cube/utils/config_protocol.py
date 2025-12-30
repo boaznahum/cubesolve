@@ -208,6 +208,11 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
+    def axis_enabled(self) -> bool:
+        """Master switch for axis drawing - when False, no axis code runs."""
+        ...
+
+    @property
     def axis_length(self) -> float:
         """Length of axis display."""
         ...

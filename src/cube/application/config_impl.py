@@ -129,6 +129,11 @@ class AppConfig(ConfigProtocol):
         return cfg.CORNER_SIZE
 
     @property
+    def axis_enabled(self) -> bool:
+        """Master switch for axis drawing - when False, no axis code runs."""
+        return cfg.AXIS_ENABLED
+
+    @property
     def axis_length(self) -> float:
         """Length of axis display."""
         return cfg.AXIS_LENGTH
