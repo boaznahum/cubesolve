@@ -110,14 +110,25 @@ to the correct face for that color.
 CLEANUP: After solving, these tracker marks must be removed (cleanup_trackers).
 """
 
+from __future__ import annotations
+
 from collections.abc import Collection, Iterable, Sequence
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
 
 from cube.domain.model import CenterSlice, Color
+
+if TYPE_CHECKING:
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.model.cube_boy import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
-from cube.domain.solver.common.big_cube._FaceTracker import FaceTracker
+from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
+from cube.domain.solver.common.tracker._base import (
+    FaceTracker,
+    MarkedFaceTracker,
+    SimpleFaceTracker,
+    get_tracker_key_prefix,
+)
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
@@ -160,7 +171,7 @@ class NxNCentersFaceTrackers(SolverElement):
 
     USAGE:
     ======
-        trackers = NxNCentersFaceTrackers(solver)
+        trackers = NxNCentersFaceTrackers(solver, holder_id=42)
         t1 = trackers.track_no_1()        # First face (highest majority)
         t2 = t1.track_opposite()          # Opposite face
         t3 = trackers._track_no_3([t1, t2])  # Third face
@@ -168,10 +179,68 @@ class NxNCentersFaceTrackers(SolverElement):
         t5, t6 = trackers._track_two_last([t1, t2, t3, t4])  # Last two
     """
 
-    def __init__(self, solver: SolverElementsProvider) -> None:
-        super().__init__(solver)
+    __slots__ = ["_holder_id"]
 
-    def track_no_1(self) -> FaceTracker:
+    # Class variable for unique tracker IDs
+    _global_tracer_id: int = 0
+
+    def __init__(self, solver: SolverElementsProvider, holder_id: int) -> None:
+        super().__init__(solver)
+        self._holder_id = holder_id
+
+    # =========================================================================
+    # Factory methods - create FaceTrackers using self._holder_id
+    # =========================================================================
+
+    def _create_tracker(self, parent_container: "FacesTrackerHolder", color: Color, pred: Pred[Face]) -> SimpleFaceTracker:
+        """Create a SimpleFaceTracker."""
+        return SimpleFaceTracker(self.cube, parent_container, color, pred)
+
+    def _create_tracker_by_center_piece(self, parent_container: "FacesTrackerHolder",_slice: CenterSlice) -> MarkedFaceTracker:
+        """Mark a center slice and create a MarkedFaceTracker for it.
+
+        Returns MarkedFaceTracker which stores the key for cleanup.
+        """
+        NxNCentersFaceTrackers._global_tracer_id += 1
+        unique_id = NxNCentersFaceTrackers._global_tracer_id
+
+        prefix = get_tracker_key_prefix()
+        key = f"{prefix}h{self._holder_id}:{_slice.color}{unique_id}"
+
+        edge = _slice.edge
+        edge.c_attributes[key] = _slice.color  # Store Color for renderer
+
+        cube = _slice.parent.cube
+        if cube.config.solver_annotate_trackers:
+            viewer_add_view_marker(edge.c_attributes, VMarker.C0)
+
+        return MarkedFaceTracker(cube, parent_container, _slice.color, key)
+
+    def _create_tracker_by_color(self, parent_container: FacesTrackerHolder, face: Face, color: Color) -> MarkedFaceTracker:
+        """Find slice with color on face and create tracker for it."""
+        _slice = face.cube.cqr.find_slice_in_face_center(face, lambda s: s.color == color)
+        assert _slice
+        return self._create_tracker_by_center_piece(parent_container, _slice)
+
+    def _create_tracker_odd(self, parent_container: FacesTrackerHolder, f: Face) -> SimpleFaceTracker:
+        """Create tracker for odd cube using fixed center."""
+        cube = f.cube
+        n_slices = cube.n_slices
+        assert n_slices % 2
+
+        rc = (n_slices // 2, n_slices // 2)
+        color = f.center.get_center_slice(rc).color
+
+        def pred(_f: Face) -> bool:
+            return _f.center.get_center_slice(rc).color == color
+
+        return self._create_tracker(parent_container, color, pred)
+
+    # =========================================================================
+    # Tracker creation for BOY layout
+    # =========================================================================
+
+    def track_no_1(self, parent_container: "FacesTrackerHolder") -> FaceTracker:
         """Create tracker for face 1 - the face with highest majority color.
 
         ODD CUBE:
@@ -198,16 +267,16 @@ class NxNCentersFaceTrackers(SolverElement):
 
         Returns:
             FaceTracker for face 1 with its assigned color.
+            :param container:
         """
         cube = self.cube
         if cube.n_slices % 2:
-            return FaceTracker.track_odd(cube.front)
+            return self._create_tracker_odd(parent_container, cube.front)
         else:
             f, c = self._find_face_with_max_colors()
-            # see there why can't we track by index
-            return FaceTracker.search_color_and_track(f, c)
+            return self._create_tracker_by_color(parent_container, f, c)
 
-    def _track_no_3(self, two_first: Sequence[FaceTracker]) -> FaceTracker:
+    def _track_no_3(self, parent_container: FacesTrackerHolder, two_first: Sequence[FaceTracker]) -> FaceTracker:
         """Create tracker for face 3 - highest majority from remaining faces/colors.
 
         After faces 1 and 2 are assigned (face 2 = opposite of face 1),
@@ -245,6 +314,7 @@ class NxNCentersFaceTrackers(SolverElement):
         At least one face among them MUST have pieces of an unused color.
 
         Args:
+            parent_container: The FacesTrackerHolder that owns this tracker.
             two_first: Trackers for faces 1 and 2.
 
         Returns:
@@ -272,9 +342,9 @@ class NxNCentersFaceTrackers(SolverElement):
         # because f1, f2 contains only 1/3 of all pieces
         f3, f3_color = self._find_face_with_max_colors(left, left_colors)
 
-        return FaceTracker.search_color_and_track(f3, f3_color)
+        return self._create_tracker_by_color(parent_container, f3, f3_color)
 
-    def _track_two_last(self, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
+    def _track_two_last(self, parent_container: FacesTrackerHolder, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
         """Create trackers for faces 5 and 6 - the final BOY-constrained assignment.
 
         After 4 faces are assigned, we have:
@@ -318,6 +388,7 @@ class NxNCentersFaceTrackers(SolverElement):
         We try one, verify with CubeLayout, and use the other if invalid.
 
         Args:
+            parent_container: The FacesTrackerHolder that owns this tracker.
             four_first: Trackers for faces 1-4.
 
         Returns:
@@ -353,8 +424,8 @@ class NxNCentersFaceTrackers(SolverElement):
             pred = self._create_f5_pred(four_first, color)
             assert pred(f5)
 
-        f5_track = FaceTracker.by_pred(cube, color, pred)
-        f6_track = f5_track.track_opposite()
+        f5_track = self._create_tracker(parent_container, color, pred)
+        f6_track = f5_track._track_opposite()
 
         return f5_track, f6_track
 
@@ -434,36 +505,8 @@ class NxNCentersFaceTrackers(SolverElement):
         """Check if a center slice is marked as a tracker."""
         return FaceTracker.is_track_slice(s)
 
-    def _remove_all_track_slices(self) -> None:
-        """Remove tracker marks from all center slices on all faces.
-
-        WHEN TO CALL:
-        =============
-        After center solving is complete. Tracker marks prevent certain
-        optimizations (complete slice swaps, big block moves) because we
-        can't move the marked slice - it's our reference point.
-
-        Once solving is done, marks are no longer needed and should be
-        removed to avoid interfering with subsequent operations.
-
-        WHY MARKS PREVENT SWAPS:
-        ------------------------
-        If we swap a complete row/column that contains a tracker slice,
-        we lose our reference point for that face's color!
-
-        Example:
-            ┌─┬─┬─┬─┐
-            │R│R│★│R│  <- ★ is tracker (marks this face as RED)
-            ├─┼─┼─┼─┤
-            │R│R│R│R│
-            ...
-
-        If we swap the top row with UP face, the ★ moves to UP,
-        and we'd now think UP should be RED (wrong!).
-        So we skip rows/columns containing trackers.
-        """
-        for f in self.cube.faces:
-            FaceTracker.remove_face_track_slices(f)
+    # Note: Tracker cleanup is now handled by FacesTrackerHolder.cleanup()
+    # which uses per-holder IDs for safe cleanup. No global cleanup method here.
 
     # Using a variable instead of `if True:` so mypy/pyright will type-check
     # the disabled debug code. Set to False to enable debug output.

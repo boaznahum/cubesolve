@@ -7,3 +7,5 @@ cubesolve.egg-info/
 .venv312/
 __todo/__next_session.md
 .venv/
+# Ignore PyCharm interpreter settings
+.idea/misc.xml

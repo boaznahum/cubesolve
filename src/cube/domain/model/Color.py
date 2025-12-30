@@ -11,3 +11,6 @@ class Color(Enum):
     GREEN = "G"
     RED = "R"
     WHITE = "W"
+
+    def __str__(self) -> str:
+        return self.value

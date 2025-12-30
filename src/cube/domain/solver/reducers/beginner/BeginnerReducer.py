@@ -1,8 +1,12 @@
-"""Beginner reducer - standard NxN to 3x3 cube reduction."""
+"""Beginner reducer - standard NxN to 3x3 cube reduction.
+
+Uses FacesTrackerHolder for even cube matching - see:
+    solver/common/big_cube/FACE_TRACKER.md
+"""
 
 from __future__ import annotations
 
-from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReductionResults

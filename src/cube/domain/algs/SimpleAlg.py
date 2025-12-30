@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from typing import Self, final, override
+from typing import Self, final
+from typing_extensions import override
 
 from cube.domain.algs._internal_utils import _normalize_for_count, n_to_str
 from cube.domain.algs.Alg import Alg

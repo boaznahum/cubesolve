@@ -480,7 +480,7 @@ class Part(ABC, CubeElement):
         """
         return the name of the part with color ID
         For is3x3 only
-        :return: e.g. 'Edge White/Red'
+        :return: e.g. 'Edge FL White/Red'
         """
         s1 = ""
         s2 = ""

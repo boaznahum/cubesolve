@@ -12,15 +12,18 @@ import pytest
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
+from cube.domain.solver.SolverName import SolverName
+from tests.solvers.conftest import skip_if_not_supported
 
 
 # =============================================================================
 # Status Tests
 # =============================================================================
 
-@pytest.mark.parametrize("size", [4, 5, 7])
+@pytest.mark.parametrize("size", [4, 5, 7], ids=lambda s: f"size_{s}")
 def test_lbl_solver_status_on_solved_cube(size: int) -> None:
     """Test status reporting on a solved cube."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     solver = LayerByLayerNxNSolver(app.op)
@@ -32,6 +35,7 @@ def test_lbl_solver_status_on_solved_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 5])
 def test_lbl_solver_status_on_scrambled_cube(size: int) -> None:
     """Test status reporting on a scrambled cube."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -51,11 +55,12 @@ def test_lbl_solver_status_on_scrambled_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_state_inspection_on_solved_cube(size: int) -> None:
     """Test state inspection methods on a solved cube."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
     solver = LayerByLayerNxNSolver(app.op)
 
     # On solved cube, use FacesTrackerHolder for inspection
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_centers_solved(th)
@@ -67,13 +72,14 @@ def test_lbl_solver_state_inspection_on_solved_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 5])
 def test_lbl_solver_state_inspection_on_scrambled_cube(size: int) -> None:
     """Test state inspection methods on a scrambled cube."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
     solver = LayerByLayerNxNSolver(app.op)
 
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         # On scrambled cube, Layer 1 should not be solved
@@ -87,6 +93,7 @@ def test_lbl_solver_state_inspection_on_scrambled_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_solves_layer1_centers(size: int) -> None:
     """Test that LBL solver can solve Layer 1 centers."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -94,7 +101,7 @@ def test_lbl_solver_solves_layer1_centers(size: int) -> None:
 
     solver = LayerByLayerNxNSolver(app.op)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     # Before solve - centers might or might not be solved
     # (could be solved by chance on small scrambles)
@@ -112,6 +119,7 @@ def test_lbl_solver_solves_layer1_centers(size: int) -> None:
 @pytest.mark.parametrize("seed", range(5))
 def test_lbl_solver_layer1_centers_multiple_scrambles(seed: int) -> None:
     """Test Layer 1 centers solving with multiple scramble seeds."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble with different seeds
@@ -122,7 +130,7 @@ def test_lbl_solver_layer1_centers_multiple_scrambles(seed: int) -> None:
     # Solve Layer 1 centers
     solver.solve(what=SolveStep.LBL_L1_Ctr, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_centers_solved(th), f"5x5 Layer 1 centers should be solved (seed={seed})"
@@ -137,6 +145,7 @@ def test_lbl_solver_layer1_centers_multiple_scrambles(seed: int) -> None:
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_solves_layer1_cross(size: int) -> None:
     """Test that LBL solver can solve Layer 1 cross (centers + edges positioned)."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -147,7 +156,7 @@ def test_lbl_solver_solves_layer1_cross(size: int) -> None:
     # Solve Layer 1 cross (centers + edges paired + edges positioned)
     solver.solve(what=SolveStep.L1x, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_centers_solved(th), "Layer 1 centers should be solved"
@@ -157,9 +166,26 @@ def test_lbl_solver_solves_layer1_cross(size: int) -> None:
     print(f"\n  Size {size}x{size}: Layer 1 cross solved")
 
 
+@pytest.mark.parametrize("size", [7, 8, 9, 11], ids=lambda size: f"size_{size}")
+@pytest.mark.parametrize("scramble", range(9), ids=lambda s: f"scramble{s}")
+def test_lbl_solver_solves_slice_0(scramble: int, size: int) -> None:
+    """Just check that solver doesnt fails"""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    # Scramble
+    app.scramble(scramble, None, animation=False, verbose=False)
+
+    solver = LayerByLayerNxNSolver(app.op)
+
+    # Solve Layer 1 cross (centers + edges paired + edges positioned)
+    solver.solve(animation=False)
+
+
 @pytest.mark.parametrize("seed", range(5))
 def test_lbl_solver_layer1_cross_multiple_scrambles(seed: int) -> None:
     """Test Layer 1 cross solving with multiple scramble seeds."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble with different seeds
@@ -170,7 +196,7 @@ def test_lbl_solver_layer1_cross_multiple_scrambles(seed: int) -> None:
     # Solve Layer 1 cross
     solver.solve(what=SolveStep.L1x, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_cross_solved(th), f"5x5 Layer 1 cross should be solved (seed={seed})"
@@ -185,6 +211,7 @@ def test_lbl_solver_layer1_cross_multiple_scrambles(seed: int) -> None:
 @pytest.mark.parametrize("size", [4, 5, 7])
 def test_lbl_solver_solves_layer1_complete(size: int) -> None:
     """Test that LBL solver can solve complete Layer 1 (centers + edges + corners)."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -195,7 +222,7 @@ def test_lbl_solver_solves_layer1_complete(size: int) -> None:
     # Solve complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_centers_solved(th), "Layer 1 centers should be solved"
@@ -209,6 +236,7 @@ def test_lbl_solver_solves_layer1_complete(size: int) -> None:
 @pytest.mark.parametrize("seed", range(5))
 def test_lbl_solver_layer1_complete_multiple_scrambles(seed: int) -> None:
     """Test complete Layer 1 solving with multiple scramble seeds on 5x5."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble with different seeds
@@ -219,7 +247,7 @@ def test_lbl_solver_layer1_complete_multiple_scrambles(seed: int) -> None:
     # Solve complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_solved(th), f"5x5 Layer 1 should be solved (seed={seed})"
@@ -233,6 +261,7 @@ def test_lbl_solver_layer1_complete_multiple_scrambles(seed: int) -> None:
 @pytest.mark.parametrize("size", [4, 6])
 def test_lbl_solver_even_cube_layer1(size: int) -> None:
     """Test Layer 1 solving on even cubes (uses shadow cube approach)."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
     # Scramble
@@ -243,12 +272,11 @@ def test_lbl_solver_even_cube_layer1(size: int) -> None:
     # Solve complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
 
-    # Use solver's persistent tracker (same one used during solving)
-    th = solver.tracker_holder
-    assert solver._is_layer1_solved(th), f"Even cube {size}x{size} Layer 1 should be solved"
+    # Create fresh tracker holder to verify Layer 1 is solved
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
-    # Cleanup trackers when done
-    solver.cleanup_trackers()
+    with FacesTrackerHolder(solver) as th:
+        assert solver._is_layer1_solved(th), f"Even cube {size}x{size} Layer 1 should be solved"
 
     print(f"\n  Even cube {size}x{size}: Layer 1 solved")
 
@@ -256,6 +284,7 @@ def test_lbl_solver_even_cube_layer1(size: int) -> None:
 @pytest.mark.parametrize("seed", range(5))
 def test_lbl_solver_even_cube_multiple_scrambles(seed: int) -> None:
     """Test Layer 1 solving on 4x4 with multiple scramble seeds."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble with different seeds
@@ -266,7 +295,7 @@ def test_lbl_solver_even_cube_multiple_scrambles(seed: int) -> None:
     # Solve complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
 
-    from cube.domain.solver.common.big_cube.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
         assert solver._is_layer1_solved(th), f"4x4 Layer 1 should be solved (seed={seed})"
@@ -280,6 +309,7 @@ def test_lbl_solver_even_cube_multiple_scrambles(seed: int) -> None:
 
 def test_lbl_solver_supported_steps() -> None:
     """Test that LBL solver reports correct supported steps."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
     solver = LayerByLayerNxNSolver(app.op)
 
@@ -293,7 +323,7 @@ def test_lbl_solver_supported_steps() -> None:
 
 def test_lbl_solver_code() -> None:
     """Test that LBL solver reports correct code."""
-    from cube.domain.solver.SolverName import SolverName
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
 
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
     solver = LayerByLayerNxNSolver(app.op)
@@ -307,6 +337,7 @@ def test_lbl_solver_code() -> None:
 
 def test_lbl_solver_status_progression() -> None:
     """Test that status progresses correctly through solve steps."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, 5)
     app = AbstractApp.create_non_default(cube_size=5, animation=False)
 
     # Scramble
@@ -327,7 +358,58 @@ def test_lbl_solver_status_progression() -> None:
     # After complete Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
     status_after_l1 = solver.status
-    # Status should show L1 done
-    assert status_after_l1 == "L1:Done", f"Expected 'L1:Done', got '{status_after_l1}'"
+    # Status should show L1 done (format: "L1:Done|Sl:X/N" where X=solved slices, N=total)
+    assert status_after_l1.startswith("L1:Done"), f"Expected status starting with 'L1:Done', got '{status_after_l1}'"
 
     print(f"\n  Status progression: {status_before} -> {status_after_centers} -> {status_after_l1}")
+
+
+# =============================================================================
+# Slice Center Tests
+# =============================================================================
+
+@pytest.mark.parametrize("size", [5, 7])
+def test_lbl_solver_solves_slice_centers(size: int) -> None:
+    """Test that LBL solver can solve middle slice centers."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    # Scramble
+    app.scramble(42, None, animation=False, verbose=False)
+
+    solver = LayerByLayerNxNSolver(app.op)
+    cube = app.cube
+
+    # First solve Layer 1
+    solver.solve(what=SolveStep.LBL_L1, animation=False)
+    assert solver.status.startswith("L1:Done"), f"Layer 1 not solved: {solver.status}"
+
+    # Now solve slice centers
+    solver.solve(what=SolveStep.LBL_SLICES_CTR, animation=False)
+
+    # Check status shows all slices done
+    n_slices = cube.n_slices
+    expected_status = f"L1:Done|Sl:{n_slices}/{n_slices}"
+    assert solver.status == expected_status, f"Expected '{expected_status}', got '{solver.status}'"
+
+
+@pytest.mark.parametrize("size", [5])
+def test_lbl_solver_slice_centers_multiple_scrambles(size: int) -> None:
+    """Test slice center solving with multiple scrambles."""
+    skip_if_not_supported(SolverName.LBL_DIRECT, size)
+    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+
+    for seed in range(5):
+        # Reset and scramble
+        app.reset()
+        app.scramble(seed, None, animation=False, verbose=False)
+
+        solver = LayerByLayerNxNSolver(app.op)
+
+        # Solve Layer 1 + slice centers
+        solver.solve(what=SolveStep.LBL_SLICES_CTR, animation=False)
+
+        # Check all slices are solved
+        n_slices = app.cube.n_slices
+        assert solver.status == f"L1:Done|Sl:{n_slices}/{n_slices}", \
+            f"Seed {seed}: Expected all slices solved, got '{solver.status}'"

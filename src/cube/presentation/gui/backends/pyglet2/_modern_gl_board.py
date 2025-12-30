@@ -299,12 +299,14 @@ class ModernGLBoard:
                 # Collect animated marker geometry
                 if animated_marker_verts is not None:
                     cell.generate_marker_vertices(animated_marker_verts)
+                    cell.generate_tracker_indicator_vertices(animated_marker_verts)
             else:
                 cell.generate_face_vertices(face_verts)
                 cell.generate_line_vertices(line_verts)
                 # Collect static marker geometry
                 if marker_verts is not None:
                     cell.generate_marker_vertices(marker_verts)
+                    cell.generate_tracker_indicator_vertices(marker_verts)
 
     def _generate_textured_face_verts(
         self,
