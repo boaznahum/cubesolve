@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Sequence, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model._elements import SliceIndex
-from cube.domain.model._part_slice import EdgeWing, PartSlice
+from cube.domain.model.PartSlice import EdgeWing, PartSlice
 from cube.domain.model.Part import Part
 from cube.domain.model.PartEdge import PartEdge
 
@@ -125,29 +125,29 @@ class Edge(Part):
         assert isinstance(index, int)
         return self._slices[index]
 
-    def get_ltr_index_from_slice_index(self, face: _Face, i) -> int:
+    def get_ltr_index_from_slice_index(self, face: _Face, i: int) -> int:
         """
-        Convert internal slice index to left-to-right index for a given face.
+        Convert edge's internal slice index to face's ltr coordinate.
 
-        Each face has its own coordinate system where slices are numbered
-        left-to-right (for horizontal edges) or bottom-to-top (for vertical).
-        This method converts from the internal slice index to the face's view.
+        The edge serves the face's coordinate system. Each face has its own
+        consistent ltr system, and this method translates from the edge's
+        internal storage to the face's view.
 
-        The right_top_left_same_direction flag determines the mapping:
-        - True: Both faces see slices in same order (index unchanged)
-        - False: f1 uses direct mapping, f2 sees inverted indices
+        Critical insight: The returned ltr is always consistent with the face's
+        own ltr system. Edge-face ltr = Face ltr (guaranteed by translation).
 
-        8 edges have same_direction=True: F-U, F-L, F-R, F-D, L-D, R-B, L-B, U-R
-        4 edges have same_direction=False: L-U, U-B, D-R, D-B
+        Translation rules:
+        - same_direction=True: Both faces see same order (no translation)
+        - same_direction=False: f1 direct, f2 inverts
 
-        See: design2/edge-coordinate-system.md for visual explanation
+        See: docs/design2/edge-face-coordinate-system-approach2.md
 
         Args:
-            face: The face from whose perspective to get the index
-            i: Internal slice index
+            face: The face requesting its ltr coordinate
+            i: Edge's internal slice index
 
         Returns:
-            Left-to-right index from the face's perspective
+            The ltr coordinate in the face's coordinate system
         """
         assert face is self._f1 or face is self._f2
 
@@ -161,20 +161,27 @@ class Edge(Part):
 
     def get_slice_index_from_ltr_index(self, face: _Face, ltr_i: int) -> int:
         """
-        Convert left-to-right index (from face's view) to internal slice index.
+        Convert face's ltr coordinate to edge's internal slice index.
 
-        Inverse of get_ltr_index_from_slice_index.
-        Used during face rotation to find which internal slice to access
-        when given an index from the face's perspective.
+        The edge serves the face's coordinate system. The face provides its
+        ltr coordinate, and this method translates to the edge's internal
+        storage index.
 
-        See: design2/edge-coordinate-system.md for visual explanation
+        Critical insight: The face's ltr is the input - the edge translates
+        to find the correct internal slice. Edge-face ltr = Face ltr.
+
+        Translation rules:
+        - same_direction=True: Both faces see same order (no translation)
+        - same_direction=False: f1 direct, f2 inverts
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
 
         Args:
-            face: The face from whose perspective the index is given
-            ltr_i: Left-to-right index from face's view
+            face: The face providing its ltr coordinate
+            ltr_i: The face's ltr coordinate
 
         Returns:
-            Internal slice index
+            Edge's internal slice index
         """
         assert face is self._f1 or face is self._f2
 

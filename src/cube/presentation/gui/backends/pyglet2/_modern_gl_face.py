@@ -41,7 +41,7 @@ from ._modern_gl_constants import (
 )
 
 if TYPE_CHECKING:
-    from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model.PartSlice import PartSlice
     from cube.domain.model.Face import Face
     from cube.domain.model.PartEdge import PartEdge
 

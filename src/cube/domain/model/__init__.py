@@ -16,9 +16,9 @@ from ._elements import (
 from ._elements import (
     SliceIndex as SliceIndex,
 )
-from ._part_slice import CenterSlice as CenterSlice
-from ._part_slice import EdgeWing as EdgeWing
-from ._part_slice import PartSlice as PartSlice
+from .PartSlice import CenterSlice as CenterSlice
+from .PartSlice import EdgeWing as EdgeWing
+from .PartSlice import PartSlice as PartSlice
 from .Center import Center as Center
 from .Corner import Corner as Corner
 from .Cube import Cube as Cube

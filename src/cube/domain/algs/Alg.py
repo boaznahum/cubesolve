@@ -65,7 +65,11 @@ class Alg(ABC):
 
     def __mul__(self, n: int) -> "Alg":
         from .Mul import _Mul
-        return _Mul(self, n)
+
+        if n < 0:
+            return _Mul(self.inv(), -n) # _Mul doesnt support negative need to fix
+        else:
+            return _Mul(self, n)
 
     def __add__(self, other: "Alg") -> "Alg":
         from .SeqAlg import SeqAlg

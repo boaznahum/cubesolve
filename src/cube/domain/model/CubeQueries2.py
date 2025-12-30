@@ -15,7 +15,7 @@ from cube.domain.exceptions import InternalSWError
 from ..algs import Alg, Algs, NSimpleAlg
 from . import Edge, Part, PartEdge
 from ._elements import CubeState, PartColorsID
-from ._part_slice import CenterSlice, CornerSlice, EdgeWing, PartSlice
+from .PartSlice import CenterSlice, CornerSlice, EdgeWing, PartSlice
 from .Cube import Cube
 from .cube_boy import Color
 from .Face import Face
@@ -366,9 +366,9 @@ class CubeQueries2:
 
         state: CubeState = {}
 
-        parts = cube.get_all_parts()
+        slices = cube.get_all_part_slices()
 
-        for p in parts:
+        for p in slices:
                 state[p.fixed_id] = p.colors
 
         return state

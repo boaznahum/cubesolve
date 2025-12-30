@@ -14,7 +14,7 @@ from cube.domain.model._elements import (
     _Cube,
     _Face,
 )
-from cube.domain.model._part_slice import PartSlice
+from cube.domain.model.PartSlice import PartSlice
 from cube.domain.model.cube_boy import Color, FaceName, color2long
 from cube.domain.model.PartEdge import PartEdge
 
@@ -96,6 +96,16 @@ class Part(ABC, CubeElement):
                 raise Exception(f"SW error, you are trying to re assign part id was: {self._fixed_id}, new: {_id}")
         else:
             self._fixed_id = _id
+
+    def clear_c_attributes(self) -> None:
+        """
+        Clear color-associated attributes from all slices of this part.
+
+        Note: Part itself does NOT have c_attributes - only PartSlice and PartEdge do.
+        This method delegates to each slice's clear_c_attributes().
+        """
+        for s in self.all_slices:
+            s.clear_c_attributes()
 
     @property
     def fixed_id(self) -> PartFixedID:
@@ -232,6 +242,19 @@ class Part(ABC, CubeElement):
         Relationship to other properties:
         - in_position=True, match_faces=False → Part in right slot but wrong orientation
         - in_position=True, match_faces=True → Part fully solved
+
+        WARNING - DO NOT USE DURING BIG CUBE CENTER SOLVING:
+        =====================================================
+        This method compares part colors to face.color, which reads from
+        the center piece at position (n_slices//2, n_slices//2).
+
+        On even cubes (4x4, 6x6, etc.), when centers are being moved by
+        commutators, face.color changes dynamically. This causes match_faces
+        to return FALSE even when edges/corners are NOT disturbed!
+
+        For checking if edges/corners are preserved during center operations,
+        use relative consistency: verify each edge's colors match the colors
+        of its adjacent corners on the shared faces.
 
         See: design2/model-id-system.md section "Key State Check Properties"
         """

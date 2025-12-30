@@ -5,7 +5,7 @@ from cube.domain.exceptions import InternalSWError
 
 from ._elements import SliceIndex
 from ._part import CornerName, _faces_2_corner_name
-from ._part_slice import CornerSlice, PartSlice
+from .PartSlice import CornerSlice, PartSlice
 from .cube_boy import Color
 from .Part import Part
 from .PartEdge import PartEdge

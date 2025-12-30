@@ -1003,6 +1003,11 @@ class NxNCenters(SolverElement):
         rc2_f_rotated = self.rotate_point_clockwise(r2, c2)
 
         # the columns ranges must not intersect
+        # c1 column sart of block
+        # c2 column end of block
+        # rc1_f_rotated[1] columns start  after rotating
+        # rc2_f_rotated[1] columns end  after rotating
+
         if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
             on_front_rotate = Algs.F.prime
             rc1_f_rotated = self.rotate_point_counterclockwise(r1, c1)

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 from .cube_boy import Color
 
 if TYPE_CHECKING:
-    from ._part_slice import PartSlice
+    from .PartSlice import PartSlice
     from .Cube import Cube
     from .Face import Face
 
@@ -155,6 +155,10 @@ class PartEdge:
         p.c_attributes = self.c_attributes.copy()
 
         return p
+
+    def clear_c_attributes(self) -> None:
+        """Clear color-associated attributes."""
+        self.c_attributes.clear()
 
     def annotate(self, fixed_location: bool):
         if fixed_location:
