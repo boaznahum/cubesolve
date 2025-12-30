@@ -190,10 +190,10 @@ def parse_todo_file_entries(todo_files: list[TodoFile], project_root: Path) -> l
 
 
 def get_github_issues() -> list[dict]:
-    """Get list of GitHub issues with 'todo' label."""
+    """Get list of all open GitHub issues."""
     try:
         result = subprocess.run(
-            ['gh', 'issue', 'list', '--label', 'todo', '--state', 'all',
+            ['gh', 'issue', 'list', '--state', 'open',
              '--limit', '100', '--json', 'number,title,state,labels'],
             capture_output=True, text=True, timeout=30
         )
@@ -446,7 +446,7 @@ def print_report(
         print(f"  - With ID, NOT in GitHub: {len(not_in_github)}")
         print(f"  - Without ID:             {len(without_id)}")
         print(f"Todo files: {len(todo_files)}")
-        print(f"GitHub Issues (todo label): {len(github_issues)}")
+        print(f"GitHub Issues (open): {len(github_issues)}")
         print()
 
     if without_id:
