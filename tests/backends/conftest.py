@@ -297,6 +297,20 @@ def get_available_backends() -> list[str]:
 
     # Note: pyglet (legacy) backend was archived - use pyglet2 instead
 
+    # Try pyglet2 (requires pyglet >= 2.0)
+    try:
+        from cube.presentation.gui.backends import pyglet2  # noqa: F401
+        available.append("pyglet2")
+    except ImportError:
+        pass
+
+    # Try console (requires colorama or rich)
+    try:
+        from cube.presentation.gui.backends import console  # noqa: F401
+        available.append("console")
+    except ImportError:
+        pass
+
     # Try tkinter (requires tk)
     try:
         from cube.presentation.gui.backends import tkinter  # noqa: F401
