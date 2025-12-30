@@ -30,7 +30,10 @@ Or manually:
 from __future__ import annotations
 
 from collections.abc import Iterator, Iterable
+from contextlib import contextmanager
 from typing import TYPE_CHECKING
+
+from typing_extensions import Self
 
 from cube.domain.model import CenterSlice, Color
 from cube.domain.model.cube_boy import CubeLayout
@@ -351,6 +354,48 @@ class FacesTrackerHolder:
         """
         for tracker in self._trackers:
             tracker.cleanup()
+
+    @contextmanager
+    def preserve_physical_faces(self) -> Iterator[Self]:
+        """Context manager preserving face->color mapping across operations.
+
+        Use when running algorithms (like commutators) that:
+        1. Move center pieces (which moves markers)
+        2. Preserve the cage (cube orientation unchanged after)
+
+        Each tracker saves/restores according to its own rules:
+        - SimpleFaceTracker: no-op (predicates are stable)
+        - MarkedFaceTracker: saves face name, restores marker to same physical face
+
+        Usage:
+            with holder.preserve_physical_faces():
+                commutator.execute()  # Moves centers
+            # Markers now restored to original physical faces
+
+        Example:
+            # Before: marker on UP tracking WHITE
+            with holder.preserve_physical_faces():
+                alg.play()  # Commutator moves centers
+                # Marker may now be on FRONT (followed the piece)
+            # After: marker back on UP (same physical face)
+
+        Yields:
+            Self for chaining.
+        """
+        # Save state for each tracker (physical face name)
+        saved_states: list[FaceName] = [
+            tracker.save_physical_face() for tracker in self._trackers
+        ]
+
+        try:
+            yield self
+        finally:
+            # Restore each tracker to its saved physical face
+            for tracker, saved_face in zip(self._trackers, saved_states):
+                tracker.restore_to_physical_face(saved_face)
+
+            # Invalidate cache (tracker->face mappings may have changed)
+            self._face_colors_cache = None
 
     def __iter__(self) -> Iterator[FaceTracker]:
         """Iterate over the 6 face trackers."""

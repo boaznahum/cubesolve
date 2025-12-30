@@ -1,5 +1,7 @@
 # Physical Face Preserver - Design Document
 
+**Status: IMPLEMENTED**
+
 ## Problem Statement
 
 Face trackers mark center slices on even cubes to track "which color belongs on which physical face". When algorithms like commutators move center pieces, the markers move WITH the pieces. For commutators that preserve the cage (cube orientation is preserved after execution), we need a way to restore markers to their original physical faces.
