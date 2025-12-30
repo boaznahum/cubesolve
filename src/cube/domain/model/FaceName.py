@@ -11,3 +11,6 @@ class FaceName(Enum):
     B = "B"
     L = "L"
     R = "R"
+
+    def __str__(self):
+        return self.value

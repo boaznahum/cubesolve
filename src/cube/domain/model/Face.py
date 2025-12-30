@@ -4,7 +4,7 @@ from typing import Callable, Tuple, TypeAlias
 from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
 
 from ._elements import Direction, PartColorsID
-from ._part_slice import CenterSlice, PartSlice
+from .PartSlice import CenterSlice, PartSlice
 from .Center import Center
 from .Corner import Corner
 from .cube_boy import Color, FaceName
@@ -179,17 +179,43 @@ class Face(SuperElement, Hashable):
     @property
     def color(self):
         """
-        The color of center, valid in 3x3 only or for odd cubes !!!
-        :return:
+        The DYNAMIC color of the face's center - reads from center piece at (n//2, n//2).
+
+        WARNING - UNRELIABLE DURING BIG CUBE CENTER SOLVING:
+        =====================================================
+        On even cubes (4x4, 6x6, etc.), this reads from ONE center piece
+        at position (n_slices//2, n_slices//2). When centers are being
+        moved by commutators, this value changes dynamically!
+
+        Example: On a 4x4 cube, if a commutator moves the center piece at
+        position (1,1) from U to F, then U.color suddenly returns BLUE
+        instead of YELLOW - even though U face edges are still Yellow!
+
+        Use cases:
+        - Valid: After full reduction (all centers same color)
+        - Valid: On odd cubes (center piece is fixed)
+        - INVALID: During center solving on even cubes
+
+        For checking state during center solving, use relative consistency
+        between edges and corners instead of comparing to face colors.
+
+        :return: Color of center piece at (n_slices//2, n_slices//2)
         """
         return self.center.color
 
     @property
     def original_color(self) -> Color:
         """
-        The color the face was born with, never changed, doesn't move
-        good only for locate physical faces
-        :return:
+        The FIXED color this face was born with - never changes, doesn't move.
+
+        This is the face's permanent identity regardless of what center pieces
+        are currently on it. Use this during big cube center solving when
+        face.color is unreliable.
+
+        Example: U face always has original_color=YELLOW, even if a Blue
+        center piece is currently at position (1,1).
+
+        :return: The face's birth color (constant)
         """
         return self._original_color
 
@@ -224,19 +250,37 @@ class Face(SuperElement, Hashable):
             top: Face = self._get_other_face(self._edge_top)
             bottom: Face = self._get_other_face(self._edge_bottom)
 
-            # top -> right -> bottom -> left -> top
-
-            #           -->
-            #           TOP
-            #          0 1 2
-            #       2         2
-            # ^ LEFT  1         1 RIGHT  ^
-            #       0         0
-            #          0 1 2
-            #          BOTTOM
-            #          -->
-            # - so bottom and right are in reverse left-top-right direction, see right-top-left-coordinates.jpg
-            #  So when copying from LEFT<--BOTTOM and RIGHT<-TOP we need to switch indexes
+            # CLOCKWISE ROTATION: left → top → right → bottom → left
+            #
+            # Face's LTR coordinate system:
+            # ┌─────────────────────────────────────┐
+            # │            TOP (horizontal)         │
+            # │           ltr: 0 → 1 → 2            │
+            # │         ┌─────────────┐             │
+            # │  LEFT   │             │   RIGHT     │
+            # │  (vert) │      F      │   (vert)    │
+            # │  ltr:   │             │   ltr:      │
+            # │   2 ↑   │             │   2 ↑       │
+            # │   1 │   │             │   1 │       │
+            # │   0 ┘   │             │   0 ┘       │
+            # │         └─────────────┘             │
+            # │           ltr: 0 → 1 → 2            │
+            # │           BOTTOM (horizontal)       │
+            # └─────────────────────────────────────┘
+            #
+            # Clockwise rotation mapping (in face's ltr):
+            #   LEFT[ltr=0] → TOP[ltr=0]      (bottom-left corner stays at ltr=0)
+            #   LEFT[ltr=2] → TOP[ltr=2]      (top-left corner stays at ltr=2)
+            #
+            #   TOP[ltr=0]  → RIGHT[ltr=2]    (left of top → TOP of right = ltr inverts!)
+            #   TOP[ltr=2]  → RIGHT[ltr=0]    (right of top → BOTTOM of right)
+            #
+            # Pattern: LEFT[ltr] → TOP[ltr] → RIGHT[inv(ltr)] → BOTTOM[inv(ltr)] → LEFT[ltr]
+            #
+            # The edge translation layer (get_slice_index_from_ltr_index) handles f1/f2
+            # differences automatically. The face only works in its own ltr system!
+            #
+            # See: docs/design2/edge-face-coordinate-system-approach2.md
             #
             saved_top: Edge = self._edge_top.copy()
             # saved_right: Edge = self._edge_right.copy()
@@ -452,6 +496,33 @@ class Face(SuperElement, Hashable):
         for e in self.edges:
             yield e.get_other_face(self)
 
+    @property
+    def others_faces(self) -> Iterable[_Face]:
+        """
+        All other faces adjusted and opposite
+        :return:
+        """
+
+        yield from self.adjusted_faces()
+        yield self.opposite
+
+    @property
+    def opposite(self) -> _Face:
+        return self._opposite
+
+    def find_shared_edge(self, face2: _Face) -> Edge | None:
+        """
+        Find the edge shared by two faces, or None if they're opposite.
+
+        Returns:
+            The shared Edge if faces are adjacent, None if opposite
+        """
+        for edge in self._edges:
+            other_face = edge.get_other_face(self)
+            if other_face is face2:
+                return edge
+        return None
+
     def is_edge(self, edge: Edge) -> bool:
         """
         This edge belongs to face
@@ -460,9 +531,6 @@ class Face(SuperElement, Hashable):
         """
         return edge in self._edges
 
-    @property
-    def opposite(self) -> _Face:
-        return self._opposite
 
     def set_opposite(self, o: _Face):
         """
@@ -515,3 +583,79 @@ class Face(SuperElement, Hashable):
     def slices(self) -> Iterable[PartSlice]:
         for p in self._parts:
             yield from p.all_slices
+
+    # -------------------------------------------------------------------------
+    # Edge Coordinate System Methods (Issue #53)
+    # -------------------------------------------------------------------------
+    # The ltr (left-to-right) coordinate system belongs to the Face.
+    # Each edge translates between face's ltr and its internal slice index.
+    # See: docs/design2/edge-face-coordinate-system-approach2.md
+    # -------------------------------------------------------------------------
+
+    def get_horizontal_slice_index_from_ltr(self, ltr_i: int) -> int:
+        """
+        Convert ltr index to slice index for horizontal edges (top/bottom).
+
+        The face's ltr system is consistent by definition. The edge translates
+        to its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            ltr_i: Left-to-right index from this face's perspective
+
+        Returns:
+            Internal slice index
+        """
+        return self._edge_top.get_slice_index_from_ltr_index(self, ltr_i)
+
+    def get_horizontal_ltr_from_slice_index(self, slice_i: int) -> int:
+        """
+        Convert slice index to ltr index for horizontal edges (top/bottom).
+
+        The face's ltr system is consistent by definition. The edge translates
+        from its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            slice_i: Internal slice index
+
+        Returns:
+            Left-to-right index from this face's perspective
+        """
+        return self._edge_top.get_ltr_index_from_slice_index(self, slice_i)
+
+    def get_vertical_slice_index_from_ltr(self, ltr_i: int) -> int:
+        """
+        Convert ltr index to slice index for vertical edges (left/right).
+
+        The face's ltr system is consistent by definition. The edge translates
+        to its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            ltr_i: Bottom-to-top index from this face's perspective
+
+        Returns:
+            Internal slice index
+        """
+        return self._edge_left.get_slice_index_from_ltr_index(self, ltr_i)
+
+    def get_vertical_ltr_from_slice_index(self, slice_i: int) -> int:
+        """
+        Convert slice index to ltr index for vertical edges (left/right).
+
+        The face's ltr system is consistent by definition. The edge translates
+        from its internal index. Edge-face ltr = Face ltr.
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            slice_i: Internal slice index
+
+        Returns:
+            Bottom-to-top index from this face's perspective
+        """
+        return self._edge_left.get_ltr_index_from_slice_index(self, slice_i)

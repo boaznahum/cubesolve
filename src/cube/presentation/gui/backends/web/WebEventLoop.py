@@ -34,11 +34,9 @@ class WebEventLoop(EventLoop):
         self._clients: set = set()
         self._scheduled: list[tuple[float, Callable[[float], None], float | None]] = []
         self._start_time = time.monotonic()
-        # In test mode, find a free port; otherwise use provided or default
-        if gui_test_mode:
-            self._port = self._find_free_port()
-        else:
-            self._port = port if port is not None else 8765
+        self._explicit_port = port  # Store for lazy port resolution
+        self._port: int | None = None  # Resolved lazily in run()
+        self._port_resolved = False
 
         # Callbacks for call_soon
         self._pending_callbacks: list[Callable[[], None]] = []
@@ -66,6 +64,29 @@ class WebEventLoop(EventLoop):
     def set_client_connected_handler(self, handler: Callable[[], None] | None) -> None:
         """Set handler for client connection (for initial draw)."""
         self._on_client_connected = handler
+
+    @property
+    def gui_test_mode(self) -> bool:
+        """Whether running in GUI test mode."""
+        return self._gui_test_mode
+
+    @gui_test_mode.setter
+    def gui_test_mode(self, value: bool) -> None:
+        """Set GUI test mode. Must be called before run()."""
+        if self._port_resolved:
+            raise RuntimeError("Cannot change gui_test_mode after port has been resolved")
+        self._gui_test_mode = value
+
+    def _resolve_port(self) -> int:
+        """Resolve the port to use (lazy, called before server starts)."""
+        if not self._port_resolved:
+            if self._gui_test_mode:
+                self._port = self._find_free_port()
+            else:
+                self._port = self._explicit_port if self._explicit_port is not None else 8765
+            self._port_resolved = True
+        assert self._port is not None
+        return self._port
 
     @property
     def running(self) -> bool:
@@ -141,18 +162,21 @@ class WebEventLoop(EventLoop):
         app.router.add_get('/', index_handler)
         app.router.add_get('/{filename}', static_handler)
 
+        # Resolve port (lazy - uses gui_test_mode to decide)
+        port = self._resolve_port()
+
         # Start server
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, 'localhost', self._port, reuse_address=True)
+        site = web.TCPSite(runner, 'localhost', port, reuse_address=True)
         await site.start()
 
-        print(f"Web backend running at http://localhost:{self._port}", flush=True)
+        print(f"Web backend running at http://localhost:{port}", flush=True)
         print("Press Ctrl+C to stop", flush=True)
 
         # Open browser (skip in test mode)
         if not self._gui_test_mode:
-            webbrowser.open(f"http://localhost:{self._port}")
+            webbrowser.open(f"http://localhost:{port}")
 
         # Main loop
         try:

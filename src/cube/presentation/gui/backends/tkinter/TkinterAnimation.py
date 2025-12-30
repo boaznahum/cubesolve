@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Callable, Collection
 from cube.presentation.gui.protocols import AnimationBackend
 
 if TYPE_CHECKING:
-    from cube.domain.model._part_slice import PartSlice
+    from cube.domain.model.PartSlice import PartSlice
     from cube.domain.model.Cube import Cube
     from cube.domain.model.cube_boy import FaceName
 

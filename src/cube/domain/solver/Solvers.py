@@ -25,9 +25,7 @@ class Solvers:
     @classmethod
     def default(cls, op: OperatorProtocol) -> Solver:
         """Get the default solver based on config setting."""
-        from cube.application import _config as cfg
-
-        solver_name = SolverName.lookup(cfg.DEFAULT_SOLVER)
+        solver_name = SolverName.lookup(op.app_state.config.default_solver)
         return cls.by_name(solver_name, op)
 
     @staticmethod

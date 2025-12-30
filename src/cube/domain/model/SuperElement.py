@@ -3,7 +3,7 @@ from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Tuple, TypeAlias
 
 from ._elements import CubeElement
-from ._part_slice import PartSlice
+from .PartSlice import PartSlice
 from .Part import Part
 
 if TYPE_CHECKING:

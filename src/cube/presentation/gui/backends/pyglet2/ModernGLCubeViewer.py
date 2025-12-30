@@ -52,7 +52,7 @@ import numpy as np
 from numpy import ndarray
 
 from cube.application.protocols import AnimatableViewer
-from cube.domain.model._part_slice import PartSlice
+from cube.domain.model.PartSlice import PartSlice
 from cube.domain.model.cube_boy import Color, FaceName
 from cube.domain.model.CubeListener import CubeListener
 
@@ -200,7 +200,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         todo:boaz:what a waste of time !!!
         """
         # Check first PartEdge to see if texture is still there
-        for part_slice in self._cube.get_all_parts():
+        for part_slice in self._cube.get_all_part_slices():
             for edge in part_slice.edges:
                 # If any edge should have texture but doesn't, need reload
                 return CELL_TEXTURE_KEY not in edge.c_attributes
@@ -869,7 +869,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         self._cell_textures.clear()
 
         # Clear from c_attributes on all PartEdges
-        for part_slice in self._cube.get_all_parts():
+        for part_slice in self._cube.get_all_part_slices():
             for edge in part_slice.edges:
                 edge.c_attributes.pop(CELL_TEXTURE_KEY, None)
 

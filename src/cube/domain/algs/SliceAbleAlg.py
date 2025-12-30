@@ -69,8 +69,9 @@ class SliceAbleAlg(NSimpleAlg, ABC):
             if not start and not stop:
                 return s
 
-            if 1 == start and 1 == stop:
-                return s
+            # todo: bug in represnation of sliceable algs, we have a bug here this is not true for all algs
+            # if 1 == start and 1 == stop:
+            #     return s
 
             if start and not stop:
                 return "[" + str(start) + ":" + "]" + s
