@@ -413,9 +413,8 @@ R2             # R twice (special case for single move)
 
 The current parser (`_parser.py`) has these limitations:
 
-1. **No exponent N support**: `R3` is not supported (use `R' ` instead)
-2. **Basic tokenization**: Complex nested structures may not parse correctly
-3. **Case sensitivity**: `r` vs `R` have different meanings (see Adaptive Wide Moves)
+1. **No exponent N support**: `R3` is not supported (use `R'` instead)
+2. **Case sensitivity**: `r` vs `R` have different meanings (see Adaptive Wide Moves)
 
 ---
 
