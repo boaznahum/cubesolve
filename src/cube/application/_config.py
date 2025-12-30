@@ -93,6 +93,7 @@ CELL_SIZE: int = 30
 
 CORNER_SIZE = 0.2  # relative to cell size (should be 1 in 3x3)
 
+AXIS_ENABLED = False  # Master switch for axis drawing - when False, no axis code runs
 AXIS_LENGTH = 4 * CELL_SIZE
 
 MAX_MARKER_RADIUS = 5.0  # when decreasing cube size, we don't want the markers become larger and larger

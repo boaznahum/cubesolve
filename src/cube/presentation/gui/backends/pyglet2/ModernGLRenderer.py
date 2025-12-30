@@ -578,7 +578,7 @@ class ModernGLRenderer:
         ], dtype=np.float32)
         self._upload_and_draw(tri_verts, gl.GL_TRIANGLES)
 
-    def draw_axis(self, length: float = 5.0) -> None:
+    def draw_axis(self, length: float = 5.0, width: float = 5.0) -> None:
         """Draw XYZ axis lines for debugging.
 
         X = Red, Y = Green, Z = Blue
@@ -587,15 +587,15 @@ class ModernGLRenderer:
 
         # X axis - Red
         self.set_color(255, 0, 0)
-        self.line(origin, (length, 0, 0), 2.0)
+        self.line(origin, (length, 0, 0), width)
 
         # Y axis - Green
         self.set_color(0, 255, 0)
-        self.line(origin, (0, length, 0), 2.0)
+        self.line(origin, (0, length, 0), width)
 
         # Z axis - Blue
         self.set_color(0, 0, 255)
-        self.line(origin, (0, 0, length), 2.0)
+        self.line(origin, (0, 0, length), width)
 
         # Reset color
         self.set_color(255, 255, 255)
