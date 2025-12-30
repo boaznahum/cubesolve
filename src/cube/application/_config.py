@@ -25,6 +25,9 @@ CUBE_SIZE = 7  # Using debug4x4 texture set for 4x4 debugging
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
 DEFAULT_SOLVER = "lbl"
 
+# 3x3 solver used by cage method for corner solving (Phase 1b)
+# Options: "beginner", "cfop", "kociemba"
+CAGE_3X3_SOLVER = "cfop"
 
 ######### Model  ########
 
@@ -70,9 +73,6 @@ from cube.domain.model.Color import Color as _Color  # noqa: E402
 
 FIRST_FACE_COLOR: _Color = _Color.WHITE
 
-# 3x3 solver used by cage method for corner solving (Phase 1b)
-# Options: "beginner", "cfop", "kociemba"
-CAGE_3X3_SOLVER = "cfop"
 
 SOLVER_DEBUG = True
 
