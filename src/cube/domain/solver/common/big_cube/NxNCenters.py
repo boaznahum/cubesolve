@@ -973,11 +973,11 @@ class NxNCenters(SolverElement):
         is_back = source_face is cube.back
 
         # normalize block
-        r1 = rc1[0]
-        c1 = rc1[1]
+        r1: int = rc1[0]
+        c1: int = rc1[1]
 
-        r2 = rc2[0]
-        c2 = rc2[1]
+        r2: int = rc2[0]
+        c2: int = rc2[1]
 
         if r1 > r2:
             r1, r2 = r2, r1
