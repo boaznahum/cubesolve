@@ -23,14 +23,70 @@ class Algs:
     About Notations
     https://alg.cubing.net/
 
-    E, S, M is according to the above
+    ================================================================================
+    SLICE ALGORITHMS (M, E, S)
+    ================================================================================
 
+    ┌──────┬────────────┬────────────────┬───────────────────────────────────────┐
+    │Slice │   Axis     │ Affects Faces  │ Rotation Direction                    │
+    ├──────┼────────────┼────────────────┼───────────────────────────────────────┤
+    │  M   │  L ↔ R     │  F, U, B, D    │ Like L (clockwise when viewing L)     │
+    │  E   │  U ↔ D     │  F, R, B, L    │ Like D (clockwise when viewing D)     │
+    │  S   │  F ↔ B     │  U, R, D, L    │ Like F (clockwise when viewing F)     │
+    └──────┴────────────┴────────────────┴───────────────────────────────────────┘
 
-    X - OK
-    Y - OK
-    Z - OK
+    API: Algs.M.get_face_name() → L, Algs.E.get_face_name() → D, Algs.S.get_face_name() → F
 
+    Slice Traversal (content movement during rotation):
+        M: F → U → B → D → F  (vertical cycle, like L rotation)
+        E: R → B → L → F → R  (horizontal cycle, like D rotation)
+        S: U → R → D → L → U  (around F/B axis, like F rotation)
 
+    Slice Indexing (1-based, NOT 0-based!):
+        For an NxN cube: n_slices = N - 2 (number of inner slices)
+        Valid indices: 1, 2, ..., n_slices
+
+        WARNING: E[0], M[0], S[0] are INVALID! Indices start at 1.
+        Internally, normalize_slice_index() converts: public[i] → internal[i-1]
+
+        Example for 5x5 cube (n_slices = 3):
+            E[1]  - first inner slice (closest to D face)  → internal index 0
+            E[2]  - middle slice                           → internal index 1
+            E[3]  - last inner slice (closest to U face)   → internal index 2
+            E     - all slices together
+
+        Where Slice[1] begins (same side as reference face):
+            M[1] - closest to L face (the reference face for M)
+            E[1] - closest to D face (the reference face for E)
+            S[1] - closest to F face (the reference face for S)
+
+        Visual for 5x5 cube (M slice example, viewing from front):
+
+                      L face                              R face
+                         │                                   │
+                         │   M[1]  M[2]  M[3]                │
+                         │     ↓     ↓     ↓                 │
+                         │   ┌───┐ ┌───┐ ┌───┐               │
+                         └───┤   ├─┤   ├─┤   ├───────────────┘
+                             │   │ │   │ │   │
+                             └───┘ └───┘ └───┘
+                              ↑           ↑
+                         closest      closest
+                          to L         to R
+
+    ================================================================================
+    WHOLE-CUBE ROTATIONS (X, Y, Z)
+    ================================================================================
+
+    ┌──────┬─────────────────┬────────────────────────────────────────────────────┐
+    │Whole │ Implementation  │ Rotation Direction                                 │
+    ├──────┼─────────────────┼────────────────────────────────────────────────────┤
+    │  X   │ M' + R + L'     │ Like R (clockwise facing R) - OPPOSITE of M's L!   │
+    │  Y   │ E' + U + D'     │ Like U (clockwise facing U) - OPPOSITE of E's D!   │
+    │  Z   │ S + F + B'      │ Like F (clockwise facing F) - SAME as S's F!       │
+    └──────┴─────────────────┴────────────────────────────────────────────────────┘
+
+    ================================================================================
     """
     # When played, it simply refreshes GUI
     # So it used by annotation tools, after they changed some model(text, cube)
@@ -48,8 +104,8 @@ class Algs:
 
     R = _R()
     Rw = DoubleLayerAlg(R)
-    X = _X()  # Entire cube or R
-    M = _M()  # Middle over L
+    X = _X()  # Entire cube over R. See class docstring for X/Y/Z details.
+    M = _M()  # Middle slice over L axis. See class docstring for M/E/S details.
     _MM = _M().simple_mul(-1)  # Middle over L
 
     # noinspection PyPep8Naming
@@ -61,13 +117,13 @@ class Algs:
 
     U = _U()
     Uw = DoubleLayerAlg(U)
-    Y = _Y()  # Entire over U
-    E = _E()  # Middle slice over D
+    Y = _Y()  # Entire cube over U. See class docstring for X/Y/Z details.
+    E = _E()  # Middle slice over D axis. See class docstring for M/E/S details.
 
     F = _F()
     Fw = DoubleLayerAlg(F)
-    Z = _Z()  # Entire over F
-    S = _S()  # Middle over F
+    Z = _Z()  # Entire cube over F. See class docstring for X/Y/Z details.
+    S = _S()  # Middle slice over F axis. See class docstring for M/E/S details.
 
     # =========================================================================
     # Adaptive Wide Moves (lowercase notation)
@@ -100,6 +156,8 @@ class Algs:
                                     F, Fw, Z, S,
                                     B, Bw,
                                     D, Dw,
+                                    # Adaptive wide moves (lowercase)
+                                    f, u, r, l, d, b,
                                     ]
 
     RU = SeqAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)

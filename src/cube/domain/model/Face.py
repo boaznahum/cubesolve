@@ -179,17 +179,43 @@ class Face(SuperElement, Hashable):
     @property
     def color(self):
         """
-        The color of center, valid in 3x3 only or for odd cubes !!!
-        :return:
+        The DYNAMIC color of the face's center - reads from center piece at (n//2, n//2).
+
+        WARNING - UNRELIABLE DURING BIG CUBE CENTER SOLVING:
+        =====================================================
+        On even cubes (4x4, 6x6, etc.), this reads from ONE center piece
+        at position (n_slices//2, n_slices//2). When centers are being
+        moved by commutators, this value changes dynamically!
+
+        Example: On a 4x4 cube, if a commutator moves the center piece at
+        position (1,1) from U to F, then U.color suddenly returns BLUE
+        instead of YELLOW - even though U face edges are still Yellow!
+
+        Use cases:
+        - Valid: After full reduction (all centers same color)
+        - Valid: On odd cubes (center piece is fixed)
+        - INVALID: During center solving on even cubes
+
+        For checking state during center solving, use relative consistency
+        between edges and corners instead of comparing to face colors.
+
+        :return: Color of center piece at (n_slices//2, n_slices//2)
         """
         return self.center.color
 
     @property
     def original_color(self) -> Color:
         """
-        The color the face was born with, never changed, doesn't move
-        good only for locate physical faces
-        :return:
+        The FIXED color this face was born with - never changes, doesn't move.
+
+        This is the face's permanent identity regardless of what center pieces
+        are currently on it. Use this during big cube center solving when
+        face.color is unreliable.
+
+        Example: U face always has original_color=YELLOW, even if a Blue
+        center piece is currently at position (1,1).
+
+        :return: The face's birth color (constant)
         """
         return self._original_color
 

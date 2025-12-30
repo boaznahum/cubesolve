@@ -60,27 +60,27 @@ SLICE INDEXING (1-based):
         - Valid indices: 1, 2, ..., n_slices
 
     Example for 5x5 cube (n_slices = 3):
-        E[1]  - first inner slice (closest to U face)
+        E[1]  - first inner slice (closest to D face)
         E[2]  - middle slice
-        E[3]  - last inner slice (closest to D face)
+        E[3]  - last inner slice (closest to U face)
         E     - all slices together
 
-    WHERE SLICE 1 BEGINS (reference face perspective):
+    WHERE SLICE 1 BEGINS (same side as reference face):
         ┌──────┬─────────────────────────────────────────────────────────────────┐
         │Slice │ Slice[1] is closest to...                                       │
         ├──────┼─────────────────────────────────────────────────────────────────┤
-        │  M   │ Closest to R face (opposite of reference face L)                │
-        │  E   │ Closest to U face (opposite of reference face D)                │
-        │  S   │ Closest to B face (opposite of reference face F)                │
+        │  M   │ Closest to L face (the reference face for M)                    │
+        │  E   │ Closest to D face (the reference face for E)                    │
+        │  S   │ Closest to F face (the reference face for S)                    │
         └──────┴─────────────────────────────────────────────────────────────────┘
 
     Visual for 5x5 cube (E slice example, viewing from front):
                          U face
                     ┌─────────────┐
                     │             │
-            E[1] →  ├─────────────┤  ← closest to U
+            E[3] →  ├─────────────┤  ← closest to U
             E[2] →  ├─────────────┤  ← middle
-            E[3] →  ├─────────────┤  ← closest to D
+            E[1] →  ├─────────────┤  ← closest to D
                     │             │
                     └─────────────┘
                          D face
@@ -266,17 +266,35 @@ class SliceAlgorithmResult:
         See SliceAbleAlg.normalize_slice_index() which converts to 0-based internally.
     """
     whole_slice_alg: SliceAlg  # not sliced
-    on_slice: int  # 1-based slice index
+
+    # claude make a bug here it make it 1 based , now it is hard to fix it
+    # it is in the transfoem table !!!
+    _on_slice: int  # 1-based slice index
     n: int  # n rotations
 
+    @property
+    def on_slice(self):
+        """
+        Zero based !!!
+        :return:
+        """
+        return self._on_slice - 1
     def get_alg(self) -> Alg:
-        return self.whole_slice_alg[self.on_slice] * self.n
+        return self.get_slice_alg(self.on_slice)
 
     def get_whole_slice_alg(self) -> Alg:
         return self.whole_slice_alg * self.n
 
+    # see bug above, but here we accept zero base !!!
     def get_slice_alg(self, slice_index) -> Alg:
-        return self.whole_slice_alg[slice_index] * self.n
+        """
+
+        :param slice_index:  zero based !!!
+        :return:
+        """
+        return self.whole_slice_alg[slice_index+1] * self.n
+
+
 
 
 

@@ -73,6 +73,7 @@ dev = [
     "types-colorama",
     "types-keyboard",
     "Pillow",  # For generating test face textures (resources/faces/generate_images.py)
+    "tabulate",  # For formatting test failure tables
 ]
 
 [project.urls]
