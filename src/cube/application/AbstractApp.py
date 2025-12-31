@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from cube.application.commands.Operator import Operator
+from cube.application.Scrambler import Scrambler
 from cube.application.state import ApplicationAndViewState
 from cube.domain.algs import Alg
 from cube.domain.solver import Solver
@@ -94,6 +95,11 @@ class AbstractApp(metaclass=ABCMeta):
     @abstractmethod
     def cube(self) -> "Cube":
         raise NotImplementedError
+
+    @property
+    def scrambler(self) -> Scrambler:
+        """Get the scrambler for generating scramble algorithms."""
+        return Scrambler(self)
 
     @abstractmethod
     def reset(self, cube_size: int | None = None):

@@ -405,10 +405,9 @@ def test_lbl_solver_solves_slice_0_centers(size: int) -> None:
         l1_tracker = solver._get_layer1_tracker(th)
         l1_face = l1_tracker.face
 
-        # Get the 4 side faces (orthogonal to L1)
-        side_faces = [f for f in cube.faces
-                      if f.name != l1_face.name
-                      and f.name != CubeLayout.opposite(l1_face.name)]
+        # Get the 4 side faces (adjacent to L1)
+        adjacent_names = CubeLayout.get_adjacent_faces(l1_face.name)
+        side_faces = [cube.face(fn) for fn in adjacent_names]
 
         # Check each side face's slice 0 centers
         for side_face in side_faces:
@@ -424,4 +423,32 @@ def test_lbl_solver_solves_slice_0_centers(size: int) -> None:
                     f"has color {center.color}, expected {expected_color}"
                 )
 
-    print(f"\n  Size {size}x{size}: Slice 0 centers solved")
+    print(f"\n  Size {size}x{size}: Slice 0 centers solved (before rotation)")
+
+    # Now apply random whole cube rotations and verify again
+    from cube.application.Scrambler import ScrambleWhat
+    app.scrambler.scramble(ScrambleWhat.WHOLE_CUBE, seed=size, animation=False)
+
+    # Verify geometry method still works after rotations
+    with FacesTrackerHolder(solver) as th:
+        l1_tracker = solver._get_layer1_tracker(th)
+        l1_face = l1_tracker.face
+
+        # Get the 4 side faces (adjacent to L1)
+        adjacent_names = CubeLayout.get_adjacent_faces(l1_face.name)
+        side_faces = [cube.face(fn) for fn in adjacent_names]
+
+        for side_face in side_faces:
+            face_tracker = th.get_tracker(side_face.name)
+            expected_color = face_tracker.color
+
+            for row, col in CubeLayoutGeomtry.iterate_orthogonal_face_center_pieces(
+                cube, l1_face, side_face, layer_slice_index=0
+            ):
+                center = side_face.center.get_center_slice((row, col))
+                assert center.color == expected_color, (
+                    f"After rotation: Slice 0 center at ({row},{col}) on {side_face.name.name} "
+                    f"has color {center.color}, expected {expected_color}"
+                )
+
+    print(f"  Size {size}x{size}: Slice 0 centers solved (after rotation)")

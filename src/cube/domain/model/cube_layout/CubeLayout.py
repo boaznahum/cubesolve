@@ -19,6 +19,16 @@ class CubeLayout:
 
     _all_opposite: Mapping[FaceName, FaceName] = {**_opposite, **_rev_opposite}
 
+    # Pre-computed adjacent faces for each face (faces that share an edge)
+    _adjacent: Mapping[FaceName, tuple[FaceName, ...]] = {
+        FaceName.F: (FaceName.U, FaceName.D, FaceName.L, FaceName.R),
+        FaceName.B: (FaceName.U, FaceName.D, FaceName.L, FaceName.R),
+        FaceName.U: (FaceName.F, FaceName.B, FaceName.L, FaceName.R),
+        FaceName.D: (FaceName.F, FaceName.B, FaceName.L, FaceName.R),
+        FaceName.L: (FaceName.F, FaceName.B, FaceName.U, FaceName.D),
+        FaceName.R: (FaceName.F, FaceName.B, FaceName.U, FaceName.D),
+    }
+
     def __init__(self, read_only: bool, faces: Mapping[FaceName, Color],
                  sp: IServiceProvider) -> None:
         super().__init__()
@@ -81,7 +91,20 @@ class CubeLayout:
         Returns:
             True if faces share an edge, False otherwise
         """
-        return face1 != face2 and face2 != CubeLayout._all_opposite[face1]
+        return face2 in CubeLayout._adjacent[face1]
+
+    @staticmethod
+    def get_adjacent_faces(face: FaceName) -> tuple[FaceName, ...]:
+        """
+        Get all faces adjacent to the given face (faces that share an edge).
+
+        Args:
+            face: The face to get adjacent faces for
+
+        Returns:
+            Tuple of 4 adjacent FaceNames
+        """
+        return CubeLayout._adjacent[face]
 
     def opposite_color(self, color: Color) -> Color:
         return self._faces[CubeLayout.opposite(self._find_face(color))]
