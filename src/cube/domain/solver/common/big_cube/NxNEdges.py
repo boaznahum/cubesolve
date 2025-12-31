@@ -75,23 +75,30 @@ class NxNEdges(SolverElement):
 
         Returns:
             True if edge parity was performed, False otherwise.
-        """
-        # Find the 4 edges adjacent to Layer 1 face (by position)
-        # These are the edges that need to be solved for Layer 1
-        target_edges = list(face_tracker.face.edges)
 
-        # Check if all target edges are already solved
-        if all(e.is3x3 for e in target_edges):
+        Note:
+            Finds edges by COLOR (e.g., all edges containing WHITE for white cross),
+            not by position. This is correct because after centers are solved,
+            the cross edges may be scattered across the cube.
+        """
+        # Find the 4 edges that contain the target color (by color, not position!)
+        # For white cross: finds edges with WHITE in their colors_id
+        target_color = face_tracker.color
+        target_edges_by_color = [e for e in self.cube.edges if target_color in e.colors_id]
+
+        assert len(target_edges_by_color) == 4, \
+            f"Expected 4 edges with {target_color}, found {len(target_edges_by_color)}"
+
+        # Check if all target edges are already solved (paired)
+        if all(e.is3x3 for e in target_edges_by_color):
             return False
 
-        # because the move !!!
-        by_name = [ t.name_n_colors for t in target_edges]
-
-        with self.ann.annotate(h1=f"Edges for {face_tracker.color.name}"):
+        with self.ann.annotate(h1=f"Edges for {target_color.name}"):
             parity_done = False
             while True:
-                # Find an unsolved edge among target edges
-                unsolved = [e for e in target_edges if e.name_n_colors in by_name and  not e.is3x3]
+                # Find unsolved edges containing target color (re-query each iteration)
+                unsolved = [e for e in self.cube.edges
+                           if target_color in e.colors_id and not e.is3x3]
                 if not unsolved:
                     break
 

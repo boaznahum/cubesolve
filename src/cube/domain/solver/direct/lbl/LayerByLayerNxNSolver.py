@@ -203,9 +203,14 @@ class LayerByLayerNxNSolver(BaseSolver):
         return l1_face.center.is3x3
 
     def _is_layer1_edges_solved(self, th: FacesTrackerHolder) -> bool:
-        """Check if all Layer 1 face edges are paired (reduced to 3x3)."""
-        l1_face = self._get_layer1_tracker(th).face
-        return all(e.is3x3 for e in l1_face.edges)
+        """Check if all edges containing L1 color are paired (reduced to 3x3).
+
+        Note: Checks by COLOR, not position. After centers are solved but before
+        cross, the 4 L1-color edges may be scattered across the cube.
+        """
+        l1_color = self._get_layer1_tracker(th).color
+        l1_edges = [e for e in self.cube.edges if l1_color in e.colors_id]
+        return all(e.is3x3 for e in l1_edges)
 
     def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 cross is solved (edges paired AND in correct position).

@@ -166,7 +166,7 @@ class NxNCenters2(SolverElement):
 
             return work_was_done
 
-        self._solve_single_center_row_slice_all_slices(l1_white_tracker, slice_row_index, target_face)
+        self._solve_single_center_row_slice_all_slices(l1_white_tracker, target_face, slice_row_index)
 
     def _solve_single_center_row_slice_all_slices(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                   slice_row_index: int
