@@ -15,7 +15,7 @@ from numpy import ndarray
 from cube.application.state import ApplicationAndViewState
 from cube.domain.model import PartEdge, PartFixedID, PartSlice
 from cube.domain.model.Cube import Cube
-from cube.domain.model.cube_boy import FaceName
+from cube.domain.model.cube_layout.cube_boy import FaceName
 from cube.domain.model.Face import Face
 
 from ..gui.protocols import Renderer

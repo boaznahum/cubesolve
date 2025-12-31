@@ -25,8 +25,8 @@ from .Cube import Cube as Cube
 from .Cube3x3Colors import CornerColors as CornerColors
 from .Cube3x3Colors import Cube3x3Colors as Cube3x3Colors
 from .Cube3x3Colors import EdgeColors as EdgeColors
-from .cube_boy import Color as Color
-from .cube_boy import FaceName as FaceName
+from cube.domain.model.cube_layout.cube_boy import Color as Color
+from cube.domain.model.cube_layout.cube_boy import FaceName as FaceName
 from .CubeListener import CubeListener as CubeListener
 from .Edge import Edge as Edge
 from .Face import Face as Face

@@ -124,7 +124,7 @@ from typing import TYPE_CHECKING, Tuple
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
-from cube.domain.model.CubeLayout import CubeLayout
+from cube.domain.model.cube_layout.CubeLayout import CubeLayout
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face

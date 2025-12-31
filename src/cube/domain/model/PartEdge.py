@@ -2,7 +2,7 @@ from collections import defaultdict
 from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, TypeAlias
 
-from .cube_boy import Color
+from cube.domain.model.cube_layout.cube_boy import Color
 
 if TYPE_CHECKING:
     from .PartSlice import PartSlice

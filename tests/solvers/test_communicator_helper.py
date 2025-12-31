@@ -25,7 +25,7 @@ import pytest
 from tabulate import tabulate
 
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.model.cube_boy import FaceName
+from cube.domain.model.cube_layout.cube_boy import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper

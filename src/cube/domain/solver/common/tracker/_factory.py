@@ -119,7 +119,7 @@ from cube.domain.model import CenterSlice, Color
 
 if TYPE_CHECKING:
     from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.model.cube_boy import CubeLayout
+from cube.domain.model.cube_layout.cube_boy import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.model.VMarker import VMarker, viewer_add_view_marker

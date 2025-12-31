@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Tuple, TypeAlias, Union
 
 from cube.utils.config_protocol import ConfigProtocol
 
-from .cube_boy import Color
+from cube.domain.model.cube_layout.cube_boy import Color
 
 
 @unique

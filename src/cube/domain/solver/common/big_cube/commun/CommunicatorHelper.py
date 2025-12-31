@@ -24,7 +24,7 @@ from cube.domain.model.Face import Face
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.solver.common.big_cube.commun.CubeLayoutGeomtry import CubeLayoutGeomtry, CLGColRow
+from cube.domain.model.cube_layout.CubeLayoutGeomtry import CubeLayoutGeomtry, CLGColRow
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
 

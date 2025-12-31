@@ -44,10 +44,10 @@ Consumers:
 
 from cube.utils.config_protocol import IServiceProvider
 
-from .Color import Color
-from .ColorLong import ColorLong
-from .CubeLayout import CubeLayout
-from .FaceName import FaceName
+from cube.domain.model.Color import Color
+from cube.domain.model.ColorLong import ColorLong
+from cube.domain.model.cube_layout.CubeLayout import CubeLayout
+from cube.domain.model.FaceName import FaceName
 
 # ============================================================================
 # BOY Layout - Global Cached Singleton

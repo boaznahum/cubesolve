@@ -8,8 +8,8 @@ from typing import Mapping
 from cube.domain.exceptions import InternalSWError
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 
-from .Color import Color
-from .FaceName import FaceName
+from cube.domain.model.Color import Color
+from cube.domain.model.FaceName import FaceName
 
 
 class CubeLayout:
@@ -165,7 +165,7 @@ class CubeLayout:
         Returns:
             True if this layout matches the global BOY definition.
         """
-        from cube.domain.model import cube_boy
+        from cube.domain.model.cube_layout import cube_boy
         return self.same(cube_boy.get_boy_layout(self._sp))
 
     def clone(self):

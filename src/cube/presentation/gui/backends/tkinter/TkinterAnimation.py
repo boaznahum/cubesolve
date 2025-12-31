@@ -13,7 +13,7 @@ from cube.presentation.gui.protocols import AnimationBackend
 if TYPE_CHECKING:
     from cube.domain.model.PartSlice import PartSlice
     from cube.domain.model.Cube import Cube
-    from cube.domain.model.cube_boy import FaceName
+    from cube.domain.model.cube_layout.cube_boy import FaceName
 
 
 class TkinterAnimation(AnimationBackend):

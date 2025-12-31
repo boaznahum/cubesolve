@@ -141,7 +141,7 @@ from ._elements import AxisName, PartColorsID
 from .PartSlice import CornerSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Corner import Corner
-from .cube_boy import Color, CubeLayout, FaceName
+from cube.domain.model.cube_layout.cube_boy import Color, CubeLayout, FaceName
 from .cube_slice import Slice, SliceName
 from .Edge import Edge
 from .Face import Face
@@ -360,8 +360,8 @@ class Cube(CubeSupplier):
         self._color_2_face = {}
 
         # Use centralized BOY layout instance
-        from . import cube_boy
-        from .CubeLayout import CubeLayout
+        from .cube_layout import cube_boy
+        from cube.domain.model.cube_layout.CubeLayout import CubeLayout
 
         boy = cube_boy.get_boy_layout(self._sp)
 

@@ -3,7 +3,7 @@
 This document provides visual diagrams explaining the three ID types in the cube model.
 
 **Key Source Files:**
-- [`cube_boy.py`](../../src/cube/domain/model/cube_boy.py) - Cube creation with BOY color scheme
+- [`cube_boy.py`](../../src/cube/domain/model/cube_layout/cube_boy.py) - Cube creation with BOY color scheme
 - [`Part.py`](../../src/cube/domain/model/Part.py) - Part class with all ID properties
 - [`_part_slice.py`](../src/cube/domain/model/_part_slice.py) - PartSlice with slice-level IDs
 - [`Edge.py`](../src/cube/domain/model/Edge.py) - Edge class with is3x3 property
