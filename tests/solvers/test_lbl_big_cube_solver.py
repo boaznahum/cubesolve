@@ -372,8 +372,10 @@ def test_lbl_solver_status_progression() -> None:
 def test_lbl_solver_solves_slice_0_centers(size: int) -> None:
     """Test that LBL solver can solve slice 0 (bottom slice) centers on odd cubes.
 
-    Slice 0 is the row closest to the DOWN face on all 4 side faces.
+    Slice 0 is the layer of centers closest to Layer 1 (white face) on all 4 side faces.
     Only tests odd cubes because even cubes have different center structure.
+
+    Uses iterate_orthogonal_face_center_pieces to properly handle any L1 position.
     """
     skip_if_not_supported(SolverName.LBL_DIRECT, size)
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
@@ -382,6 +384,7 @@ def test_lbl_solver_solves_slice_0_centers(size: int) -> None:
     app.scramble(42, None, animation=False, verbose=False)
 
     solver = LayerByLayerNxNSolver(app.op)
+    cube = app.cube
 
     # First solve Layer 1
     solver.solve(what=SolveStep.LBL_L1, animation=False)
@@ -389,15 +392,36 @@ def test_lbl_solver_solves_slice_0_centers(size: int) -> None:
     from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
     with FacesTrackerHolder(solver) as th:
-        assert solver._is_layer1_solved(th), f"Layer 1 not solved"
+        assert solver._is_layer1_solved(th), "Layer 1 not solved"
 
     # Now solve slice centers
     solver.solve(what=SolveStep.LBL_SLICES_CTR, animation=False)
 
-    # Check slice 0 centers are solved using is_slice_centers_solved
+    # Check slice 0 centers are solved using the new geometry method
+    from cube.domain.model.cube_layout.CubeLayout import CubeLayout
+    from cube.domain.model.cube_layout.CubeLayoutGeomtry import CubeLayoutGeomtry
+
     with FacesTrackerHolder(solver) as th:
         l1_tracker = solver._get_layer1_tracker(th)
-        is_solved = solver._lbl_slices.is_slice_centers_solved(0, th, l1_tracker)
-        assert is_solved, f"Slice 0 centers should be solved on {size}x{size}"
+        l1_face = l1_tracker.face
+
+        # Get the 4 side faces (orthogonal to L1)
+        side_faces = [f for f in cube.faces
+                      if f.name != l1_face.name
+                      and f.name != CubeLayout.opposite(l1_face.name)]
+
+        # Check each side face's slice 0 centers
+        for side_face in side_faces:
+            face_tracker = th.get_tracker(side_face.name)
+            expected_color = face_tracker.color
+
+            for row, col in CubeLayoutGeomtry.iterate_orthogonal_face_center_pieces(
+                cube, l1_face, side_face, layer_slice_index=0
+            ):
+                center = side_face.center.get_center_slice((row, col))
+                assert center.color == expected_color, (
+                    f"Slice 0 center at ({row},{col}) on {side_face.name.name} "
+                    f"has color {center.color}, expected {expected_color}"
+                )
 
     print(f"\n  Size {size}x{size}: Slice 0 centers solved")

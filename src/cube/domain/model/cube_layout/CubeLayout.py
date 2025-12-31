@@ -61,6 +61,28 @@ class CubeLayout:
     def opposite(fn: FaceName) -> FaceName:
         return CubeLayout._all_opposite[fn]
 
+    @staticmethod
+    def is_adjacent(face1: FaceName, face2: FaceName) -> bool:
+        """
+        Check if two faces are adjacent (share an edge).
+
+        Two faces are adjacent if they are neither the same nor opposite.
+        Adjacent faces share exactly one edge on the cube.
+
+        Example:
+            F and U are adjacent (share top edge of F)
+            F and B are NOT adjacent (they are opposite)
+            F and F are NOT adjacent (same face)
+
+        Args:
+            face1: First face
+            face2: Second face
+
+        Returns:
+            True if faces share an edge, False otherwise
+        """
+        return face1 != face2 and face2 != CubeLayout._all_opposite[face1]
+
     def opposite_color(self, color: Color) -> Color:
         return self._faces[CubeLayout.opposite(self._find_face(color))]
 
