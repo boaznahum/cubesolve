@@ -157,9 +157,9 @@ class NxNCenters2(SolverElement):
                                                                   slice_row_index):
                     work_was_done = True
 
-                # this does position and tracking again !!!
-                if self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, slice_row_index):
-                    work_was_done = True
+                # WIP: Commented out - this does position and tracking again !!!
+                # if self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, slice_row_index):
+                #     work_was_done = True
 
             if not work_was_done:
                 break

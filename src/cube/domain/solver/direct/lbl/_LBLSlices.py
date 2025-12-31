@@ -254,7 +254,7 @@ class _LBLSlices(SolverElement):
         op = self._slv.op
 
         # Solve all slices from bottom to top
-        if False:
+        if True:  # WIP: Only solve first slice for now
             r = range(1)
         else:
             r = range(self.n_slices)
