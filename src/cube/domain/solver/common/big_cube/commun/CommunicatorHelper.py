@@ -152,15 +152,24 @@ class CommunicatorHelper(SolverElement):
 
     @staticmethod
     def _normalize_block(block: Block) -> Block:
-        """Normalize block so r1 <= r2 and c1 <= c2."""
+        """Normalize block coordinates so min values come first.
 
-        #claude documnet this it is critical
+        A block is defined by two corner points: (r1, c1) and (r2, c2).
+        This method ensures that r1 <= r2 and c1 <= c2 after normalization.
 
-        rc1: Point = block[0]
-        rc2 = block[1]
+        This is critical for commutator algorithms because:
+        1. M-slice selection depends on column ordering
+        2. Block iteration assumes normalized coordinates
+        3. Intersection checks require consistent ordering
 
+        Args:
+            block: Tuple of two points ((r1, c1), (r2, c2))
+
+        Returns:
+            Normalized block with r1 <= r2 and c1 <= c2
+        """
         r1, c1 = block[0]
-        r2, c2 = block[0]
+        r2, c2 = block[1]
         if r1 > r2:
             r1, r2 = r2, r1
         if c1 > c2:
