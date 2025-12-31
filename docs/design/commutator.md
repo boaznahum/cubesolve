@@ -2,6 +2,42 @@
 
 **Module:** `src/cube/domain/solver/common/big_cube/commun/CommunicatorHelper.py`
 
+---
+
+## What is CommunicatorHelper?
+
+**CommunicatorHelper** is a tool that moves center pieces from one face to another on big cubes (4x4, 5x5, etc.).
+
+```
+Example: Move center piece from UP to FRONT
+
+    UP face              FRONT face
+    ┌───┬───┬───┐        ┌───┬───┬───┐
+    │   │   │   │        │   │   │   │
+    ├───┼───┼───┤        ├───┼───┼───┤
+    │   │ A │   │  ───►  │   │ A │   │   Piece A transfers
+    ├───┼───┼───┤        ├───┼───┼───┤   from UP to FRONT
+    │   │   │   │        │   │   │   │
+    └───┴───┴───┘        └───┴───┴───┘
+```
+
+**The algorithm used:**
+```
+[m, F, m2, F', m', F, m2', F']
+
+Where:
+  m  = slice move (M, E, or S) that brings piece from source to target
+  F  = target face rotation
+  m2 = slice for the rotated position
+```
+
+**Key features:**
+- Moves center pieces without disturbing edges or corners
+- Supports all 30 face pair combinations (any source → any adjacent target)
+- Can move single pieces or rectangular blocks
+
+---
+
 ## Theory Background
 
 > **Source Credits:** This documentation is based on content from:
