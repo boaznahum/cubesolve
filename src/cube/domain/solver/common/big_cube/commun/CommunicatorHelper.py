@@ -1,4 +1,10 @@
 """
+
+claud: see https://www.speedsolving.com/wiki/index.php/Commutator
+read the sbive link snd create a full communicator md fike in this explsing my comminatir with the theoretic in the link above 
+also the class shoukd well dicunented with duagrams and images.
+remive anyvdead code frim the class
+
 Communicator Helper for NxN Big Cubes.
 
 Provides the block commutator algorithm for any source/target face pair.

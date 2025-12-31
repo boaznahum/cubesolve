@@ -59,7 +59,7 @@ class SolverName(Enum):
 
     Each enum value contains SolverMeta with test skip reasons (None = supported).
     """
-    LBL = SolverMeta("LBL", not_testable="WIP: Some edge cases with seed=0 need investigation")
+    LBL = SolverMeta("LBL")
     CFOP = SolverMeta("CFOP")#, only_3x3="CFOP use same reducer as LBL")
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers

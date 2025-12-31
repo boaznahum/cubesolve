@@ -31,10 +31,13 @@ The U face does NOT move. This is equivalent to:
   - Rotating everything else around the Y axis
 
 On different cube sizes:
-    3x3: d moves [D]                    = 1 layer  (same as D)
+    3x3: d moves [D, M]                 = 2 layers (same as Dw, standard)
     4x4: d moves [D, inner1, inner2]    = 3 layers (U stays)
     5x5: d moves [D, inner1, inner2, inner3] = 4 layers (U stays)
     NxN: d moves [D, all N-2 inner layers]   = N-1 layers (U stays)
+
+NOTE: On 3x3 this matches standard notation (Rw = 2 layers).
+On larger cubes, this differs from standard (which says Rw = always 2 layers).
 
 WHY THIS IS NEEDED FOR CFOP ON NxN
 ==================================
