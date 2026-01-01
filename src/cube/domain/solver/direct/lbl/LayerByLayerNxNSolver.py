@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.solver.common.tracker._base import FaceTracker
+from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper

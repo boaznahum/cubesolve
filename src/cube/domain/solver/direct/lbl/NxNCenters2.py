@@ -2,7 +2,7 @@ import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from enum import Enum, unique
-from typing import Tuple, TypeAlias
+from typing import Tuple, TypeAlias, Generator
 
 from cube.domain import algs
 from cube.domain.algs import Algs
@@ -12,19 +12,21 @@ from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.solver.common.tracker._base import FaceTracker
+from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.protocols import SolverElementsProvider
 
 CENTER_SLICE_TRACK_KEY = "xxxxxxx"
 
 Point: TypeAlias = Tuple[int, int]
 
+_True = True
+
 
 @unique
 class _SearchBlockMode(Enum):
     CompleteBlock = 1
     BigThanSource = 2
-    ExactMatch = 3  # required on source match source
+    ExactMatch = 3  # required on a source match source
 
 
 class NxNCenters2(SolverElement):
@@ -132,6 +134,8 @@ class NxNCenters2(SolverElement):
         Args:
             face_tracker: Face to solve
             slice_index: Slice index to solve  zeo based
+            :param face_tracker:
+            :param l1_white_tracker:
         """
         self._solve_single_center_row_slice(l1_white_tracker, face_tracker, slice_index)
 
@@ -151,7 +155,7 @@ class NxNCenters2(SolverElement):
 
             with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_index):
 
-                # positon and tracking need go inside
+                # position and tracking need to go inside
                 if self._solve_single_center_row_slice_all_slices(l1_white_tracker, target_face,
                                                                   slice_index):
                     work_was_done = True
@@ -165,7 +169,6 @@ class NxNCenters2(SolverElement):
 
             return work_was_done
 
-
     def _solve_single_center_row_slice_all_slices(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                   slice_row_index: int
                                                   ) -> bool:
@@ -177,7 +180,8 @@ class NxNCenters2(SolverElement):
             if source_face is not l1_white_tracker:
                 # === HEADLINE 1: SLICE ===
                 with self.ann.annotate(
-                        h1=lambda: f"Solving Face {target_face.color_at_face_str} Slice {slice_row_index} {target_face.color}  from Source {source_face.color_at_face_str}"):
+                        h1=lambda: f"Solving Face {target_face.color_at_face_str} Slice {slice_row_index} "
+                                   f"{target_face.color}  from Source {source_face.color_at_face_str}"):
 
                     if self._solve_single_center_piece_from_source_face(l1_white_tracker, target_face, source_face,
                                                                         slice_row_index):
@@ -196,7 +200,7 @@ class NxNCenters2(SolverElement):
         # the default is boolean False !!!
         x = cs.c_attributes[CENTER_SLICE_TRACK_KEY]
 
-        #print(f"x: {x}")
+        # print(f"x: {x}")
 
         if type(x) is int:
             return x
@@ -222,7 +226,7 @@ class NxNCenters2(SolverElement):
                 yield rc
 
     def _iterate_all_tracked_slices_and_index(self, target_face: FaceTracker) -> Iterator[
-        Tuple[CenterSlice, CenterSliceIndex]]:
+            Tuple[CenterSlice, CenterSliceIndex]]:
 
         for cs in target_face.face.center.all_slices:
 
@@ -233,10 +237,11 @@ class NxNCenters2(SolverElement):
 
     def _print_all_tracked_slices(self, s) -> None:
 
-        return
+        if _True:
+            return
 
-        print(f"{s} xxxxx pieces:", end="")
-
+            # noinspection PyUnreachableCode
+        print(f"{s} center pieces:", end="")
         for c in self.cube.centers:
             for cs in c.all_slices:
                 if self._is_center_slice(cs) is not None:
@@ -256,7 +261,7 @@ class NxNCenters2(SolverElement):
         assert target_face.face is self.cube.front
 
     @contextmanager
-    def _track_row_slices(self, target_face: FaceTracker, slice_index: int):
+    def _track_row_slices(self, target_face: FaceTracker, slice_index: int) -> Generator[None, None, None]:
         """Track center slices in a row, cleanup on exit."""
         for rc in self._2d_center_row_slice_iter(slice_index):
             slice_piece = target_face.face.center.get_center_slice(rc)
@@ -268,8 +273,9 @@ class NxNCenters2(SolverElement):
 
     @contextmanager
     def _setup_l1_and_target_and_track_slices(self, l1_white_tracker: FaceTracker,
-                                              target_face: FaceTracker, slice_index: int):
+                                              target_face: FaceTracker, slice_index: int) -> Iterator[None]:
         """Combined: position faces AND track slices."""
+        """Position L1 down and target face to front."""
         self._position_l1_and_target(l1_white_tracker, target_face)
         with self._track_row_slices(target_face, slice_index):
             yield
@@ -278,24 +284,27 @@ class NxNCenters2(SolverElement):
                                             slice_row_index: int) -> bool:
         """
             #claqude please document this method
+            :type slice_row_index: int
         """
 
         work_was_done: bool = False
 
         assert l1_white_tracker.face.center.is3x3  # solved
 
-        # now check is there slice on my target
+        # now check is there a slice on my target
 
         target_color: Color = target_face.color
 
-        with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
+        with self._setup_l1_and_target_and_track_slices(l1_white_tracker,
+                                                        target_face,
+                                                        slice_row_index):
 
             for cs, rc in self._iterate_all_tracked_slices_and_index(target_face):
 
                 if cs.color == target_color:
                     continue
 
-                # now search source on my face
+                # now search a source on my face
                 source_rc = rc
                 for _ in range(3):
                     source_rc = self.rotate_point_clockwise(source_rc[0], source_rc[1], 1)
@@ -331,7 +340,7 @@ class NxNCenters2(SolverElement):
                                                     _SearchBlockMode.CompleteBlock):
                             work_was_done = True
 
-                        # restore original setup, need to improve
+                        # restore the original setup, need to improve
                         self._position_l1_and_target(l1_white_tracker, target_face)
 
                         break
@@ -347,20 +356,19 @@ class NxNCenters2(SolverElement):
         """
         Solve center pieces from a specific source face.
 
-        The target face is brought to front, source face to up or back,
+        The target face is brought to front, source face to up or back;
         then block commutators are used to move pieces.
 
-        :param target_face: target face tracker
+        :param target_face: Target face tracker
         :param source_face: source face tracker
         :param slice_row_index: row index to solve
         :return: True if work was done
         """
 
         with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
-            # positon and tracking need go inside
+            # position and tracking need to go inside
             return self._solve_single_center_piece_from_source_face_impl(l1_white_tracker, target_face, source_face,
-                                                                     slice_row_index)
-
+                                                                         slice_row_index)
 
     def _solve_single_center_piece_from_source_face_impl(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                          source_face: FaceTracker,
@@ -416,7 +424,7 @@ class NxNCenters2(SolverElement):
                             face: Face, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
                             mode: _SearchBlockMode) -> bool:
         """
-        Execute block commutator to move pieces from source to target.
+        Execute a block commutator to move pieces from source to target.
 
         The commutator is: [M', F, M', F', M, F, M, F']
         This is BALANCED (2 F + 2 F' = 0), so corners return to their position.
@@ -453,10 +461,10 @@ class NxNCenters2(SolverElement):
 
         :param face: Target face (must be front)
         :param source_face: Source face (must be up or back)
-        :param rc1: one corner of block, center slices indexes [0..n)
-        :param rc2: other corner of block, center slices indexes [0..n)
+        :param rc1: one corner of the block, center slices indexes [0..n)
+        :param rc2: another corner of the block, center slices indexes [0..n)
         :param mode: to search complete block or with colors more than mine
-        :return: False if block not found (or no work need to be done)
+        :return: False if the block is not found (or no work need to be done)
         """
         cube: Cube = face.cube
         assert face is cube.front

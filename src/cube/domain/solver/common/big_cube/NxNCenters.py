@@ -12,7 +12,7 @@ from cube.domain.model.cube_layout.cube_boy import color2long
 from cube.domain.model.cube_layout import CubeLayout, create_layout
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.tracker._base import FaceTracker
+from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider

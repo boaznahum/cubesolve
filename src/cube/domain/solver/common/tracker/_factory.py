@@ -123,7 +123,7 @@ from cube.domain.model.cube_layout import CubeLayout, create_layout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
-from cube.domain.solver.common.tracker._base import (
+from cube.domain.solver.common.tracker.trackers import (
     FaceTracker,
     MarkedFaceTracker,
     SimpleFaceTracker,
