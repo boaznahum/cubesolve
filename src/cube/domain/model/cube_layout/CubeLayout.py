@@ -12,6 +12,14 @@ from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 
 
+def _build_adjacent(all_opposite: Mapping[FaceName, FaceName]) -> Mapping[FaceName, tuple[FaceName, ...]]:
+    """Build adjacent faces mapping from opposite faces mapping."""
+    return {
+        face: tuple(f for f in FaceName if f != face and f != all_opposite[face])
+        for face in FaceName
+    }
+
+
 class CubeLayout:
     _opposite: Mapping[FaceName, FaceName] = {FaceName.F: FaceName.B, FaceName.U: FaceName.D, FaceName.L: FaceName.R}
 
@@ -19,15 +27,8 @@ class CubeLayout:
 
     _all_opposite: Mapping[FaceName, FaceName] = {**_opposite, **_rev_opposite}
 
-    # Pre-computed adjacent faces for each face (faces that share an edge)
-    _adjacent: Mapping[FaceName, tuple[FaceName, ...]] = {
-        FaceName.F: (FaceName.U, FaceName.D, FaceName.L, FaceName.R),
-        FaceName.B: (FaceName.U, FaceName.D, FaceName.L, FaceName.R),
-        FaceName.U: (FaceName.F, FaceName.B, FaceName.L, FaceName.R),
-        FaceName.D: (FaceName.F, FaceName.B, FaceName.L, FaceName.R),
-        FaceName.L: (FaceName.F, FaceName.B, FaceName.U, FaceName.D),
-        FaceName.R: (FaceName.F, FaceName.B, FaceName.U, FaceName.D),
-    }
+    # Derived from _all_opposite: adjacent = all faces except self and opposite
+    _adjacent: Mapping[FaceName, tuple[FaceName, ...]] = _build_adjacent(_all_opposite)
 
     def __init__(self, read_only: bool, faces: Mapping[FaceName, Color],
                  sp: IServiceProvider) -> None:

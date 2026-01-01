@@ -66,25 +66,23 @@ class Scrambler:
         if length is None:
             length = rng.randint(3, 7) if what == ScrambleWhat.WHOLE_CUBE else rng.randint(20, 40)
 
-        # Build move pool based on flags
-        moves: list[str] = []
+        # Build move pool based on flags - use actual Alg instances
+        moves: list[Alg] = []
         if ScrambleWhat.WHOLE_CUBE in what:
-            moves.extend(["x", "x'", "x2", "y", "y'", "y2", "z", "z'", "z2"])
+            for alg in [Algs.X, Algs.Y, Algs.Z]:
+                moves.extend([alg, alg.inv(), alg * 2])
         if ScrambleWhat.FACE in what:
-            moves.extend(["R", "R'", "R2", "L", "L'", "L2",
-                          "U", "U'", "U2", "D", "D'", "D2",
-                          "F", "F'", "F2", "B", "B'", "B2"])
+            for alg in [Algs.R, Algs.L, Algs.U, Algs.D, Algs.F, Algs.B]:
+                moves.extend([alg, alg.inv(), alg * 2])
         if ScrambleWhat.SLICE in what:
-            moves.extend(["M", "M'", "M2", "E", "E'", "E2", "S", "S'", "S2"])
+            for alg in [Algs.M, Algs.E, Algs.S]:
+                moves.extend([alg, alg.inv(), alg * 2])
 
         if not moves:
             raise ValueError(f"No moves available for scramble type: {what}")
 
         # Generate scramble
-        algs = []
-        for _ in range(length):
-            move = rng.choice(moves)
-            algs.append(Algs.parse(move))
+        algs = [rng.choice(moves) for _ in range(length)]
 
         alg = SeqAlg(f"scramble_{what.name}_{seed}", *algs)
         self._app.op.play(alg, animation=animation)

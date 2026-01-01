@@ -202,8 +202,8 @@ class _LBLSlices(SolverElement):
     def _solve_face_row_simple(
             self, l1_white_tracker: FaceTracker, face_tracker: FaceTracker, slice_index: int
     ) -> None:
-
-        self._centers.solve_single_center_row_slice(l1_white_tracker, face_tracker, slice_index)
+        row = self.slice_to_row(slice_index)
+        self._centers.solve_single_center_row_slice(l1_white_tracker, face_tracker, row)
 
     def _is_face_row_solved(self, face: Face, row: int, target_color: Color) -> bool:
         """Check if a specific row on a face has all correct colors."""

@@ -17,13 +17,13 @@ from typing import Tuple
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 7  # Using debug4x4 texture set for 4x4 debugging
+CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
 # Available solvers: LBL, CFOP, Kociemba, Cage, LBL-Direct
 # Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "lbl-d" (for LBL-Direct)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "lbl"
+DEFAULT_SOLVER = "lbl-d"
 
 # 3x3 solver used by cage method for corner solving (Phase 1b)
 # Options: "beginner", "cfop", "kociemba"
