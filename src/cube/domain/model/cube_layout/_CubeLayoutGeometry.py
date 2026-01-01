@@ -14,16 +14,21 @@ if TYPE_CHECKING:
 
 class _CubeLayoutGeometry:
     """
-    All un solved geometry questions
+    Private implementation of cube geometry calculations.
 
-        I think if we start from F as known, and travel on slice  path  that we can say it is hardcoded
-            then we can calculate this values, bit not now
+    This class answers geometric questions about the relationship between
+    slices (M, E, S) and faces. It provides the static implementation that
+    is exposed through the SliceLayout and CubeLayout protocols.
 
-        the idea is to hardcode the cuve layout in CubeLayout, use Cube to build it
-        and use this class to use it too, I think once we have slice path and the
-        ltr system of each edge we can answer this question, it is good thinking.
-        meanwhile i'm harcoding it
+    Methods are currently hardcoded based on empirical observation. Future
+    work (Issue #55) may derive these mathematically from slice traversal
+    paths and face coordinate systems.
 
+    See Also:
+        - SliceLayout protocol: exposes does_slice_cut_rows_or_columns,
+          does_slice_of_face_start_with_face as instance methods
+        - CubeLayout protocol: exposes iterate_orthogonal_face_center_pieces
+        - GEOMETRY.md: detailed documentation of geometric relationships
     """
 
     @staticmethod
