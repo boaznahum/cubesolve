@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from cube.domain.model import FaceName
+from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
 
 

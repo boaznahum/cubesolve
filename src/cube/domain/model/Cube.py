@@ -365,9 +365,6 @@ class Cube(CubeSupplier):
 
         self._color_2_face = {}
 
-        # Use centralized BOY layout instance
-        from .cube_layout import cube_boy
-
         boy = self._layout
 
         f: Face = Face(self, FaceName.F, boy[FaceName.F])
