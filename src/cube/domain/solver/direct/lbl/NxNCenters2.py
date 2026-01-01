@@ -121,7 +121,7 @@ class NxNCenters2(SolverElement):
             super().debug("NxX 2 Centers:", args)
 
     def solve_single_center_row_slice(
-            self, l1_white_tracker: FaceTracker, face_tracker: FaceTracker, row_slice_index: int
+            self, l1_white_tracker: FaceTracker, face_tracker: FaceTracker, slice_index: int
     ) -> None:
         """
         Solve a single row of center pieces on a face.
@@ -131,12 +131,12 @@ class NxNCenters2(SolverElement):
 
         Args:
             face_tracker: Face to solve
-            row_slice_index: Row index to solve
+            slice_index: Slice index to solve  zeo based
         """
-        self._solve_single_center_row_slice(l1_white_tracker, face_tracker, row_slice_index)
+        self._solve_single_center_row_slice(l1_white_tracker, face_tracker, slice_index)
 
     def _solve_single_center_row_slice(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
-                                       slice_row_index: int):
+                                       slice_index: int):
 
         work_was_done = False
 
@@ -149,11 +149,11 @@ class NxNCenters2(SolverElement):
             if iter_count > max_iter:
                 raise InternalSWError("Maximum number of iterations reached")
 
-            with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
+            with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_index):
 
                 # positon and tracking need go inside
                 if self._solve_single_center_row_slice_all_slices(l1_white_tracker, target_face,
-                                                                  slice_row_index):
+                                                                  slice_index):
                     work_was_done = True
 
                 # WIP: Commented out - this does position and tracking again !!!
@@ -165,7 +165,6 @@ class NxNCenters2(SolverElement):
 
             return work_was_done
 
-        self._solve_single_center_row_slice_all_slices(l1_white_tracker, target_face, slice_row_index)
 
     def _solve_single_center_row_slice_all_slices(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                   slice_row_index: int
@@ -178,7 +177,7 @@ class NxNCenters2(SolverElement):
             if source_face is not l1_white_tracker:
                 # === HEADLINE 1: SLICE ===
                 with self.ann.annotate(
-                        h1=lambda: f"Face {target_face.color} Slice {slice_row_index} Source {source_face.face.color}"):
+                        h1=lambda: f"Solving Face {target_face.color_at_face_str} Slice {slice_row_index} {target_face.color}  from Source {source_face.color_at_face_str}"):
 
                     if self._solve_single_center_piece_from_source_face(l1_white_tracker, target_face, source_face,
                                                                         slice_row_index):
