@@ -12,7 +12,8 @@
       "WebFetch(domain:ruwix.com)",
       "WebFetch(domain:www.youtube.com)",
       "WebFetch(domain:charlesreid1.com)",
-      "WebFetch(domain:www.reddit.com)"
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []
