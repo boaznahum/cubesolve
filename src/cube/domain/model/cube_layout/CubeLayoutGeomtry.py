@@ -117,18 +117,12 @@ class CubeLayoutGeomtry:
         See also: does_slice_cut_rows_or_columns()
         """
         if slice_name == SliceName.S:
-            if face_name in [FaceName.L, FaceName.D, FaceName.U]:
-                # S[0] is closest to F. On L/D/U faces, F is at the far end (not row/col 0)
-                return False
 
+            if face_name in [FaceName.L, FaceName.D]:
+                # slice cut the rows so we take columns like in M
+                return False #S[1] is on L[last]
         elif slice_name == SliceName.M:
             if face_name in [FaceName.B]:
-                # M[0] is closest to L, on B face L is on the right (inverted)
-                return False
-
-        elif slice_name == SliceName.E:
-            # E[0] is closest to D. On all side faces, D is at the bottom (row n-1)
-            if face_name in [FaceName.F, FaceName.B, FaceName.L, FaceName.R]:
                 return False
 
         return True
