@@ -5,7 +5,6 @@ Simple ASCII art renderer. Uses the same approach as ConsoleViewer but simpler.
 Direction/orientation may need adjustment based on user testing.
 """
 
-from typing import Sequence
 
 from rich.console import Console
 from rich.text import Text

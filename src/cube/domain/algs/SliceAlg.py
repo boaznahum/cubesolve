@@ -48,7 +48,7 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         self._slice_name = slice_name
 
     @property
-    def slice_name(self) -> SliceName | None:
+    def slice_name(self) -> SliceName:
         return self._slice_name
 
     @final

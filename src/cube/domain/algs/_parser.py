@@ -253,6 +253,9 @@ def _token_to_alg(t: str) -> _Alg:
 
     # Apply slice to base algorithm FIRST (before modifiers)
     if slice_spec is not None:
+        from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
+        if not isinstance(base_alg, SliceAbleAlg):
+            raise InternalSWError(f"Slice notation not supported for {base_alg}")
         if isinstance(slice_spec, slice):
             base_alg = base_alg[slice_spec.start:slice_spec.stop]
         else:

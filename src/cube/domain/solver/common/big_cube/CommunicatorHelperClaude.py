@@ -13,7 +13,6 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 import sys
 from dataclasses import dataclass
 from typing import Tuple, TypeAlias
-from unittest import case
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
