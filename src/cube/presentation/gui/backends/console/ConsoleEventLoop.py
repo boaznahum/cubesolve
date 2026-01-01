@@ -77,7 +77,7 @@ class ConsoleEventLoop(EventLoop):
                     import keyboard
                     # Loop until we get a KEY_DOWN event (ignore KEY_UP)
                     while True:
-                        event = keyboard.read_event(suppress=True)
+                        event = keyboard.read_event(suppress=False)
                         if event.event_type == keyboard.KEY_DOWN:
                             return event.name
                         # KEY_UP events are ignored, continue waiting
