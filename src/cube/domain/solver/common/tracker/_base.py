@@ -79,8 +79,14 @@ class FaceTracker(ABC):
         return self._color
 
     @property
-    def color_at_face_str(self):
-        """claude doc and types"""
+    def color_at_face_str(self) -> str:
+        """Return color@face string representation of the tracked face.
+
+        Delegates to the underlying Face.color_at_face_str property.
+
+        Returns:
+            String in format "COLOR@FACE" like "WHITE@D"
+        """
         return self.face.color_at_face_str
 
     def __str__(self) -> str:
