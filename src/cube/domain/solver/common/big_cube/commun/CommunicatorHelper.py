@@ -422,20 +422,11 @@ class CommunicatorHelper(SolverElement):
                 f"Face pair ({source_face}, {target_face}) not yet implemented"
             )
 
-        cube = self.cube
-
-        # Convert LTR to index coordinates
-        # claude see a new document, face is always ltt, no need to convert
-        # target_idx_block = self.ltr_block_to_index(target, target_block)
-
         # now we assume block of size 1
         target_point_begin: Point = target_block[0]
 
-        # try a new algorithm
         translation_result: FaceTranslationResult = Face2FaceTranslator.translate(target_face, source_face,
                                                                                   target_point_begin)
-
-        new_expected_source_1_point = translation_result.source_coord
 
         return _InternalCommData(translation_result.source_coord, translation_result)
 
@@ -528,8 +519,7 @@ class CommunicatorHelper(SolverElement):
         if source_face is target_face:
             raise ValueError("Source and target must be different faces")
 
-        source_block_was_none = source_block is None
-        if source_block_was_none:
+        if source_block is None:
             source_block = target_block
 
         # currently we support  only blockof size 1
@@ -541,15 +531,6 @@ class CommunicatorHelper(SolverElement):
             raise NotImplementedError(
                 f"Face pair ({source_face}, {target_face}) not yet implemented"
             )
-
-        cube = self.cube
-
-        # Convert LTR to index coordinates
-        # claude see a new document, face is always ltt, no need to convert
-        # target_idx_block = self.ltr_block_to_index(target, target_block)
-
-        source_block_normalized = self._normalize_block(source_block)
-        target_block_normalized = self._normalize_block(target_block)
 
         # now we assume a block of size 1
         source_1_point: Point = source_block[0]
@@ -569,7 +550,7 @@ class CommunicatorHelper(SolverElement):
         slice_base_alg: SliceAlg = slice_alg_data.whole_slice_alg
 
         on_front_rotate_n, target_block_after_rotate = \
-            self._compute_rotate_on_target(cube, target_face.name, slice_base_alg.slice_name, target_block)
+            self._compute_rotate_on_target(self.cube, target_face.name, slice_base_alg.slice_name, target_block)
 
         on_front_rotate: Alg = Algs.of_face(target_face.name) * on_front_rotate_n
 

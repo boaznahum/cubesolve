@@ -5,15 +5,14 @@ Simple ASCII art renderer. Uses the same approach as ConsoleViewer but simpler.
 Direction/orientation may need adjustment based on user testing.
 """
 
-
 from rich.console import Console
 from rich.text import Text
-
-_console = Console()
 
 from cube.domain.model.Color import Color
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
+
+_console = Console()
 
 
 # Direction config for each face: (flip_rows, flip_cols, invert_lr_idx, invert_tb_idx)

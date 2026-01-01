@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
-    from cube.domain.algs import Alg
+    from cube.domain.algs.Alg import Alg
 
 
 class ScrambleWhat(Flag):
@@ -45,7 +45,7 @@ class ScramblerProtocol(Protocol):
         ...
 
 
-class Scrambler:
+class Scrambler(ScramblerProtocol):
     """Implementation of ScramblerProtocol."""
 
     def __init__(self, app: "AbstractApp") -> None:
@@ -69,14 +69,14 @@ class Scrambler:
         # Build move pool based on flags - use actual Alg instances
         moves: list[Alg] = []
         if ScrambleWhat.WHOLE_CUBE in what:
-            for alg in [Algs.X, Algs.Y, Algs.Z]:
-                moves.extend([alg, alg.inv(), alg * 2])
+            for whole_alg in [Algs.X, Algs.Y, Algs.Z]:
+                moves.extend([whole_alg, whole_alg.inv(), whole_alg * 2])
         if ScrambleWhat.FACE in what:
-            for alg in [Algs.R, Algs.L, Algs.U, Algs.D, Algs.F, Algs.B]:
-                moves.extend([alg, alg.inv(), alg * 2])
+            for face_alg in [Algs.R, Algs.L, Algs.U, Algs.D, Algs.F, Algs.B]:
+                moves.extend([face_alg, face_alg.inv(), face_alg * 2])
         if ScrambleWhat.SLICE in what:
-            for alg in [Algs.M, Algs.E, Algs.S]:
-                moves.extend([alg, alg.inv(), alg * 2])
+            for slice_alg in [Algs.M, Algs.E, Algs.S]:
+                moves.extend([slice_alg, slice_alg.inv(), slice_alg * 2])
 
         if not moves:
             raise ValueError(f"No moves available for scramble type: {what}")

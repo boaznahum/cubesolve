@@ -13,9 +13,12 @@ from collections.abc import Iterable, Iterator
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, ContextManager, Tuple, cast
 
-from cube.domain.model import Corner, Edge, Part, PartSlice
 from cube.domain.model._elements import PartColorsID
+from cube.domain.model.Corner import Corner
+from cube.domain.model.Edge import Edge
+from cube.domain.model.Part import Part
 from cube.domain.model.PartEdge import PartEdge
+from cube.domain.model.PartSlice import PartSlice
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.protocols.AnnotationProtocol import (
     SupportsAnnotation,

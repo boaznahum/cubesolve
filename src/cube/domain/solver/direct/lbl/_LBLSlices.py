@@ -245,12 +245,6 @@ class _LBLSlices(SolverElement):
         IMPORTANT: Layer 1 must be on DOWN for the commutator to work correctly.
         The commutator uses UP as source, so if Layer 1 is on UP, we'll mess it up.
         """
-
-        # Ensure Layer 1 is on DOWN (commutator uses UP as source)
-        l1_face = l1_white_tracker.face
-        cube = self.cube
-        op = self._slv.op
-
         # Solve all slices from bottom to top
         if True:  # WIP: Only solve first slice for now
             r = range(1)
