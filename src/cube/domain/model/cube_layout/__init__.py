@@ -5,7 +5,12 @@ from typing import Mapping
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
-from cube.domain.model.cube_layout.cube_layout import CubeLayout
+from cube.domain.model.cube_layout.cube_layout import (
+    CubeLayout,
+    opposite,
+    is_adjacent,
+    get_adjacent_faces,
+)
 from cube.domain.model.cube_layout._CubeLayout import _CubeLayout
 from cube.utils.config_protocol import IServiceProvider
 
@@ -34,4 +39,7 @@ def create_layout(
 __all__ = [
     'CubeLayout',
     'create_layout',
+    'opposite',
+    'is_adjacent',
+    'get_adjacent_faces',
 ]

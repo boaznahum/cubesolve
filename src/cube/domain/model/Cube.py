@@ -383,11 +383,11 @@ class Cube(CubeSupplier):
             FaceName.B: b
         }
 
-        # Set opposite face relationships using CubeLayout.opposite()
+        # Set opposite face relationships using layout.opposite()
         # Only set once per pair to avoid duplicate calls
         set_pairs: set[frozenset[FaceName]] = set()
         for fn, face in self._faces.items():
-            opposite_fn = CubeLayout.opposite(fn)
+            opposite_fn = boy.opposite(fn)
             pair = frozenset([fn, opposite_fn])
             if pair not in set_pairs:
                 face.set_opposite(self._faces[opposite_fn])

@@ -125,7 +125,6 @@ from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.model import Cube
-from cube.domain.model.cube_layout.cube_layout import CubeLayout
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
@@ -637,7 +636,7 @@ class Face2FaceTranslator:
                 # Same direction as whole-cube rotation
                 slice_index = _compute_slice_index(target_name, slice_name, target_coord, n_slices)
                 return [SliceAlgorithmResult(slice_alg, slice_index, whole_cube_base_n)]
-            elif whole_on_face is CubeLayout.opposite(slice_alg_face_name):
+            elif whole_on_face is cube.layout.opposite(slice_alg_face_name):
                 # Opposite direction - negate n
                 slice_index = _compute_slice_index(target_name, slice_name, target_coord, n_slices)
                 return [SliceAlgorithmResult(slice_alg, slice_index, -whole_cube_base_n)]

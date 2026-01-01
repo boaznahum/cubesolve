@@ -26,8 +26,8 @@ Usage:
     # Check if a layout matches BOY (preferred method)
     is_boy = some_layout.is_boy()
 
-    # Get opposite faces (via CubeLayout)
-    opposite = CubeLayout.opposite(FaceName.F)  # FaceName.B
+    # Get opposite faces (via layout instance)
+    opposite = boy.opposite(FaceName.F)  # FaceName.B
 
 Important:
     - get_boy_layout() returns a CACHED SINGLETON - same instance every time

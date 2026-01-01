@@ -3,6 +3,17 @@ import pytest
 from cube.domain.algs import Algs
 from cube.application.AbstractApp import AbstractApp
 from cube.application import _config as config
+from cube.domain.solver.SolverName import SolverName
+
+# All solvers (unsupported ones will be skipped via skip_if_not_supported)
+ALL_SOLVERS = list(SolverName)
+
+
+def skip_if_not_supported(solver_name: SolverName, cube_size: int) -> None:
+    """Skip test if solver doesn't support this cube size."""
+    skip_reason = solver_name.meta.get_skip_reason(cube_size)
+    if skip_reason:
+        pytest.skip(skip_reason)
 
 
 @pytest.fixture(autouse=True)
@@ -15,11 +26,13 @@ def reset_sanity_config():
 
 @pytest.mark.parametrize("cube_size", [3, 5])
 @pytest.mark.parametrize("sanity_check", [True, False])
-def test_scramble_and_solve(cube_size: int, sanity_check: bool):
+@pytest.mark.parametrize("solver", ALL_SOLVERS)
+def test_scramble_and_solve(cube_size: int, sanity_check: bool, solver: SolverName):
     """Test that a scrambled cube can be solved correctly."""
+    skip_if_not_supported(solver, cube_size)
     config.CHECK_CUBE_SANITY = sanity_check
 
-    app = AbstractApp.create_non_default(cube_size, animation=False)
+    app = AbstractApp.create_non_default(cube_size, animation=False, solver=solver)
     cube = app.cube
 
     alg = Algs.scramble(cube.size, 4)
@@ -27,10 +40,10 @@ def test_scramble_and_solve(cube_size: int, sanity_check: bool):
 
     result = app.slv.solve()
 
-    assert cube.solved, f"Cube of size {cube_size} should be solved"
+    assert cube.solved, f"Cube of size {cube_size} should be solved by {solver.name}"
 
     # Log solve details (visible with pytest -v)
-    print(f"\nCube size: {cube_size}, Sanity: {sanity_check}")
+    print(f"\nCube size: {cube_size}, Sanity: {sanity_check}, Solver: {solver.name}")
     print(f"  corner swap: {result.was_corner_swap}")
     print(f"  even edge parity: {result.was_even_edge_parity}")
     print(f"  partial edge parity: {result.was_partial_edge_parity}")
@@ -38,7 +51,8 @@ def test_scramble_and_solve(cube_size: int, sanity_check: bool):
 
 
 @pytest.mark.parametrize("seed", [1, 2, 3])
-def test_scramble_by_seed_and_solve(seed: int):
+@pytest.mark.parametrize("solver", ALL_SOLVERS)
+def test_scramble_by_seed_and_solve(seed: int, solver: SolverName):
     """
     Test scramble with specific seeds and solve - mirrors GUI test sequences.
 
@@ -48,16 +62,17 @@ def test_scramble_by_seed_and_solve(seed: int):
     Matches GUI test: Command.SCRAMBLE_1 + Command.SOLVE_ALL + Command.QUIT
     Which calls: app.scramble(seed, None, animation=False) then app.slv.solve()
     """
-    app = AbstractApp.create_non_default(cube_size=3, animation=False)
+    skip_if_not_supported(solver, 3)
+    app = AbstractApp.create_non_default(cube_size=3, animation=False, solver=solver)
 
     # Use app.scramble() same as GUI - this resets op and uses op.play()
     app.scramble(scramble_key=seed, scramble_size=None, animation=False, verbose=True)
 
     result = app.slv.solve(animation=False)
 
-    assert app.cube.solved, f"Cube should be solved after scramble seed {seed}"
+    assert app.cube.solved, f"Cube should be solved after scramble seed {seed} by {solver.name}"
 
-    print(f"\nScramble seed {seed} test:")
+    print(f"\nScramble seed {seed} test ({solver.name}):")
     print(f"  corner swap: {result.was_corner_swap}")
     print(f"  even edge parity: {result.was_even_edge_parity}")
     print(f"  partial edge parity: {result.was_partial_edge_parity}")

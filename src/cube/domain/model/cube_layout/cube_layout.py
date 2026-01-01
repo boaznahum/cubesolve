@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Collection
-from typing import TYPE_CHECKING, ClassVar, Mapping, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
@@ -30,7 +30,7 @@ def _build_adjacent(all_opposite: Mapping[FaceName, FaceName]) -> Mapping[FaceNa
     }
 
 
-# Class-level constants for face geometry (shared by all implementations)
+# Module-level constants for face geometry
 _OPPOSITE: Mapping[FaceName, FaceName] = {
     FaceName.F: FaceName.B,
     FaceName.U: FaceName.D,
@@ -44,36 +44,94 @@ _ALL_OPPOSITE: Mapping[FaceName, FaceName] = {**_OPPOSITE, **_REV_OPPOSITE}
 _ADJACENT: Mapping[FaceName, tuple[FaceName, ...]] = _build_adjacent(_ALL_OPPOSITE)
 
 
+# ============================================================================
+# Geometry Functions (module-level, not part of protocol)
+# ============================================================================
+
+def opposite(fn: FaceName) -> FaceName:
+    """Get the face opposite to the given face.
+
+    Opposite faces never share an edge or corner. On a solved cube,
+    opposite faces have complementary colors.
+
+    Opposite pairs:
+        F ↔ B (Front/Back)
+        U ↔ D (Up/Down)
+        L ↔ R (Left/Right)
+
+    Args:
+        fn: The face to get the opposite of, see :class:`FaceName`.
+
+    Returns:
+        The opposite :class:`FaceName`.
+
+    Example:
+        opposite(FaceName.F)  # Returns FaceName.B
+
+    See Also:
+        :func:`is_adjacent`: Check if two faces share an edge.
+        :func:`get_adjacent_faces`: Get all 4 adjacent faces.
+        :meth:`CubeLayout.opposite_color`: Get color on opposite face.
+    """
+    return _ALL_OPPOSITE[fn]
+
+
+def is_adjacent(face1: FaceName, face2: FaceName) -> bool:
+    """Check if two faces are adjacent (share an edge).
+
+    Two faces are adjacent if they are neither the same nor opposite.
+    Adjacent faces share exactly one edge on the cube.
+
+    Example:
+        F and U are adjacent (share top edge of F)
+        F and B are NOT adjacent (they are opposite)
+        F and F are NOT adjacent (same face)
+
+    Args:
+        face1: First face.
+        face2: Second face.
+
+    Returns:
+        True if faces share an edge, False otherwise.
+    """
+    return face2 in _ADJACENT[face1]
+
+
+def get_adjacent_faces(face: FaceName) -> tuple[FaceName, ...]:
+    """Get all faces adjacent to the given face (faces that share an edge).
+
+    Each face has exactly 4 adjacent faces (all except itself and its opposite).
+
+    Args:
+        face: The face to get adjacent faces for.
+
+    Returns:
+        Tuple of 4 adjacent FaceNames.
+
+    Example:
+        get_adjacent_faces(FaceName.F)  # (U, R, D, L)
+    """
+    return _ADJACENT[face]
+
+
+# ============================================================================
+# CubeLayout Protocol
+# ============================================================================
+
 @runtime_checkable
 class CubeLayout(Protocol):
     """Protocol for cube face-color layout management.
 
     A CubeLayout maps each face (F, R, U, L, D, B) to a color.
-    It provides both instance methods for working with a specific layout
-    and static methods for geometric face relationships.
 
-    Instance Usage:
-        layout = get_boy_layout(sp)
+    Usage:
+        layout = cube.layout
         color = layout[FaceName.F]  # Get front face color
-        opposite = layout.opposite_color(Color.BLUE)  # Get color opposite to blue
-
-    Static Usage (geometry):
-        opposite_face = CubeLayout.opposite(FaceName.F)  # Returns FaceName.B
-        is_adj = CubeLayout.is_adjacent(FaceName.F, FaceName.U)  # Returns True
-        adjacent = CubeLayout.get_adjacent_faces(FaceName.F)  # (U, R, D, L)
-
-    Attributes:
-        _opposite: Mapping of faces to their opposites (F→B, U→D, L→R)
-        _all_opposite: Complete opposite mapping (both directions)
-        _adjacent: Mapping of each face to its 4 adjacent faces
+        opp = layout.opposite_color(Color.BLUE)  # Get color opposite to blue
+        opposite_face = layout.opposite(FaceName.F)  # Returns FaceName.B
+        is_adj = layout.is_adjacent(FaceName.F, FaceName.U)  # Returns True
+        adjacent = layout.get_adjacent_faces(FaceName.F)  # (U, R, D, L)
     """
-
-    # Class-level geometry constants (shared by protocol and implementations)
-    _opposite: ClassVar[Mapping[FaceName, FaceName]] = _OPPOSITE
-    _all_opposite: ClassVar[Mapping[FaceName, FaceName]] = _ALL_OPPOSITE
-    _adjacent: ClassVar[Mapping[FaceName, tuple[FaceName, ...]]] = _ADJACENT
-
-
 
     @property
     @abstractmethod
@@ -98,9 +156,13 @@ class CubeLayout(Protocol):
 
     @abstractmethod
     def get_slice(self, slice_name: SliceName) -> SliceLayout:
-        """Get the slice for a specific face.
-        Args:
+        """Get the slice layout for a specific slice.
 
+        Args:
+            slice_name: The slice (M, E, or S).
+
+        Returns:
+            SliceLayout for that slice.
         """
         ...
 
@@ -124,67 +186,6 @@ class CubeLayout(Protocol):
             appear together on an edge piece.
         """
         ...
-
-    @staticmethod
-    def opposite(fn: FaceName) -> FaceName:
-        """Get the face opposite to the given face.
-
-        Opposite faces never share an edge or corner. On a solved cube,
-        opposite faces have complementary colors.
-
-        Opposite pairs:
-            F ↔ B (Front/Back)
-            U ↔ D (Up/Down)
-            L ↔ R (Left/Right)
-
-        Args:
-            fn: The face to get the opposite of.
-
-        Returns:
-            The opposite face.
-
-        Example:
-            CubeLayout.opposite(FaceName.F)  # Returns FaceName.B
-        """
-        return _ALL_OPPOSITE[fn]
-
-    @staticmethod
-    def is_adjacent(face1: FaceName, face2: FaceName) -> bool:
-        """Check if two faces are adjacent (share an edge).
-
-        Two faces are adjacent if they are neither the same nor opposite.
-        Adjacent faces share exactly one edge on the cube.
-
-        Example:
-            F and U are adjacent (share top edge of F)
-            F and B are NOT adjacent (they are opposite)
-            F and F are NOT adjacent (same face)
-
-        Args:
-            face1: First face.
-            face2: Second face.
-
-        Returns:
-            True if faces share an edge, False otherwise.
-        """
-        return face2 in _ADJACENT[face1]
-
-    @staticmethod
-    def get_adjacent_faces(face: FaceName) -> tuple[FaceName, ...]:
-        """Get all faces adjacent to the given face (faces that share an edge).
-
-        Each face has exactly 4 adjacent faces (all except itself and its opposite).
-
-        Args:
-            face: The face to get adjacent faces for.
-
-        Returns:
-            Tuple of 4 adjacent FaceNames.
-
-        Example:
-            CubeLayout.get_adjacent_faces(FaceName.F)  # (U, R, D, L)
-        """
-        return _ADJACENT[face]
 
     @abstractmethod
     def opposite_color(self, color: Color) -> Color:
@@ -260,5 +261,70 @@ class CubeLayout(Protocol):
         Returns:
             A new CubeLayout with the same face-color mapping,
             but with read_only=False.
+        """
+        ...
+
+    # =========================================================================
+    # Geometry Instance Methods
+    # =========================================================================
+
+    @abstractmethod
+    def opposite(self, fn: FaceName) -> FaceName:
+        """Get the face opposite to the given face.
+
+        Opposite faces never share an edge or corner. On a solved cube,
+        opposite faces have complementary colors.
+
+        Opposite pairs:
+            F ↔ B (Front/Back)
+            U ↔ D (Up/Down)
+            L ↔ R (Left/Right)
+
+        Args:
+            fn: The face to get the opposite of.
+
+        Returns:
+            The opposite FaceName.
+
+        Example:
+            layout.opposite(FaceName.F)  # Returns FaceName.B
+        """
+        ...
+
+    @abstractmethod
+    def is_adjacent(self, face1: FaceName, face2: FaceName) -> bool:
+        """Check if two faces are adjacent (share an edge).
+
+        Two faces are adjacent if they are neither the same nor opposite.
+        Adjacent faces share exactly one edge on the cube.
+
+        Example:
+            F and U are adjacent (share top edge of F)
+            F and B are NOT adjacent (they are opposite)
+            F and F are NOT adjacent (same face)
+
+        Args:
+            face1: First face.
+            face2: Second face.
+
+        Returns:
+            True if faces share an edge, False otherwise.
+        """
+        ...
+
+    @abstractmethod
+    def get_adjacent_faces(self, face: FaceName) -> tuple[FaceName, ...]:
+        """Get all faces adjacent to the given face (faces that share an edge).
+
+        Each face has exactly 4 adjacent faces (all except itself and its opposite).
+
+        Args:
+            face: The face to get adjacent faces for.
+
+        Returns:
+            Tuple of 4 adjacent FaceNames.
+
+        Example:
+            layout.get_adjacent_faces(FaceName.F)  # (U, R, D, L)
         """
         ...

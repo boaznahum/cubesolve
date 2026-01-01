@@ -3,7 +3,15 @@ import pytest
 from cube.domain import algs
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.model.Cube import Cube
+from cube.domain.solver.SolverName import SolverName
 from tests.test_utils import _test_sp
+
+# All solvers (unsupported ones will be skipped via skip_if_not_supported)
+def skip_if_not_supported(solver_name: SolverName, cube_size: int) -> None:
+    """Skip test if solver doesn't support this cube size."""
+    skip_reason = solver_name.meta.get_skip_reason(cube_size)
+    if skip_reason:
+        pytest.skip(skip_reason)
 
 
 def test_scramble1_preserves_boy_large_cube() -> None:
@@ -18,11 +26,13 @@ def test_scramble1_preserves_boy_large_cube() -> None:
     assert cube.is_boy
 
 
-def test_solve_preserves_boy() -> None:
+@pytest.mark.parametrize("solver", list(SolverName))
+def test_solve_preserves_boy(solver: SolverName) -> None:
     """Test that solving preserves BOY orientation."""
     size = 4
+    skip_if_not_supported(solver, size)
 
-    app = AbstractApp.create_non_default(size, animation=False)
+    app = AbstractApp.create_non_default(size, animation=False, solver=solver)
     cube = app.cube
 
     a: algs.Alg = algs.Algs.scramble1(cube.size)
@@ -30,4 +40,4 @@ def test_solve_preserves_boy() -> None:
 
     app.slv.solve()
 
-    assert cube.is_boy
+    assert cube.is_boy, f"Solver {solver.name} should preserve BOY orientation"

@@ -16,6 +16,7 @@ class CLGColRow(Enum):
     ROW = auto()
     COL = auto()
 
+
 class CubeLayoutGeomtry:
     """
     All un solved geometry questions
@@ -29,7 +30,6 @@ class CubeLayoutGeomtry:
         meanwhile i'm harcoding it
 
     """
-
 
     @staticmethod
     def does_slice_cut_rows_or_columns(slice_name: SliceName, face_name: FaceName) -> CLGColRow:
@@ -46,11 +46,11 @@ class CubeLayoutGeomtry:
             return CLGColRow.ROW
 
         elif slice_name == SliceName.E:
-            return CLGColRow.COL # slice cut the column so we check row
+            return CLGColRow.COL  # slice cut the column so we check row
 
         elif slice_name == SliceName.S:
 
-            if face_name in  [FaceName.R, FaceName.L]:
+            if face_name in [FaceName.R, FaceName.L]:
                 # slice cut the rows so we take columns like in M
                 return CLGColRow.ROW
             else:
@@ -120,7 +120,7 @@ class CubeLayoutGeomtry:
 
             if face_name in [FaceName.L, FaceName.D]:
                 # slice cut the rows so we take columns like in M
-                return False #S[1] is on L[last]
+                return False  #S[1] is on L[last]
         elif slice_name == SliceName.M:
             if face_name in [FaceName.B]:
                 return False
@@ -135,10 +135,10 @@ class CubeLayoutGeomtry:
 
     @staticmethod
     def iterate_orthogonal_face_center_pieces(
-        cube: "Cube",
-        layer1_face: "Face",
-        side_face: "Face",
-        layer_slice_index: int,
+            cube: "Cube",
+            layer1_face: "Face",
+            side_face: "Face",
+            layer_slice_index: int,
     ) -> Iterator[tuple[int, int]]:
         """
         Yield (row, col) positions on side_face for the given layer slice.
@@ -212,13 +212,11 @@ class CubeLayoutGeomtry:
 
             layer_slice_index=0 yields: (2,0), (2,1), (2,2)
         """
-        from cube.domain.model.cube_layout.cube_layout import CubeLayout
-
         # Validate side_face is adjacent to layer1_face (shares an edge)
         l1_name = layer1_face.name
         side_name = side_face.name
 
-        if not CubeLayout.is_adjacent(l1_name, side_name):
+        if not cube.layout.is_adjacent(l1_name, side_name):
             raise ValueError(f"{side_name} is not adjacent to {l1_name}")
 
         n_slices = cube.n_slices
@@ -266,4 +264,3 @@ class CubeLayoutGeomtry:
             # Slice cuts cols → forms a row → fixed row, iterate cols
             for col in range(n_slices):
                 yield (face_index, col)
-
