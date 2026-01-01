@@ -59,9 +59,10 @@ _CONSOLE_TO_KEYS: dict[str, int] = {
 
 # Keys that are handled specially (not via key mapping)
 _SPECIAL_KEYS = {
-    ConsoleKeys.ALGS,    # Algorithm input mode
-    ConsoleKeys.STATUS,  # Show detailed status
-    ConsoleKeys.HELP,    # Show help
+    ConsoleKeys.ALGS,       # Algorithm input mode
+    ConsoleKeys.STATUS,     # Show detailed status
+    ConsoleKeys.HELP,       # Show help
+    ConsoleKeys.SOLVE_STEP, # Solve step selection
 }
 
 
@@ -168,25 +169,36 @@ class ConsoleAppWindow(AppWindowBase, AppWindow):
         slv = app.slv
         op = app.op
 
-        print(f"Status: {slv.status}")
-        print(f"Solved: {cube.solved}")
-        print(f"History: #{op.count}")
+        # Line 1: Solver name + status + solved
+        solved_str = "[green]SOLVED[/green]" if cube.solved else "[yellow]not solved[/yellow]"
+        solver_name = slv.name.value if hasattr(slv.name, 'value') else slv.name
+        _console.print(f"Solver: [cyan]{solver_name}[/cyan]  Status: {slv.status}  {solved_str}")
 
+        # Line 2: History (simplified)
+        h = Algs.simplify(*op.history(remove_scramble=True))
+        hist_str = str(h)[-60:] if h.count() > 0 else "(empty)"
+        _console.print(f"History: #{h.count()} {hist_str}")
+
+        # Mode flags
         mode_flags = []
         if self._inv_mode:
             mode_flags.append("INV")
         if self._wide_mode:
             mode_flags.append("WIDE")
         if mode_flags:
-            print(f"[{' + '.join(mode_flags)} MODE ON]")
+            _console.print(f"[magenta][{' + '.join(mode_flags)} MODE][/magenta]")
 
         if app.error:
-            print(f"Error: {app.error}")
+            _console.print(f"[red]Error: {app.error}[/red]")
 
-        print("\nCommands: R L U F B D (faces), X Y M (rotations)")
-        print("          ' (inv toggle), W (wide toggle), 0-6 (scramble)")
-        print("          ? (solve), < (undo), A (algorithm), S (status)")
-        print("          H (help), C (clear), Q (quit)")
+        # Solve steps for current solver
+        steps = slv.supported_steps()
+        if steps:
+            step_strs = [s.short_code for s in steps[:9]]
+            _console.print(f"Solve: ? (all)  V: {' '.join(step_strs)}")
+
+        print("\nR L U F B D (faces), X Y M (rot), ' (inv), W (wide), 0-6 (scramble)")
+        print("? (solve all), V (solve step), < (undo), A (alg), S (status), C (clear), Q (quit)")
 
     def _show_help(self) -> None:
         """Show detailed help information."""
@@ -328,6 +340,43 @@ Press any key to continue...
         except Exception as e:
             _console.print(f"[red]Parse error:[/red] {e}")
 
+    def _prompt_solve_step(self) -> None:
+        """Prompt user to select a solve step."""
+        slv = self._app.slv
+        steps = slv.supported_steps()
+
+        if not steps:
+            _console.print("[yellow]No solve steps available for this solver[/yellow]")
+            return
+
+        solver_name = slv.name.value if hasattr(slv.name, 'value') else slv.name
+        _console.print(f"\n[cyan]Solver: {solver_name} - Select step (1-{len(steps)}):[/cyan]")
+        for i, step in enumerate(steps[:9]):
+            _console.print(f"  {i+1}: {step.short_code} - {step.description}")
+
+        try:
+            choice = Prompt.ask("[bold cyan]>>>[/bold cyan]")
+        except (EOFError, KeyboardInterrupt):
+            _console.print("[yellow]Cancelled[/yellow]")
+            return
+
+        if not choice or not choice.isdigit():
+            return
+
+        idx = int(choice) - 1
+        if 0 <= idx < len(steps):
+            step = steps[idx]
+            _console.print(f"[green]Solving: {step.description}...[/green]")
+            try:
+                result = slv.solve(what=step, animation=False)
+                _console.print(f"[green]Done. Result: {result}[/green]")
+            except Exception as e:
+                import traceback
+                _console.print(f"[red]Solve error:[/red] {e}")
+                traceback.print_exc()
+        else:
+            _console.print(f"[yellow]Invalid choice: {choice}[/yellow]")
+
     # Face keys that support wide mode
     _FACE_KEYS = {ConsoleKeys.R, ConsoleKeys.L, ConsoleKeys.U, ConsoleKeys.D, ConsoleKeys.F, ConsoleKeys.B}
 
@@ -368,6 +417,11 @@ Press any key to continue...
 
         if key == ConsoleKeys.HELP:
             self._show_help()
+            return False
+
+        if key == ConsoleKeys.SOLVE_STEP:
+            self._prompt_solve_step()
+            self._draw()
             return False
 
         # Handle face moves with wide mode support
