@@ -36,7 +36,7 @@ from typing import TYPE_CHECKING
 from typing_extensions import Self
 
 from cube.domain.model import CenterSlice, Color
-from cube.domain.model.cube_layout.cube_boy import CubeLayout
+from cube.domain.model.cube_layout import CubeLayout, create_layout
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.solver.common.tracker._base import FaceTracker
@@ -328,7 +328,7 @@ class FacesTrackerHolder:
             CubeLayout representing current tracker state.
         """
         layout = {tracker.face.name: tracker.color for tracker in self._trackers}
-        return CubeLayout(False, layout, self._cube.sp)
+        return create_layout(False, layout, self._cube.sp)
 
     def assert_is_boy(self) -> None:
         """Assert that trackers represent valid BOY layout.

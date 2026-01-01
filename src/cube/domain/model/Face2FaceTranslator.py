@@ -124,7 +124,8 @@ from typing import TYPE_CHECKING, Tuple
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
-from cube.domain.model.cube_layout.CubeLayout import CubeLayout
+from cube.domain.model import Cube
+from cube.domain.model.cube_layout.cube_layout import CubeLayout
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
@@ -582,6 +583,7 @@ class Face2FaceTranslator:
 
         # Compute slice algorithms
         slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
+            target_face.cube,
             target_name, source_name, target_coord, n_slices, whole_cube_base_alg, whole_cube_base_n
         )
 
@@ -605,6 +607,7 @@ class Face2FaceTranslator:
 
     @staticmethod
     def _compute_slice_algorithms(
+            cube: Cube,
             target_name: FaceName,
             source_name: FaceName,
             target_coord: tuple[int, int],
@@ -626,7 +629,7 @@ class Face2FaceTranslator:
         slice_alg: SliceAlg
 
         for slice_alg in [Algs.S, Algs.M, Algs.E]:
-            slice_alg_face_name = slice_alg.get_face_name()
+            slice_alg_face_name = slice_alg.get_face_name(cube)
             slice_name = slice_alg.slice_name
             assert slice_name is not None
 

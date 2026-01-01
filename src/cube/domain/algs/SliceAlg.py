@@ -62,14 +62,14 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
     def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
 
-        face_name = self.get_face_name()
+        face_name = self.get_face_name(cube)
 
         start_stop: Iterable[int] = self.normalize_slice_index(n_max=cube.n_slices,
                                                                _default=range(1, cube.n_slices + 1))
 
         return face_name, cube.get_rotate_slice_involved_parts(self._slice_name, start_stop)
 
-    def get_face_name(self) -> FaceName:
+    def get_face_name(self, cube: Cube) -> FaceName:
         """
         Return the face that defines the positive rotation direction for this slice.
 
@@ -90,19 +90,21 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
             - WholeCubeAlg.get_face_name() for whole-cube rotation equivalent
             - docs/face-coordinate-system/face-slice-rotation.md
         """
-        match self._slice_name:
 
-            case SliceName.S:  # over F
-                return FaceName.F
-
-            case SliceName.M:  # over L
-                return FaceName.L
-
-            case SliceName.E:  # over D
-                return FaceName.D
-
-            case _:
-                raise RuntimeError(f"Unknown Slice {self._slice_name}")
+        return cube.layout.get_slice(self._slice_name).get_face_name()
+        # match self._slice_name:
+        #
+        #     case SliceName.S:  # over F
+        #         return FaceName.F
+        #
+        #     case SliceName.M:  # over L
+        #         return FaceName.L
+        #
+        #     case SliceName.E:  # over D
+        #         return FaceName.D
+        #
+        #     case _:
+        #         raise RuntimeError(f"Unknown Slice {self._slice_name}")
 
     @abstractmethod
     def get_base_alg(self) -> SliceAbleAlg:

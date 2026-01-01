@@ -398,7 +398,7 @@ def test_lbl_solver_solves_slice_0_centers(size: int) -> None:
     solver.solve(what=SolveStep.LBL_SLICES_CTR, animation=False)
 
     # Check slice 0 centers are solved using the new geometry method
-    from cube.domain.model.cube_layout.CubeLayout import CubeLayout
+    from cube.domain.model.cube_layout.cube_layout import CubeLayout
     from cube.domain.model.cube_layout.CubeLayoutGeomtry import CubeLayoutGeomtry
 
     with FacesTrackerHolder(solver) as th:

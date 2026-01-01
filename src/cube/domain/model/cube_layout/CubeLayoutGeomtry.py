@@ -212,7 +212,7 @@ class CubeLayoutGeomtry:
 
             layer_slice_index=0 yields: (2,0), (2,1), (2,2)
         """
-        from cube.domain.model.cube_layout.CubeLayout import CubeLayout
+        from cube.domain.model.cube_layout.cube_layout import CubeLayout
 
         # Validate side_face is adjacent to layer1_face (shares an edge)
         l1_name = layer1_face.name

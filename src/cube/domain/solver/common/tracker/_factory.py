@@ -119,7 +119,7 @@ from cube.domain.model import CenterSlice, Color
 
 if TYPE_CHECKING:
     from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.model.cube_layout.cube_boy import CubeLayout
+from cube.domain.model.cube_layout import CubeLayout, create_layout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
@@ -484,7 +484,7 @@ class NxNCentersFaceTrackers(SolverElement):
             try1 = {f.face.name: f.color for f in four_first}
             try1[f5.name] = c5
             try1[f6.name] = c6
-            cl: CubeLayout = CubeLayout(False, try1, self.cube.sp)
+            cl: CubeLayout = create_layout(False, try1, self.cube.sp)
 
             if cl.same(self.cube.original_layout):
                 return True  # f/color make it a BOY
@@ -493,7 +493,7 @@ class NxNCentersFaceTrackers(SolverElement):
             try1 = {f.face.name: f.color for f in four_first}
             try1[f5.name] = c5
             try1[f6.name] = c6
-            cl = CubeLayout(False, try1, self.cube.sp)
+            cl = create_layout(False, try1, self.cube.sp)
             assert cl.same(self.cube.original_layout)
 
             return False

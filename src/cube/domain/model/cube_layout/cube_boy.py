@@ -46,7 +46,8 @@ from cube.utils.config_protocol import IServiceProvider
 
 from cube.domain.model.Color import Color
 from cube.domain.model.ColorLong import ColorLong
-from cube.domain.model.cube_layout.CubeLayout import CubeLayout
+from cube.domain.model.cube_layout.cube_layout import CubeLayout
+from cube.domain.model.cube_layout import create_layout
 from cube.domain.model.FaceName import FaceName
 
 # ============================================================================
@@ -102,7 +103,7 @@ def get_boy_layout(sp: IServiceProvider) -> CubeLayout:
     """
     global _boy_layout
     if _boy_layout is None:
-        _boy_layout = CubeLayout(True, {
+        _boy_layout = create_layout(True, {
             FaceName.F: Color.BLUE,
             FaceName.R: Color.RED,
             FaceName.U: Color.YELLOW,
