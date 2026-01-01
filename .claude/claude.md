@@ -213,6 +213,28 @@ The script uses Windows Text-to-Speech to say "Hey Friend! Claude needs your att
 3. Ask: "Would you like me to commit these changes?"
 4. Only commit after receiving explicit approval
 
+### Pre-Commit Checklist (MANDATORY):
+Before committing, ALWAYS do these steps:
+
+1. **List modified files:** `git diff --name-only`
+2. **Search for instructions:** `grep -i "claude"` in ALL modified files (catches `claude:`, `claud:`, `claude doc`, etc.)
+3. **Show context** for each `claude` match found
+4. **Ask what to do** with each instruction - iterate until user is satisfied
+5. **If user says skip** - leave that comment in place, do NOT remove it
+6. **Never undo user code** - never use `git checkout` or revert user changes without explicit permission
+7. **Only then commit**
+
+### Example Pre-Commit Check:
+```bash
+# Step 1: List modified files
+git diff --name-only
+
+# Step 2: Search for claude instructions in each file
+grep -rn -i "claude" <file1> <file2> ...
+
+# Step 3: Show context and ask user about each match
+```
+
 ### Examples:
 
 **Correct:**
