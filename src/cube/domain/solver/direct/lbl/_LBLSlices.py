@@ -23,7 +23,7 @@ from cube.domain.model.cube_layout.cube_boy import Color
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.tracker._base import FaceTracker
-from cube.domain.solver.common.big_cube.NxNCenters2 import NxNCenters2
+from cube.domain.solver.direct.lbl.NxNCenters2 import NxNCenters2
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 
 if TYPE_CHECKING:

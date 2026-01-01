@@ -177,7 +177,7 @@ class Face(SuperElement, Hashable):
         return self._corner_bottom_left
 
     @property
-    def color(self):
+    def color(self) -> Color:
         """
         The DYNAMIC color of the face's center - reads from center piece at (n//2, n//2).
 
@@ -202,6 +202,21 @@ class Face(SuperElement, Hashable):
         :return: Color of center piece at (n_slices//2, n_slices//2)
         """
         return self.center.color
+
+    @property
+    def color_at_face_str(self) -> str:
+        """Return a string representation of color at this face position.
+
+        Format: "{color}@{face_name}" e.g. "WHITE@D", "BLUE@F"
+
+        Useful for debug messages and annotations to show both
+        what color is currently on a face and which face it is.
+
+        Returns:
+            String in format "COLOR@FACE" like "WHITE@D"
+        """
+        return f"{self.color}@{self.name}"
+
 
     @property
     def original_color(self) -> Color:

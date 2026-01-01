@@ -78,6 +78,11 @@ class FaceTracker(ABC):
     def color(self) -> Color:
         return self._color
 
+    @property
+    def color_at_face_str(self):
+        """claude doc and types"""
+        return self.face.color_at_face_str
+
     def __str__(self) -> str:
         return f"{self.color.name}@{self.face}"
 
