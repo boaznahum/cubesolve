@@ -16,7 +16,7 @@ When you encounter a geometric question:
    - `COMPUTED` - Can be derived from other facts
    - `UNKNOWN` - Not yet analyzed
 4. **If COMPUTED** - Document what it's derived from
-5. **Implement** - Add to `CubeLayoutGeomtry.py`
+5. **Implement** - Add to `_CubeLayoutGeometry.py` (private), expose via protocol
 
 ### Classification Guidelines
 
@@ -165,8 +165,8 @@ def iterate_orthogonal_face_center_pieces(
 
 **Usage:**
 ```python
-for row, col in CubeLayoutGeomtry.iterate_orthogonal_face_center_pieces(
-    cube, layer1_face, front_face, slice_index=0
+for row, col in cube.layout.iterate_orthogonal_face_center_pieces(
+    cube, layer1_face, front_face, layer_slice_index=0
 ):
     center = front_face.center.get_center_slice((row, col))
     if center.color != expected_color:
@@ -208,27 +208,41 @@ Else:  # L1 == opposite of reference
 
 ---
 
-## Existing Methods in CubeLayoutGeomtry
+## Architecture
 
-### `does_slice_cut_rows_or_columns(slice_name, face_name)`
+The geometry methods are organized as follows:
 
-Returns whether a slice (M/E/S) cuts through rows or columns on a given face.
+- **Private implementation:** `_CubeLayoutGeometry` (in `_CubeLayoutGeometry.py`)
+- **Public API via protocols:**
+  - `SliceLayout` protocol: slice-related methods (`does_slice_cut_rows_or_columns`, `does_slice_of_face_start_with_face`)
+  - `CubeLayout` protocol: face relationship methods (`iterate_orthogonal_face_center_pieces`)
+
+## Methods in SliceLayout Protocol
+
+### `slice_layout.does_slice_cut_rows_or_columns(face_name)`
+
+Returns whether this slice cuts through rows or columns on a given face.
 
 - M slice: always cuts rows (vertical slice)
 - E slice: always cuts columns (horizontal slice)
 - S slice: depends on face (R/L = rows, others = columns)
 
-### `does_slice_of_face_start_with_face(slice_name, face_name)`
+**Usage:**
+```python
+slice_layout = cube.layout.get_slice(SliceName.M)
+if slice_layout.does_slice_cut_rows_or_columns(FaceName.F) == CLGColRow.ROW:
+    ...
+```
 
-Returns whether slice[1] starts at the "natural" beginning of the face coordinate.
+### `slice_layout.does_slice_of_face_start_with_face(face_name)`
+
+Returns whether slice[0] starts at the "natural" beginning of the face coordinate.
 
 Used to determine if slice indices go in same direction as face coordinates.
 
----
+## Methods in CubeLayout Protocol
 
-## Next Steps
+### `layout.iterate_orthogonal_face_center_pieces(cube, layer1_face, side_face, layer_slice_index)`
 
-1. Define the exact method signature we need
-2. Understand how Layer 1 position determines which slice type (M/E/S) to use
-3. Implement the method using existing geometry helpers
+Yields (row, col) positions on side_face for the given layer slice.
 

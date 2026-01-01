@@ -1,23 +1,18 @@
 from __future__ import annotations
 
-from enum import Enum, auto
 from typing import TYPE_CHECKING, Iterator
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
-from cube.domain.model import FaceName
+from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
+from cube.domain.model.cube_layout.slice_layout import CLGColRow
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
 
 
-class CLGColRow(Enum):
-    ROW = auto()
-    COL = auto()
-
-
-class CubeLayoutGeomtry:
+class _CubeLayoutGeometry:
     """
     All un solved geometry questions
 
@@ -244,10 +239,10 @@ class CubeLayoutGeomtry:
         # Does this slice cut rows or columns on side_face?
         # ROW → slice cuts rows → forms a COLUMN on face → fixed col, iterate rows
         # COL → slice cuts cols → forms a ROW on face → fixed row, iterate cols
-        cut_type = CubeLayoutGeomtry.does_slice_cut_rows_or_columns(slice_name, side_name)
+        cut_type = _CubeLayoutGeometry.does_slice_cut_rows_or_columns(slice_name, side_name)
 
         # Does slice index align with face LTR coordinates?
-        starts_with_face = CubeLayoutGeomtry.does_slice_of_face_start_with_face(slice_name, side_name)
+        starts_with_face = _CubeLayoutGeometry.does_slice_of_face_start_with_face(slice_name, side_name)
 
         # Convert physical_slice_index to row/column index on face
         if starts_with_face:

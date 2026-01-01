@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection
-from typing import Mapping
+from collections.abc import Collection, Iterator
+from typing import TYPE_CHECKING, Mapping
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model.SliceName import SliceName
@@ -18,6 +18,10 @@ from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
+
+if TYPE_CHECKING:
+    from cube.domain.model.Cube import Cube
+    from cube.domain.model.Face import Face
 
 
 class _CubeLayout(CubeLayout):
@@ -175,6 +179,18 @@ class _CubeLayout(CubeLayout):
     def get_adjacent_faces(self, face: FaceName) -> tuple[FaceName, ...]:
         """Get all faces adjacent to the given face."""
         return _ADJACENT[face]
+
+    def iterate_orthogonal_face_center_pieces(
+            self,
+            cube: "Cube",
+            layer1_face: "Face",
+            side_face: "Face",
+            layer_slice_index: int,
+    ) -> Iterator[tuple[int, int]]:
+        from cube.domain.model.cube_layout._CubeLayoutGeometry import _CubeLayoutGeometry
+        return _CubeLayoutGeometry.iterate_orthogonal_face_center_pieces(
+            cube, layer1_face, side_face, layer_slice_index
+        )
 
     def _is_face(self, color: Color) -> FaceName | None:
         """Find which face has the given color, or None if not found."""

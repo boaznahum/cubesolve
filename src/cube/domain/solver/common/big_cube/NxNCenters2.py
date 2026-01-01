@@ -4,7 +4,6 @@ from contextlib import contextmanager
 from enum import Enum, unique
 from typing import Tuple, TypeAlias
 
-import cube
 from cube.domain import algs
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
@@ -148,7 +147,7 @@ class NxNCenters2(SolverElement):
         while True:
             iter_count += 1
             if iter_count > max_iter:
-                raise InternalSWError(f"Maximum number of iterations reached")
+                raise InternalSWError("Maximum number of iterations reached")
 
             with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
 

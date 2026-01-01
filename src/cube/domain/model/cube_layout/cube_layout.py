@@ -10,7 +10,7 @@ See cube_boy.py for the canonical BOY definition.
 from __future__ import annotations
 
 from abc import abstractmethod
-from collections.abc import Collection
+from collections.abc import Collection, Iterator
 from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
 
 from cube.domain.model.Color import Color
@@ -19,6 +19,8 @@ from cube.domain.model.SliceName import SliceName
 from cube.domain.model.cube_layout.slice_layout import SliceLayout
 
 if TYPE_CHECKING:
+    from cube.domain.model.Cube import Cube
+    from cube.domain.model.Face import Face
     from cube.utils.config_protocol import ConfigProtocol
 
 
@@ -326,5 +328,87 @@ class CubeLayout(Protocol):
 
         Example:
             layout.get_adjacent_faces(FaceName.F)  # (U, R, D, L)
+        """
+        ...
+
+    @abstractmethod
+    def iterate_orthogonal_face_center_pieces(
+            self,
+            cube: "Cube",
+            layer1_face: "Face",
+            side_face: "Face",
+            layer_slice_index: int,
+    ) -> Iterator[tuple[int, int]]:
+        """
+        Yield (row, col) positions on side_face for the given layer slice.
+
+        A "layer slice" is a horizontal layer parallel to layer1_face (L1).
+        Layer slice 0 is the one closest to L1.
+
+        Args:
+            cube: The cube (for n_slices)
+            layer1_face: The Layer 1 face (base layer, e.g., white face)
+            side_face: A face orthogonal to layer1_face
+            layer_slice_index: 0 = closest to L1, n_slices-1 = farthest
+
+        Yields:
+            (row, col) in LTR coordinates on side_face
+
+        Raises:
+            ValueError: if side_face is not orthogonal to layer1_face
+
+        Example 1: L1=DOWN, side_face=FRONT, 5x5 cube (n_slices=3)
+        =========================================================
+
+            Looking at FRONT face:
+
+                      U
+                ┌───┬───┬───┐
+            row2│   │   │   │  ← layer_slice_index=2 (closest to U)
+                ├───┼───┼───┤
+            row1│   │   │   │  ← layer_slice_index=1
+                ├───┼───┼───┤
+            row0│ * │ * │ * │  ← layer_slice_index=0 (closest to D=L1)
+                └───┴───┴───┘
+                      D (L1)
+
+            layer_slice_index=0 yields: (0,0), (0,1), (0,2)
+
+        Example 2: L1=LEFT, side_face=FRONT, 5x5 cube (n_slices=3)
+        ==========================================================
+
+            Looking at FRONT face:
+
+                L1        R
+                (L)
+                ┌───┬───┬───┐
+                │ * │   │   │  row2
+                ├───┼───┼───┤
+                │ * │   │   │  row1
+                ├───┼───┼───┤
+                │ * │   │   │  row0
+                └───┴───┴───┘
+                col0 col1 col2
+
+                ↑ layer_slice_index=0 (closest to L=L1)
+
+            layer_slice_index=0 yields: (0,0), (1,0), (2,0)
+
+        Example 3: L1=UP, side_face=FRONT, 5x5 cube (n_slices=3)
+        =========================================================
+
+            Looking at FRONT face:
+
+                      U (L1)
+                ┌───┬───┬───┐
+            row2│ * │ * │ * │  ← layer_slice_index=0 (closest to U=L1)
+                ├───┼───┼───┤
+            row1│   │   │   │  ← layer_slice_index=1
+                ├───┼───┼───┤
+            row0│   │   │   │  ← layer_slice_index=2 (closest to D)
+                └───┴───┴───┘
+                      D
+
+            layer_slice_index=0 yields: (2,0), (2,1), (2,2)
         """
         ...

@@ -24,7 +24,7 @@ from cube.domain.model.Face import Face
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.model.cube_layout.CubeLayoutGeomtry import CubeLayoutGeomtry, CLGColRow
+from cube.domain.model.cube_layout.slice_layout import CLGColRow
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -223,13 +223,14 @@ class CommunicatorHelper(SolverElement):
             return point[0]
 
         slice_name = base_slice_alg.slice_name
-        if CubeLayoutGeomtry.does_slice_cut_rows_or_columns(slice_name, on_face) == CLGColRow.ROW:
+        slice_layout = self.cube.layout.get_slice(slice_name)
+        if slice_layout.does_slice_cut_rows_or_columns(on_face) == CLGColRow.ROW:
             # cut rows so we extract columns
             ex = exc
         else:
             ex = exr
 
-        slice_match_face_ltr = CubeLayoutGeomtry.does_slice_of_face_start_with_face(slice_name, on_face)
+        slice_match_face_ltr = slice_layout.does_slice_of_face_start_with_face(on_face)
 
 
 
@@ -450,7 +451,8 @@ class CommunicatorHelper(SolverElement):
             # extract row
             return point[0]
 
-        if CubeLayoutGeomtry.does_slice_cut_rows_or_columns(slice_name, face_name) == CLGColRow.ROW:
+        slice_layout = cube.layout.get_slice(slice_name)
+        if slice_layout.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW:
             # cut rows so we extract columns
             ex = exc
         else:

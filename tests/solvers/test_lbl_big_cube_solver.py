@@ -398,15 +398,12 @@ def test_lbl_solver_solves_slice_0_centers(size: int) -> None:
     solver.solve(what=SolveStep.LBL_SLICES_CTR, animation=False)
 
     # Check slice 0 centers are solved using the new geometry method
-    from cube.domain.model.cube_layout import CubeLayout
-    from cube.domain.model.cube_layout.CubeLayoutGeomtry import CubeLayoutGeomtry
-
     with FacesTrackerHolder(solver) as th:
         l1_tracker = solver._get_layer1_tracker(th)
         l1_face = l1_tracker.face
 
         # Get the 4 side faces (adjacent to L1)
-        adjacent_names = CubeLayout.get_adjacent_faces(l1_face.name)
+        adjacent_names = cube.layout.get_adjacent_faces(l1_face.name)
         side_faces = [cube.face(fn) for fn in adjacent_names]
 
         # Check each side face's slice 0 centers
@@ -414,7 +411,7 @@ def test_lbl_solver_solves_slice_0_centers(size: int) -> None:
             face_tracker = th.get_tracker(side_face.name)
             expected_color = face_tracker.color
 
-            for row, col in CubeLayoutGeomtry.iterate_orthogonal_face_center_pieces(
+            for row, col in cube.layout.iterate_orthogonal_face_center_pieces(
                 cube, l1_face, side_face, layer_slice_index=0
             ):
                 center = side_face.center.get_center_slice((row, col))
@@ -435,14 +432,14 @@ def test_lbl_solver_solves_slice_0_centers(size: int) -> None:
         l1_face = l1_tracker.face
 
         # Get the 4 side faces (adjacent to L1)
-        adjacent_names = CubeLayout.get_adjacent_faces(l1_face.name)
+        adjacent_names = cube.layout.get_adjacent_faces(l1_face.name)
         side_faces = [cube.face(fn) for fn in adjacent_names]
 
         for side_face in side_faces:
             face_tracker = th.get_tracker(side_face.name)
             expected_color = face_tracker.color
 
-            for row, col in CubeLayoutGeomtry.iterate_orthogonal_face_center_pieces(
+            for row, col in cube.layout.iterate_orthogonal_face_center_pieces(
                 cube, l1_face, side_face, layer_slice_index=0
             ):
                 center = side_face.center.get_center_slice((row, col))
