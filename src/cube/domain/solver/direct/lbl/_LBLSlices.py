@@ -252,3 +252,22 @@ class _LBLSlices(SolverElement):
             r = range(self.n_slices)
         for slice_index in r:
             self.solve_slice_centers(slice_index, th, l1_white_tracker)
+
+    def solve_slice_n_faces(
+            self, th: FacesTrackerHolder, l1_white_tracker: FaceTracker,
+            slice_index: int, n_faces: int
+    ) -> None:
+        """Solve N faces of a specific slice (for debugging).
+
+        Args:
+            th: FacesTrackerHolder for face color tracking
+            l1_white_tracker: Layer 1 face tracker
+            slice_index: Which slice to solve (0 = closest to D)
+            n_faces: How many faces to solve (1-4)
+        """
+        # Get side face trackers (excluding L1 and opposite)
+        side_trackers = self.get_side_face_trackers(th, l1_white_tracker)
+
+        # Solve only the first n_faces
+        for i, face_tracker in enumerate(side_trackers[:n_faces]):
+            self._solve_face_row_simple(l1_white_tracker, face_tracker, slice_index)

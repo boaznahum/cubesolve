@@ -171,8 +171,7 @@ class ConsoleAppWindow(AppWindowBase, AppWindow):
 
         # Line 1: Solver name + status + solved
         solved_str = "[green]SOLVED[/green]" if cube.solved else "[yellow]not solved[/yellow]"
-        solver_name = slv.name.value if hasattr(slv.name, 'value') else slv.name
-        _console.print(f"Solver: [cyan]{solver_name}[/cyan]  Status: {slv.status}  {solved_str}")
+        _console.print(f"Solver: [cyan]{slv.name}[/cyan]  Status: {slv.status}  {solved_str}")
 
         # Line 2: History (simplified)
         h = Algs.simplify(*op.history(remove_scramble=True))
@@ -349,8 +348,7 @@ Press any key to continue...
             _console.print("[yellow]No solve steps available for this solver[/yellow]")
             return
 
-        solver_name = slv.name.value if hasattr(slv.name, 'value') else slv.name
-        _console.print(f"\n[cyan]Solver: {solver_name} - Select step (1-{len(steps)}):[/cyan]")
+        _console.print(f"\n[cyan]Solver: {slv.name} - Select step (1-{len(steps)}):[/cyan]")
         for i, step in enumerate(steps[:9]):
             _console.print(f"  {i+1}: {step.short_code} - {step.description}")
 

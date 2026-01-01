@@ -22,11 +22,16 @@ _SOLVE_STEP_META: dict[str, tuple[str, str]] = {
     "NxNCenters": ("Ctr", "NxN Centers"),
     "NxNEdges": ("Edg", "NxN Edges"),
     "Cage": ("Cage", "Cage (Edges + Corners)"),
-    # LBL-Direct method steps
+    # LBL-Big method steps
     "LBL_L1_Ctr": ("L1Ctr", "Layer 1 Centers"),
     "LBL_L1_Edg": ("L1Edg", "Layer 1 Edges"),
     "LBL_L1": ("L1", "Layer 1 Complete"),
     "LBL_SLICES_CTR": ("SlCtr", "Middle Slices Centers"),
+    # Slice 0 granular steps (4 faces per slice)
+    "LBL_S0F1": ("S0F1", "Slice 0 Face 1"),
+    "LBL_S0F2": ("S0F2", "Slice 0 Faces 1-2"),
+    "LBL_S0F3": ("S0F3", "Slice 0 Faces 1-3"),
+    "LBL_S0F4": ("S0F4", "Slice 0 Complete"),
 }
 
 
@@ -51,11 +56,16 @@ class SolveStep(Enum):
     # Cage method step
     Cage = "Cage"
 
-    # LBL-Direct method steps (layer-by-layer for big cubes)
+    # LBL-Big method steps (layer-by-layer for big cubes)
     LBL_L1_Ctr = "LBL_L1_Ctr"  # Layer 1 centers only
     LBL_L1_Edg = "LBL_L1_Edg"  # Layer 1 edges only
     LBL_L1 = "LBL_L1"          # Layer 1 complete (centers + edges + corners)
     LBL_SLICES_CTR = "LBL_SLICES_CTR"  # Middle slices centers only (for debugging)
+    # Slice 0 granular steps (4 faces per slice)
+    LBL_S0F1 = "LBL_S0F1"      # Slice 0, first face center row
+    LBL_S0F2 = "LBL_S0F2"      # Slice 0, faces 1-2
+    LBL_S0F3 = "LBL_S0F3"      # Slice 0, faces 1-3
+    LBL_S0F4 = "LBL_S0F4"      # Slice 0 complete (all 4 faces)
 
     @property
     def short_code(self) -> str:

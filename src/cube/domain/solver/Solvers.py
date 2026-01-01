@@ -109,9 +109,9 @@ class Solvers:
         return CageNxNSolver(op)
 
     @staticmethod
-    def lbl_direct(op: OperatorProtocol) -> Solver:
+    def lbl_big(op: OperatorProtocol) -> Solver:
         """
-        Get Layer-by-Layer direct solver for NxN cubes.
+        Get Layer-by-Layer solver for big (NxN) cubes.
 
         Solves the cube one horizontal layer at a time:
         - Layer 1: Centers → Edges → Corners (on configured face)
@@ -158,8 +158,8 @@ class Solvers:
             case SolverName.CAGE:
                 return cls.cage(op)
 
-            case SolverName.LBL_DIRECT:
-                return cls.lbl_direct(op)
+            case SolverName.LBL_BIG:
+                return cls.lbl_big(op)
 
             case _:
                 raise InternalSWError(f"Unknown solver: {solver_id}")
