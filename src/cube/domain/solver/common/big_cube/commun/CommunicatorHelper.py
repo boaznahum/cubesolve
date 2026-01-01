@@ -13,13 +13,15 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 - X increases rightward (ltr_x)
 """
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Tuple, TypeAlias
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.SliceAlg import SliceAlg
-from cube.domain.model import FaceName, Cube
+from cube.domain.model import FaceName, Cube, CenterSlice
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.model.Face import Face
 from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
 from cube.domain.model.SliceName import SliceName
@@ -575,9 +577,28 @@ class CommunicatorHelper(SolverElement):
                            on_front_rotate.prime  # F
                            )
 
-        if source_setup_n_rotate:
-            self.op.play(source_setup_alg)
-        self.op.play(cum)
+        # Animation annotation helpers
+        def _ann_target() -> Iterator[CenterSlice]:
+            """Yield target CenterSlice objects."""
+            yield target_face.center.get_center_slice(target_block[0])
+
+        def _ann_source() -> Iterator[CenterSlice]:
+            """Yield source CenterSlice objects (before rotation)."""
+            yield source_face.center.get_center_slice(source_1_point)
+
+        def _h2() -> str:
+            """Headline for annotation - block size info."""
+            return ", 1x1 communicator"
+
+        # Execute with animation annotations
+        with self.ann.annotate(
+                (_ann_source, AnnWhat.Moved),
+                (_ann_target, AnnWhat.FixedPosition),
+                h2=_h2
+        ):
+            if source_setup_n_rotate:
+                self.op.play(source_setup_alg)
+            self.op.play(cum)
 
         # =========================================================
         # CAGE METHOD: Undo source rotation to preserve paired edges
