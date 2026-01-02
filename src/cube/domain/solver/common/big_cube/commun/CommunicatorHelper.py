@@ -40,6 +40,23 @@ class _InternalCommData:
     trans_data: FaceTranslationResult
 
 
+@dataclass(frozen=True)
+class CommutatorResult:
+    """Result of execute_communicator method.
+
+    Contains both computed data (for dry_run) and execution algorithm (for actual execution).
+    This result can be cached and reused to avoid redundant calculations.
+
+    Attributes:
+        source_ltr: The computed source LTR position (where the piece naturally is before setup)
+        algorithm: The algorithm to execute (None if dry_run=True)
+        _secret: Internal cache secret for optimization (avoid re-computation on second call)
+    """
+    source_ltr: Point
+    algorithm: Alg | None
+    _secret: _InternalCommData | None = None
+
+
 class CommunicatorHelper(SolverElement):
     """
     Helper for the block commutator algorithm on NxN cubes.
@@ -143,6 +160,178 @@ class CommunicatorHelper(SolverElement):
         data = self._do_communicator(source, target, (target_ltr, target_ltr))
 
         return data.source_coordinate
+
+    def execute_communicator(
+            self,
+            source_face: Face,
+            target_face: Face,
+            target_block: Block,
+            source_block: Block | None = None,
+            preserve_state: bool = True,
+            dry_run: bool = False,
+            _cached_secret: CommutatorResult | None = None
+    ) -> CommutatorResult:
+        """
+        Unified communicator execution method with optional dry_run and optimization.
+
+        This is the PRIMARY API for communicator operations. It combines the functionality
+        of get_natural_source_ltr() and do_communicator() into a single method.
+
+        WORKFLOW WITH DRY_RUN OPTIMIZATION:
+        ===================================
+
+        Step 1: Dry run to get source position (no execution, no cube modification)
+            >>> result = helper.execute_communicator(
+            ...     source_face=cube.up,
+            ...     target_face=cube.front,
+            ...     target_block=((1,1), (1,1)),
+            ...     dry_run=True
+            ... )
+            >>> natural_source = result.source_ltr
+            >>> print(f"Natural source position: {natural_source}")
+            >>> assert result.algorithm is None  # No algorithm in dry_run
+
+        Step 2: Manipulate/search the source position (e.g., rotate to find color)
+            >>> source_point = natural_source
+            >>> for rotation in range(4):
+            ...     color = cube.up.center.get_center_slice(source_point).color
+            ...     if color == required_color:
+            ...         break
+            ...     source_point = cube.cqr.rotate_point_clockwise(source_point)
+
+        Step 3: Execute with cached computation (reuse the dry_run result)
+            >>> final_result = helper.execute_communicator(
+            ...     source_face=cube.up,
+            ...     target_face=cube.front,
+            ...     target_block=((1,1), (1,1)),
+            ...     source_block=(source_point, source_point),
+            ...     preserve_state=True,
+            ...     dry_run=False,
+            ...     _cached_secret=result  # OPTIMIZATION: reuse dry_run computation!
+            ... )
+            >>> algorithm = final_result.algorithm
+            >>> # Execute the algorithm on the cube
+
+        PARAMETERS:
+        ===========
+        source_face: Source face (where pieces come from)
+        target_face: Target face (where pieces go to)
+        target_block: Block coordinates on target face ((y0,x0), (y1,x1))
+        source_block: Block coordinates on source face, defaults to target_block
+        preserve_state: If True, preserve cube state (edges and corners return)
+        dry_run: If True, return only computed source position (no execution)
+        _cached_secret: CommutatorResult from previous dry_run call (optimization)
+
+        RETURNS:
+        ========
+        CommutatorResult containing:
+            - source_ltr: The computed source LTR position
+            - algorithm: The algorithm (None if dry_run=True)
+            - _secret: Internal cache for optimization (do not use directly)
+
+        RAISES:
+        =======
+        ValueError: If source and target are the same, face
+        NotImplementedError: If face pair is not supported
+        """
+        if source_face is target_face:
+            raise ValueError("Source and target must be different faces")
+
+        if source_block is None:
+            source_block = target_block
+
+        # Validate blocks (currently supporting size 1 only)
+        assert source_block[0] == source_block[1]
+        assert target_block[0] == target_block[1]
+
+        # Check if this pair is supported
+        if not self.is_supported(source_face, target_face):
+            raise NotImplementedError(
+                f"Face pair ({source_face}, {target_face}) not yet implemented"
+            )
+
+        # Get source point from input
+        source_1_point: Point = source_block[0]
+
+        # OPTIMIZATION: Use cached secret from dry_run to avoid recomputation
+        if _cached_secret is not None and _cached_secret._secret is not None:
+            internal_data = _cached_secret._secret
+        else:
+            internal_data = self._do_communicator(source_face, target_face, target_block)
+
+        # If dry_run, return early with just the source position
+        if dry_run:
+            return CommutatorResult(
+                source_ltr=internal_data.source_coordinate,
+                algorithm=None,
+                _secret=internal_data
+            )
+
+        # Build and execute the full algorithm (same as original do_communicator)
+        expected_source_1_point: Point = internal_data.source_coordinate
+        source_setup_n_rotate = self._find_rotation_idx(source_1_point, expected_source_1_point)
+
+        source_setup_alg = Algs.of_face(
+            source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
+
+        # E, S, M
+        slice_alg_data: SliceAlgorithmResult = internal_data.trans_data.slice_algorithms[0]
+        slice_base_alg: SliceAlg = slice_alg_data.whole_slice_alg
+
+        on_front_rotate_n, target_block_after_rotate = \
+            self._compute_rotate_on_target(self.cube, target_face.name, slice_base_alg.slice_name, target_block)
+
+        on_front_rotate: Alg = Algs.of_face(target_face.name) * on_front_rotate_n
+
+        # Build the communicator
+        inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block, target_face.name) * slice_alg_data.n
+        second_inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block_after_rotate, target_face.name) * slice_alg_data.n
+
+        cum = Algs.seq_alg(None,
+                           inner_slice_alg,
+                           on_front_rotate,
+                           second_inner_slice_alg,
+                           on_front_rotate.prime,
+                           inner_slice_alg.prime,
+                           on_front_rotate,
+                           second_inner_slice_alg.prime,
+                           on_front_rotate.prime
+                           )
+
+        # Animation annotation helpers
+        def _ann_target() -> Iterator[CenterSlice]:
+            """Yield target CenterSlice objects."""
+            yield target_face.center.get_center_slice(target_block[0])
+
+        def _ann_source() -> Iterator[CenterSlice]:
+            """Yield source CenterSlice objects (before rotation)."""
+            yield source_face.center.get_center_slice(source_1_point)
+
+        def _h2() -> str:
+            """Headline for annotation - block size info."""
+            return ", 1x1 communicator"  # pragma: no cover
+
+        # Execute with animation annotations
+        with self.ann.annotate(
+                (_ann_source, AnnWhat.Moved),
+                (_ann_target, AnnWhat.FixedPosition),
+                h2=_h2
+        ):
+            if source_setup_n_rotate:
+                self.op.play(source_setup_alg)
+            self.op.play(cum)
+
+        # CAGE METHOD: Undo source rotation to preserve paired edges
+        if preserve_state and source_setup_n_rotate:
+            self.op.play(source_setup_alg.prime)
+
+        final_algorithm = (source_setup_alg + cum + source_setup_alg.prime).simplify()
+
+        return CommutatorResult(
+            source_ltr=internal_data.source_coordinate,
+            algorithm=final_algorithm,
+            _secret=None  # Don't cache after execution
+        )
 
     # =========================================================================
     # Helper Methods
@@ -501,6 +690,10 @@ class CommunicatorHelper(SolverElement):
             preserve_state: bool = True
     ) -> Alg:
         """
+        Convenience wrapper - delegates to execute_communicator().
+
+        DEPRECATED: Use execute_communicator() for new code with dry_run support.
+
         Execute a block commutator to move pieces from source to target.
 
         The commutator is: [M', F, M', F', M, F, M, F']
@@ -514,98 +707,18 @@ class CommunicatorHelper(SolverElement):
             preserve_state: If True, preserve cube state (edges and corners return)
 
         Returns:
-            True if the communicator was executed, False if not needed
+            Algorithm to execute
 
         Raises:
             ValueError: If source and target are the same, face
-            ValueError: If blocks cannot be mapped with 0-3 rotations
+            NotImplementedError: If face pair is not supported
         """
-        if source_face is target_face:
-            raise ValueError("Source and target must be different faces")
-
-        if source_block is None:
-            source_block = target_block
-
-        # currently we support  only blockof size 1
-        assert source_block[0] == source_block[1]
-        assert target_block[0] == target_block[1]
-
-        # Check if this pair is supported
-        if not self.is_supported(source_face, target_face):
-            raise NotImplementedError(
-                f"Face pair ({source_face}, {target_face}) not yet implemented"
-            )
-
-        # now we assume a block of size 1
-        source_1_point: Point = source_block[0]
-
-        internal_data = self._do_communicator(source_face, target_face, target_block)
-
-        # Find rotation to align the actual source to the expected source
-        expected_source_1_point: Point = internal_data.source_coordinate
-
-        source_setup_n_rotate = self._find_rotation_idx(source_1_point, expected_source_1_point)
-
-        source_setup_alg = Algs.of_face(
-            source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
-
-        # E, S, M
-        slice_alg_data: SliceAlgorithmResult = internal_data.trans_data.slice_algorithms[0]
-        slice_base_alg: SliceAlg = slice_alg_data.whole_slice_alg
-
-        on_front_rotate_n, target_block_after_rotate = \
-            self._compute_rotate_on_target(self.cube, target_face.name, slice_base_alg.slice_name, target_block)
-
-        on_front_rotate: Alg = Algs.of_face(target_face.name) * on_front_rotate_n
-
-        # build the communicator
-
-        # we want to slice on the target
-        inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block, target_face.name) * slice_alg_data.n
-        second_inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block_after_rotate, target_face.name) * slice_alg_data.n
-
-        # 4x4 U -> F, 0,0
-        # M[2] F' M[1] F M[2]' F ' M[1]'
-        cum = Algs.seq_alg(None,
-                           inner_slice_alg,  # M[2]
-                           on_front_rotate,  # F'
-                           second_inner_slice_alg,  # M[1]
-                           on_front_rotate.prime,  # F
-                           inner_slice_alg.prime,  # M[2]
-                           on_front_rotate,  # F'
-                           second_inner_slice_alg.prime,  # M[1]'
-                           on_front_rotate.prime  # F
-                           )
-
-        # Animation annotation helpers
-        def _ann_target() -> Iterator[CenterSlice]:
-            """Yield target CenterSlice objects."""
-            yield target_face.center.get_center_slice(target_block[0])
-
-        def _ann_source() -> Iterator[CenterSlice]:
-            """Yield source CenterSlice objects (before rotation)."""
-            yield source_face.center.get_center_slice(source_1_point)
-
-        def _h2() -> str:
-            """Headline for annotation - block size info."""
-            return ", 1x1 communicator"
-
-        # Execute with animation annotations
-        with self.ann.annotate(
-                (_ann_source, AnnWhat.Moved),
-                (_ann_target, AnnWhat.FixedPosition),
-                h2=_h2
-        ):
-            if source_setup_n_rotate:
-                self.op.play(source_setup_alg)
-            self.op.play(cum)
-
-        # =========================================================
-        # CAGE METHOD: Undo source rotation to preserve paired edges
-        # =========================================================
-        # The commutator itself is balanced (F rotations cancel out).
-        # But the source face rotation setup is NOT balanced - undo it.
-        if preserve_state and source_setup_n_rotate:
-            self.op.play(source_setup_alg.prime)
-
-        return (source_setup_alg + cum + source_setup_alg.prime).simplify()
+        result = self.execute_communicator(
+            source_face=source_face,
+            target_face=target_face,
+            target_block=target_block,
+            source_block=source_block,
+            preserve_state=preserve_state,
+            dry_run=False
+        )
+        return result.algorithm or Algs.NOOP
