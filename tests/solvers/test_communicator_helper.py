@@ -25,6 +25,7 @@ import pytest
 from tabulate import tabulate
 
 from cube.application.AbstractApp import AbstractApp
+from cube.domain.algs import Algs
 from cube.domain.model.cube_layout.cube_boy import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
@@ -198,14 +199,22 @@ def test_create_helper(cube_size: int) -> None:
 @pytest.mark.parametrize("face_pair", SUPPORTED_PAIRS, ids=_face_pair_id)
 def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
     """
-    Test communicator for a specific face pair.
+    Test communicator for a specific face pair using the new execute_communicator API.
+
+    VALIDATES THE 3-CYCLE PATTERN: s1 → t → s2 → s1
+    ==================================================
+    The block communicator moves exactly 3 pieces in a cycle:
+    - s1: source point (natural source position)
+    - t: target point (target block position)
+    - s2: intermediate point (computed via target rotation on source face)
 
     For the given source/target pair:
     - Iterate all (ltr_y, ltr_x) positions in LTR coordinates
-    - For each of 4 rotations, compute source position
-    - Place unique attribute on source
-    - Execute communicator
-    - Verify attribute moved to target
+    - For each of 4 rotations, compute source position via execute_communicator (dry_run)
+    - Place unique attribute on source piece
+    - Execute communicator with new API
+    - VERIFY 3-CYCLE POINTS: s1, t, s2 are correctly computed
+    - Verify attribute moved from s1 to t (via s2)
     - Verify cube state preserved
 
     Known Limitations (Even Cubes):
@@ -239,11 +248,20 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
 
             target_point = (ltr_y, ltr_x)
 
-            # Get expected source LTR by mapping target → source
-            # see helper
-            natural_source_point = helper.get_natural_source_ltr(
-                source_face, target_face, target_point
+            # Use NEW API: execute_communicator with dry_run to get natural source
+            # and the 3-cycle points (s1, t, s2) WITHOUT modifying the cube
+            target_block = (target_point, target_point)
+            dry_result = helper.execute_communicator(
+                source_face=source_face,
+                target_face=target_face,
+                target_block=target_block,
+                dry_run=True  # Get natural source and cycle points
             )
+
+            natural_source_point = dry_result.source_ltr
+            cycle_s1 = dry_result.s1_point  # Natural source position
+            cycle_t = dry_result.t_point    # Target position
+            cycle_s2 = dry_result.s2_point  # Intermediate position
 
             for rotation in range(4):
                 # Reset cube to pristine state for each test iteration
@@ -269,18 +287,22 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
 
                 source_slice_piece.c_attributes[test_key] = test_value
 
-                # Call the communicator helper (with LTR coordinates)
-                # Some (position, rotation) combinations are unsupported:
-                # - "cannot be handled": position has column intersection with both F directions
-                # - "Cannot align": source/target blocks in different rotation orbits
-                # - Edge disturbance: M slice gap < 2 for specific source/position combos
-                # These are algorithm limitations, not bugs.
+                # ================================================================
+                # USE NEW API: execute_communicator() with cycle point validation
+                # ================================================================
+                result = helper.execute_communicator(
+                    source_face=source_face,
+                    target_face=target_face,
+                    target_block=target_block,
+                    source_block=(rotated_source_point, rotated_source_point),
+                    preserve_state=True,
+                    dry_run=False  # Execute and return algorithm + cycle points
+                )
 
-                alg = helper.do_communicator(source_face, target_face,
-                                             target_block=target_block,
-                                             source_block=(rotated_source_point, rotated_source_point),
-                                             preserve_state=True
-                                             )
+                alg = result.algorithm or Algs.NOOP
+                s1_point = result.s1_point
+                t_point = result.t_point
+                s2_point = result.s2_point
 
                 # Check cube state using relative consistency (not face.color)
                 state_preserved = _check_cube_state_preserved(cube)
@@ -292,7 +314,28 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     "source_point": rotated_source_point,
                     "target_point": target_point,
                     "alg": alg,
+                    "s1_point": s1_point,  # From new API
+                    "t_point": t_point,    # From new API
+                    "s2_point": s2_point,  # From new API
                 }
+
+                # ================================================================
+                # VALIDATE 3-CYCLE POINTS
+                # ================================================================
+                # s1 should be the natural source position (after setup rotation if needed)
+                if s1_point is None:
+                    failures.append({**record, "type": "s1_point_is_none"})
+                    continue
+
+                # t should be the target point
+                if t_point != target_point:
+                    failures.append({**record, "type": "t_point_mismatch", "expected_t": target_point})
+                    continue
+
+                # s2 should be on the source face (validate it's not None)
+                if s2_point is None:
+                    failures.append({**record, "type": "s2_point_is_none"})
+                    continue
 
                 if not state_preserved:
                     failures.append({**record, "type": "state_not_preserved"})
@@ -342,7 +385,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
         for r in all_records:
             # Add separator between different target points
             if prev_target is not None and r['target_point'] != prev_target:
-                table_data.append(["---", "---", "---", "---", "---", "---"])
+                table_data.append(["---", "---", "---", "---", "---", "---", "---", "---", "---"])
             prev_target = r['target_point']
 
             table_data.append([
@@ -351,11 +394,14 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 r['rotation'],
                 r['natural_source_point'],
                 r['source_point'],
+                r.get('s1_point', 'N/A'),
+                r.get('t_point', 'N/A'),
+                r.get('s2_point', 'N/A'),
                 r['alg'],
             ])
 
         # Use multi-line headers to keep table narrow
-        headers = ["Type", "Target\nPoint", "Rot", "Natural\nSrc", "Rotated\nSrc", "Algorithm"]
+        headers = ["Type", "Target\nPoint", "Rot", "Natural\nSrc", "Rotated\nSrc", "s1", "t", "s2", "Algorithm"]
         table_str = tabulate(table_data, headers=headers, tablefmt="simple")
 
         msg = f"\n{header}\n{'=' * len(header)}\n{table_str}\n\nTotal failures: {len(failures)}"
