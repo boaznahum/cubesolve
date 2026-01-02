@@ -47,13 +47,22 @@ class CommutatorResult:
     Contains both computed data (for dry_run) and execution algorithm (for actual execution).
     This result can be cached and reused to avoid redundant calculations.
 
+    The 3-cycle points represent the three pieces affected by the block commutator:
+    s1 → t → s2 → s1 (cycle pattern)
+
     Attributes:
         source_ltr: The computed source LTR position (where the piece naturally is before setup)
         algorithm: The algorithm to execute (None if dry_run=True)
+        s1_point: Source point (s1) - the first piece in the 3-cycle
+        t_point: Target point (t) - the second piece in the 3-cycle
+        s2_point: Intermediate point (s2) - the third piece in the 3-cycle
         _secret: Internal cache secret for optimization (avoid re-computation on second call)
     """
     source_ltr: Point
     algorithm: Alg | None
+    s1_point: Point | None = None
+    t_point: Point | None = None
+    s2_point: Point | None = None
     _secret: _InternalCommData | None = None
 
 
@@ -177,6 +186,31 @@ class CommunicatorHelper(SolverElement):
         This is the PRIMARY API for communicator operations. It combines the functionality
         of get_natural_source_ltr() and do_communicator() into a single method.
 
+        THE 3-CYCLE PATTERN:
+        ===================
+        The block commutator moves exactly 3 pieces in a cycle: s1 → t → s2 → s1
+
+        ```
+        SOURCE FACE          TARGET FACE
+        ┌─────────┐         ┌─────────┐
+        │  s1 ←─┐ │         │  ↓      │
+        │       │ │         │  t      │
+        │     s2→ │         │  ↑      │
+        └─────────┘         └─────────┘
+
+        Three-step cycle:
+        1. s1 → t  (via slice move + target face rotation)
+        2. t → s2  (target piece moves to intermediate position on source)
+        3. s2 → s1 (intermediate piece moves back to original s1 position)
+
+        S2 Derivation:
+        - s2 is always on the SOURCE face
+        - s2 position is determined by the target point rotation:
+          • If CW rotation: s2 = rotate_clockwise(t) on SOURCE
+          • If CCW rotation: s2 = rotate_counterclockwise(t) on SOURCE
+        - The rotation type is determined by an intersection check
+        ```
+
         WORKFLOW WITH DRY_RUN OPTIMIZATION:
         ===================================
 
@@ -189,6 +223,7 @@ class CommunicatorHelper(SolverElement):
             ... )
             >>> natural_source = result.source_ltr
             >>> print(f"Natural source position: {natural_source}")
+            >>> print(f"Three-cycle points: s1={result.s1_point}, t={result.t_point}, s2={result.s2_point}")
             >>> assert result.algorithm is None  # No algorithm in dry_run
 
         Step 2: Manipulate/search the source position (e.g., rotate to find color)
@@ -227,6 +262,9 @@ class CommunicatorHelper(SolverElement):
         CommutatorResult containing:
             - source_ltr: The computed source LTR position
             - algorithm: The algorithm (None if dry_run=True)
+            - s1_point: Source point (first piece in 3-cycle)
+            - t_point: Target point (second piece in 3-cycle)
+            - s2_point: Intermediate point (third piece in 3-cycle)
             - _secret: Internal cache for optimization (do not use directly)
 
         RAISES:
@@ -259,11 +297,35 @@ class CommunicatorHelper(SolverElement):
         else:
             internal_data = self._do_communicator(source_face, target_face, target_block)
 
-        # If dry_run, return early with just the source position
+        # Compute the 3-cycle points (s1, t, s2)
+        # s1 is the source point (either provided or the natural source position)
+        # If source_block was not provided, use the natural source position computed by helper
+        natural_source_1_point: Point = internal_data.source_coordinate
+        s1_point: Point = source_1_point if source_1_point != target_block[0] else natural_source_1_point
+        t_point: Point = target_block[0]
+
+        # Compute s2 based on target point rotation
+        # Get rotation type from _compute_rotate_on_target
+        on_front_rotate_n, _ = self._compute_rotate_on_target(
+            self.cube, target_face.name,
+            internal_data.trans_data.slice_algorithms[0].whole_slice_alg.slice_name,
+            target_block
+        )
+
+        # s2 is on the source face: rotate t by CW or CCW depending on on_front_rotate_n
+        if on_front_rotate_n == -1:  # CCW rotation on target face
+            s2_point = self.cube.cqr.rotate_point_counterclockwise(t_point)
+        else:  # CW rotation on target face
+            s2_point = self.cube.cqr.rotate_point_clockwise(t_point)
+
+        # If dry_run, return early with just the source position and cycle points
         if dry_run:
             return CommutatorResult(
                 source_ltr=internal_data.source_coordinate,
                 algorithm=None,
+                s1_point=s1_point,
+                t_point=t_point,
+                s2_point=s2_point,
                 _secret=internal_data
             )
 
@@ -330,6 +392,9 @@ class CommunicatorHelper(SolverElement):
         return CommutatorResult(
             source_ltr=internal_data.source_coordinate,
             algorithm=final_algorithm,
+            s1_point=s1_point,
+            t_point=t_point,
+            s2_point=s2_point,
             _secret=None  # Don't cache after execution
         )
 
