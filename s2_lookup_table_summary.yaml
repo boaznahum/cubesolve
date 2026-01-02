@@ -1,0 +1,72 @@
+"UP\u2192FRONT":
+  rule: 'FAILED: set()'
+  consistent: false
+"UP\u2192BACK":
+  rule: 'FAILED: set()'
+  consistent: false
+"UP\u2192RIGHT":
+  rule: 'FAILED: set()'
+  consistent: false
+"UP\u2192LEFT":
+  rule: 'FAILED: set()'
+  consistent: false
+"DOWN\u2192FRONT":
+  rule: 'FAILED: set()'
+  consistent: false
+"DOWN\u2192BACK":
+  rule: 'FAILED: set()'
+  consistent: false
+"DOWN\u2192RIGHT":
+  rule: 'FAILED: set()'
+  consistent: false
+"DOWN\u2192LEFT":
+  rule: 'FAILED: set()'
+  consistent: false
+"FRONT\u2192UP":
+  rule: 'FAILED: set()'
+  consistent: false
+"FRONT\u2192DOWN":
+  rule: 'FAILED: set()'
+  consistent: false
+"FRONT\u2192RIGHT":
+  rule: 'FAILED: set()'
+  consistent: false
+"FRONT\u2192LEFT":
+  rule: 'FAILED: set()'
+  consistent: false
+"BACK\u2192UP":
+  rule: 'FAILED: set()'
+  consistent: false
+"BACK\u2192DOWN":
+  rule: 'FAILED: set()'
+  consistent: false
+"BACK\u2192RIGHT":
+  rule: 'FAILED: set()'
+  consistent: false
+"BACK\u2192LEFT":
+  rule: 'FAILED: set()'
+  consistent: false
+"RIGHT\u2192UP":
+  rule: 'FAILED: set()'
+  consistent: false
+"RIGHT\u2192DOWN":
+  rule: 'FAILED: set()'
+  consistent: false
+"RIGHT\u2192FRONT":
+  rule: 'FAILED: set()'
+  consistent: false
+"RIGHT\u2192BACK":
+  rule: 'FAILED: set()'
+  consistent: false
+"LEFT\u2192UP":
+  rule: 'FAILED: set()'
+  consistent: false
+"LEFT\u2192DOWN":
+  rule: 'FAILED: set()'
+  consistent: false
+"LEFT\u2192FRONT":
+  rule: 'FAILED: set()'
+  consistent: false
+"LEFT\u2192BACK":
+  rule: 'FAILED: set()'
+  consistent: false

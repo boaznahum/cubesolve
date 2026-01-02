@@ -1,0 +1,168 @@
+"UP\u2192FRONT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"UP\u2192BACK":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"UP\u2192RIGHT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"UP\u2192LEFT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"DOWN\u2192FRONT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"DOWN\u2192BACK":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"DOWN\u2192RIGHT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"DOWN\u2192LEFT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"FRONT\u2192UP":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"FRONT\u2192DOWN":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"FRONT\u2192RIGHT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"FRONT\u2192LEFT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"BACK\u2192UP":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"BACK\u2192DOWN":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"BACK\u2192RIGHT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"BACK\u2192LEFT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"RIGHT\u2192UP":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"RIGHT\u2192DOWN":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"RIGHT\u2192FRONT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"RIGHT\u2192BACK":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"LEFT\u2192UP":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"LEFT\u2192DOWN":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"LEFT\u2192FRONT":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
+"LEFT\u2192BACK":
+  valid: false
+  rule: null
+  rotation: null
+  s2_face: null
+  error: NO_VALID_RESULTS
+  test_count: 3
