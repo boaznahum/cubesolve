@@ -1,0 +1,365 @@
+"UP\u2192FRONT":
+  source_face: UP
+  target_face: FRONT
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: &id001 !!python/tuple
+    - 0
+    - 0
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 0
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"UP\u2192RIGHT":
+  source_face: UP
+  target_face: RIGHT
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 0
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 2
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"UP\u2192BACK":
+  source_face: UP
+  target_face: BACK
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 2
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 0
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"UP\u2192LEFT":
+  source_face: UP
+  target_face: LEFT
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 2
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"DOWN\u2192FRONT":
+  source_face: DOWN
+  target_face: FRONT
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 0
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"DOWN\u2192RIGHT":
+  source_face: DOWN
+  target_face: RIGHT
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 2
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"FRONT\u2192UP":
+  source_face: FRONT
+  target_face: UP
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 0
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"FRONT\u2192DOWN":
+  source_face: FRONT
+  target_face: DOWN
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 0
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"FRONT\u2192RIGHT":
+  source_face: FRONT
+  target_face: RIGHT
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 0
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"RIGHT\u2192UP":
+  source_face: RIGHT
+  target_face: UP
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 2
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+"RIGHT\u2192FRONT":
+  source_face: RIGHT
+  target_face: FRONT
+  s2_derivation_rule: NO_VALID_TESTS
+  test_cases:
+  - target_point: *id001
+    source_point: !!python/tuple
+    - 0
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 0
+    - 2
+    source_point: !!python/tuple
+    - 0
+    - 2
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
+  - target_point: !!python/tuple
+    - 2
+    - 0
+    source_point: !!python/tuple
+    - 2
+    - 0
+    s2_position: null
+    s2_face: null
+    s2_rotation: null
+    valid: false
