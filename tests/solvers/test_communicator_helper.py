@@ -382,19 +382,22 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     continue
 
                 # Verify markers are NOT in their original positions (they moved!)
+                # marker_s1 original position was s1 (on source face)
                 source_s1_piece = source_face.center.get_center_slice(rotated_s1).edge
                 if marker_s1_key in source_s1_piece.c_attributes:
-                    failures.append({**record, "type": "marker_s1_still_on_s1"})
+                    failures.append({**record, "type": "marker_s1_still_on_original_s1"})
                     continue
 
-                source_s2_piece = source_face.center.get_center_slice(rotated_s2).edge
-                if marker_t_key in source_s2_piece.c_attributes:
-                    failures.append({**record, "type": "marker_t_still_on_t_wrong_piece"})
-                    continue
-
+                # marker_t original position was t (on target face)
                 target_t_piece = target_face.center.get_center_slice(t_point).edge
-                if marker_s2_key in target_t_piece.c_attributes:
-                    failures.append({**record, "type": "marker_s2_still_on_s2"})
+                if marker_t_key in target_t_piece.c_attributes:
+                    failures.append({**record, "type": "marker_t_still_on_original_t"})
+                    continue
+
+                # marker_s2 original position was s2 (on source face)
+                source_s2_piece = source_face.center.get_center_slice(rotated_s2).edge
+                if marker_s2_key in source_s2_piece.c_attributes:
+                    failures.append({**record, "type": "marker_s2_still_on_original_s2"})
                     continue
 
                 # All checks passed - record success
