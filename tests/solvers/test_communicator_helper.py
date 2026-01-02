@@ -276,33 +276,60 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
 
                 target_block = (target_point, target_point)
 
-                # Create a unique test attribute
-                test_key = f"test_{uuid.uuid4().hex[:8]}"
-                test_value = uuid.uuid4().hex
+                # Get the cycle points from dry_run
+                dry_result = helper.execute_communicator(
+                    source_face=source_face,
+                    target_face=target_face,
+                    target_block=target_block,
+                    dry_run=True
+                )
 
-                rotated_source_point = cube.cqr.rotate_point_clockwise(natural_source_point, rotation)
+                s1_point = dry_result.s1_point  # Natural source position
+                t_point = dry_result.t_point    # Target position
+                s2_point = dry_result.s2_point  # Intermediate position on source
 
-                # Get the source center slice and set attribute (using LTR coords)
-                source_slice_piece: PartEdge = source_face.center.get_center_slice(rotated_source_point).edge
-
-                source_slice_piece.c_attributes[test_key] = test_value
+                # When we rotate the natural source, we also rotate s1 and s2 (both on source)
+                rotated_s1 = cube.cqr.rotate_point_clockwise(s1_point, rotation)
+                rotated_s2 = cube.cqr.rotate_point_clockwise(s2_point, rotation)
+                # t_point stays the same (on target face)
 
                 # ================================================================
-                # USE NEW API: execute_communicator() with cycle point validation
+                # PLACE UNIQUE MARKERS ON ALL 3 CYCLE POINTS
+                # ================================================================
+                marker_s1_key = f"marker_s1_{uuid.uuid4().hex[:8]}"
+                marker_s1_value = f"s1_{uuid.uuid4().hex[:4]}"
+
+                marker_t_key = f"marker_t_{uuid.uuid4().hex[:8]}"
+                marker_t_value = f"t_{uuid.uuid4().hex[:4]}"
+
+                marker_s2_key = f"marker_s2_{uuid.uuid4().hex[:8]}"
+                marker_s2_value = f"s2_{uuid.uuid4().hex[:4]}"
+
+                # Mark s1 on source face
+                source_s1_piece = source_face.center.get_center_slice(rotated_s1).edge
+                source_s1_piece.c_attributes[marker_s1_key] = marker_s1_value
+
+                # Mark t on target face
+                target_t_piece = target_face.center.get_center_slice(t_point).edge
+                target_t_piece.c_attributes[marker_t_key] = marker_t_value
+
+                # Mark s2 on source face
+                source_s2_piece = source_face.center.get_center_slice(rotated_s2).edge
+                source_s2_piece.c_attributes[marker_s2_key] = marker_s2_value
+
+                # ================================================================
+                # EXECUTE COMMUNICATOR
                 # ================================================================
                 result = helper.execute_communicator(
                     source_face=source_face,
                     target_face=target_face,
                     target_block=target_block,
-                    source_block=(rotated_source_point, rotated_source_point),
+                    source_block=(rotated_s1, rotated_s1),
                     preserve_state=True,
-                    dry_run=False  # Execute and return algorithm + cycle points
+                    dry_run=False
                 )
 
                 alg = result.algorithm or Algs.NOOP
-                s1_point = result.s1_point
-                t_point = result.t_point
-                s2_point = result.s2_point
 
                 # Check cube state using relative consistency (not face.color)
                 state_preserved = _check_cube_state_preserved(cube)
@@ -310,55 +337,68 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 # Common record data
                 record = {
                     "rotation": rotation,
-                    "natural_source_point": natural_source_point,
-                    "source_point": rotated_source_point,
                     "target_point": target_point,
+                    "natural_source_point": natural_source_point,
+                    "s1_point": s1_point,
+                    "t_point": t_point,
+                    "s2_point": s2_point,
+                    "rotated_s1": rotated_s1,
+                    "rotated_s2": rotated_s2,
                     "alg": alg,
-                    "s1_point": s1_point,  # From new API
-                    "t_point": t_point,    # From new API
-                    "s2_point": s2_point,  # From new API
                 }
 
                 # ================================================================
-                # VALIDATE 3-CYCLE POINTS
+                # VALIDATE 3-CYCLE: s1 → t → s2 → s1
                 # ================================================================
-                # s1 should be the natural source position (after setup rotation if needed)
-                if s1_point is None:
-                    failures.append({**record, "type": "s1_point_is_none"})
-                    continue
-
-                # t should be the target point
-                if t_point != target_point:
-                    failures.append({**record, "type": "t_point_mismatch", "expected_t": target_point})
-                    continue
-
-                # s2 should be on the source face (validate it's not None)
-                if s2_point is None:
-                    failures.append({**record, "type": "s2_point_is_none"})
-                    continue
-
                 if not state_preserved:
                     failures.append({**record, "type": "state_not_preserved"})
-                    continue  # Skip further checks for this iteration
-
-                # Verify attribute moved to target (using LTR coords)
-                target_slice_edge = target_face.center.get_center_slice(target_point).edge
-                if test_key not in target_slice_edge.c_attributes:
-                    failures.append({**record, "type": "attr_not_on_target"})
                     continue
 
-                if target_slice_edge.c_attributes[test_key] != test_value:
-                    failures.append({**record, "type": "attr_value_mismatch"})
+                # Check marker_s1: should move from s1 to t
+                target_t_piece = target_face.center.get_center_slice(t_point).edge
+                if marker_s1_key not in target_t_piece.c_attributes:
+                    failures.append({**record, "type": "marker_s1_not_at_t"})
+                    continue
+                if target_t_piece.c_attributes[marker_s1_key] != marker_s1_value:
+                    failures.append({**record, "type": "marker_s1_value_mismatch"})
                     continue
 
-                # Verify attribute no longer on the source
-                source_slice_piece = source_face.center.get_center_slice(rotated_source_point).edge
-                if test_key in source_slice_piece.c_attributes:
-                    failures.append({**record, "type": "attr_still_on_source"})
+                # Check marker_t: should move from t to s2
+                source_s2_piece = source_face.center.get_center_slice(rotated_s2).edge
+                if marker_t_key not in source_s2_piece.c_attributes:
+                    failures.append({**record, "type": "marker_t_not_at_s2"})
+                    continue
+                if source_s2_piece.c_attributes[marker_t_key] != marker_t_value:
+                    failures.append({**record, "type": "marker_t_value_mismatch"})
+                    continue
+
+                # Check marker_s2: should move from s2 back to s1
+                source_s1_piece = source_face.center.get_center_slice(rotated_s1).edge
+                if marker_s2_key not in source_s1_piece.c_attributes:
+                    failures.append({**record, "type": "marker_s2_not_at_s1"})
+                    continue
+                if source_s1_piece.c_attributes[marker_s2_key] != marker_s2_value:
+                    failures.append({**record, "type": "marker_s2_value_mismatch"})
+                    continue
+
+                # Verify markers are NOT in their original positions (they moved!)
+                source_s1_piece = source_face.center.get_center_slice(rotated_s1).edge
+                if marker_s1_key in source_s1_piece.c_attributes:
+                    failures.append({**record, "type": "marker_s1_still_on_s1"})
+                    continue
+
+                source_s2_piece = source_face.center.get_center_slice(rotated_s2).edge
+                if marker_t_key in source_s2_piece.c_attributes:
+                    failures.append({**record, "type": "marker_t_still_on_t_wrong_piece"})
+                    continue
+
+                target_t_piece = target_face.center.get_center_slice(t_point).edge
+                if marker_s2_key in target_t_piece.c_attributes:
+                    failures.append({**record, "type": "marker_s2_still_on_s2"})
                     continue
 
                 # All checks passed - record success
-                successes.append({**record, "type": "OK"})
+                successes.append({**record, "type": "OK_3CYCLE"})
 
     # At end of test, report all failures in a table
     if failures:
@@ -385,7 +425,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
         for r in all_records:
             # Add separator between different target points
             if prev_target is not None and r['target_point'] != prev_target:
-                table_data.append(["---", "---", "---", "---", "---", "---", "---", "---", "---"])
+                table_data.append(["---"] * 9)  # 9 columns
             prev_target = r['target_point']
 
             table_data.append([
@@ -393,10 +433,10 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 r['target_point'],
                 r['rotation'],
                 r['natural_source_point'],
-                r['source_point'],
-                r.get('s1_point', 'N/A'),
-                r.get('t_point', 'N/A'),
-                r.get('s2_point', 'N/A'),
+                r['rotated_s1'],
+                r['s1_point'],
+                r['t_point'],
+                r['s2_point'],
                 r['alg'],
             ])
 
