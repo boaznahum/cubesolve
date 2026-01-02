@@ -1,0 +1,153 @@
+validation_summary:
+  total_tests: 24
+  valid_results: 0
+  success_rate: 0.0%
+  consistent_rules: 0
+  mixed_patterns: 0
+results_by_cube_size:
+  '3':
+    "UP\u2192FRONT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "UP\u2192RIGHT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "DOWN\u2192FRONT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "DOWN\u2192RIGHT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "FRONT\u2192UP":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "FRONT\u2192RIGHT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "BACK\u2192UP":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "BACK\u2192LEFT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "RIGHT\u2192UP":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "RIGHT\u2192FRONT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "LEFT\u2192UP":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+    "LEFT\u2192FRONT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: intersection
+  '5':
+    "UP\u2192FRONT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "UP\u2192RIGHT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "DOWN\u2192FRONT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "DOWN\u2192RIGHT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "FRONT\u2192UP":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "FRONT\u2192RIGHT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "BACK\u2192UP":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "BACK\u2192LEFT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "RIGHT\u2192UP":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "RIGHT\u2192FRONT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "LEFT\u2192UP":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
+    "LEFT\u2192FRONT":
+      valid: false
+      s2_position: null
+      s2_face: null
+      rotation: null
+      error: marker_not_found
