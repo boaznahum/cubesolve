@@ -352,11 +352,15 @@ class CommunicatorHelper(SolverElement):
             rotation_count = on_front_rotate_n + table_rotation_offset  # Add
 
         # s2 is on the source face: apply clock rotations to source_1_point
-        # rotation_count is normalized to 0-3 (4 positions on a face)
+        # Handle positive (CW) and negative (CCW) rotations correctly
         s2_point = source_1_point
         rotation_count_normalized = rotation_count % 4
-        for _ in range(rotation_count_normalized):
-            s2_point = self.cube.cqr.rotate_point_clockwise(s2_point)
+        if rotation_count >= 0:
+            for _ in range(rotation_count_normalized):
+                s2_point = self.cube.cqr.rotate_point_clockwise(s2_point)
+        else:
+            for _ in range(rotation_count_normalized):
+                s2_point = self.cube.cqr.rotate_point_counterclockwise(s2_point)
 
         # If dry_run, return early with just the source position and cycle points
         if dry_run:
