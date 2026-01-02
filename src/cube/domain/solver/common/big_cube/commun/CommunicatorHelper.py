@@ -15,7 +15,9 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Tuple, TypeAlias
+import yaml
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
@@ -93,6 +95,28 @@ class CommunicatorHelper(SolverElement):
 
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)
+        self._s2_rotation_table = self._load_s2_rotation_table()
+
+    @staticmethod
+    def _load_s2_rotation_table() -> dict:
+        """Load s2 rotation direction lookup table from YAML file."""
+        table_file = Path(__file__).parent / "s2_rotation_table.yaml"
+        try:
+            with open(table_file, 'r') as f:
+                return yaml.safe_load(f) or {}
+        except FileNotFoundError:
+            # If table not found, return empty dict (will use default behavior)
+            return {}
+
+    def _get_s2_rotation_multiplier(self, source_face_name: FaceName, target_face_name: FaceName) -> int:
+        """Get the s2 rotation multiplier from the lookup table.
+
+        Returns:
+            Multiplier value (typically 1 or -1)
+            Default is 1 if not found in table
+        """
+        key = f"{source_face_name.name}-{target_face_name.name}"
+        return self._s2_rotation_table.get(key, 1)
 
     @property
     def n_slices(self) -> int:
@@ -318,10 +342,15 @@ class CommunicatorHelper(SolverElement):
             target_block
         )
 
-        # s2 is on the source face: rotate t by CW or CCW depending on on_front_rotate_n
-        if on_front_rotate_n == -1:  # CCW rotation on target face
+        # Apply lookup table multiplier to determine final s2 rotation direction
+        # result = table_multiplier * on_front_rotate_n
+        table_multiplier = self._get_s2_rotation_multiplier(source_face.name, target_face.name)
+        s2_rotation_n = table_multiplier * on_front_rotate_n
+
+        # s2 is on the source face: rotate t by CW or CCW depending on s2_rotation_n
+        if s2_rotation_n < 0:  # CCW rotation
             s2_point = self.cube.cqr.rotate_point_counterclockwise(t_point)
-        else:  # CW rotation on target face
+        else:  # CW rotation
             s2_point = self.cube.cqr.rotate_point_clockwise(t_point)
 
         # If dry_run, return early with just the source position and cycle points

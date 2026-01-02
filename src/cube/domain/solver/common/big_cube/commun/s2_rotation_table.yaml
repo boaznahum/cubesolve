@@ -1,0 +1,40 @@
+# S2 Rotation Direction Lookup Table
+# Format: (source_face, target_face): value
+# The helper computes: result = value * rotate_n
+# Where rotate_n is -1 or 1 from _compute_rotate_on_target()
+
+FRONT-UP: 1
+FRONT-DOWN: 1
+FRONT-LEFT: 1
+FRONT-RIGHT: 1
+FRONT-BACK: 1
+
+UP-FRONT: 1
+UP-BACK: 1
+UP-LEFT: 1
+UP-RIGHT: 1
+UP-DOWN: 1
+
+DOWN-FRONT: 1
+DOWN-BACK: 1
+DOWN-LEFT: 1
+DOWN-RIGHT: 1
+DOWN-UP: 1
+
+BACK-UP: 1
+BACK-DOWN: 1
+BACK-LEFT: 1
+BACK-RIGHT: 1
+BACK-FRONT: 1
+
+LEFT-UP: 1
+LEFT-DOWN: 1
+LEFT-FRONT: 1
+LEFT-BACK: 1
+LEFT-RIGHT: 1
+
+RIGHT-UP: 1
+RIGHT-DOWN: 1
+RIGHT-FRONT: 1
+RIGHT-BACK: 1
+RIGHT-LEFT: 1
