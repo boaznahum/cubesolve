@@ -364,6 +364,38 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     continue
 
                 # Check marker_t: should move from t to s2
+                # SEARCH for where marker_t actually ended up
+                marker_t_found_location = None
+                marker_t_found_on_face = None
+
+                # Search on source face
+                for search_y in range(n_slices):
+                    for search_x in range(n_slices):
+                        search_point = (search_y, search_x)
+                        search_piece = source_face.center.get_center_slice(search_point).edge
+                        if marker_t_key in search_piece.c_attributes:
+                            marker_t_found_location = search_point
+                            marker_t_found_on_face = "SOURCE"
+                            break
+                    if marker_t_found_location:
+                        break
+
+                # Search on target face if not found on source
+                if not marker_t_found_location:
+                    for search_y in range(n_slices):
+                        for search_x in range(n_slices):
+                            search_point = (search_y, search_x)
+                            search_piece = target_face.center.get_center_slice(search_point).edge
+                            if marker_t_key in search_piece.c_attributes:
+                                marker_t_found_location = search_point
+                                marker_t_found_on_face = "TARGET"
+                                break
+                        if marker_t_found_location:
+                            break
+
+                record["marker_t_found_location"] = marker_t_found_location
+                record["marker_t_found_on_face"] = marker_t_found_on_face
+
                 source_s2_piece = source_face.center.get_center_slice(rotated_s2).edge
                 if marker_t_key not in source_s2_piece.c_attributes:
                     failures.append({**record, "type": "marker_t_not_at_s2"})
@@ -401,6 +433,9 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     continue
 
                 # All checks passed - record success
+                # Add marker_t location info (should be at rotated_s2 on source face)
+                record["marker_t_found_on_face"] = "SOURCE"
+                record["marker_t_found_location"] = rotated_s2
                 successes.append({**record, "type": "OK_3CYCLE"})
 
     # At end of test, report all failures in a table
@@ -431,20 +466,23 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                 table_data.append(["---"] * 9)  # 9 columns
             prev_target = r['target_point']
 
+            marker_t_found_on_face = r.get('marker_t_found_on_face', '?')
+            marker_t_found_location = r.get('marker_t_found_location', '?')
+
             table_data.append([
                 r['type'],
                 r['target_point'],
                 r['rotation'],
-                r['natural_source_point'],
-                r['rotated_s1'],
                 r['s1_point'],
                 r['t_point'],
+                f"{marker_t_found_on_face}:{marker_t_found_location}",
                 r['s2_point'],
-                r['alg'],
+                r['rotated_s1'],
+                r['rotated_s2'],
             ])
 
         # Use multi-line headers to keep table narrow
-        headers = ["Type", "Target\nPoint", "Rot", "Natural\nSrc", "Rotated\nSrc", "s1", "t", "s2", "Algorithm"]
+        headers = ["Type", "Target\nPoint", "Rot", "s1", "t\n(Target)", "Marker_T\nFound", "s2\n(Computed)", "Rotated\nS1", "Rotated\nS2"]
         table_str = tabulate(table_data, headers=headers, tablefmt="simple")
 
         msg = f"\n{header}\n{'=' * len(header)}\n{table_str}\n\nTotal failures: {len(failures)}"
