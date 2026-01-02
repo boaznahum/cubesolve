@@ -214,7 +214,7 @@ class CommunicatorHelper(SolverElement):
         WORKFLOW WITH DRY_RUN OPTIMIZATION:
         ===================================
 
-        Step 1: Dry run to get source position (no execution, no cube modification)
+        Step 1: Dry run to get natural source position and 3-cycle points
             >>> result = helper.execute_communicator(
             ...     source_face=cube.up,
             ...     target_face=cube.front,
@@ -222,8 +222,9 @@ class CommunicatorHelper(SolverElement):
             ...     dry_run=True
             ... )
             >>> natural_source = result.source_ltr
-            >>> print(f"Natural source position: {natural_source}")
-            >>> print(f"Three-cycle points: s1={result.s1_point}, t={result.t_point}, s2={result.s2_point}")
+            >>> print(f"Natural source: {natural_source}")
+            >>> print(f"3-cycle: s1={result.s1_point}, t={result.t_point}, s2={result.s2_point}")
+            >>> # s1, t, s2 are the actual cycle points after any source setup rotation
             >>> assert result.algorithm is None  # No algorithm in dry_run
 
         Step 2: Manipulate/search the source position (e.g., rotate to find color)
@@ -262,10 +263,15 @@ class CommunicatorHelper(SolverElement):
         CommutatorResult containing:
             - source_ltr: The computed source LTR position
             - algorithm: The algorithm (None if dry_run=True)
-            - s1_point: Source point (first piece in 3-cycle)
-            - t_point: Target point (second piece in 3-cycle)
-            - s2_point: Intermediate point (third piece in 3-cycle)
+            - s1_point: Source point - NATURAL SOURCE position (after setup, not input source_block)
+            - t_point: Target point - the target block position
+            - s2_point: Intermediate point - computed via target rotation on source face
             - _secret: Internal cache for optimization (do not use directly)
+
+        NOTE on s1_point vs source_block parameter:
+        - source_block parameter: input position for source face setup/rotation only
+        - s1_point in result: the ACTUAL point in the 3-cycle (natural source position)
+        - These may differ if source_block was provided for setup purposes
 
         RAISES:
         =======
@@ -298,11 +304,11 @@ class CommunicatorHelper(SolverElement):
             internal_data = self._do_communicator(source_face, target_face, target_block)
 
         # Compute the 3-cycle points (s1, t, s2)
-        # s1 is the source point (either provided or the natural source position)
-        # If source_block was not provided, use the natural source position computed by helper
-        natural_source_1_point: Point = internal_data.source_coordinate
-        s1_point: Point = source_1_point if source_1_point != target_block[0] else natural_source_1_point
-        t_point: Point = target_block[0]
+        # CRITICAL: These are the ACTUAL points in the 3-cycle after any source setup rotation
+        # s1 is ALWAYS the natural source position where the communicator actually operates
+        # The input source_1_point is only for source face SETUP, not the cycle itself
+        s1_point: Point = internal_data.source_coordinate  # Natural source position
+        t_point: Point = target_block[0]  # Target position
 
         # Compute s2 based on target point rotation
         # Get rotation type from _compute_rotate_on_target
