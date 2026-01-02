@@ -334,7 +334,7 @@ class CommunicatorHelper(SolverElement):
         s1_point: Point = internal_data.source_coordinate  # Natural source position
         t_point: Point = target_block[0]  # Target position
 
-        # Compute s2 based on source point rotation
+        # Compute s2 based on source point clock rotations
         # Get rotation type from _compute_rotate_on_target
         on_front_rotate_n, _ = self._compute_rotate_on_target(
             self.cube, target_face.name,
@@ -342,17 +342,21 @@ class CommunicatorHelper(SolverElement):
             target_block
         )
 
-        # Apply lookup table multiplier to determine final s2 rotation direction
-        # result = table_multiplier * on_front_rotate_n
-        table_multiplier = self._get_s2_rotation_multiplier(source_face.name, target_face.name)
-        s2_rotation_n = table_multiplier * on_front_rotate_n
+        # Apply lookup table rotation offset: ADD or SUBTRACT rotations based on direction
+        # If on_front_rotate_n < 0 (CCW): subtract the table value
+        # If on_front_rotate_n >= 0 (CW): add the table value
+        table_rotation_offset = self._get_s2_rotation_multiplier(source_face.name, target_face.name)
+        if on_front_rotate_n < 0:
+            rotation_count = on_front_rotate_n - table_rotation_offset  # Subtract
+        else:
+            rotation_count = on_front_rotate_n + table_rotation_offset  # Add
 
-        # s2 is on the source face: rotate source_1_point by the determined rotation value
-        # This rotates the actual source point used to determine the third affected piece
-        if s2_rotation_n < 0:  # CCW rotation
-            s2_point = self.cube.cqr.rotate_point_counterclockwise(source_1_point)
-        else:  # CW rotation
-            s2_point = self.cube.cqr.rotate_point_clockwise(source_1_point)
+        # s2 is on the source face: apply clock rotations to source_1_point
+        # rotation_count is normalized to 0-3 (4 positions on a face)
+        s2_point = source_1_point
+        rotation_count_normalized = rotation_count % 4
+        for _ in range(rotation_count_normalized):
+            s2_point = self.cube.cqr.rotate_point_clockwise(s2_point)
 
         # If dry_run, return early with just the source position and cycle points
         if dry_run:
