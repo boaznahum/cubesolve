@@ -342,14 +342,10 @@ class CommunicatorHelper(SolverElement):
             target_block
         )
 
-        # Apply lookup table rotation offset: ADD or SUBTRACT rotations based on direction
-        # If on_front_rotate_n < 0 (CCW): subtract the table value
-        # If on_front_rotate_n >= 0 (CW): add the table value
+        # Apply lookup table rotation offset directly
+        # The table value is the total clock rotations to apply to source_1_point
         table_rotation_offset = self._get_s2_rotation_multiplier(source_face.name, target_face.name)
-        if on_front_rotate_n < 0:
-            rotation_count = on_front_rotate_n - table_rotation_offset  # Subtract
-        else:
-            rotation_count = on_front_rotate_n + table_rotation_offset  # Add
+        rotation_count = table_rotation_offset
 
         # s2 is on the source face: apply clock rotations to source_1_point
         # Handle positive (CW) and negative (CCW) rotations correctly
