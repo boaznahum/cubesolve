@@ -662,33 +662,38 @@ class Face2FaceTranslator:
         source_name = source_face.name
         target_name = target_face.name
 
-        # Use IDENTITY transformation (no coordinate transformation)
-        # This is the simplest approach - coordinates map directly
-        transform_type = TransformType.IDENTITY
+        # ROTATION SEARCH ALGORITHM:
+        # Try all 4 rotation states to find the correct transformation
+        for rotation_i in range(4):
+            # Step 1: Rotate source coordinate clockwise rotation_i times
+            c_rotated = source_coord
+            for _ in range(rotation_i):
+                c_rotated = source_face.cube.cqr.rotate_point_clockwise(c_rotated)
 
-        # Apply the identity transformation using center grid size
-        # This gives us the target coordinate (which is the same as source_coord)
-        target_coord = _apply_transform(source_coord, transform_type, n_slices)
+            # Step 2: Call f2 with swapped source and target
+            result = Face2FaceTranslator.translate_source_from_target(target_face, source_face, c_rotated)
+            result_coord = result.source_coord
 
-        # Derive whole-cube algorithm dynamically from rotation cycles
-        # Going FROM source TO target (opposite direction of translate_source_from_target)
-        whole_cube_base_alg, whole_cube_base_n, whole_cube_alg = _derive_whole_cube_alg(source_name, target_name)
+            # Step 3: Check if result_coord equals source_coord
+            if result_coord == source_coord:
+                # Found the answer! Build FaceTranslationResult with result_coord
+                whole_cube_base_alg, whole_cube_base_n, whole_cube_alg = _derive_whole_cube_alg(source_name, target_name)
+                shared_edge = Face2FaceTranslator._find_shared_edge(source_face, target_face)
+                slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
+                    source_face.cube,
+                    target_name, source_name, result_coord, n_slices, whole_cube_base_alg, whole_cube_base_n
+                )
+                return FaceTranslationResult(
+                    source_coord=result_coord,
+                    whole_cube_alg=whole_cube_alg,
+                    slice_algorithms=slice_algorithms,
+                    shared_edge=shared_edge,
+                )
 
-        # Find shared edge (None if faces are opposite)
-        shared_edge = Face2FaceTranslator._find_shared_edge(source_face, target_face)
-
-        # Compute slice algorithms
-        # Note: pass target_coord here since that's where the content goes
-        slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
-            source_face.cube,
-            target_name, source_name, target_coord, n_slices, whole_cube_base_alg, whole_cube_base_n
-        )
-
-        return FaceTranslationResult(
-            source_coord=target_coord,  # In this context, this is the output target coordinate
-            whole_cube_alg=whole_cube_alg,
-            slice_algorithms=slice_algorithms,
-            shared_edge=shared_edge,
+        # If no rotation state worked, raise exception
+        raise ValueError(
+            f"No valid transformation found for coordinate {source_coord} "
+            f"between source_face={source_name} and target_face={target_name}"
         )
 
     @staticmethod
