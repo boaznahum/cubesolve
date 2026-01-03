@@ -666,13 +666,12 @@ class Face2FaceTranslator:
         # Going FROM source TO target (opposite direction of translate_source_from_target)
         whole_cube_base_alg, whole_cube_base_n, whole_cube_alg = _derive_whole_cube_alg(source_name, target_name)
 
-        # Get the transformation type from the empirically-derived table
-        # Note: We look up (source_name, target_name), not (target_name, source_name)
-        # This gives us the inverse transformation
-        transform_type = _TRANSFORMATION_TABLE[(source_name, target_name)]
+        # Use IDENTITY transformation (no coordinate transformation)
+        # This is the simplest approach - coordinates map directly
+        transform_type = TransformType.IDENTITY
 
-        # Apply the transformation using center grid size
-        # This gives us the target coordinate
+        # Apply the identity transformation using center grid size
+        # This gives us the target coordinate (which is the same as source_coord)
         target_coord = _apply_transform(source_coord, transform_type, n_slices)
 
         # Find shared edge (None if faces are opposite)

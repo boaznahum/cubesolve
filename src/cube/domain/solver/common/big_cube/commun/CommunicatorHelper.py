@@ -356,9 +356,13 @@ class CommunicatorHelper(SolverElement):
             for _ in range(on_front_rotate_n):
                 xpt = self.cube.cqr.rotate_point_clockwise(xpt)
 
-        # Step 3: Apply translator - identity for now
-        # xpt is on target_face, we need to find its position on source_face
-        xp_translated = xpt
+        # Step 3: Apply translator using identity transformation
+        # xpt is on target_face, find where it maps to on source_face
+        # translate_target_from_source(source_face, target_face, coord) finds where coord on target_face goes on source_face
+        translation_result = Face2FaceTranslator.translate_target_from_source(
+            target_face, source_face, xpt
+        )
+        xp_translated = translation_result.source_coord
 
         # Step 4: Apply su' (inverse setup) to get final xp in original coordinates
         expected_source_1_point: Point = internal_data.source_coordinate
