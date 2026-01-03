@@ -357,7 +357,7 @@ class CommunicatorHelper(SolverElement):
                 xpt = self.cube.cqr.rotate_point_clockwise(xpt)
 
         # Step 3: Apply translator - identity for now
-        # The correct coordinate transformation needs deeper understanding of the LTR bridge
+        # xpt is on target_face, we need to find its position on source_face
         xp_translated = xpt
 
         # Step 4: Apply su' (inverse setup) to get final xp in original coordinates
@@ -733,7 +733,7 @@ class CommunicatorHelper(SolverElement):
         # now we assume block of size 1
         target_point_begin: Point = target_block[0]
 
-        translation_result: FaceTranslationResult = Face2FaceTranslator.translate(target_face, source_face,
+        translation_result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face, source_face,
                                                                                   target_point_begin)
 
         return _InternalCommData(translation_result.source_coord, translation_result)
