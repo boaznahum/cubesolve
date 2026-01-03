@@ -356,9 +356,8 @@ class CommunicatorHelper(SolverElement):
             for _ in range(on_front_rotate_n):
                 xpt = self.cube.cqr.rotate_point_clockwise(xpt)
 
-        # Step 3: Apply translator (identity for now - works for axis-aligned pairs)
-        # TODO: For perpendicular face pairs (LEFT/RIGHT), we need proper Face2FaceTranslator
-        # The translator would need to inverse-transform from target to source coordinates
+        # Step 3: Apply translator - identity for now
+        # The correct coordinate transformation needs deeper understanding of the LTR bridge
         xp_translated = xpt
 
         # Step 4: Apply su' (inverse setup) to get final xp in original coordinates
