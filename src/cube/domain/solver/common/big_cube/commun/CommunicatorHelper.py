@@ -336,7 +336,6 @@ class CommunicatorHelper(SolverElement):
 
         # Compute xp (s2) using correct algorithm:
         # xp = su'(translator(tf, sf, f(tp)))
-        # For now, translator is identity function
 
         # Step 1: Get tp (target point)
         tp: Point = target_block[0]
@@ -348,7 +347,7 @@ class CommunicatorHelper(SolverElement):
             target_block
         )
 
-        # Apply f(tp): rotate tp by on_front_rotate_n
+        # Apply f(tp): rotate tp by on_front_rotate_n on the target face
         xpt = tp
         if on_front_rotate_n < 0:  # CCW rotation
             for _ in range(abs(on_front_rotate_n)):
@@ -357,10 +356,12 @@ class CommunicatorHelper(SolverElement):
             for _ in range(on_front_rotate_n):
                 xpt = self.cube.cqr.rotate_point_clockwise(xpt)
 
-        # Step 3: Apply translator (identity for now)
+        # Step 3: Apply translator (identity for now - works for axis-aligned pairs)
+        # TODO: For perpendicular face pairs (LEFT/RIGHT), we need proper Face2FaceTranslator
+        # The translator would need to inverse-transform from target to source coordinates
         xp_translated = xpt
 
-        # Step 4: Apply su' (inverse setup) to get final xp
+        # Step 4: Apply su' (inverse setup) to get final xp in original coordinates
         expected_source_1_point: Point = internal_data.source_coordinate
         source_setup_n_rotate = self._find_rotation_idx(source_1_point, expected_source_1_point)
 
