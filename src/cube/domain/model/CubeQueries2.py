@@ -171,6 +171,17 @@ class CubeQueries2:
             (r, c) = (c, inv(r))
 
     def rotate_point_clockwise(self, rc: Tuple[int, int], n=1) -> Tuple[int, int]:
+
+        """
+        claud: also support negative in this case do rotate_point_counterclockwise
+        :param rc:
+        :param n:
+        :return:
+        """
+
+        if n < 0:
+            return self.rotate_point_counterclockwise(rc, -n)
+
         cube = self._cube
 
         inv = cube.inv
@@ -180,6 +191,16 @@ class CubeQueries2:
         return rc
 
     def rotate_point_counterclockwise(self, rc: Tuple[int, int], n=1) -> Tuple[int, int]:
+
+        """
+        claud: also support negative in this case do rotate_point_clockwise
+        :param rc:
+        :param n:
+        :return:
+        """
+
+        if n < 0:
+            return self.rotate_point_clockwise(rc, -n)
 
         cube = self._cube
 

@@ -350,17 +350,11 @@ class CommunicatorHelper(SolverElement):
 
         # Apply f(tp): rotate tp by on_front_rotate_n on the target face
         # the second point on target that will be moved to source
-        xpt = tp
-        if on_front_rotate_n < 0:  # CCW rotation
-            for _ in range(abs(on_front_rotate_n)):
-                xpt = self.cube.cqr.rotate_point_counterclockwise(xpt)
-        else:  # CW rotation
-            for _ in range(on_front_rotate_n):
-                xpt = self.cube.cqr.rotate_point_clockwise(xpt)
+        cqr = self.cube.cqr
+        xpt = cqr.rotate_point_clockwise(tp, on_front_rotate_n) #supports negative
 
-        # Step 3:
-        # xpt is on target_face, find where it maps to on source_face
-        # translate_target_from_source(source_face, target_face, coord) finds where coord on target_face goes on source_face
+        # Step 3: xpt is on target_face, find where it maps to on source_face translate_target_from_source(
+        # source_face, target_face, coord) finds where coord on target_face goes on source_face
         xpt_on_source = Face2FaceTranslator.translate_target_from_source(
             target_face, source_face, xpt
         )
@@ -369,18 +363,12 @@ class CommunicatorHelper(SolverElement):
         expected_source_1_point: Point = internal_data.natural_source_coordinate
         source_setup_n_rotate = self._find_rotation_idx(source_point, natural_source)
 
-        xpt_on_source_after_un_setup = xpt_on_source
-        # su' rotates counterclockwise by source_setup_n_rotate (inverse of clockwise)
-        for _ in range(source_setup_n_rotate):
-            xpt_on_source_after_un_setup = self.cube.cqr.rotate_point_counterclockwise(xpt_on_source_after_un_setup)
-
-        # If dry_run, return early with just the source position and cycle points
-        result = CommutatorResult(source_point=source_point,
-                                  algorithm=None,
-                                  natural_source=natural_source,
-                                  target_point=target_point,
-                                  second_replaced_with_target_point_on_source=xpt_on_source_after_un_setup,
-                                  _secret=internal_data)
+        # undo the setup  #supports negative
+        xpt_on_source_after_un_setup = cqr.rotate_point_clockwise(xpt_on_source,
+                                                                  - source_setup_n_rotate)
+        # # su' rotates counterclockwise by source_setup_n_rotate (inverse of clockwise)
+        # for _ in range(source_setup_n_rotate):
+        #     xpt_on_source_after_un_setup = cqr.rotate_point_counterclockwise(xpt_on_source_after_un_setup)
 
         # Build and execute the full algorithm (same as original do_communicator)
 
