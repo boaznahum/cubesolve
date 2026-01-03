@@ -662,10 +662,6 @@ class Face2FaceTranslator:
         source_name = source_face.name
         target_name = target_face.name
 
-        # Derive whole-cube algorithm dynamically from rotation cycles
-        # Going FROM source TO target (opposite direction of translate_source_from_target)
-        whole_cube_base_alg, whole_cube_base_n, whole_cube_alg = _derive_whole_cube_alg(source_name, target_name)
-
         # Use IDENTITY transformation (no coordinate transformation)
         # This is the simplest approach - coordinates map directly
         transform_type = TransformType.IDENTITY
@@ -673,6 +669,10 @@ class Face2FaceTranslator:
         # Apply the identity transformation using center grid size
         # This gives us the target coordinate (which is the same as source_coord)
         target_coord = _apply_transform(source_coord, transform_type, n_slices)
+
+        # Derive whole-cube algorithm dynamically from rotation cycles
+        # Going FROM source TO target (opposite direction of translate_source_from_target)
+        whole_cube_base_alg, whole_cube_base_n, whole_cube_alg = _derive_whole_cube_alg(source_name, target_name)
 
         # Find shared edge (None if faces are opposite)
         shared_edge = Face2FaceTranslator._find_shared_edge(source_face, target_face)
