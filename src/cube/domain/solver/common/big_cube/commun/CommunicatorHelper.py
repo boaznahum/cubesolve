@@ -334,29 +334,40 @@ class CommunicatorHelper(SolverElement):
         s1_point: Point = internal_data.source_coordinate  # Natural source position
         t_point: Point = target_block[0]  # Target position
 
-        # Compute s2 based on source point clock rotations
-        # Get rotation type from _compute_rotate_on_target
+        # Compute xp (s2) using correct algorithm:
+        # xp = su'(translator(tf, sf, f(tp)))
+        # For now, translator is identity function
+
+        # Step 1: Get tp (target point)
+        tp: Point = target_block[0]
+
+        # Step 2: Apply f (face rotation on target) to tp
         on_front_rotate_n, _ = self._compute_rotate_on_target(
             self.cube, target_face.name,
             internal_data.trans_data.slice_algorithms[0].whole_slice_alg.slice_name,
             target_block
         )
 
-        # Apply lookup table rotation offset directly
-        # The table value is the total clock rotations to apply to source_1_point
-        table_rotation_offset = self._get_s2_rotation_multiplier(source_face.name, target_face.name)
-        rotation_count = table_rotation_offset
+        # Apply f(tp): rotate tp by on_front_rotate_n
+        xpt = tp
+        if on_front_rotate_n < 0:  # CCW rotation
+            for _ in range(abs(on_front_rotate_n)):
+                xpt = self.cube.cqr.rotate_point_counterclockwise(xpt)
+        else:  # CW rotation
+            for _ in range(on_front_rotate_n):
+                xpt = self.cube.cqr.rotate_point_clockwise(xpt)
 
-        # s2 is on the source face: apply clock rotations to source_1_point
-        # Handle positive (CW) and negative (CCW) rotations correctly
-        s2_point = source_1_point
-        rotation_count_normalized = rotation_count % 4
-        if rotation_count >= 0:
-            for _ in range(rotation_count_normalized):
-                s2_point = self.cube.cqr.rotate_point_clockwise(s2_point)
-        else:
-            for _ in range(rotation_count_normalized):
-                s2_point = self.cube.cqr.rotate_point_counterclockwise(s2_point)
+        # Step 3: Apply translator (identity for now)
+        xp_translated = xpt
+
+        # Step 4: Apply su' (inverse setup) to get final xp
+        expected_source_1_point: Point = internal_data.source_coordinate
+        source_setup_n_rotate = self._find_rotation_idx(source_1_point, expected_source_1_point)
+
+        s2_point = xp_translated
+        # su' rotates counterclockwise by source_setup_n_rotate (inverse of clockwise)
+        for _ in range(source_setup_n_rotate):
+            s2_point = self.cube.cqr.rotate_point_counterclockwise(s2_point)
 
         # If dry_run, return early with just the source position and cycle points
         if dry_run:
