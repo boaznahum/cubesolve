@@ -147,7 +147,7 @@ else:
 xp_translated = xpt
 
 # Step 4: Apply su' (inverse setup)
-expected_source_1_point: Point = internal_data.source_coordinate
+expected_source_1_point: Point = internal_data.natural_source_coordinate
 source_setup_n_rotate = self._find_rotation_idx(source_1_point, expected_source_1_point)
 s2_point = xp_translated
 for _ in range(source_setup_n_rotate):

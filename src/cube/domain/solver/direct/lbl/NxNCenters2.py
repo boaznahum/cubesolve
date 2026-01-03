@@ -439,7 +439,7 @@ class NxNCenters2(SolverElement):
         )
 
         # Step 2 - Search for source point with required color at natural position
-        natural_source = dry_result.source_ltr
+        natural_source = dry_result.source_point
 
         def source_point_has_color(s: Point) -> Point | None:
             """Search for source point with required color, checking 4 rotations."""

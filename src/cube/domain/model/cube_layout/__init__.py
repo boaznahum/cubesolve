@@ -1,7 +1,7 @@
 # answer all the geometric questions of the cube
 # see issue #55 https://github.com/boaznahum/cubesolve/issues/55#issue-3765157931
 
-from typing import Mapping
+from typing import Mapping, Tuple
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
@@ -13,6 +13,8 @@ from cube.domain.model.cube_layout.cube_layout import (
 )
 from cube.domain.model.cube_layout._CubeLayout import _CubeLayout
 from cube.utils.config_protocol import IServiceProvider
+
+Point= Tuple[int, int]
 
 
 def create_layout(

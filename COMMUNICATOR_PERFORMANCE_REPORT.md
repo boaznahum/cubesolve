@@ -82,7 +82,7 @@ The cache optimization (`_cached_secret`) provides additional benefit when using
 dry_result = helper.execute_communicator(..., dry_run=True)
 
 # Step 2: Manipulate source position (external work)
-source_point = search_for_color(dry_result.source_ltr)
+source_point = search_for_color(dry_result.source_point)
 
 # Step 3: Execute with cached computation
 final_result = helper.execute_communicator(
@@ -188,7 +188,7 @@ dry_result = self._comm_helper.execute_communicator(
     target_block=(target_point, target_point),
     dry_run=True
 )
-source_point_with_color = source_point_has_color(dry_result.source_ltr)
+source_point_with_color = source_point_has_color(dry_result.source_point)
 self._comm_helper.execute_communicator(
     source_face=source_face,
     target_face=target_face,

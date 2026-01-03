@@ -38,7 +38,7 @@ Block: TypeAlias = Tuple[Point, Point]
 
 @dataclass(frozen=True)
 class _InternalCommData:
-    source_coordinate: Point  # point on the source from where communicator will bring the data, before source setup alg
+    natural_source_coordinate: Point  # point on the source from where communicator will bring the data, before source setup alg
     trans_data: FaceTranslationResult
 
 
@@ -53,18 +53,18 @@ class CommutatorResult:
     s1 → t → s2 → s1 (cycle pattern)
 
     Attributes:
-        source_ltr: The computed source LTR position (where the piece naturally is before setup)
+        source_point: The computed source LTR position (where the piece naturally is before setup)
         algorithm: The algorithm to execute (None if dry_run=True)
-        s1_point: Source point (s1) - the first piece in the 3-cycle
-        t_point: Target point (t) - the second piece in the 3-cycle
-        s2_point: Intermediate point (s2) - the third piece in the 3-cycle
+        natural_source: Source point (s1) - the first piece in the 3-cycle
+        target_point: Target point (t) - the second piece in the 3-cycle
+        second_replaced_with_target_point_on_source: Intermediate point (s2) - the third piece in the 3-cycle
         _secret: Internal cache secret for optimization (avoid re-computation on second call)
     """
-    source_ltr: Point
+    source_point: Point
     algorithm: Alg | None
-    s1_point: Point | None = None
-    t_point: Point | None = None
-    s2_point: Point | None = None
+    natural_source: Point | None = None
+    target_point: Point | None = None
+    second_replaced_with_target_point_on_source: Point | None = None
     _secret: _InternalCommData | None = None
 
 
@@ -192,7 +192,7 @@ class CommunicatorHelper(SolverElement):
 
         data = self._do_communicator(source, target, (target_ltr, target_ltr))
 
-        return data.source_coordinate
+        return data.natural_source_coordinate
 
     def execute_communicator(
             self,
@@ -245,9 +245,9 @@ class CommunicatorHelper(SolverElement):
             ...     target_block=((1,1), (1,1)),
             ...     dry_run=True
             ... )
-            >>> natural_source = result.source_ltr
+            >>> natural_source = result.source_point
             >>> print(f"Natural source: {natural_source}")
-            >>> print(f"3-cycle: s1={result.s1_point}, t={result.t_point}, s2={result.s2_point}")
+            >>> print(f"3-cycle: s1={result.natural_source}, t={result.target_point}, s2={result.xpt_on_source_after_un_setup}")
             >>> # s1, t, s2 are the actual cycle points after any source setup rotation
             >>> assert result.algorithm is None  # No algorithm in dry_run
 
@@ -287,14 +287,14 @@ class CommunicatorHelper(SolverElement):
         CommutatorResult containing:
             - source_ltr: The computed source LTR position
             - algorithm: The algorithm (None if dry_run=True)
-            - s1_point: Source point - NATURAL SOURCE position (after setup, not input source_block)
-            - t_point: Target point - the target block position
-            - s2_point: Intermediate point - computed via target rotation on source face
+            - natural_source: Source point - NATURAL SOURCE position (after setup, not input source_block)
+            - target_point: Target point - the target block position
+            - xpt_on_source_after_un_setup: Intermediate point - computed via target rotation on source face
             - _secret: Internal cache for optimization (do not use directly)
 
-        NOTE on s1_point vs source_block parameter:
+        NOTE on natural_source vs source_block parameter:
         - source_block parameter: input position for source face setup/rotation only
-        - s1_point in result: the ACTUAL point in the 3-cycle (natural source position)
+        - natural_source in result: the ACTUAL point in the 3-cycle (natural source position)
         - These may differ if source_block was provided for setup purposes
 
         RAISES:
@@ -319,20 +319,21 @@ class CommunicatorHelper(SolverElement):
             )
 
         # Get source point from input
-        source_1_point: Point = source_block[0]
+        source_point: Point = source_block[0]
 
         # OPTIMIZATION: Use cached secret from dry_run to avoid recomputation
-        if _cached_secret is not None and _cached_secret._secret is not None:
-            internal_data = _cached_secret._secret
-        else:
-            internal_data = self._do_communicator(source_face, target_face, target_block)
+        # if _cached_secret is not None and _cached_secret._secret is not None:
+        #     internal_data = _cached_secret._secret
+        # else:
+
+        internal_data = self._do_communicator(source_face, target_face, target_block)
 
         # Compute the 3-cycle points (s1, t, s2)
         # CRITICAL: These are the ACTUAL points in the 3-cycle after any source setup rotation
         # s1 is ALWAYS the natural source position where the communicator actually operates
-        # The input source_1_point is only for source face SETUP, not the cycle itself
-        s1_point: Point = internal_data.source_coordinate  # Natural source position
-        t_point: Point = target_block[0]  # Target position
+        # The input source_point is only for source face SETUP, not the cycle itself
+        natural_source: Point = internal_data.natural_source_coordinate  # Natural source position
+        target_point: Point = target_block[0]  # Target position
 
         # Compute xp (s2) using correct algorithm:
         # xp = su'(translator(tf, sf, f(tp)))
@@ -341,13 +342,14 @@ class CommunicatorHelper(SolverElement):
         tp: Point = target_block[0]
 
         # Step 2: Apply f (face rotation on target) to tp
-        on_front_rotate_n, _ = self._compute_rotate_on_target(
+        on_front_rotate_n, target_block_after_rotate = self._compute_rotate_on_target(
             self.cube, target_face.name,
             internal_data.trans_data.slice_algorithms[0].whole_slice_alg.slice_name,
             target_block
         )
 
         # Apply f(tp): rotate tp by on_front_rotate_n on the target face
+        # the second point on target that will be moved to source
         xpt = tp
         if on_front_rotate_n < 0:  # CCW rotation
             for _ in range(abs(on_front_rotate_n)):
@@ -356,37 +358,31 @@ class CommunicatorHelper(SolverElement):
             for _ in range(on_front_rotate_n):
                 xpt = self.cube.cqr.rotate_point_clockwise(xpt)
 
-        # Step 3: Apply translator using identity transformation
+        # Step 3:
         # xpt is on target_face, find where it maps to on source_face
         # translate_target_from_source(source_face, target_face, coord) finds where coord on target_face goes on source_face
-        translation_result = Face2FaceTranslator.translate_target_from_source(
+        xpt_on_source = Face2FaceTranslator.translate_target_from_source(
             target_face, source_face, xpt
         )
-        xp_translated = translation_result.source_coord
 
         # Step 4: Apply su' (inverse setup) to get final xp in original coordinates
-        expected_source_1_point: Point = internal_data.source_coordinate
-        source_setup_n_rotate = self._find_rotation_idx(source_1_point, expected_source_1_point)
+        expected_source_1_point: Point = internal_data.natural_source_coordinate
+        source_setup_n_rotate = self._find_rotation_idx(source_point, natural_source)
 
-        s2_point = xp_translated
+        xpt_on_source_after_un_setup = xpt_on_source
         # su' rotates counterclockwise by source_setup_n_rotate (inverse of clockwise)
         for _ in range(source_setup_n_rotate):
-            s2_point = self.cube.cqr.rotate_point_counterclockwise(s2_point)
+            xpt_on_source_after_un_setup = self.cube.cqr.rotate_point_counterclockwise(xpt_on_source_after_un_setup)
 
         # If dry_run, return early with just the source position and cycle points
-        if dry_run:
-            return CommutatorResult(
-                source_ltr=internal_data.source_coordinate,
-                algorithm=None,
-                s1_point=s1_point,
-                t_point=t_point,
-                s2_point=s2_point,
-                _secret=internal_data
-            )
+        result = CommutatorResult(source_point=source_point,
+                                  algorithm=None,
+                                  natural_source=natural_source,
+                                  target_point=target_point,
+                                  second_replaced_with_target_point_on_source=xpt_on_source_after_un_setup,
+                                  _secret=internal_data)
 
         # Build and execute the full algorithm (same as original do_communicator)
-        expected_source_1_point: Point = internal_data.source_coordinate
-        source_setup_n_rotate = self._find_rotation_idx(source_1_point, expected_source_1_point)
 
         source_setup_alg = Algs.of_face(
             source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
@@ -395,14 +391,12 @@ class CommunicatorHelper(SolverElement):
         slice_alg_data: SliceAlgorithmResult = internal_data.trans_data.slice_algorithms[0]
         slice_base_alg: SliceAlg = slice_alg_data.whole_slice_alg
 
-        on_front_rotate_n, target_block_after_rotate = \
-            self._compute_rotate_on_target(self.cube, target_face.name, slice_base_alg.slice_name, target_block)
-
         on_front_rotate: Alg = Algs.of_face(target_face.name) * on_front_rotate_n
 
         # Build the communicator
         inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block, target_face.name) * slice_alg_data.n
-        second_inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block_after_rotate, target_face.name) * slice_alg_data.n
+        second_inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block_after_rotate,
+                                                          target_face.name) * slice_alg_data.n
 
         cum = Algs.seq_alg(None,
                            inner_slice_alg,
@@ -415,41 +409,43 @@ class CommunicatorHelper(SolverElement):
                            on_front_rotate.prime
                            )
 
-        # Animation annotation helpers
-        def _ann_target() -> Iterator[CenterSlice]:
-            """Yield target CenterSlice objects."""
-            yield target_face.center.get_center_slice(target_block[0])
+        if not dry_run:
 
-        def _ann_source() -> Iterator[CenterSlice]:
-            """Yield source CenterSlice objects (before rotation)."""
-            yield source_face.center.get_center_slice(source_1_point)
+            # Animation annotation helpers
+            def _ann_target() -> Iterator[CenterSlice]:
+                """Yield target CenterSlice objects."""
+                yield target_face.center.get_center_slice(target_block[0])
 
-        def _h2() -> str:
-            """Headline for annotation - block size info."""
-            return ", 1x1 communicator"  # pragma: no cover
+            def _ann_source() -> Iterator[CenterSlice]:
+                """Yield source CenterSlice objects (before rotation)."""
+                yield source_face.center.get_center_slice(source_point)
 
-        # Execute with animation annotations
-        with self.ann.annotate(
-                (_ann_source, AnnWhat.Moved),
-                (_ann_target, AnnWhat.FixedPosition),
-                h2=_h2
-        ):
-            if source_setup_n_rotate:
-                self.op.play(source_setup_alg)
-            self.op.play(cum)
+            def _h2() -> str:
+                """Headline for annotation - block size info."""
+                return ", 1x1 communicator"  # pragma: no cover
 
-        # CAGE METHOD: Undo source rotation to preserve paired edges
-        if preserve_state and source_setup_n_rotate:
-            self.op.play(source_setup_alg.prime)
+            # Execute with animation annotations
+            with self.ann.annotate(
+                    (_ann_source, AnnWhat.Moved),
+                    (_ann_target, AnnWhat.FixedPosition),
+                    h2=_h2
+            ):
+                if source_setup_n_rotate:
+                    self.op.play(source_setup_alg)
+                self.op.play(cum)
+
+            # CAGE METHOD: Undo source rotation to preserve paired edges
+            if preserve_state and source_setup_n_rotate:
+                self.op.play(source_setup_alg.prime)
 
         final_algorithm = (source_setup_alg + cum + source_setup_alg.prime).simplify()
 
         return CommutatorResult(
-            source_ltr=internal_data.source_coordinate,
+            source_point=source_point,
             algorithm=final_algorithm,
-            s1_point=s1_point,
-            t_point=t_point,
-            s2_point=s2_point,
+            natural_source=natural_source,
+            target_point=target_point,
+            second_replaced_with_target_point_on_source=xpt_on_source_after_un_setup,
             _secret=None  # Don't cache after execution
         )
 
@@ -513,8 +509,6 @@ class CommunicatorHelper(SolverElement):
         inner_max = n // 2
         return inner_min <= r <= inner_max and inner_min <= c <= inner_max
 
-
-
     def _get_slice_alg(self, base_slice_alg: SliceAlg,
                        target_block: Block, on_face: FaceName):
 
@@ -543,13 +537,10 @@ class CommunicatorHelper(SolverElement):
 
         slice_match_face_ltr = slice_layout.does_slice_of_face_start_with_face(on_face)
 
-
-
         #   index is from left to right, L is from left to right,
         # so we don't need to invert
 
-
-        v1 = ex(target_block[0]) # begin
+        v1 = ex(target_block[0])  # begin
         v2 = ex(target_block[1])
 
         if not slice_match_face_ltr:
@@ -737,8 +728,9 @@ class CommunicatorHelper(SolverElement):
         # now we assume block of size 1
         target_point_begin: Point = target_block[0]
 
-        translation_result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face, source_face,
-                                                                                  target_point_begin)
+        translation_result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face,
+                                                                                                     source_face,
+                                                                                                     target_point_begin)
 
         return _InternalCommData(translation_result.source_coord, translation_result)
 

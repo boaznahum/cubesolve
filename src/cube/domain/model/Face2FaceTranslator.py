@@ -125,6 +125,7 @@ from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.model import Cube
+from cube.domain.model.cube_layout import Point
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
@@ -279,6 +280,7 @@ class SliceAlgorithmResult:
         :return:
         """
         return self._on_slice - 1
+
     def get_alg(self) -> Alg:
         return self.get_slice_alg(self.on_slice)
 
@@ -292,10 +294,7 @@ class SliceAlgorithmResult:
         :param slice_index:  zero based !!!
         :return:
         """
-        return self.whole_slice_alg[slice_index+1] * self.n
-
-
-
+        return self.whole_slice_alg[slice_index + 1] * self.n
 
 
 # =============================================================================
@@ -326,10 +325,10 @@ class _SliceIndexFormula:
         INV_ROW: slice_index = n_slices - row  (maps 0 → n_slices, n_slices-1 → 1)
         INV_COL: slice_index = n_slices - col  (maps 0 → n_slices, n_slices-1 → 1)
     """
-    ROW = "row"           # slice_index = row + 1
-    COL = "col"           # slice_index = col + 1
-    INV_ROW = "inv_row"   # slice_index = n_slices - row
-    INV_COL = "inv_col"   # slice_index = n_slices - col
+    ROW = "row"  # slice_index = row + 1
+    COL = "col"  # slice_index = col + 1
+    INV_ROW = "inv_row"  # slice_index = n_slices - row
+    INV_COL = "inv_col"  # slice_index = n_slices - col
 
 
 _SLICE_INDEX_TABLE: dict[tuple[SliceName, FaceName], str] = {
@@ -354,10 +353,10 @@ _SLICE_INDEX_TABLE: dict[tuple[SliceName, FaceName], str] = {
 
 
 def _compute_slice_index(
-    source_face: FaceName,
-    slice_name: SliceName,
-    coord: tuple[int, int],
-    n_slices: int
+        source_face: FaceName,
+        slice_name: SliceName,
+        coord: tuple[int, int],
+        n_slices: int
 ) -> int:
     """
     Compute the 1-based slice index for a given source face and coordinate.
@@ -479,7 +478,6 @@ def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Tuple[WholeCubeA
 
             return whole_cube_alg, steps, whole_cube_alg * steps
 
-
     # Should never reach here for valid face pairs
     raise ValueError(f"No rotation cycle contains both {source} and {dest}")
 
@@ -598,8 +596,33 @@ class Face2FaceTranslator:
             source_face: Face,
             target_face: Face,
             source_coord: tuple[int, int]
-    ) -> FaceTranslationResult:
+    ) -> Point:
         """
+
+        claud: If given slice S Operation(S, E, M) brings point x@S to y@T then the same
+        inverse S bring y@T to x@S with the same S you cannot bring it to difrrent ,  it is unique, you cannot move point to othe rplace.
+        so we say x@S<-->y@T
+
+
+
+        (for twofaces that are far away Parallels ,  and not adjust there two slice operations wihtdiffrent results)
+
+
+        So if we need to find what is target@T given source_coord@source_face :
+          Guess a point on T v@T, and find which source (Natural source) w@S match it.
+          as we siad above v@T <--> w@S
+          If w@S == source_coord@source_face it means - as we said before that
+             v@T <--> w@S, so
+             v@T <--> source_coord@source_face
+
+          so v@T is our answer:  target@T = v@T
+
+          to guess v@T we just need to roate souce 4 times becuase there are no other options,a inner poit cannot be moved to outer
+          for eaxmple.
+
+        cluad: till here
+
+
         Find the coordinate on target_face where content from source_face will move to.
 
         Given a position on the source face where we have content,
@@ -662,33 +685,33 @@ class Face2FaceTranslator:
         source_name = source_face.name
         target_name = target_face.name
 
+        """
+        So if we need to find what is target@T given source_coord@source_face :
+          Guess a point on T v@T, and find which source (Natural source) w@S match it.
+          as we siad above v@T <--> w@S 
+          If w@S == source_coord@source_face it means - as we said before that 
+             v@T <--> w@S, so
+             v@T <--> source_coord@source_face
+             
+          so v@T is our answer:  target@T = v@T """
+
         # ROTATION SEARCH ALGORITHM:
         # Try all 4 rotation states to find the correct transformation
-        for rotation_i in range(4):
-            # Step 1: Rotate source coordinate clockwise rotation_i times
-            c_rotated = source_coord
-            for _ in range(rotation_i):
-                c_rotated = source_face.cube.cqr.rotate_point_clockwise(c_rotated)
+        cqr = source_face.cube.cqr
+
+        for n_rotations in range(4):
+            # Step 1: Rotate source coordinate clockwise n_rotations times
+            # guess v@T
+            guessed_point = cqr.rotate_point_clockwise(source_coord, n_rotations)
 
             # Step 2: Call f2 with swapped source and target
-            result = Face2FaceTranslator.translate_source_from_target(target_face, source_face, c_rotated)
-            result_coord = result.source_coord
+            result = Face2FaceTranslator.translate_source_from_target(target_face, source_face, guessed_point)
+            # w@S
+            source_on_source = result.source_coord
 
-            # Step 3: Check if result_coord equals source_coord
-            if result_coord == source_coord:
-                # Found the answer! Build FaceTranslationResult with result_coord
-                whole_cube_base_alg, whole_cube_base_n, whole_cube_alg = _derive_whole_cube_alg(source_name, target_name)
-                shared_edge = Face2FaceTranslator._find_shared_edge(source_face, target_face)
-                slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
-                    source_face.cube,
-                    target_name, source_name, result_coord, n_slices, whole_cube_base_alg, whole_cube_base_n
-                )
-                return FaceTranslationResult(
-                    source_coord=result_coord,
-                    whole_cube_alg=whole_cube_alg,
-                    slice_algorithms=slice_algorithms,
-                    shared_edge=shared_edge,
-                )
+            # Step 3: Check if source_on_source equals source_coord
+            if source_on_source == source_coord:
+                return guessed_point
 
         # If no rotation state worked, raise exception
         raise ValueError(

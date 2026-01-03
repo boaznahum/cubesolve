@@ -262,7 +262,7 @@ def execute_communicator(..., target_block, source_block=None):
 
     # Step 1: Get np (natural source) via translator
     internal_data = self._do_communicator(sf, tf, target_block)
-    np = internal_data.source_coordinate
+    np = internal_data.natural_source_coordinate
 
     # Step 2: Set up the 3-cycle points
     s1_point = np  # s1 is always at natural source
