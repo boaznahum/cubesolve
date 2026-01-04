@@ -44,4 +44,6 @@ __all__ = [
     'opposite',
     'is_adjacent',
     'get_adjacent_faces',
+    # Face2FaceTranslator is NOT exported here to avoid circular imports.
+    # Import directly: from cube.domain.model.geometric.Face2FaceTranslator import ...
 ]

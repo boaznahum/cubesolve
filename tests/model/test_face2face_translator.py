@@ -26,7 +26,7 @@ import pytest
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.FaceName import FaceName
-from cube.domain.model.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult
+from cube.domain.model.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult
 from cube.domain.model._elements import CenterSliceIndex
 from cube.domain.model.PartSlice import CenterSlice
 from tests.test_utils import _test_sp
