@@ -76,6 +76,11 @@ class FRotation:
         """True if this is the identity rotation."""
         return self._n_rotation % 4 == 0
 
+    @property
+    def unit(self) -> FUnitRotation:
+        """The unit rotation (size-independent)."""
+        return FUnitRotation(_n_rotation=self._n_rotation)
+
     def __repr__(self) -> str:
         names = {0: "I", 1: "CW", 2: "R2", 3: "CCW"}
         return f"FRotation({names[self._n_rotation % 4]}, n={self.n})"
