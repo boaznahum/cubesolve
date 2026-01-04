@@ -28,7 +28,7 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, ClassVar, Tuple
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -102,6 +102,12 @@ class FUnitRotation:
         FUnitRotation.R2  - 180 degrees (half turn)
     """
     _n_rotation: int  # 0=I, 1=CW, 2=R2, 3=CCW (quarter turns clockwise)
+
+    # Class-level constants (declared for type checkers)
+    I: ClassVar[FUnitRotation]
+    CW: ClassVar[FUnitRotation]
+    R2: ClassVar[FUnitRotation]
+    CCW: ClassVar[FUnitRotation]
 
     def of_cube(self, cube: "Cube") -> FRotation:
         """Create a sized rotation for the given cube."""
