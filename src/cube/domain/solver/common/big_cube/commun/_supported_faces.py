@@ -1,4 +1,4 @@
-from cube.domain.model import FaceName
+from cube.domain.model.FaceName import FaceName
 
 
 def _get_supported_pairs() -> list[tuple[FaceName, FaceName]]:

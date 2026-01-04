@@ -122,7 +122,9 @@ from enum import Enum, auto
 from typing import TYPE_CHECKING, Tuple
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
-from cube.domain.algs import Algs, Alg, WholeCubeAlg
+from cube.domain.algs.Alg import Alg
+from cube.domain.algs.Algs import Algs
+from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.model import Cube
 from cube.domain.model.geometric import Point

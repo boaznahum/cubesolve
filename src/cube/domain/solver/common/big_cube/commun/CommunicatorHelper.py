@@ -361,7 +361,6 @@ class CommunicatorHelper(SolverElement):
         )
 
         # Step 4: Apply su' (inverse setup) to get final xp in original coordinates
-        expected_source_1_point: Point = internal_data.natural_source_coordinate
         source_setup_n_rotate = self._find_rotation_idx(source_point, natural_source)
 
         # undo the setup  #supports negative
