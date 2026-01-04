@@ -28,6 +28,11 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         super().__init__(str(face.value), n)
         self._face: FaceName = face
 
+    @property
+    def _hide_single_slice(self) -> bool:
+        """Hide [1] because R = R[1] for FaceAlg."""
+        return True
+
     @final
     def play(self, cube: Cube, inv: bool = False):
         start_stop: Iterable[int] = self.normalize_slice_index(n_max=1 + cube.n_slices, _default=[1])

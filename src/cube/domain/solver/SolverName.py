@@ -59,13 +59,14 @@ class SolverName(Enum):
 
     Each enum value contains SolverMeta with test skip reasons (None = supported).
     """
-    LBL = SolverMeta("LBL", not_testable="WIP: Some edge cases with seed=0 need investigation")
+    LBL = SolverMeta("LBL")
     CFOP = SolverMeta("CFOP")#, only_3x3="CFOP use same reducer as LBL")
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
-    LBL_DIRECT = SolverMeta("LBL-Direct", implemented=False,
-                            skip_3x3="LBL-Direct is for NxN cubes only",
-                            not_testable="WIP: Only Layer 1 implemented")  # Layer-by-layer direct method
+    LBL_BIG = SolverMeta("LBL-Big",
+                         not_testable="Not yet implemented",
+                         skip_3x3="LBL-Big is for NxN cubes only",
+                         skip_even="WIP: Even cubes not fully tested")  # Layer-by-layer for big cubes
 
     @property
     def display_name(self) -> str:

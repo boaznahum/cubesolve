@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.solver.common.tracker._base import FaceTracker
+from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
@@ -86,7 +86,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     @property
     def get_code(self) -> SolverName:
-        return SolverName.LBL_DIRECT
+        return SolverName.LBL_BIG
 
     @property
     def status(self) -> str:
@@ -124,13 +124,21 @@ class LayerByLayerNxNSolver(BaseSolver):
         """Return list of solve steps this solver supports.
 
         Note: SolveStep.ALL is implicit for all solvers (not listed here).
+        Slice steps are dynamically added based on cube size.
         """
-        return [
+        steps = [
             SolveStep.LBL_L1_Ctr,     # Layer 1 centers only
             SolveStep.L1x,            # Layer 1 cross (centers + edges)
             SolveStep.LBL_L1,         # Layer 1 complete
-            SolveStep.LBL_SLICES_CTR, # Middle slices centers (debugging)
+            # Slice 0 granular steps (4 faces)
+            SolveStep.LBL_S0F1,       # Slice 0 face 1
+            SolveStep.LBL_S0F2,       # Slice 0 faces 1-2
+            SolveStep.LBL_S0F3,       # Slice 0 faces 1-3
+            SolveStep.LBL_S0F4,       # Slice 0 complete
+            SolveStep.LBL_SLICES_CTR, # All middle slices centers
         ]
+
+        return steps
 
     # =========================================================================
     # Protected methods (AbstractSolver)
@@ -184,6 +192,19 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_slices_centers(th)
                     # TODO: Add slice edges, last layer
 
+                case SolveStep.LBL_S0F1 | SolveStep.LBL_S0F2 | SolveStep.LBL_S0F3 | SolveStep.LBL_S0F4:
+                    # Solve Layer 1 + slice 0 up to N faces
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+                    self._solve_layer1_corners(th)
+                    n_faces = {
+                        SolveStep.LBL_S0F1: 1,
+                        SolveStep.LBL_S0F2: 2,
+                        SolveStep.LBL_S0F3: 3,
+                        SolveStep.LBL_S0F4: 4,
+                    }[what]
+                    self._solve_slice_n_faces(th, slice_index=0, n_faces=n_faces)
+
                 case _:
                     raise ValueError(f"Unsupported step: {what}")
 
@@ -203,9 +224,14 @@ class LayerByLayerNxNSolver(BaseSolver):
         return l1_face.center.is3x3
 
     def _is_layer1_edges_solved(self, th: FacesTrackerHolder) -> bool:
-        """Check if all Layer 1 face edges are paired (reduced to 3x3)."""
-        l1_face = self._get_layer1_tracker(th).face
-        return all(e.is3x3 for e in l1_face.edges)
+        """Check if all edges containing L1 color are paired (reduced to 3x3).
+
+        Note: Checks by COLOR, not position. After centers are solved but before
+        cross, the 4 L1-color edges may be scattered across the cube.
+        """
+        l1_color = self._get_layer1_tracker(th).color
+        l1_edges = [e for e in self.cube.edges if l1_color in e.colors_id]
+        return all(e.is3x3 for e in l1_edges)
 
     def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 cross is solved (edges paired AND in correct position).
@@ -397,3 +423,16 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         with self.op.annotation.annotate(h2="Middle slices centers"):
             self._lbl_slices.solve_all_slice_centers(th, l1_tracker)
+
+    def _solve_slice_n_faces(self, th: FacesTrackerHolder, slice_index: int, n_faces: int) -> None:
+        """Solve N faces of a specific slice (for debugging).
+
+        Args:
+            th: Tracker holder
+            slice_index: Which slice (0 = first middle slice)
+            n_faces: How many faces to solve (1-4)
+        """
+        l1_tracker = self._get_layer1_tracker(th)
+
+        with self.op.annotation.annotate(h2=f"Slice {slice_index}, {n_faces} faces"):
+            self._lbl_slices.solve_slice_n_faces(th, l1_tracker, slice_index, n_faces)

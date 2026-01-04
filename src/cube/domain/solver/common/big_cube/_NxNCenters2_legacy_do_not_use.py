@@ -1,19 +1,15 @@
-import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from enum import Enum, unique
 from typing import Tuple, TypeAlias
 
-import cube
-from cube.domain import algs
-from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, CenterSlice, CenterSliceIndex
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.solver.common.tracker._base import FaceTracker
+from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
+from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.protocols import SolverElementsProvider
 
 CENTER_SLICE_TRACK_KEY = "xxxxxxx"
@@ -116,6 +112,7 @@ class NxNCenters2(SolverElement):
         super().__init__(slv)
 
         self._preserve_cage = preserve_cage
+        self._comm_helper = CommunicatorHelper(slv)
 
     def debug(self, *args, level=3):
         if level <= NxNCenters2.D_LEVEL:
@@ -148,7 +145,7 @@ class NxNCenters2(SolverElement):
         while True:
             iter_count += 1
             if iter_count > max_iter:
-                raise InternalSWError(f"Maximum number of iterations reached")
+                raise InternalSWError("Maximum number of iterations reached")
 
             with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
 
@@ -157,16 +154,16 @@ class NxNCenters2(SolverElement):
                                                                   slice_row_index):
                     work_was_done = True
 
-                # this does position and tracking again !!!
-                if self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, slice_row_index):
-                    work_was_done = True
+                # WIP: Commented out - this does position and tracking again !!!
+                # if self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, slice_row_index):
+                #     work_was_done = True
 
             if not work_was_done:
                 break
 
             return work_was_done
 
-        self._solve_single_center_row_slice_all_slices(l1_white_tracker, slice_row_index, target_face)
+        self._solve_single_center_row_slice_all_slices(l1_white_tracker, target_face, slice_row_index)
 
     def _solve_single_center_row_slice_all_slices(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
                                                   slice_row_index: int
@@ -420,39 +417,9 @@ class NxNCenters2(SolverElement):
         """
         Execute block commutator to move pieces from source to target.
 
-        The commutator is: [M', F, M', F', M, F, M, F']
-        This is BALANCED (2 F + 2 F' = 0), so corners return to their position.
+        Delegates to CommunicatorHelper for the actual commutator execution.
 
-        CAGE METHOD (preserve_cage=True):
-        =================================
-        The commutator itself is balanced, but the SOURCE ROTATION setup move
-        (line: source_face * n_rotate) is NOT balanced. This permanently moves corners.
-        With preserve_cage=True: We undo this rotation after the commutator.
-
-        WHY THE COMMUTATOR IS BALANCED - VISUAL:
-        ----------------------------------------
-        The commutator cycles 3 positions:
-
-           Source (UP)          Front (F)
-           +-+-+-+              +-+-+-+
-           | |A| |              | |C| |
-           +-+-+-+              +-+-+-+
-           | | | |              | | | |
-           +-+-+-+              +-+-+-+
-           | | | |              | |B| |
-           +-+-+-+              +-+-+-+
-
-        After [M', F, M', F', M, F, M, F']:
-        - A (from UP) -> C position (on F)
-        - C (from F)  -> B position (on F after rotation)
-        - B (from F)  -> A position (on UP)
-
-        The F rotations happen in pairs: F + F' and F + F' = 0 net rotation.
-        So corners end up back where they started.
-
-        BUT: If we first played source_face * n_rotate to align the block,
-        that rotation is NOT undone by the commutator. We must undo it manually.
-
+        :param required_color: Color to search for on source face
         :param face: Target face (must be front)
         :param source_face: Source face (must be up or back)
         :param rc1: one corner of block, center slices indexes [0..n)
@@ -463,8 +430,6 @@ class NxNCenters2(SolverElement):
         cube: Cube = face.cube
         assert face is cube.front
         assert source_face is cube.up or source_face is cube.back
-
-        is_back = source_face is cube.back
 
         # normalize block
         r1 = rc1[0]
@@ -481,89 +446,28 @@ class NxNCenters2(SolverElement):
         rc1 = (r1, c1)
         rc2 = (r2, c2)
 
-        # in case of odd nd (mid, mid), search will fail, nothing to do
-        # if we change the order, then block validation below will fail,
-        #  so we need to check for case odd (mid, mid) somewhere else
-        # now search block
+        # Search for matching block on source face
         n_rotate = self._search_block(face, source_face, required_color, mode, rc1, rc2)
 
         if n_rotate is None:
             return False
 
-        on_front_rotate: algs.Alg
+        # Compute source block position after n_rotate clockwise rotations
+        cqr = cube.cqr
+        src_rc1 = cqr.rotate_point_clockwise(rc1, n_rotate)
+        src_rc2 = cqr.rotate_point_clockwise(rc2, n_rotate)
 
-        # assume we rotate F clockwise
-        rc1_f_rotated = self.rotate_point_clockwise(r1, c1)
-        rc2_f_rotated = self.rotate_point_clockwise(r2, c2)
+        target_block = (rc1, rc2)
+        source_block = (src_rc1, src_rc2)
 
-        # the columns ranges must not intersect
-        if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-            on_front_rotate = Algs.F.prime
-            rc1_f_rotated = self.rotate_point_counterclockwise(r1, c1)
-            rc2_f_rotated = self.rotate_point_counterclockwise(r2, c2)
-
-            if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-                print("Intersection still exists after rotation", file=sys.stderr)
-            assert not self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1]))
-        else:
-            # clockwise is OK
-            on_front_rotate = Algs.F
-
-        # center indexes are in opposite direction of R
-        #   index is from left to right, R is from right to left
-        rotate_on_cell = self._get_slice_m_alg(rc1[1], rc2[1])
-        rotate_on_second = self._get_slice_m_alg(rc1_f_rotated[1], rc2_f_rotated[1])
-
-        if is_back:
-            rotate_mul = 2
-        else:
-            rotate_mul = 1
-
-        cum = [rotate_on_cell.prime * rotate_mul,
-               on_front_rotate,
-               rotate_on_second.prime * rotate_mul,
-               on_front_rotate.prime,
-               rotate_on_cell * rotate_mul,
-               on_front_rotate,
-               rotate_on_second * rotate_mul,
-               on_front_rotate.prime]
-
-        def _ann_target():
-
-            for rc in self._2d_range_on_source(False, rc1, rc2):
-                yield face.center.get_center_slice(rc)
-
-        def _ann_source():
-            _on_src1_1 = self._point_on_source(is_back, rc1)
-            _on_src1_2 = self._point_on_source(is_back, rc2)
-            # why - ? because we didn't yet rotate it
-            _on_src1_1 = cube.cqr.rotate_point_clockwise(_on_src1_1, -n_rotate)
-            _on_src1_2 = cube.cqr.rotate_point_clockwise(_on_src1_2, -n_rotate)
-            for rc in self._2d_range(_on_src1_1, _on_src1_2):
-                yield source_face.center.get_center_slice(rc)
-
-        def _h2():
-            size_ = self._block_size2(rc1, rc2)
-            return f", {size_[0]}x{size_[1]} communicator"
-
-        with self.ann.annotate((_ann_source, AnnWhat.Moved),
-                               (_ann_target, AnnWhat.FixedPosition),
-                               h2=_h2
-                               ):
-            if n_rotate:
-                self.op.play(Algs.of_face(source_face.name) * n_rotate)
-            self.op.play(Algs.seq_alg(None, *cum))
-
-        # =========================================================
-        # CAGE METHOD: Undo source rotation to preserve paired edges
-        # =========================================================
-        # The commutator itself is balanced (F rotations cancel out).
-        # But the source face rotation setup is NOT balanced - undo it.
-        if self._preserve_cage and n_rotate:
-            undo_alg = Algs.of_face(source_face.name).prime * n_rotate
-            undo_alg = undo_alg.simplify()
-            self.debug(f"  [CAGE] Undoing source rotation: {undo_alg}", level=1)
-            self.op.play(undo_alg)
+        # Delegate to CommunicatorHelper (includes animation annotations)
+        self._comm_helper.do_communicator(
+            source_face=source_face,
+            target_face=face,
+            target_block=target_block,
+            source_block=source_block,
+            preserve_state=self._preserve_cage
+        )
 
         return True
 
@@ -597,33 +501,6 @@ class NxNCenters2(SolverElement):
                     _count += 1
 
         return _count
-
-    @staticmethod
-    def _1_d_intersect(range_1: Tuple[int, int], range_2: Tuple[int, int]) -> bool:
-        """
-        Check if two 1D ranges intersect.
-
-                 x3--------------x4
-           x1--------x2
-        :param range_1:  x1, x2
-        :param range_2:  x3, x4
-        :return:  not ( x3  > x2 or x4 < x1 )
-        """
-        x1, x2 = range_1
-        x3, x4 = range_2
-
-        # after rotation points swap coordinates
-        if x1 > x2:
-            x1, x2 = x2, x1
-        if x3 > x4:
-            x3, x4 = x4, x3
-
-        if x3 > x2:
-            return False
-        if x4 < x1:
-            return False
-
-        return True
 
     def _point_on_source(self, is_back: bool, rc: Tuple[int, int]) -> Point:
         """Convert point coordinates for source face (handles back face mirroring)."""
@@ -777,18 +654,5 @@ class NxNCenters2(SolverElement):
 
     def rotate_point_counterclockwise(self, row: int, column: int, n: int = 1) -> Tuple[int, int]:
         return self.cube.cqr.rotate_point_counterclockwise((row, column), n)
-
-    def _get_slice_m_alg(self, c1: int, c2: int) -> algs.Alg:
-        """
-        Get M slice algorithm for column range.
-
-        :param c1: Center Slice index [0, n)
-        :param c2: Center Slice index [0, n)
-        :return: M slice algorithm for [c1, c2]
-        """
-        if c1 > c2:
-            c1, c2 = c2, c1
-
-        return Algs.M[c1 + 1:c2 + 1].prime
 
     D_LEVEL = 3

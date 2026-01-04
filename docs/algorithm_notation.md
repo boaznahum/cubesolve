@@ -413,9 +413,8 @@ R2             # R twice (special case for single move)
 
 The current parser (`_parser.py`) has these limitations:
 
-1. **No exponent N support**: `R3` is not supported (use `R' ` instead)
-2. **Basic tokenization**: Complex nested structures may not parse correctly
-3. **Case sensitivity**: `r` vs `R` have different meanings (see Adaptive Wide Moves)
+1. **No exponent N support**: `R3` is not supported (use `R'` instead)
+2. **Case sensitivity**: `r` vs `R` have different meanings (see Adaptive Wide Moves)
 
 ---
 
@@ -462,3 +461,167 @@ Named sequences are output as: `{name}`
 | `src/cube/domain/algs/Alg.py` | Base class, `__str__()` |
 | `src/cube/domain/algs/Algs.py` | `Algs.parse(s)`, move constants |
 | `src/cube/domain/algs/SimpleAlg.py` | `atomic_str()` implementation |
+
+---
+
+## Complete Move Reference
+
+This section explains ALL moves, what they do, and how slicing works.
+
+### Understanding Slice Indexing
+
+**Rule:** Slices are numbered starting from the **reference face** (the face whose direction the move follows).
+
+![Cube Slice Overview 3D](images/cube_slice_overview_3d.png)
+
+#### Face Moves (R, L, U, D, F, B)
+
+- `R[1]` = R face layer (closest to R)
+- `R[2]` = first inner layer from R
+- `R[1:2]` = 2 layers = **standard Rw**
+- `R[1:4]` = 4 layers = **our Rw** on 5x5 (differs from standard!)
+
+#### Slice Moves (M, E, S)
+
+Slices start from the **reference face** (the face whose direction the move follows):
+
+| Move | Reference | Direction | M[1] is closest to |
+|------|-----------|-----------|-------------------|
+| M | L | Like L | L face |
+| E | D | Like D | D face |
+| S | F | Like F | F face |
+
+- `M[2]` = center slice only = **standard M** on 5x5
+- `M[1:3]` = all 3 inner slices = **our M** on 5x5 (BUG!)
+
+#### Slice Range Notation: [start:stop]
+
+| Notation | Meaning | Layers on 5x5 |
+|----------|---------|---------------|
+| `R` or `R[1]` | Face only | 1 |
+| `R[1:2]` | Face + 1 inner | 2 (standard Rw) |
+| `R[1:4]` | Face + 3 inner | 4 (our Rw) |
+| `M[2]` | Center slice | 1 (standard M) |
+| `M[1:3]` | All inner | 3 (our M) |
+
+#### Key Formulas
+
+- `n_slices = cube_size - 2` (inner slices only)
+- 3x3 has 1 inner slice, 5x5 has 3, 7x7 has 5
+
+#### External References
+
+- [Ruwix - Interactive 3D Widget](https://ruwix.com/the-rubiks-cube/notation/) - animated demos
+- [Ruwix - Advanced Notation](https://ruwix.com/the-rubiks-cube/notation/advanced/) - more diagrams
+
+---
+
+### Face Moves: R, L, U, D, F, B
+
+| Property | Value |
+|----------|-------|
+| **What it does** | Rotates one face layer |
+| **3x3** | 1 layer |
+| **5x5** | 1 layer |
+| **Standard** | 1 layer |
+| **Sliceable?** | YES |
+
+**Slicing examples on 5x5:**
+```
+R       = R[1]    = layer 1 only (the R face)
+R[2]              = layer 2 only (first inner layer)
+R[1:2]            = layers 1-2 (R face + first inner) = standard Rw
+R[1:4]            = layers 1-4 (all but L face)
+```
+
+---
+
+### Wide Moves: Rw, Lw, Uw, Dw, Fw, Bw
+
+| Property | Value |
+|----------|-------|
+| **What it does** | Face + inner layers |
+| **3x3 (ours)** | 2 layers |
+| **3x3 (standard)** | 2 layers |
+| **5x5 (ours)** | 4 layers (all but opposite face) |
+| **5x5 (standard)** | 2 layers |
+| **Sliceable?** | NO (computed dynamically) |
+
+**Our implementation:** `Rw = R[1 : size-1]` = all layers except opposite face
+**Standard:** `Rw` = always 2 layers = `R[1:2]`
+
+**⚠️ DIFFERS FROM STANDARD ON BIG CUBES**
+
+To get standard 2-layer wide on big cubes, use: `R[1:2]`
+
+---
+
+### Adaptive Wide Moves: r, l, u, d, f, b (lowercase)
+
+| Property | Value |
+|----------|-------|
+| **What it does** | Face + ALL inner layers (opposite face stays) |
+| **3x3** | 2 layers |
+| **5x5** | 4 layers |
+| **Standard** | Same as Rw (2 layers) |
+| **Sliceable?** | NO (computed dynamically) |
+
+**Our implementation:** Same as `Rw` - they are identical!
+
+**Why it exists:** Added for CFOP on NxN cubes. Moving only 2 layers breaks edge pairing on big cubes, so we move ALL inner layers to keep edges paired.
+
+---
+
+### Slice Moves: M, E, S
+
+| Property | M | E | S |
+|----------|---|---|---|
+| **Axis** | Between L-R | Between U-D | Between F-B |
+| **Direction** | Like L | Like D | Like F |
+| **3x3 (ours)** | 1 slice | 1 slice | 1 slice |
+| **3x3 (standard)** | 1 slice | 1 slice | 1 slice |
+| **5x5 (ours)** | 3 slices (ALL) | 3 slices (ALL) | 3 slices (ALL) |
+| **5x5 (standard)** | 1 slice (center) | 1 slice (center) | 1 slice (center) |
+| **Sliceable?** | YES | YES | YES |
+
+**Our implementation:** `M = M[1 : n_slices]` = ALL inner slices
+**Standard:** `M` = center slice only
+
+**⚠️ BUG: DIFFERS FROM STANDARD ON BIG CUBES**
+
+**Slicing examples on 5x5 (3 inner slices):**
+```
+M rotates like L, so M[1] starts from L face:
+
+    L    M[1]  M[2]  M[3]   R
+    |     |     |     |     |
+         1st   center 3rd
+
+M       = M[1:3]  = all 3 inner slices (OUR behavior - wrong!)
+M[1]              = first inner slice (closest to L)
+M[2]              = center slice (STANDARD M on 5x5)
+M[3]              = third inner slice (closest to R)
+```
+
+To get standard center-slice M on 5x5, use: `M[2]`
+
+---
+
+### Summary Table
+
+| Move | 3x3 | 5x5 Ours | 5x5 Standard | Sliceable | Notes |
+|------|-----|----------|--------------|-----------|-------|
+| `R` | 1 | 1 | 1 | Yes | ✓ Correct |
+| `Rw` | 2 | 4 | 2 | No | ⚠️ Differs |
+| `r` | 2 | 4 | 2 | No | Same as Rw |
+| `M` | 1 | 3 | 1 | Yes | ⚠️ BUG |
+| `R[1:2]` | 2 | 2 | 2 | - | Standard Rw |
+| `M[2]` | 1 | 1 | 1 | - | Standard M |
+
+---
+
+### Sources
+
+- [Speedsolving Wiki - NxNxN Notation](https://www.speedsolving.com/wiki/index.php/NxNxN_Notation)
+- [Ruwix - Advanced Notation](https://ruwix.com/the-rubiks-cube/notation/advanced/)
+- [KewbzUK - 5x5 Notation](https://kewbz.co.uk/blogs/notations-1/5x5-notation)

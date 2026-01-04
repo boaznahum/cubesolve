@@ -18,6 +18,7 @@ from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.domain.algs import Algs
 from cube.domain.solver import Solvers
+from cube.domain.solver.SolverName import SolverName
 from tests.test_utils import _test_sp
 
 
@@ -77,6 +78,7 @@ class CubeTestDriver:
     renderer: Renderer
     event_loop: EventLoop
     animation: AnimationBackend | None = None
+    solver_name: SolverName = SolverName.LBL
     _solver: Solvers | None = field(default=None, init=False)
     _key_mapping: dict[int, Algs] = field(default_factory=lambda: DEFAULT_KEY_MAPPING.copy())
     _shift_mapping: dict[int, Algs] = field(default_factory=lambda: SHIFT_KEY_MAPPING.copy())
@@ -112,7 +114,7 @@ class CubeTestDriver:
     def solver(self) -> Solvers:
         """Get or create solver."""
         if self._solver is None:
-            self._solver = Solvers.default(self.operator)
+            self._solver = Solvers.by_name(self.solver_name, self.operator)
         return self._solver
 
     @property
@@ -297,6 +299,20 @@ def get_available_backends() -> list[str]:
 
     # Note: pyglet (legacy) backend was archived - use pyglet2 instead
 
+    # Try pyglet2 (requires pyglet >= 2.0)
+    try:
+        from cube.presentation.gui.backends import pyglet2  # noqa: F401
+        available.append("pyglet2")
+    except ImportError:
+        pass
+
+    # Try console (requires colorama or rich)
+    try:
+        from cube.presentation.gui.backends import console  # noqa: F401
+        available.append("console")
+    except ImportError:
+        pass
+
     # Try tkinter (requires tk)
     try:
         from cube.presentation.gui.backends import tkinter  # noqa: F401
@@ -420,6 +436,7 @@ def gui_components(backend_name: str) -> Iterator[tuple[Renderer, Window, EventL
 def cube_driver(
     gui_components: tuple[Renderer, Window, EventLoop, AnimationBackend | None],
     backend_name: str,
+    request: pytest.FixtureRequest,
 ) -> Iterator[CubeTestDriver]:
     """Create a CubeTestDriver for testing cube operations.
 
@@ -431,8 +448,23 @@ def cube_driver(
 
             cube_driver.scramble(seed=42).solve()
             assert cube_driver.solved
+
+    For tests that use solve(), parametrize with solver_name:
+
+        @pytest.mark.parametrize("solver_name", WORKING_SOLVERS)
+        def test_solve(cube_driver, solver_name):
+            ...
     """
     renderer, window, event_loop, animation = gui_components
+
+    # Get solver_name from test parametrization if available
+    solver_name = getattr(request, 'param', None)
+    if solver_name is None:
+        # Check if solver_name is in fixturenames (from parametrize)
+        if 'solver_name' in request.fixturenames:
+            solver_name = request.getfixturevalue('solver_name')
+        else:
+            solver_name = SolverName.LBL  # Default
 
     cube = Cube(3, sp=_test_sp)
     config = AppConfig()
@@ -446,6 +478,7 @@ def cube_driver(
         renderer=renderer,
         event_loop=event_loop,
         animation=animation,
+        solver_name=solver_name,
     )
 
     yield driver
@@ -455,18 +488,29 @@ def cube_driver(
 def cube_driver_factory(
     gui_components: tuple[Renderer, Window, EventLoop, AnimationBackend | None],
     backend_name: str,
-) -> Callable[[int], CubeTestDriver]:
-    """Factory fixture to create CubeTestDriver with custom cube size.
+    request: pytest.FixtureRequest,
+) -> Callable[[int, SolverName | None], CubeTestDriver]:
+    """Factory fixture to create CubeTestDriver with custom cube size and solver.
 
     Usage:
         def test_large_cube(cube_driver_factory):
             driver = cube_driver_factory(5)  # 5x5 cube
             driver.scramble().solve()
             assert driver.solved
+
+        @pytest.mark.parametrize("solver_name", WORKING_SOLVERS)
+        def test_with_solver(cube_driver_factory, solver_name):
+            driver = cube_driver_factory(3, solver_name)
+            ...
     """
     renderer, window, event_loop, animation = gui_components
 
-    def create_driver(cube_size: int = 3) -> CubeTestDriver:
+    # Get solver_name from test parametrization if available
+    default_solver = SolverName.LBL
+    if 'solver_name' in request.fixturenames:
+        default_solver = request.getfixturevalue('solver_name')
+
+    def create_driver(cube_size: int = 3, solver_name: SolverName | None = None) -> CubeTestDriver:
         cube = Cube(cube_size, sp=_test_sp)
         config = AppConfig()
         app_state = ApplicationAndViewState(config)
@@ -478,6 +522,7 @@ def cube_driver_factory(
             renderer=renderer,
             event_loop=event_loop,
             animation=animation,
+            solver_name=solver_name or default_solver,
         )
 
     return create_driver

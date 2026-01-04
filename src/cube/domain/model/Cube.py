@@ -141,7 +141,8 @@ from ._elements import AxisName, PartColorsID
 from .PartSlice import CornerSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Corner import Corner
-from .cube_boy import Color, CubeLayout, FaceName
+from cube.domain.model.cube_layout.cube_boy import Color, FaceName
+from cube.domain.model.cube_layout import CubeLayout, create_layout
 from .cube_slice import Slice, SliceName
 from .Edge import Edge
 from .Face import Face
@@ -317,7 +318,8 @@ class Cube(CubeSupplier):
         "_last_sanity_counter",
         "_original_layout",
         "_cqr",
-        "_sp"
+        "_sp",
+        "_layout",
     ]
 
     _front: Face
@@ -340,6 +342,10 @@ class Cube(CubeSupplier):
         self._in_query_mode: bool = False  # Skip texture updates during query operations
         self._listeners: list["CubeListener"] = []
         self._is_even_cube_shadow: bool = False
+
+        from .cube_layout import cube_boy
+
+        self._layout: CubeLayout = cube_boy.get_boy_layout(self._sp)
         self._reset()
 
         from cube.domain.model.CubeQueries2 import CubeQueries2
@@ -359,11 +365,7 @@ class Cube(CubeSupplier):
 
         self._color_2_face = {}
 
-        # Use centralized BOY layout instance
-        from . import cube_boy
-        from .CubeLayout import CubeLayout
-
-        boy = cube_boy.get_boy_layout(self._sp)
+        boy = self._layout
 
         f: Face = Face(self, FaceName.F, boy[FaceName.F])
         l: Face = Face(self, FaceName.L, boy[FaceName.L])  # noqa: E741 TODO: fix
@@ -381,11 +383,11 @@ class Cube(CubeSupplier):
             FaceName.B: b
         }
 
-        # Set opposite face relationships using CubeLayout.opposite()
+        # Set opposite face relationships using layout.opposite()
         # Only set once per pair to avoid duplicate calls
         set_pairs: set[frozenset[FaceName]] = set()
         for fn, face in self._faces.items():
-            opposite_fn = CubeLayout.opposite(fn)
+            opposite_fn = boy.opposite(fn)
             pair = frozenset([fn, opposite_fn])
             if pair not in set_pairs:
                 face.set_opposite(self._faces[opposite_fn])
@@ -472,6 +474,10 @@ class Cube(CubeSupplier):
     @property
     def cube(self) -> "Cube":
         return self
+
+    @property
+    def layout(self) -> CubeLayout:
+        return self._layout
 
     @property
     def sp(self) -> IServiceProvider:
@@ -1804,7 +1810,7 @@ class Cube(CubeSupplier):
 
         if not self._original_layout:
             faces: dict[FaceName, Color] = {f.name: f.original_color for f in self._faces.values()}
-            lo = CubeLayout(True, faces, self._sp)
+            lo = create_layout(True, faces, self._sp)
 
             self._original_layout = lo
 
@@ -1818,7 +1824,7 @@ class Cube(CubeSupplier):
         """
 
         faces: dict[FaceName, Color] = {f.name: f.center.color for f in self._faces.values()}
-        return CubeLayout(False, faces, self._sp)
+        return create_layout(False, faces, self._sp)
 
     @property
     def is_boy(self) -> bool:

@@ -68,7 +68,7 @@ def verify_whole_cube_translation(
     target_face = cube.face(target_name)
     source_face = cube.face(source_name)
 
-    result = Face2FaceTranslator.translate(target_face, source_face, target_coord)
+    result = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
     source_coord = result.source_coord
 
     marker_value = f"WHOLE_{target_name}_{source_name}_{target_coord}"
@@ -113,7 +113,7 @@ def verify_slice_translation(
     target_face = cube.face(target_name)
     source_face = cube.face(source_name)
 
-    result = Face2FaceTranslator.translate(target_face, source_face, target_coord)
+    result = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
     source_coord = result.source_coord
 
     marker_value = f"SLICE_{target_name}_{source_name}_{target_coord}"

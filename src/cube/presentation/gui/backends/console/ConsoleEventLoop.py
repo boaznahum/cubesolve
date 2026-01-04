@@ -71,18 +71,26 @@ class ConsoleEventLoop(EventLoop):
             return None
 
         try:
-            # Try keyboard library if available and running in a terminal
+            # Read single key from THIS console only (not globally)
+            # Windows: msvcrt, Linux: termios
             if sys.stdin.isatty():
                 try:
-                    import keyboard
-                    # Loop until we get a KEY_DOWN event (ignore KEY_UP)
-                    while True:
-                        event = keyboard.read_event(suppress=True)
-                        if event.event_type == keyboard.KEY_DOWN:
-                            return event.name
-                        # KEY_UP events are ignored, continue waiting
+                    # Windows
+                    import msvcrt
+                    ch = msvcrt.getwch()
+                    return ch.upper()
                 except ImportError:
-                    pass
+                    # Linux/Unix - use termios for raw single-char input
+                    import termios  # type: ignore[import-not-found]
+                    import tty  # type: ignore[import-not-found]
+                    fd = sys.stdin.fileno()
+                    old_settings = termios.tcgetattr(fd)  # type: ignore[attr-defined]
+                    try:
+                        tty.setraw(fd)  # type: ignore[attr-defined]
+                        ch = sys.stdin.read(1)
+                        return ch.upper()
+                    finally:
+                        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)  # type: ignore[attr-defined]
 
             # Fall back to input()
             value = input()

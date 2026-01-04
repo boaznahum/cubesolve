@@ -57,7 +57,7 @@ from cube.domain.exceptions import InternalSWError
 
 from ._elements import CHelper, PartColorsID
 from .Cube import Cube
-from .cube_boy import Color
+from cube.domain.model.cube_layout.cube_boy import Color
 
 
 class CubeSanity:

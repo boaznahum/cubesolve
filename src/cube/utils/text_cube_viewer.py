@@ -5,36 +5,43 @@ Simple ASCII art renderer. Uses the same approach as ConsoleViewer but simpler.
 Direction/orientation may need adjustment based on user testing.
 """
 
-from typing import TYPE_CHECKING, Sequence
+from dataclasses import dataclass
 
-if TYPE_CHECKING:
-    from rich.text import Text
-
-try:
-    from rich.console import Console
-    from rich.text import Text
-    _HAS_RICH = True
-    _console = Console()
-except ImportError:
-    _HAS_RICH = False
+from rich.console import Console
+from rich.text import Text
 
 from cube.domain.model.Color import Color
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 
+_console = Console()
 
-# Direction config for each face: (flip_rows, flip_cols, invert_lr_idx, invert_tb_idx)
-# flip_rows=True: row 0 becomes last row
-# flip_cols=True: col 0 becomes last col
-# invert_lr_idx=True: left/right edge slice index is inverted
-# invert_tb_idx=True: top/bottom edge slice index is inverted
-FACE_CONFIG = {
-    "U": (False, False, False, False),
-    "D": (False, True, False, False),  # D: flip_cols
-    "F": (False, False, False, False),
-    "L": (False, False, False, False),
-    "R": (False, False, False, False),
-    "B": (True, False, True, True),  # B: flip_rows + invert both (try different combo)
+
+@dataclass(frozen=True)
+class FaceRenderConfig:
+    """Configuration for mapping cube face coordinates to 2D paper/console.
+
+    When rendering a cube face to 2D:
+    - Paper has X (horizontal, left-to-right) and Y (vertical, top-to-bottom)
+    - Cube face has its own coordinate system
+
+    Attributes:
+        reverse_x: Paper X goes opposite direction to cube X
+        reverse_y: Paper Y goes opposite direction to cube Y
+        swap_xy: Paper X maps to cube Y, paper Y maps to cube X (90° rotation)
+    """
+    reverse_x: bool = False
+    reverse_y: bool = False
+    swap_xy: bool = False
+
+
+FACE_CONFIG: dict[str, FaceRenderConfig] = {
+    "U": FaceRenderConfig(),
+    "D": FaceRenderConfig(reverse_x=False),
+    "F": FaceRenderConfig(),
+    "L": FaceRenderConfig(),
+    "R": FaceRenderConfig(),
+    "B": FaceRenderConfig(reverse_x=False, reverse_y=False),
 }
 
 
@@ -58,45 +65,59 @@ def _get_face_grid(face: Face, face_name: str) -> list[list[Color]]:
     """
     Get a 2D grid of colors for a face.
 
-    For an NxN cube, the grid is NxN:
-    - Row 0: corners and top edge
-    - Rows 1 to N-2: left edge, centers, right edge
-    - Row N-1: corners and bottom edge
-
-    Returns grid[row][col] where row 0 is TOP of face.
-    Applies FACE_CONFIG flips for the given face_name.
+    Returns grid[paper_row][paper_col] for console output.
+    Uses FaceRenderConfig to map paper coordinates to face LTR coordinates.
     """
     n = face.cube.size
-    n_slices = face.cube.n_slices  # size - 2
+    last = n - 1
 
-    # Get config
-    config = FACE_CONFIG.get(face_name, (False, False, False, False))
-    invert_lr_idx = config[2] if len(config) > 2 else False
-    invert_tb_idx = config[3] if len(config) > 3 else False
+    config = FACE_CONFIG.get(face_name, FaceRenderConfig())
 
     grid: list[list[Color]] = []
 
-    for row in range(n):
+    for paper_row in range(n):
         row_colors: list[Color] = []
-        for col in range(n):
-            color = _get_color_at(face, row, col, n, n_slices, invert_lr_idx, invert_tb_idx)
+        for paper_col in range(n):
+            # Map paper coords to face LTR coords
+            if config.swap_xy:
+                face_row, face_col = paper_col, paper_row
+            else:
+                face_row, face_col = paper_row, paper_col
+
+            if config.reverse_x:
+                face_col = last - face_col
+            if config.reverse_y:
+                face_row = last - face_row
+
+            color = get_color_ltr(face, face_row, face_col)
             row_colors.append(color)
         grid.append(row_colors)
-
-    # Apply flips based on config
-    flip_rows, flip_cols = config[0], config[1]
-
-    if flip_rows:
-        grid = list(reversed(grid))
-    if flip_cols:
-        grid = [list(reversed(row)) for row in grid]
 
     return grid
 
 
-def _get_color_at(face: Face, row: int, col: int, n: int, n_slices: int,
-                   invert_lr_idx: bool = False, invert_tb_idx: bool = False) -> Color:
-    """Get color at a specific grid position on a face."""
+def get_color_ltr(face: Face, row: int, col: int) -> Color:
+    """Get color at (row, col) using left-to-right, top-to-bottom coordinates.
+
+    Coordinate system (looking directly at the face):
+    - row 0 = top row, row n-1 = bottom row
+    - col 0 = left column, col n-1 = right column
+
+    For a 3x3:
+        col:  0   1   2
+    row 0:  [TL] [T] [TR]
+    row 1:  [L]  [C] [R]
+    row 2:  [BL] [B] [BR]
+
+    Args:
+        face: The cube face
+        row: Row index (0 = top)
+        col: Column index (0 = left)
+
+    Returns:
+        Color at that position
+    """
+    n = face.cube.size
     last = n - 1
 
     # Corners
@@ -112,29 +133,21 @@ def _get_color_at(face: Face, row: int, col: int, n: int, n_slices: int,
     # Top edge (row 0, cols 1 to n-2)
     if row == 0 and 0 < col < last:
         slice_idx = col - 1
-        if invert_tb_idx:
-            slice_idx = n_slices - 1 - slice_idx
         return face.edge_top.get_slice(slice_idx).get_face_edge(face).color
 
     # Bottom edge (row n-1, cols 1 to n-2)
     if row == last and 0 < col < last:
         slice_idx = col - 1
-        if invert_tb_idx:
-            slice_idx = n_slices - 1 - slice_idx
         return face.edge_bottom.get_slice(slice_idx).get_face_edge(face).color
 
     # Left edge (col 0, rows 1 to n-2)
     if col == 0 and 0 < row < last:
         slice_idx = row - 1
-        if invert_lr_idx:
-            slice_idx = n_slices - 1 - slice_idx
         return face.edge_left.get_slice(slice_idx).get_face_edge(face).color
 
     # Right edge (col n-1, rows 1 to n-2)
     if col == last and 0 < row < last:
         slice_idx = row - 1
-        if invert_lr_idx:
-            slice_idx = n_slices - 1 - slice_idx
         return face.edge_right.get_slice(slice_idx).get_face_edge(face).color
 
     # Center (rows 1 to n-2, cols 1 to n-2)
@@ -263,29 +276,17 @@ def cube_to_text(cube: Cube) -> str:
 
 def print_cube(cube: Cube, title: str | None = None) -> None:
     """Print a cube to the console with rich formatting."""
-    if _HAS_RICH:
-        if title:
-            _console.print(f"[cyan]=== {title} ===[/cyan]")
-        text = cube_to_rich_text(cube)
-        _console.print(text)
-    else:
-        if title:
-            print(f"=== {title} ===")
-        print(cube_to_text(cube))
+    if title:
+        _console.print(f"[cyan]=== {title} ===[/cyan]")
+    text = cube_to_rich_text(cube)
+    _console.print(text)
 
 
 def print_cube_with_info(cube: Cube, alg_str: str = "") -> None:
     """Print cube with status information."""
-    if _HAS_RICH:
-        status = "[green]SOLVED[/green]" if cube.solved else "[yellow]SCRAMBLED[/yellow]"
-        _console.print(f"Size: {cube.size}x{cube.size}  Status: {status}")
-        if alg_str:
-            _console.print(f"Algorithm: [cyan]{alg_str}[/cyan]")
-        text = cube_to_rich_text(cube)
-        _console.print(text)
-    else:
-        status = "SOLVED" if cube.solved else "SCRAMBLED"
-        print(f"Size: {cube.size}x{cube.size}  Status: {status}")
-        if alg_str:
-            print(f"Algorithm: {alg_str}")
-        print_cube(cube)
+    status = "[green]SOLVED[/green]" if cube.solved else "[yellow]SCRAMBLED[/yellow]"
+    _console.print(f"Size: {cube.size}x{cube.size}  Status: {status}")
+    if alg_str:
+        _console.print(f"Algorithm: [cyan]{alg_str}[/cyan]")
+    text = cube_to_rich_text(cube)
+    _console.print(text)

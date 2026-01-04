@@ -19,15 +19,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.model.cube_boy import Color
+from cube.domain.model.cube_layout.cube_boy import Color
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.solver.common.tracker._base import FaceTracker
-from cube.domain.solver.common.big_cube.NxNCenters2 import NxNCenters2
+from cube.domain.solver.common.tracker.trackers import FaceTracker
+from cube.domain.solver.direct.lbl.NxNCenters2 import NxNCenters2
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 
 if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 
@@ -203,7 +202,6 @@ class _LBLSlices(SolverElement):
     def _solve_face_row_simple(
             self, l1_white_tracker: FaceTracker, face_tracker: FaceTracker, slice_index: int
     ) -> None:
-
         self._centers.solve_single_center_row_slice(l1_white_tracker, face_tracker, slice_index)
 
     def _is_face_row_solved(self, face: Face, row: int, target_color: Color) -> bool:
@@ -246,17 +244,29 @@ class _LBLSlices(SolverElement):
         IMPORTANT: Layer 1 must be on DOWN for the commutator to work correctly.
         The commutator uses UP as source, so if Layer 1 is on UP, we'll mess it up.
         """
-        from cube.domain.algs import Algs
-
-        # Ensure Layer 1 is on DOWN (commutator uses UP as source)
-        l1_face = l1_white_tracker.face
-        cube = self.cube
-        op = self._slv.op
-
         # Solve all slices from bottom to top
-        if False:
+        if True:  # WIP: Only solve first slice for now
             r = range(1)
         else:
             r = range(self.n_slices)
         for slice_index in r:
             self.solve_slice_centers(slice_index, th, l1_white_tracker)
+
+    def solve_slice_n_faces(
+            self, th: FacesTrackerHolder, l1_white_tracker: FaceTracker,
+            slice_index: int, n_faces: int
+    ) -> None:
+        """Solve N faces of a specific slice (for debugging).
+
+        Args:
+            th: FacesTrackerHolder for face color tracking
+            l1_white_tracker: Layer 1 face tracker
+            slice_index: Which slice to solve (0 = closest to D)
+            n_faces: How many faces to solve (1-4)
+        """
+        # Get side face trackers (excluding L1 and opposite)
+        side_trackers = self.get_side_face_trackers(th, l1_white_tracker)
+
+        # Solve only the first n_faces
+        for i, face_tracker in enumerate(side_trackers[:n_faces]):
+            self._solve_face_row_simple(l1_white_tracker, face_tracker, slice_index)

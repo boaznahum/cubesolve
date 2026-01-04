@@ -39,6 +39,7 @@ class Keys:
 
     # Operations
     SOLVE = "?"  # Solve the cube
+    SOLVE_STEP = "V"  # Solve specific step (menu)
     UNDO = "<"  # Undo last move
     CLEAR = "C"  # Clear/reset cube
     ALGS = "A"  # Enter algorithm input mode

@@ -15,10 +15,21 @@ The CubeTestDriver handles:
 import pytest
 
 from cube.domain.algs import Algs
+from cube.domain.solver.SolverName import SolverName
 from cube.presentation.gui.types import Keys
 
 # Import CubeTestDriver from conftest (available via fixture)
 from tests.backends.conftest import CubeTestDriver
+
+# All solvers (unsupported ones will be skipped via skip_if_not_supported)
+ALL_SOLVERS = list(SolverName)
+
+
+def skip_if_not_supported(solver_name: SolverName, cube_size: int) -> None:
+    """Skip test if solver doesn't support this cube size."""
+    skip_reason = solver_name.meta.get_skip_reason(cube_size)
+    if skip_reason:
+        pytest.skip(skip_reason)
 
 
 class TestCubeRotations:
@@ -68,24 +79,30 @@ class TestCubeSolving:
     """Test cube solving with various configurations."""
 
     @pytest.mark.parametrize("seed", [1, 2, 3, 42, 123])
-    def test_scramble_and_solve(self, cube_driver: CubeTestDriver, backend_name: str, seed: int):
+    @pytest.mark.parametrize("solver_name", ALL_SOLVERS)
+    def test_scramble_and_solve(self, cube_driver: CubeTestDriver, backend_name: str, seed: int, solver_name: SolverName):
         """Scramble cube, then solve it."""
+        skip_if_not_supported(solver_name, 3)
         cube_driver.scramble(seed=seed)
         assert not cube_driver.solved
 
         cube_driver.solve()
         assert cube_driver.solved
 
-    def test_solve_after_key_sequence(self, cube_driver: CubeTestDriver, backend_name: str):
+    @pytest.mark.parametrize("solver_name", ALL_SOLVERS)
+    def test_solve_after_key_sequence(self, cube_driver: CubeTestDriver, backend_name: str, solver_name: SolverName):
         """Solve after applying key sequence."""
+        skip_if_not_supported(solver_name, 3)
         cube_driver.execute("RLUDFB")
         assert not cube_driver.solved
 
         cube_driver.solve()
         assert cube_driver.solved
 
-    def test_multiple_scramble_solve_cycles(self, cube_driver: CubeTestDriver, backend_name: str):
+    @pytest.mark.parametrize("solver_name", ALL_SOLVERS)
+    def test_multiple_scramble_solve_cycles(self, cube_driver: CubeTestDriver, backend_name: str, solver_name: SolverName):
         """Multiple scramble-solve cycles."""
+        skip_if_not_supported(solver_name, 3)
         for seed in range(1, 6):
             cube_driver.scramble(seed=seed)
             assert not cube_driver.solved
@@ -100,20 +117,23 @@ class TestCubeSizes:
     """Test different cube sizes."""
 
     @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    @pytest.mark.parametrize("solver_name", ALL_SOLVERS)
     def test_different_cube_sizes(
         self,
         cube_driver_factory,
         backend_name: str,
         cube_size: int,
+        solver_name: SolverName,
     ):
         """Test scramble and solve on different cube sizes."""
+        skip_if_not_supported(solver_name, cube_size)
         driver = cube_driver_factory(cube_size)
 
         driver.scramble(seed=42)
         assert not driver.solved
 
         driver.solve()
-        assert driver.solved, f"{cube_size}x{cube_size} cube should be solved"
+        assert driver.solved, f"{cube_size}x{cube_size} cube should be solved by {solver_name.name}"
 
 
 class TestUndoRedo:
@@ -180,8 +200,10 @@ class TestRenderingWithCube:
 
         assert not cube_driver.solved
 
-    def test_render_during_solve(self, cube_driver: CubeTestDriver, backend_name: str):
+    @pytest.mark.parametrize("solver_name", ALL_SOLVERS)
+    def test_render_during_solve(self, cube_driver: CubeTestDriver, backend_name: str, solver_name: SolverName):
         """Render frames during solve sequence."""
+        skip_if_not_supported(solver_name, 3)
         cube_driver.scramble(seed=42)
 
         # Render before solve
@@ -234,8 +256,10 @@ class TestKeyMapping:
 class TestChaining:
     """Test method chaining."""
 
-    def test_method_chaining(self, cube_driver: CubeTestDriver, backend_name: str):
+    @pytest.mark.parametrize("solver_name", ALL_SOLVERS)
+    def test_method_chaining(self, cube_driver: CubeTestDriver, backend_name: str, solver_name: SolverName):
         """Test fluent interface with method chaining."""
+        skip_if_not_supported(solver_name, 3)
         result = (
             cube_driver
             .scramble(seed=42)
@@ -267,8 +291,10 @@ class TestChaining:
 class TestBatchOperations:
     """Test batch operations (headless advantage)."""
 
-    def test_batch_scramble_solve(self, cube_driver_factory, backend_name: str):
+    @pytest.mark.parametrize("solver_name", ALL_SOLVERS)
+    def test_batch_scramble_solve(self, cube_driver_factory, backend_name: str, solver_name: SolverName):
         """Batch test multiple scramble-solve operations."""
+        skip_if_not_supported(solver_name, 3)
         results = []
 
         for seed in range(1, 11):
@@ -284,7 +310,7 @@ class TestBatchOperations:
             })
 
         # All should be solved
-        assert all(r['solved'] for r in results)
+        assert all(r['solved'] for r in results), f"All cubes should be solved by {solver_name.name}"
 
         # Verify we got varying move counts (not all same)
         move_counts = [r['move_count'] for r in results]
@@ -295,15 +321,18 @@ class TestBatchOperations:
         (4, 1), (4, 2),
         (5, 1),
     ])
+    @pytest.mark.parametrize("solver_name", ALL_SOLVERS)
     def test_parameterized_cube_solve(
         self,
         cube_driver_factory,
         backend_name: str,
         cube_size: int,
         seed: int,
+        solver_name: SolverName,
     ):
         """Parameterized test for various cube sizes and seeds."""
+        skip_if_not_supported(solver_name, cube_size)
         driver = cube_driver_factory(cube_size)
         driver.scramble(seed=seed).solve()
 
-        assert driver.solved, f"{cube_size}x{cube_size} cube with seed {seed} should be solved"
+        assert driver.solved, f"{cube_size}x{cube_size} cube with seed {seed} should be solved by {solver_name.name}"

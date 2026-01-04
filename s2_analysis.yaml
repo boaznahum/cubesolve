@@ -1,0 +1,52 @@
+# S2 Derivation Analysis for UP → FRONT
+# 
+# Finding: The piece at target position t moves to SOURCE FACE (UP)!
+# s2 is computed by rotating t (CCW or CW) and placing it on SOURCE face
+#
+# Pattern discovered:
+
+source_target_pairs:
+  UP_FRONT:
+    source_face: UP
+    target_face: FRONT
+    test_cases:
+      - target_point: (0, 0)
+        source_point: (0, 0)
+        s2_position: (0, 2)
+        s2_face: UP
+        rotation_type: CCW  # rotate_counterclockwise(target_point)
+        valid: true
+        
+      - target_point: (0, 1)
+        source_point: (0, 1)
+        s2_position: (1, 0)
+        s2_face: UP
+        rotation_type: CW   # rotate_clockwise(target_point)
+        valid: true
+        
+      - target_point: (1, 0)
+        source_point: (1, 0)
+        s2_position: (2, 1)
+        s2_face: UP
+        rotation_type: CW   # rotate_clockwise(target_point)
+        valid: true
+        
+      - target_point: (1, 1)
+        source_point: (1, 1)
+        s2_position: UNKNOWN
+        s2_face: UNKNOWN
+        rotation_type: UNKNOWN
+        valid: false  # Intersection error - unsupported position
+        note: "Center position (1,1) causes intersection error"
+
+key_findings:
+  1_discovery: "s2 is on the SOURCE face, not target face!"
+  2_discovery: "Piece at t moves to source face at position computed by rotating t"
+  3_discovery: "Rotation is either CW or CCW - needs rule to determine which"
+  4_discovery: "The rotation might be determined by _compute_rotate_on_target check!"
+
+next_investigation:
+  - "Extract the rotation decision from _compute_rotate_on_target"
+  - "Check if on_front_rotate (1 or -1) corresponds to our CW/CCW pattern"
+  - "Test other source/target face pairs to see if pattern holds universally"
+  - "Build complete lookup table for all 30 face pairs"

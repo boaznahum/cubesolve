@@ -27,6 +27,7 @@ from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.model import CenterSlice, Color
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
+from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 
 if TYPE_CHECKING:
@@ -77,6 +78,17 @@ class FaceTracker(ABC):
     def color(self) -> Color:
         return self._color
 
+    @property
+    def color_at_face_str(self) -> str:
+        """Return color@face string representation of the tracked face.
+
+        Delegates to the underlying Face.color_at_face_str property.
+
+        Returns:
+            String in format "COLOR@FACE" like "WHITE@D"
+        """
+        return self.face.color_at_face_str
+
     def __str__(self) -> str:
         return f"{self.color.name}@{self.face}"
 
@@ -86,6 +98,31 @@ class FaceTracker(ABC):
     @abstractmethod
     def cleanup(self) -> None:
         """Remove any marks this tracker created. Abstract - must be implemented."""
+        pass
+
+    def save_physical_face(self) -> FaceName:
+        """Save current physical face for later restoration.
+
+        Returns the FaceName of the physical face this tracker is currently on.
+        Used by preserve_physical_faces() context manager.
+
+        Returns:
+            The FaceName of the current physical face.
+        """
+        return self.face.name
+
+    def restore_to_physical_face(self, saved_face_name: FaceName) -> None:
+        """Restore tracker to the saved physical face.
+
+        Called after operations that may move markers (like commutators).
+        Each tracker type handles restoration according to its own rules:
+        - SimpleFaceTracker: no-op (predicates remain stable)
+        - MarkedFaceTracker: cleanup + re-mark on saved face
+
+        Args:
+            saved_face_name: The FaceName saved by save_physical_face().
+        """
+        # Default: no-op for SimpleFaceTracker (predicates are stable)
         pass
 
     def _track_opposite(self) -> "SimpleFaceTracker":
@@ -246,3 +283,46 @@ class MarkedFaceTracker(FaceTracker):
                 if self._key in s.edge.c_attributes:
                     del s.edge.c_attributes[self._key]
                     return
+
+    def restore_to_physical_face(self, saved_face_name: FaceName) -> None:
+        """Remove current marker, create new marker on saved physical face.
+
+        This is called after operations (like commutators) that may have moved
+        the marked center slice to a different physical face. We:
+        1. Cleanup the existing marker (wherever it ended up)
+        2. Find the physical face by saved name
+        3. Mark a center slice on that face with our tracking key
+
+        Args:
+            saved_face_name: The FaceName of the physical face to restore to.
+        """
+        # 1. Cleanup existing marker
+        self.cleanup()
+
+        # 2. Find face by saved name
+        face = self._cube.face(saved_face_name)
+
+        # 3. Find a center slice to mark on that face
+        center_slice = self._find_markable_center_slice(face)
+
+        # 4. Mark it with our color (reuse existing key)
+        center_slice.edge.c_attributes[self._key] = self._color
+
+    def _find_markable_center_slice(self, face: Face) -> CenterSlice:
+        """Find a center slice on the given face to mark.
+
+        Prefers a slice matching our target color if available,
+        otherwise uses the first available center slice.
+
+        Args:
+            face: The Face to find a center slice on.
+
+        Returns:
+            A CenterSlice suitable for marking.
+        """
+        # Prefer a slice matching our target color
+        for s in face.center.all_slices:
+            if s.color == self._color:
+                return s
+        # Fallback to first available slice
+        return next(iter(face.center.all_slices))

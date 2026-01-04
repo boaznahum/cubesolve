@@ -26,8 +26,8 @@ Usage:
     # Check if a layout matches BOY (preferred method)
     is_boy = some_layout.is_boy()
 
-    # Get opposite faces (via CubeLayout)
-    opposite = CubeLayout.opposite(FaceName.F)  # FaceName.B
+    # Get opposite faces (via layout instance)
+    opposite = boy.opposite(FaceName.F)  # FaceName.B
 
 Important:
     - get_boy_layout() returns a CACHED SINGLETON - same instance every time
@@ -44,10 +44,11 @@ Consumers:
 
 from cube.utils.config_protocol import IServiceProvider
 
-from .Color import Color
-from .ColorLong import ColorLong
-from .CubeLayout import CubeLayout
-from .FaceName import FaceName
+from cube.domain.model.Color import Color
+from cube.domain.model.ColorLong import ColorLong
+from cube.domain.model.cube_layout.cube_layout import CubeLayout
+from cube.domain.model.cube_layout import create_layout
+from cube.domain.model.FaceName import FaceName
 
 # ============================================================================
 # BOY Layout - Global Cached Singleton
@@ -102,7 +103,7 @@ def get_boy_layout(sp: IServiceProvider) -> CubeLayout:
     """
     global _boy_layout
     if _boy_layout is None:
-        _boy_layout = CubeLayout(True, {
+        _boy_layout = create_layout(True, {
             FaceName.F: Color.BLUE,
             FaceName.R: Color.RED,
             FaceName.U: Color.YELLOW,

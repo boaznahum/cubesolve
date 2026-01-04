@@ -124,7 +124,8 @@ from typing import TYPE_CHECKING, Tuple
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
-from cube.domain.model.CubeLayout import CubeLayout
+from cube.domain.model import Cube
+from cube.domain.model.cube_layout import Point
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
@@ -234,7 +235,7 @@ class FaceTranslationResult:
     Example::
 
         # I want content at (1, 2) on Front, coming from Up
-        result = translator.translate(cube.front, cube.up, (1, 2))
+        result = translator.translate_source_from_target(cube.front, cube.up, (1, 2))
         # result.source_coord = position on Up face
         # result.whole_cube_alg = X' (brings Up to Front)
     """
@@ -279,6 +280,7 @@ class SliceAlgorithmResult:
         :return:
         """
         return self._on_slice - 1
+
     def get_alg(self) -> Alg:
         return self.get_slice_alg(self.on_slice)
 
@@ -292,10 +294,7 @@ class SliceAlgorithmResult:
         :param slice_index:  zero based !!!
         :return:
         """
-        return self.whole_slice_alg[slice_index+1] * self.n
-
-
-
+        return self.whole_slice_alg[slice_index + 1] * self.n
 
 
 # =============================================================================
@@ -326,10 +325,10 @@ class _SliceIndexFormula:
         INV_ROW: slice_index = n_slices - row  (maps 0 → n_slices, n_slices-1 → 1)
         INV_COL: slice_index = n_slices - col  (maps 0 → n_slices, n_slices-1 → 1)
     """
-    ROW = "row"           # slice_index = row + 1
-    COL = "col"           # slice_index = col + 1
-    INV_ROW = "inv_row"   # slice_index = n_slices - row
-    INV_COL = "inv_col"   # slice_index = n_slices - col
+    ROW = "row"  # slice_index = row + 1
+    COL = "col"  # slice_index = col + 1
+    INV_ROW = "inv_row"  # slice_index = n_slices - row
+    INV_COL = "inv_col"  # slice_index = n_slices - col
 
 
 _SLICE_INDEX_TABLE: dict[tuple[SliceName, FaceName], str] = {
@@ -354,10 +353,10 @@ _SLICE_INDEX_TABLE: dict[tuple[SliceName, FaceName], str] = {
 
 
 def _compute_slice_index(
-    source_face: FaceName,
-    slice_name: SliceName,
-    coord: tuple[int, int],
-    n_slices: int
+        source_face: FaceName,
+        slice_name: SliceName,
+        coord: tuple[int, int],
+        n_slices: int
 ) -> int:
     """
     Compute the 1-based slice index for a given source face and coordinate.
@@ -479,7 +478,6 @@ def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Tuple[WholeCubeA
 
             return whole_cube_alg, steps, whole_cube_alg * steps
 
-
     # Should never reach here for valid face pairs
     raise ValueError(f"No rotation cycle contains both {source} and {dest}")
 
@@ -501,7 +499,7 @@ class Face2FaceTranslator:
     """
 
     @staticmethod
-    def translate(
+    def translate_source_from_target(
             target_face: Face,
             source_face: Face,
             target_coord: tuple[int, int]
@@ -544,7 +542,7 @@ class Face2FaceTranslator:
         Example::
 
             # I want content at (1, 2) on Front face, coming from Right face
-            result = Face2FaceTranslator.translate(cube.front, cube.right, (1, 2))
+            result = Face2FaceTranslator.translate_source_from_target(cube.front, cube.right, (1, 2))
 
             # result.source_coord tells me where to look on Right face
             # result.whole_cube_alg (Y') will bring Right content to Front
@@ -582,6 +580,7 @@ class Face2FaceTranslator:
 
         # Compute slice algorithms
         slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
+            target_face.cube,
             target_name, source_name, target_coord, n_slices, whole_cube_base_alg, whole_cube_base_n
         )
 
@@ -590,6 +589,134 @@ class Face2FaceTranslator:
             whole_cube_alg=whole_cube_alg,
             slice_algorithms=slice_algorithms,
             shared_edge=shared_edge,
+        )
+
+    @staticmethod
+    def translate_target_from_source(
+            source_face: Face,
+            target_face: Face,
+            source_coord: tuple[int, int]
+    ) -> Point:
+        """
+
+        claud: If given slice S Operation(S, E, M) brings point x@S to y@T then the same
+        inverse S bring y@T to x@S with the same S you cannot bring it to difrrent ,  it is unique, you cannot move point to othe rplace.
+        so we say x@S<-->y@T
+
+
+
+        (for twofaces that are far away Parallels ,  and not adjust there two slice operations wihtdiffrent results)
+
+
+        So if we need to find what is target@T given source_coord@source_face :
+          Guess a point on T v@T, and find which source (Natural source) w@S match it.
+          as we siad above v@T <--> w@S
+          If w@S == source_coord@source_face it means - as we said before that
+             v@T <--> w@S, so
+             v@T <--> source_coord@source_face
+
+          so v@T is our answer:  target@T = v@T
+
+          to guess v@T we just need to roate souce 4 times becuase there are no other options,a inner poit cannot be moved to outer
+          for eaxmple.
+
+        cluad: till here
+
+
+        Find the coordinate on target_face where content from source_face will move to.
+
+        Given a position on the source face where we have content,
+        find the corresponding position on the target face where that content
+        will appear after applying a movement algorithm.
+
+        This is the inverse operation of translate_source_from_target():
+        If translate_source_from_target(TF, SF, tc) returns sc,
+        then translate_target_from_source(SF, TF, sc) returns tc.
+
+        Args:
+            source_face: Where content currently is
+            target_face: Where we want to know where content will go
+            source_coord: (row, col) position on source_face (0-indexed)
+
+        Returns:
+            FaceTranslationResult containing:
+
+            source_coord: (row, col) on target_face where the content will appear.
+                         This is the "target" coordinate in the inverse relationship.
+
+            whole_cube_alg: Algorithm (X/Y/Z moves) that brings source_face content
+                           to target_face.
+
+            slice_algorithms: Slice algorithms (M/E/S moves) that bring source content
+                             to target position. Uses the input source_coord.
+                             - Adjacent faces: exactly 1 algorithm
+                             - Opposite faces: exactly 2 algorithms
+
+            shared_edge: Edge connecting source and target faces.
+                        - Not None: faces are adjacent (share this edge)
+                        - None: faces are opposite (F↔B, U↔D, L↔R)
+
+        Raises:
+            ValueError: If source_face == target_face (no translation needed)
+            ValueError: If source_coord is out of bounds for cube size
+
+        Example::
+
+            # I have content at (1, 2) on Right face, where will it go on Front face?
+            result = Face2FaceTranslator.translate_target_from_source(cube.right, cube.front, (1, 2))
+
+            # result.source_coord tells me where it will appear on Front face (the "target")
+            # result.whole_cube_alg (Y') will bring Right content to Front
+
+            # Verification:
+            # 1. Mark source_coord on Right face
+            # 2. Apply result.whole_cube_alg
+            # 3. Marker appears at result.source_coord on Front face
+        """
+        if source_face is target_face:
+            raise ValueError("Cannot translate from a face to itself")
+
+        # Use center n_slices for coordinate bounds (not cube size)
+        n_slices = source_face.center.n_slices
+        row, col = source_coord
+        if not (0 <= row < n_slices and 0 <= col < n_slices):
+            raise ValueError(f"Coordinate {source_coord} out of bounds for center grid (n_slices={n_slices})")
+
+        source_name = source_face.name
+        target_name = target_face.name
+
+        """
+        So if we need to find what is target@T given source_coord@source_face :
+          Guess a point on T v@T, and find which source (Natural source) w@S match it.
+          as we siad above v@T <--> w@S 
+          If w@S == source_coord@source_face it means - as we said before that 
+             v@T <--> w@S, so
+             v@T <--> source_coord@source_face
+             
+          so v@T is our answer:  target@T = v@T """
+
+        # ROTATION SEARCH ALGORITHM:
+        # Try all 4 rotation states to find the correct transformation
+        cqr = source_face.cube.cqr
+
+        for n_rotations in range(4):
+            # Step 1: Rotate source coordinate clockwise n_rotations times
+            # guess v@T
+            guessed_point = cqr.rotate_point_clockwise(source_coord, n_rotations)
+
+            # Step 2: Call f2 with swapped source and target
+            result = Face2FaceTranslator.translate_source_from_target(target_face, source_face, guessed_point)
+            # w@S
+            source_on_source = result.source_coord
+
+            # Step 3: Check if source_on_source equals source_coord
+            if source_on_source == source_coord:
+                return guessed_point
+
+        # If no rotation state worked, raise exception
+        raise ValueError(
+            f"No valid transformation found for coordinate {source_coord} "
+            f"between source_face={source_name} and target_face={target_name}"
         )
 
     @staticmethod
@@ -605,6 +732,7 @@ class Face2FaceTranslator:
 
     @staticmethod
     def _compute_slice_algorithms(
+            cube: Cube,
             target_name: FaceName,
             source_name: FaceName,
             target_coord: tuple[int, int],
@@ -626,7 +754,7 @@ class Face2FaceTranslator:
         slice_alg: SliceAlg
 
         for slice_alg in [Algs.S, Algs.M, Algs.E]:
-            slice_alg_face_name = slice_alg.get_face_name()
+            slice_alg_face_name = slice_alg.get_face_name(cube)
             slice_name = slice_alg.slice_name
             assert slice_name is not None
 
@@ -634,7 +762,7 @@ class Face2FaceTranslator:
                 # Same direction as whole-cube rotation
                 slice_index = _compute_slice_index(target_name, slice_name, target_coord, n_slices)
                 return [SliceAlgorithmResult(slice_alg, slice_index, whole_cube_base_n)]
-            elif whole_on_face is CubeLayout.opposite(slice_alg_face_name):
+            elif whole_on_face is cube.layout.opposite(slice_alg_face_name):
                 # Opposite direction - negate n
                 slice_index = _compute_slice_index(target_name, slice_name, target_coord, n_slices)
                 return [SliceAlgorithmResult(slice_alg, slice_index, -whole_cube_base_n)]

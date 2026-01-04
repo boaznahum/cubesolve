@@ -10,7 +10,7 @@ from cube.application.animation.AnimationText import AnimationText
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
 from cube.domain.model.Cube import Cube
-from cube.domain.model.cube_boy import FaceName
+from cube.domain.model.cube_layout.cube_boy import FaceName
 from cube.utils.config_protocol import ConfigProtocol
 
 
