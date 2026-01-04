@@ -153,7 +153,7 @@ class FUnitRotation:
             if unit_rot.of_n_slices(n_slices)(*source) == target:
                 return unit_rot
         raise ValueError(
-            f"No valid transformation found between {source_face.name} and {target_face.name}"
+            f"No valid transformation found between {source} and {target}"
         )
 
 

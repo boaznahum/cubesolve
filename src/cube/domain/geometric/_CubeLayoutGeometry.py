@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterator
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
-from cube.domain.geometric.FRotation import FUnitRotation
+from cube.domain.geometric.FRotation import FUnitRotation, FRotation
 from cube.domain.model.Edge import Edge
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
@@ -323,11 +323,10 @@ class _CubeLayoutGeometry:
         """Derive unit rotation using Slice traversal logic."""
         # Use (0, 0) as reference point
         origin = (0, 0)
-        target_for_origin = _CubeLayoutGeometry._translate_via_slice_geometry(
+        unit_rotation = _CubeLayoutGeometry._translate_via_slice_geometry(
             source_face, target_face, origin, n_slices, slice_name
         )
-        # Determine which FUnitRotation matches this transformation
-        return FUnitRotation.of(source_face.n_slices, origin, target_for_origin)
+        return unit_rotation
 
     @staticmethod
     def _translate_via_slice_geometry(
@@ -336,7 +335,7 @@ class _CubeLayoutGeometry:
             source_coord: tuple[int, int],
             n_slices: int,
             slice_name: SliceName
-    ) -> tuple[int, int]:
+    ) -> FUnitRotation:
         """
         Translate coordinates using Slice traversal geometry.
 
@@ -385,14 +384,16 @@ class _CubeLayoutGeometry:
         target_idx = cycle_faces.index(target_face)
         steps = (target_idx - source_idx) % 4
 
+        unit_rotation: FUnitRotation
+
         if steps == 0:
             # Same face (shouldn't happen, but handle gracefully)
-            return source_coord
+            unit_rotation = FUnitRotation.CW0
         elif steps == 1:
             # Adjacent: one step
             source_edge = cycle_edges[source_idx]
             target_edge = cycle_edges[target_idx]
-            return _CubeLayoutGeometry._translate_adjacent(
+            unit_rotation = _CubeLayoutGeometry._translate_adjacent(
                 source_face, target_face, source_coord, n_slices,
                 source_edge, target_edge
             )
@@ -405,42 +406,35 @@ class _CubeLayoutGeometry:
             target_edge = cycle_edges[target_idx]
 
             # First transform: source → intermediate
-            intermediate_coord = _CubeLayoutGeometry._translate_adjacent(
+            unit1 = _CubeLayoutGeometry._translate_adjacent(
                 source_face, intermediate_face, source_coord, n_slices,
                 source_edge, intermediate_edge
             )
+
             # Second transform: intermediate → target
-            return _CubeLayoutGeometry._translate_adjacent(
-                intermediate_face, target_face, intermediate_coord, n_slices,
+            unit2 = _CubeLayoutGeometry._translate_adjacent(
+                intermediate_face, target_face, (0, 0), n_slices,
                 intermediate_edge, target_edge
             )
+
+            unit_rotation = unit1 * unit2
         else:  # steps == 3
             # Going backwards (3 steps forward = 1 step backward)
             # This means target is "before" source in the cycle
             # Compose: source → intermediate1 → intermediate2 → target
-            int1_idx = (source_idx + 1) % 4
-            int2_idx = (source_idx + 2) % 4
 
-            int1_face = cycle_faces[int1_idx]
-            int2_face = cycle_faces[int2_idx]
-
-            source_edge = cycle_edges[source_idx]
-            int1_edge = cycle_edges[int1_idx]
-            int2_edge = cycle_edges[int2_idx]
             target_edge = cycle_edges[target_idx]
 
-            coord1 = _CubeLayoutGeometry._translate_adjacent(
-                source_face, int1_face, source_coord, n_slices,
-                source_edge, int1_edge
+            source_edge = cycle_edges[source_idx]
+
+            inverse = _CubeLayoutGeometry._translate_adjacent(
+                target_face, source_face, (0, 0), n_slices,
+                target_edge, source_edge
             )
-            coord2 = _CubeLayoutGeometry._translate_adjacent(
-                int1_face, int2_face, coord1, n_slices,
-                int1_edge, int2_edge
-            )
-            return _CubeLayoutGeometry._translate_adjacent(
-                int2_face, target_face, coord2, n_slices,
-                int2_edge, target_edge
-            )
+
+            unit_rotation = - inverse
+
+        return unit_rotation
 
     @staticmethod
     def _build_slice_cycle(cube: Cube, slice_name: SliceName) -> tuple[list[Face], list[Edge]]:
@@ -488,11 +482,11 @@ class _CubeLayoutGeometry:
     def _translate_adjacent(
             source_face: Face,
             target_face: Face,
-            source_coord: tuple[int, int],
+            _source_coord: tuple[int, int],
             n_slices: int,
             source_edge: Edge,
             target_edge: Edge
-    ) -> tuple[int, int]:
+    ) -> FUnitRotation:
         """
         Translate coordinates between two ADJACENT faces (one edge crossing).
 
@@ -562,7 +556,8 @@ class _CubeLayoutGeometry:
         def inv(x: int) -> int:
             return n_slices - 1 - x
 
-        row, col = source_coord
+        source_cord = (0, 0)
+        row, col = source_cord
 
         # ============================================================
         # STEP 1: Extract current_index and slot_along from source
@@ -608,4 +603,6 @@ class _CubeLayoutGeometry:
             else:  # left edge
                 target_col = slot_along
 
-        return (target_row, target_col)
+        target = (target_row, target_col)
+
+        return FUnitRotation.of(n_slices, source_cord, target)
