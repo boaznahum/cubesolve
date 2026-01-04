@@ -458,3 +458,41 @@ for slice_ in all_slices:
 
 **Workaround:** Press `+` key before scramble (or use `--speed-up 1+` in tests)
 - dont run tesest after midifcation without asking me i need to review the solution first dont waste my tokens
+
+---
+
+## Session Notes - MANDATORY
+
+**CRITICAL:** For every session, maintain a session notes file to persist progress across sessions.
+
+### Location & Naming
+
+```
+.claude/sessions/<branch-name>.md
+```
+
+Example: For branch `claude/create-transforms-8ecXU`, the file is:
+```
+.claude/sessions/claude-create-transforms-8ecXU.md
+```
+
+### Requirements
+
+1. **Create on first session** if it doesn't exist
+2. **Update on any progress** - document what was done, what works, what fails
+3. **Make it ready to continue** - another session should be able to pick up where you left off
+4. **Include**:
+   - Overview of the task/goal
+   - Key files modified
+   - Current status (what works, what's broken)
+   - Next steps
+   - Commits made
+   - Any debugging notes or insights
+
+### Purpose
+
+This ensures continuity across Claude sessions. When starting work on a branch:
+1. Check if `.claude/sessions/<branch-name>.md` exists
+2. Read it to understand current state
+3. Continue from where the previous session left off
+4. Update the file with your progress before ending
