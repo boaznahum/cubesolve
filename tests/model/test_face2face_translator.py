@@ -26,6 +26,7 @@ import pytest
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.FaceName import FaceName
+from cube.domain.model.SliceName import SliceName
 from cube.domain.model.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult
 from cube.domain.model._elements import CenterSliceIndex
 from cube.domain.model.PartSlice import CenterSlice
@@ -248,3 +249,90 @@ class TestTranslateTargetFromSource:
                 f"  expected {target_coord}\n"
                 f"  slice_name={slice_name}"
             )
+
+
+class TestSliceMovementPrediction:
+    """
+    Test translate_target_from_source by actually applying slice operations.
+
+    For each (source, target) face pair:
+    1. Put unique marker on each center piece of source face
+    2. Get slice algorithm from translate_source_from_target (includes direction)
+    3. Apply the slice operation
+    4. Verify each piece moved to position predicted by translate_target_from_source
+    """
+
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_SLICE)
+    @pytest.mark.parametrize("face_pair", FACE_PAIRS, ids=_face_pair_id)
+    def test_slice_movement_prediction(
+        self, cube_size: int, face_pair: tuple[FaceName, FaceName]
+    ) -> None:
+        """
+        Test that translate_target_from_source correctly predicts where pieces move.
+
+        Contract:
+        1. Mark each center piece on source_face with unique marker
+        2. Get slice algorithm (with correct direction) from translate_source_from_target
+        3. Predict target positions using translate_target_from_source
+        4. Apply slice algorithm
+        5. Verify markers appear at predicted positions on target_face
+        """
+        # Convention: face_pair = (target, source), test ID is "target<-source"
+        target_name, source_name = face_pair
+        cube = Cube(cube_size, sp=_test_sp)
+
+        source_face = cube.face(source_name)
+        target_face = cube.face(target_name)
+
+        # Get slice algorithms from translate_source_from_target
+        # This gives us the correct slice AND direction
+        # Use a dummy coord to get the algorithms
+        result = Face2FaceTranslator.translate_source_from_target(
+            target_face, source_face, (0, 0)
+        )
+
+        # Test each slice algorithm
+        for slice_alg_result in result.slice_algorithms:
+            slice_name = slice_alg_result.whole_slice_alg.slice_name
+            if slice_name is None:
+                continue
+
+            # Reset cube for this slice test
+            cube = Cube(cube_size, sp=_test_sp)
+            source_face = cube.face(source_name)
+            target_face = cube.face(target_name)
+
+            # Step 1: Put unique marker on each center piece and predict target positions
+            predictions: dict[tuple[int, int], str] = {}  # target_coord -> marker_value
+
+            for center_slice in source_face.center.all_slices:
+                source_coord: CenterSliceIndex = center_slice.index
+                marker_value = f"M_{source_name}_{source_coord[0]}_{source_coord[1]}"
+
+                # Place marker
+                center_slice.edge.c_attributes["test_marker"] = marker_value
+
+                # Predict where it will go
+                predicted_target = Face2FaceTranslator.translate_target_from_source(
+                    source_face, target_face, source_coord, slice_name
+                )
+                predictions[predicted_target] = marker_value
+
+            # Step 2: Apply whole slice algorithm (moves ALL slices, not just one)
+            whole_slice_alg = slice_alg_result.whole_slice_alg
+            whole_slice_alg.play(cube)
+
+            # Step 3: Verify markers at predicted positions on target_face
+            target_face = cube.face(target_name)
+            for predicted_coord, expected_marker in predictions.items():
+                check_slice: CenterSlice = target_face.center.get_center_slice(predicted_coord)
+                actual_marker = check_slice.edge.c_attributes.get("test_marker")
+
+                assert actual_marker == expected_marker, (
+                    f"Slice movement prediction failed!\n"
+                    f"  source_face={source_name}, target_face={target_name}\n"
+                    f"  slice_name={slice_name}, alg={whole_slice_alg}\n"
+                    f"  predicted_coord={predicted_coord}\n"
+                    f"  expected marker: {expected_marker}\n"
+                    f"  actual marker: {actual_marker}"
+                )
