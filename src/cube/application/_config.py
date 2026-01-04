@@ -38,6 +38,9 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE = False
 
 CHECK_CUBE_SANITY = False
 
+# Enable cube caching for performance optimization
+ENABLE_CUBE_CACHE = True
+
 ###### Operator ####
 
 # Only initial value, can be changed

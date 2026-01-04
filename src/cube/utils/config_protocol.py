@@ -125,6 +125,11 @@ class ConfigProtocol(Protocol):
         """Default cube size."""
         ...
 
+    @property
+    def enable_cube_cache(self) -> bool:
+        """Enable cube caching for performance optimization."""
+        ...
+
     # ==========================================================================
     # Solver settings
     # ==========================================================================

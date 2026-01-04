@@ -50,6 +50,11 @@ class AppConfig(ConfigProtocol):
         """Default cube size."""
         return cfg.CUBE_SIZE
 
+    @property
+    def enable_cube_cache(self) -> bool:
+        """Enable cube caching for performance optimization."""
+        return cfg.ENABLE_CUBE_CACHE
+
     # ==========================================================================
     # Solver settings
     # ==========================================================================
