@@ -126,6 +126,7 @@ from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.model import Cube
 from cube.domain.model.geometric import Point
+from cube.domain.model.FRotation import FUnitRotation
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
@@ -598,31 +599,6 @@ class Face2FaceTranslator:
             source_coord: tuple[int, int]
     ) -> Point:
         """
-
-        claud: If given slice S Operation(S, E, M) brings point x@S to y@T then the same
-        inverse S bring y@T to x@S with the same S you cannot bring it to difrrent ,  it is unique, you cannot move point to othe rplace.
-        so we say x@S<-->y@T
-
-
-
-        (for twofaces that are far away Parallels ,  and not adjust there two slice operations wihtdiffrent results)
-
-
-        So if we need to find what is target@T given source_coord@source_face :
-          Guess a point on T v@T, and find which source (Natural source) w@S match it.
-          as we siad above v@T <--> w@S
-          If w@S == source_coord@source_face it means - as we said before that
-             v@T <--> w@S, so
-             v@T <--> source_coord@source_face
-
-          so v@T is our answer:  target@T = v@T
-
-          to guess v@T we just need to roate souce 4 times becuase there are no other options,a inner poit cannot be moved to outer
-          for eaxmple.
-
-        cluad: till here
-
-
         Find the coordinate on target_face where content from source_face will move to.
 
         Given a position on the source face where we have content,
@@ -633,28 +609,17 @@ class Face2FaceTranslator:
         If translate_source_from_target(TF, SF, tc) returns sc,
         then translate_target_from_source(SF, TF, sc) returns tc.
 
+        Uses caching to avoid recomputing the rotation for each call.
+        The rotation is computed once per (source_face, target_face) pair
+        using (0,0) as a reference point, then cached and applied to any source_coord.
+
         Args:
             source_face: Where content currently is
             target_face: Where we want to know where content will go
             source_coord: (row, col) position on source_face (0-indexed)
 
         Returns:
-            FaceTranslationResult containing:
-
-            source_coord: (row, col) on target_face where the content will appear.
-                         This is the "target" coordinate in the inverse relationship.
-
-            whole_cube_alg: Algorithm (X/Y/Z moves) that brings source_face content
-                           to target_face.
-
-            slice_algorithms: Slice algorithms (M/E/S moves) that bring source content
-                             to target position. Uses the input source_coord.
-                             - Adjacent faces: exactly 1 algorithm
-                             - Opposite faces: exactly 2 algorithms
-
-            shared_edge: Edge connecting source and target faces.
-                        - Not None: faces are adjacent (share this edge)
-                        - None: faces are opposite (F↔B, U↔D, L↔R)
+            (row, col) on target_face where the content will appear.
 
         Raises:
             ValueError: If source_face == target_face (no translation needed)
@@ -663,61 +628,35 @@ class Face2FaceTranslator:
         Example::
 
             # I have content at (1, 2) on Right face, where will it go on Front face?
-            result = Face2FaceTranslator.translate_target_from_source(cube.right, cube.front, (1, 2))
-
-            # result.source_coord tells me where it will appear on Front face (the "target")
-            # result.whole_cube_alg (Y') will bring Right content to Front
-
-            # Verification:
-            # 1. Mark source_coord on Right face
-            # 2. Apply result.whole_cube_alg
-            # 3. Marker appears at result.source_coord on Front face
+            target_coord = Face2FaceTranslator.translate_target_from_source(cube.right, cube.front, (1, 2))
         """
         if source_face is target_face:
             raise ValueError("Cannot translate from a face to itself")
 
-        # Use center n_slices for coordinate bounds (not cube size)
         n_slices = source_face.center.n_slices
         row, col = source_coord
         if not (0 <= row < n_slices and 0 <= col < n_slices):
             raise ValueError(f"Coordinate {source_coord} out of bounds for center grid (n_slices={n_slices})")
 
-        source_name = source_face.name
-        target_name = target_face.name
+        cache_key = (source_face.name, target_face.name)
+        cache = source_face.cube.layout.cache_manager.get("f2f_unit_rotation", FUnitRotation)
 
-        """
-        So if we need to find what is target@T given source_coord@source_face :
-          Guess a point on T v@T, and find which source (Natural source) w@S match it.
-          as we siad above v@T <--> w@S 
-          If w@S == source_coord@source_face it means - as we said before that 
-             v@T <--> w@S, so
-             v@T <--> source_coord@source_face
-             
-          so v@T is our answer:  target@T = v@T """
+        def compute_unit_rotation() -> FUnitRotation:
+            """Compute unit rotation using (0,0) as reference point."""
+            origin = (0, 0)
+            for unit_rot in [FUnitRotation.CW0, FUnitRotation.CW1, FUnitRotation.CW2, FUnitRotation.CW3]:
+                guessed_target = unit_rot.of_n_slices(n_slices)(*origin)
+                result = Face2FaceTranslator.translate_source_from_target(
+                    target_face, source_face, guessed_target
+                )
+                if result.source_coord == origin:
+                    return unit_rot
+            raise ValueError(
+                f"No valid transformation found between {source_face.name} and {target_face.name}"
+            )
 
-        # ROTATION SEARCH ALGORITHM:
-        # Try all 4 rotation states to find the correct transformation
-        cqr = source_face.cube.cqr
-
-        for n_rotations in range(4):
-            # Step 1: Rotate source coordinate clockwise n_rotations times
-            # guess v@T
-            guessed_point = cqr.rotate_point_clockwise(source_coord, n_rotations)
-
-            # Step 2: Call f2 with swapped source and target
-            result = Face2FaceTranslator.translate_source_from_target(target_face, source_face, guessed_point)
-            # w@S
-            source_on_source = result.source_coord
-
-            # Step 3: Check if source_on_source equals source_coord
-            if source_on_source == source_coord:
-                return guessed_point
-
-        # If no rotation state worked, raise exception
-        raise ValueError(
-            f"No valid transformation found for coordinate {source_coord} "
-            f"between source_face={source_name} and target_face={target_name}"
-        )
+        unit_rotation = cache.compute(cache_key, compute_unit_rotation)
+        return unit_rotation.of_n_slices(n_slices)(*source_coord)
 
     @staticmethod
     def _find_shared_edge(face1: Face, face2: Face) -> Edge | None:

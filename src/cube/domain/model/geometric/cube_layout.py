@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.utils.config_protocol import ConfigProtocol
+    from cube.utils.Cache import CacheManager
 
 
 def _build_adjacent(all_opposite: Mapping[FaceName, FaceName]) -> Mapping[FaceName, tuple[FaceName, ...]]:
@@ -137,8 +138,14 @@ class CubeLayout(Protocol):
 
     @property
     @abstractmethod
-    def config(self) -> ConfigProtocol:
+    def config(self) -> "ConfigProtocol":
         """Get configuration via service provider."""
+        ...
+
+    @property
+    @abstractmethod
+    def cache_manager(self) -> "CacheManager":
+        """Get the cache manager for this layout."""
         ...
 
     @abstractmethod
