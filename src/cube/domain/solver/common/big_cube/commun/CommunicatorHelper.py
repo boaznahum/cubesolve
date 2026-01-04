@@ -355,8 +355,9 @@ class CommunicatorHelper(SolverElement):
 
         # Step 3: xpt is on target_face, find where it maps to on source_face translate_target_from_source(
         # source_face, target_face, coord) finds where coord on target_face goes on source_face
+        slice_name = internal_data.trans_data.slice_algorithms[0].whole_slice_alg.slice_name
         xpt_on_source = Face2FaceTranslator.translate_target_from_source(
-            target_face, source_face, xpt
+            target_face, source_face, xpt, slice_name
         )
 
         # Step 4: Apply su' (inverse setup) to get final xp in original coordinates
