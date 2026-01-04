@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy import ndarray
 
-from cube.domain.model.geometric.cube_boy import Color, FaceName
+from cube.domain.geometric.cube_boy import Color, FaceName
 
 from ._modern_gl_cell import ModernGLCell
 from ._modern_gl_constants import (

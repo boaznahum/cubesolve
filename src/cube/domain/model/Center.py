@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Self, TypeAlias
 
 from cube.domain.model._elements import CenterSliceIndex, SliceIndex
 from cube.domain.model.PartSlice import CenterSlice
-from cube.domain.model.geometric.cube_boy import FaceName
+from cube.domain.geometric.cube_boy import FaceName
 from cube.domain.model.Part import Part
 from cube.domain.model.PartEdge import PartEdge
 

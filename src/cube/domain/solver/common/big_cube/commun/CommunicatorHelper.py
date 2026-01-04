@@ -25,10 +25,10 @@ from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.model import FaceName, Cube, CenterSlice
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.model.Face import Face
-from cube.domain.model.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
+from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.model.geometric.slice_layout import CLGColRow
+from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
 

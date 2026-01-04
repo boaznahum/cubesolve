@@ -26,7 +26,7 @@ from tabulate import tabulate
 
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
-from cube.domain.model.geometric.cube_boy import FaceName
+from cube.domain.geometric.cube_boy import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper

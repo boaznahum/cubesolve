@@ -437,7 +437,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             current_mod = self._app.cube._modify_counter
             if current_mod != self._debug_last_printed_mod:
                 self._debug_last_printed_mod = current_mod
-                from cube.domain.model.geometric.cube_boy import FaceName
+                from cube.domain.geometric.cube_boy import FaceName
                 self._modern_viewer.debug_print_face_grid(FaceName.F)
 
         # Check for solve state transition (cube just became solved)

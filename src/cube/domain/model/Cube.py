@@ -141,8 +141,8 @@ from ._elements import AxisName, PartColorsID
 from .PartSlice import CornerSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Corner import Corner
-from cube.domain.model.geometric.cube_boy import Color, FaceName
-from cube.domain.model.geometric import CubeLayout, create_layout
+from cube.domain.geometric.cube_boy import Color, FaceName
+from cube.domain.geometric import CubeLayout, create_layout
 from .cube_slice import Slice, SliceName
 from .Edge import Edge
 from .Face import Face
@@ -343,7 +343,7 @@ class Cube(CubeSupplier):
         self._listeners: list["CubeListener"] = []
         self._is_even_cube_shadow: bool = False
 
-        from .geometric import cube_boy
+        from cube.domain.geometric import cube_boy
 
         self._layout: CubeLayout = cube_boy.get_boy_layout(self._sp)
         self._reset()

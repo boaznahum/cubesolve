@@ -7,7 +7,7 @@ from ._elements import Direction, PartColorsID
 from .PartSlice import CenterSlice, PartSlice
 from .Center import Center
 from .Corner import Corner
-from cube.domain.model.geometric.cube_boy import Color, FaceName
+from cube.domain.geometric.cube_boy import Color, FaceName
 from .Edge import Edge
 from .Part import Part
 from .PartEdge import PartEdge

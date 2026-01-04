@@ -9,7 +9,7 @@ from cube.domain.algs.Alg import Alg
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.FaceName import FaceName
-from cube.domain.model.geometric.Face2FaceTranslator import Face2FaceTranslator, _TRANSFORMATION_TABLE, _apply_transform
+from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator, _TRANSFORMATION_TABLE, _apply_transform
 from cube.domain.model.cube_slice import SliceName
 # noinspection PyProtectedMember
 from cube.domain.model.PartSlice import CenterSlice

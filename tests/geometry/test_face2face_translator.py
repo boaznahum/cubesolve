@@ -27,7 +27,7 @@ from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
-from cube.domain.model.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult
+from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult
 from cube.domain.model._elements import CenterSliceIndex
 from cube.domain.model.PartSlice import CenterSlice
 from tests.test_utils import _test_sp
@@ -42,7 +42,7 @@ def _get_face_pairs() -> list[tuple[FaceName, FaceName]]:
 
 FACE_PAIRS = _get_face_pairs()
 CUBE_SIZES_WHOLE = [3, 5]
-CUBE_SIZES_SLICE = [5]
+CUBE_SIZES_SLICE = range(5, 6)
 
 
 def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:

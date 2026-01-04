@@ -6,14 +6,15 @@ from collections.abc import Collection, Iterator
 from typing import TYPE_CHECKING, Mapping
 
 from cube.domain.exceptions import InternalSWError
+from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.model.SliceName import SliceName
-from cube.domain.model.geometric.cube_layout import (
+from cube.domain.geometric.cube_layout import (
     CubeLayout,
     _ADJACENT,
     _ALL_OPPOSITE,
     _OPPOSITE,
 )
-from cube.domain.model.geometric.slice_layout import SliceLayout, _SliceLayout
+from cube.domain.geometric.slice_layout import SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 from cube.utils.Cache import CacheManager
 
@@ -168,7 +169,7 @@ class _CubeLayout(CubeLayout):
 
     def is_boy(self) -> bool:
         """Check if this layout matches the standard BOY color scheme."""
-        from cube.domain.model.geometric import cube_boy
+        from cube.domain.geometric import cube_boy
         return self.same(cube_boy.get_boy_layout(self._sp))
 
     def clone(self) -> _CubeLayout:
@@ -194,10 +195,12 @@ class _CubeLayout(CubeLayout):
             side_face: "Face",
             layer_slice_index: int,
     ) -> Iterator[tuple[int, int]]:
-        from cube.domain.model.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
+        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
         return _CubeLayoutGeometry.iterate_orthogonal_face_center_pieces(
             cube, layer1_face, side_face, layer_slice_index
         )
+
+
 
     def get_slices_between_faces(
             self,
@@ -210,7 +213,7 @@ class _CubeLayout(CubeLayout):
         TODO: This is a patch implementation using translate_source_from_target.
               Consider deriving this directly from slice geometry.
         """
-        from cube.domain.model.geometric.Face2FaceTranslator import Face2FaceTranslator
+        from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 
         # Use a dummy coordinate - we just need the slice info
         dummy_coord = (0, 0)
@@ -389,3 +392,27 @@ class _CubeLayout(CubeLayout):
 
         for c in Color:
             assert self._find_face(c)
+
+    def translate_target_from_source(self,
+            source_face: Face,
+            target_face: Face,
+            source_coord: tuple[int, int],
+            slice_name: SliceName
+    ) -> FUnitRotation:
+
+        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
+
+        def compute_unit_rotation() -> FUnitRotation:
+            return _CubeLayoutGeometry.translate_target_from_source(
+                source_face,
+                target_face, source_coord, slice_name
+            )
+
+        cache_key = (source_face.name, target_face.name, slice_name)
+        cache = self.cache_manager.get("CubeLayout.translate_target_from_source",
+                                                      FUnitRotation)
+
+        unit_rotation = cache.compute(cache_key, compute_unit_rotation)
+
+        return unit_rotation
+
