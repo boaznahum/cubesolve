@@ -419,3 +419,28 @@ class CubeLayout(Protocol):
             layer_slice_index=0 yields: (2,0), (2,1), (2,2)
         """
         ...
+
+    @abstractmethod
+    def get_slices_between_faces(
+            self,
+            source_face: "Face",
+            target_face: "Face",
+    ) -> list[SliceName]:
+        """
+        Get the slice(s) that connect source_face to target_face.
+
+        For adjacent faces: returns 1 slice
+        For opposite faces: returns 2 slices (both pass through)
+
+        Args:
+            source_face: The source face
+            target_face: The target face
+
+        Returns:
+            List of SliceName(s) that connect the faces
+
+        Example:
+            F → U: [M] (M slice connects F and U)
+            F → B: [M, E] (both M and E connect opposite faces F and B)
+        """
+        ...

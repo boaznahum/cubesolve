@@ -199,6 +199,34 @@ class _CubeLayout(CubeLayout):
             cube, layer1_face, side_face, layer_slice_index
         )
 
+    def get_slices_between_faces(
+            self,
+            source_face: "Face",
+            target_face: "Face",
+    ) -> list[SliceName]:
+        """
+        Get the slice(s) that connect source_face to target_face.
+
+        TODO: This is a patch implementation using translate_source_from_target.
+              Consider deriving this directly from slice geometry.
+        """
+        from cube.domain.model.geometric.Face2FaceTranslator import Face2FaceTranslator
+
+        # Use a dummy coordinate - we just need the slice info
+        dummy_coord = (0, 0)
+        result = Face2FaceTranslator.translate_source_from_target(
+            target_face, source_face, dummy_coord
+        )
+
+        # Extract unique slice names from slice_algorithms
+        slice_names: list[SliceName] = []
+        for slice_alg_result in result.slice_algorithms:
+            slice_name = slice_alg_result.whole_slice_alg.slice_name
+            if slice_name is not None and slice_name not in slice_names:
+                slice_names.append(slice_name)
+
+        return slice_names
+
     def _is_face(self, color: Color) -> FaceName | None:
         """Find which face has the given color, or None if not found."""
         for f, c in self._faces.items():
