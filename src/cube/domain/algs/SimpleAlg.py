@@ -21,6 +21,8 @@ class NSimpleAlg(SimpleAlg, ABC):
     """
     A simple alg with n property,
     Follows the rule of simple rotation n == N % 4
+
+    We don't support __i methods because we want all objects to be immutable
     """
 
     __slots__ = ["_n", "_code"]
@@ -95,15 +97,6 @@ class NSimpleAlg(SimpleAlg, ABC):
 
     def same_form(self, a: "SimpleAlg") -> bool:
         return True
-
-    def __imul__(self, other: int):
-        """
-        For simple algorithm inv and mul
-        :param other:
-        :return:
-        """
-        self._n *= other
-        return self
 
     @property
     def code(self):

@@ -49,8 +49,7 @@ class _Inv(Alg):
         a = self._alg.simplify()  # can't be _Mul, nor Inv
 
         if isinstance(a, _Inv.NSimpleAlg):
-            s = a.clone()
-            s *= -1  # inv - that is my function
+            s = a.clone() * -1
             return s.simplify()
         elif isinstance(a, AnnotationAlg):
             return a

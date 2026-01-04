@@ -18,6 +18,7 @@ class Alg(ABC):
         from .Inv import _Inv
         return _Inv(self)
 
+    @final
     @property
     def prime(self) -> "Alg":
         return self.inv()

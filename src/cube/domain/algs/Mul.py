@@ -50,8 +50,7 @@ class _Mul(Alg, ABC):
         a = self._alg.simplify()  # can't be _Mul
 
         if isinstance(a, NSimpleAlg):
-            s = a.clone()
-            s *= self._n  # multipy by me - that is my function
+            s = a.clone() * self._n
             return s.simplify()
         elif isinstance(a, AnnotationAlg):
             return a
