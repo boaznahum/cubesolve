@@ -30,6 +30,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Tuple
 
+from cube.domain.geometric.types import Point
+
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
 
@@ -131,6 +133,28 @@ class FUnitRotation:
 
     def __repr__(self) -> str:
         return f"FUnitRotation.CW{self._n_rotation % 4}"
+
+    @staticmethod
+    def of(n_slices, source: Point, target: Point) -> FUnitRotation:
+
+        """
+        Given two points on known cube size, compute the unit transform such that
+          >>> ut: FUnitRotation = ...
+          >>> ut.of_n_slices(n_slices)(source) == target
+        :param n_slices:
+        :param source:
+        :param target:
+        :return:
+
+        :raises ValueError: In no such trasfrom exists
+        """
+        # Determine which FUnitRotation matches this transformation
+        for unit_rot in [FUnitRotation.CW0, FUnitRotation.CW1, FUnitRotation.CW2, FUnitRotation.CW3]:
+            if unit_rot.of_n_slices(n_slices)(*source) == target:
+                return unit_rot
+        raise ValueError(
+            f"No valid transformation found between {source_face.name} and {target_face.name}"
+        )
 
 
 # Predefined unit rotations

@@ -275,6 +275,8 @@ class _CubeLayoutGeometry:
             slice_name: SliceName
     ) -> FUnitRotation:
         """
+
+        caching: Cached by the called
         Find the coordinate on target_face where content from source_face will move to.
 
         Given a position on the source face where we have content,
@@ -318,28 +320,14 @@ class _CubeLayoutGeometry:
         if not (0 <= row < n_slices and 0 <= col < n_slices):
             raise ValueError(f"Coordinate {source_coord} out of bounds for center grid (n_slices={n_slices})")
 
-        # Cache key includes slice_name since different slices give different results
-        cache_key = (source_face.name, target_face.name, slice_name)
-        cache = source_face.cube.layout.cache_manager.get("_CubeLayoutGeometry.translate_target_from_source",
-                                                          FUnitRotation)
-
-        def compute_unit_rotation() -> FUnitRotation:
-            """Derive unit rotation using Slice traversal logic."""
-            # Use (0, 0) as reference point
-            origin = (0, 0)
-            target_for_origin = _CubeLayoutGeometry._translate_via_slice_geometry(
-                source_face, target_face, origin, n_slices, slice_name
-            )
-            # Determine which FUnitRotation matches this transformation
-            for unit_rot in [FUnitRotation.CW0, FUnitRotation.CW1, FUnitRotation.CW2, FUnitRotation.CW3]:
-                if unit_rot.of_n_slices(n_slices)(*origin) == target_for_origin:
-                    return unit_rot
-            raise ValueError(
-                f"No valid transformation found between {source_face.name} and {target_face.name}"
-            )
-
-        unit_rotation = cache.compute(cache_key, compute_unit_rotation)
-        return unit_rotation
+        """Derive unit rotation using Slice traversal logic."""
+        # Use (0, 0) as reference point
+        origin = (0, 0)
+        target_for_origin = _CubeLayoutGeometry._translate_via_slice_geometry(
+            source_face, target_face, origin, n_slices, slice_name
+        )
+        # Determine which FUnitRotation matches this transformation
+        return FUnitRotation.of(source_face.n_slices, origin, target_for_origin)
 
     @staticmethod
     def _translate_via_slice_geometry(

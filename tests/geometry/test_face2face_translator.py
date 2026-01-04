@@ -47,7 +47,7 @@ CUBE_SIZES_SLICE = range(5, 6)
 
 def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:
     """Generate readable test ID for face pair."""
-    return f"{pair[0].name}<-{pair[1].name}"
+    return f"{pair[1].name}->{pair[0].name}"
 
 
 def verify_whole_cube_translation(
