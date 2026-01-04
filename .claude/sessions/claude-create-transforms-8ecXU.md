@@ -157,11 +157,11 @@ def get_slices_between_faces(
 
 ---
 
-## 5. TestSliceMovementPrediction (WIP)
+## 5. TestSliceMovementPrediction - FIXED
 
-**File**: `tests/model/test_face2face_translator.py`
+**File**: `tests/geometry/test_face2face_translator.py`
 
-**Status**: 12 pass, 18 fail
+**Status**: ✅ All 30 tests pass (was 12 pass, 18 fail)
 
 ### Test Design
 
@@ -169,18 +169,29 @@ For each (source, target) face pair:
 1. Put unique marker on each center piece of source face
 2. Get slice algorithm from `translate_source_from_target` (includes direction)
 3. Predict target positions using `translate_target_from_source`
-4. Apply `whole_slice_alg`
+4. Apply slice algorithm **with direction multiplier**
 5. Verify markers appear at predicted positions on target_face
 
-### Current Issue
+### Bug Fix (2025-01-04)
 
-18 tests failing. The predictions from `translate_target_from_source` don't
-match where pieces actually end up after applying the slice algorithm.
+**Root Cause**: Test was using `whole_slice_alg` directly instead of `get_whole_slice_alg()`.
 
-Possible causes to investigate:
-1. `translate_target_from_source` returning wrong predictions
-2. Mismatch between slice direction in algorithm vs prediction
-3. The `whole_slice_alg` behavior
+The `SliceAlgResult` class has:
+- `whole_slice_alg`: Base algorithm (moves all slices once)
+- `n`: Direction multiplier (1 or 3 for CW/CCW)
+- `get_whole_slice_alg()`: Returns `whole_slice_alg * n` (includes direction)
+
+**Before (wrong)**:
+```python
+whole_slice_alg = slice_alg_result.whole_slice_alg
+whole_slice_alg.play(cube)
+```
+
+**After (correct)**:
+```python
+alg_with_direction = slice_alg_result.get_whole_slice_alg()
+alg_with_direction.play(cube)
+```
 
 ### Test Convention
 
@@ -250,23 +261,22 @@ e60191f Return singleton constants from FRotation.unit property
 3. `src/cube/domain/model/geometric/cube_layout.py` - Protocol with new method
 4. `src/cube/domain/model/geometric/_CubeLayout.py` - Implementation
 5. `src/cube/domain/model/geometric/__init__.py` - Updated exports note
-6. `tests/model/test_face2face_translator.py` - Tests including WIP
+6. `tests/geometry/test_face2face_translator.py` - Tests (moved from tests/model/)
+7. `tests/geometry/test_communicator_helper.py` - Helper tests (moved from tests/model/)
+8. `tests/geometry/__init__.py` - New test package
 
 ---
 
 ## 10. Next Steps
 
-1. **Debug failing tests**: Investigate why `translate_target_from_source`
-   predictions don't match actual piece movement
+1. ~~**Debug failing tests**~~: ✅ DONE - Fixed by using `get_whole_slice_alg()` instead of `whole_slice_alg`
 
-2. **Verify slice direction**: Ensure the algorithm direction matches what
-   `translate_target_from_source` expects
+2. ~~**Verify slice direction**~~: ✅ DONE - The `n` multiplier in `SliceAlgResult` handles direction
 
-3. **Consider**: The test applies `whole_slice_alg` once, but
-   `translate_target_from_source` may assume multiple rotations for opposite faces
-
-4. **Issue #55**: Continue reducing assumptions by using geometric derivation
+3. **Issue #55**: Continue reducing assumptions by using geometric derivation
    instead of prebuilt tables
+
+4. **Test organization**: All geometry tests now in `tests/geometry/` (334 tests pass)
 
 ---
 

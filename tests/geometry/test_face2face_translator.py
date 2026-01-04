@@ -318,9 +318,10 @@ class TestSliceMovementPrediction:
                 )
                 predictions[predicted_target] = marker_value
 
-            # Step 2: Apply whole slice algorithm (moves ALL slices, not just one)
-            whole_slice_alg = slice_alg_result.whole_slice_alg
-            whole_slice_alg.play(cube)
+            # Step 2: Apply whole slice algorithm WITH DIRECTION (moves ALL slices)
+            # get_whole_slice_alg() returns whole_slice_alg * n (includes direction)
+            alg_with_direction = slice_alg_result.get_whole_slice_alg()
+            alg_with_direction.play(cube)
 
             # Step 3: Verify markers at predicted positions on target_face
             target_face = cube.face(target_name)
@@ -331,7 +332,7 @@ class TestSliceMovementPrediction:
                 assert actual_marker == expected_marker, (
                     f"Slice movement prediction failed!\n"
                     f"  source_face={source_name}, target_face={target_name}\n"
-                    f"  slice_name={slice_name}, alg={whole_slice_alg}\n"
+                    f"  slice_name={slice_name}, alg={alg_with_direction}, n={slice_alg_result.n}\n"
                     f"  predicted_coord={predicted_coord}\n"
                     f"  expected marker: {expected_marker}\n"
                     f"  actual marker: {actual_marker}"
