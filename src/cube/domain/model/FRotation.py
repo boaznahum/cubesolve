@@ -5,107 +5,127 @@ Face Rotation Transformations (FRotation)
 This module defines transformations for points on a cube face when the face rotates.
 
 Two classes:
-- FRotation: Unit rotation (size-independent), defines the transformation type
-- SizedFRotation: Size-specific rotation that can transform (row, col) coordinates
+- FUnitRotation: Unit rotation (size-independent), defines the rotation amount
+- FRotation: Size-specific rotation that can transform (row, col) coordinates
+
+Both support multiplication (*) for composition and negation (-) for inverse.
 
 Usage::
 
     # Get a sized rotation from a unit rotation
-    fr_cw = FRotation.CW.of_n_slices(3)  # For 3x3 cube
+    fr = FUnitRotation.CW.of_n_slices(3)  # For 3x3 face
 
     # Transform coordinates
-    new_r, new_c = fr_cw(0, 0)  # (0, 0) -> (0, 2) for CW on 3x3
+    new_r, new_c = fr(0, 0)  # (0, 0) -> (0, 2) for CW on 3x3
 
-    # Or use with a cube
-    fr_cw = FRotation.CW.of_cube(cube)
+    # Composition
+    fr2 = FUnitRotation.CW * FUnitRotation.CW  # = R2
+
+    # Inverse
+    fr_inv = -FUnitRotation.CW  # = CCW
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Tuple
+from typing import TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
 
 
-@dataclass(frozen=True)
-class SizedFRotation:
-    """
-    A face rotation transformation for a specific cube size.
-
-    This class can transform (row, col) coordinates according to the rotation.
-
-    Attributes:
-        n: The cube size (number of rows/columns on a face)
-        _transform: The transformation function (r, c, n) -> (new_r, new_c)
-        name: Human-readable name of the rotation
-    """
-    n: int
-    _transform: Callable[[int, int, int], Tuple[int, int]]
-    name: str
-
-    def __call__(self, r: int, c: int) -> Tuple[int, int]:
-        """Transform a coordinate (r, c) according to this rotation."""
-        return self._transform(r, c, self.n)
-
-    def __repr__(self) -> str:
-        return f"SizedFRotation({self.name}, n={self.n})"
-
-
-# Transformation functions for each rotation type
-def _identity(r: int, c: int, n: int) -> Tuple[int, int]:
-    """No rotation: (r, c) -> (r, c)"""
-    return (r, c)
-
-
-def _cw(r: int, c: int, n: int) -> Tuple[int, int]:
-    """90 degrees clockwise: (r, c) -> (c, n-1-r)"""
+def _apply_cw_once(r: int, c: int, n: int) -> Tuple[int, int]:
+    """Apply one 90° clockwise rotation: (r, c) -> (c, n-1-r)"""
     return (c, n - 1 - r)
-
-
-def _ccw(r: int, c: int, n: int) -> Tuple[int, int]:
-    """90 degrees counter-clockwise: (r, c) -> (n-1-c, r)"""
-    return (n - 1 - c, r)
-
-
-def _r2(r: int, c: int, n: int) -> Tuple[int, int]:
-    """180 degrees: (r, c) -> (n-1-r, n-1-c)"""
-    return (n - 1 - r, n - 1 - c)
 
 
 @dataclass(frozen=True)
 class FRotation:
     """
-    Unit face rotation transformation (size-independent).
+    A face rotation transformation for a specific cube size.
 
-    This class represents a rotation type without knowing the cube size.
-    Use of_cube() or of_n_slices() to get a SizedFRotation that can
-    transform coordinates.
+    This class can transform (row, col) coordinates according to the rotation.
+    Supports composition (*) and inverse (-).
 
-    Predefined instances:
-        FRotation.I   - Identity (no rotation)
-        FRotation.CW  - 90 degrees clockwise
-        FRotation.CCW - 90 degrees counter-clockwise
-        FRotation.R2  - 180 degrees (half turn)
+    Attributes:
+        n: The cube size (number of rows/columns on a face)
+        _n_rotation: Number of 90° clockwise rotations (0-3)
     """
-    _transform: Callable[[int, int, int], Tuple[int, int]]
-    name: str
+    n: int
+    _n_rotation: int  # 0=I, 1=CW, 2=R2, 3=CCW (quarter turns clockwise)
 
-    def of_cube(self, cube: "Cube") -> SizedFRotation:
-        """Create a sized rotation for the given cube."""
-        return SizedFRotation(n=cube.size, _transform=self._transform, name=self.name)
+    def __call__(self, r: int, c: int) -> Tuple[int, int]:
+        """Transform a coordinate (r, c) according to this rotation."""
+        result = (r, c)
+        for _ in range(self._n_rotation % 4):
+            result = _apply_cw_once(result[0], result[1], self.n)
+        return result
 
-    def of_n_slices(self, n: int) -> SizedFRotation:
-        """Create a sized rotation for an n x n face."""
-        return SizedFRotation(n=n, _transform=self._transform, name=self.name)
+    def __mul__(self, other: FRotation) -> FRotation:
+        """Compose two rotations: (self * other) means apply other first, then self."""
+        if self.n != other.n:
+            raise ValueError(f"Cannot multiply rotations with different sizes: {self.n} vs {other.n}")
+        return FRotation(n=self.n, _n_rotation=(self._n_rotation + other._n_rotation) % 4)
+
+    def __neg__(self) -> FRotation:
+        """Return the inverse rotation."""
+        return FRotation(n=self.n, _n_rotation=(4 - self._n_rotation) % 4)
+
+    @property
+    def is_identity(self) -> bool:
+        """True if this is the identity rotation."""
+        return self._n_rotation % 4 == 0
 
     def __repr__(self) -> str:
-        return f"FRotation.{self.name}"
+        names = {0: "I", 1: "CW", 2: "R2", 3: "CCW"}
+        return f"FRotation({names[self._n_rotation % 4]}, n={self.n})"
+
+
+@dataclass(frozen=True)
+class FUnitRotation:
+    """
+    Unit face rotation transformation (size-independent).
+
+    This class represents a rotation amount without knowing the cube size.
+    Use of_cube() or of_n_slices() to get a FRotation that can transform coordinates.
+    Supports composition (*) and inverse (-).
+
+    Predefined instances:
+        FUnitRotation.I   - Identity (no rotation)
+        FUnitRotation.CW  - 90 degrees clockwise
+        FUnitRotation.CCW - 90 degrees counter-clockwise
+        FUnitRotation.R2  - 180 degrees (half turn)
+    """
+    _n_rotation: int  # 0=I, 1=CW, 2=R2, 3=CCW (quarter turns clockwise)
+
+    def of_cube(self, cube: "Cube") -> FRotation:
+        """Create a sized rotation for the given cube."""
+        return FRotation(n=cube.size, _n_rotation=self._n_rotation)
+
+    def of_n_slices(self, n: int) -> FRotation:
+        """Create a sized rotation for an n x n face."""
+        return FRotation(n=n, _n_rotation=self._n_rotation)
+
+    def __mul__(self, other: FUnitRotation) -> FUnitRotation:
+        """Compose two rotations: (self * other) means apply other first, then self."""
+        return FUnitRotation(_n_rotation=(self._n_rotation + other._n_rotation) % 4)
+
+    def __neg__(self) -> FUnitRotation:
+        """Return the inverse rotation."""
+        return FUnitRotation(_n_rotation=(4 - self._n_rotation) % 4)
+
+    @property
+    def is_identity(self) -> bool:
+        """True if this is the identity rotation."""
+        return self._n_rotation % 4 == 0
+
+    def __repr__(self) -> str:
+        names = {0: "I", 1: "CW", 2: "R2", 3: "CCW"}
+        return f"FUnitRotation.{names[self._n_rotation % 4]}"
 
 
 # Predefined unit rotations
-FRotation.I = FRotation(_transform=_identity, name="I")
-FRotation.CW = FRotation(_transform=_cw, name="CW")
-FRotation.CCW = FRotation(_transform=_ccw, name="CCW")
-FRotation.R2 = FRotation(_transform=_r2, name="R2")
+FUnitRotation.I = FUnitRotation(_n_rotation=0)
+FUnitRotation.CW = FUnitRotation(_n_rotation=1)
+FUnitRotation.R2 = FUnitRotation(_n_rotation=2)
+FUnitRotation.CCW = FUnitRotation(_n_rotation=3)
