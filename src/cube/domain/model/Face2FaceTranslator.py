@@ -609,9 +609,10 @@ class Face2FaceTranslator:
         If translate_source_from_target(TF, SF, tc) returns sc,
         then translate_target_from_source(SF, TF, sc) returns tc.
 
-        Uses caching to avoid recomputing the rotation for each call.
-        The rotation is computed once per (source_face, target_face) pair
-        using (0,0) as a reference point, then cached and applied to any source_coord.
+        Uses geometric derivation based on Slice traversal logic:
+        - Finds which slice (M, E, S) connects the two faces
+        - Uses edge-based coordinate translation (like Slice._get_slices_by_index)
+        - Caches the derived FUnitRotation for efficiency
 
         Args:
             source_face: Where content currently is
@@ -642,14 +643,15 @@ class Face2FaceTranslator:
         cache = source_face.cube.layout.cache_manager.get("f2f_unit_rotation", FUnitRotation)
 
         def compute_unit_rotation() -> FUnitRotation:
-            """Compute unit rotation using (0,0) as reference point."""
+            """Derive unit rotation using Slice traversal logic."""
+            # Use (0, 0) as reference point
             origin = (0, 0)
+            target_for_origin = Face2FaceTranslator._translate_via_slice_geometry(
+                source_face, target_face, origin, n_slices
+            )
+            # Determine which FUnitRotation matches this transformation
             for unit_rot in [FUnitRotation.CW0, FUnitRotation.CW1, FUnitRotation.CW2, FUnitRotation.CW3]:
-                guessed_target = unit_rot.of_n_slices(n_slices)(*origin)
-                result = Face2FaceTranslator.translate_source_from_target(
-                    target_face, source_face, guessed_target
-                )
-                if result.source_coord == origin:
+                if unit_rot.of_n_slices(n_slices)(*origin) == target_for_origin:
                     return unit_rot
             raise ValueError(
                 f"No valid transformation found between {source_face.name} and {target_face.name}"
@@ -657,6 +659,146 @@ class Face2FaceTranslator:
 
         unit_rotation = cache.compute(cache_key, compute_unit_rotation)
         return unit_rotation.of_n_slices(n_slices)(*source_coord)
+
+    @staticmethod
+    def _translate_via_slice_geometry(
+            source_face: Face,
+            target_face: Face,
+            source_coord: tuple[int, int],
+            n_slices: int
+    ) -> tuple[int, int]:
+        """
+        Translate coordinates using Slice traversal geometry.
+
+        This mirrors the logic in Slice._get_slices_by_index:
+        - Finds which slice connects the two faces
+        - Traverses from source to target using edge-based coordinate translation
+        - Returns the translated coordinate
+
+        The geometric insight from Slice.py:
+        - Each slice has a starting face/edge that determines traversal order
+        - current_index (one coordinate dimension) translates through edges
+        - Position along slice (other dimension) stays physically aligned
+        """
+        cube = source_face.cube
+
+        def inv(x: int) -> int:
+            return n_slices - 1 - x
+
+        # Find which slice connects source and target, and get traversal info
+        slice_info = Face2FaceTranslator._find_slice_for_faces(cube, source_face, target_face)
+        if slice_info is None:
+            raise ValueError(f"No slice connects {source_face.name} and {target_face.name}")
+
+        slice_name, start_face, start_edge = slice_info
+
+        # Build the traversal cycle to find source and target positions
+        cycle_faces = []
+        cycle_edges = []
+        current_face = start_face
+        current_edge = start_edge
+
+        for _ in range(4):
+            cycle_faces.append(current_face)
+            cycle_edges.append(current_edge)
+            next_edge = current_edge.opposite(current_face)
+            current_face = next_edge.get_other_face(current_face)
+            current_edge = next_edge
+
+        # Find positions in cycle
+        source_idx = cycle_faces.index(source_face)
+        target_idx = cycle_faces.index(target_face)
+
+        # Extract (current_index, position_along_slice) from source_coord
+        source_edge = cycle_edges[source_idx]
+        row, col = source_coord
+
+        if source_face.is_bottom_or_top(source_edge):
+            # col is current_index (slice index), row is position along slice
+            current_index = col
+            if source_face.is_top_edge(source_edge):
+                position_along = inv(row)
+            else:  # bottom edge
+                position_along = row
+        else:
+            # row is current_index (slice index), col is position along slice
+            current_index = row
+            if source_face.is_right_edge(source_edge):
+                position_along = inv(col)
+            else:  # left edge
+                position_along = col
+
+        # Traverse from source to target, translating current_index through edges
+        steps = (target_idx - source_idx) % 4
+        face = source_face
+        edge = source_edge
+
+        for _ in range(steps):
+            next_edge = edge.opposite(face)
+            next_face = next_edge.get_other_face(face)
+            # Translate current_index through edge
+            edge_internal = next_edge.get_slice_index_from_ltr_index(face, current_index)
+            current_index = next_edge.get_ltr_index_from_slice_index(next_face, edge_internal)
+            face = next_face
+            edge = next_edge
+
+        # Reconstruct target_coord from (current_index, position_along_slice)
+        target_edge = edge
+        if target_face.is_bottom_or_top(target_edge):
+            # col is current_index, row is position_along
+            target_col = current_index
+            if target_face.is_top_edge(target_edge):
+                target_row = inv(position_along)
+            else:  # bottom edge
+                target_row = position_along
+        else:
+            # row is current_index, col is position_along
+            target_row = current_index
+            if target_face.is_right_edge(target_edge):
+                target_col = inv(position_along)
+            else:  # left edge
+                target_col = position_along
+
+        return (target_row, target_col)
+
+    @staticmethod
+    def _find_slice_for_faces(
+            cube: Cube,
+            source_face: Face,
+            target_face: Face
+    ) -> tuple[SliceName, Face, Edge] | None:
+        """
+        Find which slice connects two faces and return traversal start info.
+
+        Returns:
+            (slice_name, start_face, start_edge) or None if faces are opposite
+        """
+        # Slice traversal patterns from Slice._get_slices_by_index
+        # M: F → U → B → D (starts at F.edge_bottom)
+        # E: R → B → L → F (starts at R.edge_left)
+        # S: U → R → D → L (starts at U.edge_left)
+
+        slice_configs = [
+            (SliceName.M, cube.front, cube.front.edge_bottom),
+            (SliceName.E, cube.right, cube.right.edge_left),
+            (SliceName.S, cube.up, cube.up.edge_left),
+        ]
+
+        for slice_name, start_face, start_edge in slice_configs:
+            # Build cycle for this slice
+            cycle = []
+            face = start_face
+            edge = start_edge
+            for _ in range(4):
+                cycle.append(face)
+                next_edge = edge.opposite(face)
+                face = next_edge.get_other_face(face)
+                edge = next_edge
+
+            if source_face in cycle and target_face in cycle:
+                return (slice_name, start_face, start_edge)
+
+        return None  # Faces are opposite (not in same slice)
 
     @staticmethod
     def _find_shared_edge(face1: Face, face2: Face) -> Edge | None:
