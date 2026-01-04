@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Iterator
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
-from cube.domain.model.cube_layout.slice_layout import CLGColRow
+from cube.domain.model.geometric.slice_layout import CLGColRow
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

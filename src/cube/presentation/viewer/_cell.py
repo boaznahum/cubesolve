@@ -19,7 +19,7 @@ from cube.domain.model import (
     PartSlice,
     PartSliceHashID,
 )
-from cube.domain.model.cube_layout.cube_boy import Color
+from cube.domain.model.geometric.cube_boy import Color
 from cube.domain.model.Face import Face
 from cube.domain.model.VMarker import VMarker, viewer_get_markers
 from cube.utils import geometry

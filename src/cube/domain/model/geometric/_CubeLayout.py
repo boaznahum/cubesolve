@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Mapping
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model.SliceName import SliceName
-from cube.domain.model.cube_layout.cube_layout import (
+from cube.domain.model.geometric.cube_layout import (
     CubeLayout,
     _ADJACENT,
     _ALL_OPPOSITE,
     _OPPOSITE,
 )
-from cube.domain.model.cube_layout.slice_layout import SliceLayout, _SliceLayout
+from cube.domain.model.geometric.slice_layout import SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 
 from cube.domain.model.Color import Color
@@ -161,7 +161,7 @@ class _CubeLayout(CubeLayout):
 
     def is_boy(self) -> bool:
         """Check if this layout matches the standard BOY color scheme."""
-        from cube.domain.model.cube_layout import cube_boy
+        from cube.domain.model.geometric import cube_boy
         return self.same(cube_boy.get_boy_layout(self._sp))
 
     def clone(self) -> _CubeLayout:
@@ -187,7 +187,7 @@ class _CubeLayout(CubeLayout):
             side_face: "Face",
             layer_slice_index: int,
     ) -> Iterator[tuple[int, int]]:
-        from cube.domain.model.cube_layout._CubeLayoutGeometry import _CubeLayoutGeometry
+        from cube.domain.model.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
         return _CubeLayoutGeometry.iterate_orthogonal_face_center_pieces(
             cube, layer1_face, side_face, layer_slice_index
         )

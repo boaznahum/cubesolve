@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy import ndarray
 
-from cube.domain.model.cube_layout.cube_boy import Color, FaceName
+from cube.domain.model.geometric.cube_boy import Color, FaceName
 from cube.domain.model.VMarker import viewer_get_markers
 
 from ._modern_gl_arrow import Arrow3D, create_arrows_from_markers

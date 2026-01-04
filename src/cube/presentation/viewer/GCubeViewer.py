@@ -12,7 +12,7 @@ from cube.application.protocols import AnimatableViewer
 from cube.application.state import ApplicationAndViewState
 from cube.domain.model.PartSlice import PartSlice
 from cube.domain.model.Cube import Cube
-from cube.domain.model.cube_layout.cube_boy import FaceName
+from cube.domain.model.geometric.cube_boy import FaceName
 from cube.domain.model.Face import Face
 from cube.domain.model.PartEdge import PartEdge
 

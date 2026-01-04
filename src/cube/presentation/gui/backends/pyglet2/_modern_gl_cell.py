@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy import ndarray
 
-from cube.domain.model.cube_layout.cube_boy import Color
+from cube.domain.model.geometric.cube_boy import Color
 from cube.domain.model.VMarker import VMarker, viewer_get_markers
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 

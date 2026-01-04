@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from enum import Enum, auto
 
-from cube.domain.model.cube_layout.cube_boy import Color, FaceName
+from cube.domain.model.geometric.cube_boy import Color, FaceName
 
 # =============================================================================
 # Cube Geometry Constants

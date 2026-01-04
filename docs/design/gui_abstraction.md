@@ -488,7 +488,7 @@ class EventLoop(Protocol):
 from typing import Protocol, Callable, Collection, runtime_checkable
 from cube.domain.model import PartSlice
 from cube.domain.model.Cube import Cube
-from cube.domain.model.cube_layout.cube_boy import FaceName
+from cube.domain.model.geometric.cube_boy import FaceName
 
 
 @runtime_checkable

@@ -103,7 +103,7 @@ In `Face._update_texture_directions_after_rotate()`:
 ```python
 # Only F and B faces need adjacent sticker updates
 # because they rotate around Z axis, which changes Y component
-from cube.domain.model.cube_layout.cube_boy import FaceName
+from cube.domain.model.geometric.cube_boy import FaceName
 
 if self.name in (FaceName.F, FaceName.B):
     # Update adjacent edge and corner stickers

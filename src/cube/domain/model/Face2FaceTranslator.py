@@ -125,7 +125,7 @@ from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.model import Cube
-from cube.domain.model.cube_layout import Point
+from cube.domain.model.geometric import Point
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face

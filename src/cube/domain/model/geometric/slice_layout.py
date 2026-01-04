@@ -152,9 +152,9 @@ class _SliceLayout(SliceLayout):
                 raise RuntimeError(f"Unknown Slice {self._slice_name}")
 
     def does_slice_cut_rows_or_columns(self, face_name: FaceName) -> CLGColRow:
-        from cube.domain.model.cube_layout._CubeLayoutGeometry import _CubeLayoutGeometry
+        from cube.domain.model.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
         return _CubeLayoutGeometry.does_slice_cut_rows_or_columns(self._slice_name, face_name)
 
     def does_slice_of_face_start_with_face(self, face_name: FaceName) -> bool:
-        from cube.domain.model.cube_layout._CubeLayoutGeometry import _CubeLayoutGeometry
+        from cube.domain.model.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
         return _CubeLayoutGeometry.does_slice_of_face_start_with_face(self._slice_name, face_name)

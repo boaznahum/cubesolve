@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cubesolve"
+version = "0.1.0"
+description = "A Rubik's Cube solver and visualizer"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "pyglet>=2.0",
+    "rich",
+    "Pillow",
+    "aiohttp",
+    "typing_extensions",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "mypy",
+    "pyright",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+packages = ["cube"]
+ignore_missing_imports = true
+
+[tool.pyright]
+pythonVersion = "3.11"
+include = ["src"]
+
+[tool.ruff]
+src = ["src"]
+line-length = 120

@@ -46,8 +46,8 @@ from cube.utils.config_protocol import IServiceProvider
 
 from cube.domain.model.Color import Color
 from cube.domain.model.ColorLong import ColorLong
-from cube.domain.model.cube_layout.cube_layout import CubeLayout
-from cube.domain.model.cube_layout import create_layout
+from cube.domain.model.geometric.cube_layout import CubeLayout
+from cube.domain.model.geometric import create_layout
 from cube.domain.model.FaceName import FaceName
 
 # ============================================================================

@@ -15,7 +15,7 @@ from cube.domain.model._elements import (
     _Face,
 )
 from cube.domain.model.PartSlice import PartSlice
-from cube.domain.model.cube_layout.cube_boy import Color, FaceName, color2long
+from cube.domain.model.geometric.cube_boy import Color, FaceName, color2long
 from cube.domain.model.PartEdge import PartEdge
 
 TPartType = TypeVar("TPartType", bound="Part")

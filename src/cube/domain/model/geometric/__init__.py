@@ -5,13 +5,13 @@ from typing import Mapping, Tuple
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
-from cube.domain.model.cube_layout.cube_layout import (
+from cube.domain.model.geometric.cube_layout import (
     CubeLayout,
     opposite,
     is_adjacent,
     get_adjacent_faces,
 )
-from cube.domain.model.cube_layout._CubeLayout import _CubeLayout
+from cube.domain.model.geometric._CubeLayout import _CubeLayout
 from cube.utils.config_protocol import IServiceProvider
 
 Point= Tuple[int, int]

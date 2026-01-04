@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
-from cube.domain.model.cube_layout.cube_boy import FaceName
+from cube.domain.model.geometric.cube_boy import FaceName
 from cube.domain.solver import SolveStep
 
 from ..ViewSetup import ViewSetup

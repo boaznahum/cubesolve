@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
-from cube.domain.model.cube_layout.slice_layout import SliceLayout
+from cube.domain.model.geometric.slice_layout import SliceLayout
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

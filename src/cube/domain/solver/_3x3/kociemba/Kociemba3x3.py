@@ -129,7 +129,7 @@ import kociemba  # type: ignore[import-not-found]
 
 from cube.domain.exceptions.InternalSWError import InternalSWError
 from cube.domain.algs._parser import parse_alg
-from cube.domain.model.cube_layout.cube_boy import Color, FaceName
+from cube.domain.model.geometric.cube_boy import Color, FaceName
 from cube.domain.solver.common.AbstractSolver import AbstractSolver
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
