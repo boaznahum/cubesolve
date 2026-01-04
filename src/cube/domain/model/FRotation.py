@@ -78,8 +78,8 @@ class FRotation:
 
     @property
     def unit(self) -> FUnitRotation:
-        """The unit rotation (size-independent)."""
-        return FUnitRotation(_n_rotation=self._n_rotation)
+        """The unit rotation (size-independent), returns singleton constant."""
+        return _UNIT_ROTATIONS[self._n_rotation % 4]
 
     def __repr__(self) -> str:
         return f"FRotation(CW{self._n_rotation % 4}, n={self.n})"
@@ -138,3 +138,11 @@ FUnitRotation.CW0 = FUnitRotation(_n_rotation=0)
 FUnitRotation.CW1 = FUnitRotation(_n_rotation=1)
 FUnitRotation.CW2 = FUnitRotation(_n_rotation=2)
 FUnitRotation.CW3 = FUnitRotation(_n_rotation=3)
+
+# Lookup tuple for FRotation.unit property
+_UNIT_ROTATIONS: tuple[FUnitRotation, ...] = (
+    FUnitRotation.CW0,
+    FUnitRotation.CW1,
+    FUnitRotation.CW2,
+    FUnitRotation.CW3,
+)
