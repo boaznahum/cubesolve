@@ -203,3 +203,48 @@ class TestSliceAlgorithm:
             )
 
             cube.clear_c_attributes()
+
+
+class TestTranslateTargetFromSource:
+    """Tests for translate_target_from_source - the inverse of translate_source_from_target."""
+
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_SLICE)
+    @pytest.mark.parametrize("face_pair", FACE_PAIRS, ids=_face_pair_id)
+    def test_inverse_of_source_from_target(self, cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
+        """
+        Verify translate_target_from_source is the inverse of translate_source_from_target.
+
+        For each (target_face, source_face, target_coord):
+        1. Get source_coord and slice_name from translate_source_from_target
+        2. Call translate_target_from_source(source_face, target_face, source_coord, slice_name)
+        3. Verify it returns the original target_coord
+        """
+        target_name, source_name = face_pair
+        cube = Cube(cube_size, sp=_test_sp)
+
+        target_face = cube.face(target_name)
+        source_face = cube.face(source_name)
+
+        for center_slice in target_face.center.all_slices:
+            target_coord: CenterSliceIndex = center_slice.index
+
+            # Get source_coord and slice_name from translate_source_from_target
+            result = Face2FaceTranslator.translate_source_from_target(
+                target_face, source_face, target_coord
+            )
+            source_coord = result.source_coord
+            slice_name = result.slice_algorithms[0].whole_slice_alg.slice_name
+
+            # Call the inverse function
+            computed_target = Face2FaceTranslator.translate_target_from_source(
+                source_face, target_face, source_coord, slice_name
+            )
+
+            assert computed_target == target_coord, (
+                f"translate_target_from_source is not inverse!\n"
+                f"  target_face={target_name}, source_face={source_name}\n"
+                f"  target_coord={target_coord} -> source_coord={source_coord}\n"
+                f"  translate_target_from_source returned {computed_target}\n"
+                f"  expected {target_coord}\n"
+                f"  slice_name={slice_name}"
+            )
