@@ -1,28 +1,31 @@
 """Generic cache implementations with type safety.
 
-Provides a Cache protocol and two implementations:
-- CacheImpl: Actual caching with type validation
-- CacheNull: No caching, always calls factory (useful for testing/debugging)
+Provides Cache and CacheManager protocols with implementations:
+- Cache: Protocol for individual caches
+  - CacheImpl: Actual caching with type validation
+  - CacheNull: Singleton, no caching, always calls factory
+- CacheManager: Protocol for cache of caches
+  - CacheManagerImpl: Creates/manages CacheImpl instances
+  - CacheManagerNull: Singleton, always returns CacheNull
 
 Usage::
 
-    # Create a cache for strings
-    cache: Cache[str] = CacheImpl(str)
+    # Using CacheManager
+    manager: CacheManager = CacheManagerImpl()
+    cache = manager.get("my_cache", str)
+    # or
+    cache = manager["my_cache", str]
 
-    # Compute or retrieve cached value
     value = cache.compute("key1", lambda: expensive_computation())
 
-    # Clear all cached values
-    cache.clear()
-
-    # Use null cache to disable caching
-    null_cache: Cache[str] = CacheNull(str)
+    # Disable caching (for testing/debugging)
+    null_manager: CacheManager = CacheManagerNull.instance
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Generic, Hashable, Protocol, TypeVar, runtime_checkable
+from typing import Any, Callable, ClassVar, Generic, Hashable, Protocol, TypeVar, runtime_checkable, Tuple
 
 V = TypeVar('V')
 
@@ -103,17 +106,16 @@ class CacheImpl(Cache[V], Generic[V]):
         return value
 
 
-@dataclass
-class CacheNull(Cache[V], Generic[V]):
-    """Null cache - always calls factory, never caches.
+class CacheNull(Cache[V]):
+    """Null cache singleton - always calls factory, never caches.
 
     Useful for testing or when caching should be disabled.
-    Still performs type validation on factory results.
+    Since nothing is stored, a single instance works for all types.
 
-    Attributes:
-        _type: The expected type of values
+    Usage::
+        cache: Cache[str] = CacheNull.instance
     """
-    _type: type[V]
+    instance: ClassVar[CacheNull[Any]]
 
     def clear(self) -> None:
         """No-op since nothing is cached."""
@@ -128,14 +130,110 @@ class CacheNull(Cache[V], Generic[V]):
 
         Returns:
             The newly computed value
-
-        Raises:
-            TypeError: If computed value is not of expected type
         """
-        value = factory()
-        if not isinstance(value, self._type):
-            raise TypeError(
-                f"Factory returned wrong type: expected {self._type.__name__}, "
-                f"got {type(value).__name__}"
-            )
-        return value
+        return factory()
+
+
+CacheNull.instance = CacheNull()
+
+
+@runtime_checkable
+class CacheManager(Protocol):
+    """Protocol for cache manager - a cache of caches.
+
+    Manages multiple Cache instances, each identified by a key.
+    """
+
+    def get(self, key: Hashable, value_type: type[V]) -> Cache[V]:
+        """Get or create a cache for the given key and value type.
+
+        Args:
+            key: Hashable key identifying the cache
+            value_type: The type of values the cache will store
+
+        Returns:
+            A Cache instance for the given key
+        """
+        ...
+
+    def __getitem__(self, key_and_type: Tuple[Hashable, type[V]]) -> Cache[V]:
+        """Bracket access: manager[key, MyType].
+
+        Args:
+            key_and_type: Tuple of (key, value_type)
+
+        Returns:
+            A Cache instance for the given key
+        """
+        ...
+
+
+@dataclass
+class CacheManagerImpl(CacheManager):
+    """Actual cache manager - creates/returns CacheImpl instances.
+
+    Maintains a dictionary of caches, creating new ones as needed.
+    """
+    _caches: dict[Hashable, Cache[Any]] = field(default_factory=dict, init=False)
+
+    def get(self, key: Hashable, value_type: type[V]) -> Cache[V]:
+        """Get or create a cache for the given key and value type.
+
+        Args:
+            key: Hashable key identifying the cache
+            value_type: The type of values the cache will store
+
+        Returns:
+            A CacheImpl instance for the given key
+        """
+        if key not in self._caches:
+            self._caches[key] = CacheImpl(value_type)
+        return self._caches[key]  # type: ignore[return-value]
+
+    def __getitem__(self, key_and_type: Tuple[Hashable, type[V]]) -> Cache[V]:
+        """Bracket access: manager[key, MyType].
+
+        Args:
+            key_and_type: Tuple of (key, value_type)
+
+        Returns:
+            A CacheImpl instance for the given key
+        """
+        return self.get(key_and_type[0], key_and_type[1])
+
+
+class CacheManagerNull(CacheManager):
+    """Null cache manager singleton - always returns CacheNull.
+
+    Useful for testing or when caching should be disabled globally.
+
+    Usage::
+        manager: CacheManager = CacheManagerNull.instance
+    """
+    instance: ClassVar[CacheManagerNull]
+
+    def get(self, key: Hashable, value_type: type[V]) -> Cache[V]:
+        """Always returns the CacheNull singleton.
+
+        Args:
+            key: Ignored
+            value_type: Ignored
+
+        Returns:
+            The CacheNull singleton
+        """
+        return CacheNull.instance
+
+    def __getitem__(self, key_and_type: Tuple[Hashable, type[V]]) -> Cache[V]:
+        """Always returns the CacheNull singleton.
+
+        Args:
+            key_and_type: Ignored
+
+        Returns:
+            The CacheNull singleton
+        """
+        return CacheNull.instance
+
+
+CacheManagerNull.instance = CacheManagerNull()
