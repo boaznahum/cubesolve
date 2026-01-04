@@ -13,16 +13,16 @@ Both support multiplication (*) for composition and negation (-) for inverse.
 Usage::
 
     # Get a sized rotation from a unit rotation
-    fr = FUnitRotation.CW.of_n_slices(3)  # For 3x3 face
+    fr = FUnitRotation.CW1.of_n_slices(3)  # For 3x3 face
 
     # Transform coordinates
-    new_r, new_c = fr(0, 0)  # (0, 0) -> (0, 2) for CW on 3x3
+    new_r, new_c = fr(0, 0)  # (0, 0) -> (0, 2) for CW1 on 3x3
 
     # Composition
-    fr2 = FUnitRotation.CW * FUnitRotation.CW  # = R2
+    fr2 = FUnitRotation.CW1 * FUnitRotation.CW1  # = CW2
 
     # Inverse
-    fr_inv = -FUnitRotation.CW  # = CCW
+    fr_inv = -FUnitRotation.CW1  # = CW3
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ class FRotation:
         _n_rotation: Number of 90° clockwise rotations (0-3)
     """
     n: int
-    _n_rotation: int  # 0=I, 1=CW, 2=R2, 3=CCW (quarter turns clockwise)
+    _n_rotation: int  # 0-3 quarter turns clockwise
 
     def __call__(self, r: int, c: int) -> Tuple[int, int]:
         """Transform a coordinate (r, c) according to this rotation."""
@@ -82,8 +82,7 @@ class FRotation:
         return FUnitRotation(_n_rotation=self._n_rotation)
 
     def __repr__(self) -> str:
-        names = {0: "I", 1: "CW", 2: "R2", 3: "CCW"}
-        return f"FRotation({names[self._n_rotation % 4]}, n={self.n})"
+        return f"FRotation(CW{self._n_rotation % 4}, n={self.n})"
 
 
 @dataclass(frozen=True)
@@ -96,18 +95,18 @@ class FUnitRotation:
     Supports composition (*) and inverse (-).
 
     Predefined instances:
-        FUnitRotation.I   - Identity (no rotation)
-        FUnitRotation.CW  - 90 degrees clockwise
-        FUnitRotation.CCW - 90 degrees counter-clockwise
-        FUnitRotation.R2  - 180 degrees (half turn)
+        FUnitRotation.CW0 - Identity (no rotation)
+        FUnitRotation.CW1 - 90 degrees clockwise
+        FUnitRotation.CW2 - 180 degrees (half turn)
+        FUnitRotation.CW3 - 270 degrees clockwise (= 90 degrees counter-clockwise)
     """
-    _n_rotation: int  # 0=I, 1=CW, 2=R2, 3=CCW (quarter turns clockwise)
+    _n_rotation: int  # 0-3 quarter turns clockwise
 
     # Class-level constants (declared for type checkers)
-    I: ClassVar[FUnitRotation]
-    CW: ClassVar[FUnitRotation]
-    R2: ClassVar[FUnitRotation]
-    CCW: ClassVar[FUnitRotation]
+    CW0: ClassVar[FUnitRotation]
+    CW1: ClassVar[FUnitRotation]
+    CW2: ClassVar[FUnitRotation]
+    CW3: ClassVar[FUnitRotation]
 
     def of_cube(self, cube: "Cube") -> FRotation:
         """Create a sized rotation for the given cube."""
@@ -131,12 +130,11 @@ class FUnitRotation:
         return self._n_rotation % 4 == 0
 
     def __repr__(self) -> str:
-        names = {0: "I", 1: "CW", 2: "R2", 3: "CCW"}
-        return f"FUnitRotation.{names[self._n_rotation % 4]}"
+        return f"FUnitRotation.CW{self._n_rotation % 4}"
 
 
 # Predefined unit rotations
-FUnitRotation.I = FUnitRotation(_n_rotation=0)
-FUnitRotation.CW = FUnitRotation(_n_rotation=1)
-FUnitRotation.R2 = FUnitRotation(_n_rotation=2)
-FUnitRotation.CCW = FUnitRotation(_n_rotation=3)
+FUnitRotation.CW0 = FUnitRotation(_n_rotation=0)
+FUnitRotation.CW1 = FUnitRotation(_n_rotation=1)
+FUnitRotation.CW2 = FUnitRotation(_n_rotation=2)
+FUnitRotation.CW3 = FUnitRotation(_n_rotation=3)
