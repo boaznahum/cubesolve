@@ -676,21 +676,140 @@ class Face2FaceTranslator:
         """
         Translate coordinates using Slice traversal geometry.
 
-        This mirrors the logic in Slice._get_slices_by_index:
-        - Uses the provided slice_name to determine traversal start
-        - Traverses from source to target using edge-based coordinate translation
-        - Returns the translated coordinate
+        This mirrors the logic in Slice._get_slices_by_index to translate a single
+        point from source_face to target_face through the slice cycle.
 
-        The geometric insight from Slice.py:
-        - Each slice has a starting face/edge that determines traversal order
-        - current_index (one coordinate dimension) translates through edges
-        - Position along slice (other dimension) stays physically aligned
+        ================================================================================
+        COORDINATE SYSTEM
+        ================================================================================
+
+        Each face uses LTR (Left-to-Right) coordinates:
+        - (0, 0) at bottom-left when viewing face from outside
+        - row increases upward, col increases rightward
+
+                col: 0   1   2
+                   ┌───┬───┬───┐
+            row 2  │   │   │   │
+                   ├───┼───┼───┤
+            row 1  │   │   │   │
+                   ├───┼───┼───┤
+            row 0  │   │   │   │
+                   └───┴───┴───┘
+
+        ================================================================================
+        TWO COORDINATES TO TRACK
+        ================================================================================
+
+        When a slice crosses a face, each point has two components:
+
+        1. current_index: WHICH slice (0, 1, 2, ...)
+           - Translates through edges as we traverse faces
+           - Uses edge.get_slice_index_from_ltr_index() and get_ltr_index_from_slice_index()
+
+        2. slot_along: WHERE on the slice (position 0, 1, 2, ...)
+           - Represents physical position along the slice strip
+           - PRESERVED across all faces (slot 0 stays slot 0)
+           - But mapping to (row, col) depends on edge type
+
+        ================================================================================
+        SLOT ORDERING (from Slice._get_slices_by_index)
+        ================================================================================
+
+        The slot ordering depends on edge type and direction:
+
+        HORIZONTAL EDGES (top/bottom):
+        ┌─────────────────────────────┐
+        │  Bottom edge:               │   Top edge:
+        │  slot 0 → (row=0, col=idx)  │   slot 0 → (row=n-1, col=idx)
+        │  slot 1 → (row=1, col=idx)  │   slot 1 → (row=n-2, col=idx)
+        │  slot 2 → (row=2, col=idx)  │   slot 2 → (row=n-3, col=idx)
+        │                             │
+        │  ↑ slots go bottom-to-top   │   ↑ slots go top-to-bottom
+        └─────────────────────────────┘
+
+        VERTICAL EDGES (left/right):
+        ┌─────────────────────────────┐
+        │  Left edge:                 │   Right edge:
+        │  slot 0 → (row=idx, col=0)  │   slot 0 → (row=idx, col=n-1)
+        │  slot 1 → (row=idx, col=1)  │   slot 1 → (row=idx, col=n-2)
+        │  slot 2 → (row=idx, col=2)  │   slot 2 → (row=idx, col=n-3)
+        │                             │
+        │  → slots go left-to-right   │   → slots go right-to-left
+        └─────────────────────────────┘
+
+        ================================================================================
+        AXIS EXCHANGE HANDLING
+        ================================================================================
+
+        When edge type changes (horizontal ↔ vertical), the coordinate axes swap:
+
+        Example: S slice traversal U(edge_left) → R(edge_top)
+
+        On U (vertical edge):          On R (horizontal edge):
+        ┌─────────────────┐            ┌─────────────────┐
+        │ ↓               │            │  ←←←←←←←←←←←←←  │
+        │ │  current_index│            │  current_index  │
+        │ │  = row        │            │  = col          │
+        │ ↓               │            │                 │
+        │ slot = col      │            │  slot = inv(row)│
+        │ (left-to-right) │            │  (top-to-bottom)│
+        └─────────────────┘            └─────────────────┘
+
+        The slot_along value is PRESERVED, but maps to:
+        - col on vertical edges (left/right)
+        - row on horizontal edges (top/bottom)
+        - With inv() applied for right/top edges
+
+        ================================================================================
+        EXAMPLE: S slice, point (1, 2) on U → ? on R
+        ================================================================================
+
+        Source: U with edge_left (vertical, left edge)
+        ┌───────────────┐
+        │     col       │
+        │   0   1   2   │
+        │ ┌───┬───┬───┐ │
+        │ │   │   │ X │ │ row 1  ← X is at (1, 2)
+        │ └───┴───┴───┘ │
+        │   slice 1     │
+        └───────────────┘
+
+        Extract:
+        - current_index = row = 1 (which slice)
+        - slot_along = col = 2 (left edge, no inv)
+
+        Translate current_index through U-R edge → new_index
+
+        Target: R with edge_top (horizontal, top edge)
+        ┌───────────────┐
+        │     col       │
+        │   0   1   2   │
+        │ ┌───┬───┬───┐ │
+        │ │ X │   │   │ │ row 2 = inv(slot) = inv(2) = 0? No, row 2
+        │ ├───┼───┼───┤ │
+        │ │   │   │   │ │ row 1
+        │ ├───┼───┼───┤ │
+        │ │   │   │   │ │ row 0
+        │ └───┴───┴───┘ │
+        │     new_index │
+        └───────────────┘
+
+        Reconstruct:
+        - target_col = new_index
+        - target_row = inv(slot_along) = inv(2) = 0
+
+        Result: (0, new_index)
+
+        ================================================================================
         """
         cube = source_face.cube
 
         def inv(x: int) -> int:
             return n_slices - 1 - x
 
+        # ============================================================
+        # STEP 1: Build traversal cycle
+        # ============================================================
         # Get start face/edge from slice definition (same as Slice._get_slices_by_index)
         match slice_name:
             case SliceName.M:
@@ -705,9 +824,9 @@ class Face2FaceTranslator:
             case _:
                 raise ValueError(f"Unknown slice name: {slice_name}")
 
-        # Build the traversal cycle to find source and target positions
-        cycle_faces = []
-        cycle_edges = []
+        # Build the traversal cycle: [(face, entry_edge), ...]
+        cycle_faces: list[Face] = []
+        cycle_edges: list[Edge] = []
         current_face = start_face
         current_edge = start_edge
 
@@ -718,30 +837,38 @@ class Face2FaceTranslator:
             current_face = next_edge.get_other_face(current_face)
             current_edge = next_edge
 
-        # Find positions in cycle
+        # ============================================================
+        # STEP 2: Extract current_index and slot_along at source
+        # ============================================================
         source_idx = cycle_faces.index(source_face)
         target_idx = cycle_faces.index(target_face)
-
-        # Extract (current_index, position_along_slice) from source_coord
         source_edge = cycle_edges[source_idx]
         row, col = source_coord
 
         if source_face.is_bottom_or_top(source_edge):
-            # col is current_index (slice index), row is position along slice
+            # Horizontal edge: col = current_index, row determines slot
             current_index = col
             if source_face.is_top_edge(source_edge):
-                position_along = inv(row)
-            else:  # bottom edge
-                position_along = row
+                # Top edge: slot i has row = inv(i), so slot = inv(row)
+                slot_along = inv(row)
+            else:
+                # Bottom edge: slot i has row = i, so slot = row
+                slot_along = row
         else:
-            # row is current_index (slice index), col is position along slice
+            # Vertical edge: row = current_index, col determines slot
             current_index = row
             if source_face.is_right_edge(source_edge):
-                position_along = inv(col)
-            else:  # left edge
-                position_along = col
+                # Right edge: slot i has col = inv(i), so slot = inv(col)
+                slot_along = inv(col)
+            else:
+                # Left edge: slot i has col = i, so slot = col
+                slot_along = col
 
-        # Traverse from source to target, translating current_index through edges
+        # ============================================================
+        # STEP 3: Traverse from source to target
+        # ============================================================
+        # Only current_index translates through edges.
+        # slot_along is PRESERVED (physical position along slice).
         steps = (target_idx - source_idx) % 4
         face = source_face
         edge = source_edge
@@ -749,28 +876,34 @@ class Face2FaceTranslator:
         for _ in range(steps):
             next_edge = edge.opposite(face)
             next_face = next_edge.get_other_face(face)
-            # Translate current_index through edge
+            # Translate current_index: face LTR → edge internal → next_face LTR
             edge_internal = next_edge.get_slice_index_from_ltr_index(face, current_index)
             current_index = next_edge.get_ltr_index_from_slice_index(next_face, edge_internal)
             face = next_face
             edge = next_edge
 
-        # Reconstruct target_coord from (current_index, position_along_slice)
+        # ============================================================
+        # STEP 4: Reconstruct coordinates at target
+        # ============================================================
         target_edge = edge
         if target_face.is_bottom_or_top(target_edge):
-            # col is current_index, row is position_along
+            # Horizontal edge: col = current_index, row from slot
             target_col = current_index
             if target_face.is_top_edge(target_edge):
-                target_row = inv(position_along)
-            else:  # bottom edge
-                target_row = position_along
+                # Top edge: slot i has row = inv(i), so row = inv(slot)
+                target_row = inv(slot_along)
+            else:
+                # Bottom edge: slot i has row = i, so row = slot
+                target_row = slot_along
         else:
-            # row is current_index, col is position_along
+            # Vertical edge: row = current_index, col from slot
             target_row = current_index
             if target_face.is_right_edge(target_edge):
-                target_col = inv(position_along)
-            else:  # left edge
-                target_col = position_along
+                # Right edge: slot i has col = inv(i), so col = inv(slot)
+                target_col = inv(slot_along)
+            else:
+                # Left edge: slot i has col = i, so col = slot
+                target_col = slot_along
 
         return (target_row, target_col)
 
