@@ -15,6 +15,7 @@ from cube.domain.model.geometric.cube_layout import (
 )
 from cube.domain.model.geometric.slice_layout import SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
+from cube.utils.Cache import CacheManager
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
@@ -51,6 +52,7 @@ class _CubeLayout(CubeLayout):
         self._read_only = read_only
         self._sp = sp
         self._edge_colors: Collection[frozenset[Color]] | None = None
+        self._cache_manager = CacheManager.create(sp.config)
 
         self._slices: Mapping[SliceName, SliceLayout] = {
             SliceName.S: _SliceLayout(SliceName.S),
@@ -63,6 +65,11 @@ class _CubeLayout(CubeLayout):
     def config(self) -> ConfigProtocol:
         """Get configuration via service provider."""
         return self._sp.config
+
+    @property
+    def cache_manager(self) -> CacheManager:
+        """Get the cache manager for this layout."""
+        return self._cache_manager
 
     def __getitem__(self, face: FaceName) -> Color:
         """Get the color for a specific face."""

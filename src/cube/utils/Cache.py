@@ -10,22 +10,20 @@ Provides Cache and CacheManager protocols with implementations:
 
 Usage::
 
-    # Using CacheManager
-    manager: CacheManager = CacheManagerImpl()
+    # Create CacheManager based on config
+    manager = CacheManager.create(config)
     cache = manager.get("my_cache", str)
-    # or
-    cache = manager["my_cache", str]
 
     value = cache.compute("key1", lambda: expensive_computation())
-
-    # Disable caching (for testing/debugging)
-    null_manager: CacheManager = CacheManagerNull.instance
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, ClassVar, Generic, Hashable, Protocol, TypeVar, runtime_checkable, Tuple
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, Hashable, Protocol, TypeVar, runtime_checkable, Tuple
+
+if TYPE_CHECKING:
+    from cube.utils.config_protocol import ConfigProtocol
 
 V = TypeVar('V')
 
@@ -142,7 +140,22 @@ class CacheManager(Protocol):
     """Protocol for cache manager - a cache of caches.
 
     Manages multiple Cache instances, each identified by a key.
+    Use CacheManager.create(config) to get appropriate implementation.
     """
+
+    @staticmethod
+    def create(config: "ConfigProtocol") -> "CacheManager":
+        """Factory: create appropriate CacheManager based on config.
+
+        Args:
+            config: Configuration protocol with enable_cube_cache flag
+
+        Returns:
+            CacheManagerImpl if caching enabled, CacheManagerNull otherwise
+        """
+        if config.enable_cube_cache:
+            return CacheManagerImpl()
+        return CacheManagerNull.instance
 
     def get(self, key: Hashable, value_type: type[V]) -> Cache[V]:
         """Get or create a cache for the given key and value type.
