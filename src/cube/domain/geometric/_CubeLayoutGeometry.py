@@ -590,6 +590,9 @@ class _CubeLayoutGeometry:
             target_edge: Edge
     ) -> dict[Face, Point]:
         """
+
+        Claud: Currently we know to travel in one direction on given slice
+        This is cop of
         Translate coordinates between two ADJACENT faces (one edge crossing).
 
         ================================================================================
