@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterator
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
-from cube.domain.geometric.FRotation import FUnitRotation, FRotation
+from cube.domain.geometric.FRotation import FUnitRotation
+from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
 from cube.domain.model.Edge import Edge
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
-from cube.domain.geometric.slice_layout import CLGColRow
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -123,7 +123,7 @@ class _CubeLayoutGeometry:
 
             if face_name in [FaceName.L, FaceName.D]:
                 # slice cut the rows so we take columns like in M
-                return False  #S[1] is on L[last]
+                return False  # S[1] is on L[last]
         elif slice_name == SliceName.M:
             if face_name in [FaceName.B]:
                 return False
@@ -395,6 +395,7 @@ class _CubeLayoutGeometry:
             source_edge = cycle_edges[source_idx]
             target_edge = cycle_edges[target_idx]
             unit_rotation = _CubeLayoutGeometry._translate_adjacent(
+                slice_name,
                 source_face, target_face, source_coord, n_slices,
                 source_edge, target_edge
             )
@@ -408,12 +409,14 @@ class _CubeLayoutGeometry:
 
             # First transform: source → intermediate
             unit1 = _CubeLayoutGeometry._translate_adjacent(
+                slice_name,
                 source_face, intermediate_face, source_coord, n_slices,
                 source_edge, intermediate_edge
             )
 
             # Second transform: intermediate → target
             unit2 = _CubeLayoutGeometry._translate_adjacent(
+                slice_name,
                 intermediate_face, target_face, (0, 0), n_slices,
                 intermediate_edge, target_edge
             )
@@ -429,6 +432,7 @@ class _CubeLayoutGeometry:
             source_edge = cycle_edges[source_idx]
 
             inverse = _CubeLayoutGeometry._translate_adjacent(
+                slice_name,
                 target_face, source_face, (0, 0), n_slices,
                 target_edge, source_edge
             )
@@ -481,6 +485,7 @@ class _CubeLayoutGeometry:
 
     @staticmethod
     def _translate_adjacent(
+            slice_name: SliceName,
             source_face: Face,
             target_face: Face,
             _source_coord: tuple[int, int],
@@ -554,55 +559,23 @@ class _CubeLayoutGeometry:
         ================================================================================
         """
 
-        point_on_faces = tr
+        point_on_faces = _CubeLayoutGeometry._travel_all_faces(
+            slice_name,
+            source_face,
+            target_face,
+            _source_coord,
+            n_slices,
+            source_edge,
+            target_edge,
+        )
 
-        def inv(x: int) -> int:
-            return n_slices - 1 - x
+        assert source_face in point_on_faces
+        assert target_face in point_on_faces
 
-        # now find the reference edge of the start face
+        point_on_source = point_on_faces[source_face]
+        point_on_target = point_on_faces[target_face]
 
-        # we mimic the alg in cube.domain.model.Slice.Slice._get_slices_by_index
-        current_edge: Edge = source_edge  # this determines the direction of rotation
-        current_index: int = 0  # arbitrary column or row depends on the Slice
-        other_rol_or_col = 0
-
-        current_face: Face = source_face
-
-        point_on_faces: list[Point] = []
-
-        for face_index in range(2):  # walking on two faces
-            if current_face.is_bottom_or_top(current_edge):
-                if current_face.is_top_edge(current_edge):
-                    point_on_current_face = (inv(other_rol_or_col), current_index)
-                else:
-                    point_on_current_face = (other_rol_or_col, current_index)
-
-            else:
-                if current_face.is_right_edge(current_edge):
-                    point_on_current_face = (current_index, inv(other_rol_or_col))
-                else:
-                    point_on_current_face = (current_index, other_rol_or_col)
-
-            point_on_faces.append(point_on_current_face)
-
-            if face_index == 0: # PREPARE FOR THE NEXT
-                next_edge: Edge = current_edge.opposite(current_face)
-                next_face = next_edge.get_other_face(current_face)
-                assert next_face.is_edge(next_edge)
-
-                # SLICE COORDINATES are always ltr
-                next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
-                current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
-                current_edge = next_edge
-                current_face = next_face
-
-                assert current_face is target_face
-
-        assert len(point_on_faces) == 2
-
-
-
-        return FUnitRotation.of(n_slices, point_on_faces[0], point_on_faces[1])
+        return FUnitRotation.of(n_slices, point_on_source, point_on_target)
 
     @staticmethod
     def _travel_all_faces(
@@ -730,7 +703,7 @@ class _CubeLayoutGeometry:
 
             point_on_faces[current_face] = point_on_current_face
 
-            if face_index < 3: # PREPARE FOR THE NEXT
+            if face_index < 3:  # PREPARE FOR THE NEXT
                 next_edge: Edge = current_edge.opposite(current_face)
                 next_face = next_edge.get_other_face(current_face)
                 assert next_face.is_edge(next_edge)
@@ -741,10 +714,8 @@ class _CubeLayoutGeometry:
                 current_edge = next_edge
                 current_face = next_face
 
-                assert current_face is target_face
+                #assert current_face is target_face
 
         assert len(point_on_faces) == 4
-
-
 
         return point_on_faces
