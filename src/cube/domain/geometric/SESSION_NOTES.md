@@ -20,7 +20,8 @@ creating new instances:
 @property
 def unit(self) -> FUnitRotation:
     """The unit rotation (size-independent), returns singleton constant."""
-    return _UNIT_ROTATIONS[self._n_rotation % 4]
+    return _UNIT_ROTATIONS[self.n_rotation % 4]
+
 
 _UNIT_ROTATIONS: tuple[FUnitRotation, ...] = (
     FUnitRotation.CW0,

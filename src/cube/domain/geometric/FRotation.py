@@ -27,7 +27,7 @@ Usage::
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Tuple
 
 from cube.domain.geometric.types import Point
@@ -36,9 +36,11 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
 
 
-def _apply_cw_once(r: int, c: int, n: int) -> Tuple[int, int]:
-    """Apply one 90° clockwise rotation: (r, c) -> (c, n-1-r)"""
-    return (c, n - 1 - r)
+def _apply_cw(r: int, c: int, n_slices: int, n_rotation: int) -> Tuple[int, int]:
+    for _ in range(n_rotation):
+        r, c = (c, n_slices - 1 - r)
+
+    return r, c
 
 
 @dataclass(frozen=True)
@@ -50,42 +52,38 @@ class FRotation:
     Supports composition (*) and inverse (-).
 
     Attributes:
-        n: The cube size (number of rows/columns on a face)
-        _n_rotation: Number of 90° clockwise rotations (0-3)
+        n_slices: The cube size (number of rows/columns on a face)
+        n_rotation: Number of 90° clockwise rotations (0-3)
     """
-    n: int
-    _n_rotation: int  # 0-3 quarter turns clockwise
+    n_slices: int
+    n_rotation: int  # 0-3 quarter turns clockwise
 
     def __call__(self, r: int, c: int) -> Tuple[int, int]:
         """Transform a coordinate (r, c) according to this rotation."""
-        result = (r, c)
-        for _ in range(self._n_rotation % 4):
-            result = _apply_cw_once(result[0], result[1], self.n)
-        return result
+        return _apply_cw(r, c, self.n_slices, self.n_rotation)
 
     def __mul__(self, other: FRotation) -> FRotation:
         """Compose two rotations: (self * other) means apply other first, then self."""
-        if self.n != other.n:
-            raise ValueError(f"Cannot multiply rotations with different sizes: {self.n} vs {other.n}")
-        return FRotation(n=self.n, _n_rotation=(self._n_rotation + other._n_rotation) % 4)
+        if self.n_slices != other.n_slices:
+            raise ValueError(f"Cannot multiply rotations with different sizes: {self.n_slices} vs {other.n_slices}")
+        return FRotation(n_slices=self.n_slices, n_rotation=(self.n_rotation + other.n_rotation) % 4)
 
     def __neg__(self) -> FRotation:
         """Return the inverse rotation."""
-        return FRotation(n=self.n, _n_rotation=(4 - self._n_rotation) % 4)
+        return FRotation(n_slices=self.n_slices, n_rotation=(4 - self.n_rotation) % 4)
 
     @property
     def is_identity(self) -> bool:
         """True if this is the identity rotation."""
-        return self._n_rotation % 4 == 0
+        return self.n_rotation % 4 == 0
 
     @property
     def unit(self) -> FUnitRotation:
         """The unit rotation (size-independent), returns singleton constant."""
-        return _UNIT_ROTATIONS[self._n_rotation % 4]
+        return _UNIT_ROTATIONS[self.n_rotation % 4]
 
     def __repr__(self) -> str:
-        return f"FRotation(CW{self._n_rotation % 4}, n={self.n})"
-
+        return f"FRotation(CW{self.n_rotation % 4}, n={self.n_slices})"
 
 @dataclass(frozen=True)
 class FUnitRotation:
@@ -103,20 +101,26 @@ class FUnitRotation:
         FUnitRotation.CW3 - 270 degrees clockwise (= 90 degrees counter-clockwise)
     """
     _n_rotation: int  # 0-3 quarter turns clockwise
+    _str: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        # Compute what (0,0) transforms to on a 2x2 face for display
+        result = _apply_cw(0, 0, 2, self._n_rotation)
+        object.__setattr__(self, '_str', f"CW{self._n_rotation % 4}{result}")
 
     # Class-level constants (declared for type checkers)
-    CW0: ClassVar[FUnitRotation]
-    CW1: ClassVar[FUnitRotation]
-    CW2: ClassVar[FUnitRotation]
-    CW3: ClassVar[FUnitRotation]
+    CW0: ClassVar[FUnitRotation]  # Identity (no rotation)
+    CW1: ClassVar[FUnitRotation]  # 90 degrees clockwise
+    CW2: ClassVar[FUnitRotation]  # 180 degrees (half turn)
+    CW3: ClassVar[FUnitRotation]  # 270 degrees clockwise (= 90 degrees counter-clockwise)
 
     def of_cube(self, cube: "Cube") -> FRotation:
         """Create a sized rotation for the given cube."""
-        return FRotation(n=cube.n_slices, _n_rotation=self._n_rotation)
+        return FRotation(n_slices=cube.n_slices, n_rotation=self._n_rotation)
 
     def of_n_slices(self, n: int) -> FRotation:
         """Create a sized rotation for an n x n face."""
-        return FRotation(n=n, _n_rotation=self._n_rotation)
+        return FRotation(n_slices=n, n_rotation=self._n_rotation)
 
     def __mul__(self, other: FUnitRotation) -> FUnitRotation:
         """Compose two rotations: (self * other) means apply other first, then self."""
@@ -132,10 +136,10 @@ class FUnitRotation:
         return self._n_rotation % 4 == 0
 
     def __repr__(self) -> str:
-        return f"FUnitRotation.CW{self._n_rotation % 4}"
+        return self._str
 
     @staticmethod
-    def of(n_slices, source: Point, target: Point) -> FUnitRotation:
+    def of(n_slices: int, source: Point, target: Point) -> FUnitRotation:
 
         """
         Given two points on known cube size, compute the unit transform such that
