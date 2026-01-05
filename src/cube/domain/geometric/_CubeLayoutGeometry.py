@@ -276,42 +276,34 @@ class _CubeLayoutGeometry:
             slice_name: SliceName
     ) -> FUnitRotation:
         """
+        Compute the unit rotation that transforms coordinates from source_face to target_face.
 
-        caching: Cached by the called
-        Find the coordinate on target_face where content from source_face will move to.
-
-        Given a position on the source face where we have content,
-        find the corresponding position on the target face where that content
-        will appear after applying a movement algorithm.
-
-        This is the inverse operation of translate_source_from_target():
-        If translate_source_from_target(TF, SF, tc) returns sc,
-        then translate_target_from_source(SF, TF, sc) returns tc.
-
-        Uses geometric derivation based on Slice traversal logic:
-        - Uses the provided slice_name to determine traversal path
-        - Uses edge-based coordinate translation (like Slice._get_slices_by_index)
-        - Caches the derived FUnitRotation for efficiency
+        Given a slice that connects source_face and target_face, this method computes
+        the FUnitRotation that, when applied to a coordinate on source_face, gives
+        the corresponding coordinate on target_face.
 
         Args:
-            source_face: Where content currently is
-            target_face: Where we want to know where content will go
-            source_coord: (row, col) position on source_face (0-indexed)
+            source_face: The face where content originates
+            target_face: The face where content will appear
+            source_coord: (row, col) position on source_face (used for bounds validation)
             slice_name: Which slice (M, E, S) connects the faces
 
         Returns:
-            (row, col) on target_face where the content will appear.
+            FUnitRotation that transforms source coordinates to target coordinates.
+            Apply with: unit.of_cube(cube)(*source_coord) to get (target_row, target_col)
 
         Raises:
-            ValueError: If source_face == target_face (no translation needed)
-            ValueError: If source_coord is out of bounds for cube size
+            ValueError: If source_face == target_face
+            ValueError: If source_coord is out of bounds
 
         Example::
 
-            # I have content at (1, 2) on Right face, where will it go on Front face?
-            target_coord = Face2FaceTranslator.translate_target_from_source(
+            # Get the rotation from Right to Front via E slice
+            unit = _CubeLayoutGeometry.translate_target_from_source(
                 cube.right, cube.front, (1, 2), SliceName.E
             )
+            # Apply to get actual target coordinate
+            target_coord = unit.of_cube(cube)(1, 2)
         """
         if source_face is target_face:
             raise ValueError("Cannot translate from a face to itself")
@@ -338,43 +330,21 @@ class _CubeLayoutGeometry:
             slice_name: SliceName
     ) -> FUnitRotation:
         """
-        Translate coordinates using Slice traversal geometry.
+        Derive the unit rotation between two faces using slice traversal geometry.
 
-        ================================================================================
-        DESIGN: ADJACENT + COMPOSITION
-        ================================================================================
+        Uses _travel_all_faces to compute the reference point (0,0) on all 4 faces
+        that the slice passes through, then derives the FUnitRotation that maps
+        the source reference point to the target reference point.
 
-        Instead of handling all cases in one complex function, we use composition:
+        Args:
+            source_face: Starting face
+            target_face: Destination face
+            source_coord: Not used (kept for API compatibility)
+            n_slices: Cube size (for FUnitRotation.of)
+            slice_name: Which slice connects the faces
 
-        1. ADJACENT FACES (1 step): Direct edge crossing
-           F → U uses _translate_adjacent(F, U, coord)
-
-        2. OPPOSITE FACES (2 steps): Composition of two adjacent transforms
-           F → B = _translate_adjacent(intermediate, B, _translate_adjacent(F, intermediate, coord))
-
-        This is cleaner because:
-        - Adjacent transform is simpler to understand
-        - Opposite is just composition of two adjacent transforms
-        - Each transform is independently verifiable
-
-        ================================================================================
-        COORDINATE SYSTEM
-        ================================================================================
-
-        Each face uses LTR (Left-to-Right) coordinates:
-        - (0, 0) at bottom-left when viewing face from outside
-        - row increases upward, col increases rightward
-
-                col: 0   1   2
-                   ┌───┬───┬───┐
-            row 2  │   │   │   │
-                   ├───┼───┼───┤
-            row 1  │   │   │   │
-                   ├───┼───┼───┤
-            row 0  │   │   │   │
-                   └───┴───┴───┘
-
-        ================================================================================
+        Returns:
+            FUnitRotation representing the coordinate transformation
         """
 
         point_on_faces = _CubeLayoutGeometry._travel_all_faces(source_face.cube, slice_name)
@@ -395,13 +365,28 @@ class _CubeLayoutGeometry:
             slice_name: SliceName,
     ) -> dict[Face, Point]:
         """
+        Travel through all 4 faces that a slice passes through, computing reference points.
 
-        Claud: Currently we know to travel in one direction on given slice
-        This is cop of
-        Translate coordinates between two ADJACENT faces (one edge crossing).
+        Starting from a reference edge on the first face, this method walks through
+        all 4 faces in the slice's traversal order, computing where the reference
+        point (0, 0) lands on each face.
+
+        Slice starting faces and edges:
+            M: Front face, bottom edge  (traverses F → U → B → D)
+            E: Right face, left edge    (traverses R → B → L → F)
+            S: Up face, left edge       (traverses U → R → D → L)
+
+        Args:
+            cube: The cube instance
+            slice_name: Which slice (M, E, S) to traverse
+
+        Returns:
+            dict mapping each Face to its reference Point.
+            The reference point is where (row=0, col=0) from the start face
+            appears on each face in the traversal.
 
         ================================================================================
-        TWO COORDINATES TO TRACK
+        IMPLEMENTATION DETAILS - TWO COORDINATES TO TRACK
         ================================================================================
 
         When a slice crosses a face, each point has two components:
