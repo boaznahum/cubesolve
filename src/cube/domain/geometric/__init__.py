@@ -1,18 +1,24 @@
 # answer all the geometric questions of the cube
 # see issue #55 https://github.com/boaznahum/cubesolve/issues/55#issue-3765157931
+#
+# NOTE: This module intentionally avoids importing from submodules at the top level
+# to prevent circular imports. Import directly from the specific modules:
+#
+#   from cube.domain.geometric.cube_layout import CubeLayout, opposite, is_adjacent
+#   from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
+#   etc.
+#
+# The create_layout() function is provided as a convenience factory.
 
-from typing import Mapping
+from __future__ import annotations
 
-from cube.domain.geometric._CubeLayout import _CubeLayout
-from cube.domain.geometric.cube_layout import (
-    CubeLayout,
-    opposite,
-    is_adjacent,
-    get_adjacent_faces,
-)
-from cube.domain.model.Color import Color
-from cube.domain.model.FaceName import FaceName
-from cube.utils.config_protocol import IServiceProvider
+from typing import TYPE_CHECKING, Mapping
+
+if TYPE_CHECKING:
+    from cube.domain.geometric.cube_layout import CubeLayout
+    from cube.domain.model.Color import Color
+    from cube.domain.model.FaceName import FaceName
+    from cube.utils.config_protocol import IServiceProvider
 
 
 def create_layout(
@@ -33,15 +39,10 @@ def create_layout(
     Returns:
         CubeLayout instance with the given configuration.
     """
+    from cube.domain.geometric._CubeLayout import _CubeLayout
     return _CubeLayout(read_only, faces, sp)
 
 
 __all__ = [
-    'CubeLayout',
     'create_layout',
-    'opposite',
-    'is_adjacent',
-    'get_adjacent_faces',
-    # Face2FaceTranslator is NOT exported here to avoid circular imports.
-    # Import directly: from cube.domain.geometric.Face2FaceTranslator import ...
 ]

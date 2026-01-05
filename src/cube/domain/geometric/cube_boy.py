@@ -42,13 +42,18 @@ Consumers:
     - CageNxNSolver: Asserts shadow cube maintains BOY layout
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from cube.utils.config_protocol import IServiceProvider
 
 from cube.domain.model.Color import Color
 from cube.domain.model.ColorLong import ColorLong
-from cube.domain.geometric.cube_layout import CubeLayout
-from cube.domain.geometric import create_layout
 from cube.domain.model.FaceName import FaceName
+
+if TYPE_CHECKING:
+    from cube.domain.geometric.cube_layout import CubeLayout
 
 # ============================================================================
 # BOY Layout - Global Cached Singleton
@@ -103,6 +108,8 @@ def get_boy_layout(sp: IServiceProvider) -> CubeLayout:
     """
     global _boy_layout
     if _boy_layout is None:
+        # Import here to avoid circular import
+        from cube.domain.geometric import create_layout
         _boy_layout = create_layout(True, {
             FaceName.F: Color.BLUE,
             FaceName.R: Color.RED,

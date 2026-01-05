@@ -36,7 +36,8 @@ from typing import TYPE_CHECKING
 from typing_extensions import Self
 
 from cube.domain.model import CenterSlice, Color
-from cube.domain.geometric import CubeLayout, create_layout
+from cube.domain.geometric import create_layout
+from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.solver.common.tracker.trackers import FaceTracker

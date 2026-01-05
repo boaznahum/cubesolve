@@ -575,7 +575,9 @@ class _CubeLayoutGeometry:
         point_on_source = point_on_faces[source_face]
         point_on_target = point_on_faces[target_face]
 
-        return FUnitRotation.of(n_slices, point_on_source, point_on_target)
+        unit = FUnitRotation.of(n_slices, point_on_source, point_on_target)
+
+        return unit
 
     @staticmethod
     def _travel_all_faces(

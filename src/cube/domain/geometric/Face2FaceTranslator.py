@@ -637,7 +637,7 @@ class Face2FaceTranslator:
         """
 
         unit_transform = source_face.cube.layout.translate_target_from_source(
-            target_face, source_face, source_coord,
+            source_face, target_face, source_coord,
             slice_name)
 
         return unit_transform.of_cube(source_face.cube)(*source_coord)

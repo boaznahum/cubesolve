@@ -15,8 +15,8 @@ Usage::
     # Get a sized rotation from a unit rotation
     fr = FUnitRotation.CW1.of_n_slices(3)  # For 3x3 face
 
-    # Transform coordinates
-    new_r, new_c = fr(0, 0)  # (0, 0) -> (0, 2) for CW1 on 3x3
+    # Transform coordinates (origin at bottom-left, r=row, c=col)
+    new_r, new_c = fr(0, 0)  # (0, 0) -> (2, 0) for CW1 on 3x3
 
     # Composition
     fr2 = FUnitRotation.CW1 * FUnitRotation.CW1  # = CW2
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 def _apply_cw(r: int, c: int, n_slices: int, n_rotation: int) -> Tuple[int, int]:
     for _ in range(n_rotation):
-        r, c = (c, n_slices - 1 - r)
+        r, c = (n_slices - 1 - c, r)
 
     return r, c
 

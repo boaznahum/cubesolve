@@ -142,7 +142,8 @@ from .PartSlice import CornerSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Corner import Corner
 from cube.domain.geometric.cube_boy import Color, FaceName
-from cube.domain.geometric import CubeLayout, create_layout
+from cube.domain.geometric import create_layout
+from cube.domain.geometric.cube_layout import CubeLayout
 from .cube_slice import Slice, SliceName
 from .Edge import Edge
 from .Face import Face

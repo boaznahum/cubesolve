@@ -9,7 +9,8 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.model import CenterSlice, Color, FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.geometric.cube_boy import color2long
-from cube.domain.geometric import CubeLayout, create_layout
+from cube.domain.geometric import create_layout
+from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.tracker.trackers import FaceTracker

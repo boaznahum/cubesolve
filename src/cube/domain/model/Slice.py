@@ -266,6 +266,9 @@ class Slice(SuperElement):
                 if current_face.is_top_edge(current_edge):
                     _c = [center.get_center_slice((inv(i), current_index)) for i in range(n_slices)]
                 else:
+                    # actaully it was ok even before this fix, cube.domain.geometric._CubeLayoutGeometry._CubeLayoutGeometry._travel_all_faces
+                    # but here because we callect all pices, it does matter, it is doest indication that we have a bug
+                    # see cube.domain.geometric._CubeLayoutGeometry._CubeLayoutGeometry._travel_all_faces
                     if current_face.name is FaceName.D and self._name == SliceName.S:
                         _c = [center.get_center_slice((inv(i), current_index)) for i in range(n_slices)]
                     else:
