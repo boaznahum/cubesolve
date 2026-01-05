@@ -1,9 +1,9 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Collection, Iterable, Tuple, final
 
-from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
+from cube.domain.algs._internal_utils import _inv
 from cube.domain.model.Cube import Cube, FaceName, PartSlice
 from cube.domain.model.cube_slice import SliceName
 
@@ -92,24 +92,6 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         """
 
         return cube.layout.get_slice(self._slice_name).get_face_name()
-        # match self._slice_name:
-        #
-        #     case SliceName.S:  # over F
-        #         return FaceName.F
-        #
-        #     case SliceName.M:  # over L
-        #         return FaceName.L
-        #
-        #     case SliceName.E:  # over D
-        #         return FaceName.D
-        #
-        #     case _:
-        #         raise RuntimeError(f"Unknown Slice {self._slice_name}")
-
-    @abstractmethod
-    def get_base_alg(self) -> SliceAbleAlg:
-        """ return whole slice alg that is not yet sliced"""
-        pass
 
 
 @final
@@ -117,10 +99,6 @@ class _M(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.M)
-
-    def get_base_alg(self) -> SliceAbleAlg:
-        from cube.domain.algs.Algs import Algs
-        return Algs.M
 
 
 @final
@@ -132,10 +110,6 @@ class _E(SliceAlg):
     def __init__(self) -> None:
         super().__init__(SliceName.E)
 
-    def get_base_alg(self) -> SliceAbleAlg:
-        from cube.domain.algs.Algs import Algs
-        return Algs.E
-
 
 @final
 class _S(SliceAlg):
@@ -145,7 +119,3 @@ class _S(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.S)
-
-    def get_base_alg(self) -> SliceAbleAlg:
-        from cube.domain.algs.Algs import Algs
-        return Algs.E

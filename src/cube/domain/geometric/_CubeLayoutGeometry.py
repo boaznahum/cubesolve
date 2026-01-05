@@ -454,7 +454,12 @@ class _CubeLayoutGeometry:
             return n_slices - 1 - x
 
         # we mimic the alg in cube.domain.model.Slice.Slice._get_slices_by_index
-        # todo: hard coded
+        #
+        # todo:
+        #    hard coded
+        #    We never test what happens if we start with arbitrary face
+        #    if we can we can remove the hard code, use cube.domain.algs.SliceAlg.SliceAlg.get_face_name and here from it to compute the starting Face
+
         match slice_name:
             case SliceName.M:  # over L, works
                 current_face = cube.front
@@ -505,8 +510,6 @@ class _CubeLayoutGeometry:
                 current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
                 current_edge = next_edge
                 current_face = next_face
-
-                #assert current_face is target_face
 
         assert len(point_on_faces) == 4
 
