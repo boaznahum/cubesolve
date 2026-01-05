@@ -167,6 +167,7 @@ These cycles can be derived from Slice traversal:
 
 from typing import TYPE_CHECKING, Iterable, Sequence, Tuple, TypeAlias
 
+from .FaceName  import FaceName
 from .PartSlice import CenterSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Edge import Edge
@@ -265,7 +266,10 @@ class Slice(SuperElement):
                 if current_face.is_top_edge(current_edge):
                     _c = [center.get_center_slice((inv(i), current_index)) for i in range(n_slices)]
                 else:
-                    _c = [center.get_center_slice((i, current_index)) for i in range(n_slices)]
+                    if current_face.name is FaceName.D and self._name == SliceName.S:
+                        _c = [center.get_center_slice((inv(i), current_index)) for i in range(n_slices)]
+                    else:
+                        _c = [center.get_center_slice((i, current_index)) for i in range(n_slices)]
 
             else:
                 if current_face.is_right_edge(current_edge):
