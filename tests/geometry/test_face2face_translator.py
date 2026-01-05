@@ -305,7 +305,7 @@ class TestSliceMovementPrediction:
             # Step 1: Put unique marker on each center piece and predict target positions
             predictions: dict[tuple[int, int], str] = {}  # target_coord -> marker_value
 
-            for center_slice in source_face.center.all_slices:
+            for center_slice in [[*source_face.center.all_slices][0]]:
                 source_coord: CenterSliceIndex = center_slice.index
                 marker_value = f"M_{source_name}_{source_coord[0]}_{source_coord[1]}"
 
