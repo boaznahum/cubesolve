@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Iterator
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.geometric.FRotation import FUnitRotation, FRotation
+from cube.domain.geometric.types import Point
 from cube.domain.model.Edge import Edge
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
@@ -261,11 +262,11 @@ class _CubeLayoutGeometry:
         if cut_type == CLGColRow.ROW:
             # Slice cuts rows → forms a column → fixed col, iterate rows
             for row in range(n_slices):
-                yield (row, face_index)
+                yield row, face_index
         else:
             # Slice cuts cols → forms a row → fixed row, iterate cols
             for col in range(n_slices):
-                yield (face_index, col)
+                yield face_index, col
 
     @staticmethod
     def translate_target_from_source(
@@ -553,56 +554,197 @@ class _CubeLayoutGeometry:
         ================================================================================
         """
 
+        point_on_faces = tr
+
         def inv(x: int) -> int:
             return n_slices - 1 - x
 
-        source_cord = (0, 0)
-        row, col = source_cord
+        # now find the reference edge of the start face
 
-        # ============================================================
-        # STEP 1: Extract current_index and slot_along from source
-        # ============================================================
-        if source_face.is_bottom_or_top(source_edge):
-            # Horizontal edge: col = current_index
-            current_index = col
-            if source_face.is_top_edge(source_edge):
-                slot_along = inv(row)
-            else:  # bottom edge
-                slot_along = row
-        else:
-            # Vertical edge: row = current_index
-            current_index = row
-            if source_face.is_right_edge(source_edge):
-                slot_along = inv(col)
-            else:  # left edge
-                slot_along = col
+        # we mimic the alg in cube.domain.model.Slice.Slice._get_slices_by_index
+        current_edge: Edge = source_edge  # this determines the direction of rotation
+        current_index: int = 0  # arbitrary column or row depends on the Slice
+        other_rol_or_col = 0
 
-        # ============================================================
-        # STEP 2: Translate current_index through the shared edge
-        # ============================================================
-        # The shared edge is source_edge.opposite(source_face)
-        shared_edge = source_edge.opposite(source_face)
-        edge_internal = shared_edge.get_slice_index_from_ltr_index(source_face, current_index)
-        new_index = shared_edge.get_ltr_index_from_slice_index(target_face, edge_internal)
+        current_face: Face = source_face
 
-        # ============================================================
-        # STEP 3: Reconstruct coordinates at target
-        # ============================================================
-        if target_face.is_bottom_or_top(target_edge):
-            # Horizontal edge: col = current_index
-            target_col = new_index
-            if target_face.is_top_edge(target_edge):
-                target_row = inv(slot_along)
-            else:  # bottom edge
-                target_row = slot_along
-        else:
-            # Vertical edge: row = current_index
-            target_row = new_index
-            if target_face.is_right_edge(target_edge):
-                target_col = inv(slot_along)
-            else:  # left edge
-                target_col = slot_along
+        point_on_faces: list[Point] = []
 
-        target = (target_row, target_col)
+        for face_index in range(2):  # walking on two faces
+            if current_face.is_bottom_or_top(current_edge):
+                if current_face.is_top_edge(current_edge):
+                    point_on_current_face = (inv(other_rol_or_col), current_index)
+                else:
+                    point_on_current_face = (other_rol_or_col, current_index)
 
-        return FUnitRotation.of(n_slices, source_cord, target)
+            else:
+                if current_face.is_right_edge(current_edge):
+                    point_on_current_face = (current_index, inv(other_rol_or_col))
+                else:
+                    point_on_current_face = (current_index, other_rol_or_col)
+
+            point_on_faces.append(point_on_current_face)
+
+            if face_index == 0: # PREPARE FOR THE NEXT
+                next_edge: Edge = current_edge.opposite(current_face)
+                next_face = next_edge.get_other_face(current_face)
+                assert next_face.is_edge(next_edge)
+
+                # SLICE COORDINATES are always ltr
+                next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
+                current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
+                current_edge = next_edge
+                current_face = next_face
+
+                assert current_face is target_face
+
+        assert len(point_on_faces) == 2
+
+
+
+        return FUnitRotation.of(n_slices, point_on_faces[0], point_on_faces[1])
+
+    @staticmethod
+    def _travel_all_faces(
+            slice_name: SliceName,
+            source_face: Face,
+            target_face: Face,
+            _source_coord: tuple[int, int],
+            n_slices: int,
+            source_edge: Edge,
+            target_edge: Edge
+    ) -> dict[Face, Point]:
+        """
+        Translate coordinates between two ADJACENT faces (one edge crossing).
+
+        ================================================================================
+        TWO COORDINATES TO TRACK
+        ================================================================================
+
+        When a slice crosses a face, each point has two components:
+
+        1. current_index: WHICH slice (0, 1, 2, ...)
+           - Translates through the shared edge
+           - Uses edge.get_slice_index_from_ltr_index() and get_ltr_index_from_slice_index()
+
+        2. slot_along: WHERE on the slice (position 0, 1, 2, ...)
+           - Physical position along the slice strip
+           - PRESERVED across faces (slot 0 stays slot 0)
+           - But mapping to (row, col) depends on edge type
+
+        ================================================================================
+        SLOT ORDERING (from Slice._get_slices_by_index)
+        ================================================================================
+
+        HORIZONTAL EDGES (top/bottom):
+        ┌─────────────────────────────┬─────────────────────────────┐
+        │  Bottom edge:               │   Top edge:                 │
+        │  slot 0 → (row=0, col=idx)  │   slot 0 → (row=n-1, col=idx)
+        │  slot 1 → (row=1, col=idx)  │   slot 1 → (row=n-2, col=idx)
+        │                             │                             │
+        │  current_index = col        │   current_index = col       │
+        │  slot = row                 │   slot = inv(row)           │
+        └─────────────────────────────┴─────────────────────────────┘
+
+        VERTICAL EDGES (left/right):
+        ┌─────────────────────────────┬─────────────────────────────┐
+        │  Left edge:                 │   Right edge:               │
+        │  slot 0 → (row=idx, col=0)  │   slot 0 → (row=idx, col=n-1)
+        │  slot 1 → (row=idx, col=1)  │   slot 1 → (row=idx, col=n-2)
+        │                             │                             │
+        │  current_index = row        │   current_index = row       │
+        │  slot = col                 │   slot = inv(col)           │
+        └─────────────────────────────┴─────────────────────────────┘
+
+        ================================================================================
+        EXAMPLE: M slice, F(bottom) → U(bottom)
+        ================================================================================
+
+        Source F with edge_bottom:
+        ┌───────────────┐
+        │   0   1   2   │ col
+        │ ┌───┬───┬───┐ │
+        │ │   │   │   │ │ row 2
+        │ ├───┼───┼───┤ │
+        │ │   │ X │   │ │ row 1  ← X at (1, 1)
+        │ ├───┼───┼───┤ │
+        │ │   │   │   │ │ row 0
+        │ └───┴───┴───┘ │
+        │     ↑ slice 1 │
+        └───────────────┘
+
+        Extract: current_index=1, slot_along=1 (bottom edge)
+        Translate current_index through F-U edge
+        Reconstruct at U with its edge
+
+        ================================================================================
+        """
+
+        def inv(x: int) -> int:
+            return n_slices - 1 - x
+
+        cube = source_face.cube
+
+        current_index: int = 0  # arbitrary column or row depends on the Slice
+        other_rol_or_col = 0
+
+        # we mimic the alg in cube.domain.model.Slice.Slice._get_slices_by_index
+        # todo: hard coded
+        match slice_name:
+            case SliceName.M:  # over L, works
+                current_face = cube.front
+                current_edge = current_face.edge_bottom
+
+            case SliceName.E:  # over D, works
+                current_face = cube.right
+                current_edge = current_face.edge_left
+
+            case SliceName.S:  # over F, works
+                current_face = cube.up
+                current_edge = current_face.edge_left
+
+            case _:
+                raise ValueError(f"Unknown slice name: {slice_name}")
+        # now find the reference edge of the start face
+
+        # noinspection PyUnboundLocalVariable no it is not
+        assert current_face.is_edge(current_edge)
+
+        current_index: int = 0  # arbitrary column or row depends on the Slice
+        other_rol_or_col = 0
+
+        point_on_faces: dict[Face, Point] = {}
+
+        for face_index in range(4):  # walking on two faces
+            if current_face.is_bottom_or_top(current_edge):
+                if current_face.is_top_edge(current_edge):
+                    point_on_current_face = (inv(other_rol_or_col), current_index)
+                else:
+                    point_on_current_face = (other_rol_or_col, current_index)
+
+            else:
+                if current_face.is_right_edge(current_edge):
+                    point_on_current_face = (current_index, inv(other_rol_or_col))
+                else:
+                    point_on_current_face = (current_index, other_rol_or_col)
+
+            point_on_faces[current_face] = point_on_current_face
+
+            if face_index < 3: # PREPARE FOR THE NEXT
+                next_edge: Edge = current_edge.opposite(current_face)
+                next_face = next_edge.get_other_face(current_face)
+                assert next_face.is_edge(next_edge)
+
+                # SLICE COORDINATES are always ltr
+                next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
+                current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
+                current_edge = next_edge
+                current_face = next_face
+
+                assert current_face is target_face
+
+        assert len(point_on_faces) == 4
+
+
+
+        return point_on_faces
