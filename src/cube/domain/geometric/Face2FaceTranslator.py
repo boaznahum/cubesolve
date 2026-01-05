@@ -474,8 +474,7 @@ def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Tuple[WholeCubeA
             steps = (src_idx - dst_idx) % 4
             if steps == 0:
                 # source == dest (shouldn't happen, but handle gracefully)
-                raise InternalSWError("dource == dest")
-                return Algs.no_op()
+                raise InternalSWError("source == dest")
 
             return whole_cube_alg, steps, whole_cube_alg * steps
 

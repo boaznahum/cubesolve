@@ -376,198 +376,8 @@ class _CubeLayoutGeometry:
 
         ================================================================================
         """
-        cube = source_face.cube
 
-        # Build the slice cycle to find positions
-        cycle_faces, cycle_edges = _CubeLayoutGeometry._build_slice_cycle(cube, slice_name)
-
-        source_idx = cycle_faces.index(source_face)
-        target_idx = cycle_faces.index(target_face)
-        steps = (target_idx - source_idx) % 4
-
-        unit_rotation: FUnitRotation
-
-        if steps == 0:
-            # Same face (shouldn't happen, but handle gracefully)
-            unit_rotation = FUnitRotation.CW0
-        elif steps == 1:
-            # Adjacent: one step
-            source_edge = cycle_edges[source_idx]
-            target_edge = cycle_edges[target_idx]
-            unit_rotation = _CubeLayoutGeometry._translate_adjacent(
-                slice_name,
-                source_face, target_face, source_coord, n_slices,
-                source_edge, target_edge
-            )
-        elif steps == 2:
-            # Opposite: compose two adjacent transforms
-            intermediate_idx = (source_idx + 1) % 4
-            intermediate_face = cycle_faces[intermediate_idx]
-            intermediate_edge = cycle_edges[intermediate_idx]
-            source_edge = cycle_edges[source_idx]
-            target_edge = cycle_edges[target_idx]
-
-            # First transform: source → intermediate
-            unit1 = _CubeLayoutGeometry._translate_adjacent(
-                slice_name,
-                source_face, intermediate_face, source_coord, n_slices,
-                source_edge, intermediate_edge
-            )
-
-            # Second transform: intermediate → target
-            unit2 = _CubeLayoutGeometry._translate_adjacent(
-                slice_name,
-                intermediate_face, target_face, (0, 0), n_slices,
-                intermediate_edge, target_edge
-            )
-
-            unit_rotation = unit1 * unit2
-        else:  # steps == 3
-            # Going backwards (3 steps forward = 1 step backward)
-            # This means target is "before" source in the cycle
-            # Compose: source → intermediate1 → intermediate2 → target
-
-            target_edge = cycle_edges[target_idx]
-
-            source_edge = cycle_edges[source_idx]
-
-            inverse = _CubeLayoutGeometry._translate_adjacent(
-                slice_name,
-                target_face, source_face, (0, 0), n_slices,
-                target_edge, source_edge
-            )
-
-            unit_rotation = - inverse
-
-        return unit_rotation
-
-    @staticmethod
-    def _build_slice_cycle(cube: Cube, slice_name: SliceName) -> tuple[list[Face], list[Edge]]:
-        """
-        Build the traversal cycle for a slice.
-
-        Returns:
-            (cycle_faces, cycle_edges) where:
-            - cycle_faces[i] is the i-th face in traversal order
-            - cycle_edges[i] is the entry edge for cycle_faces[i]
-
-        Slice cycles (from Slice.py):
-            M: F(edge_bottom) → U → B → D
-            E: R(edge_left) → B → L → F
-            S: U(edge_left) → R → D → L
-        """
-        match slice_name:
-            case SliceName.M:
-                start_face = cube.front
-                start_edge = start_face.edge_bottom
-            case SliceName.E:
-                start_face = cube.right
-                start_edge = start_face.edge_left
-            case SliceName.S:
-                start_face = cube.up
-                start_edge = start_face.edge_left
-            case _:
-                raise ValueError(f"Unknown slice name: {slice_name}")
-
-        cycle_faces: list[Face] = []
-        cycle_edges: list[Edge] = []
-        current_face = start_face
-        current_edge = start_edge
-
-        for _ in range(4):
-            cycle_faces.append(current_face)
-            cycle_edges.append(current_edge)
-            next_edge = current_edge.opposite(current_face)
-            current_face = next_edge.get_other_face(current_face)
-            current_edge = next_edge
-
-        return cycle_faces, cycle_edges
-
-    @staticmethod
-    def _translate_adjacent(
-            slice_name: SliceName,
-            source_face: Face,
-            target_face: Face,
-            _source_coord: tuple[int, int],
-            n_slices: int,
-            source_edge: Edge,
-            target_edge: Edge
-    ) -> FUnitRotation:
-        """
-        Translate coordinates between two ADJACENT faces (one edge crossing).
-
-        ================================================================================
-        TWO COORDINATES TO TRACK
-        ================================================================================
-
-        When a slice crosses a face, each point has two components:
-
-        1. current_index: WHICH slice (0, 1, 2, ...)
-           - Translates through the shared edge
-           - Uses edge.get_slice_index_from_ltr_index() and get_ltr_index_from_slice_index()
-
-        2. slot_along: WHERE on the slice (position 0, 1, 2, ...)
-           - Physical position along the slice strip
-           - PRESERVED across faces (slot 0 stays slot 0)
-           - But mapping to (row, col) depends on edge type
-
-        ================================================================================
-        SLOT ORDERING (from Slice._get_slices_by_index)
-        ================================================================================
-
-        HORIZONTAL EDGES (top/bottom):
-        ┌─────────────────────────────┬─────────────────────────────┐
-        │  Bottom edge:               │   Top edge:                 │
-        │  slot 0 → (row=0, col=idx)  │   slot 0 → (row=n-1, col=idx)
-        │  slot 1 → (row=1, col=idx)  │   slot 1 → (row=n-2, col=idx)
-        │                             │                             │
-        │  current_index = col        │   current_index = col       │
-        │  slot = row                 │   slot = inv(row)           │
-        └─────────────────────────────┴─────────────────────────────┘
-
-        VERTICAL EDGES (left/right):
-        ┌─────────────────────────────┬─────────────────────────────┐
-        │  Left edge:                 │   Right edge:               │
-        │  slot 0 → (row=idx, col=0)  │   slot 0 → (row=idx, col=n-1)
-        │  slot 1 → (row=idx, col=1)  │   slot 1 → (row=idx, col=n-2)
-        │                             │                             │
-        │  current_index = row        │   current_index = row       │
-        │  slot = col                 │   slot = inv(col)           │
-        └─────────────────────────────┴─────────────────────────────┘
-
-        ================================================================================
-        EXAMPLE: M slice, F(bottom) → U(bottom)
-        ================================================================================
-
-        Source F with edge_bottom:
-        ┌───────────────┐
-        │   0   1   2   │ col
-        │ ┌───┬───┬───┐ │
-        │ │   │   │   │ │ row 2
-        │ ├───┼───┼───┤ │
-        │ │   │ X │   │ │ row 1  ← X at (1, 1)
-        │ ├───┼───┼───┤ │
-        │ │   │   │   │ │ row 0
-        │ └───┴───┴───┘ │
-        │     ↑ slice 1 │
-        └───────────────┘
-
-        Extract: current_index=1, slot_along=1 (bottom edge)
-        Translate current_index through F-U edge
-        Reconstruct at U with its edge
-
-        ================================================================================
-        """
-
-        point_on_faces = _CubeLayoutGeometry._travel_all_faces(
-            slice_name,
-            source_face,
-            target_face,
-            _source_coord,
-            n_slices,
-            source_edge,
-            target_edge,
-        )
+        point_on_faces = _CubeLayoutGeometry._travel_all_faces(source_face.cube, slice_name)
 
         assert source_face in point_on_faces
         assert target_face in point_on_faces
@@ -581,13 +391,8 @@ class _CubeLayoutGeometry:
 
     @staticmethod
     def _travel_all_faces(
+            cube: Cube,
             slice_name: SliceName,
-            source_face: Face,
-            target_face: Face,
-            _source_coord: tuple[int, int],
-            n_slices: int,
-            source_edge: Edge,
-            target_edge: Edge
     ) -> dict[Face, Point]:
         """
 
@@ -658,13 +463,10 @@ class _CubeLayoutGeometry:
         ================================================================================
         """
 
+        n_slices = cube.n_slices
+
         def inv(x: int) -> int:
             return n_slices - 1 - x
-
-        cube = source_face.cube
-
-        current_index: int = 0  # arbitrary column or row depends on the Slice
-        other_rol_or_col = 0
 
         # we mimic the alg in cube.domain.model.Slice.Slice._get_slices_by_index
         # todo: hard coded

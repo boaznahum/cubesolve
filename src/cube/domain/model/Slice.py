@@ -167,7 +167,6 @@ These cycles can be derived from Slice traversal:
 
 from typing import TYPE_CHECKING, Iterable, Sequence, Tuple, TypeAlias
 
-from .FaceName  import FaceName
 from .PartSlice import CenterSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Edge import Edge

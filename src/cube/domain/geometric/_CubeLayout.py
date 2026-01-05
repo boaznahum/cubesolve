@@ -38,8 +38,6 @@ class _CubeLayout(CubeLayout):
     and shared by all implementations.
     """
 
-
-
     def __init__(self, read_only: bool, faces: Mapping[FaceName, Color],
                  sp: IServiceProvider) -> None:
         """Create a new CubeLayout.
@@ -78,8 +76,6 @@ class _CubeLayout(CubeLayout):
 
     def get_slice(self, slice_name: SliceName) -> SliceLayout:
         return self._slices[slice_name]
-
-
 
     def colors(self) -> Collection[Color]:
         """Get all colors in this layout."""
@@ -199,8 +195,6 @@ class _CubeLayout(CubeLayout):
         return _CubeLayoutGeometry.iterate_orthogonal_face_center_pieces(
             cube, layer1_face, side_face, layer_slice_index
         )
-
-
 
     def get_slices_between_faces(
             self,
@@ -394,11 +388,11 @@ class _CubeLayout(CubeLayout):
             assert self._find_face(c)
 
     def translate_target_from_source(self,
-            source_face: Face,
-            target_face: Face,
-            source_coord: tuple[int, int],
-            slice_name: SliceName
-    ) -> FUnitRotation:
+                                     source_face: Face,
+                                     target_face: Face,
+                                     source_coord: tuple[int, int],
+                                     slice_name: SliceName
+                                     ) -> FUnitRotation:
 
         from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
 
@@ -410,9 +404,8 @@ class _CubeLayout(CubeLayout):
 
         cache_key = (source_face.name, target_face.name, slice_name)
         cache = self.cache_manager.get("CubeLayout.translate_target_from_source",
-                                                      FUnitRotation)
+                                       FUnitRotation)
 
         unit_rotation = cache.compute(cache_key, compute_unit_rotation)
 
         return unit_rotation
-
