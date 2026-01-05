@@ -11,6 +11,11 @@ from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 
 
 class _Scramble(SeqAlg):
+    """
+    A scramble sequence. All instances are frozen (immutable) after construction.
+    """
+
+    __slots__ = ()  # No additional slots
 
     def __init__(self, name: str | None, *algs: Alg) -> None:
         super().__init__(name, *algs)

@@ -92,21 +92,29 @@ class WideFaceAlg(AnimationAbleAlg, ABC):
     This is essential for CFOP algorithms that need to work on both
     shadow 3x3 cubes and real NxN cubes without breaking edge pairing.
 
+    All instances are frozen (immutable) after construction.
+
     Inheritance: AnimationAbleAlg -> NSimpleAlg -> SimpleAlg -> Alg
     (NOT SliceAbleAlg - wide moves are not sliceable, they adapt dynamically)
     """
+
+    __slots__ = ("_face",)
 
     def __init__(self, face: FaceName, n: int = 1) -> None:
         # Use lowercase face letter as the code
         super().__init__(face.value.lower(), n)
         self._face: FaceName = face
+        # Note: _freeze() is called by concrete subclasses
 
-    def copy(self, other: NSimpleAlg) -> Self:
-        """Copy state from another WideFaceAlg."""
-        assert isinstance(other, WideFaceAlg)
-        super().copy(other)
-        self._face = other._face
-        return self
+    def _create_with_n(self, n: int) -> Self:
+        """Create a new WideFaceAlg with the given n value."""
+        instance: Self = object.__new__(type(self))
+        object.__setattr__(instance, "_frozen", False)
+        object.__setattr__(instance, "_code", self._code)
+        object.__setattr__(instance, "_n", n)
+        object.__setattr__(instance, "_face", self._face)
+        object.__setattr__(instance, "_frozen", True)
+        return instance
 
     def play(self, cube: Cube, inv: bool = False) -> None:
         """
@@ -137,28 +145,34 @@ class WideFaceAlg(AnimationAbleAlg, ABC):
 class _wd(WideFaceAlg):
     def __init__(self) -> None:
         super().__init__(FaceName.D)
+        self._freeze()
 
 
 class _wu(WideFaceAlg):
     def __init__(self) -> None:
         super().__init__(FaceName.U)
+        self._freeze()
 
 
 class _wr(WideFaceAlg):
     def __init__(self) -> None:
         super().__init__(FaceName.R)
+        self._freeze()
 
 
 class _wl(WideFaceAlg):
     def __init__(self) -> None:
         super().__init__(FaceName.L)
+        self._freeze()
 
 
 class _wf(WideFaceAlg):
     def __init__(self) -> None:
         super().__init__(FaceName.F)
+        self._freeze()
 
 
 class _wb(WideFaceAlg):
     def __init__(self) -> None:
         super().__init__(FaceName.B)
+        self._freeze()

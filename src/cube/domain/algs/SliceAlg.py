@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Collection, Iterable, Tuple, final
+from typing import Collection, Iterable, Self, Sequence, Tuple, final
 
 from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
@@ -37,22 +37,49 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         - Outer layers (0 and N-1) are face rotations, not slice moves
         - Inner slices start at layer 1 from the reference face
 
+    All instances are frozen (immutable) after construction.
+
     See Also:
         - SliceAbleAlg: Parent class with slicing/indexing logic
         - Face2FaceTranslator: Uses 1-based indices when computing slice algorithms
     """
 
+    __slots__ = ("_slice_name",)
+
     def __init__(self, slice_name: SliceName, n: int = 1) -> None:
         # we know it is str, still we need to cast for mypy
         super().__init__(slice_name.value.__str__(), n)
         self._slice_name = slice_name
+        # Note: _freeze() is called by concrete subclasses
+
+    def _create_with_n(self, n: int) -> Self:
+        """Create a new SliceAlg with the given n value."""
+        instance: Self = object.__new__(type(self))
+        object.__setattr__(instance, "_frozen", False)
+        object.__setattr__(instance, "_code", self._code)
+        object.__setattr__(instance, "_n", n)
+        object.__setattr__(instance, "_slices", self._slices)
+        object.__setattr__(instance, "_slice_name", self._slice_name)
+        object.__setattr__(instance, "_frozen", True)
+        return instance
+
+    def _create_with_slices(self, slices: "slice | Sequence[int] | None") -> Self:
+        """Create a new SliceAlg with the given slices."""
+        instance: Self = object.__new__(type(self))
+        object.__setattr__(instance, "_frozen", False)
+        object.__setattr__(instance, "_code", self._code)
+        object.__setattr__(instance, "_n", self._n)
+        object.__setattr__(instance, "_slices", slices)
+        object.__setattr__(instance, "_slice_name", self._slice_name)
+        object.__setattr__(instance, "_frozen", True)
+        return instance
 
     @property
     def slice_name(self) -> SliceName:
         return self._slice_name
 
     @final
-    def play(self, cube: Cube, inv: bool = False):
+    def play(self, cube: Cube, inv: bool = False) -> None:
         # cube.rotate_slice(self._slice_name, _inv(inv, self._n))
 
         # See class description for explanation
@@ -92,19 +119,6 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         """
 
         return cube.layout.get_slice(self._slice_name).get_face_name()
-        # match self._slice_name:
-        #
-        #     case SliceName.S:  # over F
-        #         return FaceName.F
-        #
-        #     case SliceName.M:  # over L
-        #         return FaceName.L
-        #
-        #     case SliceName.E:  # over D
-        #         return FaceName.D
-        #
-        #     case _:
-        #         raise RuntimeError(f"Unknown Slice {self._slice_name}")
 
     @abstractmethod
     def get_base_alg(self) -> SliceAbleAlg:
@@ -117,6 +131,7 @@ class _M(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.M)
+        self._freeze()
 
     def get_base_alg(self) -> SliceAbleAlg:
         from cube.domain.algs.Algs import Algs
@@ -131,6 +146,7 @@ class _E(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.E)
+        self._freeze()
 
     def get_base_alg(self) -> SliceAbleAlg:
         from cube.domain.algs.Algs import Algs
@@ -145,7 +161,8 @@ class _S(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.S)
+        self._freeze()
 
     def get_base_alg(self) -> SliceAbleAlg:
         from cube.domain.algs.Algs import Algs
-        return Algs.E
+        return Algs.S

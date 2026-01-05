@@ -11,13 +11,20 @@ if typing.TYPE_CHECKING:
 
 
 class SeqAlg(Alg):
+    """
+    A sequence of algorithms.
+    All instances are frozen (immutable) after construction.
+    """
+
+    __slots__ = ("_name", "_algs")
 
     def __init__(self, name: str | None, *algs: Alg) -> None:
         super().__init__()
         self._name = name
-        self._algs: list[Alg] = [*algs]
+        self._algs: tuple[Alg, ...] = tuple(algs)
+        self._freeze()
 
-    def play(self, cube: Cube, inv: bool = False):
+    def play(self, cube: Cube, inv: bool = False) -> None:
 
         if inv:
 
@@ -69,7 +76,7 @@ class SeqAlg(Alg):
         work_to_do = bool(algs)
         while work_to_do:
             work_to_do = False
-            new_algs = []
+            new_algs: list[NSimpleAlg] = []
             prev: NSimpleAlg | None = None
             for a in algs:
                 if not isinstance(a, NSimpleAlg):
@@ -83,12 +90,10 @@ class SeqAlg(Alg):
 
                         assert isinstance(prev, SimpleAlg)
 
-                        #                        c = type(a)
-                        # noinspection PyArgumentList
-                        a2 = a.clone()  # type: ignore # _n = 1
-                        a2._n = prev.n + a.n
-                        if a2.n % 4:
-                            prev = a2
+                        # Use with_n() to create new instance with combined n value
+                        combined_n = prev.n + a.n
+                        if combined_n % 4:
+                            prev = a.with_n(combined_n)
                         else:
                             prev = None  # R0 is a None
                         work_to_do = True  # really ?
@@ -109,16 +114,16 @@ class SeqAlg(Alg):
     def count(self) -> int:
         return functools.reduce(lambda n, a: n + a.count(), self._algs, 0)
 
-    def __add__(self, other: "Alg"):
+    def __add__(self, other: "Alg") -> "Alg":
 
         if self._name:
             # we can't combine
             return super().__add__(other)
 
         if isinstance(other, SeqAlg) and not other._name:
-            return SeqAlg(None, *[*self._algs, *other._algs])
+            return SeqAlg(None, *self._algs, *other._algs)
         else:
-            return SeqAlg(None, *[*self._algs, other])
+            return SeqAlg(None, *self._algs, other)
 
     @property
     def algs(self) -> Sequence[Alg]:
@@ -127,7 +132,6 @@ class SeqAlg(Alg):
     @classmethod
     def empty(cls) -> "SeqAlg":
         return SeqAlg(None)
-
 
     @override
     def to_printable(self) -> "SeqAlg":
@@ -143,10 +147,14 @@ class SeqAlg(Alg):
 
 class SeqSimpleAlg(SeqAlg):
     """
-    A big alg composed of SimpleAlg s only
+    A big alg composed of SimpleAlg s only.
+    All instances are frozen (immutable) after construction.
     """
 
+    __slots__ = ()  # No additional slots
+
     def __init__(self, name: str | None, *algs: "SimpleAlg") -> None:
+        # Don't call _freeze() since parent already does
         super().__init__(name, *algs)
 
     @property

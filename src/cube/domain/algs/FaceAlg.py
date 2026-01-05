@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Collection, Iterable, Tuple, final
+from typing import Any, Collection, Iterable, Self, Sequence, Tuple, final
 
 from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
@@ -8,7 +8,6 @@ from cube.domain.model import Cube, FaceName, PartSlice
 
 
 class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
-
     """
     How face is sliced:
     Assume cube size is NxN, N-2 middle slices
@@ -21,12 +20,38 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
     R[1:4] is OK.
     R[1:5] is an error.
 
+    All instances are frozen (immutable) after construction.
     """
+
+    __slots__ = ("_face",)
 
     def __init__(self, face: FaceName, n: int = 1) -> None:
         # we know it is str, still we need to cast for mypy
         super().__init__(str(face.value), n)
         self._face: FaceName = face
+        # Note: _freeze() is called by concrete subclasses
+
+    def _create_with_n(self, n: int) -> Self:
+        """Create a new FaceAlg with the given n value."""
+        instance: Self = object.__new__(type(self))
+        object.__setattr__(instance, "_frozen", False)
+        object.__setattr__(instance, "_code", self._code)
+        object.__setattr__(instance, "_n", n)
+        object.__setattr__(instance, "_slices", self._slices)
+        object.__setattr__(instance, "_face", self._face)
+        object.__setattr__(instance, "_frozen", True)
+        return instance
+
+    def _create_with_slices(self, slices: "slice | Sequence[int] | None") -> Self:
+        """Create a new FaceAlg with the given slices."""
+        instance: Self = object.__new__(type(self))
+        object.__setattr__(instance, "_frozen", False)
+        object.__setattr__(instance, "_code", self._code)
+        object.__setattr__(instance, "_n", self._n)
+        object.__setattr__(instance, "_slices", slices)
+        object.__setattr__(instance, "_face", self._face)
+        object.__setattr__(instance, "_frozen", True)
+        return instance
 
     @property
     def _hide_single_slice(self) -> bool:
@@ -34,12 +59,12 @@ class FaceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
         return True
 
     @final
-    def play(self, cube: Cube, inv: bool = False):
+    def play(self, cube: Cube, inv: bool = False) -> None:
         start_stop: Iterable[int] = self.normalize_slice_index(n_max=1 + cube.n_slices, _default=[1])
 
         cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
 
-    def get_animation_objects(self, cube) -> Tuple[FaceName, Collection[PartSlice]]:
+    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
         face = self._face
 
         slices: Iterable[int] = self.normalize_slice_index(n_max=1 + cube.n_slices, _default=[1])
@@ -58,6 +83,7 @@ class _U(FaceAlg):
 
     def __init__(self) -> None:
         super().__init__(FaceName.U)
+        self._freeze()
 
 
 @final
@@ -65,6 +91,7 @@ class _D(FaceAlg):
 
     def __init__(self) -> None:
         super().__init__(FaceName.D)
+        self._freeze()
 
 
 @final
@@ -72,6 +99,7 @@ class _F(FaceAlg):
 
     def __init__(self) -> None:
         super().__init__(FaceName.F)
+        self._freeze()
 
 
 @final
@@ -79,6 +107,7 @@ class _B(FaceAlg):
 
     def __init__(self) -> None:
         super().__init__(FaceName.B)
+        self._freeze()
 
 
 @final
@@ -86,6 +115,7 @@ class _R(FaceAlg):
 
     def __init__(self) -> None:
         super().__init__(FaceName.R)
+        self._freeze()
 
 
 @final
@@ -93,3 +123,4 @@ class _L(FaceAlg):
 
     def __init__(self) -> None:
         super().__init__(FaceName.L)
+        self._freeze()

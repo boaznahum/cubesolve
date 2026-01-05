@@ -11,19 +11,24 @@ if TYPE_CHECKING:
 
 
 class _Inv(Alg):
+    """
+    Inverse of an algorithm.
+    All instances are frozen (immutable) after construction.
+    """
     from .SeqAlg import SeqAlg
     from .SimpleAlg import NSimpleAlg
 
-    __slots__ = "_alg"
+    __slots__ = ("_alg",)
 
     def __init__(self, _a: Alg) -> None:
         super().__init__()
         self._alg = _a
+        self._freeze()
 
     def __str__(self) -> str:
         return self._alg.atomic_str() + "'"
 
-    def play(self, cube: Cube, inv: bool = False):
+    def play(self, cube: Cube, inv: bool = False) -> None:
         self._alg.play(cube, not inv)
 
     def inv(self) -> Alg:
@@ -49,7 +54,8 @@ class _Inv(Alg):
         a = self._alg.simplify()  # can't be _Mul, nor Inv
 
         if isinstance(a, _Inv.NSimpleAlg):
-            s = a.clone() * -1
+            # Use simple_inverse() instead of clone() * -1
+            s = a.simple_inverse()
             return s.simplify()
         elif isinstance(a, AnnotationAlg):
             return a

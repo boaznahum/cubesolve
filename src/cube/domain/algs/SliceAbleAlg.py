@@ -9,11 +9,22 @@ if TYPE_CHECKING:
 
 
 class SliceAbleAlg(NSimpleAlg, ABC):
+    """
+    Base class for algorithms that support slice indexing like R[1:3].
+    All instances are frozen (immutable) after construction.
+    """
+
+    __slots__ = ("_slices",)
 
     def __init__(self, code: str, n: int = 1) -> None:
         super().__init__(code, n)
         # sorted sequence
-        self.slices: slice | Sequence[int] | None = None  # [1 n]
+        self._slices: slice | Sequence[int] | None = None  # [1 n]
+        # Note: _freeze() is called by concrete subclasses
+
+    @property
+    def slices(self) -> "slice | Sequence[int] | None":
+        return self._slices
 
     @property
     def _hide_single_slice(self) -> bool:
@@ -24,11 +35,20 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         """
         return False
 
-    def copy(self, other: NSimpleAlg) -> Self:
-        assert isinstance(other, SliceAbleAlg)
-        super(SliceAbleAlg, self).copy(other)
-        self.slices = other.slices
-        return self
+    def with_slices(self, slices: "slice | Sequence[int] | None") -> Self:
+        """Create a new instance with the given slices. Subclasses should override."""
+        if slices == self._slices:
+            return self
+        return self._create_with_slices(slices)
+
+    def _create_with_slices(self, slices: "slice | Sequence[int] | None") -> Self:
+        """
+        Create a new instance with the given slices.
+        Subclasses must override to pass their specific constructor args.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} must implement _create_with_slices()"
+        )
 
     def __getitem__(self, items: int | slice | Sequence[int]) -> Self:
 
@@ -36,7 +56,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
             return self
 
         a_slice: slice | Sequence[int]
-        if self.slices is not None:
+        if self._slices is not None:
             raise InternalSWError(f"Already sliced: {self}")
         if isinstance(items, int):
             a_slice = slice(items, items)  # start/stop the same
@@ -47,12 +67,9 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         else:
             raise InternalSWError(f"Unknown type for slice: {items} {type(items)}")
 
-        clone: SliceAbleAlg = self.clone()
-        clone.slices = a_slice
+        return self.with_slices(a_slice)
 
-        return clone  # type: ignore
-
-    def _add_to_str(self, s):
+    def _add_to_str(self, s: str) -> str:
         """
                     None -> default = R
                     (None, None) -> default R
@@ -65,7 +82,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
                 :return:
                 """
 
-        slices = self.slices
+        slices = self._slices
 
         if slices is None:
             return s
@@ -118,7 +135,7 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         :return: [start, stop] in cube coordinates [0, size-2]
         """
 
-        slices = self.slices
+        slices = self._slices
 
         res: Iterable[int]
 
@@ -163,8 +180,8 @@ class SliceAbleAlg(NSimpleAlg, ABC):
         if not isinstance(a, SliceAbleAlg):
             return False
 
-        my = self.slices
-        other = a.slices
+        my = self._slices
+        other = a._slices
         if my is None and other is None:
             return True
 

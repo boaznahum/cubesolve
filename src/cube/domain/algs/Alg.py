@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Self, final
+from typing import TYPE_CHECKING, Any, Self, final
 
 from cube.domain.model.Cube import Cube
 
@@ -10,6 +10,33 @@ if TYPE_CHECKING:
 
 
 class Alg(ABC):
+    """
+    Base class for all algorithms. All Alg subclasses are frozen (immutable)
+    after construction. Use factory methods like `with_n()` to create modified copies.
+    """
+
+    __slots__ = ("_frozen",)
+
+    def __init__(self) -> None:
+        object.__setattr__(self, "_frozen", False)
+
+    def _freeze(self) -> None:
+        """Mark this instance as frozen. Called at end of subclass __init__."""
+        object.__setattr__(self, "_frozen", True)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if getattr(self, "_frozen", False):
+            raise AttributeError(
+                f"Cannot modify frozen {type(self).__name__}.{name}. "
+                f"Use factory methods like with_n() to create modified copies."
+            )
+        object.__setattr__(self, name, value)
+
+    def __delattr__(self, name: str) -> None:
+        if getattr(self, "_frozen", False):
+            raise AttributeError(
+                f"Cannot delete attribute from frozen {type(self).__name__}.{name}"
+            )
 
     @abstractmethod
     def play(self, cube: Cube, inv: bool = False): ...
