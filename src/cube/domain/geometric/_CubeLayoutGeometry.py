@@ -459,7 +459,7 @@ class _CubeLayoutGeometry:
 
         face_infos: list[FaceWalkingInfo] = []
 
-        for _ in range(4):
+        for iteration in range(4):
             # Determine edge properties ONCE
             is_horizontal = current_face.is_bottom_or_top(current_edge)
             is_slot_inverted = (
@@ -473,6 +473,12 @@ class _CubeLayoutGeometry:
                 reference_point: Point = (inv(slot) if is_slot_inverted else slot, current_index)
             else:
                 reference_point = (current_index, inv(slot) if is_slot_inverted else slot)
+
+            # DEBUG: Show iteration info
+            print(f"7. Iteration {iteration}: face={current_face.name.name}, edge={current_edge.name}, "
+                  f"is_horizontal={is_horizontal}, is_slot_inverted={is_slot_inverted}, "
+                  f"is_index_inverted={is_index_inverted}, current_index={current_index}, slot={slot}, "
+                  f"reference_point={reference_point}")
 
             # Create precomputed point function - all decisions baked in
             if is_horizontal and is_slot_inverted and is_index_inverted:
