@@ -410,6 +410,30 @@ class _CubeLayoutGeometry:
         def inv(x: int) -> int:
             return n_slices - 1 - x
 
+        # DEBUG: Show rotation face and cycle info
+        from cube.domain.geometric.slice_layout import _SliceLayout
+        slice_layout = _SliceLayout(slice_name)
+        rotation_face_name = slice_layout.get_face_name()
+        rotation_face = cube.face(rotation_face_name)
+        opposite_face = rotation_face.opposite
+
+        all_faces = [cube.front, cube.back, cube.up, cube.down, cube.left, cube.right]
+        cycle_faces = [f for f in all_faces if f != rotation_face and f != opposite_face]
+
+        print(f"\n=== {slice_name.name} slice ===")
+        print(f"1. Rotation face: {rotation_face_name.name}")
+        print(f"2. Opposite face: {opposite_face.name.name}")
+        print(f"3. Cycle faces (unordered): {[f.name.name for f in cycle_faces]}")
+
+        # Show edges of rotation face in clockwise order
+        edge_positions = ["top", "right", "bottom", "left"]
+        edges = [rotation_face.edge_top, rotation_face.edge_right, rotation_face.edge_bottom, rotation_face.edge_left]
+        print(f"4. Edges of {rotation_face_name.name} (clockwise order):")
+        for pos, edge in zip(edge_positions, edges):
+            other_face = edge.get_other_face(rotation_face)
+            print(f"   {pos}: {other_face.name.name}")
+        # END DEBUG
+
         # Get starting face and edge based on slice type
         match slice_name:
             case SliceName.M:
