@@ -48,43 +48,66 @@ note top of AnnotationAlg: Not a real alg\nNeed to get rid of it
 ' Under NSimpleAlg
 together {
     abstract class AnimationAbleAlg
-
-    abstract class SliceAbleAlg {
-        __getitem__(self, items)
-    }
 }
 
 NSimpleAlg  <|--  AnimationAbleAlg
-NSimpleAlg  <|--  SliceAbleAlg
 
-'under AnimationAbleAlg and SliceAbleAlg
+'under AnimationAbleAlg - Base classes for Face and Slice algs
 together {
-    abstract class FaceAlg
-    abstract class SliceAlg
+    abstract class FaceAlgBase {
+        slices: property
+        play(cube, inv)
+    }
+    abstract class SliceAlgBase {
+        slices: property
+        play(cube, inv)
+    }
     abstract class WholeCubeAlg
-    abstract class DoubleLayerAlg
-
-
-    ' Make SliceAlg right to Face they both under SliceAbleAlg
-    FaceAlg -right[hidden]-> SliceAlg
+    class DoubleLayerAlg
 }
 
-
-SliceAbleAlg  <|--  FaceAlg
-AnimationAbleAlg  <|--  FaceAlg
+AnimationAbleAlg  <|--  FaceAlgBase
+AnimationAbleAlg  <|--  SliceAlgBase
+AnimationAbleAlg  <|--  WholeCubeAlg
 AnimationAbleAlg  <|--  DoubleLayerAlg
 
-note top of DoubleLayerAlg: R[1:N-1]
+note top of DoubleLayerAlg: Rw = R[1:N-1]
 
-note top of SliceAbleAlg: R[2], R[1:2], \nR[2,4]
+' FaceAlg hierarchy - sliceable and sliced versions
+together {
+    abstract class FaceAlg {
+        __getitem__(items) -> SlicedFaceAlg
+    }
+    class SlicedFaceAlg {
+        _slices: slice | Sequence
+        <s>__getitem__</s>
+    }
+}
 
-SliceAbleAlg  <|--  SliceAlg
-AnimationAbleAlg  <|--  SliceAlg
+FaceAlgBase  <|--  FaceAlg
+FaceAlgBase  <|--  SlicedFaceAlg
 
-NSimpleAlg  <|--  WholeCubeAlg
-AnimationAbleAlg  <|--  WholeCubeAlg
+note top of FaceAlg: R, L, U, D, F, B\nCan be sliced: R[1:2]
+note bottom of SlicedFaceAlg: Result of R[1:2]\nCannot be sliced again
 
+' SliceAlg hierarchy - sliceable and sliced versions
+together {
+    abstract class SliceAlg {
+        __getitem__(items) -> SlicedSliceAlg
+    }
+    class SlicedSliceAlg {
+        _slices: slice | Sequence
+        <s>__getitem__</s>
+    }
+}
 
+SliceAlgBase  <|--  SliceAlg
+SliceAlgBase  <|--  SlicedSliceAlg
+
+note top of SliceAlg: M, E, S\nCan be sliced: M[1:2]
+note bottom of SlicedSliceAlg: Result of M[1:2]\nCannot be sliced again
+
+' Concrete FaceAlg classes
 together  {
     FaceAlg <|-- U
     FaceAlg <|-- D
@@ -122,7 +145,6 @@ together  {
 ' try to make groups on under the other
 U -down[hidden]-> S
 Lw -down[hidden]-> X
-
 
 
 

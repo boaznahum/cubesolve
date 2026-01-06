@@ -37,7 +37,7 @@ This document describes the package structure of `src/cube/` and the dependencie
 ### domain/
 | Package | Purpose |
 |---------|---------|
-| `algs/` | Algorithm definitions (Alg, SimpleAlg, SliceAbleAlg) |
+| `algs/` | Algorithm definitions (Alg, SimpleAlg, FaceAlgBase, SliceAlgBase) |
 | `model/` | Cube model classes (Cube, Part, Face, Edge, Corner, etc.) |
 | `solver/` | Solving algorithms |
 | `solver/beginner/` | Layer-by-layer beginner method |
