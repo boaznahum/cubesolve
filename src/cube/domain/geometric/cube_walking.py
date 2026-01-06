@@ -95,7 +95,20 @@ class FaceWalkingInfo:
 
     Attributes:
         face: The Face object
-        edge: The reference edge used during the walk
+        edge: The "entry edge" - the edge shared with the PREVIOUS face in the cycle.
+              This is NOT just any edge - it's specifically the edge through which
+              the slice enters this face from the previous face in traversal order.
+
+              For M slice (F→U→B→D), using edge.opposite() to traverse:
+              - Front: edge_bottom (starting edge, shared with Down)
+              - Up: edge shared with Front (Up's bottom edge)
+              - Back: edge shared with Up (Back's top edge)
+              - Down: edge shared with Back (Down's top edge)
+
+              This edge determines:
+              1. Whether slice cuts rows or columns (horizontal vs vertical edge)
+              2. Whether slot indices are inverted (top/right edges invert)
+              3. The local slice_index translation from the previous face
         reference_point: Where (slice_index=0, slot=0) lands on this face
         n_slices: Total number of slices
         _compute: Precomputed function (slice_index, slot) -> Point
