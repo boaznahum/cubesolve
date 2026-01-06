@@ -177,6 +177,7 @@ from .SuperElement import SuperElement
 if TYPE_CHECKING:
     # noinspection PyUnresolvedReferences
     from .Cube import Cube
+    from cube.domain.geometric.cube_walking import CubeWalkingInfo
 
 _Cube: TypeAlias = "Cube"
 
@@ -219,85 +220,50 @@ class Slice(SuperElement):
             left
         )
 
+    def _get_walking_info(self) -> "CubeWalkingInfo":
+        """
+        Get or create the CubeWalkingInfo for this slice.
+
+        The walking info is created once and can be reused for all slice indices.
+        It contains precomputed functions for efficient point calculation.
+
+        Returns:
+            CubeWalkingInfo for this slice
+        """
+        # Import here to avoid circular imports
+        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
+        return _CubeLayoutGeometry.create_walking_info(self.cube, self._name)
+
     def _get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
-        # First we need to decide with which edge to start, to get consistent results
-        current_edge: Edge  # this determines the direction of rotation
-        current_index: int
-        current_face: Face
+        """
+        Get all edge wings and center slices for a given slice index.
 
-        match self._name:
-            case SliceName.M:  # over L, works
-                current_face = self.cube.front
-                current_edge = current_face.edge_bottom
-                current_index = slice_index
+        This uses CubeWalkingInfo to efficiently compute the points on each face
+        without duplicating the face traversal logic.
 
-            case SliceName.E:  # over D, works
-                current_face = self.cube.right
-                current_edge = current_face.edge_left
-                current_index = slice_index
+        Args:
+            slice_index: Which slice (0 to n_slices-1)
 
-            case SliceName.S:  # over F, works
-                current_face = self.cube.up
-                current_edge = current_face.edge_left
-                current_index = slice_index
-
-            case _:
-                raise ValueError(f"Unknown slice name: {self._name}")
-
-        # noinspection PyUnboundLocalVariable no it is not
-        assert current_face.is_edge(current_edge)
-
+        Returns:
+            Tuple of (edge_wings, center_slices) for all 4 faces
+        """
+        walk_info = self._get_walking_info()
         n_slices = self.n_slices
 
-        inv = self.inv
-
-        # !!! we treat start index as in LTR coordinates on start face !!!
         edges: list[EdgeWing] = []
         centers: list[CenterSlice] = []
-        for _ in range(4):
-            # here start face handling
 
-            center: Center = current_face.center
+        for face_info in walk_info:
+            # Get center slices using precomputed point function
+            center: Center = face_info.face.center
+            for slot in range(n_slices):
+                point = face_info.compute_point(slice_index, slot)
+                centers.append(center.get_center_slice(point))
 
-            _c: Sequence[CenterSlice]
-
-            if current_face.is_bottom_or_top(current_edge):
-                if current_face.is_top_edge(current_edge):
-                    _c = [center.get_center_slice((inv(i), current_index)) for i in range(n_slices)]
-                else:
-                    _c = [center.get_center_slice((i, current_index)) for i in range(n_slices)]
-
-            else:
-                if current_face.is_right_edge(current_edge):
-                    _c = [center.get_center_slice((current_index, inv(i))) for i in range(n_slices)]
-                else:
-                    _c = [center.get_center_slice((current_index, i)) for i in range(n_slices)]
-
-            centers.extend(_c)
-
-            edge_slice = current_edge.get_slice_by_ltr_index(current_face, current_index)
+            # Get edge wing using the stored edge and local slice index
+            local_index = face_info.compute_point(slice_index, 0)[1] if face_info.face.is_bottom_or_top(face_info.edge) else face_info.compute_point(slice_index, 0)[0]
+            edge_slice = face_info.edge.get_slice_by_ltr_index(face_info.face, local_index)
             edges.append(edge_slice)
-
-            # PHYSICAL ALIGNMENT PROBLEM:
-            # When rotating a slice, the user sees a visual line going around 4 faces.
-            # Each face has its own internal storage order, so Face F's index 2 might
-            # be Face U's index 0. But they must be PHYSICALLY ALIGNED - same visual line!
-            #
-            # SOLUTION: Use the shared edge as a BRIDGE between face ltr systems.
-            # The edge translates: current_face ltr → edge index → next_face ltr
-            # This preserves physical alignment across all 4 faces.
-            #
-            # See: docs/design2/edge-face-coordinate-system-approach2.md
-            #
-            next_edge: Edge = current_edge.opposite(current_face)
-            next_face = next_edge.get_other_face(current_face)
-            assert next_face.is_edge(next_edge)
-
-            # Translate: current_face's ltr → edge internal index → next_face's ltr
-            next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
-            current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
-            current_edge = next_edge
-            current_face = next_face
 
         return edges, centers
 
