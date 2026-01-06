@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from cube.domain.model.FaceName import FaceName
-from cube.domain.model.SliceName import SliceName
+if TYPE_CHECKING:
+    from cube.domain.model.FaceName import FaceName
+    from cube.domain.model.SliceName import SliceName
 
 
 class CLGColRow(Enum):
@@ -126,16 +127,19 @@ class SliceLayout(Protocol):
 
 class _SliceLayout(SliceLayout):
 
-    def __init__(self, slice_name: SliceName):
-        self._slice_name: SliceName = slice_name
+    def __init__(self, slice_name: "SliceName"):
+        self._slice_name = slice_name
 
-    def get_face_name(self) -> FaceName:
+    def get_face_name(self) -> "FaceName":
 
         """
         cluad: replace with memebr that passed inthe constructor from the CubeLayout
         :param slice_name:
         :return:
         """
+        # Import at runtime to avoid circular import
+        from cube.domain.model.FaceName import FaceName
+        from cube.domain.model.SliceName import SliceName
 
         match self._slice_name:
 

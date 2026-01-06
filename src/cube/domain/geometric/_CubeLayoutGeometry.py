@@ -453,23 +453,30 @@ class _CubeLayoutGeometry:
         def inv(x: int) -> int:
             return n_slices - 1 - x
 
-        # we mimic the alg in cube.domain.model.Slice.Slice._get_slices_by_index
-        # todo: hard coded
-        match slice_name:
-            case SliceName.M:  # over L, works
-                current_face = cube.front
-                current_edge = current_face.edge_bottom
+        # Derive starting face and edge from of_face geometry
+        # The slice traverses 4 faces adjacent to of_face (and its opposite)
+        # We pick a starting face and edge that give consistent traversal
 
-            case SliceName.E:  # over D, works
-                current_face = cube.right
-                current_edge = current_face.edge_left
+        slice_layout = cube.layout.get_slice(slice_name)
+        of_face_name = slice_layout.get_face_name()
+        opp_face_name = cube.layout.opposite(of_face_name)
 
-            case SliceName.S:  # over F, works
-                current_face = cube.up
-                current_edge = current_face.edge_left
+        # Get Face objects
+        of_face_obj = cube.face(of_face_name)
+        opp_face_obj = cube.face(opp_face_name)
 
-            case _:
-                raise ValueError(f"Unknown slice name: {slice_name}")
+        # Starting face: pick any face from the ring (adjacent to of_face)
+        # The ring faces are the 4 faces adjacent to of_face (excludes of_face and its opposite)
+        ring_face_names = cube.layout.get_adjacent_faces(of_face_name)
+        current_face = cube.face(ring_face_names[0])  # Pick the first one - arbitrary but consistent
+
+        # Starting edge: find a "ring edge" on current_face
+        # Ring edges are edges NOT shared with of_face or its opposite
+        of_edge = current_face.find_shared_edge(of_face_obj)
+        opp_edge = current_face.find_shared_edge(opp_face_obj)
+
+        # Find first edge that's not shared with of_face or opposite
+        current_edge = next(e for e in current_face.edges if e not in [of_edge, opp_edge])
         # now find the reference edge of the start face
 
         # noinspection PyUnboundLocalVariable no it is not
@@ -505,8 +512,6 @@ class _CubeLayoutGeometry:
                 current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
                 current_edge = next_edge
                 current_face = next_face
-
-                #assert current_face is target_face
 
         assert len(point_on_faces) == 4
 
