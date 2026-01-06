@@ -432,23 +432,23 @@ class _CubeLayoutGeometry:
         first_face = cycle_faces_ordered[0]
         second_face = cycle_faces_ordered[1]
 
-        # Find shared edge between them (the EXIT edge)
-        exit_edge = None
+        # Find shared edge between first two faces
+        shared_edge = None
         for edge in [first_face.edge_top, first_face.edge_right, first_face.edge_bottom, first_face.edge_left]:
             if edge.get_other_face(first_face) == second_face:
-                exit_edge = edge
+                shared_edge = edge
                 break
 
-        # Starting edge is the OPPOSITE of exit edge (since algorithm goes to opposite)
+        # Starting edge is the opposite of shared edge
         current_face = first_face
-        current_edge = exit_edge.opposite(first_face)
+        current_edge = shared_edge.opposite(first_face)
 
         # DEBUG
         print(f"\n=== {slice_name.name} slice ===")
         print(f"Rotation face: {rotation_face_name.name}")
-        print(f"Cycle faces (clockwise): {[f.name.name for f in cycle_faces_ordered]}")
+        print(f"Cycle faces: {[f.name.name for f in cycle_faces_ordered]}")
         print(f"First two faces: {first_face.name.name}, {second_face.name.name}")
-        print(f"Exit edge: {exit_edge.name}, Starting edge (opposite): {current_edge.name}")
+        print(f"Shared edge: {shared_edge.name}, Starting edge (opposite): {current_edge.name}")
         print(f"Starting face: {current_face.name.name}")
 
         # Virtual point coordinates for reference
