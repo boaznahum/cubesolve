@@ -18,6 +18,7 @@ We start from a reference edge on the first face with coordinates:
 - slice_index = 0 (which slice)
 - slot = 0 (position along the slice)
 
+Claude: thus is not trye, you dont that is 0,0 on the slice, but yiu know that if yravel alng the slice with same slot number then yku reach the ither virtusl ooint on other face. critical to rxplsun maybe with diagram
 These map to (row, col) = (0, 0) on the first face (for bottom/left edge).
 As we walk through faces, we track where this virtual (0,0) lands on each face.
 
@@ -175,6 +176,7 @@ class FaceWalkingInfo:
           - Left: (local_index, slot)
           - Right: (local_index, inv(slot))
         """
+         # claude: i dint eant sll these calculations, keep the final lamda that do wirk skl decidion need to be made once, reduce nunbet if oublic methids
         local_index = self.get_local_slice_index(start_slice_index)
         slot_value = self._inv(slot) if self.is_slot_inverted else slot
 
@@ -217,7 +219,8 @@ class CubeWalkingInfo:
         n_slices: Total number of slices (cube_size - 2), for sized transforms
         face_infos: Tuple of 4 FaceWalkingInfo in traversal order
 
-    Traversal order by slice:
+   claude: you csnt assume whucy gace we start dony orimise it, only the cycke is important
+   Traversal order by slice:
         M: Front → Up → Back → Down
         E: Right → Back → Left → Front
         S: Up → Right → Down → Left
@@ -312,7 +315,7 @@ class CubeWalkingInfo:
         self,
         source_face: "Face",
         target_face: "Face",
-        row: int,
+        row: int,# claude use Point
         col: int
     ) -> Point:
         """
@@ -361,6 +364,7 @@ class CubeWalkingInfo:
             return n_slices - 1 - x
 
         # Get starting face and edge based on slice type
+        claude: i tikd yiu to keep this method cube layout where it was
         match slice_name:
             case SliceName.M:
                 current_face = cube.front
@@ -423,3 +427,4 @@ class CubeWalkingInfo:
             n_slices=n_slices,
             face_infos=tuple(face_infos)
         )
+
