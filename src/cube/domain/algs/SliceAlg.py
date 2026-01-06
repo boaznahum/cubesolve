@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Self, Sequence, final
 
+from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 from cube.domain.algs.SliceAlgBase import SliceAlgBase
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model.cube_slice import SliceName
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
     from cube.domain.algs.SimpleAlg import SimpleAlg
 
 
-class SliceAlg(SliceAlgBase, ABC):
+class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
     """
     Slice algorithm that CAN be sliced. M[1:2] returns SlicedSliceAlg.
 

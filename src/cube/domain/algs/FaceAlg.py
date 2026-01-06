@@ -2,6 +2,7 @@ from abc import ABC
 from typing import TYPE_CHECKING, Self, Sequence, final
 
 from cube.domain.algs.FaceAlgBase import FaceAlgBase
+from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import FaceName
 
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
     from cube.domain.algs.SimpleAlg import SimpleAlg
 
 
-class FaceAlg(FaceAlgBase, ABC):
+class FaceAlg(FaceAlgBase, SliceAbleAlg, ABC):
     """
     Face algorithm that CAN be sliced. R[1:2] returns SlicedFaceAlg.
 

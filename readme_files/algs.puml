@@ -73,6 +73,13 @@ AnimationAbleAlg  <|--  DoubleLayerAlg
 
 note top of DoubleLayerAlg: Rw = R[1:N-1]
 
+' SliceAbleAlg - marker ABC for isinstance checks
+abstract class SliceAbleAlg {
+    {abstract} __getitem__(items)
+}
+
+note top of SliceAbleAlg: Marker ABC\nisinstance(R, SliceAbleAlg) = True\nisinstance(R[1:2], SliceAbleAlg) = False
+
 ' FaceAlg hierarchy - sliceable and sliced versions
 together {
     abstract class FaceAlg {
@@ -86,9 +93,10 @@ together {
 
 FaceAlgBase  <|--  FaceAlg
 FaceAlgBase  <|--  SlicedFaceAlg
+SliceAbleAlg  <|--  FaceAlg
 
 note top of FaceAlg: R, L, U, D, F, B\nCan be sliced: R[1:2]
-note bottom of SlicedFaceAlg: Result of R[1:2]\nCannot be sliced again
+note bottom of SlicedFaceAlg: Result of R[1:2]\nCannot be sliced again\nNOT SliceAbleAlg
 
 ' SliceAlg hierarchy - sliceable and sliced versions
 together {
@@ -103,9 +111,10 @@ together {
 
 SliceAlgBase  <|--  SliceAlg
 SliceAlgBase  <|--  SlicedSliceAlg
+SliceAbleAlg  <|--  SliceAlg
 
 note top of SliceAlg: M, E, S\nCan be sliced: M[1:2]
-note bottom of SlicedSliceAlg: Result of M[1:2]\nCannot be sliced again
+note bottom of SlicedSliceAlg: Result of M[1:2]\nCannot be sliced again\nNOT SliceAbleAlg
 
 ' Concrete FaceAlg classes
 together  {

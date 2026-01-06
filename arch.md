@@ -167,13 +167,14 @@ Alg (Abstract Base)
 │   └── NSimpleAlg
 │       └── AnimationAbleAlg
 │           ├── FaceAlgBase (common face properties)
-│           │   ├── FaceAlg (R, L, U, D, F, B) - sliceable
-│           │   └── SlicedFaceAlg - result of R[1:2], not sliceable
+│           │   ├── FaceAlg (R, L, U, D, F, B) - also inherits SliceAbleAlg
+│           │   └── SlicedFaceAlg - result of R[1:2], NOT SliceAbleAlg
 │           ├── SliceAlgBase (common slice properties)
-│           │   ├── SliceAlg (M, E, S) - sliceable
-│           │   └── SlicedSliceAlg - result of M[1:2], not sliceable
+│           │   ├── SliceAlg (M, E, S) - also inherits SliceAbleAlg
+│           │   └── SlicedSliceAlg - result of M[1:2], NOT SliceAbleAlg
 │           ├── WholeCubeAlg (x, y, z)
 │           └── DoubleLayerAlg (Wide moves: Rw, Lw, etc.)
+├── SliceAbleAlg (Marker ABC - for isinstance checks)
 ├── SeqAlg (Composite - sequences)
 ├── Inv (Decorator - inverse)
 └── Mul (Decorator - repetition)
@@ -374,10 +375,10 @@ f._edge_right = r._edge_left = _create_edge(edges, f, r, True)
 ```
                          Alg
                           │
-          ┌───────────────┼───────────────┐
-          │               │               │
-     SimpleAlg         SeqAlg         Decorator
-          │               │               │
+          ┌───────────────┼───────────────┬──────────────┐
+          │               │               │              │
+     SimpleAlg         SeqAlg         Decorator    SliceAbleAlg
+          │               │               │          (marker ABC)
      NSimpleAlg      [Alg, ...]      ┌───┴───┐
           │                          │       │
   AnimationAbleAlg                  Inv     Mul
@@ -389,11 +390,14 @@ FaceAlgBase SliceAlgBase WholeCubeAlg DoubleLayerAlg
  ┌──┴──┐  ┌──┴──┐
  │     │  │     │
 FaceAlg SlicedFaceAlg SliceAlg SlicedSliceAlg
-(R,L,..) (R[1:2])    (M,E,S)  (M[1:2])
+(R,L,..)  (R[1:2])    (M,E,S)   (M[1:2])
+   ↑                     ↑
+   └── SliceAbleAlg ─────┘  (FaceAlg & SliceAlg inherit SliceAbleAlg)
 ```
 
 **Type-Safe Slicing:** `FaceAlg.__getitem__()` returns `SlicedFaceAlg` (not `Self`).
 `SlicedFaceAlg` has no `__getitem__` - compile-time prevention of re-slicing.
+`isinstance(R, SliceAbleAlg)` is True, but `isinstance(R[1:2], SliceAbleAlg)` is False.
 
 **Example Composition:**
 ```python
