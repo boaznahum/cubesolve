@@ -434,8 +434,8 @@ def iterate_slice_on_face(slice, face, index): ...
 
 1. [x] Complete inventory of all hardcoded tables
 2. [x] Document the mathematical relationship between tables
-3. [ ] Prototype derivation of transformation table
-4. [ ] Verify B-face asymmetry hypothesis
+3. [x] Prototype derivation of transformation table (CubeWalkingInfo.get_transform())
+4. [x] Verify B-face asymmetry hypothesis (test_cube_walking.py proves it)
 
 ### 12.2 Future Work (Issue #55)
 
