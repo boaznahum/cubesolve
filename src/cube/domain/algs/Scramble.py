@@ -7,7 +7,7 @@ from cube.domain.algs.Inv import _Inv
 from cube.domain.algs.Mul import _Mul
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import SimpleAlg
-from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
+from cube.domain.algs.SliceAlg import SliceAlg
 
 
 class _Scramble(SeqAlg):
@@ -111,14 +111,12 @@ def __scramble(cube_size: int, rnd: Random, n: int, nest) -> list[Alg]:
             k -= 1
             is_simple = True
 
-            if isinstance(a, SliceAbleAlg) and prob(_PROB_SLICE_AN_ALG):
+            if (isinstance(a, FaceAlg) or isinstance(a, SliceAlg)) and prob(_PROB_SLICE_AN_ALG):
 
                 if isinstance(a, FaceAlg):
                     max_slice = cube_size - 1  # see :class:`FaceAlg`
-                elif isinstance(a, SliceAbleAlg):
+                else:  # SliceAlg
                     max_slice = cube_size - 2  # see :class:`SliceAlg`
-                else:
-                    raise RuntimeError("Unknown SliceAbleAlg")
 
                 slice_start = rnd.randint(1, max_slice)
                 if slice_start == max_slice:

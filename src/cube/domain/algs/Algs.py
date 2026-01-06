@@ -9,7 +9,6 @@ from cube.domain.algs.FaceAlg import _B, _D, _F, _L, _R, _U, FaceAlg
 from cube.domain.algs.Scramble import _Scramble, _scramble
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
-from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 from cube.domain.algs.SliceAlg import _E, _M, _S, SliceAlg
 from cube.domain.algs.WholeCubeAlg import _X, _Y, _Z
 from cube.domain.algs.WideFaceAlg import _wb, _wd, _wf, _wl, _wr, _wu
@@ -224,7 +223,7 @@ class Algs:
                 raise InternalSWError(f"Unknown face name {face}")
 
     @classmethod
-    def of_slice(cls, slice_name: SliceName) -> SliceAbleAlg:
+    def of_slice(cls, slice_name: SliceName) -> SliceAlg:
 
         match slice_name:
 

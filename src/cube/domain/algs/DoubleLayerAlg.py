@@ -2,6 +2,7 @@ from typing import Collection, Self, Tuple
 
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.FaceAlg import FaceAlg
+from cube.domain.algs.FaceAlgBase import FaceAlgBase
 from cube.domain.algs.SeqAlg import SeqSimpleAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg, SimpleAlg
 from cube.domain.model.Cube import Cube, FaceName, PartSlice
@@ -40,7 +41,7 @@ class DoubleLayerAlg(AnimationAbleAlg):
     def play(self, cube: Cube, inv: bool = False) -> None:
         self.compose_base_alg(cube).play(cube, inv)
 
-    def compose_base_alg(self, cube: Cube) -> FaceAlg:
+    def compose_base_alg(self, cube: Cube) -> FaceAlgBase:
         fa: FaceAlg = self._of_face_alg
         cube_size = cube.size
 
@@ -48,6 +49,7 @@ class DoubleLayerAlg(AnimationAbleAlg):
             fa = fa.with_n(self._n)
 
         # size-1: 3x3 -> R[1:2], 4x4 [1:3]
+        # Returns SlicedFaceAlg (subclass of FaceAlgBase)
         return fa[1: cube_size - 1]
 
     def xsimplify(self) -> "NSimpleAlg|SeqSimpleAlg":
