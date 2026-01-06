@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterator
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
+from cube.domain.geometric.cube_walking import CubeWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
@@ -332,7 +333,7 @@ class _CubeLayoutGeometry:
         """
         Derive the unit rotation between two faces using slice traversal geometry.
 
-        Uses _travel_all_faces to compute the reference point (0,0) on all 4 faces
+        Uses CubeWalkingInfo to compute the reference point (0,0) on all 4 faces
         that the slice passes through, then derives the FUnitRotation that maps
         the source reference point to the target reference point.
 
@@ -346,18 +347,8 @@ class _CubeLayoutGeometry:
         Returns:
             FUnitRotation representing the coordinate transformation
         """
-
-        point_on_faces = _CubeLayoutGeometry._travel_all_faces(source_face.cube, slice_name)
-
-        assert source_face in point_on_faces
-        assert target_face in point_on_faces
-
-        point_on_source = point_on_faces[source_face]
-        point_on_target = point_on_faces[target_face]
-
-        unit = FUnitRotation.of(n_slices, point_on_source, point_on_target)
-
-        return unit
+        walk_info = CubeWalkingInfo.create(source_face.cube, slice_name)
+        return walk_info.get_transform(source_face, target_face)
 
     @staticmethod
     def _travel_all_faces(
@@ -367,9 +358,11 @@ class _CubeLayoutGeometry:
         """
         Travel through all 4 faces that a slice passes through, computing reference points.
 
-        Starting from a reference edge on the first face, this method walks through
-        all 4 faces in the slice's traversal order, computing where the reference
-        point (0, 0) lands on each face.
+        This method delegates to CubeWalkingInfo.create() which performs the actual
+        traversal, then converts the result to a dict for backward compatibility.
+
+        Starting from a reference edge on the first face, the walk tracks where the
+        virtual reference point (0, 0) lands on each face.
 
         Slice starting faces and edges:
             M: Front face, bottom edge  (traverses F → U → B → D)
@@ -385,134 +378,9 @@ class _CubeLayoutGeometry:
             The reference point is where (row=0, col=0) from the start face
             appears on each face in the traversal.
 
-        ================================================================================
-        IMPLEMENTATION DETAILS - TWO COORDINATES TO TRACK
-        ================================================================================
-
-        When a slice crosses a face, each point has two components:
-
-        1. current_index: WHICH slice (0, 1, 2, ...)
-           - Translates through the shared edge
-           - Uses edge.get_slice_index_from_ltr_index() and get_ltr_index_from_slice_index()
-
-        2. slot_along: WHERE on the slice (position 0, 1, 2, ...)
-           - Physical position along the slice strip
-           - PRESERVED across faces (slot 0 stays slot 0)
-           - But mapping to (row, col) depends on edge type
-
-        ================================================================================
-        SLOT ORDERING (from Slice._get_slices_by_index)
-        ================================================================================
-
-        HORIZONTAL EDGES (top/bottom):
-        ┌─────────────────────────────┬─────────────────────────────┐
-        │  Bottom edge:               │   Top edge:                 │
-        │  slot 0 → (row=0, col=idx)  │   slot 0 → (row=n-1, col=idx)
-        │  slot 1 → (row=1, col=idx)  │   slot 1 → (row=n-2, col=idx)
-        │                             │                             │
-        │  current_index = col        │   current_index = col       │
-        │  slot = row                 │   slot = inv(row)           │
-        └─────────────────────────────┴─────────────────────────────┘
-
-        VERTICAL EDGES (left/right):
-        ┌─────────────────────────────┬─────────────────────────────┐
-        │  Left edge:                 │   Right edge:               │
-        │  slot 0 → (row=idx, col=0)  │   slot 0 → (row=idx, col=n-1)
-        │  slot 1 → (row=idx, col=1)  │   slot 1 → (row=idx, col=n-2)
-        │                             │                             │
-        │  current_index = row        │   current_index = row       │
-        │  slot = col                 │   slot = inv(col)           │
-        └─────────────────────────────┴─────────────────────────────┘
-
-        ================================================================================
-        EXAMPLE: M slice, F(bottom) → U(bottom)
-        ================================================================================
-
-        Source F with edge_bottom:
-        ┌───────────────┐
-        │   0   1   2   │ col
-        │ ┌───┬───┬───┐ │
-        │ │   │   │   │ │ row 2
-        │ ├───┼───┼───┤ │
-        │ │   │ X │   │ │ row 1  ← X at (1, 1)
-        │ ├───┼───┼───┤ │
-        │ │   │   │   │ │ row 0
-        │ └───┴───┴───┘ │
-        │     ↑ slice 1 │
-        └───────────────┘
-
-        Extract: current_index=1, slot_along=1 (bottom edge)
-        Translate current_index through F-U edge
-        Reconstruct at U with its edge
-
-        ================================================================================
+        See Also:
+            CubeWalkingInfo - the underlying implementation with full documentation
+            cube_walking.py - detailed explanation of the virtual point concept
         """
-
-        n_slices = cube.n_slices
-
-        def inv(x: int) -> int:
-            return n_slices - 1 - x
-
-        # Derive starting face and edge from of_face geometry
-        # The slice traverses 4 faces adjacent to of_face (and its opposite)
-        # We pick a starting face and edge that give consistent traversal
-
-        slice_layout = cube.layout.get_slice(slice_name)
-        of_face_name = slice_layout.get_face_name()
-        opp_face_name = cube.layout.opposite(of_face_name)
-
-        # Get Face objects
-        of_face_obj = cube.face(of_face_name)
-        opp_face_obj = cube.face(opp_face_name)
-
-        # Starting face: pick any face from the ring (adjacent to of_face)
-        # The ring faces are the 4 faces adjacent to of_face (excludes of_face and its opposite)
-        ring_face_names = cube.layout.get_adjacent_faces(of_face_name)
-        current_face = cube.face(ring_face_names[0])  # Pick the first one - arbitrary but consistent
-
-        # Starting edge: find a "ring edge" on current_face
-        # Ring edges are edges NOT shared with of_face or its opposite
-        of_edge = current_face.find_shared_edge(of_face_obj)
-        opp_edge = current_face.find_shared_edge(opp_face_obj)
-
-        # Find first edge that's not shared with of_face or opposite
-        current_edge = next(e for e in current_face.edges if e not in [of_edge, opp_edge])
-        # now find the reference edge of the start face
-
-        # noinspection PyUnboundLocalVariable no it is not
-        assert current_face.is_edge(current_edge)
-
-        current_index: int = 0  # arbitrary column or row depends on the Slice
-        other_rol_or_col = 0
-
-        point_on_faces: dict[Face, Point] = {}
-
-        for face_index in range(4):  # walking on two faces
-            if current_face.is_bottom_or_top(current_edge):
-                if current_face.is_top_edge(current_edge):
-                    point_on_current_face = (inv(other_rol_or_col), current_index)
-                else:
-                    point_on_current_face = (other_rol_or_col, current_index)
-
-            else:
-                if current_face.is_right_edge(current_edge):
-                    point_on_current_face = (current_index, inv(other_rol_or_col))
-                else:
-                    point_on_current_face = (current_index, other_rol_or_col)
-
-            point_on_faces[current_face] = point_on_current_face
-
-            if face_index < 3:  # PREPARE FOR THE NEXT
-                next_edge: Edge = current_edge.opposite(current_face)
-                next_face = next_edge.get_other_face(current_face)
-                assert next_face.is_edge(next_edge)
-
-                # SLICE COORDINATES are always ltr
-                next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
-                current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
-                current_edge = next_edge
-                current_face = next_face
-
-        assert len(point_on_faces) == 4
-
-        return point_on_faces
+        walk_info = CubeWalkingInfo.create(cube, slice_name)
+        return {info.face: info.reference_point for info in walk_info}
