@@ -41,6 +41,11 @@ CHECK_CUBE_SANITY = False
 # Enable cube caching for performance optimization
 ENABLE_CUBE_CACHE = True
 
+# Enable algorithm instance caching (flyweight pattern)
+# When True: Only 4 instances per FaceAlg/SliceAlg/WholeCubeAlg (n=0,1,2,3)
+# When False: New instance created each time (original behavior)
+ALG_CACHE_ENABLED = True
+
 ###### Operator ####
 
 # Only initial value, can be changed

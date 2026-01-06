@@ -9,6 +9,7 @@ from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.model.Cube import Cube
+from cube.application import _config as config
 from tests.test_utils import _test_sp
 
 
@@ -64,3 +65,66 @@ def test_solve_performance():
     print(f"\nCube size={s}")
     print(f"Count={count}, average={count / n_executed_tests}")
     print(f"Time(s)={period:.3f}, average per solve={period / n_executed_tests:.3f}s")
+
+
+@pytest.mark.benchmark
+def test_alg_cache_performance():
+    """
+    Benchmark alg caching performance.
+
+    Compares scramble generation with and without ALG_CACHE_ENABLED.
+    """
+    from cube.domain.algs.FaceAlg import FaceAlg
+    from cube.domain.algs.SliceAlg import SliceAlg
+    from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
+
+    n_scrambles = 50
+    cube_size = 5
+
+    def run_scramble_benchmark() -> float:
+        """Run scramble generation with simplify/flatten and return time in seconds."""
+        start = time.time_ns()
+        for seed in range(n_scrambles):
+            alg = Algs.scramble(cube_size, seed, 50)
+            # simplify() and flatten() call with_n() which uses the cache
+            _ = alg.simplify()
+            _ = list(alg.flatten())
+        return (time.time_ns() - start) / 1e9
+
+    def clear_caches():
+        """Clear all alg caches."""
+        FaceAlg._instance_cache.clear()
+        SliceAlg._instance_cache.clear()
+        WholeCubeAlg._instance_cache.clear()
+
+    # Save original setting
+    original_setting = config.ALG_CACHE_ENABLED
+
+    try:
+        # Test with caching disabled
+        config.ALG_CACHE_ENABLED = False
+        clear_caches()
+        time_no_cache = run_scramble_benchmark()
+
+        # Test with caching enabled
+        config.ALG_CACHE_ENABLED = True
+        clear_caches()
+        time_with_cache = run_scramble_benchmark()
+
+        # Print results
+        print(f"\n=== Alg Cache Benchmark ({n_scrambles} scrambles, size {cube_size}) ===")
+        print(f"Without cache: {time_no_cache:.3f}s")
+        print(f"With cache:    {time_with_cache:.3f}s")
+        if time_with_cache > 0:
+            speedup = time_no_cache / time_with_cache
+            print(f"Speedup:       {speedup:.2f}x")
+
+        # Cache stats
+        print(f"\nCache sizes after benchmark:")
+        print(f"  FaceAlg:      {len(FaceAlg._instance_cache)} entries")
+        print(f"  SliceAlg:     {len(SliceAlg._instance_cache)} entries")
+        print(f"  WholeCubeAlg: {len(WholeCubeAlg._instance_cache)} entries")
+
+    finally:
+        # Restore original setting
+        config.ALG_CACHE_ENABLED = original_setting
