@@ -41,7 +41,7 @@ The reference_point stored in FaceWalkingInfo captures where slot=0, slice_index
 lands on each face. From any two reference points, we derive the rotation transform.
 
 ================================================================================
-CYCLE ORDER
+CYCLE ORDER AND ROTATION FACE RELATIONSHIP
 ================================================================================
 
 Each slice passes through exactly 4 faces in a cycle:
@@ -51,6 +51,22 @@ Each slice passes through exactly 4 faces in a cycle:
 
 The cycle order is fixed, but the starting face is an implementation detail.
 Only the RELATIVE order of faces in the cycle matters for transforms.
+
+IMPORTANT: The cycle order matches the CONTENT FLOW during slice rotation.
+
+Each slice rotates like a specific face (its "rotation face"):
+- M rotates like L (clockwise facing L): content flows F → U → B → D
+- E rotates like D (clockwise facing D): content flows R → B → L → F
+- S rotates like F (clockwise facing F): content flows U → R → D → L
+
+This relationship is fundamental:
+1. The face_infos tuple stores faces in content flow order
+2. The rotation face is available via SliceLayout.get_face_name()
+3. When rotating the slice, content at face[i] moves to face[(i+1) % 4]
+
+See also:
+- SliceLayout.get_face_name() for the rotation face
+- Slice.py module docstring for detailed slice traversal diagrams
 
 ================================================================================
 USAGE

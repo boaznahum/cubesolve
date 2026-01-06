@@ -384,12 +384,26 @@ class _CubeLayoutGeometry:
         (slice_index=0, slot=0) lands on each face. It also precomputes
         the point computation function for each face for efficiency.
 
+        The face_infos are returned in CONTENT FLOW order - the order in which
+        content moves during a positive slice rotation. Each slice rotates like
+        a specific face (its "rotation face"):
+        - M rotates like L: F → U → B → D
+        - E rotates like D: R → B → L → F
+        - S rotates like F: U → R → D → L
+
+        The entry edge for each face is the edge shared with the PREVIOUS face
+        in the cycle. This edge determines coordinate orientation on that face.
+
         Args:
             cube: The cube instance
             slice_name: Which slice (M, E, S) to traverse
 
         Returns:
             CubeWalkingInfo with reference points and precomputed functions
+
+        See Also:
+            SliceLayout.get_face_name() - returns the rotation face for a slice
+            cube_walking.py - explains slot consistency and cycle order
         """
         n_slices = cube.n_slices
 
