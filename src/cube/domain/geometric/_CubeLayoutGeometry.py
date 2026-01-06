@@ -432,23 +432,22 @@ class _CubeLayoutGeometry:
         first_face = cycle_faces_ordered[0]
         second_face = cycle_faces_ordered[1]
 
-        # Find shared edge between first two faces
+        # Find shared edge between first two faces - this IS the starting edge
         shared_edge = None
         for edge in [first_face.edge_top, first_face.edge_right, first_face.edge_bottom, first_face.edge_left]:
             if edge.get_other_face(first_face) == second_face:
                 shared_edge = edge
                 break
 
-        # Starting edge is the opposite of shared edge
         current_face = first_face
-        current_edge = shared_edge.opposite(first_face)
+        current_edge = shared_edge
 
         # DEBUG
         print(f"\n=== {slice_name.name} slice ===")
         print(f"Rotation face: {rotation_face_name.name}")
         print(f"Cycle faces: {[f.name.name for f in cycle_faces_ordered]}")
         print(f"First two faces: {first_face.name.name}, {second_face.name.name}")
-        print(f"Shared edge: {shared_edge.name}, Starting edge (opposite): {current_edge.name}")
+        print(f"Shared edge = Starting edge: {current_edge.name}")
         print(f"Starting face: {current_face.name.name}")
 
         # Virtual point coordinates for reference
@@ -517,17 +516,18 @@ class _CubeLayoutGeometry:
 
             # Move to next face (except after the 4th)
             if len(face_infos) < 4:
-                next_edge: Edge = current_edge.opposite(current_face)
-                next_face = next_edge.get_other_face(current_face)
+                # Follow current_edge to next face, then get opposite on new face
+                next_face = current_edge.get_other_face(current_face)
+                next_edge: Edge = current_edge.opposite(next_face)
 
                 # DEBUG: Show how we move to next face
-                print(f"   -> opposite edge of {current_edge.name} on {current_face.name.name} is {next_edge.name} -> goes to {next_face.name.name}")
+                print(f"   -> {current_edge.name} leads to {next_face.name.name}, opposite on {next_face.name.name} is {next_edge.name}")
 
                 # Translate slice index through the edge
-                next_slice_index = next_edge.get_slice_index_from_ltr_index(
+                next_slice_index = current_edge.get_slice_index_from_ltr_index(
                     current_face, current_index
                 )
-                current_index = next_edge.get_ltr_index_from_slice_index(
+                current_index = current_edge.get_ltr_index_from_slice_index(
                     next_face, next_slice_index
                 )
                 current_edge = next_edge
