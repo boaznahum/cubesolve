@@ -78,7 +78,6 @@ from typing import Collection, Self, Tuple
 
 from cube.domain.algs._internal_utils import _inv, n_to_str
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
-from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.model import Cube, FaceName, PartSlice
 
 
