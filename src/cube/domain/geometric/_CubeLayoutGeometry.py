@@ -475,7 +475,18 @@ class _CubeLayoutGeometry:
                 reference_point = (current_index, inv(slot) if is_slot_inverted else slot)
 
             # DEBUG: Show iteration info
-            print(f"7. Iteration {iteration}: face={current_face.name.name}, edge={current_edge.name}, "
+            # Which edge position is this on current_face?
+            if current_edge == current_face.edge_top:
+                edge_pos = "top"
+            elif current_edge == current_face.edge_bottom:
+                edge_pos = "bottom"
+            elif current_edge == current_face.edge_left:
+                edge_pos = "left"
+            elif current_edge == current_face.edge_right:
+                edge_pos = "right"
+            else:
+                edge_pos = "???"
+            print(f"7. Iteration {iteration}: face={current_face.name.name}, edge={current_edge.name} (position={edge_pos}), "
                   f"is_horizontal={is_horizontal}, is_slot_inverted={is_slot_inverted}, "
                   f"is_index_inverted={is_index_inverted}, current_index={current_index}, slot={slot}, "
                   f"reference_point={reference_point}")
