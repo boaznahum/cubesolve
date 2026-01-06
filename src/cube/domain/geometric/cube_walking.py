@@ -2,76 +2,87 @@
 Cube Walking - Data structures for traversing cube faces along a slice.
 
 This module provides data structures that capture the traversal of 4 faces
-that a slice (M, E, or S) passes through. The key insight is tracking where
-a "virtual point (0,0)" lands on each face during the walk.
+that a slice (M, E, or S) passes through.
 
 Related: Issue #55 - Replace hard-coded lookup tables with mathematical derivation
 
 ================================================================================
-VIRTUAL POINT CONCEPT
+SLOT CONSISTENCY PRINCIPLE
 ================================================================================
 
-The "virtual point (0,0)" is a reference point used to determine the coordinate
-transformation between faces in a slice traversal.
+When walking along a slice through 4 faces, the KEY insight is:
 
-We start from a reference edge on the first face with coordinates:
-- slice_index = 0 (which slice)
-- slot = 0 (position along the slice)
+    If you travel along the slice keeping the same SLOT number,
+    you reach corresponding positions on each face.
 
-Claude: thus is not trye, you dont that is 0,0 on the slice, but yiu know that if yravel alng the slice with same slot number then yku reach the ither virtusl ooint on other face. critical to rxplsun maybe with diagram
-These map to (row, col) = (0, 0) on the first face (for bottom/left edge).
-As we walk through faces, we track where this virtual (0,0) lands on each face.
+This is NOT about a specific point (0,0). Rather:
+- Pick any slot number (0, 1, 2, ...)
+- Follow that slot through all 4 faces
+- The positions you visit are "corresponding" positions
 
-From any two reference points, we can derive the rotation transform
-(CW0=identity, CW1=90°, CW2=180°, CW3=270°) using FUnitRotation.of().
+Diagram - M slice, slot 0 (leftmost position on each face):
+
+    ┌─────────┐
+    │ Front   │     slot 0 is at (0, slice_idx) - bottom edge
+    │    ↑    │
+    └────┼────┘
+         │
+    ┌────┼────┐
+    │    ↑    │     slot 0 is at (0, slice_idx) - bottom edge
+    │ Up      │
+    └────┼────┘
+         │
+    ┌────┼────┐
+    │    ↓    │     slot 0 is at (n-1, slice_idx) - TOP edge (inverted!)
+    │ Back    │
+    └─────────┘
+
+The reference_point stored in FaceWalkingInfo captures where slot=0, slice_index=0
+lands on each face. From any two reference points, we derive the rotation transform.
 
 ================================================================================
-TRAVERSAL ORDER BY SLICE
+CYCLE ORDER
 ================================================================================
 
-Each slice passes through exactly 4 faces:
-- M slice: F → U → B → D (parallel to L and R)
-- E slice: R → B → L → F (parallel to U and D)
-- S slice: U → R → D → L (parallel to F and B)
+Each slice passes through exactly 4 faces in a cycle:
+- M slice: cycles through F, U, B, D (parallel to L and R)
+- E slice: cycles through R, B, L, F (parallel to U and D)
+- S slice: cycles through U, R, D, L (parallel to F and B)
 
-The starting face and edge for each slice:
-- M: Front face, bottom edge
-- E: Right face, left edge
-- S: Up face, left edge
+The cycle order is fixed, but the starting face is an implementation detail.
+Only the RELATIVE order of faces in the cycle matters for transforms.
 
 ================================================================================
 USAGE
 ================================================================================
 
 # Create walking info ONCE (can be cached)
-walk_info = CubeWalkingInfo.create(cube, SliceName.M)
+walk_info = create_walking_info(cube, SliceName.M)
 
 # Get transform between any two faces
 transform = walk_info.get_transform(face_f, face_u)
 
 # Apply transform to translate points
-sized_transform = transform.of_n_slices(n_slices)
-new_row, new_col = sized_transform(row, col)
-
-# Or use the convenience method
-new_point = walk_info.translate_point(source_face, target_face, row, col)
+new_point = walk_info.translate_point(source_face, target_face, point)
 
 ================================================================================
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterator
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Callable, Iterator
 
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.types import Point
 
 if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
-    from cube.domain.model.cube_slice import SliceName
     from cube.domain.model.Edge import Edge
     from cube.domain.model.Face import Face
+
+
+# Type alias for the point computation function
+PointComputer = Callable[[int, int], Point]  # (slice_index, slot) -> Point
 
 
 @dataclass(frozen=True)
@@ -79,126 +90,54 @@ class FaceWalkingInfo:
     """
     Information about one face in a slice traversal.
 
-    This captures where the virtual point (0,0) lands on this face,
-    which is used to derive the rotation transform to/from other faces.
-
-    It also stores enough information to compute points for ANY slice_index,
-    not just slice_index=0. This allows the walking info to be cached and
-    reused for all slice indices.
+    This captures where slot=0, slice_index=0 lands on this face (reference_point),
+    and provides a precomputed function to compute any point efficiently.
 
     Attributes:
         face: The Face object
-        edge: The reference edge used during the walk (determines orientation)
-        reference_point: Where virtual (0,0) lands on this face in LTR coordinates.
-                        This is the key data for computing transforms.
-        local_slice_index: The translated slice_index for virtual (0,0) on this face.
-                          If 0, slice indices are NOT inverted. If n_slices-1, they ARE inverted.
-        n_slices: Total number of slices (for inversion calculations)
+        edge: The reference edge used during the walk
+        reference_point: Where (slice_index=0, slot=0) lands on this face
+        n_slices: Total number of slices
+        _compute: Precomputed function (slice_index, slot) -> Point
+                  All decisions (edge type, inversions) are baked in at construction.
 
-    The reference_point depends on:
-    - Edge type (top/bottom = horizontal, left/right = vertical)
-    - Edge side (top/right edges invert the slot coordinate)
-
-    Computing points for arbitrary slice_index:
-    - Use get_local_slice_index() to translate from start slice_index to this face's index
-    - Use compute_point() to get (row, col) for any (slice_index, slot)
-
-    Example:
-        For M slice starting at Front/bottom edge:
-        - Front: reference_point = (0, 0), local_slice_index = 0
-        - Up:    reference_point = (0, 0), local_slice_index = 0
-        - Back:  reference_point = (2, 0), local_slice_index = 0 (but slot inverted)
-        - Down:  reference_point = (2, 0), local_slice_index = 0 (but slot inverted)
+    The reference_point is used to derive transforms between faces.
+    The _compute function is used to get any point efficiently.
     """
 
     face: "Face"
     edge: "Edge"
     reference_point: Point
-    local_slice_index: int
     n_slices: int
+    _compute: PointComputer = field(compare=False)  # Don't compare functions
 
-    @property
-    def is_horizontal_edge(self) -> bool:
-        """True if edge is top or bottom (slice cuts columns)."""
-        return self.face.is_bottom_or_top(self.edge)
-
-    @property
-    def is_slot_inverted(self) -> bool:
-        """True if slot coordinate is inverted (top or right edge)."""
-        if self.is_horizontal_edge:
-            return self.face.is_top_edge(self.edge)
-        else:
-            return self.face.is_right_edge(self.edge)
-
-    @property
-    def is_index_inverted(self) -> bool:
-        """True if slice_index is inverted relative to start face."""
-        # If local_slice_index for virtual 0 is non-zero, the index is inverted
-        return self.local_slice_index != 0
-
-    def _inv(self, x: int) -> int:
-        """Invert index: n_slices - 1 - x."""
-        return self.n_slices - 1 - x
-
-    def get_local_slice_index(self, start_slice_index: int) -> int:
-        """
-        Convert a starting slice_index to this face's local slice index.
-
-        Args:
-            start_slice_index: The slice index on the first face (0 to n_slices-1)
-
-        Returns:
-            The corresponding slice index on this face
-        """
-        if self.is_index_inverted:
-            return self._inv(start_slice_index)
-        return start_slice_index
-
-    def compute_point(self, start_slice_index: int, slot: int) -> Point:
+    def compute_point(self, slice_index: int, slot: int) -> Point:
         """
         Compute (row, col) for a given slice_index and slot position.
 
-        This is the key method for computing points on this face for any
-        slice_index, using the cached edge orientation information.
+        This uses the precomputed function - no runtime decisions.
 
         Args:
-            start_slice_index: The slice index on the FIRST face (0 to n_slices-1)
+            slice_index: Which slice (0 to n_slices-1)
             slot: Position along the slice (0 to n_slices-1)
 
         Returns:
             (row, col) in LTR coordinates on this face
-
-        The mapping depends on edge type:
-        - Horizontal edge (top/bottom): slice cuts columns
-          - Bottom: (slot, local_index)
-          - Top: (inv(slot), local_index)
-        - Vertical edge (left/right): slice cuts rows
-          - Left: (local_index, slot)
-          - Right: (local_index, inv(slot))
         """
-         # claude: i dint eant sll these calculations, keep the final lamda that do wirk skl decidion need to be made once, reduce nunbet if oublic methids
-        local_index = self.get_local_slice_index(start_slice_index)
-        slot_value = self._inv(slot) if self.is_slot_inverted else slot
+        return self._compute(slice_index, slot)
 
-        if self.is_horizontal_edge:
-            # Slice cuts columns - slot varies row
-            return (slot_value, local_index)
-        else:
-            # Slice cuts rows - slot varies column
-            return (local_index, slot_value)
-
-    def iterate_points(self, start_slice_index: int) -> Iterator[Point]:
+    def iterate_points(self, slice_index: int) -> Iterator[Point]:
         """
         Iterate over all (row, col) positions along a slice on this face.
 
         Args:
-            start_slice_index: The slice index on the FIRST face
+            slice_index: Which slice
 
         Yields:
             (row, col) for slot 0, 1, ..., n_slices-1
         """
         for slot in range(self.n_slices):
-            yield self.compute_point(start_slice_index, slot)
+            yield self._compute(slice_index, slot)
 
 
 @dataclass(frozen=True)
@@ -206,34 +145,17 @@ class CubeWalkingInfo:
     """
     Complete information about walking a slice through all 4 faces.
 
-    This captures the traversal of a slice (M, E, or S) through the 4 faces
-    it passes through. The face_infos are stored in traversal order AND
-    can be looked up by Face object.
-
-    The key data is the reference_point on each face - where virtual (0,0)
-    lands. From any two reference points, we can derive the rotation
-    transform between those faces.
+    The face_infos are stored in cycle order and can be looked up by Face object.
 
     Attributes:
         slice_name: Which slice (M, E, or S)
-        n_slices: Total number of slices (cube_size - 2), for sized transforms
-        face_infos: Tuple of 4 FaceWalkingInfo in traversal order
-
-   claude: you csnt assume whucy gace we start dony orimise it, only the cycke is important
-   Traversal order by slice:
-        M: Front → Up → Back → Down
-        E: Right → Back → Left → Front
-        S: Up → Right → Down → Left
+        n_slices: Total number of slices (cube_size - 2)
+        face_infos: Tuple of 4 FaceWalkingInfo in cycle order
 
     Usage:
-        # Create once, cache for reuse
-        walk_info = CubeWalkingInfo.create(cube, SliceName.M)
-
-        # Get unit transform between faces
+        walk_info = create_walking_info(cube, SliceName.M)
         transform = walk_info.get_transform(face_f, face_u)
-
-        # Translate a point from one face to another
-        new_point = walk_info.translate_point(face_f, face_u, row, col)
+        new_point = walk_info.translate_point(face_f, face_u, (row, col))
     """
 
     slice_name: "SliceName"
@@ -246,7 +168,7 @@ class CubeWalkingInfo:
             raise ValueError(f"CubeWalkingInfo requires exactly 4 faces, got {len(self.face_infos)}")
 
     def __iter__(self) -> Iterator[FaceWalkingInfo]:
-        """Iterate over face infos in traversal order."""
+        """Iterate over face infos in cycle order."""
         return iter(self.face_infos)
 
     def __len__(self) -> int:
@@ -254,21 +176,15 @@ class CubeWalkingInfo:
         return len(self.face_infos)
 
     def __getitem__(self, index: int) -> FaceWalkingInfo:
-        """Get face info by traversal index (0-3)."""
+        """Get face info by cycle index (0-3)."""
         return self.face_infos[index]
 
     def get_face_info(self, face: "Face") -> FaceWalkingInfo:
         """
         Look up FaceWalkingInfo by Face object.
 
-        Args:
-            face: The Face to look up
-
-        Returns:
-            FaceWalkingInfo for that face
-
         Raises:
-            KeyError: If face is not in this traversal (e.g., parallel face)
+            KeyError: If face is not in this traversal
         """
         for info in self.face_infos:
             if info.face is face:
@@ -281,7 +197,7 @@ class CubeWalkingInfo:
 
     @property
     def faces(self) -> tuple["Face", ...]:
-        """Get tuple of faces in traversal order."""
+        """Get tuple of faces in cycle order."""
         return tuple(info.face for info in self.face_infos)
 
     def get_transform(self, source_face: "Face", target_face: "Face") -> FUnitRotation:
@@ -289,12 +205,6 @@ class CubeWalkingInfo:
         Get the unit rotation transform from source_face to target_face.
 
         The transform is derived from the reference points on both faces.
-        Given a point (r, c) on source_face, the corresponding point on
-        target_face is: transform.of_n_slices(n_slices)(r, c)
-
-        Args:
-            source_face: The face to transform FROM
-            target_face: The face to transform TO
 
         Returns:
             FUnitRotation that transforms coordinates from source to target
@@ -315,116 +225,18 @@ class CubeWalkingInfo:
         self,
         source_face: "Face",
         target_face: "Face",
-        row: int,# claude use Point
-        col: int
+        point: Point
     ) -> Point:
         """
         Translate a point from source_face to target_face.
 
-        Convenience method that gets the transform and applies it.
-
         Args:
             source_face: The face the point is on
             target_face: The face to translate to
-            row: Row coordinate on source_face (LTR)
-            col: Column coordinate on source_face (LTR)
+            point: (row, col) on source_face
 
         Returns:
             (row, col) on target_face in LTR coordinates
         """
         transform = self.get_transform(source_face, target_face)
-        return transform.of_n_slices(self.n_slices)(row, col)
-
-    @staticmethod
-    def create(cube: "Cube", slice_name: "SliceName") -> "CubeWalkingInfo":
-        """
-        Create walking info by traversing the 4 faces of a slice.
-
-        This walks through all 4 faces starting from a reference edge,
-        tracking where the virtual point (0,0) lands on each face.
-
-        The walk uses:
-        - slice_index = 0 (first slice)
-        - slot = 0 (first position along slice)
-
-        These map to reference_point on each face based on edge type.
-
-        Args:
-            cube: The cube instance
-            slice_name: Which slice (M, E, S) to traverse
-
-        Returns:
-            CubeWalkingInfo with reference points for all 4 faces
-        """
-        from cube.domain.model.cube_slice import SliceName
-
-        n_slices = cube.n_slices
-
-        def inv(x: int) -> int:
-            return n_slices - 1 - x
-
-        # Get starting face and edge based on slice type
-        claude: i tikd yiu to keep this method cube layout where it was
-        match slice_name:
-            case SliceName.M:
-                current_face = cube.front
-                current_edge = current_face.edge_bottom
-            case SliceName.E:
-                current_face = cube.right
-                current_edge = current_face.edge_left
-            case SliceName.S:
-                current_face = cube.up
-                current_edge = current_face.edge_left
-            case _:
-                raise ValueError(f"Unknown slice name: {slice_name}")
-
-        # Virtual point coordinates
-        current_index: int = 0  # which slice
-        slot: int = 0  # position along slice
-
-        face_infos: list[FaceWalkingInfo] = []
-
-        for _ in range(4):
-            # Compute reference_point based on edge type
-            if current_face.is_bottom_or_top(current_edge):
-                # Horizontal edge: slice cuts columns
-                if current_face.is_top_edge(current_edge):
-                    reference_point: Point = (inv(slot), current_index)
-                else:  # bottom edge
-                    reference_point = (slot, current_index)
-            else:
-                # Vertical edge: slice cuts rows
-                if current_face.is_right_edge(current_edge):
-                    reference_point = (current_index, inv(slot))
-                else:  # left edge
-                    reference_point = (current_index, slot)
-
-            face_infos.append(FaceWalkingInfo(
-                face=current_face,
-                edge=current_edge,
-                reference_point=reference_point,
-                local_slice_index=current_index,
-                n_slices=n_slices
-            ))
-
-            # Move to next face (except after the 4th)
-            if len(face_infos) < 4:
-                next_edge = current_edge.opposite(current_face)
-                next_face = next_edge.get_other_face(current_face)
-
-                # Translate slice index through the edge
-                next_slice_index = next_edge.get_slice_index_from_ltr_index(
-                    current_face, current_index
-                )
-                current_index = next_edge.get_ltr_index_from_slice_index(
-                    next_face, next_slice_index
-                )
-                current_edge = next_edge
-                current_face = next_face
-
-        return CubeWalkingInfo(
-            slice_name=slice_name,
-            n_slices=n_slices,
-            face_infos=tuple(face_infos)
-        )
-
+        return transform.of_n_slices(self.n_slices)(*point)
