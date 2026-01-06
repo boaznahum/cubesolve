@@ -448,6 +448,11 @@ class _CubeLayoutGeometry:
             case _:
                 raise ValueError(f"Unknown slice name: {slice_name}")
 
+        # DEBUG: Show starting face and edge
+        print(f"5. Starting face: {current_face.name.name}")
+        print(f"6. Starting edge: {current_edge.name}")
+        # END DEBUG
+
         # Virtual point coordinates for reference
         current_index: int = 0  # which slice
         slot: int = 0  # position along slice
