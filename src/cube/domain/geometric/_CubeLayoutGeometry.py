@@ -410,48 +410,46 @@ class _CubeLayoutGeometry:
         def inv(x: int) -> int:
             return n_slices - 1 - x
 
-        # DEBUG: Show rotation face and cycle info
+        # Derive starting face and edge from rotation face
         from cube.domain.geometric.slice_layout import _SliceLayout
         slice_layout = _SliceLayout(slice_name)
         rotation_face_name = slice_layout.get_face_name()
         rotation_face = cube.face(rotation_face_name)
-        opposite_face = rotation_face.opposite
 
-        all_faces = [cube.front, cube.back, cube.up, cube.down, cube.left, cube.right]
-        cycle_faces = [f for f in all_faces if f != rotation_face and f != opposite_face]
+        # Get cycle faces from rotation face's edges
+        # L and R faces use counter-clockwise order; others use clockwise
+        if rotation_face_name in [FaceName.L, FaceName.R]:
+            # Counter-clockwise: right, top, left, bottom
+            rotation_edges = [rotation_face.edge_right, rotation_face.edge_top,
+                             rotation_face.edge_left, rotation_face.edge_bottom]
+        else:
+            # Clockwise: top, right, bottom, left
+            rotation_edges = [rotation_face.edge_top, rotation_face.edge_right,
+                             rotation_face.edge_bottom, rotation_face.edge_left]
+        cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
+        # Pick first two consecutive faces
+        first_face = cycle_faces_ordered[0]
+        second_face = cycle_faces_ordered[1]
+
+        # Find shared edge between them (the EXIT edge)
+        exit_edge = None
+        for edge in [first_face.edge_top, first_face.edge_right, first_face.edge_bottom, first_face.edge_left]:
+            if edge.get_other_face(first_face) == second_face:
+                exit_edge = edge
+                break
+
+        # Starting edge is the OPPOSITE of exit edge (since algorithm goes to opposite)
+        current_face = first_face
+        current_edge = exit_edge.opposite(first_face)
+
+        # DEBUG
         print(f"\n=== {slice_name.name} slice ===")
-        print(f"1. Rotation face: {rotation_face_name.name}")
-        print(f"2. Opposite face: {opposite_face.name.name}")
-        print(f"3. Cycle faces (unordered): {[f.name.name for f in cycle_faces]}")
-
-        # Show edges of rotation face in clockwise order
-        edge_positions = ["top", "right", "bottom", "left"]
-        edges = [rotation_face.edge_top, rotation_face.edge_right, rotation_face.edge_bottom, rotation_face.edge_left]
-        print(f"4. Edges of {rotation_face_name.name} (clockwise order):")
-        for pos, edge in zip(edge_positions, edges):
-            other_face = edge.get_other_face(rotation_face)
-            print(f"   {pos}: {other_face.name.name}")
-        # END DEBUG
-
-        # Get starting face and edge based on slice type
-        match slice_name:
-            case SliceName.M:
-                current_face = cube.front
-                current_edge = current_face.edge_bottom
-            case SliceName.E:
-                current_face = cube.right
-                current_edge = current_face.edge_left
-            case SliceName.S:
-                current_face = cube.up
-                current_edge = current_face.edge_left
-            case _:
-                raise ValueError(f"Unknown slice name: {slice_name}")
-
-        # DEBUG: Show starting face and edge
-        print(f"5. Starting face: {current_face.name.name}")
-        print(f"6. Starting edge: {current_edge.name}")
-        # END DEBUG
+        print(f"Rotation face: {rotation_face_name.name}")
+        print(f"Cycle faces (clockwise): {[f.name.name for f in cycle_faces_ordered]}")
+        print(f"First two faces: {first_face.name.name}, {second_face.name.name}")
+        print(f"Exit edge: {exit_edge.name}, Starting edge (opposite): {current_edge.name}")
+        print(f"Starting face: {current_face.name.name}")
 
         # Virtual point coordinates for reference
         current_index: int = 0  # which slice
