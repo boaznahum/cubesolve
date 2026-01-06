@@ -522,6 +522,9 @@ class _CubeLayoutGeometry:
                 next_edge: Edge = current_edge.opposite(current_face)
                 next_face = next_edge.get_other_face(current_face)
 
+                # DEBUG: Show how we move to next face
+                print(f"   -> opposite edge of {current_edge.name} on {current_face.name.name} is {next_edge.name} -> goes to {next_face.name.name}")
+
                 # Translate slice index through the edge
                 next_slice_index = next_edge.get_slice_index_from_ltr_index(
                     current_face, current_index
