@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import ClassVar, Collection, Self, Tuple, final
+from typing import Collection, Self, Tuple, final
 
 from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
@@ -12,56 +12,15 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
     """
     Whole cube rotation algorithms (X, Y, Z).
     All instances are frozen (immutable) after construction.
-
-    When ALG_CACHE_ENABLED is True, only 4 instances exist per axis (n=0,1,2,3).
-    The with_n() method returns cached instances instead of creating new ones.
     """
 
     __slots__ = ("_axis_name",)
-
-    # Cache: (concrete_class, n % 4) -> instance
-    # Shared across all WholeCubeAlg subclasses
-    _instance_cache: ClassVar[dict[tuple[type, int], "WholeCubeAlg"]] = {}
 
     def __init__(self, axis_name: AxisName, n: int = 1) -> None:
         # cast to satisfy numpy
         super().__init__(str(axis_name.value), n)
         self._axis_name = axis_name
         # Note: _freeze() is called by concrete subclasses
-
-    def _register_in_cache(self) -> None:
-        """Register this instance in the cache. Called after _freeze()."""
-        from cube.application import _config as config
-        if config.ALG_CACHE_ENABLED:
-            key = (type(self), self._n % 4)
-            if key not in self._instance_cache:
-                self._instance_cache[key] = self
-
-    def with_n(self, n: int) -> Self:
-        """
-        Return instance with given n value.
-
-        When ALG_CACHE_ENABLED: Returns cached instance (only 4 per axis).
-        When disabled: Creates new instance each time.
-        """
-        from cube.application import _config as config
-
-        n_norm = n % 4
-
-        if config.ALG_CACHE_ENABLED:
-            key = (type(self), n_norm)
-            cached = self._instance_cache.get(key)
-            if cached is not None:
-                return cached  # type: ignore[return-value]
-            # Create, cache, and return
-            instance = self._create_with_n(n_norm)
-            self._instance_cache[key] = instance
-            return instance
-        else:
-            # Original behavior
-            if n == self._n:
-                return self
-            return self._create_with_n(n)
 
     def _create_with_n(self, n: int) -> Self:
         """Create a new WholeCubeAlg with the given n value."""
@@ -124,25 +83,22 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
 @final
 class _X(WholeCubeAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(AxisName.X, n)
+    def __init__(self) -> None:
+        super().__init__(AxisName.X)
         self._freeze()
-        self._register_in_cache()
 
 
 @final
 class _Y(WholeCubeAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(AxisName.Y, n)
+    def __init__(self) -> None:
+        super().__init__(AxisName.Y)
         self._freeze()
-        self._register_in_cache()
 
 
 @final
 class _Z(WholeCubeAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(AxisName.Z, n)
+    def __init__(self) -> None:
+        super().__init__(AxisName.Z)
         self._freeze()
-        self._register_in_cache()

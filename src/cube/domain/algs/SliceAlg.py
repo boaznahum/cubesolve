@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, ClassVar, Self, Sequence, final
+from typing import TYPE_CHECKING, Self, Sequence, final
 
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 from cube.domain.algs.SliceAlgBase import SliceAlgBase
@@ -21,60 +21,19 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
 
     All instances are frozen (immutable) after construction.
 
-    When ALG_CACHE_ENABLED is True, only 4 instances exist per slice (n=0,1,2,3).
-    The with_n() method returns cached instances instead of creating new ones.
-
     See SliceAlgBase for documentation on slice indexing conventions.
     """
 
     __slots__ = ()  # No additional slots - _slice_name is in SliceAlgBase
 
-    # Cache: (concrete_class, n % 4) -> instance
-    # Shared across all SliceAlg subclasses
-    _instance_cache: ClassVar[dict[tuple[type, int], "SliceAlg"]] = {}
-
     def __init__(self, slice_name: SliceName, n: int = 1) -> None:
         super().__init__(slice_name, n)
         # Note: _freeze() is called by concrete subclasses
-
-    def _register_in_cache(self) -> None:
-        """Register this instance in the cache. Called after _freeze()."""
-        from cube.application import _config as config
-        if config.ALG_CACHE_ENABLED:
-            key = (type(self), self._n % 4)
-            if key not in self._instance_cache:
-                self._instance_cache[key] = self
 
     @property
     def slices(self) -> None:
         """Return slice info. Always None for unsliced SliceAlg."""
         return None
-
-    def with_n(self, n: int) -> Self:
-        """
-        Return instance with given n value.
-
-        When ALG_CACHE_ENABLED: Returns cached instance (only 4 per slice).
-        When disabled: Creates new instance each time.
-        """
-        from cube.application import _config as config
-
-        n_norm = n % 4
-
-        if config.ALG_CACHE_ENABLED:
-            key = (type(self), n_norm)
-            cached = self._instance_cache.get(key)
-            if cached is not None:
-                return cached  # type: ignore[return-value]
-            # Create, cache, and return
-            instance = self._create_with_n(n_norm)
-            self._instance_cache[key] = instance
-            return instance
-        else:
-            # Original behavior
-            if n == self._n:
-                return self
-            return self._create_with_n(n)
 
     def _create_with_n(self, n: int) -> Self:
         """Create a new SliceAlg with the given n value."""
@@ -134,10 +93,9 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
 @final
 class _M(SliceAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(SliceName.M, n)
+    def __init__(self) -> None:
+        super().__init__(SliceName.M)
         self._freeze()
-        self._register_in_cache()
 
     def get_base_alg(self) -> SliceAlgBase:
         from cube.domain.algs.Algs import Algs
@@ -150,10 +108,9 @@ class _E(SliceAlg):
     Middle slice over D
     """
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(SliceName.E, n)
+    def __init__(self) -> None:
+        super().__init__(SliceName.E)
         self._freeze()
-        self._register_in_cache()
 
     def get_base_alg(self) -> SliceAlgBase:
         from cube.domain.algs.Algs import Algs
@@ -166,10 +123,9 @@ class _S(SliceAlg):
     Middle slice over F
     """
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(SliceName.S, n)
+    def __init__(self) -> None:
+        super().__init__(SliceName.S)
         self._freeze()
-        self._register_in_cache()
 
     def get_base_alg(self) -> SliceAlgBase:
         from cube.domain.algs.Algs import Algs

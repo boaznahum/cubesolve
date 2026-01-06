@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import TYPE_CHECKING, ClassVar, Self, Sequence, final
+from typing import TYPE_CHECKING, Self, Sequence, final
 
 from cube.domain.algs.FaceAlgBase import FaceAlgBase
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
@@ -20,59 +20,18 @@ class FaceAlg(FaceAlgBase, SliceAbleAlg, ABC):
     be sliced again (type-level enforcement).
 
     All instances are frozen (immutable) after construction.
-
-    When ALG_CACHE_ENABLED is True, only 4 instances exist per face (n=0,1,2,3).
-    The with_n() method returns cached instances instead of creating new ones.
     """
 
     __slots__ = ()  # No additional slots - _face is in FaceAlgBase
-
-    # Cache: (concrete_class, n % 4) -> instance
-    # Shared across all FaceAlg subclasses
-    _instance_cache: ClassVar[dict[tuple[type, int], "FaceAlg"]] = {}
 
     def __init__(self, face: FaceName, n: int = 1) -> None:
         super().__init__(face, n)
         # Note: _freeze() is called by concrete subclasses
 
-    def _register_in_cache(self) -> None:
-        """Register this instance in the cache. Called after _freeze()."""
-        from cube.application import _config as config
-        if config.ALG_CACHE_ENABLED:
-            key = (type(self), self._n % 4)
-            if key not in self._instance_cache:
-                self._instance_cache[key] = self
-
     @property
     def slices(self) -> None:
         """Return slice info. Always None for unsliced FaceAlg."""
         return None
-
-    def with_n(self, n: int) -> Self:
-        """
-        Return instance with given n value.
-
-        When ALG_CACHE_ENABLED: Returns cached instance (only 4 per face).
-        When disabled: Creates new instance each time.
-        """
-        from cube.application import _config as config
-
-        n_norm = n % 4
-
-        if config.ALG_CACHE_ENABLED:
-            key = (type(self), n_norm)
-            cached = self._instance_cache.get(key)
-            if cached is not None:
-                return cached  # type: ignore[return-value]
-            # Create, cache, and return
-            instance = self._create_with_n(n_norm)
-            self._instance_cache[key] = instance
-            return instance
-        else:
-            # Original behavior
-            if n == self._n:
-                return self
-            return self._create_with_n(n)
 
     def _create_with_n(self, n: int) -> Self:
         """Create a new FaceAlg with the given n value."""
@@ -125,52 +84,46 @@ class FaceAlg(FaceAlgBase, SliceAbleAlg, ABC):
 @final
 class _U(FaceAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(FaceName.U, n)
+    def __init__(self) -> None:
+        super().__init__(FaceName.U)
         self._freeze()
-        self._register_in_cache()
 
 
 @final
 class _D(FaceAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(FaceName.D, n)
+    def __init__(self) -> None:
+        super().__init__(FaceName.D)
         self._freeze()
-        self._register_in_cache()
 
 
 @final
 class _F(FaceAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(FaceName.F, n)
+    def __init__(self) -> None:
+        super().__init__(FaceName.F)
         self._freeze()
-        self._register_in_cache()
 
 
 @final
 class _B(FaceAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(FaceName.B, n)
+    def __init__(self) -> None:
+        super().__init__(FaceName.B)
         self._freeze()
-        self._register_in_cache()
 
 
 @final
 class _R(FaceAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(FaceName.R, n)
+    def __init__(self) -> None:
+        super().__init__(FaceName.R)
         self._freeze()
-        self._register_in_cache()
 
 
 @final
 class _L(FaceAlg):
 
-    def __init__(self, n: int = 1) -> None:
-        super().__init__(FaceName.L, n)
+    def __init__(self) -> None:
+        super().__init__(FaceName.L)
         self._freeze()
-        self._register_in_cache()
