@@ -83,10 +83,15 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
         pass
 
     def same_form(self, a: "SimpleAlg") -> bool:
-        """Check if another alg has the same form (both unsliced)."""
+        """Check if another alg has the same form (both unsliced).
+
+        Note: We don't need to check self._slice_name == a._slice_name here
+        because each slice has its own concrete type (_M, _E, _S).
+        The optimizer uses `type(prev) is type(a)` which already ensures
+        we only compare algs of the same slice type.
+        """
         if not isinstance(a, SliceAlg):
             return False
-        # Both are unsliced SliceAlg - same form
         return True
 
 

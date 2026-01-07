@@ -74,10 +74,15 @@ class FaceAlg(FaceAlgBase, SliceAbleAlg, ABC):
         return SlicedFaceAlg(self._face, self._n, a_slice)
 
     def same_form(self, a: "SimpleAlg") -> bool:
-        """Check if another alg has the same form (both unsliced)."""
+        """Check if another alg has the same form (both unsliced).
+
+        Note:howmany times you run it previouse time  We don't need to check self._face == a._face here because
+        each face has its own concrete type (_R, _L, _U, _D, _F, _B).
+        The optimizer uses `type(prev) is type(a)` which already ensures
+        we only compare algs of the same face type.
+        """
         if not isinstance(a, FaceAlg):
             return False
-        # Both are unsliced FaceAlg - same form if same face
         return True
 
 
