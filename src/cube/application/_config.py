@@ -20,10 +20,10 @@ from typing import Tuple
 CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
-# Available solvers: LBL, CFOP, Kociemba, Cage, LBL-Big
-# Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "lbl-b" (for LBL-Big)
+# Available solvers: LBL, CFOP, Kociemba, Cage
+# Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "lbl-b"
+DEFAULT_SOLVER = "lbl"
 
 # 3x3 solver used by cage method for corner solving (Phase 1b)
 # Options: "beginner", "cfop", "kociemba"
