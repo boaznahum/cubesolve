@@ -448,6 +448,17 @@ class _CubeLayoutGeometry:
         # Pick first two consecutive faces
         fidx = random.randint(0, 0)
         first_face = cycle_faces_ordered[fidx]
+
+
+        # now which direction i want to go ?
+        # find the shared edge with first face and rotate face
+        shared_with_rotate: Edge = first_face.get_shared_edge(rotation_face)
+
+        # is same ltr ?
+        # ltr index on shared edge
+        ltr_index_on_edge = shared_with_rotate.get_ltr_index_from_slice_index(first_face)
+
+
         second_face = cycle_faces_ordered[ (fidx + 1) % 4]
 
 
