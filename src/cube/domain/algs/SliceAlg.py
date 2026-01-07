@@ -31,19 +31,9 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
         # Note: _freeze() is called by concrete subclasses
 
     @property
-    def slice_name(self) -> SliceName:
-        return self._slice_name
-
-    @final
-    def play(self, cube: Cube, inv: bool = False):
-        # cube.rotate_slice(self._slice_name, _inv(inv, self._n))
-
-        # See class description for explanation
-        slices = self.normalize_slice_index(n_max=cube.n_slices, _default=range(1, cube.n_slices + 1))
-
-        cube.rotate_slice(self._slice_name, _inv(inv, self._n), slices)
-
-    def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
+    def slices(self) -> None:
+        """Return slice info. Always None for unsliced SliceAlg."""
+        return None
 
     def _create_with_n(self, n: int) -> Self:
         """Create a new SliceAlg with the given n value."""
@@ -55,27 +45,19 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
         object.__setattr__(instance, "_frozen", True)
         return instance
 
-        start_stop: Iterable[int] = self.normalize_slice_index(n_max=cube.n_slices,
-                                                               _default=range(1, cube.n_slices + 1))
-
-        return face_name, cube.get_rotate_slice_involved_parts(self._slice_name, start_stop)
-
-    def get_face_name(self, cube: Cube) -> FaceName:
+    def __getitem__(self, items: int | slice | Sequence[int]) -> "SlicedSliceAlg":
         """
-        Return the face that defines the positive rotation direction for this slice.
+        Slice this slice algorithm, returning a SlicedSliceAlg.
 
-        This is the face that the slice rotates "over" - when the slice rotates,
-        it moves content in the same direction as rotating I think that face clockwise
-        (viewed from outside the cube looking at that face).
+        The returned SlicedSliceAlg cannot be sliced again (no __getitem__).
 
-        In terms of the LTR coordinate system (see docs/face-coordinate-system/):
-        - Clockwise rotation moves content: T→R→(-T)→(-R)→T
-        - Content flows from the T (top/bottom) direction toward the R (left/right) direction
+        Args:
+            items: Slice specification (int, slice, or sequence of ints)
 
         Returns:
-            M slice → L face (middle layer between L and R, rotates like L)
-            E slice → D face (middle layer between U and D, rotates like D)
-            S slice → F face (middle layer between F and B, rotates like F)
+            A new SlicedSliceAlg with the slice applied
+        """
+        from cube.domain.algs.SlicedSliceAlg import SlicedSliceAlg
 
         if not items:
             # Return self unchanged for empty slice? Or default?
@@ -93,24 +75,11 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
         else:
             raise InternalSWError(f"Unknown type for slice: {items} {type(items)}")
 
-        return cube.layout.get_slice(self._slice_name).get_face_name()
-        # match self._slice_name:
-        #
-        #     case SliceName.S:  # over F
-        #         return FaceName.F
-        #
-        #     case SliceName.M:  # over L
-        #         return FaceName.L
-        #
-        #     case SliceName.E:  # over D
-        #         return FaceName.D
-        #
-        #     case _:
-        #         raise RuntimeError(f"Unknown Slice {self._slice_name}")
+        return SlicedSliceAlg(self._slice_name, self._n, a_slice)
 
     @abstractmethod
-    def get_base_alg(self) -> SliceAbleAlg:
-        """ return whole slice alg that is not yet sliced"""
+    def get_base_alg(self) -> "SliceAlgBase":
+        """Return whole slice alg that is not yet sliced."""
         pass
 
     def same_form(self, a: "SimpleAlg") -> bool:
