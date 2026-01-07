@@ -1,6 +1,7 @@
 from collections.abc import Hashable, Iterable, Sequence
 from typing import Callable, Tuple, TypeAlias
 
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
 
 from ._elements import Direction, PartColorsID
@@ -537,6 +538,21 @@ class Face(SuperElement, Hashable):
             if other_face is face2:
                 return edge
         return None
+
+    def get_shared_edge(self, face2: _Face) -> Edge:
+        """
+        get the edge shared by two faces, or None if they're opposite.
+
+        Returns:
+            The shared Edge if faces are adjacent, raise error if opposite
+        """
+
+        edge = self.find_shared_edge(face2)
+
+        if edge is None:
+            raise InternalSWError(f"{self} has no shared edge with {face2}")
+
+        return edge
 
     def is_edge(self, edge: Edge) -> bool:
         """

@@ -64,7 +64,7 @@ def session_random_seed() -> int:
 @pytest.fixture
 def all_solver_names() -> list[SolverName]:
     """Return all available solver names."""
-    return list(SolverName)
+    return SolverName.implemented()
 
 
 @pytest.fixture
@@ -123,7 +123,7 @@ def get_scramble_params_remaining() -> list[tuple[str, int | None]]:
 
 def get_solver_names() -> list[SolverName]:
     """Get all solver names for parametrization."""
-    return list(SolverName)
+    return SolverName.implemented()
 
 
 def get_cube_sizes() -> list[int]:

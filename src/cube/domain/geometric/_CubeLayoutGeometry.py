@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING, Iterator
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
@@ -7,6 +8,7 @@ from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
+from cube.domain.model import Face, Edge
 from cube.domain.model.Edge import Edge
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
@@ -430,6 +432,8 @@ class _CubeLayoutGeometry:
             # Front is left/right edge → X axis face → counter-clockwise
             use_clockwise = False
 
+        # rotation_edges = cube.layout.get_face_edge_rotation_cw(rotation_face)
+
         if use_clockwise:
             # Clockwise: top, right, bottom, left
             rotation_edges = [rotation_face.edge_top, rotation_face.edge_right,
@@ -438,21 +442,21 @@ class _CubeLayoutGeometry:
             # Counter-clockwise: right, top, left, bottom
             rotation_edges = [rotation_face.edge_right, rotation_face.edge_top,
                              rotation_face.edge_left, rotation_face.edge_bottom]
+
         cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
         # Pick first two consecutive faces
-        first_face = cycle_faces_ordered[0]
-        second_face = cycle_faces_ordered[1]
+        fidx = random.randint(0, 0)
+        first_face = cycle_faces_ordered[fidx]
+        second_face = cycle_faces_ordered[ (fidx + 1) % 4]
+
+
 
         # Find shared edge between first two faces - this IS the starting edge
-        shared_edge = None
-        for edge in [first_face.edge_top, first_face.edge_right, first_face.edge_bottom, first_face.edge_left]:
-            if edge.get_other_face(first_face) == second_face:
-                shared_edge = edge
-                break
+        shared_edge: Edge | None = first_face.get_shared_edge(second_face)
 
-        current_face = first_face
-        current_edge = shared_edge
+        current_face: Face = first_face
+        current_edge: Edge = shared_edge
 
         # DEBUG
         print(f"\n=== {slice_name.name} slice ===")

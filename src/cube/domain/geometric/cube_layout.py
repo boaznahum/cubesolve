@@ -14,6 +14,7 @@ from collections.abc import Collection, Iterator
 from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
 
 from cube.domain.geometric.FRotation import FUnitRotation
+from cube.domain.model.Edge import Edge
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
@@ -490,3 +491,16 @@ class CubeLayout(Protocol):
             )
         """
         ...
+
+    def get_face_edge_rotation_cw(self, face: Face) -> list[Edge]:
+        """
+        claude: describe this method with diagrams, ltr system bottom top left right
+
+        actuall is a basic assumption, it is not relate dto spefici face, but currently we
+        work with pysical enteties so lay out return them
+        :return:
+        """
+        ...
+
+
+
