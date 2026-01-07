@@ -417,15 +417,27 @@ class _CubeLayoutGeometry:
         rotation_face = cube.face(rotation_face_name)
 
         # Get cycle faces from rotation face's edges
-        # L and R faces use counter-clockwise order; others use clockwise
-        if rotation_face_name in [FaceName.L, FaceName.R]:
-            # Counter-clockwise: right, top, left, bottom
-            rotation_edges = [rotation_face.edge_right, rotation_face.edge_top,
-                             rotation_face.edge_left, rotation_face.edge_bottom]
+        # Determine edge order based on rotation face's geometric relationship to Front face
+        front_face = cube.front
+        if rotation_face == front_face:
+            # Rotation face IS front → use clockwise
+            use_clockwise = True
+        elif (rotation_face.edge_top.get_other_face(rotation_face) == front_face or
+              rotation_face.edge_bottom.get_other_face(rotation_face) == front_face):
+            # Front is top/bottom edge → Y or Z axis face → clockwise
+            use_clockwise = True
         else:
+            # Front is left/right edge → X axis face → counter-clockwise
+            use_clockwise = False
+
+        if use_clockwise:
             # Clockwise: top, right, bottom, left
             rotation_edges = [rotation_face.edge_top, rotation_face.edge_right,
                              rotation_face.edge_bottom, rotation_face.edge_left]
+        else:
+            # Counter-clockwise: right, top, left, bottom
+            rotation_edges = [rotation_face.edge_right, rotation_face.edge_top,
+                             rotation_face.edge_left, rotation_face.edge_bottom]
         cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
         # Pick first two consecutive faces
