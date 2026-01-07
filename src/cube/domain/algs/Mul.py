@@ -13,7 +13,12 @@ from cube.domain.model.Cube import Cube
 
 @final
 class _Mul(Alg, ABC):
-    __slots__ = ["_alg", "_n"]
+    """
+    Multiplication (repetition) of an algorithm.
+    All instances are frozen (immutable) after construction.
+    """
+
+    __slots__ = ("_alg", "_n")
 
     def __init__(self, a: Alg, n: int) -> None:
 
@@ -21,6 +26,7 @@ class _Mul(Alg, ABC):
         super().__init__()
         self._alg = a
         self._n = n
+        self._freeze()
 
     def atomic_str(self) -> str:
 
@@ -34,7 +40,7 @@ class _Mul(Alg, ABC):
 
         return s
 
-    def play(self, cube: Cube, inv: bool = False):
+    def play(self, cube: Cube, inv: bool = False) -> None:
 
         for _ in range(0, self._n):
             self._alg.play(cube, inv)
@@ -50,7 +56,8 @@ class _Mul(Alg, ABC):
         a = self._alg.simplify()  # can't be _Mul
 
         if isinstance(a, NSimpleAlg):
-            s = a.clone() * self._n
+            # Use simple_mul() instead of clone() * self._n
+            s = a.simple_mul(self._n)
             return s.simplify()
         elif isinstance(a, AnnotationAlg):
             return a
@@ -62,7 +69,7 @@ class _Mul(Alg, ABC):
             raise TypeError("Unknown type:", type(self))
 
     def flatten(self) -> Iterator["SimpleAlg"]:
-        me = [* self._alg.flatten() ]
+        me = [*self._alg.flatten()]
         for _ in range(0, self._n):
             yield from me
 

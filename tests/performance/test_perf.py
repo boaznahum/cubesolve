@@ -7,6 +7,7 @@ from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.application.commands.Operator import Operator
 from cube.domain.solver import Solver, Solvers
+from cube.domain.solver.SolverName import SolverName
 from cube.domain.model.Cube import Cube
 from tests.test_utils import _test_sp
 
@@ -18,8 +19,14 @@ def test_solve_performance():
     n_loops = 3
     cube_size = 10
 
-    cube = Cube(cube_size, sp=_test_sp)
+    # Check if the default solver supports this cube size
     config = AppConfig()
+    solver_name = SolverName.lookup(config.default_solver)
+    skip_reason = solver_name.meta.get_skip_reason(cube_size)
+    if skip_reason:
+        pytest.skip(f"Default solver {solver_name.display_name}: {skip_reason}")
+
+    cube = Cube(cube_size, sp=_test_sp)
     vs = ApplicationAndViewState(config)
     op: Operator = Operator(cube, vs)
     slv: Solver = Solvers.default(op)

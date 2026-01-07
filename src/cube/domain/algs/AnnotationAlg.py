@@ -6,14 +6,19 @@ from cube.domain.model.Cube import Cube
 
 class AnnotationAlg(SimpleAlg):
     """
-        When played, it simply refreshes GUI
-        So it used by annotation tools, after they changed some model(text, cube)
+    When played, it simply refreshes GUI.
+    Used by annotation tools after they changed some model (text, cube).
+
+    All instances are frozen (immutable) after construction.
     """
+
+    __slots__ = ()  # No additional slots
 
     def __init__(self) -> None:
         super().__init__()
+        self._freeze()
 
-    def play(self, cube: Cube, inv: bool = False):
+    def play(self, cube: Cube, inv: bool = False) -> None:
         pass
 
     def count(self) -> int:
@@ -29,7 +34,7 @@ class AnnotationAlg(SimpleAlg):
         yield self
 
     def simple_inverse(self) -> Self:
-        return self # not really an alg
+        return self  # not really an alg
 
     def __str__(self) -> str:
         return "AnnotationAlg"

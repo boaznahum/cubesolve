@@ -164,13 +164,20 @@ class AbstractApp(ABC):
 ```
 Alg (Abstract Base)
 ├── SimpleAlg (Atomic moves)
-│   ├── FaceAlg (R, L, U, D, F, B)
-│   ├── SliceAlg (M, E, S)
-│   └── WholeCubeAlg (x, y, z)
+│   └── NSimpleAlg
+│       └── AnimationAbleAlg
+│           ├── FaceAlgBase (common face properties)
+│           │   ├── FaceAlg (R, L, U, D, F, B) - also inherits SliceAbleAlg
+│           │   └── SlicedFaceAlg - result of R[1:2], NOT SliceAbleAlg
+│           ├── SliceAlgBase (common slice properties)
+│           │   ├── SliceAlg (M, E, S) - also inherits SliceAbleAlg
+│           │   └── SlicedSliceAlg - result of M[1:2], NOT SliceAbleAlg
+│           ├── WholeCubeAlg (x, y, z)
+│           └── DoubleLayerAlg (Wide moves: Rw, Lw, etc.)
+├── SliceAbleAlg (Marker ABC - for isinstance checks)
 ├── SeqAlg (Composite - sequences)
 ├── Inv (Decorator - inverse)
-├── Mul (Decorator - repetition)
-└── DoubleLayerAlg (Wide moves: Rw, Lw, etc.)
+└── Mul (Decorator - repetition)
 ```
 
 **Key Features:**
@@ -366,17 +373,31 @@ f._edge_right = r._edge_left = _create_edge(edges, f, r, True)
 #### Composite Pattern Implementation
 
 ```
-                    Alg
-                     │
-        ┌────────────┼────────────┐
-        │            │            │
-   SimpleAlg      SeqAlg      Decorator
-        │            │            │
-    ┌───┴───┐    [Alg, ...]   ┌──┴──┐
-    │       │                  │     │
- FaceAlg SliceAlg            Inv   Mul
- (R,L,..) (M,E,S)            (')   (*n)
+                         Alg
+                          │
+          ┌───────────────┼───────────────┬──────────────┐
+          │               │               │              │
+     SimpleAlg         SeqAlg         Decorator    SliceAbleAlg
+          │               │               │          (marker ABC)
+     NSimpleAlg      [Alg, ...]      ┌───┴───┐
+          │                          │       │
+  AnimationAbleAlg                  Inv     Mul
+          │                         (')    (*n)
+    ┌─────┼─────┬─────────────┐
+    │     │     │             │
+FaceAlgBase SliceAlgBase WholeCubeAlg DoubleLayerAlg
+    │     │                   (x,y,z)    (Rw,Lw,...)
+ ┌──┴──┐  ┌──┴──┐
+ │     │  │     │
+FaceAlg SlicedFaceAlg SliceAlg SlicedSliceAlg
+(R,L,..)  (R[1:2])    (M,E,S)   (M[1:2])
+   ↑                     ↑
+   └── SliceAbleAlg ─────┘  (FaceAlg & SliceAlg inherit SliceAbleAlg)
 ```
+
+**Type-Safe Slicing:** `FaceAlg.__getitem__()` returns `SlicedFaceAlg` (not `Self`).
+`SlicedFaceAlg` has no `__getitem__` - compile-time prevention of re-slicing.
+`isinstance(R, SliceAbleAlg)` is True, but `isinstance(R[1:2], SliceAbleAlg)` is False.
 
 **Example Composition:**
 ```python

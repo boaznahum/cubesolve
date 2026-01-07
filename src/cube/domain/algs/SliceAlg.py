@@ -1,51 +1,34 @@
-from abc import ABC
-from typing import Collection, Iterable, Tuple, final
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Self, Sequence, final
 
-from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
-from cube.domain.algs._internal_utils import _inv
-from cube.domain.model.Cube import Cube, FaceName, PartSlice
+from cube.domain.algs.SliceAlgBase import SliceAlgBase
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model.cube_slice import SliceName
 
+if TYPE_CHECKING:
+    from cube.domain.algs.SlicedSliceAlg import SlicedSliceAlg
+    from cube.domain.algs.SimpleAlg import SimpleAlg
 
-class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
+
+class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
     """
-    Base class for slice algorithms (M, E, S).
+    Slice algorithm that CAN be sliced. M[1:2] returns SlicedSliceAlg.
 
-    Slice Indexing Convention (1-based):
-        Slice indices are 1-based, ranging from 1 to n_slices (where n_slices = cube_size - 2).
-        This is the PUBLIC API convention used when indexing slice algorithms.
+    This class represents an unsliced slice algorithm (M, E, S).
+    When sliced via __getitem__, it returns a SlicedSliceAlg which cannot
+    be sliced again (type-level enforcement).
 
-        For an NxN cube:
-            - n_slices = N - 2 (number of inner slices)
-            - Valid indices: 1, 2, ..., n_slices
+    All instances are frozen (immutable) after construction.
 
-        Example for 5x5 cube (n_slices = 3):
-            E[1]  - first inner slice (closest to U face)
-            E[2]  - middle slice
-            E[3]  - last inner slice (closest to D face)
-            E     - all slices (E[1:3] equivalent)
-            E[1:] - slices 1 to n_slices
-            E[:2] - slices 1 to 2
-
-    Internal Conversion:
-        SliceAbleAlg.normalize_slice_index() converts 1-based indices to 0-based
-        for internal cube operations. See that method for details.
-
-    Why 1-based?
-        - Matches standard cube notation (E[1] is the first middle slice)
-        - Outer layers (0 and N-1) are face rotations, not slice moves
-        - Inner slices start at layer 1 from the reference face
-
-    See Also:
-        - SliceAbleAlg: Parent class with slicing/indexing logic
-        - Face2FaceTranslator: Uses 1-based indices when computing slice algorithms
+    See SliceAlgBase for documentation on slice indexing conventions.
     """
+
+    __slots__ = ()  # No additional slots - _slice_name is in SliceAlgBase
 
     def __init__(self, slice_name: SliceName, n: int = 1) -> None:
-        # we know it is str, still we need to cast for mypy
-        super().__init__(slice_name.value.__str__(), n)
-        self._slice_name = slice_name
+        super().__init__(slice_name, n)
+        # Note: _freeze() is called by concrete subclasses
 
     @property
     def slice_name(self) -> SliceName:
@@ -62,7 +45,15 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
 
     def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
 
-        face_name = self.get_face_name(cube)
+    def _create_with_n(self, n: int) -> Self:
+        """Create a new SliceAlg with the given n value."""
+        instance: Self = object.__new__(type(self))
+        object.__setattr__(instance, "_frozen", False)
+        object.__setattr__(instance, "_code", self._code)
+        object.__setattr__(instance, "_n", n)
+        object.__setattr__(instance, "_slice_name", self._slice_name)
+        object.__setattr__(instance, "_frozen", True)
+        return instance
 
         start_stop: Iterable[int] = self.normalize_slice_index(n_max=cube.n_slices,
                                                                _default=range(1, cube.n_slices + 1))
@@ -86,12 +77,53 @@ class SliceAlg(SliceAbleAlg, AnimationAbleAlg, ABC):
             E slice → D face (middle layer between U and D, rotates like D)
             S slice → F face (middle layer between F and B, rotates like F)
 
-        See also:
-            - WholeCubeAlg.get_face_name() for whole-cube rotation equivalent
-            - docs/face-coordinate-system/face-slice-rotation.md
-        """
+        if not items:
+            # Return self unchanged for empty slice? Or default?
+            # Original behavior returned self, but we need to return SlicedSliceAlg
+            # For empty items, return with default all slices
+            return SlicedSliceAlg(self._slice_name, self._n, slice(None, None))
+
+        a_slice: slice | Sequence[int]
+        if isinstance(items, int):
+            a_slice = slice(items, items)  # start/stop the same
+        elif isinstance(items, slice):
+            a_slice = items
+        elif isinstance(items, Sequence):
+            a_slice = sorted(items)
+        else:
+            raise InternalSWError(f"Unknown type for slice: {items} {type(items)}")
 
         return cube.layout.get_slice(self._slice_name).get_face_name()
+        # match self._slice_name:
+        #
+        #     case SliceName.S:  # over F
+        #         return FaceName.F
+        #
+        #     case SliceName.M:  # over L
+        #         return FaceName.L
+        #
+        #     case SliceName.E:  # over D
+        #         return FaceName.D
+        #
+        #     case _:
+        #         raise RuntimeError(f"Unknown Slice {self._slice_name}")
+
+    @abstractmethod
+    def get_base_alg(self) -> SliceAbleAlg:
+        """ return whole slice alg that is not yet sliced"""
+        pass
+
+    def same_form(self, a: "SimpleAlg") -> bool:
+        """Check if another alg has the same form (both unsliced).
+
+        Note: We don't need to check self._slice_name == a._slice_name here
+        because each slice has its own concrete type (_M, _E, _S).
+        The optimizer uses `type(prev) is type(a)` which already ensures
+        we only compare algs of the same slice type.
+        """
+        if not isinstance(a, SliceAlg):
+            return False
+        return True
 
 
 @final
@@ -99,6 +131,11 @@ class _M(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.M)
+        self._freeze()
+
+    def get_base_alg(self) -> SliceAlgBase:
+        from cube.domain.algs.Algs import Algs
+        return Algs.M
 
 
 @final
@@ -109,6 +146,11 @@ class _E(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.E)
+        self._freeze()
+
+    def get_base_alg(self) -> SliceAlgBase:
+        from cube.domain.algs.Algs import Algs
+        return Algs.E
 
 
 @final
@@ -119,3 +161,8 @@ class _S(SliceAlg):
 
     def __init__(self) -> None:
         super().__init__(SliceName.S)
+        self._freeze()
+
+    def get_base_alg(self) -> SliceAlgBase:
+        from cube.domain.algs.Algs import Algs
+        return Algs.S

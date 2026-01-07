@@ -92,7 +92,7 @@ class TestSimplify:
         cube_size = 8
         config.CHECK_CUBE_SANITY = False
 
-        alg = Algs.scramble(cube_size, seq_length=None, seed=None)
+        alg = Algs.scramble(cube_size, seq_length=5000, seed=None)
         _test_simplify(alg, cube_size)
 
     def test_simplify_inverse(self):

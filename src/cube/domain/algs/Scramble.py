@@ -11,6 +11,11 @@ from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 
 
 class _Scramble(SeqAlg):
+    """
+    A scramble sequence. All instances are frozen (immutable) after construction.
+    """
+
+    __slots__ = ()  # No additional slots
 
     def __init__(self, name: str | None, *algs: Alg) -> None:
         super().__init__(name, *algs)
@@ -110,10 +115,8 @@ def __scramble(cube_size: int, rnd: Random, n: int, nest) -> list[Alg]:
 
                 if isinstance(a, FaceAlg):
                     max_slice = cube_size - 1  # see :class:`FaceAlg`
-                elif isinstance(a, SliceAbleAlg):
+                else:  # SliceAlg
                     max_slice = cube_size - 2  # see :class:`SliceAlg`
-                else:
-                    raise RuntimeError("Unknown SliceAbleAlg")
 
                 slice_start = rnd.randint(1, max_slice)
                 if slice_start == max_slice:
