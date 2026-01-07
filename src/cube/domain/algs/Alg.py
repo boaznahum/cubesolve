@@ -99,11 +99,11 @@ class Alg(ABC):
         else:
             return _Mul(self, n)
 
-    def __add__(self, other: "Alg") -> "Alg":
+    def __add__(self, other: "Alg") -> "SeqAlg":
         from .SeqAlg import SeqAlg
         return SeqAlg(None, self, other)
 
-    def __sub__(self, other: "Alg") -> "Alg":
+    def __sub__(self, other: "Alg") -> "SeqAlg":
         return self + other.prime
 
     def to_printable(self) -> Self:

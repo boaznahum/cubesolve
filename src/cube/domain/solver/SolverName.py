@@ -63,9 +63,10 @@ class SolverName(Enum):
     CFOP = SolverMeta("CFOP")#, only_3x3="CFOP use same reducer as LBL")
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
-    # LBL_DIRECT = SolverMeta("LBL-Direct", implemented=False,
-    #                         skip_3x3="LBL-Direct is for NxN cubes only",
-    #                         not_testable="WIP: Only Layer 1 implemented")  # Layer-by-layer direct method
+    LBL_BIG = SolverMeta("LBL-Big",
+                         implemented=False,  # Not yet fully implemented
+                         skip_3x3="LBL-Big is for NxN cubes only",
+                         skip_even="WIP: Even cubes not fully tested")  # Layer-by-layer for big cubes
 
     @property
     def display_name(self) -> str:
@@ -130,3 +131,13 @@ class SolverName(Enum):
     def available_names(cls) -> str:
         """Return comma-separated list of available solver names."""
         return ", ".join(s.display_name for s in cls)
+
+    @classmethod
+    def implemented(cls) -> list["SolverName"]:
+        """Return list of implemented solvers (for use in tests)."""
+        return [s for s in cls if s.meta.implemented]
+
+    @classmethod
+    def all(cls) -> list["SolverName"]:
+        """Return list of all solvers."""
+        return list(cls)

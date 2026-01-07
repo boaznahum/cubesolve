@@ -472,34 +472,34 @@ def _handle_selected_slice(window: AppWindow, slice_face: PartEdge, inv: bool):
 
             assert isinstance(_slice, EdgeWing)
 
-            slice_alg: SliceAlg | None = None
+            slice_alg_base: SliceAlg | None = None
             neg_slice_index = False
             if face_name in [FaceName.F, FaceName.B]:
 
                 if face.is_bottom_or_top(part):
-                    slice_alg = Algs.M  # we want over L
+                    slice_alg_base = Algs.M  # we want over L
                     neg_slice_index = face_name == FaceName.B  # but r start at right, ltr is from left
                 else:
-                    slice_alg = Algs.E  # we want over D
+                    slice_alg_base = Algs.E  # we want over D
                     neg_slice_index = False
             elif face_name in [FaceName.R, FaceName.L]:
 
                 if face.is_bottom_or_top(part):
-                    slice_alg = Algs.S  # we want over F
+                    slice_alg_base = Algs.S  # we want over F
                     neg_slice_index = face_name == FaceName.L
                 else:
-                    slice_alg = Algs.E  # we want over D
+                    slice_alg_base = Algs.E  # we want over D
                     neg_slice_index = False
             elif face_name in [FaceName.U, FaceName.D]:
 
                 if face.is_bottom_or_top(part):
-                    slice_alg = Algs.M  # we want over L
+                    slice_alg_base = Algs.M  # we want over L
                     neg_slice_index = True
                 else:
-                    slice_alg = Algs.S  # we want over F
+                    slice_alg_base = Algs.S  # we want over F
                     neg_slice_index = face_name == FaceName.D
 
-            if slice_alg:
+            if slice_alg_base:
 
                 index = _slice.index
                 index = part.get_ltr_index_from_slice_index(face, index)
@@ -507,7 +507,7 @@ def _handle_selected_slice(window: AppWindow, slice_face: PartEdge, inv: bool):
                 if neg_slice_index:
                     index = face.inv(index)
 
-                slice_alg = slice_alg[index + 1]  # index start from 1
+                slice_alg = slice_alg_base[index + 1]  # index start from 1
 
                 __play(slice_alg)
 
@@ -523,34 +523,34 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
     """
     face_name: FaceName = face.name
 
-    slice_alg: SliceAlg
+    slice_alg_base: SliceAlg
     neg_slice_index: bool
     inv: bool = False
     if face_name in [FaceName.F, FaceName.B]:
 
         if face.is_bottom_or_top(part):
-            slice_alg = Algs.M  # we want over L
+            slice_alg_base = Algs.M  # we want over L
             neg_slice_index = face_name == FaceName.B  # but r start at right, ltr is from left
             inv = face_name == FaceName.F
         else:
-            slice_alg = Algs.E  # we want over D
+            slice_alg_base = Algs.E  # we want over D
             neg_slice_index = False
     elif face_name in [FaceName.R, FaceName.L]:
 
         if face.is_bottom_or_top(part):
-            slice_alg = Algs.S  # we want over F
+            slice_alg_base = Algs.S  # we want over F
             neg_slice_index = face_name == FaceName.L
             inv = face_name == FaceName.R  # over F, so left-top is F prime
         else:
-            slice_alg = Algs.E  # we want over D
+            slice_alg_base = Algs.E  # we want over D
             neg_slice_index = False
     elif face_name in [FaceName.U, FaceName.D]:
 
         if face.is_bottom_or_top(part):
-            slice_alg = Algs.M  # we want over L
+            slice_alg_base = Algs.M  # we want over L
             neg_slice_index = False
         else:
-            slice_alg = Algs.S  # we want over F
+            slice_alg_base = Algs.S  # we want over F
             neg_slice_index = face_name == FaceName.D
             inv = face_name == FaceName.D
 
@@ -563,7 +563,7 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
     if neg_slice_index:
         index = face.inv(index)
 
-    slice_alg = slice_alg[index + 1]  # index start from 1
+    slice_alg = slice_alg_base[index + 1]  # index start from 1
 
     if inv:
         return slice_alg.prime

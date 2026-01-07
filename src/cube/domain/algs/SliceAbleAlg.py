@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Sequence
 
+from cube.domain.algs.Alg import Alg
 
-class SliceAbleAlg(ABC):
+
+class SliceAbleAlg(Alg, ABC):
     """
     Marker ABC for algorithms that support slice indexing like R[1:3].
 

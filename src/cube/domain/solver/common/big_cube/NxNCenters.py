@@ -4,7 +4,7 @@ from enum import Enum, unique
 from typing import Tuple, TypeAlias
 
 from cube.domain import algs
-from cube.domain.algs import Algs
+from cube.domain.algs import Algs, SeqAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import CenterSlice, Color, FaceName
 from cube.domain.model.Cube import Cube
@@ -414,7 +414,7 @@ class NxNCenters(SolverElement):
                 # =========================================================
                 # CAGE METHOD: Track setup rotations for undo
                 # =========================================================
-                setup_alg = Algs.NOOP
+                setup_alg: SeqAlg = Algs.NOOP
 
                 for _ in range(3):  # 3 faces: L, D, R brought to UP
                     # don't use face - it was moved !!!
