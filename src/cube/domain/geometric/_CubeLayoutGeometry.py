@@ -12,6 +12,17 @@ from cube.domain.model.Edge import Edge
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
 
+# Import walker components for the new implementation
+from cube.domain.model.cube_layout.claude_solution.v3_with_real_cube.cube_rotation_walker_v3 import (
+    CubeRotationWalkerV3,
+    CubeConfig,
+    EdgeConnection,
+    Edge as WalkerEdge,
+)
+
+# Flag to switch between implementations
+USE_WALKER_IMPLEMENTATION = False
+
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
@@ -378,34 +389,101 @@ class _CubeLayoutGeometry:
 
     @staticmethod
     def create_walking_info(cube: Cube, slice_name: SliceName) -> CubeWalkingInfo:
-        """
-        Create walking info by traversing the 4 faces of a slice.
+        """Dispatcher - uses flag to choose implementation."""
+        if USE_WALKER_IMPLEMENTATION:
+            return _CubeLayoutGeometry._create_walking_info_walker(cube, slice_name)
+        else:
+            return _CubeLayoutGeometry._create_walking_info_old(cube, slice_name)
 
-        This walks through all 4 faces, tracking where the reference point
-        (slice_index=0, slot=0) lands on each face. It also precomputes
-        the point computation function for each face for efficiency.
+    # =========================================================================
+    # Walker-based implementation (new)
+    # =========================================================================
 
-        The face_infos are returned in CONTENT FLOW order - the order in which
-        content moves during a positive slice rotation. Each slice rotates like
-        a specific face (its "rotation face"):
-        - M rotates like L: F → U → B → D
-        - E rotates like D: R → B → L → F
-        - S rotates like F: U → R → D → L
+    @staticmethod
+    def _create_cube_config(cube: "Cube") -> CubeConfig:
+        """Build CubeConfig from Cube for CubeRotationWalkerV3."""
+        m2c = {
+            FaceName.F: "F", FaceName.R: "R", FaceName.L: "L",
+            FaceName.U: "U", FaceName.D: "D", FaceName.B: "B",
+        }
 
-        The entry edge for each face is the edge shared with the PREVIOUS face
-        in the cycle. This edge determines coordinate orientation on that face.
+        edge_map: dict[str, dict[WalkerEdge, EdgeConnection]] = {}
+        for f in cube.faces:
+            cn = m2c[f.name]
+            edge_map[cn] = {
+                WalkerEdge.RIGHT: EdgeConnection(m2c[f.edge_right.get_other_face(f).name], WalkerEdge.LEFT),
+                WalkerEdge.LEFT: EdgeConnection(m2c[f.edge_left.get_other_face(f).name], WalkerEdge.RIGHT),
+                WalkerEdge.TOP: EdgeConnection(m2c[f.edge_top.get_other_face(f).name], WalkerEdge.BOTTOM),
+                WalkerEdge.BOTTOM: EdgeConnection(m2c[f.edge_bottom.get_other_face(f).name], WalkerEdge.TOP),
+            }
 
-        Args:
-            cube: The cube instance
-            slice_name: Which slice (M, E, S) to traverse
+        rotation_paths = {
+            m2c[f.name]: [m2c[e.get_other_face(f).name] for e in cube.layout.get_face_edge_rotation_cw(f)]
+            for f in cube.faces
+        }
 
-        Returns:
-            CubeWalkingInfo with reference points and precomputed functions
+        return CubeConfig(edge_map=edge_map, rotation_paths=rotation_paths)
 
-        See Also:
-            SliceLayout.get_face_name() - returns the rotation face for a slice
-            cube_walking.py - explains slot consistency and cycle order
-        """
+    @staticmethod
+    def _walker_edge_to_domain(face: "Face", walker_edge: WalkerEdge) -> Edge:
+        """Map walker Edge enum to domain Edge object."""
+        return {
+            WalkerEdge.TOP: face.edge_top,
+            WalkerEdge.BOTTOM: face.edge_bottom,
+            WalkerEdge.LEFT: face.edge_left,
+            WalkerEdge.RIGHT: face.edge_right,
+        }[walker_edge]
+
+    @staticmethod
+    def _create_walking_info_walker(cube: Cube, slice_name: SliceName) -> CubeWalkingInfo:
+        """Walker-based implementation using CubeRotationWalkerV3."""
+        n_slices = cube.n_slices
+
+        m2c = {FaceName.F: "F", FaceName.R: "R", FaceName.L: "L",
+               FaceName.U: "U", FaceName.D: "D", FaceName.B: "B"}
+        c2m = {"F": FaceName.F, "R": FaceName.R, "L": FaceName.L,
+               "U": FaceName.U, "D": FaceName.D, "B": FaceName.B}
+
+        from cube.domain.geometric.slice_layout import _SliceLayout
+        slice_layout = _SliceLayout(slice_name)
+        rotation_face_name = slice_layout.get_face_name()
+        rotate_with = m2c[rotation_face_name]
+
+        config = _CubeLayoutGeometry._create_cube_config(cube)
+        starting_face = config.rotation_paths[rotate_with][0]
+
+        walker = CubeRotationWalkerV3(n=n_slices, config=config)
+        face_outputs = walker.calculate_rotation(starting_face, rotate_with)
+
+        face_infos: list[FaceWalkingInfo] = []
+        for fo in face_outputs:
+            face = cube.face(c2m[fo.face])
+            edge = _CubeLayoutGeometry._walker_edge_to_domain(face, fo.exit_edge)
+            reference_point: Point = fo.get_point(si=0, other_coord=0)
+
+            compute = (lambda fo_cap=fo: lambda si, sl: fo_cap.get_point(si, sl))()
+
+            face_infos.append(FaceWalkingInfo(
+                face=face,
+                edge=edge,
+                reference_point=reference_point,
+                n_slices=n_slices,
+                _compute=compute
+            ))
+
+        return CubeWalkingInfo(
+            slice_name=slice_name,
+            n_slices=n_slices,
+            face_infos=tuple(face_infos)
+        )
+
+    # =========================================================================
+    # Original implementation (old)
+    # =========================================================================
+
+    @staticmethod
+    def _create_walking_info_old(cube: Cube, slice_name: SliceName) -> CubeWalkingInfo:
+        """Original implementation - traverses faces manually."""
         n_slices = cube.n_slices
 
         cube_layout: CubeLayout = cube.layout
@@ -413,46 +491,26 @@ class _CubeLayoutGeometry:
         def inv(x: int) -> int:
             return n_slices - 1 - x
 
-        # Derive starting face and edge from rotation face
         from cube.domain.geometric.slice_layout import _SliceLayout
         slice_layout = _SliceLayout(slice_name)
         rotation_face_name = slice_layout.get_face_name()
         rotation_face = cube.face(rotation_face_name)
 
-        # Get cycle faces from rotation face's edges
-        # Determine edge order based on rotation face's geometric relationship to Front face
-
         rotation_edges = cube_layout.get_face_edge_rotation_cw(rotation_face)
-
         cycle_faces_ordered: list[Face] = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
-        # Pick first two consecutive faces
-        # randomly !!!
-        first_face  = cycle_faces_ordered[0]
+        first_face = cycle_faces_ordered[0]
         second_face = cycle_faces_ordered[1]
-
         shared_edge = first_face.find_shared_edge(second_face)
-
 
         current_face = first_face
         current_edge = shared_edge
-
-        # DEBUG
-        print(f"\n=== {slice_name.name} slice ===")
-        print(f"Rotation face: {rotation_face_name.name}")
-        print(f"Cycle faces: {[f.name.name for f in cycle_faces_ordered]}")
-        print(f"First two faces: {first_face.name.name}, {second_face.name.name}")
-        print(f"Shared edge = Starting edge: {current_edge.name}")
-        print(f"Starting face: {current_face.name.name}")
-
-        # Virtual point coordinates for reference
-        current_index: int = 0  # which slice
-        slot: int = 0  # position along slice
+        current_index: int = 0
+        slot: int = 0
 
         face_infos: list[FaceWalkingInfo] = []
 
         for iteration in range(4):
-            # Determine edge properties ONCE
             is_horizontal = current_face.is_bottom_or_top(current_edge)
             is_slot_inverted = (
                 current_face.is_top_edge(current_edge) if is_horizontal
@@ -460,30 +518,11 @@ class _CubeLayoutGeometry:
             )
             is_index_inverted = current_index != 0
 
-            # Compute reference_point for (slice_index=0, slot=0)
             if is_horizontal:
                 reference_point: Point = (inv(slot) if is_slot_inverted else slot, current_index)
             else:
                 reference_point = (current_index, inv(slot) if is_slot_inverted else slot)
 
-            # DEBUG: Show iteration info
-            # Which edge position is this on current_face?
-            if current_edge == current_face.edge_top:
-                edge_pos = "top"
-            elif current_edge == current_face.edge_bottom:
-                edge_pos = "bottom"
-            elif current_edge == current_face.edge_left:
-                edge_pos = "left"
-            elif current_edge == current_face.edge_right:
-                edge_pos = "right"
-            else:
-                edge_pos = "???"
-            print(f"7. Iteration {iteration}: face={current_face.name.name}, edge={current_edge.name} (position={edge_pos}), "
-                  f"is_horizontal={is_horizontal}, is_slot_inverted={is_slot_inverted}, "
-                  f"is_index_inverted={is_index_inverted}, current_index={current_index}, slot={slot}, "
-                  f"reference_point={reference_point}")
-
-            # Create precomputed point function - all decisions baked in
             if is_horizontal and is_slot_inverted and is_index_inverted:
                 compute = lambda si, sl, inv=inv: (inv(sl), inv(si))
             elif is_horizontal and is_slot_inverted and not is_index_inverted:
@@ -498,7 +537,7 @@ class _CubeLayoutGeometry:
                 compute = lambda si, sl, inv=inv: (si, inv(sl))
             elif not is_horizontal and not is_slot_inverted and is_index_inverted:
                 compute = lambda si, sl, inv=inv: (inv(si), sl)
-            else:  # not is_horizontal and not is_slot_inverted and not is_index_inverted
+            else:
                 compute = lambda si, sl: (si, sl)
 
             face_infos.append(FaceWalkingInfo(
@@ -509,16 +548,10 @@ class _CubeLayoutGeometry:
                 _compute=compute
             ))
 
-            # Move to next face (except after the 4th)
             if len(face_infos) < 4:
-                # Follow current_edge to next face, then get opposite on new face
                 next_face = current_edge.get_other_face(current_face)
                 next_edge: Edge = current_edge.opposite(next_face)
 
-                # DEBUG: Show how we move to next face
-                print(f"   -> {current_edge.name} leads to {next_face.name.name}, opposite on {next_face.name.name} is {next_edge.name}")
-
-                # Translate slice index through the edge
                 next_slice_index = current_edge.get_slice_index_from_ltr_index(
                     current_face, current_index
                 )
