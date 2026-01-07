@@ -490,3 +490,15 @@ class CubeLayout(Protocol):
             )
         """
         ...
+
+    def get_face_edge_rotation_cw(self, face: Face) -> list[Edge]:
+        """
+        claude: describe this method with diagrams, ltr system bottom top left right
+
+        actuall is a basic assumption, it is not relate dto spefici face, but currently we
+        work with pysical enteties so lay out return them
+        :return:
+        """
+
+
+

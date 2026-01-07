@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterator, Any
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
+from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
@@ -407,6 +408,8 @@ class _CubeLayoutGeometry:
         """
         n_slices = cube.n_slices
 
+        cube_layout: CubeLayout = cube.layout
+
         def inv(x: int) -> int:
             return n_slices - 1 - x
 
@@ -418,38 +421,18 @@ class _CubeLayoutGeometry:
 
         # Get cycle faces from rotation face's edges
         # Determine edge order based on rotation face's geometric relationship to Front face
-        front_face = cube.front
-        if rotation_face == front_face:
-            # Rotation face IS front → use clockwise
-            use_clockwise = True
-        elif (rotation_face.edge_top.get_other_face(rotation_face) == front_face or
-              rotation_face.edge_bottom.get_other_face(rotation_face) == front_face):
-            # Front is top/bottom edge → Y or Z axis face → clockwise
-            use_clockwise = True
-        else:
-            # Front is left/right edge → X axis face → counter-clockwise
-            use_clockwise = False
 
-        if use_clockwise:
-            # Clockwise: top, right, bottom, left
-            rotation_edges = [rotation_face.edge_top, rotation_face.edge_right,
-                             rotation_face.edge_bottom, rotation_face.edge_left]
-        else:
-            # Counter-clockwise: right, top, left, bottom
-            rotation_edges = [rotation_face.edge_right, rotation_face.edge_top,
-                             rotation_face.edge_left, rotation_face.edge_bottom]
-        cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
+        rotation_edges = cube_layout.get_face_edge_rotation_cw(rotation_face)
+
+        cycle_faces_ordered: list[Face] = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
         # Pick first two consecutive faces
-        first_face = cycle_faces_ordered[0]
+        # randomly !!!
+        first_face  = cycle_faces_ordered[0]
         second_face = cycle_faces_ordered[1]
 
-        # Find shared edge between first two faces - this IS the starting edge
-        shared_edge = None
-        for edge in [first_face.edge_top, first_face.edge_right, first_face.edge_bottom, first_face.edge_left]:
-            if edge.get_other_face(first_face) == second_face:
-                shared_edge = edge
-                break
+        shared_edge = first_face.find_shared_edge(second_face)
+
 
         current_face = first_face
         current_edge = shared_edge

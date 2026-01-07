@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Mapping
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.FRotation import FUnitRotation
+from cube.domain.model import Edge
 from cube.domain.model.SliceName import SliceName
 from cube.domain.geometric.cube_layout import (
     CubeLayout,
@@ -409,3 +410,14 @@ class _CubeLayout(CubeLayout):
         unit_rotation = cache.compute(cache_key, compute_unit_rotation)
 
         return unit_rotation
+
+    def get_face_edge_rotation_cw(self, face: Face) -> list[Edge]:
+        """
+        claude: describe this method with diagrams, ltr system bottom top left right
+        :return:
+        """
+
+        rotation_edges: list[Edge] = [face.edge_top, face.edge_right,
+                                      face.edge_bottom, face.edge_left]
+
+        return rotation_edges
