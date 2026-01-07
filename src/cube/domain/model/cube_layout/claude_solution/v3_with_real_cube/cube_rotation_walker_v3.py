@@ -24,9 +24,11 @@ CRITICAL ADJACENCY PROPERTY:
   These two points are PHYSICALLY ADJACENT on the cube!
 """
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Tuple, Dict, Callable, Any
-from dataclasses import dataclass
+
+from cube.domain.model import Cube, FaceName, Edge
 
 
 # =============================================================================
@@ -70,18 +72,34 @@ class EdgeConnection:
     edge: Edge
 
 
-@dataclass 
+@dataclass
 class CubeConfig:
     """
     Complete configuration for a cube's face connections and rotation paths.
-    
+
     This data structure encapsulates all the cube-specific information,
     keeping the algorithm completely generic.
-    
+
     Attributes:
         edge_map: Dictionary mapping each face to its edge connections
         rotation_paths: Dictionary mapping each face to its surrounding faces (CW order)
-    
+
+    CRITICAL - rotation_paths CW Order:
+        When deriving rotation_paths from a cube model with edge_left/top/right/bottom,
+        the CW order differs per face based on its 3D orientation:
+
+        | Face | CW Edge Order                    | Resulting Path     |
+        |------|----------------------------------|--------------------|
+        | R    | left -> top -> right -> bottom   | F -> U -> B -> D   |
+        | L    | right -> bottom -> left -> top   | F -> D -> B -> U   |
+        | U    | bottom -> right -> top -> left   | F -> R -> B -> L   |
+        | D    | top -> left -> bottom -> right   | F -> L -> B -> R   |
+        | F    | top -> right -> bottom -> left   | U -> R -> D -> L   |
+        | B    | top -> right -> bottom -> left   | U -> L -> D -> R   |
+
+        Common mistake: Using [edge for edge in face.edges] directly will NOT
+        give the correct CW order for most faces!
+
     Example:
         config = CubeConfig(
             edge_map={
@@ -438,9 +456,7 @@ class CubeRotationWalkerV3:
     def __init__(
         self,
         n: int,
-        edge_map: Dict[Any, Dict[Edge, EdgeConnection]] = None,
-        rotation_paths: Dict[Any, List[Any]] = None,
-        config: CubeConfig = None
+        config: CubeConfig
     ):
         """
         Initialize the cube rotation walker.
@@ -458,15 +474,10 @@ class CubeRotationWalkerV3:
         self.n = n
         
         # Accept either config object or separate dicts
-        if config is not None:
-            self.edge_map = config.edge_map
-            self.rotation_paths = config.rotation_paths
-        elif edge_map is not None and rotation_paths is not None:
-            self.edge_map = edge_map
-            self.rotation_paths = rotation_paths
-        else:
-            raise ValueError("Must provide either (edge_map + rotation_paths) or config")
-    
+        assert config
+        self.edge_map = config.edge_map
+        self.rotation_paths = config.rotation_paths
+
     def _find_connecting_edge(self, from_face: Any, to_face: Any) -> Tuple[Edge, Edge]:
         """Find which edges connect two faces."""
         for edge, connection in self.edge_map[from_face].items():
@@ -667,114 +678,51 @@ def print_results(faces: List[FaceOutput], n: int, si: int):
 # EXAMPLE: Standard Rubik's Cube Configuration
 # =============================================================================
 
-def create_standard_rubiks_cube_config() -> CubeConfig:
-    """
-    Create a standard Rubik's cube configuration.
-    
-    This is an EXAMPLE of how to create input data.
-    You can create your own configuration for different cube types.
-    
-    Returns:
-        CubeConfig with standard Rubik's cube edge connections and rotation paths
-    """
-    
-    # Using string identifiers for faces
-    edge_map = {
-        "F": {
-            Edge.RIGHT: EdgeConnection("R", Edge.LEFT),
-            Edge.LEFT: EdgeConnection("L", Edge.RIGHT),
-            Edge.TOP: EdgeConnection("U", Edge.BOTTOM),
-            Edge.BOTTOM: EdgeConnection("D", Edge.TOP),
-        },
-        "R": {
-            Edge.RIGHT: EdgeConnection("B", Edge.LEFT),
-            Edge.LEFT: EdgeConnection("F", Edge.RIGHT),
-            Edge.TOP: EdgeConnection("U", Edge.RIGHT),
-            Edge.BOTTOM: EdgeConnection("D", Edge.RIGHT),
-        },
-        "B": {
-            Edge.RIGHT: EdgeConnection("L", Edge.LEFT),
-            Edge.LEFT: EdgeConnection("R", Edge.RIGHT),
-            Edge.TOP: EdgeConnection("U", Edge.TOP),
-            Edge.BOTTOM: EdgeConnection("D", Edge.BOTTOM),
-        },
-        "L": {
-            Edge.RIGHT: EdgeConnection("F", Edge.LEFT),
-            Edge.LEFT: EdgeConnection("B", Edge.RIGHT),
-            Edge.TOP: EdgeConnection("U", Edge.LEFT),
-            Edge.BOTTOM: EdgeConnection("D", Edge.LEFT),
-        },
-        "U": {
-            Edge.RIGHT: EdgeConnection("R", Edge.TOP),
-            Edge.LEFT: EdgeConnection("L", Edge.TOP),
-            Edge.TOP: EdgeConnection("B", Edge.TOP),
-            Edge.BOTTOM: EdgeConnection("F", Edge.TOP),
-        },
-        "D": {
-            Edge.RIGHT: EdgeConnection("R", Edge.BOTTOM),
-            Edge.LEFT: EdgeConnection("L", Edge.BOTTOM),
-            Edge.TOP: EdgeConnection("F", Edge.BOTTOM),
-            Edge.BOTTOM: EdgeConnection("B", Edge.BOTTOM),
-        },
-    }
-    
-    rotation_paths = {
-        "R": ["F", "U", "B", "D"],
-        "L": ["F", "D", "B", "U"],
-        "U": ["F", "R", "B", "L"],
-        "D": ["F", "L", "B", "R"],
-        "F": ["U", "R", "D", "L"],
-        "B": ["U", "L", "D", "R"],
-    }
-    
-    return CubeConfig(edge_map=edge_map, rotation_paths=rotation_paths)
 
 
 # =============================================================================
 # MAIN - Demo
 # =============================================================================
 
-if __name__ == "__main__":
+def show_results(config):
+    global face, edges, edge, faces, n
     print("=" * 70)
     print("CUBE ROTATION WALKER V3 - Fully Configurable")
     print("=" * 70)
-    
-    # Create configuration
-    config = create_standard_rubiks_cube_config()
-    
+
     print("\n1. INPUT DATA STRUCTURE - edge_map:")
     print("-" * 50)
     for face, edges in config.edge_map.items():
         print(f"\n  {face}:")
         for edge, conn in edges.items():
             print(f"    {edge.value:6} → {conn.face}.{conn.edge.value}")
-    
+
     print("\n\n2. INPUT DATA STRUCTURE - rotation_paths:")
     print("-" * 50)
     for face, path in config.rotation_paths.items():
         print(f"  {face}: {path}")
-    
+
     # Create walker with config
     walker = CubeRotationWalkerV3(n=4, config=config)
-    
+
     # Calculate rotation
     faces = walker.calculate_rotation(
         starting_face="F",
         rotate_with="R"
     )
-    
+
     print("\n\n3. OUTPUT:")
     print("-" * 50)
-    
+
     print("\nRotation path: F → U → B → D")
     print("\nSI=0 results:")
     for face in faces:
         print(f"  Face {face.face}: {face.get_all_points(0)}")
-    
+
     print("\nSI=2 results:")
     for face in faces:
         print(f"  Face {face.face}: {face.get_all_points(2)}")
-    
+
     # Show adjacency
     print("\n\n4. ADJACENCY VERIFICATION (SI=0):")
     print("-" * 50)
@@ -782,11 +730,13 @@ if __name__ == "__main__":
     for i in range(len(faces)):
         f1 = faces[i]
         f2 = faces[(i + 1) % len(faces)]
-        
+
         exit_pt = f1.get_point(0, n - 1)
         entry_pt = f2.get_point(0, 0)
-        
+
         print(f"\n  {f1.face} → {f2.face}:")
         print(f"    Exit:  {f1.face}.get_point(0, 3) = {exit_pt}")
         print(f"    Entry: {f2.face}.get_point(0, 0) = {entry_pt}")
         print(f"    ADJACENT ✓")
+
+
