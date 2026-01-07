@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING
 
 from cube.domain.model._part import CornerName, EdgeName
 from cube.domain.model.Color import Color
 from cube.domain.geometric import create_layout
-from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.FaceName import FaceName
 from cube.utils.config_protocol import IServiceProvider
+
+if TYPE_CHECKING:
+    from cube.domain.geometric.cube_layout import CubeLayout
 
 
 @dataclass(frozen=True)

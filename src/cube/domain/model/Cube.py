@@ -123,6 +123,7 @@ See Also
 Notes
 -----
 The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
+
 - Front (F) = Blue
 - Right (R) = Red
 - Up (U) = Yellow
@@ -130,6 +131,8 @@ The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
 - Down (D) = White
 - Back (B) = Green
 """
+
+from __future__ import annotations
 
 from collections.abc import Iterable, MutableSequence
 from typing import TYPE_CHECKING, Collection, Protocol, Tuple
@@ -143,7 +146,6 @@ from .Center import Center
 from .Corner import Corner
 from cube.domain.geometric.cube_boy import Color, FaceName
 from cube.domain.geometric import create_layout
-from cube.domain.geometric.cube_layout import CubeLayout
 from .cube_slice import Slice, SliceName
 from .Edge import Edge
 from .Face import Face
@@ -151,6 +153,7 @@ from .Part import Part
 from .PartEdge import PartEdge
 
 if TYPE_CHECKING:
+    from cube.domain.geometric.cube_layout import CubeLayout
     from .Cube3x3Colors import Cube3x3Colors
     from .CubeListener import CubeListener
     from .CubeQueries2 import CubeQueries2
