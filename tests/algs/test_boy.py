@@ -26,7 +26,7 @@ def test_scramble1_preserves_boy_large_cube() -> None:
     assert cube.is_boy
 
 
-@pytest.mark.parametrize("solver", list(SolverName))
+@pytest.mark.parametrize("solver", SolverName.implemented())
 def test_solve_preserves_boy(solver: SolverName) -> None:
     """Test that solving preserves BOY orientation."""
     size = 4

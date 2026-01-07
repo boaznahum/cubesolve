@@ -22,7 +22,7 @@ from cube.presentation.gui.types import Keys
 from tests.backends.conftest import CubeTestDriver
 
 # All solvers (unsupported ones will be skipped via skip_if_not_supported)
-ALL_SOLVERS = list(SolverName)
+ALL_SOLVERS = SolverName.implemented()
 
 
 def skip_if_not_supported(solver_name: SolverName, cube_size: int) -> None:

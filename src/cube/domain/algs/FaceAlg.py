@@ -2,6 +2,7 @@ from abc import ABC
 from typing import TYPE_CHECKING, Self, Sequence, final
 
 from cube.domain.algs.FaceAlgBase import FaceAlgBase
+from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import FaceName
 
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
     from cube.domain.algs.SimpleAlg import SimpleAlg
 
 
-class FaceAlg(FaceAlgBase, ABC):
+class FaceAlg(FaceAlgBase, SliceAbleAlg, ABC):
     """
     Face algorithm that CAN be sliced. R[1:2] returns SlicedFaceAlg.
 
@@ -73,10 +74,15 @@ class FaceAlg(FaceAlgBase, ABC):
         return SlicedFaceAlg(self._face, self._n, a_slice)
 
     def same_form(self, a: "SimpleAlg") -> bool:
-        """Check if another alg has the same form (both unsliced)."""
+        """Check if another alg has the same form (both unsliced).
+
+        Note:howmany times you run it previouse time  We don't need to check self._face == a._face here because
+        each face has its own concrete type (_R, _L, _U, _D, _F, _B).
+        The optimizer uses `type(prev) is type(a)` which already ensures
+        we only compare algs of the same face type.
+        """
         if not isinstance(a, FaceAlg):
             return False
-        # Both are unsliced FaceAlg - same form if same face
         return True
 
 

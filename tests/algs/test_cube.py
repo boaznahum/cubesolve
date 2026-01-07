@@ -6,7 +6,7 @@ from cube.application import _config as config
 from cube.domain.solver.SolverName import SolverName
 
 # All solvers (unsupported ones will be skipped via skip_if_not_supported)
-ALL_SOLVERS = list(SolverName)
+ALL_SOLVERS = SolverName.implemented()
 
 
 def skip_if_not_supported(solver_name: SolverName, cube_size: int) -> None:

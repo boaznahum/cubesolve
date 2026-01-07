@@ -55,8 +55,19 @@ class SlicedFaceAlg(FaceAlgBase):
         return instance
 
     def same_form(self, a: "SimpleAlg") -> bool:
-        """Check if another alg has the same form (same slices)."""
+        """Check if another alg has the same form (same face and slices).
+
+        IMPORTANT: Unlike FaceAlg (which has concrete types _R, _L, etc.),
+        SlicedFaceAlg is a single concrete type for ALL sliced face algs.
+        Therefore, we MUST check self._face == a._face here because the
+        optimizer's `type(prev) is type(a)` check will be True for any
+        two SlicedFaceAlg instances (e.g., R[1:2] and L[1:2]).
+        """
         if not isinstance(a, SlicedFaceAlg):
+            return False
+
+        # Must be same face - critical check since all sliced face algs share one type
+        if self._face != a._face:
             return False
 
         my = self._slices

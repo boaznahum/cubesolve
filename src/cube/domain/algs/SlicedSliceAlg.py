@@ -55,8 +55,19 @@ class SlicedSliceAlg(SliceAlgBase):
         return instance
 
     def same_form(self, a: "SimpleAlg") -> bool:
-        """Check if another alg has the same form (same slices)."""
+        """Check if another alg has the same form (same slice name and slices).
+
+        IMPORTANT: Unlike SliceAlg (which has concrete types _M, _E, _S),
+        SlicedSliceAlg is a single concrete type for ALL sliced slice algs.
+        Therefore, we MUST check self._slice_name == a._slice_name here because
+        the optimizer's `type(prev) is type(a)` check will be True for any
+        two SlicedSliceAlg instances (e.g., M[1:2] and E[1:2]).
+        """
         if not isinstance(a, SlicedSliceAlg):
+            return False
+
+        # Must be same slice name - critical check since all sliced slice algs share one type
+        if self._slice_name != a._slice_name:
             return False
 
         my = self._slices

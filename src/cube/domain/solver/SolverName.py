@@ -64,7 +64,7 @@ class SolverName(Enum):
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
     LBL_BIG = SolverMeta("LBL-Big",
-                         not_testable="Not yet implemented",
+                         implemented=False,  # Not yet fully implemented
                          skip_3x3="LBL-Big is for NxN cubes only",
                          skip_even="WIP: Even cubes not fully tested")  # Layer-by-layer for big cubes
 
@@ -131,3 +131,13 @@ class SolverName(Enum):
     def available_names(cls) -> str:
         """Return comma-separated list of available solver names."""
         return ", ".join(s.display_name for s in cls)
+
+    @classmethod
+    def implemented(cls) -> list["SolverName"]:
+        """Return list of implemented solvers (for use in tests)."""
+        return [s for s in cls if s.meta.implemented]
+
+    @classmethod
+    def all(cls) -> list["SolverName"]:
+        """Return list of all solvers."""
+        return list(cls)

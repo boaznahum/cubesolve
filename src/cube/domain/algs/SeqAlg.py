@@ -114,7 +114,7 @@ class SeqAlg(Alg):
     def count(self) -> int:
         return functools.reduce(lambda n, a: n + a.count(), self._algs, 0)
 
-    def __add__(self, other: "Alg") -> "Alg":
+    def __add__(self, other: "Alg") -> "SeqAlg":
 
         if self._name:
             # we can't combine

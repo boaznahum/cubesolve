@@ -265,7 +265,7 @@ class ApplicationAndViewState:
         else:
             self._draw_shadows = self._draw_shadows.replace(s.upper(), "")
 
-    def slice_alg(self, cube: Cube, r: algs.SliceAbleAlg):
+    def slice_alg(self, cube: Cube, r: algs.SliceAbleAlg) -> algs.Alg:
 
         mx: int
 
@@ -285,8 +285,8 @@ class ApplicationAndViewState:
         if stop > mx:
             stop = mx
 
-        r = r[start:stop]
-        return r
+        sliced = r[start:stop]
+        return sliced
 
     @contextmanager
     def w_animation_speed(self, animation_speed: int):
