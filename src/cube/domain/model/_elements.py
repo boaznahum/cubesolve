@@ -20,9 +20,9 @@ class AxisName(Enum):
     """
     Whole cube Axis name
     """
-    X = "X"
-    Y = "Y"
-    Z = "Z"
+    X = "X"  # Over R , against M
+    Y = "Y"  # over U , against E
+    Z = "Z"  # Over F,  With S
 
 
 _Face: TypeAlias = "Face"  # type: ignore  # noqa: F821
