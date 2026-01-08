@@ -15,6 +15,7 @@ from cube.domain.geometric.cube_layout import (
     _ALL_OPPOSITE,
     _OPPOSITE,
 )
+from cube.domain.geometric.cube_walking import CubeWalkingInfo
 from cube.domain.geometric.slice_layout import SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 from cube.utils.Cache import CacheManager
@@ -61,6 +62,10 @@ class _CubeLayout(CubeLayout):
 
         }
 
+        # Lazy-initialized internal 3x3 cube for geometry queries
+        self._internal_cube: Cube | None = None
+        self._creating_internal_cube: bool = False
+
     @property
     def config(self) -> ConfigProtocol:
         """Get configuration via service provider."""
@@ -70,6 +75,36 @@ class _CubeLayout(CubeLayout):
     def cache_manager(self) -> CacheManager:
         """Get the cache manager for this layout."""
         return self._cache_manager
+
+    @property
+    def _cube(self) -> "Cube":
+        """Get internal 3x3 cube for geometry queries (lazy initialization).
+
+        This cube is used to answer template-level geometry questions that
+        require traversing face/edge relationships. It's created on first access.
+
+        Raises:
+            InternalSWError: If called during cube creation (cycle detected).
+        """
+        if self._internal_cube is not None:
+            return self._internal_cube
+
+        if self._creating_internal_cube:
+            raise InternalSWError(
+                "Circular dependency detected: CubeLayout._cube accessed while "
+                "creating internal cube. This indicates a geometry method was "
+                "called during Cube.__init__() that requires the internal cube."
+            )
+
+        # Create the internal 3x3 cube
+        self._creating_internal_cube = True
+        try:
+            from cube.domain.model.Cube import Cube
+            self._internal_cube = Cube(3, self._sp, layout=self)
+        finally:
+            self._creating_internal_cube = False
+
+        return self._internal_cube
 
     def __getitem__(self, face: FaceName) -> Color:
         """Get the color for a specific face."""
