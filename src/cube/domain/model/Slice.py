@@ -167,6 +167,7 @@ These cycles can be derived from Slice traversal:
 
 from typing import TYPE_CHECKING, Iterable, Sequence, Tuple, TypeAlias
 
+from . import CenterSlice
 from .PartSlice import CenterSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Edge import Edge
@@ -299,6 +300,11 @@ class Slice(SuperElement):
 
         n_slices = self.n_slices
 
+        sp = self.cube.sp
+        mm = sp.marker_manager
+        mf = sp.marker_factory
+        add_markers = sp.config.markers_config.DRAW_CENTER_INDEXES
+
         for i in s_range:
 
             elements: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = self._get_slices_by_index(i)
@@ -323,9 +329,12 @@ class Slice(SuperElement):
                 prev_c: CenterSlice = centers[j]  # on the first face
                 c0: CenterSlice = prev_c.clone()
                 for fi in range(1, 4):  # 1 2 3
-                    c = centers[j + fi * n_slices]
+                    c: CenterSlice = centers[j + fi * n_slices]
                     prev_c.copy_center_colors(c)
                     prev_c = c
+                    if add_markers and j < 3:
+                        char = mf.char(str(j))
+                        mm.add_marker(c.edge, char, moveable=False, remove_same_name=True)
 
                 centers[j + 3 * n_slices].copy_center_colors(c0)
 
