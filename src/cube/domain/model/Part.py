@@ -1,10 +1,7 @@
 import sys
-import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
 from typing import Self, Tuple, TypeVar
-
-from typing_extensions import deprecated
 
 from cube.domain.model._elements import (
     CubeElement,
@@ -320,16 +317,6 @@ class Part(ABC, CubeElement):
             self._colors_id_by_pos = by_pos
 
         return by_pos
-
-    @property
-    @deprecated("Use position_id instead")
-    def colors_id_by_pos(self) -> PartColorsID:
-        """
-        :deprecated, use: position_id
-        """
-        warnings.warn("Use position_id", DeprecationWarning, 2)
-
-        return self.position_id
 
     @classmethod
     def parts_id_by_pos(cls, parts: Sequence["Part"]) -> Sequence[PartColorsID]:

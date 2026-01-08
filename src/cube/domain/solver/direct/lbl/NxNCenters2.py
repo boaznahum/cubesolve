@@ -224,10 +224,6 @@ class NxNCenters2(SolverElement):
 
                 yield cs, rc
 
-    def _print_all_tracked_slices(self, s: str) -> None:
-        """Debug printing - disabled by default."""
-        pass
-
     def _position_l1_and_target(self, l1_white_tracker: FaceTracker, target_face: FaceTracker):
         """Position L1 down and target face to front."""
         assert target_face is not l1_white_tracker

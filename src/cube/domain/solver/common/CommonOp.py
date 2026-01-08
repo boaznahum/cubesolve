@@ -1,8 +1,5 @@
-import warnings
 from contextlib import contextmanager
 from typing import Callable, ContextManager, Generator, Sequence, Tuple
-
-from typing_extensions import deprecated
 
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import InternalSWError
@@ -17,7 +14,7 @@ from cube.domain.solver.protocols import (
     SupportsAnnotation,
 )
 
-from ...model.CubeQueries2 import Pred, Pred0
+from ...model.CubeQueries2 import Pred
 
 TRACE_UNIQUE_ID: int = 0
 
@@ -110,122 +107,6 @@ class CommonOp:
                             return edges
 
         return edges
-
-    # noinspection PyMethodMayBeStatic
-    @deprecated("Use CubeQueries2 instead")
-    def rotate_and_check(self, alg: Alg, pred: Callable[[], bool]) -> int:
-        """
-        Rotate face and check condition
-
-
-        :param alg:
-        :param pred:
-        :return: number of rotation, -1 if check fails
-        restore cube state before returning, this is not count as solve step
-        """
-
-        #new todo use cube.application.commands.Operator.Operator.with_query_restore_state
-
-        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
-
-        n = 0
-        cube = self.cube
-        try:
-            for _ in range(0, 4):
-                if pred():
-                    return n
-                alg.play(cube)
-                n += 1
-        finally:
-            (alg * n).prime.play(cube)
-
-        return -1
-
-    @deprecated("Use CubeQueries2 instead")
-    def rotate_and_check_get_alg(self, alg: Alg, pred: Pred0) -> Alg | None:
-        """
-        Rotate face and check condition
-        :return the algorithm needed to fulfill the pred, or None if no such
-
-
-        :param alg:
-        :param pred:
-        """
-
-        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
-
-        n = self.cube.cqr.rotate_and_check(alg, pred)  # type: ignore[arg-type]  # deprecated backward compat
-
-        if n >= 0:
-            if n == 0:
-                return Algs.no_op()
-            else:
-                return alg * n
-        else:
-            return None
-
-    @deprecated("Use CubeQueries2 instead")
-    def rotate_face_and_check(self, f: Face, pred: Callable[[], bool]) -> int:
-        """
-        Rotate face and check condition
-        Restores Cube, doesn't operate on operator
-
-
-        :param f:
-        :param pred:
-        :return: number of rotation, -1 if check fails
-        restore cube state before returning, this is not count as solve step
-        """
-
-        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
-
-        return self.cube.cqr.rotate_and_check(Algs.of_face(f.name), pred)
-
-    @deprecated("Use CubeQueries2 instead")
-    def rotate_face_and_check_get_alg_deprecated(self, f: Face, pred: Pred0) -> Alg:
-        """
-        Rotate face and check condition
-        :return the algorithm needed to fulfill the pred
-        :raise InternalSWError if no such algorithm  exists to fullfil the pred
-
-
-        :param f:
-        :param pred:
-        :return: number of rotation, -1 if check fails
-        restore cube state before returning, this is not count as solve step
-        """
-
-        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
-
-        alg = Algs.of_face(f.name)
-        n = self.cube.cqr.rotate_and_check(alg, pred)
-        assert n >= 0
-
-        return alg * n
-
-    @deprecated("Use CubeQueries2 instead")
-    def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Alg | None:
-        """
-        Rotate face and check condition
-        :return the algorithm needed to fulfill the pred, or None if no such
-
-
-        :param f:
-        :param pred:
-        """
-
-        warnings.warn("Use CubeQueries2", DeprecationWarning, 2)
-
-        alg = Algs.of_face(f.name)
-        n = self.cube.cqr.rotate_and_check(alg, pred)
-
-        if n >= 0:
-            if n == 0:
-                return Algs.no_op()
-            else:
-                return alg * n
-        else:
-            return None
 
     def rotate_till(self, alg: Alg, pred: Callable[[], bool]) -> int:
         """
