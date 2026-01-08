@@ -53,6 +53,7 @@ class CommutatorResult:
     s1 → t → s2 → s1 (cycle pattern)
 
     Attributes:
+        slice_name: that use in the communicator algorithm
         source_point: The computed source LTR position (where the piece naturally is before setup)
         algorithm: The algorithm to execute (None if dry_run=True)
         natural_source: Source point (s1) - the first piece in the 3-cycle
@@ -60,6 +61,7 @@ class CommutatorResult:
         second_replaced_with_target_point_on_source: Intermediate point (s2) - the third piece in the 3-cycle
         _secret: Internal cache secret for optimization (avoid re-computation on second call)
     """
+    slice_name: SliceName
     source_point: Point
     algorithm: Alg | None
     natural_source: Point | None = None
@@ -429,6 +431,7 @@ class CommunicatorHelper(SolverElement):
         final_algorithm = (source_setup_alg + cum + source_setup_alg.prime).simplify()
 
         return CommutatorResult(
+            slice_name=slice_name,
             source_point=source_point,
             algorithm=final_algorithm,
             natural_source=natural_source,
