@@ -7,6 +7,7 @@ All other code must access config through ConfigProtocol via context (app.config
 from cube.application import _config as cfg
 from cube.domain.model.Color import Color
 from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, MarkerDef
+from cube.utils.markers_config import MarkersConfig
 from cube.utils.SSCode import SSCode
 
 
@@ -184,19 +185,9 @@ class AppConfig(ConfigProtocol):
     # GUI settings
     # ==========================================================================
     @property
-    def gui_draw_markers(self) -> bool:
-        """Draw markers on cube faces."""
-        return cfg.GUI_DRAW_MARKERS
-
-    @property
-    def gui_draw_sample_markers(self) -> bool:
-        """Draw sample markers on cube faces."""
-        return cfg.GUI_DRAW_SAMPLE_MARKERS
-
-    @property
-    def gui_draw_ltr_coords(self) -> bool:
-        """Draw LTR coordinate system markers (origin, X arrow, Y arrow)."""
-        return cfg.GUI_DRAW_LTR_COORDS
+    def markers_config(self) -> MarkersConfig:
+        """Get markers configuration (draw flags for various marker types)."""
+        return cfg.MARKERS_CONFIG
 
     @property
     def gui_test_mode(self) -> bool:

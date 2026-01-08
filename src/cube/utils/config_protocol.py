@@ -12,7 +12,9 @@ from typing import TYPE_CHECKING, Protocol, Tuple, runtime_checkable
 if TYPE_CHECKING:
     from cube.domain.model.Color import Color
     from cube.utils.SSCode import SSCode
-    from cube.application.markers import IMarkerFactory, IMarkerManager
+    from cube.application.markers.IMarkerFactory import IMarkerFactory
+    from cube.application.markers.IMarkerManager import IMarkerManager
+    from cube.utils.markers_config import MarkersConfig
 
 
 @runtime_checkable
@@ -272,18 +274,8 @@ class ConfigProtocol(Protocol):
     # GUI settings
     # ==========================================================================
     @property
-    def gui_draw_markers(self) -> bool:
-        """Draw markers on cube faces."""
-        ...
-
-    @property
-    def gui_draw_sample_markers(self) -> bool:
-        """Draw sample markers on cube faces."""
-        ...
-
-    @property
-    def gui_draw_ltr_coords(self) -> bool:
-        """Draw LTR coordinate system markers (origin, X arrow, Y arrow)."""
+    def markers_config(self) -> "MarkersConfig":
+        """Get markers configuration (draw flags for various marker types)."""
         ...
 
     @property

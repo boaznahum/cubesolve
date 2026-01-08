@@ -21,7 +21,7 @@ class IMarkerManager(Protocol):
         self,
         part_edge: "PartEdge",
         marker: "MarkerConfig",
-        moveable: bool,
+        moveable: bool = True,
     ) -> None:
         """Add a marker to a PartEdge.
 

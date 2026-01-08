@@ -15,6 +15,8 @@ Access config values through the ConfigProtocol interface instead.
 from dataclasses import dataclass
 from typing import Tuple
 
+from cube.utils.markers_config import MarkersConfig
+
 ########## Some top important
 # Only initial value, can be changed
 CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
@@ -88,9 +90,8 @@ VIEWER_TRACE_DRAW_UPDATE = False
 
 PROF_VIEWER_SEARCH_FACET = False
 
-GUI_DRAW_MARKERS = False
-GUI_DRAW_SAMPLE_MARKERS = False
-GUI_DRAW_LTR_COORDS = True  # Draw LTR coordinate system markers (origin, X arrow, Y arrow)
+# Marker configuration - all marker-related flags in one place
+MARKERS_CONFIG = MarkersConfig()
 
 CELL_SIZE: int = 30
 

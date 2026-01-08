@@ -655,8 +655,8 @@ class ModernGLCell:
         # Generate arrow markers (filled triangles)
         self.generate_arrow_marker_vertices(dest)
 
-        # Filter to only ring/circle markers (exclude CROSS and ARROW)
-        ring_markers = [m for m in markers if m.shape not in (MarkerShape.CROSS, MarkerShape.ARROW)]
+        # Filter to only ring/circle markers (exclude CROSS, ARROW, and CHARACTER)
+        ring_markers = [m for m in markers if m.shape not in (MarkerShape.CROSS, MarkerShape.ARROW, MarkerShape.CHARACTER)]
         if not ring_markers:
             return
 
