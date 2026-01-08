@@ -446,7 +446,7 @@ class _CubeLayoutGeometry:
         cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
         # Pick first two consecutive faces
-        fidx = 2 #random.randint(0, )
+        fidx = 3 #random.randint(0, )
         first_face = cycle_faces_ordered[fidx]
         second_face = cycle_faces_ordered[ (fidx + 1) % 4]
 
@@ -486,7 +486,7 @@ class _CubeLayoutGeometry:
             if current_face is cube.back:
                 current_index = inv(current_index)
         elif slice_name is SliceName.S:
-            if current_face in [cube.down]:
+            if current_face in [cube.down, cube.left]:
                 current_index = inv(current_index)
 
         # DEBUG
