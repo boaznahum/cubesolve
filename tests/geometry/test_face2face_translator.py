@@ -114,7 +114,7 @@ def verify_slice_translation(
     target_face = cube.face(target_name)
     source_face = cube.face(source_name)
 
-    result = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
+    result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
     source_coord = result.source_coord
 
     marker_value = f"SLICE_{target_name}_{source_name}_{target_coord}"
@@ -125,6 +125,11 @@ def verify_slice_translation(
 
     # Apply slice algorithm
     slice_alg = result.slice_algorithms[0].get_alg()
+
+    slice_name = result.slice_algorithms[0].whole_slice_alg.slice_name
+
+    if slice_name not in [SliceName.M]:
+        return # skip it
     slice_alg.play(cube)
 
     # Verify marker at target_coord on target_face

@@ -446,17 +446,26 @@ class _CubeLayoutGeometry:
         cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
         # Pick first two consecutive faces
-        fidx = random.randint(0, 0)
+        fidx = 2 #random.randint(1, 1)
         first_face = cycle_faces_ordered[fidx]
 
 
         # now which direction i want to go ?
         # find the shared edge with first face and rotate face
-        shared_with_rotate: Edge = first_face.get_shared_edge(rotation_face)
+#        shared_with_rotate: Edge = first_face.get_shared_edge(rotation_face)
 
         # is same ltr ?
         # ltr index on shared edge
-        ltr_index_on_edge = shared_with_rotate.get_ltr_index_from_slice_index(first_face)
+#        ltr_index_on_edge = shared_with_rotate.get_ltr_index_from_slice_index(first_face, 0)
+
+        # Failing example
+        # === M slice ===
+        # Rotation face: L
+        # Cycle faces: ['F', 'U', 'B', 'D']
+        # First two faces: B, D
+        # Shared edge = Starting edge: BD
+        # Starting face: B
+
 
 
         second_face = cycle_faces_ordered[ (fidx + 1) % 4]
@@ -469,6 +478,13 @@ class _CubeLayoutGeometry:
         current_face: Face = first_face
         current_edge: Edge = shared_edge
 
+        # Virtual point coordinates for reference
+        current_index: int = 0  # which slice
+        slot: int = 0  # position along slice
+
+        if current_face is cube.back:
+            current_index = inv(current_index)
+
         # DEBUG
         print(f"\n=== {slice_name.name} slice ===")
         print(f"Rotation face: {rotation_face_name.name}")
@@ -476,10 +492,8 @@ class _CubeLayoutGeometry:
         print(f"First two faces: {first_face.name.name}, {second_face.name.name}")
         print(f"Shared edge = Starting edge: {current_edge.name}")
         print(f"Starting face: {current_face.name.name}")
+        print(f"Starting slice index: {current_index}, {slot}")
 
-        # Virtual point coordinates for reference
-        current_index: int = 0  # which slice
-        slot: int = 0  # position along slice
 
         face_infos: list[FaceWalkingInfo] = []
 
