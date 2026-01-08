@@ -63,6 +63,10 @@ class MarkerManager(IMarkerManager):
     ) -> None:
         """Add a marker to a PartEdge.
 
+        Duplicate prevention uses full dataclass equality (ALL fields including name).
+        Two markers with identical visual properties but different names are considered
+        different and will both be added.
+
         Args:
             part_edge: The sticker to mark
             marker: The marker configuration
