@@ -110,14 +110,14 @@ class Face(SuperElement, Hashable):
             mm.add_fixed_marker(corner_bl, mf.ltr_origin())
 
             # X-axis arrow on bottom edge (LTR index 0 = nearest to origin)
-            # Must convert LTR index to internal edge slice index
-            x_slice_idx = self.get_horizontal_slice_index_from_ltr(0)
+            # Each edge has its own conversion - use the specific edge's method
+            x_slice_idx = self._edge_bottom.get_slice_index_from_ltr_index(self, 0)
             edge_x = self._edge_bottom.get_slice(x_slice_idx).get_face_edge(self)
             mm.add_fixed_marker(edge_x, mf.ltr_arrow_x())
 
             # Y-axis arrow on left edge (LTR index 0 = nearest to origin)
-            # Must convert LTR index to internal edge slice index
-            y_slice_idx = self.get_vertical_slice_index_from_ltr(0)
+            # Each edge has its own conversion - use the specific edge's method
+            y_slice_idx = self._edge_left.get_slice_index_from_ltr_index(self, 0)
             edge_y = self._edge_left.get_slice(y_slice_idx).get_face_edge(self)
             mm.add_fixed_marker(edge_y, mf.ltr_arrow_y())
 
