@@ -93,14 +93,14 @@ class Face(SuperElement, Hashable):
         markers_cfg = self.config.markers_config
         draw_markers = markers_cfg.GUI_DRAW_MARKERS
         sample_markers = markers_cfg.GUI_DRAW_SAMPLE_MARKERS
-        draw_ltr_coords = markers_cfg.GUI_DRAW_LTR_COORDS
+        draw_ltr_cords = markers_cfg.GUI_DRAW_LTR_ORIGIN_ARROWS
         mf = self.cube.sp.marker_factory
         mm = self.cube.sp.marker_manager
 
         n = self.cube.n_slices
         n1 = n - 1
 
-        if draw_ltr_coords:
+        if draw_ltr_cords:
             # LTR Coordinate System Markers:
             # - Origin (bottom-left corner): filled black circle
             # - X-axis (bottom edge, pointing right): red arrow

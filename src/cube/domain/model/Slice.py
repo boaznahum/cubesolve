@@ -332,9 +332,13 @@ class Slice(SuperElement):
                     c: CenterSlice = centers[j + fi * n_slices]
                     prev_c.copy_center_colors(c)
                     prev_c = c
-                    if add_markers and j < 3:
+                    if add_markers:
+                        # it is waste of time, we need to be able to set the name by the factory
                         char = mf.char(str(j))
-                        mm.add_marker(c.edge, char, moveable=False, remove_same_name=True)
+                        if j < 3:
+                            mm.add_marker(c.edge, char, moveable=False, remove_same_name=True)
+                        else:
+                            mm.remove_markers_by_name(c.edge, char.name)
 
                 centers[j + 3 * n_slices].copy_center_colors(c0)
 

@@ -93,6 +93,11 @@ PROF_VIEWER_SEARCH_FACET = False
 # Marker configuration - all marker-related flags in one place
 MARKERS_CONFIG = MarkersConfig()
 
+MARKERS_CONFIG.GUI_DRAW_MARKERS = False
+MARKERS_CONFIG.GUI_DRAW_SAMPLE_MARKERS = False
+MARKERS_CONFIG.GUI_DRAW_LTR_ORIGIN_ARROWS = False  # Draw LTR coordinate system markers (origin, X arrow, Y arrow)
+MARKERS_CONFIG.DRAW_CENTER_INDEXES = False  # Draw center index markers during rotation (SLOW - debug only)
+
 CELL_SIZE: int = 30
 
 CORNER_SIZE = 0.2  # relative to cell size (should be 1 in 3x3)
