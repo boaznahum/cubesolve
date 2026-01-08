@@ -43,8 +43,8 @@ current_index: int = 0  # which slice
 ==========================================
 # Now tests tests all lsices axi name
 
-    fidx = 0 #random.randint(0, ) ❓
-    fidx = 1 #random.randint(0, ) ❓
-    fidx = 2 #random.randint(0, ) ❓
+    fidx = 0 #random.randint(0, ) ✅
+    fidx = 1 #random.randint(0, ) ✅
+    fidx = 2 #random.randint(0, ) ✅
     fidx = 3 #random.randint(0, ) ✅
     

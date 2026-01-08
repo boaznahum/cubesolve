@@ -446,7 +446,7 @@ class _CubeLayoutGeometry:
         cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
         # Pick first two consecutive faces
-        fidx = 3 #random.randint(0, )
+        fidx = 2 #random.randint(0, )
         first_face = cycle_faces_ordered[fidx]
         second_face = cycle_faces_ordered[ (fidx + 1) % 4]
 
