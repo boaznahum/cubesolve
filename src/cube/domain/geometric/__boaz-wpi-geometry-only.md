@@ -40,7 +40,7 @@ current_index: int = 0  # which slice
                 current_index = inv(current_index)
         ## Some of the tests skip none Slice M
 
-==========================================
+==========================================  ✅
 # Now tests tests all lsices axi name
 
     fidx = 0 #random.randint(0, ) ✅
@@ -48,3 +48,9 @@ current_index: int = 0  # which slice
     fidx = 2 #random.randint(0, ) ✅
     fidx = 3 #random.randint(0, ) ✅
     
+
+=== trying random=========================  ✅
+
+        fidx = random.randint(0, 3) ‼️‼️‼️
+        This means results are consistence
+
