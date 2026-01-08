@@ -18,7 +18,7 @@ from cube.domain.model.Edge import Edge
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
-from cube.domain.geometric.slice_layout import SliceLayout
+from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -499,6 +499,33 @@ class CubeLayout(Protocol):
         actuall is a basic assumption, it is not relate dto spefici face, but currently we
         work with pysical enteties so lay out return them
         :return:
+        """
+        ...
+
+    @abstractmethod
+    def does_slice_cut_rows_or_columns(self, slice_name: SliceName, face_name: FaceName) -> CLGColRow:
+        """
+        Determine if a slice cuts rows or columns on a given face.
+
+        This is a template-level geometry question - the answer depends only on
+        the slice type and face, not on a specific cube instance.
+
+        Slice Traversal (content movement during rotation):
+            M: F → U → B → D → F  (vertical cycle, like L rotation)
+            E: R → B → L → F → R  (horizontal cycle, like D rotation)
+            S: U → R → D → L → U  (around F/B axis, like F rotation)
+
+        Args:
+            slice_name: Which slice (M, E, or S)
+            face_name: Which face to check
+
+        Returns:
+            CLGColRow.ROW if slice cuts through rows (forms vertical strips)
+            CLGColRow.COL if slice cuts through columns (forms horizontal strips)
+
+        Example:
+            M slice on Front face cuts columns (vertical strips) → returns ROW
+            E slice on Front face cuts rows (horizontal strips) → returns COL
         """
         ...
 
