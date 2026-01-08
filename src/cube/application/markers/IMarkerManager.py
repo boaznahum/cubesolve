@@ -56,16 +56,38 @@ class IMarkerManager(Protocol):
         marker: "MarkerConfig",
         moveable: bool | None = None,
     ) -> bool:
-        """Remove a marker from a PartEdge.
+        """Remove a marker from a PartEdge (exact match required).
 
         Args:
             part_edge: The sticker to unmark
-            marker: The marker configuration to remove
+            marker: The marker configuration to remove (all fields must match)
             moveable: If True, remove from c_attributes. If False, remove from
                      f_attributes. If None, try both.
 
         Returns:
             True if marker was found and removed, False otherwise.
+        """
+        ...
+
+    def remove_markers_by_name(
+        self,
+        part_edge: "PartEdge",
+        name: str,
+        moveable: bool | None = None,
+    ) -> int:
+        """Remove all markers with a given name from a PartEdge.
+
+        Unlike remove_marker which requires exact match, this removes all markers
+        that have the specified name regardless of other properties.
+
+        Args:
+            part_edge: The sticker to unmark
+            name: The marker name/type to remove (e.g., "C1", "ORIGIN")
+            moveable: If True, remove from c_attributes. If False, remove from
+                     f_attributes. If None, remove from all.
+
+        Returns:
+            Number of markers removed.
         """
         ...
 

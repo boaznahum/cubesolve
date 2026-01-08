@@ -96,3 +96,14 @@ class IMarkerFactory(Protocol):
     ) -> MarkerConfig:
         """Create a custom cross marker."""
         ...
+
+    def char(
+        self,
+        character: str,
+        color: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    ) -> MarkerConfig:
+        """Create a character marker.
+
+        Multiple characters with different values can be placed on same cell.
+        """
+        ...
