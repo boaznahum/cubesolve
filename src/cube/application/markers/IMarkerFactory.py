@@ -47,6 +47,22 @@ class IMarkerFactory(Protocol):
         ...
 
     # ============================================================
+    # LTR Coordinate System Markers
+    # ============================================================
+
+    def ltr_origin(self) -> MarkerConfig:
+        """LTR origin marker - filled circle at coordinate origin."""
+        ...
+
+    def ltr_arrow_x(self) -> MarkerConfig:
+        """LTR X-axis arrow - red arrow pointing right."""
+        ...
+
+    def ltr_arrow_y(self) -> MarkerConfig:
+        """LTR Y-axis arrow - blue arrow pointing up."""
+        ...
+
+    # ============================================================
     # Custom Marker Creation
     # ============================================================
 

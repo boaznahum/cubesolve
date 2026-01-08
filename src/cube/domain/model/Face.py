@@ -92,11 +92,34 @@ class Face(SuperElement, Hashable):
 
         draw_markers = self.config.gui_draw_markers
         sample_markers = self.config.gui_draw_sample_markers
+        draw_ltr_coords = self.config.gui_draw_ltr_coords
         mf = self.cube.sp.marker_factory
         mm = self.cube.sp.marker_manager
 
         n = self.cube.n_slices
         n1 = n - 1
+
+        if draw_ltr_coords:
+            # LTR Coordinate System Markers:
+            # - Origin (bottom-left corner): filled black circle
+            # - X-axis (bottom edge, pointing right): red arrow
+            # - Y-axis (left edge, pointing up): blue arrow
+
+            # Origin marker on bottom-left corner
+            corner_bl = self._corner_bottom_left.slice.get_face_edge(self)
+            mm.add_fixed_marker(corner_bl, mf.ltr_origin())
+
+            # X-axis arrow on bottom edge (LTR index 0 = nearest to origin)
+            # Must convert LTR index to internal edge slice index
+            x_slice_idx = self.get_horizontal_slice_index_from_ltr(0)
+            edge_x = self._edge_bottom.get_slice(x_slice_idx).get_face_edge(self)
+            mm.add_fixed_marker(edge_x, mf.ltr_arrow_x())
+
+            # Y-axis arrow on left edge (LTR index 0 = nearest to origin)
+            # Must convert LTR index to internal edge slice index
+            y_slice_idx = self.get_vertical_slice_index_from_ltr(0)
+            edge_y = self._edge_left.get_slice(y_slice_idx).get_face_edge(self)
+            mm.add_fixed_marker(edge_y, mf.ltr_arrow_y())
 
         if draw_markers:
             # Set origin markers on edges (slot 0 of each edge)

@@ -20,6 +20,13 @@ class MarkerManager(IMarkerManager):
     This is the ONLY class that should add or retrieve markers from PartEdges.
     All other code (AnnotationManager, Face init, renderers) must use this manager.
 
+    Marker Uniqueness:
+        Markers are identified by their `name` field, NOT by dataclass equality.
+        - add_marker: Skips if a marker with same name already exists on the PartEdge
+        - remove_marker: Removes by name match, not by comparing all fields
+        This allows creating new MarkerConfig instances to remove existing markers
+        (e.g., remove_marker(edge, MarkerConfig("C0", ...)) removes any marker named "C0").
+
     Markers can be stored in two modes:
     - Moveable (c_attributes): Marker follows the sticker color during rotations
     - Fixed (attributes or f_attributes): Marker stays at the physical position
@@ -36,7 +43,7 @@ class MarkerManager(IMarkerManager):
         # Get all markers for rendering
         markers = manager.get_markers(part_edge)
 
-        # Remove a specific marker
+        # Remove a specific marker (by name match)
         manager.remove_marker(part_edge, MarkerFactory.c1())
     """
 

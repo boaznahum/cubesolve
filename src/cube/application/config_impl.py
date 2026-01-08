@@ -194,6 +194,11 @@ class AppConfig(ConfigProtocol):
         return cfg.GUI_DRAW_SAMPLE_MARKERS
 
     @property
+    def gui_draw_ltr_coords(self) -> bool:
+        """Draw LTR coordinate system markers (origin, X arrow, Y arrow)."""
+        return cfg.GUI_DRAW_LTR_COORDS
+
+    @property
     def gui_test_mode(self) -> bool:
         """GUI testing mode - exceptions propagate."""
         return cfg.GUI_TEST_MODE

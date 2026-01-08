@@ -310,6 +310,100 @@ class ModernGLCell:
             dest.extend([rb[0], rb[1], rb[2], r, g, b])
             dest.extend([lt[0], lt[1], lt[2], r, g, b])
 
+    def generate_arrow_line_vertices(self, _dest: list[float]) -> None:
+        """Generate line vertices for arrow markers (thin outline).
+
+        This is called but generates nothing - arrows are rendered as filled
+        triangles via generate_arrow_marker_vertices instead.
+        """
+        # Arrows are rendered as filled shapes, not lines
+        pass
+
+    def generate_arrow_marker_vertices(self, dest: list[float]) -> None:
+        """Generate filled triangle vertices for arrow markers.
+
+        Draws a thick arrow shape for each marker with shape == ARROW.
+        The arrow points in the direction specified by marker.direction:
+        - 0° = right (X+ direction)
+        - 90° = up (Y+ direction)
+        - 180° = left (X- direction)
+        - 270° = down (Y- direction)
+
+        Arrow geometry:
+        - Rectangular shaft (2 triangles)
+        - Triangular arrowhead (1 triangle)
+
+        Appends triangle vertices to dest.
+        Each vertex: x, y, z, nx, ny, nz, r, g, b (9 floats)
+
+        Args:
+            dest: List to append vertex data to
+        """
+        markers = self.get_markers()
+        if not markers:
+            return
+
+        # Find arrow markers
+        arrow_markers = [m for m in markers if m.shape == MarkerShape.ARROW]
+        if not arrow_markers:
+            return
+
+        lb, rb, rt, lt = self._corners
+        nx, ny, nz = float(self._normal[0]), float(self._normal[1]), float(self._normal[2])
+
+        # Calculate cell center and edge vectors
+        center = (lb + rb + rt + lt) / 4.0
+        right_vec = (rb - lb) / 2.0  # Half-width vector pointing right
+        up_vec = (lt - lb) / 2.0     # Half-height vector pointing up
+
+        # Height offset to raise arrows above face surface
+        height_offset = self._normal * 0.15
+
+        for marker in arrow_markers:
+            # Get marker color
+            if marker.color is not None:
+                r, g, b = marker.color
+            else:
+                r, g, b = 0.0, 0.0, 0.0
+
+            # Calculate direction and perpendicular vectors
+            angle_rad = math.radians(marker.direction)
+            cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+
+            # Direction vector in face-local coordinates (0° = right, 90° = up)
+            dir_vec = right_vec * cos_a + up_vec * sin_a
+            # Perpendicular vector for shaft width
+            perp_vec = right_vec * (-sin_a) + up_vec * cos_a
+
+            # Arrow dimensions based on marker properties
+            shaft_length = marker.radius_factor * 0.7
+            shaft_width = marker.thickness * 0.12  # Shaft thickness
+            head_length = 0.3  # Arrowhead length
+            head_width = marker.thickness * 0.25   # Arrowhead base width
+
+            # Shaft vertices (rectangle from shaft_start to shaft_end)
+            shaft_start = center - dir_vec * shaft_length * 0.4 + height_offset
+            shaft_end = center + dir_vec * shaft_length * 0.4 + height_offset
+
+            # Four corners of the shaft rectangle
+            s1 = shaft_start - perp_vec * shaft_width
+            s2 = shaft_start + perp_vec * shaft_width
+            s3 = shaft_end + perp_vec * shaft_width
+            s4 = shaft_end - perp_vec * shaft_width
+
+            # Shaft triangles (2 triangles for rectangle)
+            for v in [s1, s2, s3, s1, s3, s4]:
+                dest.extend([v[0], v[1], v[2], nx, ny, nz, r, g, b])
+
+            # Arrowhead vertices (triangle)
+            head_tip = shaft_end + dir_vec * head_length
+            head_base1 = shaft_end - perp_vec * head_width
+            head_base2 = shaft_end + perp_vec * head_width
+
+            # Arrowhead triangle
+            for v in [head_base1, head_base2, head_tip]:
+                dest.extend([v[0], v[1], v[2], nx, ny, nz, r, g, b])
+
     @property
     def color_enum(self) -> Color:
         """Get the Color enum for this cell (for texture grouping)."""
@@ -398,7 +492,7 @@ class ModernGLCell:
         return FacesTrackerHolder.get_tracked_edge_color(self.part_edge)
 
     def generate_marker_vertices(self, dest: list[float]) -> None:
-        """Generate triangle vertices for 3D raised marker rings/circles.
+        """Generate triangle vertices for 3D raised marker rings/circles/arrows.
 
         Creates 3D cylinder/ring geometry for each marker on this cell.
         The marker is a raised cylinder above the cell surface with:
@@ -408,6 +502,7 @@ class ModernGLCell:
 
         Uses marker's color if specified, otherwise complementary color for contrast.
         Skips CROSS markers (handled by generate_cross_line_vertices).
+        Handles ARROW markers via generate_arrow_marker_vertices.
 
         Appends triangles to dest.
         Each vertex: x, y, z, nx, ny, nz, r, g, b (9 floats)
@@ -419,8 +514,11 @@ class ModernGLCell:
         if not markers:
             return
 
-        # Filter out cross markers (they're drawn as lines, not rings)
-        ring_markers = [m for m in markers if m.shape != MarkerShape.CROSS]
+        # Generate arrow markers (filled triangles)
+        self.generate_arrow_marker_vertices(dest)
+
+        # Filter to only ring/circle markers (exclude CROSS and ARROW)
+        ring_markers = [m for m in markers if m.shape not in (MarkerShape.CROSS, MarkerShape.ARROW)]
         if not ring_markers:
             return
 

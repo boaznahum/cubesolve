@@ -115,6 +115,54 @@ class MarkerFactory(IMarkerFactory):
         )
 
     # ============================================================
+    # LTR Coordinate System Markers
+    # ============================================================
+
+    def ltr_origin(self) -> MarkerConfig:
+        """LTR origin marker - filled black circle at coordinate origin.
+
+        Marks the [0,0] corner of the face's LTR coordinate system.
+        """
+        return MarkerConfig(
+            name="LTR_ORIGIN",
+            shape=MarkerShape.FILLED_CIRCLE,
+            color=(0.0, 0.0, 0.0),  # Black
+            radius_factor=0.4,
+            thickness=1.0,
+            height_offset=0.1,
+        )
+
+    def ltr_arrow_x(self) -> MarkerConfig:
+        """LTR X-axis arrow - red arrow pointing right.
+
+        Indicates the X-axis (left-to-right) direction on each face.
+        """
+        return MarkerConfig(
+            name="LTR_ARROW_X",
+            shape=MarkerShape.ARROW,
+            color=(1.0, 0.0, 0.0),  # Red
+            radius_factor=0.8,
+            thickness=1.0,
+            height_offset=0.0,
+            direction=0.0,  # Right
+        )
+
+    def ltr_arrow_y(self) -> MarkerConfig:
+        """LTR Y-axis arrow - blue arrow pointing up.
+
+        Indicates the Y-axis (bottom-to-top) direction on each face.
+        """
+        return MarkerConfig(
+            name="LTR_ARROW_Y",
+            shape=MarkerShape.ARROW,
+            color=(0.0, 0.0, 1.0),  # Blue
+            radius_factor=0.8,
+            thickness=1.0,
+            height_offset=0.0,
+            direction=90.0,  # Up
+        )
+
+    # ============================================================
     # Legacy Markers (with fixed colors from config)
     # ============================================================
 

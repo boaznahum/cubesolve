@@ -282,6 +282,11 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
+    def gui_draw_ltr_coords(self) -> bool:
+        """Draw LTR coordinate system markers (origin, X arrow, Y arrow)."""
+        ...
+
+    @property
     def gui_test_mode(self) -> bool:
         """GUI testing mode - exceptions propagate."""
         ...
