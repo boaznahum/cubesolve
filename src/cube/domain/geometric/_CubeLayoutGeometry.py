@@ -407,6 +407,9 @@ class _CubeLayoutGeometry:
             SliceLayout.get_face_name() - returns the rotation face for a slice
             cube_walking.py - explains slot consistency and cycle order
         """
+
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # Turn on in _config.py MarkersConfig.GUI_DRAW_LTR_ORIGIN_ARROWS to see where they actually appear
         n_slices = cube.n_slices
 
         def inv(x: int) -> int:
@@ -432,24 +435,37 @@ class _CubeLayoutGeometry:
             # Front is left/right edge → X axis face → counter-clockwise
             use_clockwise = False
 
-        # rotation_edges = cube.layout.get_face_edge_rotation_cw(rotation_face)
-
-        if use_clockwise:
-            # Clockwise: top, right, bottom, left
-            rotation_edges = [rotation_face.edge_top, rotation_face.edge_right,
-                             rotation_face.edge_bottom, rotation_face.edge_left]
+        if False:
+            rotation_edges = cube.layout.get_face_edge_rotation_cw(rotation_face)
         else:
-            # Counter-clockwise: right, top, left, bottom
-            rotation_edges = [rotation_face.edge_right, rotation_face.edge_top,
-                             rotation_face.edge_left, rotation_face.edge_bottom]
+            # claude code don't understand why it works
+            if use_clockwise:
+                # Clockwise: top, right, bottom, left
+                rotation_edges = [rotation_face.edge_top, rotation_face.edge_right,
+                                 rotation_face.edge_bottom, rotation_face.edge_left]
+            else:
+                # Counter-clockwise: right, top, left, bottom
+                rotation_edges = [rotation_face.edge_right, rotation_face.edge_top,
+                                 rotation_face.edge_left, rotation_face.edge_bottom]
 
         cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
         # Pick first two consecutive faces
-        fidx = random.randint(0, 3)
+        fidx = -1
+        if False:
+            if True:  # investigating the bug
+                for i, f in enumerate(cycle_faces_ordered):
+                    if f is cube.up:
+                        fidx = i
+                        break
+
+        if fidx < 0:
+            fidx = random.randint(0, 3)
+
         first_face = cycle_faces_ordered[fidx]
         second_face = cycle_faces_ordered[ (fidx + 1) % 4]
 
+        # we try to reproduce the bug with D->U
 
         # now which direction i want to go ?
         # find the shared edge with first face and rotate face
@@ -482,12 +498,38 @@ class _CubeLayoutGeometry:
         current_index: int = 0  # which slice
         slot: int = 0  # position along slice
 
-        if slice_name is SliceName.M:
-            if current_face is cube.back:
-                current_index = inv(current_index)
-        elif slice_name is SliceName.S:
-            if current_face in [cube.down, cube.left]:
-                current_index = inv(current_index)
+        # check if current index is far or close to "of image"
+
+
+        if True:
+
+            # claude: better explain this: current index nust be close to the rotating image, this is the definition
+            #  of rotating over Face, it is the direction and where slice index begin
+            shared_with_rotating: Edge = current_face.get_shared_edge(rotation_face)
+
+            # ? vertical cross bottom and up ?
+
+            if current_face.is_bottom_or_top(current_edge):
+                # my left index 0 is the rotating face ?
+                if current_face.edge_left is shared_with_rotating:
+                    ...
+                else:
+                    current_index = inv(current_index)
+            else:  # horizontal cross columns
+                # is my bottom index 0 is shared
+                if current_face.edge_bottom is shared_with_rotating:
+                    ...
+                else:
+                    current_index = inv(current_index)
+
+        else:
+            if slice_name is SliceName.M:
+
+                if current_face is cube.back:
+                     current_index = inv(current_index)
+            elif slice_name is SliceName.S:
+                if current_face in [cube.down, cube.left]:
+                    current_index = inv(current_index)
 
         # DEBUG
         print(f"\n=== {slice_name.name} slice ===")
