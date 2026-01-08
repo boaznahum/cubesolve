@@ -355,7 +355,7 @@ class ModernGLCell:
             dest.extend([p1[0], p1[1], p1[2], lr, lg, lb_color])
             dest.extend([p2[0], p2[1], p2[2], lr, lg, lb_color])
 
-    def generate_cross_line_vertices(self, dest: list[float]) -> None:
+    def generate_cross_line_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
         """Generate line vertices for cross markers.
 
         Draws an X (cross) through the cell center for each marker
@@ -366,8 +366,10 @@ class ModernGLCell:
 
         Args:
             dest: List to append vertex data to
+            markers: Optional pre-fetched markers list (avoids repeated lookups)
         """
-        markers = self.get_markers()
+        if markers is None:
+            markers = self.get_markers()
         if not markers:
             return
 
@@ -402,7 +404,7 @@ class ModernGLCell:
         # Arrows are rendered as filled shapes, not lines
         pass
 
-    def generate_arrow_marker_vertices(self, dest: list[float]) -> None:
+    def generate_arrow_marker_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
         """Generate filled triangle vertices for arrow markers.
 
         Draws a thick arrow shape for each marker with shape == ARROW.
@@ -421,8 +423,10 @@ class ModernGLCell:
 
         Args:
             dest: List to append vertex data to
+            markers: Optional pre-fetched markers list (avoids repeated lookups)
         """
-        markers = self.get_markers()
+        if markers is None:
+            markers = self.get_markers()
         if not markers:
             return
 
@@ -487,7 +491,7 @@ class ModernGLCell:
             for v in [head_base1, head_base2, head_tip]:
                 dest.extend([v[0], v[1], v[2], nx, ny, nz, r, g, b])
 
-    def generate_character_line_vertices(self, dest: list[float]) -> None:
+    def generate_character_line_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
         """Generate line vertices for character markers.
 
         Draws characters using line segments. Supports letters A-Z, digits 0-9,
@@ -498,8 +502,10 @@ class ModernGLCell:
 
         Args:
             dest: List to append vertex data to
+            markers: Optional pre-fetched markers list (avoids repeated lookups)
         """
-        markers = self.get_markers()
+        if markers is None:
+            markers = self.get_markers()
         if not markers:
             return
 
@@ -652,8 +658,8 @@ class ModernGLCell:
         if not markers:
             return
 
-        # Generate arrow markers (filled triangles)
-        self.generate_arrow_marker_vertices(dest)
+        # Generate arrow markers (filled triangles) - pass markers to avoid re-fetch
+        self.generate_arrow_marker_vertices(dest, markers)
 
         # Filter to only ring/circle markers (exclude CROSS, ARROW, and CHARACTER)
         ring_markers = [m for m in markers if m.shape not in (MarkerShape.CROSS, MarkerShape.ARROW, MarkerShape.CHARACTER)]
