@@ -2,7 +2,7 @@ import sys
 from collections import defaultdict
 from collections.abc import Iterable, MutableSequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Callable, Hashable, Sequence, Tuple
+from typing import TYPE_CHECKING, Sequence, Tuple
 
 import numpy as np
 from numpy import ndarray
@@ -21,7 +21,7 @@ from cube.domain.model import (
 )
 from cube.domain.geometric.cube_boy import Color
 from cube.domain.model.Face import Face
-from cube.domain.model.VMarker import VMarker, viewer_get_markers
+from cube.application.markers import MarkerConfig, MarkerShape, get_markers_from_part_edge
 from cube.utils import geometry
 from cube.utils.config_protocol import ConfigProtocol
 
@@ -383,8 +383,6 @@ class _Cell:
         # noinspection SpellCheckingInspection
         cross_color_y = (0, 191, 255)  # deepskyblue	#00BFFF	rgb(0,191,255)
 
-        get_markers: Callable[[dict[Hashable, Any]], Sequence[VMarker] | None] = viewer_get_markers
-
         from ._faceboard import _FaceBoard
         fb: _FaceBoard = self._face_board
         cube_face: Face = fb.cube_face
@@ -395,9 +393,6 @@ class _Cell:
 
         # Get config for this method
         cfg = self._config
-
-        # color, outer, inner radius, height
-        markers: dict[str, Tuple[Tuple[int, int, int], float, float, float]] = cfg.markers
 
         cubie_facet_texture: TextureData | None = self._cubie_texture
         renderer = self._renderer
@@ -425,27 +420,12 @@ class _Cell:
                     points = self._vertices_to_points(_vx)
                     renderer.shapes.lines_in_quad(points, _nn, 5, (138, 43, 226))
 
-            # if _slice.get_face_edge(cube_face).attributes["origin"]:
-            #     shapes.cross(vx, cross_width, cross_color)
-            # if _slice.get_face_edge(cube_face).attributes["on_x"]:
-            #     shapes.cross(vx, cross_width_x, cross_color_x)
-            # if _slice.get_face_edge(cube_face).attributes["on_y"]:
-            #     shapes.cross(vx, cross_width_y, cross_color_y)
-
-            if movable:
-                _markers = get_markers(part_edge.c_attributes)
-            else:
-                _markers = get_markers(part_edge.f_attributes)
+            # Get markers using the new MarkerConfig system
+            _markers = get_markers_from_part_edge(part_edge)
 
             if _markers:
                 for marker in _markers:
-                    assert isinstance(marker, VMarker)
-                    _m = markers[str(marker.value)]
-                    _marker_color = _m[0]
-                    radius = _m[1]
-                    thick = _m[2]
-                    height = _m[3]
-                    self._create_markers(_vx, facet_color, _marker_color, radius, thick, height, marker)
+                    self._create_markers(_vx, facet_color, marker)
 
         if isinstance(part, Corner):
 
@@ -618,47 +598,105 @@ class _Cell:
 
     def _create_markers(self, vertexes: Sequence[ndarray],
                         facet_color: _VColor,
-                        marker_color: _VColor,
-                        _radius: float,
-                        thick: float,
-                        height: float,
-                        marker: VMarker):
+                        marker: MarkerConfig):
+        """Draw a marker on the cell.
 
-        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
+        Args:
+            vertexes: Cell corner vertices [left_bottom, right_bottom, right_top, left_top]
+            facet_color: RGB color (0-255) of the face for complementary color calculation
+            marker: MarkerConfig containing all marker properties
+        """
+        # Skip cross markers - they should be handled separately as lines
+        if marker.shape == MarkerShape.CROSS:
+            # Draw cross as two diagonal lines
+            vx = vertexes
+            color_rgb: _VColor
+            if marker.color is not None:
+                # Convert from float (0.0-1.0) to int (0-255)
+                color_rgb = (
+                    int(marker.color[0] * 255),
+                    int(marker.color[1] * 255),
+                    int(marker.color[2] * 255),
+                )
+            else:
+                color_rgb = (0, 0, 0)  # Default black for cross
+
+            points = self._vertices_to_points(vx)
+            # Draw X through corners
+            self._renderer.shapes.line(points[0], points[2], 2.0, color_rgb)  # lb to rt
+            self._renderer.shapes.line(points[1], points[3], 2.0, color_rgb)  # rb to lt
+            return
+
+        # Ring or filled circle markers
         vx = vertexes
-
         center = (vx[0] + vx[2]) / 2
 
         x_vec_size = vertexes[1] - vertexes[0]
         y_vec_size = vertexes[3] - vertexes[0]
 
-
         x_size: float = np.linalg.norm(x_vec_size)  # type: ignore
         y_size: float = np.linalg.norm(y_vec_size)  # type: ignore
         _face_size = min([x_size, y_size])
 
-
-
+        # Calculate radius
         radius = _face_size / 2.0 * 0.8
         radius = min([radius, self._config.max_marker_radius])
+        radius *= marker.radius_factor
 
-        radius *= _radius
-
+        # Calculate inner/outer radius based on shape
         r_outer = radius
-        r_inner = radius * (1 - thick)
+        if marker.shape == MarkerShape.FILLED_CIRCLE:
+            r_inner = 0.0
+        else:  # RING
+            r_inner = radius * (1 - marker.thickness)
 
-        # center += self._face_board.ortho_direction * 30
+        # Calculate height offset
+        height = marker.height_offset * _face_size
+
+        # Determine marker color
+        marker_color: _VColor
+        if marker.color is not None:
+            # Use explicit color (convert from float to int)
+            marker_color = (
+                int(marker.color[0] * 255),
+                int(marker.color[1] * 255),
+                int(marker.color[2] * 255),
+            )
+        elif marker.use_complementary_color:
+            # Compute complementary color from facet color
+            marker_color = self._get_complementary_color(facet_color)
+        else:
+            # Fallback to magenta
+            marker_color = (255, 0, 255)
 
         p1 = center + self._face_board.ortho_direction * height
         p2 = center - self._face_board.ortho_direction * height
 
         renderer = self._renderer
-
-        # this is also supported by glCallLine
-        # shapes.cylinder(p1, p2, r1, r2, marker_color)
         p1_point = self._to_point3d(p1)
         p2_point = self._to_point3d(p2)
         renderer.shapes.full_cylinder(p1_point, p2_point, r_outer, r_inner, marker_color)
+
+    def _get_complementary_color(self, face_color: _VColor) -> _VColor:
+        """Get a complementary color for maximum contrast.
+
+        Args:
+            face_color: RGB tuple (0-255 range) of the face color
+
+        Returns:
+            RGB tuple (0-255) for the marker color
+        """
+        # Map common face colors to high-contrast complementary colors
+        # Values are approximate matches for the standard cube colors
+        complementary_map: dict[_VColor, _VColor] = {
+            (255, 0, 0): (0, 255, 255),      # Red -> Cyan
+            (0, 255, 0): (255, 0, 255),      # Green -> Magenta
+            (0, 0, 255): (255, 255, 0),      # Blue -> Yellow
+            (255, 255, 0): (102, 51, 255),   # Yellow -> Blue/Purple
+            (255, 128, 0): (0, 255, 255),    # Orange -> Cyan
+            (255, 255, 255): (153, 0, 153),  # White -> Dark Magenta
+        }
+        return complementary_map.get(face_color, (255, 0, 255))  # Default to magenta
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]

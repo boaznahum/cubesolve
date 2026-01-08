@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Any
 
 from cube.application.AbstractApp import AbstractApp
 from cube.application.commands.Operator import Operator
+from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
 from cube.application.state import ApplicationAndViewState
 from cube.domain.algs import Alg
 from cube.domain.model.Cube import Cube
@@ -22,6 +23,8 @@ class _App(AbstractApp):
                  cube_size: int | None,
                  solver: SolverName | None = None) -> None:
         self._config = config
+        self._marker_factory = MarkerFactory()
+        self._marker_manager = MarkerManager()
         super().__init__()
 
         self._vs = vs
@@ -60,6 +63,16 @@ class _App(AbstractApp):
     def config(self) -> ConfigProtocol:
         """Get the application configuration."""
         return self._config
+
+    @property
+    def marker_factory(self) -> IMarkerFactory:
+        """Get the marker factory for creating marker configurations."""
+        return self._marker_factory
+
+    @property
+    def marker_manager(self) -> IMarkerManager:
+        """Get the marker manager for adding/retrieving markers on cube stickers."""
+        return self._marker_manager
 
     @property
     def error(self) -> str | None:

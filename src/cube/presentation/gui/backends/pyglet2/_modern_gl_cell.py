@@ -26,14 +26,13 @@ Vertex Format:
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy import ndarray
 
+from cube.application.markers import MarkerConfig, MarkerShape, get_markers_from_part_edge
 from cube.domain.geometric.cube_boy import Color
-from cube.domain.model.VMarker import VMarker, viewer_get_markers
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
@@ -45,13 +44,7 @@ from ._modern_gl_constants import CELL_TEXTURE_KEY
 # Number of segments for ring geometry (more = smoother circle)
 _RING_SEGMENTS = 32  # Increased for smoother 3D rings
 
-# Marker definitions: name -> (radius_factor, thickness, height_offset)
-# Color is now determined dynamically based on face color (complementary)
-_MARKER_DEFS: dict[str, tuple[float, float, float]] = {
-    "C0": (1.0, 0.8, 0.15),   # Full ring, raised
-    "C1": (0.6, 1.0, 0.15),   # Filled circle, raised
-    "C2": (1.0, 0.3, 0.15),   # Thin ring, raised
-}
+# Marker definitions now come from MarkerConfig - no static definitions needed
 
 # Complementary colors for each cube face color (RGB 0.0-1.0)
 # These provide maximum contrast for visibility
@@ -83,11 +76,6 @@ _TRACKER_INDICATOR_OUTLINE_COLOR = (0.0, 0.0, 0.0)  # Black outline for visibili
 
 # Border line color (black)
 _LINE_COLOR = (0.0, 0.0, 0.0)
-
-# Cross marker colors for origin/on_x/on_y attributes (from Face.py)
-_CROSS_COLOR_ORIGIN = (0.0, 0.0, 0.0)  # Black for origin
-_CROSS_COLOR_ON_X = (0.54, 0.17, 0.89)  # Blueviolet for on_x
-_CROSS_COLOR_ON_Y = (0.0, 0.75, 1.0)  # Deepskyblue for on_y
 
 
 def _get_complementary_color(face_color: tuple[float, float, float]) -> tuple[float, float, float]:
@@ -285,42 +273,42 @@ class ModernGLCell:
             dest.extend([p2[0], p2[1], p2[2], lr, lg, lb_color])
 
     def generate_cross_line_vertices(self, dest: list[float]) -> None:
-        """Generate line vertices for origin/on_x/on_y cross markers.
+        """Generate line vertices for cross markers.
 
-        Draws an X (cross) through the cell center when the cell's
-        part_edge has origin, on_x, or on_y attributes set.
+        Draws an X (cross) through the cell center for each marker
+        with shape == CROSS (origin, on_x, on_y markers).
 
-        Appends 4 vertices (2 line segments forming X) to dest.
+        Appends 4 vertices per cross (2 line segments forming X) to dest.
         Each vertex: x, y, z, r, g, b (6 floats)
 
         Args:
             dest: List to append vertex data to
         """
-        if self.part_edge is None:
+        markers = self.get_markers()
+        if not markers:
             return
 
-        attributes = self.part_edge.attributes
-
-        # Check which cross to draw
-        if attributes.get("origin", False):
-            color = _CROSS_COLOR_ORIGIN
-        elif attributes.get("on_x", False):
-            color = _CROSS_COLOR_ON_X
-        elif attributes.get("on_y", False):
-            color = _CROSS_COLOR_ON_Y
-        else:
-            return  # No cross marker
+        # Find cross markers
+        cross_markers = [m for m in markers if m.shape == MarkerShape.CROSS]
+        if not cross_markers:
+            return
 
         lb, rb, rt, lt = self._corners
-        r, g, b = color
 
-        # Draw X from corner to corner
-        # Line 1: lb to rt (diagonal)
-        dest.extend([lb[0], lb[1], lb[2], r, g, b])
-        dest.extend([rt[0], rt[1], rt[2], r, g, b])
-        # Line 2: rb to lt (other diagonal)
-        dest.extend([rb[0], rb[1], rb[2], r, g, b])
-        dest.extend([lt[0], lt[1], lt[2], r, g, b])
+        for marker in cross_markers:
+            # Get marker color - use explicit color or default to black
+            if marker.color is not None:
+                r, g, b = marker.color
+            else:
+                r, g, b = 0.0, 0.0, 0.0
+
+            # Draw X from corner to corner
+            # Line 1: lb to rt (diagonal)
+            dest.extend([lb[0], lb[1], lb[2], r, g, b])
+            dest.extend([rt[0], rt[1], rt[2], r, g, b])
+            # Line 2: rb to lt (other diagonal)
+            dest.extend([rb[0], rb[1], rb[2], r, g, b])
+            dest.extend([lt[0], lt[1], lt[2], r, g, b])
 
     @property
     def color_enum(self) -> Color:
@@ -341,32 +329,22 @@ class ModernGLCell:
             return None
         return self.part_edge.c_attributes.get(CELL_TEXTURE_KEY)
 
-    def get_markers(self) -> Sequence[VMarker] | None:
-        """Get markers for this cell from both c_attributes and f_attributes.
+    def get_markers(self) -> list[MarkerConfig]:
+        """Get markers for this cell from all attribute dictionaries.
 
         Markers are visual annotations added by the solver during animation
         to highlight pieces being tracked:
+        - attributes: fixed position markers
         - c_attributes: markers on moving pieces (follow the piece)
         - f_attributes: markers on fixed positions (stay in place)
 
         Returns:
-            Sequence of VMarker enums, or None if no markers.
+            List of MarkerConfig objects, sorted by z_order.
         """
         if self.part_edge is None:
-            return None
+            return []
 
-        # Get markers from both moving (c_attributes) and fixed (f_attributes)
-        c_markers = viewer_get_markers(self.part_edge.c_attributes)
-        f_markers = viewer_get_markers(self.part_edge.f_attributes)
-
-        # Combine both lists
-        if c_markers and f_markers:
-            return list(c_markers) + list(f_markers)
-        elif c_markers:
-            return c_markers
-        elif f_markers:
-            return f_markers
-        return None
+        return get_markers_from_part_edge(self.part_edge)
 
     def has_markers(self) -> bool:
         """Check if this cell has any markers.
@@ -374,8 +352,7 @@ class ModernGLCell:
         Returns:
             True if cell has markers to render.
         """
-        markers = self.get_markers()
-        return markers is not None and len(markers) > 0
+        return len(self.get_markers()) > 0
 
     def get_center_position(self) -> ndarray:
         """Get the 3D center position of this cell.
@@ -429,7 +406,8 @@ class ModernGLCell:
         - Outer cylinder wall
         - Inner cylinder wall (for rings)
 
-        Uses complementary colors for maximum contrast against the face color.
+        Uses marker's color if specified, otherwise complementary color for contrast.
+        Skips CROSS markers (handled by generate_cross_line_vertices).
 
         Appends triangles to dest.
         Each vertex: x, y, z, nx, ny, nz, r, g, b (9 floats)
@@ -439,6 +417,11 @@ class ModernGLCell:
         """
         markers = self.get_markers()
         if not markers:
+            return
+
+        # Filter out cross markers (they're drawn as lines, not rings)
+        ring_markers = [m for m in markers if m.shape != MarkerShape.CROSS]
+        if not ring_markers:
             return
 
         # Calculate cell center and size
@@ -453,21 +436,31 @@ class ModernGLCell:
         # Normal vector (already normalized)
         normal = (float(self._normal[0]), float(self._normal[1]), float(self._normal[2]))
 
-        # Get complementary color based on face color for maximum contrast
-        marker_color = _get_complementary_color(self._color)
-
         # Generate geometry for each marker
-        for marker in markers:
-            marker_def = _MARKER_DEFS.get(marker.value)
-            if marker_def is None:
-                continue
+        for marker in ring_markers:
+            # Get marker properties from MarkerConfig
+            radius_factor = marker.radius_factor
+            thick = marker.thickness
+            height_offset = marker.height_offset
 
-            radius_factor, thick, height_offset = marker_def
+            # Determine marker color
+            if marker.color is not None:
+                marker_color = marker.color
+            elif marker.use_complementary_color:
+                marker_color = _get_complementary_color(self._color)
+            else:
+                marker_color = _DEFAULT_MARKER_COLOR
 
             # Calculate actual radius
             base_radius = cell_size * 0.4  # 40% of cell size
             outer_radius = base_radius * radius_factor
-            inner_radius = outer_radius * (1.0 - thick)
+
+            # For FILLED_CIRCLE, inner_radius is 0 (solid disk)
+            # For RING, calculate inner radius from thickness
+            if marker.shape == MarkerShape.FILLED_CIRCLE:
+                inner_radius = 0.0
+            else:  # RING
+                inner_radius = outer_radius * (1.0 - thick)
 
             # Height of the 3D cylinder
             marker_height = height_offset * cell_size

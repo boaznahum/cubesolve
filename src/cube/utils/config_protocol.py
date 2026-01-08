@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Protocol, Tuple, runtime_checkable
 if TYPE_CHECKING:
     from cube.domain.model.Color import Color
     from cube.utils.SSCode import SSCode
+    from cube.application.markers import IMarkerFactory, IMarkerManager
 
 
 @runtime_checkable
@@ -448,4 +449,14 @@ class IServiceProvider(Protocol):
     @property
     def config(self) -> ConfigProtocol:
         """Get the application configuration."""
+        ...
+
+    @property
+    def marker_factory(self) -> "IMarkerFactory":
+        """Get the marker factory for creating marker configurations."""
+        ...
+
+    @property
+    def marker_manager(self) -> "IMarkerManager":
+        """Get the marker manager for adding/retrieving markers on cube stickers."""
         ...

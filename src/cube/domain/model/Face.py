@@ -2,7 +2,6 @@ from collections.abc import Hashable, Iterable, Sequence
 from typing import Callable, Tuple, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model.VMarker import VMarker, viewer_add_view_marker
 
 from ._elements import Direction, PartColorsID
 from .PartSlice import CenterSlice, PartSlice
@@ -91,21 +90,38 @@ class Face(SuperElement, Hashable):
         self.set_parts(self._center, *self._edges, *self._corners)
         super().finish_init()
 
+        draw_markers = self.config.gui_draw_markers
         sample_markers = self.config.gui_draw_sample_markers
+        mf = self.cube.sp.marker_factory
+        mm = self.cube.sp.marker_manager
 
         n = self.cube.n_slices
         n1 = n - 1
-        self._edge_bottom.get_slice(0).get_face_edge(self).attributes["origin"] = True
-        self._edge_left.get_slice(0).get_face_edge(self).attributes["origin"] = True
-        self._edge_top.get_slice(0).get_face_edge(self).attributes["origin"] = True
-        self._edge_right.get_slice(0).get_face_edge(self).attributes["origin"] = True
-        self._edge_bottom.get_slice(n1).get_face_edge(self).attributes["on_x"] = True
-        self._edge_left.get_slice(n1).get_face_edge(self).attributes["on_y"] = True
+
+        if draw_markers:
+            # Set origin markers on edges (slot 0 of each edge)
+            origin_marker = mf.origin()
+            mm.add_fixed_marker(self._edge_bottom.get_slice(0).get_face_edge(self), origin_marker)
+            mm.add_fixed_marker(self._edge_left.get_slice(0).get_face_edge(self), origin_marker)
+            mm.add_fixed_marker(self._edge_top.get_slice(0).get_face_edge(self), origin_marker)
+            mm.add_fixed_marker(self._edge_right.get_slice(0).get_face_edge(self), origin_marker)
+
+            # Set on_x marker (X-axis direction)
+            mm.add_fixed_marker(self._edge_bottom.get_slice(n1).get_face_edge(self), mf.on_x())
+
+            # Set on_y marker (Y-axis direction)
+            mm.add_fixed_marker(self._edge_left.get_slice(n1).get_face_edge(self), mf.on_y())
+
+            # Set coordinate markers on center pieces
+            mm.add_fixed_marker(self._center.get_center_slice((0, 0)).get_face_edge(self), origin_marker)
+            mm.add_fixed_marker(self._center.get_center_slice((0, n1)).get_face_edge(self), mf.on_x())
+            mm.add_fixed_marker(self._center.get_center_slice((n1, 0)).get_face_edge(self), mf.on_y())
 
         for i in range(n):
             if sample_markers:
-                viewer_add_view_marker(self._edge_left.get_slice(i).get_face_edge(self).c_attributes, VMarker.C1)
-                viewer_add_view_marker(self._edge_right.get_slice(i).get_face_edge(self).f_attributes, VMarker.C2)
+                # Sample markers for debugging: C1 on left edge, C2 on right edge
+                mm.add_marker(self._edge_left.get_slice(i).get_face_edge(self), mf.c1(), moveable=True)
+                mm.add_marker(self._edge_right.get_slice(i).get_face_edge(self), mf.c2(), moveable=False)
 
             self._edge_left.get_slice(i).get_face_edge(self).attributes["cw"] = i
             self._edge_top.get_slice(i).get_face_edge(self).attributes["cw"] = i
@@ -116,10 +132,6 @@ class Face(SuperElement, Hashable):
             for i in range(n):
                 # cw = self._edge_bottom.get_slice(i).get_face_edge(self).attributes["cw"]
                 e.get_left_top_left_edge(self, i).c_attributes["n"] = i + 1
-
-        self._center.get_center_slice((0, 0)).get_face_edge(self).attributes["origin"] = True
-        self._center.get_center_slice((0, n1)).get_face_edge(self).attributes["on_x"] = True
-        self._center.get_center_slice((n1, 0)).get_face_edge(self).attributes["on_y"] = True
 
         for r in range(n):
             for c in range(n):

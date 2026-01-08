@@ -36,14 +36,14 @@ class PartEdge:
     2. ``c_attributes`` - Color-Associated (MOVES with color)
        - Attributes that travel with the colored sticker during rotations
        - COPIED during copy_color() method
-       - Keys: "n" (sequential number), tracker keys, VMarker.C1
+       - Keys: "n" (sequential number), tracker keys, "markers" list
        - Use case: Track a specific piece as it moves around the cube
        - Example: FaceTracker puts a key here to find a piece after rotation
 
     3. ``f_attributes`` - Fixed to Slot (STAYS at position)
        - Attributes that stay at the physical slot position
        - NOT copied during copy_color()
-       - Keys: destination markers, VMarker.C2
+       - Keys: destination markers, "markers" list
        - Use case: Mark where a piece should end up (destination)
        - Uses defaultdict(bool) so missing keys return False
 
@@ -87,11 +87,11 @@ class PartEdge:
         self.attributes: dict[Hashable, Any] = {}
 
         # Color-associated attributes - MOVE with color during copy_color()
-        # Used by FaceTracker, animation markers (VMarker.C1)
+        # Used by FaceTracker, moveable markers (e.g., C1 from MarkerFactory)
         self.c_attributes: dict[Hashable, Any] = {}
 
         # Fixed attributes - STAY at physical slot, NOT copied during rotation
-        # Used for destination markers (VMarker.C2)
+        # Used for fixed markers (e.g., C2 from MarkerFactory)
         self.f_attributes: dict[Hashable, Any] = defaultdict(bool)
 
         self._parent: _PartSlice

@@ -4,24 +4,18 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
     ContextManager,
     Generator,
-    Hashable,
     Literal,
     Tuple,
     TypeAlias,
 )
 
 from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.application.markers import MarkerConfig
 from cube.domain.algs.Algs import Algs
 from cube.domain.model import Corner, Edge, Part, PartColorsID, PartEdge, PartSlice
-from cube.domain.model.VMarker import (
-    VMarker,
-    viewer_add_view_marker,
-    viewer_remove_view_marker,
-)
 
 from .AnnWhat import AnnWhat
 
@@ -59,7 +53,7 @@ class OpAnnotation:
         return self.op.animation_enabled
 
     # @contextmanager
-    def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, VMarker]],
+    def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, MarkerConfig]],
                                 text: _HEADS | None = None):
 
         """
@@ -70,6 +64,7 @@ class OpAnnotation:
         """
 
         op = self.op
+        mm = self.cube.sp.marker_manager
 
         global _SLice_Tracking_UniqID
 
@@ -79,16 +74,13 @@ class OpAnnotation:
         def _key(_i):
             return "annotation_track" + str(abs(_i))
 
-        add_marker = viewer_add_view_marker
-        remove_marker: Callable[[dict[Hashable, Any], VMarker], None] = viewer_remove_view_marker
-
         #                  type,         key_index, marker
-        slots: list[Tuple[Literal[1, 2, 3], int, VMarker]] = []
-        s: Tuple[PartEdge, bool, VMarker]
+        slots: list[Tuple[Literal[1, 2, 3], int, MarkerConfig]] = []
+        s: Tuple[PartEdge, bool, MarkerConfig]
         for s in slices:
             _slice: PartEdge = s[0]
             fixed = s[1]
-            marker = s[2]  # see view_markers.py
+            marker = s[2]
 
             _SLice_Tracking_UniqID += 1
 
@@ -107,11 +99,11 @@ class OpAnnotation:
             key = _key(_SLice_Tracking_UniqID)
             if fixed:
                 slots.append((_type, -_SLice_Tracking_UniqID, marker))
-                add_marker(_slice.f_attributes, marker)
+                mm.add_marker(_slice, marker, moveable=False)
                 _slice.f_attributes[key] = key
             else:
                 slots.append((_type, _SLice_Tracking_UniqID, marker))
-                add_marker(_slice.c_attributes, marker)
+                mm.add_marker(_slice, marker, moveable=True)
                 _slice.c_attributes[key] = key
 
         has_text = text and any(text)
@@ -171,13 +163,10 @@ class OpAnnotation:
 
                 if i < 0:
                     # if have a bug, nested annimation in __fixed_edge, so key already deleted
-
-                    # del e.f_attributes[annotation_key]
-                    remove_marker(e.f_attributes, marker)
+                    mm.remove_marker(e, marker, moveable=False)
                     del e.f_attributes[key]
                 else:
-                    # del e.c_attributes[annotation_key]
-                    remove_marker(e.c_attributes, marker)
+                    mm.remove_marker(e, marker, moveable=True)
                     del e.c_attributes[key]
 
             op.play(Algs.AN)
@@ -219,8 +208,9 @@ class OpAnnotation:
 
         global _SLice_Tracking_UniqID
 
-        edges: list[Tuple[PartEdge, bool, VMarker]] = []
+        edges: list[Tuple[PartEdge, bool, MarkerConfig]] = []
         cube = self.cube
+        mf = cube.sp.marker_factory
 
         # we invoke a specific method, to stop recursively check for type
         # we already know the type
@@ -234,9 +224,9 @@ class OpAnnotation:
                 raise InternalSWError("AnnWhat.Both is applicable only for Part or PartColorID")
 
             if by_position:
-                marker = VMarker.C2
+                marker = mf.c2()  # Destination marker (stays at position)
             else:
-                marker = VMarker.C1
+                marker = mf.c1()  # Moved marker (follows piece)
 
             edges.append((_e, by_position, marker))
 
