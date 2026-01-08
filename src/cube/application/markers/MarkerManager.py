@@ -60,6 +60,7 @@ class MarkerManager(IMarkerManager):
         part_edge: PartEdge,
         marker: MarkerConfig,
         moveable: bool = True,
+        remove_same_name: bool = False,
     ) -> None:
         """Add a marker to a PartEdge.
 
@@ -73,7 +74,13 @@ class MarkerManager(IMarkerManager):
             moveable: If True, marker moves with the sticker color during rotations
                      (stored in c_attributes). If False, marker stays at physical
                      position (stored in f_attributes).
+            remove_same_name: If True, removes all existing markers with the same
+                     name before adding the new marker. Useful for updating markers
+                     that should replace previous values (e.g., index indicators).
         """
+        if remove_same_name:
+            self.remove_markers_by_name(part_edge, marker.name, moveable=moveable)
+
         if moveable:
             attrs = part_edge.c_attributes
         else:
