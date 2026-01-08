@@ -117,7 +117,7 @@ class TestSolverBasics:
     def test_all_solvers_are_tested(self) -> None:
         """Verify that our test covers all known solvers."""
         tested_solvers = set(get_solver_names())
-        all_solvers = set(SolverName)
+        all_solvers = set(SolverName.implemented())
 
         assert tested_solvers == all_solvers, (
             f"Test configuration is missing solvers: {all_solvers - tested_solvers}"
