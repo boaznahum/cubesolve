@@ -479,12 +479,15 @@ class _Cell:
                 with self._gen_list_for_slice(_slice, g_list_dest):
                     draw_facet(edge, vx)
 
-                    # if _slice.get_face_edge(cube_face).attributes["origin"]:
-                    #     shapes.cross(vx, cross_width, cross_color)
-                    # if _slice.get_face_edge(cube_face).attributes["on_x"]:
-                    #     shapes.cross(vx, cross_width_x, cross_color_x)
-                    # if _slice.get_face_edge(cube_face).attributes["on_y"]:
-                    #     shapes.cross(vx, cross_width_y, cross_color_y)
+                    if cfg.gui_draw_markers:
+                        attributes = edge.attributes
+                        points = self._vertices_to_points(vx)
+                        if attributes.get("origin", False):
+                            renderer.shapes.cross(points, cross_width, cross_color)
+                        if attributes.get("on_x", False):
+                            renderer.shapes.cross(points, cross_width_x, cross_color_x)
+                        if attributes.get("on_y", False):
+                            renderer.shapes.cross(points, cross_width_y, cross_color_y)
 
         else:
             assert isinstance(part, Center)
@@ -511,11 +514,11 @@ class _Cell:
                         if cfg.gui_draw_markers:
                             attributes = edge.attributes
                             points = self._vertices_to_points(vx)
-                            if attributes["origin"]:
+                            if attributes.get("origin", False):
                                 renderer.shapes.cross(points, cross_width, cross_color)
-                            if attributes["on_x"]:
+                            if attributes.get("on_x", False):
                                 renderer.shapes.cross(points, cross_width_x, cross_color_x)
-                            if attributes["on_y"]:
+                            if attributes.get("on_y", False):
                                 renderer.shapes.cross(points, cross_width_y, cross_color_y)
 
     def _create_markers_box(self, vertexes: Sequence[ndarray], color, marker: bool):

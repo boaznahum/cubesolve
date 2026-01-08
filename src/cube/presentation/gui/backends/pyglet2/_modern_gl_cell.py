@@ -84,6 +84,11 @@ _TRACKER_INDICATOR_OUTLINE_COLOR = (0.0, 0.0, 0.0)  # Black outline for visibili
 # Border line color (black)
 _LINE_COLOR = (0.0, 0.0, 0.0)
 
+# Cross marker colors for origin/on_x/on_y attributes (from Face.py)
+_CROSS_COLOR_ORIGIN = (0.0, 0.0, 0.0)  # Black for origin
+_CROSS_COLOR_ON_X = (0.54, 0.17, 0.89)  # Blueviolet for on_x
+_CROSS_COLOR_ON_Y = (0.0, 0.75, 1.0)  # Deepskyblue for on_y
+
 
 def _get_complementary_color(face_color: tuple[float, float, float]) -> tuple[float, float, float]:
     """Get a complementary marker color for maximum contrast.
@@ -278,6 +283,44 @@ class ModernGLCell:
         for p1, p2 in [(lb, rb), (rb, rt), (rt, lt), (lt, lb)]:
             dest.extend([p1[0], p1[1], p1[2], lr, lg, lb_color])
             dest.extend([p2[0], p2[1], p2[2], lr, lg, lb_color])
+
+    def generate_cross_line_vertices(self, dest: list[float]) -> None:
+        """Generate line vertices for origin/on_x/on_y cross markers.
+
+        Draws an X (cross) through the cell center when the cell's
+        part_edge has origin, on_x, or on_y attributes set.
+
+        Appends 4 vertices (2 line segments forming X) to dest.
+        Each vertex: x, y, z, r, g, b (6 floats)
+
+        Args:
+            dest: List to append vertex data to
+        """
+        if self.part_edge is None:
+            return
+
+        attributes = self.part_edge.attributes
+
+        # Check which cross to draw
+        if attributes.get("origin", False):
+            color = _CROSS_COLOR_ORIGIN
+        elif attributes.get("on_x", False):
+            color = _CROSS_COLOR_ON_X
+        elif attributes.get("on_y", False):
+            color = _CROSS_COLOR_ON_Y
+        else:
+            return  # No cross marker
+
+        lb, rb, rt, lt = self._corners
+        r, g, b = color
+
+        # Draw X from corner to corner
+        # Line 1: lb to rt (diagonal)
+        dest.extend([lb[0], lb[1], lb[2], r, g, b])
+        dest.extend([rt[0], rt[1], rt[2], r, g, b])
+        # Line 2: rb to lt (other diagonal)
+        dest.extend([rb[0], rb[1], rb[2], r, g, b])
+        dest.extend([lt[0], lt[1], lt[2], r, g, b])
 
     @property
     def color_enum(self) -> Color:

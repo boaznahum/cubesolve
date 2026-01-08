@@ -296,6 +296,7 @@ class ModernGLBoard:
             if is_animated:
                 cell.generate_face_vertices(animated_face_verts)
                 cell.generate_line_vertices(animated_line_verts)
+                cell.generate_cross_line_vertices(animated_line_verts)
                 # Collect animated marker geometry
                 if animated_marker_verts is not None:
                     cell.generate_marker_vertices(animated_marker_verts)
@@ -303,6 +304,7 @@ class ModernGLBoard:
             else:
                 cell.generate_face_vertices(face_verts)
                 cell.generate_line_vertices(line_verts)
+                cell.generate_cross_line_vertices(line_verts)
                 # Collect static marker geometry
                 if marker_verts is not None:
                     cell.generate_marker_vertices(marker_verts)
@@ -334,10 +336,12 @@ class ModernGLBoard:
                 if color in animated_verts_per_color:
                     cell.generate_textured_vertices(animated_verts_per_color[color], size)
                 cell.generate_line_vertices(animated_line_verts)
+                cell.generate_cross_line_vertices(animated_line_verts)
             else:
                 if color in verts_per_color:
                     cell.generate_textured_vertices(verts_per_color[color], size)
                 cell.generate_line_vertices(line_verts)
+                cell.generate_cross_line_vertices(line_verts)
 
     def generate_per_cell_textured_geometry(
         self,
@@ -418,10 +422,12 @@ class ModernGLBoard:
                 animated_verts_per_texture.setdefault(texture_handle, [])
                 cell.generate_full_uv_vertices(animated_verts_per_texture[texture_handle])
                 cell.generate_line_vertices(animated_line_verts)
+                cell.generate_cross_line_vertices(animated_line_verts)
             else:
                 verts_per_texture.setdefault(texture_handle, [])
                 cell.generate_full_uv_vertices(verts_per_texture[texture_handle])
                 cell.generate_line_vertices(line_verts)
+                cell.generate_cross_line_vertices(line_verts)
 
     def get_face_center(self, face_name: FaceName) -> ndarray:
         """Get the center point of a face."""
