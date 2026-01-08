@@ -242,6 +242,7 @@ class FaceTranslationResult:
     """
 
     source_coord: tuple[int, int]
+    whole_cube_base_alg: WholeCubeAlg
     whole_cube_alg: Alg
     slice_algorithms: list[SliceAlgorithmResult]
     shared_edge: Edge | None
@@ -586,6 +587,7 @@ class Face2FaceTranslator:
 
         return FaceTranslationResult(
             source_coord=source_coord,
+            whole_cube_base_alg=whole_cube_base_alg,
             whole_cube_alg=whole_cube_alg,
             slice_algorithms=slice_algorithms,
             shared_edge=shared_edge,

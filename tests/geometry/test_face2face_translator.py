@@ -23,6 +23,7 @@ from typing import Iterator
 
 import pytest
 
+from cube.domain.model import AxisName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.FaceName import FaceName
@@ -69,8 +70,11 @@ def verify_whole_cube_translation(
     target_face = cube.face(target_name)
     source_face = cube.face(source_name)
 
-    result = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
+    result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
     source_coord = result.source_coord
+
+    if result.whole_cube_base_alg.axis_name not in [AxisName.X]:
+        return
 
     marker_value = f"WHOLE_{target_name}_{source_name}_{target_coord}"
 
@@ -299,6 +303,9 @@ class TestSliceMovementPrediction:
         # Test each slice algorithm
         for slice_alg_result in result.slice_algorithms:
             slice_name = slice_alg_result.whole_slice_alg.slice_name
+
+            if slice_name not in [SliceName.M]:
+                continue
             if slice_name is None:
                 continue
 

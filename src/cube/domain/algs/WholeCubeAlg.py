@@ -43,6 +43,10 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
         face_name = self.get_face_name()
         return face_name, cube.get_all_part_slices()
 
+    @property
+    def axis_name(self) -> AxisName:
+        return self._axis_name
+
     def get_face_name(self) -> FaceName:
         """
         Return the face that defines the positive rotation axis.
