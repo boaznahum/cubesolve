@@ -73,8 +73,8 @@ def verify_whole_cube_translation(
     result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
     source_coord = result.source_coord
 
-    if result.whole_cube_base_alg.axis_name not in [AxisName.X]:
-        return
+    # if result.whole_cube_base_alg.axis_name not in [AxisName.X]:
+    #     return
 
     marker_value = f"WHOLE_{target_name}_{source_name}_{target_coord}"
 
@@ -132,8 +132,8 @@ def verify_slice_translation(
 
     slice_name = result.slice_algorithms[0].whole_slice_alg.slice_name
 
-    if slice_name not in [SliceName.M]:
-        return # skip it
+    # if slice_name not in [SliceName.M]:
+    #     return # skip it
     slice_alg.play(cube)
 
     # Verify marker at target_coord on target_face
@@ -304,8 +304,8 @@ class TestSliceMovementPrediction:
         for slice_alg_result in result.slice_algorithms:
             slice_name = slice_alg_result.whole_slice_alg.slice_name
 
-            if slice_name not in [SliceName.M]:
-                continue
+            # if slice_name not in [SliceName.M]:
+            #     continue
             if slice_name is None:
                 continue
 
