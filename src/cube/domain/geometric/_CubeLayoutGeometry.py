@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, Iterator
 
-from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
@@ -22,46 +21,21 @@ class _CubeLayoutGeometry:
     Private implementation of cube geometry calculations.
 
     This class answers geometric questions about the relationship between
-    slices (M, E, S) and faces. It provides the static implementation that
-    is exposed through the SliceLayout and CubeLayout protocols.
+    slices (M, E, S) and faces. It provides static implementations for
+    methods exposed through the SliceLayout and CubeLayout protocols.
 
     Methods are currently hardcoded based on empirical observation. Future
     work (Issue #55) may derive these mathematically from slice traversal
     paths and face coordinate systems.
 
+    Note: does_slice_cut_rows_or_columns was moved to _SliceLayout (Issue #55).
+
     See Also:
-        - SliceLayout protocol: exposes does_slice_cut_rows_or_columns,
+        - SliceLayout protocol: exposes does_slice_cut_rows_or_columns (in _SliceLayout),
           does_slice_of_face_start_with_face as instance methods
         - CubeLayout protocol: exposes iterate_orthogonal_face_center_pieces
         - GEOMETRY.md: detailed documentation of geometric relationships
     """
-
-    @staticmethod
-    def does_slice_cut_rows_or_columns(slice_name: SliceName, face_name: FaceName) -> CLGColRow:
-
-        """
-           Slice Traversal (content movement during rotation):
-                M: F → U → B → D → F  (vertical cycle, like L rotation)
-                E: R → B → L → F → R  (horizontal cycle, like D rotation)
-                S: U → R → D → L → U  (around F/B axis, like F rotation)
-
-        """
-        # Determine if slice intersects rows or columns based on slice orientation
-        if slice_name == SliceName.M:
-            return CLGColRow.ROW
-
-        elif slice_name == SliceName.E:
-            return CLGColRow.COL  # slice cut the column so we check row
-
-        elif slice_name == SliceName.S:
-
-            if face_name in [FaceName.R, FaceName.L]:
-                # slice cut the rows so we take columns like in M
-                return CLGColRow.ROW
-            else:
-                return CLGColRow.COL
-
-        raise InternalSWError()
 
     @staticmethod
     def does_slice_of_face_start_with_face(slice_name: SliceName, face_name: FaceName) -> bool:
@@ -249,7 +223,8 @@ class _CubeLayoutGeometry:
         # Does this slice cut rows or columns on side_face?
         # ROW → slice cuts rows → forms a COLUMN on face → fixed col, iterate rows
         # COL → slice cuts cols → forms a ROW on face → fixed row, iterate cols
-        cut_type = _CubeLayoutGeometry.does_slice_cut_rows_or_columns(slice_name, side_name)
+        slice_layout = cube.layout.get_slice(slice_name)
+        cut_type = slice_layout.does_slice_cut_rows_or_columns(side_name)
 
         # Does slice index align with face LTR coordinates?
         starts_with_face = _CubeLayoutGeometry.does_slice_of_face_start_with_face(slice_name, side_name)

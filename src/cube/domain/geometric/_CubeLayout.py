@@ -15,7 +15,6 @@ from cube.domain.geometric.cube_layout import (
     _ALL_OPPOSITE,
     _OPPOSITE,
 )
-from cube.domain.geometric.cube_walking import CubeWalkingInfo
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 from cube.utils.Cache import CacheManager
@@ -460,8 +459,6 @@ class _CubeLayout(CubeLayout):
     def does_slice_cut_rows_or_columns(self, slice_name: SliceName, face_name: FaceName) -> CLGColRow:
         """Determine if a slice cuts rows or columns on a given face.
 
-        Currently delegates to _CubeLayoutGeometry. Future work may derive this
-        from the internal cube's geometry.
+        Delegates to the SliceLayout for this slice.
         """
-        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
-        return _CubeLayoutGeometry.does_slice_cut_rows_or_columns(slice_name, face_name)
+        return self.get_slice(slice_name).does_slice_cut_rows_or_columns(face_name)

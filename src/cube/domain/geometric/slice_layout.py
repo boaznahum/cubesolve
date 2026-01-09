@@ -155,10 +155,43 @@ class _SliceLayout(SliceLayout):
             case _:
                 raise RuntimeError(f"Unknown Slice {self._slice_name}")
 
-    def does_slice_cut_rows_or_columns(self, face_name: FaceName) -> CLGColRow:
-        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
-        return _CubeLayoutGeometry.does_slice_cut_rows_or_columns(self._slice_name, face_name)
+    def does_slice_cut_rows_or_columns(self, face_name: "FaceName") -> CLGColRow:
+        """
+        Determine whether this slice cuts rows or columns on the given face.
 
-    def does_slice_of_face_start_with_face(self, face_name: FaceName) -> bool:
+        Classification: HARDCODED - empirically determined.
+        TODO (Issue #55): Derive from slice axis vs face orientation.
+
+        Slice Traversal (content movement during rotation):
+            M: F → U → B → D → F  (vertical cycle, like L rotation)
+            E: R → B → L → F → R  (horizontal cycle, like D rotation)
+            S: U → R → D → L → U  (around F/B axis, like F rotation)
+
+        Args:
+            face_name: The face to check.
+
+        Returns:
+            CLGColRow.ROW if slice cuts rows (forms vertical strips on face)
+            CLGColRow.COL if slice cuts columns (forms horizontal strips on face)
+        """
+        from cube.domain.model.FaceName import FaceName
+        from cube.domain.model.SliceName import SliceName
+
+        if self._slice_name == SliceName.M:
+            return CLGColRow.ROW
+
+        elif self._slice_name == SliceName.E:
+            return CLGColRow.COL  # slice cuts columns so we check row
+
+        elif self._slice_name == SliceName.S:
+            if face_name in [FaceName.R, FaceName.L]:
+                # slice cuts rows so we take columns like in M
+                return CLGColRow.ROW
+            else:
+                return CLGColRow.COL
+
+        raise RuntimeError(f"Unknown slice: {self._slice_name}")
+
+    def does_slice_of_face_start_with_face(self, face_name: "FaceName") -> bool:
         from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
         return _CubeLayoutGeometry.does_slice_of_face_start_with_face(self._slice_name, face_name)
