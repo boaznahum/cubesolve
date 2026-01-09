@@ -84,7 +84,7 @@ if ($Help) {
     exit 0
 }
 
-# Set environment variable
+# Set environment variable to suppress debug output
 $env:CUBE_QUIET_ALL = "1"
 
 # Track results
