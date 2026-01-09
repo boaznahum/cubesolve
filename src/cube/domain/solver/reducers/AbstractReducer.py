@@ -83,7 +83,8 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
 
     def debug(self, *args) -> None:
         """Output debug information."""
-        if self._is_debug_enabled:
+        logger = self._cube.sp.logger
+        if logger.is_debug(self._is_debug_enabled):
             prefix = self._debug_prefix + ":"
             print("Reducer:", prefix, *(str(x) for x in args))
             self.op.log("Reducer:", prefix, *args)

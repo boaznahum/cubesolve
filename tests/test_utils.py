@@ -21,7 +21,7 @@ class TestServiceProvider(IServiceProvider):
         self._config = AppConfig()
         self._marker_factory = MarkerFactory()
         self._marker_manager = MarkerManager()
-        self._logger = Logger(self._config)
+        self._logger = Logger()  # Uses env var override if set
 
     @property
     def config(self) -> ConfigProtocol:

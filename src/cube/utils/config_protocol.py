@@ -432,34 +432,6 @@ class ConfigProtocol(Protocol):
         """
         ...
 
-    # ==========================================================================
-    # Debug/Logging settings
-    # ==========================================================================
-    @property
-    def quiet_all(self) -> bool:
-        """Suppress all debug output.
-
-        Can be overridden by CUBE_QUIET_ALL environment variable.
-        """
-        ...
-
-    @quiet_all.setter
-    def quiet_all(self, value: bool) -> None:
-        """Set quiet_all mode."""
-        ...
-
-    @property
-    def debug_all(self) -> bool:
-        """Enable all debug output.
-
-        Can be overridden by CUBE_DEBUG_ALL environment variable.
-        """
-        ...
-
-    @debug_all.setter
-    def debug_all(self, value: bool) -> None:
-        """Set debug_all mode."""
-        ...
 
 
 @runtime_checkable

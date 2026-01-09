@@ -533,14 +533,15 @@ class _CubeLayoutGeometry:
 
         # DEBUG
         _log = cube.sp.logger
-        _dbg = False  # Local debug flag for this method
-        _log.debug(_dbg, f"\n=== {slice_name.name} slice ===")
-        _log.debug(_dbg, f"Rotation face: {rotation_face_name.name}")
-        _log.debug(_dbg, f"Cycle faces: {[f.name.name for f in cycle_faces_ordered]}")
-        _log.debug(_dbg, f"First two faces: {first_face.name.name}, {second_face.name.name}")
-        _log.debug(_dbg, f"Shared edge = Starting edge: {current_edge.name}")
-        _log.debug(_dbg, f"Starting face: {current_face.name.name}")
-        _log.debug(_dbg, f"Starting slice index: {current_index}, {slot}")
+        _dbg = cube.config.solver_debug  # Use config flag for geometry debug
+        if _log.is_debug(_dbg):
+            _log.debug(_dbg, f"\n=== {slice_name.name} slice ===")
+            _log.debug(_dbg, f"Rotation face: {rotation_face_name.name}")
+            _log.debug(_dbg, f"Cycle faces: {[f.name.name for f in cycle_faces_ordered]}")
+            _log.debug(_dbg, f"First two faces: {first_face.name.name}, {second_face.name.name}")
+            _log.debug(_dbg, f"Shared edge = Starting edge: {current_edge.name}")
+            _log.debug(_dbg, f"Starting face: {current_face.name.name}")
+            _log.debug(_dbg, f"Starting slice index: {current_index}, {slot}")
 
 
         face_infos: list[FaceWalkingInfo] = []
@@ -561,21 +562,22 @@ class _CubeLayoutGeometry:
                 reference_point = (current_index, inv(slot) if is_slot_inverted else slot)
 
             # DEBUG: Show iteration info
-            # Which edge position is this on current_face?
-            if current_edge == current_face.edge_top:
-                edge_pos = "top"
-            elif current_edge == current_face.edge_bottom:
-                edge_pos = "bottom"
-            elif current_edge == current_face.edge_left:
-                edge_pos = "left"
-            elif current_edge == current_face.edge_right:
-                edge_pos = "right"
-            else:
-                edge_pos = "???"
-            _log.debug(_dbg, f"7. Iteration {iteration}: face={current_face.name.name}, edge={current_edge.name} (position={edge_pos}), "
-                  f"is_horizontal={is_horizontal}, is_slot_inverted={is_slot_inverted}, "
-                  f"is_index_inverted={is_index_inverted}, current_index={current_index}, slot={slot}, "
-                  f"reference_point={reference_point}")
+            if _log.is_debug(_dbg):
+                # Which edge position is this on current_face?
+                if current_edge == current_face.edge_top:
+                    edge_pos = "top"
+                elif current_edge == current_face.edge_bottom:
+                    edge_pos = "bottom"
+                elif current_edge == current_face.edge_left:
+                    edge_pos = "left"
+                elif current_edge == current_face.edge_right:
+                    edge_pos = "right"
+                else:
+                    edge_pos = "???"
+                _log.debug(_dbg, f"7. Iteration {iteration}: face={current_face.name.name}, edge={current_edge.name} (position={edge_pos}), "
+                      f"is_horizontal={is_horizontal}, is_slot_inverted={is_slot_inverted}, "
+                      f"is_index_inverted={is_index_inverted}, current_index={current_index}, slot={slot}, "
+                      f"reference_point={reference_point}")
 
             # Create precomputed point function - all decisions baked in
             if is_horizontal and is_slot_inverted and is_index_inverted:
@@ -610,7 +612,8 @@ class _CubeLayoutGeometry:
                 next_edge: Edge = current_edge.opposite(next_face)
 
                 # DEBUG: Show how we move to next face
-                _log.debug(_dbg, f"   -> {current_edge.name} leads to {next_face.name.name}, opposite on {next_face.name.name} is {next_edge.name}")
+                if _log.is_debug(_dbg):
+                    _log.debug(_dbg, f"   -> {current_edge.name} leads to {next_face.name.name}, opposite on {next_face.name.name} is {next_edge.name}")
 
                 # Translate slice index through the edge
                 next_slice_index = current_edge.get_slice_index_from_ltr_index(
