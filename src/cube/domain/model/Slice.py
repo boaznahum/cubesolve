@@ -172,6 +172,7 @@ from .Center import Center
 from .Edge import Edge
 from .SliceName import SliceName
 from .SuperElement import SuperElement
+from cube.utils.Cache import CacheManager
 
 if TYPE_CHECKING:
     # noinspection PyUnresolvedReferences
@@ -189,8 +190,8 @@ class Slice(SuperElement):
         "_right_bottom", "_right", "_right_top",
         "_top", "_left_top",
         "_edges", "_centers",
-        "_for_debug"
-
+        "_for_debug",
+        "_cache_manager",  # CacheManager instance for this slice (respects config.enable_cube_cache)
     ]
 
     def __init__(self, cube: _Cube, name: SliceName,
@@ -212,6 +213,9 @@ class Slice(SuperElement):
         self._edges: Sequence[Edge] = [left_top, right_top, right_bottom, left_bottom]
         self._centers: Sequence[Center] = [top, left, bottom, right]
 
+        # Create cache manager for this slice (CacheManagerImpl or CacheManagerNull based on config)
+        self._cache_manager = CacheManager.create(cube.config)
+
         self.set_parts(
             left_top, top, right_top,
             right,
@@ -223,22 +227,71 @@ class Slice(SuperElement):
         """
         Get or create the CubeWalkingInfo for this slice.
 
-        The walking info is created once and can be reused for all slice indices.
-        It contains precomputed functions for efficient point calculation.
+        Performance Optimization:
+        ========================
+        CubeWalkingInfo is expensive to create (_CubeLayoutGeometry.create_walking_info):
+        - Traverses 4 faces to compute reference points
+        - Creates 8 closure functions for point computation
+        - Picks random starting face (but result is functionally equivalent)
+
+        The result is CONSTANT for a given slice - it only depends on:
+        - The slice name (M, E, or S)
+        - The cube's face layout (which doesn't change)
+
+        Cache Strategy:
+        - Uses CacheManager from cube.layout (respects config.enable_cube_cache)
+        - Keyed by slice name (M, E, or S)
+        - No invalidation needed: the walking info never changes for a slice
+
+        Call Frequency (without cache):
+        - Called by _get_slices_by_index() which is called 2×n_slices times per rotate()
+        - For a 5×5 cube rotating M: 6 calls per quarter turn = 6 expensive rebuilds
 
         Returns:
             CubeWalkingInfo for this slice
         """
         # Import here to avoid circular imports
         from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
-        return _CubeLayoutGeometry.create_walking_info(self.cube, self._name)
+        from cube.domain.geometric.cube_walking import CubeWalkingInfo
+
+        def compute_walking_info() -> CubeWalkingInfo:
+            return _CubeLayoutGeometry.create_walking_info(self.cube, self._name)
+
+        cache_key = self._name  # SliceName.M, SliceName.E, or SliceName.S
+        cache = self._cache_manager.get("Slice._get_walking_info", CubeWalkingInfo)
+
+        return cache.compute(cache_key, compute_walking_info)
 
     def _get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
         """
         Get all edge wings and center slices for a given slice index.
 
-        This uses CubeWalkingInfo to efficiently compute the points on each face
-        without duplicating the face traversal logic.
+        Performance Optimization:YES
+        ========================
+        This method is called TWICE per slice per quarter turn:
+        1. In _rotate() to get elements for rotation (line ~339)
+        2. In _update_texture_directions_after_rotate() (line ~473)
+
+        For a 5×5 cube (n_slices=3), rotating M slice once:
+        - 3 slice indices × 2 calls each = 6 calls to this method
+
+        Each call without caching:
+        - Calls _get_walking_info() (which may itself be cached)
+        - Iterates over 4 faces
+        - For each face: n_slices center lookups + 1 edge lookup
+        - Creates new EdgeWing and CenterSlice lists
+
+        Cache Strategy:
+        - Uses CacheManager from cube.layout (respects config.enable_cube_cache)
+        - Keyed by (slice_name, slice_index) - e.g., (SliceName.M, 0)
+        - The returned EdgeWing/CenterSlice objects are REFERENCES to actual cube pieces
+        - They don't need invalidation because they point to the same objects
+        - The cache just avoids recomputing WHICH objects to return
+
+        Why References Are Safe:
+        - The EdgeWing and CenterSlice objects returned are the actual cube pieces
+        - When we rotate, we modify their colors, not their identity
+        - Next rotation will get the same objects (with new colors) - that's correct!
 
         Args:
             slice_index: Which slice (0 to n_slices-1)
@@ -246,25 +299,31 @@ class Slice(SuperElement):
         Returns:
             Tuple of (edge_wings, center_slices) for all 4 faces
         """
-        walk_info = self._get_walking_info()
-        n_slices = self.n_slices
+        def compute_slices() -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
+            walk_info = self._get_walking_info()
+            n_slices = self.n_slices
 
-        edges: list[EdgeWing] = []
-        centers: list[CenterSlice] = []
+            edges: list[EdgeWing] = []
+            centers: list[CenterSlice] = []
 
-        for face_info in walk_info:
-            # Get center slices using precomputed point function
-            center: Center = face_info.face.center
-            for slot in range(n_slices):
-                point = face_info.compute_point(slice_index, slot)
-                centers.append(center.get_center_slice(point))
+            for face_info in walk_info:
+                # Get center slices using precomputed point function
+                center: Center = face_info.face.center
+                for slot in range(n_slices):
+                    point = face_info.compute_point(slice_index, slot)
+                    centers.append(center.get_center_slice(point))
 
-            # Get edge wing using the stored edge and local slice index
-            local_index = face_info.compute_point(slice_index, 0)[1] if face_info.face.is_bottom_or_top(face_info.edge) else face_info.compute_point(slice_index, 0)[0]
-            edge_slice = face_info.edge.get_slice_by_ltr_index(face_info.face, local_index)
-            edges.append(edge_slice)
+                # Get edge wing using the stored edge and local slice index
+                local_index = face_info.compute_point(slice_index, 0)[1] if face_info.face.is_bottom_or_top(face_info.edge) else face_info.compute_point(slice_index, 0)[0]
+                edge_slice = face_info.edge.get_slice_by_ltr_index(face_info.face, local_index)
+                edges.append(edge_slice)
 
-        return edges, centers
+            return edges, centers
+
+        cache_key = (self._name, slice_index)  # e.g., (SliceName.M, 0)
+        cache = self._cache_manager.get("Slice._get_slices_by_index", tuple)
+
+        return cache.compute(cache_key, compute_slices)
 
     def _get_index_range(self, slices_indexes: Iterable[int] | int | None) -> Iterable[int]:
         """
