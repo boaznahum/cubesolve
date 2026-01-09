@@ -20,6 +20,9 @@ from cube.utils.markers_config import MarkersConfig
 # Only initial value, can be changed
 CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
 
+# Enable cube caching for performance optimization
+ENABLE_CUBE_CACHE = True
+
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
 # Available solvers: LBL, CFOP, Kociemba, Cage
 # Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba)
@@ -39,8 +42,6 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE = False
 
 CHECK_CUBE_SANITY = False
 
-# Enable cube caching for performance optimization
-ENABLE_CUBE_CACHE = False
 
 ###### Operator ####
 
