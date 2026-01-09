@@ -30,7 +30,7 @@ Continue the work from `geometry_cleanup_issue55_no2` to remove hardcoded geomet
 
 | ID | Table/Logic | File:Lines | Status | Notes |
 |----|-------------|------------|--------|-------|
-| 1.1 | `_TRANSFORMATION_TABLE` | Face2FaceTranslator.py:164-206 | Pending | 30-entry dict, derive from slice traversal |
+| 1.1 | `_TRANSFORMATION_TABLE` | Face2FaceTranslator.py:164-206 | In Progress | 30-entry dict, derive from slice traversal |
 | 1.2 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py:336-354 | Pending | 12-entry dict, derive from edge geometry |
 
 ### From HARDCODED_ANALYSIS.md - Phase 2 (Medium Priority)
