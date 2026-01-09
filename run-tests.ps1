@@ -6,7 +6,7 @@
     Iterates over all folders under tests\ and runs pytest with:
     - CUBE_QUIET_ALL=1 environment variable
     - -n auto (parallel execution)
-    - -v (verbose)
+    - -v (verbose, unless -q specified)
 
 .PARAMETER IncludePerformance
     Also run tests\performance (skipped by default)
@@ -14,11 +14,18 @@
 .PARAMETER IncludeGUI
     Also run tests\gui (skipped by default)
 
+.PARAMETER Quiet
+    Show only progress (no verbose output)
+
+.PARAMETER CollectOnly
+    Only collect tests, don't run them
+
 .EXAMPLE
     .\run-tests.ps1
     .\run-tests.ps1 -IncludePerformance
     .\run-tests.ps1 -p
-    .\run-tests.ps1 -IncludeGUI -IncludePerformance
+    .\run-tests.ps1 -q
+    .\run-tests.ps1 --collect-only
 #>
 
 param(
@@ -28,9 +35,22 @@ param(
     [Alias("g")]
     [switch]$IncludeGUI,
 
+    [Alias("q")]
+    [switch]$Quiet,
+
+    [Alias("c")]
+    [switch]$CollectOnly,
+
     [Alias("h", "?")]
     [switch]$Help
 )
+
+# Handle --help and --collect-only style arguments
+foreach ($arg in $args) {
+    if ($arg -eq "--help") { $Help = $true }
+    if ($arg -eq "--collect-only") { $CollectOnly = $true }
+    if ($arg -eq "--quiet") { $Quiet = $true }
+}
 
 # Show help if requested
 if ($Help) {
@@ -43,17 +63,23 @@ if ($Help) {
     Write-Host "FLAGS:" -ForegroundColor Yellow
     Write-Host "    -p, -IncludePerformance    Include tests\performance (skipped by default)"
     Write-Host "    -g, -IncludeGUI            Include tests\gui (skipped by default)"
-    Write-Host "    -h, -Help, -?              Show this help message"
+    Write-Host "    -q, -Quiet, --quiet        Show only progress (no verbose output)"
+    Write-Host "    -c, -CollectOnly,          Only collect tests, don't run them"
+    Write-Host "        --collect-only"
+    Write-Host "    -h, -Help, --help, -?      Show this help message"
     Write-Host ""
     Write-Host "EXAMPLES:" -ForegroundColor Yellow
     Write-Host "    .\run-tests.ps1              Run all tests (except gui, performance)"
     Write-Host "    .\run-tests.ps1 -p           Include performance tests"
     Write-Host "    .\run-tests.ps1 -g           Include GUI tests"
     Write-Host "    .\run-tests.ps1 -p -g        Include both performance and GUI tests"
+    Write-Host "    .\run-tests.ps1 -q           Run with progress only (no verbose)"
+    Write-Host "    .\run-tests.ps1 -c           Collect tests only, don't run"
+    Write-Host "    .\run-tests.ps1 --collect-only"
     Write-Host ""
     Write-Host "ENVIRONMENT:" -ForegroundColor Yellow
     Write-Host "    Sets CUBE_QUIET_ALL=1 to suppress debug output"
-    Write-Host "    Uses pytest with: -n auto -v -m 'not slow'"
+    Write-Host "    Uses pytest with: -n auto -m 'not slow' [-v]"
     Write-Host ""
     exit 0
 }
@@ -75,12 +101,25 @@ if (-not $IncludeGUI) {
     $skipFolders += "gui"
 }
 
+# Build pytest arguments
+$pytestArgs = @("-n", "auto", "-m", "not slow")
+if (-not $Quiet) {
+    $pytestArgs += "-v"
+}
+if ($CollectOnly) {
+    $pytestArgs += "--collect-only"
+}
+
 # Get all test folders
 $testFolders = Get-ChildItem -Path "tests" -Directory | Where-Object { $_.Name -notin $skipFolders }
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  Running Tests by Folder" -ForegroundColor Cyan
+if ($CollectOnly) {
+    Write-Host "  Collecting Tests by Folder" -ForegroundColor Cyan
+} else {
+    Write-Host "  Running Tests by Folder" -ForegroundColor Cyan
+}
 Write-Host "  Skipping: $($skipFolders -join ', ')" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
@@ -94,7 +133,7 @@ foreach ($folder in $testFolders) {
     Write-Host "----------------------------------------" -ForegroundColor Cyan
 
     # Run pytest
-    python -m pytest $folderPath -n auto -v -m "not slow"
+    python -m pytest $folderPath @pytestArgs
 
     if ($LASTEXITCODE -eq 0) {
         $results[$folder.Name] = "PASSED"
