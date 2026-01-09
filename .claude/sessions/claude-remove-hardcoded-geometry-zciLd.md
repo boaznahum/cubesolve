@@ -18,7 +18,7 @@ Continue the work from `geometry_cleanup_issue55_no2` to remove hardcoded geomet
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | 1 | Remove hardcoded starting face/edge in `create_walking_info()` | Done | Derived from rotation face geometry |
-| 2 | Remove DEBUG print statements | Pending | See details below |
+| 2 | Remove DEBUG print statements | Done | Uses proper config-controlled logging (`solver_debug`) |
 | 3 | Update documentation | Pending | Document the geometry derivation |
 | 4 | Derive `is_slot_inverted` logic | Pending | Currently computed per-iteration |
 | 5 | Derive `is_index_inverted` logic | Pending | Currently computed per-iteration |
