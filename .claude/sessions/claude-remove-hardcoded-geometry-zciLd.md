@@ -26,6 +26,17 @@ Continue the work from `geometry_cleanup_issue55_no2` to remove hardcoded geomet
 | 7 | Debug `translate_target_from_source` predictions | Pending | Predictions don't match actual piece movement |
 | 8 | Derive `get_slices_between_faces` directly | Pending | Currently uses patch implementation |
 
+### Methods from GEOMETRY.md
+
+| # | Method | Classification | Status | Notes |
+|---|--------|---------------|--------|-------|
+| 9 | `get_side_faces(layer1_face)` | COMPUTED | Pending | Return 4 faces perpendicular to L1 |
+| 10 | `does_slice_affect_rows_or_cols(layer1_face, side_face)` | COMPUTED | Pending | Does slice cut rows or columns? |
+| 11 | `get_row_or_col_for_slice(layer1_face, side_face, slice_index, n_slices)` | COMPUTED | Pending | Which row/col for slice index? |
+| 12 | `iterate_orthogonal_face_center_pieces(...)` | COMPUTED | Done | In CubeLayout protocol |
+| 13 | `does_slice_cut_rows_or_columns(face_name)` | COMPUTED | Done | In SliceLayout protocol |
+| 14 | `does_slice_of_face_start_with_face(face_name)` | COMPUTED | Done | In SliceLayout protocol |
+
 ---
 
 ## Task #2: DEBUG Statements
