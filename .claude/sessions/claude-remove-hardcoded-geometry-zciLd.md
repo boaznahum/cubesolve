@@ -115,3 +115,40 @@ if _log.is_debug(_dbg):
 
 1. Decide on DEBUG statement handling (task #2)
 2. Continue with remaining tasks from table above
+
+---
+
+## Task 1.1: Deriving _TRANSFORMATION_TABLE
+
+### Approach
+
+1. Slice cycles (M, E, S) and whole-cube rotations (X, Y, Z) affect the **same 4 faces**
+2. Use `CubeWalkingInfo.get_transform(source, target)` to get coordinate transform
+3. Handle direction difference between slice and axis rotation
+
+### Geometric Assumption
+
+**ASSUMPTION:** Opposite faces rotate in opposite directions.
+
+| Slice | Rotation Face | Axis | Axis Face | Relationship |
+|-------|---------------|------|-----------|--------------|
+| M | L | X | R | Opposite → invert direction |
+| E | D | Y | U | Opposite → invert direction |
+| S | F | Z | F | Same → same direction |
+
+**Status:** Accepted as geometric fact. If proof needed, see:
+- Standard Rubik's cube notation conventions
+- TODO: Add link to formal proof if needed
+
+### Algorithm
+
+```
+For (source_face, target_face):
+1. Find slice that connects them (M, E, or S)
+2. Get slice rotation face via SliceLayout.get_face_name()
+3. Get axis rotation face (X→R, Y→U, Z→F)
+4. Check if opposite via CubeLayout.get_opposite()
+5. Get transform from CubeWalkingInfo.get_transform()
+6. If opposite faces: invert transform direction
+7. Map FUnitRotation → TransformType
+```
