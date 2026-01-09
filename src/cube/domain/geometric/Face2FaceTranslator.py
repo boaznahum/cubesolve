@@ -161,6 +161,16 @@ class TransformType(Enum):
 #
 # Derived by: tests/model/test_empirical_transforms.py::test_derive_all_transformations
 #
+# TODO: Issue #55 - Derive from slice traversal instead of hardcoded table
+#
+# Key insight: Slice cycles (M, E, S) and whole-cube rotations (X, Y, Z) affect
+# the SAME 4 faces. The transform can be derived from CubeWalkingInfo.
+#
+# GEOMETRIC ASSUMPTION: Opposite faces rotate in opposite directions.
+#   - M rotates like L, X rotates like R → opposite → invert direction
+#   - E rotates like D, Y rotates like U → opposite → invert direction
+#   - S rotates like F, Z rotates like F → same → same direction
+#
 _TRANSFORMATION_TABLE: dict[tuple[FaceName, FaceName], TransformType] = {
     # B face transitions
     (FaceName.B, FaceName.D): TransformType.ROT_180,  # via X
