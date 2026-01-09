@@ -8,13 +8,13 @@ from cube.domain.algs import Alg
 from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solver, Solvers
 from cube.domain.solver.SolverName import SolverName
-from cube.utils.config_protocol import ConfigProtocol
+from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 
 if TYPE_CHECKING:
     from cube.application.animation.AnimationManager import AnimationManager
 
 
-class _App(AbstractApp):
+class _App(AbstractApp, IServiceProvider):
 
     def __init__(self,
                  config: ConfigProtocol,
