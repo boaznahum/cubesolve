@@ -114,9 +114,31 @@ def derive_transform_type(
     """
     Derive the TransformType for a (source, target) face pair.
 
-    Returns None if faces are same or opposite.
+    This function computes how coordinates transform when content moves from
+    source face to target face via a whole-cube rotation (X, Y, or Z).
+
+    Args:
+        cube: A Cube instance (needed to access face objects and walking info)
+        source: The face where content originates (e.g., FaceName.F)
+        target: The face where content arrives (e.g., FaceName.U)
+
+    Returns:
+        TransformType indicating how (row, col) coordinates change:
+        - IDENTITY: (r, c) → (r, c) - no change
+        - ROT_90_CW: (r, c) → (inv(c), r) - 90° clockwise
+        - ROT_90_CCW: (r, c) → (c, inv(r)) - 90° counter-clockwise
+        - ROT_180: (r, c) → (inv(r), inv(c)) - 180° rotation
+        - None: if faces are same or opposite (no direct connection)
+
+    Example:
+        derive_transform_type(cube, FaceName.F, FaceName.U)
+        → TransformType.IDENTITY (F→U via X keeps coordinates)
+
+        derive_transform_type(cube, FaceName.D, FaceName.L)
+        → TransformType.ROT_90_CW (D→L via Z rotates 90° CW)
 
     GEOMETRIC ASSUMPTION: Opposite faces rotate in opposite directions.
+    See: Face2FaceTranslator.py comment block for details.
     """
     if source == target:
         return None
