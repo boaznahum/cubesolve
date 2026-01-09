@@ -55,10 +55,9 @@ class _CubeLayout(CubeLayout):
         self._cache_manager = CacheManager.create(sp.config)
 
         self._slices: Mapping[SliceName, SliceLayout] = {
-            SliceName.S: _SliceLayout(SliceName.S),
-            SliceName.E: _SliceLayout(SliceName.E),
-            SliceName.M: _SliceLayout(SliceName.M),
-
+            SliceName.S: _SliceLayout(SliceName.S, self),
+            SliceName.E: _SliceLayout(SliceName.E, self),
+            SliceName.M: _SliceLayout(SliceName.M, self),
         }
 
         # Lazy-initialized internal 3x3 cube for geometry queries
@@ -99,7 +98,9 @@ class _CubeLayout(CubeLayout):
         self._creating_internal_cube = True
         try:
             from cube.domain.model.Cube import Cube
-            self._internal_cube = Cube(3, self._sp, layout=self)
+            self._internal_cube = Cube(3, self._sp)
+            # Set the layout directly (Cube doesn't accept layout in __init__)
+            self._internal_cube._original_layout = self
         finally:
             self._creating_internal_cube = False
 
@@ -447,10 +448,43 @@ class _CubeLayout(CubeLayout):
 
     def get_face_edge_rotation_cw(self, face: Face) -> list[Edge]:
         """
-        claude: describe this method with diagrams, ltr system bottom top left right
-        :return:
-        """
+        Get the four edges of a face in clockwise rotation order.
 
+        Returns edges in the order content moves during a clockwise face rotation:
+        top → right → bottom → left → (back to top)
+
+        In LTR Coordinate System (looking at face from outside cube):
+        ============================================================
+
+                        T (top direction)
+                        ↑
+                        │
+                ┌───────┴───────┐
+                │   edge_top    │
+                │               │
+          L ←───│edge    edge   │───→ R (right direction)
+                │_left   _right │
+                │               │
+                │  edge_bottom  │
+                └───────┬───────┘
+                        │
+                        ↓
+                       -T
+
+        Clockwise rotation order: [0]=top, [1]=right, [2]=bottom, [3]=left
+
+        When face rotates CW, content flows: T → R → (-T) → (-R) → T
+        - Content at top edge moves to right edge
+        - Content at right edge moves to bottom edge
+        - Content at bottom edge moves to left edge
+        - Content at left edge moves to top edge
+
+        Args:
+            face: The face to get edges for.
+
+        Returns:
+            List of 4 edges in clockwise order: [top, right, bottom, left]
+        """
         rotation_edges: list[Edge] = [face.edge_top, face.edge_right,
                                       face.edge_bottom, face.edge_left]
 

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Protocol
 if TYPE_CHECKING:
     from cube.domain.model.FaceName import FaceName
     from cube.domain.model.SliceName import SliceName
+    from cube.domain.geometric._CubeLayout import _CubeLayout
 
 
 class CLGColRow(Enum):
@@ -51,17 +52,38 @@ class SliceLayout(Protocol):
         """
         Determine whether this slice cuts rows or columns on the given face.
 
-        Slice Traversal (content movement during rotation):
-            M: F → U → B → D → F  (vertical cycle, like L rotation)
-            E: R → B → L → F → R  (horizontal cycle, like D rotation)
-            S: U → R → D → L → U  (around F/B axis, like F rotation)
+        Derived from slice geometry: checks if the exit edge (to next face in cycle)
+        is horizontal or vertical on this face.
+
+        - Horizontal exit edge (top/bottom) → slice goes vertically → cuts rows
+        - Vertical exit edge (left/right) → slice goes horizontally → cuts columns
 
         Args:
             face_name: The face to check.
 
         Returns:
-            CLGColRow.ROW if slice cuts rows (forms a column on face)
-            CLGColRow.COL if slice cuts columns (forms a row on face)
+            CLGColRow.ROW if slice cuts rows (forms vertical strips on face)
+            CLGColRow.COL if slice cuts columns (forms horizontal strips on face)
+
+        See also:
+            is_horizontal_on_face() - alias that returns bool
+        """
+        ...
+
+    def is_horizontal_on_face(self, face_name: FaceName) -> bool:
+        """
+        Check if slice forms horizontal strips (rows) on the given face.
+
+        This is an alias for does_slice_cut_rows_or_columns that returns a bool:
+        - True = slice forms horizontal strips = cuts columns = CLGColRow.COL
+        - False = slice forms vertical strips = cuts rows = CLGColRow.ROW
+
+        Args:
+            face_name: The face to check.
+
+        Returns:
+            True if slice is horizontal on this face (cuts columns)
+            False if slice is vertical on this face (cuts rows)
         """
         ...
 
@@ -127,8 +149,9 @@ class SliceLayout(Protocol):
 
 class _SliceLayout(SliceLayout):
 
-    def __init__(self, slice_name: "SliceName"):
+    def __init__(self, slice_name: "SliceName", layout: "_CubeLayout | None" = None):
         self._slice_name = slice_name
+        self._layout: "_CubeLayout | None" = layout
 
     def get_face_name(self) -> "FaceName":
 
@@ -159,13 +182,10 @@ class _SliceLayout(SliceLayout):
         """
         Determine whether this slice cuts rows or columns on the given face.
 
-        Classification: HARDCODED - empirically determined.
-        TODO (Issue #55): Derive from slice axis vs face orientation.
-
-        Slice Traversal (content movement during rotation):
-            M: F → U → B → D → F  (vertical cycle, like L rotation)
-            E: R → B → L → F → R  (horizontal cycle, like D rotation)
-            S: U → R → D → L → U  (around F/B axis, like F rotation)
+        Derived from first principles (Issue #55):
+        - The slice is parallel to its rotation face and its opposite face
+        - If these "axis faces" are the left/right neighbors of target face → vertical → cuts rows
+        - If these "axis faces" are the top/bottom neighbors → horizontal → cuts columns
 
         Args:
             face_name: The face to check.
@@ -173,24 +193,60 @@ class _SliceLayout(SliceLayout):
         Returns:
             CLGColRow.ROW if slice cuts rows (forms vertical strips on face)
             CLGColRow.COL if slice cuts columns (forms horizontal strips on face)
+
+        See also:
+            is_horizontal_on_face() - alias returning bool
         """
-        from cube.domain.model.FaceName import FaceName
-        from cube.domain.model.SliceName import SliceName
+        if self._layout is None:
+            raise RuntimeError(
+                "Cannot derive does_slice_cut_rows_or_columns without layout reference. "
+                "Use CubeLayout.get_slice() to get a properly initialized SliceLayout."
+            )
 
-        if self._slice_name == SliceName.M:
-            return CLGColRow.ROW
+        def compute() -> CLGColRow:
+            from cube.domain.model.Cube import Cube
+            from cube.domain.model.Face import Face
 
-        elif self._slice_name == SliceName.E:
-            return CLGColRow.COL  # slice cuts columns so we check row
+            # Get the rotation face for this slice (M→L, E→D, S→F)
+            rotation_face_name = self.get_face_name()
 
-        elif self._slice_name == SliceName.S:
-            if face_name in [FaceName.R, FaceName.L]:
-                # slice cuts rows so we take columns like in M
+            # Access the internal 3x3 cube to check face edge relationships
+            assert self._layout is not None  # Already checked above
+            internal_cube: Cube = self._layout._cube
+            face: Face = internal_cube.face(face_name)
+
+            # Get the left and right neighbors of the target face
+            left_neighbor: Face = face.edge_left.get_other_face(face).name
+            right_neighbor: Face = face.edge_right.get_other_face(face).name
+
+            # If the slice's rotation face is a left/right neighbor,
+            # the slice is vertical on this face (cuts rows)
+            if rotation_face_name in (left_neighbor, right_neighbor):
                 return CLGColRow.ROW
             else:
                 return CLGColRow.COL
 
-        raise RuntimeError(f"Unknown slice: {self._slice_name}")
+        # Use cache manager from layout
+        cache_key = (self._slice_name, face_name)
+        cache = self._layout.cache_manager.get("SliceLayout.does_slice_cut_rows_or_columns", CLGColRow)
+        return cache.compute(cache_key, compute)
+
+    def is_horizontal_on_face(self, face_name: "FaceName") -> bool:
+        """
+        Check if slice forms horizontal strips (rows) on the given face.
+
+        This is an alias for does_slice_cut_rows_or_columns that returns a bool:
+        - True = slice forms horizontal strips = cuts columns = CLGColRow.COL
+        - False = slice forms vertical strips = cuts rows = CLGColRow.ROW
+
+        Args:
+            face_name: The face to check.
+
+        Returns:
+            True if slice is horizontal on this face (cuts columns)
+            False if slice is vertical on this face (cuts rows)
+        """
+        return self.does_slice_cut_rows_or_columns(face_name) == CLGColRow.COL
 
     def does_slice_of_face_start_with_face(self, face_name: "FaceName") -> bool:
         from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
