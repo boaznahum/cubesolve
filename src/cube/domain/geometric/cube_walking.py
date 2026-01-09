@@ -95,6 +95,7 @@ from cube.domain.geometric.types import Point
 if TYPE_CHECKING:
     from cube.domain.model.Edge import Edge
     from cube.domain.model.Face import Face
+    from cube.domain.model.SliceName import SliceName
 
 
 # Type alias for the point computation function

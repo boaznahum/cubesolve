@@ -8,7 +8,6 @@ from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
-from cube.domain.model import Face, Edge
 from cube.domain.model.Edge import Edge
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
@@ -490,6 +489,7 @@ class _CubeLayoutGeometry:
 
         # Find shared edge between first two faces - this IS the starting edge
         shared_edge: Edge | None = first_face.get_shared_edge(second_face)
+        assert shared_edge is not None, f"No shared edge between {first_face.name} and {second_face.name}"
 
         current_face: Face = first_face
         current_edge: Edge = shared_edge
@@ -546,6 +546,31 @@ class _CubeLayoutGeometry:
 
         face_infos: list[FaceWalkingInfo] = []
 
+        # Point computation functions - 8 combinations of (horizontal, slot_inverted, index_inverted)
+        def _compute_h_si_ii(si: int, sl: int) -> Point:
+            return (inv(sl), inv(si))
+
+        def _compute_h_si(si: int, sl: int) -> Point:
+            return (inv(sl), si)
+
+        def _compute_h_ii(si: int, sl: int) -> Point:
+            return (sl, inv(si))
+
+        def _compute_h(si: int, sl: int) -> Point:
+            return (sl, si)
+
+        def _compute_v_si_ii(si: int, sl: int) -> Point:
+            return (inv(si), inv(sl))
+
+        def _compute_v_si(si: int, sl: int) -> Point:
+            return (si, inv(sl))
+
+        def _compute_v_ii(si: int, sl: int) -> Point:
+            return (inv(si), sl)
+
+        def _compute_v(si: int, sl: int) -> Point:
+            return (si, sl)
+
         for iteration in range(4):
             # Determine edge properties ONCE
             is_horizontal = current_face.is_bottom_or_top(current_edge)
@@ -579,23 +604,23 @@ class _CubeLayoutGeometry:
                       f"is_index_inverted={is_index_inverted}, current_index={current_index}, slot={slot}, "
                       f"reference_point={reference_point}")
 
-            # Create precomputed point function - all decisions baked in
+            # Select precomputed point function based on edge properties
             if is_horizontal and is_slot_inverted and is_index_inverted:
-                compute = lambda si, sl, inv=inv: (inv(sl), inv(si))
+                compute = _compute_h_si_ii
             elif is_horizontal and is_slot_inverted and not is_index_inverted:
-                compute = lambda si, sl, inv=inv: (inv(sl), si)
+                compute = _compute_h_si
             elif is_horizontal and not is_slot_inverted and is_index_inverted:
-                compute = lambda si, sl, inv=inv: (sl, inv(si))
+                compute = _compute_h_ii
             elif is_horizontal and not is_slot_inverted and not is_index_inverted:
-                compute = lambda si, sl: (sl, si)
+                compute = _compute_h
             elif not is_horizontal and is_slot_inverted and is_index_inverted:
-                compute = lambda si, sl, inv=inv: (inv(si), inv(sl))
+                compute = _compute_v_si_ii
             elif not is_horizontal and is_slot_inverted and not is_index_inverted:
-                compute = lambda si, sl, inv=inv: (si, inv(sl))
+                compute = _compute_v_si
             elif not is_horizontal and not is_slot_inverted and is_index_inverted:
-                compute = lambda si, sl, inv=inv: (inv(si), sl)
+                compute = _compute_v_ii
             else:  # not is_horizontal and not is_slot_inverted and not is_index_inverted
-                compute = lambda si, sl: (si, sl)
+                compute = _compute_v
 
             face_infos.append(FaceWalkingInfo(
                 face=current_face,
