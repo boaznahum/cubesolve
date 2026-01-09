@@ -22,6 +22,9 @@ Continue the work from `geometry_cleanup_issue55_no2` to remove hardcoded geomet
 | 3 | Update documentation | Pending | Document the geometry derivation |
 | 4 | Derive `is_slot_inverted` logic | Pending | Currently computed per-iteration |
 | 5 | Derive `is_index_inverted` logic | Pending | Currently computed per-iteration |
+| 6 | Fix TestSliceMovementPrediction tests | Pending | 18 tests failing (12 pass) |
+| 7 | Debug `translate_target_from_source` predictions | Pending | Predictions don't match actual piece movement |
+| 8 | Derive `get_slices_between_faces` directly | Pending | Currently uses patch implementation |
 
 ---
 
