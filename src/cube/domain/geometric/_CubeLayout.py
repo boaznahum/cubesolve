@@ -15,6 +15,7 @@ from cube.domain.geometric.cube_layout import (
     _ALL_OPPOSITE,
     _OPPOSITE,
 )
+from cube.domain.geometric.Face2FaceTranslator import TransformType
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 from cube.utils.Cache import CacheManager
@@ -496,3 +497,251 @@ class _CubeLayout(CubeLayout):
         Delegates to the SliceLayout for this slice.
         """
         return self.get_slice(slice_name).does_slice_cut_rows_or_columns(face_name)
+
+    def derive_transform_type(
+        self,
+        source: FaceName,
+        target: FaceName,
+    ) -> TransformType | None:
+        """
+        Derive the TransformType for coordinate mapping between two faces.
+
+        This method computes how coordinates transform when content moves from
+        source face to target face via a whole-cube rotation (X, Y, or Z).
+
+        The result is purely geometric and does not depend on cube size - it's
+        derived from slice traversal geometry using symbolic corner analysis.
+
+        Args:
+            source: The face where content originates (e.g., FaceName.F)
+            target: The face where content arrives (e.g., FaceName.U)
+
+        Returns:
+            TransformType indicating how (row, col) coordinates change:
+            - IDENTITY: (r, c) → (r, c) - no change
+            - ROT_90_CW: (r, c) → (inv(c), r) - 90° clockwise
+            - ROT_90_CCW: (r, c) → (c, inv(r)) - 90° counter-clockwise
+            - ROT_180: (r, c) → (inv(r), inv(c)) - 180° rotation
+            - None: if faces are same or opposite (no direct connection)
+
+        Example:
+            layout.derive_transform_type(FaceName.F, FaceName.U)
+            → TransformType.IDENTITY (F→U via X keeps coordinates)
+
+        GEOMETRIC ASSUMPTION: Opposite faces rotate in opposite directions.
+        See Face2FaceTranslator.py comment block for details.
+        """
+        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
+
+        if source == target:
+            return None
+
+        # Check for opposite faces - need special handling (two 90° rotations)
+        is_opposite = _ALL_OPPOSITE.get(source) == target
+
+        # Find which slice connects them
+        slice_name = _CubeLayoutGeometry._get_slice_for_faces(source, target)
+        if slice_name is None:
+            return None  # Should not happen
+
+        # Use internal 3x3 cube for face/edge objects only
+        cube = self._cube
+
+        if is_opposite:
+            # For opposite faces, find an intermediate adjacent face and compose
+            # the transforms: source → intermediate → target
+            intermediate = self._get_adjacent_in_cycle(cube, slice_name, source)
+            transform1 = self._derive_adjacent_transform(cube, slice_name, source, intermediate)
+            transform2 = self._derive_adjacent_transform(cube, slice_name, intermediate, target)
+            transform = self._compose_transforms(transform1, transform2)
+        else:
+            transform = self._derive_adjacent_transform(cube, slice_name, source, target)
+
+        # Check if we need to invert due to opposite rotation faces
+        from cube.domain.geometric._CubeLayoutGeometry import (
+            _SLICE_ROTATION_FACE,
+            _AXIS_ROTATION_FACE,
+            _OPPOSITE_FACES,
+        )
+
+        slice_rot_face = _SLICE_ROTATION_FACE[slice_name]
+        axis_rot_face = _AXIS_ROTATION_FACE[slice_name]
+
+        if _OPPOSITE_FACES.get(slice_rot_face) == axis_rot_face:
+            transform = self._invert_transform(transform)
+
+        return transform
+
+    def _get_adjacent_in_cycle(
+        self,
+        cube: "Cube",
+        slice_name: SliceName,
+        face_name: FaceName,
+    ) -> FaceName:
+        """Get an adjacent face in the slice cycle (next in CW order)."""
+        from cube.domain.geometric.slice_layout import _SliceLayout
+
+        slice_layout = _SliceLayout(slice_name)
+        rotation_face = cube.face(slice_layout.get_face_name())
+        rotation_edges = cube.layout.get_face_edge_rotation_cw(rotation_face)
+        cycle_faces = [edge.get_other_face(rotation_face) for edge in rotation_edges]
+
+        face_idx = next(i for i, f in enumerate(cycle_faces) if f.name == face_name)
+        return cycle_faces[(face_idx + 1) % 4].name
+
+    def _derive_adjacent_transform(
+        self,
+        cube: "Cube",
+        slice_name: SliceName,
+        source: FaceName,
+        target: FaceName,
+    ) -> TransformType:
+        """Derive transform between two adjacent faces in the same slice cycle."""
+        source_props = self._get_face_edge_properties(cube, slice_name, source)
+        target_props = self._get_face_edge_properties(cube, slice_name, target)
+
+        source_corner = self._props_to_corner(source_props)
+        target_corner = self._props_to_corner(target_props)
+
+        return self._corner_pair_to_transform(source_corner, target_corner)
+
+    @staticmethod
+    def _compose_transforms(t1: TransformType, t2: TransformType) -> TransformType:
+        """Compose two transforms: apply t1 first, then t2."""
+        # Map TransformType to rotation count (0-3)
+        to_count = {
+            TransformType.IDENTITY: 0,
+            TransformType.ROT_90_CW: 1,
+            TransformType.ROT_180: 2,
+            TransformType.ROT_90_CCW: 3,
+        }
+        from_count = {
+            0: TransformType.IDENTITY,
+            1: TransformType.ROT_90_CW,
+            2: TransformType.ROT_180,
+            3: TransformType.ROT_90_CCW,
+        }
+        return from_count[(to_count[t1] + to_count[t2]) % 4]
+
+    @staticmethod
+    def _get_face_edge_properties(
+        cube: "Cube",
+        slice_name: SliceName,
+        face_name: FaceName,
+    ) -> tuple[bool, bool, bool]:
+        """
+        Get edge properties for a face in the slice traversal.
+
+        Returns (is_horizontal, is_slot_inverted, is_index_inverted).
+        These properties fully determine the reference corner without needing n_slices.
+        """
+        from cube.domain.geometric.slice_layout import _SliceLayout
+
+        face = cube.face(face_name)
+        slice_layout = _SliceLayout(slice_name)
+        rotation_face = cube.face(slice_layout.get_face_name())
+
+        # Find entry edge by traversing the cycle
+        rotation_edges = cube.layout.get_face_edge_rotation_cw(rotation_face)
+        cycle_faces = [edge.get_other_face(rotation_face) for edge in rotation_edges]
+
+        # Find this face in the cycle
+        face_idx = next(i for i, f in enumerate(cycle_faces) if f.name == face_name)
+
+        # Entry edge is shared with previous face in cycle
+        prev_face = cycle_faces[(face_idx - 1) % 4]
+        entry_edge: Edge = face.get_shared_edge(prev_face)
+
+        # Edge properties
+        is_horizontal = face.is_bottom_or_top(entry_edge)
+        is_slot_inverted = (
+            face.is_top_edge(entry_edge) if is_horizontal
+            else face.is_right_edge(entry_edge)
+        )
+
+        # Index inversion: check if slice starts from rotation face side
+        shared_with_rotating = face.get_shared_edge(rotation_face)
+        if is_horizontal:
+            is_index_inverted = face.edge_left is not shared_with_rotating
+        else:
+            is_index_inverted = face.edge_bottom is not shared_with_rotating
+
+        return (is_horizontal, is_slot_inverted, is_index_inverted)
+
+    @staticmethod
+    def _props_to_corner(props: tuple[bool, bool, bool]) -> int:
+        """
+        Map edge properties to symbolic corner (0-3).
+
+        Corners are encoded as:
+        - 0: (0, 0)     - origin
+        - 1: (n-1, 0)   - bottom-left when inverted row
+        - 2: (0, n-1)   - top-right when inverted col
+        - 3: (n-1, n-1) - opposite corner
+
+        The mapping depends on (is_horizontal, is_slot_inverted, is_index_inverted).
+        """
+        is_h, is_si, is_ii = props
+
+        # Reference point formula at (slice_index=0, slot=0):
+        # Horizontal: (inv(slot) if si else slot, idx if not ii else inv(idx))
+        #           = (inv(0) if si else 0, 0 if not ii else inv(0))
+        #           = (N if si else 0, 0 if not ii else N)  where N = n-1
+        # Vertical:   (idx if not ii else inv(idx), inv(slot) if si else slot)
+        #           = (0 if not ii else N, N if si else 0)
+
+        if is_h:
+            row_is_max = is_si  # inv(slot) at slot=0 gives n-1
+            col_is_max = is_ii  # inv(idx) at idx=0 gives n-1
+        else:
+            row_is_max = is_ii  # inv(idx) at idx=0 gives n-1
+            col_is_max = is_si  # inv(slot) at slot=0 gives n-1
+
+        # Encode as corner ID
+        return (1 if row_is_max else 0) + (2 if col_is_max else 0)
+
+    @staticmethod
+    def _corner_pair_to_transform(source_corner: int, target_corner: int) -> TransformType:
+        """
+        Derive TransformType from source→target corner mapping.
+
+        For a rotation R, if R(corner_i) = corner_j, then:
+        - IDENTITY: 0→0, 1→1, 2→2, 3→3
+        - ROT_90_CW: 0→1, 1→3, 2→0, 3→2  (corners rotate CW)
+        - ROT_180: 0→3, 1→2, 2→1, 3→0
+        - ROT_90_CCW: 0→2, 1→0, 2→3, 3→1
+
+        We have source_corner → target_corner, need to find which rotation does this.
+        """
+        # Build lookup: which rotation maps source to target?
+        # For each rotation, compute where corner 0 goes
+        rotation_table = {
+            (0, 0): TransformType.IDENTITY,
+            (0, 1): TransformType.ROT_90_CW,
+            (0, 3): TransformType.ROT_180,
+            (0, 2): TransformType.ROT_90_CCW,
+            (1, 1): TransformType.IDENTITY,
+            (1, 3): TransformType.ROT_90_CW,
+            (1, 2): TransformType.ROT_180,
+            (1, 0): TransformType.ROT_90_CCW,
+            (2, 2): TransformType.IDENTITY,
+            (2, 0): TransformType.ROT_90_CW,
+            (2, 1): TransformType.ROT_180,
+            (2, 3): TransformType.ROT_90_CCW,
+            (3, 3): TransformType.IDENTITY,
+            (3, 2): TransformType.ROT_90_CW,
+            (3, 0): TransformType.ROT_180,
+            (3, 1): TransformType.ROT_90_CCW,
+        }
+        return rotation_table[(source_corner, target_corner)]
+
+    @staticmethod
+    def _invert_transform(transform: TransformType) -> TransformType:
+        """Invert a transform (for opposite rotation directions)."""
+        inversion = {
+            TransformType.IDENTITY: TransformType.IDENTITY,
+            TransformType.ROT_90_CW: TransformType.ROT_90_CCW,
+            TransformType.ROT_180: TransformType.ROT_180,
+            TransformType.ROT_90_CCW: TransformType.ROT_90_CW,
+        }
+        return inversion[transform]

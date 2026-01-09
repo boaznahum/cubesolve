@@ -30,7 +30,7 @@ Continue the work from `geometry_cleanup_issue55_no2` to remove hardcoded geomet
 
 | ID | Table/Logic | File:Lines | Status | Notes |
 |----|-------------|------------|--------|-------|
-| 1.1 | `_TRANSFORMATION_TABLE` | Face2FaceTranslator.py:164-206 | In Progress | 30-entry dict, derive from slice traversal |
+| 1.1 | `_TRANSFORMATION_TABLE` | Face2FaceTranslator.py:164-206 | **DONE** | Derived via `CubeLayout.derive_transform_type()` |
 | 1.2 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py:336-354 | Pending | 12-entry dict, derive from edge geometry |
 
 ### From HARDCODED_ANALYSIS.md - Phase 2 (Medium Priority)
@@ -97,8 +97,11 @@ if _log.is_debug(_dbg):
 
 ## Key Files
 
-- `src/cube/domain/geometric/_CubeLayoutGeometry.py` - Main implementation
+- `src/cube/domain/geometric/_CubeLayout.py` - `derive_transform_type()` implementation
+- `src/cube/domain/geometric/cube_layout.py` - CubeLayout protocol with derive_transform_type
+- `src/cube/domain/geometric/_CubeLayoutGeometry.py` - Helper methods and constants
 - `src/cube/domain/geometric/GEOMETRY.md` - Design documentation
+- `tests/geometry/test_derive_transformation_table.py` - Tests for transform derivation
 - `.claude/sessions/claude-remove-geometry-barcoded-Jy1nL.md` - Previous session notes
 
 ---
@@ -109,12 +112,19 @@ if _log.is_debug(_dbg):
 - Core hardcoded geometry removal already complete
 - All tests passing (618+)
 
+### This Session's Changes
+
+- Added `derive_transform_type()` to `CubeLayout` protocol and `_CubeLayout` implementation
+- Method derives transforms using symbolic corner analysis (no n_slices dependency)
+- All 30 entries of `_TRANSFORMATION_TABLE` can now be derived mathematically
+- Test file validates derivation matches hardcoded table
+
 ---
 
 ## Next Steps
 
 1. Decide on DEBUG statement handling (task #2)
-2. Continue with remaining tasks from table above
+2. Continue with remaining tasks (1.2, 2.1, etc.)
 
 ---
 
@@ -140,7 +150,7 @@ if _log.is_debug(_dbg):
 - Standard Rubik's cube notation conventions
 - TODO: Add link to formal proof if needed
 
-### Algorithm
+### Algorithm (Initial Approach - Using CubeWalkingInfo)
 
 ```
 For (source_face, target_face):
@@ -152,3 +162,31 @@ For (source_face, target_face):
 6. If opposite faces: invert transform direction
 7. Map FUnitRotation → TransformType
 ```
+
+### Final Implementation - Symbolic Corner Analysis
+
+The initial approach using CubeWalkingInfo required n_slices >= 2 to get distinct reference points (n_slices=1 gives all corners as (0,0)). Instead, we derive transforms using **symbolic corner analysis**:
+
+1. **Edge properties determine corner**: Each face's reference point is at one of 4 corners, determined by 3 boolean flags:
+   - `is_horizontal`: Is the entry edge on top/bottom?
+   - `is_slot_inverted`: Is slot 0 at the inverted end?
+   - `is_index_inverted`: Is slice index 0 at the inverted end?
+
+2. **Corner encoding** (row_is_max, col_is_max → corner ID):
+   - (0, 0) → corner 0
+   - (n-1, 0) → corner 1
+   - (0, n-1) → corner 2
+   - (n-1, n-1) → corner 3
+
+3. **Transform from corner pair**: Lookup table maps (source_corner, target_corner) → TransformType
+
+4. **Handle opposite faces**: Compose two adjacent transforms
+
+**Benefits**:
+- No n_slices dependency - purely symbolic
+- No need for special cube with n_slices >= 2
+- Uses internal 3x3 cube for face/edge objects only
+
+**Implementation**: `_CubeLayout.derive_transform_type()` (no cube parameter)
+
+**Tests**: `tests/geometry/test_derive_transformation_table.py` - all 30 entries match hardcoded table

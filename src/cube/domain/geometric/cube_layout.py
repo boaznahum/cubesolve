@@ -14,7 +14,6 @@ from collections.abc import Collection, Iterator
 from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
 
 from cube.domain.geometric.FRotation import FUnitRotation
-from cube.domain.model.Edge import Edge
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
@@ -23,8 +22,10 @@ from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
+    from cube.domain.model.Edge import Edge
     from cube.utils.config_protocol import ConfigProtocol
     from cube.utils.Cache import CacheManager
+    from cube.domain.geometric.Face2FaceTranslator import TransformType
 
 
 def _build_adjacent(all_opposite: Mapping[FaceName, FaceName]) -> Mapping[FaceName, tuple[FaceName, ...]]:
@@ -526,6 +527,46 @@ class CubeLayout(Protocol):
         Example:
             M slice on Front face cuts columns (vertical strips) → returns ROW
             E slice on Front face cuts rows (horizontal strips) → returns COL
+        """
+        ...
+
+    @abstractmethod
+    def derive_transform_type(
+        self,
+        source: FaceName,
+        target: FaceName,
+    ) -> TransformType | None:
+        """
+        Derive the TransformType for coordinate mapping between two faces.
+
+        This method computes how coordinates transform when content moves from
+        source face to target face via a whole-cube rotation (X, Y, or Z).
+
+        The result is purely geometric and does not depend on cube size - it's
+        derived from slice traversal geometry using symbolic corner analysis.
+
+        Args:
+            source: The face where content originates (e.g., FaceName.F)
+            target: The face where content arrives (e.g., FaceName.U)
+
+        Returns:
+            TransformType indicating how (row, col) coordinates change:
+            - IDENTITY: (r, c) → (r, c) - no change
+            - ROT_90_CW: (r, c) → (inv(c), r) - 90° clockwise
+            - ROT_90_CCW: (r, c) → (c, inv(r)) - 90° counter-clockwise
+            - ROT_180: (r, c) → (inv(r), inv(c)) - 180° rotation
+            - None: if faces are same (no transformation needed)
+
+        Example:
+            layout.derive_transform_type(FaceName.F, FaceName.U)
+            → TransformType.IDENTITY (F→U via X keeps coordinates)
+
+        Note:
+            Adjacent faces (like F→U) derive from single rotation.
+            Opposite faces (like F→B) derive from two 90° rotations composed.
+
+        GEOMETRIC ASSUMPTION: Opposite faces rotate in opposite directions.
+        See Face2FaceTranslator.py for details.
         """
         ...
 
