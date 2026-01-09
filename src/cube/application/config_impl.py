@@ -331,3 +331,26 @@ class AppConfig(ConfigProtocol):
             True if the code is enabled in SS_CODES config, False otherwise
         """
         return cfg.SS_CODES.get(code, False)
+
+    # ==========================================================================
+    # Debug/Logging settings
+    # ==========================================================================
+    @property
+    def quiet_all(self) -> bool:
+        """Suppress all debug output."""
+        return cfg.QUIET_ALL
+
+    @quiet_all.setter
+    def quiet_all(self, value: bool) -> None:
+        """Set quiet_all mode."""
+        cfg.QUIET_ALL = value
+
+    @property
+    def debug_all(self) -> bool:
+        """Enable all debug output."""
+        return cfg.DEBUG_ALL
+
+    @debug_all.setter
+    def debug_all(self, value: bool) -> None:
+        """Set debug_all mode."""
+        cfg.DEBUG_ALL = value

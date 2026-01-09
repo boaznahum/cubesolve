@@ -11,7 +11,7 @@ To access configuration values from outside the application package:
 DO NOT use `from cube.application._config import X` in production code.
 Access config values through the ConfigProtocol interface instead.
 """
-
+import os
 from dataclasses import dataclass
 from typing import Tuple
 
@@ -42,6 +42,23 @@ CHECK_CUBE_SANITY = False
 
 # Enable cube caching for performance optimization
 ENABLE_CUBE_CACHE = False
+
+######### Debug/Logging  ########
+# Environment variables override these values at module load time:
+#   CUBE_QUIET_ALL=1  -> suppresses all debug output
+#   CUBE_DEBUG_ALL=1  -> enables all debug output
+
+def _env_bool(name: str, default: bool) -> bool:
+    """Get boolean value from environment variable."""
+    val = os.environ.get(name, "").lower()
+    if val in ("1", "true", "yes"):
+        return True
+    if val in ("0", "false", "no"):
+        return False
+    return default
+
+QUIET_ALL: bool = _env_bool("CUBE_QUIET_ALL", False)
+DEBUG_ALL: bool = _env_bool("CUBE_DEBUG_ALL", False)
 
 ###### Operator ####
 

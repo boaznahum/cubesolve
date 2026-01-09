@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from cube.application.markers.IMarkerFactory import IMarkerFactory
     from cube.application.markers.IMarkerManager import IMarkerManager
     from cube.utils.markers_config import MarkersConfig
+    from cube.utils.logger_protocol import ILogger
 
 
 @runtime_checkable
@@ -431,6 +432,35 @@ class ConfigProtocol(Protocol):
         """
         ...
 
+    # ==========================================================================
+    # Debug/Logging settings
+    # ==========================================================================
+    @property
+    def quiet_all(self) -> bool:
+        """Suppress all debug output.
+
+        Can be overridden by CUBE_QUIET_ALL environment variable.
+        """
+        ...
+
+    @quiet_all.setter
+    def quiet_all(self, value: bool) -> None:
+        """Set quiet_all mode."""
+        ...
+
+    @property
+    def debug_all(self) -> bool:
+        """Enable all debug output.
+
+        Can be overridden by CUBE_DEBUG_ALL environment variable.
+        """
+        ...
+
+    @debug_all.setter
+    def debug_all(self, value: bool) -> None:
+        """Set debug_all mode."""
+        ...
+
 
 @runtime_checkable
 class IServiceProvider(Protocol):
@@ -456,4 +486,9 @@ class IServiceProvider(Protocol):
     @property
     def marker_manager(self) -> "IMarkerManager":
         """Get the marker manager for adding/retrieving markers on cube stickers."""
+        ...
+
+    @property
+    def logger(self) -> "ILogger":
+        """Get the logger for debug output control."""
         ...

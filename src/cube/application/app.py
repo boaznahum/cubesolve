@@ -2,8 +2,10 @@ from typing import TYPE_CHECKING, Any
 
 from cube.application.AbstractApp import AbstractApp
 from cube.application.commands.Operator import Operator
+from cube.application.Logger import Logger
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
 from cube.application.state import ApplicationAndViewState
+from cube.utils.logger_protocol import ILogger
 from cube.domain.algs import Alg
 from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solver, Solvers
@@ -25,6 +27,7 @@ class _App(AbstractApp, IServiceProvider):
         self._config = config
         self._marker_factory = MarkerFactory()
         self._marker_manager = MarkerManager()
+        self._logger = Logger(config)
         super().__init__()
 
         self._vs = vs
@@ -73,6 +76,11 @@ class _App(AbstractApp, IServiceProvider):
     def marker_manager(self) -> IMarkerManager:
         """Get the marker manager for adding/retrieving markers on cube stickers."""
         return self._marker_manager
+
+    @property
+    def logger(self) -> ILogger:
+        """Get the logger for debug output control."""
+        return self._logger
 
     @property
     def error(self) -> str | None:
