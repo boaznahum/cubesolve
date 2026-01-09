@@ -14,6 +14,40 @@ from cube.domain.model.SliceName import SliceName
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
+    from cube.domain.geometric.Face2FaceTranslator import TransformType
+
+
+# =============================================================================
+# Module-level constants for transform derivation
+# =============================================================================
+
+# Slice -> faces it affects (for finding which slice connects two faces)
+_SLICE_FACES: dict[SliceName, set[FaceName]] = {
+    SliceName.M: {FaceName.F, FaceName.U, FaceName.B, FaceName.D},
+    SliceName.E: {FaceName.F, FaceName.R, FaceName.B, FaceName.L},
+    SliceName.S: {FaceName.U, FaceName.R, FaceName.D, FaceName.L},
+}
+
+# Slice rotation faces: M rotates like L, E rotates like D, S rotates like F
+_SLICE_ROTATION_FACE: dict[SliceName, FaceName] = {
+    SliceName.M: FaceName.L,
+    SliceName.E: FaceName.D,
+    SliceName.S: FaceName.F,
+}
+
+# Axis rotation faces: X rotates around R, Y around U, Z around F
+_AXIS_ROTATION_FACE: dict[SliceName, FaceName] = {
+    SliceName.M: FaceName.R,  # X axis
+    SliceName.E: FaceName.U,  # Y axis
+    SliceName.S: FaceName.F,  # Z axis
+}
+
+# Opposite faces
+_OPPOSITE_FACES: dict[FaceName, FaceName] = {
+    FaceName.F: FaceName.B, FaceName.B: FaceName.F,
+    FaceName.U: FaceName.D, FaceName.D: FaceName.U,
+    FaceName.L: FaceName.R, FaceName.R: FaceName.L,
+}
 
 
 class _CubeLayoutGeometry:
@@ -36,6 +70,119 @@ class _CubeLayoutGeometry:
         - CubeLayout protocol: exposes iterate_orthogonal_face_center_pieces
         - GEOMETRY.md: detailed documentation of geometric relationships
     """
+
+    # =========================================================================
+    # Transform derivation (Issue #55)
+    # =========================================================================
+
+    @staticmethod
+    def derive_transform_type(
+        cube: "Cube",
+        source: FaceName,
+        target: FaceName,
+    ) -> "TransformType | None":
+        """
+        Derive the TransformType for a (source, target) face pair.
+
+        This function computes how coordinates transform when content moves from
+        source face to target face via a whole-cube rotation (X, Y, or Z).
+
+        Args:
+            cube: A Cube instance (needed to access face objects and walking info)
+            source: The face where content originates (e.g., FaceName.F)
+            target: The face where content arrives (e.g., FaceName.U)
+
+        Returns:
+            TransformType indicating how (row, col) coordinates change:
+            - IDENTITY: (r, c) → (r, c) - no change
+            - ROT_90_CW: (r, c) → (inv(c), r) - 90° clockwise
+            - ROT_90_CCW: (r, c) → (c, inv(r)) - 90° counter-clockwise
+            - ROT_180: (r, c) → (inv(r), inv(c)) - 180° rotation
+            - None: if faces are same or opposite (no direct connection)
+
+        Example:
+            derive_transform_type(cube, FaceName.F, FaceName.U)
+            → TransformType.IDENTITY (F→U via X keeps coordinates)
+
+            derive_transform_type(cube, FaceName.D, FaceName.L)
+            → TransformType.ROT_90_CW (D→L via Z rotates 90° CW)
+
+        GEOMETRIC ASSUMPTION: Opposite faces rotate in opposite directions.
+        See: Face2FaceTranslator.py comment block for details.
+        """
+        # Import here to avoid circular dependency
+        from cube.domain.geometric.Face2FaceTranslator import TransformType
+
+        if source == target:
+            return None
+
+        # Find which slice connects them
+        slice_name = _CubeLayoutGeometry._get_slice_for_faces(source, target)
+        if slice_name is None:
+            return None  # Opposite faces - no single slice
+
+        # Get walking info for this slice
+        walking_info = _CubeLayoutGeometry.create_walking_info(cube, slice_name)
+
+        # Get faces from cube
+        source_face = cube.face(source)
+        target_face = cube.face(target)
+
+        # Get the transform from walking info
+        unit_rotation = walking_info.get_transform(source_face, target_face)
+        transform = _CubeLayoutGeometry._unit_rotation_to_transform(unit_rotation)
+
+        # Check if we need to invert due to opposite rotation faces
+        slice_rot_face = _SLICE_ROTATION_FACE[slice_name]
+        axis_rot_face = _AXIS_ROTATION_FACE[slice_name]
+
+        if _OPPOSITE_FACES.get(slice_rot_face) == axis_rot_face:
+            transform = _CubeLayoutGeometry._invert_transform(transform)
+
+        return transform
+
+    @staticmethod
+    def _get_slice_for_faces(source: FaceName, target: FaceName) -> SliceName | None:
+        """
+        Find which slice connects two faces.
+
+        Returns None if faces are the same or opposite (no single slice connects them).
+        """
+        for slice_name, faces in _SLICE_FACES.items():
+            if source in faces and target in faces:
+                return slice_name
+        return None
+
+    @staticmethod
+    def _unit_rotation_to_transform(unit: FUnitRotation) -> "TransformType":
+        """Convert FUnitRotation to TransformType."""
+        from cube.domain.geometric.Face2FaceTranslator import TransformType
+
+        mapping = {
+            0: TransformType.IDENTITY,
+            1: TransformType.ROT_90_CW,
+            2: TransformType.ROT_180,
+            3: TransformType.ROT_90_CCW,
+        }
+        return mapping[unit._n_rotation % 4]
+
+    @staticmethod
+    def _invert_transform(transform: "TransformType") -> "TransformType":
+        """Invert a transform (for opposite rotation directions)."""
+        from cube.domain.geometric.Face2FaceTranslator import TransformType
+
+        # CW0 stays CW0, CW1 becomes CW3, CW2 stays CW2, CW3 becomes CW1
+        inversion = {
+            TransformType.IDENTITY: TransformType.IDENTITY,
+            TransformType.ROT_90_CW: TransformType.ROT_90_CCW,
+            TransformType.ROT_180: TransformType.ROT_180,
+            TransformType.ROT_90_CCW: TransformType.ROT_90_CW,
+        }
+        return inversion[transform]
+
+    # =========================================================================
+    # Slice alignment methods
+    # =========================================================================
 
     @staticmethod
     def does_slice_of_face_start_with_face(slice_name: SliceName, face_name: FaceName) -> bool:
