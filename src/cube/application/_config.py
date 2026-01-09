@@ -11,13 +11,17 @@ To access configuration values from outside the application package:
 DO NOT use `from cube.application._config import X` in production code.
 Access config values through the ConfigProtocol interface instead.
 """
-
 from dataclasses import dataclass
 from typing import Tuple
+
+from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
 # Only initial value, can be changed
 CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
+
+# Enable cube caching for performance optimization
+ENABLE_CUBE_CACHE = True
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
 # Available solvers: LBL, CFOP, Kociemba, Cage
@@ -38,8 +42,6 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE = False
 
 CHECK_CUBE_SANITY = False
 
-# Enable cube caching for performance optimization
-ENABLE_CUBE_CACHE = False
 
 ###### Operator ####
 
@@ -77,7 +79,7 @@ from cube.domain.model.Color import Color as _Color  # noqa: E402
 FIRST_FACE_COLOR: _Color = _Color.WHITE
 
 
-SOLVER_DEBUG = True
+SOLVER_DEBUG = False
 
 ######  Viewer ########
 
@@ -88,9 +90,13 @@ VIEWER_TRACE_DRAW_UPDATE = False
 
 PROF_VIEWER_SEARCH_FACET = False
 
-GUI_DRAW_MARKERS = False
-GUI_DRAW_SAMPLE_MARKERS = False
-GUI_DRAW_LTR_COORDS = True  # Draw LTR coordinate system markers (origin, X arrow, Y arrow)
+# Marker configuration - all marker-related flags in one place
+MARKERS_CONFIG = MarkersConfig()
+
+MARKERS_CONFIG.GUI_DRAW_MARKERS = False
+MARKERS_CONFIG.GUI_DRAW_SAMPLE_MARKERS = False
+MARKERS_CONFIG.GUI_DRAW_LTR_ORIGIN_ARROWS = False  # Draw LTR coordinate system markers (origin, X arrow, Y arrow)
+MARKERS_CONFIG.DRAW_CENTER_INDEXES = False  # Draw center index markers during rotation (SLOW - debug only)
 
 CELL_SIZE: int = 30
 

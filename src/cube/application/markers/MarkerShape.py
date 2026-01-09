@@ -19,6 +19,9 @@ class MarkerShape(Enum):
     CROSS = "cross"            # X shape through corners (like origin/on_x/on_y)
     ARROW = "arrow"            # Directional arrow (uses direction field in MarkerConfig)
 
+    # Text/character shape
+    CHARACTER = "character"    # Single character (uses character field in MarkerConfig)
+
     # Future shapes can be added here
     # DOT = "dot"              # Small point
     # SQUARE = "square"        # Square outline

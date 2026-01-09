@@ -258,6 +258,37 @@ class MarkerFactory(IMarkerFactory):
         )
 
     # ============================================================
+    # Character Markers
+    # ============================================================
+
+    def char(
+        self,
+        character: str,
+        color: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    ) -> MarkerConfig:
+        """Create a character marker.
+
+        Draws a single character on the cell. Multiple characters with different
+        values can be placed on the same cell (full dataclass equality is used).
+
+        Args:
+            character: Single character to display (e.g., "A", "1", "+")
+            color: RGB color tuple (0.0-1.0 range). Default black.
+
+        Returns:
+            MarkerConfig for the character marker.
+        """
+        return MarkerConfig(
+            name="CHAR",  # Same name but different character = different marker
+            shape=MarkerShape.CHARACTER,
+            color=color,
+            radius_factor=0.8,
+            thickness=1.0,
+            height_offset=0.1,
+            character=character,
+        )
+
+    # ============================================================
     # Get All Predefined Markers
     # ============================================================
 

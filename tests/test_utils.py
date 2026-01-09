@@ -5,8 +5,10 @@ Provides TestServiceProvider for tests that create Cube directly without full ap
 """
 
 from cube.application.config_impl import AppConfig
+from cube.application.Logger import Logger
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
 from cube.utils.config_protocol import IServiceProvider, ConfigProtocol
+from cube.utils.logger_protocol import ILogger
 
 
 class TestServiceProvider(IServiceProvider):
@@ -19,6 +21,7 @@ class TestServiceProvider(IServiceProvider):
         self._config = AppConfig()
         self._marker_factory = MarkerFactory()
         self._marker_manager = MarkerManager()
+        self._logger = Logger()  # Uses env var override if set
 
     @property
     def config(self) -> ConfigProtocol:
@@ -31,6 +34,10 @@ class TestServiceProvider(IServiceProvider):
     @property
     def marker_manager(self) -> IMarkerManager:
         return self._marker_manager
+
+    @property
+    def logger(self) -> ILogger:
+        return self._logger
 
 
 # Create a shared instance for tests to use

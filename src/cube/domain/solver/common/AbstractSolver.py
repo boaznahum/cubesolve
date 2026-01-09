@@ -106,11 +106,10 @@ class AbstractSolver(Solver, ABC):
         return self.op.app_state.is_debug(self._is_debug_enabled)
 
     def debug(self, *args):
-
-        if self.is_debug_enabled:
+        logger = self.cube.sp.logger
+        if logger.is_debug(self._is_debug_enabled):
             prefix = self.name + ":"
             print("Solver:", prefix, *(str(x) for x in args))
-
             self.op.log("Solver:", prefix, *args)
 
     @property

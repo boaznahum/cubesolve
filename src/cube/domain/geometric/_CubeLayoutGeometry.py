@@ -8,7 +8,6 @@ from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
-from cube.domain.model import Face, Edge
 from cube.domain.model.Edge import Edge
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
@@ -47,7 +46,7 @@ class _CubeLayoutGeometry:
                 S: U → R → D → L → U  (around F/B axis, like F rotation)
 
         """
-        # claude what is the Mathematica of this ???
+        # Determine if slice intersects rows or columns based on slice orientation
         if slice_name == SliceName.M:
             return CLGColRow.ROW
 
@@ -407,6 +406,9 @@ class _CubeLayoutGeometry:
             SliceLayout.get_face_name() - returns the rotation face for a slice
             cube_walking.py - explains slot consistency and cycle order
         """
+
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # Turn on in _config.py MarkersConfig.GUI_DRAW_LTR_ORIGIN_ARROWS to see where they actually appear
         n_slices = cube.n_slices
 
         def inv(x: int) -> int:
@@ -418,62 +420,22 @@ class _CubeLayoutGeometry:
         rotation_face_name = slice_layout.get_face_name()
         rotation_face = cube.face(rotation_face_name)
 
-        # Get cycle faces from rotation face's edges
-        # Determine edge order based on rotation face's geometric relationship to Front face
-        front_face = cube.front
-        if rotation_face == front_face:
-            # Rotation face IS front → use clockwise
-            use_clockwise = True
-        elif (rotation_face.edge_top.get_other_face(rotation_face) == front_face or
-              rotation_face.edge_bottom.get_other_face(rotation_face) == front_face):
-            # Front is top/bottom edge → Y or Z axis face → clockwise
-            use_clockwise = True
-        else:
-            # Front is left/right edge → X axis face → counter-clockwise
-            use_clockwise = False
-
-        # rotation_edges = cube.layout.get_face_edge_rotation_cw(rotation_face)
-
-        if use_clockwise:
-            # Clockwise: top, right, bottom, left
-            rotation_edges = [rotation_face.edge_top, rotation_face.edge_right,
-                             rotation_face.edge_bottom, rotation_face.edge_left]
-        else:
-            # Counter-clockwise: right, top, left, bottom
-            rotation_edges = [rotation_face.edge_right, rotation_face.edge_top,
-                             rotation_face.edge_left, rotation_face.edge_bottom]
+        # Get edges in clockwise order around the rotation face
+        # This gives us the 4 adjacent faces in geometric clockwise order
+        rotation_edges = cube.layout.get_face_edge_rotation_cw(rotation_face)
 
         cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
-        # Pick first two consecutive faces
+        # Pick first two consecutive faces (random starting point in the cycle)
         fidx = random.randint(0, 3)
         first_face = cycle_faces_ordered[fidx]
-        second_face = cycle_faces_ordered[ (fidx + 1) % 4]
-
-
-        # now which direction i want to go ?
-        # find the shared edge with first face and rotate face
-#        shared_with_rotate: Edge = first_face.get_shared_edge(rotation_face)
-
-        # is same ltr ?
-        # ltr index on shared edge
-#        ltr_index_on_edge = shared_with_rotate.get_ltr_index_from_slice_index(first_face, 0)
-
-        # Failing example
-        # === M slice ===
-        # Rotation face: L
-        # Cycle faces: ['F', 'U', 'B', 'D']
-        # First two faces: B, D
-        # Shared edge = Starting edge: BD
-        # Starting face: B
-
-
-
+        second_face = cycle_faces_ordered[(fidx + 1) % 4]
 
 
 
         # Find shared edge between first two faces - this IS the starting edge
         shared_edge: Edge | None = first_face.get_shared_edge(second_face)
+        assert shared_edge is not None, f"No shared edge between {first_face.name} and {second_face.name}"
 
         current_face: Face = first_face
         current_edge: Edge = shared_edge
@@ -482,24 +444,58 @@ class _CubeLayoutGeometry:
         current_index: int = 0  # which slice
         slot: int = 0  # position along slice
 
-        if slice_name is SliceName.M:
-            if current_face is cube.back:
+        # Determine if current_index needs to be inverted based on alignment with rotation face.
+        # The slice index must start from the edge closest to the rotation face.
+        shared_with_rotating: Edge = current_face.get_shared_edge(rotation_face)
+
+        if current_face.is_bottom_or_top(current_edge):
+            # Vertical slice - check if left edge aligns with rotation face
+            if current_face.edge_left is not shared_with_rotating:
                 current_index = inv(current_index)
-        elif slice_name is SliceName.S:
-            if current_face in [cube.down, cube.left]:
+        else:
+            # Horizontal slice - check if bottom edge aligns with rotation face
+            if current_face.edge_bottom is not shared_with_rotating:
                 current_index = inv(current_index)
 
         # DEBUG
-        print(f"\n=== {slice_name.name} slice ===")
-        print(f"Rotation face: {rotation_face_name.name}")
-        print(f"Cycle faces: {[f.name.name for f in cycle_faces_ordered]}")
-        print(f"First two faces: {first_face.name.name}, {second_face.name.name}")
-        print(f"Shared edge = Starting edge: {current_edge.name}")
-        print(f"Starting face: {current_face.name.name}")
-        print(f"Starting slice index: {current_index}, {slot}")
+        _log = cube.sp.logger
+        _dbg = cube.config.solver_debug  # Use config flag for geometry debug
+        if _log.is_debug(_dbg):
+            _log.debug(_dbg, f"\n=== {slice_name.name} slice ===")
+            _log.debug(_dbg, f"Rotation face: {rotation_face_name.name}")
+            _log.debug(_dbg, f"Cycle faces: {[f.name.name for f in cycle_faces_ordered]}")
+            _log.debug(_dbg, f"First two faces: {first_face.name.name}, {second_face.name.name}")
+            _log.debug(_dbg, f"Shared edge = Starting edge: {current_edge.name}")
+            _log.debug(_dbg, f"Starting face: {current_face.name.name}")
+            _log.debug(_dbg, f"Starting slice index: {current_index}, {slot}")
 
 
         face_infos: list[FaceWalkingInfo] = []
+
+        # Point computation functions - 8 combinations of (horizontal, slot_inverted, index_inverted)
+        def _compute_h_si_ii(si: int, sl: int) -> Point:
+            return (inv(sl), inv(si))
+
+        def _compute_h_si(si: int, sl: int) -> Point:
+            return (inv(sl), si)
+
+        def _compute_h_ii(si: int, sl: int) -> Point:
+            return (sl, inv(si))
+
+        def _compute_h(si: int, sl: int) -> Point:
+            return (sl, si)
+
+        def _compute_v_si_ii(si: int, sl: int) -> Point:
+            return (inv(si), inv(sl))
+
+        def _compute_v_si(si: int, sl: int) -> Point:
+            return (si, inv(sl))
+
+        def _compute_v_ii(si: int, sl: int) -> Point:
+            return (inv(si), sl)
+
+        def _compute_v(si: int, sl: int) -> Point:
+            return (si, sl)
 
         for iteration in range(4):
             # Determine edge properties ONCE
@@ -517,39 +513,40 @@ class _CubeLayoutGeometry:
                 reference_point = (current_index, inv(slot) if is_slot_inverted else slot)
 
             # DEBUG: Show iteration info
-            # Which edge position is this on current_face?
-            if current_edge == current_face.edge_top:
-                edge_pos = "top"
-            elif current_edge == current_face.edge_bottom:
-                edge_pos = "bottom"
-            elif current_edge == current_face.edge_left:
-                edge_pos = "left"
-            elif current_edge == current_face.edge_right:
-                edge_pos = "right"
-            else:
-                edge_pos = "???"
-            print(f"7. Iteration {iteration}: face={current_face.name.name}, edge={current_edge.name} (position={edge_pos}), "
-                  f"is_horizontal={is_horizontal}, is_slot_inverted={is_slot_inverted}, "
-                  f"is_index_inverted={is_index_inverted}, current_index={current_index}, slot={slot}, "
-                  f"reference_point={reference_point}")
+            if _log.is_debug(_dbg):
+                # Which edge position is this on current_face?
+                if current_edge == current_face.edge_top:
+                    edge_pos = "top"
+                elif current_edge == current_face.edge_bottom:
+                    edge_pos = "bottom"
+                elif current_edge == current_face.edge_left:
+                    edge_pos = "left"
+                elif current_edge == current_face.edge_right:
+                    edge_pos = "right"
+                else:
+                    edge_pos = "???"
+                _log.debug(_dbg, f"7. Iteration {iteration}: face={current_face.name.name}, edge={current_edge.name} (position={edge_pos}), "
+                      f"is_horizontal={is_horizontal}, is_slot_inverted={is_slot_inverted}, "
+                      f"is_index_inverted={is_index_inverted}, current_index={current_index}, slot={slot}, "
+                      f"reference_point={reference_point}")
 
-            # Create precomputed point function - all decisions baked in
+            # Select precomputed point function based on edge properties
             if is_horizontal and is_slot_inverted and is_index_inverted:
-                compute = lambda si, sl, inv=inv: (inv(sl), inv(si))
+                compute = _compute_h_si_ii
             elif is_horizontal and is_slot_inverted and not is_index_inverted:
-                compute = lambda si, sl, inv=inv: (inv(sl), si)
+                compute = _compute_h_si
             elif is_horizontal and not is_slot_inverted and is_index_inverted:
-                compute = lambda si, sl, inv=inv: (sl, inv(si))
+                compute = _compute_h_ii
             elif is_horizontal and not is_slot_inverted and not is_index_inverted:
-                compute = lambda si, sl: (sl, si)
+                compute = _compute_h
             elif not is_horizontal and is_slot_inverted and is_index_inverted:
-                compute = lambda si, sl, inv=inv: (inv(si), inv(sl))
+                compute = _compute_v_si_ii
             elif not is_horizontal and is_slot_inverted and not is_index_inverted:
-                compute = lambda si, sl, inv=inv: (si, inv(sl))
+                compute = _compute_v_si
             elif not is_horizontal and not is_slot_inverted and is_index_inverted:
-                compute = lambda si, sl, inv=inv: (inv(si), sl)
+                compute = _compute_v_ii
             else:  # not is_horizontal and not is_slot_inverted and not is_index_inverted
-                compute = lambda si, sl: (si, sl)
+                compute = _compute_v
 
             face_infos.append(FaceWalkingInfo(
                 face=current_face,
@@ -566,7 +563,8 @@ class _CubeLayoutGeometry:
                 next_edge: Edge = current_edge.opposite(next_face)
 
                 # DEBUG: Show how we move to next face
-                print(f"   -> {current_edge.name} leads to {next_face.name.name}, opposite on {next_face.name.name} is {next_edge.name}")
+                if _log.is_debug(_dbg):
+                    _log.debug(_dbg, f"   -> {current_edge.name} leads to {next_face.name.name}, opposite on {next_face.name.name} is {next_edge.name}")
 
                 # Translate slice index through the edge
                 next_slice_index = current_edge.get_slice_index_from_ltr_index(

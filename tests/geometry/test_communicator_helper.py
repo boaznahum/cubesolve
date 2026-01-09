@@ -29,6 +29,7 @@ from cube.domain.algs import Algs
 from cube.domain.geometric.cube_boy import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
+from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
@@ -272,6 +273,9 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     target_block=target_block,
                     dry_run=True
                 )
+
+                # if dry_result.slice_name is not SliceName.M:
+                #     continue
 
                 # but we should also rotate source point
                 source_point = dry_result.source_point  # Natural source position

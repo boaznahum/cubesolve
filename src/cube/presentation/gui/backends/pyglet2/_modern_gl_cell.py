@@ -78,6 +78,89 @@ _TRACKER_INDICATOR_OUTLINE_COLOR = (0.0, 0.0, 0.0)  # Black outline for visibili
 _LINE_COLOR = (0.0, 0.0, 0.0)
 
 
+# Simple line-based font for character markers
+# Each character is defined as list of line segments: (x1, y1, x2, y2)
+# Coordinates are normalized: -1 to 1 range, centered at origin
+_CHAR_SEGMENTS: dict[str, list[tuple[float, float, float, float]]] = {
+    # Letters
+    "A": [(-0.5, -1, 0, 1), (0, 1, 0.5, -1), (-0.3, 0, 0.3, 0)],
+    "B": [(-0.4, -1, -0.4, 1), (-0.4, 1, 0.3, 1), (0.3, 1, 0.4, 0.5), (0.4, 0.5, 0.3, 0),
+          (-0.4, 0, 0.3, 0), (0.3, 0, 0.4, -0.5), (0.4, -0.5, 0.3, -1), (0.3, -1, -0.4, -1)],
+    "C": [(0.4, 0.7, 0, 1), (0, 1, -0.4, 0.5), (-0.4, 0.5, -0.4, -0.5),
+          (-0.4, -0.5, 0, -1), (0, -1, 0.4, -0.7)],
+    "D": [(-0.4, -1, -0.4, 1), (-0.4, 1, 0.2, 1), (0.2, 1, 0.4, 0.5),
+          (0.4, 0.5, 0.4, -0.5), (0.4, -0.5, 0.2, -1), (0.2, -1, -0.4, -1)],
+    "E": [(-0.4, -1, -0.4, 1), (-0.4, 1, 0.4, 1), (-0.4, 0, 0.2, 0), (-0.4, -1, 0.4, -1)],
+    "F": [(-0.4, -1, -0.4, 1), (-0.4, 1, 0.4, 1), (-0.4, 0, 0.2, 0)],
+    "G": [(0.4, 0.7, 0, 1), (0, 1, -0.4, 0.5), (-0.4, 0.5, -0.4, -0.5),
+          (-0.4, -0.5, 0, -1), (0, -1, 0.4, -0.5), (0.4, -0.5, 0.4, 0), (0.4, 0, 0, 0)],
+    "H": [(-0.4, -1, -0.4, 1), (0.4, -1, 0.4, 1), (-0.4, 0, 0.4, 0)],
+    "I": [(-0.2, 1, 0.2, 1), (0, 1, 0, -1), (-0.2, -1, 0.2, -1)],
+    "J": [(0.4, 1, 0.4, -0.5), (0.4, -0.5, 0, -1), (0, -1, -0.4, -0.5)],
+    "K": [(-0.4, -1, -0.4, 1), (0.4, 1, -0.4, 0), (-0.4, 0, 0.4, -1)],
+    "L": [(-0.4, 1, -0.4, -1), (-0.4, -1, 0.4, -1)],
+    "M": [(-0.4, -1, -0.4, 1), (-0.4, 1, 0, 0), (0, 0, 0.4, 1), (0.4, 1, 0.4, -1)],
+    "N": [(-0.4, -1, -0.4, 1), (-0.4, 1, 0.4, -1), (0.4, -1, 0.4, 1)],
+    "O": [(0, 1, -0.4, 0.5), (-0.4, 0.5, -0.4, -0.5), (-0.4, -0.5, 0, -1),
+          (0, -1, 0.4, -0.5), (0.4, -0.5, 0.4, 0.5), (0.4, 0.5, 0, 1)],
+    "P": [(-0.4, -1, -0.4, 1), (-0.4, 1, 0.3, 1), (0.3, 1, 0.4, 0.5),
+          (0.4, 0.5, 0.3, 0), (0.3, 0, -0.4, 0)],
+    "Q": [(0, 1, -0.4, 0.5), (-0.4, 0.5, -0.4, -0.5), (-0.4, -0.5, 0, -1),
+          (0, -1, 0.4, -0.5), (0.4, -0.5, 0.4, 0.5), (0.4, 0.5, 0, 1), (0.1, -0.3, 0.5, -1)],
+    "R": [(-0.4, -1, -0.4, 1), (-0.4, 1, 0.3, 1), (0.3, 1, 0.4, 0.5),
+          (0.4, 0.5, 0.3, 0), (0.3, 0, -0.4, 0), (0, 0, 0.4, -1)],
+    "S": [(0.4, 0.7, 0, 1), (0, 1, -0.4, 0.5), (-0.4, 0.5, 0.4, -0.5),
+          (0.4, -0.5, 0, -1), (0, -1, -0.4, -0.7)],
+    "T": [(-0.4, 1, 0.4, 1), (0, 1, 0, -1)],
+    "U": [(-0.4, 1, -0.4, -0.5), (-0.4, -0.5, 0, -1), (0, -1, 0.4, -0.5), (0.4, -0.5, 0.4, 1)],
+    "V": [(-0.4, 1, 0, -1), (0, -1, 0.4, 1)],
+    "W": [(-0.4, 1, -0.2, -1), (-0.2, -1, 0, 0), (0, 0, 0.2, -1), (0.2, -1, 0.4, 1)],
+    "X": [(-0.4, 1, 0.4, -1), (-0.4, -1, 0.4, 1)],
+    "Y": [(-0.4, 1, 0, 0), (0.4, 1, 0, 0), (0, 0, 0, -1)],
+    "Z": [(-0.4, 1, 0.4, 1), (0.4, 1, -0.4, -1), (-0.4, -1, 0.4, -1)],
+    # Digits
+    "0": [(0, 1, -0.4, 0.5), (-0.4, 0.5, -0.4, -0.5), (-0.4, -0.5, 0, -1),
+          (0, -1, 0.4, -0.5), (0.4, -0.5, 0.4, 0.5), (0.4, 0.5, 0, 1)],
+    "1": [(-0.2, 0.5, 0, 1), (0, 1, 0, -1), (-0.3, -1, 0.3, -1)],
+    "2": [(-0.4, 0.5, 0, 1), (0, 1, 0.4, 0.5), (0.4, 0.5, -0.4, -1), (-0.4, -1, 0.4, -1)],
+    "3": [(-0.4, 1, 0.4, 1), (0.4, 1, 0, 0), (0, 0, 0.4, 0), (0.4, 0, 0.4, -0.5),
+          (0.4, -0.5, 0, -1), (0, -1, -0.4, -1)],
+    "4": [(-0.4, 1, -0.4, 0), (-0.4, 0, 0.4, 0), (0.4, 1, 0.4, -1)],
+    "5": [(0.4, 1, -0.4, 1), (-0.4, 1, -0.4, 0), (-0.4, 0, 0.4, 0),
+          (0.4, 0, 0.4, -0.5), (0.4, -0.5, 0, -1), (0, -1, -0.4, -0.7)],
+    "6": [(0.4, 0.7, 0, 1), (0, 1, -0.4, 0.5), (-0.4, 0.5, -0.4, -0.5),
+          (-0.4, -0.5, 0, -1), (0, -1, 0.4, -0.5), (0.4, -0.5, 0.4, 0),
+          (0.4, 0, -0.4, 0)],
+    "7": [(-0.4, 1, 0.4, 1), (0.4, 1, 0, -1)],
+    "8": [(0, 1, -0.3, 0.7), (-0.3, 0.7, -0.3, 0.3), (-0.3, 0.3, 0, 0),
+          (0, 0, 0.3, 0.3), (0.3, 0.3, 0.3, 0.7), (0.3, 0.7, 0, 1),
+          (0, 0, -0.4, -0.3), (-0.4, -0.3, -0.4, -0.7), (-0.4, -0.7, 0, -1),
+          (0, -1, 0.4, -0.7), (0.4, -0.7, 0.4, -0.3), (0.4, -0.3, 0, 0)],
+    "9": [(-0.4, -0.7, 0, -1), (0, -1, 0.4, -0.5), (0.4, -0.5, 0.4, 0.5),
+          (0.4, 0.5, 0, 1), (0, 1, -0.4, 0.5), (-0.4, 0.5, -0.4, 0),
+          (-0.4, 0, 0.4, 0)],
+    # Symbols
+    "+": [(-0.4, 0, 0.4, 0), (0, -0.6, 0, 0.6)],
+    "-": [(-0.4, 0, 0.4, 0)],
+    "*": [(-0.3, 0.3, 0.3, -0.3), (-0.3, -0.3, 0.3, 0.3), (-0.4, 0, 0.4, 0)],
+    "/": [(-0.3, -1, 0.3, 1)],
+    "?": [(0, -1, 0, -0.8), (0, -0.3, 0, 0), (0, 0, 0.3, 0.3), (0.3, 0.3, 0.3, 0.7),
+          (0.3, 0.7, 0, 1), (0, 1, -0.3, 0.7)],
+}
+
+
+def _get_char_segments(char: str) -> list[tuple[float, float, float, float]]:
+    """Get line segments for a character.
+
+    Args:
+        char: Single uppercase character
+
+    Returns:
+        List of (x1, y1, x2, y2) line segments in normalized coordinates.
+    """
+    return _CHAR_SEGMENTS.get(char, _CHAR_SEGMENTS.get("?", []))
+
+
 def _get_complementary_color(face_color: tuple[float, float, float]) -> tuple[float, float, float]:
     """Get a complementary marker color for maximum contrast.
 
@@ -272,7 +355,7 @@ class ModernGLCell:
             dest.extend([p1[0], p1[1], p1[2], lr, lg, lb_color])
             dest.extend([p2[0], p2[1], p2[2], lr, lg, lb_color])
 
-    def generate_cross_line_vertices(self, dest: list[float]) -> None:
+    def generate_cross_line_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
         """Generate line vertices for cross markers.
 
         Draws an X (cross) through the cell center for each marker
@@ -283,8 +366,10 @@ class ModernGLCell:
 
         Args:
             dest: List to append vertex data to
+            markers: Optional pre-fetched markers list (avoids repeated lookups)
         """
-        markers = self.get_markers()
+        if markers is None:
+            markers = self.get_markers()
         if not markers:
             return
 
@@ -319,7 +404,7 @@ class ModernGLCell:
         # Arrows are rendered as filled shapes, not lines
         pass
 
-    def generate_arrow_marker_vertices(self, dest: list[float]) -> None:
+    def generate_arrow_marker_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
         """Generate filled triangle vertices for arrow markers.
 
         Draws a thick arrow shape for each marker with shape == ARROW.
@@ -338,8 +423,10 @@ class ModernGLCell:
 
         Args:
             dest: List to append vertex data to
+            markers: Optional pre-fetched markers list (avoids repeated lookups)
         """
-        markers = self.get_markers()
+        if markers is None:
+            markers = self.get_markers()
         if not markers:
             return
 
@@ -403,6 +490,63 @@ class ModernGLCell:
             # Arrowhead triangle
             for v in [head_base1, head_base2, head_tip]:
                 dest.extend([v[0], v[1], v[2], nx, ny, nz, r, g, b])
+
+    def generate_character_line_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
+        """Generate line vertices for character markers.
+
+        Draws characters using line segments. Supports letters A-Z, digits 0-9,
+        and some common symbols.
+
+        Appends line vertices to dest.
+        Each vertex: x, y, z, r, g, b (6 floats)
+
+        Args:
+            dest: List to append vertex data to
+            markers: Optional pre-fetched markers list (avoids repeated lookups)
+        """
+        if markers is None:
+            markers = self.get_markers()
+        if not markers:
+            return
+
+        # Find character markers
+        char_markers = [m for m in markers if m.shape == MarkerShape.CHARACTER]
+        if not char_markers:
+            return
+
+        lb, rb, rt, lt = self._corners
+
+        # Calculate cell center and edge vectors
+        center = (lb + rb + rt + lt) / 4.0
+        right_vec = (rb - lb) / 2.0  # Half-width vector pointing right
+        up_vec = (lt - lb) / 2.0     # Half-height vector pointing up
+
+        # Height offset to raise characters above face surface
+        height_offset = self._normal * 0.15
+
+        for marker in char_markers:
+            if not marker.character:
+                continue
+
+            # Get marker color
+            if marker.color is not None:
+                r, g, b = marker.color
+            else:
+                r, g, b = 0.0, 0.0, 0.0
+
+            char = marker.character[0].upper()  # Use first character only
+            scale = marker.radius_factor * 0.6
+
+            # Get line segments for this character
+            segments = _get_char_segments(char)
+
+            for x1, y1, x2, y2 in segments:
+                # Convert normalized coords (-1 to 1) to 3D position
+                p1 = center + right_vec * x1 * scale + up_vec * y1 * scale + height_offset
+                p2 = center + right_vec * x2 * scale + up_vec * y2 * scale + height_offset
+
+                dest.extend([p1[0], p1[1], p1[2], r, g, b])
+                dest.extend([p2[0], p2[1], p2[2], r, g, b])
 
     @property
     def color_enum(self) -> Color:
@@ -514,11 +658,11 @@ class ModernGLCell:
         if not markers:
             return
 
-        # Generate arrow markers (filled triangles)
-        self.generate_arrow_marker_vertices(dest)
+        # Generate arrow markers (filled triangles) - pass markers to avoid re-fetch
+        self.generate_arrow_marker_vertices(dest, markers)
 
-        # Filter to only ring/circle markers (exclude CROSS and ARROW)
-        ring_markers = [m for m in markers if m.shape not in (MarkerShape.CROSS, MarkerShape.ARROW)]
+        # Filter to only ring/circle markers (exclude CROSS, ARROW, and CHARACTER)
+        ring_markers = [m for m in markers if m.shape not in (MarkerShape.CROSS, MarkerShape.ARROW, MarkerShape.CHARACTER)]
         if not ring_markers:
             return
 

@@ -170,9 +170,9 @@ from typing import TYPE_CHECKING, Iterable, Sequence, Tuple, TypeAlias
 from .PartSlice import CenterSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Edge import Edge
-from .Face import Face
 from .SliceName import SliceName
 from .SuperElement import SuperElement
+from cube.utils.Cache import CacheManager
 
 if TYPE_CHECKING:
     # noinspection PyUnresolvedReferences
@@ -190,8 +190,8 @@ class Slice(SuperElement):
         "_right_bottom", "_right", "_right_top",
         "_top", "_left_top",
         "_edges", "_centers",
-        "_for_debug"
-
+        "_for_debug",
+        "_cache_manager",  # CacheManager instance for this slice (respects config.enable_cube_cache)
     ]
 
     def __init__(self, cube: _Cube, name: SliceName,
@@ -213,6 +213,9 @@ class Slice(SuperElement):
         self._edges: Sequence[Edge] = [left_top, right_top, right_bottom, left_bottom]
         self._centers: Sequence[Center] = [top, left, bottom, right]
 
+        # Create cache manager for this slice (CacheManagerImpl or CacheManagerNull based on config)
+        self._cache_manager = CacheManager.create(cube.config)
+
         self.set_parts(
             left_top, top, right_top,
             right,
@@ -224,22 +227,71 @@ class Slice(SuperElement):
         """
         Get or create the CubeWalkingInfo for this slice.
 
-        The walking info is created once and can be reused for all slice indices.
-        It contains precomputed functions for efficient point calculation.
+        Performance Optimization:
+        ========================
+        CubeWalkingInfo is expensive to create (_CubeLayoutGeometry.create_walking_info):
+        - Traverses 4 faces to compute reference points
+        - Creates 8 closure functions for point computation
+        - Picks random starting face (but result is functionally equivalent)
+
+        The result is CONSTANT for a given slice - it only depends on:
+        - The slice name (M, E, or S)
+        - The cube's face layout (which doesn't change)
+
+        Cache Strategy:
+        - Uses CacheManager from cube.layout (respects config.enable_cube_cache)
+        - Keyed by slice name (M, E, or S)
+        - No invalidation needed: the walking info never changes for a slice
+
+        Call Frequency (without cache):
+        - Called by _get_slices_by_index() which is called 2×n_slices times per rotate()
+        - For a 5×5 cube rotating M: 6 calls per quarter turn = 6 expensive rebuilds
 
         Returns:
             CubeWalkingInfo for this slice
         """
         # Import here to avoid circular imports
         from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
-        return _CubeLayoutGeometry.create_walking_info(self.cube, self._name)
+        from cube.domain.geometric.cube_walking import CubeWalkingInfo
+
+        def compute_walking_info() -> CubeWalkingInfo:
+            return _CubeLayoutGeometry.create_walking_info(self.cube, self._name)
+
+        cache_key = self._name  # SliceName.M, SliceName.E, or SliceName.S
+        cache = self._cache_manager.get("Slice._get_walking_info", CubeWalkingInfo)
+
+        return cache.compute(cache_key, compute_walking_info)
 
     def _get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
         """
         Get all edge wings and center slices for a given slice index.
 
-        This uses CubeWalkingInfo to efficiently compute the points on each face
-        without duplicating the face traversal logic.
+        Performance Optimization:YES
+        ========================
+        This method is called TWICE per slice per quarter turn:
+        1. In _rotate() to get elements for rotation (line ~339)
+        2. In _update_texture_directions_after_rotate() (line ~473)
+
+        For a 5×5 cube (n_slices=3), rotating M slice once:
+        - 3 slice indices × 2 calls each = 6 calls to this method
+
+        Each call without caching:
+        - Calls _get_walking_info() (which may itself be cached)
+        - Iterates over 4 faces
+        - For each face: n_slices center lookups + 1 edge lookup
+        - Creates new EdgeWing and CenterSlice lists
+
+        Cache Strategy:
+        - Uses CacheManager from cube.layout (respects config.enable_cube_cache)
+        - Keyed by (slice_name, slice_index) - e.g., (SliceName.M, 0)
+        - The returned EdgeWing/CenterSlice objects are REFERENCES to actual cube pieces
+        - They don't need invalidation because they point to the same objects
+        - The cache just avoids recomputing WHICH objects to return
+
+        Why References Are Safe:
+        - The EdgeWing and CenterSlice objects returned are the actual cube pieces
+        - When we rotate, we modify their colors, not their identity
+        - Next rotation will get the same objects (with new colors) - that's correct!
 
         Args:
             slice_index: Which slice (0 to n_slices-1)
@@ -247,25 +299,31 @@ class Slice(SuperElement):
         Returns:
             Tuple of (edge_wings, center_slices) for all 4 faces
         """
-        walk_info = self._get_walking_info()
-        n_slices = self.n_slices
+        def compute_slices() -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
+            walk_info = self._get_walking_info()
+            n_slices = self.n_slices
 
-        edges: list[EdgeWing] = []
-        centers: list[CenterSlice] = []
+            edges: list[EdgeWing] = []
+            centers: list[CenterSlice] = []
 
-        for face_info in walk_info:
-            # Get center slices using precomputed point function
-            center: Center = face_info.face.center
-            for slot in range(n_slices):
-                point = face_info.compute_point(slice_index, slot)
-                centers.append(center.get_center_slice(point))
+            for face_info in walk_info:
+                # Get center slices using precomputed point function
+                center: Center = face_info.face.center
+                for slot in range(n_slices):
+                    point = face_info.compute_point(slice_index, slot)
+                    centers.append(center.get_center_slice(point))
 
-            # Get edge wing using the stored edge and local slice index
-            local_index = face_info.compute_point(slice_index, 0)[1] if face_info.face.is_bottom_or_top(face_info.edge) else face_info.compute_point(slice_index, 0)[0]
-            edge_slice = face_info.edge.get_slice_by_ltr_index(face_info.face, local_index)
-            edges.append(edge_slice)
+                # Get edge wing using the stored edge and local slice index
+                local_index = face_info.compute_point(slice_index, 0)[1] if face_info.face.is_bottom_or_top(face_info.edge) else face_info.compute_point(slice_index, 0)[0]
+                edge_slice = face_info.edge.get_slice_by_ltr_index(face_info.face, local_index)
+                edges.append(edge_slice)
 
-        return edges, centers
+            return edges, centers
+
+        cache_key = (self._name, slice_index)  # e.g., (SliceName.M, 0)
+        cache = self._cache_manager.get("Slice._get_slices_by_index", tuple)
+
+        return cache.compute(cache_key, compute_slices)
 
     def _get_index_range(self, slices_indexes: Iterable[int] | int | None) -> Iterable[int]:
         """
@@ -299,6 +357,11 @@ class Slice(SuperElement):
 
         n_slices = self.n_slices
 
+        sp = self.cube.sp
+        mm = sp.marker_manager
+        mf = sp.marker_factory
+        add_markers = sp.config.markers_config.DRAW_CENTER_INDEXES
+
         for i in s_range:
 
             elements: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = self._get_slices_by_index(i)
@@ -323,28 +386,76 @@ class Slice(SuperElement):
                 prev_c: CenterSlice = centers[j]  # on the first face
                 c0: CenterSlice = prev_c.clone()
                 for fi in range(1, 4):  # 1 2 3
-                    c = centers[j + fi * n_slices]
+                    c: CenterSlice = centers[j + fi * n_slices]
                     prev_c.copy_center_colors(c)
                     prev_c = c
+                    if add_markers:
+                        # it is waste of time, we need to be able to set the name by the factory
+                        char = mf.char(str(j))
+                        if j < 3:
+                            mm.add_marker(c.edge, char, moveable=False, remove_same_name=True)
+                        else:
+                            mm.remove_markers_by_name(c.edge, char.name)
 
-                centers[j + 3 * n_slices].copy_center_colors(c0)
+                c = centers[j + 3 * n_slices]
+                c.copy_center_colors(c0)
+                if add_markers:
+                    # it is waste of time, we need to be able to set the name by the factory
+                    char = mf.char(str(j))
+                    if j < 3:
+                        mm.add_marker(c.edge, char, moveable=False, remove_same_name=True)
+                    else:
+                        mm.remove_markers_by_name(c.edge, char.name)
 
     def rotate(self, n=1, slices_indexes: Iterable[int] | None = None):
-
         """
+        Rotate the slice n quarter turns.
 
-        :param n:
-        :param slices_indexes: [0..n-2-1] [0, n_slices-1] or None=[0, n_slices-1]
-        :return:
+        Args:
+            n: Number of quarter turns (positive = clockwise looking at rotation face from outside)
+            slices_indexes: Which slice indices to rotate, or None for all [0, n_slices-1]
+
+        Direction Inversion Explanation:
+        ================================
+        We invert n because _rotate() cycles content OPPOSITE to traversal order.
+
+        Example - M slice (rotates like L, clockwise looking from left):
+
+        1. GEOMETRIC TRAVERSAL ORDER (clockwise around L face):
+           Looking at L from outside, clockwise visits: U → F → D → B → U
+
+                    U
+                    ↓
+               B ←──L──→ F      Clockwise: U → F → D → B
+                    ↓
+                    D
+
+        2. _rotate() CYCLING MECHANISM:
+           Elements collected in traversal order: [e_U, e_F, e_D, e_B]
+           _rotate() does: e0 ← e1 ← e2 ← e3 ← e0
+
+           So: e_U ← e_F ← e_D ← e_B ← e_U
+           Meaning: U gets F's content, F gets D's, D gets B's, B gets U's
+
+        3. RESULTING CONTENT MOVEMENT:
+           Content flows: U → B → D → F → U (OPPOSITE of traversal!)
+
+        4. CORRECT M ROTATION (like L clockwise):
+           Content should flow: U → F → D → B → U
+
+        5. SOLUTION:
+           Invert n so _rotate() runs in reverse, giving correct direction:
+           Content flows: U → F → D → B → U ✓
+
+        This applies uniformly to M, E, and S slices.
         """
 
         if n == 0:
             return
 
-        # TODO [#11]: BUG - M slice direction is inverted compared to standard notation
-        # See: https://alg.cubing.net/?alg=m and https://ruwix.com/the-rubiks-cube/notation/advanced/
-        if self._name != SliceName.M:
-            n = -n
+        # Invert direction: _rotate() cycles opposite to geometric traversal order
+        # See docstring above for detailed explanation with diagrams
+        n = -n
 
         def _p():
             # f: Face

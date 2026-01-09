@@ -19,14 +19,16 @@ class MarkerConfig:
     are specified here.
 
     Uniqueness Model:
-        Markers are identified by their `name` field, NOT by dataclass equality.
-        - add_marker: Prevents duplicate names on same PartEdge (skips if name exists)
-        - remove_marker: Removes by name match, not by full equality
-        This allows creating new MarkerConfig instances with same name to remove/update.
+        Markers use full dataclass equality (frozen=True, so hashable).
+        - add_marker: Skips only if exact same marker exists (all fields equal)
+        - remove_marker: Removes by exact match (all fields must match)
+        - remove_markers_by_name: Removes all markers with given name
+        This allows multiple markers of same type (name) with different properties
+        (e.g., two "CHAR" markers with different characters on same cell).
 
     Attributes:
-        name: Unique identifier for this marker type (e.g., "C0", "ORIGIN").
-              Used for duplicate prevention and removal - NOT dataclass equality.
+        name: Type identifier for this marker (e.g., "C0", "ORIGIN", "CHAR").
+              Multiple markers with same name but different properties are allowed.
         shape: The geometric shape of the marker
         color: RGB color tuple (0.0-1.0 range). If None, use complementary color.
         radius_factor: Outer radius as fraction of cell size (0.0-1.0)
@@ -36,6 +38,7 @@ class MarkerConfig:
         z_order: Drawing order (higher = drawn on top). Default 0.
         direction: Arrow direction in degrees (0=right, 90=up, 180=left, 270=down).
                    Only used for ARROW shape. Uses face-local coordinates.
+        character: Single character to display. Only used for CHARACTER shape.
     """
 
     name: str
@@ -47,6 +50,7 @@ class MarkerConfig:
     use_complementary_color: bool = False
     z_order: int = 0
     direction: float = 0.0  # Arrow direction in degrees (0=right, 90=up)
+    character: str = ""     # Character to display (for CHARACTER shape)
 
     def __post_init__(self) -> None:
         """Validate marker configuration."""
@@ -75,6 +79,7 @@ class MarkerConfig:
             use_complementary_color=self.use_complementary_color,
             z_order=z_order,
             direction=self.direction,
+            character=self.character,
         )
 
 
