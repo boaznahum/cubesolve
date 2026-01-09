@@ -26,6 +26,38 @@ Continue the work from `geometry_cleanup_issue55_no2` to remove hardcoded geomet
 | 7 | Debug `translate_target_from_source` predictions | Pending | Predictions don't match actual piece movement |
 | 8 | Derive `get_slices_between_faces` directly | Pending | Currently uses patch implementation |
 
+### From HARDCODED_ANALYSIS.md - Phase 1 (High Priority)
+
+| ID | Table/Logic | File:Lines | Status | Notes |
+|----|-------------|------------|--------|-------|
+| 1.1 | `_TRANSFORMATION_TABLE` | Face2FaceTranslator.py:164-206 | Pending | 30-entry dict, derive from slice traversal |
+| 1.2 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py:336-354 | Pending | 12-entry dict, derive from edge geometry |
+
+### From HARDCODED_ANALYSIS.md - Phase 2 (Medium Priority)
+
+| ID | Table/Logic | File:Lines | Status | Notes |
+|----|-------------|------------|--------|-------|
+| 2.1 | `does_slice_cut_rows_or_columns` | _CubeLayoutGeometry.py:40-64 | Pending | Derive from slice axis |
+| 2.2 | `does_slice_of_face_start_with_face` | _CubeLayoutGeometry.py:66-133 | Pending | Derive from edge sharing |
+| 2.3 | Face-to-slice mapping | _CubeLayoutGeometry.py:231-247 | Pending | Trivial derivation |
+| 1.3 | Rotation cycles `_X/Y/Z_CYCLE` | Face2FaceTranslator.py:421-423 | Pending | Derive from slice traversal |
+| 3.2 | `_build_slice_cycle` start face/edge | Face2FaceTranslator.py:774-799 | Done | Was task #1 |
+
+### From HARDCODED_ANALYSIS.md - Phase 3 (Low Priority)
+
+| ID | Table/Logic | File:Lines | Status | Notes |
+|----|-------------|------------|--------|-------|
+| 5.2 | `_rotate_x/y/z` | _CubeLayout.py:352-401 | Pending | Could use cycles |
+
+### From HARDCODED_ANALYSIS.md - Fundamental Definitions (NOT Derivable)
+
+| ID | Definition | File:Lines | Notes |
+|----|------------|------------|-------|
+| 5.1 | `_OPPOSITE` faces | cube_layout.py:39-43 | Cube geometry definition |
+| 3.1 | `get_face_name()` slice rotation | slice_layout.py:144-156 | M→L, E→D, S→F definition |
+| 6.1 | BOY color scheme | cube_boy.py:113-120 | Reference definition |
+| 4.1 | Face property checks | Face.py:611-647 | Convenience methods |
+
 ### Methods from GEOMETRY.md
 
 | # | Method | Classification | Status | Notes |
