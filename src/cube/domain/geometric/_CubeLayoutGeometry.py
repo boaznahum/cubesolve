@@ -420,7 +420,7 @@ class _CubeLayoutGeometry:
         rotation_face_name = slice_layout.get_face_name()
         rotation_face = cube.face(rotation_face_name)
 
-        USE_CLAUDE_PATCH = True  # is till dont understand why
+        USE_CLAUDE_PATCH = False  # Using geometrically correct clockwise order
 
         if USE_CLAUDE_PATCH:
 

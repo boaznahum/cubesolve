@@ -233,89 +233,6 @@ class Slice(SuperElement):
         from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
         return _CubeLayoutGeometry.create_walking_info(self.cube, self._name)
 
-    def _get_slices_by_index_old(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
-        # First we need to decide with which edge to start, to get consistent results
-        current_edge: Edge  # this determines the direction of rotation
-        current_index: int
-        current_face: Face
-
-        match self._name:
-            case SliceName.M:  # over L, works
-                current_face = self.cube.front
-                current_edge = current_face.edge_bottom
-                current_index = slice_index
-
-            case SliceName.E:  # over D, works
-                current_face = self.cube.right
-                current_edge = current_face.edge_left
-                current_index = slice_index
-
-            case SliceName.S:  # over F, works
-                current_face = self.cube.up
-                current_edge = current_face.edge_left
-                current_index = slice_index
-
-            case _:
-                raise ValueError(f"Unknown slice name: {self._name}")
-
-        # noinspection PyUnboundLocalVariable no it is not
-        assert current_face.is_edge(current_edge)
-
-        n_slices = self.n_slices
-
-        inv = self.inv
-
-        # !!! we treat start index as in LTR coordinates on start face !!!
-        edges: list[EdgeWing] = []
-        centers: list[CenterSlice] = []
-        for _ in range(4):
-            # here start face handling
-
-            center: Center = current_face.center
-
-            _c: Sequence[CenterSlice]
-
-            if current_face.is_bottom_or_top(current_edge):
-                if current_face.is_top_edge(current_edge):
-                    _c = [center.get_center_slice((inv(i), current_index)) for i in range(n_slices)]
-                else:
-                    _c = [center.get_center_slice((i, current_index)) for i in range(n_slices)]
-
-            else:
-                if current_face.is_right_edge(current_edge):
-                    _c = [center.get_center_slice((current_index, inv(i))) for i in range(n_slices)]
-                else:
-                    _c = [center.get_center_slice((current_index, i)) for i in range(n_slices)]
-
-            centers.extend(_c)
-
-            edge_slice = current_edge.get_slice_by_ltr_index(current_face, current_index)
-            edges.append(edge_slice)
-
-            # PHYSICAL ALIGNMENT PROBLEM:
-            # When rotating a slice, the user sees a visual line going around 4 faces.
-            # Each face has its own internal storage order, so Face F's index 2 might
-            # be Face U's index 0. But they must be PHYSICALLY ALIGNED - same visual line!
-            #
-            # SOLUTION: Use the shared edge as a BRIDGE between face ltr systems.
-            # The edge translates: current_face ltr → edge index → next_face ltr
-            # This preserves physical alignment across all 4 faces.
-            #
-            # See: docs/design2/edge-face-coordinate-system-approach2.md
-            #
-            next_edge: Edge = current_edge.opposite(current_face)
-            next_face = next_edge.get_other_face(current_face)
-            assert next_face.is_edge(next_edge)
-
-            # Translate: current_face's ltr → edge internal index → next_face's ltr
-            next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
-            current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
-            current_edge = next_edge
-            current_face = next_face
-
-        return edges, centers
-
-
     def _get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
         """
         Get all edge wings and center slices for a given slice index.
@@ -432,21 +349,54 @@ class Slice(SuperElement):
                         mm.remove_markers_by_name(c.edge, char.name)
 
     def rotate(self, n=1, slices_indexes: Iterable[int] | None = None):
-
         """
+        Rotate the slice n quarter turns.
 
-        :param n:
-        :param slices_indexes: [0..n-2-1] [0, n_slices-1] or None=[0, n_slices-1]
-        :return:
+        Args:
+            n: Number of quarter turns (positive = clockwise looking at rotation face from outside)
+            slices_indexes: Which slice indices to rotate, or None for all [0, n_slices-1]
+
+        Direction Inversion Explanation:
+        ================================
+        We invert n because _rotate() cycles content OPPOSITE to traversal order.
+
+        Example - M slice (rotates like L, clockwise looking from left):
+
+        1. GEOMETRIC TRAVERSAL ORDER (clockwise around L face):
+           Looking at L from outside, clockwise visits: U → F → D → B → U
+
+                    U
+                    ↓
+               B ←──L──→ F      Clockwise: U → F → D → B
+                    ↓
+                    D
+
+        2. _rotate() CYCLING MECHANISM:
+           Elements collected in traversal order: [e_U, e_F, e_D, e_B]
+           _rotate() does: e0 ← e1 ← e2 ← e3 ← e0
+
+           So: e_U ← e_F ← e_D ← e_B ← e_U
+           Meaning: U gets F's content, F gets D's, D gets B's, B gets U's
+
+        3. RESULTING CONTENT MOVEMENT:
+           Content flows: U → B → D → F → U (OPPOSITE of traversal!)
+
+        4. CORRECT M ROTATION (like L clockwise):
+           Content should flow: U → F → D → B → U
+
+        5. SOLUTION:
+           Invert n so _rotate() runs in reverse, giving correct direction:
+           Content flows: U → F → D → B → U ✓
+
+        This applies uniformly to M, E, and S slices.
         """
 
         if n == 0:
             return
 
-        # TODO [#11]: BUG - M slice direction is inverted compared to standard notation
-        # See: https://alg.cubing.net/?alg=m and https://ruwix.com/the-rubiks-cube/notation/advanced/
-        if self._name != SliceName.M:
-            n = -n
+        # Invert direction: _rotate() cycles opposite to geometric traversal order
+        # See docstring above for detailed explanation with diagrams
+        n = -n
 
         def _p():
             # f: Face
