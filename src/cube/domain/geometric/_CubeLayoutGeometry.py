@@ -46,7 +46,7 @@ class _CubeLayoutGeometry:
                 S: U → R → D → L → U  (around F/B axis, like F rotation)
 
         """
-        # claude what is the Mathematica of this ???
+        # Determine if slice intersects rows or columns based on slice orientation
         if slice_name == SliceName.M:
             return CLGColRow.ROW
 
@@ -420,74 +420,16 @@ class _CubeLayoutGeometry:
         rotation_face_name = slice_layout.get_face_name()
         rotation_face = cube.face(rotation_face_name)
 
-        USE_CLAUDE_PATCH = False  # Using geometrically correct clockwise order
-
-        if USE_CLAUDE_PATCH:
-
-            # Get cycle faces from rotation face's edges
-            # Determine edge order based on rotation face's geometric relationship to Front face
-            front_face = cube.front
-            if rotation_face == front_face:
-                # Rotation face IS front → use clockwise
-                use_clockwise = True
-            elif (rotation_face.edge_top.get_other_face(rotation_face) == front_face or
-                  rotation_face.edge_bottom.get_other_face(rotation_face) == front_face):
-                # Front is top/bottom edge → Y or Z axis face → clockwise
-                use_clockwise = True
-            else:
-                # Front is left/right edge → X axis face → counter-clockwise
-                use_clockwise = False
-
-            # claude code don't understand why it works
-            if use_clockwise:
-                # Clockwise: top, right, bottom, left
-                rotation_edges = [rotation_face.edge_top, rotation_face.edge_right,
-                                 rotation_face.edge_bottom, rotation_face.edge_left]
-            else:
-                # Counter-clockwise: right, top, left, bottom
-                rotation_edges = [rotation_face.edge_right, rotation_face.edge_top,
-                                 rotation_face.edge_left, rotation_face.edge_bottom]
-            # till here claude patch
-        else:
-            rotation_edges = cube.layout.get_face_edge_rotation_cw(rotation_face)
+        # Get edges in clockwise order around the rotation face
+        # This gives us the 4 adjacent faces in geometric clockwise order
+        rotation_edges = cube.layout.get_face_edge_rotation_cw(rotation_face)
 
         cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
-        # Pick first two consecutive faces
-        fidx = -1
-        if False:
-            if True:  # investigating the bug
-                for i, f in enumerate(cycle_faces_ordered):
-                    if f is cube.up:
-                        fidx = i
-                        break
-
-        if fidx < 0:
-            fidx = random.randint(0, 3)
-
+        # Pick first two consecutive faces (random starting point in the cycle)
+        fidx = random.randint(0, 3)
         first_face = cycle_faces_ordered[fidx]
-        second_face = cycle_faces_ordered[ (fidx + 1) % 4]
-
-        # we try to reproduce the bug with D->U
-
-        # now which direction i want to go ?
-        # find the shared edge with first face and rotate face
-#        shared_with_rotate: Edge = first_face.get_shared_edge(rotation_face)
-
-        # is same ltr ?
-        # ltr index on shared edge
-#        ltr_index_on_edge = shared_with_rotate.get_ltr_index_from_slice_index(first_face, 0)
-
-        # Failing example
-        # === M slice ===
-        # Rotation face: L
-        # Cycle faces: ['F', 'U', 'B', 'D']
-        # First two faces: B, D
-        # Shared edge = Starting edge: BD
-        # Starting face: B
-
-
-
+        second_face = cycle_faces_ordered[(fidx + 1) % 4]
 
 
 
@@ -502,38 +444,18 @@ class _CubeLayoutGeometry:
         current_index: int = 0  # which slice
         slot: int = 0  # position along slice
 
-        # check if current index is far or close to "of image"
+        # Determine if current_index needs to be inverted based on alignment with rotation face.
+        # The slice index must start from the edge closest to the rotation face.
+        shared_with_rotating: Edge = current_face.get_shared_edge(rotation_face)
 
-
-        if True:
-
-            # claude: better explain this: current index nust be close to the rotating image, this is the definition
-            #  of rotating over Face, it is the direction and where slice index begin
-            shared_with_rotating: Edge = current_face.get_shared_edge(rotation_face)
-
-            # ? vertical cross bottom and up ?
-
-            if current_face.is_bottom_or_top(current_edge):
-                # my left index 0 is the rotating face ?
-                if current_face.edge_left is shared_with_rotating:
-                    ...
-                else:
-                    current_index = inv(current_index)
-            else:  # horizontal cross columns
-                # is my bottom index 0 is shared
-                if current_face.edge_bottom is shared_with_rotating:
-                    ...
-                else:
-                    current_index = inv(current_index)
-
+        if current_face.is_bottom_or_top(current_edge):
+            # Vertical slice - check if left edge aligns with rotation face
+            if current_face.edge_left is not shared_with_rotating:
+                current_index = inv(current_index)
         else:
-            if slice_name is SliceName.M:
-
-                if current_face is cube.back:
-                     current_index = inv(current_index)
-            elif slice_name is SliceName.S:
-                if current_face in [cube.down, cube.left]:
-                    current_index = inv(current_index)
+            # Horizontal slice - check if bottom edge aligns with rotation face
+            if current_face.edge_bottom is not shared_with_rotating:
+                current_index = inv(current_index)
 
         # DEBUG
         _log = cube.sp.logger
