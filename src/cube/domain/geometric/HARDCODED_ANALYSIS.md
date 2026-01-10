@@ -37,6 +37,20 @@ No other file should define constants. `_CubeGeometric.py`, `_CubeLayout.py`, et
 ## Remaining Work
 
 ### High Priority
+
+- **BUG: _compute_slice_algorithms returns early, only 1 algorithm for opposite faces**
+  - Location: `Face2FaceTranslator.py:971-983`
+  - Docstring says "2 for opposite faces" but code returns after FIRST match
+  - For opposite faces (U↔D, L↔R, F↔B), 2 slices connect them:
+    - U↔D: M and S
+    - L↔R: E and S
+    - F↔B: M and E
+  - Each slice gives DIFFERENT transform (different source_coord)
+  - **FIX**:
+    1. Find ALL matching slices (don't return early)
+    2. Each SliceAlgorithmResult needs its own source_coord
+    3. Update `FaceTranslationResult` - maybe return list of results
+
 - **1.2 `_SLICE_INDEX_TABLE`** - 12 entries mapping (SliceName, FaceName) → formula
   - Derive from: `does_slice_cut_rows_or_columns()` + `does_slice_of_face_start_with_face()`
 
