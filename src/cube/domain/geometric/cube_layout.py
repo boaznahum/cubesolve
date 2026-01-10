@@ -72,6 +72,7 @@ _AXIS_ROTATION_FACE: Mapping[SliceName, FaceName] = {
 # Geometry Functions (module-level, not part of protocol)
 # ============================================================================
 
+# claude: make it private, it cannot be use directly, only by insane eof cube layout
 def opposite(fn: FaceName) -> FaceName:
     """Get the face opposite to the given face.
 
@@ -100,6 +101,7 @@ def opposite(fn: FaceName) -> FaceName:
     return _ALL_OPPOSITE[fn]
 
 
+# claude: make it private, it cannot be use directly, only by insane eof cube layout
 def is_adjacent(face1: FaceName, face2: FaceName) -> bool:
     """Check if two faces are adjacent (share an edge).
 
@@ -121,6 +123,7 @@ def is_adjacent(face1: FaceName, face2: FaceName) -> bool:
     return face2 in _ADJACENT[face1]
 
 
+# claude: make it private, it cannot be use directly, only by insane eof cube layout
 def get_adjacent_faces(face: FaceName) -> tuple[FaceName, ...]:
     """Get all faces adjacent to the given face (faces that share an edge).
 
