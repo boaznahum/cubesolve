@@ -170,7 +170,8 @@ Fundamental (hand-defined):
 Derived (computed from fundamental):
 - `_ALL_OPPOSITE` - Bidirectional opposite mapping
 - `_ADJACENT` - Adjacent faces (derived from `_OPPOSITE`)
-- `_SLICE_FACES` - Faces each slice affects (derived from `_SLICE_ROTATION_FACE` + `_ADJACENT`)
+
+Note: `_SLICE_FACES` was removed - now derived on demand in `get_slice_for_faces()`.
 
 **BOY color scheme in `cube_boy.py`:**
 - Face → Color mapping for standard Rubik's cube

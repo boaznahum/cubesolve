@@ -64,10 +64,8 @@ _AXIS_ROTATION_FACE: Mapping[SliceName, FaceName] = {
     SliceName.S: FaceName.F,  # Z axis (same as slice rotation face)
 }
 
-# Derived: Which faces each slice affects (adjacent to its rotation face)
-_SLICE_FACES: Mapping[SliceName, frozenset[FaceName]] = {
-    s: frozenset(_ADJACENT[f]) for s, f in _SLICE_ROTATION_FACE.items()
-}
+# Note: _SLICE_FACES was removed - derive on demand from _SLICE_ROTATION_FACE + _ADJACENT
+# See _CubeGeometric.get_slice_for_faces() for implementation
 
 
 # ============================================================================

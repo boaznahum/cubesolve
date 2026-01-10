@@ -25,7 +25,7 @@ No other file should define constants. `_CubeGeometric.py`, `_CubeLayout.py`, et
 | 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | Face2FaceTranslator.py | TODO | Derive from slice rotation faces |
 | 2.1 | `_SLICE_ROTATION_FACE` | cube_layout.py | **DONE** | Fundamental constant |
 | 2.2 | `_AXIS_ROTATION_FACE` | cube_layout.py | **DONE** | Moved to cube_layout.py |
-| 2.3 | `_SLICE_FACES` | cube_layout.py | **DONE** | Derived from _SLICE_ROTATION_FACE + _ADJACENT |
+| 2.3 | `_SLICE_FACES` | (removed) | **DONE** | Derived on demand from _SLICE_ROTATION_FACE + _ADJACENT |
 | 2.4 | `_OPPOSITE_FACES` | (deleted) | **DONE** | Removed - was duplicate of `_ALL_OPPOSITE` |
 | 3.1 | `_OPPOSITE` | cube_layout.py | OK | Fundamental - correct location |
 | 3.2 | `_ADJACENT` | cube_layout.py | OK | Derived from `_OPPOSITE` |
@@ -52,16 +52,17 @@ All in **cube_layout.py** (except BOY):
 
 ```
 cube_layout.py:
-  _OPPOSITE           : F↔B, U↔D, L↔R
-  _ALL_OPPOSITE       : Bidirectional opposite mapping
-  _ADJACENT           : Derived from _OPPOSITE
-  _SLICE_ROTATION_FACE: M→L, E→D, S→F
-  _AXIS_ROTATION_FACE : M→R, E→U, S→F
-  _SLICE_FACES        : Derived from _SLICE_ROTATION_FACE + _ADJACENT
+  _OPPOSITE           : F↔B, U↔D, L↔R (fundamental)
+  _ALL_OPPOSITE       : Bidirectional (derived)
+  _ADJACENT           : Adjacent faces (derived from _OPPOSITE)
+  _SLICE_ROTATION_FACE: M→L, E→D, S→F (fundamental)
+  _AXIS_ROTATION_FACE : M→R, E→U, S→F (fundamental)
 
 cube_boy.py:
   BOY layout          : Face→Color mapping
 ```
+
+Note: `_SLICE_FACES` was removed - now derived on demand in `get_slice_for_faces()`.
 
 ---
 

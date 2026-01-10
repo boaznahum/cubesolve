@@ -413,15 +413,22 @@ class _CubeGeometric:
         """
         Find which slice connects two faces.
 
-        Uses _SLICE_FACES which is derived from _SLICE_ROTATION_FACE + _ADJACENT
-        in cube_layout.py.
+        Derives slice faces on demand from _SLICE_ROTATION_FACE + _ADJACENT.
+        Iterates in M, E, S order (from _SLICE_ROTATION_FACE.keys()).
+
+        IMPORTANT: For opposite faces, multiple slices connect them.
+        The iteration order matters: M/E must come before S because
+        S gives wrong transforms for opposite faces.
 
         Returns None if faces are the same or opposite (no single slice connects them).
         """
-        from cube.domain.geometric.cube_layout import _SLICE_FACES
+        from cube.domain.geometric.cube_layout import _SLICE_ROTATION_FACE, _ADJACENT
 
-        for slice_name, faces in _SLICE_FACES.items():
-            if source in faces and target in faces:
+        # Iterate in _SLICE_ROTATION_FACE order (M, E, S)
+        for slice_name, rotation_face in _SLICE_ROTATION_FACE.items():
+            # Faces affected by this slice are adjacent to its rotation face
+            slice_faces = _ADJACENT[rotation_face]
+            if source in slice_faces and target in slice_faces:
                 return slice_name
         return None
 
