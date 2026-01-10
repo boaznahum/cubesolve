@@ -30,7 +30,6 @@ from cube.domain.model.SliceName import SliceName
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
-    from cube.domain.geometric.Face2FaceTranslator import TransformType
 
 
 class _CubeGeometric:
@@ -67,26 +66,6 @@ class _CubeGeometric:
     # =========================================================================
     # CubeGeometric Protocol Implementation
     # =========================================================================
-
-    def derive_transform_type(
-        self,
-        source: FaceName,
-        target: FaceName,
-    ) -> "TransformType | None":
-        """
-        Derive the TransformType for a (source, target) face pair.
-
-        Delegates to CubeLayout.derive_transform_type() since the transform
-        type itself is size-independent (only the coordinate values change).
-
-        Args:
-            source: The face where content originates
-            target: The face where content arrives
-
-        Returns:
-            TransformType or None if faces are same/opposite
-        """
-        return self._cube.layout.derive_transform_type(source, target)
 
     def create_walking_info(self, slice_name: SliceName) -> CubeWalkingInfo:
         """

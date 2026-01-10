@@ -17,7 +17,6 @@ Usage:
     cube.layout.is_adjacent(FaceName.F, FaceName.U)
 
     # Size-dependent (via geometric):
-    cube.geometric.derive_transform_type(FaceName.F, FaceName.U)
     cube.geometric.create_walking_info(SliceName.M)
 
 See Also:
@@ -32,10 +31,8 @@ from typing import TYPE_CHECKING, Iterator, Protocol
 
 if TYPE_CHECKING:
     from cube.domain.geometric.cube_walking import CubeWalkingInfo
-    from cube.domain.geometric.Face2FaceTranslator import TransformType
     from cube.domain.geometric.FRotation import FUnitRotation
     from cube.domain.model.Face import Face
-    from cube.domain.model.FaceName import FaceName
     from cube.domain.model.SliceName import SliceName
 
 
@@ -48,36 +45,10 @@ class CubeGeometric(Protocol):
     accessed via cube.geometric.
 
     Methods:
-        derive_transform_type: Get coordinate transform between two faces
         create_walking_info: Get slice traversal info for all 4 faces
         iterate_orthogonal_face_center_pieces: Yield positions for a layer slice
         translate_target_from_source: Get unit rotation between faces
     """
-
-    def derive_transform_type(
-        self,
-        source: "FaceName",
-        target: "FaceName",
-    ) -> "TransformType | None":
-        """
-        Derive the TransformType for a (source, target) face pair.
-
-        Computes how coordinates transform when content moves from source face
-        to target face via a whole-cube rotation (X, Y, or Z).
-
-        Args:
-            source: The face where content originates
-            target: The face where content arrives
-
-        Returns:
-            TransformType indicating how (row, col) coordinates change:
-            - IDENTITY: (r, c) -> (r, c)
-            - ROT_90_CW: (r, c) -> (inv(c), r)
-            - ROT_90_CCW: (r, c) -> (c, inv(r))
-            - ROT_180: (r, c) -> (inv(r), inv(c))
-            - None: if faces are same or opposite
-        """
-        ...
 
     def create_walking_info(self, slice_name: "SliceName") -> "CubeWalkingInfo":
         """

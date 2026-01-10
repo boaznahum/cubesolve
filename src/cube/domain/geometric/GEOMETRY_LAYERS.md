@@ -32,14 +32,7 @@ The geometry package is organized into two distinct layers based on **size depen
 cube.layout.is_adjacent(FaceName.F, FaceName.U)      # → True
 cube.layout.opposite(FaceName.F)                      # → FaceName.B
 cube.layout.does_slice_cut_rows_or_columns(M, F)     # → CLGColRow.ROW
-cube.layout.derive_transform_type(F, U)              # → TransformType.IDENTITY
 ```
-
-### Key Insight
-
-`derive_transform_type()` is in the Layout layer because the **transformation type**
-(IDENTITY, ROT_90_CW, etc.) is the same for all cube sizes. Only the actual coordinate
-values differ (e.g., `inv(x)` = `n_slices - 1 - x` depends on size).
 
 ---
 
@@ -85,8 +78,8 @@ cube.geometric.translate_target_from_source(...)     # FUnitRotation needs n_sli
     │                           │   │                           │
     │   • opposite()            │   │   • create_walking_info() │
     │   • is_adjacent()         │   │   • iterate_orthogonal_*  │
-    │   • derive_transform_type │   │   • translate_target_*    │
-    │   • does_slice_cut_*      │   │                           │
+    │   • does_slice_cut_*      │   │   • translate_target_*    │
+    │                           │   │                           │
     │                           │   │   Uses: n_slices, Face,   │
     │   Uses: FaceName,         │   │         Edge objects      │
     │         SliceName only    │   │                           │
@@ -132,10 +125,10 @@ with `FaceName` and `SliceName` enums.
 
 ```python
 # CORRECT - Layout layer
-def derive_transform_type(self, source: FaceName, target: FaceName) -> TransformType
+def is_adjacent(self, face1: FaceName, face2: FaceName) -> bool
 
-# WRONG - This would be Geometric layer
-def derive_transform_type(self, cube: Cube, source: FaceName, target: FaceName)
+# Geometric layer uses Face/Edge objects and n_slices
+def translate_target_from_source(self, source_face: Face, ...) -> FUnitRotation
 ```
 
 ### 2. Geometric Owns Coordinate Calculations
@@ -179,7 +172,7 @@ Note: `_SLICE_FACES` was removed - now derived on demand in `get_slice_for_faces
 ### To Be Derived (Goal: Remove Hardcoding)
 
 The following tables in `Face2FaceTranslator.py` should be derived, not hardcoded:
-- `_TRANSFORMATION_TABLE` - **DONE** (derived via `derive_transform_type`)
+- `_TRANSFORMATION_TABLE` - **REMOVED** (was dead code, transforms computed dynamically)
 - `_SLICE_INDEX_TABLE` - TODO (derive from edge geometry)
 - `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` - TODO (derive from rotation faces)
 

@@ -102,14 +102,9 @@ RELATIONSHIP TO WHOLE-CUBE ROTATIONS (X, Y, Z):
 ================================================================================
 
 IMPLEMENTATION:
-    Uses empirically-derived transformation table based on whole-cube rotations.
-    Each face pair has one of 4 transformation types:
-    - IDENTITY: (r, c) -> (r, c)
-    - ROT_90_CW: (r, c) -> (inv(c), r)
-    - ROT_90_CCW: (r, c) -> (c, inv(r))
-    - ROT_180: (r, c) -> (inv(r), inv(c))
-
-    where inv(x) = n - 1 - x (for an n×n cube).
+    Transforms between faces are computed using FUnitRotation (CW0, CW1, CW2, CW3)
+    representing 0°, 90°CW, 180°, and 90°CCW rotations respectively.
+    The translation is derived from slice traversal geometry using CubeWalkingInfo.
 
     See: docs/face-coordinate-system/images/right-top-left-coordinates.jpg
     for the face coordinate system diagram (R = column direction, T = row direction).
@@ -118,7 +113,6 @@ IMPLEMENTATION:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import TYPE_CHECKING, Tuple
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
@@ -134,86 +128,6 @@ if TYPE_CHECKING:
 
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.cube_slice import SliceName
-
-
-class TransformType(Enum):
-    """
-    Coordinate transformation types between faces.
-
-    For an n×n cube with inv(x) = n - 1 - x:
-    - IDENTITY: (r, c) -> (r, c) - no change
-    - ROT_90_CW: (r, c) -> (inv(c), r) - 90° clockwise
-    - ROT_90_CCW: (r, c) -> (c, inv(r)) - 90° counter-clockwise
-    - ROT_180: (r, c) -> (inv(r), inv(c)) - 180° rotation
-    """
-    IDENTITY = auto()
-    ROT_90_CW = auto()
-    ROT_90_CCW = auto()
-    ROT_180 = auto()
-
-
-# =============================================================================
-# TRANSFORMATION TABLE - Empirically derived from whole-cube rotations
-# =============================================================================
-#
-# For each (source, dest) pair, this table specifies how coordinates transform
-# when a marker on source face moves to dest face via whole-cube rotation.
-#
-# Derived by: tests/model/test_empirical_transforms.py::test_derive_all_transformations
-#
-# TODO: Issue #55 - Derive from slice traversal instead of hardcoded table
-#
-# Key insight: Slice cycles (M, E, S) and whole-cube rotations (X, Y, Z) affect
-# the SAME 4 faces. The transform can be derived from CubeWalkingInfo.
-#
-# GEOMETRIC ASSUMPTION: Opposite faces rotate in opposite directions.
-#   - M rotates like L, X rotates like R → opposite → invert direction
-#   - E rotates like D, Y rotates like U → opposite → invert direction
-#   - S rotates like F, Z rotates like F → same → same direction
-#
-_TRANSFORMATION_TABLE: dict[tuple[FaceName, FaceName], TransformType] = {
-    # B face transitions
-    (FaceName.B, FaceName.D): TransformType.ROT_180,  # via X
-    (FaceName.B, FaceName.F): TransformType.ROT_180,  # via X2
-    (FaceName.B, FaceName.L): TransformType.IDENTITY,  # via Y'
-    (FaceName.B, FaceName.R): TransformType.IDENTITY,  # via Y
-    (FaceName.B, FaceName.U): TransformType.ROT_180,  # via X'
-
-    # D face transitions
-    (FaceName.D, FaceName.B): TransformType.ROT_180,  # via X'
-    (FaceName.D, FaceName.F): TransformType.IDENTITY,  # via X
-    (FaceName.D, FaceName.L): TransformType.ROT_90_CW,  # via Z
-    (FaceName.D, FaceName.R): TransformType.ROT_90_CCW,  # via Z'
-    (FaceName.D, FaceName.U): TransformType.IDENTITY,  # via X2
-
-    # F face transitions
-    (FaceName.F, FaceName.B): TransformType.ROT_180,  # via X2
-    (FaceName.F, FaceName.D): TransformType.IDENTITY,  # via X'
-    (FaceName.F, FaceName.L): TransformType.IDENTITY,  # via Y
-    (FaceName.F, FaceName.R): TransformType.IDENTITY,  # via Y'
-    (FaceName.F, FaceName.U): TransformType.IDENTITY,  # via X
-
-    # L face transitions
-    (FaceName.L, FaceName.B): TransformType.IDENTITY,  # via Y
-    (FaceName.L, FaceName.D): TransformType.ROT_90_CCW,  # via Z'
-    (FaceName.L, FaceName.F): TransformType.IDENTITY,  # via Y'
-    (FaceName.L, FaceName.R): TransformType.IDENTITY,  # via Y2
-    (FaceName.L, FaceName.U): TransformType.ROT_90_CW,  # via Z
-
-    # R face transitions
-    (FaceName.R, FaceName.B): TransformType.IDENTITY,  # via Y'
-    (FaceName.R, FaceName.D): TransformType.ROT_90_CW,  # via Z
-    (FaceName.R, FaceName.F): TransformType.IDENTITY,  # via Y
-    (FaceName.R, FaceName.L): TransformType.IDENTITY,  # via Y2
-    (FaceName.R, FaceName.U): TransformType.ROT_90_CCW,  # via Z'
-
-    # U face transitions
-    (FaceName.U, FaceName.B): TransformType.ROT_180,  # via X
-    (FaceName.U, FaceName.D): TransformType.IDENTITY,  # via X2
-    (FaceName.U, FaceName.F): TransformType.IDENTITY,  # via X'
-    (FaceName.U, FaceName.L): TransformType.ROT_90_CCW,  # via Z'
-    (FaceName.U, FaceName.R): TransformType.ROT_90_CW,  # via Z
-}
 
 
 @dataclass(frozen=True)
@@ -430,42 +344,10 @@ def _compute_slice_index(
 #
 # Cycles are ordered so that applying the base alg moves content from index i to i+1.
 
-# claude: more hard coded
+# Rotation cycles: content at cycle[i] moves to cycle[(i+1) % 4] when applying base alg
 _X_CYCLE: list[FaceName] = [FaceName.D, FaceName.F, FaceName.U, FaceName.B]  # X moves +1
 _Y_CYCLE: list[FaceName] = [FaceName.R, FaceName.F, FaceName.L, FaceName.B]  # Y moves +1
 _Z_CYCLE: list[FaceName] = [FaceName.L, FaceName.U, FaceName.R, FaceName.D]  # Z moves +1
-
-
-def _apply_transform(
-        coord: tuple[int, int],
-        transform_type: TransformType,
-        n: int
-) -> tuple[int, int]:
-    """
-    Apply a coordinate transformation.
-
-    Args:
-        coord: (row, col) to transform
-        transform_type: One of IDENTITY, ROT_90_CW, ROT_90_CCW, ROT_180
-        n: Cube size (for computing inv(x) = n - 1 - x)
-
-    Returns:
-        Transformed (row, col)
-    """
-    row, col = coord
-
-    def inv(x: int) -> int:
-        return n - 1 - x
-
-    match transform_type:
-        case TransformType.IDENTITY:
-            return row, col
-        case TransformType.ROT_90_CW:
-            return inv(col), row
-        case TransformType.ROT_90_CCW:
-            return col, inv(row)
-        case TransformType.ROT_180:
-            return inv(row), inv(col)
 
 
 def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> list[Tuple[WholeCubeAlg, int, Alg]]:
@@ -610,7 +492,7 @@ class Face2FaceTranslator:
 
         # Build lookup for whole-cube algs by their axis
         whole_cube_by_axis: dict[FaceName, tuple[WholeCubeAlg, Alg]] = {}
-        for base_alg, _steps, alg in whole_cube_algs:
+        for base_alg, _, alg in whole_cube_algs:
             whole_cube_by_axis[base_alg.get_face_name()] = (base_alg, alg)
 
         # Each slice algorithm becomes one FaceTranslationResult

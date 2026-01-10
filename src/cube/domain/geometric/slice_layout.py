@@ -216,8 +216,8 @@ class _SliceLayout(SliceLayout):
             face: Face = internal_cube.face(face_name)
 
             # Get the left and right neighbors of the target face
-            left_neighbor: Face = face.edge_left.get_other_face(face).name
-            right_neighbor: Face = face.edge_right.get_other_face(face).name
+            left_neighbor: FaceName = face.edge_left.get_other_face(face).name
+            right_neighbor: FaceName = face.edge_right.get_other_face(face).name
 
             # If the slice's rotation face is a left/right neighbor,
             # the slice is vertical on this face (cuts rows)
