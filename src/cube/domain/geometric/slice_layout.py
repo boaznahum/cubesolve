@@ -249,5 +249,5 @@ class _SliceLayout(SliceLayout):
         return self.does_slice_cut_rows_or_columns(face_name) == CLGColRow.COL
 
     def does_slice_of_face_start_with_face(self, face_name: "FaceName") -> bool:
-        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
-        return _CubeLayoutGeometry.does_slice_of_face_start_with_face(self._slice_name, face_name)
+        from cube.domain.geometric._CubeGeometric import _CubeGeometric
+        return _CubeGeometric._does_slice_of_face_start_with_face(self._slice_name, face_name)

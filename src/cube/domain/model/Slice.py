@@ -251,11 +251,10 @@ class Slice(SuperElement):
             CubeWalkingInfo for this slice
         """
         # Import here to avoid circular imports
-        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
         from cube.domain.geometric.cube_walking import CubeWalkingInfo
 
         def compute_walking_info() -> CubeWalkingInfo:
-            return _CubeLayoutGeometry.create_walking_info(self.cube, self._name)
+            return self.cube.geometric.create_walking_info(self._name)
 
         cache_key = self._name  # SliceName.M, SliceName.E, or SliceName.S
         cache = self._cache_manager.get("Slice._get_walking_info", CubeWalkingInfo)

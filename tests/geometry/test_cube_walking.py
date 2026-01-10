@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import pytest
 
-from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
 from cube.domain.geometric.cube_walking import CubeWalkingInfo
 from cube.domain.geometric.Face2FaceTranslator import TransformType, _TRANSFORMATION_TABLE
 from cube.domain.geometric.FRotation import FUnitRotation
@@ -53,13 +52,13 @@ class TestCubeWalkingTransforms:
     def test_walking_info_creation(self, cube: Cube):
         """Verify CubeWalkingInfo can be created for all slices."""
         for slice_name in SliceName:
-            walk_info = _CubeLayoutGeometry.create_walking_info(cube, slice_name)
+            walk_info = cube.geometric.create_walking_info(slice_name)
             assert len(walk_info) == 4
             assert walk_info.n_slices == cube.n_slices
 
     def test_m_slice_faces(self, cube: Cube):
         """M slice should traverse F, U, B, D."""
-        walk_info = _CubeLayoutGeometry.create_walking_info(cube, SliceName.M)
+        walk_info = cube.geometric.create_walking_info(SliceName.M)
         face_names = [info.face.name for info in walk_info]
         # Cycle order is F → U → B → D
         assert FaceName.F in face_names
@@ -72,7 +71,7 @@ class TestCubeWalkingTransforms:
 
     def test_e_slice_faces(self, cube: Cube):
         """E slice should traverse R, B, L, F."""
-        walk_info = _CubeLayoutGeometry.create_walking_info(cube, SliceName.E)
+        walk_info = cube.geometric.create_walking_info(SliceName.E)
         face_names = [info.face.name for info in walk_info]
         # Cycle order is R → B → L → F
         assert FaceName.R in face_names
@@ -85,7 +84,7 @@ class TestCubeWalkingTransforms:
 
     def test_s_slice_faces(self, cube: Cube):
         """S slice should traverse U, R, D, L."""
-        walk_info = _CubeLayoutGeometry.create_walking_info(cube, SliceName.S)
+        walk_info = cube.geometric.create_walking_info(SliceName.S)
         face_names = [info.face.name for info in walk_info]
         # Cycle order is U → R → D → L
         assert FaceName.U in face_names
@@ -111,7 +110,7 @@ class TestCubeWalkingTransforms:
         mismatches = []
 
         for slice_name in SliceName:
-            walk_info = _CubeLayoutGeometry.create_walking_info(cube, slice_name)
+            walk_info = cube.geometric.create_walking_info(slice_name)
             faces = walk_info.faces
 
             # Check ADJACENT pairs only (faces that are 1 step apart in cycle)
@@ -149,7 +148,7 @@ class TestCubeWalkingTransforms:
         CubeWalkingInfo (slice traversal) for opposite faces.
         """
         for slice_name in SliceName:
-            walk_info = _CubeLayoutGeometry.create_walking_info(cube, slice_name)
+            walk_info = cube.geometric.create_walking_info(slice_name)
             faces = walk_info.faces
 
             for i in range(4):
@@ -249,7 +248,7 @@ class TestBFaceAsymmetry:
 
         In the M slice (F, U, B, D), transitions to/from B should be ROT_180.
         """
-        walk_info = _CubeLayoutGeometry.create_walking_info(cube, SliceName.M)
+        walk_info = cube.geometric.create_walking_info(SliceName.M)
 
         # Get faces
         face_f = cube.front
@@ -288,7 +287,7 @@ class TestSlotConsistency:
         - Back: should be at right edge
         - Down: should be at top edge
         """
-        walk_info = _CubeLayoutGeometry.create_walking_info(cube, SliceName.M)
+        walk_info = cube.geometric.create_walking_info(SliceName.M)
         n_slices = walk_info.n_slices
 
         # For slice_index=0, slot=0
@@ -306,7 +305,7 @@ class TestSlotConsistency:
         """
         Verify that translating a point around the full cycle returns to start.
         """
-        walk_info = _CubeLayoutGeometry.create_walking_info(cube, SliceName.M)
+        walk_info = cube.geometric.create_walking_info(SliceName.M)
         faces = walk_info.faces
 
         # Start with a point on the first face

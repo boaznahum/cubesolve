@@ -228,9 +228,8 @@ class _CubeLayout(CubeLayout):
             side_face: "Face",
             layer_slice_index: int,
     ) -> Iterator[tuple[int, int]]:
-        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
-        return _CubeLayoutGeometry.iterate_orthogonal_face_center_pieces(
-            cube, layer1_face, side_face, layer_slice_index
+        return cube.geometric.iterate_orthogonal_face_center_pieces(
+            layer1_face, side_face, layer_slice_index
         )
 
     def get_slices_between_faces(
@@ -431,12 +430,9 @@ class _CubeLayout(CubeLayout):
                                      slice_name: SliceName
                                      ) -> FUnitRotation:
 
-        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
-
         def compute_unit_rotation() -> FUnitRotation:
-            return _CubeLayoutGeometry.translate_target_from_source(
-                source_face,
-                target_face, source_coord, slice_name
+            return source_face.cube.geometric.translate_target_from_source(
+                source_face, target_face, source_coord, slice_name
             )
 
         cache_key = (source_face.name, target_face.name, slice_name)
@@ -531,7 +527,12 @@ class _CubeLayout(CubeLayout):
         GEOMETRIC ASSUMPTION: Opposite faces rotate in opposite directions.
         See Face2FaceTranslator.py comment block for details.
         """
-        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
+        from cube.domain.geometric._CubeGeometric import (
+            _CubeGeometric,
+            _SLICE_ROTATION_FACE,
+            _AXIS_ROTATION_FACE,
+            _OPPOSITE_FACES,
+        )
 
         if source == target:
             return None
@@ -540,7 +541,7 @@ class _CubeLayout(CubeLayout):
         is_opposite = _ALL_OPPOSITE.get(source) == target
 
         # Find which slice connects them
-        slice_name = _CubeLayoutGeometry._get_slice_for_faces(source, target)
+        slice_name = _CubeGeometric.get_slice_for_faces(source, target)
         if slice_name is None:
             return None  # Should not happen
 
@@ -558,12 +559,6 @@ class _CubeLayout(CubeLayout):
             transform = self._derive_adjacent_transform(cube, slice_name, source, target)
 
         # Check if we need to invert due to opposite rotation faces
-        from cube.domain.geometric._CubeLayoutGeometry import (
-            _SLICE_ROTATION_FACE,
-            _AXIS_ROTATION_FACE,
-            _OPPOSITE_FACES,
-        )
-
         slice_rot_face = _SLICE_ROTATION_FACE[slice_name]
         axis_rot_face = _AXIS_ROTATION_FACE[slice_name]
 
