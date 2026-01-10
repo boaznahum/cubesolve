@@ -23,9 +23,9 @@ No other file should define constants. `_CubeGeometric.py`, `_CubeLayout.py`, et
 | 1.1 | `_TRANSFORMATION_TABLE` | Face2FaceTranslator.py | **DONE** | Derived via `layout.derive_transform_type()` |
 | 1.2 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py | TODO | Derive from edge geometry |
 | 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | Face2FaceTranslator.py | TODO | Derive from slice rotation faces |
-| 2.1 | `_SLICE_ROTATION_FACE` | _CubeGeometric.py | **MOVE** | Move to cube_layout.py (fundamental) |
+| 2.1 | `_SLICE_ROTATION_FACE` | cube_layout.py | **DONE** | Fundamental constant |
 | 2.2 | `_AXIS_ROTATION_FACE` | _CubeGeometric.py | **MOVE** | Move to cube_layout.py (fundamental) |
-| 2.3 | `_SLICE_FACES` | (removed) | **DONE** | Derived via CubeWalkingInfo |
+| 2.3 | `_SLICE_FACES` | cube_layout.py | **DONE** | Derived from _SLICE_ROTATION_FACE + _ADJACENT |
 | 2.4 | `_OPPOSITE_FACES` | _CubeGeometric.py | **DELETE** | Duplicate of `_ALL_OPPOSITE` |
 | 3.1 | `_OPPOSITE` | cube_layout.py | OK | Fundamental - correct location |
 | 3.2 | `_ADJACENT` | cube_layout.py | OK | Derived from `_OPPOSITE` |
@@ -34,32 +34,10 @@ No other file should define constants. `_CubeGeometric.py`, `_CubeLayout.py`, et
 
 ---
 
-## Known Issue: Opposite Faces with Multiple Slices
-
-**Problem:** Opposite faces are connected by TWO slices, not one:
-
-| Opposite Pair | Connecting Slices |
-|---------------|-------------------|
-| F ↔ B | M and E |
-| U ↔ D | M and S |
-| L ↔ R | E and S |
-
-**Current Status:** `get_slice_for_faces` returns the first slice found, but different slices may give different transforms for opposite faces.
-
-**Test Failures (4/30):**
-- (U, D): Expected IDENTITY, got ROT_180
-- (D, U): Expected IDENTITY, got ROT_180
-- (L, R): Expected IDENTITY, got ROT_180
-- (R, L): Expected IDENTITY, got ROT_180
-
-**TODO:** Need to determine canonical slice for each opposite pair, or use a different algorithm for opposite faces.
-
----
-
 ## Remaining Work
 
-### Immediate: Move Constants to cube_layout.py
-- **2.1-2.2** Move `_SLICE_ROTATION_FACE`, `_AXIS_ROTATION_FACE` from `_CubeGeometric.py`
+### Immediate: Cleanup _CubeGeometric.py
+- **2.2** Move `_AXIS_ROTATION_FACE` to cube_layout.py
 - **2.4** Delete `_OPPOSITE_FACES` (duplicate of `_ALL_OPPOSITE`)
 
 ### High Priority

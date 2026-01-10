@@ -434,22 +434,20 @@ class _CubeGeometric:
 
         return True
 
-    def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
+    @staticmethod
+    def get_slice_for_faces(source: FaceName, target: FaceName) -> SliceName | None:
         """
         Find which slice connects two faces.
 
-        Uses CubeWalkingInfo to determine which slice passes through both faces.
-        The face order in CubeWalkingInfo follows the rotation face's clockwise order.
+        Uses _SLICE_FACES which is derived from _SLICE_ROTATION_FACE + _ADJACENT
+        in cube_layout.py.
 
         Returns None if faces are the same or opposite (no single slice connects them).
         """
-        if source == target:
-            return None
+        from cube.domain.geometric.cube_layout import _SLICE_FACES
 
-        for slice_name in SliceName:
-            walk_info = self.create_walking_info(slice_name)
-            faces_in_slice = {info.face.name for info in walk_info}
-            if source in faces_in_slice and target in faces_in_slice:
+        for slice_name, faces in _SLICE_FACES.items():
+            if source in faces and target in faces:
                 return slice_name
         return None
 

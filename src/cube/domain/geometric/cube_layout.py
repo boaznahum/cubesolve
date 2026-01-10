@@ -56,6 +56,11 @@ _SLICE_ROTATION_FACE: Mapping[SliceName, FaceName] = {
     SliceName.S: FaceName.F,
 }
 
+# Derived: Which faces each slice affects (adjacent to its rotation face)
+_SLICE_FACES: Mapping[SliceName, frozenset[FaceName]] = {
+    s: frozenset(_ADJACENT[f]) for s, f in _SLICE_ROTATION_FACE.items()
+}
+
 
 # ============================================================================
 # Geometry Functions (module-level, not part of protocol)
