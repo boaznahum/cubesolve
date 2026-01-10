@@ -115,41 +115,34 @@ def verify_whole_cube_translation(
         _verify_single_whole_cube_result(cube, target_name, source_name, target_coord, result)
 
 
-def verify_slice_translation(
+def _verify_single_slice_result(
     cube: Cube,
-    target_face: Face,
-    source_face: Face,
+    target_name: FaceName,
+    source_name: FaceName,
     target_coord: CenterSliceIndex,
+    result: FaceTranslationResult,
 ) -> None:
     """
-    Verify slice algorithm translation.
+    Verify a single slice translation result.
 
     Contract:
         1. Place marker at source_coord on source_face
         2. Apply slice algorithm
         3. Marker appears at target_coord on target_face
     """
-    target_name = target_face.name
-    source_name = source_face.name
+    source_coord = result.slice_algorithm.source_coord
+    slice_alg = result.slice_algorithm.get_alg()
+    marker_value = f"SLICE_{target_name}_{source_name}_{target_coord}_{result.slice_algorithm.whole_slice_alg}"
+
+    # Get fresh face objects
     target_face = cube.face(target_name)
     source_face = cube.face(source_name)
-
-    result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
-    source_coord = result.source_coord
-
-    marker_value = f"SLICE_{target_name}_{source_name}_{target_coord}"
 
     # Place marker at source_coord on source_face
     source_slice: CenterSlice = source_face.center.get_center_slice(source_coord)
     source_slice.edge.c_attributes["test_marker"] = marker_value
 
     # Apply slice algorithm
-    slice_alg = result.slice_algorithms[0].get_alg()
-
-    slice_name = result.slice_algorithms[0].whole_slice_alg.slice_name
-
-    # if slice_name not in [SliceName.M]:
-    #     return # skip it
     slice_alg.play(cube)
 
     # Verify marker at target_coord on target_face
@@ -164,6 +157,27 @@ def verify_slice_translation(
         f"  Expected marker at {target_coord} on {target_name}\n"
         f"  Found: {check_slice.edge.c_attributes.get('test_marker')}"
     )
+
+
+def verify_slice_translation(
+    cube: Cube,
+    target_name: FaceName,
+    source_name: FaceName,
+    target_coord: CenterSliceIndex,
+) -> None:
+    """
+    Verify slice algorithm translation for all results.
+
+    For adjacent faces: 1 result
+    For opposite faces: 2 results (tests both slice axes)
+    """
+    results = Face2FaceTranslator.translate_source_from_target(
+        cube.face(target_name), cube.face(source_name), target_coord
+    )
+
+    for result in results:
+        cube.reset()  # Reset to solved state
+        _verify_single_slice_result(cube, target_name, source_name, target_coord, result)
 
 
 class TestWholeCubeAlgorithm:
@@ -199,13 +213,12 @@ class TestSliceAlgorithm:
         cube = Cube(cube_size, sp=_test_sp)
 
         target_face = cube.face(target_name)
-        source_face = cube.face(source_name)
 
         for center_slice in target_face.center.all_slices:
             target_coord: CenterSliceIndex = center_slice.index
 
             verify_slice_translation(
-                cube, target_face, source_face, target_coord
+                cube, target_name, source_name, target_coord
             )
 
             cube.clear_c_attributes()
@@ -218,13 +231,12 @@ class TestSliceAlgorithm:
         cube = Cube(cube_size, sp=_test_sp)
 
         target_face = cube.face(target_name)
-        source_face = cube.face(source_name)
 
         for center_slice in target_face.center.all_slices:
             target_coord: CenterSliceIndex = center_slice.index
 
             verify_slice_translation(
-                cube, target_face, source_face, target_coord
+                cube, target_name, source_name, target_coord
             )
 
             cube.clear_c_attributes()
