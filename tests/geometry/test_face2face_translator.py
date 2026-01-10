@@ -265,26 +265,29 @@ class TestTranslateTargetFromSource:
         for center_slice in target_face.center.all_slices:
             target_coord: CenterSliceIndex = center_slice.index
 
-            # Get source_coord and slice_name from translate_source_from_target
-            result = Face2FaceTranslator.translate_source_from_target(
+            # Get all results from translate_source_from_target
+            results = Face2FaceTranslator.translate_source_from_target(
                 target_face, source_face, target_coord
             )
-            source_coord = result.source_coord
-            slice_name = result.slice_algorithms[0].whole_slice_alg.slice_name
 
-            # Call the inverse function
-            computed_target = Face2FaceTranslator.translate_target_from_source(
-                source_face, target_face, source_coord, slice_name
-            )
+            # Test inverse for each result
+            for result in results:
+                source_coord = result.slice_algorithm.source_coord
+                slice_name = result.slice_algorithm.whole_slice_alg.slice_name
 
-            assert computed_target == target_coord, (
-                f"translate_target_from_source is not inverse!\n"
-                f"  target_face={target_name}, source_face={source_name}\n"
-                f"  target_coord={target_coord} -> source_coord={source_coord}\n"
-                f"  translate_target_from_source returned {computed_target}\n"
-                f"  expected {target_coord}\n"
-                f"  slice_name={slice_name}"
-            )
+                # Call the inverse function
+                computed_target = Face2FaceTranslator.translate_target_from_source(
+                    source_face, target_face, source_coord, slice_name
+                )
+
+                assert computed_target == target_coord, (
+                    f"translate_target_from_source is not inverse!\n"
+                    f"  target_face={target_name}, source_face={source_name}\n"
+                    f"  target_coord={target_coord} -> source_coord={source_coord}\n"
+                    f"  translate_target_from_source returned {computed_target}\n"
+                    f"  expected {target_coord}\n"
+                    f"  slice_name={slice_name}"
+                )
 
 
 class TestSliceMovementPrediction:
@@ -320,15 +323,16 @@ class TestSliceMovementPrediction:
         source_face = cube.face(source_name)
         target_face = cube.face(target_name)
 
-        # Get slice algorithms from translate_source_from_target
+        # Get all results from translate_source_from_target
         # This gives us the correct slice AND direction
         # Use a dummy coord to get the algorithms
-        result = Face2FaceTranslator.translate_source_from_target(
+        results = Face2FaceTranslator.translate_source_from_target(
             target_face, source_face, (0, 0)
         )
 
-        # Test each slice algorithm
-        for slice_alg_result in result.slice_algorithms:
+        # Test each result (each has its own slice_algorithm)
+        for result in results:
+            slice_alg_result = result.slice_algorithm
             slice_name = slice_alg_result.whole_slice_alg.slice_name
 
             # if slice_name not in [SliceName.M]:
