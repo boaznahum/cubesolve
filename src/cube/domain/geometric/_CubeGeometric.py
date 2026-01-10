@@ -33,32 +33,6 @@ if TYPE_CHECKING:
     from cube.domain.geometric.Face2FaceTranslator import TransformType
 
 
-# =============================================================================
-# Module-level constants for geometry calculations
-# =============================================================================
-
-# Slice rotation faces: M rotates like L, E rotates like D, S rotates like F
-_SLICE_ROTATION_FACE: dict[SliceName, FaceName] = {
-    SliceName.M: FaceName.L,
-    SliceName.E: FaceName.D,
-    SliceName.S: FaceName.F,
-}
-
-# Axis rotation faces: X rotates around R, Y around U, Z around F
-_AXIS_ROTATION_FACE: dict[SliceName, FaceName] = {
-    SliceName.M: FaceName.R,  # X axis
-    SliceName.E: FaceName.U,  # Y axis
-    SliceName.S: FaceName.F,  # Z axis
-}
-
-# Opposite faces
-_OPPOSITE_FACES: dict[FaceName, FaceName] = {
-    FaceName.F: FaceName.B, FaceName.B: FaceName.F,
-    FaceName.U: FaceName.D, FaceName.D: FaceName.U,
-    FaceName.L: FaceName.R, FaceName.R: FaceName.L,
-}
-
-
 class _CubeGeometric:
     """
     Size-dependent cube geometry calculations.
@@ -452,14 +426,4 @@ class _CubeGeometric:
         return None
 
 
-# =============================================================================
-# Module-level exports (for backward compatibility during migration)
-# =============================================================================
-
-# These constants are also used by _CubeLayout for derive_transform_type
-__all__ = [
-    '_CubeGeometric',
-    '_SLICE_ROTATION_FACE',
-    '_AXIS_ROTATION_FACE',
-    '_OPPOSITE_FACES',
-]
+__all__ = ['_CubeGeometric']

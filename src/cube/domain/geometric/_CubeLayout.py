@@ -527,10 +527,10 @@ class _CubeLayout(CubeLayout):
         GEOMETRIC ASSUMPTION: Opposite faces rotate in opposite directions.
         See Face2FaceTranslator.py comment block for details.
         """
-        from cube.domain.geometric._CubeGeometric import (
+        from cube.domain.geometric.cube_layout import (
             _SLICE_ROTATION_FACE,
             _AXIS_ROTATION_FACE,
-            _OPPOSITE_FACES,
+            _ALL_OPPOSITE,
         )
 
         if source == target:
@@ -562,7 +562,7 @@ class _CubeLayout(CubeLayout):
         slice_rot_face = _SLICE_ROTATION_FACE[slice_name]
         axis_rot_face = _AXIS_ROTATION_FACE[slice_name]
 
-        if _OPPOSITE_FACES.get(slice_rot_face) == axis_rot_face:
+        if _ALL_OPPOSITE.get(slice_rot_face) == axis_rot_face:
             transform = self._invert_transform(transform)
 
         return transform

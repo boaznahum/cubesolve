@@ -160,25 +160,27 @@ cube.geometric   # → CubeGeometric (size-dependent)
 
 ## Constants Location
 
-### Layout Layer Constants (in `_CubeLayout.py` or `cube_layout.py`)
+**All topology constants are in `cube_layout.py`:**
 
-These are pure topology - same for all cube sizes:
-- `_OPPOSITE` / `_ALL_OPPOSITE` - Face opposite mappings
-- `_ADJACENT` - Face adjacency mappings
+Fundamental (hand-defined):
+- `_OPPOSITE` - Canonical opposite pairs: F↔B, U↔D, L↔R
+- `_SLICE_ROTATION_FACE` - Slice → rotation face: M→L, E→D, S→F
+- `_AXIS_ROTATION_FACE` - Slice → axis face: M→R, E→U, S→F
 
-### Geometric Layer Constants (in `_CubeGeometric.py`)
+Derived (computed from fundamental):
+- `_ALL_OPPOSITE` - Bidirectional opposite mapping
+- `_ADJACENT` - Adjacent faces (derived from `_OPPOSITE`)
+- `_SLICE_FACES` - Faces each slice affects (derived from `_SLICE_ROTATION_FACE` + `_ADJACENT`)
 
-These relate to slice traversal and coordinate systems:
-- `_SLICE_FACES` - Which faces each slice passes through
-- `_SLICE_ROTATION_FACE` - Reference face for each slice (M→L, E→D, S→F)
-- `_AXIS_ROTATION_FACE` - Axis face for each slice (M→R, E→U, S→F)
+**BOY color scheme in `cube_boy.py`:**
+- Face → Color mapping for standard Rubik's cube
 
 ### To Be Derived (Goal: Remove Hardcoding)
 
 The following tables in `Face2FaceTranslator.py` should be derived, not hardcoded:
 - `_TRANSFORMATION_TABLE` - **DONE** (derived via `derive_transform_type`)
 - `_SLICE_INDEX_TABLE` - TODO (derive from edge geometry)
-- `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` - Can be derived from rotation faces
+- `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` - TODO (derive from rotation faces)
 
 ---
 

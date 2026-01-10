@@ -24,9 +24,9 @@ No other file should define constants. `_CubeGeometric.py`, `_CubeLayout.py`, et
 | 1.2 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py | TODO | Derive from edge geometry |
 | 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | Face2FaceTranslator.py | TODO | Derive from slice rotation faces |
 | 2.1 | `_SLICE_ROTATION_FACE` | cube_layout.py | **DONE** | Fundamental constant |
-| 2.2 | `_AXIS_ROTATION_FACE` | _CubeGeometric.py | **MOVE** | Move to cube_layout.py (fundamental) |
+| 2.2 | `_AXIS_ROTATION_FACE` | cube_layout.py | **DONE** | Moved to cube_layout.py |
 | 2.3 | `_SLICE_FACES` | cube_layout.py | **DONE** | Derived from _SLICE_ROTATION_FACE + _ADJACENT |
-| 2.4 | `_OPPOSITE_FACES` | _CubeGeometric.py | **DELETE** | Duplicate of `_ALL_OPPOSITE` |
+| 2.4 | `_OPPOSITE_FACES` | (deleted) | **DONE** | Removed - was duplicate of `_ALL_OPPOSITE` |
 | 3.1 | `_OPPOSITE` | cube_layout.py | OK | Fundamental - correct location |
 | 3.2 | `_ADJACENT` | cube_layout.py | OK | Derived from `_OPPOSITE` |
 | 4.1 | BOY layout | cube_boy.py | OK | Fundamental - correct location |
@@ -35,10 +35,6 @@ No other file should define constants. `_CubeGeometric.py`, `_CubeLayout.py`, et
 ---
 
 ## Remaining Work
-
-### Immediate: Cleanup _CubeGeometric.py
-- **2.2** Move `_AXIS_ROTATION_FACE` to cube_layout.py
-- **2.4** Delete `_OPPOSITE_FACES` (duplicate of `_ALL_OPPOSITE`)
 
 ### High Priority
 - **1.2 `_SLICE_INDEX_TABLE`** - 12 entries mapping (SliceName, FaceName) → formula
@@ -57,8 +53,11 @@ All in **cube_layout.py** (except BOY):
 ```
 cube_layout.py:
   _OPPOSITE           : F↔B, U↔D, L↔R
-  _SLICE_ROTATION_FACE: M→L, E→D, S→F  (to be moved here)
-  _AXIS_ROTATION_FACE : M→R, E→U, S→F  (to be moved here)
+  _ALL_OPPOSITE       : Bidirectional opposite mapping
+  _ADJACENT           : Derived from _OPPOSITE
+  _SLICE_ROTATION_FACE: M→L, E→D, S→F
+  _AXIS_ROTATION_FACE : M→R, E→U, S→F
+  _SLICE_FACES        : Derived from _SLICE_ROTATION_FACE + _ADJACENT
 
 cube_boy.py:
   BOY layout          : Face→Color mapping

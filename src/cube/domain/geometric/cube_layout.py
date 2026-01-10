@@ -56,6 +56,14 @@ _SLICE_ROTATION_FACE: Mapping[SliceName, FaceName] = {
     SliceName.S: FaceName.F,
 }
 
+# Axis rotation faces: whole-cube X rotates around R, Y around U, Z around F
+# Note: _AXIS_ROTATION_FACE[s] is opposite to _SLICE_ROTATION_FACE[s] except for S
+_AXIS_ROTATION_FACE: Mapping[SliceName, FaceName] = {
+    SliceName.M: FaceName.R,  # X axis
+    SliceName.E: FaceName.U,  # Y axis
+    SliceName.S: FaceName.F,  # Z axis (same as slice rotation face)
+}
+
 # Derived: Which faces each slice affects (adjacent to its rotation face)
 _SLICE_FACES: Mapping[SliceName, frozenset[FaceName]] = {
     s: frozenset(_ADJACENT[f]) for s, f in _SLICE_ROTATION_FACE.items()
