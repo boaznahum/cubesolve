@@ -19,6 +19,7 @@ from cube.domain.geometric.Face2FaceTranslator import (
 )
 from tests.test_utils import _test_sp
 
+CUBE_SIZES_SLICE = range(3, 7)
 
 class TestDeriveTransformationTable:
     """Test that we can derive the transformation table from geometry."""
@@ -28,13 +29,18 @@ class TestDeriveTransformationTable:
         """Create a test cube."""
         return Cube(5, sp=_test_sp)
 
-    def test_derive_all_entries(self, cube: Cube):
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_SLICE)
+    def test_derive_all_entries(self, cube_size: int):
         """
         Compare derived transforms against the hardcoded table.
 
         This test verifies that our derivation algorithm produces
         the same results as the empirically-derived table.
         """
+
+        cube = Cube(cube_size, sp=_test_sp)
+
+
         layout = cube.layout
         mismatches: list[str] = []
         matches = 0
@@ -62,8 +68,13 @@ class TestDeriveTransformationTable:
 
         assert not mismatches, f"Found {len(mismatches)} mismatches:\n" + "\n".join(mismatches)
 
-    def test_derive_single_entry_debug(self, cube: Cube):
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_SLICE)
+    def test_derive_single_entry_debug(self, cube_size: int):
         """Debug test for a single entry - useful for investigating mismatches."""
+
+        cube = Cube(cube_size, sp=_test_sp)
+
+
         source, target = FaceName.F, FaceName.U
         expected = _TRANSFORMATION_TABLE.get((source, target))
         derived = cube.layout.derive_transform_type(source, target)
@@ -74,18 +85,26 @@ class TestDeriveTransformationTable:
 
         assert derived == expected
 
-    def test_derive_returns_none_for_same_face(self, cube: Cube):
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_SLICE)
+    def test_derive_returns_none_for_same_face(self, cube_size: int):
         """Test that same face returns None."""
+
+        cube = Cube(cube_size, sp=_test_sp)
+
         for face in FaceName:
             result = cube.layout.derive_transform_type(face, face)
             assert result is None, f"Expected None for {face} -> {face}"
 
-    def test_derive_handles_opposite_faces(self, cube: Cube):
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_SLICE)
+    def test_derive_handles_opposite_faces(self, cube_size: int):
         """Test that opposite faces return correct transforms (via 2 rotations)."""
         # Expected from hardcoded table:
         # F↔B: ROT_180 (via M slice, two 90° rotations)
         # U↔D: IDENTITY (via M or S slice, two 90° rotations)
         # L↔R: IDENTITY (via E or S slice, two 90° rotations)
+
+        cube = Cube(cube_size, sp=_test_sp)
+
         opposite_expected = {
             (FaceName.F, FaceName.B): TransformType.ROT_180,
             (FaceName.B, FaceName.F): TransformType.ROT_180,
