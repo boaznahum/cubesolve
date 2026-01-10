@@ -23,6 +23,7 @@ from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
+from cube.domain.geometric.cube_layout import _SLICE_FACES  # Derived in cube_layout.py
 from cube.domain.model.Edge import Edge
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
@@ -36,13 +37,6 @@ if TYPE_CHECKING:
 # =============================================================================
 # Module-level constants for geometry calculations
 # =============================================================================
-
-# Slice -> faces it affects (for finding which slice connects two faces)
-_SLICE_FACES: dict[SliceName, set[FaceName]] = {
-    SliceName.M: {FaceName.F, FaceName.U, FaceName.B, FaceName.D},
-    SliceName.E: {FaceName.F, FaceName.R, FaceName.B, FaceName.L},
-    SliceName.S: {FaceName.U, FaceName.R, FaceName.D, FaceName.L},
-}
 
 # Slice rotation faces: M rotates like L, E rotates like D, S rotates like F
 _SLICE_ROTATION_FACE: dict[SliceName, FaceName] = {
