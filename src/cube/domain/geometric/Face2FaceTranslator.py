@@ -470,20 +470,29 @@ def _apply_transform(
             return inv(row), inv(col)
 
 
-def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Tuple[WholeCubeAlg, int, Alg]:
+def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> list[Tuple[WholeCubeAlg, int, Alg]]:
     """
-    Derive the whole-cube algorithm that brings dest to source's screen position.
+    Derive whole-cube algorithm(s) that bring dest to source's screen position.
 
-    Uses rotation cycles to compute the minimal algorithm dynamically.
+    For adjacent faces: returns 1 algorithm (single rotation X/Y/Z)
+    For opposite faces: returns 2 algorithms (double rotations like X2, Y2)
 
-    The cycles are ordered so each base_alg application moves content from
-    cycle[i] to cycle[i+1]. To move dest to source's position:
-    - We need (dest_idx + steps) % 4 == src_idx
-    - Therefore: steps = (src_idx - dest_idx) % 4
+    Note: For opposite faces, there are additional solutions using combination
+    moves (e.g., X Y), but this method only returns single-axis rotations.
+
+    Examples for opposite faces (single-axis only):
+        F↔B: X2, Y2
+        U↔D: X2, Z2
+        L↔R: Y2, Z2
+
+    Returns:
+        List of (base_alg, steps, full_alg) tuples where:
+        - base_alg: The base rotation (X, Y, or Z)
+        - steps: Number of rotations (1-3)
+        - full_alg: The complete algorithm (e.g., X2)
     """
-    # claude: here all the problems begin, this is the root cause, you need to return all
-    #   available algorithms,
-    # and all the information is in CubeLayout
+    results: list[Tuple[WholeCubeAlg, int, Alg]] = []
+
     whole_cube_alg: WholeCubeAlg
     for cycle, whole_cube_alg in [(_X_CYCLE, Algs.X), (_Y_CYCLE, Algs.Y), (_Z_CYCLE, Algs.Z)]:
         if source in cycle and dest in cycle:
@@ -495,10 +504,12 @@ def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> Tuple[WholeCubeA
                 # source == dest (shouldn't happen, but handle gracefully)
                 raise InternalSWError("source == dest")
 
-            return whole_cube_alg, steps, whole_cube_alg * steps
+            results.append((whole_cube_alg, steps, whole_cube_alg * steps))
 
-    # Should never reach here for valid face pairs
-    raise ValueError(f"No rotation cycle contains both {source} and {dest}")
+    if not results:
+        raise ValueError(f"No rotation cycle contains both {source} and {dest}")
+
+    return results
 
 
 class Face2FaceTranslator:
