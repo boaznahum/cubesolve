@@ -61,6 +61,10 @@ def _verify_single_whole_cube_result(
     """
     Verify a single whole-cube translation result.
 
+    Uses FaceName instead of Face objects because cube.reset() creates new
+    Face objects, making old references stale. FaceName is an immutable enum
+    that remains valid across resets.
+
     Contract:
         1. Place marker at source_coord on source_face
         2. Apply whole_cube_alg
@@ -103,6 +107,10 @@ def verify_whole_cube_translation(
     """
     Verify whole-cube algorithm translation for all results.
 
+    Uses FaceName instead of Face objects because cube.reset() creates new
+    Face objects, making old references stale. FaceName is an immutable enum
+    that remains valid across resets.
+
     For adjacent faces: 1 result
     For opposite faces: 2 results (tests both rotation axes)
     """
@@ -124,6 +132,10 @@ def _verify_single_slice_result(
 ) -> None:
     """
     Verify a single slice translation result.
+
+    Uses FaceName instead of Face objects because cube.reset() creates new
+    Face objects, making old references stale. FaceName is an immutable enum
+    that remains valid across resets.
 
     Contract:
         1. Place marker at source_coord on source_face
@@ -167,6 +179,10 @@ def verify_slice_translation(
 ) -> None:
     """
     Verify slice algorithm translation for all results.
+
+    Uses FaceName instead of Face objects because cube.reset() creates new
+    Face objects, making old references stale. FaceName is an immutable enum
+    that remains valid across resets.
 
     For adjacent faces: 1 result
     For opposite faces: 2 results (tests both slice axes)
