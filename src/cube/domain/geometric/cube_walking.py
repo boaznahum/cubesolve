@@ -175,20 +175,28 @@ class CubeWalkingInfo:
     """
     Complete information about walking a slice through all 4 faces.
 
-    The face_infos are stored in cycle order and can be looked up by Face object.
+    The face_infos are stored in CONTENT FLOW order - the order content moves
+    during a positive (clockwise) rotation of the slice's rotation_face.
+
+    Face Order (Content Flow):
+        - M slice (rotation_face=L): F → U → B → D
+        - E slice (rotation_face=D): R → B → L → F
+        - S slice (rotation_face=F): U → R → D → L
 
     Attributes:
         slice_name: Which slice (M, E, or S)
+        rotation_face: The face this slice rotates like (M→L, E→D, S→F)
         n_slices: Total number of slices (cube_size - 2)
-        face_infos: Tuple of 4 FaceWalkingInfo in cycle order
+        face_infos: Tuple of 4 FaceWalkingInfo in content flow order
 
     Usage:
-        walk_info = create_walking_info(cube, SliceName.M)
+        walk_info = cube.geometric.create_walking_info(SliceName.M)
         transform = walk_info.get_transform(face_f, face_u)
         new_point = walk_info.translate_point(face_f, face_u, (row, col))
     """
 
     slice_name: "SliceName"
+    rotation_face: "FaceName"
     n_slices: int
     face_infos: tuple[FaceWalkingInfo, ...]
 

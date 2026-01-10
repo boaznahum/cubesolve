@@ -528,7 +528,6 @@ class _CubeLayout(CubeLayout):
         See Face2FaceTranslator.py comment block for details.
         """
         from cube.domain.geometric._CubeGeometric import (
-            _CubeGeometric,
             _SLICE_ROTATION_FACE,
             _AXIS_ROTATION_FACE,
             _OPPOSITE_FACES,
@@ -540,8 +539,8 @@ class _CubeLayout(CubeLayout):
         # Check for opposite faces - need special handling (two 90° rotations)
         is_opposite = _ALL_OPPOSITE.get(source) == target
 
-        # Find which slice connects them
-        slice_name = _CubeGeometric.get_slice_for_faces(source, target)
+        # Find which slice connects them (uses CubeWalkingInfo internally)
+        slice_name = self._cube.geometric.get_slice_for_faces(source, target)
         if slice_name is None:
             return None  # Should not happen
 

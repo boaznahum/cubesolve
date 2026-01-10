@@ -23,7 +23,6 @@ from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
-from cube.domain.geometric.cube_layout import _SLICE_FACES  # Derived in cube_layout.py
 from cube.domain.model.Edge import Edge
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
@@ -296,6 +295,7 @@ class _CubeGeometric:
 
         return CubeWalkingInfo(
             slice_name=slice_name,
+            rotation_face=rotation_face_name,
             n_slices=n_slices,
             face_infos=tuple(face_infos)
         )
@@ -434,15 +434,22 @@ class _CubeGeometric:
 
         return True
 
-    @staticmethod
-    def get_slice_for_faces(source: FaceName, target: FaceName) -> SliceName | None:
+    def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
         """
         Find which slice connects two faces.
 
+        Uses CubeWalkingInfo to determine which slice passes through both faces.
+        The face order in CubeWalkingInfo follows the rotation face's clockwise order.
+
         Returns None if faces are the same or opposite (no single slice connects them).
         """
-        for slice_name, faces in _SLICE_FACES.items():
-            if source in faces and target in faces:
+        if source == target:
+            return None
+
+        for slice_name in SliceName:
+            walk_info = self.create_walking_info(slice_name)
+            faces_in_slice = {info.face.name for info in walk_info}
+            if source in faces_in_slice and target in faces_in_slice:
                 return slice_name
         return None
 
@@ -454,7 +461,6 @@ class _CubeGeometric:
 # These constants are also used by _CubeLayout for derive_transform_type
 __all__ = [
     '_CubeGeometric',
-    '_SLICE_FACES',
     '_SLICE_ROTATION_FACE',
     '_AXIS_ROTATION_FACE',
     '_OPPOSITE_FACES',
