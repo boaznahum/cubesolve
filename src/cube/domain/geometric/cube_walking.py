@@ -102,6 +102,80 @@ if TYPE_CHECKING:
 # Type alias for the point computation function
 PointComputer = Callable[[int, int], Point]  # (slice_index, slot) -> Point
 
+# Type alias for size-independent point computation (takes n_slices as first arg)
+SizedPointComputer = Callable[[int, int, int], Point]  # (n_slices, slice_index, slot) -> Point
+
+
+# =============================================================================
+# SIZE-INDEPENDENT COMPUTE FUNCTIONS
+# =============================================================================
+#
+# These 8 functions compute (row, col) from (n_slices, slice_index, slot).
+# They are selected based on 3 boolean flags:
+#   - is_horizontal: edge is top/bottom (True) or left/right (False)
+#   - is_slot_inverted: edge is top/right (True) or bottom/left (False)
+#   - is_index_inverted: current_index != 0 during traversal
+#
+# The function selection is SIZE-INDEPENDENT and can be stored in UnitFaceWalkingInfo.
+# =============================================================================
+
+def _compute_h_si_ii(n: int, si: int, sl: int) -> Point:
+    """Horizontal edge, slot inverted, index inverted."""
+    return (n - 1 - sl, n - 1 - si)
+
+
+def _compute_h_si(n: int, si: int, sl: int) -> Point:
+    """Horizontal edge, slot inverted, index NOT inverted."""
+    return (n - 1 - sl, si)
+
+
+def _compute_h_ii(n: int, si: int, sl: int) -> Point:
+    """Horizontal edge, slot NOT inverted, index inverted."""
+    return (sl, n - 1 - si)
+
+
+def _compute_h(n: int, si: int, sl: int) -> Point:
+    """Horizontal edge, slot NOT inverted, index NOT inverted."""
+    return (sl, si)
+
+
+def _compute_v_si_ii(n: int, si: int, sl: int) -> Point:
+    """Vertical edge, slot inverted, index inverted."""
+    return (n - 1 - si, n - 1 - sl)
+
+
+def _compute_v_si(n: int, si: int, sl: int) -> Point:
+    """Vertical edge, slot inverted, index NOT inverted."""
+    return (si, n - 1 - sl)
+
+
+def _compute_v_ii(n: int, si: int, sl: int) -> Point:
+    """Vertical edge, slot NOT inverted, index inverted."""
+    return (n - 1 - si, sl)
+
+
+def _compute_v(n: int, si: int, sl: int) -> Point:
+    """Vertical edge, slot NOT inverted, index NOT inverted."""
+    return (si, sl)
+
+
+def select_compute_function(
+    is_horizontal: bool,
+    is_slot_inverted: bool,
+    is_index_inverted: bool
+) -> SizedPointComputer:
+    """Select the appropriate compute function based on edge properties."""
+    if is_horizontal:
+        if is_slot_inverted:
+            return _compute_h_si_ii if is_index_inverted else _compute_h_si
+        else:
+            return _compute_h_ii if is_index_inverted else _compute_h
+    else:
+        if is_slot_inverted:
+            return _compute_v_si_ii if is_index_inverted else _compute_v_si
+        else:
+            return _compute_v_ii if is_index_inverted else _compute_v
+
 
 @dataclass(frozen=True)
 class FaceWalkingInfo:
@@ -305,17 +379,19 @@ class UnitFaceWalkingInfo:
     """
     Size-independent walking info for one face in a slice traversal.
 
-    Only stores the essential info:
+    Stores:
     - face_name: which face
-    - edge_position: which edge is the entry edge
+    - edge_position: which edge is the entry edge ("top", "bottom", "left", "right")
     - unit_rotation: FUnitRotation relative to first face
+    - compute: Size-independent compute function (n_slices, slice_index, slot) -> Point
 
-    The unit_rotation is the KEY - it captures how coordinates transform
-    between faces, and works for any cube size.
+    The compute function is selected during traversal based on edge properties
+    and is SIZE-INDEPENDENT - it takes n_slices as a parameter.
     """
     face_name: "FaceName"
     edge_position: str  # "top", "bottom", "left", "right"
     unit_rotation: FUnitRotation
+    compute: SizedPointComputer = field(compare=False)  # Don't compare functions
 
 
 @dataclass(frozen=True)

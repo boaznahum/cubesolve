@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterator
 
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
-from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
+from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo, PointComputer
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 from cube.domain.geometric.types import Point
@@ -70,11 +70,8 @@ class _SizedCubeLayout(SizedCubeLayout):
         """
         Create walking info by using unit walking info as the source of truth.
 
-        Uses create_unit_walking_info() to get the deterministic face order
-        and edge positions, then computes the size-dependent parts (reference
-        points and compute functions).
-
-        This ensures consistency between unit and sized walking info.
+        The unit_info contains size-independent compute functions.
+        This method just binds n_slices to create the sized version.
 
         Args:
             slice_name: Which slice (M, E, S) to traverse
@@ -84,132 +81,31 @@ class _SizedCubeLayout(SizedCubeLayout):
         """
         cube = self._cube
         n_slices = cube.n_slices
-        layout = cube.layout
 
-        def inv(x: int) -> int:
-            return n_slices - 1 - x
-
-        # Get unit walking info (size-independent, deterministic order)
-        unit_info = layout.create_unit_walking_info(slice_name)
-
-        # Get slice layout for alignment checks
-        slice_layout: SliceLayout = layout.get_slice(slice_name)
-
-        # DEBUG logging
-        _log = cube.sp.logger
-        _dbg = cube.config.solver_debug
-        if _log.is_debug(_dbg):
-            _log.debug(_dbg, f"\n=== {slice_name.name} slice (using unit info) ===")
-            _log.debug(_dbg, f"Rotation face: {unit_info.rotation_face.name}")
-            _log.debug(_dbg, f"Unit faces: {[f.face_name.name for f in unit_info.face_infos]}")
+        # Get unit walking info (contains size-independent compute functions)
+        unit_info = cube.layout.create_unit_walking_info(slice_name)
 
         face_infos: list[FaceWalkingInfo] = []
 
-        # Point computation functions - 8 combinations of (horizontal, slot_inverted, index_inverted)
-        def _compute_h_si_ii(si: int, sl: int) -> Point:
-            return (inv(sl), inv(si))
+        for unit_face_info in unit_info.face_infos:
+            # Get Face and Edge objects
+            face: Face = cube.face(unit_face_info.face_name)
+            edge: Edge = self._get_edge_from_position(face, unit_face_info.edge_position)
 
-        def _compute_h_si(si: int, sl: int) -> Point:
-            return (inv(sl), si)
+            # Get the size-independent compute function and bind n_slices
+            sized_compute = unit_face_info.compute
+            compute: PointComputer = lambda si, sl, fn=sized_compute, n=n_slices: fn(n, si, sl)
 
-        def _compute_h_ii(si: int, sl: int) -> Point:
-            return (sl, inv(si))
-
-        def _compute_h(si: int, sl: int) -> Point:
-            return (sl, si)
-
-        def _compute_v_si_ii(si: int, sl: int) -> Point:
-            return (inv(si), inv(sl))
-
-        def _compute_v_si(si: int, sl: int) -> Point:
-            return (si, inv(sl))
-
-        def _compute_v_ii(si: int, sl: int) -> Point:
-            return (inv(si), sl)
-
-        def _compute_v(si: int, sl: int) -> Point:
-            return (si, sl)
-
-        # Track current_index as we traverse (for is_index_inverted)
-        current_index: int = 0
-        slot: int = 0
-
-        for i, unit_face_info in enumerate(unit_info.face_infos):
-            # Get Face object from unit info
-            current_face: Face = cube.face(unit_face_info.face_name)
-
-            # Get Edge object from edge_position
-            current_edge: Edge = self._get_edge_from_position(
-                current_face, unit_face_info.edge_position
-            )
-
-            # Initialize current_index for first face
-            if i == 0:
-                if not slice_layout.does_slice_of_face_start_with_face(current_face.name):
-                    current_index = inv(0)
-
-            # Determine edge properties
-            is_horizontal = current_face.is_bottom_or_top(current_edge)
-            is_slot_inverted = (
-                current_face.is_top_edge(current_edge) if is_horizontal
-                else current_face.is_right_edge(current_edge)
-            )
-            is_index_inverted = current_index != 0
-
-            # Compute reference_point for (slice_index=0, slot=0)
-            if is_horizontal:
-                reference_point: Point = (inv(slot) if is_slot_inverted else slot, current_index)
-            else:
-                reference_point = (current_index, inv(slot) if is_slot_inverted else slot)
-
-            # DEBUG logging
-            if _log.is_debug(_dbg):
-                _log.debug(_dbg, f"Face {i}: {current_face.name.name}, "
-                          f"edge={unit_face_info.edge_position}, "
-                          f"is_horizontal={is_horizontal}, is_slot_inverted={is_slot_inverted}, "
-                          f"is_index_inverted={is_index_inverted}, current_index={current_index}, "
-                          f"reference_point={reference_point}")
-
-            # Select precomputed point function based on edge properties
-            if is_horizontal and is_slot_inverted and is_index_inverted:
-                compute = _compute_h_si_ii
-            elif is_horizontal and is_slot_inverted and not is_index_inverted:
-                compute = _compute_h_si
-            elif is_horizontal and not is_slot_inverted and is_index_inverted:
-                compute = _compute_h_ii
-            elif is_horizontal and not is_slot_inverted and not is_index_inverted:
-                compute = _compute_h
-            elif not is_horizontal and is_slot_inverted and is_index_inverted:
-                compute = _compute_v_si_ii
-            elif not is_horizontal and is_slot_inverted and not is_index_inverted:
-                compute = _compute_v_si
-            elif not is_horizontal and not is_slot_inverted and is_index_inverted:
-                compute = _compute_v_ii
-            else:
-                compute = _compute_v
+            # reference_point = compute(0, 0)
+            reference_point: Point = sized_compute(n_slices, 0, 0)
 
             face_infos.append(FaceWalkingInfo(
-                face=current_face,
-                edge=current_edge,
+                face=face,
+                edge=edge,
                 reference_point=reference_point,
                 n_slices=n_slices,
                 _compute=compute
             ))
-
-            # Update current_index for next face (except after the 4th)
-            if i < 3:
-                next_unit_face = unit_info.face_infos[i + 1]
-                next_face: Face = cube.face(next_unit_face.face_name)
-
-                if _log.is_debug(_dbg):
-                    _log.debug(_dbg, f"   -> transitioning to {next_face.name.name}")
-
-                next_slice_index = current_edge.get_slice_index_from_ltr_index(
-                    current_face, current_index
-                )
-                current_index = current_edge.get_ltr_index_from_slice_index(
-                    next_face, next_slice_index
-                )
 
         return CubeWalkingInfo(
             slice_name=slice_name,

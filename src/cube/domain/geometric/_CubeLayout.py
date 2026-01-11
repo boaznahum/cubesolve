@@ -19,6 +19,7 @@ from cube.domain.geometric.cube_walking import (
     UnitCubeWalkingInfo,
     UnitFaceWalkingInfo,
     _FAKE_N_SLICES,
+    select_compute_function,
 )
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
@@ -81,10 +82,15 @@ class _CubeLayout(CubeLayout):
 
     @property
     def _cube(self) -> "Cube":
-        """Get internal 3x3 cube for geometry queries (lazy initialization).
+        """Get internal 5x5 cube for geometry queries (lazy initialization).
 
         This cube is used to answer template-level geometry questions that
         require traversing face/edge relationships. It's created on first access.
+
+        NOTE: We use size 5 (n_slices=3) rather than size 3 (n_slices=1) because
+        edge coordinate conversion methods need n_slices >= 2 to properly
+        distinguish inverted vs non-inverted indices. With n_slices=1, index 0
+        maps to 0 even when inverted, which breaks the is_index_inverted check.
 
         Raises:
             InternalSWError: If called during cube creation (cycle detected).
@@ -99,11 +105,11 @@ class _CubeLayout(CubeLayout):
                 "called during Cube.__init__() that requires the internal cube."
             )
 
-        # Create the internal 3x3 cube
+        # Create the internal 5x5 cube (n_slices=3 for proper index inversion detection)
         self._creating_internal_cube = True
         try:
             from cube.domain.model.Cube import Cube
-            self._internal_cube = Cube(3, self._sp)
+            self._internal_cube = Cube(5, self._sp)
             # Set the layout directly (Cube doesn't accept layout in __init__)
             self._internal_cube._original_layout = self
         finally:
@@ -489,13 +495,14 @@ class _CubeLayout(CubeLayout):
         """
         Create size-independent walking info for a slice.
 
-        Uses fake n_slices to compute FUnitRotation for each face.
+        Uses internal cube's n_slices to compute FUnitRotation for each face.
         The FUnitRotation is size-independent (CW0, CW1, CW2, CW3).
         """
 
         def compute() -> UnitCubeWalkingInfo:
             cube = self._cube
-            n_slices = _FAKE_N_SLICES
+            # Use actual internal cube's n_slices for consistency with edge methods
+            n_slices = cube.n_slices
 
             def inv(x: int) -> int:
                 return n_slices - 1 - x
@@ -529,13 +536,15 @@ class _CubeLayout(CubeLayout):
             first_reference_point: tuple[int, int] | None = None
 
             for _ in range(4):
-                # Compute reference_point
+                # Compute edge properties
                 is_horizontal = current_face.is_bottom_or_top(current_edge)
                 is_slot_inverted = (
                     current_face.is_top_edge(current_edge) if is_horizontal
                     else current_face.is_right_edge(current_edge)
                 )
+                is_index_inverted = current_index != 0
 
+                # Compute reference_point
                 if is_horizontal:
                     reference_point = (inv(slot) if is_slot_inverted else slot, current_index)
                 else:
@@ -560,10 +569,16 @@ class _CubeLayout(CubeLayout):
                 else:
                     edge_position = "right"
 
+                # Select compute function (SIZE-INDEPENDENT)
+                compute_fn = select_compute_function(
+                    is_horizontal, is_slot_inverted, is_index_inverted
+                )
+
                 unit_face_infos.append(UnitFaceWalkingInfo(
                     face_name=current_face.name,
                     edge_position=edge_position,
                     unit_rotation=unit_rotation,
+                    compute=compute_fn,
                 ))
 
                 # Move to next face
