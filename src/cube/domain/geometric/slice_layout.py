@@ -358,6 +358,9 @@ class _SliceLayout(SliceLayout):
             cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
 
             # Pick first two consecutive faces (random starting point in the cycle)
+            # INTENTIONALLY RANDOM: The user chose this to expose potential bugs.
+            # The walking algorithm must NOT depend on which face we start from.
+            # If tests fail non-deterministically, it reveals hidden assumptions.
             fidx = random.randint(0, 3)
             first_face = cycle_faces_ordered[fidx]
             second_face = cycle_faces_ordered[(fidx + 1) % 4]
@@ -441,8 +444,8 @@ class _SliceLayout(SliceLayout):
                     compute_fn = _compute_v
 
                 face_infos.append(FaceWalkingInfoUnit(
-                    face=current_face,
-                    edge=current_edge,
+                    face_name=current_face.name,
+                    edge_name=current_edge.name,
                     reference_point=reference_point,
                     n_slices=fake_n_slices,
                     _compute=compute_fn

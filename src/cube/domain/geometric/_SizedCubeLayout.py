@@ -122,8 +122,8 @@ class _SizedCubeLayout(SizedCubeLayout):
             sized_faces = []
 
             for uf in unit.face_infos:
-                face: Face = cube.face(uf.face.name)  # todo: don't by accident store fake cube object need to fix unit to return names
-                edge: Edge = cube.edge(uf.edge.name)  # todo: don't by accident store fake cube object need to fix unit to return names
+                face: Face = cube.face(uf.face_name)
+                edge: Edge = cube.edge(uf.edge_name)
                 reference_point: Point = uf.get_reference_point(n_slices)
                 compute_fn: PointComputer = uf.get_compute(n_slices)
 
