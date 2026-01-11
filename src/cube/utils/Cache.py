@@ -1,20 +1,24 @@
-"""Generic cache implementations with type safety.
+"""Single-entry cache implementations.
 
-Provides Cache and CacheManager protocols with implementations:
-- Cache: Protocol for individual caches
-  - CacheImpl: Actual caching with type validation
+Architecture:
+- Cache: Protocol for single-entry caches (holds 0 or 1 value)
+  - CacheImpl: Actual single-value cache
   - CacheNull: Singleton, no caching, always calls factory
-- CacheManager: Protocol for cache of caches
-  - CacheManagerImpl: Creates/manages CacheImpl instances
+- CacheManager: Protocol for managing multiple Cache instances
+  - CacheManagerImpl: Creates/manages CacheImpl instances by key
   - CacheManagerNull: Singleton, always returns CacheNull
+
+The key insight: each Cache holds ONE value. The full cache key is passed
+to CacheManager.get(), which returns a single-entry Cache for that key.
 
 Usage::
 
     # Create CacheManager based on config
     manager = CacheManager.create(config)
-    cache = manager.get("my_cache", str)
 
-    value = cache.compute("key1", lambda: expensive_computation())
+    # Full key passed to get(), compute() has no key parameter
+    cache = manager.get(("MyClass.method", arg1, arg2), MyType)
+    value = cache.compute(lambda: expensive_computation())
 """
 
 from __future__ import annotations
@@ -30,81 +34,75 @@ V = TypeVar('V')
 
 @runtime_checkable
 class Cache(Protocol[V]):
-    """Protocol for cache implementations.
+    """Protocol for single-entry cache implementations.
 
-    Generic cache that stores values of type V, keyed by hashable keys.
-    Implementations must provide clear() and compute() methods.
+    A Cache holds at most ONE value. The key is determined when obtaining
+    the cache from CacheManager.get(). This simplifies the interface:
+    - CacheManager.get(full_key, type) -> returns Cache for that key
+    - Cache.compute(factory) -> returns cached value or computes it
+
+    Values cannot be None - the cache assumes all cached values are non-None.
     """
 
     def clear(self) -> None:
-        """Clear all cached values."""
+        """Clear the cached value."""
         ...
 
-    def compute(self, key: Hashable, factory: Callable[[], V], disable_cache=False) -> V:
+    def compute(self, factory: Callable[[], V], disable_cache: bool = False) -> V:
         """Get cached value or compute and cache it.
 
         Args:
-            key: Hashable key to look up or store the value
             factory: Callable that produces the value if not cached
-            disable_cache: for temporarily disable cache for this call only
+            disable_cache: If True, always call factory (bypass cache)
 
         Returns:
             The cached or newly computed value
-
-        Raises:
-            TypeError: If cached or computed value is not of expected type
-            :param key:
-            :param factory:
         """
         ...
 
 
 @dataclass
 class CacheImpl(Cache[V], Generic[V]):
-    """Actual cache implementation with type checking.
+    """Single-entry cache implementation.
 
-    Caches values and validates their types on retrieval and storage.
+    Holds at most ONE cached value. The key is managed by CacheManager.
+    Values cannot be None - use _has_value to distinguish "no value" from "cached None".
 
     Attributes:
-        _type: The expected type of cached values
+        _type: The expected type of cached value (for documentation, not checked)
     """
     _type: type[V]
-    _cache: dict[Hashable, V] = field(default_factory=dict, init=False)
+    _value: V | None = field(default=None, init=False)
+    _has_value: bool = field(default=False, init=False)
 
     def clear(self) -> None:
-        """Clear all cached values."""
-        self._cache.clear()
+        """Clear the cached value."""
+        self._value = None
+        self._has_value = False
 
-    def compute(self, key: Hashable, factory: Callable[[], V], disable_cache=False) -> V:
+    def compute(self, factory: Callable[[], V], disable_cache: bool = False) -> V:
         """Get cached value or compute and cache it.
 
         Args:
-            key: Hashable key to look up or store the value
             factory: Callable that produces the value if not cached
-            disable_cache: for temporarily disable cache for this call only
+            disable_cache: If True, always call factory (bypass cache)
 
         Returns:
             The cached or newly computed value
 
         Raises:
-            TypeError: If cached or computed value is not of expected type
+            RuntimeError: If cached or computed value is None
         """
-        if not disable_cache and key in self._cache:
-            value = self._cache[key]
-            if not isinstance(value, self._type):
-                raise TypeError(
-                    f"Cached value has wrong type: expected {self._type.__name__}, "
-                    f"got {type(value).__name__}"
-                )
-            return value
+        if not disable_cache and self._has_value:
+            if self._value is None:
+                raise RuntimeError("Cached value is None - cache does not support None values")
+            return self._value
 
         value = factory()
-        if not isinstance(value, self._type):
-            raise TypeError(
-                f"Factory returned wrong type: expected {self._type.__name__}, "
-                f"got {type(value).__name__}"
-            )
-        self._cache[key] = value
+        if value is None:
+            raise RuntimeError("Factory returned None - cache does not support None values")
+        self._value = value
+        self._has_value = True
         return value
 
 
@@ -123,12 +121,12 @@ class CacheNull(Cache[V]):
         """No-op since nothing is cached."""
         pass
 
-    def compute(self, key: Hashable, factory: Callable[[], V], disable_cache=False) -> V:
+    def compute(self, factory: Callable[[], V], disable_cache: bool = False) -> V:
         """Always call factory and return result (no caching).
 
         Args:
-            key: Ignored (no caching)
             factory: Callable that produces the value
+            disable_cache: Ignored (always bypasses cache anyway)
 
         Returns:
             The newly computed value
@@ -253,6 +251,10 @@ class CacheManagerNull(CacheManager):
             The CacheNull singleton
         """
         return CacheNull.instance
+
+    def clear(self) -> None:
+        """No-op since CacheNull never stores anything."""
+        pass
 
     def __getitem__(self, key_and_type: Tuple[Hashable, type[V]]) -> Cache[V]:
         """Always returns the CacheNull singleton.

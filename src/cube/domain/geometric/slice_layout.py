@@ -244,9 +244,9 @@ class _SliceLayout(SliceLayout):
                 return CLGColRow.COL
 
         # Use cache manager from layout
-        cache_key = (self._slice_name, face_name)
-        cache = self._layout.cache_manager.get("SliceLayout.does_slice_cut_rows_or_columns", CLGColRow)
-        return cache.compute(cache_key, compute)
+        cache_key = ("SliceLayout.does_slice_cut_rows_or_columns", self._slice_name, face_name)
+        cache = self._layout.cache_manager.get(cache_key, CLGColRow)
+        return cache.compute(compute)
 
     def is_horizontal_on_face(self, face_name: "FaceName") -> bool:
         """
@@ -318,9 +318,9 @@ class _SliceLayout(SliceLayout):
                 return False
 
         # Use cache manager from layout
-        cache_key = (self._slice_name, face_name)
-        cache = self._layout.cache_manager.get("SliceLayout.does_slice_of_face_start_with_face", bool)
-        return cache.compute(cache_key, compute)
+        cache_key = ("SliceLayout.does_slice_of_face_start_with_face", self._slice_name, face_name)
+        cache = self._layout.cache_manager.get(cache_key, bool)
+        return cache.compute(compute)
 
     def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
         """
@@ -472,6 +472,6 @@ class _SliceLayout(SliceLayout):
             )
 
         # Use cache manager from layout - cache by slice_name only (size-independent!)
-        cache_key = self._slice_name
-        cache = self._layout.cache_manager.get("SliceLayout.create_walking_info_unit", CubeWalkingInfoUnit)
-        return cache.compute(cache_key, compute)
+        cache_key = ("SliceLayout.create_walking_info_unit", self._slice_name)
+        cache = self._layout.cache_manager.get(cache_key, CubeWalkingInfoUnit)
+        return cache.compute(compute)

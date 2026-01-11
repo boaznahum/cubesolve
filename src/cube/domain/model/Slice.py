@@ -294,10 +294,10 @@ class Slice(SuperElement):
 
             return edges, centers
 
-        cache_key = (self._name, slice_index)  # e.g., (SliceName.M, 0)
-        cache = self._cache_manager.get("Slice._get_slices_by_index", tuple)
+        cache_key = ("Slice._get_slices_by_index", self._name, slice_index)  # e.g., ("...", SliceName.M, 0)
+        cache = self._cache_manager.get(cache_key, tuple)
 
-        return cache.compute(cache_key, compute_slices)
+        return cache.compute(compute_slices)
 
     def _get_index_range(self, slices_indexes: Iterable[int] | int | None) -> Iterable[int]:
         """

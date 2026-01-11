@@ -145,8 +145,8 @@ class _SizedCubeLayout(SizedCubeLayout):
             )
 
         # Cache using per-instance CacheManager (NOT layout cache!)
-        cache = self._cache_manager.get("SizedCubeLayout.create_walking_info", CubeWalkingInfo)
-        return cache.compute(slice_name, compute)
+        cache = self._cache_manager.get(("SizedCubeLayout.create_walking_info", slice_name), CubeWalkingInfo)
+        return cache.compute(compute)
 
     def iterate_orthogonal_face_center_pieces(
         self,

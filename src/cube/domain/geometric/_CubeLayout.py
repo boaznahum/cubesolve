@@ -422,11 +422,10 @@ class _CubeLayout(CubeLayout):
                 source_face, target_face, source_coord, slice_name
             )
 
-        cache_key = (source_face.name, target_face.name, slice_name)
-        cache = self.cache_manager.get("CubeLayout.translate_target_from_source",
-                                       FUnitRotation)
+        cache_key = ("CubeLayout.translate_target_from_source", source_face.name, target_face.name, slice_name)
+        cache = self.cache_manager.get(cache_key, FUnitRotation)
 
-        unit_rotation = cache.compute(cache_key, compute_unit_rotation)
+        unit_rotation = cache.compute(compute_unit_rotation)
 
         return unit_rotation
 
