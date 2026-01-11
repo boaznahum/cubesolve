@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Iterator
 from cube.domain.geometric.cube_geometric import CubeGeometric
 from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
-from cube.domain.geometric.slice_layout import CLGColRow
+from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 from cube.domain.geometric.types import Point
 from cube.domain.model.Edge import Edge
 from cube.domain.model.SliceName import SliceName
@@ -93,8 +93,7 @@ class _CubeGeometric(CubeGeometric):
             return n_slices - 1 - x
 
         # Derive starting face and edge from rotation face
-        from cube.domain.geometric.slice_layout import _SliceLayout
-        slice_layout = _SliceLayout(slice_name)
+        slice_layout: SliceLayout = cube.layout.get_slice(slice_name)
         rotation_face_name = slice_layout.get_face_name()
         rotation_face = cube.face(rotation_face_name)
 
@@ -119,16 +118,8 @@ class _CubeGeometric(CubeGeometric):
         slot: int = 0  # position along slice
 
         # Determine if current_index needs to be inverted based on alignment with rotation face
-        shared_with_rotating: Edge = current_face.get_shared_edge(rotation_face)
-
-        if current_face.is_bottom_or_top(current_edge):
-            # Vertical slice - check if left edge aligns with rotation face
-            if current_face.edge_left is not shared_with_rotating:
-                current_index = inv(current_index)
-        else:
-            # Horizontal slice - check if bottom edge aligns with rotation face
-            if current_face.edge_bottom is not shared_with_rotating:
-                current_index = inv(current_index)
+        if not slice_layout.does_slice_of_face_start_with_face(current_face.name):
+            current_index = inv(current_index)
 
         # DEBUG logging
         _log = cube.sp.logger
