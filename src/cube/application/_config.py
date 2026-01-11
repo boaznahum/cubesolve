@@ -21,6 +21,7 @@ from cube.utils.markers_config import MarkersConfig
 CUBE_SIZE = 5  # Using debug4x4 texture set for 4x4 debugging
 
 # Enable cube caching for performance optimization
+# Env override: CUBE_DISABLE_CACHE=1 to disable
 ENABLE_CUBE_CACHE = True
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
