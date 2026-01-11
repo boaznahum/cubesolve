@@ -192,9 +192,19 @@ git push origin origin/<branch>:refs/heads/archive/completed/<branch>
 # Delete old remote branch
 git push origin --delete <branch>
 
-# Delete local branch
+# Delete local branch (if it exists)
 git branch -D <branch>
+
+# Prune stale remote-tracking refs
+git fetch --prune
 ```
+
+**IMPORTANT: Clean up [gone] branches afterward.**
+After archiving, run the `/commit-commands:clean_gone` skill to delete any local branches whose remote tracking branch was deleted. This handles:
+- Local branches marked as `[gone]` (remote was deleted)
+- Associated worktrees (removed before branch deletion)
+
+`git fetch --prune` only removes remote-tracking refs (`remotes/origin/...`), NOT local branches. The `clean_gone` skill handles the local branch cleanup.
 
 **Delete both** (when you don't need the branch history):
 ```bash
