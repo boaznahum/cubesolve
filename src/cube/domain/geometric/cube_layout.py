@@ -64,38 +64,15 @@ _AXIS_ROTATION_FACE: Mapping[SliceName, FaceName] = {
 }
 
 # Note: _SLICE_FACES was removed - derive on demand from _SLICE_ROTATION_FACE + _ADJACENT
-# See get_slice_for_faces() below for implementation
 
 
 # ============================================================================
-# Geometry Functions (module-level, size-independent)
+# Private Geometry Functions (use CubeLayout protocol methods instead)
 # ============================================================================
 
 
-def get_slice_for_faces(source: FaceName, target: FaceName) -> SliceName | None:
-    """
-    Find which slice connects two faces.
-
-    Derives slice faces on demand from _SLICE_ROTATION_FACE + _ADJACENT.
-
-    This is a size-independent topology question - the answer is the same
-    for a 3x3 as for a 7x7 cube.
-
-    Args:
-        source: First face.
-        target: Second face.
-
-    Returns:
-        SliceName if a slice connects the faces, None if faces are the same
-        or no single slice connects them.
-
-    Note: For opposite faces, this returns only the FIRST matching slice.
-    Use get_all_slices_for_faces() to get ALL connecting slices.
-
-    Example:
-        get_slice_for_faces(FaceName.F, FaceName.U)  # Returns SliceName.M
-        get_slice_for_faces(FaceName.F, FaceName.B)  # Returns SliceName.M (first match)
-    """
+def _get_slice_for_faces(source: FaceName, target: FaceName) -> SliceName | None:
+    """Internal: Find which slice connects two faces. Use CubeLayout.get_slice_for_faces()."""
     for slice_name in SliceName:
         rotation_face = _SLICE_ROTATION_FACE[slice_name]
         slice_faces = _ADJACENT[rotation_face]
@@ -104,30 +81,10 @@ def get_slice_for_faces(source: FaceName, target: FaceName) -> SliceName | None:
     return None
 
 
-def get_all_slices_for_faces(source: FaceName, target: FaceName) -> list[SliceName]:
-    """
-    Find ALL slices that connect two faces.
-
-    This is a size-independent topology question - the answer is the same
-    for a 3x3 as for a 7x7 cube.
-
-    For adjacent faces: returns 1 slice
-    For opposite faces: returns 2 slices
-
-    Args:
-        source: First face.
-        target: Second face.
-
-    Returns:
-        List of SliceNames connecting the faces. Empty if faces are the same.
-
-    Example:
-        get_all_slices_for_faces(FaceName.F, FaceName.U)  # [SliceName.M]
-        get_all_slices_for_faces(FaceName.F, FaceName.B)  # [SliceName.M, SliceName.E]
-    """
+def _get_all_slices_for_faces(source: FaceName, target: FaceName) -> list[SliceName]:
+    """Internal: Find ALL slices connecting two faces. Use CubeLayout.get_all_slices_for_faces()."""
     if source == target:
         return []
-
     result: list[SliceName] = []
     for slice_name in SliceName:
         rotation_face = _SLICE_ROTATION_FACE[slice_name]
@@ -137,38 +94,13 @@ def get_all_slices_for_faces(source: FaceName, target: FaceName) -> list[SliceNa
     return result
 
 
-def get_slice_parallel_to_face(face: FaceName) -> SliceName:
-    """
-    Find which slice is parallel to a face.
-
-    A slice is parallel to a face if the face is NOT on the slice's axis.
-    Each slice has an axis pair (opposite faces):
-        - M: axis = L/R → parallel to U, D, F, B
-        - E: axis = U/D → parallel to L, R, F, B
-        - S: axis = F/B → parallel to U, D, L, R
-
-    This is derived from _SLICE_ROTATION_FACE and _ALL_OPPOSITE.
-
-    Args:
-        face: The face to find a parallel slice for.
-
-    Returns:
-        SliceName of the slice that is parallel to this face.
-
-    Example:
-        get_slice_parallel_to_face(FaceName.U)  # SliceName.E (E is parallel to U/D axis)
-        get_slice_parallel_to_face(FaceName.F)  # SliceName.S (S is parallel to F/B axis)
-        get_slice_parallel_to_face(FaceName.L)  # SliceName.M (M is parallel to L/R axis)
-    """
+def _get_slice_parallel_to_face(face: FaceName) -> SliceName:
+    """Internal: Find slice parallel to face. Use CubeLayout.get_slice_parallel_to_face()."""
     for slice_name in SliceName:
         rotation_face = _SLICE_ROTATION_FACE[slice_name]
         opposite_face = _ALL_OPPOSITE[rotation_face]
-        # Slice axis pair is {rotation_face, opposite_face}
-        # Face is parallel to slice if it's NOT on the axis
         if face not in (rotation_face, opposite_face):
             return slice_name
-
-    # Should never reach here - every face is parallel to exactly one slice
     raise ValueError(f"No slice parallel to {face}")
 
 
@@ -390,6 +322,64 @@ class CubeLayout(Protocol):
 
         Example:
             layout.get_adjacent_faces(FaceName.F)  # (U, R, D, L)
+        """
+        ...
+
+    @abstractmethod
+    def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
+        """Find which slice connects two faces.
+
+        For opposite faces, returns only the FIRST matching slice.
+        Use get_all_slices_for_faces() to get ALL connecting slices.
+
+        Args:
+            source: First face.
+            target: Second face.
+
+        Returns:
+            SliceName if a slice connects the faces, None if same face.
+
+        Example:
+            layout.get_slice_for_faces(FaceName.F, FaceName.U)  # SliceName.M
+        """
+        ...
+
+    @abstractmethod
+    def get_all_slices_for_faces(self, source: FaceName, target: FaceName) -> list[SliceName]:
+        """Find ALL slices that connect two faces.
+
+        For adjacent faces: returns 1 slice.
+        For opposite faces: returns 2 slices.
+
+        Args:
+            source: First face.
+            target: Second face.
+
+        Returns:
+            List of SliceNames. Empty if faces are the same.
+
+        Example:
+            layout.get_all_slices_for_faces(FaceName.F, FaceName.B)  # [SliceName.M, SliceName.E]
+        """
+        ...
+
+    @abstractmethod
+    def get_slice_parallel_to_face(self, face: FaceName) -> SliceName:
+        """Find which slice is parallel to a face.
+
+        A slice is parallel to a face if the face is NOT on the slice's axis.
+        - M: axis = L/R → parallel to U, D, F, B
+        - E: axis = U/D → parallel to L, R, F, B
+        - S: axis = F/B → parallel to U, D, L, R
+
+        Args:
+            face: The face to find a parallel slice for.
+
+        Returns:
+            SliceName of the slice parallel to this face.
+
+        Example:
+            layout.get_slice_parallel_to_face(FaceName.U)  # SliceName.E
         """
         ...
 

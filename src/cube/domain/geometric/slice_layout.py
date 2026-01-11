@@ -250,18 +250,41 @@ class _SliceLayout(SliceLayout):
             True  → slice[0] aligns with face's row/col 0 (natural start)
             False → slice[0] aligns with face's row/col (n_slices-1) (inverted)
         """
-        from cube.domain.model.FaceName import FaceName
-        from cube.domain.model.SliceName import SliceName
+        if self._layout is None:
+            raise RuntimeError(
+                "Cannot derive does_slice_of_face_start_with_face without layout reference. "
+                "Use CubeLayout.get_slice() to get a properly initialized SliceLayout."
+            )
 
-        # Derive from first principles:
-        # - M[0] closest to L: on BACK face, L is on the RIGHT, so inverted
-        # - S[0] closest to F: on L and D faces, F is away from their origin, so inverted
-        # - E has no inversions in its cycle
-        if self._slice_name == SliceName.S:
-            if face_name in [FaceName.L, FaceName.D]:
-                return False  # S[0] is opposite to coordinate origin on these faces
-        elif self._slice_name == SliceName.M:
-            if face_name == FaceName.B:
-                return False  # M[0] (closest to L) is at high column index on B
+        def compute() -> bool:
+            from cube.domain.model.Cube import Cube
+            from cube.domain.model.Face import Face
 
-        return True
+            # Get the rotation face (slice[0] is closest to it)
+            rotation_face_name = self.get_face_name()
+
+            # Use internal 3x3 cube to check edge relationships
+            assert self._layout is not None
+            internal_cube: Cube = self._layout._cube
+            face: Face = internal_cube.face(face_name)
+            rotation_face: Face = internal_cube.face(rotation_face_name)
+
+            # Find which edge of 'face' connects to rotation_face
+            shared_edge = face.get_shared_edge(rotation_face)
+            if shared_edge is None:
+                # face_name is not adjacent to rotation face (shouldn't happen in slice cycle)
+                return True
+
+            # If rotation face is on the left or bottom edge of this face,
+            # then slice[0] aligns with row/col 0 (True)
+            # If rotation face is on the right or top edge,
+            # then slice[0] aligns with row/col (n-1) (False)
+            if shared_edge is face.edge_left or shared_edge is face.edge_bottom:
+                return True
+            else:
+                return False
+
+        # Use cache manager from layout
+        cache_key = (self._slice_name, face_name)
+        cache = self._layout.cache_manager.get("SliceLayout.does_slice_of_face_start_with_face", bool)
+        return cache.compute(cache_key, compute)

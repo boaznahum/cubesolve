@@ -220,6 +220,21 @@ class _CubeLayout(CubeLayout):
         """Get all faces adjacent to the given face."""
         return _ADJACENT[face]
 
+    def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
+        """Find which slice connects two faces."""
+        from cube.domain.geometric.cube_layout import _get_slice_for_faces
+        return _get_slice_for_faces(source, target)
+
+    def get_all_slices_for_faces(self, source: FaceName, target: FaceName) -> list[SliceName]:
+        """Find ALL slices that connect two faces."""
+        from cube.domain.geometric.cube_layout import _get_all_slices_for_faces
+        return _get_all_slices_for_faces(source, target)
+
+    def get_slice_parallel_to_face(self, face: FaceName) -> SliceName:
+        """Find which slice is parallel to a face."""
+        from cube.domain.geometric.cube_layout import _get_slice_parallel_to_face
+        return _get_slice_parallel_to_face(face)
+
     def iterate_orthogonal_face_center_pieces(
             self,
             cube: "Cube",

@@ -19,6 +19,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, Iterator
 
+from cube.domain.geometric.cube_geometric import CubeGeometric
 from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from cube.domain.model.Face import Face
 
 
-class _CubeGeometric:
+class _CubeGeometric(CubeGeometric):
     """
     Size-dependent cube geometry calculations.
 
@@ -286,9 +287,8 @@ class _CubeGeometric:
 
         # Determine which slice type (M/E/S) is parallel to L1
         # A slice is parallel to a face if that face is NOT on the slice's axis
-        # Use get_slice_parallel_to_face() which derives this from _SLICE_ROTATION_FACE
-        from cube.domain.geometric.cube_layout import get_slice_parallel_to_face, _SLICE_ROTATION_FACE
-        slice_name = get_slice_parallel_to_face(l1_name)
+        from cube.domain.geometric.cube_layout import _SLICE_ROTATION_FACE
+        slice_name = cube.layout.get_slice_parallel_to_face(l1_name)
         reference_face = _SLICE_ROTATION_FACE[slice_name]
 
         # Convert layer_slice_index to physical slice index
