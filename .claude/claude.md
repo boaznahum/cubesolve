@@ -102,6 +102,20 @@ CUBE_QUIET_ALL=1 python -m pytest tests/gui -v --speed-up 5
 
 **ALL FIVE must pass before committing.** Ruff is fastest so run it first. Use `ruff check --fix` to auto-fix issues.
 
+### Tagging Passing Commits
+
+**IMPORTANT:** When a commit passes ALL checks (all 5 checkers + all tests under tests/), create a git tag and push it:
+
+```bash
+# Create tag with timestamp (format: pass-YYYYMMDD-HHMMSS)
+git tag pass-$(date +%Y%m%d-%H%M%S)
+
+# Push the tag
+git push origin --tags
+```
+
+This helps identify known-good commits for easy rollback if needed.
+
 **Note:** Pyright uses `typeCheckingMode = "standard"` (configured in `pyproject.toml`), which is stricter than mypy. It catches:
 - Undefined variables that mypy misses
 - Method override issues (incompatible parameter types/names)
