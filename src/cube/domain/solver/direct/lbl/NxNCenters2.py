@@ -377,8 +377,6 @@ class NxNCenters2(SolverElement):
 
             self.debug(f"Working on slice {slice_row_index} Found piece {rc}")
 
-            self._print_all_tracked_slices(f"before working on {rc} {slice_row_index}")
-
             if target_face.face.center.get_center_slice(rc).color == color:
                 continue
 
@@ -398,8 +396,6 @@ class NxNCenters2(SolverElement):
                 self.debug(f"Fixed slice {rc}")
 
                 work_done = True
-
-            self._print_all_tracked_slices(f"after working on {rc} {slice_row_index} wd={wd}")
 
         return work_done
 
