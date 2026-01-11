@@ -364,6 +364,8 @@ class Cube(CubeSupplier):
 
     def _reset(self, cube_size=None) -> None:
 
+        self._sized_layout.reset();
+
         if cube_size:
             self._size = cube_size
 

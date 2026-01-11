@@ -173,6 +173,12 @@ class CacheManager(Protocol):
         """
         ...
 
+    def clear(self) -> None:
+        """
+        Clear the cache
+        :return:
+        """
+
     def __getitem__(self, key_and_type: Tuple[Hashable, type[V]]) -> Cache[V]:
         """Bracket access: manager[key, MyType].
 
@@ -206,6 +212,13 @@ class CacheManagerImpl(CacheManager):
         if key not in self._caches:
             self._caches[key] = CacheImpl(value_type)
         return self._caches[key]  # type: ignore[return-value]
+
+    def clear(self) -> None:
+        for caches in self._caches.values():
+            # in case some hold reference to it it is not enough to clear the manager
+            caches.clear()
+
+        self._caches.clear()
 
     def __getitem__(self, key_and_type: Tuple[Hashable, type[V]]) -> Cache[V]:
         """Bracket access: manager[key, MyType].

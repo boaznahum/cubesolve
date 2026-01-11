@@ -64,6 +64,7 @@ class _CubeLayout(CubeLayout):
         self._internal_cube: Cube | None = None
         self._creating_internal_cube: bool = False
 
+
     @property
     def config(self) -> ConfigProtocol:
         """Get configuration via service provider."""

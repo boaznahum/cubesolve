@@ -50,6 +50,9 @@ class SizedCubeLayout(Protocol):
         translate_target_from_source: Get unit rotation between faces
     """
 
+    def reset(self):
+        ...
+
     def create_walking_info(self, slice_name: "SliceName") -> "CubeWalkingInfo":
         """
         Create walking info by traversing the 4 faces of a slice.

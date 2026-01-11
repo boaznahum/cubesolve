@@ -25,6 +25,7 @@ from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
 from cube.domain.model.Edge import Edge
 from cube.domain.model.SliceName import SliceName
+from cube.utils.Cache import CacheManager
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -41,6 +42,24 @@ class _SizedCubeLayout(SizedCubeLayout):
 
     Attributes:
         _cube: The cube instance this geometry belongs to
+        _cache_manager: Per-instance CacheManager for this SizedCubeLayout
+
+    IMPORTANT - Cache Architecture:
+        This class has its OWN CacheManager (_cache_manager), separate from CubeLayout.cache_manager.
+
+        Why NOT use CubeLayout.cache_manager:
+        - CubeLayout is shared across ALL cubes of the same size (singleton per n_slices)
+        - _SizedCubeLayout is tied to a SPECIFIC Cube instance
+        - CubeWalkingInfo contains Face and Edge objects from a specific cube
+        - If we cached in CubeLayout, a cached CubeWalkingInfo would return
+          Face/Edge objects from the WRONG cube instance!
+
+        Example of the bug if using layout cache:
+            cube1 = Cube(5)
+            cube2 = Cube(5)  # Same size, shares CubeLayout with cube1
+            info1 = cube1.sized_layout.create_walking_info(M)  # Cached in shared layout
+            info2 = cube2.sized_layout.create_walking_info(M)  # Returns cached info1!
+            # BUG: info2.face_infos[0].face is cube1's Face, not cube2's!
 
     See Also:
         SizedCubeLayout: The protocol this class implements
@@ -56,6 +75,14 @@ class _SizedCubeLayout(SizedCubeLayout):
             cube: The cube instance (provides n_slices and face objects)
         """
         self._cube = cube
+        # Per-instance CacheManager - NOT shared with other cubes!
+        # See class docstring for why we can't use CubeLayout.cache_manager
+        self._cache_manager: CacheManager = CacheManager.create(cube.config)
+
+    def reset(self):
+        # must free all objects when new cube is created !!!
+        self._cache_manager.clear()
+
 
     @property
     def n_slices(self) -> int:
@@ -73,7 +100,10 @@ class _SizedCubeLayout(SizedCubeLayout):
         This method:
         1. Gets the size-independent unit walking info from SliceLayout (cached there)
         2. Converts it to actual coordinates for this cube's n_slices
-        3. Caches the result by (slice_name, n_slices)
+        3. Caches the result in this instance's CacheManager (NOT in layout cache!)
+
+        IMPORTANT: Uses per-instance _cache_manager, NOT CubeLayout.cache_manager!
+        See class docstring for why layout cache is invalid here.
 
         Args:
             slice_name: Which slice (M, E, S) to traverse
@@ -92,8 +122,8 @@ class _SizedCubeLayout(SizedCubeLayout):
             sized_faces = []
 
             for uf in unit.face_infos:
-                face: Face = cube.face(uf.face.name)  # todo: don't by accident store fak cube object need to fix unit to return names
-                edge: Edge = cube.edge(uf.edge.name)  # todo: don't by accident store fak cube object need to fix unit to return names
+                face: Face = cube.face(uf.face.name)  # todo: don't by accident store fake cube object need to fix unit to return names
+                edge: Edge = cube.edge(uf.edge.name)  # todo: don't by accident store fake cube object need to fix unit to return names
                 reference_point: Point = uf.get_reference_point(n_slices)
                 compute_fn: PointComputer = uf.get_compute(n_slices)
 
@@ -114,10 +144,9 @@ class _SizedCubeLayout(SizedCubeLayout):
                 face_infos=tuple(sized_faces)
             )
 
-        # Cache by (slice_name, n_slices) using layout's cache manager
-        cache_key = (slice_name, n_slices)
-        cache = cube.layout.cache_manager.get("SizedCubeLayout.create_walking_info", CubeWalkingInfo)
-        return cache.compute(cache_key, compute)
+        # Cache using per-instance CacheManager (NOT layout cache!)
+        cache = self._cache_manager.get("SizedCubeLayout.create_walking_info", CubeWalkingInfo)
+        return cache.compute(slice_name, compute)
 
     def iterate_orthogonal_face_center_pieces(
         self,
