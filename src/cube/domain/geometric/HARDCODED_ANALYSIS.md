@@ -8,165 +8,171 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 
 ### Constants Location Rule
 
-**All constants must be in exactly two places:**
-1. **`cube_layout.py`** - Topology constants (opposite faces, adjacent faces, slice definitions)
+**Fundamental constants should be in:**
+1. **`cube_layout.py`** - Topology constants (opposite faces, slice definitions)
 2. **`cube_boy.py`** - BOY color scheme
-
-No other file should define constants. `_CubeGeometric.py`, `_CubeLayout.py`, etc. must derive values from these two sources.
+3. **`_part.py`** - Part definitions (edge/corner names)
+4. **`CubeSanity.py`** - Valid color combinations
 
 ---
 
-## Status Summary
+## Status Summary - Geometry Package
 
-| ID | Table/Constant | Current Location | Status | Action |
-|----|----------------|------------------|--------|--------|
-| 1.1 | `_TRANSFORMATION_TABLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Was dead code - transforms via CubeWalkingInfo |
+| ID | Table/Constant | Location | Status | Action |
+|----|----------------|----------|--------|--------|
+| 1.1 | `_TRANSFORMATION_TABLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Was dead code |
 | 1.2 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py | TODO | 12 entries - derive from edge geometry |
-| 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | Face2FaceTranslator.py | TODO | 12 entries total - derive from slice rotation faces |
-| 1.4 | `slice_to_axis` dict | Face2FaceTranslator.py | TODO | Duplicates `_AXIS_ROTATION_FACE` |
-| 1.5 | `slice_name_to_alg` dict | Face2FaceTranslator.py | TODO | Map via `Algs.M/E/S` |
-| 2.1 | `_SLICE_ROTATION_FACE` | cube_layout.py | **OK** | Fundamental constant |
-| 2.2 | `_AXIS_ROTATION_FACE` | cube_layout.py | **OK** | Fundamental constant |
-| 2.3 | `_SLICE_FACES` | (removed) | **REMOVED** | Derived on demand |
-| 2.4 | `_OPPOSITE_FACES` | (deleted) | **REMOVED** | Was duplicate |
-| 3.1 | `_OPPOSITE` | cube_layout.py | **OK** | Fundamental |
-| 3.2 | `_ADJACENT` | cube_layout.py | **OK** | Derived from `_OPPOSITE` |
-| 4.1 | BOY layout | cube_boy.py | **OK** | Fundamental |
-| 4.2 | `_UNIT_ROTATIONS` | FRotation.py | **OK** | Mathematical constants |
-| 5.1 | `_build_slice_cycle` start faces | Face2FaceTranslator.py | TODO | Hardcoded M/E/S start faces |
-| 5.2 | `get_start_face()` | slice_layout.py | TODO | Hardcoded face returns |
-| 6.1 | `iterate_orthogonal_face_center_pieces` | _CubeGeometric.py | TODO | Hardcoded face checks |
-| 6.2 | `_compute_source_coord_via_slice` | _CubeGeometric.py | TODO | Hardcoded SliceName checks |
-| 7.1 | `get_face_from_f_layout` | _CubeLayout.py | TODO | Hardcoded rotation logic |
-| 7.2 | `get_funitrot_to_face` | _CubeLayout.py | TODO | Hardcoded rotation logic |
-| 7.3 | `_rotate_dict_x/y/z` | _CubeLayout.py | TODO | Hardcoded cycles (derive from fundamental) |
+| 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | Face2FaceTranslator.py | TODO | 12 entries - derive from slice faces |
+| 1.4 | `slice_to_axis` dict | Face2FaceTranslator.py:488 | TODO | Duplicates `_AXIS_ROTATION_FACE` |
+| 1.5 | `_build_slice_cycle` start faces | Face2FaceTranslator.py:693 | TODO | Hardcoded M/E/S start faces |
+| 2.1 | `_SLICE_ROTATION_FACE` | cube_layout.py | **OK** | Fundamental |
+| 2.2 | `_AXIS_ROTATION_FACE` | cube_layout.py | **OK** | Fundamental |
+| 2.3 | `_OPPOSITE` | cube_layout.py | **OK** | Fundamental |
+| 2.4 | `get_slice_for_faces()` | cube_layout.py | **ADDED** | Derives slices from constants |
+| 2.5 | `get_all_slices_for_faces()` | cube_layout.py | **ADDED** | Derives all connecting slices |
+| 2.6 | `get_slice_parallel_to_face()` | cube_layout.py | **ADDED** | Derives parallel slice for face |
+| 3.1 | `get_start_face()` | slice_layout.py | TODO | Hardcoded face returns |
+| 3.2 | face checks | ~~_CubeGeometric.py~~ | **FIXED** | Now uses `get_slice_parallel_to_face()` |
+| 3.3 | `does_slice_of_face_start_with_face()` | slice_layout.py | **MOVED** | Moved from _CubeGeometric |
+| 3.4 | rotation logic | _CubeLayout.py | TODO | `_rotate_dict_x/y/z` cycles |
+
+---
+
+## Codebase-Wide Hardcoded Constants
+
+### FUNDAMENTAL - Should Stay
+
+| File | What | Count | Notes |
+|------|------|-------|-------|
+| `cube_layout.py` | `_OPPOSITE`, `_SLICE_ROTATION_FACE`, `_AXIS_ROTATION_FACE` | 9 | Topology definitions |
+| `cube_boy.py` | BOY color mapping | 6 | Color scheme |
+| `_part.py` | Edge/corner name definitions | 24 | Part structure |
+| `Cube.py:374-387` | Face object creation | 6 | Uses BOY layout |
+| `Cube.py:451-472` | Slice object creation | 3 | Initialization |
+| `Cube3x3Colors.py` | Edge/corner color init | 18 | Initial state |
+| `CubeSanity.py` | Valid color combinations | 24 | Validation data |
+| `FRotation.py` | `_UNIT_ROTATIONS` | 4 | Mathematical |
+
+### TODO - Should Be Derived
+
+| File | What | Count | How to Derive |
+|------|------|-------|---------------|
+| `Face2FaceTranslator.py` | `_SLICE_INDEX_TABLE` | 12 | From edge geometry |
+| `Face2FaceTranslator.py` | `_X/Y/Z_CYCLE` | 12 | From `_SLICE_ROTATION_FACE` |
+| `Face2FaceTranslator.py` | `slice_to_axis` | 3 | Use `_AXIS_ROTATION_FACE` |
+| `_supported_faces.py` | Face transform table | 41 | From face relationships |
+| `FaceAlg.py` | Subclass constructors | 6 | Factory pattern |
+| `WideFaceAlg.py` | Subclass constructors | 6 | Factory pattern |
+| `SliceAlg.py` | Subclass constructors | 3 | Factory pattern |
+| `WholeCubeAlg.py` | Subclass constructors + dispatch | 9 | Factory pattern |
+
+### ACCEPTABLE - Switch/Dispatch Logic
+
+These are inherently tied to enum values and are acceptable:
+
+| File | What | Notes |
+|------|------|-------|
+| `Cube.py` | `rotate_face_and_slice()` dispatch | ~20 cases |
+| `CommonOp.py` | Face manipulation logic | ~35 references |
+| `Algs.py` | Move notation dispatch | ~15 cases |
+| `Face.py` | `is_front()`, `is_back()` etc. | Properties |
+| Solver files | Assertions and sanity checks | Validation |
 
 ---
 
 ## Completed Work
 
-### Session 2025-01 (Current)
+### Session 2026-01-11 (continued)
 
-**Removed dead code:**
+**Moved methods to layout layer:**
+- `get_slice_for_faces()` - moved from `_CubeGeometric` to `cube_layout.py`
+- `get_all_slices_for_faces()` - moved from `_CubeGeometric` to `cube_layout.py`
+- `get_slice_parallel_to_face()` - new function in `cube_layout.py`
+- `_does_slice_of_face_start_with_face()` - moved from `_CubeGeometric` to `_SliceLayout`
+
+**Fixed hardcoded logic:**
+- `iterate_orthogonal_face_center_pieces` - removed hardcoded face checks, now uses `get_slice_parallel_to_face()`
+
+**Removed claude: comments** from `_CubeGeometric.py`
+
+### Session 2025-01-11
+
+**Removed dead code (-891 lines):**
 - `TransformType` enum - never used in production
 - `derive_transform_type()` - never called from solver/presentation
 - `_TRANSFORMATION_TABLE` - was dead, transforms use CubeWalkingInfo
-- ~891 lines removed
+- Related test files and helper methods
 
 **Fixed bugs:**
-- `_compute_slice_algorithms` now returns ALL algorithms for opposite faces (was returning early)
-- `FaceTranslationResult` API changed: `slice_algorithms: list` → `slice_algorithm: SliceAlgorithmResult`
-- `translate_source_from_target` returns `list[FaceTranslationResult]` (1 for adjacent, 2 for opposite)
+- `_compute_slice_algorithms` returns ALL algorithms for opposite faces
+- `FaceTranslationResult` API: `slice_algorithms: list` → `slice_algorithm: SliceAlgorithmResult`
+- `translate_source_from_target` returns `list[FaceTranslationResult]`
 
 ### Previous Sessions
 
-- `_SLICE_FACES` table removed - derived on demand from `_SLICE_ROTATION_FACE + _ADJACENT`
-- `_OPPOSITE_FACES` removed - was duplicate of `_ALL_OPPOSITE`
+- `_SLICE_FACES` table removed - derived on demand
+- `_OPPOSITE_FACES` removed - was duplicate
 - Constants consolidated in `cube_layout.py`
 
 ---
 
-## Remaining Work
+## Priority Order for Remaining Work
 
 ### High Priority (Duplicated Constants)
+1. **`slice_to_axis` in Face2FaceTranslator.py** - Direct duplicate of `_AXIS_ROTATION_FACE`
+2. **`_supported_faces.py` table** - 41 entries that could be derived
 
-**1.4 `slice_to_axis` dict in Face2FaceTranslator.py:488**
-```python
-slice_to_axis: dict[SliceName, FaceName] = {
-    SliceName.M: FaceName.R,  # M -> X
-    SliceName.E: FaceName.U,  # E -> Y
-    SliceName.S: FaceName.F,  # S -> Z
-}
-```
-This duplicates `_AXIS_ROTATION_FACE` in cube_layout.py. Should use `cube.layout._AXIS_ROTATION_FACE[slice_name]` or add accessor method.
+### Medium Priority (Derivable Tables)
+3. **`_SLICE_INDEX_TABLE`** - 12 entries, derive from `does_slice_cut_rows_or_columns()`
+4. **`_X/Y/Z_CYCLE`** - 12 entries, derive from `_SLICE_ROTATION_FACE + _ADJACENT`
+5. **`_build_slice_cycle` start faces** - 3 cases, derive from slice definitions
 
-**1.2 `_SLICE_INDEX_TABLE` - 12 entries**
-```python
-_SLICE_INDEX_TABLE: dict[tuple[SliceName, FaceName], str] = {
-    (SliceName.M, FaceName.F): _SliceIndexFormula.COL,
-    (SliceName.M, FaceName.U): _SliceIndexFormula.COL,
-    ...
-}
-```
-Can derive from: `does_slice_cut_rows_or_columns()` + `does_slice_of_face_start_with_face()`
-
-### Medium Priority (Hardcoded Logic)
-
-**1.3 Rotation Cycles** - `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE`
-Can derive from `_SLICE_ROTATION_FACE` + `_ADJACENT`:
-- X cycle = faces affected by M slice (opposite of L: not L or R)
-- Y cycle = faces affected by E slice (opposite of D: not U or D)
-- Z cycle = faces affected by S slice (opposite of F: not F or B)
-
-**5.1 `_build_slice_cycle` start faces** (Face2FaceTranslator.py:693)
-```python
-case SliceName.M:
-    start_face = cube.front
-    start_edge = start_face.edge_bottom
-```
-Should derive from `_SLICE_ROTATION_FACE` and `get_start_edge_for_slice()`.
-
-**6.1/6.2 _CubeGeometric hardcoded checks**
-```python
-if l1_name in [FaceName.U, FaceName.D]:
-    slice_name = SliceName.E
-    reference_face = FaceName.D
-```
-Should use `get_slice_for_faces()` pattern.
-
-**7.1/7.2/7.3 _CubeLayout rotation logic**
-Complex rotation code that should eventually be derived from fundamental constants.
-
----
-
-## Fundamental Definitions
-
-All in **cube_layout.py** (except BOY):
-
-```
-cube_layout.py:
-  _OPPOSITE           : F↔B, U↔D, L↔R (3 entries - fundamental)
-  _ALL_OPPOSITE       : Bidirectional (6 entries - derived)
-  _ADJACENT           : Adjacent faces (derived from _OPPOSITE)
-  _SLICE_ROTATION_FACE: M→L, E→D, S→F (3 entries - fundamental)
-  _AXIS_ROTATION_FACE : M→R, E→U, S→F (3 entries - fundamental)
-
-cube_boy.py:
-  BOY layout          : Face→Color mapping (6 entries - fundamental)
-```
-
-**Total fundamental constants: 15 entries** (3+3+3+6)
+### Low Priority (Factory Pattern Refactoring)
+6. **Alg subclass constructors** - Use factory/registry pattern instead of explicit classes
 
 ---
 
 ## File Organization
 
 ```
-src/cube/domain/geometric/
-├── HARDCODED_ANALYSIS.md   # This file - task status
-├── GEOMETRY_LAYERS.md      # Architecture documentation
-│
-├── cube_layout.py          # CubeLayout protocol + FUNDAMENTAL CONSTANTS
-├── _CubeLayout.py          # Implementation (contains hardcoded rotation logic)
-├── slice_layout.py         # SliceLayout protocol (contains hardcoded get_start_face)
-│
-├── cube_geometric.py       # CubeGeometric protocol
-├── _CubeGeometric.py       # Implementation (contains hardcoded face checks)
-│
-├── Face2FaceTranslator.py  # Contains: _SLICE_INDEX_TABLE, cycles, slice_to_axis
-├── FRotation.py            # Rotation transforms (mathematical - OK)
-└── cube_walking.py         # Slice traversal (docstring examples only)
+src/cube/
+├── domain/
+│   ├── geometric/           # ANALYZED - see table above
+│   │   ├── cube_layout.py   # FUNDAMENTAL CONSTANTS HERE
+│   │   ├── cube_boy.py      # BOY COLOR SCHEME HERE
+│   │   └── ...
+│   │
+│   ├── model/
+│   │   ├── _part.py         # FUNDAMENTAL - Part definitions
+│   │   ├── Cube.py          # Mixed: init (OK) + dispatch (acceptable)
+│   │   ├── CubeSanity.py    # FUNDAMENTAL - Valid combinations
+│   │   └── Slice.py         # Acceptable dispatch logic
+│   │
+│   ├── algs/
+│   │   ├── FaceAlg.py       # TODO - Factory pattern
+│   │   ├── SliceAlg.py      # TODO - Factory pattern
+│   │   ├── WholeCubeAlg.py  # TODO - Factory pattern
+│   │   └── Algs.py          # Acceptable dispatch
+│   │
+│   └── solver/
+│       └── common/
+│           └── big_cube/
+│               └── commun/
+│                   └── _supported_faces.py  # TODO - Derive from relationships
 ```
 
 ---
 
-## Quick Reference: Where to Look
+## Quick Reference
 
 | To derive... | Look at... |
 |--------------|------------|
-| Which faces are opposite | `cube_layout._OPPOSITE` |
-| Which faces are adjacent | `cube_layout._ADJACENT` |
-| Which face a slice rotates like | `cube_layout._SLICE_ROTATION_FACE` |
-| Which axis a slice aligns with | `cube_layout._AXIS_ROTATION_FACE` |
-| Which slices connect two faces | `_CubeGeometric.get_slice_for_faces()` |
-| Face traversal for a slice | `CubeWalkingInfo` via `create_walking_info()` |
+| Opposite faces | `cube_layout._OPPOSITE` |
+| Adjacent faces | `cube_layout._ADJACENT` |
+| Slice rotation face | `cube_layout._SLICE_ROTATION_FACE` |
+| Slice axis face | `cube_layout._AXIS_ROTATION_FACE` |
+| Slices connecting faces | `cube_layout.get_slice_for_faces()` |
+| All slices connecting faces | `cube_layout.get_all_slices_for_faces()` |
+| Slice parallel to a face | `cube_layout.get_slice_parallel_to_face()` |
+| Slice alignment with face | `slice_layout.does_slice_of_face_start_with_face()` |
+| Face traversal | `CubeWalkingInfo` via `create_walking_info()` |

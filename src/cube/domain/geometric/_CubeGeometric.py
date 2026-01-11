@@ -24,7 +24,6 @@ from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
 from cube.domain.model.Edge import Edge
-from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
 
 if TYPE_CHECKING:
@@ -69,7 +68,6 @@ class _CubeGeometric:
 
     def create_walking_info(self, slice_name: SliceName) -> CubeWalkingInfo:
         """
-        cluade: fuck he promise tomoe it to move cube layout
         Create walking info by traversing the 4 faces of a slice.
 
         Walks through all 4 faces, tracking where the reference point
@@ -286,18 +284,12 @@ class _CubeGeometric:
 
         n_slices = cube.n_slices
 
-        # claude:more hard coded why hwy why , dont you under stand the mission in HARDCODED_ANALYSIS.md
-
         # Determine which slice type (M/E/S) is parallel to L1
-        if l1_name in [FaceName.U, FaceName.D]:
-            slice_name = SliceName.E
-            reference_face = FaceName.D  # E[0] closest to D
-        elif l1_name in [FaceName.L, FaceName.R]:
-            slice_name = SliceName.M
-            reference_face = FaceName.L  # M[0] closest to L
-        else:  # F or B
-            slice_name = SliceName.S
-            reference_face = FaceName.F  # S[0] closest to F
+        # A slice is parallel to a face if that face is NOT on the slice's axis
+        # Use get_slice_parallel_to_face() which derives this from _SLICE_ROTATION_FACE
+        from cube.domain.geometric.cube_layout import get_slice_parallel_to_face, _SLICE_ROTATION_FACE
+        slice_name = get_slice_parallel_to_face(l1_name)
+        reference_face = _SLICE_ROTATION_FACE[slice_name]
 
         # Convert layer_slice_index to physical slice index
         if l1_name == reference_face:
@@ -310,7 +302,7 @@ class _CubeGeometric:
         cut_type = slice_layout.does_slice_cut_rows_or_columns(side_name)
 
         # Does slice index align with face LTR coordinates?
-        starts_with_face = self._does_slice_of_face_start_with_face(slice_name, side_name)
+        starts_with_face = slice_layout.does_slice_of_face_start_with_face(side_name)
 
         # Convert physical_slice_index to row/column index on face
         if starts_with_face:
@@ -361,85 +353,6 @@ class _CubeGeometric:
 
         walk_info = self.create_walking_info(slice_name)
         return walk_info.get_transform(source_face, target_face)
-
-    # =========================================================================
-    # Helper Methods
-    # =========================================================================
-
-    @staticmethod
-    def _does_slice_of_face_start_with_face(slice_name: SliceName, face_name: FaceName) -> bool:
-        """
-
-        claude: yet another method you promise me to move to cube layout and is not docu,netd in HARDCODED_ANALYSIS.md
-        Check if slice index 0 aligns with the face's natural coordinate origin.
-
-        Each slice (M, E, S) has indices 0 to n_slices-1. Slice index 0 is always
-        closest to the "reference face" for that slice type:
-            - M[0] closest to L (M rotates like L)
-            - E[0] closest to D (E rotates like D)
-            - S[0] closest to F (S rotates like F)
-
-        Returns:
-            True  → slice[0] aligns with face's row/col 0 (natural start)
-            False → slice[0] aligns with face's row/col (n_slices-1) (inverted)
-        """
-        if slice_name == SliceName.S:
-            if face_name in [FaceName.L, FaceName.D]:
-                return False  # S[1] is on L[last]
-        elif slice_name == SliceName.M:
-            if face_name in [FaceName.B]:
-                return False
-
-        return True
-
-    @staticmethod
-    def get_slice_for_faces(source: FaceName, target: FaceName) -> SliceName | None:
-        """
-        claude: is this method still needed ? whay ?
-        Find which slice connects two faces.
-
-        Derives slice faces on demand from _SLICE_ROTATION_FACE + _ADJACENT.
-
-        Returns None if faces are the same or no slice connects them.
-
-        Note: For opposite faces, this returns only the FIRST matching slice.
-        Use get_all_slices_for_faces() to get ALL connecting slices.
-        """
-        from cube.domain.geometric.cube_layout import _SLICE_ROTATION_FACE, _ADJACENT
-
-        # Iterate in SliceName enum order (S, M, E)
-        # claude: more hadrd coded that need to rmoved all inforamtion is in cube layout
-        for slice_name in SliceName:
-            rotation_face = _SLICE_ROTATION_FACE[slice_name]
-            slice_faces = _ADJACENT[rotation_face]
-            if source in slice_faces and target in slice_faces:
-                return slice_name
-        return None
-
-    @staticmethod
-    def get_all_slices_for_faces(source: FaceName, target: FaceName) -> list[SliceName]:
-        """
-
-        claude: this method belong to layout it doest depended on cube size !!!! read the ruls, you lied to me see HARDCODED_ANALYSIS.md
-        Find ALL slices that connect two faces.
-
-        For adjacent faces: returns 1 slice
-        For opposite faces: returns 2 slices
-
-        Returns empty list if faces are the same.
-        """
-        from cube.domain.geometric.cube_layout import _SLICE_ROTATION_FACE, _ADJACENT
-
-        if source == target:
-            return []
-
-        result: list[SliceName] = []
-        for slice_name in SliceName:
-            rotation_face = _SLICE_ROTATION_FACE[slice_name]
-            slice_faces = _ADJACENT[rotation_face]
-            if source in slice_faces and target in slice_faces:
-                result.append(slice_name)
-        return result
 
 
 __all__ = ['_CubeGeometric']

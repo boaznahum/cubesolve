@@ -870,10 +870,10 @@ class Face2FaceTranslator:
         Returns:
             List of SliceAlgorithmResult (1 for adjacent faces, 2 for opposite faces)
         """
-        from cube.domain.geometric._CubeGeometric import _CubeGeometric
+        from cube.domain.geometric.cube_layout import get_all_slices_for_faces
 
         # Find ALL slices that connect source and target
-        connecting_slices = _CubeGeometric.get_all_slices_for_faces(source_name, target_name)
+        connecting_slices = get_all_slices_for_faces(source_name, target_name)
 
         if not connecting_slices:
             raise InternalSWError(f"No slice connects {source_name} to {target_name}")

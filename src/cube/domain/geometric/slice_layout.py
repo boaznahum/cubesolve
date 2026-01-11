@@ -249,5 +249,35 @@ class _SliceLayout(SliceLayout):
         return self.does_slice_cut_rows_or_columns(face_name) == CLGColRow.COL
 
     def does_slice_of_face_start_with_face(self, face_name: "FaceName") -> bool:
-        from cube.domain.geometric._CubeGeometric import _CubeGeometric
-        return _CubeGeometric._does_slice_of_face_start_with_face(self._slice_name, face_name)
+        """
+        Check if slice index 0 aligns with the face's natural coordinate origin.
+
+        Each slice (M, E, S) has indices 0 to n_slices-1. Slice index 0 is always
+        closest to the "reference face" for that slice type:
+            - M[0] closest to L (M rotates like L)
+            - E[0] closest to D (E rotates like D)
+            - S[0] closest to F (S rotates like F)
+
+        This is a size-independent topology question derived from:
+        - The slice's rotation face (from _SLICE_ROTATION_FACE)
+        - The face's position relative to that rotation face
+
+        Returns:
+            True  → slice[0] aligns with face's row/col 0 (natural start)
+            False → slice[0] aligns with face's row/col (n_slices-1) (inverted)
+        """
+        from cube.domain.model.FaceName import FaceName
+        from cube.domain.model.SliceName import SliceName
+
+        # Derive from first principles:
+        # - M[0] closest to L: on BACK face, L is on the RIGHT, so inverted
+        # - S[0] closest to F: on L and D faces, F is away from their origin, so inverted
+        # - E has no inversions in its cycle
+        if self._slice_name == SliceName.S:
+            if face_name in [FaceName.L, FaceName.D]:
+                return False  # S[0] is opposite to coordinate origin on these faces
+        elif self._slice_name == SliceName.M:
+            if face_name == FaceName.B:
+                return False  # M[0] (closest to L) is at high column index on B
+
+        return True
