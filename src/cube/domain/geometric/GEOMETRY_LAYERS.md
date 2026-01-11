@@ -9,7 +9,7 @@ The geometry package is organized into two distinct layers based on **size depen
 | Layer | Size Dependency | Access | Purpose |
 |-------|-----------------|--------|---------|
 | **Layout** | None (pure topology) | `cube.layout` | Face relationships, slice properties |
-| **Geometric** | Requires n_slices | `cube.geometric` | Coordinate calculations, walking info |
+| **Geometric** | Requires n_slices | `cube.sized_layout` | Coordinate calculations, walking info |
 
 ## Layer 1: Layout (Size-Independent)
 
@@ -42,19 +42,19 @@ cube.layout.does_slice_cut_rows_or_columns(M, F)     # → CLGColRow.ROW
 
 ### Protocol
 
-- **`CubeGeometric`** (`cube_geometric.py`) - Size-dependent coordinate calculations
+- **`SizedCubeLayout`** (`sized_cube_layout.py`) - Size-dependent coordinate calculations
 
 ### Implementation
 
-- **`_CubeGeometric`** (`_CubeGeometric.py`) - Implements CubeGeometric
+- **`_SizedCubeLayout`** (`_SizedCubeLayout.py`) - Implements SizedCubeLayout
 
 ### Example Questions (Geometric Layer)
 
 ```python
 # These answers DEPEND on cube size
-cube.geometric.create_walking_info(SliceName.M)      # Reference points vary by n_slices
-cube.geometric.iterate_orthogonal_face_center_pieces(...)  # Row/col values vary
-cube.geometric.translate_target_from_source(...)     # FUnitRotation needs n_slices
+cube.sized_layout.create_walking_info(SliceName.M)      # Reference points vary by n_slices
+cube.sized_layout.iterate_orthogonal_face_center_pieces(...)  # Row/col values vary
+cube.sized_layout.translate_target_from_source(...)     # FUnitRotation needs n_slices
 ```
 
 ---
@@ -66,8 +66,8 @@ cube.geometric.translate_target_from_source(...)     # FUnitRotation needs n_sli
 │                           Cube Instance                              │
 │                                                                      │
 │   ┌─────────────────────────┐     ┌─────────────────────────┐       │
-│   │     cube.layout         │     │     cube.geometric      │       │
-│   │    (CubeLayout)         │     │    (CubeGeometric)      │       │
+│   │     cube.layout         │     │     cube.sized_layout      │       │
+│   │    (CubeLayout)         │     │    (SizedCubeLayout)      │       │
 │   └───────────┬─────────────┘     └───────────┬─────────────┘       │
 │               │                               │                      │
 └───────────────┼───────────────────────────────┼──────────────────────┘
@@ -100,8 +100,8 @@ src/cube/domain/geometric/
 ├── _CubeLayout.py              # _CubeLayout implementation
 │
 ├── # GEOMETRIC LAYER (Size-Dependent)
-├── cube_geometric.py           # CubeGeometric protocol
-├── _CubeGeometric.py           # _CubeGeometric implementation
+├── sized_cube_layout.py           # SizedCubeLayout protocol
+├── _SizedCubeLayout.py           # _SizedCubeLayout implementation
 │
 ├── # SHARED UTILITIES
 ├── cube_walking.py             # CubeWalkingInfo, FaceWalkingInfo
@@ -146,7 +146,7 @@ Each layer follows the pattern:
 The `Cube` class provides access to both layers:
 ```python
 cube.layout      # → CubeLayout (size-independent)
-cube.geometric   # → CubeGeometric (size-dependent)
+cube.sized_layout   # → SizedCubeLayout (size-dependent)
 ```
 
 ---

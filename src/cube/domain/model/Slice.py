@@ -254,7 +254,7 @@ class Slice(SuperElement):
         from cube.domain.geometric.cube_walking import CubeWalkingInfo
 
         def compute_walking_info() -> CubeWalkingInfo:
-            return self.cube.geometric.create_walking_info(self._name)
+            return self.cube.sized_layout.create_walking_info(self._name)
 
         cache_key = self._name  # SliceName.M, SliceName.E, or SliceName.S
         cache = self._cache_manager.get("Slice._get_walking_info", CubeWalkingInfo)

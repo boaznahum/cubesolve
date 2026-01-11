@@ -1,14 +1,14 @@
 """
-CubeGeometric Protocol - Size-dependent cube geometry calculations.
+SizedCubeLayout Protocol - Size-dependent cube geometry calculations.
 
 Unlike CubeLayout/SliceLayout which answer pure geometric questions independent
 of cube size (e.g., "which faces are adjacent?", "does slice cut rows or columns?"),
-CubeGeometric methods require knowledge of cube size (n_slices) for coordinate
+SizedCubeLayout methods require knowledge of cube size (n_slices) for coordinate
 calculations.
 
 Key difference:
     - CubeLayout: "Is F adjacent to U?" → Yes (always, for any cube size)
-    - CubeGeometric: "What's the reference point for slice M on face F?" → (0, 0) for 3x3, but depends on n_slices
+    - SizedCubeLayout: "What's the reference point for slice M on face F?" → (0, 0) for 3x3, but depends on n_slices
 
 Usage:
     cube = Cube(5)
@@ -16,13 +16,13 @@ Usage:
     # Size-independent (via layout):
     cube.layout.is_adjacent(FaceName.F, FaceName.U)
 
-    # Size-dependent (via geometric):
-    cube.geometric.create_walking_info(SliceName.M)
+    # Size-dependent (via sized_layout):
+    cube.sized_layout.create_walking_info(SliceName.M)
 
 See Also:
     - CubeLayout: Size-independent face/edge relationships
     - SliceLayout: Size-independent slice/face relationships
-    - _CubeGeometric: Private implementation of this protocol
+    - _SizedCubeLayout: Private implementation of this protocol
 """
 
 from __future__ import annotations
@@ -36,13 +36,13 @@ if TYPE_CHECKING:
     from cube.domain.model.SliceName import SliceName
 
 
-class CubeGeometric(Protocol):
+class SizedCubeLayout(Protocol):
     """
     Protocol for cube geometry calculations that depend on cube size.
 
     These methods require knowledge of n_slices (cube_size - 2) for coordinate
-    calculations. An instance of CubeGeometric is stored in each Cube and
-    accessed via cube.geometric.
+    calculations. An instance of SizedCubeLayout is stored in each Cube and
+    accessed via cube.sized_layout.
 
     Methods:
         create_walking_info: Get slice traversal info for all 4 faces

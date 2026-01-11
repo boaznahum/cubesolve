@@ -4,7 +4,7 @@
 
 Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 - **Layout Layer** (size-independent): `CubeLayout`, `SliceLayout` - accessed via `cube.layout`
-- **Geometric Layer** (size-dependent): `CubeGeometric` - accessed via `cube.geometric`
+- **Geometric Layer** (size-dependent): `SizedCubeLayout` - accessed via `cube.sized_layout`
 
 ### Constants Location Rule
 
@@ -32,8 +32,8 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | 2.5 | `get_all_slices_for_faces()` | cube_layout.py | **ADDED** | Derives all connecting slices |
 | 2.6 | `get_slice_parallel_to_face()` | cube_layout.py | **ADDED** | Derives parallel slice for face |
 | 3.1 | `get_start_face()` | slice_layout.py | TODO | Hardcoded face returns |
-| 3.2 | face checks | ~~_CubeGeometric.py~~ | **FIXED** | Now uses `get_slice_parallel_to_face()` |
-| 3.3 | `does_slice_of_face_start_with_face()` | slice_layout.py | **MOVED** | Moved from _CubeGeometric |
+| 3.2 | face checks | ~~_SizedCubeLayout.py~~ | **FIXED** | Now uses `get_slice_parallel_to_face()` |
+| 3.3 | `does_slice_of_face_start_with_face()` | slice_layout.py | **MOVED** | Moved from _SizedCubeLayout |
 | 3.4 | rotation logic | _CubeLayout.py | TODO | `_rotate_dict_x/y/z` cycles |
 
 ---
@@ -85,15 +85,15 @@ These are inherently tied to enum values and are acceptable:
 ### Session 2026-01-11 (continued)
 
 **Moved methods to layout layer:**
-- `get_slice_for_faces()` - moved from `_CubeGeometric` to `cube_layout.py`
-- `get_all_slices_for_faces()` - moved from `_CubeGeometric` to `cube_layout.py`
+- `get_slice_for_faces()` - moved from `_SizedCubeLayout` to `cube_layout.py`
+- `get_all_slices_for_faces()` - moved from `_SizedCubeLayout` to `cube_layout.py`
 - `get_slice_parallel_to_face()` - new function in `cube_layout.py`
-- `_does_slice_of_face_start_with_face()` - moved from `_CubeGeometric` to `_SliceLayout`
+- `_does_slice_of_face_start_with_face()` - moved from `_SizedCubeLayout` to `_SliceLayout`
 
 **Fixed hardcoded logic:**
 - `iterate_orthogonal_face_center_pieces` - removed hardcoded face checks, now uses `get_slice_parallel_to_face()`
 
-**Removed claude: comments** from `_CubeGeometric.py`
+**Removed claude: comments** from `_SizedCubeLayout.py`
 
 ### Session 2025-01-11
 

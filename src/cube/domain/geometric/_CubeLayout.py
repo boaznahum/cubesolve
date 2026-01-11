@@ -242,7 +242,7 @@ class _CubeLayout(CubeLayout):
             side_face: "Face",
             layer_slice_index: int,
     ) -> Iterator[tuple[int, int]]:
-        return cube.geometric.iterate_orthogonal_face_center_pieces(
+        return cube.sized_layout.iterate_orthogonal_face_center_pieces(
             layer1_face, side_face, layer_slice_index
         )
 
@@ -417,7 +417,7 @@ class _CubeLayout(CubeLayout):
                                      ) -> FUnitRotation:
 
         def compute_unit_rotation() -> FUnitRotation:
-            return source_face.cube.geometric.translate_target_from_source(
+            return source_face.cube.sized_layout.translate_target_from_source(
                 source_face, target_face, source_coord, slice_name
             )
 

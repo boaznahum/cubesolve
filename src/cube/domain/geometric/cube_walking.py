@@ -191,7 +191,7 @@ class CubeWalkingInfo:
         face_infos: Tuple of 4 FaceWalkingInfo in content flow order
 
     Usage:
-        walk_info = cube.geometric.create_walking_info(SliceName.M)
+        walk_info = cube.sized_layout.create_walking_info(SliceName.M)
         transform = walk_info.get_transform(face_f, face_u)
         new_point = walk_info.translate_point(face_f, face_u, (row, col))
     """

@@ -144,7 +144,7 @@ from .Corner import Corner
 from cube.domain.geometric.cube_boy import Color, FaceName
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
-from cube.domain.geometric.cube_geometric import CubeGeometric
+from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from .cube_slice import Slice, SliceName
 from .Edge import Edge
 from .Face import Face
@@ -346,10 +346,10 @@ class Cube(CubeSupplier):
         self._is_even_cube_shadow: bool = False
 
         from cube.domain.geometric import cube_boy
-        from cube.domain.geometric._CubeGeometric import _CubeGeometric
+        from cube.domain.geometric._SizedCubeLayout import _SizedCubeLayout
 
         self._layout: CubeLayout = cube_boy.get_boy_layout(self._sp)
-        self._geometric: CubeGeometric = _CubeGeometric(self)
+        self._sized_layout: SizedCubeLayout = _SizedCubeLayout(self)
         self._reset()
 
         from cube.domain.model.CubeQueries2 import CubeQueries2
@@ -484,9 +484,9 @@ class Cube(CubeSupplier):
         return self._layout
 
     @property
-    def geometric(self) -> CubeGeometric:
+    def sized_layout(self) -> SizedCubeLayout:
         """Get the size-dependent geometry calculator for this cube."""
-        return self._geometric
+        return self._sized_layout
 
     @property
     def sp(self) -> IServiceProvider:

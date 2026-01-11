@@ -891,7 +891,7 @@ class Face2FaceTranslator:
             slice_alg = slice_name_to_alg[slice_name]
 
             # Get walking info for this slice
-            walk_info = cube.geometric.create_walking_info(slice_name)
+            walk_info = cube.sized_layout.create_walking_info(slice_name)
 
             # Compute n: how many rotations to move from source to target
             # In the face_infos cycle, content at index i moves to index (i+1) % 4

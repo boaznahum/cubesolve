@@ -1,17 +1,17 @@
 """
-_CubeGeometric - Size-dependent cube geometry implementation.
+_SizedCubeLayout - Size-dependent cube geometry implementation.
 
-This class implements the CubeGeometric protocol, providing coordinate
+This class implements the SizedCubeLayout protocol, providing coordinate
 calculations that require knowledge of cube size (n_slices).
 
 See GEOMETRY_LAYERS.md for the two-layer architecture:
 - Layout layer (CubeLayout): size-independent topology
-- Geometric layer (CubeGeometric): size-dependent coordinates
+- Sized layout layer (SizedCubeLayout): size-dependent coordinates
 
 Usage:
     cube = Cube(5)
-    walking_info = cube.geometric.create_walking_info(SliceName.M)
-    positions = list(cube.geometric.iterate_orthogonal_face_center_pieces(...))
+    walking_info = cube.sized_layout.create_walking_info(SliceName.M)
+    positions = list(cube.sized_layout.iterate_orthogonal_face_center_pieces(...))
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING, Iterator
 
-from cube.domain.geometric.cube_geometric import CubeGeometric
+from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from cube.domain.geometric.cube_walking import CubeWalkingInfo, FaceWalkingInfo
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
@@ -32,11 +32,11 @@ if TYPE_CHECKING:
     from cube.domain.model.Face import Face
 
 
-class _CubeGeometric(CubeGeometric):
+class _SizedCubeLayout(SizedCubeLayout):
     """
     Size-dependent cube geometry calculations.
 
-    This class implements the CubeGeometric protocol. It holds a reference
+    This class implements the SizedCubeLayout protocol. It holds a reference
     to a Cube instance and provides methods that require n_slices for
     coordinate calculations.
 
@@ -44,14 +44,14 @@ class _CubeGeometric(CubeGeometric):
         _cube: The cube instance this geometry belongs to
 
     See Also:
-        CubeGeometric: The protocol this class implements
+        SizedCubeLayout: The protocol this class implements
         CubeLayout: Size-independent layout queries (different layer)
         GEOMETRY_LAYERS.md: Architecture documentation
     """
 
     def __init__(self, cube: "Cube") -> None:
         """
-        Create a CubeGeometric for the given cube.
+        Create a SizedCubeLayout for the given cube.
 
         Args:
             cube: The cube instance (provides n_slices and face objects)
@@ -346,4 +346,4 @@ class _CubeGeometric(CubeGeometric):
         return walk_info.get_transform(source_face, target_face)
 
 
-__all__ = ['_CubeGeometric']
+__all__ = ['_SizedCubeLayout']

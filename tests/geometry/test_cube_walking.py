@@ -28,13 +28,13 @@ class TestCubeWalkingTransforms:
     def test_walking_info_creation(self, cube: Cube):
         """Verify CubeWalkingInfo can be created for all slices."""
         for slice_name in SliceName:
-            walk_info = cube.geometric.create_walking_info(slice_name)
+            walk_info = cube.sized_layout.create_walking_info(slice_name)
             assert len(walk_info) == 4
             assert walk_info.n_slices == cube.n_slices
 
     def test_m_slice_faces(self, cube: Cube):
         """M slice should traverse F, U, B, D."""
-        walk_info = cube.geometric.create_walking_info(SliceName.M)
+        walk_info = cube.sized_layout.create_walking_info(SliceName.M)
         face_names = [info.face.name for info in walk_info]
         # Cycle order is F → U → B → D
         assert FaceName.F in face_names
@@ -47,7 +47,7 @@ class TestCubeWalkingTransforms:
 
     def test_e_slice_faces(self, cube: Cube):
         """E slice should traverse R, B, L, F."""
-        walk_info = cube.geometric.create_walking_info(SliceName.E)
+        walk_info = cube.sized_layout.create_walking_info(SliceName.E)
         face_names = [info.face.name for info in walk_info]
         # Cycle order is R → B → L → F
         assert FaceName.R in face_names
@@ -60,7 +60,7 @@ class TestCubeWalkingTransforms:
 
     def test_s_slice_faces(self, cube: Cube):
         """S slice should traverse U, R, D, L."""
-        walk_info = cube.geometric.create_walking_info(SliceName.S)
+        walk_info = cube.sized_layout.create_walking_info(SliceName.S)
         face_names = [info.face.name for info in walk_info]
         # Cycle order is U → R → D → L
         assert FaceName.U in face_names
@@ -77,7 +77,7 @@ class TestCubeWalkingTransforms:
         composition of two adjacent transforms.
         """
         for slice_name in SliceName:
-            walk_info = cube.geometric.create_walking_info(slice_name)
+            walk_info = cube.sized_layout.create_walking_info(slice_name)
             faces = walk_info.faces
 
             for i in range(4):
@@ -118,7 +118,7 @@ class TestSlotConsistency:
         - Back: should be at right edge
         - Down: should be at top edge
         """
-        walk_info = cube.geometric.create_walking_info(SliceName.M)
+        walk_info = cube.sized_layout.create_walking_info(SliceName.M)
         n_slices = walk_info.n_slices
 
         # For slice_index=0, slot=0
@@ -136,7 +136,7 @@ class TestSlotConsistency:
         """
         Verify that translating a point around the full cycle returns to start.
         """
-        walk_info = cube.geometric.create_walking_info(SliceName.M)
+        walk_info = cube.sized_layout.create_walking_info(SliceName.M)
         faces = walk_info.faces
 
         # Start with a point on the first face
