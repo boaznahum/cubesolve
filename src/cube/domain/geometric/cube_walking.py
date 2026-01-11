@@ -279,3 +279,53 @@ class CubeWalkingInfo:
         """
         transform = self.get_transform(source_face, target_face)
         return transform.of_n_slices(self.n_slices)(*point)
+
+
+# =============================================================================
+# UNIT (SIZE-INDEPENDENT) WALKING INFO
+# =============================================================================
+#
+# KEY INSIGHT: FUnitRotation is size-independent!
+#
+# FUnitRotation (CW0, CW1, CW2, CW3) works for ANY cube size.
+# To compute it without knowing the actual cube size:
+#
+# 1. Use a "fake" n_slices (100) to get distinct reference points
+# 2. Traverse faces, computing reference_point for each
+# 3. Derive FUnitRotation using FUnitRotation.of()
+# 4. Store only the FUnitRotation - it's valid for ANY cube size!
+#
+# =============================================================================
+
+_FAKE_N_SLICES = 100
+
+
+@dataclass(frozen=True)
+class UnitFaceWalkingInfo:
+    """
+    Size-independent walking info for one face in a slice traversal.
+
+    Only stores the essential info:
+    - face_name: which face
+    - edge_position: which edge is the entry edge
+    - unit_rotation: FUnitRotation relative to first face
+
+    The unit_rotation is the KEY - it captures how coordinates transform
+    between faces, and works for any cube size.
+    """
+    face_name: "FaceName"
+    edge_position: str  # "top", "bottom", "left", "right"
+    unit_rotation: FUnitRotation
+
+
+@dataclass(frozen=True)
+class UnitCubeWalkingInfo:
+    """
+    Size-independent walking info for all 4 faces of a slice.
+
+    Created by CubeLayout.create_unit_walking_info().
+    Call of_cube(cube) to get a sized CubeWalkingInfo.
+    """
+    slice_name: "SliceName"
+    rotation_face: "FaceName"
+    face_infos: tuple[UnitFaceWalkingInfo, ...]

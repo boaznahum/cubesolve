@@ -15,6 +15,11 @@ from cube.domain.geometric.cube_layout import (
     _ALL_OPPOSITE,
     _OPPOSITE,
 )
+from cube.domain.geometric.cube_walking import (
+    UnitCubeWalkingInfo,
+    UnitFaceWalkingInfo,
+    _FAKE_N_SLICES,
+)
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 from cube.utils.Cache import CacheManager
@@ -479,4 +484,108 @@ class _CubeLayout(CubeLayout):
         Delegates to the SliceLayout for this slice.
         """
         return self.get_slice(slice_name).does_slice_cut_rows_or_columns(face_name)
+
+    def create_unit_walking_info(self, slice_name: SliceName) -> UnitCubeWalkingInfo:
+        """
+        Create size-independent walking info for a slice.
+
+        Uses fake n_slices to compute FUnitRotation for each face.
+        The FUnitRotation is size-independent (CW0, CW1, CW2, CW3).
+        """
+
+        def compute() -> UnitCubeWalkingInfo:
+            cube = self._cube
+            n_slices = _FAKE_N_SLICES
+
+            def inv(x: int) -> int:
+                return n_slices - 1 - x
+
+            # Get slice layout and rotation face
+            slice_layout: SliceLayout = self.get_slice(slice_name)
+            rotation_face_name = slice_layout.get_face_name()
+            rotation_face = cube.face(rotation_face_name)
+
+            # Get edges in clockwise order around rotation face
+            rotation_edges = self.get_face_edge_rotation_cw(rotation_face)
+            cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
+
+            # Pick first two faces (deterministic)
+            first_face = cycle_faces_ordered[0]
+            second_face = cycle_faces_ordered[1]
+
+            # Find shared edge
+            shared_edge: Edge | None = first_face.get_shared_edge(second_face)
+            assert shared_edge is not None
+
+            current_face = first_face
+            current_edge = shared_edge
+            current_index: int = 0
+            slot: int = 0
+
+            if not slice_layout.does_slice_of_face_start_with_face(current_face.name):
+                current_index = inv(current_index)
+
+            unit_face_infos: list[UnitFaceWalkingInfo] = []
+            first_reference_point: tuple[int, int] | None = None
+
+            for _ in range(4):
+                # Compute reference_point
+                is_horizontal = current_face.is_bottom_or_top(current_edge)
+                is_slot_inverted = (
+                    current_face.is_top_edge(current_edge) if is_horizontal
+                    else current_face.is_right_edge(current_edge)
+                )
+
+                if is_horizontal:
+                    reference_point = (inv(slot) if is_slot_inverted else slot, current_index)
+                else:
+                    reference_point = (current_index, inv(slot) if is_slot_inverted else slot)
+
+                # Compute FUnitRotation
+                if first_reference_point is None:
+                    first_reference_point = reference_point
+                    unit_rotation = FUnitRotation.CW0
+                else:
+                    unit_rotation = FUnitRotation.of(
+                        n_slices, first_reference_point, reference_point
+                    )
+
+                # Determine edge position
+                if current_edge is current_face.edge_top:
+                    edge_position = "top"
+                elif current_edge is current_face.edge_bottom:
+                    edge_position = "bottom"
+                elif current_edge is current_face.edge_left:
+                    edge_position = "left"
+                else:
+                    edge_position = "right"
+
+                unit_face_infos.append(UnitFaceWalkingInfo(
+                    face_name=current_face.name,
+                    edge_position=edge_position,
+                    unit_rotation=unit_rotation,
+                ))
+
+                # Move to next face
+                if len(unit_face_infos) < 4:
+                    next_face = current_edge.get_other_face(current_face)
+                    next_edge: Edge = current_edge.opposite(next_face)
+                    next_slice_index = current_edge.get_slice_index_from_ltr_index(
+                        current_face, current_index
+                    )
+                    current_index = current_edge.get_ltr_index_from_slice_index(
+                        next_face, next_slice_index
+                    )
+                    current_edge = next_edge
+                    current_face = next_face
+
+            return UnitCubeWalkingInfo(
+                slice_name=slice_name,
+                rotation_face=rotation_face_name,
+                face_infos=tuple(unit_face_infos)
+            )
+
+        cache_key = slice_name
+        cache = self._cache_manager.get("_CubeLayout.create_unit_walking_info", UnitCubeWalkingInfo)
+        return cache.compute(cache_key, compute)
 

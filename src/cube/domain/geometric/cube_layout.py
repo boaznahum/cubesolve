@@ -20,6 +20,7 @@ from cube.domain.model.SliceName import SliceName
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 
 if TYPE_CHECKING:
+    from cube.domain.geometric.cube_walking import UnitCubeWalkingInfo
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
@@ -557,6 +558,22 @@ class CubeLayout(Protocol):
         Example:
             M slice on Front face cuts columns (vertical strips) → returns ROW
             E slice on Front face cuts rows (horizontal strips) → returns COL
+        """
+        ...
+
+    @abstractmethod
+    def create_unit_walking_info(self, slice_name: SliceName) -> "UnitCubeWalkingInfo":
+        """
+        Create size-independent walking info for a slice.
+
+        Uses fake n_slices to compute FUnitRotation transforms that work
+        for any cube size.
+
+        Args:
+            slice_name: Which slice (M, E, or S)
+
+        Returns:
+            UnitCubeWalkingInfo with FUnitRotation for each face
         """
         ...
 
