@@ -173,79 +173,6 @@ def get_slice_parallel_to_face(face: FaceName) -> SliceName:
 
 
 # ============================================================================
-# Face Geometry Functions (module-level, not part of protocol)
-# ============================================================================
-
-# claude: make it private, it cannot be use directly, only by insane eof cube layout
-def opposite(fn: FaceName) -> FaceName:
-    """Get the face opposite to the given face.
-
-    Opposite faces never share an edge or corner. On a solved cube,
-    opposite faces have complementary colors.
-
-    Opposite pairs:
-        F ↔ B (Front/Back)
-        U ↔ D (Up/Down)
-        L ↔ R (Left/Right)
-
-    Args:
-        fn: The face to get the opposite of, see :class:`FaceName`.
-
-    Returns:
-        The opposite :class:`FaceName`.
-
-    Example:
-        opposite(FaceName.F)  # Returns FaceName.B
-
-    See Also:
-        :func:`is_adjacent`: Check if two faces share an edge.
-        :func:`get_adjacent_faces`: Get all 4 adjacent faces.
-        :meth:`CubeLayout.opposite_color`: Get color on opposite face.
-    """
-    return _ALL_OPPOSITE[fn]
-
-
-# claude: make it private, it cannot be use directly, only by insane eof cube layout
-def is_adjacent(face1: FaceName, face2: FaceName) -> bool:
-    """Check if two faces are adjacent (share an edge).
-
-    Two faces are adjacent if they are neither the same nor opposite.
-    Adjacent faces share exactly one edge on the cube.
-
-    Example:
-        F and U are adjacent (share top edge of F)
-        F and B are NOT adjacent (they are opposite)
-        F and F are NOT adjacent (same face)
-
-    Args:
-        face1: First face.
-        face2: Second face.
-
-    Returns:
-        True if faces share an edge, False otherwise.
-    """
-    return face2 in _ADJACENT[face1]
-
-
-# claude: make it private, it cannot be use directly, only by insane eof cube layout
-def get_adjacent_faces(face: FaceName) -> tuple[FaceName, ...]:
-    """Get all faces adjacent to the given face (faces that share an edge).
-
-    Each face has exactly 4 adjacent faces (all except itself and its opposite).
-
-    Args:
-        face: The face to get adjacent faces for.
-
-    Returns:
-        Tuple of 4 adjacent FaceNames.
-
-    Example:
-        get_adjacent_faces(FaceName.F)  # (U, R, D, L)
-    """
-    return _ADJACENT[face]
-
-
-# ============================================================================
 # CubeLayout Protocol
 # ============================================================================
 
@@ -595,11 +522,24 @@ class CubeLayout(Protocol):
 
     def get_face_edge_rotation_cw(self, face: Face) -> list[Edge]:
         """
-        claude: describe this method with diagrams, ltr system bottom top left right
+        Get the four edges of a face in clockwise rotation order.
 
-        actuall is a basic assumption, it is not relate dto spefici face, but currently we
-        work with pysical enteties so lay out return them
-        :return:
+        Returns edges in the order content moves during a clockwise face rotation:
+        top → right → bottom → left → (back to top)
+
+        In LTR Coordinate System (looking at face from outside cube):
+
+                        top edge
+                    ┌───────────────┐
+                    │               │
+            left    │     FACE      │    right
+            edge    │               │    edge
+                    │               │
+                    └───────────────┘
+                        bottom edge
+
+        Returns:
+            List of 4 edges: [top, right, bottom, left]
         """
         ...
 

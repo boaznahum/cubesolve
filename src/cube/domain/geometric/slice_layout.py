@@ -154,29 +154,13 @@ class _SliceLayout(SliceLayout):
         self._layout: "_CubeLayout | None" = layout
 
     def get_face_name(self) -> "FaceName":
-
         """
-        cluad: replace with memebr that passed inthe constructor from the CubeLayout
-        :param slice_name:
-        :return:
+        Return the face that defines the positive rotation direction for this slice.
+
+        Derives from _SLICE_ROTATION_FACE constant in cube_layout.py.
         """
-        # Import at runtime to avoid circular import
-        from cube.domain.model.FaceName import FaceName
-        from cube.domain.model.SliceName import SliceName
-
-        match self._slice_name:
-
-            case SliceName.S:  # over F
-                return FaceName.F
-
-            case SliceName.M:  # over L
-                return FaceName.L
-
-            case SliceName.E:  # over D
-                return FaceName.D
-
-            case _:
-                raise RuntimeError(f"Unknown Slice {self._slice_name}")
+        from cube.domain.geometric.cube_layout import _SLICE_ROTATION_FACE
+        return _SLICE_ROTATION_FACE[self._slice_name]
 
     def does_slice_cut_rows_or_columns(self, face_name: "FaceName") -> CLGColRow:
         """
