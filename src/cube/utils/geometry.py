@@ -75,3 +75,6 @@ def in_box(x, y, z, bottom_quad: Sequence[np.ndarray],
     #     print(f"{top_quad=}")
     #
     return res
+
+def inv(n_slices:int, x: int) -> int:
+    return n_slices - x -1

@@ -145,6 +145,7 @@ from cube.domain.geometric.cube_boy import Color, FaceName
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
+from ._part import EdgeName
 from .cube_slice import Slice, SliceName
 from .Edge import Edge
 from .Face import Face
@@ -313,7 +314,9 @@ class Cube(CubeSupplier):
         "_front", "_left", "_up", "_right", "_down", "_back",
         "_faces",
         "_color_2_face",
-        "_edges", "_corners", "_centers",
+        "_edges",
+        "_edges_map",
+        "_corners", "_centers",
         "_slice_m", "_slice_e", "_slice_s",
         "_slices",
         "_modify_counter",
@@ -332,6 +335,9 @@ class Cube(CubeSupplier):
     _back: Face
     _color_2_face: dict[Color, Face]
     _faces: dict[FaceName, Face]
+    _edges: list[Edge]
+    _edges_map: dict[EdgeName, Edge]
+
     _slices: dict[SliceName, Slice]
 
     def __init__(self, size: int, sp: IServiceProvider) -> None:
@@ -428,6 +434,8 @@ class Cube(CubeSupplier):
         u._edge_right = r._edge_top = _create_edge(edges, u, r, True)
 
         self._edges = edges
+
+        self._edges_map = { e.name: e for e in edges }
 
         corners: list[Corner] = []
 
@@ -758,6 +766,9 @@ class Cube(CubeSupplier):
 
     def face(self, name: FaceName) -> Face:
         return self._faces[name]
+
+    def edge(self, name: EdgeName) -> Edge:
+        return self._edges_map[name]
 
     def get_slice(self, name: SliceName) -> Slice:
         return self._slices[name]
