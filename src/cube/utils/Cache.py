@@ -40,18 +40,21 @@ class Cache(Protocol[V]):
         """Clear all cached values."""
         ...
 
-    def compute(self, key: Hashable, factory: Callable[[], V]) -> V:
+    def compute(self, key: Hashable, factory: Callable[[], V], disable_cache=False) -> V:
         """Get cached value or compute and cache it.
 
         Args:
             key: Hashable key to look up or store the value
             factory: Callable that produces the value if not cached
+            disable_cache: for temporarily disable cache for this call only
 
         Returns:
             The cached or newly computed value
 
         Raises:
             TypeError: If cached or computed value is not of expected type
+            :param key:
+            :param factory:
         """
         ...
 
@@ -72,12 +75,13 @@ class CacheImpl(Cache[V], Generic[V]):
         """Clear all cached values."""
         self._cache.clear()
 
-    def compute(self, key: Hashable, factory: Callable[[], V]) -> V:
+    def compute(self, key: Hashable, factory: Callable[[], V], disable_cache=False) -> V:
         """Get cached value or compute and cache it.
 
         Args:
             key: Hashable key to look up or store the value
             factory: Callable that produces the value if not cached
+            disable_cache: for temporarily disable cache for this call only
 
         Returns:
             The cached or newly computed value
@@ -85,7 +89,7 @@ class CacheImpl(Cache[V], Generic[V]):
         Raises:
             TypeError: If cached or computed value is not of expected type
         """
-        if key in self._cache:
+        if not disable_cache and key in self._cache:
             value = self._cache[key]
             if not isinstance(value, self._type):
                 raise TypeError(
@@ -119,7 +123,7 @@ class CacheNull(Cache[V]):
         """No-op since nothing is cached."""
         pass
 
-    def compute(self, key: Hashable, factory: Callable[[], V]) -> V:
+    def compute(self, key: Hashable, factory: Callable[[], V], disable_cache=False) -> V:
         """Always call factory and return result (no caching).
 
         Args:
