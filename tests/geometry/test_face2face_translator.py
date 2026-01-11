@@ -51,32 +51,31 @@ def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:
     return f"{pair[1].name}->{pair[0].name}"
 
 
-def verify_whole_cube_translation(
+def _verify_single_whole_cube_result(
     cube: Cube,
-    target_face: Face,
-    source_face: Face,
+    target_name: FaceName,
+    source_name: FaceName,
     target_coord: CenterSliceIndex,
+    result: FaceTranslationResult,
 ) -> None:
     """
-    Verify whole-cube algorithm translation.
+    Verify a single whole-cube translation result.
+
+    Uses FaceName instead of Face objects because cube.reset() creates new
+    Face objects, making old references stale. FaceName is an immutable enum
+    that remains valid across resets.
 
     Contract:
         1. Place marker at source_coord on source_face
         2. Apply whole_cube_alg
         3. Marker appears at target_coord on target_face
     """
-    target_name = target_face.name
-    source_name = source_face.name
+    source_coord = result.slice_algorithm.source_coord
+    marker_value = f"WHOLE_{target_name}_{source_name}_{target_coord}_{result.whole_cube_alg}"
+
+    # Get fresh face objects
     target_face = cube.face(target_name)
     source_face = cube.face(source_name)
-
-    result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
-    source_coord = result.source_coord
-
-    # if result.whole_cube_base_alg.axis_name not in [AxisName.X]:
-    #     return
-
-    marker_value = f"WHOLE_{target_name}_{source_name}_{target_coord}"
 
     # Place marker at source_coord on source_face
     source_slice: CenterSlice = source_face.center.get_center_slice(source_coord)
@@ -99,41 +98,63 @@ def verify_whole_cube_translation(
     )
 
 
-def verify_slice_translation(
+def verify_whole_cube_translation(
     cube: Cube,
-    target_face: Face,
-    source_face: Face,
+    target_name: FaceName,
+    source_name: FaceName,
     target_coord: CenterSliceIndex,
 ) -> None:
     """
-    Verify slice algorithm translation.
+    Verify whole-cube algorithm translation for all results.
+
+    Uses FaceName instead of Face objects because cube.reset() creates new
+    Face objects, making old references stale. FaceName is an immutable enum
+    that remains valid across resets.
+
+    For adjacent faces: 1 result
+    For opposite faces: 2 results (tests both rotation axes)
+    """
+    results = Face2FaceTranslator.translate_source_from_target(
+        cube.face(target_name), cube.face(source_name), target_coord
+    )
+
+    for result in results:
+        cube.reset()  # Reset to solved state
+        _verify_single_whole_cube_result(cube, target_name, source_name, target_coord, result)
+
+
+def _verify_single_slice_result(
+    cube: Cube,
+    target_name: FaceName,
+    source_name: FaceName,
+    target_coord: CenterSliceIndex,
+    result: FaceTranslationResult,
+) -> None:
+    """
+    Verify a single slice translation result.
+
+    Uses FaceName instead of Face objects because cube.reset() creates new
+    Face objects, making old references stale. FaceName is an immutable enum
+    that remains valid across resets.
 
     Contract:
         1. Place marker at source_coord on source_face
         2. Apply slice algorithm
         3. Marker appears at target_coord on target_face
     """
-    target_name = target_face.name
-    source_name = source_face.name
+    source_coord = result.slice_algorithm.source_coord
+    slice_alg = result.slice_algorithm.get_alg()
+    marker_value = f"SLICE_{target_name}_{source_name}_{target_coord}_{result.slice_algorithm.whole_slice_alg}"
+
+    # Get fresh face objects
     target_face = cube.face(target_name)
     source_face = cube.face(source_name)
-
-    result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face, source_face, target_coord)
-    source_coord = result.source_coord
-
-    marker_value = f"SLICE_{target_name}_{source_name}_{target_coord}"
 
     # Place marker at source_coord on source_face
     source_slice: CenterSlice = source_face.center.get_center_slice(source_coord)
     source_slice.edge.c_attributes["test_marker"] = marker_value
 
     # Apply slice algorithm
-    slice_alg = result.slice_algorithms[0].get_alg()
-
-    slice_name = result.slice_algorithms[0].whole_slice_alg.slice_name
-
-    # if slice_name not in [SliceName.M]:
-    #     return # skip it
     slice_alg.play(cube)
 
     # Verify marker at target_coord on target_face
@@ -150,6 +171,31 @@ def verify_slice_translation(
     )
 
 
+def verify_slice_translation(
+    cube: Cube,
+    target_name: FaceName,
+    source_name: FaceName,
+    target_coord: CenterSliceIndex,
+) -> None:
+    """
+    Verify slice algorithm translation for all results.
+
+    Uses FaceName instead of Face objects because cube.reset() creates new
+    Face objects, making old references stale. FaceName is an immutable enum
+    that remains valid across resets.
+
+    For adjacent faces: 1 result
+    For opposite faces: 2 results (tests both slice axes)
+    """
+    results = Face2FaceTranslator.translate_source_from_target(
+        cube.face(target_name), cube.face(source_name), target_coord
+    )
+
+    for result in results:
+        cube.reset()  # Reset to solved state
+        _verify_single_slice_result(cube, target_name, source_name, target_coord, result)
+
+
 class TestWholeCubeAlgorithm:
     """Tests for translate() whole-cube algorithms."""
 
@@ -161,13 +207,12 @@ class TestWholeCubeAlgorithm:
         cube = Cube(cube_size, sp=_test_sp)
 
         target_face = cube.face(target_name)
-        source_face = cube.face(source_name)
 
         for center_slice in target_face.center.all_slices:
             target_coord: CenterSliceIndex = center_slice.index
 
             verify_whole_cube_translation(
-                cube, target_face, source_face, target_coord
+                cube, target_name, source_name, target_coord
             )
 
             cube.clear_c_attributes()
@@ -184,13 +229,12 @@ class TestSliceAlgorithm:
         cube = Cube(cube_size, sp=_test_sp)
 
         target_face = cube.face(target_name)
-        source_face = cube.face(source_name)
 
         for center_slice in target_face.center.all_slices:
             target_coord: CenterSliceIndex = center_slice.index
 
             verify_slice_translation(
-                cube, target_face, source_face, target_coord
+                cube, target_name, source_name, target_coord
             )
 
             cube.clear_c_attributes()
@@ -203,13 +247,12 @@ class TestSliceAlgorithm:
         cube = Cube(cube_size, sp=_test_sp)
 
         target_face = cube.face(target_name)
-        source_face = cube.face(source_name)
 
         for center_slice in target_face.center.all_slices:
             target_coord: CenterSliceIndex = center_slice.index
 
             verify_slice_translation(
-                cube, target_face, source_face, target_coord
+                cube, target_name, source_name, target_coord
             )
 
             cube.clear_c_attributes()
@@ -238,26 +281,29 @@ class TestTranslateTargetFromSource:
         for center_slice in target_face.center.all_slices:
             target_coord: CenterSliceIndex = center_slice.index
 
-            # Get source_coord and slice_name from translate_source_from_target
-            result = Face2FaceTranslator.translate_source_from_target(
+            # Get all results from translate_source_from_target
+            results = Face2FaceTranslator.translate_source_from_target(
                 target_face, source_face, target_coord
             )
-            source_coord = result.source_coord
-            slice_name = result.slice_algorithms[0].whole_slice_alg.slice_name
 
-            # Call the inverse function
-            computed_target = Face2FaceTranslator.translate_target_from_source(
-                source_face, target_face, source_coord, slice_name
-            )
+            # Test inverse for each result
+            for result in results:
+                source_coord = result.slice_algorithm.source_coord
+                slice_name = result.slice_algorithm.whole_slice_alg.slice_name
 
-            assert computed_target == target_coord, (
-                f"translate_target_from_source is not inverse!\n"
-                f"  target_face={target_name}, source_face={source_name}\n"
-                f"  target_coord={target_coord} -> source_coord={source_coord}\n"
-                f"  translate_target_from_source returned {computed_target}\n"
-                f"  expected {target_coord}\n"
-                f"  slice_name={slice_name}"
-            )
+                # Call the inverse function
+                computed_target = Face2FaceTranslator.translate_target_from_source(
+                    source_face, target_face, source_coord, slice_name
+                )
+
+                assert computed_target == target_coord, (
+                    f"translate_target_from_source is not inverse!\n"
+                    f"  target_face={target_name}, source_face={source_name}\n"
+                    f"  target_coord={target_coord} -> source_coord={source_coord}\n"
+                    f"  translate_target_from_source returned {computed_target}\n"
+                    f"  expected {target_coord}\n"
+                    f"  slice_name={slice_name}"
+                )
 
 
 class TestSliceMovementPrediction:
@@ -293,15 +339,16 @@ class TestSliceMovementPrediction:
         source_face = cube.face(source_name)
         target_face = cube.face(target_name)
 
-        # Get slice algorithms from translate_source_from_target
+        # Get all results from translate_source_from_target
         # This gives us the correct slice AND direction
         # Use a dummy coord to get the algorithms
-        result = Face2FaceTranslator.translate_source_from_target(
+        results = Face2FaceTranslator.translate_source_from_target(
             target_face, source_face, (0, 0)
         )
 
-        # Test each slice algorithm
-        for slice_alg_result in result.slice_algorithms:
+        # Test each result (each has its own slice_algorithm)
+        for result in results:
+            slice_alg_result = result.slice_algorithm
             slice_name = slice_alg_result.whole_slice_alg.slice_name
 
             # if slice_name not in [SliceName.M]:

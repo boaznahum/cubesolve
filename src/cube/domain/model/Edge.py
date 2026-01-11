@@ -6,6 +6,7 @@ from cube.domain.model._elements import SliceIndex
 from cube.domain.model.PartSlice import EdgeWing, PartSlice
 from cube.domain.model.Part import Part
 from cube.domain.model.PartEdge import PartEdge
+from cube.utils import geometry
 
 from ._elements import EdgeSliceIndex
 from ._part import EdgeName, _faces_2_edge_name
@@ -197,6 +198,86 @@ class Edge(Part):
         assert ltr_i == self.get_ltr_index_from_slice_index(face, si)
 
         return si
+
+    def get_slice_index_from_ltr_index_arbitrary_n_slices(self, n_slices: int, face: _Face, ltr_i: int) -> int:
+        """
+        Convert face's ltr coordinate to edge's internal slice index.
+
+        The edge serves the face's coordinate system. The face provides its
+        ltr coordinate, and this method translates to the edge's internal
+        storage index.
+
+        Critical insight: The face's ltr is the input - the edge translates
+        to find the correct internal slice. Edge-face ltr = Face ltr.
+
+        Translation rules:
+        - same_direction=True: Both faces see same order (no translation)
+        - same_direction=False: f1 direct, f2 inverts
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            face: The face providing its ltr coordinate
+            ltr_i: The face's ltr coordinate
+
+        Returns:
+            Edge's internal slice index
+            :param ltr_i:
+            :param face:
+            :param n_slices:
+        """
+        assert face is self._f1 or face is self._f2
+
+        si: int
+        if self.right_top_left_same_direction:
+            si = ltr_i
+        else:
+            if face is self._f1:
+                si = ltr_i  # arbitrary f1 was chosen
+            else:
+                si = geometry.inv(n_slices, ltr_i)  # type: ignore
+
+        assert ltr_i == self.get_ltr_index_from_slice_index_arbitrary_n_slices(n_slices, face, si)
+
+        return si
+
+    def get_ltr_index_from_slice_index_arbitrary_n_slices(self, n_slices: int, face: _Face, i: int) -> int:
+        """
+        Convert edge's internal slice index to face's ltr coordinate.
+
+        The edge serves the face's coordinate system. Each face has its own
+        consistent ltr system, and this method translates from the edge's
+        internal storage to the face's view.
+
+        Critical insight: The returned ltr is always consistent with the face's
+        own ltr system. Edge-face ltr = Face ltr (guaranteed by translation).
+
+        Translation rules:
+        - same_direction=True: Both faces see same order (no translation)
+        - same_direction=False: f1 direct, f2 inverts
+
+        See: docs/design2/edge-face-coordinate-system-approach2.md
+
+        Args:
+            face: The face requesting its ltr coordinate
+            i: Edge's internal slice index
+
+        Returns:
+            The ltr coordinate in the face's coordinate system
+            :param i:
+            :param face:
+            :param n_slices:
+        """
+        assert face is self._f1 or face is self._f2
+
+        if self.right_top_left_same_direction:
+            return i
+        else:
+            if face is self._f1:
+                return i  # arbitrary f1 was chosen
+            else:
+                return geometry.inv(n_slices, i)
+
 
     def get_slice_by_ltr_index(self, face: _Face, i) -> EdgeWing:
         """

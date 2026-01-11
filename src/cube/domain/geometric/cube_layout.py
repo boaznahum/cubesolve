@@ -14,15 +14,15 @@ from collections.abc import Collection, Iterator
 from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
 
 from cube.domain.geometric.FRotation import FUnitRotation
-from cube.domain.model.Edge import Edge
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
-from cube.domain.geometric.slice_layout import SliceLayout
+from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
+    from cube.domain.model.Edge import Edge
     from cube.utils.config_protocol import ConfigProtocol
     from cube.utils.Cache import CacheManager
 
@@ -48,75 +48,60 @@ _ALL_OPPOSITE: Mapping[FaceName, FaceName] = {**_OPPOSITE, **_REV_OPPOSITE}
 
 _ADJACENT: Mapping[FaceName, tuple[FaceName, ...]] = _build_adjacent(_ALL_OPPOSITE)
 
+# Slice rotation faces: M rotates like L, E rotates like D, S rotates like F
+_SLICE_ROTATION_FACE: Mapping[SliceName, FaceName] = {
+    SliceName.M: FaceName.L,
+    SliceName.E: FaceName.D,
+    SliceName.S: FaceName.F,
+}
+
+# Axis rotation faces: whole-cube X rotates around R, Y around U, Z around F
+# Note: _AXIS_ROTATION_FACE[s] is opposite to _SLICE_ROTATION_FACE[s] except for S
+_AXIS_ROTATION_FACE: Mapping[SliceName, FaceName] = {
+    SliceName.M: FaceName.R,  # X axis
+    SliceName.E: FaceName.U,  # Y axis
+    SliceName.S: FaceName.F,  # Z axis (same as slice rotation face)
+}
+
+# Note: _SLICE_FACES was removed - derive on demand from _SLICE_ROTATION_FACE + _ADJACENT
+
 
 # ============================================================================
-# Geometry Functions (module-level, not part of protocol)
+# Private Geometry Functions (use CubeLayout protocol methods instead)
 # ============================================================================
 
-def opposite(fn: FaceName) -> FaceName:
-    """Get the face opposite to the given face.
 
-    Opposite faces never share an edge or corner. On a solved cube,
-    opposite faces have complementary colors.
-
-    Opposite pairs:
-        F ↔ B (Front/Back)
-        U ↔ D (Up/Down)
-        L ↔ R (Left/Right)
-
-    Args:
-        fn: The face to get the opposite of, see :class:`FaceName`.
-
-    Returns:
-        The opposite :class:`FaceName`.
-
-    Example:
-        opposite(FaceName.F)  # Returns FaceName.B
-
-    See Also:
-        :func:`is_adjacent`: Check if two faces share an edge.
-        :func:`get_adjacent_faces`: Get all 4 adjacent faces.
-        :meth:`CubeLayout.opposite_color`: Get color on opposite face.
-    """
-    return _ALL_OPPOSITE[fn]
+def _get_slice_for_faces(source: FaceName, target: FaceName) -> SliceName | None:
+    """Internal: Find which slice connects two faces. Use CubeLayout.get_slice_for_faces()."""
+    for slice_name in SliceName:
+        rotation_face = _SLICE_ROTATION_FACE[slice_name]
+        slice_faces = _ADJACENT[rotation_face]
+        if source in slice_faces and target in slice_faces:
+            return slice_name
+    return None
 
 
-def is_adjacent(face1: FaceName, face2: FaceName) -> bool:
-    """Check if two faces are adjacent (share an edge).
-
-    Two faces are adjacent if they are neither the same nor opposite.
-    Adjacent faces share exactly one edge on the cube.
-
-    Example:
-        F and U are adjacent (share top edge of F)
-        F and B are NOT adjacent (they are opposite)
-        F and F are NOT adjacent (same face)
-
-    Args:
-        face1: First face.
-        face2: Second face.
-
-    Returns:
-        True if faces share an edge, False otherwise.
-    """
-    return face2 in _ADJACENT[face1]
+def _get_all_slices_for_faces(source: FaceName, target: FaceName) -> list[SliceName]:
+    """Internal: Find ALL slices connecting two faces. Use CubeLayout.get_all_slices_for_faces()."""
+    if source == target:
+        return []
+    result: list[SliceName] = []
+    for slice_name in SliceName:
+        rotation_face = _SLICE_ROTATION_FACE[slice_name]
+        slice_faces = _ADJACENT[rotation_face]
+        if source in slice_faces and target in slice_faces:
+            result.append(slice_name)
+    return result
 
 
-def get_adjacent_faces(face: FaceName) -> tuple[FaceName, ...]:
-    """Get all faces adjacent to the given face (faces that share an edge).
-
-    Each face has exactly 4 adjacent faces (all except itself and its opposite).
-
-    Args:
-        face: The face to get adjacent faces for.
-
-    Returns:
-        Tuple of 4 adjacent FaceNames.
-
-    Example:
-        get_adjacent_faces(FaceName.F)  # (U, R, D, L)
-    """
-    return _ADJACENT[face]
+def _get_slice_parallel_to_face(face: FaceName) -> SliceName:
+    """Internal: Find slice parallel to face. Use CubeLayout.get_slice_parallel_to_face()."""
+    for slice_name in SliceName:
+        rotation_face = _SLICE_ROTATION_FACE[slice_name]
+        opposite_face = _ALL_OPPOSITE[rotation_face]
+        if face not in (rotation_face, opposite_face):
+            return slice_name
+    raise ValueError(f"No slice parallel to {face}")
 
 
 # ============================================================================
@@ -341,6 +326,64 @@ class CubeLayout(Protocol):
         ...
 
     @abstractmethod
+    def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
+        """Find which slice connects two faces.
+
+        For opposite faces, returns only the FIRST matching slice.
+        Use get_all_slices_for_faces() to get ALL connecting slices.
+
+        Args:
+            source: First face.
+            target: Second face.
+
+        Returns:
+            SliceName if a slice connects the faces, None if same face.
+
+        Example:
+            layout.get_slice_for_faces(FaceName.F, FaceName.U)  # SliceName.M
+        """
+        ...
+
+    @abstractmethod
+    def get_all_slices_for_faces(self, source: FaceName, target: FaceName) -> list[SliceName]:
+        """Find ALL slices that connect two faces.
+
+        For adjacent faces: returns 1 slice.
+        For opposite faces: returns 2 slices.
+
+        Args:
+            source: First face.
+            target: Second face.
+
+        Returns:
+            List of SliceNames. Empty if faces are the same.
+
+        Example:
+            layout.get_all_slices_for_faces(FaceName.F, FaceName.B)  # [SliceName.M, SliceName.E]
+        """
+        ...
+
+    @abstractmethod
+    def get_slice_parallel_to_face(self, face: FaceName) -> SliceName:
+        """Find which slice is parallel to a face.
+
+        A slice is parallel to a face if the face is NOT on the slice's axis.
+        - M: axis = L/R → parallel to U, D, F, B
+        - E: axis = U/D → parallel to L, R, F, B
+        - S: axis = F/B → parallel to U, D, L, R
+
+        Args:
+            face: The face to find a parallel slice for.
+
+        Returns:
+            SliceName of the slice parallel to this face.
+
+        Example:
+            layout.get_slice_parallel_to_face(FaceName.U)  # SliceName.E
+        """
+        ...
+
+    @abstractmethod
     def iterate_orthogonal_face_center_pieces(
             self,
             cube: "Cube",
@@ -422,31 +465,6 @@ class CubeLayout(Protocol):
         """
         ...
 
-    @abstractmethod
-    def get_slices_between_faces(
-            self,
-            source_face: "Face",
-            target_face: "Face",
-    ) -> list[SliceName]:
-        """
-        Get the slice(s) that connect source_face to target_face.
-
-        For adjacent faces: returns 1 slice
-        For opposite faces: returns 2 slices (both pass through)
-
-        Args:
-            source_face: The source face
-            target_face: The target face
-
-        Returns:
-            List of SliceName(s) that connect the faces
-
-        Example:
-            F → U: [M] (M slice connects F and U)
-            F → B: [M, E] (both M and E connect opposite faces F and B)
-        """
-        ...
-
     def translate_target_from_source(
             self,
             source_face: Face,
@@ -494,13 +512,54 @@ class CubeLayout(Protocol):
 
     def get_face_edge_rotation_cw(self, face: Face) -> list[Edge]:
         """
-        claude: describe this method with diagrams, ltr system bottom top left right
+        Get the four edges of a face in clockwise rotation order.
 
-        actuall is a basic assumption, it is not relate dto spefici face, but currently we
-        work with pysical enteties so lay out return them
-        :return:
+        Returns edges in the order content moves during a clockwise face rotation:
+        top → right → bottom → left → (back to top)
+
+        In LTR Coordinate System (looking at face from outside cube):
+
+                        top edge
+                    ┌───────────────┐
+                    │               │
+            left    │     FACE      │    right
+            edge    │               │    edge
+                    │               │
+                    └───────────────┘
+                        bottom edge
+
+        Returns:
+            List of 4 edges: [top, right, bottom, left]
         """
         ...
+
+    @abstractmethod
+    def does_slice_cut_rows_or_columns(self, slice_name: SliceName, face_name: FaceName) -> CLGColRow:
+        """
+        Determine if a slice cuts rows or columns on a given face.
+
+        This is a template-level geometry question - the answer depends only on
+        the slice type and face, not on a specific cube instance.
+
+        Slice Traversal (content movement during rotation):
+            M: F → U → B → D → F  (vertical cycle, like L rotation)
+            E: R → B → L → F → R  (horizontal cycle, like D rotation)
+            S: U → R → D → L → U  (around F/B axis, like F rotation)
+
+        Args:
+            slice_name: Which slice (M, E, or S)
+            face_name: Which face to check
+
+        Returns:
+            CLGColRow.ROW if slice cuts through rows (forms vertical strips)
+            CLGColRow.COL if slice cuts through columns (forms horizontal strips)
+
+        Example:
+            M slice on Front face cuts columns (vertical strips) → returns ROW
+            E slice on Front face cuts rows (horizontal strips) → returns COL
+        """
+        ...
+
 
 
 

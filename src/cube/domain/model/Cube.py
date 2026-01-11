@@ -144,6 +144,8 @@ from .Corner import Corner
 from cube.domain.geometric.cube_boy import Color, FaceName
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
+from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
+from ._part import EdgeName
 from .cube_slice import Slice, SliceName
 from .Edge import Edge
 from .Face import Face
@@ -312,7 +314,9 @@ class Cube(CubeSupplier):
         "_front", "_left", "_up", "_right", "_down", "_back",
         "_faces",
         "_color_2_face",
-        "_edges", "_corners", "_centers",
+        "_edges",
+        "_edges_map",
+        "_corners", "_centers",
         "_slice_m", "_slice_e", "_slice_s",
         "_slices",
         "_modify_counter",
@@ -331,6 +335,9 @@ class Cube(CubeSupplier):
     _back: Face
     _color_2_face: dict[Color, Face]
     _faces: dict[FaceName, Face]
+    _edges: list[Edge]
+    _edges_map: dict[EdgeName, Edge]
+
     _slices: dict[SliceName, Slice]
 
     def __init__(self, size: int, sp: IServiceProvider) -> None:
@@ -345,8 +352,10 @@ class Cube(CubeSupplier):
         self._is_even_cube_shadow: bool = False
 
         from cube.domain.geometric import cube_boy
+        from cube.domain.geometric._SizedCubeLayout import _SizedCubeLayout
 
         self._layout: CubeLayout = cube_boy.get_boy_layout(self._sp)
+        self._sized_layout: SizedCubeLayout = _SizedCubeLayout(self)
         self._reset()
 
         from cube.domain.model.CubeQueries2 import CubeQueries2
@@ -354,6 +363,8 @@ class Cube(CubeSupplier):
         self._cqr: CubeQueries2 = CubeQueries2(self)
 
     def _reset(self, cube_size=None) -> None:
+
+        self._sized_layout.reset()
 
         if cube_size:
             self._size = cube_size
@@ -426,6 +437,8 @@ class Cube(CubeSupplier):
 
         self._edges = edges
 
+        self._edges_map = { e.name: e for e in edges }
+
         corners: list[Corner] = []
 
         f._corner_top_left = l._corner_top_right = u._corner_bottom_left = _create_corner(corners, f, l, u)
@@ -479,6 +492,11 @@ class Cube(CubeSupplier):
     @property
     def layout(self) -> CubeLayout:
         return self._layout
+
+    @property
+    def sized_layout(self) -> SizedCubeLayout:
+        """Get the size-dependent geometry calculator for this cube."""
+        return self._sized_layout
 
     @property
     def sp(self) -> IServiceProvider:
@@ -750,6 +768,9 @@ class Cube(CubeSupplier):
 
     def face(self, name: FaceName) -> Face:
         return self._faces[name]
+
+    def edge(self, name: EdgeName) -> Edge:
+        return self._edges_map[name]
 
     def get_slice(self, name: SliceName) -> Slice:
         return self._slices[name]

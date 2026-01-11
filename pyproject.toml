@@ -68,7 +68,7 @@ dev = [
     "pytest",
     "pytest-xdist",
     "mypy",
-    "pyright",
+    "pyright==1.1.408",
     "vulture",
     "ruff",
     "types-colorama",

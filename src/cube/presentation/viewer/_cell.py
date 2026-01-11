@@ -415,7 +415,7 @@ class _Cell:
                 else:
                     renderer.shapes.quad_with_border(points, facet_color, lw, lc)
 
-                if cfg.gui_draw_markers:
+                if cfg.markers_config.GUI_DRAW_MARKERS:
                     _nn = part_edge.c_attributes["n"]
                     points = self._vertices_to_points(_vx)
                     renderer.shapes.lines_in_quad(points, _nn, 5, (138, 43, 226))
@@ -437,7 +437,7 @@ class _Cell:
 
                 draw_facet(edge, vertexes)
 
-                if cfg.gui_draw_markers:
+                if cfg.markers_config.GUI_DRAW_MARKERS:
                     points = self._vertices_to_points(vertexes)
                     if cube_face.corner_bottom_left is part:
                         renderer.shapes.cross(points, cross_width, cross_color)
@@ -459,7 +459,7 @@ class _Cell:
                 with self._gen_list_for_slice(_slice, g_list_dest):
                     draw_facet(edge, vx)
 
-                    if cfg.gui_draw_markers:
+                    if cfg.markers_config.GUI_DRAW_MARKERS:
                         attributes = edge.attributes
                         points = self._vertices_to_points(vx)
                         if attributes.get("origin", False):
@@ -491,7 +491,7 @@ class _Cell:
 
                         draw_facet(edge, vx)
 
-                        if cfg.gui_draw_markers:
+                        if cfg.markers_config.GUI_DRAW_MARKERS:
                             attributes = edge.attributes
                             points = self._vertices_to_points(vx)
                             if attributes.get("origin", False):

@@ -2,12 +2,28 @@
 
 This is the ONLY module allowed to import _config directly.
 All other code must access config through ConfigProtocol via context (app.config or vs.config).
+
+Environment Variables:
+    CUBE_DISABLE_CACHE: Set to "1", "true", or "yes" to disable cube caching.
 """
+
+import os
 
 from cube.application import _config as cfg
 from cube.domain.model.Color import Color
 from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, MarkerDef
+from cube.utils.markers_config import MarkersConfig
 from cube.utils.SSCode import SSCode
+
+
+def _env_bool(name: str) -> bool | None:
+    """Get boolean value from environment variable, or None if not set."""
+    val = os.environ.get(name, "").lower()
+    if val in ("1", "true", "yes"):
+        return True
+    if val in ("0", "false", "no"):
+        return False
+    return None
 
 
 class AppConfig(ConfigProtocol):
@@ -52,7 +68,13 @@ class AppConfig(ConfigProtocol):
 
     @property
     def enable_cube_cache(self) -> bool:
-        """Enable cube caching for performance optimization."""
+        """Enable cube caching for performance optimization.
+
+        Can be disabled by setting CUBE_DISABLE_CACHE=1 environment variable.
+        """
+        env_disable = _env_bool("CUBE_DISABLE_CACHE")
+        if env_disable is not None:
+            return not env_disable  # DISABLE_CACHE=1 → enable=False
         return cfg.ENABLE_CUBE_CACHE
 
     # ==========================================================================
@@ -184,19 +206,9 @@ class AppConfig(ConfigProtocol):
     # GUI settings
     # ==========================================================================
     @property
-    def gui_draw_markers(self) -> bool:
-        """Draw markers on cube faces."""
-        return cfg.GUI_DRAW_MARKERS
-
-    @property
-    def gui_draw_sample_markers(self) -> bool:
-        """Draw sample markers on cube faces."""
-        return cfg.GUI_DRAW_SAMPLE_MARKERS
-
-    @property
-    def gui_draw_ltr_coords(self) -> bool:
-        """Draw LTR coordinate system markers (origin, X arrow, Y arrow)."""
-        return cfg.GUI_DRAW_LTR_COORDS
+    def markers_config(self) -> MarkersConfig:
+        """Get markers configuration (draw flags for various marker types)."""
+        return cfg.MARKERS_CONFIG
 
     @property
     def gui_test_mode(self) -> bool:

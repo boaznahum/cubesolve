@@ -15,7 +15,7 @@ from cube.domain.geometric.cube_layout import (
     _ALL_OPPOSITE,
     _OPPOSITE,
 )
-from cube.domain.geometric.slice_layout import SliceLayout, _SliceLayout
+from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 from cube.utils.Cache import CacheManager
 
@@ -55,11 +55,15 @@ class _CubeLayout(CubeLayout):
         self._cache_manager = CacheManager.create(sp.config)
 
         self._slices: Mapping[SliceName, SliceLayout] = {
-            SliceName.S: _SliceLayout(SliceName.S),
-            SliceName.E: _SliceLayout(SliceName.E),
-            SliceName.M: _SliceLayout(SliceName.M),
-
+            SliceName.S: _SliceLayout(SliceName.S, self),
+            SliceName.E: _SliceLayout(SliceName.E, self),
+            SliceName.M: _SliceLayout(SliceName.M, self),
         }
+
+        # Lazy-initialized internal 3x3 cube for geometry queries
+        self._internal_cube: Cube | None = None
+        self._creating_internal_cube: bool = False
+
 
     @property
     def config(self) -> ConfigProtocol:
@@ -70,6 +74,38 @@ class _CubeLayout(CubeLayout):
     def cache_manager(self) -> CacheManager:
         """Get the cache manager for this layout."""
         return self._cache_manager
+
+    @property
+    def _cube(self) -> "Cube":
+        """Get internal 3x3 cube for geometry queries (lazy initialization).
+
+        This cube is used to answer template-level geometry questions that
+        require traversing face/edge relationships. It's created on first access.
+
+        Raises:
+            InternalSWError: If called during cube creation (cycle detected).
+        """
+        if self._internal_cube is not None:
+            return self._internal_cube
+
+        if self._creating_internal_cube:
+            raise InternalSWError(
+                "Circular dependency detected: CubeLayout._cube accessed while "
+                "creating internal cube. This indicates a geometry method was "
+                "called during Cube.__init__() that requires the internal cube."
+            )
+
+        # Create the internal 3x3 cube
+        self._creating_internal_cube = True
+        try:
+            from cube.domain.model.Cube import Cube
+            self._internal_cube = Cube(3, self._sp)
+            # Set the layout directly (Cube doesn't accept layout in __init__)
+            self._internal_cube._original_layout = self
+        finally:
+            self._creating_internal_cube = False
+
+        return self._internal_cube
 
     def __getitem__(self, face: FaceName) -> Color:
         """Get the color for a specific face."""
@@ -185,6 +221,21 @@ class _CubeLayout(CubeLayout):
         """Get all faces adjacent to the given face."""
         return _ADJACENT[face]
 
+    def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
+        """Find which slice connects two faces."""
+        from cube.domain.geometric.cube_layout import _get_slice_for_faces
+        return _get_slice_for_faces(source, target)
+
+    def get_all_slices_for_faces(self, source: FaceName, target: FaceName) -> list[SliceName]:
+        """Find ALL slices that connect two faces."""
+        from cube.domain.geometric.cube_layout import _get_all_slices_for_faces
+        return _get_all_slices_for_faces(source, target)
+
+    def get_slice_parallel_to_face(self, face: FaceName) -> SliceName:
+        """Find which slice is parallel to a face."""
+        from cube.domain.geometric.cube_layout import _get_slice_parallel_to_face
+        return _get_slice_parallel_to_face(face)
+
     def iterate_orthogonal_face_center_pieces(
             self,
             cube: "Cube",
@@ -192,38 +243,9 @@ class _CubeLayout(CubeLayout):
             side_face: "Face",
             layer_slice_index: int,
     ) -> Iterator[tuple[int, int]]:
-        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
-        return _CubeLayoutGeometry.iterate_orthogonal_face_center_pieces(
-            cube, layer1_face, side_face, layer_slice_index
+        return cube.sized_layout.iterate_orthogonal_face_center_pieces(
+            layer1_face, side_face, layer_slice_index
         )
-
-    def get_slices_between_faces(
-            self,
-            source_face: "Face",
-            target_face: "Face",
-    ) -> list[SliceName]:
-        """
-        Get the slice(s) that connect source_face to target_face.
-
-        TODO: This is a patch implementation using translate_source_from_target.
-              Consider deriving this directly from slice geometry.
-        """
-        from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
-
-        # Use a dummy coordinate - we just need the slice info
-        dummy_coord = (0, 0)
-        result = Face2FaceTranslator.translate_source_from_target(
-            target_face, source_face, dummy_coord
-        )
-
-        # Extract unique slice names from slice_algorithms
-        slice_names: list[SliceName] = []
-        for slice_alg_result in result.slice_algorithms:
-            slice_name = slice_alg_result.whole_slice_alg.slice_name
-            if slice_name is not None and slice_name not in slice_names:
-                slice_names.append(slice_name)
-
-        return slice_names
 
     def _is_face(self, color: Color) -> FaceName | None:
         """Find which face has the given color, or None if not found."""
@@ -395,29 +417,66 @@ class _CubeLayout(CubeLayout):
                                      slice_name: SliceName
                                      ) -> FUnitRotation:
 
-        from cube.domain.geometric._CubeLayoutGeometry import _CubeLayoutGeometry
-
         def compute_unit_rotation() -> FUnitRotation:
-            return _CubeLayoutGeometry.translate_target_from_source(
-                source_face,
-                target_face, source_coord, slice_name
+            return source_face.cube.sized_layout.translate_target_from_source(
+                source_face, target_face, source_coord, slice_name
             )
 
-        cache_key = (source_face.name, target_face.name, slice_name)
-        cache = self.cache_manager.get("CubeLayout.translate_target_from_source",
-                                       FUnitRotation)
+        cache_key = ("CubeLayout.translate_target_from_source", source_face.name, target_face.name, slice_name)
+        cache = self.cache_manager.get(cache_key, FUnitRotation)
 
-        unit_rotation = cache.compute(cache_key, compute_unit_rotation)
+        unit_rotation = cache.compute(compute_unit_rotation)
 
         return unit_rotation
 
     def get_face_edge_rotation_cw(self, face: Face) -> list[Edge]:
         """
-        claude: describe this method with diagrams, ltr system bottom top left right
-        :return:
-        """
+        Get the four edges of a face in clockwise rotation order.
 
+        Returns edges in the order content moves during a clockwise face rotation:
+        top → right → bottom → left → (back to top)
+
+        In LTR Coordinate System (looking at face from outside cube):
+        ============================================================
+
+                        T (top direction)
+                        ↑
+                        │
+                ┌───────┴───────┐
+                │   edge_top    │
+                │               │
+          L ←───│edge    edge   │───→ R (right direction)
+                │_left   _right │
+                │               │
+                │  edge_bottom  │
+                └───────┬───────┘
+                        │
+                        ↓
+                       -T
+
+        Clockwise rotation order: [0]=top, [1]=right, [2]=bottom, [3]=left
+
+        When face rotates CW, content flows: T → R → (-T) → (-R) → T
+        - Content at top edge moves to right edge
+        - Content at right edge moves to bottom edge
+        - Content at bottom edge moves to left edge
+        - Content at left edge moves to top edge
+
+        Args:
+            face: The face to get edges for.
+
+        Returns:
+            List of 4 edges in clockwise order: [top, right, bottom, left]
+        """
         rotation_edges: list[Edge] = [face.edge_top, face.edge_right,
                                       face.edge_bottom, face.edge_left]
 
         return rotation_edges
+
+    def does_slice_cut_rows_or_columns(self, slice_name: SliceName, face_name: FaceName) -> CLGColRow:
+        """Determine if a slice cuts rows or columns on a given face.
+
+        Delegates to the SliceLayout for this slice.
+        """
+        return self.get_slice(slice_name).does_slice_cut_rows_or_columns(face_name)
+

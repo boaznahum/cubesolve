@@ -87,11 +87,17 @@ python -m mypy -p cube
 # 3. Pyright type checker
 python -m pyright src/cube
 
-# 4. Non-GUI tests
-python -m pytest tests/ -v --ignore=tests/gui -m "not slow"
+# 4. Non-GUI tests (ALWAYS use CUBE_QUIET_ALL=1 to suppress debug output)
+# Bash/Linux:
+CUBE_QUIET_ALL=1 python -m pytest tests/ -v --ignore=tests/gui -m "not slow"
+# PowerShell/Windows:
+# $env:CUBE_QUIET_ALL="1"; python -m pytest tests/ -v --ignore=tests/gui -m "not slow"
 
-# 5. GUI tests
-python -m pytest tests/gui -v --speed-up 5
+# 5. GUI tests (ALWAYS use CUBE_QUIET_ALL=1 to suppress debug output)
+# Bash/Linux:
+CUBE_QUIET_ALL=1 python -m pytest tests/gui -v --speed-up 5
+# PowerShell/Windows:
+# $env:CUBE_QUIET_ALL="1"; python -m pytest tests/gui -v --speed-up 5
 ```
 
 **ALL FIVE must pass before committing.** Ruff is fastest so run it first. Use `ruff check --fix` to auto-fix issues.

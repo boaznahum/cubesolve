@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Literal, Tuple
 
 from cube.application.animation.AnimationText import AnimationText
+from cube.application.Logger import Logger
 
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
@@ -78,8 +79,8 @@ class ApplicationAndViewState:
         # Store config reference for access throughout the class
         self._config = config
 
-        self._debug_all = debug_all
-        self._quiet_all = quiet_all
+        # Logger handles debug/quiet flags with env var override
+        self._logger = Logger(debug_all=debug_all, quiet_all=quiet_all)
         self._speed = config.animation_speed
 
         # self._alpha_x_0: float = 0.3
@@ -354,72 +355,40 @@ class ApplicationAndViewState:
         return self._last_scramble_key_size
 
     @property
+    def logger(self) -> Logger:
+        """Return the logger instance."""
+        return self._logger
+
+    @property
     def is_debug_all(self) -> bool:
         """Return True if debug_all mode is enabled."""
-        return self._debug_all
+        return self._logger.is_debug_all
 
     @property
     def quiet_all(self) -> bool:
         """Return True if quiet_all mode is enabled (suppresses all debug output)."""
-        return self._quiet_all
+        return self._logger.quiet_all
 
     @quiet_all.setter
     def quiet_all(self, value: bool) -> None:
         """Set quiet_all mode."""
-        self._quiet_all = value
+        self._logger.quiet_all = value
 
     def is_debug(self, debug_on: bool = False) -> bool:
-        """Check if debug output should happen.
-
-        Args:
-            debug_on: Local flag to enable debug for this specific call.
-
-        Returns:
-            True if debug output should happen:
-            - quiet_all is False AND (debug_all is True OR debug_on is True)
-        """
-        if self._quiet_all:
-            return False
-        return self._debug_all or debug_on
+        """Check if debug output should happen."""
+        return self._logger.is_debug(debug_on)
 
     def debug_prefix(self) -> str:
         """Return the standard debug prefix."""
-        return "DEBUG:"
+        return self._logger.debug_prefix()
 
-    def debug(self, debug_on: bool, *args) -> None:
-        """Print debug information if allowed by flags.
-
-        Args:
-            debug_on: Local flag to enable debug for this specific call.
-            *args: Arguments to print, same as print() function.
-
-        Logic:
-            - If quiet_all is True → never print
-            - If debug_all is True OR debug_on is True → print
-        """
-        if self._quiet_all:
-            return
-        if self._debug_all or debug_on:
-            print("DEBUG:", *args, flush=True)
+    def debug(self, debug_on: bool, *args: Any) -> None:
+        """Print debug information if allowed by flags."""
+        self._logger.debug(debug_on, *args)
 
     def debug_lazy(self, debug_on: bool, func: Callable[[], Any]) -> None:
-        """Print debug information with lazy evaluation.
-
-        The func is only called if we're actually going to print,
-        avoiding expensive computation when debug is disabled.
-
-        Args:
-            debug_on: Local flag to enable debug for this specific call.
-            func: Callable that returns the message to print.
-
-        Logic:
-            - If quiet_all is True → never print, func not called
-            - If debug_all is True OR debug_on is True → call func and print
-        """
-        if self._quiet_all:
-            return
-        if self._debug_all or debug_on:
-            print("DEBUG:", func())
+        """Print debug information with lazy evaluation."""
+        self._logger.debug_lazy(debug_on, func)
 
     def debug_dump(
         self,
@@ -445,7 +414,7 @@ class ApplicationAndViewState:
         return
 
         # Backend and OpenGL info - always print if provided (unless quiet)
-        if (backend_name or opengl_info) and not self._quiet_all:
+        if (backend_name or opengl_info) and not self._logger.quiet_all:
             print("=" * 60)
             if backend_name:
                 print(f"Backend: {backend_name}")
@@ -476,7 +445,7 @@ class ApplicationAndViewState:
         self.debug(True, f"  Shadow faces: '{self._draw_shadows}'")
         self.debug(True, f"  Speed index: {self._speed} ({self.get_speed.get_speed()})")
         self.debug(True, f"  Single step mode: {self.single_step_mode}")
-        self.debug(True, f"  Debug all: {self._debug_all}, Quiet all: {self._quiet_all}")
+        self.debug(True, f"  Debug all: {self._logger.is_debug_all}, Quiet all: {self._logger.quiet_all}")
 
         # Cube summary - debug(True)
         self.debug(True, "Cube:")
@@ -491,7 +460,7 @@ class ApplicationAndViewState:
 
         # Cube slices detail - debug(False) = only with --debug-all
         # Early return if not debug_all to avoid expensive computation
-        if not self._debug_all:
+        if not self._logger.is_debug_all:
             self.debug(True, "(Use --debug-all for verbose cube slice details)")
             self.debug(True, "=" * 60)
             self.debug(True, f"END DUMP: {label}")

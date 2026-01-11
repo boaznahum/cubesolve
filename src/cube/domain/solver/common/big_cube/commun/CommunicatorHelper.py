@@ -53,6 +53,7 @@ class CommutatorResult:
     s1 → t → s2 → s1 (cycle pattern)
 
     Attributes:
+        slice_name: that use in the communicator algorithm
         source_point: The computed source LTR position (where the piece naturally is before setup)
         algorithm: The algorithm to execute (None if dry_run=True)
         natural_source: Source point (s1) - the first piece in the 3-cycle
@@ -60,6 +61,7 @@ class CommutatorResult:
         second_replaced_with_target_point_on_source: Intermediate point (s2) - the third piece in the 3-cycle
         _secret: Internal cache secret for optimization (avoid re-computation on second call)
     """
+    slice_name: SliceName
     source_point: Point
     algorithm: Alg | None
     natural_source: Point | None = None
@@ -93,6 +95,10 @@ class CommunicatorHelper(SolverElement):
     - ltr_to_index() / index_to_ltr(): Coordinate translation
     """
 
+    # Class variable for test iteration over multiple translation results.
+    # For opposite faces, there are 2 valid results; tests can iterate both.
+    _test_result_index: int = 0
+
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)
         self._s2_rotation_table = self._load_s2_rotation_table()
@@ -121,6 +127,43 @@ class CommunicatorHelper(SolverElement):
     @property
     def n_slices(self) -> int:
         return self.cube.n_slices
+
+    @classmethod
+    def _select_translation_result(
+        cls, results: list[FaceTranslationResult]
+    ) -> FaceTranslationResult:
+        """Select one translation result from multiple valid results.
+
+        For opposite faces (F↔B, U↔D, L↔R), there are TWO valid translation
+        results - one for each axis that connects them. For adjacent faces,
+        there is only ONE result.
+
+        WHY WE SORT BY SLICE NAME:
+        ==========================
+        The Face2FaceTranslator may return results in arbitrary order depending
+        on internal iteration order. To ensure DETERMINISTIC behavior:
+        1. dry_run and actual execution must use the SAME result
+        2. Tests must be able to iterate ALL results to verify correctness
+
+        By sorting by slice name (E, M, S alphabetically), we guarantee:
+        - Same input always produces same output (deterministic)
+        - _test_result_index can iterate results in predictable order
+        - No hidden bugs from lucky ordering
+
+        Args:
+            results: List of valid FaceTranslationResult (1 for adjacent, 2 for opposite)
+
+        Returns:
+            Single FaceTranslationResult selected by _test_result_index % len(results)
+        """
+        # Sort by slice name for deterministic order (E < M < S alphabetically)
+        sorted_results = sorted(
+            results,
+            key=lambda r: r.slice_algorithm.whole_slice_alg.slice_name.name
+        )
+        # Use modulo to handle both adjacent (1 result) and opposite (2 results)
+        index = cls._test_result_index % len(sorted_results)
+        return sorted_results[index]
 
     # =========================================================================
     # Coordinate Translation: LTR <-> Index
@@ -344,7 +387,7 @@ class CommunicatorHelper(SolverElement):
         # Step 2: Apply f (face rotation on target) to tp
         on_front_rotate_n, target_block_after_rotate = self._compute_rotate_on_target(
             self.cube, target_face.name,
-            internal_data.trans_data.slice_algorithms[0].whole_slice_alg.slice_name,
+            internal_data.trans_data.slice_algorithm.whole_slice_alg.slice_name,
             target_block
         )
 
@@ -355,7 +398,7 @@ class CommunicatorHelper(SolverElement):
 
         # Step 3: xpt is on target_face, find where it maps to on source_face translate_target_from_source(
         # source_face, target_face, coord) finds where coord on target_face goes on source_face
-        slice_name = internal_data.trans_data.slice_algorithms[0].whole_slice_alg.slice_name
+        slice_name = internal_data.trans_data.slice_algorithm.whole_slice_alg.slice_name
         xpt_on_source = Face2FaceTranslator.translate_target_from_source(
             target_face, source_face, xpt, slice_name
         )
@@ -376,7 +419,7 @@ class CommunicatorHelper(SolverElement):
             source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
 
         # E, S, M
-        slice_alg_data: SliceAlgorithmResult = internal_data.trans_data.slice_algorithms[0]
+        slice_alg_data: SliceAlgorithmResult = internal_data.trans_data.slice_algorithm
         slice_base_alg: SliceAlg = slice_alg_data.whole_slice_alg
 
         on_front_rotate: Alg = Algs.of_face(target_face.name) * on_front_rotate_n
@@ -429,6 +472,7 @@ class CommunicatorHelper(SolverElement):
         final_algorithm = (source_setup_alg + cum + source_setup_alg.prime).simplify()
 
         return CommutatorResult(
+            slice_name=slice_name,
             source_point=source_point,
             algorithm=final_algorithm,
             natural_source=natural_source,
@@ -716,11 +760,16 @@ class CommunicatorHelper(SolverElement):
         # now we assume block of size 1
         target_point_begin: Point = target_block[0]
 
-        translation_result: FaceTranslationResult = Face2FaceTranslator.translate_source_from_target(target_face,
-                                                                                                     source_face,
-                                                                                                     target_point_begin)
+        # translate_source_from_target returns list (1 for adjacent, 2 for opposite faces)
+        all_results: list[FaceTranslationResult] = Face2FaceTranslator.translate_source_from_target(
+            target_face, source_face, target_point_begin
+        )
+        # Select one result deterministically (sorted by slice name, indexed by _test_result_index)
+        translation_result: FaceTranslationResult = self._select_translation_result(all_results)
 
-        return _InternalCommData(translation_result.source_coord, translation_result)
+        # source_coord is on the slice_algorithm, not directly on FaceTranslationResult
+        source_coord = translation_result.slice_algorithm.source_coord
+        return _InternalCommData(source_coord, translation_result)
 
     def _compute_rotate_on_target(self, cube: Cube,
                                   face_name: FaceName,

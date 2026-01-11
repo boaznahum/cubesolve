@@ -192,9 +192,28 @@ git push origin origin/<branch>:refs/heads/archive/completed/<branch>
 # Delete old remote branch
 git push origin --delete <branch>
 
-# Delete local branch
+# Delete local branch (if it exists)
 git branch -D <branch>
+
+# Prune stale remote-tracking refs
+git fetch --prune
+
+# Delete the new archive remote-tracking ref (we don't want to track archive/* locally)
+git branch -dr origin/archive/completed/<branch>
 ```
+
+**IMPORTANT: Clean up archive refs and [gone] branches.**
+
+1. **Delete archive remote-tracking refs** - The push creates a local ref `remotes/origin/archive/*` that we don't need. Delete it with `git branch -dr`. The fetch refspec should exclude `archive/*` so it won't be re-fetched:
+   ```bash
+   # Ensure archive/* is excluded from fetch (one-time setup)
+   git config --get-all remote.origin.fetch | grep -q 'archive' || \
+     git config --add remote.origin.fetch '^refs/heads/archive/*'
+   ```
+
+2. **Run `/commit-commands:clean_gone`** - Deletes any local branches marked as `[gone]` (including associated worktrees).
+
+`git fetch --prune` only removes refs for deleted remotes, NOT local branches or newly-pushed archive refs.
 
 **Delete both** (when you don't need the branch history):
 ```bash

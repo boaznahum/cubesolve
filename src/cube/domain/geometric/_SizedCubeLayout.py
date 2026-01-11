@@ -1,0 +1,253 @@
+"""
+_SizedCubeLayout - Size-dependent cube geometry implementation.
+
+This class implements the SizedCubeLayout protocol, providing coordinate
+calculations that require knowledge of cube size (n_slices).
+
+See GEOMETRY_LAYERS.md for the two-layer architecture:
+- Layout layer (CubeLayout): size-independent topology
+- Sized layout layer (SizedCubeLayout): size-dependent coordinates
+
+Usage:
+    cube = Cube(5)
+    walking_info = cube.sized_layout.create_walking_info(SliceName.M)
+    positions = list(cube.sized_layout.iterate_orthogonal_face_center_pieces(...))
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Iterator
+
+from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
+from cube.domain.geometric.cube_walking import CubeWalkingInfo, CubeWalkingInfoUnit, FaceWalkingInfo, PointComputer
+from cube.domain.geometric.FRotation import FUnitRotation
+from cube.domain.geometric.slice_layout import CLGColRow
+from cube.domain.geometric.types import Point
+from cube.domain.model.Edge import Edge
+from cube.domain.model.SliceName import SliceName
+from cube.utils.Cache import CacheManager
+
+if TYPE_CHECKING:
+    from cube.domain.model.Cube import Cube
+    from cube.domain.model.Face import Face
+
+
+class _SizedCubeLayout(SizedCubeLayout):
+    """
+    Size-dependent cube geometry calculations.
+
+    This class implements the SizedCubeLayout protocol. It holds a reference
+    to a Cube instance and provides methods that require n_slices for
+    coordinate calculations.
+
+    Attributes:
+        _cube: The cube instance this geometry belongs to
+        _cache_manager: Per-instance CacheManager for this SizedCubeLayout
+
+    IMPORTANT - Cache Architecture:
+        This class has its OWN CacheManager (_cache_manager), separate from CubeLayout.cache_manager.
+
+        Why NOT use CubeLayout.cache_manager:
+        - CubeLayout is shared across ALL cubes of the same size (singleton per n_slices)
+        - _SizedCubeLayout is tied to a SPECIFIC Cube instance
+        - CubeWalkingInfo contains Face and Edge objects from a specific cube
+        - If we cached in CubeLayout, a cached CubeWalkingInfo would return
+          Face/Edge objects from the WRONG cube instance!
+
+        Example of the bug if using layout cache:
+            cube1 = Cube(5)
+            cube2 = Cube(5)  # Same size, shares CubeLayout with cube1
+            info1 = cube1.sized_layout.create_walking_info(M)  # Cached in shared layout
+            info2 = cube2.sized_layout.create_walking_info(M)  # Returns cached info1!
+            # BUG: info2.face_infos[0].face is cube1's Face, not cube2's!
+
+    See Also:
+        SizedCubeLayout: The protocol this class implements
+        CubeLayout: Size-independent layout queries (different layer)
+        GEOMETRY_LAYERS.md: Architecture documentation
+    """
+
+    def __init__(self, cube: "Cube") -> None:
+        """
+        Create a SizedCubeLayout for the given cube.
+
+        Args:
+            cube: The cube instance (provides n_slices and face objects)
+        """
+        self._cube = cube
+        # Per-instance CacheManager - NOT shared with other cubes!
+        # See class docstring for why we can't use CubeLayout.cache_manager
+        self._cache_manager: CacheManager = CacheManager.create(cube.config)
+
+    def reset(self):
+        # must free all objects when new cube is created !!!
+        self._cache_manager.clear()
+
+
+    @property
+    def n_slices(self) -> int:
+        """Get the cube's n_slices (cube_size - 2)."""
+        return self._cube.n_slices
+
+    # =========================================================================
+    # CubeGeometric Protocol Implementation
+    # =========================================================================
+
+    def create_walking_info(self, slice_name: SliceName) -> CubeWalkingInfo:
+        """
+        Create SIZE-DEPENDENT walking info for this slice on this cube.
+
+        This method:
+        1. Gets the size-independent unit walking info from SliceLayout (cached there)
+        2. Converts it to actual coordinates for this cube's n_slices
+        3. Caches the result in this instance's CacheManager (NOT in layout cache!)
+
+        IMPORTANT: Uses per-instance _cache_manager, NOT CubeLayout.cache_manager!
+        See class docstring for why layout cache is invalid here.
+
+        Args:
+            slice_name: Which slice (M, E, S) to traverse
+
+        Returns:
+            CubeWalkingInfo with actual coordinates for this cube size
+        """
+        cube: Cube = self._cube
+        n_slices = cube.n_slices
+
+        def compute() -> CubeWalkingInfo:
+            # Get size-independent unit walking info from SliceLayout (cached there)
+            slice_layout = cube.layout.get_slice(slice_name)
+            unit: CubeWalkingInfoUnit = slice_layout.create_walking_info_unit()
+
+            sized_faces = []
+
+            for uf in unit.face_infos:
+                face: Face = cube.face(uf.face.name)  # todo: don't by accident store fake cube object need to fix unit to return names
+                edge: Edge = cube.edge(uf.edge.name)  # todo: don't by accident store fake cube object need to fix unit to return names
+                reference_point: Point = uf.get_reference_point(n_slices)
+                compute_fn: PointComputer = uf.get_compute(n_slices)
+
+                sized_face_info: FaceWalkingInfo = FaceWalkingInfo(
+                    face=face,
+                    edge=edge,
+                    reference_point=reference_point,
+                    n_slices=n_slices,
+                    _compute=compute_fn
+                )
+
+                sized_faces.append(sized_face_info)
+
+            return CubeWalkingInfo(
+                slice_name=slice_name,
+                rotation_face=unit.rotation_face,
+                n_slices=n_slices,
+                face_infos=tuple(sized_faces)
+            )
+
+        # Cache using per-instance CacheManager (NOT layout cache!)
+        cache = self._cache_manager.get(("SizedCubeLayout.create_walking_info", slice_name), CubeWalkingInfo)
+        return cache.compute(compute)
+
+    def iterate_orthogonal_face_center_pieces(
+        self,
+        layer1_face: "Face",
+        side_face: "Face",
+        layer_slice_index: int,
+    ) -> Iterator[tuple[int, int]]:
+        """
+        Yield (row, col) positions on side_face for the given layer slice.
+
+        A "layer slice" is a horizontal layer parallel to layer1_face (L1).
+        Layer slice 0 is the one closest to L1.
+
+        Args:
+            layer1_face: The Layer 1 face (base layer)
+            side_face: A face orthogonal to layer1_face
+            layer_slice_index: 0 = closest to L1, n_slices-1 = farthest
+
+        Yields:
+            (row, col) in LTR coordinates on side_face
+
+        Raises:
+            ValueError: if side_face is not orthogonal to layer1_face
+        """
+        cube = self._cube
+        l1_name = layer1_face.name
+        side_name = side_face.name
+
+        if not cube.layout.is_adjacent(l1_name, side_name):
+            raise ValueError(f"{side_name} is not adjacent to {l1_name}")
+
+        n_slices = cube.n_slices
+
+        # Determine which slice type (M/E/S) is parallel to L1
+        # A slice is parallel to a face if that face is NOT on the slice's axis
+        from cube.domain.geometric.cube_layout import _SLICE_ROTATION_FACE
+        slice_name = cube.layout.get_slice_parallel_to_face(l1_name)
+        reference_face = _SLICE_ROTATION_FACE[slice_name]
+
+        # Convert layer_slice_index to physical slice index
+        if l1_name == reference_face:
+            physical_slice_index = layer_slice_index
+        else:
+            physical_slice_index = n_slices - 1 - layer_slice_index
+
+        # Does this slice cut rows or columns on side_face?
+        slice_layout = cube.layout.get_slice(slice_name)
+        cut_type = slice_layout.does_slice_cut_rows_or_columns(side_name)
+
+        # Does slice index align with face LTR coordinates?
+        starts_with_face = slice_layout.does_slice_of_face_start_with_face(side_name)
+
+        # Convert physical_slice_index to row/column index on face
+        if starts_with_face:
+            face_index = physical_slice_index
+        else:
+            face_index = n_slices - 1 - physical_slice_index
+
+        # Yield positions
+        if cut_type == CLGColRow.ROW:
+            # Slice cuts rows → forms a column → fixed col, iterate rows
+            for row in range(n_slices):
+                yield row, face_index
+        else:
+            # Slice cuts cols → forms a row → fixed row, iterate cols
+            for col in range(n_slices):
+                yield face_index, col
+
+    def translate_target_from_source(
+        self,
+        source_face: "Face",
+        target_face: "Face",
+        source_coord: tuple[int, int],
+        slice_name: SliceName,
+    ) -> FUnitRotation:
+        """
+        Compute the unit rotation from source_face to target_face.
+
+        Args:
+            source_face: The face where content originates
+            target_face: The face where content will appear
+            source_coord: (row, col) position on source_face
+            slice_name: Which slice (M, E, S) connects the faces
+
+        Returns:
+            FUnitRotation that transforms source coordinates to target
+
+        Raises:
+            ValueError: If source_face == target_face
+            ValueError: If source_coord is out of bounds
+        """
+        if source_face is target_face:
+            raise ValueError("Cannot translate from a face to itself")
+
+        n_slices = source_face.center.n_slices
+        row, col = source_coord
+        if not (0 <= row < n_slices and 0 <= col < n_slices):
+            raise ValueError(f"Coordinate {source_coord} out of bounds (n_slices={n_slices})")
+
+        walk_info = self.create_walking_info(slice_name)
+        return walk_info.get_transform(source_face, target_face)
+
+
+__all__ = ['_SizedCubeLayout']

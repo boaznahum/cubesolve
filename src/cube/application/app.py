@@ -4,17 +4,18 @@ from cube.application.AbstractApp import AbstractApp
 from cube.application.commands.Operator import Operator
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
 from cube.application.state import ApplicationAndViewState
+from cube.utils.logger_protocol import ILogger
 from cube.domain.algs import Alg
 from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solver, Solvers
 from cube.domain.solver.SolverName import SolverName
-from cube.utils.config_protocol import ConfigProtocol
+from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
 
 if TYPE_CHECKING:
     from cube.application.animation.AnimationManager import AnimationManager
 
 
-class _App(AbstractApp):
+class _App(AbstractApp, IServiceProvider):
 
     def __init__(self,
                  config: ConfigProtocol,
@@ -28,6 +29,8 @@ class _App(AbstractApp):
         super().__init__()
 
         self._vs = vs
+        # Use the logger from ApplicationAndViewState (has env var override)
+        self._logger = vs.logger
         self._error = None
 
         if cube_size is not None:
@@ -73,6 +76,11 @@ class _App(AbstractApp):
     def marker_manager(self) -> IMarkerManager:
         """Get the marker manager for adding/retrieving markers on cube stickers."""
         return self._marker_manager
+
+    @property
+    def logger(self) -> ILogger:
+        """Get the logger for debug output control."""
+        return self._logger
 
     @property
     def error(self) -> str | None:
