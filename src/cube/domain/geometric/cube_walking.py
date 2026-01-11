@@ -208,8 +208,8 @@ class FaceWalkingInfoUnit:
     The _compute function is used to get any point efficiently.
     """
 
-    face: "Face"
-    edge: "Edge"
+    face: "Face"  # todo CubeLayout must not expose objects from face cube !!! store names
+    edge: "Edge"  # todo CubeLayout must not expose objects from face cube !!! store names
     reference_point: Point
     n_slices: int
     _compute: UnitPointComputer = field(compare=False)  # Don't compare functions

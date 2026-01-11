@@ -93,6 +93,8 @@ cube.sized_layout.translate_target_from_source(...)     # FUnitRotation needs n_
 ```
 src/cube/domain/geometric/
 ├── GEOMETRY_LAYERS.md          # This document
+├── UNIT_WALKING_INFO.md        # Unit walking info pattern (size-independent geometry)
+├── CUBELAYOUT_INTERNAL_CUBE.md # Internal 3x3 cube for geometry queries
 │
 ├── # LAYOUT LAYER (Size-Independent)
 ├── cube_layout.py              # CubeLayout protocol
@@ -104,7 +106,7 @@ src/cube/domain/geometric/
 ├── _SizedCubeLayout.py           # _SizedCubeLayout implementation
 │
 ├── # SHARED UTILITIES
-├── cube_walking.py             # CubeWalkingInfo, FaceWalkingInfo
+├── cube_walking.py             # CubeWalkingInfo, CubeWalkingInfoUnit, FaceWalkingInfo
 ├── FRotation.py                # FUnitRotation for coordinate transforms
 ├── Face2FaceTranslator.py      # Translation utilities (uses both layers)
 ├── types.py                    # Point type alias
@@ -113,6 +115,19 @@ src/cube/domain/geometric/
     ├── cube_boy.py             # BOY color scheme
     └── HARDCODED_ANALYSIS.md   # Analysis of hardcoded constants
 ```
+
+## Key Pattern: Unit Walking Info
+
+The `create_walking_info()` method uses a two-phase approach:
+
+1. **Phase 1:** `_create_walking_info_unit()` computes walking info using a fake `n_slices` value.
+   This captures the TOPOLOGY (faces, edges, coordinate inversion rules) without binding to a specific size.
+
+2. **Phase 2:** `create_walking_info()` converts the unit info to actual cube size by:
+   - Scaling reference points (0 → 0, fake_max → actual_max)
+   - Binding compute functions to actual n_slices
+
+**See:** `UNIT_WALKING_INFO.md` for detailed explanation.
 
 ---
 

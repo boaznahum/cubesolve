@@ -225,41 +225,16 @@ class Slice(SuperElement):
 
     def _get_walking_info(self) -> "CubeWalkingInfo":
         """
-        Get or create the CubeWalkingInfo for this slice.
+        Get the CubeWalkingInfo for this slice.
 
-        Performance Optimization:
-        ========================
-        CubeWalkingInfo is expensive to create (_CubeLayoutGeometry.create_walking_info):
-        - Traverses 4 faces to compute reference points
-        - Creates 8 closure functions for point computation
-        - Picks random starting face (but result is functionally equivalent)
-
-        The result is CONSTANT for a given slice - it only depends on:
-        - The slice name (M, E, or S)
-        - The cube's face layout (which doesn't change)
-
-        Cache Strategy:
-        - Uses CacheManager from cube.layout (respects config.enable_cube_cache)
-        - Keyed by slice name (M, E, or S)
-        - No invalidation needed: the walking info never changes for a slice
-
-        Call Frequency (without cache):
-        - Called by _get_slices_by_index() which is called 2×n_slices times per rotate()
-        - For a 5×5 cube rotating M: 6 calls per quarter turn = 6 expensive rebuilds
+        Caching is handled at two levels:
+        1. SliceLayout caches CubeWalkingInfoUnit (size-independent topology)
+        2. SizedCubeLayout caches CubeWalkingInfo (size-dependent coordinates)
 
         Returns:
-            CubeWalkingInfo for this slice
+            CubeWalkingInfo for this slice (cached at SizedCubeLayout level)
         """
-        # Import here to avoid circular imports
-        from cube.domain.geometric.cube_walking import CubeWalkingInfo
-
-        def compute_walking_info() -> CubeWalkingInfo:
-            return self.cube.sized_layout.create_walking_info(self._name)
-
-        cache_key = self._name  # SliceName.M, SliceName.E, or SliceName.S
-        cache = self._cache_manager.get("Slice._get_walking_info", CubeWalkingInfo)
-
-        return cache.compute(cache_key, compute_walking_info)
+        return self.cube.sized_layout.create_walking_info(self._name)
 
     def _get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
         """

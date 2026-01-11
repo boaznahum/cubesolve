@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from cube.domain.model.FaceName import FaceName
     from cube.domain.model.SliceName import SliceName
     from cube.domain.geometric._CubeLayout import _CubeLayout
+    from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit
 
 
 class CLGColRow(Enum):
@@ -143,6 +144,38 @@ class SliceLayout(Protocol):
                 └───┴───┴───┘
 
         See also: does_slice_cut_rows_or_columns()
+        """
+        ...
+
+    def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
+        """
+        Create SIZE-INDEPENDENT walking info for this slice.
+
+        This method computes the topological structure of walking through the 4 faces
+        that this slice passes through. The result uses a fake n_slices value (1234)
+        to capture the TOPOLOGY without binding to any specific cube size.
+
+        The returned CubeWalkingInfoUnit can be converted to any actual cube size
+        using FaceWalkingInfoUnit.get_reference_point() and get_compute().
+
+        WHY SIZE-INDEPENDENT?
+        =====================
+        - The faces a slice passes through don't change with cube size
+        - The edges connecting those faces don't change
+        - Whether coordinates are inverted on each face doesn't change
+        - Only the actual coordinate VALUES change (0..n_slices-1)
+
+        By computing this once and caching it, we avoid recomputing the same
+        topology for every cube size.
+
+        Returns:
+            CubeWalkingInfoUnit with:
+            - face_infos: 4 FaceWalkingInfoUnit in content flow order
+            - Each FaceWalkingInfoUnit has a compute function: (n_slices, r, c) -> Point
+
+        See Also:
+            - UNIT_WALKING_INFO.md for detailed architecture documentation
+            - SizedCubeLayout.create_walking_info() which converts to actual size
         """
         ...
 
@@ -287,4 +320,158 @@ class _SliceLayout(SliceLayout):
         # Use cache manager from layout
         cache_key = (self._slice_name, face_name)
         cache = self._layout.cache_manager.get("SliceLayout.does_slice_of_face_start_with_face", bool)
+        return cache.compute(cache_key, compute)
+
+    def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
+        """
+        Create SIZE-INDEPENDENT walking info for this slice.
+
+        See SliceLayout protocol docstring for full documentation.
+        """
+        import random
+        from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit, FaceWalkingInfoUnit
+        from cube.domain.geometric.types import Point
+        from cube.domain.model.Edge import Edge
+        from cube.domain.model.Face import Face
+
+        if self._layout is None:
+            raise RuntimeError(
+                "Cannot create walking info unit without layout reference. "
+                "Use CubeLayout.get_slice() to get a properly initialized SliceLayout."
+            )
+
+        def compute() -> CubeWalkingInfoUnit:
+            assert self._layout is not None
+            internal_3x3 = self._layout._cube
+            slice_name = self._slice_name
+            fake_n_slices = 1234  # Arbitrary large value - see UNIT_WALKING_INFO.md
+
+            def inv(x: int) -> int:
+                return fake_n_slices - 1 - x
+
+            # Derive starting face and edge from rotation face
+            rotation_face_name = self.get_face_name()
+            rotation_face = internal_3x3.face(rotation_face_name)
+
+            # Get edges in clockwise order around the rotation face
+            rotation_edges = internal_3x3.layout.get_face_edge_rotation_cw(rotation_face)
+            cycle_faces_ordered = [edge.get_other_face(rotation_face) for edge in rotation_edges]
+
+            # Pick first two consecutive faces (random starting point in the cycle)
+            fidx = random.randint(0, 3)
+            first_face = cycle_faces_ordered[fidx]
+            second_face = cycle_faces_ordered[(fidx + 1) % 4]
+
+            # Find shared edge between first two faces - this IS the starting edge
+            shared_edge: Edge | None = first_face.get_shared_edge(second_face)
+            assert shared_edge is not None, f"No shared edge between {first_face.name} and {second_face.name}"
+
+            current_face: Face = first_face
+            current_edge: Edge = shared_edge
+
+            # Virtual point coordinates for reference
+            current_index: int = 0  # which slice
+            slot: int = 0  # position along slice
+
+            # Determine if current_index needs to be inverted based on alignment with rotation face
+            if not self.does_slice_of_face_start_with_face(current_face.name):
+                current_index = inv(current_index)
+
+            face_infos: list[FaceWalkingInfoUnit] = []
+
+            def actual_inv(actual_n_slices: int, si: int) -> int:
+                return actual_n_slices - 1 - si
+
+            # Point computation functions - 8 combinations of (horizontal, slot_inverted, index_inverted)
+            def _compute_h_si_ii(actual_n_slices: int, si: int, sl: int) -> Point:
+                return (actual_inv(actual_n_slices, sl), actual_inv(actual_n_slices, si))
+
+            def _compute_h_si(actual_n_slices: int, si: int, sl: int) -> Point:
+                return (actual_inv(actual_n_slices, sl), si)
+
+            def _compute_h_ii(actual_n_slices: int, si: int, sl: int) -> Point:
+                return (sl, actual_inv(actual_n_slices, si))
+
+            def _compute_h(actual_n_slices: int, si: int, sl: int) -> Point:
+                return (sl, si)
+
+            def _compute_v_si_ii(actual_n_slices: int, si: int, sl: int) -> Point:
+                return (actual_inv(actual_n_slices, si), actual_inv(actual_n_slices, sl))
+
+            def _compute_v_si(actual_n_slices: int, si: int, sl: int) -> Point:
+                return (si, actual_inv(actual_n_slices, sl))
+
+            def _compute_v_ii(actual_n_slices: int, si: int, sl: int) -> Point:
+                return (actual_inv(actual_n_slices, si), sl)
+
+            def _compute_v(actual_n_slices: int, si: int, sl: int) -> Point:
+                return (si, sl)
+
+            for iteration in range(4):
+                # Determine edge properties
+                is_horizontal = current_face.is_bottom_or_top(current_edge)
+                is_slot_inverted = (
+                    current_face.is_top_edge(current_edge) if is_horizontal
+                    else current_face.is_right_edge(current_edge)
+                )
+                is_index_inverted = current_index != 0
+
+                # Compute reference_point for (slice_index=0, slot=0)
+                if is_horizontal:
+                    reference_point: Point = (inv(slot) if is_slot_inverted else slot, current_index)
+                else:
+                    reference_point = (current_index, inv(slot) if is_slot_inverted else slot)
+
+                # Select precomputed point function based on edge properties
+                if is_horizontal and is_slot_inverted and is_index_inverted:
+                    compute_fn = _compute_h_si_ii
+                elif is_horizontal and is_slot_inverted and not is_index_inverted:
+                    compute_fn = _compute_h_si
+                elif is_horizontal and not is_slot_inverted and is_index_inverted:
+                    compute_fn = _compute_h_ii
+                elif is_horizontal and not is_slot_inverted and not is_index_inverted:
+                    compute_fn = _compute_h
+                elif not is_horizontal and is_slot_inverted and is_index_inverted:
+                    compute_fn = _compute_v_si_ii
+                elif not is_horizontal and is_slot_inverted and not is_index_inverted:
+                    compute_fn = _compute_v_si
+                elif not is_horizontal and not is_slot_inverted and is_index_inverted:
+                    compute_fn = _compute_v_ii
+                else:
+                    compute_fn = _compute_v
+
+                face_infos.append(FaceWalkingInfoUnit(
+                    face=current_face,
+                    edge=current_edge,
+                    reference_point=reference_point,
+                    n_slices=fake_n_slices,
+                    _compute=compute_fn
+                ))
+
+                # Move to next face (except after the 4th)
+                if len(face_infos) < 4:
+                    next_face = current_edge.get_other_face(current_face)
+                    next_edge: Edge = current_edge.opposite(next_face)
+
+                    next_slice_index = current_edge.get_slice_index_from_ltr_index_arbitrary_n_slices(
+                        fake_n_slices,
+                        current_face, current_index
+                    )
+                    current_index = current_edge.get_ltr_index_from_slice_index_arbitrary_n_slices(
+                        fake_n_slices,
+                        next_face, next_slice_index
+                    )
+                    current_edge = next_edge
+                    current_face = next_face
+
+            return CubeWalkingInfoUnit(
+                slice_name=slice_name,
+                rotation_face=rotation_face_name,
+                n_slices=fake_n_slices,
+                face_infos=tuple(face_infos)
+            )
+
+        # Use cache manager from layout - cache by slice_name only (size-independent!)
+        cache_key = self._slice_name
+        cache = self._layout.cache_manager.get("SliceLayout.create_walking_info_unit", CubeWalkingInfoUnit)
         return cache.compute(cache_key, compute)
