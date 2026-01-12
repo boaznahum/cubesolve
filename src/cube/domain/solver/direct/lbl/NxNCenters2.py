@@ -229,9 +229,7 @@ class NxNCenters2(SolverElement):
         # this si solver data not visualization
         center_piece.edge.c_attributes["NxNCenters2_center_pice_solved"] = True
 
-    def _mark_piece_with_v_mark_if_solved(self, target_face: FaceTracker, center_piece: CenterSlice) -> None:
-
-        req_color = target_face.color
+    def _mark_piece_with_v_mark_if_solved(self, req_color: Color, center_piece: CenterSlice) -> None:
 
         if center_piece.color != req_color:
             return
@@ -272,7 +270,7 @@ class NxNCenters2(SolverElement):
 
             slice_piece = target_face.face.center.get_center_slice(rc)
 
-            self._mark_piece_with_v_mark_if_solved(target_face, slice_piece)
+            self._mark_piece_with_v_mark_if_solved(target_face.color, slice_piece)
 
             self._tracke_center_slice(slice_piece, rc[1])
         try:
@@ -404,7 +402,7 @@ class NxNCenters2(SolverElement):
 
             slice_piece = target_face.face.center.get_center_slice(rc)
 
-            self._mark_piece_with_v_mark_if_solved(target_face, slice_piece)
+            self._mark_piece_with_v_mark_if_solved(target_face.color, slice_piece)
 
 
         color = target_face.color
@@ -439,7 +437,7 @@ class NxNCenters2(SolverElement):
 
                 self.debug(f"Fixed slice {rc}")
 
-                self._mark_piece_with_v_mark_if_solved(target_face, center_slice)
+                self._mark_piece_with_v_mark_if_solved(target_face.color, center_slice)
 
                 work_done = True
 
@@ -450,7 +448,8 @@ class NxNCenters2(SolverElement):
 
         return work_done
 
-    def _source_point_has_color(self, required_color, source_face, s: Point, s2: Point) -> Point | None:
+    def _source_point_has_color(self, target_point_color: Color,
+                                required_color, source_face, s: Point, s2: Point) -> Tuple[Point, Point] | None:
         """Search for source point with required color, checking 4 rotations."""
 
         parent = self
@@ -474,14 +473,16 @@ class NxNCenters2(SolverElement):
                     f">>Color {color_on_source} on {s2}  matches {required_color}")
 
                 # we dont want to destroy
-                second_color_on_source: Color = source_face.center.get_center_slice(s2).color
+                second_pont_color_on_source: Color = source_face.center.get_center_slice(s2).color
                 # !!!!!!!!!!!!!!!!!!!!!!!! bug for even cube
-                # if second_color_on_source == source_face.color:
-                if self._is_cent_piece_solved(source_face.center.get_center_slice(s2)):
+                # if second_pont_color_on_source == source_face.color:
+                # but if it is the same color as target that is going to replace then it is ok
+                #
+                if target_point_color != second_pont_color_on_source and self._is_cent_piece_solved(source_face.center.get_center_slice(s2)):
                     parent.debug(
-                        f"❌❌❌❌❌❌❌❌ We dont want to destroy source {s2} {second_color_on_source}")
+                        f"❌❌❌❌❌❌❌❌ We dont want to destroy source {s2} {second_pont_color_on_source} which will be replaced by color {target_point_color}")
                 else:
-                    return s
+                    return s, s2
 
             s = parent.cube.cqr.rotate_point_clockwise(s)
             s2 = parent.cube.cqr.rotate_point_clockwise(s2)
@@ -525,10 +526,16 @@ class NxNCenters2(SolverElement):
         # Step 2 - Search for source point with required color at natural position
         natural_source = dry_result.source_point
 
-        source_point_with_color = self._source_point_has_color(required_color, source_face, natural_source,
+        target_point_color: Color = target_face.center.get_center_slice(target_point).color
+
+        source_point_and_second_source_point: Tuple[Point, Point] = self._source_point_has_color(target_point_color, required_color, source_face, natural_source,
                                                          second_point_on_source)
-        if source_point_with_color is None:
+
+        if source_point_and_second_source_point is None:
             return False
+
+        source_point_with_color = source_point_and_second_source_point[0]
+        second_point_on_source = source_point_and_second_source_point[1]
 
         # OPTIMIZATION: Step 3 - Execute with cached computation (_cached_secret)
         # This reuses the _InternalCommData from Step 1, avoiding redundant calculations
@@ -542,6 +549,10 @@ class NxNCenters2(SolverElement):
             dry_run=False,
             _cached_secret=dry_result  # ← OPTIMIZATION: Reuse computation from Step 1
         )
+
+        # if second point on source was replaced by the right color, then it is ok
+        self._mark_piece_with_v_mark_if_solved(required_color,
+                                               source_face.center.get_center_slice(second_point_on_source))
 
         return True
 
