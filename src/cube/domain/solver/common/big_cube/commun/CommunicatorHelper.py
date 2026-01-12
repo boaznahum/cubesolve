@@ -17,18 +17,19 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple, TypeAlias
+
 import yaml
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.SliceAlg import SliceAlg
-from cube.domain.model import FaceName, Cube, CenterSlice
-from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.model.Face import Face
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
-from cube.domain.model.SliceName import SliceName
-from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.geometric.slice_layout import CLGColRow
+from cube.domain.model import FaceName, Cube, CenterSlice
+from cube.domain.model.Face import Face
+from cube.domain.model.SliceName import SliceName
+from cube.domain.solver.AnnWhat import AnnWhat
+from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -63,10 +64,10 @@ class CommutatorResult:
     """
     slice_name: SliceName
     source_point: Point
-    algorithm: Alg | None
-    natural_source: Point | None = None
-    target_point: Point | None = None
-    second_replaced_with_target_point_on_source: Point | None = None
+    algorithm: Alg
+    natural_source: Point
+    target_point: Point
+    second_replaced_with_target_point_on_source: Point
     _secret: _InternalCommData | None = None
 
 
@@ -455,19 +456,35 @@ class CommunicatorHelper(SolverElement):
                 """Headline for annotation - block size info."""
                 return ", 1x1 communicator"  # pragma: no cover
 
-            # Execute with animation annotations
-            with self.ann.annotate(
-                    (_ann_source, AnnWhat.Moved),
-                    (_ann_target, AnnWhat.FixedPosition),
-                    h2=_h2
-            ):
-                if source_setup_n_rotate:
-                    self.op.play(source_setup_alg)
-                self.op.play(cum)
+            # Get s2 piece for at-risk marker (piece that will be replaced by target)
+            s2_center_slice: CenterSlice = source_face.center.get_center_slice(xpt_on_source_after_un_setup)
+            s2_edge = s2_center_slice.edge
 
-            # CAGE METHOD: Undo source rotation to preserve paired edges
-            if preserve_state and source_setup_n_rotate:
-                self.op.play(source_setup_alg.prime)
+            # Add at-risk marker for s2 (red X to warn this piece may be destroyed)
+
+            #claude: probelm here we creae even no annoataaatin
+            mf = self.cube.sp.marker_factory
+            mm = self.cube.sp.marker_manager
+            at_risk_marker = mf.at_risk()
+            mm.add_marker(s2_edge, "at_risk", at_risk_marker, moveable=True)
+
+            try:
+                # Execute with animation annotations
+                with self.ann.annotate(
+                        (_ann_source, AnnWhat.Moved),
+                        (_ann_target, AnnWhat.FixedPosition),
+                        h2=_h2
+                ):
+                    if source_setup_n_rotate:
+                        self.op.play(source_setup_alg)
+                    self.op.play(cum)
+
+                # CAGE METHOD: Undo source rotation to preserve paired edges
+                if preserve_state and source_setup_n_rotate:
+                    self.op.play(source_setup_alg.prime)
+            finally:
+                # Remove at-risk marker after execution
+                mm.remove_all("at_risk", (s.edge for c in self.cube.centers for s in c.all_slices), moveable=True)
 
         final_algorithm = (source_setup_alg + cum + source_setup_alg.prime).simplify()
 

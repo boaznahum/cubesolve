@@ -118,6 +118,11 @@ class MarkerManager(IMarkerManager):
 
         Returns:
             True if marker was found and removed, False otherwise.
+
+        Note:
+            BUG: Silently fails if wrong type (e.g. PartSlice) is passed instead
+            of PartEdge - no exception, just returns False. Consider adding
+            runtime isinstance check.
         """
         removed = False
 
@@ -152,6 +157,11 @@ class MarkerManager(IMarkerManager):
 
         Returns:
             Number of parts where the marker was removed.
+
+        Note:
+            BUG: Silently fails if wrong type (e.g. PartSlice) is passed instead
+            of PartEdge - no exception, just returns 0. Consider adding
+            runtime isinstance check.
         """
         count = 0
         for part in parts:

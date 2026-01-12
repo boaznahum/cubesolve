@@ -292,7 +292,6 @@ class WebAppWindow(AppWindow):
             commands: Sequence of commands to execute
             on_complete: Optional callback when all commands complete
         """
-        from cube.presentation.gui.commands import CommandSequence
 
         # Convert list to CommandSequence if needed
         if isinstance(commands, list):

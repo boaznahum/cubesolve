@@ -467,8 +467,7 @@ class NxNCenters2(SolverElement):
         )
 
         # is we are going to destroy second piece on the source
-        second_point_on_source = dry_result.second_replaced_with_target_point_on_source
-        second_piece_on_source = source_face.center.get_center_slice(second_point_on_source)
+        second_point_on_source: Point = dry_result.second_replaced_with_target_point_on_source
 
         # Step 2 - Search for source point with required color at natural position
         natural_source = dry_result.source_point
@@ -476,12 +475,13 @@ class NxNCenters2(SolverElement):
 
         def source_point_has_color(s: Point, second_source: Point) -> Point | None:
             """Search for source point with required color, checking 4 rotations."""
+
             for n in range(4):
                 color_on_source = source_face.center.get_center_slice(s).color
                 if color_on_source == required_color:
 
                     # we dont want to destroy
-                    second_color_on_source = source_face.center.get_center_slice(s).color
+                    second_color_on_source = source_face.center.get_center_slice(second_point_on_source).color
                     # !!!!!!!!!!!!!!!!!!!!!!!! bug for even cube
                     if second_color_on_source == source_face.color:
                         self.debug(f"❌❌❌❌❌❌❌❌ We dont want to destroy source {second_source} {second_color_on_source}")

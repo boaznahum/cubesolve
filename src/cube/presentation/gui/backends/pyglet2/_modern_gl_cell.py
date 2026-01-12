@@ -649,6 +649,151 @@ class ModernGLCell:
             add_capsule(bottom, tip_left, radius)   # Short leg
             add_capsule(bottom, tip_right, radius)  # Long leg
 
+    def generate_bold_cross_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
+        """Generate triangle vertices for bold cross (X) markers.
+
+        Creates a thick X shape using capsules (like checkmark but X shape).
+        Used for at-risk markers to warn about pieces that may be destroyed.
+
+        Appends triangles to dest.
+        Each vertex: x, y, z, nx, ny, nz, r, g, b (9 floats)
+
+        Args:
+            dest: List to append vertex data to
+            markers: Optional pre-fetched markers list (avoids repeated lookups)
+        """
+        if markers is None:
+            markers = self.get_markers()
+        if not markers:
+            return
+
+        # Find bold cross markers
+        cross_markers = [m for m in markers if m.shape == MarkerShape.BOLD_CROSS]
+        if not cross_markers:
+            return
+
+        lb, rb, rt, lt = self._corners
+        normal_vec = self._normal
+
+        # Calculate cell center and edge vectors
+        center = (lb + rb + rt + lt) / 4.0
+        right_vec = (rb - lb) / 2.0  # Half-width vector pointing right
+        up_vec = (lt - lb) / 2.0     # Half-height vector pointing up
+
+        # Cell size for scaling
+        cell_width = float(np.linalg.norm(rb - lb))
+        cell_height = float(np.linalg.norm(lt - lb))
+        cell_size = min(cell_width, cell_height)
+
+        # Number of segments for rounded shapes
+        segments = 12
+
+        for marker in cross_markers:
+            # Get marker color (red by default for at-risk)
+            if marker.color is not None:
+                r, g, b = marker.color
+            else:
+                r, g, b = 1.0, 0.2, 0.2  # Default red
+
+            # Capsule radius (tube thickness) - bold strokes
+            radius = marker.thickness * 0.14 * cell_size
+
+            # Height above surface
+            height_above = marker.height_offset * cell_size + radius * 0.5
+
+            # X dimensions based on radius_factor
+            scale = marker.radius_factor * 0.7
+
+            # Four corners of the X (at center height)
+            top_left = center + right_vec * (-0.4 * scale) + up_vec * (0.4 * scale) + normal_vec * height_above
+            top_right = center + right_vec * (0.4 * scale) + up_vec * (0.4 * scale) + normal_vec * height_above
+            bottom_left = center + right_vec * (-0.4 * scale) + up_vec * (-0.4 * scale) + normal_vec * height_above
+            bottom_right = center + right_vec * (0.4 * scale) + up_vec * (-0.4 * scale) + normal_vec * height_above
+
+            # Helper: Generate a capsule (cylinder with hemispherical ends) between two points
+            def add_capsule(p1: ndarray, p2: ndarray, cap_radius: float) -> None:
+                """Add a capsule shape between two 3D points."""
+                direction = p2 - p1
+                length = float(np.linalg.norm(direction))
+                if length < 0.001:
+                    return
+                direction = direction / length
+
+                # Create perpendicular vectors for the circular cross-section
+                if abs(direction[0]) < 0.9:
+                    up = np.array([1.0, 0.0, 0.0])
+                else:
+                    up = np.array([0.0, 1.0, 0.0])
+                perp1 = np.cross(direction, up)
+                perp1 = perp1 / np.linalg.norm(perp1)
+                perp2 = np.cross(direction, perp1)
+
+                # Generate cylinder body
+                for i in range(segments):
+                    angle1 = 2 * math.pi * i / segments
+                    angle2 = 2 * math.pi * (i + 1) / segments
+
+                    cos1, sin1 = math.cos(angle1), math.sin(angle1)
+                    cos2, sin2 = math.cos(angle2), math.sin(angle2)
+
+                    offset1 = (cos1 * perp1 + sin1 * perp2) * cap_radius
+                    offset2 = (cos2 * perp1 + sin2 * perp2) * cap_radius
+
+                    c1_p1 = p1 + offset1
+                    c2_p1 = p1 + offset2
+                    c1_p2 = p2 + offset1
+                    c2_p2 = p2 + offset2
+
+                    n1 = cos1 * perp1 + sin1 * perp2
+                    n2 = cos2 * perp1 + sin2 * perp2
+
+                    # Two triangles for the quad
+                    dest.extend([c1_p1[0], c1_p1[1], c1_p1[2], n1[0], n1[1], n1[2], r, g, b])
+                    dest.extend([c2_p1[0], c2_p1[1], c2_p1[2], n2[0], n2[1], n2[2], r, g, b])
+                    dest.extend([c2_p2[0], c2_p2[1], c2_p2[2], n2[0], n2[1], n2[2], r, g, b])
+                    dest.extend([c1_p1[0], c1_p1[1], c1_p1[2], n1[0], n1[1], n1[2], r, g, b])
+                    dest.extend([c2_p2[0], c2_p2[1], c2_p2[2], n2[0], n2[1], n2[2], r, g, b])
+                    dest.extend([c1_p2[0], c1_p2[1], c1_p2[2], n1[0], n1[1], n1[2], r, g, b])
+
+                # Generate hemispherical end caps
+                half_segments = segments // 2
+                for end_point, end_dir in [(p1, -direction), (p2, direction)]:
+                    for j in range(half_segments):
+                        lat1 = math.pi / 2 * j / half_segments
+                        lat2 = math.pi / 2 * (j + 1) / half_segments
+
+                        cos_lat1, sin_lat1 = math.cos(lat1), math.sin(lat1)
+                        cos_lat2, sin_lat2 = math.cos(lat2), math.sin(lat2)
+
+                        for i in range(segments):
+                            lon1 = 2 * math.pi * i / segments
+                            lon2 = 2 * math.pi * (i + 1) / segments
+
+                            cos_lon1, sin_lon1 = math.cos(lon1), math.sin(lon1)
+                            cos_lon2, sin_lon2 = math.cos(lon2), math.sin(lon2)
+
+                            def sphere_point(cos_lat: float, sin_lat: float, cos_lon: float, sin_lon: float) -> tuple[ndarray, ndarray]:
+                                local_n = sin_lat * end_dir + cos_lat * (cos_lon * perp1 + sin_lon * perp2)
+                                point = end_point + cap_radius * local_n
+                                return point, local_n
+
+                            p1_s, n1_s = sphere_point(cos_lat1, sin_lat1, cos_lon1, sin_lon1)
+                            p2_s, n2_s = sphere_point(cos_lat1, sin_lat1, cos_lon2, sin_lon2)
+                            p3_s, n3_s = sphere_point(cos_lat2, sin_lat2, cos_lon2, sin_lon2)
+                            p4_s, n4_s = sphere_point(cos_lat2, sin_lat2, cos_lon1, sin_lon1)
+
+                            dest.extend([p1_s[0], p1_s[1], p1_s[2], n1_s[0], n1_s[1], n1_s[2], r, g, b])
+                            dest.extend([p2_s[0], p2_s[1], p2_s[2], n2_s[0], n2_s[1], n2_s[2], r, g, b])
+                            dest.extend([p3_s[0], p3_s[1], p3_s[2], n3_s[0], n3_s[1], n3_s[2], r, g, b])
+
+                            dest.extend([p1_s[0], p1_s[1], p1_s[2], n1_s[0], n1_s[1], n1_s[2], r, g, b])
+                            dest.extend([p3_s[0], p3_s[1], p3_s[2], n3_s[0], n3_s[1], n3_s[2], r, g, b])
+                            dest.extend([p4_s[0], p4_s[1], p4_s[2], n4_s[0], n4_s[1], n4_s[2], r, g, b])
+
+            # Draw the two diagonal strokes of the X as capsules
+            add_capsule(top_left, bottom_right, radius)    # \ stroke
+            add_capsule(bottom_left, top_right, radius)    # / stroke
+
     def generate_character_line_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
         """Generate line vertices for character markers.
 
@@ -822,8 +967,11 @@ class ModernGLCell:
         # Generate checkmark markers (filled triangles)
         self.generate_checkmark_vertices(dest, markers)
 
-        # Filter to only ring/circle markers (exclude CROSS, ARROW, CHARACTER, CHECKMARK)
-        ring_markers = [m for m in markers if m.shape not in (MarkerShape.CROSS, MarkerShape.ARROW, MarkerShape.CHARACTER, MarkerShape.CHECKMARK)]
+        # Generate bold cross markers (filled triangles)
+        self.generate_bold_cross_vertices(dest, markers)
+
+        # Filter to only ring/circle markers (exclude CROSS, ARROW, CHARACTER, CHECKMARK, BOLD_CROSS)
+        ring_markers = [m for m in markers if m.shape not in (MarkerShape.CROSS, MarkerShape.ARROW, MarkerShape.CHARACTER, MarkerShape.CHECKMARK, MarkerShape.BOLD_CROSS)]
         if not ring_markers:
             return
 

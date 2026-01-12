@@ -81,6 +81,26 @@ class MarkerFactory(IMarkerFactory):
             )
         return MarkerFactory._cache[key]
 
+    def at_risk(self) -> MarkerConfig:
+        """At-risk marker - bold red X for pieces that may be destroyed.
+
+        Used in commutator 3-cycle to mark the s2 piece (second point on source)
+        which will be replaced by whatever is at the target position.
+        This warns the user that this piece is at risk of being destroyed.
+
+        Uses BOLD_CROSS shape (thick capsule strokes like CHECKMARK).
+        """
+        key = ("at_risk",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.BOLD_CROSS,
+                color=(1.0, 0.2, 0.2),  # Red
+                radius_factor=0.85,     # Same as checkmark
+                thickness=1.0,          # Bold strokes
+                height_offset=0.15,     # Same as c1/c2
+            )
+        return MarkerFactory._cache[key]
+
     # ============================================================
     # Coordinate Markers (used by Face initialization)
     # ============================================================

@@ -33,6 +33,10 @@ class IMarkerFactory(Protocol):
         """C2 marker - destination slot indicator."""
         ...
 
+    def at_risk(self) -> MarkerConfig:
+        """At-risk marker - bold red X for pieces that may be destroyed."""
+        ...
+
     # ============================================================
     # Coordinate Markers
     # ============================================================

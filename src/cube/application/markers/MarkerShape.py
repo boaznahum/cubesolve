@@ -24,3 +24,4 @@ class MarkerShape(Enum):
 
     # Special shapes
     CHECKMARK = "checkmark"    # Thick checkmark/tick mark (✓)
+    BOLD_CROSS = "bold_cross"  # Thick X mark (like checkmark but X shape)
