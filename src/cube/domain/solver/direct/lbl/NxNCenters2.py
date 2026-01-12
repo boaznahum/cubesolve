@@ -106,9 +106,6 @@ class NxNCenters2(SolverElement):
         self._preserve_cage = preserve_cage
         self._comm_helper = CommunicatorHelper(slv)
 
-    def debug(self, *args, level=3):
-        if level <= NxNCenters2.D_LEVEL:
-            super().debug("NxX 2 Centers:", args)
 
     def solve_single_center_row_slice(
             self, l1_white_tracker: FaceTracker, face_tracker: FaceTracker, slice_index: int
@@ -224,8 +221,15 @@ class NxNCenters2(SolverElement):
 
                 yield cs, rc
 
+    def _is_cent_piece_solved(self, center_piece: CenterSlice) -> bool:
+        # this si solver data not visualization
+        return "NxNCenters2_center_pice_solved" in center_piece.edge.c_attributes
 
-    def _mark_piece_with_v_mark(self, target_face: FaceTracker, center_piece: CenterSlice) -> None:
+    def _mark_center_piece_solved(self, center_piece: CenterSlice) -> None:
+        # this si solver data not visualization
+        center_piece.edge.c_attributes["NxNCenters2_center_pice_solved"] = True
+
+    def _mark_piece_with_v_mark_if_solved(self, target_face: FaceTracker, center_piece: CenterSlice) -> None:
 
         req_color = target_face.color
 
@@ -237,7 +241,12 @@ class NxNCenters2(SolverElement):
 
         checkmark = mf.checkmark()  # Green checkmark
 
+        # visualization only
         mm.add_marker(center_piece.edge, "checkmark", checkmark, moveable=True)
+
+        # this is algorithm !!!
+        self._mark_center_piece_solved(center_piece)
+
 
 
 
@@ -263,7 +272,7 @@ class NxNCenters2(SolverElement):
 
             slice_piece = target_face.face.center.get_center_slice(rc)
 
-            self._mark_piece_with_v_mark(target_face, slice_piece)
+            self._mark_piece_with_v_mark_if_solved(target_face, slice_piece)
 
             self._tracke_center_slice(slice_piece, rc[1])
         try:
@@ -395,7 +404,7 @@ class NxNCenters2(SolverElement):
 
             slice_piece = target_face.face.center.get_center_slice(rc)
 
-            self._mark_piece_with_v_mark(target_face, slice_piece)
+            self._mark_piece_with_v_mark_if_solved(target_face, slice_piece)
 
 
         color = target_face.color
@@ -417,10 +426,11 @@ class NxNCenters2(SolverElement):
                                           target_face.face,
                                           source_face.face,
                                           rc)
+            center_slice = target_face.face.center.get_center_slice(rc)
+            after_fixed_color = center_slice.color
+
             if wd:
 
-                center_slice = target_face.face.center.get_center_slice(rc)
-                after_fixed_color = center_slice.color
 
                 if after_fixed_color != color:
                     raise InternalSWError(f"Slice was not fixed {rc}, " +
@@ -429,11 +439,54 @@ class NxNCenters2(SolverElement):
 
                 self.debug(f"Fixed slice {rc}")
 
-                self._mark_piece_with_v_mark(target_face, center_slice)
+                self._mark_piece_with_v_mark_if_solved(target_face, center_slice)
 
                 work_done = True
 
+            # in this step we dont know to give a warning if not yet solved it is only single source
+
+
+
+
         return work_done
+
+    def _source_point_has_color(self, required_color, source_face, s: Point, s2: Point) -> Point | None:
+        """Search for source point with required color, checking 4 rotations."""
+
+        parent = self
+
+        parent.debug(
+            f"Start to search for {required_color} from point {s} on {source_face.color_at_face_str} ")
+
+        for n in range(4):
+
+            color_on_source = source_face.center.get_center_slice(s).color
+
+            # calude: use lazy see issue #63
+            parent.debug(
+                f">>Rotate #{n} Searching for {required_color} on {source_face.color_at_face_str}  @{s} color {color_on_source}")
+            parent.debug(
+                f">>Source face color is {source_face.color} Second point is  {s2}  color {source_face.center.get_center_slice(s2).color}")
+
+            if color_on_source == required_color:
+
+                parent.debug(
+                    f">>Color {color_on_source} on {s2}  matches {required_color}")
+
+                # we dont want to destroy
+                second_color_on_source: Color = source_face.center.get_center_slice(s2).color
+                # !!!!!!!!!!!!!!!!!!!!!!!! bug for even cube
+                # if second_color_on_source == source_face.color:
+                if self._is_cent_piece_solved(source_face.center.get_center_slice(s2)):
+                    parent.debug(
+                        f"❌❌❌❌❌❌❌❌ We dont want to destroy source {s2} {second_color_on_source}")
+                else:
+                    return s
+
+            s = parent.cube.cqr.rotate_point_clockwise(s)
+            s2 = parent.cube.cqr.rotate_point_clockwise(s2)
+
+        return None
 
     def _block_communicator(self,
                             required_color: Color,
@@ -472,30 +525,8 @@ class NxNCenters2(SolverElement):
         # Step 2 - Search for source point with required color at natural position
         natural_source = dry_result.source_point
 
-
-        def source_point_has_color(s: Point, second_source: Point) -> Point | None:
-            """Search for source point with required color, checking 4 rotations."""
-
-            for n in range(4):
-                color_on_source = source_face.center.get_center_slice(s).color
-                if color_on_source == required_color:
-
-                    # we dont want to destroy
-                    second_color_on_source = source_face.center.get_center_slice(second_point_on_source).color
-                    # !!!!!!!!!!!!!!!!!!!!!!!! bug for even cube
-                    if second_color_on_source == source_face.color:
-                        self.debug(f"❌❌❌❌❌❌❌❌ We dont want to destroy source {second_source} {second_color_on_source}")
-                    else:
-                        return s
-
-                s = self.cube.cqr.rotate_point_clockwise(s)
-                second_source = self.cube.cqr.rotate_point_clockwise(second_source)
-
-
-
-            return None
-
-        source_point_with_color = source_point_has_color(natural_source, second_point_on_source)
+        source_point_with_color = self._source_point_has_color(required_color, source_face, natural_source,
+                                                         second_point_on_source)
         if source_point_with_color is None:
             return False
 
@@ -524,3 +555,5 @@ class NxNCenters2(SolverElement):
             yield slice_index, c
 
     D_LEVEL = 3
+
+
