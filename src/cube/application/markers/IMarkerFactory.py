@@ -12,6 +12,9 @@ class IMarkerFactory(Protocol):
 
     Defines the interface for creating predefined and custom markers.
     All code should depend on this protocol, not the concrete implementation.
+
+    All factory methods should use caching (singleton pattern) - calling the same
+    method with the same arguments returns the same MarkerConfig instance every time.
     """
 
     # ============================================================
@@ -68,7 +71,6 @@ class IMarkerFactory(Protocol):
 
     def create_ring(
         self,
-        name: str,
         color: tuple[float, float, float] | None = None,
         radius_factor: float = 1.0,
         thickness: float = 0.5,
@@ -80,7 +82,6 @@ class IMarkerFactory(Protocol):
 
     def create_filled_circle(
         self,
-        name: str,
         color: tuple[float, float, float] | None = None,
         radius_factor: float = 0.6,
         height_offset: float = 0.1,
@@ -91,10 +92,16 @@ class IMarkerFactory(Protocol):
 
     def create_cross(
         self,
-        name: str,
         color: tuple[float, float, float],
     ) -> MarkerConfig:
         """Create a custom cross marker."""
+        ...
+
+    def checkmark(
+        self,
+        color: tuple[float, float, float] = (0.0, 0.8, 0.0),
+    ) -> MarkerConfig:
+        """Create a thick green checkmark (✓) marker."""
         ...
 
     def char(

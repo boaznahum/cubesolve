@@ -1,4 +1,4 @@
-"""Factory for predefined marker configurations."""
+"""Factory for predefined marker configurations with singleton caching."""
 from __future__ import annotations
 
 from .IMarkerFactory import IMarkerFactory
@@ -16,8 +16,15 @@ class MarkerFactory(IMarkerFactory):
     - Coordinate markers: ORIGIN, ON_X, ON_Y
     - Debug/sample markers
 
+    All factory methods use caching (singleton pattern) - calling the same method
+    with the same arguments returns the same MarkerConfig instance every time.
+    The cache is maintained at the class level, shared across all instances.
+
     Developers can also create custom markers using create_* methods.
     """
+
+    # Class-level cache for singleton instances
+    _cache: dict[tuple[str, ...], MarkerConfig] = {}
 
     # ============================================================
     # Animation Markers (used by solver/animation system)
@@ -29,14 +36,16 @@ class MarkerFactory(IMarkerFactory):
         Full ring in complementary color, used to mark tracker anchor pieces
         during even-cube center solving.
         """
-        return MarkerConfig(
-            name="C0",
-            shape=MarkerShape.RING,
-            radius_factor=1.0,
-            thickness=0.8,
-            height_offset=0.15,
-            use_complementary_color=True,
-        )
+        key = ("c0",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.RING,
+                radius_factor=1.0,
+                thickness=0.8,
+                height_offset=0.15,
+                use_complementary_color=True,
+            )
+        return MarkerFactory._cache[key]
 
     def c1(self) -> MarkerConfig:
         """C1 marker - moved piece indicator.
@@ -44,14 +53,16 @@ class MarkerFactory(IMarkerFactory):
         Filled circle in complementary color, marks pieces that are being
         tracked during animation (follows the sticker color).
         """
-        return MarkerConfig(
-            name="C1",
-            shape=MarkerShape.FILLED_CIRCLE,
-            radius_factor=0.6,
-            thickness=1.0,
-            height_offset=0.15,
-            use_complementary_color=True,
-        )
+        key = ("c1",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.FILLED_CIRCLE,
+                radius_factor=0.6,
+                thickness=1.0,
+                height_offset=0.15,
+                use_complementary_color=True,
+            )
+        return MarkerFactory._cache[key]
 
     def c2(self) -> MarkerConfig:
         """C2 marker - destination slot indicator.
@@ -59,14 +70,16 @@ class MarkerFactory(IMarkerFactory):
         Thin ring in complementary color, marks the destination position
         where a piece should end up (stays at fixed position).
         """
-        return MarkerConfig(
-            name="C2",
-            shape=MarkerShape.RING,
-            radius_factor=1.0,
-            thickness=0.3,
-            height_offset=0.15,
-            use_complementary_color=True,
-        )
+        key = ("c2",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.RING,
+                radius_factor=1.0,
+                thickness=0.3,
+                height_offset=0.15,
+                use_complementary_color=True,
+            )
+        return MarkerFactory._cache[key]
 
     # ============================================================
     # Coordinate Markers (used by Face initialization)
@@ -77,42 +90,48 @@ class MarkerFactory(IMarkerFactory):
 
         Black X cross marking the [0,0] reference point on each face.
         """
-        return MarkerConfig(
-            name="ORIGIN",
-            shape=MarkerShape.CROSS,
-            color=(0.0, 0.0, 0.0),  # Black
-            radius_factor=1.0,
-            thickness=1.0,
-            height_offset=0.0,  # Crosses are drawn at surface level
-        )
+        key = ("origin",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.CROSS,
+                color=(0.0, 0.0, 0.0),  # Black
+                radius_factor=1.0,
+                thickness=1.0,
+                height_offset=0.0,  # Crosses are drawn at surface level
+            )
+        return MarkerFactory._cache[key]
 
     def on_x(self) -> MarkerConfig:
         """On-X marker - X-axis direction indicator.
 
         Blueviolet X cross marking the X-axis direction on each face.
         """
-        return MarkerConfig(
-            name="ON_X",
-            shape=MarkerShape.CROSS,
-            color=(0.54, 0.17, 0.89),  # Blueviolet
-            radius_factor=1.0,
-            thickness=1.0,
-            height_offset=0.0,
-        )
+        key = ("on_x",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.CROSS,
+                color=(0.54, 0.17, 0.89),  # Blueviolet
+                radius_factor=1.0,
+                thickness=1.0,
+                height_offset=0.0,
+            )
+        return MarkerFactory._cache[key]
 
     def on_y(self) -> MarkerConfig:
         """On-Y marker - Y-axis direction indicator.
 
         Deepskyblue X cross marking the Y-axis direction on each face.
         """
-        return MarkerConfig(
-            name="ON_Y",
-            shape=MarkerShape.CROSS,
-            color=(0.0, 0.75, 1.0),  # Deepskyblue
-            radius_factor=1.0,
-            thickness=1.0,
-            height_offset=0.0,
-        )
+        key = ("on_y",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.CROSS,
+                color=(0.0, 0.75, 1.0),  # Deepskyblue
+                radius_factor=1.0,
+                thickness=1.0,
+                height_offset=0.0,
+            )
+        return MarkerFactory._cache[key]
 
     # ============================================================
     # LTR Coordinate System Markers
@@ -123,44 +142,50 @@ class MarkerFactory(IMarkerFactory):
 
         Marks the [0,0] corner of the face's LTR coordinate system.
         """
-        return MarkerConfig(
-            name="LTR_ORIGIN",
-            shape=MarkerShape.FILLED_CIRCLE,
-            color=(0.0, 0.0, 0.0),  # Black
-            radius_factor=0.4,
-            thickness=1.0,
-            height_offset=0.1,
-        )
+        key = ("ltr_origin",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.FILLED_CIRCLE,
+                color=(0.0, 0.0, 0.0),  # Black
+                radius_factor=0.4,
+                thickness=1.0,
+                height_offset=0.1,
+            )
+        return MarkerFactory._cache[key]
 
     def ltr_arrow_x(self) -> MarkerConfig:
         """LTR X-axis arrow - red arrow pointing right.
 
         Indicates the X-axis (left-to-right) direction on each face.
         """
-        return MarkerConfig(
-            name="LTR_ARROW_X",
-            shape=MarkerShape.ARROW,
-            color=(1.0, 0.0, 0.0),  # Red
-            radius_factor=0.8,
-            thickness=1.0,
-            height_offset=0.0,
-            direction=0.0,  # Right
-        )
+        key = ("ltr_arrow_x",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.ARROW,
+                color=(1.0, 0.0, 0.0),  # Red
+                radius_factor=0.8,
+                thickness=1.0,
+                height_offset=0.0,
+                direction=0.0,  # Right
+            )
+        return MarkerFactory._cache[key]
 
     def ltr_arrow_y(self) -> MarkerConfig:
         """LTR Y-axis arrow - blue arrow pointing up.
 
         Indicates the Y-axis (bottom-to-top) direction on each face.
         """
-        return MarkerConfig(
-            name="LTR_ARROW_Y",
-            shape=MarkerShape.ARROW,
-            color=(0.0, 0.0, 1.0),  # Blue
-            radius_factor=0.8,
-            thickness=1.0,
-            height_offset=0.0,
-            direction=90.0,  # Up
-        )
+        key = ("ltr_arrow_y",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.ARROW,
+                color=(0.0, 0.0, 1.0),  # Blue
+                radius_factor=0.8,
+                thickness=1.0,
+                height_offset=0.0,
+                direction=90.0,  # Up
+            )
+        return MarkerFactory._cache[key]
 
     # ============================================================
     # Legacy Markers (with fixed colors from config)
@@ -168,36 +193,42 @@ class MarkerFactory(IMarkerFactory):
 
     def c0_legacy(self) -> MarkerConfig:
         """C0 marker with legacy fixed color (mediumvioletred)."""
-        return MarkerConfig(
-            name="C0_LEGACY",
-            shape=MarkerShape.RING,
-            color=color_255_to_float((199, 21, 133)),  # mediumvioletred
-            radius_factor=1.0,
-            thickness=0.8,
-            height_offset=0.1,
-        )
+        key = ("c0_legacy",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.RING,
+                color=color_255_to_float((199, 21, 133)),  # mediumvioletred
+                radius_factor=1.0,
+                thickness=0.8,
+                height_offset=0.1,
+            )
+        return MarkerFactory._cache[key]
 
     def c1_legacy(self) -> MarkerConfig:
         """C1 marker with legacy fixed color (mediumvioletred)."""
-        return MarkerConfig(
-            name="C1_LEGACY",
-            shape=MarkerShape.FILLED_CIRCLE,
-            color=color_255_to_float((199, 21, 133)),  # mediumvioletred
-            radius_factor=0.6,
-            thickness=1.0,
-            height_offset=0.1,
-        )
+        key = ("c1_legacy",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.FILLED_CIRCLE,
+                color=color_255_to_float((199, 21, 133)),  # mediumvioletred
+                radius_factor=0.6,
+                thickness=1.0,
+                height_offset=0.1,
+            )
+        return MarkerFactory._cache[key]
 
     def c2_legacy(self) -> MarkerConfig:
         """C2 marker with legacy fixed color (darkgreen)."""
-        return MarkerConfig(
-            name="C2_LEGACY",
-            shape=MarkerShape.RING,
-            color=color_255_to_float((0, 100, 0)),  # darkgreen
-            radius_factor=1.0,
-            thickness=0.3,
-            height_offset=0.1,
-        )
+        key = ("c2_legacy",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.RING,
+                color=color_255_to_float((0, 100, 0)),  # darkgreen
+                radius_factor=1.0,
+                thickness=0.3,
+                height_offset=0.1,
+            )
+        return MarkerFactory._cache[key]
 
     # ============================================================
     # Custom Marker Creation
@@ -205,7 +236,6 @@ class MarkerFactory(IMarkerFactory):
 
     def create_ring(
         self,
-        name: str,
         color: tuple[float, float, float] | None = None,
         radius_factor: float = 1.0,
         thickness: float = 0.5,
@@ -213,49 +243,83 @@ class MarkerFactory(IMarkerFactory):
         use_complementary_color: bool = False,
     ) -> MarkerConfig:
         """Create a custom ring marker."""
-        return MarkerConfig(
-            name=name,
-            shape=MarkerShape.RING,
-            color=color,
-            radius_factor=radius_factor,
-            thickness=thickness,
-            height_offset=height_offset,
-            use_complementary_color=use_complementary_color,
-        )
+        key = ("create_ring", str(color), str(radius_factor), str(thickness), str(height_offset), str(use_complementary_color))
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.RING,
+                color=color,
+                radius_factor=radius_factor,
+                thickness=thickness,
+                height_offset=height_offset,
+                use_complementary_color=use_complementary_color,
+            )
+        return MarkerFactory._cache[key]
 
     def create_filled_circle(
         self,
-        name: str,
         color: tuple[float, float, float] | None = None,
         radius_factor: float = 0.6,
         height_offset: float = 0.1,
         use_complementary_color: bool = False,
     ) -> MarkerConfig:
         """Create a custom filled circle marker."""
-        return MarkerConfig(
-            name=name,
-            shape=MarkerShape.FILLED_CIRCLE,
-            color=color,
-            radius_factor=radius_factor,
-            thickness=1.0,  # Always filled
-            height_offset=height_offset,
-            use_complementary_color=use_complementary_color,
-        )
+        key = ("create_filled_circle", str(color), str(radius_factor), str(height_offset), str(use_complementary_color))
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.FILLED_CIRCLE,
+                color=color,
+                radius_factor=radius_factor,
+                thickness=1.0,  # Always filled
+                height_offset=height_offset,
+                use_complementary_color=use_complementary_color,
+            )
+        return MarkerFactory._cache[key]
 
     def create_cross(
         self,
-        name: str,
         color: tuple[float, float, float],
     ) -> MarkerConfig:
         """Create a custom cross marker."""
-        return MarkerConfig(
-            name=name,
-            shape=MarkerShape.CROSS,
-            color=color,
-            radius_factor=1.0,
-            thickness=1.0,
-            height_offset=0.0,  # Crosses are at surface level
-        )
+        key = ("create_cross", str(color))
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.CROSS,
+                color=color,
+                radius_factor=1.0,
+                thickness=1.0,
+                height_offset=0.0,  # Crosses are at surface level
+            )
+        return MarkerFactory._cache[key]
+
+    # ============================================================
+    # Special Shape Markers
+    # ============================================================
+
+    def checkmark(
+        self,
+        color: tuple[float, float, float] = (0.0, 0.8, 0.0),
+    ) -> MarkerConfig:
+        """Create a thick green checkmark (✓) marker.
+
+        A beautiful, thick checkmark indicating success/completion.
+        Cached by color.
+
+        Args:
+            color: RGB color tuple (0.0-1.0 range). Default bright green.
+
+        Returns:
+            MarkerConfig for the checkmark marker.
+        """
+        key = ("checkmark", str(color))
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.CHECKMARK,
+                color=color,
+                radius_factor=0.85,
+                thickness=1.0,  # Bold strokes
+                height_offset=0.08,  # Low, just above surface
+            )
+        return MarkerFactory._cache[key]
 
     # ============================================================
     # Character Markers
@@ -268,8 +332,7 @@ class MarkerFactory(IMarkerFactory):
     ) -> MarkerConfig:
         """Create a character marker.
 
-        Draws a single character on the cell. Multiple characters with different
-        values can be placed on the same cell (full dataclass equality is used).
+        Draws a single character on the cell. Cached by (character, color) tuple.
 
         Args:
             character: Single character to display (e.g., "A", "1", "+")
@@ -278,22 +341,28 @@ class MarkerFactory(IMarkerFactory):
         Returns:
             MarkerConfig for the character marker.
         """
-        return MarkerConfig(
-            name="CHAR",  # Same name but different character = different marker
-            shape=MarkerShape.CHARACTER,
-            color=color,
-            radius_factor=0.8,
-            thickness=1.0,
-            height_offset=0.1,
-            character=character,
-        )
+        key = ("char", character, str(color))
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.CHARACTER,
+                color=color,
+                radius_factor=0.8,
+                thickness=1.0,
+                height_offset=0.1,
+                character=character,
+            )
+        return MarkerFactory._cache[key]
 
     # ============================================================
     # Get All Predefined Markers
     # ============================================================
 
     def get_all_predefined(self) -> dict[str, MarkerConfig]:
-        """Get all predefined markers as a dictionary."""
+        """Get all predefined markers as a dictionary.
+
+        Note: The keys are suggested names, but callers provide actual names
+        when adding markers via MarkerManager.
+        """
         return {
             "C0": self.c0(),
             "C1": self.c1(),

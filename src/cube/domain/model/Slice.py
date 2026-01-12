@@ -364,22 +364,22 @@ class Slice(SuperElement):
                     prev_c.copy_center_colors(c)
                     prev_c = c
                     if add_markers:
-                        # it is waste of time, we need to be able to set the name by the factory
+                        marker_name = f"idx_{j}"
                         char = mf.char(str(j))
                         if j < 3:
-                            mm.add_marker(c.edge, char, moveable=False, remove_same_name=True)
+                            mm.add_marker(c.edge, marker_name, char, moveable=False)
                         else:
-                            mm.remove_markers_by_name(c.edge, char.name)
+                            mm.remove_marker(c.edge, marker_name, moveable=False)
 
                 c = centers[j + 3 * n_slices]
                 c.copy_center_colors(c0)
                 if add_markers:
-                    # it is waste of time, we need to be able to set the name by the factory
+                    marker_name = f"idx_{j}"
                     char = mf.char(str(j))
                     if j < 3:
-                        mm.add_marker(c.edge, char, moveable=False, remove_same_name=True)
+                        mm.add_marker(c.edge, marker_name, char, moveable=False)
                     else:
-                        mm.remove_markers_by_name(c.edge, char.name)
+                        mm.remove_marker(c.edge, marker_name, moveable=False)
 
     def rotate(self, n=1, slices_indexes: Iterable[int] | None = None):
         """

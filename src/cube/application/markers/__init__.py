@@ -15,15 +15,22 @@ Usage:
 
     # Get or create the marker manager (stored in cube's service provider)
     manager: IMarkerManager = cube.sp.marker_manager
+    factory = cube.sp.marker_factory
 
     # Add a moveable marker (follows piece during rotation)
-    manager.add_marker(part_edge, MarkerFactory.c1(), moveable=True)
+    manager.add_marker(part_edge, "c1", factory.c1(), moveable=True)
 
     # Add a fixed position marker
-    manager.add_marker(part_edge, MarkerFactory.c2(), moveable=False)
+    manager.add_marker(part_edge, "c2", factory.c2(), moveable=False)
 
-    # Get all markers for rendering
+    # Get all markers for rendering (deduplicated, sorted by z_order)
     markers = manager.get_markers(part_edge)
+
+    # Remove a marker by name
+    manager.remove_marker(part_edge, "c1")
+
+    # Remove from multiple parts
+    manager.remove_all("c1", [edge1, edge2, edge3])
 """
 from __future__ import annotations
 
@@ -43,7 +50,8 @@ def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerConfig]:
     """Convenience function to read all markers from a PartEdge.
 
     This function reads markers from all attribute dictionaries (attributes,
-    c_attributes, f_attributes) and returns them sorted by z_order.
+    c_attributes, f_attributes). Visually identical configs are deduplicated
+    (keeping highest z_order), then sorted by z_order for proper layering.
 
     Can be used by renderers without needing a MarkerManager instance.
 
@@ -51,16 +59,25 @@ def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerConfig]:
         part_edge: The sticker to get markers from
 
     Returns:
-        List of MarkerConfig objects, sorted by z_order.
+        List of unique MarkerConfig objects, sorted by z_order.
     """
-    result: list[MarkerConfig] = []
+    all_markers: list[MarkerConfig] = []
     key = "markers"
 
     for attrs in [part_edge.attributes, part_edge.c_attributes, part_edge.f_attributes]:
-        marker_list: list[MarkerConfig] | None = attrs.get(key)
-        if marker_list:
-            result.extend(marker_list)
+        markers_dict: dict[str, MarkerConfig] | None = attrs.get(key)
+        if markers_dict:
+            all_markers.extend(markers_dict.values())
 
+    # Deduplicate: keep highest z_order for each unique config
+    # MarkerConfig is frozen/hashable, so can use as dict key
+    unique: dict[MarkerConfig, MarkerConfig] = {}
+    for marker in all_markers:
+        if marker not in unique or marker.z_order > unique[marker].z_order:
+            unique[marker] = marker
+
+    # Sort by z_order (lowest first, so highest draws on top)
+    result = list(unique.values())
     result.sort(key=lambda m: m.z_order)
     return result
 

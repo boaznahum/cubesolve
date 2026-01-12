@@ -26,7 +26,6 @@ IMarkerFactory (Protocol)     IMarkerManager (Protocol)
 
 #### MarkerConfig (dataclass, frozen=True)
 Immutable configuration for a marker's visual properties:
-- `name`: Type identifier (e.g., "C0", "CHAR", "LTR_ORIGIN")
 - `shape`: MarkerShape enum (RING, FILLED_CIRCLE, CROSS, ARROW, CHARACTER)
 - `color`: RGB tuple (0.0-1.0) or None for complementary color
 - `radius_factor`: Size relative to cell (0.0-1.0)
@@ -36,6 +35,9 @@ Immutable configuration for a marker's visual properties:
 - `z_order`: Drawing order (higher draws on top)
 - `direction`: For ARROW shape, angle in degrees
 - `character`: For CHARACTER shape, the character to display
+
+Note: Marker names are NOT part of the config. Names are provided by callers when
+adding markers via MarkerManager.
 
 #### MarkerShape (Enum)
 Available marker shapes:
@@ -54,17 +56,18 @@ Factory providing predefined markers:
 
 #### MarkerManager (implements IMarkerManager)
 Central manager for marker operations:
-- `add_marker(part_edge, marker, moveable, remove_same_name)`
-- `add_fixed_marker(part_edge, marker)`
-- `remove_marker(part_edge, marker, moveable)`
-- `remove_markers_by_name(part_edge, name, moveable)`
-- `get_markers(part_edge)`
-- `has_markers(part_edge)`
-- `clear_markers(part_edge, moveable)`
+- `add_marker(part_edge, name, marker, moveable)` - Add marker with given name
+- `add_fixed_marker(part_edge, name, marker)` - Add structural marker
+- `remove_marker(part_edge, name, moveable)` - Remove marker by name
+- `remove_all(name, parts, moveable)` - Remove marker from multiple parts
+- `get_markers(part_edge)` - Get unique markers, deduplicated and sorted by z_order
+- `has_markers(part_edge)` - Check if has any markers
+- `has_marker(part_edge, name)` - Check if has marker with given name
+- `clear_markers(part_edge, moveable)` - Remove all markers
 
 ## Marker Storage
 
-Markers are stored in PartEdge attribute dictionaries under the key `"markers"`:
+Markers are stored in PartEdge attribute dictionaries under the key `"markers"` as `dict[name, config]`:
 
 | Dictionary | Use Case | Behavior |
 |------------|----------|----------|
@@ -72,16 +75,17 @@ Markers are stored in PartEdge attribute dictionaries under the key `"markers"`:
 | `c_attributes` | Moveable markers (`moveable=True`) | Follows piece color during rotation |
 | `f_attributes` | Fixed position markers (`moveable=False`) | Stays at physical position |
 
-## Marker Uniqueness
+## Marker Names and Uniqueness
 
-Markers use **full dataclass equality** (all fields must match):
-- Adding a duplicate marker (exact same config) is silently skipped
-- Two markers with same name but different properties are both added
-- `remove_same_name=True` removes all markers with matching name before adding
+Markers are stored by name (dictionary). The same config can be stored under different names:
+- Adding a marker with an existing name replaces the old marker
+- Different names can reference the same config instance (singleton pattern)
+- Factory methods use caching to return same instance for same parameters
 
-This allows:
-- Multiple CHARACTER markers with different characters on same cell
-- Multiple markers of same type with different colors
+**Rendering Deduplication:**
+- `get_markers()` deduplicates visually identical configs
+- Keeps highest z_order for each unique config
+- Returns sorted by z_order for proper layering
 
 ## Configuration
 
@@ -144,15 +148,21 @@ Each renderer backend must implement rendering for all marker shapes. Adding a n
 mm = cube.sp.marker_manager
 mf = cube.sp.marker_factory
 
-# Add animation markers
-mm.add_marker(part_edge, mf.c1(), moveable=True)
+# Add animation markers with name
+mm.add_marker(part_edge, "c1", mf.c1(), moveable=True)
 
 # Add coordinate markers (fixed)
-mm.add_fixed_marker(corner_edge, mf.ltr_origin())
+mm.add_fixed_marker(corner_edge, "ltr_origin", mf.ltr_origin())
 
-# Add character marker, replacing any existing CHAR markers
-mm.add_marker(center_edge, mf.char("5"), moveable=False, remove_same_name=True)
+# Add character marker (name "idx_0" replaces any existing "idx_0")
+mm.add_marker(center_edge, "idx_0", mf.char("5"), moveable=False)
 
-# Get all markers for rendering
+# Remove marker by name
+mm.remove_marker(part_edge, "c1")
+
+# Remove from multiple parts at once
+mm.remove_all("c1", [edge1, edge2, edge3])
+
+# Get all markers for rendering (deduplicated, sorted by z_order)
 markers = mm.get_markers(part_edge)
 ```

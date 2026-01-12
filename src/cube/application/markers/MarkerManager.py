@@ -1,6 +1,7 @@
 """Marker manager - central authority for adding and retrieving markers."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Hashable, Any
 
 from .IMarkerManager import IMarkerManager
@@ -20,12 +21,14 @@ class MarkerManager(IMarkerManager):
     This is the ONLY class that should add or retrieve markers from PartEdges.
     All other code (AnnotationManager, Face init, renderers) must use this manager.
 
-    Marker Uniqueness:
-        Markers use full dataclass equality (all fields must match).
-        - add_marker: Skips only if exact same marker exists (all fields equal)
-        - remove_marker: Removes by exact match (all fields must match)
-        This allows multiple markers of same type (name) with different properties
-        (e.g., two "CHAR" markers with different characters on same cell).
+    Storage Model:
+        Markers are stored as dict[name, config] under the "markers" key.
+        Names are provided by callers when adding markers. The same config
+        instance can be stored under different names.
+
+    Rendering Deduplication:
+        When get_markers() is called, visually identical configs are deduplicated
+        (keeping highest z_order), then sorted by z_order for proper layering.
 
     Markers can be stored in two modes:
     - Moveable (c_attributes): Marker follows the sticker color during rotations
@@ -35,19 +38,19 @@ class MarkerManager(IMarkerManager):
         manager = MarkerManager()
 
         # Add a moveable marker (follows piece during rotation)
-        manager.add_marker(part_edge, MarkerFactory.c1(), moveable=True)
+        manager.add_marker(part_edge, "c1", MarkerFactory.c1(), moveable=True)
 
         # Add a fixed marker (stays at position)
-        manager.add_marker(part_edge, MarkerFactory.c2(), moveable=False)
+        manager.add_marker(part_edge, "c2", MarkerFactory.c2(), moveable=False)
 
-        # Get all markers for rendering
+        # Get all markers for rendering (deduplicated, sorted)
         markers = manager.get_markers(part_edge)
 
-        # Remove a specific marker (exact match required)
-        manager.remove_marker(part_edge, MarkerFactory.c1())
+        # Remove a marker by name
+        manager.remove_marker(part_edge, "c1")
 
-        # Remove all markers of a type by name
-        manager.remove_markers_by_name(part_edge, "C1")
+        # Remove a marker from multiple parts
+        manager.remove_all("c1", [edge1, edge2, edge3])
     """
 
     def __init__(self) -> None:
@@ -58,39 +61,33 @@ class MarkerManager(IMarkerManager):
     def add_marker(
         self,
         part_edge: PartEdge,
+        name: str,
         marker: MarkerConfig,
         moveable: bool = True,
-        remove_same_name: bool = False,
     ) -> None:
         """Add a marker to a PartEdge.
 
-        Duplicate prevention uses full dataclass equality (ALL fields including name).
-        Two markers with identical visual properties but different names are considered
-        different and will both be added.
+        If a marker with the same name already exists, it is replaced.
 
         Args:
             part_edge: The sticker to mark
+            name: Unique name for this marker on this PartEdge
             marker: The marker configuration
             moveable: If True, marker moves with the sticker color during rotations
                      (stored in c_attributes). If False, marker stays at physical
                      position (stored in f_attributes).
-            remove_same_name: If True, removes all existing markers with the same
-                     name before adding the new marker. Useful for updating markers
-                     that should replace previous values (e.g., index indicators).
         """
-        if remove_same_name:
-            self.remove_markers_by_name(part_edge, marker.name, moveable=moveable)
-
         if moveable:
             attrs = part_edge.c_attributes
         else:
             attrs = part_edge.f_attributes
 
-        self._add_to_dict(attrs, marker)
+        self._add_to_dict(attrs, name, marker)
 
     def add_fixed_marker(
         self,
         part_edge: PartEdge,
+        name: str,
         marker: MarkerConfig,
     ) -> None:
         """Add a marker fixed to a position (uses attributes, not f_attributes).
@@ -100,23 +97,24 @@ class MarkerManager(IMarkerManager):
 
         Args:
             part_edge: The sticker to mark
+            name: Unique name for this marker
             marker: The marker configuration
         """
-        self._add_to_dict(part_edge.attributes, marker)
+        self._add_to_dict(part_edge.attributes, name, marker)
 
     def remove_marker(
         self,
         part_edge: PartEdge,
-        marker: MarkerConfig,
+        name: str,
         moveable: bool | None = None,
     ) -> bool:
-        """Remove a marker from a PartEdge.
+        """Remove a marker from a PartEdge by name.
 
         Args:
             part_edge: The sticker to unmark
-            marker: The marker configuration to remove
+            name: The name of the marker to remove
             moveable: If True, remove from c_attributes. If False, remove from
-                     f_attributes. If None, try both.
+                     f_attributes. If None, try all.
 
         Returns:
             True if marker was found and removed, False otherwise.
@@ -124,77 +122,94 @@ class MarkerManager(IMarkerManager):
         removed = False
 
         if moveable is True or moveable is None:
-            if self._remove_from_dict(part_edge.c_attributes, marker):
+            if self._remove_from_dict(part_edge.c_attributes, name):
                 removed = True
 
         if moveable is False or moveable is None:
-            if self._remove_from_dict(part_edge.f_attributes, marker):
+            if self._remove_from_dict(part_edge.f_attributes, name):
                 removed = True
 
         # Also check attributes for fixed structural markers
         if moveable is None:
-            if self._remove_from_dict(part_edge.attributes, marker):
+            if self._remove_from_dict(part_edge.attributes, name):
                 removed = True
 
         return removed
 
-    def remove_markers_by_name(
+    def remove_all(
         self,
-        part_edge: PartEdge,
         name: str,
+        parts: Iterable[PartEdge],
         moveable: bool | None = None,
     ) -> int:
-        """Remove all markers with a given name from a PartEdge.
-
-        Unlike remove_marker which requires exact match, this removes all markers
-        that have the specified name regardless of other properties.
+        """Remove marker with given name from all provided parts.
 
         Args:
-            part_edge: The sticker to unmark
-            name: The marker name/type to remove (e.g., "C1", "ORIGIN")
+            name: The name of the marker to remove
+            parts: Iterable of PartEdges to check
             moveable: If True, remove from c_attributes. If False, remove from
-                     f_attributes. If None, remove from all.
+                     f_attributes. If None, try all.
 
         Returns:
-            Number of markers removed.
+            Number of parts where the marker was removed.
         """
         count = 0
-
-        if moveable is True or moveable is None:
-            count += self._remove_by_name_from_dict(part_edge.c_attributes, name)
-
-        if moveable is False or moveable is None:
-            count += self._remove_by_name_from_dict(part_edge.f_attributes, name)
-
-        # Also check attributes for fixed structural markers
-        if moveable is None:
-            count += self._remove_by_name_from_dict(part_edge.attributes, name)
-
+        for part in parts:
+            if self.remove_marker(part, name, moveable):
+                count += 1
         return count
 
     def get_markers(self, part_edge: PartEdge) -> list[MarkerConfig]:
-        """Get all markers for a PartEdge.
+        """Get all markers for a PartEdge, deduplicated and sorted.
 
-        Retrieves markers from all three attribute dictionaries and returns
-        them sorted by z_order (lowest first, so highest draws on top).
+        Retrieves markers from all three attribute dictionaries. Visually
+        identical configs are deduplicated (keeping highest z_order), then
+        sorted by z_order (lowest first, so highest draws on top).
 
         Args:
             part_edge: The sticker to get markers from
 
         Returns:
-            List of MarkerConfig objects, sorted by z_order.
+            List of unique MarkerConfig objects, sorted by z_order.
         """
-        markers: list[MarkerConfig] = []
+        all_markers: list[MarkerConfig] = []
 
         # Collect from all three attribute dicts
-        markers.extend(self._get_from_dict(part_edge.attributes))
-        markers.extend(self._get_from_dict(part_edge.c_attributes))
-        markers.extend(self._get_from_dict(part_edge.f_attributes))
+        all_markers.extend(self._get_from_dict(part_edge.attributes))
+        all_markers.extend(self._get_from_dict(part_edge.c_attributes))
+        all_markers.extend(self._get_from_dict(part_edge.f_attributes))
 
-        # Sort by z_order so lower values are drawn first (higher on top)
-        markers.sort(key=lambda m: m.z_order)
+        # Deduplicate: keep highest z_order for each unique config
+        # MarkerConfig is frozen/hashable, so can use as dict key
+        unique: dict[MarkerConfig, MarkerConfig] = {}
+        for marker in all_markers:
+            if marker not in unique or marker.z_order > unique[marker].z_order:
+                unique[marker] = marker
 
-        return markers
+        # Sort by z_order (lowest first, so highest draws on top)
+        result = list(unique.values())
+        result.sort(key=lambda m: m.z_order)
+        return result
+
+    def get_markers_raw(self, part_edge: PartEdge) -> dict[str, MarkerConfig]:
+        """Get all markers with their names (no deduplication).
+
+        Useful for debugging or when you need to know marker names.
+
+        Args:
+            part_edge: The sticker to get markers from
+
+        Returns:
+            Dict of name -> MarkerConfig, merged from all attribute dicts.
+        """
+        result: dict[str, MarkerConfig] = {}
+
+        for attrs in [part_edge.attributes, part_edge.c_attributes, part_edge.f_attributes]:
+            markers_dict: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
+            if markers_dict:
+                result.update(markers_dict)
+
+        return result
 
     def get_moveable_markers(self, part_edge: PartEdge) -> list[MarkerConfig]:
         """Get only moveable markers (from c_attributes)."""
@@ -214,6 +229,14 @@ class MarkerManager(IMarkerManager):
             or bool(self._get_from_dict(part_edge.c_attributes))
             or bool(self._get_from_dict(part_edge.f_attributes))
         )
+
+    def has_marker(self, part_edge: PartEdge, name: str) -> bool:
+        """Check if a PartEdge has a marker with the given name."""
+        for attrs in [part_edge.attributes, part_edge.c_attributes, part_edge.f_attributes]:
+            markers_dict: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
+            if markers_dict and name in markers_dict:
+                return True
+        return False
 
     def clear_markers(
         self,
@@ -242,54 +265,31 @@ class MarkerManager(IMarkerManager):
     # ================================================================
 
     @staticmethod
-    def _add_to_dict(attrs: dict[Hashable, Any], marker: MarkerConfig) -> None:
+    def _add_to_dict(attrs: dict[Hashable, Any], name: str, marker: MarkerConfig) -> None:
         """Add a marker to an attributes dictionary."""
-        markers: list[MarkerConfig] | None = attrs.get(_MARKER_KEY)
+        markers: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
         if markers is None:
-            attrs[_MARKER_KEY] = [marker]
+            attrs[_MARKER_KEY] = {name: marker}
         else:
-            # Avoid duplicates using full dataclass equality (all fields)
-            # This allows same type (name) with different properties
-            if marker not in markers:
-                markers.append(marker)
+            markers[name] = marker  # Replace if exists
 
     @staticmethod
-    def _remove_from_dict(attrs: dict[Hashable, Any], marker: MarkerConfig) -> bool:
-        """Remove a marker from an attributes dictionary by full equality."""
-        markers: list[MarkerConfig] | None = attrs.get(_MARKER_KEY)
+    def _remove_from_dict(attrs: dict[Hashable, Any], name: str) -> bool:
+        """Remove a marker from an attributes dictionary by name."""
+        markers: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
         if markers is None:
             return False
 
-        # Find and remove by full dataclass equality (all fields must match)
-        try:
-            markers.remove(marker)
-            # Clean up empty list
+        if name in markers:
+            del markers[name]
+            # Clean up empty dict
             if not markers:
                 attrs.pop(_MARKER_KEY, None)
             return True
-        except ValueError:
-            return False
-
-    @staticmethod
-    def _remove_by_name_from_dict(attrs: dict[Hashable, Any], name: str) -> int:
-        """Remove all markers with given name from an attributes dictionary."""
-        markers: list[MarkerConfig] | None = attrs.get(_MARKER_KEY)
-        if markers is None:
-            return 0
-
-        # Find all markers with matching name and remove them
-        original_len = len(markers)
-        attrs[_MARKER_KEY] = [m for m in markers if m.name != name]
-        new_markers = attrs[_MARKER_KEY]
-
-        # Clean up empty list
-        if not new_markers:
-            attrs.pop(_MARKER_KEY, None)
-
-        return original_len - len(new_markers) if new_markers else original_len
+        return False
 
     @staticmethod
     def _get_from_dict(attrs: dict[Hashable, Any]) -> list[MarkerConfig]:
-        """Get markers from an attributes dictionary."""
-        markers: list[MarkerConfig] | None = attrs.get(_MARKER_KEY)
-        return list(markers) if markers else []
+        """Get marker values from an attributes dictionary."""
+        markers: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
+        return list(markers.values()) if markers else []

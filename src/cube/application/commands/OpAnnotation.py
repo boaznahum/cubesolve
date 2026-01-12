@@ -74,8 +74,8 @@ class OpAnnotation:
         def _key(_i):
             return "annotation_track" + str(abs(_i))
 
-        #                  type,         key_index, marker
-        slots: list[Tuple[Literal[1, 2, 3], int, MarkerConfig]] = []
+        #                  type,         key_index, marker_name
+        slots: list[Tuple[Literal[1, 2, 3], int, str]] = []
         s: Tuple[PartEdge, bool, MarkerConfig]
         for s in slices:
             _slice: PartEdge = s[0]
@@ -98,12 +98,12 @@ class OpAnnotation:
 
             key = _key(_SLice_Tracking_UniqID)
             if fixed:
-                slots.append((_type, -_SLice_Tracking_UniqID, marker))
-                mm.add_marker(_slice, marker, moveable=False)
+                slots.append((_type, -_SLice_Tracking_UniqID, key))
+                mm.add_marker(_slice, key, marker, moveable=False)
                 _slice.f_attributes[key] = key
             else:
-                slots.append((_type, _SLice_Tracking_UniqID, marker))
-                mm.add_marker(_slice, marker, moveable=True)
+                slots.append((_type, _SLice_Tracking_UniqID, key))
+                mm.add_marker(_slice, key, marker, moveable=True)
                 _slice.c_attributes[key] = key
 
         has_text = text and any(text)
@@ -131,7 +131,7 @@ class OpAnnotation:
 
                 i = slot[1]
                 _type = slot[0]
-                marker = slot[2]
+                marker_name = slot[2]
 
                 def _c_pred(_i, _key):
 
@@ -163,10 +163,10 @@ class OpAnnotation:
 
                 if i < 0:
                     # if have a bug, nested annimation in __fixed_edge, so key already deleted
-                    mm.remove_marker(e, marker, moveable=False)
+                    mm.remove_marker(e, marker_name, moveable=False)
                     del e.f_attributes[key]
                 else:
-                    mm.remove_marker(e, marker, moveable=True)
+                    mm.remove_marker(e, marker_name, moveable=True)
                     del e.c_attributes[key]
 
             op.play(Algs.AN)

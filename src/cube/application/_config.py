@@ -96,7 +96,7 @@ MARKERS_CONFIG = MarkersConfig()
 
 MARKERS_CONFIG.GUI_DRAW_MARKERS = False
 MARKERS_CONFIG.GUI_DRAW_SAMPLE_MARKERS = False
-MARKERS_CONFIG.GUI_DRAW_LTR_ORIGIN_ARROWS = False  # Draw LTR coordinate system markers (origin, X arrow, Y arrow)
+MARKERS_CONFIG.GUI_DRAW_LTR_ORIGIN_ARROWS = True  # Draw LTR coordinate system markers (origin, X arrow, Y arrow)
 MARKERS_CONFIG.DRAW_CENTER_INDEXES = False  # Draw center index markers during rotation (SLOW - debug only)
 
 CELL_SIZE: int = 30

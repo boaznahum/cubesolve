@@ -1,6 +1,7 @@
 """Marker manager protocol."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
@@ -15,32 +16,40 @@ class IMarkerManager(Protocol):
     This protocol defines the interface for adding/removing/retrieving
     markers on cube stickers. All code should depend on this protocol,
     not the concrete implementation.
+
+    Storage Model:
+        Markers are stored as dict[name, config]. Names are provided by callers.
+        The same config instance can be stored under different names.
+
+    Rendering Deduplication:
+        get_markers() deduplicates visually identical configs and sorts by z_order.
     """
 
     def add_marker(
         self,
         part_edge: "PartEdge",
+        name: str,
         marker: "MarkerConfig",
         moveable: bool = True,
-        remove_same_name: bool = False,
     ) -> None:
         """Add a marker to a PartEdge.
 
+        If a marker with the same name already exists, it is replaced.
+
         Args:
             part_edge: The sticker to mark
+            name: Unique name for this marker on this PartEdge
             marker: The marker configuration
             moveable: If True, marker moves with the sticker color during rotations
                      (stored in c_attributes). If False, marker stays at physical
                      position (stored in f_attributes).
-            remove_same_name: If True, removes all existing markers with the same
-                     name before adding the new marker. Useful for updating markers
-                     that should replace previous values (e.g., index indicators).
         """
         ...
 
     def add_fixed_marker(
         self,
         part_edge: "PartEdge",
+        name: str,
         marker: "MarkerConfig",
     ) -> None:
         """Add a marker fixed to a position (structural markers).
@@ -50,6 +59,7 @@ class IMarkerManager(Protocol):
 
         Args:
             part_edge: The sticker to mark
+            name: Unique name for this marker
             marker: The marker configuration
         """
         ...
@@ -57,60 +67,62 @@ class IMarkerManager(Protocol):
     def remove_marker(
         self,
         part_edge: "PartEdge",
-        marker: "MarkerConfig",
+        name: str,
         moveable: bool | None = None,
     ) -> bool:
-        """Remove a marker from a PartEdge (exact match required).
+        """Remove a marker from a PartEdge by name.
 
         Args:
             part_edge: The sticker to unmark
-            marker: The marker configuration to remove (all fields must match)
+            name: The name of the marker to remove
             moveable: If True, remove from c_attributes. If False, remove from
-                     f_attributes. If None, try both.
+                     f_attributes. If None, try all.
 
         Returns:
             True if marker was found and removed, False otherwise.
         """
         ...
 
-    def remove_markers_by_name(
+    def remove_all(
         self,
-        part_edge: "PartEdge",
         name: str,
+        parts: Iterable["PartEdge"],
         moveable: bool | None = None,
     ) -> int:
-        """Remove all markers with a given name from a PartEdge.
-
-        Unlike remove_marker which requires exact match, this removes all markers
-        that have the specified name regardless of other properties.
+        """Remove marker with given name from all provided parts.
 
         Args:
-            part_edge: The sticker to unmark
-            name: The marker name/type to remove (e.g., "C1", "ORIGIN")
+            name: The name of the marker to remove
+            parts: Iterable of PartEdges to check
             moveable: If True, remove from c_attributes. If False, remove from
-                     f_attributes. If None, remove from all.
+                     f_attributes. If None, try all.
 
         Returns:
-            Number of markers removed.
+            Number of parts where the marker was removed.
         """
         ...
 
     def get_markers(self, part_edge: "PartEdge") -> list["MarkerConfig"]:
-        """Get all markers for a PartEdge.
+        """Get all markers for a PartEdge, deduplicated and sorted.
 
-        Retrieves markers from all attribute dictionaries and returns
-        them sorted by z_order (lowest first, so highest draws on top).
+        Retrieves markers from all attribute dictionaries. Visually
+        identical configs are deduplicated (keeping highest z_order), then
+        sorted by z_order (lowest first, so highest draws on top).
 
         Args:
             part_edge: The sticker to get markers from
 
         Returns:
-            List of MarkerConfig objects, sorted by z_order.
+            List of unique MarkerConfig objects, sorted by z_order.
         """
         ...
 
     def has_markers(self, part_edge: "PartEdge") -> bool:
         """Check if a PartEdge has any markers."""
+        ...
+
+    def has_marker(self, part_edge: "PartEdge", name: str) -> bool:
+        """Check if a PartEdge has a marker with the given name."""
         ...
 
     def clear_markers(

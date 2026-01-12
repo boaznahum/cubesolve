@@ -18,17 +18,16 @@ class MarkerConfig:
     The renderer should not need to guess anything - all visual properties
     are specified here.
 
+    Note: The marker name is NOT part of the config. Names are provided externally
+    by callers when adding markers via MarkerManager. This allows the same config
+    to be reused with different names (singleton pattern).
+
     Uniqueness Model:
-        Markers use full dataclass equality (frozen=True, so hashable).
-        - add_marker: Skips only if exact same marker exists (all fields equal)
-        - remove_marker: Removes by exact match (all fields must match)
-        - remove_markers_by_name: Removes all markers with given name
-        This allows multiple markers of same type (name) with different properties
-        (e.g., two "CHAR" markers with different characters on same cell).
+        Markers are stored by name in MarkerManager. The same config instance
+        can be stored under different names. When rendering, visually identical
+        configs are deduplicated (keeping highest z_order).
 
     Attributes:
-        name: Type identifier for this marker (e.g., "C0", "ORIGIN", "CHAR").
-              Multiple markers with same name but different properties are allowed.
         shape: The geometric shape of the marker
         color: RGB color tuple (0.0-1.0 range). If None, use complementary color.
         radius_factor: Outer radius as fraction of cell size (0.0-1.0)
@@ -41,7 +40,6 @@ class MarkerConfig:
         character: Single character to display. Only used for CHARACTER shape.
     """
 
-    name: str
     shape: MarkerShape
     color: tuple[float, float, float] | None = None
     radius_factor: float = 1.0
@@ -56,31 +54,16 @@ class MarkerConfig:
         """Validate marker configuration."""
         if self.color is None and not self.use_complementary_color:
             raise ValueError(
-                f"Marker '{self.name}': must specify color or use_complementary_color"
+                "MarkerConfig: must specify color or use_complementary_color"
             )
         if self.radius_factor <= 0 or self.radius_factor > 1.0:
             raise ValueError(
-                f"Marker '{self.name}': radius_factor must be in (0, 1.0], got {self.radius_factor}"
+                f"MarkerConfig: radius_factor must be in (0, 1.0], got {self.radius_factor}"
             )
         if self.thickness <= 0 or self.thickness > 1.0:
             raise ValueError(
-                f"Marker '{self.name}': thickness must be in (0, 1.0], got {self.thickness}"
+                f"MarkerConfig: thickness must be in (0, 1.0], got {self.thickness}"
             )
-
-    def with_z_order(self, z_order: int) -> MarkerConfig:
-        """Return a copy with a different z_order."""
-        return MarkerConfig(
-            name=self.name,
-            shape=self.shape,
-            color=self.color,
-            radius_factor=self.radius_factor,
-            thickness=self.thickness,
-            height_offset=self.height_offset,
-            use_complementary_color=self.use_complementary_color,
-            z_order=z_order,
-            direction=self.direction,
-            character=self.character,
-        )
 
 
 # Type alias for marker color (RGB 0-255 int or 0.0-1.0 float)

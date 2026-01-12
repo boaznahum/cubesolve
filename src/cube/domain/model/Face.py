@@ -108,44 +108,44 @@ class Face(SuperElement, Hashable):
 
             # Origin marker on bottom-left corner
             corner_bl = self._corner_bottom_left.slice.get_face_edge(self)
-            mm.add_fixed_marker(corner_bl, mf.ltr_origin())
+            mm.add_fixed_marker(corner_bl, "ltr_origin", mf.ltr_origin())
 
             # X-axis arrow on bottom edge (LTR index 0 = nearest to origin)
             # Each edge has its own conversion - use the specific edge's method
             x_slice_idx = self._edge_bottom.get_slice_index_from_ltr_index(self, 0)
             edge_x = self._edge_bottom.get_slice(x_slice_idx).get_face_edge(self)
-            mm.add_fixed_marker(edge_x, mf.ltr_arrow_x())
+            mm.add_fixed_marker(edge_x, "ltr_arrow_x", mf.ltr_arrow_x())
 
             # Y-axis arrow on left edge (LTR index 0 = nearest to origin)
             # Each edge has its own conversion - use the specific edge's method
             y_slice_idx = self._edge_left.get_slice_index_from_ltr_index(self, 0)
             edge_y = self._edge_left.get_slice(y_slice_idx).get_face_edge(self)
-            mm.add_fixed_marker(edge_y, mf.ltr_arrow_y())
+            mm.add_fixed_marker(edge_y, "ltr_arrow_y", mf.ltr_arrow_y())
 
         if draw_markers:
             # Set origin markers on edges (slot 0 of each edge)
             origin_marker = mf.origin()
-            mm.add_fixed_marker(self._edge_bottom.get_slice(0).get_face_edge(self), origin_marker)
-            mm.add_fixed_marker(self._edge_left.get_slice(0).get_face_edge(self), origin_marker)
-            mm.add_fixed_marker(self._edge_top.get_slice(0).get_face_edge(self), origin_marker)
-            mm.add_fixed_marker(self._edge_right.get_slice(0).get_face_edge(self), origin_marker)
+            mm.add_fixed_marker(self._edge_bottom.get_slice(0).get_face_edge(self), "origin", origin_marker)
+            mm.add_fixed_marker(self._edge_left.get_slice(0).get_face_edge(self), "origin", origin_marker)
+            mm.add_fixed_marker(self._edge_top.get_slice(0).get_face_edge(self), "origin", origin_marker)
+            mm.add_fixed_marker(self._edge_right.get_slice(0).get_face_edge(self), "origin", origin_marker)
 
             # Set on_x marker (X-axis direction)
-            mm.add_fixed_marker(self._edge_bottom.get_slice(n1).get_face_edge(self), mf.on_x())
+            mm.add_fixed_marker(self._edge_bottom.get_slice(n1).get_face_edge(self), "on_x", mf.on_x())
 
             # Set on_y marker (Y-axis direction)
-            mm.add_fixed_marker(self._edge_left.get_slice(n1).get_face_edge(self), mf.on_y())
+            mm.add_fixed_marker(self._edge_left.get_slice(n1).get_face_edge(self), "on_y", mf.on_y())
 
             # Set coordinate markers on center pieces
-            mm.add_fixed_marker(self._center.get_center_slice((0, 0)).get_face_edge(self), origin_marker)
-            mm.add_fixed_marker(self._center.get_center_slice((0, n1)).get_face_edge(self), mf.on_x())
-            mm.add_fixed_marker(self._center.get_center_slice((n1, 0)).get_face_edge(self), mf.on_y())
+            mm.add_fixed_marker(self._center.get_center_slice((0, 0)).get_face_edge(self), "origin", origin_marker)
+            mm.add_fixed_marker(self._center.get_center_slice((0, n1)).get_face_edge(self), "on_x", mf.on_x())
+            mm.add_fixed_marker(self._center.get_center_slice((n1, 0)).get_face_edge(self), "on_y", mf.on_y())
 
         for i in range(n):
             if sample_markers:
                 # Sample markers for debugging: C1 on left edge, C2 on right edge
-                mm.add_marker(self._edge_left.get_slice(i).get_face_edge(self), mf.c1(), moveable=True)
-                mm.add_marker(self._edge_right.get_slice(i).get_face_edge(self), mf.c2(), moveable=False)
+                mm.add_marker(self._edge_left.get_slice(i).get_face_edge(self), f"sample_c1_{i}", mf.c1(), moveable=True)
+                mm.add_marker(self._edge_right.get_slice(i).get_face_edge(self), f"sample_c2_{i}", mf.c2(), moveable=False)
 
             self._edge_left.get_slice(i).get_face_edge(self).attributes["cw"] = i
             self._edge_top.get_slice(i).get_face_edge(self).attributes["cw"] = i
