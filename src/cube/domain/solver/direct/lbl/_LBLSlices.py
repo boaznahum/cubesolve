@@ -181,7 +181,7 @@ class _LBLSlices(SolverElement):
         """
         row = self.slice_to_row(slice_index)
 
-        #boaz: it may related to cube orinatation
+        #boaz: it may related to cube orientation
         if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
             return
 
@@ -193,6 +193,7 @@ class _LBLSlices(SolverElement):
 
         for face_tracker in side_trackers:
             self._solve_face_row_simple(l1_white_tracker, face_tracker, slice_index)
+
 
         # Verify solved
         # boaz: currently we cant do it, because our index system is wrong, slice_index is depends on cube orientation
@@ -245,7 +246,7 @@ class _LBLSlices(SolverElement):
         The commutator uses UP as source, so if Layer 1 is on UP, we'll mess it up.
         """
         # Solve all slices from bottom to top
-        if True:  # WIP: Only solve first slice for now
+        if False:  # WIP: Only solve first slice for now
             r = range(1)
         else:
             r = range(self.n_slices)
