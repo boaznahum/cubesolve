@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
 
 
-# Key used to store markers in attributes/c_attributes/f_attributes
+# Key used to store markers in attributes/c_attributes
 _MARKER_KEY: str = "markers"
 
 
@@ -29,7 +29,7 @@ class MarkerManager(IMarkerManager):
 
     Markers can be stored in two modes:
     - Moveable (c_attributes): Marker follows the sticker color during rotations
-    - Fixed (attributes or f_attributes): Marker stays at the physical position
+    - Fixed (attributes): Marker stays at the physical position
 
     Usage:
         manager = MarkerManager()
@@ -73,7 +73,7 @@ class MarkerManager(IMarkerManager):
             marker: The marker configuration
             moveable: If True, marker moves with the sticker color during rotations
                      (stored in c_attributes). If False, marker stays at physical
-                     position (stored in f_attributes).
+                     position (stored in attributes).
             remove_same_name: If True, removes all existing markers with the same
                      name before adding the new marker. Useful for updating markers
                      that should replace previous values (e.g., index indicators).
@@ -84,7 +84,7 @@ class MarkerManager(IMarkerManager):
         if moveable:
             attrs = part_edge.c_attributes
         else:
-            attrs = part_edge.f_attributes
+            attrs = part_edge.attributes
 
         self._add_to_dict(attrs, marker)
 
@@ -93,16 +93,17 @@ class MarkerManager(IMarkerManager):
         part_edge: PartEdge,
         marker: MarkerConfig,
     ) -> None:
-        """Add a marker fixed to a position (uses attributes, not f_attributes).
+        """Add a marker fixed to a position (stored in attributes).
 
-        This is for structural markers like origin/on_x/on_y that are set during
+        This is equivalent to add_marker(moveable=False) but with a clearer name
+        for structural markers like origin/on_x/on_y that are set during
         Face initialization and should never change.
 
         Args:
             part_edge: The sticker to mark
             marker: The marker configuration
         """
-        self._add_to_dict(part_edge.attributes, marker)
+        self.add_marker(part_edge, marker, moveable=False)
 
     def remove_marker(
         self,
@@ -116,7 +117,7 @@ class MarkerManager(IMarkerManager):
             part_edge: The sticker to unmark
             marker: The marker configuration to remove
             moveable: If True, remove from c_attributes. If False, remove from
-                     f_attributes. If None, try both.
+                     attributes. If None, try both.
 
         Returns:
             True if marker was found and removed, False otherwise.
@@ -128,11 +129,6 @@ class MarkerManager(IMarkerManager):
                 removed = True
 
         if moveable is False or moveable is None:
-            if self._remove_from_dict(part_edge.f_attributes, marker):
-                removed = True
-
-        # Also check attributes for fixed structural markers
-        if moveable is None:
             if self._remove_from_dict(part_edge.attributes, marker):
                 removed = True
 

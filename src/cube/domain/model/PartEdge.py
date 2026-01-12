@@ -1,4 +1,3 @@
-from collections import defaultdict
 from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, TypeAlias
 
@@ -22,16 +21,16 @@ class PartEdge:
     The color can change during rotations (via copy_color), but the face reference
     is fixed - representing the physical slot position.
 
-    THREE ATTRIBUTE DICTIONARIES
-    ============================
-    PartEdge has three distinct attribute systems for different use cases:
+    TWO ATTRIBUTE DICTIONARIES
+    ==========================
+    PartEdge has two distinct attribute systems for different use cases:
 
-    1. ``attributes`` - Structural/Positional (FIXED)
+    1. ``attributes`` - Fixed to Slot (STAYS at position)
        - Properties of the physical slot itself
-       - Set once during Face.finish_init()
-       - Keys: "origin", "on_x", "on_y", "cw" (clockwise index)
-       - NEVER move during rotations
-       - Used for coordinate system and rotation calculations
+       - Includes structural info (origin, on_x, on_y, cw) set during Face.finish_init()
+       - Also includes runtime fixed markers and tracking keys
+       - NEVER moves during rotations
+       - Use case: Coordinate system, rotation calculations, destination markers
 
     2. ``c_attributes`` - Color-Associated (MOVES with color)
        - Attributes that travel with the colored sticker during rotations
@@ -40,23 +39,15 @@ class PartEdge:
        - Use case: Track a specific piece as it moves around the cube
        - Example: FaceTracker puts a key here to find a piece after rotation
 
-    3. ``f_attributes`` - Fixed to Slot (STAYS at position)
-       - Attributes that stay at the physical slot position
-       - NOT copied during copy_color()
-       - Keys: destination markers, "markers" list
-       - Use case: Mark where a piece should end up (destination)
-       - Uses defaultdict(bool) so missing keys return False
-
     Animation Use Case:
         - AnnWhat.Moved → uses c_attributes → marker follows the sticker
-        - AnnWhat.FixedPosition → uses f_attributes → marker stays at destination
+        - AnnWhat.FixedPosition → uses attributes → marker stays at destination
 
     See: design2/partedge-attribute-system.md for visual diagrams
     """
     __slots__ = ["_face", "_parent", "_color", "_annotated_by_color",
                  "_annotated_fixed_location", "_texture_direction",
-                 "attributes", "c_attributes",
-                 "f_attributes"]
+                 "attributes", "c_attributes"]
 
     _face: _Face
     _color: Color
@@ -70,10 +61,9 @@ class PartEdge:
             face: The Face this edge belongs to (fixed, never changes)
             color: Initial color of the sticker (can change during rotation)
 
-        The three attribute dictionaries are initialized empty:
-        - attributes: {} (structural, set by Face.finish_init)
+        The two attribute dictionaries are initialized empty:
+        - attributes: {} (fixed to slot - structural info + runtime markers)
         - c_attributes: {} (color-associated, moves with color)
-        - f_attributes: defaultdict(bool) (fixed, stays at slot)
         """
         super().__init__()
         self._face = face
@@ -82,17 +72,14 @@ class PartEdge:
         self._annotated_fixed_location: bool = False
         self._texture_direction: int = 0  # Texture rotation: 0=0°, 1=90°CW, 2=180°, 3=270°CW
 
-        # Structural attributes - physical slot properties (origin, cw, on_x, on_y)
-        # Set by Face.finish_init(), never move during rotation
+        # Fixed attributes - STAY at physical slot, NOT copied during rotation
+        # Includes structural properties (origin, cw, on_x, on_y) set by Face.finish_init()
+        # Also includes runtime fixed markers (e.g., C2 destination markers)
         self.attributes: dict[Hashable, Any] = {}
 
         # Color-associated attributes - MOVE with color during copy_color()
         # Used by FaceTracker, moveable markers (e.g., C1 from MarkerFactory)
         self.c_attributes: dict[Hashable, Any] = {}
-
-        # Fixed attributes - STAY at physical slot, NOT copied during rotation
-        # Used for fixed markers (e.g., C2 from MarkerFactory)
-        self.f_attributes: dict[Hashable, Any] = defaultdict(bool)
 
         self._parent: _PartSlice
 
@@ -128,12 +115,11 @@ class PartEdge:
 
         What is NOT copied (stays at this slot):
         - _face: Physical face reference
-        - attributes: Structural slot properties
-        - f_attributes: Fixed destination markers
+        - attributes: Fixed slot properties (structural + runtime markers)
 
         This distinction enables:
         - Tracking pieces: Put marker in c_attributes, it follows the color
-        - Marking destinations: Put marker in f_attributes, it stays put
+        - Marking destinations: Put marker in attributes, it stays put
 
         See: design2/partedge-attribute-system.md for visual diagrams
         """
