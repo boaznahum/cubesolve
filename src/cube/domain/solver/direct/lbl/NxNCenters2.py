@@ -224,6 +224,24 @@ class NxNCenters2(SolverElement):
 
                 yield cs, rc
 
+
+    def _mark_piece_with_v_mark(self, target_face: FaceTracker, center_piece: CenterSlice) -> None:
+
+        req_color = target_face.color
+
+        if center_piece.color != req_color:
+            return
+
+        mf = self.cube.sp.marker_factory
+        mm = self.cube.sp.marker_manager
+
+        checkmark = mf.checkmark()  # Green checkmark
+
+        mm.add_marker(center_piece.edge, "checkmark", checkmark, moveable=True)
+
+
+
+
     def _position_l1_and_target(self, l1_white_tracker: FaceTracker, target_face: FaceTracker):
         """Position L1 down and target face to front."""
         assert target_face is not l1_white_tracker
@@ -238,8 +256,15 @@ class NxNCenters2(SolverElement):
     @contextmanager
     def _track_row_slices(self, target_face: FaceTracker, slice_index: int) -> Generator[None, None, None]:
         """Track center slices in a row, cleanup on exit."""
+
+
+
         for rc in self._2d_center_row_slice_iter(slice_index):
+
             slice_piece = target_face.face.center.get_center_slice(rc)
+
+            self._mark_piece_with_v_mark(target_face, slice_piece)
+
             self._tracke_center_slice(slice_piece, rc[1])
         try:
             yield
@@ -365,6 +390,14 @@ class NxNCenters2(SolverElement):
         assert target_face.face is cube.front
         # assert source_face.face in [cube.up, cube.back]
 
+        # mark all done
+        for rc in self._2d_center_row_slice_iter(slice_row_index):
+
+            slice_piece = target_face.face.center.get_center_slice(rc)
+
+            self._mark_piece_with_v_mark(target_face, slice_piece)
+
+
         color = target_face.color
 
         if self.count_color_on_face(source_face.face, color) == 0:
@@ -386,7 +419,8 @@ class NxNCenters2(SolverElement):
                                           rc)
             if wd:
 
-                after_fixed_color = target_face.face.center.get_center_slice(rc).color
+                center_slice = target_face.face.center.get_center_slice(rc)
+                after_fixed_color = center_slice.color
 
                 if after_fixed_color != color:
                     raise InternalSWError(f"Slice was not fixed {rc}, " +
@@ -394,6 +428,8 @@ class NxNCenters2(SolverElement):
                                           f"actual={after_fixed_color}")
 
                 self.debug(f"Fixed slice {rc}")
+
+                self._mark_piece_with_v_mark(target_face, center_slice)
 
                 work_done = True
 
@@ -430,19 +466,36 @@ class NxNCenters2(SolverElement):
             dry_run=True
         )
 
+        # is we are going to destroy second piece on the source
+        second_point_on_source = dry_result.second_replaced_with_target_point_on_source
+        second_piece_on_source = source_face.center.get_center_slice(second_point_on_source)
+
         # Step 2 - Search for source point with required color at natural position
         natural_source = dry_result.source_point
 
-        def source_point_has_color(s: Point) -> Point | None:
+
+        def source_point_has_color(s: Point, second_source: Point) -> Point | None:
             """Search for source point with required color, checking 4 rotations."""
             for n in range(4):
                 color_on_source = source_face.center.get_center_slice(s).color
                 if color_on_source == required_color:
-                    return s
+
+                    # we dont want to destroy
+                    second_color_on_source = source_face.center.get_center_slice(s).color
+                    # !!!!!!!!!!!!!!!!!!!!!!!! bug for even cube
+                    if second_color_on_source == source_face.color:
+                        self.debug(f"❌❌❌❌❌❌❌❌ We dont want to destroy source {second_source} {second_color_on_source}")
+                    else:
+                        return s
+
                 s = self.cube.cqr.rotate_point_clockwise(s)
+                second_source = self.cube.cqr.rotate_point_clockwise(second_source)
+
+
+
             return None
 
-        source_point_with_color = source_point_has_color(natural_source)
+        source_point_with_color = source_point_has_color(natural_source, second_point_on_source)
         if source_point_with_color is None:
             return False
 

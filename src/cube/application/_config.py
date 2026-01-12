@@ -28,7 +28,7 @@ ENABLE_CUBE_CACHE = True
 # Available solvers: LBL, CFOP, Kociemba, Cage
 # Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "lbl"
+DEFAULT_SOLVER = "LBL-Big"
 
 # 3x3 solver used by cage method for corner solving (Phase 1b)
 # Options: "beginner", "cfop", "kociemba"
@@ -80,7 +80,7 @@ from cube.domain.model.Color import Color as _Color  # noqa: E402
 FIRST_FACE_COLOR: _Color = _Color.WHITE
 
 
-SOLVER_DEBUG = False
+SOLVER_DEBUG = True
 
 ######  Viewer ########
 

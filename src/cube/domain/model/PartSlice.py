@@ -530,6 +530,7 @@ class CenterSlice(PartSlice):
 
     @property
     def color(self):
+        """Because canter has single edge"""
         return self.edge.color
 
     @property
