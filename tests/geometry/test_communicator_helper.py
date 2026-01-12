@@ -315,16 +315,16 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
 
                     # Mark s1 on source face
                     source_point_piece = source_face.center.get_center_slice(source_point).edge
-                    source_point_piece.c_attributes[marker_source_key] = marker_source_value
+                    source_point_piece.moveable_attributes[marker_source_key] = marker_source_value
 
                     # Mark t on target face
                     target_point_piece = target_face.center.get_center_slice(target_point).edge
-                    target_point_piece.c_attributes[marker_target_key] = marker_target_value
+                    target_point_piece.moveable_attributes[marker_target_key] = marker_target_value
 
                     # Mark s2 on source face
                     second_source_point_piece = (
                         source_face.center.get_center_slice(second_replaced_with_target_point_on_source).edge)
-                    second_source_point_piece.c_attributes[marker_second_key] = marker_second_value
+                    second_source_point_piece.moveable_attributes[marker_second_key] = marker_second_value
 
                     # ================================================================
                     # EXECUTE COMMUNICATOR
@@ -364,10 +364,10 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
 
                     # Check marker_s1: should move from s1 to t
                     target_point_piece = target_face.center.get_center_slice(target_point).edge
-                    if marker_source_key not in target_point_piece.c_attributes:
+                    if marker_source_key not in target_point_piece.moveable_attributes:
                         failures.append({**record, "type": "marker_s1_not_at_t"})
                         continue
-                    if target_point_piece.c_attributes[marker_source_key] != marker_source_value:
+                    if target_point_piece.moveable_attributes[marker_source_key] != marker_source_value:
                         failures.append({**record, "type": "marker_s1_value_mismatch"})
                         continue
 
@@ -381,7 +381,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                         for search_x in range(n_slices):
                             search_point = (search_y, search_x)
                             search_piece = source_face.center.get_center_slice(search_point).edge
-                            if marker_target_key in search_piece.c_attributes:
+                            if marker_target_key in search_piece.moveable_attributes:
                                 marker_t_found_location = search_point
                                 marker_t_found_on_face = "SOURCE"
                                 break
@@ -394,7 +394,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                             for search_x in range(n_slices):
                                 search_point = (search_y, search_x)
                                 search_piece = target_face.center.get_center_slice(search_point).edge
-                                if marker_target_key in search_piece.c_attributes:
+                                if marker_target_key in search_piece.moveable_attributes:
                                     marker_t_found_location = search_point
                                     marker_t_found_on_face = "TARGET"
                                     break
@@ -405,38 +405,38 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     record["marker_t_found_on_face"] = marker_t_found_on_face
 
                     second_source_point_piece = source_face.center.get_center_slice(second_replaced_with_target_point_on_source).edge
-                    if marker_target_key not in second_source_point_piece.c_attributes:
+                    if marker_target_key not in second_source_point_piece.moveable_attributes:
                         failures.append({**record, "type": "marker_t_not_at_s2"})
                         continue
-                    if second_source_point_piece.c_attributes[marker_target_key] != marker_target_value:
+                    if second_source_point_piece.moveable_attributes[marker_target_key] != marker_target_value:
                         failures.append({**record, "type": "marker_t_value_mismatch"})
                         continue
 
                     # Check marker_s2: should move from s2 back to s1
                     source_point_piece = source_face.center.get_center_slice(source_point).edge
-                    if marker_second_key not in source_point_piece.c_attributes:
+                    if marker_second_key not in source_point_piece.moveable_attributes:
                         failures.append({**record, "type": "marker_s2_not_at_s1"})
                         continue
-                    if source_point_piece.c_attributes[marker_second_key] != marker_second_value:
+                    if source_point_piece.moveable_attributes[marker_second_key] != marker_second_value:
                         failures.append({**record, "type": "marker_s2_value_mismatch"})
                         continue
 
                     # Verify markers are NOT in their original positions (they moved!)
                     # marker_s1 original position was s1 (on source face)
                     source_point_piece = source_face.center.get_center_slice(source_point).edge
-                    if marker_source_key in source_point_piece.c_attributes:
+                    if marker_source_key in source_point_piece.moveable_attributes:
                         failures.append({**record, "type": "marker_s1_still_on_original_s1"})
                         continue
 
                     # marker_t original position was t (on target face)
                     target_point_piece = target_face.center.get_center_slice(target_point).edge
-                    if marker_target_key in target_point_piece.c_attributes:
+                    if marker_target_key in target_point_piece.moveable_attributes:
                         failures.append({**record, "type": "marker_t_still_on_original_t"})
                         continue
 
                     # marker_s2 original position was s2 (on source face)
                     second_source_point_piece = source_face.center.get_center_slice(second_replaced_with_target_point_on_source).edge
-                    if marker_second_key in second_source_point_piece.c_attributes:
+                    if marker_second_key in second_source_point_piece.moveable_attributes:
                         failures.append({**record, "type": "marker_s2_still_on_original_s2"})
                         continue
 
