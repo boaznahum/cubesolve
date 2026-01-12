@@ -9,3 +9,9 @@ __todo/__next_session.md
 .venv/
 # Ignore PyCharm interpreter settings
 .idea/misc.xml
+
+# Claude Code temp files
+tmpclaude-*-cwd
+
+# Profiler output
+scalene-*.json
