@@ -6,13 +6,15 @@ combines GUI window functionality with application logic. All backends
 (pyglet, tkinter, console, headless) implement this protocol to enable
 a unified entry point (main_any_backend.py).
 """
+from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.application.protocols.AnimatableViewer import AnimatableViewer
-    from cube.presentation.gui.commands import Command
+    from cube.presentation.gui.commands import Command, CommandSequence
     from cube.presentation.gui.protocols.Renderer import Renderer
 
 
@@ -249,5 +251,47 @@ class AppWindow(Protocol):
 
         Returns:
             Number of textures successfully loaded (0-6).
+        """
+        ...
+
+    def schedule_once(self, callback: Callable[[float], None], delay: float) -> None:
+        """Schedule a callback to run after a delay (non-blocking).
+
+        The GUI remains responsive during the wait. The callback receives
+        the actual elapsed time as its argument.
+
+        Args:
+            callback: Function to call after delay, receives dt (elapsed time)
+            delay: Time in seconds to wait before calling
+
+        Example:
+            def on_timeout(dt: float) -> None:
+                print(f"Waited {dt} seconds")
+                window.inject_command(Commands.QUIT)
+
+            window.schedule_once(on_timeout, 3.0)  # Quit after 3 seconds
+        """
+        ...
+
+    def inject_command_sequence(
+        self,
+        commands: "CommandSequence | list[Command]",
+        on_complete: Callable[[], None] | None = None,
+    ) -> None:
+        """Inject a sequence of commands, handling delays from SleepCommand.
+
+        Commands are executed in order. If a command returns delay_next_command > 0,
+        the remaining commands are scheduled to run after that delay.
+        The GUI remains responsive during delays.
+
+        Args:
+            commands: Sequence of commands to execute
+            on_complete: Optional callback when all commands complete
+
+        Example:
+            from cube.presentation.gui.commands import Commands
+            window.inject_command_sequence(
+                Commands.Sleep(3) + Commands.SCRAMBLE_1 + Commands.QUIT
+            )
         """
         ...

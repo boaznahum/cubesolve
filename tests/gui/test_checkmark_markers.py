@@ -42,7 +42,7 @@ def test_checkmark_markers_on_centers(backend: str):
     original_test_mode = config.GUI_TEST_MODE
 
     event_loop = None
-    view_duration = 3.0  # seconds to view markers before quit
+    view_duration = 0.1  # seconds to view markers before quit
 
     try:
         config.GUI_TEST_MODE = True
@@ -69,17 +69,11 @@ def test_checkmark_markers_on_centers(backend: str):
         event_loop = gui_backend.event_loop
         win = gui_backend.create_app_window(app, 720, 720, "Checkmark Markers Test")
 
-        # Schedule quit after viewing time (this keeps GUI responsive)
-        def schedule_quit(_dt: float) -> None:
-            print(f"Viewing markers for {view_duration} seconds...")
-
-            def do_quit(_dt2: float) -> None:
-                print("Quitting after viewing markers")
-                win.inject_command(Commands.QUIT)
-
-            event_loop.schedule_once(do_quit, view_duration)
-
-        event_loop.schedule_once(schedule_quit, 0.1)
+        # Schedule quit after viewing time using command sequence
+        print(f"Will view markers for {view_duration} seconds then quit...")
+        win.inject_command_sequence(
+            Commands.Sleep(view_duration) + Commands.QUIT
+        )
 
         # Run event loop (GUI stays responsive during wait)
         event_loop.run()
@@ -159,16 +153,11 @@ def test_checkmark_markers_on_nxn_centers(cube_size: int, backend: str):
         event_loop = gui_backend.event_loop
         win = gui_backend.create_app_window(app, 720, 720, f"Checkmark Markers - {cube_size}x{cube_size}")
 
-        def schedule_quit(_dt: float) -> None:
-            print(f"Viewing markers for {view_duration} seconds...")
-
-            def do_quit(_dt2: float) -> None:
-                print("Quitting after viewing markers")
-                win.inject_command(Commands.QUIT)
-
-            event_loop.schedule_once(do_quit, view_duration)
-
-        event_loop.schedule_once(schedule_quit, 0.1)
+        # Schedule quit after viewing time using command sequence
+        print(f"Will view markers for {view_duration} seconds then quit...")
+        win.inject_command_sequence(
+            Commands.Sleep(view_duration) + Commands.QUIT
+        )
         event_loop.run()
 
         result = GUITestResult(success=True, message="Checkmark markers displayed successfully")

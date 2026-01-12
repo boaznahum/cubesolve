@@ -13,12 +13,13 @@ Key Handling Architecture:
 
 import traceback
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Sequence
 
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.domain.algs import Alg, Algs
-from cube.presentation.gui.commands import Command, CommandContext
+from cube.presentation.gui.commands import Command, CommandContext, CommandSequence
 from cube.presentation.gui.key_bindings import lookup_command
 from cube.presentation.gui.types import Color4
 
@@ -135,6 +136,18 @@ class AppWindowBase(ABC):
     @abstractmethod
     def set_mouse_visible(self, visible: bool) -> None:
         """Show or hide the mouse cursor."""
+        ...
+
+    @abstractmethod
+    def schedule_once(self, callback: Callable[[float], None], delay: float) -> None:
+        """Schedule a callback to run after a delay (non-blocking).
+
+        The GUI remains responsive during the wait.
+
+        Args:
+            callback: Function to call after delay, receives dt (elapsed time)
+            delay: Time in seconds to wait before calling
+        """
         ...
 
     def get_system_mouse_cursor(self, cursor_type: str) -> None:
@@ -271,6 +284,73 @@ class AppWindowBase(ABC):
                     error_text += msg
                 self._app.set_error(error_text)
                 self.update_gui_elements()
+
+    def inject_command_sequence(
+        self,
+        commands: CommandSequence | list[Command],
+        on_complete: Callable[[], None] | None = None,
+    ) -> None:
+        """Inject a sequence of commands, handling delays from SleepCommand.
+
+        Commands are executed in order. If a command returns delay_next_command > 0,
+        the remaining commands are scheduled to run after that delay.
+        The GUI remains responsive during delays.
+
+        Args:
+            commands: Sequence of commands to execute
+            on_complete: Optional callback when all commands complete
+
+        Example:
+            from cube.presentation.gui.commands import Commands
+            window.inject_command_sequence(
+                Commands.Sleep(3) + Commands.SCRAMBLE_1 + Commands.QUIT
+            )
+        """
+        if isinstance(commands, CommandSequence):
+            cmd_list = list(commands)
+        else:
+            cmd_list = list(commands)
+
+        def execute_next(index: int) -> None:
+            if index >= len(cmd_list):
+                if on_complete:
+                    on_complete()
+                return
+
+            cmd = cmd_list[index]
+            try:
+                ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
+                result = cmd.execute(ctx)
+                if not result.no_gui_update:
+                    self.update_gui_elements()
+
+                # Check if we need to delay before next command
+                if result.delay_next_command > 0 and index + 1 < len(cmd_list):
+                    # Schedule remaining commands after delay
+                    self.schedule_once(lambda _dt: execute_next(index + 1), result.delay_next_command)
+                else:
+                    # Execute next command immediately
+                    execute_next(index + 1)
+
+            except AppExit:
+                if self._app.config.gui_test_mode:
+                    self.close()
+                    raise
+                else:
+                    self._app.set_error("Asked to stop")
+                    self.update_gui_elements()
+            except Exception as e:
+                cfg = self._app.config
+                if cfg.gui_test_mode and cfg.quit_on_error_in_test_mode:
+                    self.close()
+                    raise
+                else:
+                    traceback.print_exc()
+                    self._app.set_error(f"Error: {e}")
+                    self.update_gui_elements()
+
+        # Start executing commands
+        execute_next(0)
 
     def _update_status_text(self) -> None:
         """Build status text labels.

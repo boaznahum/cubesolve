@@ -41,6 +41,8 @@ from .concrete import (
     SizeDecCommand,
     # Size
     SizeIncCommand,
+    # Timing
+    SleepCommand,
     SliceResetCommand,
     SliceStartDecCommand,
     # Slice
@@ -268,6 +270,29 @@ class Commands:
     # =========================================================================
     ANNOTATE = AnnotateCommand()
     SPECIAL_ALG = SpecialAlgCommand()
+
+    # =========================================================================
+    # TIMING
+    # =========================================================================
+    SLEEP_1 = SleepCommand(duration=1.0)
+    SLEEP_2 = SleepCommand(duration=2.0)
+    SLEEP_3 = SleepCommand(duration=3.0)
+    SLEEP_5 = SleepCommand(duration=5.0)
+
+    @staticmethod
+    def Sleep(duration: float) -> SleepCommand:
+        """Create a sleep command with custom duration.
+
+        Args:
+            duration: Time to sleep in seconds
+
+        Returns:
+            SleepCommand instance
+
+        Example:
+            Commands.Sleep(5) + Commands.QUIT  # Wait 5 seconds, then quit
+        """
+        return SleepCommand(duration=duration)
 
     @classmethod
     def get_by_name(cls, name: str) -> "Command":

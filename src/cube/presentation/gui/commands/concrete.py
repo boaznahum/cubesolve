@@ -662,3 +662,24 @@ class SpecialAlgCommand(Command):
 
         ctx.op.play(alg, False)
         return CommandResult()
+
+
+# =============================================================================
+# TIMING COMMANDS
+# =============================================================================
+
+@dataclass(frozen=True)
+class SleepCommand(Command):
+    """Command to pause for a duration (non-blocking, GUI stays responsive).
+
+    Use this in command sequences to add delays between actions.
+
+    Example:
+        Commands.SLEEP_3 + Commands.QUIT  # Wait 3 seconds, then quit
+        Commands.Sleep(5) + Commands.SOLVE_ALL  # Wait 5 seconds, then solve
+    """
+    duration: float = 1.0  # Duration in seconds
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        """Return result with delay_next_command set."""
+        return CommandResult(delay_next_command=self.duration, no_gui_update=True)

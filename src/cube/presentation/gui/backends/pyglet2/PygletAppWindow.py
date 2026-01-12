@@ -7,6 +7,8 @@ and inherits from AppWindowBase for shared logic.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 try:
     import pyglet
     from pyglet import gl
@@ -393,6 +395,17 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             Number of textures successfully loaded (0-6).
         """
         return self._modern_viewer.load_texture_set_per_cell(directory)
+
+    def schedule_once(self, callback: "Callable[[float], None]", delay: float) -> None:
+        """Schedule a callback to run after a delay (non-blocking).
+
+        The GUI remains responsive during the wait.
+
+        Args:
+            callback: Function to call after delay, receives dt (elapsed time)
+            delay: Time in seconds to wait before calling
+        """
+        self._backend.event_loop.schedule_once(callback, delay)
 
     @property
     def modern_viewer(self) -> ModernGLCubeViewer:

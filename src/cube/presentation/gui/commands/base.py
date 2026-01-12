@@ -73,6 +73,7 @@ class CommandResult:
     """Result of command execution."""
     handled: bool = True
     no_gui_update: bool = False  # True if GUI doesn't need updating
+    delay_next_command: float = 0.0  # Delay before executing next command (seconds)
 
 
 # =============================================================================

@@ -3,6 +3,9 @@ Headless AppWindow implementation.
 
 Provides a no-output application window for testing and automation.
 """
+from __future__ import annotations
+
+from collections.abc import Callable
 
 from cube.application.AbstractApp import AbstractApp
 from cube.application.protocols import AnimatableViewer
@@ -161,5 +164,14 @@ class HeadlessAppWindow(AppWindowBase, AppWindow):
             Empty string (headless backend has no OpenGL context).
         """
         return ""
+
+    def schedule_once(self, callback: "Callable[[float], None]", delay: float) -> None:
+        """Schedule a callback to run after a delay (non-blocking).
+
+        Args:
+            callback: Function to call after delay, receives dt (elapsed time)
+            delay: Time in seconds to wait before calling
+        """
+        self._event_loop.schedule_once(callback, delay)
 
     # adjust_brightness() and get_brightness() inherited from AppWindowBase (return None)

@@ -15,6 +15,9 @@ Enhanced Features:
 - Status display: press 'S' to show detailed part status
 - Rich colored output when rich library is available
 """
+from __future__ import annotations
+
+from collections.abc import Callable
 
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
@@ -478,5 +481,14 @@ Press any key to continue...
             Empty string (console backend has no OpenGL context).
         """
         return ""
+
+    def schedule_once(self, callback: "Callable[[float], None]", delay: float) -> None:
+        """Schedule a callback to run after a delay (non-blocking).
+
+        Args:
+            callback: Function to call after delay, receives dt (elapsed time)
+            delay: Time in seconds to wait before calling
+        """
+        self._event_loop.schedule_once(callback, delay)
 
     # adjust_brightness() and get_brightness() inherited from AppWindowBase (return None)

@@ -4,6 +4,9 @@ Tkinter AppWindow implementation.
 Provides the Tkinter-specific AppWindow that uses TkinterWindow
 and AppWindowBase for shared logic.
 """
+from __future__ import annotations
+
+from collections.abc import Callable
 
 from cube.application.AbstractApp import AbstractApp
 from cube.application.animation.AnimationManager import AnimationWindow
@@ -216,5 +219,14 @@ class TkinterAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             Empty string (tkinter backend uses 2D canvas, no OpenGL).
         """
         return ""
+
+    def schedule_once(self, callback: "Callable[[float], None]", delay: float) -> None:
+        """Schedule a callback to run after a delay (non-blocking).
+
+        Args:
+            callback: Function to call after delay, receives dt (elapsed time)
+            delay: Time in seconds to wait before calling
+        """
+        self._event_loop.schedule_once(callback, delay)
 
     # adjust_brightness() and get_brightness() inherited from AppWindowBase (return None)

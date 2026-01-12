@@ -7,6 +7,7 @@ High-level window combining GUI and application logic.
 from __future__ import annotations
 
 import traceback
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from cube.application.exceptions.ExceptionAppExit import AppExit
@@ -18,6 +19,7 @@ from cube.presentation.gui.protocols.AppWindow import AppWindow
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
+    from cube.presentation.gui.commands import CommandSequence
     from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
     from cube.presentation.viewer.GCubeViewer import GCubeViewer
 
@@ -265,3 +267,63 @@ class WebAppWindow(AppWindow):
     def load_texture_set(self, directory: str) -> int:
         """Load all face textures from a directory (not supported in web backend)."""
         return 0
+
+    def schedule_once(self, callback: "Callable[[float], None]", delay: float) -> None:
+        """Schedule a callback to run after a delay (non-blocking).
+
+        Args:
+            callback: Function to call after delay, receives dt (elapsed time)
+            delay: Time in seconds to wait before calling
+        """
+        self._event_loop.schedule_once(callback, delay)
+
+    def inject_command_sequence(
+        self,
+        commands: "CommandSequence | list[Command]",
+        on_complete: "Callable[[], None] | None" = None,
+    ) -> None:
+        """Inject a sequence of commands, handling delays from SleepCommand.
+
+        Commands are executed in order. If a command returns delay_next_command > 0,
+        the remaining commands are scheduled to run after that delay.
+        The GUI remains responsive during delays.
+
+        Args:
+            commands: Sequence of commands to execute
+            on_complete: Optional callback when all commands complete
+        """
+        from cube.presentation.gui.commands import CommandSequence
+
+        # Convert list to CommandSequence if needed
+        if isinstance(commands, list):
+            cmd_list = commands
+        else:
+            cmd_list = list(commands)
+
+        if not cmd_list:
+            if on_complete:
+                on_complete()
+            return
+
+        def execute_next(index: int) -> None:
+            if index >= len(cmd_list):
+                if on_complete:
+                    on_complete()
+                return
+
+            cmd = cmd_list[index]
+            result = cmd.execute(CommandContext.from_window(self))  # type: ignore[arg-type]
+
+            if not result.no_gui_update:
+                self.update_gui_elements()
+
+            # If delay requested, schedule next command after delay
+            if result.delay_next_command > 0:
+                def continue_sequence(_dt: float) -> None:
+                    execute_next(index + 1)
+                self.schedule_once(continue_sequence, result.delay_next_command)
+            else:
+                # No delay, execute next command immediately
+                execute_next(index + 1)
+
+        execute_next(0)
