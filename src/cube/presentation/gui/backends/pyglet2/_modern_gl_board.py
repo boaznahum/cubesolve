@@ -367,7 +367,7 @@ class ModernGLBoard:
     ]:
         """Generate vertex data grouped by cell texture handle.
 
-        Used for per-cell textures stored in PartEdge.c_attributes.
+        Used for per-cell textures stored in PartEdge.moveable_attributes.
         Each cell's texture handle is looked up from c_attributes and
         cells with the same texture are batched together.
 
@@ -490,12 +490,12 @@ class ModernGLBoard:
                     continue
 
                 # Check c_attributes for source markers (moving pieces)
-                c_markers = cell.part_edge.c_attributes.get("markers")
+                c_markers = cell.part_edge.moveable_attributes.get("markers")
                 if c_markers:
                     source_cells.append(cell)
 
                 # Check f_attributes for destination markers (fixed positions)
-                f_markers = cell.part_edge.f_attributes.get("markers")
+                f_markers = cell.part_edge.fixed_attributes.get("markers")
                 if f_markers:
                     dest_cells.append(cell)
 

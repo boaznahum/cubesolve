@@ -147,19 +147,19 @@ class Face(SuperElement, Hashable):
                 mm.add_marker(self._edge_left.get_slice(i).get_face_edge(self), mf.c1(), moveable=True)
                 mm.add_marker(self._edge_right.get_slice(i).get_face_edge(self), mf.c2(), moveable=False)
 
-            self._edge_left.get_slice(i).get_face_edge(self).attributes["cw"] = i
-            self._edge_top.get_slice(i).get_face_edge(self).attributes["cw"] = i
-            self._edge_right.get_slice(i).get_face_edge(self).attributes["cw"] = n1 - i
-            self._edge_bottom.get_slice(i).get_face_edge(self).attributes["cw"] = n1 - i
+            self._edge_left.get_slice(i).get_face_edge(self).fixed_attributes["cw"] = i
+            self._edge_top.get_slice(i).get_face_edge(self).fixed_attributes["cw"] = i
+            self._edge_right.get_slice(i).get_face_edge(self).fixed_attributes["cw"] = n1 - i
+            self._edge_bottom.get_slice(i).get_face_edge(self).fixed_attributes["cw"] = n1 - i
 
         for e in self._edges:
             for i in range(n):
-                # cw = self._edge_bottom.get_slice(i).get_face_edge(self).attributes["cw"]
-                e.get_left_top_left_edge(self, i).c_attributes["n"] = i + 1
+                # cw = self._edge_bottom.get_slice(i).get_face_edge(self).fixed_attributes["cw"]
+                e.get_left_top_left_edge(self, i).moveable_attributes["n"] = i + 1
 
         for r in range(n):
             for c in range(n):
-                self._center.get_center_slice((r, c)).edge.c_attributes["n"] = r * n + c
+                self._center.get_center_slice((r, c)).edge.moveable_attributes["n"] = r * n + c
 
     # noinspection PyUnresolvedReferences
 

@@ -203,7 +203,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         for part_slice in self._cube.get_all_part_slices():
             for edge in part_slice.edges:
                 # If any edge should have texture but doesn't, need reload
-                return CELL_TEXTURE_KEY not in edge.c_attributes
+                return CELL_TEXTURE_KEY not in edge.moveable_attributes
         return False
 
     def _debug_texture(self, *args) -> None:
@@ -789,7 +789,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         """Load face textures and slice into per-cell textures.
 
         This is the NEW texture system where each cell has its own texture
-        stored in PartEdge.c_attributes. Textures follow stickers during
+        stored in PartEdge.moveable_attributes. Textures follow stickers during
         rotation via the copy_color() mechanism.
 
         Expects files named F.png, B.png, R.png, L.png, U.png, D.png
@@ -816,7 +816,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                     # Slice image into NxN cell textures
                     sliced = self._renderer.slice_texture(str(file_path), size)
                     if sliced:
-                        # Assign texture handles to PartEdge.c_attributes
+                        # Assign texture handles to PartEdge.moveable_attributes
                         self._assign_cell_textures(face_name, sliced)
                         loaded += 1
                     break
@@ -834,7 +834,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         face_name: FaceName,
         sliced_textures: list[list[int]],
     ) -> None:
-        """Assign sliced texture handles to PartEdge.c_attributes.
+        """Assign sliced texture handles to PartEdge.moveable_attributes.
 
         Each cell's texture handle is stored in the corresponding PartEdge's
         c_attributes dict under CELL_TEXTURE_KEY. During rotation, copy_color()
@@ -857,9 +857,9 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                 part_edge = gl_face.get_part_edge_at_cell(cube_face, row, col)
 
                 if part_edge is not None:
-                    part_edge.c_attributes[CELL_TEXTURE_KEY] = texture_handle
+                    part_edge.moveable_attributes[CELL_TEXTURE_KEY] = texture_handle
                     # Debug identifier to trace c_attributes copying
-                    part_edge.c_attributes[CELL_DEBUG_KEY] = f"{face_name.value}({row},{col})"
+                    part_edge.moveable_attributes[CELL_DEBUG_KEY] = f"{face_name.value}({row},{col})"
 
     def clear_cell_textures(self) -> None:
         """Clear all per-cell textures from GPU and c_attributes."""
@@ -871,7 +871,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         # Clear from c_attributes on all PartEdges
         for part_slice in self._cube.get_all_part_slices():
             for edge in part_slice.edges:
-                edge.c_attributes.pop(CELL_TEXTURE_KEY, None)
+                edge.moveable_attributes.pop(CELL_TEXTURE_KEY, None)
 
         self._use_per_cell_textures = False
         self._texture_directory = None  # Don't reload on reset
@@ -1041,7 +1041,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                 part_slice = self._get_part_slice_at(FaceName.F, row, col)
                 if part_slice:
                     part_edge = part_slice.get_face_edge(cube_face)
-                    debug_id = part_edge.c_attributes.get(CELL_DEBUG_KEY, "???")
+                    debug_id = part_edge.moveable_attributes.get(CELL_DEBUG_KEY, "???")
                     row_items.append(debug_id)
                 else:
                     row_items.append("None")
@@ -1054,13 +1054,13 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         gl_face = self._board.faces[FaceName.F]
         size = self._cube.size
 
-        lines = ["    Front face CELLS part_edge.c_attributes:"]
+        lines = ["    Front face CELLS part_edge.moveable_attributes:"]
         for row in range(size - 1, -1, -1):
             row_items = []
             for cell in gl_face.cells:
                 if cell.row == row:
                     if cell.part_edge:
-                        debug_id = cell.part_edge.c_attributes.get(CELL_DEBUG_KEY, "???")
+                        debug_id = cell.part_edge.moveable_attributes.get(CELL_DEBUG_KEY, "???")
                         row_items.append((cell.col, debug_id))
                     else:
                         row_items.append((cell.col, "NoEdge"))
@@ -1143,8 +1143,8 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             for col in range(size):
                 part_edge = gl_face.get_part_edge_at_cell(cube_face, row, col)
                 if part_edge is not None:
-                    debug_id = part_edge.c_attributes.get(CELL_DEBUG_KEY, "???")
-                    tex_handle = part_edge.c_attributes.get(CELL_TEXTURE_KEY, -1)
+                    debug_id = part_edge.moveable_attributes.get(CELL_DEBUG_KEY, "???")
+                    tex_handle = part_edge.moveable_attributes.get(CELL_TEXTURE_KEY, -1)
                     row_items.append(f"{debug_id}({tex_handle})")
                 else:
                     row_items.append("None")

@@ -462,7 +462,7 @@ class Edge(Part):
         sl: EdgeWing
         for sl in self.all_slices:
             e: PartEdge = sl.get_face_edge(face)
-            _cw = e.attributes["cw"]
+            _cw = e.fixed_attributes["cw"]
             if _cw == cw:
                 return e
 
@@ -479,8 +479,8 @@ class Edge(Part):
         n_s = ""
         for i in range(n):
             sl: PartEdge = self._find_cw(face, i)
-            cw_s += str(self.get_slice(i).get_face_edge(face).attributes["cw"])
-            n_s += str(sl.c_attributes["n"])
+            cw_s += str(self.get_slice(i).get_face_edge(face).fixed_attributes["cw"])
+            n_s += str(sl.moveable_attributes["n"])
 
         return cw_s + " " + n_s
 

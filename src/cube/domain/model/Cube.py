@@ -785,7 +785,7 @@ class Cube(CubeSupplier):
         for f in self.faces:
             f.reset_after_faces_changes()
 
-    def clear_c_attributes(self) -> None:
+    def clear_moveable_attributes(self) -> None:
         """
         Clear all color-associated attributes (c_attributes) from all cube parts.
 
@@ -808,18 +808,18 @@ class Cube(CubeSupplier):
         -------
         >>> cube = Cube(3)
         >>> # Add a marker to front center
-        >>> cube.front.center.get_center_slice((1,1)).c_attributes["marker"] = "X"
+        >>> cube.front.center.get_center_slice((1,1)).moveable_attributes["marker"] = "X"
         >>> # Do some operations...
         >>> cube.front.rotate(1)
         >>> # Clear all markers
-        >>> cube.clear_c_attributes()
+        >>> cube.clear_moveable_attributes()
         >>> # All c_attributes are now empty
 
         Notes
         -----
         This does NOT affect:
         - Cube colors (use reset() for that)
-        - Structural attributes (edge.attributes) which stay with positions
+        - Structural attributes (edge.fixed_attributes) which stay with positions
         - Cube state or solution status
 
         See Also
@@ -828,11 +828,11 @@ class Cube(CubeSupplier):
         PartEdge : Has both attributes (positional) and c_attributes (color-following)
         """
         for edge in self.edges:
-            edge.clear_c_attributes()
+            edge.clear_moveable_attributes()
         for corner in self.corners:
-            corner.clear_c_attributes()
+            corner.clear_moveable_attributes()
         for center in self.centers:
-            center.clear_c_attributes()
+            center.clear_moveable_attributes()
 
     def x_rotate(self, n):
         """

@@ -565,7 +565,7 @@ class ModernGLCell:
         """
         if self.part_edge is None:
             return None
-        return self.part_edge.c_attributes.get(CELL_TEXTURE_KEY)
+        return self.part_edge.moveable_attributes.get(CELL_TEXTURE_KEY)
 
     def get_markers(self) -> list[MarkerConfig]:
         """Get markers for this cell from all attribute dictionaries.

@@ -25,14 +25,14 @@ class PartEdge:
     ==========================
     PartEdge has two distinct attribute systems for different use cases:
 
-    1. ``attributes`` - Fixed to Slot (STAYS at position)
+    1. ``fixed_attributes`` - Fixed to Slot (STAYS at position)
        - Properties of the physical slot itself
        - Includes structural info (origin, on_x, on_y, cw) set during Face.finish_init()
        - Also includes runtime fixed markers and tracking keys
        - NEVER moves during rotations
        - Use case: Coordinate system, rotation calculations, destination markers
 
-    2. ``c_attributes`` - Color-Associated (MOVES with color)
+    2. ``moveable_attributes`` - Color-Associated (MOVES with color)
        - Attributes that travel with the colored sticker during rotations
        - COPIED during copy_color() method
        - Keys: "n" (sequential number), tracker keys, "markers" list
@@ -40,14 +40,14 @@ class PartEdge:
        - Example: FaceTracker puts a key here to find a piece after rotation
 
     Animation Use Case:
-        - AnnWhat.Moved → uses c_attributes → marker follows the sticker
-        - AnnWhat.FixedPosition → uses attributes → marker stays at destination
+        - AnnWhat.Moved → uses moveable_attributes → marker follows the sticker
+        - AnnWhat.FixedPosition → uses fixed_attributes → marker stays at destination
 
     See: design2/partedge-attribute-system.md for visual diagrams
     """
     __slots__ = ["_face", "_parent", "_color", "_annotated_by_color",
                  "_annotated_fixed_location", "_texture_direction",
-                 "attributes", "c_attributes"]
+                 "fixed_attributes", "moveable_attributes"]
 
     _face: _Face
     _color: Color
@@ -62,8 +62,8 @@ class PartEdge:
             color: Initial color of the sticker (can change during rotation)
 
         The two attribute dictionaries are initialized empty:
-        - attributes: {} (fixed to slot - structural info + runtime markers)
-        - c_attributes: {} (color-associated, moves with color)
+        - fixed_attributes: {} (fixed to slot - structural info + runtime markers)
+        - moveable_attributes: {} (color-associated, moves with color)
         """
         super().__init__()
         self._face = face
@@ -75,11 +75,11 @@ class PartEdge:
         # Fixed attributes - STAY at physical slot, NOT copied during rotation
         # Includes structural properties (origin, cw, on_x, on_y) set by Face.finish_init()
         # Also includes runtime fixed markers (e.g., C2 destination markers)
-        self.attributes: dict[Hashable, Any] = {}
+        self.fixed_attributes: dict[Hashable, Any] = {}
 
-        # Color-associated attributes - MOVE with color during copy_color()
+        # Moveable attributes - MOVE with color during copy_color()
         # Used by FaceTracker, moveable markers (e.g., C1 from MarkerFactory)
-        self.c_attributes: dict[Hashable, Any] = {}
+        self.moveable_attributes: dict[Hashable, Any] = {}
 
         self._parent: _PartSlice
 
@@ -111,23 +111,23 @@ class PartEdge:
         What gets COPIED:
         - _color: The actual sticker color
         - _annotated_by_color: Color-based annotation flag
-        - c_attributes: All color-associated attributes (cleared then updated)
+        - moveable_attributes: All color-associated attributes (cleared then updated)
 
         What is NOT copied (stays at this slot):
         - _face: Physical face reference
-        - attributes: Fixed slot properties (structural + runtime markers)
+        - fixed_attributes: Fixed slot properties (structural + runtime markers)
 
         This distinction enables:
-        - Tracking pieces: Put marker in c_attributes, it follows the color
-        - Marking destinations: Put marker in attributes, it stays put
+        - Tracking pieces: Put marker in moveable_attributes, it follows the color
+        - Marking destinations: Put marker in fixed_attributes, it stays put
 
         See: design2/partedge-attribute-system.md for visual diagrams
         """
         self._color = source._color
         self._annotated_by_color = source._annotated_by_color
         self._texture_direction = source._texture_direction
-        self.c_attributes.clear()
-        self.c_attributes.update(source.c_attributes)
+        self.moveable_attributes.clear()
+        self.moveable_attributes.update(source.moveable_attributes)
 
     def clone(self) -> "PartEdge":
         """
@@ -137,14 +137,14 @@ class PartEdge:
         p = PartEdge(self._face, self._color)
         p._annotated_by_color = self._annotated_by_color
         p._texture_direction = self._texture_direction
-        p.attributes = self.attributes.copy()
-        p.c_attributes = self.c_attributes.copy()
+        p.fixed_attributes = self.fixed_attributes.copy()
+        p.moveable_attributes = self.moveable_attributes.copy()
 
         return p
 
-    def clear_c_attributes(self) -> None:
-        """Clear color-associated attributes."""
-        self.c_attributes.clear()
+    def clear_moveable_attributes(self) -> None:
+        """Clear moveable (color-associated) attributes."""
+        self.moveable_attributes.clear()
 
     def annotate(self, fixed_location: bool):
         if fixed_location:

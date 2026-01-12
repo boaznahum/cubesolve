@@ -383,7 +383,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
     def load_texture_set(self, directory: str) -> int:
         """Load all face textures from a directory.
 
-        Uses per-cell textures stored in PartEdge.c_attributes.
+        Uses per-cell textures stored in PartEdge.moveable_attributes.
         Textures follow stickers during rotation.
 
         Args:

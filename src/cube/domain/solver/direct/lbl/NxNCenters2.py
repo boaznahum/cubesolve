@@ -182,12 +182,12 @@ class NxNCenters2(SolverElement):
 
         # self.debug(f"Tracking cent slice {cs.index} column {column}")
 
-        cs.c_attributes[CENTER_SLICE_TRACK_KEY] = column
+        cs.moveable_attributes[CENTER_SLICE_TRACK_KEY] = column
 
     def _is_center_slice(self, cs: CenterSlice) -> int | None:
 
         # the default is boolean False !!!
-        x = cs.c_attributes[CENTER_SLICE_TRACK_KEY]
+        x = cs.moveable_attributes[CENTER_SLICE_TRACK_KEY]
 
         # print(f"x: {x}")
 
@@ -197,7 +197,7 @@ class NxNCenters2(SolverElement):
             return None
 
     def _clear_center_slice(self, cs: CenterSlice) -> None:
-        cs.c_attributes.pop(CENTER_SLICE_TRACK_KEY, None)
+        cs.moveable_attributes.pop(CENTER_SLICE_TRACK_KEY, None)
 
     def _clear_all_tracking(self):
 

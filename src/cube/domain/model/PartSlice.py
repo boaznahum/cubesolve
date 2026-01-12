@@ -89,7 +89,7 @@ class PartSlice(ABC, Hashable):
         self._fixed_id: PartSliceHashID | None = None
         self._parent: _Part | None = None
         # attributes(like color) that are move around with the slice
-        self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
+        self.moveable_attributes: dict[Hashable, Any] = defaultdict(bool)
 
         global _SliceUniqueID
         _SliceUniqueID += 1
@@ -187,14 +187,14 @@ class PartSlice(ABC, Hashable):
 
         self.reset_colors_id()
 
-        self.c_attributes.clear()
-        self.c_attributes.update(source_slice.c_attributes)
+        self.moveable_attributes.clear()
+        self.moveable_attributes.update(source_slice.moveable_attributes)
 
-    def clear_c_attributes(self) -> None:
+    def clear_moveable_attributes(self) -> None:
         """Clear color-associated attributes from this slice and all its edges."""
-        self.c_attributes.clear()
+        self.moveable_attributes.clear()
         for edge in self._edges:
-            edge.clear_c_attributes()
+            edge.clear_moveable_attributes()
 
     def same_colors(self, other: "PartSlice"):
         """
@@ -356,7 +356,7 @@ class PartSlice(ABC, Hashable):
     def clone(self: _TPartSlice) -> _TPartSlice:
         s = self._clone_basic()
         s._unique_id = self._unique_id
-        s.c_attributes = self.c_attributes.copy()
+        s.moveable_attributes = self.moveable_attributes.copy()
         # don't need to clone f_attributes, clone is used for rotating only; f_attributes is not rotated
         return s
 

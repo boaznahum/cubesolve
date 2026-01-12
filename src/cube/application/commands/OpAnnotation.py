@@ -100,11 +100,11 @@ class OpAnnotation:
             if fixed:
                 slots.append((_type, -_SLice_Tracking_UniqID, marker))
                 mm.add_marker(_slice, marker, moveable=False)
-                _slice.f_attributes[key] = key
+                _slice.fixed_attributes[key] = key
             else:
                 slots.append((_type, _SLice_Tracking_UniqID, marker))
                 mm.add_marker(_slice, marker, moveable=True)
-                _slice.c_attributes[key] = key
+                _slice.moveable_attributes[key] = key
 
         has_text = text and any(text)
         if has_text:
@@ -137,11 +137,11 @@ class OpAnnotation:
 
                     if _i < 0:
                         def _pred(_e: PartEdge) -> bool:
-                            return _key == _e.f_attributes.get(_key)
+                            return _key == _e.fixed_attributes.get(_key)
 
                     else:
                         def _pred(_e: PartEdge) -> bool:
-                            return _key == _e.c_attributes.get(_key)
+                            return _key == _e.moveable_attributes.get(_key)
 
                     _pred.__doc__ = f"Find {i}"
 
@@ -164,10 +164,10 @@ class OpAnnotation:
                 if i < 0:
                     # if have a bug, nested annimation in __fixed_edge, so key already deleted
                     mm.remove_marker(e, marker, moveable=False)
-                    del e.f_attributes[key]
+                    del e.fixed_attributes[key]
                 else:
                     mm.remove_marker(e, marker, moveable=True)
-                    del e.c_attributes[key]
+                    del e.moveable_attributes[key]
 
             op.play(Algs.AN)
 

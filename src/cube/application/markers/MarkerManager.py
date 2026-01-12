@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
 
 
-# Key used to store markers in attributes/c_attributes
+# Key used to store markers in fixed_attributes/moveable_attributes
 _MARKER_KEY: str = "markers"
 
 
@@ -28,8 +28,8 @@ class MarkerManager(IMarkerManager):
         (e.g., two "CHAR" markers with different characters on same cell).
 
     Markers can be stored in two modes:
-    - Moveable (c_attributes): Marker follows the sticker color during rotations
-    - Fixed (attributes): Marker stays at the physical position
+    - Moveable (moveable_attributes): Marker follows the sticker color during rotations
+    - Fixed (fixed_attributes): Marker stays at the physical position
 
     Usage:
         manager = MarkerManager()
@@ -72,8 +72,8 @@ class MarkerManager(IMarkerManager):
             part_edge: The sticker to mark
             marker: The marker configuration
             moveable: If True, marker moves with the sticker color during rotations
-                     (stored in c_attributes). If False, marker stays at physical
-                     position (stored in attributes).
+                     (stored in moveable_attributes). If False, marker stays at physical
+                     position (stored in fixed_attributes).
             remove_same_name: If True, removes all existing markers with the same
                      name before adding the new marker. Useful for updating markers
                      that should replace previous values (e.g., index indicators).
@@ -82,9 +82,9 @@ class MarkerManager(IMarkerManager):
             self.remove_markers_by_name(part_edge, marker.name, moveable=moveable)
 
         if moveable:
-            attrs = part_edge.c_attributes
+            attrs = part_edge.moveable_attributes
         else:
-            attrs = part_edge.attributes
+            attrs = part_edge.fixed_attributes
 
         self._add_to_dict(attrs, marker)
 
@@ -93,7 +93,7 @@ class MarkerManager(IMarkerManager):
         part_edge: PartEdge,
         marker: MarkerConfig,
     ) -> None:
-        """Add a marker fixed to a position (stored in attributes).
+        """Add a marker fixed to a position (stored in fixed_attributes).
 
         This is equivalent to add_marker(moveable=False) but with a clearer name
         for structural markers like origin/on_x/on_y that are set during
@@ -116,8 +116,8 @@ class MarkerManager(IMarkerManager):
         Args:
             part_edge: The sticker to unmark
             marker: The marker configuration to remove
-            moveable: If True, remove from c_attributes. If False, remove from
-                     attributes. If None, try both.
+            moveable: If True, remove from moveable_attributes. If False, remove from
+                     fixed_attributes. If None, try both.
 
         Returns:
             True if marker was found and removed, False otherwise.
@@ -125,11 +125,11 @@ class MarkerManager(IMarkerManager):
         removed = False
 
         if moveable is True or moveable is None:
-            if self._remove_from_dict(part_edge.c_attributes, marker):
+            if self._remove_from_dict(part_edge.moveable_attributes, marker):
                 removed = True
 
         if moveable is False or moveable is None:
-            if self._remove_from_dict(part_edge.attributes, marker):
+            if self._remove_from_dict(part_edge.fixed_attributes, marker):
                 removed = True
 
         return removed
@@ -148,8 +148,8 @@ class MarkerManager(IMarkerManager):
         Args:
             part_edge: The sticker to unmark
             name: The marker name/type to remove (e.g., "C1", "ORIGIN")
-            moveable: If True, remove from c_attributes. If False, remove from
-                     f_attributes. If None, remove from all.
+            moveable: If True, remove from moveable_attributes. If False, remove from
+                     fixed_attributes. If None, remove from all.
 
         Returns:
             Number of markers removed.
@@ -157,21 +157,17 @@ class MarkerManager(IMarkerManager):
         count = 0
 
         if moveable is True or moveable is None:
-            count += self._remove_by_name_from_dict(part_edge.c_attributes, name)
+            count += self._remove_by_name_from_dict(part_edge.moveable_attributes, name)
 
         if moveable is False or moveable is None:
-            count += self._remove_by_name_from_dict(part_edge.f_attributes, name)
-
-        # Also check attributes for fixed structural markers
-        if moveable is None:
-            count += self._remove_by_name_from_dict(part_edge.attributes, name)
+            count += self._remove_by_name_from_dict(part_edge.fixed_attributes, name)
 
         return count
 
     def get_markers(self, part_edge: PartEdge) -> list[MarkerConfig]:
         """Get all markers for a PartEdge.
 
-        Retrieves markers from all three attribute dictionaries and returns
+        Retrieves markers from both attribute dictionaries and returns
         them sorted by z_order (lowest first, so highest draws on top).
 
         Args:
@@ -182,10 +178,9 @@ class MarkerManager(IMarkerManager):
         """
         markers: list[MarkerConfig] = []
 
-        # Collect from all three attribute dicts
-        markers.extend(self._get_from_dict(part_edge.attributes))
-        markers.extend(self._get_from_dict(part_edge.c_attributes))
-        markers.extend(self._get_from_dict(part_edge.f_attributes))
+        # Collect from both attribute dicts
+        markers.extend(self._get_from_dict(part_edge.fixed_attributes))
+        markers.extend(self._get_from_dict(part_edge.moveable_attributes))
 
         # Sort by z_order so lower values are drawn first (higher on top)
         markers.sort(key=lambda m: m.z_order)
@@ -193,22 +188,18 @@ class MarkerManager(IMarkerManager):
         return markers
 
     def get_moveable_markers(self, part_edge: PartEdge) -> list[MarkerConfig]:
-        """Get only moveable markers (from c_attributes)."""
-        return self._get_from_dict(part_edge.c_attributes)
+        """Get only moveable markers (from moveable_attributes)."""
+        return self._get_from_dict(part_edge.moveable_attributes)
 
     def get_fixed_markers(self, part_edge: PartEdge) -> list[MarkerConfig]:
-        """Get only fixed markers (from f_attributes and attributes)."""
-        markers: list[MarkerConfig] = []
-        markers.extend(self._get_from_dict(part_edge.attributes))
-        markers.extend(self._get_from_dict(part_edge.f_attributes))
-        return markers
+        """Get only fixed markers (from fixed_attributes)."""
+        return self._get_from_dict(part_edge.fixed_attributes)
 
     def has_markers(self, part_edge: PartEdge) -> bool:
         """Check if a PartEdge has any markers."""
         return (
-            bool(self._get_from_dict(part_edge.attributes))
-            or bool(self._get_from_dict(part_edge.c_attributes))
-            or bool(self._get_from_dict(part_edge.f_attributes))
+            bool(self._get_from_dict(part_edge.fixed_attributes))
+            or bool(self._get_from_dict(part_edge.moveable_attributes))
         )
 
     def clear_markers(
@@ -220,18 +211,14 @@ class MarkerManager(IMarkerManager):
 
         Args:
             part_edge: The sticker to clear
-            moveable: If True, clear only c_attributes. If False, clear only
-                     f_attributes. If None, clear all.
+            moveable: If True, clear only moveable_attributes. If False, clear only
+                     fixed_attributes. If None, clear all.
         """
         if moveable is True or moveable is None:
-            part_edge.c_attributes.pop(_MARKER_KEY, None)
+            part_edge.moveable_attributes.pop(_MARKER_KEY, None)
 
         if moveable is False or moveable is None:
-            part_edge.f_attributes.pop(_MARKER_KEY, None)
-
-        # Also clear attributes for fixed structural markers
-        if moveable is None:
-            part_edge.attributes.pop(_MARKER_KEY, None)
+            part_edge.fixed_attributes.pop(_MARKER_KEY, None)
 
     # ================================================================
     # Internal Helper Methods

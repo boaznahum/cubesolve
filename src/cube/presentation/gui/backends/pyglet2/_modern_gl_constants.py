@@ -100,10 +100,10 @@ COLOR_TO_HOME_FACE: dict[Color, FaceName] = {
 }
 
 # =============================================================================
-# Cell Texture System (per-cell textures stored in PartEdge.c_attributes)
+# Cell Texture System (per-cell textures stored in PartEdge.moveable_attributes)
 # =============================================================================
 # When textures are sliced into NxN cells, each cell's texture handle is
-# stored in the PartEdge.c_attributes dict under this key. The texture
+# stored in the PartEdge.moveable_attributes dict under this key. The texture
 # "follows" the sticker during rotation via copy_color() mechanism.
 
 CELL_TEXTURE_KEY = "cell_texture"  # Key for texture handle in c_attributes
