@@ -198,3 +198,46 @@ class PartEdge:
             quarter_turns: Number of 90° clockwise rotations (can be negative)
         """
         self._texture_direction = (self._texture_direction + quarter_turns) % 4
+
+    @staticmethod
+    def rotate_4cycle(p0: "PartEdge", p1: "PartEdge", p2: "PartEdge", p3: "PartEdge") -> None:
+        """Rotate color data in a 4-cycle: p0 ← p1 ← p2 ← p3 ← p0.
+
+        This is an optimized rotation that swaps references instead of copying.
+        In a 4-cycle, we don't need to copy dict contents - just rotate references.
+
+        Performance: O(1) for c_attributes instead of O(K) where K = number of attributes.
+
+        The cycle direction matches the copy_color pattern:
+        - p0 receives p1's color data
+        - p1 receives p2's color data
+        - p2 receives p3's color data
+        - p3 receives p0's original color data
+
+        What gets rotated (moves with color):
+        - _color: The actual sticker color
+        - _annotated_by_color: Color-based annotation flag
+        - _texture_direction: Texture rotation state
+        - c_attributes: Dict reference is swapped, not copied!
+
+        Args:
+            p0, p1, p2, p3: The four PartEdges in the cycle
+        """
+        # Save references from all 4 positions first
+        colors = (p0._color, p1._color, p2._color, p3._color)
+        annotated = (p0._annotated_by_color, p1._annotated_by_color,
+                     p2._annotated_by_color, p3._annotated_by_color)
+        textures = (p0._texture_direction, p1._texture_direction,
+                    p2._texture_direction, p3._texture_direction)
+        # Key optimization: save dict REFERENCES, not copies
+        c_attrs = (p0.c_attributes, p1.c_attributes, p2.c_attributes, p3.c_attributes)
+
+        # Rotate: p0 ← p1 ← p2 ← p3 ← p0
+        p0._color, p1._color, p2._color, p3._color = colors[1], colors[2], colors[3], colors[0]
+        p0._annotated_by_color, p1._annotated_by_color, p2._annotated_by_color, p3._annotated_by_color = \
+            annotated[1], annotated[2], annotated[3], annotated[0]
+        p0._texture_direction, p1._texture_direction, p2._texture_direction, p3._texture_direction = \
+            textures[1], textures[2], textures[3], textures[0]
+        # Swap dict references - O(1) instead of clear+update which is O(K)
+        p0.c_attributes, p1.c_attributes, p2.c_attributes, p3.c_attributes = \
+            c_attrs[1], c_attrs[2], c_attrs[3], c_attrs[0]
