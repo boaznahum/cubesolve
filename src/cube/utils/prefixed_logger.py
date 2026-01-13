@@ -1,7 +1,8 @@
 """Prefixed logger that wraps ILogger with automatic prefix and debug flag."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, Callable, Generator
 
 from cube.utils.logger_protocol import DebugFlagType, ILogger
 
@@ -132,19 +133,28 @@ class PrefixedLogger(ILogger):
 
 
 class MutablePrefixLogger(ILogger):
-    """Logger wrapper with a mutable prefix that can be set after creation.
+    """Logger wrapper with mutable prefix and indented sections support.
 
     Use this when the prefix isn't known at construction time but will be set later.
-    Before set_prefix() is called, delegates directly to parent without adding prefix.
+    Supports indented sections via tab() context manager.
 
     Example:
         logger = MutablePrefixLogger(parent_logger)
-        logger.debug(None, "no prefix yet")  # Delegates to parent
         logger.set_prefix("MyComponent")
-        logger.debug(None, "with prefix")    # Adds "MyComponent:" prefix
+
+        with logger.tab(lambda: "Processing slice 1"):
+            logger.debug(None, "nested message")
+            with logger.tab(lambda: "Source face"):
+                logger.debug(None, "deeper nested")
+
+        # Output:
+        # ── Processing slice 1 ──
+        # │  nested message
+        # │  ── Source face ──
+        # │  │  deeper nested
     """
 
-    __slots__ = ["_delegate", "_prefix"]
+    __slots__ = ["_delegate", "_prefix", "_indent_stack"]
 
     def __init__(self, delegate: ILogger) -> None:
         """Initialize with parent logger and no prefix.
@@ -154,6 +164,7 @@ class MutablePrefixLogger(ILogger):
         """
         self._delegate = delegate
         self._prefix: str | None = None
+        self._indent_stack: list[str] = []
 
     def set_prefix(self, prefix: str) -> None:
         """Set the prefix for this logger.
@@ -162,6 +173,52 @@ class MutablePrefixLogger(ILogger):
             prefix: The prefix to prepend to all debug messages.
         """
         self._prefix = prefix
+
+    @contextmanager
+    def tab(
+        self,
+        headline: Callable[[], str] | str | None = None,
+        char: str = '│'
+    ) -> Generator[bool, None, None]:
+        """Context manager for indented debug sections.
+
+        Args:
+            headline: Section title (lazy callable or string), printed on entry
+            char: Indent character ('│' default, ' ' for blank)
+
+        Yields:
+            bool: True if debug is enabled (caller can skip expensive work)
+        """
+        # Check if debug is enabled
+        is_enabled = self._delegate.is_debug(None)
+
+        # Build current indent for headline
+        current_indent = "".join(self._indent_stack)
+
+        # Resolve headline string (for both start and end messages)
+        headline_str: str | None = None
+        if headline:
+            headline_str = headline() if callable(headline) else headline
+
+        if is_enabled and headline_str:
+            # Print headline with border
+            self._delegate.debug(None, f"{current_indent}── {headline_str} ──")
+
+        # Build indent string: "│  " (char + 2 spaces)
+        indent = f"{char}  "
+
+        # Push indent onto stack
+        self._indent_stack.append(indent)
+
+        try:
+            yield is_enabled
+        finally:
+            # Pop indent from stack
+            self._indent_stack.pop()
+
+            # Print end message
+            if is_enabled and headline_str:
+                self._delegate.debug(None, f"{current_indent}── end: {headline_str} ──")
 
     @property
     def is_debug_all(self) -> bool:
@@ -189,17 +246,23 @@ class MutablePrefixLogger(ILogger):
         return self._delegate.debug_prefix()
 
     def debug(self, debug_on: bool | None, *args: Any) -> None:
-        """Print debug information, adding prefix if set."""
+        """Print debug information with prefix and indentation."""
+        indent = "".join(self._indent_stack)
         if self._prefix:
-            self._delegate.debug(debug_on, f"{self._prefix}:", *args)
+            self._delegate.debug(debug_on, f"{self._prefix}:", indent, *args)
+        elif indent:
+            self._delegate.debug(debug_on, indent, *args)
         else:
             self._delegate.debug(debug_on, *args)
 
     def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any]) -> None:
-        """Print debug with lazy evaluation."""
+        """Print debug with lazy evaluation, prefix and indentation."""
         if self._delegate.is_debug(debug_on):
+            indent = "".join(self._indent_stack)
             if self._prefix:
-                self._delegate.debug(debug_on, f"{self._prefix}:", func())
+                self._delegate.debug(debug_on, f"{self._prefix}:", indent, func())
+            elif indent:
+                self._delegate.debug(debug_on, indent, func())
             else:
                 self._delegate.debug(debug_on, func())
 

@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
 
-from cube.application.PrefixedLogger import MutablePrefixLogger
+from cube.utils.prefixed_logger import MutablePrefixLogger
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat

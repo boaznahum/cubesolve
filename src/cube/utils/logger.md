@@ -197,8 +197,8 @@ Values accepted: `1`, `true`, `yes` (case-insensitive)
 | File | Purpose |
 |------|---------|
 | `src/cube/utils/logger_protocol.py` | `ILogger`, `IPrefixLogger`, `DebugFlagType` |
+| `src/cube/utils/prefixed_logger.py` | `PrefixedLogger`, `MutablePrefixLogger` |
 | `src/cube/application/Logger.py` | Root `Logger` implementation |
-| `src/cube/application/PrefixedLogger.py` | `PrefixedLogger`, `MutablePrefixLogger` |
 | `src/cube/application/state.py` | `ApplicationAndViewState` creates root Logger |
 
 ## Migration Guide

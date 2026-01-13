@@ -148,5 +148,5 @@ class Logger(ILogger):
         Returns:
             PrefixedLogger instance that delegates to this logger.
         """
-        from cube.application.PrefixedLogger import PrefixedLogger
+        from cube.utils.prefixed_logger import PrefixedLogger
         return PrefixedLogger(self, prefix, debug_flag)

@@ -9,7 +9,7 @@ See Also:
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Protocol, runtime_checkable
+from typing import Any, Callable, ContextManager, Protocol, runtime_checkable
 
 # Type for debug flag: static bool, dynamic callable, or None (inherit/ignore)
 DebugFlagType = bool | Callable[[], bool] | None
@@ -118,16 +118,25 @@ class ILogger(Protocol):
 
 @runtime_checkable
 class IPrefixLogger(ILogger, Protocol):
-    """Logger with mutable prefix that can be set after creation.
+    """Logger with mutable prefix and indented sections support.
 
     Use this when the prefix isn't known at construction time but will be set later.
-    Extends ILogger with set_prefix() method.
+    Extends ILogger with set_prefix() and tab() methods.
 
     Example:
         logger: IPrefixLogger = MutablePrefixLogger(parent_logger)
-        logger.debug(None, "no prefix yet")  # Delegates to parent
         logger.set_prefix("MyComponent")
-        logger.debug(None, "with prefix")    # Adds "MyComponent:" prefix
+
+        with logger.tab(lambda: "Processing slice 1") as dbg:
+            logger.debug(None, "nested message")
+            with logger.tab(lambda: "Source face"):
+                logger.debug(None, "deeper nested")
+
+        # Output:
+        # ── Processing slice 1 ──
+        # │  nested message
+        # │  ── Source face ──
+        # │  │  deeper nested
     """
 
     def set_prefix(self, prefix: str) -> None:
@@ -135,5 +144,33 @@ class IPrefixLogger(ILogger, Protocol):
 
         Args:
             prefix: The prefix to prepend to all debug messages.
+        """
+        ...
+
+    def tab(
+        self,
+        headline: Callable[[], str] | str | None = None,
+        char: str = '│'
+    ) -> ContextManager[bool]:
+        """Context manager for indented debug sections.
+
+        Creates a visually nested section in debug output. All debug calls
+        within the context are indented with the specified character.
+
+        Args:
+            headline: Section title, printed on entry. Can be:
+                - Callable (lazy): Only evaluated if debug is enabled
+                - str: Static string
+                - None: No headline printed
+            char: Indent character ('│' default, ' ' for blank indent)
+
+        Yields:
+            bool: True if debug is enabled (caller can skip expensive work)
+
+        Example:
+            with logger.tab(lambda: f"Slice {i}") as dbg:
+                if dbg:
+                    expensive = compute()
+                logger.debug(None, "processing...")
         """
         ...
