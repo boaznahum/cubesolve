@@ -171,6 +171,16 @@ class Face(SuperElement, Hashable):
     def center(self) -> Center:
         return self._center
 
+    def get_center_slice(self, index: CenterSliceIndex) -> "CenterSlice":
+        """
+        A short cut for center.get_center_slice()
+        Row, Column
+        :param index:
+        :return:
+        """
+        return self.center.get_center_slice(index)
+
+
     @property
     def edges(self) -> Sequence[Edge]:
         # need to cache
