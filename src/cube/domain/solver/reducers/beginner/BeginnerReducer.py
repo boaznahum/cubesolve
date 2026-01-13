@@ -43,7 +43,7 @@ class BeginnerReducer(AbstractReducer):
             advanced_edge_parity: If True, use advanced R/L-slice parity algorithm.
                                   If False, use simple M-slice parity algorithm.
         """
-        super().__init__(op)
+        super().__init__(op, logger_prefix="BeginnerReducer")
 
         # Import here to avoid circular imports
         from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
