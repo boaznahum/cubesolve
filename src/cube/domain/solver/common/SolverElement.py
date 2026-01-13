@@ -1,6 +1,7 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
 
+from cube.application.PrefixedLogger import MutablePrefixLogger
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -23,9 +24,9 @@ _Common: TypeAlias = "CommonOp"
 class SolverElement(CubeSupplier):
     __slots__ = ["_solver", "_ann",
                  "_cmn",
-                 "_debug_prefix",
                  "_cube",
-                 "_cqr"
+                 "_cqr",
+                 "_logger"
                  ]
 
     _solver: SolverElementsProvider
@@ -34,18 +35,21 @@ class SolverElement(CubeSupplier):
         self._solver = solver
         self._ann = solver.op.annotation
         self._cmn = solver.cmn
-        self._debug_prefix: str | None = None
         self._cube = solver.cube
         self._cqr = solver.cube.cqr
+        # MutablePrefixLogger: prefix can be set later via _set_debug_prefix
+        self._logger: MutablePrefixLogger = MutablePrefixLogger(solver._logger)
 
-    def _set_debug_prefix(self, prefix: str):
-        self._debug_prefix = prefix
+    def _set_debug_prefix(self, prefix: str) -> None:
+        """Set the debug prefix for this element's logger."""
+        self._logger.set_prefix(prefix)
 
-    def debug(self, *args):
-        if x := self._debug_prefix:
-            self._solver.debug(x + ":", *args)
-        else:
-            self._solver.debug(*args)
+    def debug(self, *args) -> None:
+        """Output debug information.
+
+        DEPRECATED: Use self._logger.debug(None, ...) instead.
+        """
+        self._logger.debug(None, *args)
 
     @property
     def cube(self) -> Cube:

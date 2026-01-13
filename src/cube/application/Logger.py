@@ -19,7 +19,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
-from cube.utils.logger_protocol import ILogger
+from cube.utils.logger_protocol import DebugFlagType, ILogger
 
 
 def _env_bool(name: str) -> bool | None:
@@ -79,11 +79,12 @@ class Logger(ILogger):
         """Set quiet_all mode."""
         self._quiet_all = value
 
-    def is_debug(self, debug_on: bool = False) -> bool:
+    def is_debug(self, debug_on: bool | None = None) -> bool:
         """Check if debug output should happen.
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
+                      If None, treated as False.
 
         Returns:
             True if debug output should happen:
@@ -91,17 +92,18 @@ class Logger(ILogger):
         """
         if self._quiet_all:
             return False
-        return self._debug_all or debug_on
+        return self._debug_all or (debug_on is True)
 
     def debug_prefix(self) -> str:
         """Return the standard debug prefix."""
         return "DEBUG:"
 
-    def debug(self, debug_on: bool, *args: Any) -> None:
+    def debug(self, debug_on: bool | None, *args: Any) -> None:
         """Print debug information if allowed by flags.
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
+                      If None, treated as False.
             *args: Arguments to print, same as print() function.
 
         Logic:
@@ -110,10 +112,10 @@ class Logger(ILogger):
         """
         if self._quiet_all:
             return
-        if self._debug_all or debug_on:
+        if self._debug_all or (debug_on is True):
             print("DEBUG:", *args, flush=True)
 
-    def debug_lazy(self, debug_on: bool, func: Callable[[], Any]) -> None:
+    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any]) -> None:
         """Print debug information with lazy evaluation.
 
         The func is only called if we're actually going to print,
@@ -121,6 +123,7 @@ class Logger(ILogger):
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
+                      If None, treated as False.
             func: Callable that returns the message to print.
 
         Logic:
@@ -129,5 +132,21 @@ class Logger(ILogger):
         """
         if self._quiet_all:
             return
-        if self._debug_all or debug_on:
+        if self._debug_all or (debug_on is True):
             print("DEBUG:", func())
+
+    def with_prefix(self, prefix: str, debug_flag: DebugFlagType = None) -> ILogger:
+        """Create a prefixed logger wrapping this logger.
+
+        Args:
+            prefix: Prefix to prepend to all messages.
+            debug_flag: Debug control for the new logger:
+                - bool: Static True/False
+                - Callable[[], bool]: Dynamic evaluation
+                - None: Use caller-provided debug_on
+
+        Returns:
+            PrefixedLogger instance that delegates to this logger.
+        """
+        from cube.application.PrefixedLogger import PrefixedLogger
+        return PrefixedLogger(self, prefix, debug_flag)

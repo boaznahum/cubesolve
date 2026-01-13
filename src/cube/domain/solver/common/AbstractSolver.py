@@ -9,6 +9,7 @@ from cube.domain.solver import Solver
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
+from cube.utils.logger_protocol import ILogger
 
 if TYPE_CHECKING:
     pass
@@ -16,14 +17,20 @@ if TYPE_CHECKING:
 
 class AbstractSolver(Solver, ABC):
     """Abstract base class for all solvers."""
-    __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override"]
+    __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override", "__logger"]
 
-    def __init__(self, op: OperatorProtocol) -> None:
+    def __init__(self, op: OperatorProtocol, logger_prefix: str | None = None) -> None:
         super().__init__()
         # Set _op and _cube BEFORE CommonOp - CommonOp needs self.op
         self._op = op
         self._cube = op.cube
         self._debug_override: bool | None = None
+        # Create logger with prefix (passed explicitly by subclass)
+        prefix = logger_prefix or "Solver"
+        self.__logger: ILogger = self._cube.sp.logger.with_prefix(
+            prefix,
+            debug_flag=lambda: self._is_debug_enabled
+        )
         self.common: CommonOp = CommonOp(self)
 
     # =========================================================================
@@ -105,12 +112,18 @@ class AbstractSolver(Solver, ABC):
     def is_debug_enabled(self):
         return self.op.app_state.is_debug(self._is_debug_enabled)
 
-    def debug(self, *args):
-        logger = self.cube.sp.logger
-        if logger.is_debug(self._is_debug_enabled):
-            prefix = self.name + ":"
-            print("Solver:", prefix, *(str(x) for x in args))
-            self.op.log("Solver:", prefix, *args)
+    @property
+    def _logger(self) -> ILogger:
+        """The logger for this solver, with prefix and debug flag."""
+        return self.__logger
+
+    def debug(self, *args) -> None:
+        """Output debug information.
+
+        DEPRECATED: Use self._logger.debug(None, ...) instead.
+        Kept for backward compatibility.
+        """
+        self.__logger.debug(None, *args)
 
     @property
     @final

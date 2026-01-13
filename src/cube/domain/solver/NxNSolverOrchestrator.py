@@ -79,7 +79,7 @@ class NxNSolverOrchestrator(AbstractSolver):
             solver_3x3: Solver for 3x3 cube
             solver_name: Name identifier for this solver
         """
-        super().__init__(op)
+        super().__init__(op, logger_prefix=f"Solver:{solver_name.display_name}")
         self._op = op
         self._reducer = reducer
         self._solver_3x3 = solver_3x3

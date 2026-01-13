@@ -13,6 +13,7 @@ from abc import ABCMeta
 from typing import TYPE_CHECKING, Protocol
 
 from cube.utils.config_protocol import ConfigProtocol
+from cube.utils.logger_protocol import ILogger
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -52,9 +53,21 @@ class SolverElementsProvider(Protocol, metaclass=ABCMeta):
         ...
 
     def debug(self, *args) -> None:
-        """Output debug information."""
+        """Output debug information.
+
+        DEPRECATED: Use self._logger.debug(None, ...) instead.
+        """
+        ...
+
+    @property
+    def _logger(self) -> ILogger:
+        """The logger for this solver/reducer.
+
+        Created via cube.sp.logger.with_prefix() with debug_flag callback.
+        Child elements can chain with: self._logger.with_prefix("ChildName")
+        """
         ...
 
     @property
     def config(self) -> ConfigProtocol:
-        return  self.op.app_state.config
+        return self.op.app_state.config

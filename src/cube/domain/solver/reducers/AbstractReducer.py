@@ -17,6 +17,7 @@ from cube.domain.solver.protocols.ReducerProtocol import (
     ReductionResults,
 )
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
+from cube.utils.logger_protocol import ILogger
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -46,19 +47,25 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         - status: str (property)
     """
 
-    __slots__ = ["_op", "_cube", "_cmn", "_debug_override", "_debug_prefix"]
+    __slots__ = ["_op", "_cube", "_cmn", "_debug_override", "__logger"]
 
-    def __init__(self, op: OperatorProtocol) -> None:
+    def __init__(self, op: OperatorProtocol, logger_prefix: str | None = None) -> None:
         """
         Initialize the AbstractReducer.
 
         Args:
             op: Operator for cube manipulation
+            logger_prefix: Prefix for logger output (default: "Reducer")
         """
         self._op = op
         self._cube = op.cube
         self._debug_override: bool | None = None
-        self._debug_prefix: str = "Reducer"
+        # Create logger with prefix (passed explicitly by subclass)
+        prefix = logger_prefix or "Reducer"
+        self.__logger: ILogger = self._cube.sp.logger.with_prefix(
+            prefix,
+            debug_flag=lambda: self._is_debug_enabled
+        )
 
         # Create CommonOp passing self (we implement SolverElementsProvider)
         from cube.domain.solver.common.CommonOp import CommonOp
@@ -82,12 +89,17 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         return self._cmn
 
     def debug(self, *args) -> None:
-        """Output debug information."""
-        logger = self._cube.sp.logger
-        if logger.is_debug(self._is_debug_enabled):
-            prefix = self._debug_prefix + ":"
-            print("Reducer:", prefix, *(str(x) for x in args))
-            self.op.log("Reducer:", prefix, *args)
+        """Output debug information.
+
+        DEPRECATED: Use self._logger.debug(None, ...) instead.
+        Kept for backward compatibility.
+        """
+        self.__logger.debug(None, *args)
+
+    @property
+    def _logger(self) -> ILogger:
+        """The logger for this reducer, with prefix and debug flag."""
+        return self.__logger
 
     # ---- Debug configuration ----
 
@@ -98,10 +110,6 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
             return self._cube.config.solver_debug
         else:
             return self._debug_override
-
-    def _set_debug_prefix(self, prefix: str) -> None:
-        """Set the debug output prefix."""
-        self._debug_prefix = prefix
 
     # ---- ReducerProtocol interface (abstract) ----
 

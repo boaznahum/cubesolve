@@ -5,10 +5,14 @@ Application layer provides the Logger implementation.
 
 See Also:
     Logger: The concrete implementation in cube.application.Logger
+    PrefixedLogger: Wrapper that adds prefix to messages
 """
 from __future__ import annotations
 
 from typing import Any, Callable, Protocol, runtime_checkable
+
+# Type for debug flag: static bool, dynamic callable, or None (inherit/ignore)
+DebugFlagType = bool | Callable[[], bool] | None
 
 
 @runtime_checkable
@@ -42,11 +46,12 @@ class ILogger(Protocol):
         """Set quiet_all mode."""
         ...
 
-    def is_debug(self, debug_on: bool = False) -> bool:
+    def is_debug(self, debug_on: bool | None = None) -> bool:
         """Check if debug output should happen.
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
+                      If None, treated as False for root logger.
 
         Returns:
             True if debug output should happen:
@@ -58,11 +63,12 @@ class ILogger(Protocol):
         """Return the standard debug prefix."""
         ...
 
-    def debug(self, debug_on: bool, *args: Any) -> None:
+    def debug(self, debug_on: bool | None, *args: Any) -> None:
         """Print debug information if allowed by flags.
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
+                      If None, uses logger's default (False for root, debug_flag for prefixed).
             *args: Arguments to print, same as print() function.
 
         Logic:
@@ -71,7 +77,7 @@ class ILogger(Protocol):
         """
         ...
 
-    def debug_lazy(self, debug_on: bool, func: Callable[[], Any]) -> None:
+    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any]) -> None:
         """Print debug information with lazy evaluation.
 
         The func is only called if we're actually going to print,
@@ -79,10 +85,55 @@ class ILogger(Protocol):
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
+                      If None, uses logger's default.
             func: Callable that returns the message to print.
 
         Logic:
             - If quiet_all is True → never print, func not called
             - If debug_all is True OR debug_on is True → call func and print
+        """
+        ...
+
+    def with_prefix(self, prefix: str, debug_flag: DebugFlagType = None) -> "ILogger":
+        """Create a new logger that prepends prefix to all messages.
+
+        Args:
+            prefix: String to prepend to all messages (colon added automatically).
+            debug_flag: Debug control for the new logger:
+                - bool: Static True/False
+                - Callable[[], bool]: Dynamic evaluation (e.g., lambda: self._is_debug_enabled)
+                - None: Inherit from parent or use caller-provided debug_on
+
+        Returns:
+            New ILogger instance that delegates to this logger with prefix.
+
+        Example:
+            solver_logger = root_logger.with_prefix("Solver:Beginner", lambda: self._is_debug_enabled)
+            step_logger = solver_logger.with_prefix("L1Cross")  # inherits debug_flag
+            step_logger.debug(None, "solving...")
+            # Output: "DEBUG: Solver:Beginner:L1Cross: solving..."
+        """
+        ...
+
+
+@runtime_checkable
+class IPrefixLogger(ILogger, Protocol):
+    """Logger with mutable prefix that can be set after creation.
+
+    Use this when the prefix isn't known at construction time but will be set later.
+    Extends ILogger with set_prefix() method.
+
+    Example:
+        logger: IPrefixLogger = MutablePrefixLogger(parent_logger)
+        logger.debug(None, "no prefix yet")  # Delegates to parent
+        logger.set_prefix("MyComponent")
+        logger.debug(None, "with prefix")    # Adds "MyComponent:" prefix
+    """
+
+    def set_prefix(self, prefix: str) -> None:
+        """Set the prefix for this logger.
+
+        Args:
+            prefix: The prefix to prepend to all debug messages.
         """
         ...
