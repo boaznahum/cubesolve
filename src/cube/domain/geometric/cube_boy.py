@@ -46,7 +46,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.utils.config_protocol import IServiceProvider
+from cube.utils.service_provider import IServiceProvider
 
 from cube.domain.model.Color import Color
 from cube.domain.model.ColorLong import ColorLong

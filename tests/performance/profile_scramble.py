@@ -18,7 +18,8 @@ from cube.domain.model.Cube import Cube
 from cube.application.config_impl import AppConfig
 from cube.application.Logger import Logger
 from cube.application.markers import MarkerFactory, MarkerManager
-from cube.utils.config_protocol import IServiceProvider, ConfigProtocol
+from cube.utils.config_protocol import ConfigProtocol
+from cube.utils.service_provider import IServiceProvider
 from cube.utils.logger_protocol import ILogger
 from cube.application.markers import IMarkerFactory, IMarkerManager
 

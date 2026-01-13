@@ -9,7 +9,8 @@ from cube.domain.algs import Alg
 from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solver, Solvers
 from cube.domain.solver.SolverName import SolverName
-from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
+from cube.utils.config_protocol import ConfigProtocol
+from cube.utils.service_provider import IServiceProvider
 
 if TYPE_CHECKING:
     from cube.application.animation.AnimationManager import AnimationManager

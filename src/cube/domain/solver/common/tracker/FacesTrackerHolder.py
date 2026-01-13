@@ -35,7 +35,6 @@ from typing import TYPE_CHECKING
 
 from typing_extensions import Self
 
-from cube.domain.geometric.types import Point
 from cube.domain.model import CenterSlice, Color
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout

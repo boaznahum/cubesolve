@@ -343,8 +343,6 @@ class NxNCenters2(SolverElement):
         assert l1_white_tracker.face is self.cube.down # assume in right setup
         assert l1_white_tracker.face.center.is3x3  # solved
 
-        work_was_done: bool = False
-
         for target_face in ( f.face for f in l1_white_tracker.adjusted_faces() ) :
 
             # now check is there a slice on my target

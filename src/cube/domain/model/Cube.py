@@ -135,7 +135,8 @@ from collections.abc import Iterable, MutableSequence
 from typing import TYPE_CHECKING, Collection, Protocol, Tuple
 
 from cube.domain.exceptions import InternalSWError
-from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
+from cube.utils.config_protocol import ConfigProtocol
+from cube.utils.service_provider import IServiceProvider
 
 from ._elements import AxisName, PartColorsID
 from .PartSlice import CornerSlice, EdgeWing, PartSlice

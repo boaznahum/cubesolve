@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from cube.domain.geometric.cube_layout import CubeLayout
     from cube.domain.model.Color import Color
     from cube.domain.model.FaceName import FaceName
-    from cube.utils.config_protocol import IServiceProvider
+    from cube.utils.service_provider import IServiceProvider
 
 
 def create_layout(

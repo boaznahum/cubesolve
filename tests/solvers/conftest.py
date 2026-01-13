@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from cube.domain.solver.SolverName import SolverName
-from cube.utils.config_protocol import IServiceProvider
+from cube.utils.service_provider import IServiceProvider
 
 from tests.test_utils import _test_sp
 

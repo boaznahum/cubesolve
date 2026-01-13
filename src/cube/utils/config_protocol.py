@@ -1,7 +1,6 @@
 """Configuration protocol for dependency inversion.
 
 Domain imports these protocols from utils (foundation layer).
-Application layer implements IServiceProvider.
 
 IMPORTANT: Only config_impl.py should import _config directly.
 All other code must access config through this protocol via context.
@@ -12,10 +11,7 @@ from typing import TYPE_CHECKING, Protocol, Tuple, runtime_checkable
 if TYPE_CHECKING:
     from cube.domain.model.Color import Color
     from cube.utils.SSCode import SSCode
-    from cube.application.markers.IMarkerFactory import IMarkerFactory
-    from cube.application.markers.IMarkerManager import IMarkerManager
     from cube.utils.markers_config import MarkersConfig
-    from cube.utils.logger_protocol import ILogger
 
 
 @runtime_checkable
@@ -430,37 +426,4 @@ class ConfigProtocol(Protocol):
         Returns:
             True if the code is enabled in SS_CODES config, False otherwise
         """
-        ...
-
-
-
-@runtime_checkable
-class IServiceProvider(Protocol):
-    """Service provider protocol - provides access to application services.
-
-    Domain classes receive this via dependency injection.
-    Application (_App) implements this protocol.
-    Tests use a lightweight TestServiceProvider.
-
-    Extensible: future services (debug, logging) can be added here.
-    """
-
-    @property
-    def config(self) -> ConfigProtocol:
-        """Get the application configuration."""
-        ...
-
-    @property
-    def marker_factory(self) -> "IMarkerFactory":
-        """Get the marker factory for creating marker configurations."""
-        ...
-
-    @property
-    def marker_manager(self) -> "IMarkerManager":
-        """Get the marker manager for adding/retrieving markers on cube stickers."""
-        ...
-
-    @property
-    def logger(self) -> "ILogger":
-        """Get the logger for debug output control."""
         ...

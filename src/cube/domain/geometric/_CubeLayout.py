@@ -16,7 +16,8 @@ from cube.domain.geometric.cube_layout import (
     _OPPOSITE,
 )
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout, _SliceLayout
-from cube.utils.config_protocol import ConfigProtocol, IServiceProvider
+from cube.utils.config_protocol import ConfigProtocol
+from cube.utils.service_provider import IServiceProvider
 from cube.utils.Cache import CacheManager
 
 from cube.domain.model.Color import Color
