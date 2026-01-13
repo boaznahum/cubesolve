@@ -645,7 +645,7 @@ class NxNCenters2(SolverElement):
 
         target_point_color: Color = target_face.center.get_center_slice(target_point).color
 
-        source_point_and_second_source_point: Tuple[Point, Point] = self._source_point_has_color(target_point_color, required_color, source_face, natural_source,
+        source_point_and_second_source_point: Tuple[Point, Point] | None = self._source_point_has_color(target_point_color, required_color, source_face, natural_source,
                                                          second_point_on_source)
 
         if source_point_and_second_source_point is None:

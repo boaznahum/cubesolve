@@ -43,7 +43,6 @@ from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.common.tracker._factory import NxNCentersFaceTrackers
-from test_marker_tracking import n_slices
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

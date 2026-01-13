@@ -3,7 +3,7 @@ from typing import Callable, Tuple, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
 
-from ._elements import Direction, PartColorsID
+from ._elements import CenterSliceIndex, Direction, PartColorsID
 from .PartSlice import CenterSlice, PartSlice
 from .Center import Center
 from .Corner import Corner
