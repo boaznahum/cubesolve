@@ -20,6 +20,7 @@ from .Cube import Cube
 from cube.domain.geometric.cube_boy import Color
 from .Face import Face
 from .Part import TPartType
+from ..geometric.types import Point
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]
@@ -440,3 +441,23 @@ class CubeQueries2:
                 return e
 
         return None
+
+    def is_center_in_odd(self, point: Point) -> bool:
+
+        r = point[0]
+
+        if r != point[1]:
+            return False
+
+        cube = self._cube
+
+        if cube.is_even:
+            return False
+
+        n_slices = cube.n_slices
+
+        p_center = n_slices // 2
+
+        return r == p_center
+
+

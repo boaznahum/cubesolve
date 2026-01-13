@@ -349,6 +349,8 @@ class CommunicatorHelper(SolverElement):
         if source_face is target_face:
             raise ValueError("Source and target must be different faces")
 
+        # todo: check in center of even is in source or target, raise exception
+
         if source_block is None:
             source_block = target_block
 

@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING
 
 from typing_extensions import Self
 
+from cube.domain.geometric.types import Point
 from cube.domain.model import CenterSlice, Color
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
@@ -42,6 +43,7 @@ from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.common.tracker._factory import NxNCentersFaceTrackers
+from test_marker_tracking import n_slices
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -169,6 +171,10 @@ class FacesTrackerHolder:
     def is_even_cube(self) -> bool:
         """True if tracking an even cube (requires cleanup)."""
         return self._is_even
+
+
+
+
 
     @property
     def trackers(self) -> list[FaceTracker]:

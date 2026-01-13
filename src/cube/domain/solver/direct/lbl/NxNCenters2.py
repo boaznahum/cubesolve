@@ -354,6 +354,9 @@ class NxNCenters2(SolverElement):
             # now find candidate_point
             for point in self._2d_center_row_slice_iter(slice_index):
 
+                if self.cube.cqr.is_center_in_odd(point):
+                    continue  # cant move center
+
                 point_to_solve_piece: CenterSlice = target_face.get_center_slice(point)
 
                 if self._is_cent_piece_solved(point_to_solve_piece):
