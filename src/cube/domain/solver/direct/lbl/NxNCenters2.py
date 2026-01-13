@@ -109,7 +109,7 @@ class NxNCenters2(SolverElement):
 
 
     def solve_single_center_row_slice(
-            self, l1_white_tracker: FaceTracker, face_tracker: FaceTracker, slice_index: int
+            self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int
     ) -> None:
         """
         Solve a single row of center pieces on a face.
@@ -120,12 +120,12 @@ class NxNCenters2(SolverElement):
         Args:
             face_tracker: Face to solve
             slice_index: Slice index to solve  zeo based
-            :param face_tracker:
+            :param target_face:
             :param l1_white_tracker:
         """
 
         self.debug(f"{symbols.green_line(6)}Starting to work on Slice {slice_index} all faces{symbols.green_line(6)}")
-        self._solve_single_center_slice_all_sources(l1_white_tracker, face_tracker, slice_index)
+        self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, slice_index)
         self.debug(f"{symbols.green_line(6) * 6}End to work on Slice {slice_index} all faces{symbols.green_line(6)}")
 
     def _all_slices_on_all_faces_solved(self, l1_white_tracker: FaceTracker, slice_index: int) -> bool:
@@ -519,7 +519,7 @@ class NxNCenters2(SolverElement):
         color = target_face.color
 
         if self.count_color_on_face(source_face.face, color) == 0:
-            self.debug(f"Working on slice {slice_row_index} Found no piece {color}")
+            self.debug(f"Working on slice {slice_row_index} @ {target_face.color_at_face_str} Found no piece {color} on {source_face.face.color_at_face_str}")
             return False  # nothing can be done here
 
         work_done = False

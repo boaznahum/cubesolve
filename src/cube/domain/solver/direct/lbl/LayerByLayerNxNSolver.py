@@ -414,15 +414,15 @@ class LayerByLayerNxNSolver(BaseSolver):
     # Private methods - Middle slices solving
     # =========================================================================
 
-    def _solve_slices_centers(self, th: FacesTrackerHolder) -> None:
+    def _solve_slices_centers(self, face_trackers: FacesTrackerHolder) -> None:
         """Solve all middle slice ring centers (bottom to top).
 
         Delegates to _LBLSlices helper which wraps NxNCenters and NxNEdges.
         """
-        l1_tracker = self._get_layer1_tracker(th)
+        l1_tracker = self._get_layer1_tracker(face_trackers)
 
         with self.op.annotation.annotate(h2="Middle slices centers"):
-            self._lbl_slices.solve_all_slice_centers(th, l1_tracker)
+            self._lbl_slices.solve_all_slice_centers(face_trackers, l1_tracker)
 
     def _solve_slice_n_faces(self, th: FacesTrackerHolder, slice_index: int, n_faces: int) -> None:
         """Solve N faces of a specific slice (for debugging).
