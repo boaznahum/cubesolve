@@ -12,6 +12,7 @@ __todo/__next_session.md
 
 # Claude Code temp files
 tmpclaude-*-cwd
+.claude/tmpdir/
 
 # Profiler output
 scalene-*.json

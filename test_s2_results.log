@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/home/user/cubesolve/test_s2_derivation_all_pairs.py", line 16, in <module>
-    from cube.application.AbstractApp import AbstractApp
-ModuleNotFoundError: No module named 'cube'

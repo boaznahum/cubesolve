@@ -223,7 +223,7 @@ class NxNCenters2(SolverElement):
                         self.debug(f"‼️‼️‼️‼️Nothing was removed_count, aborting face {target_face} slice {slice_index} ‼️‼️‼️‼️")
                         return work_was_done
                     else:
-                        self.debug(f"‼️‼️‼️‼️{removed_count} piece(s) removed_count, trying again slice {slice_index} ‼️‼️‼️‼️")
+                        self.debug(f"‼️‼️‼️‼️{removed_count} piece(s) moved, trying again slice {slice_index} ‼️‼️‼️‼️")
 
     def _solve_single_center_slice_all_sources_impl(self, l1_white_tracker: FaceTracker,
                                                     target_face: FaceTracker,
