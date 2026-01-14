@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
 
-from cube.utils.prefixed_logger import MutablePrefixLogger
+from cube.utils.logger import Logger
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -37,19 +37,21 @@ class SolverElement(CubeSupplier):
         self._cmn = solver.cmn
         self._cube = solver.cube
         self._cqr = solver.cube.cqr
-        # MutablePrefixLogger: prefix can be set later via _set_debug_prefix
-        self._logger: MutablePrefixLogger = MutablePrefixLogger(solver._logger)
+        # Logger: prefix can be set later via _set_debug_prefix (uses set_prefix())
+        self._logger: Logger = Logger(solver._logger)
 
     def _set_debug_prefix(self, prefix: str) -> None:
         """Set the debug prefix for this element's logger."""
         self._logger.set_prefix(prefix)
 
-    def debug(self, *args) -> None:
-        """Output debug information.
+    def debug(self, *args, level: int | None = None) -> None:
+        """Output debug information with optional level filtering.
 
-        DEPRECATED: Use self._logger.debug(None, ...) instead.
+        Args:
+            *args: Arguments to print.
+            level: Optional debug level. If set, checks level <= threshold.
         """
-        self._logger.debug(None, *args)
+        self._logger.debug(None, *args, level=level)
 
     @property
     def cube(self) -> Cube:

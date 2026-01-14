@@ -277,7 +277,7 @@ class NxNCenters(SolverElement):
 
     def _do_faces(self, faces: Sequence[FaceTracker], minimal_bring_one_color, use_back_too: bool) -> bool:
         # while True:
-        self._logger.debug(None, "_do_faces:", *faces, level=3)
+        self.debug( "_do_faces:", *faces, level=3)
         work_done = False
         for f in faces:
             # we must trace faces, because they are moved by algorith
@@ -318,13 +318,13 @@ class NxNCenters(SolverElement):
     def _do_center(self, face_loc: FaceTracker, minimal_bring_one_color, use_back_too: bool) -> bool:
 
         if self._is_face_solved(face_loc.face, face_loc.color):
-            self._logger.debug(None, f"Face is already done {face_loc.face}", level=1)
+            self.debug( f"Face is already done {face_loc.face}", level=1)
             return False
 
         color = face_loc.color
 
         if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
-            self._logger.debug(None, f"{face_loc.face} already has at least one {color}", level=3)
+            self.debug( f"{face_loc.face} already has at least one {color}", level=3)
             return False
 
         sources:Set[Face] = OrderedSet(self.cube.faces) - {face_loc.face}
@@ -332,14 +332,14 @@ class NxNCenters(SolverElement):
             sources -= {face_loc.face.opposite}
 
         if all(not self._has_color_on_face(f, color) for f in sources):
-            self._logger.debug(None, f"For face {face_loc.face}, No color {color} available on  {sources}", level=1)
+            self.debug( f"For face {face_loc.face}, No color {color} available on  {sources}", level=1)
             return False
 
-        self._logger.debug(None, f"Need to work on {face_loc.face}", level=1)
+        self.debug( f"Need to work on {face_loc.face}", level=1)
 
         work_done = self.__do_center(face_loc, minimal_bring_one_color, use_back_too)
 
-        self._logger.debug(None, f"After working on {face_loc.face} {work_done=}, "
+        self.debug( f"After working on {face_loc.face} {work_done=}, "
                            f"solved={self._is_face_solved(face_loc.face, face_loc.color)}", level=1)
 
         return work_done
@@ -383,16 +383,16 @@ class NxNCenters(SolverElement):
         color: Color = face_loc.color
 
         if self._is_face_solved(face, color):
-            self._logger.debug(None, f"Face is already done {face}", level=1)
+            self.debug( f"Face is already done {face}", level=1)
             return False
 
         if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
-            self._logger.debug(None, f"{face_loc.face} already has at least one {color}", level=3)
+            self.debug( f"{face_loc.face} already has at least one {color}", level=3)
             return False
 
         cmn = self.cmn
 
-        self._logger.debug(None, f"Working on face {face}", level=1)
+        self.debug( f"Working on face {face}", level=1)
 
         with self.ann.annotate(h2=f"{color2long(face_loc.color).value} face"):
             cube = self.cube
@@ -521,14 +521,14 @@ class NxNCenters(SolverElement):
                                               f"required={color}, " +
                                               f"actual={after_fixed_color}")
 
-                    self._logger.debug(None, f"Fixed slice {rc}", level=3)
+                    self.debug( f"Fixed slice {rc}", level=3)
 
                     work_done = True
                     if minimal_bring_one_color:
                         return work_done
 
         if not work_done:
-            self._logger.debug(None, f"Internal error, no work was done on face {face} required color {color}, "
+            self.debug( f"Internal error, no work was done on face {face} required color {color}, "
                                f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}", level=3)
             for rc in self._2d_center_iter():
                 if center.get_center_slice(rc).color != color:
@@ -739,11 +739,11 @@ class NxNCenters(SolverElement):
         # =========================================================
         if self._preserve_cage:
             if n_rotate:
-                self._logger.debug(None, f"  [CAGE] Undoing source rotation: {rotate_source_alg.prime * n_rotate}", level=1)
+                self.debug( f"  [CAGE] Undoing source rotation: {rotate_source_alg.prime * n_rotate}", level=1)
                 op.play(rotate_source_alg.prime * n_rotate)
 
             if did_f_prime_setup:
-                self._logger.debug(None, "  [CAGE] Undoing F' setup: F", level=1)
+                self.debug( "  [CAGE] Undoing F' setup: F", level=1)
                 op.play(Algs.F)
 
     def _do_blocks(self, color, face, source_face):
@@ -814,7 +814,7 @@ class NxNCenters(SolverElement):
         if face.name == FaceName.B or face.name == FaceName.F:
             raise InternalSWError(f"{face.name} is not supported, can't bring them to up preserving front")
 
-        self._logger.debug(None, f"Need to bring {face} to up", level=3)
+        self.debug( f"Need to bring {face} to up", level=3)
 
         # rotate back with all slices clockwise
         rotate = Algs.B[1:self.cube.n_slices + 1]
@@ -1067,7 +1067,7 @@ class NxNCenters(SolverElement):
         # But the source face rotation setup is NOT balanced - undo it.
         if self._preserve_cage and n_rotate:
             undo_alg = Algs.of_face(source_face.name).prime * n_rotate
-            self._logger.debug(None, f"  [CAGE] Undoing source rotation: {undo_alg}", level=1)
+            self.debug( f"  [CAGE] Undoing source rotation: {undo_alg}", level=1)
             self.op.play(undo_alg)
 
         return True

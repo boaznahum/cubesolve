@@ -4,8 +4,7 @@ Domain imports this protocol from utils (foundation layer).
 Application layer provides the Logger implementation.
 
 See Also:
-    Logger: The concrete implementation in cube.application.Logger
-    PrefixedLogger: Wrapper that adds prefix to messages
+    Logger: The unified implementation in cube.utils.prefixed_logger
 """
 from __future__ import annotations
 
@@ -147,7 +146,7 @@ class IPrefixLogger(ILogger, Protocol):
     Extends ILogger with set_prefix() and tab() methods.
 
     Example:
-        logger: IPrefixLogger = MutablePrefixLogger(parent_logger)
+        logger: IPrefixLogger = Logger(parent_logger)
         logger.set_prefix("MyComponent")
 
         with logger.tab(lambda: "Processing slice 1") as dbg:

@@ -3,7 +3,7 @@
 ## Overview
 
 The logging system provides centralized debug output control with prefix chaining.
-All debug output flows through `ILogger` instances created via `with_prefix()`.
+All debug output flows through `Logger` instances created via `with_prefix()`.
 
 ## Architecture
 
@@ -14,18 +14,20 @@ All debug output flows through `ILogger` instances created via `with_prefix()`.
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         Logger (root)                                │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────────┐ │
-│  │ _quiet_all  │  │ _debug_all  │  │ with_prefix(prefix, flag)   │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────────────┘ │
+│  delegate=None → owns _quiet_all and _debug_all                      │
+│  ┌─────────────────────────────────────────────────────────────────┐│
+│  │ with_prefix(prefix, debug_flag) → returns child Logger          ││
+│  └─────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────────┘
                               │
               with_prefix("Solver:LBL", lambda: self._is_debug_enabled)
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     PrefixedLogger                                   │
+│                     Logger (child)                                   │
+│  delegate=parent, _root=parent._root (shares root's flags)          │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────────┐ │
-│  │ _delegate   │  │ _prefix     │  │ _debug_flag (callable)      │ │
+│  │ _prefix     │  │ _debug_flag │  │ _level (filtering)          │ │
 │  └─────────────┘  └─────────────┘  └─────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────┘
                               │
@@ -33,7 +35,7 @@ All debug output flows through `ILogger` instances created via `with_prefix()`.
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     PrefixedLogger (chained)                         │
+│                     Logger (chained child)                           │
 │  prefix = "Solver:LBL:L1Cross"                                       │
 │  debug_flag inherited from parent                                    │
 └─────────────────────────────────────────────────────────────────────┘
@@ -44,10 +46,31 @@ All debug output flows through `ILogger` instances created via `with_prefix()`.
 | Class | Purpose |
 |-------|---------|
 | `ILogger` | Protocol for all loggers |
-| `IPrefixLogger` | Protocol extending ILogger with `set_prefix()` |
-| `Logger` | Root logger implementation |
-| `PrefixedLogger` | Wrapper that adds prefix and optional debug_flag |
-| `MutablePrefixLogger` | Wrapper with prefix that can be set later |
+| `IPrefixLogger` | Protocol extending ILogger with `set_prefix()` and `tab()` |
+| `Logger` | Unified implementation (root and child loggers) |
+
+## Logger Class
+
+The unified `Logger` class handles both root and child roles:
+
+```python
+# Root logger (delegate=None)
+root = Logger()  # owns _quiet_all, _debug_all
+
+# Child logger (delegate=parent)
+child = root.with_prefix("Solver")  # shares root's flags via _root reference
+
+# Or create child directly
+child = Logger(delegate=parent, prefix="Solver", debug_flag=lambda: True)
+```
+
+### Features
+
+- **Prefix chaining**: `root.with_prefix("A").with_prefix("B")` → `"A:B:"`
+- **Mutable prefix**: `logger.set_prefix("NewPrefix")` changes prefix dynamically
+- **Debug flag callback**: Evaluated on each `debug()` call
+- **Level filtering**: `set_level(N)`, messages with `level > N` are hidden
+- **Indented sections**: `tab()` context manager for visual nesting
 
 ## Level-Based Debug
 
@@ -162,13 +185,13 @@ class NxNSolverOrchestrator(AbstractSolver):
 
 ## SolverElement Pattern
 
-Uses `MutablePrefixLogger` because prefix is set dynamically:
+Uses `Logger` with mutable prefix (prefix is set dynamically):
 
 ```python
 class SolverElement(CubeSupplier):
     def __init__(self, solver: SolverElementsProvider) -> None:
-        # MutablePrefixLogger: prefix can be set later via _set_debug_prefix
-        self._logger: MutablePrefixLogger = MutablePrefixLogger(solver._logger)
+        # Logger: prefix can be set later via _set_debug_prefix (uses set_prefix())
+        self._logger: Logger = Logger(solver._logger)
 
     def _set_debug_prefix(self, prefix: str) -> None:
         """Set the debug prefix for this element's logger."""
@@ -193,7 +216,7 @@ DebugFlagType = bool | Callable[[], bool] | None
 
 ### 1. Logger Flags (`quiet_all` / `debug_all`)
 
-Global on/off switches in `Logger`:
+Global on/off switches owned by root Logger:
 - Set at startup or via environment variables
 - `quiet_all` suppresses ALL debug output
 - `debug_all` enables ALL debug output
@@ -202,7 +225,7 @@ Global on/off switches in `Logger`:
 
 Per-feature toggle in `_config.py`:
 - Toggled via Ctrl+O in GUI
-- Passed via `debug_flag` callback to PrefixedLogger
+- Passed via `debug_flag` callback to Logger
 
 ### How They Interact
 
@@ -225,6 +248,28 @@ def _is_debug_enabled(self) -> bool:
 | False | True | * | **Yes** (debug_all enables all) |
 | False | False | True | **Yes** (debug_flag enables) |
 | False | False | False | **No** |
+
+## Indented Sections
+
+Use `tab()` for visually nested debug output:
+
+```python
+logger = Logger(parent)
+logger.set_prefix("MyComponent")
+
+with logger.tab(lambda: "Processing slice 1"):
+    logger.debug(None, "nested message")
+    with logger.tab(lambda: "Source face"):
+        logger.debug(None, "deeper nested")
+
+# Output:
+# DEBUG: MyComponent: ── Processing slice 1 ──
+# DEBUG: MyComponent:│  nested message
+# DEBUG: MyComponent:│  ── Source face ──
+# DEBUG: MyComponent:│  │  deeper nested
+# DEBUG: MyComponent:│  ── end: Source face ──
+# DEBUG: MyComponent: ── end: Processing slice 1 ──
+```
 
 ## Usage
 
@@ -259,8 +304,8 @@ Values accepted: `1`, `true`, `yes` (case-insensitive)
 | File | Purpose |
 |------|---------|
 | `src/cube/utils/logger_protocol.py` | `ILogger`, `IPrefixLogger`, `DebugFlagType` |
-| `src/cube/utils/prefixed_logger.py` | `PrefixedLogger`, `MutablePrefixLogger` |
-| `src/cube/application/Logger.py` | Root `Logger` implementation |
+| `src/cube/utils/prefixed_logger.py` | Unified `Logger` implementation |
+| `src/cube/application/Logger.py` | Re-export for backwards compatibility |
 | `src/cube/application/state.py` | `ApplicationAndViewState` creates root Logger |
 
 ## Migration Guide
