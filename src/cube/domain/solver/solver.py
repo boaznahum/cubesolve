@@ -62,10 +62,10 @@ class SolveStep(Enum):
     LBL_L1 = "LBL_L1"          # Layer 1 complete (centers + edges + corners)
     LBL_SLICES_CTR = "LBL_SLICES_CTR"  # Middle slices centers only (for debugging)
     # Slice 0 granular steps (4 faces per slice)
-    LBL_S0F1 = "LBL_S0F1"      # Slice 0, first face center row
-    LBL_S0F2 = "LBL_S0F2"      # Slice 0, faces 1-2
-    LBL_S0F3 = "LBL_S0F3"      # Slice 0, faces 1-3
-    LBL_S0F4 = "LBL_S0F4"      # Slice 0 complete (all 4 faces)
+    # LBL_S0F1 = "LBL_S0F1"      # Slice 0, first face center row
+    # LBL_S0F2 = "LBL_S0F2"      # Slice 0, faces 1-2
+    # LBL_S0F3 = "LBL_S0F3"      # Slice 0, faces 1-3
+    # LBL_S0F4 = "LBL_S0F4"      # Slice 0 complete (all 4 faces)
 
     @property
     def short_code(self) -> str:

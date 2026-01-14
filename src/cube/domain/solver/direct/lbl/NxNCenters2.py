@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Tuple, TypeAlias, Generator
+from typing import Tuple, TypeAlias, Generator, Any
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, CenterSlice, CenterSliceIndex
@@ -124,9 +124,8 @@ class NxNCenters2(SolverElement):
             :param l1_white_tracker:
         """
 
-        self.debug(f"{symbols.green_line(6)}Starting to work on Slice {slice_index} all faces{symbols.green_line(6)}")
-        self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, slice_index)
-        self.debug(f"{symbols.green_line(6) * 6}End to work on Slice {slice_index} all faces{symbols.green_line(6)}")
+        with self._logger.tab(lambda: f"{symbols.green_line(3)} Slice {slice_index} {target_face.color_at_face_str} <-- all faces {symbols.green_line(3)}"):
+            self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, slice_index)
 
     def _all_slices_on_all_faces_solved(self, l1_white_tracker: FaceTracker, slice_index: int) -> bool:
 
@@ -179,11 +178,11 @@ class NxNCenters2(SolverElement):
                     self.debug(f"✅✅✅✅ All slices solved {slice_index} ✅✅✅✅✅")
                     return work_was_done
                 else:
-                    self.debug(f"‼️‼️‼️‼️Not All slices solved, trying to remove {slice_index} ‼️‼️‼️‼️")
+                    self.debug(f"‼️‼️‼️‼️Not All slices solved, trying to remove from some face ‼️‼️‼️‼️")
 
                     removed = self._remove_all_pieces_from_target_face(l1_white_tracker, slice_index)
 
-                    self.debug(f"  Removed from {slice_index} is {removed}")
+                    self.debug(f"  Removed from is {removed}")
 
                     if not removed:
                         self.debug(f"‼️‼️‼️‼️Nothing was removed, aborting {slice_index} ‼️‼️‼️‼️")
@@ -195,20 +194,24 @@ class NxNCenters2(SolverElement):
                                                     target_face: FaceTracker,
                                                     slice_row_index: int
                                                     ) -> bool:
-        source_faces = target_face.other_faces()
+        source_faces: list[FaceTracker] = [ * target_face.other_faces() ]
+
+        self.debug(f" ❓❓❓❓❓❓ {source_faces}")
 
         work_was_done = False
 
-        for source_face in source_faces:
+        source_face: FaceTracker
+        for i, source_face in enumerate(source_faces):
             if source_face is not l1_white_tracker:
-                # === HEADLINE 1: SLICE ===
-                with self.ann.annotate(
-                        h1=lambda: f"Solving Face {target_face.color_at_face_str} Slice {slice_row_index} "
-                                   f"{target_face.color}  from Source {source_face.color_at_face_str}"):
+                with self._logger.tab(headline=lambda :f"{i+1} Target {target_face.color_at_face_str} <-- {source_face.color_at_face_str}"):
+                    # === HEADLINE 1: SLICE ===
+                    with self.ann.annotate(
+                            h1=lambda: f"Solving Face {target_face.color_at_face_str} Slice {slice_row_index} "
+                                       f"{target_face.color}  from Source {source_face.color_at_face_str}"):
 
-                    if self._solve_single_center_slice_single_source_face(l1_white_tracker, target_face, source_face,
-                                                                          slice_row_index):
-                        work_was_done = True
+                        if self._solve_single_center_slice_single_source_face(l1_white_tracker, target_face, source_face,
+                                                                              slice_row_index):
+                            work_was_done = True
 
         return work_was_done
 
@@ -473,19 +476,12 @@ class NxNCenters2(SolverElement):
         :return: True if work was done
         """
 
-        self.debug(
-            f"➖〰️〰️〰️〰️〰️〰️〰️〰️Working on {target_face.face} slice {slice_row_index} source {source_face.face}")
-
-        with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
-            # position and tracking need to go inside
-
-            try:
+        with self._logger.tab(lambda: f"➖〰️〰️〰️ Target {target_face.face} slice {slice_row_index} source {source_face.face} 〰️〰️〰️➖"):
+            with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
+                # position and tracking need to go inside
                 return self._solve_single_center_piece_from_source_face_impl(l1_white_tracker,
                                                                              target_face, source_face,
                                                                              slice_row_index)
-            finally:
-                self.debug(
-                    f"➖〰️〰️〰️〰️〰️〰️〰️〰️End of working on face {target_face.face} slice {slice_row_index} source {source_face.face}")
 
     def _solve_single_center_piece_from_source_face_impl(self, l1_white_tracker: FaceTracker,
                                                          target_face: FaceTracker,

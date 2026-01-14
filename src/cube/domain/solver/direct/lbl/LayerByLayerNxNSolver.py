@@ -131,10 +131,10 @@ class LayerByLayerNxNSolver(BaseSolver):
             SolveStep.L1x,            # Layer 1 cross (centers + edges)
             SolveStep.LBL_L1,         # Layer 1 complete
             # Slice 0 granular steps (4 faces)
-            SolveStep.LBL_S0F1,       # Slice 0 face 1
-            SolveStep.LBL_S0F2,       # Slice 0 faces 1-2
-            SolveStep.LBL_S0F3,       # Slice 0 faces 1-3
-            SolveStep.LBL_S0F4,       # Slice 0 complete
+            # SolveStep.LBL_S0F1,       # Slice 0 face 1
+            # SolveStep.LBL_S0F2,       # Slice 0 faces 1-2
+            # SolveStep.LBL_S0F3,       # Slice 0 faces 1-3
+            # SolveStep.LBL_S0F4,       # Slice 0 complete
             SolveStep.LBL_SLICES_CTR, # All middle slices centers
         ]
 
@@ -192,18 +192,18 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_slices_centers(th)
                     # TODO: Add slice edges, last layer
 
-                case SolveStep.LBL_S0F1 | SolveStep.LBL_S0F2 | SolveStep.LBL_S0F3 | SolveStep.LBL_S0F4:
-                    # Solve Layer 1 + slice 0 up to N faces
-                    self._solve_layer1_centers(th)
-                    self._solve_layer1_edges(th)
-                    self._solve_layer1_corners(th)
-                    n_faces = {
-                        SolveStep.LBL_S0F1: 1,
-                        SolveStep.LBL_S0F2: 2,
-                        SolveStep.LBL_S0F3: 3,
-                        SolveStep.LBL_S0F4: 4,
-                    }[what]
-                    self._solve_slice_n_faces(th, slice_index=0, n_faces=n_faces)
+                # case SolveStep.LBL_S0F1 | SolveStep.LBL_S0F2 | SolveStep.LBL_S0F3 | SolveStep.LBL_S0F4:
+                #     # Solve Layer 1 + slice 0 up to N faces
+                #     self._solve_layer1_centers(th)
+                #     self._solve_layer1_edges(th)
+                #     self._solve_layer1_corners(th)
+                #     n_faces = {
+                #         SolveStep.LBL_S0F1: 1,
+                #         SolveStep.LBL_S0F2: 2,
+                #         SolveStep.LBL_S0F3: 3,
+                #         SolveStep.LBL_S0F4: 4,
+                #     }[what]
+                #     self._solve_slice_n_faces(th, slice_index=0, n_faces=n_faces)
 
                 case _:
                     raise ValueError(f"Unsupported step: {what}")
@@ -424,15 +424,15 @@ class LayerByLayerNxNSolver(BaseSolver):
         with self.op.annotation.annotate(h2="Middle slices centers"):
             self._lbl_slices.solve_all_slice_centers(face_trackers, l1_tracker)
 
-    def _solve_slice_n_faces(self, th: FacesTrackerHolder, slice_index: int, n_faces: int) -> None:
-        """Solve N faces of a specific slice (for debugging).
-
-        Args:
-            th: Tracker holder
-            slice_index: Which slice (0 = first middle slice)
-            n_faces: How many faces to solve (1-4)
-        """
-        l1_tracker = self._get_layer1_tracker(th)
-
-        with self.op.annotation.annotate(h2=f"Slice {slice_index}, {n_faces} faces"):
-            self._lbl_slices.solve_slice_n_faces(th, l1_tracker, slice_index, n_faces)
+    # def _solve_slice_n_faces(self, th: FacesTrackerHolder, slice_index: int, n_faces: int) -> None:
+    #     """Solve N faces of a specific slice (for debugging).
+    #
+    #     Args:
+    #         th: Tracker holder
+    #         slice_index: Which slice (0 = first middle slice)
+    #         n_faces: How many faces to solve (1-4)
+    #     """
+    #     l1_tracker = self._get_layer1_tracker(th)
+    #
+    #     with self.op.annotation.annotate(h2=f"Slice {slice_index}, {n_faces} faces"):
+    #         self._lbl_slices.solve_slice_n_faces(th, l1_tracker, slice_index, n_faces)
