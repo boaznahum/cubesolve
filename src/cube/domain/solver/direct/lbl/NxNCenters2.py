@@ -1,14 +1,12 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Tuple, TypeAlias, Generator, Any
+from typing import Tuple, TypeAlias, Generator
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, CenterSlice, CenterSliceIndex, Face
 from cube.domain.model.Cube import Cube
-from cube.domain.model.Face import Face
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
-from cube.domain.solver.common.tracker import FacesTrackerHolder
 from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils import symbols
