@@ -156,7 +156,7 @@ class NxNCenters2(SolverElement):
 
         with self._track_row_slices(l1_white_tracker, slice_index):
 
-            max_iter = 10
+            max_iter = 10000
             iter_count = 0
 
             while True:
@@ -597,7 +597,7 @@ class NxNCenters2(SolverElement):
                 # but if it is the same color as target that is going to replace then it is ok
                 #
                 second_point_is_solved = self._is_cent_piece_solved(second_point_piece)
-                self.debug(f"Second point {second_point_piece} is solved {second_point_is_solved}", "Second point color {second_point_on_source_color}")
+                self.debug(f"Second point {second_point_piece} is solved {second_point_is_solved}", f"Second point color {second_point_on_source_color}")
                 if target_point_color != second_point_on_source_color and second_point_is_solved:
                     parent.debug(
                         f"❌❌❌❌❌❌❌❌ We dont want to destroy source {s2} {second_point_on_source_color} which will be replaced by color {target_point_color}")
