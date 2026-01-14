@@ -245,26 +245,23 @@ class MutablePrefixLogger(ILogger):
             return f"{self._delegate.debug_prefix()} {self._prefix}:"
         return self._delegate.debug_prefix()
 
-    def debug(self, debug_on: bool | None, *args: Any) -> None:
-        """Print debug information with prefix and indentation."""
+    def _leader(self) -> tuple[Any, ...]:
+        """Build prefix and indent as args tuple for debug output."""
         indent = "".join(self._indent_stack)
         if self._prefix:
-            self._delegate.debug(debug_on, f"{self._prefix}:", indent, *args)
-        elif indent:
-            self._delegate.debug(debug_on, indent, *args)
-        else:
-            self._delegate.debug(debug_on, *args)
+            return (f"{self._prefix}:", indent)
+        if indent:
+            return (indent,)
+        return ()
+
+    def debug(self, debug_on: bool | None, *args: Any) -> None:
+        """Print debug information with prefix and indentation."""
+        self._delegate.debug(debug_on, *self._leader(), *args)
 
     def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any]) -> None:
         """Print debug with lazy evaluation, prefix and indentation."""
         if self._delegate.is_debug(debug_on):
-            indent = "".join(self._indent_stack)
-            if self._prefix:
-                self._delegate.debug(debug_on, f"{self._prefix}:", indent, func())
-            elif indent:
-                self._delegate.debug(debug_on, indent, func())
-            else:
-                self._delegate.debug(debug_on, func())
+            self._delegate.debug(debug_on, *self._leader(), func())
 
     def with_prefix(self, prefix: str, debug_flag: DebugFlagType = None) -> ILogger:
         """Create nested prefixed logger.
