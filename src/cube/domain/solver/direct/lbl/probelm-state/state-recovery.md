@@ -1,3 +1,15 @@
+# 7x7 Cube slice #2 corrupt first slice
+1. reset
+2. Scramble 0
+3. in _LBLSlcies
+```python
+        if True:  # WIP: Only solve first slice for now
+            to = 3
+            r = range(min(to, self.n_slices))
+
+```
+
+![img_3.png](img_3.png)
 # Not all upper slices ae solved, sometime repeating solve solves
 ### but in 9x9 we get maximum iteration error
 
