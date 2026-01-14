@@ -168,6 +168,7 @@ These cycles can be derived from Slice traversal:
 from typing import TYPE_CHECKING, Iterable, Sequence, Tuple, TypeAlias
 
 from .PartSlice import CenterSlice, EdgeWing, PartSlice
+from .PartEdge import PartEdge
 from .Center import Center
 from .Edge import Edge
 from .SliceName import SliceName
@@ -340,46 +341,74 @@ class Slice(SuperElement):
 
             elements: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = self._get_slices_by_index(i)
 
-            # rotate edges
-            # e0 <-- e1 <-- e2 ... e[n-1]
-            # e[n-1] <-- e0
+            # Rotate edges using 4-cycle reference rotation (no cloning needed)
+            # Each EdgeWing has 2 PartEdges on 2 adjacent faces
+            # Pattern: e0 ← e1 ← e2 ← e3 ← e0
+            # This creates 2 independent 4-cycles for the 2 PartEdges per EdgeWing
             edges: Sequence[EdgeWing] = elements[0]
-            prev: EdgeWing = edges[0]
-            e0: EdgeWing = prev.clone()
-            for e in edges[1:]:
-                prev.copy_colors_ver(e)
-                prev = e
 
-            edges[-1].copy_colors_ver(e0)
+            # For slice rotation, adjacent edges share a face. We use this to
+            # identify the 2 independent 4-cycles:
+            # Cycle 1: e0[other_0] ← e1[other_1] ← e2[other_2] ← e3[other_3]
+            #   where other_i = face NOT shared with edge[(i+1)%4]
+            # Cycle 2: e0[shared_0] ← e1[shared_1] ← e2[shared_2] ← e3[shared_3]
+            #   where shared_i = face shared with edge[(i+1)%4]
 
-            # rotate centers
-            # c0 <-- c1 <-- c2 ... c[n-1]
-            # c[n-1] <-- c0
+            # Get the shared/other faces for each edge
+            shared_faces = []
+            other_faces = []
+            for idx in range(4):
+                next_idx = (idx + 1) % 4
+                shared = edges[idx].single_shared_face(edges[next_idx])
+                other = edges[idx].get_other_face(shared)
+                shared_faces.append(shared)
+                other_faces.append(other)
+
+            # Cycle 1: PartEdges on the "other" faces (not shared with next edge)
+            PartEdge.rotate_4cycle(
+                edges[0].get_face_edge(other_faces[0]),
+                edges[1].get_face_edge(other_faces[1]),
+                edges[2].get_face_edge(other_faces[2]),
+                edges[3].get_face_edge(other_faces[3])
+            )
+
+            # Cycle 2: PartEdges on the "shared" faces
+            PartEdge.rotate_4cycle(
+                edges[0].get_face_edge(shared_faces[0]),
+                edges[1].get_face_edge(shared_faces[1]),
+                edges[2].get_face_edge(shared_faces[2]),
+                edges[3].get_face_edge(shared_faces[3])
+            )
+
+            # Rotate PartSlice tracking data for edges
+            PartSlice.rotate_4cycle_slice_data(edges[0], edges[1], edges[2], edges[3])
+
+            # Rotate centers using 4-cycle reference rotation (no cloning needed)
+            # For each position j, there's a 4-cycle of CenterSlices
+            # Pattern: centers[j] ← centers[j+n] ← centers[j+2n] ← centers[j+3n] ← centers[j]
             centers: Sequence[CenterSlice] = elements[1]
-            for j in range(n_slices):  #
-                prev_c: CenterSlice = centers[j]  # on the first face
-                c0: CenterSlice = prev_c.clone()
-                for fi in range(1, 4):  # 1 2 3
-                    c: CenterSlice = centers[j + fi * n_slices]
-                    prev_c.copy_center_colors(c)
-                    prev_c = c
-                    if add_markers:
-                        marker_name = f"idx_{j}"
+            for j in range(n_slices):
+                # Get the 4 CenterSlices in the cycle
+                c0 = centers[j]
+                c1 = centers[j + n_slices]
+                c2 = centers[j + 2 * n_slices]
+                c3 = centers[j + 3 * n_slices]
+
+                # Each CenterSlice has 1 PartEdge
+                PartEdge.rotate_4cycle(c0.edge, c1.edge, c2.edge, c3.edge)
+
+                # Rotate PartSlice tracking data for centers
+                PartSlice.rotate_4cycle_slice_data(c0, c1, c2, c3)
+
+                if add_markers:
+                    marker_name = f"idx_{j}"
+                    # Handle markers for all 4 centers in the cycle
+                    for c in [c0, c1, c2, c3]:
                         char = mf.char(str(j))
                         if j < 3:
                             mm.add_marker(c.edge, marker_name, char, moveable=False)
                         else:
                             mm.remove_marker(c.edge, marker_name, moveable=False)
-
-                c = centers[j + 3 * n_slices]
-                c.copy_center_colors(c0)
-                if add_markers:
-                    marker_name = f"idx_{j}"
-                    char = mf.char(str(j))
-                    if j < 3:
-                        mm.add_marker(c.edge, marker_name, char, moveable=False)
-                    else:
-                        mm.remove_marker(c.edge, marker_name, moveable=False)
 
     def rotate(self, n=1, slices_indexes: Iterable[int] | None = None):
         """

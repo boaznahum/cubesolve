@@ -271,6 +271,37 @@ class PartSlice(ABC, Hashable):
     def reset_colors_id(self):
         self._colors_id_by_colors = None
 
+    @staticmethod
+    def rotate_4cycle_slice_data(s0: "PartSlice", s1: "PartSlice", s2: "PartSlice", s3: "PartSlice") -> None:
+        """Rotate PartSlice tracking data in a 4-cycle: s0 ← s1 ← s2 ← s3 ← s0.
+
+        This rotates the slice-level data that tracks piece identity:
+        - _unique_id: Identifier used for tracking pieces
+        - c_attributes: Slice-level color-associated attributes
+
+        Must be called alongside PartEdge.rotate_4cycle for complete rotation.
+        After calling, reset_colors_id() should be called on all affected slices
+        and their parents.
+
+        Args:
+            s0, s1, s2, s3: The four PartSlices in the cycle
+        """
+        # Save references
+        unique_ids = (s0._unique_id, s1._unique_id, s2._unique_id, s3._unique_id)
+        c_attrs = (s0.c_attributes, s1.c_attributes, s2.c_attributes, s3.c_attributes)
+
+        # Rotate: s0 ← s1 ← s2 ← s3 ← s0
+        s0._unique_id, s1._unique_id, s2._unique_id, s3._unique_id = \
+            unique_ids[1], unique_ids[2], unique_ids[3], unique_ids[0]
+        s0.c_attributes, s1.c_attributes, s2.c_attributes, s3.c_attributes = \
+            c_attrs[1], c_attrs[2], c_attrs[3], c_attrs[0]
+
+        # Reset cached colors IDs
+        for s in (s0, s1, s2, s3):
+            s.reset_colors_id()
+            if s._parent:
+                s._parent.reset_colors_id()
+
     def on_face(self, f: _Face) -> PartEdge | None:
         """
         :param f:
