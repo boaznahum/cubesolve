@@ -8,6 +8,7 @@ from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
+from cube.domain.solver.common.tracker import FacesTrackerHolder
 from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils import symbols
@@ -153,7 +154,7 @@ class NxNCenters2(SolverElement):
 
         # maybe not need iterations
 
-        with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_index):
+        with self._setup_l1_and_track_slices(l1_white_tracker, slice_index):
 
             max_iter = 10
             iter_count = 0
@@ -291,44 +292,43 @@ class NxNCenters2(SolverElement):
 
 
 
-    def _position_l1_and_target(self, l1_white_tracker: FaceTracker, target_face: FaceTracker):
+    def _position_l1(self, l1_white_tracker: FaceTracker):
         """Position L1 down and target face to front."""
-        assert target_face is not l1_white_tracker
-        assert target_face is not l1_white_tracker.opposite
+        # assert target_face is not l1_white_tracker
+        # assert target_face is not l1_white_tracker.opposite
 
         self.cmn.bring_face_down(l1_white_tracker.face)
-        self.cmn.bring_face_front_preserve_down(target_face.face)
 
         assert l1_white_tracker.face is self.cube.down
-        assert target_face.face is self.cube.front
 
     @contextmanager
-    def _track_row_slices(self, target_face: FaceTracker, slice_index: int) -> Generator[None, None, None]:
+    def _track_row_slices(self, l1_white_tracker: FaceTracker, slice_index: int) -> Generator[None, None, None]:
         """Track center slices in a row, cleanup on exit."""
 
+        for target_face in l1_white_tracker.adjusted_faces():
 
+            for rc in self._2d_center_row_slice_iter(slice_index):
 
-        for rc in self._2d_center_row_slice_iter(slice_index):
+                slice_piece = target_face.face.center.get_center_slice(rc)
 
-            slice_piece = target_face.face.center.get_center_slice(rc)
+                self._mark_piece_with_v_mark_if_solved(target_face.color, slice_piece)
 
-            self._mark_piece_with_v_mark_if_solved(target_face.color, slice_piece)
+                self._tracke_center_slice(slice_piece, rc[1])
 
-            self._tracke_center_slice(slice_piece, rc[1])
         try:
             yield
         finally:
             self._clear_all_tracking()
 
     @contextmanager
-    def _setup_l1_and_target_and_track_slices(self, l1_white_tracker: FaceTracker,
-                                              target_face: FaceTracker, slice_index: int) -> Iterator[None]:
+    def _setup_l1_and_track_slices(self, l1_white_tracker: FaceTracker,
+                                   slice_index: int) -> Iterator[None]:
         """Combined: position faces AND track slices."""
-        """Position L1 down and target face to front."""
+        """Position L1 down"""
 
 
-        self._position_l1_and_target(l1_white_tracker, target_face)
-        with self._track_row_slices(target_face, slice_index):
+        self._position_l1(l1_white_tracker)
+        with self._track_row_slices(l1_white_tracker, slice_index):
             yield
 
     def _remove_all_pieces_from_target_face(self, l1_white_tracker: FaceTracker,
@@ -406,9 +406,8 @@ class NxNCenters2(SolverElement):
 
         target_color: Color = target_face.color
 
-        with self._setup_l1_and_target_and_track_slices(l1_white_tracker,
-                                                        target_face,
-                                                        slice_row_index):
+        with self._setup_l1_and_track_slices(l1_white_tracker,
+                                             slice_row_index):
 
             for cs, rc in self._iterate_all_tracked_slices_and_index(target_face):
 
@@ -451,7 +450,7 @@ class NxNCenters2(SolverElement):
                             work_was_done = True
 
                         # restore the original setup, need to improve
-                        self._position_l1_and_target(l1_white_tracker, target_face)
+                        self._position_l1(l1_white_tracker)
 
                         break
 
@@ -477,9 +476,10 @@ class NxNCenters2(SolverElement):
         """
 
         with self._logger.tab(lambda: f"➖〰️〰️〰️ Target {target_face.face} slice {slice_row_index} source {source_face.face} 〰️〰️〰️➖"):
-            with self._setup_l1_and_target_and_track_slices(l1_white_tracker, target_face, slice_row_index):
-                # position and tracking need to go inside
-                return self._solve_single_center_piece_from_source_face_impl(l1_white_tracker,
+            self.cmn.bring_face_front_preserve_down(target_face.face)
+            assert target_face.face is self.cube.front
+
+            return self._solve_single_center_piece_from_source_face_impl(l1_white_tracker,
                                                                              target_face, source_face,
                                                                              slice_row_index)
 

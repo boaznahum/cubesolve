@@ -179,18 +179,20 @@ class _LBLSlices(SolverElement):
             th: FacesTrackerHolder for face color tracking
             l1_white_tracker: Layer 1 face tracker
         """
-        #boaz: it may be related to cube orientation
-        # if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
-        #     return
-        #
-        # Get side face trackers (excluding L1 and opposite)
-        side_trackers = self.get_side_face_trackers(th, l1_white_tracker)
-        #
-        # if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
-        #     return
+        with self._centers._setup_l1_and_track_slices(l1_white_tracker, slice_index):
 
-        for target_face in side_trackers:
-            self._solve_face_index(l1_white_tracker, target_face, slice_index)
+            #boaz: it may be related to cube orientation
+            # if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
+            #     return
+            #
+            # Get side face trackers (excluding L1 and opposite)
+            side_trackers = self.get_side_face_trackers(th, l1_white_tracker)
+            #
+            # if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
+            #     return
+
+            for target_face in side_trackers:
+                self._solve_face_index(l1_white_tracker, target_face, slice_index)
 
 
         # # Verify solved
