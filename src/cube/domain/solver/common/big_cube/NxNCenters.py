@@ -136,6 +136,7 @@ class NxNCenters(SolverElement):
                       * _OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS
         """
         super().__init__(slv)
+        self._set_debug_prefix("NxNCenters")
         self._logger.set_level(NxNCenters.D_LEVEL)
 
         self._preserve_cage = preserve_cage

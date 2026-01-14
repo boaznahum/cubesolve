@@ -89,8 +89,17 @@ class Logger(ILogger):
         """
         self._delegate = delegate
         self._prefix = prefix
-        self._debug_flag = debug_flag
         self._level: int | None = None
+
+        if delegate is None:
+            # Root logger: no debug_flag inheritance
+            self._debug_flag = debug_flag
+        else:
+            # Child logger: inherit debug_flag if not specified
+            if debug_flag is not None:
+                self._debug_flag = debug_flag
+            else:
+                self._debug_flag = getattr(delegate, "_debug_flag", None)
 
         if delegate is None:
             # Root logger: owns quiet_all/debug_all, apply env overrides
