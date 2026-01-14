@@ -214,7 +214,10 @@ class NxNCenters2(SolverElement):
                 else:
                     self.debug(f"‼️‼️‼️‼️Face {target_face} slice NOT  solved, trying to remove from some face ‼️‼️‼️‼️")
 
-                    removed_count = self._try_remove_all_pieces_from_target_face_and_other_faces(l1_white_tracker, target_face, slice_index)
+                    removed_count = self._try_remove_all_pieces_from_target_face_and_other_faces(l1_white_tracker,
+                                                                                                 target_face,
+                                                                                                 slice_index,
+                                                                                                 False)
 
                     if removed_count == 0:
                         self.debug(f"‼️‼️‼️‼️Nothing was removed_count, aborting face {target_face} slice {slice_index} ‼️‼️‼️‼️")
@@ -377,8 +380,9 @@ class NxNCenters2(SolverElement):
             self._clear_all_tracking()
 
     def _try_remove_all_pieces_from_target_face_and_other_faces(self, l1_white_tracker: FaceTracker,
-                                                _target_face: FaceTracker,
-                                                slice_index: int) -> int:
+                                                                _target_face: FaceTracker,
+                                                                slice_index: int,
+                                                                remove_all: bool) -> int:
         """
             Go over all unsolved pieces in all faces and try to take out pieces that match them out of the face.
             Try to move from target face all colors that have the same color as the face so we can bring
@@ -417,15 +421,25 @@ class NxNCenters2(SolverElement):
 
                 # find candidates on target
                 candidate_point: Point = point
-                for _ in range(3):
-                    candidate_point = self.cube.cqr.rotate_point_clockwise(candidate_point)
+                for n in range(4):
 
                     for move_from_target_face in l1_white_tracker.face.adjusted_faces():
 
                         candidate_piece = move_from_target_face.get_center_slice(candidate_point)
 
                         # it can be solved only if move_from_target_face is target_face
-                        if target_color == target_color and not self._is_cent_piece_solved(candidate_piece):
+
+                        move_from_target_face_is_target_face = move_from_target_face is _target_face
+
+                        if n == 0 and move_from_target_face_is_target_face:
+                            # n == 0 is the original point we are tying to solve
+                            # so of course there is no point to check it, if it was smae as target
+                            # then it is solved
+                            continue # for n in range(4)
+
+                        # of course for other face then move_from_target_face it cannot be solved it the color is the target
+                        # for our target we dont want to ove away solved pieces of course they are of slice < then un
+                        if candidate_piece.color == target_color and (not move_from_target_face_is_target_face or not self._is_cent_piece_solved(candidate_piece) ):
 
                                 up_face = l1_white_tracker.opposite.face
                                 self.debug(f"‼️‼️‼️ Moving  {candidate_piece} from {move_from_target_face.color_at_face_str} to  {up_face}")
@@ -441,7 +455,12 @@ class NxNCenters2(SolverElement):
                                     None)
 
                                 pieces_moved += 1
+                                if not remove_all:
+                                    return pieces_moved # exactly one
                                 break # the for n in range(3) loop
+
+                    candidate_point = self.cube.cqr.rotate_point_clockwise(candidate_point)
+
 
 
         return pieces_moved
