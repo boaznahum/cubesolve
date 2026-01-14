@@ -378,7 +378,7 @@ class NxNCenters2(SolverElement):
             self._clear_all_tracking()
 
     def _try_remove_all_pieces_from_target_face_and_other_faces(self, l1_white_tracker: FaceTracker,
-                                                                _target_face: FaceTracker,
+                                                                _target_face_tracker: FaceTracker,
                                                                 slice_index: int,
                                                                 remove_all: bool) -> int:
         """
@@ -399,7 +399,7 @@ class NxNCenters2(SolverElement):
 
         pieces_moved = 0
 
-        for target_face_tracker in [_target_face] : #( f.face for f in l1_white_tracker.adjusted_faces() ) :
+        for target_face_tracker in [_target_face_tracker] : #( f.face for f in l1_white_tracker.adjusted_faces() ) :
 
             # now check is there a slice on my target
 
@@ -412,6 +412,9 @@ class NxNCenters2(SolverElement):
                     continue  # cant move center
 
                 target_face: Face = target_face_tracker.face
+
+                # the point/piece we want to solve and for it we wan to move
+                # a piece from target_face to up,
                 point_to_solve_piece: CenterSlice = target_face.get_center_slice(point)
 
                 if self._is_cent_piece_solved(point_to_solve_piece):
@@ -421,13 +424,16 @@ class NxNCenters2(SolverElement):
                 candidate_point: Point = point
                 for n in range(4):
 
+                    # now try to  move piece with the required color from move_from_target_face
+                    # to up face
+                    move_from_target_face: Face
                     for move_from_target_face in l1_white_tracker.face.adjusted_faces():
 
                         candidate_piece = move_from_target_face.get_center_slice(candidate_point)
 
                         # it can be solved only if move_from_target_face is target_face
 
-                        move_from_target_face_is_target_face = move_from_target_face is _target_face
+                        move_from_target_face_is_target_face = move_from_target_face is _target_face_tracker.face
 
                         if n == 0 and move_from_target_face_is_target_face:
                             # n == 0 is the original point we are tying to solve

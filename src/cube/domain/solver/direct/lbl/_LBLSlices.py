@@ -247,7 +247,7 @@ class _LBLSlices(SolverElement):
         The commutator uses UP as source, so if Layer 1 is on UP, we'll mess it up.
         """
         # Solve all slices from bottom to top
-        if True:  # WIP: Only solve first slice for now
+        if False:  # WIP: Only solve first slice for now
             to = 3
             r = range(min(to, self.n_slices))
         else:

@@ -1,4 +1,4 @@
-# 7x7 Cube slice #2 corrupt first slice
+#✅✅✅ 7x7 Cube slice #2 corrupt first slice
 1. reset
 2. Scramble 0
 3. in _LBLSlcies
@@ -8,6 +8,9 @@
             r = range(min(to, self.n_slices))
 
 ```
+when solving firstslice it is ok
+when solving second slice also ok
+when solving slice 3 (index 2) it corrupts slice 1(index 0)
 
 ![img_3.png](img_3.png)
 # Not all upper slices ae solved, sometime repeating solve solves
