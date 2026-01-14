@@ -145,19 +145,44 @@ class NxNCenters2(SolverElement):
 
         return True
 
+    def _slice_on_target_face_solved(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int) -> bool:
+
+        # all over the solution we assume faces botton up is the ltr, but of course this is not true
+        # if target was not down
+
+        # what we need is a function that calculate the indexes relative to white face no matter where is it using the ltr system
+
+        assert l1_white_tracker.face is self.cube.down
+
+        for f in [target_face.face]:
+            for point in self._2d_center_row_slice_iter(slice_index):
+                c = f.get_center_slice(point)
+                if not self._is_cent_piece_solved(c):
+                    return False
+
+        return True
+
 
 
     def _solve_single_center_slice_all_sources(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
-                                               slice_index: int):
+                                               slice_index: int) -> bool:
 
         work_was_done = False
 
         # maybe not need iterations
 
+
         with self._track_row_slices(l1_white_tracker, slice_index):
+
+            face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, slice_index)
+            if face_slice_solved:
+                self.debug(f"✅✅✅✅ All slices solved {slice_index} ✅✅✅✅✅")
+                return  False
 
             max_iter = 10000
             iter_count = 0
+
+            removed_count = 0
 
             while True:
                 iter_count += 1
@@ -171,27 +196,31 @@ class NxNCenters2(SolverElement):
 
                 if solved_count > 0:
                     work_was_done = True
+                else:
+                    # if we reach here then not all were solved
+                    if removed_count > 0:
+                        raise InternalSWError(f"I moved pieces for {target_face} but still solve nothing")
 
                 # WIP: Commented out - this does position and tracking again !!!
                 # if self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, slice_row_index):
                 #     work_was_done = True
 
-                all_sliced_solved = self._all_slices_on_all_faces_solved(l1_white_tracker, slice_index)
+                face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, slice_index)
 
 
-                if all_sliced_solved:
-                    self.debug(f"✅✅✅✅ All slices solved {slice_index} ✅✅✅✅✅")
+                if face_slice_solved:
+                    self.debug(f"✅✅✅✅ Face {target_face} slice solved {slice_index} ✅✅✅✅✅")
                     return work_was_done
                 else:
-                    self.debug(f"‼️‼️‼️‼️Not All slices solved, trying to remove from some face ‼️‼️‼️‼️")
+                    self.debug(f"‼️‼️‼️‼️Face {target_face} slice NOT  solved, trying to remove from some face ‼️‼️‼️‼️")
 
-                    removed = self._try_remove_all_pieces_from_target_face(l1_white_tracker, target_face, slice_index)
+                    removed_count = self._try_remove_all_pieces_from_target_face_and_other_faces(l1_white_tracker, target_face, slice_index)
 
-                    if removed == 0:
-                        self.debug(f"‼️‼️‼️‼️Nothing was removed, aborting {slice_index} ‼️‼️‼️‼️")
+                    if removed_count == 0:
+                        self.debug(f"‼️‼️‼️‼️Nothing was removed_count, aborting face {target_face} slice {slice_index} ‼️‼️‼️‼️")
                         return work_was_done
                     else:
-                        self.debug(f"‼️‼️‼️‼️{removed} piece(s) removed, trying again {slice_index} ‼️‼️‼️‼️")
+                        self.debug(f"‼️‼️‼️‼️{removed_count} piece(s) removed_count, trying again slice {slice_index} ‼️‼️‼️‼️")
 
     def _solve_single_center_slice_all_sources_impl(self, l1_white_tracker: FaceTracker,
                                                     target_face: FaceTracker,
@@ -347,13 +376,15 @@ class NxNCenters2(SolverElement):
         finally:
             self._clear_all_tracking()
 
-    def _try_remove_all_pieces_from_target_face(self, l1_white_tracker: FaceTracker,
+    def _try_remove_all_pieces_from_target_face_and_other_faces(self, l1_white_tracker: FaceTracker,
                                                 _target_face: FaceTracker,
                                                 slice_index: int) -> int:
         """
             Go over all unsolved pieces in all faces and try to take out pieces that match them out of the face.
             Try to move from target face all colors that have the same color as the face so we can bring
             them back to target face.
+
+            then go over all other face, and see if thers is candiate there
 
             try to move single piece !!!
             :param slice_index: The slice index to work on
@@ -366,7 +397,7 @@ class NxNCenters2(SolverElement):
 
         pieces_moved = 0
 
-        for target_face_tracker in [_target_face] : # ( f.face for f in l1_white_tracker.adjusted_faces() ) :
+        for target_face_tracker in [_target_face] : #( f.face for f in l1_white_tracker.adjusted_faces() ) :
 
             # now check is there a slice on my target
 
@@ -389,26 +420,28 @@ class NxNCenters2(SolverElement):
                 for _ in range(3):
                     candidate_point = self.cube.cqr.rotate_point_clockwise(candidate_point)
 
-                    candidate_piece = target_face.get_center_slice(candidate_point)
-                    if candidate_piece.color == target_color:
+                    for move_from_target_face in l1_white_tracker.face.adjusted_faces():
 
-                        if not self._is_cent_piece_solved(candidate_piece):
+                        candidate_piece = move_from_target_face.get_center_slice(candidate_point)
 
-                            up_face = l1_white_tracker.opposite.face
-                            self.debug(f"‼️‼️‼️ Moving  {candidate_piece} to  {up_face}")
-                            # ok start to work
-                            # bring any face from up to taget, why not the oposite, becuase we dont care if we destory anothe rpoint on source
-                            self._comm_helper.execute_communicator(
-                                up_face,  # source
-                                target_face,  # target
-                                (candidate_point, candidate_point),  # target point
-                                (candidate_point, candidate_point),
-                                True,
-                                False,
-                                None)
+                        # it can be solved only if move_from_target_face is target_face
+                        if target_color == target_color and not self._is_cent_piece_solved(candidate_piece):
 
-                            pieces_moved += 1
-                            break # the for n in range(3) loop
+                                up_face = l1_white_tracker.opposite.face
+                                self.debug(f"‼️‼️‼️ Moving  {candidate_piece} from {move_from_target_face.color_at_face_str} to  {up_face}")
+                                # ok start to work
+                                # bring any face from up to taget, why not the oposite, becuase we dont care if we destory anothe rpoint on source
+                                self._comm_helper.execute_communicator(
+                                    up_face,  # source
+                                    move_from_target_face,  # target
+                                    (candidate_point, candidate_point),  # target point
+                                    (candidate_point, candidate_point),
+                                    True,
+                                    False,
+                                    None)
+
+                                pieces_moved += 1
+                                break # the for n in range(3) loop
 
 
         return pieces_moved
