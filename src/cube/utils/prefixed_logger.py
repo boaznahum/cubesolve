@@ -25,7 +25,7 @@ class PrefixedLogger(ILogger):
         # Output: "DEBUG: Solver:Beginner:L1Cross: solving..."
     """
 
-    __slots__ = ["_delegate", "_prefix", "_debug_flag"]
+    __slots__ = ["_delegate", "_prefix", "_debug_flag", "_level"]
 
     def __init__(
         self,
@@ -43,6 +43,7 @@ class PrefixedLogger(ILogger):
         self._delegate = delegate
         self._prefix = prefix
         self._debug_flag = debug_flag
+        self._level: int | None = None  # Inherit from parent by default
 
     def _resolve_debug_flag(self, debug_on: bool | None) -> bool:
         """Resolve the effective debug_on value.
@@ -78,41 +79,51 @@ class PrefixedLogger(ILogger):
         """Delegate to wrapped logger."""
         self._delegate.quiet_all = value
 
-    def is_debug(self, debug_on: bool | None = None) -> bool:
+    def is_debug(self, debug_on: bool | None = None, *, level: int | None = None) -> bool:
         """Check if debug output should happen.
 
         Args:
             debug_on: Override debug flag. If None, uses this logger's debug_flag.
+            level: Optional debug level. If set, also checks level <= threshold.
         """
+        # Local level check first
+        if level is not None and self._level is not None and level > self._level:
+            return False
         effective_debug = self._resolve_debug_flag(debug_on)
+        # Delegate level check if we don't have local level
+        if level is not None and self._level is None:
+            return self._delegate.is_debug(effective_debug, level=level)
         return self._delegate.is_debug(effective_debug)
 
     def debug_prefix(self) -> str:
         """Return the combined prefix."""
         return f"{self._delegate.debug_prefix()} {self._prefix}:"
 
-    def debug(self, debug_on: bool | None, *args: Any) -> None:
+    def debug(self, debug_on: bool | None, *args: Any, level: int | None = None) -> None:
         """Print debug information with prefix.
 
         Args:
             debug_on: Override debug flag. If None, uses this logger's debug_flag.
             *args: Arguments to print.
+            level: Optional debug level. If set, also checks level <= threshold.
         """
-        effective = self._resolve_debug_flag(debug_on)
-        # Delegate to root logger - it handles quiet_all/debug_all checks
-        self._delegate.debug(effective, f"{self._prefix}:", *args)
+        if not self.is_debug(debug_on, level=level):
+            return
+        # Print directly - we already did all checks in is_debug()
+        print("DEBUG:", f"{self._prefix}:", *args, flush=True)
 
-    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any]) -> None:
+    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any], *, level: int | None = None) -> None:
         """Print debug with lazy evaluation and prefix.
 
         Args:
             debug_on: Override debug flag. If None, uses this logger's debug_flag.
             func: Callable that returns the message to print.
+            level: Optional debug level. If set, also checks level <= threshold.
         """
-        effective = self._resolve_debug_flag(debug_on)
-        # For lazy, we MUST check first to avoid calling func unnecessarily
-        if self._delegate.is_debug(effective):
-            self._delegate.debug(effective, f"{self._prefix}:", func())
+        if not self.is_debug(debug_on, level=level):
+            return
+        # Print directly - we already did all checks in is_debug()
+        print("DEBUG:", f"{self._prefix}:", func(), flush=True)
 
     def with_prefix(self, prefix: str, debug_flag: DebugFlagType = None) -> ILogger:
         """Create nested prefixed logger.
@@ -130,6 +141,17 @@ class PrefixedLogger(ILogger):
         combined_prefix = f"{self._prefix}:{prefix}"
         effective_flag = debug_flag if debug_flag is not None else self._debug_flag
         return PrefixedLogger(self._delegate, combined_prefix, effective_flag)
+
+    # --- Level-based debug ---
+
+    def set_level(self, level: int | None) -> None:
+        """Set the debug level threshold for this logger.
+
+        Args:
+            level: Threshold (messages with level <= threshold are shown).
+                   None means inherit from parent.
+        """
+        self._level = level
 
 
 class MutablePrefixLogger(ILogger):
@@ -154,7 +176,7 @@ class MutablePrefixLogger(ILogger):
         # │  │  deeper nested
     """
 
-    __slots__ = ["_delegate", "_base_prefix", "_prefix"]
+    __slots__ = ["_delegate", "_base_prefix", "_prefix", "_level"]
 
     def __init__(self, delegate: ILogger) -> None:
         """Initialize with parent logger and no prefix.
@@ -165,6 +187,7 @@ class MutablePrefixLogger(ILogger):
         self._delegate = delegate
         self._base_prefix: str = ""  # Component name without formatting
         self._prefix: str = ""       # Full leader: component + ": " + indent
+        self._level: int | None = None  # Inherit from parent by default
 
     def set_prefix(self, prefix: str) -> None:
         """Set the prefix for this logger.
@@ -231,8 +254,14 @@ class MutablePrefixLogger(ILogger):
         """Delegate to wrapped logger."""
         self._delegate.quiet_all = value
 
-    def is_debug(self, debug_on: bool | None = None) -> bool:
+    def is_debug(self, debug_on: bool | None = None, *, level: int | None = None) -> bool:
         """Check if debug output should happen."""
+        # Local level check first
+        if level is not None and self._level is not None and level > self._level:
+            return False
+        # Delegate level check if we don't have local level
+        if level is not None and self._level is None:
+            return self._delegate.is_debug(debug_on, level=level)
         return self._delegate.is_debug(debug_on)
 
     def debug_prefix(self) -> str:
@@ -241,20 +270,25 @@ class MutablePrefixLogger(ILogger):
             return f"{self._delegate.debug_prefix()} {self._base_prefix}:"
         return self._delegate.debug_prefix()
 
-    def debug(self, debug_on: bool | None, *args: Any) -> None:
+    def debug(self, debug_on: bool | None, *args: Any, level: int | None = None) -> None:
         """Print debug information with prefix and indentation."""
+        if not self.is_debug(debug_on, level=level):
+            return
+        # Print directly - we already did all checks in is_debug()
         if self._prefix:
-            self._delegate.debug(debug_on, self._prefix, *args)
+            print("DEBUG:", self._prefix, *args, flush=True)
         else:
-            self._delegate.debug(debug_on, *args)
+            print("DEBUG:", *args, flush=True)
 
-    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any]) -> None:
+    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any], *, level: int | None = None) -> None:
         """Print debug with lazy evaluation, prefix and indentation."""
-        if self._delegate.is_debug(debug_on):
-            if self._prefix:
-                self._delegate.debug(debug_on, self._prefix, func())
-            else:
-                self._delegate.debug(debug_on, func())
+        if not self.is_debug(debug_on, level=level):
+            return
+        # Print directly - we already did all checks in is_debug()
+        if self._prefix:
+            print("DEBUG:", self._prefix, func(), flush=True)
+        else:
+            print("DEBUG:", func(), flush=True)
 
     def with_prefix(self, prefix: str, debug_flag: DebugFlagType = None) -> ILogger:
         """Create nested prefixed logger.
@@ -266,3 +300,14 @@ class MutablePrefixLogger(ILogger):
         else:
             combined = prefix
         return PrefixedLogger(self._delegate, combined, debug_flag)
+
+    # --- Level-based debug ---
+
+    def set_level(self, level: int | None) -> None:
+        """Set the debug level threshold for this logger.
+
+        Args:
+            level: Threshold (messages with level <= threshold are shown).
+                   None means inherit from parent.
+        """
+        self._level = level

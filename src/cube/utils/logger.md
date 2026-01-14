@@ -49,6 +49,68 @@ All debug output flows through `ILogger` instances created via `with_prefix()`.
 | `PrefixedLogger` | Wrapper that adds prefix and optional debug_flag |
 | `MutablePrefixLogger` | Wrapper with prefix that can be set later |
 
+## Level-Based Debug
+
+All debug methods support an optional `level` parameter for verbosity filtering:
+
+| Method | Signature |
+|--------|-----------|
+| `set_level(level)` | Set threshold (messages with level <= threshold are shown) |
+| `debug(..., level=N)` | Debug with optional level check |
+| `debug_lazy(..., level=N)` | Lazy debug with optional level check |
+| `is_debug(..., level=N)` | Check if debug at level would output |
+
+### Level Inheritance
+
+Levels inherit from parent logger if not set locally:
+- `set_level(3)` - Use level 3 for this logger
+- `set_level(None)` - Inherit from parent (default)
+
+### Example Usage
+
+```python
+# Set up logger with level
+logger = parent.with_prefix("NxNCenters")
+logger.set_level(3)  # Only show level 1, 2, 3
+
+# Use level-based debug (level is keyword-only parameter)
+logger.debug(None, "important message", level=1)   # shown (1 <= 3)
+logger.debug(None, "normal message", level=3)      # shown (3 <= 3)
+logger.debug(None, "verbose detail", level=5)      # hidden (5 > 3)
+
+# Guard expensive computations
+if logger.is_debug(None, level=5):
+    logger.debug(None, expensive_computation(), level=5)
+```
+
+### Migration from D_LEVEL Pattern
+
+**Before (deprecated):**
+```python
+class NxNCenters(SolverElement):
+    D_LEVEL = 3
+
+    def debug(self, *args, level=3):
+        if level <= NxNCenters.D_LEVEL:
+            super().debug("NxX Centers:", args)
+
+    # Usage:
+    self.debug("message", level=2)
+```
+
+**After (preferred):**
+```python
+class NxNCenters(SolverElement):
+    D_LEVEL = 3
+
+    def __init__(self, slv):
+        super().__init__(slv)
+        self._logger.set_level(NxNCenters.D_LEVEL)
+
+    # Usage (no custom debug() override needed):
+    self._logger.debug(None, "message", level=2)
+```
+
 ## How Prefix Chaining Works
 
 ```python

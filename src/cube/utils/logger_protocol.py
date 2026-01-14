@@ -46,16 +46,18 @@ class ILogger(Protocol):
         """Set quiet_all mode."""
         ...
 
-    def is_debug(self, debug_on: bool | None = None) -> bool:
+    def is_debug(self, debug_on: bool | None = None, *, level: int | None = None) -> bool:
         """Check if debug output should happen.
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
                       If None, treated as False for root logger.
+            level: Optional debug level. If set, also checks level <= threshold.
 
         Returns:
             True if debug output should happen:
             - quiet_all is False AND (debug_all is True OR debug_on is True)
+            - AND (level is None OR level <= threshold)
         """
         ...
 
@@ -63,21 +65,23 @@ class ILogger(Protocol):
         """Return the standard debug prefix."""
         ...
 
-    def debug(self, debug_on: bool | None, *args: Any) -> None:
+    def debug(self, debug_on: bool | None, *args: Any, level: int | None = None) -> None:
         """Print debug information if allowed by flags.
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
                       If None, uses logger's default (False for root, debug_flag for prefixed).
             *args: Arguments to print, same as print() function.
+            level: Optional debug level. If set, also checks level <= threshold.
 
         Logic:
             - If quiet_all is True → never print
+            - If level > threshold → never print
             - If debug_all is True OR debug_on is True → print
         """
         ...
 
-    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any]) -> None:
+    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any], *, level: int | None = None) -> None:
         """Print debug information with lazy evaluation.
 
         The func is only called if we're actually going to print,
@@ -87,9 +91,11 @@ class ILogger(Protocol):
             debug_on: Local flag to enable debug for this specific call.
                       If None, uses logger's default.
             func: Callable that returns the message to print.
+            level: Optional debug level. If set, also checks level <= threshold.
 
         Logic:
             - If quiet_all is True → never print, func not called
+            - If level > threshold → never print, func not called
             - If debug_all is True OR debug_on is True → call func and print
         """
         ...
@@ -112,6 +118,23 @@ class ILogger(Protocol):
             step_logger = solver_logger.with_prefix("L1Cross")  # inherits debug_flag
             step_logger.debug(None, "solving...")
             # Output: "DEBUG: Solver:Beginner:L1Cross: solving..."
+        """
+        ...
+
+    # --- Level-based debug ---
+
+    def set_level(self, level: int | None) -> None:
+        """Set the debug level threshold for this logger.
+
+        Args:
+            level: Debug level threshold (1-5 typical). Only messages with
+                   level <= threshold are output. None means no level filtering
+                   (all levels pass if debug is otherwise enabled).
+
+        Example:
+            logger.set_level(3)  # Only show level 1, 2, 3
+            logger.debug(None, "shown", level=2)   # level 2 <= 3, shown
+            logger.debug(None, "hidden", level=5)  # level 5 > 3, hidden
         """
         ...
 

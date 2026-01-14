@@ -44,7 +44,7 @@ class Logger(ILogger):
     Environment variables override constructor parameters if set.
     """
 
-    __slots__ = ["_debug_all", "_quiet_all"]
+    __slots__ = ["_debug_all", "_quiet_all", "_level"]
 
     def __init__(self, debug_all: bool = False, quiet_all: bool = False) -> None:
         """Initialize logger with optional environment variable overrides.
@@ -63,6 +63,7 @@ class Logger(ILogger):
 
         self._quiet_all = env_quiet if env_quiet is not None else quiet_all
         self._debug_all = env_debug if env_debug is not None else debug_all
+        self._level: int | None = None  # No level filtering by default
 
     @property
     def is_debug_all(self) -> bool:
@@ -79,18 +80,23 @@ class Logger(ILogger):
         """Set quiet_all mode."""
         self._quiet_all = value
 
-    def is_debug(self, debug_on: bool | None = None) -> bool:
+    def is_debug(self, debug_on: bool | None = None, *, level: int | None = None) -> bool:
         """Check if debug output should happen.
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
                       If None, treated as False.
+            level: Optional debug level. If set, also checks level <= threshold.
 
         Returns:
             True if debug output should happen:
             - quiet_all is False AND (debug_all is True OR debug_on is True)
+            - AND (level is None OR level <= threshold)
         """
         if self._quiet_all:
+            return False
+        # Level check
+        if level is not None and self._level is not None and level > self._level:
             return False
         return self._debug_all or (debug_on is True)
 
@@ -98,24 +104,25 @@ class Logger(ILogger):
         """Return the standard debug prefix."""
         return "DEBUG:"
 
-    def debug(self, debug_on: bool | None, *args: Any) -> None:
+    def debug(self, debug_on: bool | None, *args: Any, level: int | None = None) -> None:
         """Print debug information if allowed by flags.
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
                       If None, treated as False.
             *args: Arguments to print, same as print() function.
+            level: Optional debug level. If set, also checks level <= threshold.
 
         Logic:
             - If quiet_all is True → never print
+            - If level > threshold → never print
             - If debug_all is True OR debug_on is True → print
         """
-        if self._quiet_all:
+        if not self.is_debug(debug_on, level=level):
             return
-        if self._debug_all or (debug_on is True):
-            print("DEBUG:", *args, flush=True)
+        print("DEBUG:", *args, flush=True)
 
-    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any]) -> None:
+    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any], *, level: int | None = None) -> None:
         """Print debug information with lazy evaluation.
 
         The func is only called if we're actually going to print,
@@ -125,15 +132,16 @@ class Logger(ILogger):
             debug_on: Local flag to enable debug for this specific call.
                       If None, treated as False.
             func: Callable that returns the message to print.
+            level: Optional debug level. If set, also checks level <= threshold.
 
         Logic:
             - If quiet_all is True → never print, func not called
+            - If level > threshold → never print, func not called
             - If debug_all is True OR debug_on is True → call func and print
         """
-        if self._quiet_all:
+        if not self.is_debug(debug_on, level=level):
             return
-        if self._debug_all or (debug_on is True):
-            print("DEBUG:", func())
+        print("DEBUG:", func())
 
     def with_prefix(self, prefix: str, debug_flag: DebugFlagType = None) -> ILogger:
         """Create a prefixed logger wrapping this logger.
@@ -150,3 +158,14 @@ class Logger(ILogger):
         """
         from cube.utils.prefixed_logger import PrefixedLogger
         return PrefixedLogger(self, prefix, debug_flag)
+
+    # --- Level-based debug ---
+
+    def set_level(self, level: int | None) -> None:
+        """Set the debug level threshold.
+
+        Args:
+            level: Threshold (messages with level <= threshold are shown).
+                   None means no level filtering.
+        """
+        self._level = level

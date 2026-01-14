@@ -126,23 +126,6 @@ class NxNCenters2(SolverElement):
         with self._logger.tab(lambda: f"{symbols.green_line(3)} Slice {slice_index} {target_face.color_at_face_str} <-- all faces {symbols.green_line(3)}"):
             self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, slice_index)
 
-    def _all_slices_on_all_faces_solved(self, l1_white_tracker: FaceTracker, slice_index: int) -> bool:
-
-        # all over the solution we assume faces botton up is the ltr, but of course this is not true
-        # if target was not down
-
-        # what we need is a function that calculate the indexes relative to white face no matter where is it using the ltr system
-
-        assert l1_white_tracker.face is self.cube.down
-
-        for f in l1_white_tracker.face.adjusted_faces():
-            for point in self._2d_center_row_slice_iter(slice_index):
-                c = f.get_center_slice(point)
-                if not self._is_cent_piece_solved(c):
-                    return False
-
-        return True
-
     def _slice_on_target_face_solved(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int) -> bool:
 
         # all over the solution we assume faces botton up is the ltr, but of course this is not true
@@ -469,74 +452,6 @@ class NxNCenters2(SolverElement):
 
         return pieces_moved
 
-    def _ws_remove_all_pieces_from_target_face(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
-                                            slice_row_index: int) -> bool:
-        """
-            #claqude please document this method
-            :type slice_row_index: int
-        """
-
-        work_was_done: bool = False
-
-        assert l1_white_tracker.face.center.is3x3  # solved
-
-        # now check is there a slice on my target
-
-        target_color: Color = target_face.color
-
-        with self._track_row_slices(l1_white_tracker,
-                            slice_row_index):
-
-            for cs, rc in self._iterate_all_tracked_slices_and_index(target_face):
-
-                if cs.color == target_color:
-                    continue
-
-                # now search a source on my face
-                source_rc = rc
-                for _ in range(3):
-                    source_rc = self.cube.cqr.rotate_point_clockwise(source_rc)
-
-                    source_color = target_face.face.center.get_center_slice(source_rc).color
-
-                    if source_color == target_color:
-                        self.cmn.bring_face_front(target_face.face)
-
-                        # search a target where to move it
-                        temp_target_face: FaceTracker | None = None
-
-                        for t in target_face.adjusted_faces():
-                            # dont try to move to white
-                            if t is not l1_white_tracker:
-                                temp_target_face = t
-                                break
-
-                        assert temp_target_face is not None
-
-                        # setup again
-                        self.cmn.bring_face_front(temp_target_face.face)
-                        assert temp_target_face.face is self.cube.front
-
-                        assert target_face.face is not self.cube.back, f"how can it be {target_face.face} is back"
-
-                        self.cmn.bring_face_up_preserve_front(target_face.face)
-
-                        if self._block_communicator(target_face.color,
-                                                    temp_target_face.face,
-                                                    target_face.face,
-                                                    rc):
-                            work_was_done = True
-
-                        # restore the original setup, need to improve
-                        self._position_l1(l1_white_tracker)
-
-                        break
-
-                # we destroy it
-                assert l1_white_tracker.face.center.is3x3  # solved
-
-        return work_was_done
-
     def _solve_single_center_slice_single_source_face(self, l1_white_tracker: FaceTracker,
                                                       target_face: FaceTracker,
                                                       source_face: FaceTracker,
@@ -757,7 +672,5 @@ class NxNCenters2(SolverElement):
         n = self.cube.n_slices
         for c in range(n):
             yield slice_index, c
-
-    D_LEVEL = 3
 
 
