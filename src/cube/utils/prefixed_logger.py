@@ -154,7 +154,7 @@ class MutablePrefixLogger(ILogger):
         # │  │  deeper nested
     """
 
-    __slots__ = ["_delegate", "_prefix", "_indent_stack"]
+    __slots__ = ["_delegate", "_base_prefix", "_prefix"]
 
     def __init__(self, delegate: ILogger) -> None:
         """Initialize with parent logger and no prefix.
@@ -163,8 +163,8 @@ class MutablePrefixLogger(ILogger):
             delegate: The parent logger to wrap.
         """
         self._delegate = delegate
-        self._prefix: str | None = None
-        self._indent_stack: list[str] = []
+        self._base_prefix: str = ""  # Component name without formatting
+        self._prefix: str = ""       # Full leader: component + ": " + indent
 
     def set_prefix(self, prefix: str) -> None:
         """Set the prefix for this logger.
@@ -172,7 +172,8 @@ class MutablePrefixLogger(ILogger):
         Args:
             prefix: The prefix to prepend to all debug messages.
         """
-        self._prefix = prefix
+        self._base_prefix = prefix
+        self._prefix = f"{prefix}: "
 
     @contextmanager
     def tab(
@@ -192,33 +193,28 @@ class MutablePrefixLogger(ILogger):
         # Check if debug is enabled
         is_enabled = self._delegate.is_debug(None)
 
-        # Build current indent for headline
-        current_indent = "".join(self._indent_stack)
-
         # Resolve headline string (for both start and end messages)
         headline_str: str | None = None
         if headline:
             headline_str = headline() if callable(headline) else headline
 
         if is_enabled and headline_str:
-            # Print headline with border
-            self._delegate.debug(None, f"{current_indent}── {headline_str} ──")
+            # Print headline with current prefix
+            self._delegate.debug(None, f"{self._prefix}── {headline_str} ──")
 
-        # Build indent string: "│  " (char + 2 spaces)
-        indent = f"{char}  "
-
-        # Push indent onto stack
-        self._indent_stack.append(indent)
+        # Save current prefix and add indent
+        saved_prefix = self._prefix
+        self._prefix = f"{self._prefix}{char}  "
 
         try:
             yield is_enabled
         finally:
-            # Pop indent from stack
-            self._indent_stack.pop()
+            # Restore prefix
+            self._prefix = saved_prefix
 
             # Print end message
             if is_enabled and headline_str:
-                self._delegate.debug(None, f"{current_indent}── end: {headline_str} ──")
+                self._delegate.debug(None, f"{self._prefix}── end: {headline_str} ──")
 
     @property
     def is_debug_all(self) -> bool:
@@ -241,35 +237,32 @@ class MutablePrefixLogger(ILogger):
 
     def debug_prefix(self) -> str:
         """Return the combined prefix."""
-        if self._prefix:
-            return f"{self._delegate.debug_prefix()} {self._prefix}:"
+        if self._base_prefix:
+            return f"{self._delegate.debug_prefix()} {self._base_prefix}:"
         return self._delegate.debug_prefix()
-
-    def _leader(self) -> tuple[Any, ...]:
-        """Build prefix and indent as args tuple for debug output."""
-        indent = "".join(self._indent_stack)
-        if self._prefix:
-            return (f"{self._prefix}:", indent)
-        if indent:
-            return (indent,)
-        return ()
 
     def debug(self, debug_on: bool | None, *args: Any) -> None:
         """Print debug information with prefix and indentation."""
-        self._delegate.debug(debug_on, *self._leader(), *args)
+        if self._prefix:
+            self._delegate.debug(debug_on, self._prefix, *args)
+        else:
+            self._delegate.debug(debug_on, *args)
 
     def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any]) -> None:
         """Print debug with lazy evaluation, prefix and indentation."""
         if self._delegate.is_debug(debug_on):
-            self._delegate.debug(debug_on, *self._leader(), func())
+            if self._prefix:
+                self._delegate.debug(debug_on, self._prefix, func())
+            else:
+                self._delegate.debug(debug_on, func())
 
     def with_prefix(self, prefix: str, debug_flag: DebugFlagType = None) -> ILogger:
         """Create nested prefixed logger.
 
         If this logger has a prefix, chains them. Otherwise just uses the new prefix.
         """
-        if self._prefix:
-            combined = f"{self._prefix}:{prefix}"
+        if self._base_prefix:
+            combined = f"{self._base_prefix}:{prefix}"
         else:
             combined = prefix
         return PrefixedLogger(self._delegate, combined, debug_flag)
