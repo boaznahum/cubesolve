@@ -154,7 +154,7 @@ class NxNCenters2(SolverElement):
 
         # maybe not need iterations
 
-        with self._setup_l1_and_track_slices(l1_white_tracker, slice_index):
+        with self._track_row_slices(l1_white_tracker, slice_index):
 
             max_iter = 10
             iter_count = 0
@@ -318,18 +318,27 @@ class NxNCenters2(SolverElement):
         try:
             yield
         finally:
-            self._clear_all_tracking()
+            # NOTE: We intentionally do NOT clear tracking here.
+            # Tracking is accumulated across slices: each slice adds its own markers
+            # for solved pieces. This allows _source_point_has_color() to check
+            # _is_cent_piece_solved() and avoid destroying pieces from earlier slices.
+            # Clearing happens only in _setup_l1() when all slices are done.
+            pass
 
     @contextmanager
-    def _setup_l1_and_track_slices(self, l1_white_tracker: FaceTracker,
-                                   slice_index: int) -> Iterator[None]:
-        """Combined: position faces AND track slices."""
-        """Position L1 down"""
+    def _setup_l1(self, l1_white_tracker: FaceTracker,
+                  slice_index: int) -> Iterator[None]:
+        """Setup L1 position and manage tracking lifecycle.
 
-
+        Positions L1 (white face) down for solving. Tracking is accumulated
+        during solving (via _track_row_slices) and cleared only here when
+        all slices are done. This protects solved pieces from being destroyed.
+        """
         self._position_l1(l1_white_tracker)
-        with self._track_row_slices(l1_white_tracker, slice_index):
+        try:
             yield
+        finally:
+            self._clear_all_tracking()
 
     def _remove_all_pieces_from_target_face(self, l1_white_tracker: FaceTracker,
                                             slice_index: int) -> bool:
@@ -406,8 +415,8 @@ class NxNCenters2(SolverElement):
 
         target_color: Color = target_face.color
 
-        with self._setup_l1_and_track_slices(l1_white_tracker,
-                                             slice_row_index):
+        with self._track_row_slices(l1_white_tracker,
+                            slice_row_index):
 
             for cs, rc in self._iterate_all_tracked_slices_and_index(target_face):
 
