@@ -14,13 +14,13 @@ from collections.abc import Collection, Iterator
 from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
 
 from cube.domain.geometric.FRotation import FUnitRotation
+from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
-from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 
 if TYPE_CHECKING:
-    from cube.domain.algs import Alg
+    from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
@@ -562,7 +562,7 @@ class CubeLayout(Protocol):
         ...
 
     @abstractmethod
-    def get_bring_face_alg(self, target: FaceName, source: FaceName) -> "Alg":
+    def get_bring_face_alg(self, target: FaceName, source: FaceName) -> "WholeCubeAlg":
         """
         Get the whole-cube rotation algorithm to bring source face to target position.
 

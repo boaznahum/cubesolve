@@ -18,12 +18,13 @@ from cube.domain.geometric.cube_layout import (
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.service_provider import IServiceProvider
-from cube.utils.Cache import CacheManager
+from cube.utils.Cache import CacheManager, cached_result
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 
 if TYPE_CHECKING:
+    from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
 
@@ -481,14 +482,15 @@ class _CubeLayout(CubeLayout):
         """
         return self.get_slice(slice_name).does_slice_cut_rows_or_columns(face_name)
 
-    def get_bring_face_alg(self, target: FaceName, source: FaceName) -> "Alg":
+    @cached_result
+    def get_bring_face_alg(self, target: FaceName, source: FaceName) -> "WholeCubeAlg":
         """Get the whole-cube rotation algorithm to bring source face to target position.
 
         This is a size-independent operation - results are cached.
 
         Uses Face2FaceTranslator.derive_whole_cube_alg internally.
         """
-        from cube.domain.algs import Alg
+        from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
         from cube.domain.exceptions import GeometryError, GeometryErrorCode
         from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 
@@ -498,14 +500,14 @@ class _CubeLayout(CubeLayout):
                 f"Cannot bring {source} to itself"
             )
 
-        def compute_alg() -> Alg:
+        def compute_alg() -> WholeCubeAlg:
             results = Face2FaceTranslator.derive_whole_cube_alg(target, source)
             # Take first solution (for adjacent faces there's only one,
             # for opposite faces we pick the first available)
             _base_alg, _steps, alg = results[0]
-            return alg
+            return alg  # type: ignore[return-value]
 
         cache_key = ("CubeLayout.get_bring_face_alg", target, source)
-        cache = self.cache_manager.get(cache_key, Alg)
+        cache = self.cache_manager.get(cache_key, WholeCubeAlg)
         return cache.compute(compute_alg)
 

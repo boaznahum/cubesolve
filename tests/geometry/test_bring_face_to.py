@@ -13,32 +13,15 @@ Test approach:
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 from itertools import product
-from typing import TYPE_CHECKING, Any, Callable, Generator, Sequence
 
 import pytest
 
-from cube.domain.algs import Alg
+from cube.application.AbstractApp import AbstractApp
 from cube.domain.exceptions import GeometryError, GeometryErrorCode
 from cube.domain.model.Cube import Cube
 from cube.domain.model.FaceName import FaceName
 from cube.domain.solver.common.CommonOp import CommonOp
-from cube.domain.solver.protocols import (
-    AnnotationProtocol,
-    OperatorProtocol,
-    SolverElementsProvider,
-    SupportsAnnotation,
-)
-from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logger_protocol import ILogger
-from tests.test_utils import _test_sp
-
-
-if TYPE_CHECKING:
-    from cube.application.state import ApplicationAndViewState
-    from cube.domain.solver.AnnWhat import AnnWhat
-    from cube.utils.SSCode import SSCode
 
 
 # =============================================================================
@@ -46,151 +29,17 @@ if TYPE_CHECKING:
 # =============================================================================
 
 ALL_FACES = list(FaceName)
-
-# All valid face pairs (target, source) where target != source - 30 combinations
 VALID_FACE_PAIRS = [(t, s) for t, s in product(ALL_FACES, ALL_FACES) if t != s]
-
-# All invalid face pairs (target == source) - 6 combinations
 SAME_FACE_PAIRS = [(f, f) for f in ALL_FACES]
-
 CUBE_SIZES = [3, 5]
 
 
 def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:
-    """Generate readable test ID for face pair."""
     return f"{pair[1].name}->{pair[0].name}"
 
 
 def _same_face_id(pair: tuple[FaceName, FaceName]) -> str:
-    """Generate readable test ID for same-face pair."""
     return f"{pair[0].name}=={pair[1].name}"
-
-
-# =============================================================================
-# Mock Classes for Testing CommonOp
-# =============================================================================
-
-class MockAnnotation(AnnotationProtocol):
-    """No-op annotation for testing."""
-
-    @contextmanager
-    def annotate(
-        self,
-        *elements: tuple[SupportsAnnotation, "AnnWhat"],
-        h1: str | Callable[[], str] | None = None,
-        h2: str | Callable[[], str] | None = None,
-        h3: str | Callable[[], str] | None = None,
-        animation: bool = True,
-    ) -> Generator[None, None, None]:
-        # Suppress unused parameter warnings - these are required by protocol
-        del elements, h1, h2, h3, animation
-        yield
-
-
-class MockAppState:
-    """Mock application state with minimal config."""
-
-    def __init__(self, config: ConfigProtocol) -> None:
-        self._config = config
-
-    @property
-    def config(self) -> ConfigProtocol:
-        return self._config
-
-
-class MockOperator(OperatorProtocol):
-    """Mock operator that executes algorithms on a cube."""
-
-    def __init__(self, cube: Cube, config: ConfigProtocol) -> None:
-        self._cube = cube
-        self._annotation = MockAnnotation()
-        self._app_state = MockAppState(config)
-
-    @property
-    def cube(self) -> Cube:
-        return self._cube
-
-    def play(self, alg: Alg, inv: Any = False, animation: Any = True) -> None:
-        """Execute algorithm on the cube."""
-        del inv, animation  # Unused
-        alg.play(self._cube)
-
-    def history(self, *, remove_scramble: bool = False) -> Sequence[Alg]:
-        del remove_scramble  # Unused
-        return []
-
-    def undo(self, animation: bool = True) -> Alg | None:
-        del animation  # Unused
-        return None
-
-    @contextmanager
-    def with_animation(self, animation: bool | None = None) -> Generator[None, None, None]:
-        del animation  # Unused
-        yield
-
-    @contextmanager
-    def save_history(self) -> Generator[None, None, None]:
-        yield
-
-    @contextmanager
-    def with_query_restore_state(self) -> Generator[None, None, None]:
-        yield
-
-    @property
-    def annotation(self) -> AnnotationProtocol:
-        return self._annotation
-
-    def log(self, *s: Any) -> None:
-        del s  # Unused
-        pass
-
-    @property
-    def animation_enabled(self) -> bool:
-        return False
-
-    @property
-    def app_state(self) -> "ApplicationAndViewState":
-        return self._app_state  # type: ignore[return-value]
-
-    def enter_single_step_mode(self, code: "SSCode | None" = None) -> None:
-        del code  # Unused
-        pass
-
-
-class MockSolverElementsProvider(SolverElementsProvider):
-    """Mock provider for testing CommonOp."""
-
-    def __init__(self, cube: Cube) -> None:
-        self._cube = cube
-        self._op = MockOperator(cube, cube.sp.config)
-        self._cmn: CommonOp | None = None
-        self._the_logger = cube.sp.logger
-
-    @property
-    def op(self) -> OperatorProtocol:
-        return self._op
-
-    @property
-    def cube(self) -> Cube:
-        return self._cube
-
-    @property
-    def cmn(self) -> CommonOp:
-        if self._cmn is None:
-            self._cmn = CommonOp(self)
-        return self._cmn
-
-    def debug(self, *args: Any) -> None:
-        del args  # Unused
-        pass
-
-    @property
-    def _logger(self) -> ILogger:
-        return self._the_logger
-
-    @property
-    def config(self) -> ConfigProtocol:
-        return self._cube.sp.config
 
 
 # =============================================================================
@@ -198,10 +47,9 @@ class MockSolverElementsProvider(SolverElementsProvider):
 # =============================================================================
 
 def create_common_op(cube_size: int) -> tuple[CommonOp, Cube]:
-    """Create a CommonOp instance with a fresh cube."""
-    cube = Cube(cube_size, sp=_test_sp)
-    provider = MockSolverElementsProvider(cube)
-    return provider.cmn, cube
+    """Create a CommonOp instance using app's built-in solver."""
+    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    return app.slv.cmn, app.op.cube
 
 
 def place_marker(cube: Cube, face_name: FaceName, marker_value: str) -> None:

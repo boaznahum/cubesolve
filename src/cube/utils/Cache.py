@@ -269,3 +269,32 @@ class CacheManagerNull(CacheManager):
 
 
 CacheManagerNull.instance = CacheManagerNull()
+
+
+# =============================================================================
+# Decorator for documenting cached methods
+# =============================================================================
+
+F = TypeVar('F', bound=Callable[..., Any])
+
+
+def cached_result(func: F) -> F:
+    """Decorator to indicate that a method's result is cached.
+
+    This is a documentation decorator - it marks methods whose results
+    are cached by the CacheManager. The actual caching is done inside
+    the method using cache_manager.get().compute().
+
+    The decorator itself does NOT perform caching - it only marks the
+    method so callers know the result is cached and they don't need
+    to cache it themselves.
+
+    Usage:
+        @cached_result
+        def get_something(self, arg1, arg2) -> SomeType:
+            '''Method docstring.'''
+            cache = self.cache_manager.get(("key", arg1, arg2), SomeType)
+            return cache.compute(lambda: expensive_computation())
+    """
+    func._is_cached_result = True  # type: ignore[attr-defined]
+    return func
