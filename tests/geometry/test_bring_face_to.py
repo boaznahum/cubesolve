@@ -56,7 +56,7 @@ def place_marker(cube: Cube, face_name: FaceName, marker_value: str) -> None:
     face = cube.face(face_name)
     # Use (0, 0) center slice to place a marker
     center_slice = face.center.get_center_slice((0, 0))
-    center_slice.edge.c_attributes["test_marker"] = marker_value
+    center_slice.edge.moveable_attributes["test_marker"] = marker_value
 
 
 def find_marker_on_face(cube: Cube, face_name: FaceName) -> str | None:
@@ -67,7 +67,7 @@ def find_marker_on_face(cube: Cube, face_name: FaceName) -> str | None:
     """
     face = cube.face(face_name)
     for center_slice in face.center.all_slices:
-        marker = center_slice.edge.c_attributes.get("test_marker")
+        marker = center_slice.edge.moveable_attributes.get("test_marker")
         if marker is not None:
             return marker
     return None

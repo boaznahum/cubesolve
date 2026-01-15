@@ -110,14 +110,14 @@ def place_marker(cube: Cube, face_name: FaceName, marker_value: str) -> None:
     """Place a test marker on the center of a face."""
     face = cube.face(face_name)
     center_slice = face.center.get_center_slice((0, 0))
-    center_slice.edge.c_attributes["test_marker"] = marker_value
+    center_slice.edge.moveable_attributes["test_marker"] = marker_value
 
 
 def find_marker_on_face(cube: Cube, face_name: FaceName) -> str | None:
     """Search all center slices on a face for a test marker."""
     face = cube.face(face_name)
     for center_slice in face.center.all_slices:
-        marker = center_slice.edge.c_attributes.get("test_marker")
+        marker = center_slice.edge.moveable_attributes.get("test_marker")
         if marker is not None:
             return marker
     return None
