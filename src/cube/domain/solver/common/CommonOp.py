@@ -3,7 +3,6 @@ from typing import Callable, ContextManager, Generator, Sequence, Tuple
 
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import GeometryError, GeometryErrorCode, InternalSWError
-from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 from cube.domain.model import Color, Edge, EdgeWing, FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
@@ -196,11 +195,8 @@ class CommonOp:
         self.debug("Need to bring ", source, 'to', target.name)
 
         with self.ann.annotate(h2=f"Bringing face {source.color_at_face_str} to {target.name.value}"):
-            # Use geometry infrastructure to compute the rotation algorithm
-            results = Face2FaceTranslator.derive_whole_cube_alg(target.name, source.name)
-            # Take the first solution (for adjacent faces there's only one,
-            # for opposite faces we pick the first available)
-            _base_alg, _steps, alg = results[0]
+            # Use CubeLayout's cached method to get the rotation algorithm
+            alg = self.cube.layout.get_bring_face_alg(target.name, source.name)
             self.op.play(alg)
 
     def bring_face_up_preserve_front(self, face: Face) -> None:

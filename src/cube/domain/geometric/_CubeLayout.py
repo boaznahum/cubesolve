@@ -481,3 +481,31 @@ class _CubeLayout(CubeLayout):
         """
         return self.get_slice(slice_name).does_slice_cut_rows_or_columns(face_name)
 
+    def get_bring_face_alg(self, target: FaceName, source: FaceName) -> "Alg":
+        """Get the whole-cube rotation algorithm to bring source face to target position.
+
+        This is a size-independent operation - results are cached.
+
+        Uses Face2FaceTranslator.derive_whole_cube_alg internally.
+        """
+        from cube.domain.algs import Alg
+        from cube.domain.exceptions import GeometryError, GeometryErrorCode
+        from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
+
+        if source == target:
+            raise GeometryError(
+                GeometryErrorCode.SAME_FACE,
+                f"Cannot bring {source} to itself"
+            )
+
+        def compute_alg() -> Alg:
+            results = Face2FaceTranslator.derive_whole_cube_alg(target, source)
+            # Take first solution (for adjacent faces there's only one,
+            # for opposite faces we pick the first available)
+            _base_alg, _steps, alg = results[0]
+            return alg
+
+        cache_key = ("CubeLayout.get_bring_face_alg", target, source)
+        cache = self.cache_manager.get(cache_key, Alg)
+        return cache.compute(compute_alg)
+

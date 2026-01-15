@@ -20,6 +20,7 @@ from cube.domain.model.SliceName import SliceName
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 
 if TYPE_CHECKING:
+    from cube.domain.algs import Alg
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
@@ -557,6 +558,32 @@ class CubeLayout(Protocol):
         Example:
             M slice on Front face cuts columns (vertical strips) → returns ROW
             E slice on Front face cuts rows (horizontal strips) → returns COL
+        """
+        ...
+
+    @abstractmethod
+    def get_bring_face_alg(self, target: FaceName, source: FaceName) -> "Alg":
+        """
+        Get the whole-cube rotation algorithm to bring source face to target position.
+
+        This is a size-independent operation - the algorithm is the same for
+        3x3, 5x5, or any cube size.
+
+        Results are cached since they are pure topology.
+
+        Args:
+            target: The target face position (e.g., FaceName.U)
+            source: The source face to move (e.g., FaceName.F)
+
+        Returns:
+            Whole-cube rotation algorithm (e.g., Algs.X, Algs.Y * 2)
+
+        Raises:
+            GeometryError: If source == target (SAME_FACE code)
+
+        Example:
+            alg = layout.get_bring_face_alg(FaceName.U, FaceName.F)  # Returns Algs.X
+            alg = layout.get_bring_face_alg(FaceName.D, FaceName.U)  # Returns Algs.X * 2
         """
         ...
 
