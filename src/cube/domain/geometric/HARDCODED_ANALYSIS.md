@@ -20,7 +20,6 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 
 | What | Location | Entries | How to Derive |
 |------|----------|---------|---------------|
-| `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py | 12 | From edge geometry |
 | `slice_to_axis` dict | Face2FaceTranslator.py:488 | 3 | Use `_AXIS_ROTATION_FACE` directly |
 | `get_start_face()` | slice_layout.py | 3 | Derive from slice definitions |
 | `_rotate_dict_x/y/z` | _CubeLayout.py | 12 | From rotation cycles |
@@ -30,7 +29,7 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | Subclass constructors | SliceAlg.py | 3 | Factory pattern |
 | Subclass constructors | WholeCubeAlg.py | 9 | Factory pattern |
 
-**Total: ~95 hardcoded entries**
+**Total: ~83 hardcoded entries**
 
 ---
 
@@ -39,7 +38,7 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | ID | Table/Constant | Location | Status | Action |
 |----|----------------|----------|--------|--------|
 | 1.1 | `_TRANSFORMATION_TABLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Was dead code |
-| 1.2 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py | TODO | 12 entries - derive from edge geometry |
+| 1.2 | `_SLICE_INDEX_TABLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Derived via `_derive_slice_index_formula()` |
 | 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Derived via `get_face_neighbors_cw_names()` |
 | 1.4 | `slice_to_axis` dict | Face2FaceTranslator.py:488 | TODO | Duplicates `_AXIS_ROTATION_FACE` |
 | 1.5 | `_build_slice_cycle` start faces | Face2FaceTranslator.py:693 | **FIXED** | Uses `resolve_cube_cycle()` |
@@ -118,6 +117,17 @@ These are inherently tied to enum values and are acceptable:
 **Import cleanup:**
 - Removed `FaceName` re-export from `cube_boy.py` `__all__`
 - Fixed `cube.domain.model.__init__.py` to import `FaceName` directly from `FaceName.py`
+
+**Removed `_SLICE_INDEX_TABLE` hardcoded table (12 entries):**
+- Added `_derive_slice_index_formula(layout, slice_name, face_name)` - derives formula from geometry
+- Updated `_compute_slice_index` to take layout parameter and use derived formula
+- Formula derivation logic:
+  - `does_slice_cut_rows_or_columns()` → determines ROW vs COL
+  - `does_slice_of_face_start_with_face()` → determines direct vs inverted
+- Added comprehensive tests in `test_slice_index_derivation.py`:
+  - Validates formula against walking info (ground truth)
+  - Tests all cube sizes (3, 4, 5, 7), all slices, all faces, all points
+  - Verifies formula consistency across cube sizes
 
 ### Session 2026-01-11 (continued)
 
