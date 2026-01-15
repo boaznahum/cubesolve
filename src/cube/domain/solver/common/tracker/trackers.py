@@ -148,7 +148,7 @@ class FaceTracker(ABC):
         Returns:
             True if any tracker has marked this slice.
         """
-        for k in s.edge.c_attributes.keys():
+        for k in s.edge.moveable_attributes.keys():
             if isinstance(k, str) and k.startswith(_TRACKER_KEY_PREFIX):
                 return True
         return False
@@ -189,7 +189,7 @@ class FaceTracker(ABC):
         Returns:
             The Color enum if tracked, None otherwise.
         """
-        for key, value in edge.c_attributes.items():
+        for key, value in edge.moveable_attributes.items():
             if isinstance(key, str) and key.startswith(_TRACKER_KEY_PREFIX):
                 return value  # Value is the Color enum
         return None
@@ -269,7 +269,7 @@ class MarkedFaceTracker(FaceTracker):
         """Find face containing the marked slice."""
 
         def _slice_pred(s: CenterSlice) -> bool:
-            return self._key in s.edge.c_attributes
+            return self._key in s.edge.moveable_attributes
 
         def _face_pred(_f: Face) -> bool:
             return _f.cube.cqr.find_slice_in_face_center(_f, _slice_pred) is not None
@@ -280,8 +280,8 @@ class MarkedFaceTracker(FaceTracker):
         """Search for and remove the specific key from the marked slice."""
         for f in self._cube.faces:
             for s in f.center.all_slices:
-                if self._key in s.edge.c_attributes:
-                    del s.edge.c_attributes[self._key]
+                if self._key in s.edge.moveable_attributes:
+                    del s.edge.moveable_attributes[self._key]
                     return
 
     def restore_to_physical_face(self, saved_face_name: FaceName) -> None:
@@ -306,7 +306,7 @@ class MarkedFaceTracker(FaceTracker):
         center_slice = self._find_markable_center_slice(face)
 
         # 4. Mark it with our color (reuse existing key)
-        center_slice.edge.c_attributes[self._key] = self._color
+        center_slice.edge.moveable_attributes[self._key] = self._color
 
     def _find_markable_center_slice(self, face: Face) -> CenterSlice:
         """Find a center slice on the given face to mark.

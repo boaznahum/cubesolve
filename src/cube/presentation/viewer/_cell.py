@@ -416,7 +416,7 @@ class _Cell:
                     renderer.shapes.quad_with_border(points, facet_color, lw, lc)
 
                 if cfg.markers_config.GUI_DRAW_MARKERS:
-                    _nn = part_edge.c_attributes["n"]
+                    _nn = part_edge.moveable_attributes["n"]
                     points = self._vertices_to_points(_vx)
                     renderer.shapes.lines_in_quad(points, _nn, 5, (138, 43, 226))
 
@@ -460,7 +460,7 @@ class _Cell:
                     draw_facet(edge, vx)
 
                     if cfg.markers_config.GUI_DRAW_MARKERS:
-                        attributes = edge.attributes
+                        attributes = edge.fixed_attributes
                         points = self._vertices_to_points(vx)
                         if attributes.get("origin", False):
                             renderer.shapes.cross(points, cross_width, cross_color)
@@ -492,7 +492,7 @@ class _Cell:
                         draw_facet(edge, vx)
 
                         if cfg.markers_config.GUI_DRAW_MARKERS:
-                            attributes = edge.attributes
+                            attributes = edge.fixed_attributes
                             points = self._vertices_to_points(vx)
                             if attributes.get("origin", False):
                                 renderer.shapes.cross(points, cross_width, cross_color)

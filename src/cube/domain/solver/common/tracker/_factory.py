@@ -208,7 +208,7 @@ class NxNCentersFaceTrackers(SolverElement):
         key = f"{prefix}h{self._holder_id}:{_slice.color}{unique_id}"
 
         edge = _slice.edge
-        edge.c_attributes[key] = _slice.color  # Store Color for renderer
+        edge.moveable_attributes[key] = _slice.color  # Store Color for renderer
 
         cube = _slice.parent.cube
         if cube.config.solver_annotate_trackers:

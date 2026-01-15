@@ -79,7 +79,7 @@ def _verify_single_whole_cube_result(
 
     # Place marker at source_coord on source_face
     source_slice: CenterSlice = source_face.center.get_center_slice(source_coord)
-    source_slice.edge.c_attributes["test_marker"] = marker_value
+    source_slice.edge.moveable_attributes["test_marker"] = marker_value
 
     # Apply whole-cube algorithm
     result.whole_cube_alg.play(cube)
@@ -88,13 +88,13 @@ def _verify_single_whole_cube_result(
     target_face = cube.face(target_name)
     check_slice: CenterSlice = target_face.center.get_center_slice(target_coord)
 
-    assert check_slice.edge.c_attributes.get("test_marker") == marker_value, (
+    assert check_slice.edge.moveable_attributes.get("test_marker") == marker_value, (
         f"Whole-cube translation failed!\n"
         f"  Target: {target_name} target_coord={target_coord}\n"
         f"  Source: {source_name} source_coord={source_coord}\n"
         f"  Algorithm: {result.whole_cube_alg}\n"
         f"  Expected marker at {target_coord} on {target_name}\n"
-        f"  Found: {check_slice.edge.c_attributes.get('test_marker')}"
+        f"  Found: {check_slice.edge.moveable_attributes.get('test_marker')}"
     )
 
 
@@ -152,7 +152,7 @@ def _verify_single_slice_result(
 
     # Place marker at source_coord on source_face
     source_slice: CenterSlice = source_face.center.get_center_slice(source_coord)
-    source_slice.edge.c_attributes["test_marker"] = marker_value
+    source_slice.edge.moveable_attributes["test_marker"] = marker_value
 
     # Apply slice algorithm
     slice_alg.play(cube)
@@ -161,13 +161,13 @@ def _verify_single_slice_result(
     target_face = cube.face(target_name)
     check_slice: CenterSlice = target_face.center.get_center_slice(target_coord)
 
-    assert check_slice.edge.c_attributes.get("test_marker") == marker_value, (
+    assert check_slice.edge.moveable_attributes.get("test_marker") == marker_value, (
         f"Slice translation failed!\n"
         f"  Target: {target_name} target_coord={target_coord}\n"
         f"  Source: {source_name} source_coord={source_coord}\n"
         f"  Algorithm: {slice_alg}\n"
         f"  Expected marker at {target_coord} on {target_name}\n"
-        f"  Found: {check_slice.edge.c_attributes.get('test_marker')}"
+        f"  Found: {check_slice.edge.moveable_attributes.get('test_marker')}"
     )
 
 
@@ -215,7 +215,7 @@ class TestWholeCubeAlgorithm:
                 cube, target_name, source_name, target_coord
             )
 
-            cube.clear_c_attributes()
+            cube.clear_moveable_attributes()
 
 
 class TestSliceAlgorithm:
@@ -237,7 +237,7 @@ class TestSliceAlgorithm:
                 cube, target_name, source_name, target_coord
             )
 
-            cube.clear_c_attributes()
+            cube.clear_moveable_attributes()
 
     @pytest.mark.parametrize("cube_size", [5])
     @pytest.mark.parametrize("face_pair", [[FaceName.L, FaceName.U]], ids=_face_pair_id)
@@ -255,7 +255,7 @@ class TestSliceAlgorithm:
                 cube, target_name, source_name, target_coord
             )
 
-            cube.clear_c_attributes()
+            cube.clear_moveable_attributes()
 
 
 class TestTranslateTargetFromSource:
@@ -369,7 +369,7 @@ class TestSliceMovementPrediction:
                 marker_value = f"M_{source_name}_{source_coord[0]}_{source_coord[1]}"
 
                 # Place marker
-                center_slice.edge.c_attributes["test_marker"] = marker_value
+                center_slice.edge.moveable_attributes["test_marker"] = marker_value
 
                 # Predict where it will go
                 predicted_target = Face2FaceTranslator.translate_target_from_source(
@@ -386,7 +386,7 @@ class TestSliceMovementPrediction:
             target_face = cube.face(target_name)
             for predicted_coord, expected_marker in predictions.items():
                 check_slice: CenterSlice = target_face.center.get_center_slice(predicted_coord)
-                actual_marker = check_slice.edge.c_attributes.get("test_marker")
+                actual_marker = check_slice.edge.moveable_attributes.get("test_marker")
 
                 assert actual_marker == expected_marker, (
                     f"Slice movement prediction failed!\n"

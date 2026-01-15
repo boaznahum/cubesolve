@@ -49,8 +49,8 @@ from .MarkerManager import MarkerManager
 def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerConfig]:
     """Convenience function to read all markers from a PartEdge.
 
-    This function reads markers from all attribute dictionaries (attributes,
-    c_attributes, f_attributes). Visually identical configs are deduplicated
+    This function reads markers from both attribute dictionaries (fixed_attributes,
+    moveable_attributes). Visually identical configs are deduplicated
     (keeping highest z_order), then sorted by z_order for proper layering.
 
     Can be used by renderers without needing a MarkerManager instance.
@@ -64,7 +64,7 @@ def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerConfig]:
     all_markers: list[MarkerConfig] = []
     key = "markers"
 
-    for attrs in [part_edge.attributes, part_edge.c_attributes, part_edge.f_attributes]:
+    for attrs in [part_edge.fixed_attributes, part_edge.moveable_attributes]:
         markers_dict: dict[str, MarkerConfig] | None = attrs.get(key)
         if markers_dict:
             all_markers.extend(markers_dict.values())

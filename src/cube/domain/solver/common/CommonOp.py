@@ -695,14 +695,14 @@ class CommonOp:
         key = "SliceTracker:" + str(n)
 
         def _pred(s: EdgeWing) -> bool:
-            return key in s.c_attributes
+            return key in s.moveable_attributes
 
         tracker: EdgeSliceTracker = EdgeSliceTracker(self.cube, _pred)
 
-        es.c_attributes[key] = key
+        es.moveable_attributes[key] = key
 
         try:
             yield tracker
         finally:
-            c_att = tracker.the_slice_nl.c_attributes
+            c_att = tracker.the_slice_nl.moveable_attributes
             del c_att[key]

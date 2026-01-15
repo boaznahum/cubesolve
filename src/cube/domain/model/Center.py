@@ -118,7 +118,7 @@ class Center(Part):
         s = str(self.face.name)
         for r in range(self.n_slices):
             for c in range(self.n_slices):
-                # s += str(self.get_center_slice((r, c)).edge.c_attributes["n"]) + "|"
+                # s += str(self.get_center_slice((r, c)).edge.moveable_attributes["n"]) + "|"
                 s += str(self.get_center_slice((r, c)).color.name) + "|"
             s += "\n"
 

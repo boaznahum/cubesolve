@@ -94,15 +94,15 @@ class Part(ABC, CubeElement):
         else:
             self._fixed_id = _id
 
-    def clear_c_attributes(self) -> None:
+    def clear_moveable_attributes(self) -> None:
         """
         Clear color-associated attributes from all slices of this part.
 
         Note: Part itself does NOT have c_attributes - only PartSlice and PartEdge do.
-        This method delegates to each slice's clear_c_attributes().
+        This method delegates to each slice's clear_moveable_attributes().
         """
         for s in self.all_slices:
-            s.clear_c_attributes()
+            s.clear_moveable_attributes()
 
     @property
     def fixed_id(self) -> PartFixedID:

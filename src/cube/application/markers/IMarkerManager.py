@@ -41,8 +41,8 @@ class IMarkerManager(Protocol):
             name: Unique name for this marker on this PartEdge
             marker: The marker configuration
             moveable: If True, marker moves with the sticker color during rotations
-                     (stored in c_attributes). If False, marker stays at physical
-                     position (stored in f_attributes).
+                     (stored in moveable_attributes). If False, marker stays at physical
+                     position (stored in fixed_attributes).
         """
         ...
 
@@ -75,8 +75,8 @@ class IMarkerManager(Protocol):
         Args:
             part_edge: The sticker to unmark
             name: The name of the marker to remove
-            moveable: If True, remove from c_attributes. If False, remove from
-                     f_attributes. If None, try all.
+            moveable: If True, remove from moveable_attributes. If False, remove from
+                     fixed_attributes. If None, try both.
 
         Returns:
             True if marker was found and removed, False otherwise.
@@ -94,8 +94,8 @@ class IMarkerManager(Protocol):
         Args:
             name: The name of the marker to remove
             parts: Iterable of PartEdges to check
-            moveable: If True, remove from c_attributes. If False, remove from
-                     f_attributes. If None, try all.
+            moveable: If True, remove from moveable_attributes. If False, remove from
+                     fixed_attributes. If None, remove from all.
 
         Returns:
             Number of parts where the marker was removed.
@@ -105,7 +105,7 @@ class IMarkerManager(Protocol):
     def get_markers(self, part_edge: "PartEdge") -> list["MarkerConfig"]:
         """Get all markers for a PartEdge, deduplicated and sorted.
 
-        Retrieves markers from all attribute dictionaries. Visually
+        Retrieves markers from both attribute dictionaries. Visually
         identical configs are deduplicated (keeping highest z_order), then
         sorted by z_order (lowest first, so highest draws on top).
 
@@ -134,7 +134,7 @@ class IMarkerManager(Protocol):
 
         Args:
             part_edge: The sticker to clear
-            moveable: If True, clear only c_attributes. If False, clear only
-                     f_attributes. If None, clear all.
+            moveable: If True, clear only moveable_attributes. If False, clear only
+                     fixed_attributes. If None, clear all.
         """
         ...

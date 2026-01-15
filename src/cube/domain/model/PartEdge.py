@@ -1,4 +1,3 @@
-from collections import defaultdict
 from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, TypeAlias
 
@@ -22,41 +21,33 @@ class PartEdge:
     The color can change during rotations (via copy_color), but the face reference
     is fixed - representing the physical slot position.
 
-    THREE ATTRIBUTE DICTIONARIES
-    ============================
-    PartEdge has three distinct attribute systems for different use cases:
+    TWO ATTRIBUTE DICTIONARIES
+    ==========================
+    PartEdge has two distinct attribute systems for different use cases:
 
-    1. ``attributes`` - Structural/Positional (FIXED)
+    1. ``fixed_attributes`` - Fixed to Slot (STAYS at position)
        - Properties of the physical slot itself
-       - Set once during Face.finish_init()
-       - Keys: "origin", "on_x", "on_y", "cw" (clockwise index)
-       - NEVER move during rotations
-       - Used for coordinate system and rotation calculations
+       - Includes structural info (origin, on_x, on_y, cw) set during Face.finish_init()
+       - Also includes runtime fixed markers and tracking keys
+       - NEVER moves during rotations
+       - Use case: Coordinate system, rotation calculations, destination markers
 
-    2. ``c_attributes`` - Color-Associated (MOVES with color)
+    2. ``moveable_attributes`` - Color-Associated (MOVES with color)
        - Attributes that travel with the colored sticker during rotations
        - COPIED during copy_color() method
        - Keys: "n" (sequential number), tracker keys, "markers" list
        - Use case: Track a specific piece as it moves around the cube
        - Example: FaceTracker puts a key here to find a piece after rotation
 
-    3. ``f_attributes`` - Fixed to Slot (STAYS at position)
-       - Attributes that stay at the physical slot position
-       - NOT copied during copy_color()
-       - Keys: destination markers, "markers" list
-       - Use case: Mark where a piece should end up (destination)
-       - Uses defaultdict(bool) so missing keys return False
-
     Animation Use Case:
-        - AnnWhat.Moved → uses c_attributes → marker follows the sticker
-        - AnnWhat.FixedPosition → uses f_attributes → marker stays at destination
+        - AnnWhat.Moved → uses moveable_attributes → marker follows the sticker
+        - AnnWhat.FixedPosition → uses fixed_attributes → marker stays at destination
 
     See: design2/partedge-attribute-system.md for visual diagrams
     """
     __slots__ = ["_face", "_parent", "_color", "_annotated_by_color",
                  "_annotated_fixed_location", "_texture_direction",
-                 "attributes", "c_attributes",
-                 "f_attributes"]
+                 "fixed_attributes", "moveable_attributes"]
 
     _face: _Face
     _color: Color
@@ -70,10 +61,9 @@ class PartEdge:
             face: The Face this edge belongs to (fixed, never changes)
             color: Initial color of the sticker (can change during rotation)
 
-        The three attribute dictionaries are initialized empty:
-        - attributes: {} (structural, set by Face.finish_init)
-        - c_attributes: {} (color-associated, moves with color)
-        - f_attributes: defaultdict(bool) (fixed, stays at slot)
+        The two attribute dictionaries are initialized empty:
+        - fixed_attributes: {} (fixed to slot - structural info + runtime markers)
+        - moveable_attributes: {} (color-associated, moves with color)
         """
         super().__init__()
         self._face = face
@@ -82,17 +72,14 @@ class PartEdge:
         self._annotated_fixed_location: bool = False
         self._texture_direction: int = 0  # Texture rotation: 0=0°, 1=90°CW, 2=180°, 3=270°CW
 
-        # Structural attributes - physical slot properties (origin, cw, on_x, on_y)
-        # Set by Face.finish_init(), never move during rotation
-        self.attributes: dict[Hashable, Any] = {}
-
-        # Color-associated attributes - MOVE with color during copy_color()
-        # Used by FaceTracker, moveable markers (e.g., C1 from MarkerFactory)
-        self.c_attributes: dict[Hashable, Any] = {}
-
         # Fixed attributes - STAY at physical slot, NOT copied during rotation
-        # Used for fixed markers (e.g., C2 from MarkerFactory)
-        self.f_attributes: dict[Hashable, Any] = defaultdict(bool)
+        # Includes structural properties (origin, cw, on_x, on_y) set by Face.finish_init()
+        # Also includes runtime fixed markers (e.g., C2 destination markers)
+        self.fixed_attributes: dict[Hashable, Any] = {}
+
+        # Moveable attributes - MOVE with color during copy_color()
+        # Used by FaceTracker, moveable markers (e.g., C1 from MarkerFactory)
+        self.moveable_attributes: dict[Hashable, Any] = {}
 
         self._parent: _PartSlice
 
@@ -124,24 +111,23 @@ class PartEdge:
         What gets COPIED:
         - _color: The actual sticker color
         - _annotated_by_color: Color-based annotation flag
-        - c_attributes: All color-associated attributes (cleared then updated)
+        - moveable_attributes: All color-associated attributes (cleared then updated)
 
         What is NOT copied (stays at this slot):
         - _face: Physical face reference
-        - attributes: Structural slot properties
-        - f_attributes: Fixed destination markers
+        - fixed_attributes: Fixed slot properties (structural + runtime markers)
 
         This distinction enables:
-        - Tracking pieces: Put marker in c_attributes, it follows the color
-        - Marking destinations: Put marker in f_attributes, it stays put
+        - Tracking pieces: Put marker in moveable_attributes, it follows the color
+        - Marking destinations: Put marker in fixed_attributes, it stays put
 
         See: design2/partedge-attribute-system.md for visual diagrams
         """
         self._color = source._color
         self._annotated_by_color = source._annotated_by_color
         self._texture_direction = source._texture_direction
-        self.c_attributes.clear()
-        self.c_attributes.update(source.c_attributes)
+        self.moveable_attributes.clear()
+        self.moveable_attributes.update(source.moveable_attributes)
 
     def clone(self) -> "PartEdge":
         """
@@ -151,14 +137,14 @@ class PartEdge:
         p = PartEdge(self._face, self._color)
         p._annotated_by_color = self._annotated_by_color
         p._texture_direction = self._texture_direction
-        p.attributes = self.attributes.copy()
-        p.c_attributes = self.c_attributes.copy()
+        p.fixed_attributes = self.fixed_attributes.copy()
+        p.moveable_attributes = self.moveable_attributes.copy()
 
         return p
 
-    def clear_c_attributes(self) -> None:
-        """Clear color-associated attributes."""
-        self.c_attributes.clear()
+    def clear_moveable_attributes(self) -> None:
+        """Clear moveable (color-associated) attributes."""
+        self.moveable_attributes.clear()
 
     def annotate(self, fixed_location: bool):
         if fixed_location:
@@ -206,7 +192,7 @@ class PartEdge:
         This is an optimized rotation that swaps references instead of copying.
         In a 4-cycle, we don't need to copy dict contents - just rotate references.
 
-        Performance: O(1) for c_attributes instead of O(K) where K = number of attributes.
+        Performance: O(1) for moveable_attributes instead of O(K) where K = number of attributes.
 
         The cycle direction matches the copy_color pattern:
         - p0 receives p1's color data
@@ -218,7 +204,7 @@ class PartEdge:
         - _color: The actual sticker color
         - _annotated_by_color: Color-based annotation flag
         - _texture_direction: Texture rotation state
-        - c_attributes: Dict reference is swapped, not copied!
+        - moveable_attributes: Dict reference is swapped, not copied!
 
         Args:
             p0, p1, p2, p3: The four PartEdges in the cycle
@@ -230,7 +216,7 @@ class PartEdge:
         textures = (p0._texture_direction, p1._texture_direction,
                     p2._texture_direction, p3._texture_direction)
         # Key optimization: save dict REFERENCES, not copies
-        c_attrs = (p0.c_attributes, p1.c_attributes, p2.c_attributes, p3.c_attributes)
+        m_attrs = (p0.moveable_attributes, p1.moveable_attributes, p2.moveable_attributes, p3.moveable_attributes)
 
         # Rotate: p0 ← p1 ← p2 ← p3 ← p0
         p0._color, p1._color, p2._color, p3._color = colors[1], colors[2], colors[3], colors[0]
@@ -239,5 +225,5 @@ class PartEdge:
         p0._texture_direction, p1._texture_direction, p2._texture_direction, p3._texture_direction = \
             textures[1], textures[2], textures[3], textures[0]
         # Swap dict references - O(1) instead of clear+update which is O(K)
-        p0.c_attributes, p1.c_attributes, p2.c_attributes, p3.c_attributes = \
-            c_attrs[1], c_attrs[2], c_attrs[3], c_attrs[0]
+        p0.moveable_attributes, p1.moveable_attributes, p2.moveable_attributes, p3.moveable_attributes = \
+            m_attrs[1], m_attrs[2], m_attrs[3], m_attrs[0]

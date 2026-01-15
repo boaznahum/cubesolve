@@ -72,7 +72,7 @@ class PartSlice(ABC, Hashable):
                  "_fixed_id",
                  "_colors_id_by_colors",
                  "_unique_id",
-                 "c_attributes"
+                 "moveable_attributes"
                  ]
     _edges: MutableSequence[PartEdge]
 
@@ -89,7 +89,7 @@ class PartSlice(ABC, Hashable):
         self._fixed_id: PartSliceHashID | None = None
         self._parent: _Part | None = None
         # attributes(like color) that are move around with the slice
-        self.c_attributes: dict[Hashable, Any] = defaultdict(bool)
+        self.moveable_attributes: dict[Hashable, Any] = defaultdict(bool)
 
         global _SliceUniqueID
         _SliceUniqueID += 1
@@ -187,14 +187,14 @@ class PartSlice(ABC, Hashable):
 
         self.reset_colors_id()
 
-        self.c_attributes.clear()
-        self.c_attributes.update(source_slice.c_attributes)
+        self.moveable_attributes.clear()
+        self.moveable_attributes.update(source_slice.moveable_attributes)
 
-    def clear_c_attributes(self) -> None:
+    def clear_moveable_attributes(self) -> None:
         """Clear color-associated attributes from this slice and all its edges."""
-        self.c_attributes.clear()
+        self.moveable_attributes.clear()
         for edge in self._edges:
-            edge.clear_c_attributes()
+            edge.clear_moveable_attributes()
 
     def same_colors(self, other: "PartSlice"):
         """
@@ -277,7 +277,7 @@ class PartSlice(ABC, Hashable):
 
         This rotates the slice-level data that tracks piece identity:
         - _unique_id: Identifier used for tracking pieces
-        - c_attributes: Slice-level color-associated attributes
+        - moveable_attributes: Slice-level color-associated attributes
 
         Must be called alongside PartEdge.rotate_4cycle for complete rotation.
         After calling, reset_colors_id() should be called on all affected slices
@@ -288,13 +288,13 @@ class PartSlice(ABC, Hashable):
         """
         # Save references
         unique_ids = (s0._unique_id, s1._unique_id, s2._unique_id, s3._unique_id)
-        c_attrs = (s0.c_attributes, s1.c_attributes, s2.c_attributes, s3.c_attributes)
+        m_attrs = (s0.moveable_attributes, s1.moveable_attributes, s2.moveable_attributes, s3.moveable_attributes)
 
         # Rotate: s0 ← s1 ← s2 ← s3 ← s0
         s0._unique_id, s1._unique_id, s2._unique_id, s3._unique_id = \
             unique_ids[1], unique_ids[2], unique_ids[3], unique_ids[0]
-        s0.c_attributes, s1.c_attributes, s2.c_attributes, s3.c_attributes = \
-            c_attrs[1], c_attrs[2], c_attrs[3], c_attrs[0]
+        s0.moveable_attributes, s1.moveable_attributes, s2.moveable_attributes, s3.moveable_attributes = \
+            m_attrs[1], m_attrs[2], m_attrs[3], m_attrs[0]
 
         # Reset cached colors IDs
         for s in (s0, s1, s2, s3):
@@ -387,7 +387,7 @@ class PartSlice(ABC, Hashable):
     def clone(self: _TPartSlice) -> _TPartSlice:
         s = self._clone_basic()
         s._unique_id = self._unique_id
-        s.c_attributes = self.c_attributes.copy()
+        s.moveable_attributes = self.moveable_attributes.copy()
         # don't need to clone f_attributes, clone is used for rotating only; f_attributes is not rotated
         return s
 
