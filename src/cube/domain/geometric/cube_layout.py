@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Collection, Iterator
-from typing import TYPE_CHECKING, Mapping, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
@@ -29,137 +29,20 @@ if TYPE_CHECKING:
     from cube.utils.Cache import CacheManager
 
 
-def _build_adjacent(all_opposite: Mapping[FaceName, FaceName]) -> Mapping[FaceName, tuple[FaceName, ...]]:
-    """Build adjacent faces mapping from opposite faces mapping."""
-    return {
-        face: tuple(f for f in FaceName if f != face and f != all_opposite[face])
-        for face in FaceName
-    }
-
-
-# Module-level constants for face geometry
-_OPPOSITE: Mapping[FaceName, FaceName] = {
-    FaceName.F: FaceName.B,
-    FaceName.U: FaceName.D,
-    FaceName.L: FaceName.R
-}
-
-_REV_OPPOSITE: Mapping[FaceName, FaceName] = {v: k for k, v in _OPPOSITE.items()}
-
-_ALL_OPPOSITE: Mapping[FaceName, FaceName] = {**_OPPOSITE, **_REV_OPPOSITE}
-
-_ADJACENT: Mapping[FaceName, tuple[FaceName, ...]] = _build_adjacent(_ALL_OPPOSITE)
-
-# Slice rotation faces: M rotates like L, E rotates like D, S rotates like F
-_SLICE_ROTATION_FACE: Mapping[SliceName, FaceName] = {
-    SliceName.M: FaceName.L,
-    SliceName.E: FaceName.D,
-    SliceName.S: FaceName.F,
-}
-
-# Axis rotation faces: whole-cube X rotates around R, Y around U, Z around F
-# Note: _AXIS_ROTATION_FACE[s] is opposite to _SLICE_ROTATION_FACE[s] except for S
-_AXIS_ROTATION_FACE: Mapping[SliceName, FaceName] = {
-    SliceName.M: FaceName.R,  # X axis
-    SliceName.E: FaceName.U,  # Y axis
-    SliceName.S: FaceName.F,  # Z axis (same as slice rotation face)
-}
-
-# ============================================================================
-# WHOLE-CUBE AXIS ROTATION - Canonical Definition
-# ============================================================================
-#
-# Standard Rubik's cube notation (https://alg.cubing.net/):
-#
-#   X - Rotate entire cube on R-L axis, in the direction of R move
-#       (clockwise when looking at R face from outside)
-#       Content moves: D → F → U → B → D
-#
-#   Y - Rotate entire cube on U-D axis, in the direction of U move
-#       (clockwise when looking at U face from outside)
-#       Content moves: F → L → B → R → F
-#
-#   Z - Rotate entire cube on F-B axis, in the direction of F move
-#       (clockwise when looking at F face from outside)
-#       Content moves: U → R → D → L → U
-#
-# The face returned is the one that defines the positive rotation direction
-# (the face that rotates clockwise when the algorithm is applied).
-#
-# TODO: This mapping could be derived from cube geometry, but keeping it
-# explicit for now as it matches the standard notation convention.
-# ============================================================================
-_AXIS_FACE: Mapping[AxisName, FaceName] = {
-    AxisName.X: FaceName.R,
-    AxisName.Y: FaceName.U,
-    AxisName.Z: FaceName.F,
-}
-
-
-def get_axis_face(axis_name: AxisName) -> FaceName:
-    """
-    Get the face that defines the rotation direction for a whole-cube axis.
-
-    Standard Rubik's cube notation:
-        X axis → R face (rotation like R, clockwise facing R)
-        Y axis → U face (rotation like U, clockwise facing U)
-        Z axis → F face (rotation like F, clockwise facing F)
-
-    This is the CANONICAL source for axis-to-face mapping.
-    WholeCubeAlg.get_face_name() should delegate to this function.
-
-    Args:
-        axis_name: The axis (X, Y, or Z)
-
-    Returns:
-        The face that defines positive rotation direction for this axis
-    """
-    return _AXIS_FACE[axis_name]
-
-
-# Note: _SLICE_FACES was removed - derive on demand from _SLICE_ROTATION_FACE + _ADJACENT
-
-
-# ============================================================================
-# Private Geometry Functions (use CubeLayout protocol methods instead)
-# ============================================================================
-
-
-def _get_slice_for_faces(source: FaceName, target: FaceName) -> SliceName | None:
-    """Internal: Find which slice connects two faces. Use CubeLayout.get_slice_for_faces()."""
-    for slice_name in SliceName:
-        rotation_face = _SLICE_ROTATION_FACE[slice_name]
-        slice_faces = _ADJACENT[rotation_face]
-        if source in slice_faces and target in slice_faces:
-            return slice_name
-    return None
-
-
-def _get_all_slices_for_faces(source: FaceName, target: FaceName) -> list[SliceName]:
-    """Internal: Find ALL slices connecting two faces. Use CubeLayout.get_all_slices_for_faces()."""
-    if source == target:
-        return []
-    result: list[SliceName] = []
-    for slice_name in SliceName:
-        rotation_face = _SLICE_ROTATION_FACE[slice_name]
-        slice_faces = _ADJACENT[rotation_face]
-        if source in slice_faces and target in slice_faces:
-            result.append(slice_name)
-    return result
-
-
-def _get_slice_parallel_to_face(face: FaceName) -> SliceName:
-    """Internal: Find slice parallel to face. Use CubeLayout.get_slice_parallel_to_face()."""
-    for slice_name in SliceName:
-        rotation_face = _SLICE_ROTATION_FACE[slice_name]
-        opposite_face = _ALL_OPPOSITE[rotation_face]
-        if face not in (rotation_face, opposite_face):
-            return slice_name
-    raise ValueError(f"No slice parallel to {face}")
-
-
 # ============================================================================
 # CubeLayout Protocol
+# ============================================================================
+#
+# All geometry tables (_OPPOSITE, _ADJACENT, _SLICE_ROTATION_FACE, _AXIS_FACE)
+# are defined in _CubeLayout.py and accessed ONLY through protocol methods.
+#
+# Key methods:
+#   - opposite(face) → opposite face
+#   - is_adjacent(f1, f2) → True if faces share an edge
+#   - get_adjacent_faces(face) → tuple of 4 adjacent faces
+#   - get_slice_rotation_face(slice) → face the slice rotates like (M→L, E→D, S→F)
+#   - get_axis_face(axis) → face the axis rotates like (X→R, Y→U, Z→F)
+#   - get_axis_for_slice(slice) → (axis, same_direction) derived relationship
 # ============================================================================
 
 @runtime_checkable
@@ -434,6 +317,94 @@ class CubeLayout(Protocol):
 
         Example:
             layout.get_slice_parallel_to_face(FaceName.U)  # SliceName.E
+        """
+        ...
+
+    @abstractmethod
+    def get_slice_rotation_face(self, slice_name: SliceName) -> FaceName:
+        """Get the face that defines the rotation direction for a slice.
+
+        Standard Rubik's cube slice notation:
+            M - rotates like L (clockwise when looking at L face)
+            E - rotates like D (clockwise when looking at D face)
+            S - rotates like F (clockwise when looking at F face)
+
+        Args:
+            slice_name: The slice (M, E, or S)
+
+        Returns:
+            M → L, E → D, S → F
+
+        Example:
+            layout.get_slice_rotation_face(SliceName.M)  # FaceName.L
+        """
+        ...
+
+    @abstractmethod
+    def get_axis_face(self, axis_name: AxisName) -> FaceName:
+        """Get the face that defines the rotation direction for a whole-cube axis.
+
+        Standard Rubik's cube notation (https://alg.cubing.net/):
+
+            X - Rotate entire cube on R-L axis, in the direction of R move
+                (clockwise when looking at R face from outside)
+                Content moves: D → F → U → B → D
+
+            Y - Rotate entire cube on U-D axis, in the direction of U move
+                (clockwise when looking at U face from outside)
+                Content moves: F → L → B → R → F
+
+            Z - Rotate entire cube on F-B axis, in the direction of F move
+                (clockwise when looking at F face from outside)
+                Content moves: U → R → D → L → U
+
+        The face returned is the one that defines the positive rotation direction
+        (the face that rotates clockwise when the algorithm is applied).
+
+        TODO: This mapping could be derived from cube geometry, but keeping it
+        explicit for now as it matches the standard notation convention.
+
+        Args:
+            axis_name: The axis (X, Y, or Z)
+
+        Returns:
+            X axis → R face (rotation like R, clockwise facing R)
+            Y axis → U face (rotation like U, clockwise facing U)
+            Z axis → F face (rotation like F, clockwise facing F)
+
+        Example:
+            layout.get_axis_face(AxisName.X)  # FaceName.R
+        """
+        ...
+
+    @abstractmethod
+    def get_axis_for_slice(self, slice_name: SliceName) -> tuple[AxisName, bool]:
+        """Get the axis and direction relationship for a slice.
+
+        DERIVED from:
+            - _SLICE_ROTATION_FACE: which face the slice rotates like (M→L, E→D, S→F)
+            - get_axis_face(): which face the axis rotates like (X→R, Y→U, Z→F)
+            - opposite(): face opposite relationship
+
+        Logic:
+            Slice is on axis if slice_face and axis_face are on same axis
+            (i.e., same face OR opposite faces).
+
+            Direction is SAME if slice_face == axis_face,
+            OPPOSITE if slice_face == opposite(axis_face).
+
+        Args:
+            slice_name: The slice (M, E, or S)
+
+        Returns:
+            Tuple of (axis_name, is_same_direction):
+            - M → (X, False)  # M like L, X like R → opposite directions
+            - E → (Y, False)  # E like D, Y like U → opposite directions
+            - S → (Z, True)   # S like F, Z like F → same direction
+
+        Example:
+            axis, same_dir = layout.get_axis_for_slice(SliceName.M)
+            # axis = AxisName.X, same_dir = False
         """
         ...
 

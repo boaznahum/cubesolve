@@ -4,7 +4,6 @@ from typing import Collection, Self, Tuple, final
 from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
-from cube.domain.geometric.cube_layout import get_axis_face
 from cube.domain.model import AxisName, Cube, FaceName, PartSlice
 
 
@@ -40,26 +39,12 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
         cube.rotate_whole(self._axis_name, _inv(inv, self._n))
 
     def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
-        face_name = self.get_face_name()
+        face_name = cube.layout.get_axis_face(self._axis_name)
         return face_name, cube.get_all_part_slices()
 
     @property
     def axis_name(self) -> AxisName:
         return self._axis_name
-
-    def get_face_name(self) -> FaceName:
-        """
-        Return the face that defines the positive rotation axis.
-
-        Delegates to cube_layout.get_axis_face() which is the canonical source
-        for axis-to-face mapping. See that function for detailed documentation.
-
-        Returns:
-            X axis → R face (rotation around L-R axis)
-            Y axis → U face (rotation around U-D axis)
-            Z axis → F face (rotation around F-B axis)
-        """
-        return get_axis_face(self._axis_name)
 
 
 @final

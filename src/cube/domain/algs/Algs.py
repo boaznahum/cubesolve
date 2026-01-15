@@ -104,7 +104,7 @@ class Algs:
     R = _R()
     Rw = DoubleLayerAlg(R)
     # X, Y, Z: Identity/naming only - _X() binds to AxisName.X (just gives the alg its name).
-    # Geometric relationships (X↔R axis, direction) are defined in WholeCubeAlg.get_face_name()
+    # Geometric relationships (X↔R axis, direction) are defined in CubeLayout.get_axis_face()
     X = _X()
     M = _M()  # Middle slice over L axis. See class docstring for M/E/S details.
     _MM = _M().simple_mul(-1)  # Middle over L

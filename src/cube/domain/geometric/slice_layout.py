@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Protocol
 if TYPE_CHECKING:
     from cube.domain.model.FaceName import FaceName
     from cube.domain.model.SliceName import SliceName
-    from cube.domain.geometric._CubeLayout import _CubeLayout
+    from cube.domain.geometric.cube_layout import CubeLayout
     from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit
 
 
@@ -182,18 +182,22 @@ class SliceLayout(Protocol):
 
 class _SliceLayout(SliceLayout):
 
-    def __init__(self, slice_name: "SliceName", layout: "_CubeLayout | None" = None):
+    def __init__(self, slice_name: "SliceName", layout: "CubeLayout | None" = None):
         self._slice_name = slice_name
-        self._layout: "_CubeLayout | None" = layout
+        self._layout: "CubeLayout | None" = layout
 
     def get_face_name(self) -> "FaceName":
         """
         Return the face that defines the positive rotation direction for this slice.
 
-        Derives from _SLICE_ROTATION_FACE constant in cube_layout.py.
+        Uses CubeLayout.get_slice_rotation_face() method.
         """
-        from cube.domain.geometric.cube_layout import _SLICE_ROTATION_FACE
-        return _SLICE_ROTATION_FACE[self._slice_name]
+        if self._layout is None:
+            raise RuntimeError(
+                "Cannot get_face_name without layout reference. "
+                "Use layout.get_slice_rotation_face() directly."
+            )
+        return self._layout.get_slice_rotation_face(self._slice_name)
 
     def does_slice_cut_rows_or_columns(self, face_name: "FaceName") -> CLGColRow:
         """

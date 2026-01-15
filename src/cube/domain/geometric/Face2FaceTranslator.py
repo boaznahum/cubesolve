@@ -122,6 +122,7 @@ from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.geometric.types import Point
 from cube.domain.model import Cube
+from cube.domain.model._elements import AxisName
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
@@ -483,24 +484,19 @@ class Face2FaceTranslator:
         # Derive whole-cube algorithms (1 for adjacent, 2 for opposite faces)
         whole_cube_algs = Face2FaceTranslator.derive_whole_cube_alg(target_name, source_name)
 
-        # Map slice to whole-cube axis: M->X(R), E->Y(U), S->Z(F)
-        slice_to_axis: dict[SliceName, FaceName] = {
-            SliceName.M: FaceName.R,  # M -> X
-            SliceName.E: FaceName.U,  # E -> Y
-            SliceName.S: FaceName.F,  # S -> Z
-        }
-
-        # Build lookup for whole-cube algs by their axis
-        whole_cube_by_axis: dict[FaceName, tuple[WholeCubeAlg, Alg]] = {}
+        # Build lookup for whole-cube algs by their axis name
+        layout = target_face.cube.layout
+        whole_cube_by_axis: dict[AxisName, tuple[WholeCubeAlg, Alg]] = {}
         for base_alg, _, alg in whole_cube_algs:
-            whole_cube_by_axis[base_alg.get_face_name()] = (base_alg, alg)
+            whole_cube_by_axis[base_alg.axis_name] = (base_alg, alg)
 
         # Each slice algorithm becomes one FaceTranslationResult
         results: list[FaceTranslationResult] = []
         for slice_alg in all_slice_algorithms:
             slice_name = slice_alg.whole_slice_alg.slice_name
-            axis_face = slice_to_axis[slice_name]
-            whole_cube_base_alg, whole_cube_alg = whole_cube_by_axis[axis_face]
+            # Get axis for this slice (direction not used here, but documents the relationship)
+            axis_name, _same_direction = layout.get_axis_for_slice(slice_name)
+            whole_cube_base_alg, whole_cube_alg = whole_cube_by_axis[axis_name]
 
             results.append(FaceTranslationResult(
                 whole_cube_base_alg=whole_cube_base_alg,
