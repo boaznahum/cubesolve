@@ -18,7 +18,6 @@ from itertools import product
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.exceptions import GeometryError, GeometryErrorCode
 from cube.domain.model.Cube import Cube
 from cube.domain.model.FaceName import FaceName
 from cube.domain.solver.common.CommonOp import CommonOp
@@ -119,22 +118,25 @@ class TestBringFaceToValid:
 
 
 class TestBringFaceToSameFace:
-    """Tests for invalid bring_face_to calls (source == target)."""
+    """Tests for bring_face_to calls with source == target (should do nothing)."""
 
     @pytest.mark.parametrize("cube_size", CUBE_SIZES)
     @pytest.mark.parametrize("face_pair", SAME_FACE_PAIRS, ids=_same_face_id)
-    def test_bring_face_to_same_raises(
+    def test_bring_face_to_same_does_nothing(
         self, cube_size: int, face_pair: tuple[FaceName, FaceName]
     ) -> None:
-        """Test that bring_face_to raises GeometryError when source == target."""
+        """Test that bring_face_to does nothing when source == target."""
         face_name = face_pair[0]
         cmn, cube = create_common_op(cube_size)
 
         face = cube.face(face_name)
 
-        with pytest.raises(GeometryError) as exc_info:
-            cmn.bring_face_to(face, face)
+        # Place a marker to verify cube unchanged
+        marker = "SAME_FACE_TEST"
+        place_marker(cube, face_name, marker)
 
-        assert exc_info.value.code == GeometryErrorCode.SAME_FACE, (
-            f"Expected SAME_FACE error code, got {exc_info.value.code}"
-        )
+        # Should silently return, not raise
+        cmn.bring_face_to(face, face)
+
+        # Marker should still be on the same face
+        assert find_marker_on_face(cube, face_name) == marker

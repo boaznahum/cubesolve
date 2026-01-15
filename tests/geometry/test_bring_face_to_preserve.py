@@ -169,24 +169,29 @@ class TestBringFaceToPreserveValid:
 
 
 class TestBringFaceToPreserveSameFace:
-    """Tests for source == target (should raise GeometryError)."""
+    """Tests for source == target (should do nothing)."""
 
     @pytest.mark.parametrize("cube_size", CUBE_SIZES)
     @pytest.mark.parametrize("combo", SAME_FACE, ids=_invalid_id)
-    def test_same_face_raises(
+    def test_same_face_does_nothing(
         self, cube_size: int, combo: tuple[FaceName, FaceName, FaceName]
     ) -> None:
-        """Test that bring_face_to_preserve raises when source == target."""
+        """Test that bring_face_to_preserve does nothing when source == target."""
         target_name, source_name, preserve_name = combo
         cmn, cube = create_common_op(cube_size)
 
         face = cube.face(source_name)
         preserve_face = cube.face(preserve_name)
 
-        with pytest.raises(GeometryError) as exc_info:
-            cmn.bring_face_to_preserve(face, face, preserve_face)
+        # Place a marker to verify cube unchanged
+        marker = "SAME_FACE_TEST"
+        place_marker(cube, source_name, marker)
 
-        assert exc_info.value.code == GeometryErrorCode.SAME_FACE
+        # Should silently return, not raise
+        cmn.bring_face_to_preserve(face, face, preserve_face)
+
+        # Marker should still be on the same face
+        assert find_marker_on_face(cube, source_name) == marker
 
 
 class TestBringFaceToPreserveInvalid:

@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from typing import Callable, ContextManager, Generator, Sequence, Tuple
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.exceptions import GeometryError, GeometryErrorCode, InternalSWError
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Edge, EdgeWing, FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
@@ -183,14 +183,9 @@ class CommonOp:
             target: The target face position (where source should end up)
             source: The source face (the face to move)
 
-        Raises:
-            GeometryError: If source and target are the same face (SAME_FACE code)
         """
         if source.name == target.name:
-            raise GeometryError(
-                GeometryErrorCode.SAME_FACE,
-                f"Cannot bring {source.name} to itself"
-            )
+            return  # Already at target, nothing to do
 
         self.debug("Need to bring ", source, 'to', target.name)
 
@@ -213,14 +208,10 @@ class CommonOp:
             preserve: The face that must stay fixed
 
         Raises:
-            GeometryError: SAME_FACE if source == target
             GeometryError: INVALID_PRESERVE_ROTATION if rotation is impossible
         """
         if source.name == target.name:
-            raise GeometryError(
-                GeometryErrorCode.SAME_FACE,
-                f"Cannot bring {source.name} to itself"
-            )
+            return  # Already at target, nothing to do
 
         self.debug("Need to bring ", source, 'to', target.name, 'preserving', preserve.name)
 
@@ -234,154 +225,16 @@ class CommonOp:
             self.op.play(alg)
 
     def bring_face_up_preserve_front(self, face: Face) -> None:
-        """Bring the given face to UP position while preserving the FRONT face.
+        """Bring the given face to UP position while preserving the FRONT face."""
+        self.bring_face_to_preserve(self.cube.up, face, self.cube.front)
 
-        This method uses only Z-axis whole-cube rotations which rotate around
-        the front-back axis. This ensures the FRONT face stays as FRONT while
-        moving the target face to UP.
-
-        Only L, R, and D faces can be brought to UP while preserving FRONT.
-        F and B cannot be moved to UP without changing the front face.
-
-        Args:
-            face: The face to bring to UP position (must be L, R, or D)
-
-        Raises:
-            InternalSWError: If face is F, B, or invalid
-        """
-        if face.name != FaceName.U:
-
-            self.debug("Need to bring ", face, 'to', FaceName.U)
-
-            front = self.cube.front
-
-            with self.ann.annotate(h2=f"Bringing face {face.color_at_face_str} up, preserving front {front.color_at_face_str}"):
-
-                alg: Alg
-
-                match face.name:
-
-                    case FaceName.F:
-                        raise InternalSWError(f"You cannot bring front  {face} up and preserve front{face.name.value} ")
-
-                    case FaceName.B:
-                        raise InternalSWError(f"You cannot bring back {face} up and preserve front{face.name.value} ")
-
-                    case FaceName.D:
-                        alg = Algs.Z * 2
-
-                    case FaceName.L:
-                        alg = Algs.Z
-
-                    case FaceName.R:
-                        alg = Algs.Z.prime
-
-                    case _:
-                        raise InternalSWError(f"Unknown face {face}")
-
-                self.op.play(alg)
-
-                assert self.cube.front is front
-
-    # NEVER TESTED
     def bring_face_down_preserve_front(self, face: Face) -> None:
-        """Bring the given face to DOWN position while preserving the FRONT face.
-
-        This method uses only Z-axis whole-cube rotations which rotate around
-        the front-back axis. This ensures the FRONT face stays as FRONT while
-        moving the target face to DOWN.
-
-        Only L, R, and U faces can be brought to DOWN while preserving FRONT.
-        F and B cannot be moved to DOWN without changing the front face.
-
-        Args:
-            face: The face to bring to DOWN position (must be L, R, or U)
-
-        Raises:
-            InternalSWError: If face is F, B, or invalid
-        """
-        if face.name != FaceName.D:
-
-            self.debug("Need to bring ", face, 'to', FaceName.D)
-
-            front = self.cube.front
-
-            with self.ann.annotate(h2=f"Bringing face {face.color_at_face_str} down, preserving front {front.color_at_face_str}"):
-
-                alg: Alg
-
-                match face.name:
-
-                    case FaceName.F:
-                        raise InternalSWError(f"You cannot bring front  {face} up and preserve front{face.name.value} ")
-
-                    case FaceName.B:
-                        raise InternalSWError(f"You cannot bring back {face} up and preserve front{face.name.value} ")
-
-                    case FaceName.D:
-                        alg = Algs.Z * 2
-
-                    case FaceName.L:
-                        alg = Algs.Z
-
-                    case FaceName.R:
-                        alg = Algs.Z.prime
-
-                    case _:
-                        raise InternalSWError(f"Unknown face {face}")
-
-                self.op.play(alg)
-
-                assert self.cube.front is front
+        """Bring the given face to DOWN position while preserving the FRONT face."""
+        self.bring_face_to_preserve(self.cube.down, face, self.cube.front)
 
     def bring_face_front_preserve_down(self, face: Face) -> None:
-        """Bring the given face to FRONT position while preserving the DOWN face.
-
-        This method uses only Y-axis whole-cube rotations which rotate around
-        the up-down axis. This ensures the DOWN face stays as DOWN while
-        moving the target face to FRONT.
-
-        Only L, R, and B faces can be brought to FRONT while preserving DOWN.
-        U and D cannot be moved to FRONT without changing the down face.
-
-        Args:
-            face: The face to bring to FRONT position (must be L, R, or B)
-
-        Raises:
-            InternalSWError: If face is U, D, or invalid
-        """
-        if face.name != FaceName.F:
-
-            self.debug("Need to bring ", face, 'to', FaceName.F)
-
-            down = self.cube.down
-
-            with self.ann.annotate(h2=f"Bringing face {face.color_at_face_str} to front, preserving down {down.color_at_face_str}"):
-
-                alg: Alg
-
-                match face.name:
-
-                    case FaceName.D | FaceName.U:
-                        raise InternalSWError(f"You cannot bring {face.color_at_face_str} to front "
-                                              f"while preserving down {down.color_at_face_str}")
-
-
-                    case FaceName.B:
-                        alg = Algs.Y * 2
-
-                    case FaceName.L:
-                        alg = -Algs.Y
-
-                    case FaceName.R:
-                        alg = Algs.Y
-
-                    case _:
-                        raise InternalSWError(f"Unknown face {face}")
-
-                self.op.play(alg)
-
-                assert self.cube.down is down
+        """Bring the given face to FRONT position while preserving the DOWN face."""
+        self.bring_face_to_preserve(self.cube.front, face, self.cube.down)
 
     def bring_edge_to_front_by_e_rotate(self, edge: Edge) -> Alg | None:
         """
