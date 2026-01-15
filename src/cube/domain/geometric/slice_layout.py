@@ -3,13 +3,12 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Protocol
 
-from cube.domain.model import FaceName
 from cube.domain.model._elements import EdgePosition
 
 if TYPE_CHECKING:
     from cube.domain.model.FaceName import FaceName
     from cube.domain.model.SliceName import SliceName
-    from cube.domain.geometric.cube_layout import CubeLayout
+    from cube.domain.geometric._CubeLayout import _CubeLayout
     from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit
 
 
@@ -185,9 +184,9 @@ class SliceLayout(Protocol):
 
 class _SliceLayout(SliceLayout):
 
-    def __init__(self, slice_name: "SliceName", layout: "CubeLayout | None" = None):
+    def __init__(self, slice_name: "SliceName", layout: "_CubeLayout | None" = None):
         self._slice_name = slice_name
-        self._layout: "CubeLayout | None" = layout
+        self._layout: "_CubeLayout | None" = layout
 
     def get_face_name(self) -> "FaceName":
         """

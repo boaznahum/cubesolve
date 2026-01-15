@@ -382,6 +382,24 @@ class CubeWalkingInfoUnit:
         n_slices: Total number of slices (cube_size - 2)
         face_infos: Tuple of 4 FaceWalkingInfo in content flow order
 
+    OBJECT OWNERSHIP PATTERN
+    ========================
+    Methods with "resolve_cube" prefix follow the Object Ownership pattern:
+    - They accept a Cube (or objects from a cube) as parameter
+    - They return objects from that SAME cube
+    - They do NOT expose objects from any internal cube
+
+    This pattern ensures callers always work with objects from their own cube,
+    preventing cross-cube object contamination.
+
+    TODO: Audit all geometry classes to ensure no method exposes internal
+          objects without accepting a cube/object parameter. Any method that
+          returns Face/Edge/Part objects must either:
+          1. Accept a Cube parameter and return objects from that cube
+          2. Accept Face/Edge objects and return objects from the same cube
+          Methods that don't accept any cube-related parameter must NOT
+          return cube objects (only names/enums are allowed).
+
     Usage:
         walk_info = cube.sized_layout.create_walking_info(SliceName.M)
         transform = walk_info.get_transform(face_f, face_u)
@@ -406,9 +424,13 @@ class CubeWalkingInfoUnit:
         """Return number of faces (always 4)."""
         return len(self.face_infos)
 
-    def get_cycle(self, cube: "Cube") -> tuple[list["Face"], list["Edge"]]:
+    def resolve_cube_cycle(self, cube: "Cube") -> tuple[list["Face"], list["Edge"]]:
         """
         Resolve face and edge names to actual Face and Edge objects.
+
+        OBJECT OWNERSHIP: This method follows the resolve_cube pattern - it accepts
+        a Cube parameter and returns objects from that SAME cube. It does not expose
+        any internal objects.
 
         Converts the size-independent FaceName/EdgeName in face_infos to
         actual Face and Edge objects from the given cube.

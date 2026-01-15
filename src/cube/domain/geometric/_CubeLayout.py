@@ -531,6 +531,11 @@ class _CubeLayout(CubeLayout):
         Returns edges in the order content moves during a clockwise face rotation:
         top → right → bottom → left → (back to top)
 
+        IMPORTANT - Object Ownership:
+            This method accepts a Face object from the CALLER'S cube and returns
+            Edge objects from that SAME cube. It does NOT expose internal objects.
+            The returned edges belong to face.cube, not to any internal cube.
+
         In LTR Coordinate System (looking at face from outside cube):
         ============================================================
 
@@ -558,15 +563,65 @@ class _CubeLayout(CubeLayout):
         - Content at left edge moves to top edge
 
         Args:
-            face: The face to get edges for.
+            face: A Face object from the caller's cube
 
         Returns:
-            List of 4 edges in clockwise order: [top, right, bottom, left]
+            List of 4 Edge objects from face.cube: [top, right, bottom, left]
         """
         rotation_edges: list[Edge] = [face.edge_top, face.edge_right,
                                       face.edge_bottom, face.edge_left]
 
         return rotation_edges
+
+    def get_face_neighbors_cw(self, face: Face) -> list[Face]:
+        """
+        Get the four neighboring faces in clockwise rotation order.
+
+        Returns the faces adjacent to the given face, in the order they appear
+        when rotating clockwise around the face (viewing from outside the cube).
+
+        IMPORTANT - Object Ownership:
+            This method accepts a Face object from the CALLER'S cube and returns
+            Face objects from that SAME cube. It does NOT expose internal objects.
+            The returned faces belong to face.cube, not to any internal cube.
+
+        Relationship to edges:
+            The neighbor faces correspond to the edges returned by get_face_edge_rotation_cw():
+            - neighbors[0] is across edge[0] (top edge)
+            - neighbors[1] is across edge[1] (right edge)
+            - neighbors[2] is across edge[2] (bottom edge)
+            - neighbors[3] is across edge[3] (left edge)
+
+        In LTR Coordinate System (looking at face from outside cube):
+
+                    ┌───────────────┐
+                    │  neighbor[0]  │  (top neighbor)
+                    │               │
+                    └───────┬───────┘
+                            │
+            ┌───────┐ ┌─────┴─────┐ ┌───────┐
+            │ [3]   │ │           │ │  [1]  │
+            │ left  │─│   FACE    │─│ right │
+            │       │ │           │ │       │
+            └───────┘ └─────┬─────┘ └───────┘
+                            │
+                    ┌───────┴───────┐
+                    │  neighbor[2]  │  (bottom neighbor)
+                    │               │
+                    └───────────────┘
+
+        Args:
+            face: A Face object from the caller's cube
+
+        Returns:
+            List of 4 Face objects from face.cube: [top, right, bottom, left]
+
+        Example:
+            neighbors = layout.get_face_neighbors_cw(cube.front)
+            # neighbors = [cube.up, cube.right, cube.down, cube.left]
+        """
+        edges = self.get_face_edge_rotation_cw(face)
+        return [edge.get_other_face(face) for edge in edges]
 
     def does_slice_cut_rows_or_columns(self, slice_name: SliceName, face_name: FaceName) -> CLGColRow:
         """Determine if a slice cuts rows or columns on a given face.

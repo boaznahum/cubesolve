@@ -685,7 +685,7 @@ class Face2FaceTranslator:
             - cycle_edges[i] is the entry edge for cycle_faces[i]
         """
         walk_info_unit = cube.layout.get_slice(slice_name).create_walking_info_unit()
-        return walk_info_unit.get_cycle(cube)
+        return walk_info_unit.resolve_cube_cycle(cube)
 
     @staticmethod
     def _translate_adjacent(
