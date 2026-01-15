@@ -25,6 +25,19 @@ class AxisName(Enum):
     Z = "Z"  # Over F,  With S
 
 
+@unique
+class EdgePosition(Enum):
+    """
+    Position of an edge relative to a face (when viewing the face from outside the cube).
+
+    Used to get the edge at a specific position on a face via Face.get_edge().
+    """
+    LEFT = "left"
+    RIGHT = "right"
+    TOP = "top"
+    BOTTOM = "bottom"
+
+
 _Face: TypeAlias = "Face"  # type: ignore  # noqa: F821
 
 if TYPE_CHECKING:

@@ -3,6 +3,9 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Protocol
 
+from cube.domain.model import FaceName
+from cube.domain.model._elements import EdgePosition
+
 if TYPE_CHECKING:
     from cube.domain.model.FaceName import FaceName
     from cube.domain.model.SliceName import SliceName
@@ -225,20 +228,13 @@ class _SliceLayout(SliceLayout):
             )
 
         def compute() -> CLGColRow:
-            from cube.domain.model.Cube import Cube
-            from cube.domain.model.Face import Face
-
             # Get the rotation face for this slice (M→L, E→D, S→F)
             rotation_face_name = self.get_face_name()
 
-            # Access the internal 3x3 cube to check face edge relationships
-            assert self._layout is not None  # Already checked above
-            internal_cube: Cube = self._layout._cube
-            face: Face = internal_cube.face(face_name)
-
             # Get the left and right neighbors of the target face
-            left_neighbor: FaceName = face.edge_left.get_other_face(face).name
-            right_neighbor: FaceName = face.edge_right.get_other_face(face).name
+            assert self._layout is not None  # Already checked above
+            left_neighbor: FaceName = self._layout.get_face_neighbor(face_name, EdgePosition.LEFT)
+            right_neighbor: FaceName = self._layout.get_face_neighbor(face_name, EdgePosition.RIGHT)
 
             # If the slice's rotation face is a left/right neighbor,
             # the slice is vertical on this face (cuts rows)
@@ -294,29 +290,19 @@ class _SliceLayout(SliceLayout):
             )
 
         def compute() -> bool:
-            from cube.domain.model.Cube import Cube
-            from cube.domain.model.Face import Face
-
             # Get the rotation face (slice[0] is closest to it)
             rotation_face_name = self.get_face_name()
 
-            # Use internal 3x3 cube to check edge relationships
+            # Check which edge position connects face_name to rotation_face
             assert self._layout is not None
-            internal_cube: Cube = self._layout._cube
-            face: Face = internal_cube.face(face_name)
-            rotation_face: Face = internal_cube.face(rotation_face_name)
-
-            # Find which edge of 'face' connects to rotation_face
-            shared_edge = face.get_shared_edge(rotation_face)
-            if shared_edge is None:
-                # face_name is not adjacent to rotation face (shouldn't happen in slice cycle)
-                return True
+            left_neighbor = self._layout.get_face_neighbor(face_name, EdgePosition.LEFT)
+            bottom_neighbor = self._layout.get_face_neighbor(face_name, EdgePosition.BOTTOM)
 
             # If rotation face is on the left or bottom edge of this face,
             # then slice[0] aligns with row/col 0 (True)
             # If rotation face is on the right or top edge,
             # then slice[0] aligns with row/col (n-1) (False)
-            if shared_edge is face.edge_left or shared_edge is face.edge_bottom:
+            if rotation_face_name in (left_neighbor, bottom_neighbor):
                 return True
             else:
                 return False

@@ -18,7 +18,7 @@ from cube.utils.Cache import CacheManager, cached_result
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
-from cube.domain.model._elements import AxisName
+from cube.domain.model._elements import AxisName, EdgePosition
 
 # ============================================================================
 # PRIVATE GEOMETRY TABLES - Only accessed through CubeLayout methods
@@ -257,6 +257,15 @@ class _CubeLayout(CubeLayout):
     def get_adjacent_faces(self, face: FaceName) -> tuple[FaceName, ...]:
         """Get all faces adjacent to the given face."""
         return _ADJACENT[face]
+
+    def get_face_neighbor(self, face_name: FaceName, position: EdgePosition) -> FaceName:
+        """Get the neighboring face at a specific edge position.
+
+        Uses the internal 3x3 cube to traverse face-edge relationships.
+        """
+        face = self._cube.face(face_name)
+        edge = face.get_edge(position)
+        return edge.get_other_face(face).name
 
     def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
         """Find which slice connects two faces."""

@@ -96,6 +96,7 @@ from cube.domain.model._part import EdgeName
 from cube.domain.model.FaceName import FaceName
 
 if TYPE_CHECKING:
+    from cube.domain.model.Cube import Cube
     from cube.domain.model.Edge import Edge
     from cube.domain.model.Face import Face
     from cube.domain.model.SliceName import SliceName
@@ -404,3 +405,22 @@ class CubeWalkingInfoUnit:
     def __len__(self) -> int:
         """Return number of faces (always 4)."""
         return len(self.face_infos)
+
+    def get_cycle(self, cube: "Cube") -> tuple[list["Face"], list["Edge"]]:
+        """
+        Resolve face and edge names to actual Face and Edge objects.
+
+        Converts the size-independent FaceName/EdgeName in face_infos to
+        actual Face and Edge objects from the given cube.
+
+        Args:
+            cube: The cube instance to resolve names against
+
+        Returns:
+            (cycle_faces, cycle_edges) where:
+            - cycle_faces[i] is the Face object for face_infos[i]
+            - cycle_edges[i] is the entry Edge for face_infos[i]
+        """
+        cycle_faces: list["Face"] = [cube.face(info.face_name) for info in self.face_infos]
+        cycle_edges: list["Edge"] = [cube.edge(info.edge_name) for info in self.face_infos]
+        return cycle_faces, cycle_edges

@@ -675,42 +675,17 @@ class Face2FaceTranslator:
         """
         Build the traversal cycle for a slice.
 
+        Uses CubeWalkingInfoUnit which derives the cycle from slice geometry.
+        The starting point is intentionally random (in create_walking_info_unit)
+        to expose bugs - the caller should not depend on where the cycle starts.
+
         Returns:
             (cycle_faces, cycle_edges) where:
             - cycle_faces[i] is the i-th face in traversal order
             - cycle_edges[i] is the entry edge for cycle_faces[i]
-
-        Slice cycles (from Slice.py):
-            M: F(edge_bottom) → U → B → D
-            E: R(edge_left) → B → L → F
-            S: U(edge_left) → R → D → L
         """
-        match slice_name:
-            case SliceName.M:
-                start_face = cube.front
-                start_edge = start_face.edge_bottom
-            case SliceName.E:
-                start_face = cube.right
-                start_edge = start_face.edge_left
-            case SliceName.S:
-                start_face = cube.up
-                start_edge = start_face.edge_left
-            case _:
-                raise ValueError(f"Unknown slice name: {slice_name}")
-
-        cycle_faces: list[Face] = []
-        cycle_edges: list[Edge] = []
-        current_face = start_face
-        current_edge = start_edge
-
-        for _ in range(4):
-            cycle_faces.append(current_face)
-            cycle_edges.append(current_edge)
-            next_edge = current_edge.opposite(current_face)
-            current_face = next_edge.get_other_face(current_face)
-            current_edge = next_edge
-
-        return cycle_faces, cycle_edges
+        walk_info_unit = cube.layout.get_slice(slice_name).create_walking_info_unit()
+        return walk_info_unit.get_cycle(cube)
 
     @staticmethod
     def _translate_adjacent(

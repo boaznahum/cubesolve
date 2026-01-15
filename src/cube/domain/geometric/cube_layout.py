@@ -18,7 +18,7 @@ from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
-from cube.domain.model._elements import AxisName
+from cube.domain.model._elements import AxisName, EdgePosition
 
 if TYPE_CHECKING:
     from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
@@ -259,6 +259,26 @@ class CubeLayout(Protocol):
 
         Example:
             layout.get_adjacent_faces(FaceName.F)  # (U, R, D, L)
+        """
+        ...
+
+    @abstractmethod
+    def get_face_neighbor(self, face_name: FaceName, position: EdgePosition) -> FaceName:
+        """Get the neighboring face at a specific edge position.
+
+        Given a face and a position (LEFT, RIGHT, TOP, BOTTOM), returns the
+        face on the other side of that edge.
+
+        Args:
+            face_name: The face to get the neighbor for.
+            position: Which edge position (LEFT, RIGHT, TOP, or BOTTOM).
+
+        Returns:
+            The FaceName of the neighboring face at that position.
+
+        Example:
+            layout.get_face_neighbor(FaceName.F, EdgePosition.LEFT)  # FaceName.L
+            layout.get_face_neighbor(FaceName.F, EdgePosition.RIGHT)  # FaceName.R
         """
         ...
 
