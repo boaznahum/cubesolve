@@ -623,6 +623,12 @@ class _CubeLayout(CubeLayout):
         edges = self.get_face_edge_rotation_cw(face)
         return [edge.get_other_face(face) for edge in edges]
 
+    def get_face_neighbors_cw_names(self, face_name: FaceName) -> list[FaceName]:
+        """Get the four neighboring face NAMES in clockwise rotation order."""
+        face = self._cube.face(face_name)
+        neighbors = self.get_face_neighbors_cw(face)
+        return [n.name for n in neighbors]
+
     def does_slice_cut_rows_or_columns(self, slice_name: SliceName, face_name: FaceName) -> CLGColRow:
         """Determine if a slice cuts rows or columns on a given face.
 
@@ -647,7 +653,7 @@ class _CubeLayout(CubeLayout):
             )
 
         def compute_alg() -> WholeCubeAlg:
-            results = Face2FaceTranslator.derive_whole_cube_alg(target, source)
+            results = Face2FaceTranslator.derive_whole_cube_alg(self, target, source)
             # Take first solution (for adjacent faces there's only one,
             # for opposite faces we pick the first available)
             _base_alg, _steps, alg = results[0]
@@ -676,7 +682,7 @@ class _CubeLayout(CubeLayout):
 
         def compute_alg() -> WholeCubeAlg:
             try:
-                results = Face2FaceTranslator.derive_whole_cube_alg(target, source)
+                results = Face2FaceTranslator.derive_whole_cube_alg(self, target, source)
             except ValueError:
                 # No rotation connects source and target at all
                 raise GeometryError(

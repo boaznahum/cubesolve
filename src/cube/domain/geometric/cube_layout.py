@@ -638,6 +638,26 @@ class CubeLayout(Protocol):
         ...
 
     @abstractmethod
+    def get_face_neighbors_cw_names(self, face_name: FaceName) -> list[FaceName]:
+        """
+        Get the four neighboring face NAMES in clockwise rotation order.
+
+        Same as get_face_neighbors_cw() but works with FaceNames only,
+        without requiring a Cube instance. Useful for static/pure topology queries.
+
+        Args:
+            face_name: The face to get neighbors for
+
+        Returns:
+            List of 4 FaceNames: [top, right, bottom, left] neighbors
+
+        Example:
+            neighbors = layout.get_face_neighbors_cw_names(FaceName.F)
+            # neighbors = [FaceName.U, FaceName.R, FaceName.D, FaceName.L]
+        """
+        ...
+
+    @abstractmethod
     def does_slice_cut_rows_or_columns(self, slice_name: SliceName, face_name: FaceName) -> CLGColRow:
         """
         Determine if a slice cuts rows or columns on a given face.

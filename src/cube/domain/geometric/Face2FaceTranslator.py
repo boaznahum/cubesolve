@@ -126,6 +126,7 @@ from cube.domain.model._elements import AxisName
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
+    from cube.domain.geometric.cube_layout import CubeLayout
 
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.cube_slice import SliceName
@@ -342,15 +343,6 @@ def _compute_slice_index(
 #   X: D→F→U→B→D (D's content moves to F, F's to U, etc.)
 #   Y: R→F→L→B→R (R's content moves to F, F's to L, etc.) - NOTE: opposite direction!
 #   Z: L→U→R→D→L (L's content moves to U, U's to R, etc.)
-#
-# Cycles are ordered so that applying the base alg moves content from index i to i+1.
-
-# Rotation cycles: content at cycle[i] moves to cycle[(i+1) % 4] when applying base alg
-_X_CYCLE: list[FaceName] = [FaceName.D, FaceName.F, FaceName.U, FaceName.B]  # X moves +1
-_Y_CYCLE: list[FaceName] = [FaceName.R, FaceName.F, FaceName.L, FaceName.B]  # Y moves +1
-_Z_CYCLE: list[FaceName] = [FaceName.L, FaceName.U, FaceName.R, FaceName.D]  # Z moves +1
-
-
 class Face2FaceTranslator:
     """
     Utility class for translating coordinates between cube faces.
@@ -368,7 +360,11 @@ class Face2FaceTranslator:
     """
 
     @staticmethod
-    def derive_whole_cube_alg(source: FaceName, dest: FaceName) -> list[Tuple[WholeCubeAlg, int, Alg]]:
+    def derive_whole_cube_alg(
+            layout: "CubeLayout",
+            source: FaceName,
+            dest: FaceName
+    ) -> list[Tuple[WholeCubeAlg, int, Alg]]:
         """
         Derive whole-cube algorithm(s) that bring dest to source's screen position.
 
@@ -383,6 +379,11 @@ class Face2FaceTranslator:
             U↔D: X2, Z2
             L↔R: Y2, Z2
 
+        Args:
+            layout: CubeLayout for deriving rotation cycles
+            source: Face to bring content TO
+            dest: Face where content comes FROM
+
         Returns:
             List of (base_alg, steps, full_alg) tuples where:
             - base_alg: The base rotation (X, Y, or Z)
@@ -392,7 +393,11 @@ class Face2FaceTranslator:
         results: list[Tuple[WholeCubeAlg, int, Alg]] = []
 
         whole_cube_alg: WholeCubeAlg
-        for cycle, whole_cube_alg in [(_X_CYCLE, Algs.X), (_Y_CYCLE, Algs.Y), (_Z_CYCLE, Algs.Z)]:
+        for whole_cube_alg in [Algs.X, Algs.Y, Algs.Z]:
+            # Get the 4 faces around this axis (derived from layout, not hardcoded)
+            axis_face = layout.get_axis_face(whole_cube_alg.axis_name)
+            cycle = layout.get_face_neighbors_cw_names(axis_face)
+
             if source in cycle and dest in cycle:
                 src_idx = cycle.index(source)
                 dst_idx = cycle.index(dest)
@@ -476,16 +481,16 @@ class Face2FaceTranslator:
         shared_edge = Face2FaceTranslator._find_shared_edge(target_face, source_face)
 
         # Compute all slice algorithms - each has its own source_coord
+        layout = target_face.cube.layout
         all_slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
             target_face.cube,
             target_name, source_name, target_coord, n_slices
         )
 
         # Derive whole-cube algorithms (1 for adjacent, 2 for opposite faces)
-        whole_cube_algs = Face2FaceTranslator.derive_whole_cube_alg(target_name, source_name)
+        whole_cube_algs = Face2FaceTranslator.derive_whole_cube_alg(layout, target_name, source_name)
 
         # Build lookup for whole-cube algs by their axis name
-        layout = target_face.cube.layout
         whole_cube_by_axis: dict[AxisName, tuple[WholeCubeAlg, Alg]] = {}
         for base_alg, _, alg in whole_cube_algs:
             whole_cube_by_axis[base_alg.axis_name] = (base_alg, alg)

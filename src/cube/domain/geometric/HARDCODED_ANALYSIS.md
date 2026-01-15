@@ -21,7 +21,6 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | What | Location | Entries | How to Derive |
 |------|----------|---------|---------------|
 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py | 12 | From edge geometry |
-| `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | Face2FaceTranslator.py | 12 | From `_SLICE_ROTATION_FACE` |
 | `slice_to_axis` dict | Face2FaceTranslator.py:488 | 3 | Use `_AXIS_ROTATION_FACE` directly |
 | `get_start_face()` | slice_layout.py | 3 | Derive from slice definitions |
 | `_rotate_dict_x/y/z` | _CubeLayout.py | 12 | From rotation cycles |
@@ -31,7 +30,7 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | Subclass constructors | SliceAlg.py | 3 | Factory pattern |
 | Subclass constructors | WholeCubeAlg.py | 9 | Factory pattern |
 
-**Total: ~107 hardcoded entries**
+**Total: ~95 hardcoded entries**
 
 ---
 
@@ -41,7 +40,7 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 |----|----------------|----------|--------|--------|
 | 1.1 | `_TRANSFORMATION_TABLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Was dead code |
 | 1.2 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py | TODO | 12 entries - derive from edge geometry |
-| 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | Face2FaceTranslator.py | TODO | 12 entries - derive from slice faces |
+| 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Derived via `get_face_neighbors_cw_names()` |
 | 1.4 | `slice_to_axis` dict | Face2FaceTranslator.py:488 | TODO | Duplicates `_AXIS_ROTATION_FACE` |
 | 1.5 | `_build_slice_cycle` start faces | Face2FaceTranslator.py:693 | **FIXED** | Uses `resolve_cube_cycle()` |
 | 2.1 | `_SLICE_ROTATION_FACE` | cube_layout.py | **OK** | Fundamental |
@@ -93,6 +92,11 @@ These are inherently tied to enum values and are acceptable:
 ## Completed Work
 
 ### Session 2026-01-15
+
+**Removed `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` hardcoded tables:**
+- Added `get_face_neighbors_cw_names(face_name)` to CubeLayout - returns FaceNames
+- Updated `derive_whole_cube_alg()` to take layout parameter
+- Cycles now derived dynamically: axis → axis_face → neighbors_cw_names
 
 **Added EdgePosition enum and Face navigation:**
 - `EdgePosition` enum in `_elements.py` - LEFT/RIGHT/TOP/BOTTOM positions
@@ -211,6 +215,7 @@ src/cube/
 | Face traversal | `CubeWalkingInfo` via `create_walking_info()` |
 | Neighbor face by position | `cube_layout.get_face_neighbor(face_name, EdgePosition)` |
 | 4 neighbors clockwise | `cube_layout.get_face_neighbors_cw(face)` |
+| 4 neighbor names clockwise | `cube_layout.get_face_neighbors_cw_names(face_name)` |
 | Edge at face position | `face.get_edge(EdgePosition)` |
 | Resolve names to objects | `CubeWalkingInfoUnit.resolve_cube_cycle(cube)` |
 
