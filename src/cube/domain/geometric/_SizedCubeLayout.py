@@ -182,9 +182,8 @@ class _SizedCubeLayout(SizedCubeLayout):
 
         # Determine which slice type (M/E/S) is parallel to L1
         # A slice is parallel to a face if that face is NOT on the slice's axis
-        from cube.domain.geometric.cube_layout import _SLICE_ROTATION_FACE
         slice_name = cube.layout.get_slice_parallel_to_face(l1_name)
-        reference_face = _SLICE_ROTATION_FACE[slice_name]
+        reference_face = cube.layout.get_slice_rotation_face(slice_name)
 
         # Convert layer_slice_index to physical slice index
         if l1_name == reference_face:

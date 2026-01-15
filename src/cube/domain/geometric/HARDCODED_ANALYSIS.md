@@ -16,25 +16,46 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 
 ---
 
-## Status Summary - Geometry Package
+## TODO - Remaining Hardcoded Items
+
+| What | Location | Entries | How to Derive |
+|------|----------|---------|---------------|
+| `slice_to_axis` dict | Face2FaceTranslator.py:488 | 3 | Use `_AXIS_ROTATION_FACE` directly |
+| `get_start_face()` | slice_layout.py | 3 | Derive from slice definitions |
+| `_rotate_dict_x/y/z` | _CubeLayout.py | 12 | From rotation cycles |
+| Face transform table | _supported_faces.py | 41 | From face relationships |
+| Subclass constructors | FaceAlg.py | 6 | Factory pattern |
+| Subclass constructors | WideFaceAlg.py | 6 | Factory pattern |
+| Subclass constructors | SliceAlg.py | 3 | Factory pattern |
+| Subclass constructors | WholeCubeAlg.py | 9 | Factory pattern |
+
+**Total: ~83 hardcoded entries**
+
+---
+
+## Status Summary - Geometry Package (Full Details)
 
 | ID | Table/Constant | Location | Status | Action |
 |----|----------------|----------|--------|--------|
 | 1.1 | `_TRANSFORMATION_TABLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Was dead code |
-| 1.2 | `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py | TODO | 12 entries - derive from edge geometry |
-| 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | Face2FaceTranslator.py | TODO | 12 entries - derive from slice faces |
+| 1.2 | `_SLICE_INDEX_TABLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Derived via `_derive_slice_index_formula()` |
+| 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Derived via `get_face_neighbors_cw_names()` |
 | 1.4 | `slice_to_axis` dict | Face2FaceTranslator.py:488 | TODO | Duplicates `_AXIS_ROTATION_FACE` |
-| 1.5 | `_build_slice_cycle` start faces | Face2FaceTranslator.py:693 | TODO | Hardcoded M/E/S start faces |
+| 1.5 | `_build_slice_cycle` start faces | Face2FaceTranslator.py:693 | **FIXED** | Uses `resolve_cube_cycle()` |
 | 2.1 | `_SLICE_ROTATION_FACE` | cube_layout.py | **OK** | Fundamental |
 | 2.2 | `_AXIS_ROTATION_FACE` | cube_layout.py | **OK** | Fundamental |
 | 2.3 | `_OPPOSITE` | cube_layout.py | **OK** | Fundamental |
 | 2.4 | `get_slice_for_faces()` | cube_layout.py | **ADDED** | Derives slices from constants |
 | 2.5 | `get_all_slices_for_faces()` | cube_layout.py | **ADDED** | Derives all connecting slices |
 | 2.6 | `get_slice_parallel_to_face()` | cube_layout.py | **ADDED** | Derives parallel slice for face |
+| 2.7 | `get_face_neighbor()` | cube_layout.py | **ADDED** | Gets neighbor face by EdgePosition |
+| 2.8 | `get_face_neighbors_cw()` | cube_layout.py | **ADDED** | Gets 4 neighbors in CW order |
 | 3.1 | `get_start_face()` | slice_layout.py | TODO | Hardcoded face returns |
 | 3.2 | face checks | ~~_SizedCubeLayout.py~~ | **FIXED** | Now uses `get_slice_parallel_to_face()` |
 | 3.3 | `does_slice_of_face_start_with_face()` | slice_layout.py | **MOVED** | Moved from _SizedCubeLayout |
 | 3.4 | rotation logic | _CubeLayout.py | TODO | `_rotate_dict_x/y/z` cycles |
+| 4.1 | `EdgePosition` enum | _elements.py | **ADDED** | LEFT/RIGHT/TOP/BOTTOM positions |
+| 4.2 | `Face.get_edge()` | Face.py | **ADDED** | Get edge by EdgePosition |
 
 ---
 
@@ -53,19 +74,6 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | `CubeSanity.py` | Valid color combinations | 24 | Validation data |
 | `FRotation.py` | `_UNIT_ROTATIONS` | 4 | Mathematical |
 
-### TODO - Should Be Derived
-
-| File | What | Count | How to Derive |
-|------|------|-------|---------------|
-| `Face2FaceTranslator.py` | `_SLICE_INDEX_TABLE` | 12 | From edge geometry |
-| `Face2FaceTranslator.py` | `_X/Y/Z_CYCLE` | 12 | From `_SLICE_ROTATION_FACE` |
-| `Face2FaceTranslator.py` | `slice_to_axis` | 3 | Use `_AXIS_ROTATION_FACE` |
-| `_supported_faces.py` | Face transform table | 41 | From face relationships |
-| `FaceAlg.py` | Subclass constructors | 6 | Factory pattern |
-| `WideFaceAlg.py` | Subclass constructors | 6 | Factory pattern |
-| `SliceAlg.py` | Subclass constructors | 3 | Factory pattern |
-| `WholeCubeAlg.py` | Subclass constructors + dispatch | 9 | Factory pattern |
-
 ### ACCEPTABLE - Switch/Dispatch Logic
 
 These are inherently tied to enum values and are acceptable:
@@ -81,6 +89,45 @@ These are inherently tied to enum values and are acceptable:
 ---
 
 ## Completed Work
+
+### Session 2026-01-15
+
+**Removed `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` hardcoded tables:**
+- Added `get_face_neighbors_cw_names(face_name)` to CubeLayout - returns FaceNames
+- Updated `derive_whole_cube_alg()` to take layout parameter
+- Cycles now derived dynamically: axis → axis_face → neighbors_cw_names
+
+**Added EdgePosition enum and Face navigation:**
+- `EdgePosition` enum in `_elements.py` - LEFT/RIGHT/TOP/BOTTOM positions
+- `Face.get_edge(position)` - Get edge at specific position on face
+- `Face._edge_by_position` mapping built in `finish_init()`
+
+**Added CubeLayout methods for face neighbors:**
+- `get_face_neighbor(face_name, position)` - Get neighboring FaceName at EdgePosition
+- `get_face_neighbors_cw(face)` - Get 4 neighboring Face objects in clockwise order
+
+**Fixed Face2FaceTranslator:**
+- `_build_slice_cycle` now uses `resolve_cube_cycle()` instead of hardcoded start faces
+
+**Object Ownership Pattern documented:**
+- Methods with `resolve_cube` prefix accept Cube parameter and return objects from SAME cube
+- Added TODO in `CubeWalkingInfoUnit` to audit all geometry classes for this pattern
+- Pattern ensures no internal cube objects are leaked to callers
+
+**Import cleanup:**
+- Removed `FaceName` re-export from `cube_boy.py` `__all__`
+- Fixed `cube.domain.model.__init__.py` to import `FaceName` directly from `FaceName.py`
+
+**Removed `_SLICE_INDEX_TABLE` hardcoded table (12 entries):**
+- Added `_derive_slice_index_formula(layout, slice_name, face_name)` - derives formula from geometry
+- Updated `_compute_slice_index` to take layout parameter and use derived formula
+- Formula derivation logic:
+  - `does_slice_cut_rows_or_columns()` → determines ROW vs COL
+  - `does_slice_of_face_start_with_face()` → determines direct vs inverted
+- Added comprehensive tests in `test_slice_index_derivation.py`:
+  - Validates formula against walking info (ground truth)
+  - Tests all cube sizes (3, 4, 5, 7), all slices, all faces, all points
+  - Verifies formula consistency across cube sizes
 
 ### Session 2026-01-11 (continued)
 
@@ -176,3 +223,22 @@ src/cube/
 | Slice parallel to a face | `cube_layout.get_slice_parallel_to_face()` |
 | Slice alignment with face | `slice_layout.does_slice_of_face_start_with_face()` |
 | Face traversal | `CubeWalkingInfo` via `create_walking_info()` |
+| Neighbor face by position | `cube_layout.get_face_neighbor(face_name, EdgePosition)` |
+| 4 neighbors clockwise | `cube_layout.get_face_neighbors_cw(face)` |
+| 4 neighbor names clockwise | `cube_layout.get_face_neighbors_cw_names(face_name)` |
+| Edge at face position | `face.get_edge(EdgePosition)` |
+| Resolve names to objects | `CubeWalkingInfoUnit.resolve_cube_cycle(cube)` |
+
+---
+
+## Object Ownership Pattern
+
+Methods that return Face/Edge/Part objects must follow this pattern:
+
+1. **Accept cube parameter** → return objects from that cube
+2. **Accept Face/Edge objects** → return objects from the same cube
+3. **No cube parameter** → return only names/enums, NOT objects
+
+Methods with `resolve_cube` prefix explicitly follow this pattern.
+
+**TODO:** Audit all geometry classes to ensure compliance.

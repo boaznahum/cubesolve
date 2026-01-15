@@ -5,25 +5,61 @@ from __future__ import annotations
 from collections.abc import Collection, Iterator
 from typing import TYPE_CHECKING, Mapping
 
-from cube.domain.exceptions import InternalSWError
+from cube.domain.exceptions import GeometryError, GeometryErrorCode, InternalSWError
+from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.model.Edge import Edge
 from cube.domain.model.SliceName import SliceName
-from cube.domain.geometric.cube_layout import (
-    CubeLayout,
-    _ADJACENT,
-    _ALL_OPPOSITE,
-    _OPPOSITE,
-)
+from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.service_provider import IServiceProvider
-from cube.utils.Cache import CacheManager
+from cube.utils.Cache import CacheManager, cached_result
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
+from cube.domain.model._elements import AxisName, EdgePosition
+
+# ============================================================================
+# PRIVATE GEOMETRY TABLES - Only accessed through CubeLayout methods
+# ============================================================================
+
+# Opposite face pairs (canonical direction)
+_OPPOSITE: dict[FaceName, FaceName] = {
+    FaceName.F: FaceName.B,
+    FaceName.U: FaceName.D,
+    FaceName.L: FaceName.R,
+}
+
+# Reverse mapping
+_REV_OPPOSITE: dict[FaceName, FaceName] = {v: k for k, v in _OPPOSITE.items()}
+
+# Bidirectional opposite mapping
+_ALL_OPPOSITE: dict[FaceName, FaceName] = {**_OPPOSITE, **_REV_OPPOSITE}
+
+# Adjacent faces (derived from opposite)
+_ADJACENT: dict[FaceName, tuple[FaceName, ...]] = {
+    face: tuple(f for f in FaceName if f != face and f != _ALL_OPPOSITE[face])
+    for face in FaceName
+}
+
+# Slice rotation faces: which face each slice rotates like
+_SLICE_ROTATION_FACE: dict[SliceName, FaceName] = {
+    SliceName.M: FaceName.L,
+    SliceName.E: FaceName.D,
+    SliceName.S: FaceName.F,
+}
+
+# Axis rotation faces: which face each axis rotates like
+_AXIS_FACE: dict[AxisName, FaceName] = {
+    AxisName.X: FaceName.R,
+    AxisName.Y: FaceName.U,
+    AxisName.Z: FaceName.F,
+}
+
 
 if TYPE_CHECKING:
+    from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
 
@@ -222,20 +258,78 @@ class _CubeLayout(CubeLayout):
         """Get all faces adjacent to the given face."""
         return _ADJACENT[face]
 
+    def get_face_neighbor(self, face_name: FaceName, position: EdgePosition) -> FaceName:
+        """Get the neighboring face at a specific edge position.
+
+        Uses the internal 3x3 cube to traverse face-edge relationships.
+        """
+        face = self._cube.face(face_name)
+        edge = face.get_edge(position)
+        return edge.get_other_face(face).name
+
     def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
         """Find which slice connects two faces."""
-        from cube.domain.geometric.cube_layout import _get_slice_for_faces
-        return _get_slice_for_faces(source, target)
+        for slice_name in SliceName:
+            rotation_face = _SLICE_ROTATION_FACE[slice_name]
+            slice_faces = _ADJACENT[rotation_face]
+            if source in slice_faces and target in slice_faces:
+                return slice_name
+        return None
 
     def get_all_slices_for_faces(self, source: FaceName, target: FaceName) -> list[SliceName]:
         """Find ALL slices that connect two faces."""
-        from cube.domain.geometric.cube_layout import _get_all_slices_for_faces
-        return _get_all_slices_for_faces(source, target)
+        if source == target:
+            return []
+        result: list[SliceName] = []
+        for slice_name in SliceName:
+            rotation_face = _SLICE_ROTATION_FACE[slice_name]
+            slice_faces = _ADJACENT[rotation_face]
+            if source in slice_faces and target in slice_faces:
+                result.append(slice_name)
+        return result
 
     def get_slice_parallel_to_face(self, face: FaceName) -> SliceName:
         """Find which slice is parallel to a face."""
-        from cube.domain.geometric.cube_layout import _get_slice_parallel_to_face
-        return _get_slice_parallel_to_face(face)
+        for slice_name in SliceName:
+            rotation_face = _SLICE_ROTATION_FACE[slice_name]
+            opposite_face = _ALL_OPPOSITE[rotation_face]
+            if face not in (rotation_face, opposite_face):
+                return slice_name
+        raise ValueError(f"No slice parallel to {face}")
+
+    def get_slice_rotation_face(self, slice_name: SliceName) -> FaceName:
+        """Get the face that defines the rotation direction for a slice.
+
+        See CubeLayout.get_slice_rotation_face() for full documentation.
+        """
+        return _SLICE_ROTATION_FACE[slice_name]
+
+    def get_axis_face(self, axis_name: AxisName) -> FaceName:
+        """Get the face that defines the rotation direction for a whole-cube axis.
+
+        See CubeLayout.get_axis_face() for full documentation.
+        """
+        return _AXIS_FACE[axis_name]
+
+    def get_axis_for_slice(self, slice_name: SliceName) -> tuple[AxisName, bool]:
+        """Get the axis and direction relationship for a slice.
+
+        DERIVED from _SLICE_ROTATION_FACE, get_axis_face(), and opposite().
+        See CubeLayout.get_axis_for_slice() for full documentation.
+        """
+        slice_face = _SLICE_ROTATION_FACE[slice_name]  # M→L, E→D, S→F
+
+        for axis_name in AxisName:
+            axis_face = self.get_axis_face(axis_name)  # X→R, Y→U, Z→F
+
+            if slice_face == axis_face:
+                # Same face → same direction (S and Z both use F)
+                return (axis_name, True)
+            elif self.opposite(slice_face) == axis_face:
+                # Opposite faces → opposite directions (M uses L, X uses R)
+                return (axis_name, False)
+
+        raise ValueError(f"No axis found for slice {slice_name}")
 
     def iterate_orthogonal_face_center_pieces(
             self,
@@ -437,6 +531,11 @@ class _CubeLayout(CubeLayout):
         Returns edges in the order content moves during a clockwise face rotation:
         top → right → bottom → left → (back to top)
 
+        IMPORTANT - Object Ownership:
+            This method accepts a Face object from the CALLER'S cube and returns
+            Edge objects from that SAME cube. It does NOT expose internal objects.
+            The returned edges belong to face.cube, not to any internal cube.
+
         In LTR Coordinate System (looking at face from outside cube):
         ============================================================
 
@@ -464,15 +563,71 @@ class _CubeLayout(CubeLayout):
         - Content at left edge moves to top edge
 
         Args:
-            face: The face to get edges for.
+            face: A Face object from the caller's cube
 
         Returns:
-            List of 4 edges in clockwise order: [top, right, bottom, left]
+            List of 4 Edge objects from face.cube: [top, right, bottom, left]
         """
         rotation_edges: list[Edge] = [face.edge_top, face.edge_right,
                                       face.edge_bottom, face.edge_left]
 
         return rotation_edges
+
+    def get_face_neighbors_cw(self, face: Face) -> list[Face]:
+        """
+        Get the four neighboring faces in clockwise rotation order.
+
+        Returns the faces adjacent to the given face, in the order they appear
+        when rotating clockwise around the face (viewing from outside the cube).
+
+        IMPORTANT - Object Ownership:
+            This method accepts a Face object from the CALLER'S cube and returns
+            Face objects from that SAME cube. It does NOT expose internal objects.
+            The returned faces belong to face.cube, not to any internal cube.
+
+        Relationship to edges:
+            The neighbor faces correspond to the edges returned by get_face_edge_rotation_cw():
+            - neighbors[0] is across edge[0] (top edge)
+            - neighbors[1] is across edge[1] (right edge)
+            - neighbors[2] is across edge[2] (bottom edge)
+            - neighbors[3] is across edge[3] (left edge)
+
+        In LTR Coordinate System (looking at face from outside cube):
+
+                    ┌───────────────┐
+                    │  neighbor[0]  │  (top neighbor)
+                    │               │
+                    └───────┬───────┘
+                            │
+            ┌───────┐ ┌─────┴─────┐ ┌───────┐
+            │ [3]   │ │           │ │  [1]  │
+            │ left  │─│   FACE    │─│ right │
+            │       │ │           │ │       │
+            └───────┘ └─────┬─────┘ └───────┘
+                            │
+                    ┌───────┴───────┐
+                    │  neighbor[2]  │  (bottom neighbor)
+                    │               │
+                    └───────────────┘
+
+        Args:
+            face: A Face object from the caller's cube
+
+        Returns:
+            List of 4 Face objects from face.cube: [top, right, bottom, left]
+
+        Example:
+            neighbors = layout.get_face_neighbors_cw(cube.front)
+            # neighbors = [cube.up, cube.right, cube.down, cube.left]
+        """
+        edges = self.get_face_edge_rotation_cw(face)
+        return [edge.get_other_face(face) for edge in edges]
+
+    def get_face_neighbors_cw_names(self, face_name: FaceName) -> list[FaceName]:
+        """Get the four neighboring face NAMES in clockwise rotation order."""
+        face = self._cube.face(face_name)
+        neighbors = self.get_face_neighbors_cw(face)
+        return [n.name for n in neighbors]
 
     def does_slice_cut_rows_or_columns(self, slice_name: SliceName, face_name: FaceName) -> CLGColRow:
         """Determine if a slice cuts rows or columns on a given face.
@@ -480,4 +635,77 @@ class _CubeLayout(CubeLayout):
         Delegates to the SliceLayout for this slice.
         """
         return self.get_slice(slice_name).does_slice_cut_rows_or_columns(face_name)
+
+    @cached_result
+    def get_bring_face_alg(self, target: FaceName, source: FaceName) -> "WholeCubeAlg":
+        """Get the whole-cube rotation algorithm to bring source face to target position.
+
+        This is a size-independent operation - results are cached.
+
+        Uses Face2FaceTranslator.derive_whole_cube_alg internally.
+        """
+        from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
+
+        if source == target:
+            raise GeometryError(
+                GeometryErrorCode.SAME_FACE,
+                f"Cannot bring {source} to itself"
+            )
+
+        def compute_alg() -> WholeCubeAlg:
+            results = Face2FaceTranslator.derive_whole_cube_alg(self, target, source)
+            # Take first solution (for adjacent faces there's only one,
+            # for opposite faces we pick the first available)
+            _base_alg, _steps, alg = results[0]
+            return alg  # type: ignore[return-value]
+
+        cache_key = ("CubeLayout.get_bring_face_alg", target, source)
+        cache = self.cache_manager.get(cache_key, WholeCubeAlg)
+        return cache.compute(compute_alg)
+
+    @cached_result
+    def get_bring_face_alg_preserve(
+        self, target: FaceName, source: FaceName, preserve: FaceName
+    ) -> "WholeCubeAlg":
+        """Get whole-cube rotation to bring source to target while preserving a face.
+
+        Filters derive_whole_cube_alg results to find the axis that preserves
+        the requested face.
+        """
+        from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
+
+        if source == target:
+            raise GeometryError(
+                GeometryErrorCode.SAME_FACE,
+                f"Cannot bring {source} to itself"
+            )
+
+        def compute_alg() -> WholeCubeAlg:
+            try:
+                results = Face2FaceTranslator.derive_whole_cube_alg(self, target, source)
+            except ValueError:
+                # No rotation connects source and target at all
+                raise GeometryError(
+                    GeometryErrorCode.INVALID_PRESERVE_ROTATION,
+                    f"Cannot bring {source} to {target} while preserving {preserve}"
+                )
+
+            # Find the algorithm that uses an axis preserving the requested face
+            # Each axis preserves two opposite faces (the axis goes through them)
+            # get_axis_face() returns one of them, opposite() gives the other
+            for base_alg, _steps, alg in results:
+                axis_face = self.get_axis_face(base_alg.axis_name)
+                axis_opposite = self.opposite(axis_face)
+                if preserve == axis_face or preserve == axis_opposite:
+                    return alg  # type: ignore[return-value]
+
+            # No algorithm preserves the requested face
+            raise GeometryError(
+                GeometryErrorCode.INVALID_PRESERVE_ROTATION,
+                f"Cannot bring {source} to {target} while preserving {preserve}"
+            )
+
+        cache_key = ("CubeLayout.get_bring_face_alg_preserve", target, source, preserve)
+        cache = self.cache_manager.get(cache_key, WholeCubeAlg)
+        return cache.compute(compute_alg)
 

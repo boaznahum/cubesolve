@@ -145,7 +145,6 @@ def color2long(c: Color) -> ColorLong:
 # ============================================================================
 
 __all__ = [
-    'FaceName',
     'Color',
     'ColorLong',
     'CubeLayout',

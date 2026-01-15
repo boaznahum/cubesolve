@@ -3,7 +3,7 @@ from typing import Callable, Tuple, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
 
-from ._elements import CenterSliceIndex, Direction, PartColorsID
+from ._elements import CenterSliceIndex, Direction, EdgePosition, PartColorsID
 from .PartSlice import CenterSlice, PartSlice
 from .Center import Center
 from .Corner import Corner
@@ -28,6 +28,7 @@ class Face(SuperElement, Hashable):
                  "_corner_top_left", "_corner_top_right", "_corner_bottom_right", "_corner_bottom_left",
                  "_parts",
                  "_edges",
+                 "_edge_by_position",
                  "_corners",
                  "_opposite"
                  ]
@@ -46,6 +47,7 @@ class Face(SuperElement, Hashable):
     _corner_bottom_left: Corner
 
     _edges: Sequence[Edge]
+    _edge_by_position: dict[EdgePosition, Edge]
     _corners: Sequence[Corner]
 
     _opposite: _Face
@@ -81,6 +83,13 @@ class Face(SuperElement, Hashable):
 
     def finish_init(self):
         self._edges = (self._edge_top, self._edge_left, self._edge_right, self._edge_bottom)
+
+        self._edge_by_position = {
+            EdgePosition.LEFT: self._edge_left,
+            EdgePosition.RIGHT: self._edge_right,
+            EdgePosition.TOP: self._edge_top,
+            EdgePosition.BOTTOM: self._edge_bottom,
+        }
 
         self._corners = [self._corner_top_left,
                          self._corner_top_right,
@@ -206,6 +215,21 @@ class Face(SuperElement, Hashable):
     @property
     def edge_bottom(self) -> Edge:
         return self._edge_bottom
+
+    def get_edge(self, position: EdgePosition) -> Edge:
+        """
+        Get the edge at the specified position on this face.
+
+        Args:
+            position: Which edge to get (LEFT, RIGHT, TOP, or BOTTOM)
+
+        Returns:
+            The Edge at that position
+
+        Example:
+            face.get_edge(EdgePosition.LEFT)  # same as face.edge_left
+        """
+        return self._edge_by_position[position]
 
     @property
     def corner_top_right(self) -> Corner:

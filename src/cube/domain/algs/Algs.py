@@ -103,7 +103,9 @@ class Algs:
 
     R = _R()
     Rw = DoubleLayerAlg(R)
-    X = _X()  # Entire cube over R. See class docstring for X/Y/Z details.
+    # X, Y, Z: Identity/naming only - _X() binds to AxisName.X (just gives the alg its name).
+    # Geometric relationships (X↔R axis, direction) are defined in CubeLayout.get_axis_face()
+    X = _X()
     M = _M()  # Middle slice over L axis. See class docstring for M/E/S details.
     _MM = _M().simple_mul(-1)  # Middle over L
 
@@ -116,12 +118,12 @@ class Algs:
 
     U = _U()
     Uw = DoubleLayerAlg(U)
-    Y = _Y()  # Entire cube over U. See class docstring for X/Y/Z details.
+    Y = _Y()  # See X comment above for X/Y/Z design notes
     E = _E()  # Middle slice over D axis. See class docstring for M/E/S details.
 
     F = _F()
     Fw = DoubleLayerAlg(F)
-    Z = _Z()  # Entire cube over F. See class docstring for X/Y/Z details.
+    Z = _Z()  # See X comment above for X/Y/Z design notes
     S = _S()  # Middle slice over F axis. See class docstring for M/E/S details.
 
     # =========================================================================

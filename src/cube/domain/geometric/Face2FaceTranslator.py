@@ -113,7 +113,7 @@ IMPLEMENTATION:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Callable, Tuple
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs.Alg import Alg
@@ -122,12 +122,15 @@ from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.geometric.types import Point
 from cube.domain.model import Cube
+from cube.domain.model._elements import AxisName
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
+    from cube.domain.geometric.cube_layout import CubeLayout
 
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.cube_slice import SliceName
+from cube.domain.geometric.slice_layout import CLGColRow
 
 
 @dataclass(frozen=True)
@@ -226,61 +229,72 @@ class SliceAlgorithmResult:
 
 
 # =============================================================================
-# SLICE INDEX LOOKUP TABLE - Empirically derived
+# SLICE INDEX COMPUTATION - Derived from geometry (Issue #55)
 # =============================================================================
 #
-# For each (slice_type, source_face), this table specifies how to compute
-# the slice index from source coordinates (row, col).
+# The slice index computation is derived dynamically from geometry:
+#   - does_slice_cut_rows_or_columns(): determines if we use row or col
+#   - does_slice_of_face_start_with_face(): determines if direct or inverted
 #
-# The formula is one of: row, col, inv(row), inv(col)
-# where inv(x) = n_slices - 1 - x
-#
-# Derived by: tests/model/derive_slice_index_table.py
+# Key insight:
+#   - "cuts rows" = vertical slice → column coordinate identifies which slice
+#   - "cuts columns" = horizontal slice → row coordinate identifies which slice
 #
 
-class _SliceIndexFormula:
+# Type for slice index computation function
+# Takes (row, col, n_slices) and returns 1-based slice index
+SliceIndexComputer = Callable[[int, int, int], int]
+
+
+def _create_slice_index_computer(
+        layout: "CubeLayout",
+        slice_name: SliceName,
+        face_name: FaceName
+) -> SliceIndexComputer:
     """
-    Formula types for computing slice index from (row, col).
+    Create a function that computes 1-based slice index from (row, col, n_slices).
 
-    Coordinates (row, col) are 0-based: 0 to n_slices-1
-    Slice indices are 1-based: 1 to n_slices (see SliceAbleAlg)
+    The returned function encapsulates the geometry-derived formula for this
+    specific slice and face combination.
 
-    Direct formulas add +1 to convert from 0-based to 1-based:
-        ROW: slice_index = row + 1
-        COL: slice_index = col + 1
+    Derivation logic:
+        1. Check if slice cuts rows or columns on this face
+           - "cuts rows" = vertical slice → use column coordinate
+           - "cuts columns" = horizontal slice → use row coordinate
 
-    Inverse formulas naturally produce 1-based results:
-        INV_ROW: slice_index = n_slices - row  (maps 0 → n_slices, n_slices-1 → 1)
-        INV_COL: slice_index = n_slices - col  (maps 0 → n_slices, n_slices-1 → 1)
+        2. Check if slice indices align with face coordinates
+           - aligned → direct formula (coord + 1)
+           - not aligned → inverted formula (n_slices - coord)
+
+    Args:
+        layout: The CubeLayout for geometry queries
+        slice_name: Which slice type (M, E, S)
+        face_name: The face to compute formula for
+
+    Returns:
+        A function (row, col, n_slices) -> slice_index (1-based)
     """
-    ROW = "row"  # slice_index = row + 1
-    COL = "col"  # slice_index = col + 1
-    INV_ROW = "inv_row"  # slice_index = n_slices - row
-    INV_COL = "inv_col"  # slice_index = n_slices - col
+    slice_layout = layout.get_slice(slice_name)
+    cuts_rows = slice_layout.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW
+    starts_aligned = slice_layout.does_slice_of_face_start_with_face(face_name)
 
-
-_SLICE_INDEX_TABLE: dict[tuple[SliceName, FaceName], str] = {
-    # M slice (affects F, U, D, B)
-    (SliceName.M, FaceName.F): _SliceIndexFormula.COL,
-    (SliceName.M, FaceName.U): _SliceIndexFormula.COL,
-    (SliceName.M, FaceName.D): _SliceIndexFormula.COL,
-    (SliceName.M, FaceName.B): _SliceIndexFormula.INV_COL,
-
-    # E slice (affects F, L, R, B)
-    (SliceName.E, FaceName.F): _SliceIndexFormula.ROW,
-    (SliceName.E, FaceName.L): _SliceIndexFormula.ROW,
-    (SliceName.E, FaceName.R): _SliceIndexFormula.ROW,
-    (SliceName.E, FaceName.B): _SliceIndexFormula.ROW,
-
-    # S slice (affects L, U, R, D)
-    (SliceName.S, FaceName.L): _SliceIndexFormula.INV_COL,
-    (SliceName.S, FaceName.U): _SliceIndexFormula.ROW,
-    (SliceName.S, FaceName.R): _SliceIndexFormula.COL,
-    (SliceName.S, FaceName.D): _SliceIndexFormula.INV_ROW,
-}
+    # Determine which coordinate to use and whether to invert
+    if cuts_rows:
+        # Vertical slice - column identifies which slice
+        if starts_aligned:
+            return lambda row, col, n_slices: col + 1
+        else:
+            return lambda row, col, n_slices: n_slices - col
+    else:
+        # Horizontal slice - row identifies which slice
+        if starts_aligned:
+            return lambda row, col, n_slices: row + 1
+        else:
+            return lambda row, col, n_slices: n_slices - row
 
 
 def _compute_slice_index(
+        layout: "CubeLayout",
         source_face: FaceName,
         slice_name: SliceName,
         coord: tuple[int, int],
@@ -289,45 +303,19 @@ def _compute_slice_index(
     """
     Compute the 1-based slice index for a given source face and coordinate.
 
-    Uses the empirically-derived lookup table (_SLICE_INDEX_TABLE) to determine
-    which formula maps (row, col) to the correct slice index.
-
     Args:
+        layout: The CubeLayout for geometry queries
         source_face: The face where the coordinate originates
         slice_name: Which slice type (M, E, S)
-        coord: 0-based (row, col) on the source face, range [0, n_slices-1]
+        coord: 0-based (row, col) on the source face
         n_slices: Number of inner slices (cube.n_slices = cube.size - 2)
 
     Returns:
         1-based slice index in range [1, n_slices], suitable for SliceAlg[index]
-
-    Example:
-        For a 5×5 cube (n_slices=3), coord (1, 2) on face F with slice E:
-        - Formula is ROW (from lookup table)
-        - slice_index = row + 1 = 1 + 1 = 2
-        - Result: E[2] operates on the correct slice
-
-    See Also:
-        - SliceAbleAlg: Documents the 1-based slice indexing convention
-        - _SLICE_INDEX_TABLE: The empirically-derived lookup table
     """
     row, col = coord
-    formula = _SLICE_INDEX_TABLE.get((slice_name, source_face))
-
-    if formula is None:
-        raise ValueError(f"No slice index formula for {slice_name} on {source_face}")
-
-    match formula:
-        case _SliceIndexFormula.ROW:
-            return row + 1
-        case _SliceIndexFormula.COL:
-            return col + 1
-        case _SliceIndexFormula.INV_ROW:
-            return n_slices - row
-        case _SliceIndexFormula.INV_COL:
-            return n_slices - col
-        case _:
-            raise ValueError(f"Unknown formula: {formula}")
+    computer = _create_slice_index_computer(layout, slice_name, source_face)
+    return computer(row, col, n_slices)
 
 
 # =============================================================================
@@ -341,57 +329,6 @@ def _compute_slice_index(
 #   X: D→F→U→B→D (D's content moves to F, F's to U, etc.)
 #   Y: R→F→L→B→R (R's content moves to F, F's to L, etc.) - NOTE: opposite direction!
 #   Z: L→U→R→D→L (L's content moves to U, U's to R, etc.)
-#
-# Cycles are ordered so that applying the base alg moves content from index i to i+1.
-
-# Rotation cycles: content at cycle[i] moves to cycle[(i+1) % 4] when applying base alg
-_X_CYCLE: list[FaceName] = [FaceName.D, FaceName.F, FaceName.U, FaceName.B]  # X moves +1
-_Y_CYCLE: list[FaceName] = [FaceName.R, FaceName.F, FaceName.L, FaceName.B]  # Y moves +1
-_Z_CYCLE: list[FaceName] = [FaceName.L, FaceName.U, FaceName.R, FaceName.D]  # Z moves +1
-
-
-def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> list[Tuple[WholeCubeAlg, int, Alg]]:
-    """
-    Derive whole-cube algorithm(s) that bring dest to source's screen position.
-
-    For adjacent faces: returns 1 algorithm (single rotation X/Y/Z)
-    For opposite faces: returns 2 algorithms (double rotations like X2, Y2)
-
-    Note: For opposite faces, there are additional solutions using combination
-    moves (e.g., X Y), but this method only returns single-axis rotations.
-
-    Examples for opposite faces (single-axis only):
-        F↔B: X2, Y2
-        U↔D: X2, Z2
-        L↔R: Y2, Z2
-
-    Returns:
-        List of (base_alg, steps, full_alg) tuples where:
-        - base_alg: The base rotation (X, Y, or Z)
-        - steps: Number of rotations (1-3)
-        - full_alg: The complete algorithm (e.g., X2)
-    """
-    results: list[Tuple[WholeCubeAlg, int, Alg]] = []
-
-    whole_cube_alg: WholeCubeAlg
-    for cycle, whole_cube_alg in [(_X_CYCLE, Algs.X), (_Y_CYCLE, Algs.Y), (_Z_CYCLE, Algs.Z)]:
-        if source in cycle and dest in cycle:
-            src_idx = cycle.index(source)
-            dst_idx = cycle.index(dest)
-            # Steps needed to move dest to source position
-            steps = (src_idx - dst_idx) % 4
-            if steps == 0:
-                # source == dest (shouldn't happen, but handle gracefully)
-                raise InternalSWError("source == dest")
-
-            results.append((whole_cube_alg, steps, whole_cube_alg * steps))
-
-    if not results:
-        raise ValueError(f"No rotation cycle contains both {source} and {dest}")
-
-    return results
-
-
 class Face2FaceTranslator:
     """
     Utility class for translating coordinates between cube faces.
@@ -407,6 +344,61 @@ class Face2FaceTranslator:
     IMPLEMENTATION:
         Uses rotation cycle analysis to derive whole-cube algorithms dynamically.
     """
+
+    @staticmethod
+    def derive_whole_cube_alg(
+            layout: "CubeLayout",
+            source: FaceName,
+            dest: FaceName
+    ) -> list[Tuple[WholeCubeAlg, int, Alg]]:
+        """
+        Derive whole-cube algorithm(s) that bring dest to source's screen position.
+
+        For adjacent faces: returns 1 algorithm (single rotation X/Y/Z)
+        For opposite faces: returns 2 algorithms (double rotations like X2, Y2)
+
+        Note: For opposite faces, there are additional solutions using combination
+        moves (e.g., X Y), but this method only returns single-axis rotations.
+
+        Examples for opposite faces (single-axis only):
+            F↔B: X2, Y2
+            U↔D: X2, Z2
+            L↔R: Y2, Z2
+
+        Args:
+            layout: CubeLayout for deriving rotation cycles
+            source: Face to bring content TO
+            dest: Face where content comes FROM
+
+        Returns:
+            List of (base_alg, steps, full_alg) tuples where:
+            - base_alg: The base rotation (X, Y, or Z)
+            - steps: Number of rotations (1-3)
+            - full_alg: The complete algorithm (e.g., X2)
+        """
+        results: list[Tuple[WholeCubeAlg, int, Alg]] = []
+
+        whole_cube_alg: WholeCubeAlg
+        for whole_cube_alg in [Algs.X, Algs.Y, Algs.Z]:
+            # Get the 4 faces around this axis (derived from layout, not hardcoded)
+            axis_face = layout.get_axis_face(whole_cube_alg.axis_name)
+            cycle = layout.get_face_neighbors_cw_names(axis_face)
+
+            if source in cycle and dest in cycle:
+                src_idx = cycle.index(source)
+                dst_idx = cycle.index(dest)
+                # Steps needed to move dest to source position
+                steps = (src_idx - dst_idx) % 4
+                if steps == 0:
+                    # source == dest (shouldn't happen, but handle gracefully)
+                    raise InternalSWError("source == dest")
+
+                results.append((whole_cube_alg, steps, whole_cube_alg * steps))
+
+        if not results:
+            raise ValueError(f"No rotation cycle contains both {source} and {dest}")
+
+        return results
 
     @staticmethod
     def translate_source_from_target(
@@ -475,32 +467,27 @@ class Face2FaceTranslator:
         shared_edge = Face2FaceTranslator._find_shared_edge(target_face, source_face)
 
         # Compute all slice algorithms - each has its own source_coord
+        layout = target_face.cube.layout
         all_slice_algorithms = Face2FaceTranslator._compute_slice_algorithms(
             target_face.cube,
             target_name, source_name, target_coord, n_slices
         )
 
         # Derive whole-cube algorithms (1 for adjacent, 2 for opposite faces)
-        whole_cube_algs = _derive_whole_cube_alg(target_name, source_name)
+        whole_cube_algs = Face2FaceTranslator.derive_whole_cube_alg(layout, target_name, source_name)
 
-        # Map slice to whole-cube axis: M->X(R), E->Y(U), S->Z(F)
-        slice_to_axis: dict[SliceName, FaceName] = {
-            SliceName.M: FaceName.R,  # M -> X
-            SliceName.E: FaceName.U,  # E -> Y
-            SliceName.S: FaceName.F,  # S -> Z
-        }
-
-        # Build lookup for whole-cube algs by their axis
-        whole_cube_by_axis: dict[FaceName, tuple[WholeCubeAlg, Alg]] = {}
+        # Build lookup for whole-cube algs by their axis name
+        whole_cube_by_axis: dict[AxisName, tuple[WholeCubeAlg, Alg]] = {}
         for base_alg, _, alg in whole_cube_algs:
-            whole_cube_by_axis[base_alg.get_face_name()] = (base_alg, alg)
+            whole_cube_by_axis[base_alg.axis_name] = (base_alg, alg)
 
         # Each slice algorithm becomes one FaceTranslationResult
         results: list[FaceTranslationResult] = []
         for slice_alg in all_slice_algorithms:
             slice_name = slice_alg.whole_slice_alg.slice_name
-            axis_face = slice_to_axis[slice_name]
-            whole_cube_base_alg, whole_cube_alg = whole_cube_by_axis[axis_face]
+            # Get axis for this slice (direction not used here, but documents the relationship)
+            axis_name, _same_direction = layout.get_axis_for_slice(slice_name)
+            whole_cube_base_alg, whole_cube_alg = whole_cube_by_axis[axis_name]
 
             results.append(FaceTranslationResult(
                 whole_cube_base_alg=whole_cube_base_alg,
@@ -679,42 +666,17 @@ class Face2FaceTranslator:
         """
         Build the traversal cycle for a slice.
 
+        Uses CubeWalkingInfoUnit which derives the cycle from slice geometry.
+        The starting point is intentionally random (in create_walking_info_unit)
+        to expose bugs - the caller should not depend on where the cycle starts.
+
         Returns:
             (cycle_faces, cycle_edges) where:
             - cycle_faces[i] is the i-th face in traversal order
             - cycle_edges[i] is the entry edge for cycle_faces[i]
-
-        Slice cycles (from Slice.py):
-            M: F(edge_bottom) → U → B → D
-            E: R(edge_left) → B → L → F
-            S: U(edge_left) → R → D → L
         """
-        match slice_name:
-            case SliceName.M:
-                start_face = cube.front
-                start_edge = start_face.edge_bottom
-            case SliceName.E:
-                start_face = cube.right
-                start_edge = start_face.edge_left
-            case SliceName.S:
-                start_face = cube.up
-                start_edge = start_face.edge_left
-            case _:
-                raise ValueError(f"Unknown slice name: {slice_name}")
-
-        cycle_faces: list[Face] = []
-        cycle_edges: list[Edge] = []
-        current_face = start_face
-        current_edge = start_edge
-
-        for _ in range(4):
-            cycle_faces.append(current_face)
-            cycle_edges.append(current_edge)
-            next_edge = current_edge.opposite(current_face)
-            current_face = next_edge.get_other_face(current_face)
-            current_edge = next_edge
-
-        return cycle_faces, cycle_edges
+        walk_info_unit = cube.layout.get_slice(slice_name).create_walking_info_unit()
+        return walk_info_unit.resolve_cube_cycle(cube)
 
     @staticmethod
     def _translate_adjacent(
@@ -908,7 +870,7 @@ class Face2FaceTranslator:
             source_coord = walk_info.translate_point(target_face, source_face, target_coord)
 
             # Compute slice index
-            slice_index = _compute_slice_index(target_name, slice_name, target_coord, n_slices)
+            slice_index = _compute_slice_index(cube.layout, target_name, slice_name, target_coord, n_slices)
 
             results.append(SliceAlgorithmResult(slice_alg, slice_index, n, source_coord))
 
