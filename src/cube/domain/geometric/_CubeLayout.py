@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Collection, Iterator
 from typing import TYPE_CHECKING, Mapping
 
-from cube.domain.exceptions import InternalSWError
+from cube.domain.exceptions import GeometryError, GeometryErrorCode, InternalSWError
+from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.model.Edge import Edge
 from cube.domain.model.SliceName import SliceName
@@ -491,8 +492,6 @@ class _CubeLayout(CubeLayout):
         Uses Face2FaceTranslator.derive_whole_cube_alg internally.
         """
         from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
-        from cube.domain.exceptions import GeometryError, GeometryErrorCode
-        from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 
         if source == target:
             raise GeometryError(
@@ -508,6 +507,52 @@ class _CubeLayout(CubeLayout):
             return alg  # type: ignore[return-value]
 
         cache_key = ("CubeLayout.get_bring_face_alg", target, source)
+        cache = self.cache_manager.get(cache_key, WholeCubeAlg)
+        return cache.compute(compute_alg)
+
+    @cached_result
+    def get_bring_face_alg_preserve(
+        self, target: FaceName, source: FaceName, preserve: FaceName
+    ) -> "WholeCubeAlg":
+        """Get whole-cube rotation to bring source to target while preserving a face.
+
+        Filters derive_whole_cube_alg results to find the axis that preserves
+        the requested face.
+        """
+        from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
+
+        if source == target:
+            raise GeometryError(
+                GeometryErrorCode.SAME_FACE,
+                f"Cannot bring {source} to itself"
+            )
+
+        def compute_alg() -> WholeCubeAlg:
+            try:
+                results = Face2FaceTranslator.derive_whole_cube_alg(target, source)
+            except ValueError:
+                # No rotation connects source and target at all
+                raise GeometryError(
+                    GeometryErrorCode.INVALID_PRESERVE_ROTATION,
+                    f"Cannot bring {source} to {target} while preserving {preserve}"
+                )
+
+            # Find the algorithm that uses an axis preserving the requested face
+            # Each axis preserves two opposite faces (the axis goes through them)
+            # WholeCubeAlg.get_face_name() returns one of them, opposite() gives the other
+            for base_alg, _steps, alg in results:
+                axis_face = base_alg.get_face_name()
+                axis_opposite = self.opposite(axis_face)
+                if preserve == axis_face or preserve == axis_opposite:
+                    return alg  # type: ignore[return-value]
+
+            # No algorithm preserves the requested face
+            raise GeometryError(
+                GeometryErrorCode.INVALID_PRESERVE_ROTATION,
+                f"Cannot bring {source} to {target} while preserving {preserve}"
+            )
+
+        cache_key = ("CubeLayout.get_bring_face_alg_preserve", target, source, preserve)
         cache = self.cache_manager.get(cache_key, WholeCubeAlg)
         return cache.compute(compute_alg)
 

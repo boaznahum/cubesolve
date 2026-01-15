@@ -199,6 +199,40 @@ class CommonOp:
             alg = self.cube.layout.get_bring_face_alg(target.name, source.name)
             self.op.play(alg)
 
+    def bring_face_to_preserve(self, target: Face, source: Face, preserve: Face) -> None:
+        """Bring source face to target position while keeping preserve face fixed.
+
+        Uses constrained whole-cube rotation - only the axis that keeps preserve fixed:
+        - Preserve F or B: uses Z rotation (moves L, U, R, D)
+        - Preserve U or D: uses Y rotation (moves R, F, L, B)
+        - Preserve L or R: uses X rotation (moves D, F, U, B)
+
+        Args:
+            target: The target face position (where source should end up)
+            source: The source face (the face to move)
+            preserve: The face that must stay fixed
+
+        Raises:
+            GeometryError: SAME_FACE if source == target
+            GeometryError: INVALID_PRESERVE_ROTATION if rotation is impossible
+        """
+        if source.name == target.name:
+            raise GeometryError(
+                GeometryErrorCode.SAME_FACE,
+                f"Cannot bring {source.name} to itself"
+            )
+
+        self.debug("Need to bring ", source, 'to', target.name, 'preserving', preserve.name)
+
+        with self.ann.annotate(
+            h2=f"Bringing {source.color_at_face_str} to {target.name.value}, "
+               f"preserving {preserve.color_at_face_str}"
+        ):
+            alg = self.cube.layout.get_bring_face_alg_preserve(
+                target.name, source.name, preserve.name
+            )
+            self.op.play(alg)
+
     def bring_face_up_preserve_front(self, face: Face) -> None:
         """Bring the given face to UP position while preserving the FRONT face.
 

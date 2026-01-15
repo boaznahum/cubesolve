@@ -587,6 +587,34 @@ class CubeLayout(Protocol):
         """
         ...
 
+    @abstractmethod
+    def get_bring_face_alg_preserve(
+        self, target: FaceName, source: FaceName, preserve: FaceName
+    ) -> "WholeCubeAlg":
+        """Get whole-cube rotation to bring source to target while preserving a face.
+
+        Uses constrained rotation - only the axis that keeps preserve fixed:
+        - Preserve F or B: uses Z rotation (moves L, U, R, D)
+        - Preserve U or D: uses Y rotation (moves R, F, L, B)
+        - Preserve L or R: uses X rotation (moves D, F, U, B)
+
+        Filters results from derive_whole_cube_alg to find the one that preserves
+        the requested face (axis name matches preserve face or its opposite).
+
+        Args:
+            target: The target face position
+            source: The source face to move
+            preserve: The face that must stay fixed
+
+        Returns:
+            Whole-cube rotation algorithm using the constrained axis
+
+        Raises:
+            GeometryError: SAME_FACE if source == target
+            GeometryError: INVALID_PRESERVE_ROTATION if no valid rotation exists
+        """
+        ...
+
 
 
 

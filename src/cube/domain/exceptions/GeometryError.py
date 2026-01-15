@@ -13,6 +13,7 @@ class GeometryErrorCode(Enum):
 
     SAME_FACE = auto()       # source and target are the same face
     INVALID_FACE = auto()    # unknown or invalid face
+    INVALID_PRESERVE_ROTATION = auto()  # can't reach target while preserving face
 
 
 class GeometryError(Exception):
