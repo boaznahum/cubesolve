@@ -350,7 +350,7 @@ _Y_CYCLE: list[FaceName] = [FaceName.R, FaceName.F, FaceName.L, FaceName.B]  # Y
 _Z_CYCLE: list[FaceName] = [FaceName.L, FaceName.U, FaceName.R, FaceName.D]  # Z moves +1
 
 
-def _derive_whole_cube_alg(source: FaceName, dest: FaceName) -> list[Tuple[WholeCubeAlg, int, Alg]]:
+def derive_whole_cube_alg(source: FaceName, dest: FaceName) -> list[Tuple[WholeCubeAlg, int, Alg]]:
     """
     Derive whole-cube algorithm(s) that bring dest to source's screen position.
 
@@ -481,7 +481,7 @@ class Face2FaceTranslator:
         )
 
         # Derive whole-cube algorithms (1 for adjacent, 2 for opposite faces)
-        whole_cube_algs = _derive_whole_cube_alg(target_name, source_name)
+        whole_cube_algs = derive_whole_cube_alg(target_name, source_name)
 
         # Map slice to whole-cube axis: M->X(R), E->Y(U), S->Z(F)
         slice_to_axis: dict[SliceName, FaceName] = {

@@ -12,6 +12,7 @@ from cube.domain.exceptions.EvenCubeEdgeParityException import (
 from cube.domain.exceptions.EvenCubeEdgeSwapParityException import (
     EvenCubeEdgeSwapParityException,
 )
+from cube.domain.exceptions.GeometryError import GeometryError, GeometryErrorCode
 from cube.domain.exceptions.InternalSWError import InternalSWError
 from cube.domain.exceptions.OpAborted import OpAborted
 
@@ -21,4 +22,6 @@ __all__ = [
     "EvenCubeEdgeParityException",
     "EvenCubeCornerSwapException",
     "EvenCubeEdgeSwapParityException",
+    "GeometryError",
+    "GeometryErrorCode",
 ]

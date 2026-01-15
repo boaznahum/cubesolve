@@ -2,7 +2,8 @@ from contextlib import contextmanager
 from typing import Callable, ContextManager, Generator, Sequence, Tuple
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.exceptions import InternalSWError
+from cube.domain.exceptions import GeometryError, GeometryErrorCode, InternalSWError
+from cube.domain.geometric.Face2FaceTranslator import derive_whole_cube_alg
 from cube.domain.model import Color, Edge, EdgeWing, FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
@@ -285,6 +286,37 @@ class CommonOp:
 
                     case _:
                         raise InternalSWError(f"Unknown face {f}")
+
+    def bring_face_to(self, target: Face, source: Face) -> None:
+        """Bring the source face to the target face position using whole-cube rotations.
+
+        This is a generic method that can bring any face to any other face position.
+        It uses only whole-cube rotations (X, Y, Z) which change the cube's viewing
+        orientation without moving any pieces relative to each other.
+
+        Args:
+            target: The target face position (where source should end up)
+            source: The source face (the face to move)
+
+        Raises:
+            GeometryError: If source and target are the same face (SAME_FACE code)
+        """
+        if source.name == target.name:
+            raise GeometryError(
+                GeometryErrorCode.SAME_FACE,
+                f"Cannot bring {source.name} to itself"
+            )
+
+        self.debug("Need to bring ", source, 'to', target.name)
+
+        with self.ann.annotate(h2=f"Bringing face {source.color_at_face_str} to {target.name.value}"):
+            # Use geometry infrastructure to compute the rotation algorithm
+            # derive_whole_cube_alg returns algorithms that bring source to target position
+            results = derive_whole_cube_alg(target.name, source.name)
+            # Take the first solution (for adjacent faces there's only one,
+            # for opposite faces we pick the first available)
+            _base_alg, _steps, alg = results[0]
+            self.op.play(alg)
 
     def bring_face_up_preserve_front(self, face: Face) -> None:
         """Bring the given face to UP position while preserving the FRONT face.
