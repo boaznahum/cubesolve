@@ -3,7 +3,7 @@ from typing import Callable, ContextManager, Generator, Sequence, Tuple
 
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import GeometryError, GeometryErrorCode, InternalSWError
-from cube.domain.geometric.Face2FaceTranslator import derive_whole_cube_alg
+from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 from cube.domain.model import Color, Edge, EdgeWing, FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
@@ -152,140 +152,26 @@ class CommonOp:
     def bring_face_up(self, f: Face) -> None:
         """Bring the given face to the UP position using whole-cube rotations.
 
-        This method uses only whole-cube rotations (X, Y, Z) which change the
-        cube's viewing orientation without moving any pieces relative to each other.
-        All edges, corners, and centers stay in their same relative positions -
-        only the perspective changes.
-
-        This is safe to call at any point during solving because it doesn't
-        disturb any solved pieces or relationships between pieces.
-
-        Args:
-            f: The face to bring to UP position
-
-        Raises:
-            InternalSWError: If f is not a valid face
+        Delegates to bring_face_to(cube.up, f).
         """
         if f.name != FaceName.U:
+            self.bring_face_to(self.cube.up, f)
 
-            self.debug("Need to bring ", f, 'to', FaceName.U)
-
-            with self.ann.annotate(h2=f"Bringing face {f.color_at_face_str} up"):
-
-                alg: Alg
-
-                match f.name:
-
-                    case FaceName.F:
-                        alg = Algs.X
-
-                    case FaceName.B:
-                        alg = -Algs.X
-
-                    case FaceName.D:
-                        alg = Algs.X * 2
-
-                    case FaceName.L:
-                        alg = Algs.Y + -Algs.X
-
-                    case FaceName.R:
-                        alg = Algs.Y + Algs.X
-
-                    case _:
-                        raise InternalSWError(f"Unknown face {f}")
-
-                self.op.play(alg)
-
-    # NEVER TESTED !!
     def bring_face_down(self, f: Face) -> None:
         """Bring the given face to the DOWN position using whole-cube rotations.
 
-        This method uses only whole-cube rotations (X, Y, Z) which change the
-        cube's viewing orientation without moving any pieces relative to each other.
-        All edges, corners, and centers stay in their same relative positions -
-        only the perspective changes.
-
-        This is safe to call at any point during solving because it doesn't
-        disturb any solved pieces or relationships between pieces.
-
-        Args:
-            f: The face to bring to UP position
-
-        Raises:
-            InternalSWError: If f is not a valid face
+        Delegates to bring_face_to(cube.down, f).
         """
         if f.name != FaceName.D:
-
-            self.debug("Need to bring ", f, 'to', FaceName.D)
-
-            with self.ann.annotate(h2=f"Bringing face {f.color_at_face_str} down"):
-
-                alg: Alg
-
-                match f.name:
-
-                    case FaceName.F:
-                        alg = Algs.X.prime
-
-                    case FaceName.B:
-                        alg = Algs.X
-
-                    case FaceName.U:
-                        alg = Algs.X * 2
-
-                    case FaceName.L:
-                        alg = -Algs.Y + -Algs.X
-
-                    case FaceName.R:
-                        alg = Algs.Y -  Algs.X
-
-                    case _:
-                        raise InternalSWError(f"Unknown face {f}")
-
-                self.op.play(alg)
+            self.bring_face_to(self.cube.down, f)
 
     def bring_face_front(self, f: Face) -> None:
         """Bring the given face to the FRONT position using whole-cube rotations.
 
-        This method uses only whole-cube rotations (X, Y, Z) which change the
-        cube's viewing orientation without moving any pieces relative to each other.
-        All edges, corners, and centers stay in their same relative positions -
-        only the perspective changes.
-
-        This is safe to call at any point during solving because it doesn't
-        disturb any solved pieces or relationships between pieces.
-
-        Args:
-            f: The face to bring to FRONT position
-
-        Raises:
-            InternalSWError: If f is not a valid face
+        Delegates to bring_face_to(cube.front, f).
         """
         if f.name != FaceName.F:
-
-            self.debug("Need to bring ", f, 'to', FaceName.F)
-
-            with self.ann.annotate(h2=f"Bringing face {f.color_at_face_str} to front"):
-
-                match f.name:
-
-                    case FaceName.U:
-                        self.op.play(Algs.X.prime)
-
-                    case FaceName.B:
-                        self.op.play(-Algs.X.prime * 2)
-
-                    case FaceName.D:
-                        self.op.play(Algs.X)
-
-                    case FaceName.L:
-                        self.op.play(Algs.Y.prime)
-
-                    case FaceName.R:
-                        self.op.play(Algs.Y)
-
-                    case _:
-                        raise InternalSWError(f"Unknown face {f}")
+            self.bring_face_to(self.cube.front, f)
 
     def bring_face_to(self, target: Face, source: Face) -> None:
         """Bring the source face to the target face position using whole-cube rotations.
@@ -311,8 +197,7 @@ class CommonOp:
 
         with self.ann.annotate(h2=f"Bringing face {source.color_at_face_str} to {target.name.value}"):
             # Use geometry infrastructure to compute the rotation algorithm
-            # derive_whole_cube_alg returns algorithms that bring source to target position
-            results = derive_whole_cube_alg(target.name, source.name)
+            results = Face2FaceTranslator.derive_whole_cube_alg(target.name, source.name)
             # Take the first solution (for adjacent faces there's only one,
             # for opposite faces we pick the first available)
             _base_alg, _steps, alg = results[0]

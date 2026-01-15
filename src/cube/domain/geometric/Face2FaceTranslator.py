@@ -350,48 +350,6 @@ _Y_CYCLE: list[FaceName] = [FaceName.R, FaceName.F, FaceName.L, FaceName.B]  # Y
 _Z_CYCLE: list[FaceName] = [FaceName.L, FaceName.U, FaceName.R, FaceName.D]  # Z moves +1
 
 
-def derive_whole_cube_alg(source: FaceName, dest: FaceName) -> list[Tuple[WholeCubeAlg, int, Alg]]:
-    """
-    Derive whole-cube algorithm(s) that bring dest to source's screen position.
-
-    For adjacent faces: returns 1 algorithm (single rotation X/Y/Z)
-    For opposite faces: returns 2 algorithms (double rotations like X2, Y2)
-
-    Note: For opposite faces, there are additional solutions using combination
-    moves (e.g., X Y), but this method only returns single-axis rotations.
-
-    Examples for opposite faces (single-axis only):
-        F↔B: X2, Y2
-        U↔D: X2, Z2
-        L↔R: Y2, Z2
-
-    Returns:
-        List of (base_alg, steps, full_alg) tuples where:
-        - base_alg: The base rotation (X, Y, or Z)
-        - steps: Number of rotations (1-3)
-        - full_alg: The complete algorithm (e.g., X2)
-    """
-    results: list[Tuple[WholeCubeAlg, int, Alg]] = []
-
-    whole_cube_alg: WholeCubeAlg
-    for cycle, whole_cube_alg in [(_X_CYCLE, Algs.X), (_Y_CYCLE, Algs.Y), (_Z_CYCLE, Algs.Z)]:
-        if source in cycle and dest in cycle:
-            src_idx = cycle.index(source)
-            dst_idx = cycle.index(dest)
-            # Steps needed to move dest to source position
-            steps = (src_idx - dst_idx) % 4
-            if steps == 0:
-                # source == dest (shouldn't happen, but handle gracefully)
-                raise InternalSWError("source == dest")
-
-            results.append((whole_cube_alg, steps, whole_cube_alg * steps))
-
-    if not results:
-        raise ValueError(f"No rotation cycle contains both {source} and {dest}")
-
-    return results
-
-
 class Face2FaceTranslator:
     """
     Utility class for translating coordinates between cube faces.
@@ -407,6 +365,48 @@ class Face2FaceTranslator:
     IMPLEMENTATION:
         Uses rotation cycle analysis to derive whole-cube algorithms dynamically.
     """
+
+    @staticmethod
+    def derive_whole_cube_alg(source: FaceName, dest: FaceName) -> list[Tuple[WholeCubeAlg, int, Alg]]:
+        """
+        Derive whole-cube algorithm(s) that bring dest to source's screen position.
+
+        For adjacent faces: returns 1 algorithm (single rotation X/Y/Z)
+        For opposite faces: returns 2 algorithms (double rotations like X2, Y2)
+
+        Note: For opposite faces, there are additional solutions using combination
+        moves (e.g., X Y), but this method only returns single-axis rotations.
+
+        Examples for opposite faces (single-axis only):
+            F↔B: X2, Y2
+            U↔D: X2, Z2
+            L↔R: Y2, Z2
+
+        Returns:
+            List of (base_alg, steps, full_alg) tuples where:
+            - base_alg: The base rotation (X, Y, or Z)
+            - steps: Number of rotations (1-3)
+            - full_alg: The complete algorithm (e.g., X2)
+        """
+        results: list[Tuple[WholeCubeAlg, int, Alg]] = []
+
+        whole_cube_alg: WholeCubeAlg
+        for cycle, whole_cube_alg in [(_X_CYCLE, Algs.X), (_Y_CYCLE, Algs.Y), (_Z_CYCLE, Algs.Z)]:
+            if source in cycle and dest in cycle:
+                src_idx = cycle.index(source)
+                dst_idx = cycle.index(dest)
+                # Steps needed to move dest to source position
+                steps = (src_idx - dst_idx) % 4
+                if steps == 0:
+                    # source == dest (shouldn't happen, but handle gracefully)
+                    raise InternalSWError("source == dest")
+
+                results.append((whole_cube_alg, steps, whole_cube_alg * steps))
+
+        if not results:
+            raise ValueError(f"No rotation cycle contains both {source} and {dest}")
+
+        return results
 
     @staticmethod
     def translate_source_from_target(
@@ -481,7 +481,7 @@ class Face2FaceTranslator:
         )
 
         # Derive whole-cube algorithms (1 for adjacent, 2 for opposite faces)
-        whole_cube_algs = derive_whole_cube_alg(target_name, source_name)
+        whole_cube_algs = Face2FaceTranslator.derive_whole_cube_alg(target_name, source_name)
 
         # Map slice to whole-cube axis: M->X(R), E->Y(U), S->Z(F)
         slice_to_axis: dict[SliceName, FaceName] = {
