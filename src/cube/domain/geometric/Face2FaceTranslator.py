@@ -113,7 +113,7 @@ IMPLEMENTATION:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Callable, Tuple
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs.Alg import Alg
@@ -229,11 +229,10 @@ class SliceAlgorithmResult:
 
 
 # =============================================================================
-# SLICE INDEX FORMULA - Derived from geometry (Issue #55)
+# SLICE INDEX COMPUTATION - Derived from geometry (Issue #55)
 # =============================================================================
 #
-# For each (slice_type, source_face), the formula to compute slice index from
-# (row, col) is derived dynamically using:
+# The slice index computation is derived dynamically from geometry:
 #   - does_slice_cut_rows_or_columns(): determines if we use row or col
 #   - does_slice_of_face_start_with_face(): determines if direct or inverted
 #
@@ -242,40 +241,30 @@ class SliceAlgorithmResult:
 #   - "cuts columns" = horizontal slice → row coordinate identifies which slice
 #
 
-class _SliceIndexFormula:
-    """
-    Formula types for computing slice index from (row, col).
-
-    Coordinates (row, col) are 0-based: 0 to n_slices-1
-    Slice indices are 1-based: 1 to n_slices (see SliceAbleAlg)
-
-    Direct formulas add +1 to convert from 0-based to 1-based:
-        ROW: slice_index = row + 1
-        COL: slice_index = col + 1
-
-    Inverse formulas naturally produce 1-based results:
-        INV_ROW: slice_index = n_slices - row  (maps 0 → n_slices, n_slices-1 → 1)
-        INV_COL: slice_index = n_slices - col  (maps 0 → n_slices, n_slices-1 → 1)
-    """
-    ROW = "row"  # slice_index = row + 1
-    COL = "col"  # slice_index = col + 1
-    INV_ROW = "inv_row"  # slice_index = n_slices - row
-    INV_COL = "inv_col"  # slice_index = n_slices - col
+# Type for slice index computation function
+# Takes (row, col, n_slices) and returns 1-based slice index
+SliceIndexComputer = Callable[[int, int, int], int]
 
 
-def _derive_slice_index_formula(
+def _create_slice_index_computer(
         layout: "CubeLayout",
         slice_name: SliceName,
         face_name: FaceName
-) -> str:
+) -> SliceIndexComputer:
     """
-    Derive the slice index formula from first principles.
+    Create a function that computes 1-based slice index from (row, col, n_slices).
 
-    Logic:
-    - "cuts rows" = vertical slice → column coordinate identifies which slice → COL/INV_COL
-    - "cuts columns" = horizontal slice → row coordinate identifies which slice → ROW/INV_ROW
-    - starts_with_face=True → direct (ROW/COL)
-    - starts_with_face=False → inverted (INV_ROW/INV_COL)
+    The returned function encapsulates the geometry-derived formula for this
+    specific slice and face combination.
+
+    Derivation logic:
+        1. Check if slice cuts rows or columns on this face
+           - "cuts rows" = vertical slice → use column coordinate
+           - "cuts columns" = horizontal slice → use row coordinate
+
+        2. Check if slice indices align with face coordinates
+           - aligned → direct formula (coord + 1)
+           - not aligned → inverted formula (n_slices - coord)
 
     Args:
         layout: The CubeLayout for geometry queries
@@ -283,18 +272,25 @@ def _derive_slice_index_formula(
         face_name: The face to compute formula for
 
     Returns:
-        One of _SliceIndexFormula values (ROW, COL, INV_ROW, INV_COL)
+        A function (row, col, n_slices) -> slice_index (1-based)
     """
     slice_layout = layout.get_slice(slice_name)
-    cuts = slice_layout.does_slice_cut_rows_or_columns(face_name)
-    starts = slice_layout.does_slice_of_face_start_with_face(face_name)
+    cuts_rows = slice_layout.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW
+    starts_aligned = slice_layout.does_slice_of_face_start_with_face(face_name)
 
-    if cuts == CLGColRow.ROW:
-        # Cuts rows = vertical slice → column identifies which slice
-        return _SliceIndexFormula.COL if starts else _SliceIndexFormula.INV_COL
-    else:  # CLGColRow.COL
-        # Cuts columns = horizontal slice → row identifies which slice
-        return _SliceIndexFormula.ROW if starts else _SliceIndexFormula.INV_ROW
+    # Determine which coordinate to use and whether to invert
+    if cuts_rows:
+        # Vertical slice - column identifies which slice
+        if starts_aligned:
+            return lambda row, col, n_slices: col + 1
+        else:
+            return lambda row, col, n_slices: n_slices - col
+    else:
+        # Horizontal slice - row identifies which slice
+        if starts_aligned:
+            return lambda row, col, n_slices: row + 1
+        else:
+            return lambda row, col, n_slices: n_slices - row
 
 
 def _compute_slice_index(
@@ -307,44 +303,19 @@ def _compute_slice_index(
     """
     Compute the 1-based slice index for a given source face and coordinate.
 
-    Derives the formula dynamically from geometry using:
-    - does_slice_cut_rows_or_columns()
-    - does_slice_of_face_start_with_face()
-
     Args:
         layout: The CubeLayout for geometry queries
         source_face: The face where the coordinate originates
         slice_name: Which slice type (M, E, S)
-        coord: 0-based (row, col) on the source face, range [0, n_slices-1]
+        coord: 0-based (row, col) on the source face
         n_slices: Number of inner slices (cube.n_slices = cube.size - 2)
 
     Returns:
         1-based slice index in range [1, n_slices], suitable for SliceAlg[index]
-
-    Example:
-        For a 5×5 cube (n_slices=3), coord (1, 2) on face F with slice E:
-        - Formula is ROW (derived from geometry)
-        - slice_index = row + 1 = 1 + 1 = 2
-        - Result: E[2] operates on the correct slice
-
-    See Also:
-        - SliceAbleAlg: Documents the 1-based slice indexing convention
-        - _derive_slice_index_formula: Derives the formula from geometry
     """
     row, col = coord
-    formula = _derive_slice_index_formula(layout, slice_name, source_face)
-
-    match formula:
-        case _SliceIndexFormula.ROW:
-            return row + 1
-        case _SliceIndexFormula.COL:
-            return col + 1
-        case _SliceIndexFormula.INV_ROW:
-            return n_slices - row
-        case _SliceIndexFormula.INV_COL:
-            return n_slices - col
-        case _:
-            raise ValueError(f"Unknown formula: {formula}")
+    computer = _create_slice_index_computer(layout, slice_name, source_face)
+    return computer(row, col, n_slices)
 
 
 # =============================================================================

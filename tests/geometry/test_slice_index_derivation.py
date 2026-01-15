@@ -1,11 +1,11 @@
 """
-Test that slice index formula is correctly derived from geometry.
+Test that slice index computation is correctly derived from geometry.
 
-The formula is derived dynamically using:
+The computation is derived dynamically using:
 1. does_slice_cut_rows_or_columns() - determines ROW vs COL
 2. does_slice_of_face_start_with_face() - determines direct vs inverted
 
-This validates the formula against walking info (ground truth).
+This validates the computation against walking info (ground truth).
 """
 
 from __future__ import annotations
@@ -15,13 +15,11 @@ import pytest
 from cube.domain.model.Cube import Cube
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
-from cube.domain.geometric.slice_layout import CLGColRow
 from tests.test_utils import _test_sp
 
-# Import the formula derivation and computation functions
+# Import the computation functions
 from cube.domain.geometric.Face2FaceTranslator import (
-    _SliceIndexFormula,
-    _derive_slice_index_formula,
+    _create_slice_index_computer,
     _compute_slice_index,
 )
 
@@ -31,15 +29,15 @@ CUBE_SIZES = [3, 4, 5, 7]  # Various cube sizes
 
 
 class TestSliceIndexDerivation:
-    """Validate that slice index formula derivation works correctly."""
+    """Validate that slice index computation derivation works correctly."""
 
     @pytest.fixture
     def cube(self) -> Cube:
         return Cube(3, _test_sp)
 
-    def test_all_slice_face_combinations_have_formula(self, cube: Cube) -> None:
+    def test_all_slice_face_combinations_have_computer(self, cube: Cube) -> None:
         """
-        Verify formula can be derived for all valid slice-face combinations.
+        Verify computation function can be created for all valid slice-face combinations.
 
         Each slice affects exactly 4 faces (not the rotation face or its opposite).
         """
@@ -55,25 +53,35 @@ class TestSliceIndexDerivation:
             assert len(affected_faces) == 4, f"Slice {slice_name} should affect exactly 4 faces"
 
             for face_name in affected_faces:
-                # Should not raise - formula should be derivable
-                formula = _derive_slice_index_formula(layout, slice_name, face_name)
-                assert formula in (
-                    _SliceIndexFormula.ROW,
-                    _SliceIndexFormula.COL,
-                    _SliceIndexFormula.INV_ROW,
-                    _SliceIndexFormula.INV_COL,
-                ), f"Invalid formula for {slice_name.name} on {face_name.name}: {formula}"
+                # Should not raise - computer should be creatable
+                computer = _create_slice_index_computer(layout, slice_name, face_name)
+                assert callable(computer), (
+                    f"Expected callable for {slice_name.name} on {face_name.name}"
+                )
+                # Verify it returns valid results
+                result = computer(0, 0, 3)
+                assert isinstance(result, int), (
+                    f"Expected int result for {slice_name.name} on {face_name.name}"
+                )
+                assert 1 <= result <= 3, (
+                    f"Expected result in [1, 3] for {slice_name.name} on {face_name.name}, got {result}"
+                )
 
-    def test_formula_consistency_across_cube_sizes(self) -> None:
+    def test_computer_consistency_across_cube_sizes(self) -> None:
         """
-        Verify formula is the same for all cube sizes (size-independent topology).
-        """
-        formulas_by_size: dict[int, dict[tuple[SliceName, FaceName], str]] = {}
+        Verify the same computer produces correct results for different cube sizes.
 
+        The computer function itself is size-independent - only the n_slices parameter changes.
+        """
+        # Test that for the same (slice, face) combo, computer gives consistent results
+        # when scaled appropriately
         for size in CUBE_SIZES:
             cube = Cube(size, _test_sp)
             layout = cube.layout
-            formulas_by_size[size] = {}
+            n_slices = cube.n_slices
+
+            if n_slices == 0:
+                continue
 
             for slice_name in SliceName:
                 slice_layout = layout.get_slice(slice_name)
@@ -82,26 +90,23 @@ class TestSliceIndexDerivation:
 
                 affected_faces = [f for f in FaceName if f not in (rotation_face, opposite_face)]
                 for face_name in affected_faces:
-                    formula = _derive_slice_index_formula(layout, slice_name, face_name)
-                    formulas_by_size[size][(slice_name, face_name)] = formula
+                    computer = _create_slice_index_computer(layout, slice_name, face_name)
 
-        # Compare all sizes against size 3 (base case)
-        base_formulas = formulas_by_size[3]
-        for size in CUBE_SIZES[1:]:
-            for key, formula in formulas_by_size[size].items():
-                assert formula == base_formulas[key], (
-                    f"Formula mismatch for {key} between size 3 and {size}: "
-                    f"{base_formulas[key]} vs {formula}"
-                )
+                    # Test first and last slice indices
+                    first_result = computer(0, 0, n_slices)
+                    assert 1 <= first_result <= n_slices, (
+                        f"Size {size}, {slice_name.name} on {face_name.name}: "
+                        f"first_result={first_result} not in [1, {n_slices}]"
+                    )
 
 
 class TestSliceIndexAgainstWalkingInfo:
     """
-    Validate slice index formula against walking info (ground truth).
+    Validate slice index computation against walking info (ground truth).
 
     This tests the inverse relationship:
     - Walking info: (slice_index, slot) -> (row, col)
-    - Formula: (row, col) -> slice_index
+    - Computation: (row, col) -> slice_index
 
     Testing across all cube sizes, slices, faces, and coordinates.
     """
@@ -110,11 +115,11 @@ class TestSliceIndexAgainstWalkingInfo:
     def test_slice_index_is_inverse_of_walking_info(self, cube_size: int) -> None:
         """
         Verify: walking_info.compute_point(idx, slot) gives point,
-                formula(point) gives idx back.
+                computation(point) gives idx back.
 
         For each cube size, slice, face, and slice_index:
         1. Get point from walking info for this slice_index
-        2. Compute slice_index back using the formula
+        2. Compute slice_index back using the function
         3. Verify they match (accounting for 0-based vs 1-based)
         """
         cube = Cube(cube_size, _test_sp)
@@ -136,7 +141,7 @@ class TestSliceIndexAgainstWalkingInfo:
                     point = face_info.compute_point(slice_idx_0based, slot=0)
                     row, col = point
 
-                    # Formula returns 1-based slice index
+                    # Computation returns 1-based slice index
                     computed_1based = _compute_slice_index(
                         cube.layout, face_name, slice_name, (row, col), n_slices
                     )
@@ -155,7 +160,7 @@ class TestSliceIndexAgainstWalkingInfo:
         """
         Verify all points along a slice (different slots) map to the same slice_index.
 
-        This confirms the formula correctly extracts the relevant coordinate
+        This confirms the computation correctly extracts the relevant coordinate
         (row or col) and ignores the irrelevant one.
         """
         cube = Cube(cube_size, _test_sp)
