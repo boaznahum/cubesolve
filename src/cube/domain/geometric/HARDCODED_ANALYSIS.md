@@ -16,7 +16,19 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 
 ---
 
-## Status Summary - Geometry Package
+## TODO - Remaining Hardcoded Items
+
+| What | Location | Entries | How to Derive |
+|------|----------|---------|---------------|
+| `_SLICE_INDEX_TABLE` | Face2FaceTranslator.py | 12 | From edge geometry |
+| `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | Face2FaceTranslator.py | 12 | From `_SLICE_ROTATION_FACE` |
+| `slice_to_axis` dict | Face2FaceTranslator.py:488 | 3 | Use `_AXIS_ROTATION_FACE` directly |
+| `get_start_face()` | slice_layout.py | 3 | Derive from slice definitions |
+| `_rotate_dict_x/y/z` | _CubeLayout.py | 12 | From rotation cycles |
+
+---
+
+## Status Summary - Geometry Package (Full Details)
 
 | ID | Table/Constant | Location | Status | Action |
 |----|----------------|----------|--------|--------|
