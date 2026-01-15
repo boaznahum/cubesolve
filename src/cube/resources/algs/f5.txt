@@ -1,0 +1,3 @@
+# F5 - Checkerboard pattern
+# Creates a checkerboard pattern on all faces
+M2 E2 S2

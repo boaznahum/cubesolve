@@ -311,6 +311,11 @@ class ConfigProtocol(Protocol):
         """
         ...
 
+    @property
+    def show_file_algs(self) -> bool:
+        """Show F1-F5 file algorithm buttons in toolbar."""
+        ...
+
     # ==========================================================================
     # Texture settings
     # ==========================================================================

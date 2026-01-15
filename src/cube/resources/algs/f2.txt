@@ -1,0 +1,3 @@
+# F2 - Sune (R U R' U R U2 R')
+# Used for orienting last layer corners
+R U R' U R U2 R'

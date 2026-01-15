@@ -88,6 +88,7 @@ include = ["cube*"]
 
 [tool.setuptools.package-data]
 "cube.resources.faces" = ["**/*.png", "**/*.jpg", "README.md"]
+"cube.resources.algs" = ["*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

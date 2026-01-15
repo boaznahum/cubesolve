@@ -683,3 +683,33 @@ class SleepCommand(Command):
     def execute(self, ctx: CommandContext) -> CommandResult:
         """Return result with delay_next_command set."""
         return CommandResult(delay_next_command=self.duration, no_gui_update=True)
+
+
+# =============================================================================
+# FILE ALGORITHM COMMANDS
+# =============================================================================
+
+@dataclass(frozen=True)
+class ExecuteFileAlgCommand(Command):
+    """Execute algorithm from file slot (1-5).
+
+    Loads algorithm from f{slot}.txt resource file and executes it on the cube.
+    Respects current animation setting.
+    """
+    slot: int
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        from cube.domain.exceptions import InternalSWError
+        from cube.resources.algs import load_file_alg
+        try:
+            alg = load_file_alg(self.slot)
+            ctx.op.play(alg)  # Respects current animation setting
+        except FileNotFoundError as e:
+            ctx.app.set_error(f"File not found: {e}")
+        except ValueError as e:
+            ctx.app.set_error(f"Invalid file: {e}")
+        except InternalSWError as e:
+            ctx.app.set_error(f"Parse error: {e}")
+        except Exception as e:
+            ctx.app.set_error(f"Error: {e}")
+        return CommandResult()

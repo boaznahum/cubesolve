@@ -418,8 +418,6 @@ class GUIToolbar:
 
         assert SolveStep.ALL not in steps, 'All solvers solve All'
 
-        # claude: remove SolverStep.ALL from the list above
-
         for step in steps:
             self.add_button(
                 label=step.short_code,
@@ -591,5 +589,16 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
     # === ROW 3: Solver Step Buttons (dynamic based on current solver) ===
     toolbar.new_row()
     toolbar.rebuild_solver_buttons(app)
+
+    # === ROW 4: File Algorithm Buttons (optional, based on config) ===
+    if app.config.show_file_algs:
+        from cube.presentation.gui.commands.concrete import ExecuteFileAlgCommand
+        toolbar.new_row()
+        for slot in range(1, 6):
+            toolbar.add_button(
+                label=f"F{slot}",
+                command=ExecuteFileAlgCommand(slot=slot),
+                tooltip=f"Execute algorithm from f{slot}.txt",
+            )
 
     return toolbar

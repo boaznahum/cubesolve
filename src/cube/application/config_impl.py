@@ -236,6 +236,11 @@ class AppConfig(ConfigProtocol):
         # Clamp to valid range (0-7)
         return max(0, min(7, cfg.ANIMATION_SPEED))
 
+    @property
+    def show_file_algs(self) -> bool:
+        """Show F1-F5 file algorithm buttons in toolbar."""
+        return cfg.SHOW_FILE_ALGS
+
     # ==========================================================================
     # Texture settings
     # ==========================================================================
