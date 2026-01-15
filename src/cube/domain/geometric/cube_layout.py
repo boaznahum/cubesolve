@@ -18,6 +18,7 @@ from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
+from cube.domain.model._elements import AxisName
 
 if TYPE_CHECKING:
     from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
@@ -63,6 +64,58 @@ _AXIS_ROTATION_FACE: Mapping[SliceName, FaceName] = {
     SliceName.E: FaceName.U,  # Y axis
     SliceName.S: FaceName.F,  # Z axis (same as slice rotation face)
 }
+
+# ============================================================================
+# WHOLE-CUBE AXIS ROTATION - Canonical Definition
+# ============================================================================
+#
+# Standard Rubik's cube notation (https://alg.cubing.net/):
+#
+#   X - Rotate entire cube on R-L axis, in the direction of R move
+#       (clockwise when looking at R face from outside)
+#       Content moves: D → F → U → B → D
+#
+#   Y - Rotate entire cube on U-D axis, in the direction of U move
+#       (clockwise when looking at U face from outside)
+#       Content moves: F → L → B → R → F
+#
+#   Z - Rotate entire cube on F-B axis, in the direction of F move
+#       (clockwise when looking at F face from outside)
+#       Content moves: U → R → D → L → U
+#
+# The face returned is the one that defines the positive rotation direction
+# (the face that rotates clockwise when the algorithm is applied).
+#
+# TODO: This mapping could be derived from cube geometry, but keeping it
+# explicit for now as it matches the standard notation convention.
+# ============================================================================
+_AXIS_FACE: Mapping[AxisName, FaceName] = {
+    AxisName.X: FaceName.R,
+    AxisName.Y: FaceName.U,
+    AxisName.Z: FaceName.F,
+}
+
+
+def get_axis_face(axis_name: AxisName) -> FaceName:
+    """
+    Get the face that defines the rotation direction for a whole-cube axis.
+
+    Standard Rubik's cube notation:
+        X axis → R face (rotation like R, clockwise facing R)
+        Y axis → U face (rotation like U, clockwise facing U)
+        Z axis → F face (rotation like F, clockwise facing F)
+
+    This is the CANONICAL source for axis-to-face mapping.
+    WholeCubeAlg.get_face_name() should delegate to this function.
+
+    Args:
+        axis_name: The axis (X, Y, or Z)
+
+    Returns:
+        The face that defines positive rotation direction for this axis
+    """
+    return _AXIS_FACE[axis_name]
+
 
 # Note: _SLICE_FACES was removed - derive on demand from _SLICE_ROTATION_FACE + _ADJACENT
 

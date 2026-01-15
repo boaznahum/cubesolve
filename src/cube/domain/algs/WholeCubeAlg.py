@@ -4,7 +4,7 @@ from typing import Collection, Self, Tuple, final
 from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
-from cube.domain.exceptions import InternalSWError
+from cube.domain.geometric.cube_layout import get_axis_face
 from cube.domain.model import AxisName, Cube, FaceName, PartSlice
 
 
@@ -51,37 +51,15 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
         """
         Return the face that defines the positive rotation axis.
 
-        This is the face that rotates clockwise when the whole-cube rotation
-        is applied (viewed from outside the cube looking at that face).
-
-        In terms of the LTR coordinate system (see docs/face-coordinate-system/):
-        - Clockwise rotation moves content: T→R→(-T)→(-R)→T
-        - Content flows from the T (top/bottom) direction toward the R (left/right) direction
+        Delegates to cube_layout.get_axis_face() which is the canonical source
+        for axis-to-face mapping. See that function for detailed documentation.
 
         Returns:
             X axis → R face (rotation around L-R axis)
             Y axis → U face (rotation around U-D axis)
             Z axis → F face (rotation around F-B axis)
-
-        See also:
-            - docs/face-coordinate-system/edge-face-coordinate-system.md
-            - docs/face-coordinate-system/face-slice-rotation.md
         """
-        face_name: FaceName
-        match self._axis_name:
-
-            case AxisName.X:
-                face_name = FaceName.R
-
-            case AxisName.Y:
-                face_name = FaceName.U
-
-            case AxisName.Z:
-                face_name = FaceName.F
-
-            case _:
-                raise InternalSWError(f"Unknown Axis {self._axis_name}")
-        return face_name
+        return get_axis_face(self._axis_name)
 
 
 @final
