@@ -25,6 +25,13 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | `slice_to_axis` dict | Face2FaceTranslator.py:488 | 3 | Use `_AXIS_ROTATION_FACE` directly |
 | `get_start_face()` | slice_layout.py | 3 | Derive from slice definitions |
 | `_rotate_dict_x/y/z` | _CubeLayout.py | 12 | From rotation cycles |
+| Face transform table | _supported_faces.py | 41 | From face relationships |
+| Subclass constructors | FaceAlg.py | 6 | Factory pattern |
+| Subclass constructors | WideFaceAlg.py | 6 | Factory pattern |
+| Subclass constructors | SliceAlg.py | 3 | Factory pattern |
+| Subclass constructors | WholeCubeAlg.py | 9 | Factory pattern |
+
+**Total: ~107 hardcoded entries**
 
 ---
 
@@ -68,19 +75,6 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | `Cube3x3Colors.py` | Edge/corner color init | 18 | Initial state |
 | `CubeSanity.py` | Valid color combinations | 24 | Validation data |
 | `FRotation.py` | `_UNIT_ROTATIONS` | 4 | Mathematical |
-
-### TODO - Should Be Derived
-
-| File | What | Count | How to Derive |
-|------|------|-------|---------------|
-| `Face2FaceTranslator.py` | `_SLICE_INDEX_TABLE` | 12 | From edge geometry |
-| `Face2FaceTranslator.py` | `_X/Y/Z_CYCLE` | 12 | From `_SLICE_ROTATION_FACE` |
-| `Face2FaceTranslator.py` | `slice_to_axis` | 3 | Use `_AXIS_ROTATION_FACE` |
-| `_supported_faces.py` | Face transform table | 41 | From face relationships |
-| `FaceAlg.py` | Subclass constructors | 6 | Factory pattern |
-| `WideFaceAlg.py` | Subclass constructors | 6 | Factory pattern |
-| `SliceAlg.py` | Subclass constructors | 3 | Factory pattern |
-| `WholeCubeAlg.py` | Subclass constructors + dispatch | 9 | Factory pattern |
 
 ### ACCEPTABLE - Switch/Dispatch Logic
 
