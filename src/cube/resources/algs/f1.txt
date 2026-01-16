@@ -1,2 +1,28 @@
 # F1 - Sexy Move (R U R' U')
-[2]M
+# Algs.alg(None, Algs.U, Algs.R, Algs.U.prime, Algs.L.prime, Algs.U, Algs.R.prime, Algs.U.prime, Algs.L)
+# rotate 3 corners
+# U R U' L' U R' U' L
+# try replace L with [2]M
+# works - bring edge on top to right
+#U R U' [2]M' U R' U' [2]M
+
+# try with L # doesnt work !!
+#(U R U' [2]M' U R' U' [2]M)'
+
+#tried the Alternative (Clockwise Cycle):
+#L' U R U' L U R' U' ? so I tried
+
+#doesnt work
+#L' U [2]M U' L U [2]M' U'
+
+# tried to replace the L doesnt work
+#[2]M' U R U' [2]M U R' U'
+
+# doesnt work
+#U' L' U [2]M U' L U [2]M'
+
+# works
+U' L' U [1]M' U' L U [1]M
+
+
+
