@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from collections.abc import Collection, Iterator
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable, Tuple
 
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
@@ -321,7 +321,49 @@ class CubeLayout(Protocol):
         ...
 
     @abstractmethod
-    def get_slice_parallel_to_face(self, face: FaceName) -> SliceName:
+    def get_slice_sandwiched_between_face_and_opposite(self, face: FaceName) -> SliceName:
+        """Find the slice that is sandwiched between a face and its opposite.
+
+        Each slice lies between two opposite faces:
+        - E slice is sandwiched between U and D (horizontal slices)
+        - M slice is sandwiched between L and R (vertical slices, left-right)
+        - S slice is sandwiched between F and B (vertical slices, front-back)
+
+        ASCII Diagram (side view, E slice between U and D):
+        ::
+
+                    ┌─────────────┐
+                    │      U      │  ← U face
+                    ├─────────────┤
+                    │    E[2]     │  ← E slice index 2 (closest to U)
+                    ├─────────────┤
+                    │    E[1]     │  ← E slice index 1
+                    ├─────────────┤
+                    │    E[0]     │  ← E slice index 0 (closest to D)
+                    ├─────────────┤
+                    │      D      │  ← D face
+                    └─────────────┘
+
+        Args:
+            face: Any face (U, D, L, R, F, or B).
+
+        Returns:
+            SliceName of the slice sandwiched between this face and its opposite:
+            - U or D → SliceName.E
+            - L or R → SliceName.M
+            - F or B → SliceName.S
+
+        Raises:
+            GeometryError: If no matching slice found (should never happen).
+
+        Example:
+            layout.get_slice_sandwiched_between_face_and_opposite(FaceName.D)  # SliceName.E
+            layout.get_slice_sandwiched_between_face_and_opposite(FaceName.L)  # SliceName.M
+        """
+        ...
+
+    @abstractmethod
+    def get_slice_name_parallel_to_face(self, face: FaceName) -> SliceName:
         """Find which slice is parallel to a face.
 
         A slice is parallel to a face if the face is NOT on the slice's axis.
@@ -337,6 +379,17 @@ class CubeLayout(Protocol):
 
         Example:
             layout.get_slice_parallel_to_face(FaceName.U)  # SliceName.E
+        """
+        ...
+
+    def get_slice_rotation_faces(self, slice_name: SliceName) -> Tuple[FaceName, FaceName]:
+        """
+        claude: document his, return the two faces that parallel to slice, the rotation face in its
+        opposite face
+        see get_slice_rotation_face
+        :param slice_name:
+        :param face:
+        :return:
         """
         ...
 

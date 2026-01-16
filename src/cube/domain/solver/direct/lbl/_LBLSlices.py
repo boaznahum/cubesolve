@@ -17,13 +17,14 @@ Algorithm for ring center solving:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
+from cube.domain.model import CenterSlice, EdgeWing, FaceName, Color
+from cube.domain.model.Slice import Slice
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl.NxNCenters2 import NxNCenters2
-from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 
 if TYPE_CHECKING:
@@ -115,19 +116,25 @@ class _LBLSlices(SolverElement):
         row on all 4 side faces has the correct color for that face.
 
         Args:
-            slice_index: 0 to n_slices-1 (0 = closest to D)
+            slice_index: 0 to n_slices-1 in slice coordinates not relative to L1
             th: FacesTrackerHolder for face color tracking
             l1_tracker: Layer 1 face tracker (to identify side faces)
         """
-        row = self._slice_to_row(slice_index)
 
-        for face_tracker in self._get_side_face_trackers(th, l1_tracker):
-            target_color = face_tracker.color
-            face = face_tracker.face
+        slice_name = self.cube.layout.get_slice_name_parallel_to_face(l1_tracker.face_name)
 
-            for col in range(self.n_slices):
-                center = face.center.get_center_slice((row, col))
-                if center.color != target_color:
+        slice: Slice = self.cube.get_slice(slice_name)
+
+        pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice._get_slices_by_index(slice_index)
+
+        center_pieces = pieces[1]
+
+        # it is waste of time becuase ecnters are groupd:
+        required_colors: dict[FaceName, Color] = {f.face_name : f.color for f in th.trackers}
+
+        c: CenterSlice
+        for c in center_pieces:
+            if c.color != required_colors[c.face.name]:
                     return False
 
         return True
@@ -137,12 +144,28 @@ class _LBLSlices(SolverElement):
     ) -> int:
         """Count how many slices have their ring centers solved (from bottom up).
 
-        Counts consecutive solved slices starting from slice 0 (bottom).
+        Correctly handle cube orientation
+
+        Counts consecutive solved slices starting from row 0 (relative to L1)
         Once an unsolved slice is found, stops counting.
+
+        Claud: Im trying to do it independ on orientation, if it works we need to document it
         """
+
+        # Find the slice sandwiched between L1 face and its opposite
+        slice_name = self.cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
+
+        slice_layout = self.cube.layout.get_slice(slice_name)
+
         count = 0
-        for slice_index in range(self.n_slices):
-            if self._is_slice_centers_solved(slice_index, th, l1_tracker):
+        # slice_row as begin from L1
+        for slice_row in range(self.n_slices):
+
+            cube_slice_index = slice_layout.distance_from_face_to_slice_index(
+                l1_tracker.face_name, slice_row, self.n_slices
+            )
+
+            if self._is_slice_centers_solved(cube_slice_index, th, l1_tracker):
                 count += 1
             else:
                 break

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Iterator
-from typing import TYPE_CHECKING, Mapping
+from typing import TYPE_CHECKING, Mapping, Tuple
 
 from cube.domain.exceptions import GeometryError, GeometryErrorCode, InternalSWError
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
@@ -288,7 +288,22 @@ class _CubeLayout(CubeLayout):
                 result.append(slice_name)
         return result
 
-    def get_slice_parallel_to_face(self, face: FaceName) -> SliceName:
+    def get_slice_sandwiched_between_face_and_opposite(self, face: FaceName) -> SliceName:
+        """Find the slice sandwiched between a face and its opposite.
+
+        See CubeLayout.get_slice_sandwiched_between_face_and_opposite() for full documentation.
+        """
+        for slice_name in SliceName:
+            rotation_face, opposite_face = self.get_slice_rotation_faces(slice_name)
+            if face in (rotation_face, opposite_face):
+                return slice_name
+
+        raise GeometryError(GeometryErrorCode.INVALID_FACE, f"No slice sandwiched by {face}")
+
+
+
+
+    def get_slice_name_parallel_to_face(self, face: FaceName) -> SliceName:
         """Find which slice is parallel to a face."""
         for slice_name in SliceName:
             rotation_face = _SLICE_ROTATION_FACE[slice_name]
@@ -297,10 +312,24 @@ class _CubeLayout(CubeLayout):
                 return slice_name
         raise ValueError(f"No slice parallel to {face}")
 
+    def get_slice_rotation_faces(self, slice_name: SliceName) -> Tuple[FaceName, FaceName]:
+        """
+        claude: document his, return the two faces that parallel to slice, the rotation face in its
+        opposite face
+        see get_slice_rotation_face
+        claude: this is SliceLayout method, need to resolve and delegate
+
+        :param slice_name:
+        :return:
+        """
+        return self.get_slice(slice_name).get_slice_rotation_faces()
+
     def get_slice_rotation_face(self, slice_name: SliceName) -> FaceName:
         """Get the face that defines the rotation direction for a slice.
 
         See CubeLayout.get_slice_rotation_face() for full documentation.
+
+        cluade: this is SliceLayout method, need to resolve and delegate
         """
         return _SLICE_ROTATION_FACE[slice_name]
 

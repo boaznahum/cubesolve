@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, Tuple
 
+from cube.domain.exceptions import GeometryError, GeometryErrorCode
+from cube.domain.model.FaceName import FaceName
 from cube.domain.model._elements import EdgePosition
+from cube.utils.geometry import inv
 
 if TYPE_CHECKING:
-    from cube.domain.model.FaceName import FaceName
     from cube.domain.model.SliceName import SliceName
     from cube.domain.geometric._CubeLayout import _CubeLayout
     from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit
@@ -45,11 +47,38 @@ class SliceLayout(Protocol):
             E slice → D face (middle layer between U and D, rotates like D)
             S slice → F face (middle layer between F and B, rotates like F)
 
+        !!! same as get_slice_rotation_face  !!!
+
+
         See also:
             - WholeCubeAlg.get_face_name() for whole-cube rotation equivalent
             - docs/face-coordinate-system/face-slice-rotation.md
         """
         ...
+
+    def get_slice_rotation_face(self) -> FaceName:
+        """Get the face that defines the rotation direction for a slice.
+
+        See CubeLayout.get_slice_rotation_face() for full documentation.
+
+        cluade: this is SliceLayout method, need to resolve and delegate
+        """
+        return self.get_face_name()
+
+    def get_slice_rotation_faces(self) -> Tuple[FaceName, FaceName]:
+        """
+        claude: document his, return the two faces that parallel to slice, the rotation face in its
+        opposite face
+        see get_slice_rotation_face
+        claude: this is SliceLayout method, need to resolve and delegate
+
+        !!! same as get_face_name  !!!
+
+        :param face:
+        :return:
+        """
+        ...
+
 
     def does_slice_cut_rows_or_columns(self, face_name: FaceName) -> CLGColRow:
         """
@@ -149,6 +178,24 @@ class SliceLayout(Protocol):
         """
         ...
 
+    def distance_from_face_to_slice_index(self, face_name: FaceName, distance_from_face:int,
+                                          n_slices: int  # not belong to layout this is sized slice
+                                          ) -> int:
+        """
+        claude: document it nicely with diagrams and fix my broken english
+
+        Give a distance from face parallel to slice, find the slice index on this face
+
+
+        :param n_slices:
+        :param distance_from_face:
+        :param face_name: 0..n_slices-1
+        :return:
+        """
+        ...
+
+
+
     def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
         """
         Create SIZE-INDEPENDENT walking info for this slice.
@@ -184,9 +231,9 @@ class SliceLayout(Protocol):
 
 class _SliceLayout(SliceLayout):
 
-    def __init__(self, slice_name: "SliceName", layout: "_CubeLayout | None" = None):
+    def __init__(self, slice_name: "SliceName", layout: "_CubeLayout"):
         self._slice_name = slice_name
-        self._layout: "_CubeLayout | None" = layout
+        self._cube_layout: _CubeLayout = layout
 
     def get_face_name(self) -> "FaceName":
         """
@@ -194,12 +241,32 @@ class _SliceLayout(SliceLayout):
 
         Uses CubeLayout.get_slice_rotation_face() method.
         """
-        if self._layout is None:
+        if self._cube_layout is None:
             raise RuntimeError(
                 "Cannot get_face_name without layout reference. "
                 "Use layout.get_slice_rotation_face() directly."
             )
-        return self._layout.get_slice_rotation_face(self._slice_name)
+        return self._cube_layout.get_slice_rotation_face(self._slice_name)
+
+
+    def get_slice_rotation_faces(self) -> Tuple[FaceName, FaceName]:
+        """
+        claude: document his, return the two faces that parallel to slice, the rotation face in its
+        opposite face
+        see get_slice_rotation_face
+        claude: this is SliceLayout method, need to resolve and delegate
+
+        !!! same as get_face_name  !!!
+
+        :param face:
+        :return: Tuple[FaceName, FaceName]  !!!! first is always the rotation face
+        """
+        rotation_face: FaceName = self.get_slice_rotation_face()
+        opposite: FaceName = self._cube_layout.opposite(rotation_face)
+
+        return rotation_face, opposite
+
+
 
     def does_slice_cut_rows_or_columns(self, face_name: "FaceName") -> CLGColRow:
         """
@@ -220,7 +287,7 @@ class _SliceLayout(SliceLayout):
         See also:
             is_horizontal_on_face() - alias returning bool
         """
-        if self._layout is None:
+        if self._cube_layout is None:
             raise RuntimeError(
                 "Cannot derive does_slice_cut_rows_or_columns without layout reference. "
                 "Use CubeLayout.get_slice() to get a properly initialized SliceLayout."
@@ -231,9 +298,9 @@ class _SliceLayout(SliceLayout):
             rotation_face_name = self.get_face_name()
 
             # Get the left and right neighbors of the target face
-            assert self._layout is not None  # Already checked above
-            left_neighbor: FaceName = self._layout.get_face_neighbor(face_name, EdgePosition.LEFT)
-            right_neighbor: FaceName = self._layout.get_face_neighbor(face_name, EdgePosition.RIGHT)
+            assert self._cube_layout is not None  # Already checked above
+            left_neighbor: FaceName = self._cube_layout.get_face_neighbor(face_name, EdgePosition.LEFT)
+            right_neighbor: FaceName = self._cube_layout.get_face_neighbor(face_name, EdgePosition.RIGHT)
 
             # If the slice's rotation face is a left/right neighbor,
             # the slice is vertical on this face (cuts rows)
@@ -244,7 +311,7 @@ class _SliceLayout(SliceLayout):
 
         # Use cache manager from layout
         cache_key = ("SliceLayout.does_slice_cut_rows_or_columns", self._slice_name, face_name)
-        cache = self._layout.cache_manager.get(cache_key, CLGColRow)
+        cache = self._cube_layout.cache_manager.get(cache_key, CLGColRow)
         return cache.compute(compute)
 
     def is_horizontal_on_face(self, face_name: "FaceName") -> bool:
@@ -278,24 +345,23 @@ class _SliceLayout(SliceLayout):
         - The slice's rotation face (from _SLICE_ROTATION_FACE)
         - The face's position relative to that rotation face
 
+        claude: distance_from_face_to_slice_index is much simpler , and this one contains
+        bug even if slice is not between two faces it return false. instead of throwing error
+
         Returns:
             True  → slice[0] aligns with face's row/col 0 (natural start)
             False → slice[0] aligns with face's row/col (n_slices-1) (inverted)
         """
-        if self._layout is None:
-            raise RuntimeError(
-                "Cannot derive does_slice_of_face_start_with_face without layout reference. "
-                "Use CubeLayout.get_slice() to get a properly initialized SliceLayout."
-            )
+        assert self._cube_layout
 
         def compute() -> bool:
             # Get the rotation face (slice[0] is closest to it)
             rotation_face_name = self.get_face_name()
 
             # Check which edge position connects face_name to rotation_face
-            assert self._layout is not None
-            left_neighbor = self._layout.get_face_neighbor(face_name, EdgePosition.LEFT)
-            bottom_neighbor = self._layout.get_face_neighbor(face_name, EdgePosition.BOTTOM)
+            assert self._cube_layout is not None
+            left_neighbor = self._cube_layout.get_face_neighbor(face_name, EdgePosition.LEFT)
+            bottom_neighbor = self._cube_layout.get_face_neighbor(face_name, EdgePosition.BOTTOM)
 
             # If rotation face is on the left or bottom edge of this face,
             # then slice[0] aligns with row/col 0 (True)
@@ -308,8 +374,46 @@ class _SliceLayout(SliceLayout):
 
         # Use cache manager from layout
         cache_key = ("SliceLayout.does_slice_of_face_start_with_face", self._slice_name, face_name)
-        cache = self._layout.cache_manager.get(cache_key, bool)
+        cache = self._cube_layout.cache_manager.get(cache_key, bool)
         return cache.compute(compute)
+
+    def distance_from_face_to_slice_index(self, face_name: FaceName,
+                                          distance_from_face: int,
+                                          n_slices: int  # not belong tolayout this is sized slice
+                                          ) -> int:
+        """
+        claude: document it nicely with diagrams and fix my brokenenglish
+
+        Give a distance from face parallel to slice, find the slice index on this face
+
+        claude: thismethod not belong here should be oved to Slice, it is sided inforamtion, add protocol for Slice
+
+
+
+        :param distance_from_face:
+        :param face_name: 0..n_slices-1
+        :return:
+        """
+
+        faces: tuple[FaceName, FaceName] = self.get_slice_rotation_faces()
+
+        if face_name not in faces:
+            raise GeometryError(GeometryErrorCode.FACE_NOT_PARALLEL_TO_SLICE, f"Face {face_name} not parallel to {self._slice_name}")
+
+
+
+        assert len(faces) == 2
+
+        if face_name == faces[0]:
+            return distance_from_face
+        else:
+            opposite_face = self._cube_layout.opposite(face_name)
+
+            if opposite_face not in faces:
+                raise GeometryError(GeometryErrorCode.FACE_NOT_PARALLEL_TO_SLICE,
+                                    f"Face {face_name} not parallel to {self._slice_name}")
+
+            return inv(n_slices, distance_from_face)
 
     def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
         """
@@ -323,15 +427,15 @@ class _SliceLayout(SliceLayout):
         from cube.domain.model.Edge import Edge
         from cube.domain.model.Face import Face
 
-        if self._layout is None:
+        if self._cube_layout is None:
             raise RuntimeError(
                 "Cannot create walking info unit without layout reference. "
                 "Use CubeLayout.get_slice() to get a properly initialized SliceLayout."
             )
 
         def compute() -> CubeWalkingInfoUnit:
-            assert self._layout is not None
-            internal_3x3 = self._layout._cube
+            assert self._cube_layout is not None
+            internal_3x3 = self._cube_layout._cube
             slice_name = self._slice_name
             fake_n_slices = 1234  # Arbitrary large value - see UNIT_WALKING_INFO.md
 
@@ -465,5 +569,5 @@ class _SliceLayout(SliceLayout):
 
         # Use cache manager from layout - cache by slice_name only (size-independent!)
         cache_key = ("SliceLayout.create_walking_info_unit", self._slice_name)
-        cache = self._layout.cache_manager.get(cache_key, CubeWalkingInfoUnit)
+        cache = self._cube_layout.cache_manager.get(cache_key, CubeWalkingInfoUnit)
         return cache.compute(compute)
