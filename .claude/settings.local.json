@@ -14,7 +14,12 @@
       "WebFetch(domain:www.youtube.com)",
       "WebFetch(domain:charlesreid1.com)",
       "WebFetch(domain:www.reddit.com)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "mcp__pycharm__get_run_configurations",
+      "mcp__pycharm__get_all_open_file_paths",
+      "mcp__pycharm__list_directory_tree",
+      "mcp__pycharm__get_file_problems",
+      "mcp__pycharm__find_files_by_name_keyword"
     ],
     "deny": [],
     "ask": []

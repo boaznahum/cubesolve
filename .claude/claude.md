@@ -198,6 +198,27 @@ grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "presen
 
 ---
 
+## PyCharm MCP Server - Token Optimization
+
+**Use PyCharm MCP tools when possible to save tokens, but not at the cost of quality.**
+
+**Prefer PyCharm MCP for:**
+- `get_file_problems` - Code inspections (finds issues without reading whole file)
+- `search_in_files_by_text/regex` - Searching code
+- `find_files_by_name_keyword` - Finding files by name
+- `list_directory_tree` - Directory structure
+- `rename_refactoring` - Safe symbol renaming across project
+- `get_symbol_info` - Understanding symbols at a position
+- `execute_run_configuration` - Running tests/apps
+
+**Use regular tools when:**
+- Need precise line-by-line file reading
+- PyCharm results are incomplete or insufficient
+- Need Claude's own analysis/judgment
+- Quality would suffer
+
+---
+
 ## User Attention Alert
 
 **IMPORTANT:** When you need the user's attention, run the beep script:
