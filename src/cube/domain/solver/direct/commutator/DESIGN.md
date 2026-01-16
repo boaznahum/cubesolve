@@ -348,7 +348,7 @@ See: `SOLVER_ARCHITECTURE.md` for details.
 | `SolverElement` | `common/SolverElement.py` | Base class with cube, op, annotations |
 | `BaseSolver` | `common/BaseSolver.py` | Solver base with debug, solve interface |
 | `CommonOp` | `common/CommonOp.py` | `bring_face_front()`, `bring_edge_to_front_left_by_whole_rotate()` |
-| `CubeQueries2` | `model/CubeQueries2.py` | `find_edge()`, `rotate_and_check()`, `count_color_on_face()` |
+| `CubeQueries2` | `model/CubeQueries2.py` | `find_edge()`, `rotate_and_check()`, `_count_color_on_face()` |
 | `FaceTracker` | `common/FaceTracker.py` | Track faces/pieces during solving |
 | `Algs` | `algs/Algs.py` | All algorithms including slices |
 

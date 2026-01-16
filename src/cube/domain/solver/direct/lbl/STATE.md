@@ -71,7 +71,7 @@ Example for 5x5 (n=5, n_slices=3):
 
 ### Challenges Identified ✅
 
-1. **Partial Face Solving**: Need `solve_slice_centers()` not `solve_single_face()`
+1. **Partial Face Solving**: Need `_solve_slice_centers()` not `solve_single_face()`
 2. **Move Restrictions**: D face cannot rotate after Layer 1 solved
 3. **Source Centers**: Must come from U face or unsolved rows on side faces
 4. **Face Orientation**: 4 faces to solve simultaneously (the ring)
@@ -90,11 +90,11 @@ Example for 5x5 (n=5, n_slices=3):
 
 - [x] Add `SolveStep.LBL_SLICES_CTR` enum value
 - [x] Create `_LBLSlices` helper class wrapping NxNCenters + NxNEdges
-  - `slice_to_row()` / `row_to_slice()` - coordinate conversion
-  - `get_side_face_trackers()` - get 4 side face trackers
-  - `is_slice_centers_solved()` - check single slice
+  - `_slice_to_row()` / `row_to_slice()` - coordinate conversion
+  - `_get_side_face_trackers()` - get 4 side face trackers
+  - `_is_slice_centers_solved()` - check single slice
   - `count_solved_slice_centers()` - count consecutive solved
-  - `solve_slice_centers()` / `solve_all_slice_centers()` - placeholders
+  - `_solve_slice_centers()` / `solve_all_slice_centers()` - placeholders
 - [x] Update `status()` to show "L1:Done|Sl:X/N" format
 - [x] Integrate `_LBLSlices` into `LayerByLayerNxNSolver`
 

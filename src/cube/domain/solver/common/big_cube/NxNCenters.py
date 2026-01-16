@@ -596,7 +596,7 @@ class NxNCenters(SolverElement):
                 ) and source_slice.n_matches > min_target_slice.n_matches:
                     # ok now swap
 
-                    # before = self.count_color_on_face(face, color)
+                    # before = self._count_color_on_face(face, color)
 
                     # self._debug_print_track_slices()
                     # print("before", end="")
@@ -620,7 +620,7 @@ class NxNCenters(SolverElement):
                     # self._debug_print_track_slices()
                     # self._asserts_is_boy(self._faces)
 
-                    # after = self.count_color_on_face(face, color)
+                    # after = self._count_color_on_face(face, color)
 
                     # print(before, after, color)
 

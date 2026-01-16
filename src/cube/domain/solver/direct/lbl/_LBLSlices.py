@@ -19,15 +19,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.geometric.cube_boy import Color
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl.NxNCenters2 import NxNCenters2
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
+from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 
 if TYPE_CHECKING:
-    from cube.domain.model.Face import Face
     from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 
 
@@ -55,7 +54,7 @@ class _LBLSlices(SolverElement):
         self._slv = slv
         # preserve_cage=True to preserve Layer 1 edges during center solving
         self._centers = NxNCenters2(slv, preserve_cage=True)
-        self._edges = NxNEdges(slv, advanced_edge_parity=False)
+        self._edges = _LBLNxNEdges(slv, advanced_edge_parity=False)
 
     @property
     def centers(self) -> NxNCenters2:
@@ -63,7 +62,7 @@ class _LBLSlices(SolverElement):
         return self._centers
 
     @property
-    def edges(self) -> NxNEdges:
+    def edges(self) -> _LBLNxNEdges:
         """Access to NxNEdges helper."""
         return self._edges
 
@@ -71,7 +70,7 @@ class _LBLSlices(SolverElement):
     # Coordinate conversion
     # =========================================================================
 
-    def slice_to_row(self, slice_index: int) -> int:
+    def _slice_to_row(self, slice_index: int) -> int:
         """Convert slice index (0=bottom) to row index on side faces.
 
         Formula: row = n_slices - 1 - slice_index
@@ -83,18 +82,11 @@ class _LBLSlices(SolverElement):
         """
         return self.n_slices - 1 - slice_index
 
-    def row_to_slice(self, row_index: int) -> int:
-        """Convert row index on side faces to slice index.
-
-        Inverse of slice_to_row.
-        """
-        return self.n_slices - 1 - row_index
-
     # =========================================================================
     # Face helpers
     # =========================================================================
 
-    def get_side_face_trackers(
+    def _get_side_face_trackers(
             self, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> list[FaceTracker]:
         """Get trackers for side faces (not Layer 1 or its opposite).
@@ -114,7 +106,7 @@ class _LBLSlices(SolverElement):
     # State inspection
     # =========================================================================
 
-    def is_slice_centers_solved(
+    def _is_slice_centers_solved(
             self, slice_index: int, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> bool:
         """Check if all ring centers for a specific slice are solved.
@@ -127,9 +119,9 @@ class _LBLSlices(SolverElement):
             th: FacesTrackerHolder for face color tracking
             l1_tracker: Layer 1 face tracker (to identify side faces)
         """
-        row = self.slice_to_row(slice_index)
+        row = self._slice_to_row(slice_index)
 
-        for face_tracker in self.get_side_face_trackers(th, l1_tracker):
+        for face_tracker in self._get_side_face_trackers(th, l1_tracker):
             target_color = face_tracker.color
             face = face_tracker.face
 
@@ -150,7 +142,7 @@ class _LBLSlices(SolverElement):
         """
         count = 0
         for slice_index in range(self.n_slices):
-            if self.is_slice_centers_solved(slice_index, th, l1_tracker):
+            if self._is_slice_centers_solved(slice_index, th, l1_tracker):
                 count += 1
             else:
                 break
@@ -160,7 +152,7 @@ class _LBLSlices(SolverElement):
     # Solving operations
     # =========================================================================
 
-    def solve_slice_centers(
+    def _solve_slice_centers(
             self, slice_index: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
     ) -> None:
         """Solve ring centers for a single slice.
@@ -183,57 +175,15 @@ class _LBLSlices(SolverElement):
             # Setup L1 once at the start - positions white face down and will
             # clear all tracking when done. Individual slices accumulate their
             # tracking markers during solving.
-            # if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
-            #     return
-            #
-            # Get side face trackers (excluding L1 and opposite)
-            side_trackers = self.get_side_face_trackers(th, l1_white_tracker)
-            #
-            # if self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
-            #     return
+            side_trackers = self._get_side_face_trackers(th, l1_white_tracker)
 
             for target_face in side_trackers:
                 self._solve_face_index(l1_white_tracker, target_face, slice_index)
-
-
-        # # Verify solved
-        # # boaz: currently we cant do it, because our index system is wrong, slice_index is depends on cube orientation
-        # if False and not self.is_slice_centers_solved(slice_index, th, l1_white_tracker):
-        #     self._report_stuck(slice_index, slice_index, side_trackers)
 
     def _solve_face_index(
             self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int
     ) -> None:
         self._centers.solve_single_center_row_slice(l1_white_tracker, target_face, slice_index)
-
-    def _is_face_row_solved(self, face: Face, row: int, target_color: Color) -> bool:
-        """Check if a specific row on a face has all correct colors."""
-        for col in range(self.n_slices):
-            if face.center.get_center_slice((row, col)).color != target_color:
-                return False
-        return True
-
-    def _report_stuck(
-            self, slice_index: int, row: int, side_trackers: list[FaceTracker]
-    ) -> None:
-        """Report which face is stuck and show state."""
-        for face_tracker in side_trackers:
-            if not self._is_face_row_solved(face_tracker.face, row, face_tracker.color):
-                needed = face_tracker.color.name
-                print(f"\n=== STUCK: Need {needed} on row {row} ===")
-                cube = self.cube
-                for face in [cube.front, cube.right, cube.back, cube.left, cube.up, cube.down]:
-                    positions = []
-                    for r in range(self.n_slices):
-                        for c in range(self.n_slices):
-                            center = face.center.get_center_slice((r, c))
-                            if center.color.name == needed:
-                                positions.append(f"({r},{c})")
-                    if positions:
-                        print(f"  {face.name}: {needed} at {positions}")
-                raise RuntimeError(
-                    f"Failed to solve slice {slice_index} (row {row}) on face {face_tracker.color.name}"
-                )
 
     def solve_all_slice_centers(
             self, face_trackers: FacesTrackerHolder, l1_white_tracker: FaceTracker
@@ -247,29 +197,6 @@ class _LBLSlices(SolverElement):
         The commutator uses UP as source, so if Layer 1 is on UP, we'll mess it up.
         """
         # Solve all slices from bottom to top
-        if False:  # WIP: Only solve first slice for now
-            to = 3
-            r = range(min(to, self.n_slices))
-        else:
-            r = range(self.n_slices)
-        for slice_index in r:
-            self.solve_slice_centers(slice_index, face_trackers, l1_white_tracker)
-
-    # def solve_slice_n_faces(
-    #         self, th: FacesTrackerHolder, l1_white_tracker: FaceTracker,
-    #         slice_index: int, n_faces: int
-    # ) -> None:
-    #     """Solve N faces of a specific slice (for debugging).
-    #
-    #     Args:
-    #         th: FacesTrackerHolder for face color tracking
-    #         l1_white_tracker: Layer 1 face tracker
-    #         slice_index: Which slice to solve (0 = closest to D)
-    #         n_faces: How many faces to solve (1-4)
-    #     """
-    #     # Get side face trackers (excluding L1 and opposite)
-    #     side_trackers = self.get_side_face_trackers(th, l1_white_tracker)
-    #
-    #     # Solve only the first n_faces
-    #     for i, face_tracker in enumerate(side_trackers[:n_faces]):
-    #         self._solve_face_index(l1_white_tracker, face_tracker, slice_index)
+        from cube.domain.solver.direct.lbl._lbl_config import NUMBER_OF_SLICES_TO_SOLVE
+        for slice_index in range(min(NUMBER_OF_SLICES_TO_SOLVE, self.n_slices)):
+            self._solve_slice_centers(slice_index, face_trackers, l1_white_tracker)

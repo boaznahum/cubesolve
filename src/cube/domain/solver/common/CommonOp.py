@@ -37,6 +37,7 @@ class EdgeSliceTracker:
         return s
 
 
+#claud: document all methods in this class with diagrams, ask me if something is not cleat
 class CommonOp:
     __slots__ = ["_slv",
                  "_start_color",

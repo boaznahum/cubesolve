@@ -273,16 +273,6 @@ class NxNCenters2(SolverElement):
 
                 yield rc
 
-    def _iterate_all_tracked_slices_and_index(self, target_face: FaceTracker) -> Iterator[
-            Tuple[CenterSlice, CenterSliceIndex]]:
-
-        for cs in target_face.face.center.all_slices:
-
-            if self._is_center_slice(cs) is not None:
-                rc = cs.index
-
-                yield cs, rc
-
     # noinspection PyMethodMayBeStatic
     def _is_cent_piece_solved(self, center_piece: CenterSlice) -> bool:
         # this si solver data not visualization
@@ -506,7 +496,7 @@ class NxNCenters2(SolverElement):
 
         color = target_face.color
 
-        if self.count_color_on_face(source_face.face, color) == 0:
+        if self._count_color_on_face(source_face.face, color) == 0:
             self.debug(f"Working on slice {slice_row_index} @ {target_face.color_at_face_str} Found no piece {color} on {source_face.face.color_at_face_str}")
             return False  # nothing can be done here
 
@@ -665,7 +655,7 @@ class NxNCenters2(SolverElement):
 
         return True
 
-    def count_color_on_face(self, face: Face, color: Color) -> int:
+    def _count_color_on_face(self, face: Face, color: Color) -> int:
         return self.cqr.count_color_on_face(face, color)
 
     def _2d_center_row_slice_iter(self, slice_index: int) -> Iterator[Point]:

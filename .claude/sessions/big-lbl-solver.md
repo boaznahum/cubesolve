@@ -44,7 +44,7 @@ else:
 ## Known Issues
 
 1. Slice index depends on cube orientation (commented at line 198-199)
-2. `is_slice_centers_solved` check disabled (line 199)
+2. `_is_slice_centers_solved` check disabled (line 199)
 
 ## Next Steps
 

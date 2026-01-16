@@ -487,7 +487,7 @@ def _solve_all_middle_slices(self, th: FacesTrackerHolder) -> None:
 
 1. **Slice-to-row conversion:**
    ```python
-   def slice_to_row(self, slice_index: int) -> int:
+   def _slice_to_row(self, slice_index: int) -> int:
        """Convert slice index (0=bottom) to row index on side faces."""
        return self.cube.n_slices - 1 - slice_index
    ```
@@ -515,7 +515,7 @@ def _solve_all_middle_slices(self, th: FacesTrackerHolder) -> None:
 
 #### Implementation Order
 
-1. **Add `slice_to_row()` helper**
+1. **Add `_slice_to_row()` helper**
 2. **Create `_solve_slice_centers(slice_index)` method**
 3. **Create `_is_slice_centers_solved(slice_index)` check**
 4. **Add `SolveStep.LBL_SLICE_CTR` enum value**

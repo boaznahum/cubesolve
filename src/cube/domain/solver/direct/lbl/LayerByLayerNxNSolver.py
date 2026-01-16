@@ -21,8 +21,6 @@ See docs/design/layer_by_layer_nxn.md for detailed design.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -33,10 +31,6 @@ from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
-
-if TYPE_CHECKING:
-    from cube.domain.model.Cube import Cube
-
 
 class LayerByLayerNxNSolver(BaseSolver):
     """
@@ -130,11 +124,6 @@ class LayerByLayerNxNSolver(BaseSolver):
             SolveStep.LBL_L1_Ctr,     # Layer 1 centers only
             SolveStep.L1x,            # Layer 1 cross (centers + edges)
             SolveStep.LBL_L1,         # Layer 1 complete
-            # Slice 0 granular steps (4 faces)
-            # SolveStep.LBL_S0F1,       # Slice 0 face 1
-            # SolveStep.LBL_S0F2,       # Slice 0 faces 1-2
-            # SolveStep.LBL_S0F3,       # Slice 0 faces 1-3
-            # SolveStep.LBL_S0F4,       # Slice 0 complete
             SolveStep.LBL_SLICES_CTR, # All middle slices centers
         ]
 
@@ -191,19 +180,6 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_layer1_corners(th)
                     self._solve_slices_centers(th)
                     # TODO: Add slice edges, last layer
-
-                # case SolveStep.LBL_S0F1 | SolveStep.LBL_S0F2 | SolveStep.LBL_S0F3 | SolveStep.LBL_S0F4:
-                #     # Solve Layer 1 + slice 0 up to N faces
-                #     self._solve_layer1_centers(th)
-                #     self._solve_layer1_edges(th)
-                #     self._solve_layer1_corners(th)
-                #     n_faces = {
-                #         SolveStep.LBL_S0F1: 1,
-                #         SolveStep.LBL_S0F2: 2,
-                #         SolveStep.LBL_S0F3: 3,
-                #         SolveStep.LBL_S0F4: 4,
-                #     }[what]
-                #     self._solve_slice_n_faces(th, slice_index=0, n_faces=n_faces)
 
                 case _:
                     raise ValueError(f"Unsupported step: {what}")
@@ -269,27 +245,6 @@ class LayerByLayerNxNSolver(BaseSolver):
     # =========================================================================
     # Private methods - Layer 1 solving
     # =========================================================================
-
-    def _solve_layer1(self, sr: SolverResults, th: FacesTrackerHolder) -> None:
-        """Solve Layer 1: centers → edges → corners."""
-
-        if self._is_layer1_solved(th):
-            self.debug("Layer 1 already solved")
-            return
-
-        l1_tracker = self._get_layer1_tracker(th)
-        with self.op.annotation.annotate(h1=f"Layer 1 ({l1_tracker.color.name} face)"):
-            # Step 1: Solve Layer 1 centers
-            if not self._is_layer1_centers_solved(th):
-                self._solve_layer1_centers(th)
-
-            # Step 2: Solve Layer 1 edges
-            if not self._is_layer1_edges_solved(th):
-                self._solve_layer1_edges(th)
-
-            # Step 3: Solve Layer 1 corners using shadow 3x3
-            if not self._is_layer1_corners_solved(th):
-                self._solve_layer1_corners(th)
 
     def _solve_layer1_centers(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 1 face centers."""
@@ -399,17 +354,6 @@ class LayerByLayerNxNSolver(BaseSolver):
             assert all(e.match_faces for e in shadow_l1.edges), "Shadow cube L1 edges not solved after solve_3x3"
             assert all(c.match_faces for c in shadow_l1.corners), "Shadow cube L1 corners not solved after solve_3x3"
 
-    def _copy_state_to_shadow(self, shadow: "Cube", th: FacesTrackerHolder) -> None:
-        """Copy corner/edge state from NxN cube to shadow 3x3."""
-        # Get colors from NxN cube as 3x3 snapshot
-        colors_3x3 = self._cube.get_3x3_colors()
-
-        # Override centers with face_colors mapping
-        modified = colors_3x3.with_centers(th.get_face_colors())
-
-        # Apply to shadow cube
-        shadow.set_3x3_colors(modified)
-
     # =========================================================================
     # Private methods - Middle slices solving
     # =========================================================================
@@ -423,16 +367,3 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         with self.op.annotation.annotate(h2="Middle slices centers"):
             self._lbl_slices.solve_all_slice_centers(face_trackers, l1_tracker)
-
-    # def _solve_slice_n_faces(self, th: FacesTrackerHolder, slice_index: int, n_faces: int) -> None:
-    #     """Solve N faces of a specific slice (for debugging).
-    #
-    #     Args:
-    #         th: Tracker holder
-    #         slice_index: Which slice (0 = first middle slice)
-    #         n_faces: How many faces to solve (1-4)
-    #     """
-    #     l1_tracker = self._get_layer1_tracker(th)
-    #
-    #     with self.op.annotation.annotate(h2=f"Slice {slice_index}, {n_faces} faces"):
-    #         self._lbl_slices.solve_slice_n_faces(th, l1_tracker, slice_index, n_faces)
