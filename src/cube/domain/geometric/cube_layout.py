@@ -359,26 +359,57 @@ class CubeLayout(Protocol):
         Example:
             layout.get_slice_sandwiched_between_face_and_opposite(FaceName.D)  # SliceName.E
             layout.get_slice_sandwiched_between_face_and_opposite(FaceName.L)  # SliceName.M
+
+        Relationship with get_slice_name_parallel_to_face:
+            These two methods are COMPLEMENTS - they partition the 3 slices:
+            - sandwiched: returns the ONE slice whose axis includes this face
+            - parallel: returns a slice whose axis does NOT include this face
+
+            For any face, sandwiched and parallel return DIFFERENT slices.
+
+            ::
+
+                Face │ sandwiched │ parallel
+                ─────┼────────────┼──────────
+                 U   │     E      │    S
+                 D   │     E      │    S
+                 L   │     M      │    S
+                 R   │     M      │    S
+                 F   │     S      │    M
+                 B   │     S      │    M
         """
         ...
 
     @abstractmethod
     def get_slice_name_parallel_to_face(self, face: FaceName) -> SliceName:
-        """Find which slice is parallel to a face.
+        """Find a slice whose axis does NOT include this face.
 
-        A slice is parallel to a face if the face is NOT on the slice's axis.
-        - M: axis = L/R → parallel to U, D, F, B
-        - E: axis = U/D → parallel to L, R, F, B
-        - S: axis = F/B → parallel to U, D, L, R
+        NAMING NOTE: "parallel" here means the slice does NOT pass through the face,
+        so rotating this slice affects the given face. This is the opposite of
+        geometric parallelism (where the slice plane would be parallel to the face).
+
+        Each slice has an axis (the two faces it's sandwiched between):
+        - M: axis = L/R → does NOT include U, D, F, B
+        - E: axis = U/D → does NOT include L, R, F, B
+        - S: axis = F/B → does NOT include U, D, L, R
+
+        Returns the FIRST matching slice (iteration order: S, M, E).
 
         Args:
-            face: The face to find a parallel slice for.
+            face: The face to find a non-axis slice for.
 
         Returns:
-            SliceName of the slice parallel to this face.
+            SliceName of a slice whose axis does not include this face:
+            - U, D, L, R → SliceName.S (first match)
+            - F, B → SliceName.M (S doesn't match since F/B are on S's axis)
 
         Example:
-            layout.get_slice_parallel_to_face(FaceName.U)  # SliceName.E
+            layout.get_slice_name_parallel_to_face(FaceName.U)  # SliceName.S
+            layout.get_slice_name_parallel_to_face(FaceName.F)  # SliceName.M
+
+        See Also:
+            get_slice_sandwiched_between_face_and_opposite: Returns the slice whose
+            axis DOES include this face (the complement of this method).
         """
         ...
 
