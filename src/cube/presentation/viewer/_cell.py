@@ -22,7 +22,7 @@ from cube.domain.model import (
 from cube.domain.geometric.cube_boy import Color
 from cube.domain.model.Face import Face
 from cube.application.markers import MarkerConfig, MarkerShape, get_markers_from_part_edge
-from cube.utils import geometry
+from cube.domain.geometric import geometry_utils as geometry
 from cube.utils.config_protocol import ConfigProtocol
 
 from ..gui.protocols import Renderer

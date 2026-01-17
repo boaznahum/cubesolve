@@ -6,7 +6,9 @@ from cube.domain.exceptions import GeometryError, GeometryErrorCode
 from cube.domain.geometric.geometry_types import CLGColRow, SliceIndexComputerUnit
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model._elements import EdgePosition
-from cube.utils.geometry import inv
+from cube.domain.geometric.geometry_utils import inv
+from cube.utils.Cache import CacheManager
+from cube.utils.service_provider import IServiceProvider
 
 if TYPE_CHECKING:
     from cube.domain.model.SliceName import SliceName
@@ -255,9 +257,14 @@ class SliceLayout(Protocol):
 
 class _SliceLayout(SliceLayout):
 
-    def __init__(self, slice_name: "SliceName", layout: "_CubeLayout"):
+    def __init__(self, slice_name: "SliceName",
+                 layout: "_CubeLayout",
+                 sp: IServiceProvider):
         self._slice_name = slice_name
         self._cube_layout: _CubeLayout = layout
+
+        self._cache_manager = CacheManager.create(sp.config)
+
 
     def get_face_name(self) -> "FaceName":
         """
@@ -334,8 +341,8 @@ class _SliceLayout(SliceLayout):
                 return CLGColRow.COL
 
         # Use cache manager from layout
-        cache_key = ("SliceLayout.does_slice_cut_rows_or_columns", self._slice_name, face_name)
-        cache = self._cube_layout.cache_manager.get(cache_key, CLGColRow)
+        cache_key = ("does_slice_cut_rows_or_columns", face_name)
+        cache = self._cache_manager.get(cache_key, CLGColRow)
         return cache.compute(compute)
 
     def is_horizontal_on_face(self, face_name: "FaceName") -> bool:
@@ -397,8 +404,8 @@ class _SliceLayout(SliceLayout):
                 return False
 
         # Use cache manager from layout
-        cache_key = ("SliceLayout.does_slice_of_face_start_with_face", self._slice_name, face_name)
-        cache = self._cube_layout.cache_manager.get(cache_key, bool)
+        cache_key = ("does_slice_of_face_start_with_face", face_name)
+        cache = self._cache_manager.get(cache_key, bool)
         return cache.compute(compute)
 
     def distance_from_face_to_slice_index(self, face_name: FaceName,
@@ -485,8 +492,8 @@ class _SliceLayout(SliceLayout):
                     return lambda row, col, n_slices: n_slices - row
 
         # Use cache manager from layout - cache by slice_name only (size-independent!)
-        cache_key = ("SliceLayout.create_slice_index_computer", (self._slice_name, face_name))
-        cache = self._cube_layout.cache_manager.get(cache_key, SliceIndexComputerUnit)
+        cache_key = ("create_slice_index_computer", (face_name,))
+        cache = self._cache_manager.get(cache_key, SliceIndexComputerUnit)
         return cache.compute(compute, disable_cache=False)
 
     def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
@@ -642,6 +649,6 @@ class _SliceLayout(SliceLayout):
             )
 
         # Use cache manager from layout - cache by slice_name only (size-independent!)
-        cache_key = ("SliceLayout.create_walking_info_unit", self._slice_name)
-        cache = self._cube_layout.cache_manager.get(cache_key, CubeWalkingInfoUnit)
+        cache_key = ("create_walking_info_unit", ())
+        cache = self._cache_manager.get(cache_key, CubeWalkingInfoUnit)
         return cache.compute(compute)

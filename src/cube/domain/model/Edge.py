@@ -6,7 +6,7 @@ from cube.domain.model._elements import SliceIndex
 from cube.domain.model.PartSlice import EdgeWing, PartSlice
 from cube.domain.model.Part import Part
 from cube.domain.model.PartEdge import PartEdge
-from cube.utils import geometry
+from cube.domain.geometric import geometry_utils as geometry
 
 from ._elements import EdgeSliceIndex
 from ._part import EdgeName, _faces_2_edge_name

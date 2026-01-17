@@ -93,9 +93,9 @@ class _CubeLayout(CubeLayout):
         self._cache_manager = CacheManager.create(sp.config)
 
         self._slices: Mapping[SliceName, SliceLayout] = {
-            SliceName.S: _SliceLayout(SliceName.S, self),
-            SliceName.E: _SliceLayout(SliceName.E, self),
-            SliceName.M: _SliceLayout(SliceName.M, self),
+            SliceName.S: _SliceLayout(SliceName.S, self, sp),
+            SliceName.E: _SliceLayout(SliceName.E, self, sp),
+            SliceName.M: _SliceLayout(SliceName.M, self, sp),
         }
 
         # Lazy-initialized internal 3x3 cube for geometry queries
