@@ -176,6 +176,7 @@ from .SliceName import SliceName
 from .SuperElement import SuperElement
 from cube.utils.Cache import CacheManager
 from ..geometric.geometry_types import CLGColRow, SliceIndexComputerUnit
+from ..geometric.slice_layout import SliceLayout
 
 if TYPE_CHECKING:
     # noinspection PyUnresolvedReferences
@@ -217,8 +218,12 @@ class Slice(SuperElement):
         self._edges: Sequence[Edge] = [left_top, right_top, right_bottom, left_bottom]
         self._centers: Sequence[Center] = [top, left, bottom, right]
 
+        self._slice_layout : SliceLayout = cube.layout.get_slice(name)
+
         # Create cache manager for this slice (CacheManagerImpl or CacheManagerNull based on config)
         self._cache_manager = CacheManager.create(cube.config)
+
+
 
         self.set_parts(
             left_top, top, right_top,
@@ -607,7 +612,7 @@ class Slice(SuperElement):
 
     def compute_slice_index(self,
             layout: "CubeLayout",
-            source_face: FaceName,
+            face: FaceName,
             slice_name: SliceName,
             coord: tuple[int, int],
             n_slices: int
@@ -628,5 +633,6 @@ class Slice(SuperElement):
             1-based slice index in range [1, n_slices], suitable for SliceAlg[index]
         """
         row, col = coord
-        computer = self._create_slice_index_computer(layout, slice_name, source_face)
+        computer = self._slice_layout.create_slice_index_computer(face)
+        #computer = self._create_slice_index_computer(layout, slice_name, face)
         return computer(row, col, n_slices)

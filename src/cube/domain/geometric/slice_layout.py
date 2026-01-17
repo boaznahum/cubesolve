@@ -188,14 +188,12 @@ class SliceLayout(Protocol):
         """
         ...
 
-    def create_slice_index_computer(self,
-            layout: "CubeLayout",
-            slice_name: SliceName,
-            face_name: FaceName
-    ) -> SliceIndexComputerUnit:
+    def create_slice_index_computer(self, face_name: FaceName) -> SliceIndexComputerUnit:
         """
 
         claude: fix it it is not 1 based, search all code for this mistake
+        calude:tis method should be combined with walking info
+
         Create a function that computes 1-based slice index from (row, col, n_slices).
 
         The returned function encapsulates the geometry-derived formula for this
@@ -218,23 +216,7 @@ class SliceLayout(Protocol):
         Returns:
             A function (row, col, n_slices) -> slice_index (1-based)
         """
-        slice_layout = layout.get_slice(slice_name)
-        cuts_rows = slice_layout.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW
-        starts_aligned = slice_layout.does_slice_of_face_start_with_face(face_name)
-
-        # Determine which coordinate to use and whether to invert
-        if cuts_rows:
-            # Vertical slice - column identifies which slice
-            if starts_aligned:
-                return lambda row, col, n_slices: col + 1
-            else:
-                return lambda row, col, n_slices: n_slices - col
-        else:
-            # Horizontal slice - row identifies which slice
-            if starts_aligned:
-                return lambda row, col, n_slices: row + 1
-            else:
-                return lambda row, col, n_slices: n_slices - row
+        pass
 
 
 
@@ -457,11 +439,7 @@ class _SliceLayout(SliceLayout):
 
             return inv(n_slices, distance_from_face)
 
-    def create_slice_index_computer(self,
-            layout: "CubeLayout",
-            slice_name: SliceName,
-            face_name: FaceName
-    ) -> SliceIndexComputerUnit:
+    def create_slice_index_computer(self, face_name: FaceName) -> SliceIndexComputerUnit:
         """
 
         claude: fix it it is not 1 based, search all code for this mistake
@@ -487,23 +465,29 @@ class _SliceLayout(SliceLayout):
         Returns:
             A function (row, col, n_slices) -> slice_index (1-based)
         """
-        slice_layout = layout.get_slice(slice_name)
-        cuts_rows = slice_layout.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW
-        starts_aligned = slice_layout.does_slice_of_face_start_with_face(face_name)
 
-        # Determine which coordinate to use and whether to invert
-        if cuts_rows:
-            # Vertical slice - column identifies which slice
-            if starts_aligned:
-                return lambda row, col, n_slices: col + 1
+        def compute():
+            cuts_rows = self.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW
+            starts_aligned = self.does_slice_of_face_start_with_face(face_name)
+
+            # Determine which coordinate to use and whether to invert
+            if cuts_rows:
+                # Vertical slice - column identifies which slice
+                if starts_aligned:
+                    return lambda row, col, n_slices: col + 1
+                else:
+                    return lambda row, col, n_slices: n_slices - col
             else:
-                return lambda row, col, n_slices: n_slices - col
-        else:
-            # Horizontal slice - row identifies which slice
-            if starts_aligned:
-                return lambda row, col, n_slices: row + 1
-            else:
-                return lambda row, col, n_slices: n_slices - row
+                # Horizontal slice - row identifies which slice
+                if starts_aligned:
+                    return lambda row, col, n_slices: row + 1
+                else:
+                    return lambda row, col, n_slices: n_slices - row
+
+        # Use cache manager from layout - cache by slice_name only (size-independent!)
+        cache_key = ("SliceLayout.create_slice_index_computer", (self._slice_name, face_name))
+        cache = self._cube_layout.cache_manager.get(cache_key, SliceIndexComputerUnit)
+        return cache.compute(compute, disable_cache=False)
 
     def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
         """
