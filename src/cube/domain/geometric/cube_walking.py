@@ -69,6 +69,36 @@ See also:
 - Slice.py module docstring for detailed slice traversal diagrams
 
 ================================================================================
+FACE CONTIGUITY GUARANTEE
+================================================================================
+
+The ONLY topological guarantee for slice traversal is that the 4 faces are
+CONTIGUOUS - each face shares an edge with its neighbors in the cycle.
+
+    Face[i] shares an edge with Face[(i+1) % 4]
+
+This means:
+- Faces appear in connected order (no "jumping" across the cube)
+- Each FaceWalkingInfo.edge is the shared edge with the PREVIOUS face
+- The cycle is closed: Face[3] shares an edge with Face[0]
+
+What is NOT guaranteed:
+- Specific starting face (implementation detail)
+- Absolute coordinates on any face
+- Direction of traversal (only relative order matters)
+
+The PointComputer callback abstracts away all coordinate details - it computes
+the correct (row, col) for any (slice_index, slot) pair, accounting for:
+- Edge orientation (horizontal vs vertical)
+- Coordinate inversions on certain faces
+- Reference point placement
+
+Callers should rely ONLY on:
+1. Contiguity: faces are connected in cycle order
+2. Consistency: same (slice_index, slot) reaches corresponding positions
+3. The compute_point() API, not internal coordinate logic
+
+================================================================================
 USAGE
 ================================================================================
 
@@ -110,6 +140,13 @@ UnitPointComputer = Callable[[int , # n slices
                               int   # col
                               ], Point]  # (slice_index, slot) -> Point
 
+# Type alias for reverse computation: (row, col) -> (slice_index, slot) (with n_slices baked in)
+# This is the exact inverse of PointComputer
+ReversePointComputer = Callable[[int, int], tuple[int, int]]  # (row, col) -> (slice_index, slot)
+
+# Type alias for size-independent reverse computation: (row, col, n_slices) -> (slice_index, slot)
+UnitReversePointComputer = Callable[[int, int, int], tuple[int, int]]  # (row, col, n_slices) -> (slice_index, slot)
+
 
 @dataclass(frozen=True)
 class FaceWalkingInfo:
@@ -149,12 +186,21 @@ class FaceWalkingInfo:
     reference_point: Point
     n_slices: int  # boaz:why itis needed per face ?
     _compute: PointComputer = field(compare=False)  # Don't compare functions
+    _compute_reverse: ReversePointComputer = field(compare=False)  # (row, col) -> (slice_index, slot)
 
     def compute_point(self, slice_index: int, slot: int) -> Point:
         """
         Compute (row, col) for a given slice_index and slot position.
 
-        This uses the precomputed function - no runtime decisions.
+        FACE CONTIGUITY GUARANTEE:
+        This function abstracts away all coordinate details. Callers should
+        rely ONLY on:
+        1. Contiguity: faces are connected in cycle order (share edges)
+        2. Consistency: same (slice_index, slot) reaches corresponding positions
+        3. This API, not internal coordinate logic
+
+        The function handles edge orientation, coordinate inversions, and reference
+        point placement internally.
 
         Args:
             slice_index: Which slice (0 to n_slices-1)
@@ -177,6 +223,29 @@ class FaceWalkingInfo:
         """
         for slot in range(self.n_slices):
             yield self._compute(slice_index, slot)
+
+    def compute_reverse(self, row: int, col: int) -> tuple[int, int]:
+        """
+        Compute (slice_index, slot) for a given (row, col) coordinate.
+
+        This is the EXACT INVERSE of compute_point. For any valid coordinate:
+            compute_reverse(*compute_point(si, sl)) == (si, sl)  # Always true
+
+        FACE CONTIGUITY GUARANTEE:
+        This function abstracts away all coordinate details. Callers should
+        rely ONLY on:
+        1. Contiguity: faces are connected in cycle order (share edges)
+        2. Consistency: same (row, col) maps back to same (slice_index, slot)
+        3. This API, not internal coordinate logic
+
+        Args:
+            row: Row coordinate on this face
+            col: Column coordinate on this face
+
+        Returns:
+            (slice_index, slot) where both are in range [0, n_slices-1]
+        """
+        return self._compute_reverse(row, col)
 
 @dataclass(frozen=True)
 class FaceWalkingInfoUnit:
@@ -216,7 +285,7 @@ class FaceWalkingInfoUnit:
     reference_point: Point
     n_slices: int
     _compute: UnitPointComputer = field(compare=False)  # Don't compare functions
-
+    _compute_reverse: UnitReversePointComputer = field(compare=False)  # (row, col, n_slices) -> (slice_index, slot)
 
     def get_reference_point(self, actual_n_slices: int):
         """
@@ -247,10 +316,50 @@ class FaceWalkingInfoUnit:
 
 
     def get_compute(self, n_slices_actual: int) -> PointComputer:
+        """
+        Get forward computer with n_slices baked in: (slice_index, slot) -> (row, col).
 
+        FACE CONTIGUITY GUARANTEE:
+        The returned function abstracts away all coordinate details. Callers should
+        rely ONLY on:
+        1. Contiguity: faces are connected in cycle order (share edges)
+        2. Consistency: same (slice_index, slot) reaches corresponding positions
+        3. This API, not internal coordinate logic
+
+        The function handles edge orientation, coordinate inversions, and reference
+        point placement internally.
+
+        Args:
+            n_slices_actual: The actual cube's n_slices value
+
+        Returns:
+            Function (slice_index, slot) -> (row, col) in LTR coordinates
+        """
         return lambda r, c: self._compute(n_slices_actual, r, c)
 
+    def get_compute_reverse(self, n_slices_actual: int) -> ReversePointComputer:
+        """
+        Get reverse computer with n_slices baked in: (row, col) -> (slice_index, slot).
 
+        This is the EXACT INVERSE of get_compute(). For any valid coordinate:
+            compute = get_compute(n)
+            reverse = get_compute_reverse(n)
+            reverse(*compute(si, sl)) == (si, sl)  # Always true
+
+        FACE CONTIGUITY GUARANTEE:
+        The returned function abstracts away all coordinate details. Callers should
+        rely ONLY on:
+        1. Contiguity: faces are connected in cycle order (share edges)
+        2. Consistency: same (row, col) maps back to same (slice_index, slot)
+        3. This API, not internal coordinate logic
+
+        Args:
+            n_slices_actual: The actual cube's n_slices value
+
+        Returns:
+            Function (row, col) -> (slice_index, slot)
+        """
+        return lambda r, c: self._compute_reverse(r, c, n_slices_actual)
 
 
 

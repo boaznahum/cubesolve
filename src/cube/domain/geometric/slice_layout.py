@@ -608,6 +608,44 @@ class _SliceLayout(SliceLayout):
             def _compute_v(actual_n_slices: int, si: int, sl: int) -> Point:
                 return (si, sl)
 
+            # Reverse computation functions - 8 combinations matching forward functions
+            # Each returns (slice_index, slot) - the exact inverse of forward
+            # Note: slot_inverted affects BOTH forward and reverse (slot coordinate)
+            # Forward: _compute_h(n, si, sl) -> (sl, si) means row=slot, col=slice_index
+            # Reverse: (row, col) -> (slice_index, slot)
+            def _reverse_h_si_ii(row: int, col: int, n_slices: int) -> tuple[int, int]:
+                # Forward: (inv(sl), inv(si)) -> reverse: (inv(col), inv(row))
+                return (actual_inv(n_slices, col), actual_inv(n_slices, row))
+
+            def _reverse_h_si(row: int, col: int, n_slices: int) -> tuple[int, int]:
+                # Forward: (inv(sl), si) -> reverse: (col, inv(row))
+                return (col, actual_inv(n_slices, row))
+
+            def _reverse_h_ii(row: int, col: int, n_slices: int) -> tuple[int, int]:
+                # Forward: (sl, inv(si)) -> reverse: (inv(col), row)
+                return (actual_inv(n_slices, col), row)
+
+            def _reverse_h(row: int, col: int, n_slices: int) -> tuple[int, int]:
+                # Forward: (sl, si) -> reverse: (col, row)
+                return (col, row)
+
+            # Forward: _compute_v(n, si, sl) -> (si, sl) means row=slice_index, col=slot
+            def _reverse_v_si_ii(row: int, col: int, n_slices: int) -> tuple[int, int]:
+                # Forward: (inv(si), inv(sl)) -> reverse: (inv(row), inv(col))
+                return (actual_inv(n_slices, row), actual_inv(n_slices, col))
+
+            def _reverse_v_si(row: int, col: int, n_slices: int) -> tuple[int, int]:
+                # Forward: (si, inv(sl)) -> reverse: (row, inv(col))
+                return (row, actual_inv(n_slices, col))
+
+            def _reverse_v_ii(row: int, col: int, n_slices: int) -> tuple[int, int]:
+                # Forward: (inv(si), sl) -> reverse: (inv(row), col)
+                return (actual_inv(n_slices, row), col)
+
+            def _reverse_v(row: int, col: int, n_slices: int) -> tuple[int, int]:
+                # Forward: (si, sl) -> reverse: (row, col)
+                return (row, col)
+
             for iteration in range(4):
                 # Determine edge properties
                 is_horizontal = current_face.is_bottom_or_top(current_edge)
@@ -623,30 +661,28 @@ class _SliceLayout(SliceLayout):
                 else:
                     reference_point = (current_index, inv(slot) if is_slot_inverted else slot)
 
-                # Select precomputed point function based on edge properties
-                if is_horizontal and is_slot_inverted and is_index_inverted:
-                    compute_fn = _compute_h_si_ii
-                elif is_horizontal and is_slot_inverted and not is_index_inverted:
-                    compute_fn = _compute_h_si
-                elif is_horizontal and not is_slot_inverted and is_index_inverted:
-                    compute_fn = _compute_h_ii
-                elif is_horizontal and not is_slot_inverted and not is_index_inverted:
-                    compute_fn = _compute_h
-                elif not is_horizontal and is_slot_inverted and is_index_inverted:
-                    compute_fn = _compute_v_si_ii
-                elif not is_horizontal and is_slot_inverted and not is_index_inverted:
-                    compute_fn = _compute_v_si
-                elif not is_horizontal and not is_slot_inverted and is_index_inverted:
-                    compute_fn = _compute_v_ii
-                else:
-                    compute_fn = _compute_v
+                # Lookup table: (is_horizontal, is_slot_inverted, is_index_inverted) -> (forward, reverse)
+                # Forward: (slice_index, slot) -> (row, col)
+                # Reverse: (row, col) -> (slice_index, slot)
+                compute_lookup = {
+                    (True, True, True): (_compute_h_si_ii, _reverse_h_si_ii),
+                    (True, True, False): (_compute_h_si, _reverse_h_si),
+                    (True, False, True): (_compute_h_ii, _reverse_h_ii),
+                    (True, False, False): (_compute_h, _reverse_h),
+                    (False, True, True): (_compute_v_si_ii, _reverse_v_si_ii),
+                    (False, True, False): (_compute_v_si, _reverse_v_si),
+                    (False, False, True): (_compute_v_ii, _reverse_v_ii),
+                    (False, False, False): (_compute_v, _reverse_v),
+                }
+                compute_fn, reverse_fn = compute_lookup[(is_horizontal, is_slot_inverted, is_index_inverted)]
 
                 face_infos.append(FaceWalkingInfoUnit(
                     face_name=current_face.name,
                     edge_name=current_edge.name,
                     reference_point=reference_point,
                     n_slices=fake_n_slices,
-                    _compute=compute_fn
+                    _compute=compute_fn,
+                    _compute_reverse=reverse_fn
                 ))
 
                 # Move to next face (except after the 4th)

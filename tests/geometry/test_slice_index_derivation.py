@@ -119,3 +119,40 @@ class TestSliceIndexAgainstWalkingInfo:
                             f"slice_idx={slice_idx_0based}, slot={slot} -> point={point} -> "
                             f"computed={computed_0based} (expected {slice_idx_0based})"
                         )
+
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES)
+    def test_compute_reverse_is_exact_inverse_of_compute_point(self, cube_size: int) -> None:
+        """
+        Verify FaceWalkingInfo.compute_reverse is the exact inverse of compute_point.
+
+        For every (slice_index, slot):
+        1. compute_point(slice_index, slot) -> (row, col)
+        2. compute_reverse(row, col) -> (slice_index', slot')
+        3. Verify (slice_index', slot') == (slice_index, slot)
+        """
+        cube = Cube(cube_size, _test_sp)
+        n_slices = cube.n_slices
+
+        if n_slices == 0:
+            pytest.skip("No inner slices for this cube size")
+
+        for slice_name in SliceName:
+            walking_info = cube.sized_layout.create_walking_info(slice_name)
+
+            for face_info in walking_info:
+                face_name = face_info.face.name
+
+                for slice_idx in range(n_slices):
+                    for slot in range(n_slices):
+                        # Forward: (slice_index, slot) -> (row, col)
+                        point = face_info.compute_point(slice_idx, slot)
+                        row, col = point
+
+                        # Reverse: (row, col) -> (slice_index, slot)
+                        computed_slice_idx, computed_slot = face_info.compute_reverse(row, col)
+
+                        assert (computed_slice_idx, computed_slot) == (slice_idx, slot), (
+                            f"Cube {cube_size}, {slice_name.name} on {face_name.name}: "
+                            f"({slice_idx}, {slot}) -> {point} -> "
+                            f"({computed_slice_idx}, {computed_slot}) (expected ({slice_idx}, {slot}))"
+                        )

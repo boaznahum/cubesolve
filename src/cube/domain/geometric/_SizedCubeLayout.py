@@ -20,7 +20,10 @@ from typing import TYPE_CHECKING, Iterator
 
 from cube.domain.geometric.geometry_types import CLGColRow
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
-from cube.domain.geometric.cube_walking import CubeWalkingInfo, CubeWalkingInfoUnit, FaceWalkingInfo, PointComputer
+from cube.domain.geometric.cube_walking import (
+    CubeWalkingInfo, CubeWalkingInfoUnit, FaceWalkingInfo,
+    PointComputer, ReversePointComputer
+)
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.types import Point
 from cube.domain.model.Edge import Edge
@@ -139,13 +142,15 @@ class _SizedCubeLayout(SizedCubeLayout):
                 edge: Edge = cube.edge(uf.edge_name)
                 reference_point: Point = uf.get_reference_point(n_slices)
                 compute_fn: PointComputer = uf.get_compute(n_slices)
+                compute_reverse_fn: ReversePointComputer = uf.get_compute_reverse(n_slices)
 
                 sized_face_info: FaceWalkingInfo = FaceWalkingInfo(
                     face=face,
                     edge=edge,
                     reference_point=reference_point,
                     n_slices=n_slices,
-                    _compute=compute_fn
+                    _compute=compute_fn,
+                    _compute_reverse=compute_reverse_fn
                 )
 
                 sized_faces.append(sized_face_info)
