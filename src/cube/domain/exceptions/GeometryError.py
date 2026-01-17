@@ -15,6 +15,7 @@ class GeometryErrorCode(Enum):
     INVALID_FACE = auto()    # unknown or invalid face
     INVALID_PRESERVE_ROTATION = auto()  # can't reach target while preserving face
     FACE_NOT_PARALLEL_TO_SLICE = auto()  # face must be parallel to slice (e.g., L/R for M slice)
+    FACE_IS_PARALLEL_TO_SLICE = auto()   # face must be cut by slice, not parallel to it
 
 
 class GeometryError(Exception):

@@ -63,15 +63,17 @@ class SliceLayout(Protocol):
 
     def get_slice_rotation_faces(self) -> Tuple[FaceName, FaceName]:
         """
-        claude: document his, return the two faces that parallel to slice, the rotation face in its
-        opposite face
-        see get_slice_rotation_face
-        claude: this is SliceLayout method, need to resolve and delegate
+        Get the two faces that the slice is parallel to.
 
-        !!! same as get_face_name  !!!
+        Returns:
+            A tuple of (rotation_face, opposite_face):
+            - rotation_face: The face that defines the slice's rotation direction
+            - opposite_face: The face opposite to rotation_face
 
-        :param face:
-        :return:
+            Examples:
+                M slice → (L, R) - parallel to L and R, rotates like L
+                E slice → (D, U) - parallel to D and U, rotates like D
+                S slice → (F, B) - parallel to F and B, rotates like F
         """
         ...
 
@@ -174,19 +176,32 @@ class SliceLayout(Protocol):
         """
         ...
 
-    def distance_from_face_to_slice_index(self, face_name: FaceName, distance_from_face:int,
-                                          n_slices: int  # not belong to layout this is sized slice
+    def distance_from_face_to_slice_index(self, face_name: FaceName,
+                                          distance_from_face: int,
+                                          n_slices: int
                                           ) -> int:
         """
-        claude: document it nicely with diagrams and fix my broken english
+        Convert distance from a parallel face to slice index.
 
-        Give a distance from face parallel to slice, find the slice index on this face
+        Given a face that is parallel to the slice and a distance from that face,
+        return the corresponding 0-based slice index.
 
+        Args:
+            face_name: A face parallel to the slice (must be rotation_face or opposite_face)
+            distance_from_face: 0-based distance from the face (0 = closest to face)
+            n_slices: Total number of inner slices (cube.size - 2)
 
-        :param n_slices:
-        :param distance_from_face:
-        :param face_name: 0..n_slices-1
-        :return:
+        Returns:
+            0-based slice index in range [0, n_slices-1]
+
+        Example for M slice (parallel to L and R) with n_slices=3:
+            - distance_from_face_to_slice_index(L, 0, 3) → 0 (closest to L)
+            - distance_from_face_to_slice_index(L, 2, 3) → 2 (farthest from L)
+            - distance_from_face_to_slice_index(R, 0, 3) → 2 (closest to R = farthest from L)
+            - distance_from_face_to_slice_index(R, 2, 3) → 0 (farthest from R = closest to L)
+
+        Raises:
+            GeometryError: If face_name is not parallel to this slice
         """
         ...
 
@@ -282,15 +297,17 @@ class _SliceLayout(SliceLayout):
 
     def get_slice_rotation_faces(self) -> Tuple[FaceName, FaceName]:
         """
-        claude: document his, return the two faces that parallel to slice, the rotation face in its
-        opposite face
-        see get_slice_rotation_face
-        claude: this is SliceLayout method, need to resolve and delegate
+        Get the two faces that the slice is parallel to.
 
-        !!! same as get_face_name  !!!
+        Returns:
+            A tuple of (rotation_face, opposite_face):
+            - rotation_face: The face that defines the slice's rotation direction
+            - opposite_face: The face opposite to rotation_face
 
-        :param face:
-        :return: Tuple[FaceName, FaceName]  !!!! first is always the rotation face
+            Examples:
+                M slice → (L, R) - parallel to L and R, rotates like L
+                E slice → (D, U) - parallel to D and U, rotates like D
+                S slice → (F, B) - parallel to F and B, rotates like F
         """
         rotation_face: FaceName = self.get_slice_rotation_face()
         opposite: FaceName = self._cube_layout.opposite(rotation_face)
@@ -376,12 +393,12 @@ class _SliceLayout(SliceLayout):
         - The slice's rotation face (from _SLICE_ROTATION_FACE)
         - The face's position relative to that rotation face
 
-        claude: distance_from_face_to_slice_index is much simpler , and this one contains
-        bug even if slice is not between two faces it return false. instead of throwing error
-
         Returns:
             True  → slice[0] aligns with face's row/col 0 (natural start)
             False → slice[0] aligns with face's row/col (n_slices-1) (inverted)
+
+        Raises:
+            GeometryError: If face_name is parallel to the slice (not cut by it)
         """
         assert self._cube_layout
 
@@ -389,8 +406,16 @@ class _SliceLayout(SliceLayout):
             # Get the rotation face (slice[0] is closest to it)
             rotation_face_name = self.get_face_name()
 
-            # Check which edge position connects face_name to rotation_face
+            # Validate: face must be cut by slice, not parallel to it
             assert self._cube_layout is not None
+            parallel_faces = self.get_slice_rotation_faces()
+            if face_name in parallel_faces:
+                raise GeometryError(
+                    GeometryErrorCode.FACE_IS_PARALLEL_TO_SLICE,
+                    f"Face {face_name} is parallel to {self._slice_name}, expected a face cut by it"
+                )
+
+            # Check which edge position connects face_name to rotation_face
             left_neighbor = self._cube_layout.get_face_neighbor(face_name, EdgePosition.LEFT)
             bottom_neighbor = self._cube_layout.get_face_neighbor(face_name, EdgePosition.BOTTOM)
 
@@ -410,22 +435,31 @@ class _SliceLayout(SliceLayout):
 
     def distance_from_face_to_slice_index(self, face_name: FaceName,
                                           distance_from_face: int,
-                                          n_slices: int  # not belong tolayout this is sized slice
+                                          n_slices: int
                                           ) -> int:
         """
-        claude: document it nicely with diagrams and fix my brokenenglish
+        Convert distance from a parallel face to slice index.
 
-        Give a distance from face parallel to slice, find the slice index on this face
+        Given a face that is parallel to the slice and a distance from that face,
+        return the corresponding 0-based slice index.
 
-        claude: thismethod not belong here should be oved to Slice, it is sided inforamtion, add protocol for Slice
+        Args:
+            face_name: A face parallel to the slice (must be rotation_face or opposite_face)
+            distance_from_face: 0-based distance from the face (0 = closest to face)
+            n_slices: Total number of inner slices (cube.size - 2)
 
+        Returns:
+            0-based slice index in range [0, n_slices-1]
 
+        Example for M slice (parallel to L and R) with n_slices=3:
+            - distance_from_face_to_slice_index(L, 0, 3) → 0 (closest to L)
+            - distance_from_face_to_slice_index(L, 2, 3) → 2 (farthest from L)
+            - distance_from_face_to_slice_index(R, 0, 3) → 2 (closest to R = farthest from L)
+            - distance_from_face_to_slice_index(R, 2, 3) → 0 (farthest from R = closest to L)
 
-        :param distance_from_face:
-        :param face_name: 0..n_slices-1
-        :return:
+        Raises:
+            GeometryError: If face_name is not parallel to this slice
         """
-
         faces: tuple[FaceName, FaceName] = self.get_slice_rotation_faces()
 
         if face_name not in faces:

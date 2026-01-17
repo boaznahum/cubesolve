@@ -87,12 +87,14 @@ class _SizedCubeLayout(SizedCubeLayout):
 
     def get_slice(self, slice_name: SliceName) -> "Slice":
         """
-        claude: document this, see usages
-        :rtype: "Slice"
-        :param slice_name:
-        :return:
-        """
+        Get the Slice object for the given slice name.
 
+        Args:
+            slice_name: Which slice to get (M, E, or S)
+
+        Returns:
+            The Slice object from the underlying cube
+        """
         return self._cube.get_slice(slice_name)
 
     @property

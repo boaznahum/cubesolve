@@ -416,12 +416,20 @@ class CubeLayout(Protocol):
 
     def get_slice_rotation_faces(self, slice_name: SliceName) -> Tuple[FaceName, FaceName]:
         """
-        claude: document his, return the two faces that parallel to slice, the rotation face in its
-        opposite face
-        see get_slice_rotation_face
-        :param slice_name:
-        :param face:
-        :return:
+        Get the two faces that the slice is parallel to.
+
+        Args:
+            slice_name: Which slice (M, E, or S)
+
+        Returns:
+            A tuple of (rotation_face, opposite_face):
+            - rotation_face: The face that defines the slice's rotation direction
+            - opposite_face: The face opposite to rotation_face
+
+            Examples:
+                M slice → (L, R) - parallel to L and R, rotates like L
+                E slice → (D, U) - parallel to D and U, rotates like D
+                S slice → (F, B) - parallel to F and B, rotates like F
         """
         ...
 

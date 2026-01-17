@@ -111,7 +111,7 @@ class TestSliceIndexAgainstWalkingInfo:
                         row, col = point
 
                         computed_0based = cube.sized_layout.get_slice(slice_name).compute_slice_index(
-                            cube.layout, face_name, slice_name, (row, col), n_slices
+                            face_name, (row, col), n_slices
                         )
 
                         assert computed_0based == slice_idx_0based, (
