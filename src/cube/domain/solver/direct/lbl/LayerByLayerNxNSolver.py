@@ -21,6 +21,7 @@ See docs/design/layer_by_layer_nxn.md for detailed design.
 
 from __future__ import annotations
 
+from cube.domain.model import Corner
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -233,8 +234,24 @@ class LayerByLayerNxNSolver(BaseSolver):
         See: EVEN_CUBE_MATCHING.md for why we can't use Part.match_faces here.
         """
         l1_face = self._get_layer1_tracker(th).face
-        # Use tracker colors instead of center colors for matching
-        return all(th.part_match_faces(c) for c in l1_face.corners)
+        l1_face_color = l1_face.color
+        # todo: Use tracker colors instead of center colors for matching
+        c: Corner
+
+        # claude documnet this logic
+        for c in l1_face.corners:
+            if c.get_face_edge(l1_face).color != l1_face_color:
+                return False
+
+            edges = l1_face.edges_of_corner(c)
+
+            for e in edges:
+                other_face = e.get_other_face(l1_face)
+                if c.get_face_edge(other_face).color != c.get_face_edge(other_face).color:
+                    return False
+
+
+        return True
 
     def _is_layer1_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 is completely solved (centers + edges + corners)."""

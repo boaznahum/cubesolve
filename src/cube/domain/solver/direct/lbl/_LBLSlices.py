@@ -121,7 +121,7 @@ class _LBLSlices(SolverElement):
             l1_tracker: Layer 1 face tracker (to identify side faces)
         """
 
-        slice_name = self.cube.layout.get_slice_name_parallel_to_face(l1_tracker.face_name)
+        slice_name = self.cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
 
         slice: Slice = self.cube.get_slice(slice_name)
 

@@ -200,6 +200,26 @@ class Face(SuperElement, Hashable):
         # need to cache
         return self._corners
 
+    def edges_of_corner(self, corner: Corner) -> Sequence[Edge]:
+        """
+        claude documnet it, optimize it by look up tbale construct in finish init
+        :param corner:
+        :return:
+        """
+
+        if corner is self._corner_top_right:
+            return (self._edge_top, self._edge_right)
+        elif corner is self._corner_top_left:
+            return (self._edge_top, self._edge_left)
+        elif corner is self._corner_bottom_right:
+            return (self._edge_bottom, self._edge_right)
+        elif corner is self._corner_bottom_left:
+            return (self._edge_bottom, self._edge_left)
+        else:
+
+            raise InternalSWError(f"Unknown corner {corner}")
+
+
     @property
     def edge_left(self) -> Edge:
         return self._edge_left
