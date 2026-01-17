@@ -75,6 +75,10 @@ class FaceTracker(ABC):
         pass
 
     @property
+    def face_name(self) -> FaceName:
+        return self.face.name
+
+    @property
     def color(self) -> Color:
         return self._color
 

@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from cube.domain.geometric.cube_walking import CubeWalkingInfo
     from cube.domain.geometric.FRotation import FUnitRotation
     from cube.domain.model.Face import Face
+    from cube.domain.model.Slice import Slice
     from cube.domain.model.SliceName import SliceName
 
 
@@ -51,6 +52,15 @@ class SizedCubeLayout(Protocol):
     """
 
     def reset(self):
+        ...
+
+    def get_slice(self, slice_name: SliceName) -> "Slice":
+        """
+        claude: document this, see usages
+        :rtype: "Slice"
+        :param slice_name:
+        :return:
+        """
         ...
 
     def create_walking_info(self, slice_name: "SliceName") -> "CubeWalkingInfo":

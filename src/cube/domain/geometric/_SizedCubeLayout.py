@@ -18,10 +18,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator
 
+from cube.domain.geometric.geometry_types import CLGColRow
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from cube.domain.geometric.cube_walking import CubeWalkingInfo, CubeWalkingInfoUnit, FaceWalkingInfo, PointComputer
 from cube.domain.geometric.FRotation import FUnitRotation
-from cube.domain.geometric.slice_layout import CLGColRow
 from cube.domain.geometric.types import Point
 from cube.domain.model.Edge import Edge
 from cube.domain.model.SliceName import SliceName
@@ -30,6 +30,7 @@ from cube.utils.Cache import CacheManager
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
+    from cube.domain.model.Slice import Slice
 
 
 class _SizedCubeLayout(SizedCubeLayout):
@@ -83,6 +84,16 @@ class _SizedCubeLayout(SizedCubeLayout):
         # must free all objects when new cube is created !!!
         self._cache_manager.clear()
 
+
+    def get_slice(self, slice_name: SliceName) -> "Slice":
+        """
+        claude: document this, see usages
+        :rtype: "Slice"
+        :param slice_name:
+        :return:
+        """
+
+        return self._cube.get_slice(slice_name)
 
     @property
     def n_slices(self) -> int:
@@ -182,7 +193,7 @@ class _SizedCubeLayout(SizedCubeLayout):
 
         # Determine which slice type (M/E/S) is parallel to L1
         # A slice is parallel to a face if that face is NOT on the slice's axis
-        slice_name = cube.layout.get_slice_parallel_to_face(l1_name)
+        slice_name = cube.layout.get_slice_name_parallel_to_face(l1_name)
         reference_face = cube.layout.get_slice_rotation_face(slice_name)
 
         # Convert layer_slice_index to physical slice index

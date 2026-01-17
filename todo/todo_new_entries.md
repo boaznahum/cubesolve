@@ -12,8 +12,9 @@
 The current CacheManager design requires a `name` parameter when getting a cache, but this seems redundant. A simpler design with a single key might be sufficient.
 
 **Current Usage:**
+
 ```python
-cache = self._layout.cache_manager.get("SliceLayout.does_slice_cut_rows_or_columns", CLGColRow)
+cache = self._cube_layout.cache_manager.get("SliceLayout.does_slice_cut_rows_or_columns", CLGColRow)
 return cache.compute(cache_key, compute)
 ```
 

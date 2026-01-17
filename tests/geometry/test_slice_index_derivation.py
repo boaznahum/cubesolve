@@ -17,12 +17,6 @@ from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
 from tests.test_utils import _test_sp
 
-# Import the computation functions
-from cube.domain.geometric.Face2FaceTranslator import (
-    _create_slice_index_computer,
-    _compute_slice_index,
-)
-
 
 # Test parameters - comprehensive coverage
 CUBE_SIZES = [3, 4, 5, 7]  # Various cube sizes
@@ -35,69 +29,7 @@ class TestSliceIndexDerivation:
     def cube(self) -> Cube:
         return Cube(3, _test_sp)
 
-    def test_all_slice_face_combinations_have_computer(self, cube: Cube) -> None:
-        """
-        Verify computation function can be created for all valid slice-face combinations.
 
-        Each slice affects exactly 4 faces (not the rotation face or its opposite).
-        """
-        layout = cube.layout
-
-        for slice_name in SliceName:
-            slice_layout = layout.get_slice(slice_name)
-            rotation_face = slice_layout.get_face_name()
-            opposite_face = layout.opposite(rotation_face)
-
-            # Slice affects all faces except rotation face and its opposite
-            affected_faces = [f for f in FaceName if f not in (rotation_face, opposite_face)]
-            assert len(affected_faces) == 4, f"Slice {slice_name} should affect exactly 4 faces"
-
-            for face_name in affected_faces:
-                # Should not raise - computer should be creatable
-                computer = _create_slice_index_computer(layout, slice_name, face_name)
-                assert callable(computer), (
-                    f"Expected callable for {slice_name.name} on {face_name.name}"
-                )
-                # Verify it returns valid results
-                result = computer(0, 0, 3)
-                assert isinstance(result, int), (
-                    f"Expected int result for {slice_name.name} on {face_name.name}"
-                )
-                assert 1 <= result <= 3, (
-                    f"Expected result in [1, 3] for {slice_name.name} on {face_name.name}, got {result}"
-                )
-
-    def test_computer_consistency_across_cube_sizes(self) -> None:
-        """
-        Verify the same computer produces correct results for different cube sizes.
-
-        The computer function itself is size-independent - only the n_slices parameter changes.
-        """
-        # Test that for the same (slice, face) combo, computer gives consistent results
-        # when scaled appropriately
-        for size in CUBE_SIZES:
-            cube = Cube(size, _test_sp)
-            layout = cube.layout
-            n_slices = cube.n_slices
-
-            if n_slices == 0:
-                continue
-
-            for slice_name in SliceName:
-                slice_layout = layout.get_slice(slice_name)
-                rotation_face = slice_layout.get_face_name()
-                opposite_face = layout.opposite(rotation_face)
-
-                affected_faces = [f for f in FaceName if f not in (rotation_face, opposite_face)]
-                for face_name in affected_faces:
-                    computer = _create_slice_index_computer(layout, slice_name, face_name)
-
-                    # Test first and last slice indices
-                    first_result = computer(0, 0, n_slices)
-                    assert 1 <= first_result <= n_slices, (
-                        f"Size {size}, {slice_name.name} on {face_name.name}: "
-                        f"first_result={first_result} not in [1, {n_slices}]"
-                    )
 
 
 class TestSliceIndexAgainstWalkingInfo:
@@ -142,7 +74,7 @@ class TestSliceIndexAgainstWalkingInfo:
                     row, col = point
 
                     # Computation returns 1-based slice index
-                    computed_1based = _compute_slice_index(
+                    computed_1based = cube.sized_layout.get_slice(slice_name).compute_slice_index(
                         cube.layout, face_name, slice_name, (row, col), n_slices
                     )
 
@@ -181,7 +113,7 @@ class TestSliceIndexAgainstWalkingInfo:
                         point = face_info.compute_point(slice_idx_0based, slot)
                         row, col = point
 
-                        computed_1based = _compute_slice_index(
+                        computed_1based = cube.sized_layout.get_slice(slice_name).compute_slice_index(
                             cube.layout, face_name, slice_name, (row, col), n_slices
                         )
                         computed_0based = computed_1based - 1

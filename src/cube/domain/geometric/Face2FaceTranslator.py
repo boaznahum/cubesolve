@@ -113,7 +113,7 @@ IMPLEMENTATION:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Tuple
+from typing import TYPE_CHECKING, Tuple
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs.Alg import Alg
@@ -122,6 +122,7 @@ from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.geometric.types import Point
 from cube.domain.model import Cube
+from cube.domain.model.Slice import Slice
 from cube.domain.model._elements import AxisName
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
@@ -130,7 +131,6 @@ if TYPE_CHECKING:
 
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.cube_slice import SliceName
-from cube.domain.geometric.slice_layout import CLGColRow
 
 
 @dataclass(frozen=True)
@@ -228,94 +228,8 @@ class SliceAlgorithmResult:
         return self.whole_slice_alg[slice_index + 1] * self.n
 
 
-# =============================================================================
-# SLICE INDEX COMPUTATION - Derived from geometry (Issue #55)
-# =============================================================================
-#
-# The slice index computation is derived dynamically from geometry:
-#   - does_slice_cut_rows_or_columns(): determines if we use row or col
-#   - does_slice_of_face_start_with_face(): determines if direct or inverted
-#
-# Key insight:
-#   - "cuts rows" = vertical slice → column coordinate identifies which slice
-#   - "cuts columns" = horizontal slice → row coordinate identifies which slice
-#
-
-# Type for slice index computation function
-# Takes (row, col, n_slices) and returns 1-based slice index
-SliceIndexComputer = Callable[[int, int, int], int]
 
 
-def _create_slice_index_computer(
-        layout: "CubeLayout",
-        slice_name: SliceName,
-        face_name: FaceName
-) -> SliceIndexComputer:
-    """
-    Create a function that computes 1-based slice index from (row, col, n_slices).
-
-    The returned function encapsulates the geometry-derived formula for this
-    specific slice and face combination.
-
-    Derivation logic:
-        1. Check if slice cuts rows or columns on this face
-           - "cuts rows" = vertical slice → use column coordinate
-           - "cuts columns" = horizontal slice → use row coordinate
-
-        2. Check if slice indices align with face coordinates
-           - aligned → direct formula (coord + 1)
-           - not aligned → inverted formula (n_slices - coord)
-
-    Args:
-        layout: The CubeLayout for geometry queries
-        slice_name: Which slice type (M, E, S)
-        face_name: The face to compute formula for
-
-    Returns:
-        A function (row, col, n_slices) -> slice_index (1-based)
-    """
-    slice_layout = layout.get_slice(slice_name)
-    cuts_rows = slice_layout.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW
-    starts_aligned = slice_layout.does_slice_of_face_start_with_face(face_name)
-
-    # Determine which coordinate to use and whether to invert
-    if cuts_rows:
-        # Vertical slice - column identifies which slice
-        if starts_aligned:
-            return lambda row, col, n_slices: col + 1
-        else:
-            return lambda row, col, n_slices: n_slices - col
-    else:
-        # Horizontal slice - row identifies which slice
-        if starts_aligned:
-            return lambda row, col, n_slices: row + 1
-        else:
-            return lambda row, col, n_slices: n_slices - row
-
-
-def _compute_slice_index(
-        layout: "CubeLayout",
-        source_face: FaceName,
-        slice_name: SliceName,
-        coord: tuple[int, int],
-        n_slices: int
-) -> int:
-    """
-    Compute the 1-based slice index for a given source face and coordinate.
-
-    Args:
-        layout: The CubeLayout for geometry queries
-        source_face: The face where the coordinate originates
-        slice_name: Which slice type (M, E, S)
-        coord: 0-based (row, col) on the source face
-        n_slices: Number of inner slices (cube.n_slices = cube.size - 2)
-
-    Returns:
-        1-based slice index in range [1, n_slices], suitable for SliceAlg[index]
-    """
-    row, col = coord
-    computer = _create_slice_index_computer(layout, slice_name, source_face)
-    return computer(row, col, n_slices)
 
 
 # =============================================================================
@@ -849,11 +763,13 @@ class Face2FaceTranslator:
             SliceName.S: Algs.S,
         }
 
+        sized_layout = cube.sized_layout
+
         for slice_name in connecting_slices:
             slice_alg = slice_name_to_alg[slice_name]
 
             # Get walking info for this slice
-            walk_info = cube.sized_layout.create_walking_info(slice_name)
+            walk_info = sized_layout.create_walking_info(slice_name)
 
             # Compute n: how many rotations to move from source to target
             # In the face_infos cycle, content at index i moves to index (i+1) % 4
@@ -870,7 +786,8 @@ class Face2FaceTranslator:
             source_coord = walk_info.translate_point(target_face, source_face, target_coord)
 
             # Compute slice index
-            slice_index = _compute_slice_index(cube.layout, target_name, slice_name, target_coord, n_slices)
+            slice: Slice = sized_layout.get_slice(slice_name)
+            slice_index = slice.compute_slice_index(cube.layout, target_name, slice_name, target_coord, n_slices)
 
             results.append(SliceAlgorithmResult(slice_alg, slice_index, n, source_coord))
 

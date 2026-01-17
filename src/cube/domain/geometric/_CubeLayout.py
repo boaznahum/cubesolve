@@ -11,7 +11,8 @@ from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.model.Edge import Edge
 from cube.domain.model.SliceName import SliceName
 from cube.domain.geometric.cube_layout import CubeLayout
-from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout, _SliceLayout
+from cube.domain.geometric.geometry_types import CLGColRow
+from cube.domain.geometric.slice_layout import SliceLayout, _SliceLayout
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.service_provider import IServiceProvider
 from cube.utils.Cache import CacheManager, cached_result

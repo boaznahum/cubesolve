@@ -14,7 +14,8 @@ from collections.abc import Collection, Iterator
 from typing import TYPE_CHECKING, Protocol, runtime_checkable, Tuple
 
 from cube.domain.geometric.FRotation import FUnitRotation
-from cube.domain.geometric.slice_layout import CLGColRow, SliceLayout
+from cube.domain.geometric.geometry_types import CLGColRow
+from cube.domain.geometric.slice_layout import SliceLayout
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.SliceName import SliceName
