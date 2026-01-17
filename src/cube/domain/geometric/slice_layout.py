@@ -481,15 +481,15 @@ class _SliceLayout(SliceLayout):
             if cuts_rows:
                 # Vertical slice - column identifies which slice
                 if starts_aligned:
-                    return lambda row, col, n_slices: col + 1
+                    return lambda row, col, n_slices: col
                 else:
-                    return lambda row, col, n_slices: n_slices - col
+                    return lambda row, col, n_slices: inv(n_slices, col)
             else:
                 # Horizontal slice - row identifies which slice
                 if starts_aligned:
-                    return lambda row, col, n_slices: row + 1
+                    return lambda row, col, n_slices: row
                 else:
-                    return lambda row, col, n_slices: n_slices - row
+                    return lambda row, col, n_slices: inv(n_slices, row)
 
         # Use cache manager from layout - cache by slice_name only (size-independent!)
         cache_key = ("create_slice_index_computer", (face_name,))

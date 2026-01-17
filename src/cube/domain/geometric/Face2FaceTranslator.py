@@ -789,6 +789,9 @@ class Face2FaceTranslator:
             slice: Slice = sized_layout.get_slice(slice_name)
             slice_index = slice.compute_slice_index(cube.layout, target_name, slice_name, target_coord, n_slices)
 
+            #claude: why it is 1 based ?
+            slice_index += 1
+
             results.append(SliceAlgorithmResult(slice_alg, slice_index, n, source_coord))
 
         if not results:
