@@ -785,12 +785,10 @@ class Face2FaceTranslator:
             # To get source_coord from target_coord, translate from target back to source
             source_coord = walk_info.translate_point(target_face, source_face, target_coord)
 
-            # Compute slice index
+            # Compute slice index (0-based, then convert to 1-based for SliceAlg)
             slice: Slice = sized_layout.get_slice(slice_name)
-            slice_index = slice.compute_slice_index(cube.layout, target_name, slice_name, target_coord, n_slices)
-
-            #claude: why it is 1 based ?
-            slice_index += 1
+            slice_index = slice.compute_slice_index(target_name, target_coord, n_slices)
+            slice_index += 1  # SliceAlg uses 1-based indexing
 
             results.append(SliceAlgorithmResult(slice_alg, slice_index, n, source_coord))
 

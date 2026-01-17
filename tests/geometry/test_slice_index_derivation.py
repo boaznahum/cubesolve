@@ -73,9 +73,9 @@ class TestSliceIndexAgainstWalkingInfo:
                     point = face_info.compute_point(slice_idx_0based, slot=0)
                     row, col = point
 
-                    # Computation returns 1-based slice index
+                    # Computation returns 0-based slice index
                     computed_0based = cube.sized_layout.get_slice(slice_name).compute_slice_index(
-                        cube.layout, face_name, slice_name, (row, col), n_slices
+                        face_name, (row, col), n_slices
                     )
 
                     assert computed_0based == slice_idx_0based, (

@@ -175,13 +175,11 @@ from .Edge import Edge
 from .SliceName import SliceName
 from .SuperElement import SuperElement
 from cube.utils.Cache import CacheManager
-from ..geometric.geometry_types import CLGColRow, SliceIndexComputerUnit
 from ..geometric.slice_layout import SliceLayout
 
 if TYPE_CHECKING:
     # noinspection PyUnresolvedReferences
     from .Cube import Cube
-    from cube.domain.geometric.cube_layout import CubeLayout
     from cube.domain.geometric.cube_walking import CubeWalkingInfo
 
 _Cube: TypeAlias = "Cube"
@@ -561,78 +559,22 @@ class Slice(SuperElement):
                 for i in range(n):
                     yield c.get_slice((i, index))
 
-    def _create_slice_index_computer(self,
-            layout: "CubeLayout",
-            slice_name: SliceName,
-            face_name: FaceName
-    ) -> SliceIndexComputerUnit:
-        """
-
-        claude: fix it it is not 1 based, search all code for this mistake
-        Create a function that computes 1-based slice index from (row, col, n_slices).
-
-        The returned function encapsulates the geometry-derived formula for this
-        specific slice and face combination.
-
-        Derivation logic:
-            1. Check if slice cuts rows or columns on this face
-               - "cuts rows" = vertical slice → use column coordinate
-               - "cuts columns" = horizontal slice → use row coordinate
-
-            2. Check if slice indices align with face coordinates
-               - aligned → direct formula (coord + 1)
-               - not aligned → inverted formula (n_slices - coord)
-
-        Args:
-            layout: The CubeLayout for geometry queries
-            slice_name: Which slice type (M, E, S)
-            face_name: The face to compute formula for
-
-        Returns:
-            A function (row, col, n_slices) -> slice_index (1-based)
-        """
-        slice_layout = layout.get_slice(slice_name)
-        cuts_rows = slice_layout.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW
-        starts_aligned = slice_layout.does_slice_of_face_start_with_face(face_name)
-
-        # Determine which coordinate to use and whether to invert
-        if cuts_rows:
-            # Vertical slice - column identifies which slice
-            if starts_aligned:
-                return lambda row, col, n_slices: col + 1
-            else:
-                return lambda row, col, n_slices: n_slices - col
-        else:
-            # Horizontal slice - row identifies which slice
-            if starts_aligned:
-                return lambda row, col, n_slices: row + 1
-            else:
-                return lambda row, col, n_slices: n_slices - row
-
-
     def compute_slice_index(self,
-            layout: "CubeLayout",
             face: FaceName,
-            slice_name: SliceName,
             coord: tuple[int, int],
             n_slices: int
     ) -> int:
         """
-
-        claude: documnet fix it and suages it is not 1 based
-        Compute the 1-based slice index for a given source face and coordinate.
+        Compute the 0-based slice index for a given face and coordinate.
 
         Args:
-            layout: The CubeLayout for geometry queries
-            source_face: The face where the coordinate originates
-            slice_name: Which slice type (M, E, S)
-            coord: 0-based (row, col) on the source face
+            face: The face where the coordinate originates
+            coord: 0-based (row, col) on the face
             n_slices: Number of inner slices (cube.n_slices = cube.size - 2)
 
         Returns:
-            1-based slice index in range [1, n_slices], suitable for SliceAlg[index]
+            0-based slice index in range [0, n_slices-1]
         """
         row, col = coord
         computer = self._slice_layout.create_slice_index_computer(face)
-        #computer = self._create_slice_index_computer(layout, slice_name, face)
         return computer(row, col, n_slices)

@@ -218,7 +218,7 @@ class SliceLayout(Protocol):
         Returns:
             A function (row, col, n_slices) -> slice_index (1-based)
         """
-        pass
+        ...
 
 
 
@@ -494,7 +494,7 @@ class _SliceLayout(SliceLayout):
         # Use cache manager from layout - cache by slice_name only (size-independent!)
         cache_key = ("create_slice_index_computer", (face_name,))
         cache = self._cache_manager.get(cache_key, SliceIndexComputerUnit)
-        return cache.compute(compute, disable_cache=False)
+        return cache.compute(compute)
 
     def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
         """
