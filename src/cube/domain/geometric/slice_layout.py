@@ -497,7 +497,7 @@ class _SliceLayout(SliceLayout):
             A function (row, col, n_slices) -> slice_index (0-based)
         """
 
-        def compute():
+        def compute() -> SliceIndexComputerUnit:
             cuts_rows = self.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW
             starts_aligned = self.does_slice_of_face_start_with_face(face_name)
 
@@ -505,15 +505,15 @@ class _SliceLayout(SliceLayout):
             if cuts_rows:
                 # Vertical slice - column identifies which slice
                 if starts_aligned:
-                    return lambda row, col, n_slices: col
+                    return SliceIndexComputerUnit(lambda row, col, n_slices: col)
                 else:
-                    return lambda row, col, n_slices: inv(n_slices, col)
+                    return SliceIndexComputerUnit(lambda row, col, n_slices: inv(n_slices, col))
             else:
                 # Horizontal slice - row identifies which slice
                 if starts_aligned:
-                    return lambda row, col, n_slices: row
+                    return SliceIndexComputerUnit(lambda row, col, n_slices: row)
                 else:
-                    return lambda row, col, n_slices: inv(n_slices, row)
+                    return SliceIndexComputerUnit(lambda row, col, n_slices: inv(n_slices, row))
 
         # Use cache manager from layout - cache by slice_name only (size-independent!)
         cache_key = ("create_slice_index_computer", (face_name,))

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum, auto
 from typing import Callable
 
@@ -15,9 +17,16 @@ from typing import Callable
 #   - "cuts columns" = horizontal slice → row coordinate identifies which slice
 #
 
-# Type for slice index computation function
-# Takes (row, col, n_slices) and returns 0-based slice index
-SliceIndexComputerUnit = Callable[[int, int, int], int]
+
+class SliceIndexComputerUnit:
+    """Callable that computes 0-based slice index from (row, col, n_slices)."""
+
+    def __init__(self, func: "Callable[[int, int, int], int]") -> None:
+        self._func = func
+
+    def __call__(self, row: int, col: int, n_slices: int) -> int:
+        """Compute 0-based slice index for a coordinate on a face."""
+        return self._func(row, col, n_slices)
 
 
 class CLGColRow(Enum):

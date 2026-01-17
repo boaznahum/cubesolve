@@ -198,19 +198,14 @@ class SliceAlgorithmResult:
     """
     whole_slice_alg: SliceAlg  # not sliced
 
-    # claude make a bug here it make it 1 based , now it is hard to fix it
-    # it is in the transfoem table !!!
-    _on_slice: int  # 1-based slice index
+    _on_slice: int  # 0-based slice index
     n: int  # n rotations
     source_coord: tuple[int, int]  # Position on source face for this slice algorithm
 
     @property
-    def on_slice(self):
-        """
-        Zero based !!!
-        :return:
-        """
-        return self._on_slice - 1
+    def on_slice(self) -> int:
+        """Return 0-based slice index."""
+        return self._on_slice
 
     def get_alg(self) -> Alg:
         return self.get_slice_alg(self.on_slice)
@@ -218,8 +213,7 @@ class SliceAlgorithmResult:
     def get_whole_slice_alg(self) -> Alg:
         return self.whole_slice_alg * self.n
 
-    # see bug above, but here we accept zero base !!!
-    def get_slice_alg(self, slice_index) -> Alg:
+    def get_slice_alg(self, slice_index: int) -> Alg:
         """
 
         :param slice_index:  zero based !!!
@@ -785,10 +779,9 @@ class Face2FaceTranslator:
             # To get source_coord from target_coord, translate from target back to source
             source_coord = walk_info.translate_point(target_face, source_face, target_coord)
 
-            # Compute slice index (0-based, then convert to 1-based for SliceAlg)
+            # Compute slice index (0-based)
             slice: Slice = sized_layout.get_slice(slice_name)
             slice_index = slice.compute_slice_index(target_name, target_coord, n_slices)
-            slice_index += 1  # SliceAlg uses 1-based indexing
 
             results.append(SliceAlgorithmResult(slice_alg, slice_index, n, source_coord))
 
