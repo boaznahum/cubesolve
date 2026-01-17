@@ -30,6 +30,7 @@ class Face(SuperElement, Hashable):
                  "_edges",
                  "_edge_by_position",
                  "_corners",
+                 "_edges_of_corner",  # Lookup table: Corner -> (Edge, Edge) for O(1) access
                  "_opposite"
                  ]
 
@@ -49,6 +50,7 @@ class Face(SuperElement, Hashable):
     _edges: Sequence[Edge]
     _edge_by_position: dict[EdgePosition, Edge]
     _corners: Sequence[Corner]
+    _edges_of_corner: dict[Corner, tuple[Edge, Edge]]
 
     _opposite: _Face
 
@@ -95,6 +97,15 @@ class Face(SuperElement, Hashable):
                          self._corner_top_right,
                          self._corner_bottom_right,
                          self._corner_bottom_left]
+
+        # Lookup table for edges_of_corner: O(1) access instead of if-elif chain
+        # Maps each corner to its two adjacent edges (in clockwise order from corner)
+        self._edges_of_corner = {
+            self._corner_top_right: (self._edge_top, self._edge_right),
+            self._corner_top_left: (self._edge_top, self._edge_left),
+            self._corner_bottom_right: (self._edge_bottom, self._edge_right),
+            self._corner_bottom_left: (self._edge_bottom, self._edge_left),
+        }
 
         self.set_parts(self._center, *self._edges, *self._corners)
         super().finish_init()
@@ -200,24 +211,44 @@ class Face(SuperElement, Hashable):
         # need to cache
         return self._corners
 
-    def edges_of_corner(self, corner: Corner) -> Sequence[Edge]:
-        """
-        claude documnet it, optimize it by look up tbale construct in finish init
-        :param corner:
-        :return:
-        """
+    def edges_of_corner(self, corner: Corner) -> tuple[Edge, Edge]:
+        """Get the two edges of this face that are adjacent to the given corner.
 
-        if corner is self._corner_top_right:
-            return (self._edge_top, self._edge_right)
-        elif corner is self._corner_top_left:
-            return (self._edge_top, self._edge_left)
-        elif corner is self._corner_bottom_right:
-            return (self._edge_bottom, self._edge_right)
-        elif corner is self._corner_bottom_left:
-            return (self._edge_bottom, self._edge_left)
-        else:
+        Used by LBL solver to check corner orientation: for each corner on Layer 1,
+        we need to verify that the corner's stickers on adjacent faces match those
+        faces' colors. This method provides the edges that connect to those faces.
 
-            raise InternalSWError(f"Unknown corner {corner}")
+        Corner-edge adjacency on a face:
+        ```
+            edge_top
+        ┌─────────────────┐
+        │ TL           TR │  TL = corner_top_left    → (edge_top, edge_left)
+        │                 │  TR = corner_top_right   → (edge_top, edge_right)
+     L  │                 │  R
+     e  │     center      │  e
+     f  │                 │  d
+     t  │                 │  g
+        │ BL           BR │  BL = corner_bottom_left → (edge_bottom, edge_left)
+        └─────────────────┘  BR = corner_bottom_right→ (edge_bottom, edge_right)
+            edge_bottom
+        ```
+
+        Implementation: O(1) dict lookup (initialized in finish_init).
+
+        Args:
+            corner: A corner that belongs to this face (one of the 4 corners)
+
+        Returns:
+            Tuple of (edge1, edge2) - the two edges adjacent to this corner.
+            Order is consistent: horizontal edge first, then vertical.
+
+        Raises:
+            InternalSWError: If corner doesn't belong to this face
+        """
+        edges = self._edges_of_corner.get(corner)
+        if edges is None:
+            raise InternalSWError(f"Corner {corner} does not belong to face {self}")
+        return edges
 
 
     @property

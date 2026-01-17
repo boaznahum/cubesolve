@@ -112,55 +112,97 @@ class _LBLSlices(SolverElement):
     ) -> bool:
         """Check if all ring centers for a specific slice are solved.
 
-        A slice's ring centers are solved when every center in the corresponding
-        row on all 4 side faces has the correct color for that face.
+        This method is ORIENTATION-INDEPENDENT: it works regardless of which
+        face is Layer 1 (D, U, F, B, L, or R). The geometry layer handles
+        the coordinate translation.
+
+        A slice's "ring" consists of 4×(n-2) center pieces forming a horizontal
+        band around the cube at a specific height. The ring is solved when every
+        center piece has the correct color for its face.
+
+        How it works:
+        1. Get the slice sandwiched between L1 face and its opposite
+           (e.g., L1=D → E slice, which sits between D and U)
+        2. Query that slice for center pieces at the given slice_index
+        3. Check each center piece's color against the expected face color
 
         Args:
-            slice_index: 0 to n_slices-1 in slice coordinates not relative to L1
-            th: FacesTrackerHolder for face color tracking
-            l1_tracker: Layer 1 face tracker (to identify side faces)
+            slice_index: 0-based index in the SLICE's coordinate system
+                         (not L1-relative). Use distance_from_face_to_slice_index()
+                         to convert from L1-relative distance.
+            th: FacesTrackerHolder providing face→color mapping for even cubes
+            l1_tracker: Layer 1 face tracker (identifies which face is L1)
+
+        Returns:
+            True if all 4×(n-2) centers in this slice ring have correct colors
         """
-
         slice_name = self.cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
+        slice_obj: Slice = self.cube.get_slice(slice_name)
 
-        slice: Slice = self.cube.get_slice(slice_name)
-
-        pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice._get_slices_by_index(slice_index)
-
+        # Get edge wings and center slices at this slice index
+        # We only care about center slices (index [1])
+        pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj._get_slices_by_index(slice_index)
         center_pieces = pieces[1]
 
-        # it is waste of time becuase ecnters are groupd:
-        required_colors: dict[FaceName, Color] = {f.face_name : f.color for f in th.trackers}
+        # Build expected color map from trackers (handles even cube color tracking)
+        required_colors: dict[FaceName, Color] = {t.face_name: t.color for t in th.trackers}
 
-        c: CenterSlice
-        for c in center_pieces:
-            if c.color != required_colors[c.face.name]:
-                    return False
+        # Check each center piece has the correct color for its face
+        for center in center_pieces:
+            if center.color != required_colors[center.face.name]:
+                return False
 
         return True
 
     def count_solved_slice_centers(
             self, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> int:
-        """Count how many slices have their ring centers solved (from bottom up).
+        """Count consecutive solved slice rings starting from Layer 1.
 
-        Correctly handle cube orientation
+        ORIENTATION-INDEPENDENT DESIGN
+        ==============================
+        This method works regardless of which face is Layer 1. The key insight
+        is separating "L1-relative distance" from "slice coordinate system":
 
-        Counts consecutive solved slices starting from row 0 (relative to L1)
-        Once an unsolved slice is found, stops counting.
+        - slice_row: L1-relative distance (0 = adjacent to L1, n-1 = farthest)
+        - cube_slice_index: Slice's own coordinate (0 = closest to rotation face)
 
-        Claud: Im trying to do it independ on orientation, if it works we need to document it
+        The geometry layer's distance_from_face_to_slice_index() handles translation.
+
+        Example with 5x5 cube (n_slices=3):
+        ===================================
+        If L1 = D (white face down):
+            - Slice is E (sandwiched between D and U)
+            - E's rotation face is D, so E[0] is closest to D
+            - slice_row=0 (adjacent to D) → cube_slice_index=0
+            - slice_row=2 (adjacent to U) → cube_slice_index=2
+
+        If L1 = U (cube flipped, white face up):
+            - Slice is still E (sandwiched between U and D)
+            - E's rotation face is still D
+            - slice_row=0 (adjacent to U) → cube_slice_index=2 (farthest from D)
+            - slice_row=2 (adjacent to D) → cube_slice_index=0
+
+        The geometry layer's distance_from_face_to_slice_index() handles this
+        translation automatically based on whether L1 is the slice's rotation
+        face or its opposite.
+
+        Args:
+            th: FacesTrackerHolder providing face→color mapping
+            l1_tracker: Layer 1 face tracker (identifies orientation)
+
+        Returns:
+            Number of consecutive solved slice rings (0 to n_slices),
+            counting from L1 face upward. Stops at first unsolved slice.
         """
-
-        # Find the slice sandwiched between L1 face and its opposite
+        # Get the slice sandwiched between L1 face and its opposite
+        # (e.g., L1=D → E slice, L1=L → M slice, L1=F → S slice)
         slice_name = self.cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
-
         slice_layout = self.cube.layout.get_slice(slice_name)
 
         count = 0
-        # slice_row as begin from L1
         for slice_row in range(self.n_slices):
-
+            # Convert L1-relative distance to slice coordinate system
             cube_slice_index = slice_layout.distance_from_face_to_slice_index(
                 l1_tracker.face_name, slice_row, self.n_slices
             )
@@ -168,7 +210,8 @@ class _LBLSlices(SolverElement):
             if self._is_slice_centers_solved(cube_slice_index, th, l1_tracker):
                 count += 1
             else:
-                break
+                break  # Stop at first unsolved slice
+
         return count
 
     # =========================================================================

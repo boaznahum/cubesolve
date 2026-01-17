@@ -208,6 +208,13 @@ class LayerByLayerNxNSolver(BaseSolver):
         """
         l1_color = self._get_layer1_tracker(th).color
         l1_edges = [e for e in self.cube.edges if l1_color in e.colors_id]
+        # claude: no no this only check if edges are 3x3 but not if they ar ein the right place !!!
+        # also you can use face.edges for it,
+        # what need to be done:
+        #  aask F for faces
+        # check thet the color  and the other ar ebiy
+        # but mach simpler is to use the method of 3x3 solver beginner, rotate and check, there should be al least
+        #  on rotation in which it solved, see cube.domain.solver._3x3.shared.L1Cross.L1Cross.is_cross
         return all(e.is3x3 for e in l1_edges)
 
     def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:
@@ -226,11 +233,18 @@ class LayerByLayerNxNSolver(BaseSolver):
         return all(th.part_match_faces(e) for e in l1_face.edges)
 
     def _is_layer1_corners_solved(self, th: FacesTrackerHolder) -> bool:
-        """Check if all Layer 1 corners are in correct position with correct orientation.
+        """Check if all Layer 1 corners are correctly positioned and oriented.
 
-        Uses tracker's face→color mapping for even cubes where only L1 centers
-        are solved (other centers are still scrambled).
+        For each corner on L1 face, verifies:
+        1. The corner's sticker on L1 face has L1's color (correct orientation)
+        2. The corner's stickers on adjacent side faces match the corresponding
+           edge's stickers on those faces (correct position relative to solved edges)
 
+        Uses Face.edges_of_corner() to find the two edges adjacent to each corner.
+        Since edges are already solved (verified by _is_layer1_cross_solved), we can
+        use the edge's side-face color as the reference for corner validation.
+
+        claude: we cant use it becuase maybe D israoted so it sorner want match the face
         See: EVEN_CUBE_MATCHING.md for why we can't use Part.match_faces here.
         """
         l1_face = self._get_layer1_tracker(th).face
@@ -238,7 +252,6 @@ class LayerByLayerNxNSolver(BaseSolver):
         # todo: Use tracker colors instead of center colors for matching
         c: Corner
 
-        # claude documnet this logic
         for c in l1_face.corners:
             if c.get_face_edge(l1_face).color != l1_face_color:
                 return False
@@ -247,7 +260,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
             for e in edges:
                 other_face = e.get_other_face(l1_face)
-                if c.get_face_edge(other_face).color != c.get_face_edge(other_face).color:
+                if c.get_face_edge(other_face).color != e.get_face_edge(other_face).color:
                     return False
 
 
@@ -337,8 +350,9 @@ class LayerByLayerNxNSolver(BaseSolver):
             self.debug("Shadow cube already solved")
             return
 
-        # Check if requested step is already done on shadow
-        # claude: we computing costly but maybe using it , any way the
+        # Early-exit optimization: Check if requested step is already done on shadow.
+        # This avoids creating DualOperator and solver when not needed.
+        # Cost: O(4) to check edges, O(4) to check corners - trivial vs full solve.
         shadow_l1_face = shadow_cube.color_2_face(self.config.first_face_color)
         edges_solved = all(e.match_faces for e in shadow_l1_face.edges)
         corners_solved = all(c.match_faces for c in shadow_l1_face.corners)
@@ -353,8 +367,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         # Create DualOperator: wraps shadow cube + real operator
         dual_op = DualOperator(shadow_cube, self._op)
 
-        # Use a real 3x3 solver - beginner method for L1
-        # claud: use the same configuration as cage used for solver helper
+        # Use beginner method for L1 solving (same approach as CageNxNSolver)
         shadow_solver = Solvers3x3.beginner(dual_op)
 
         # Solve only L1 (cross + corners)
