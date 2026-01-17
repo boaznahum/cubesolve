@@ -21,7 +21,7 @@ See docs/design/layer_by_layer_nxn.md for detailed design.
 
 from __future__ import annotations
 
-from cube.domain.model import Corner
+from cube.domain.model import Corner, Part
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -201,21 +201,45 @@ class LayerByLayerNxNSolver(BaseSolver):
         return l1_face.center.is3x3
 
     def _is_layer1_edges_solved(self, th: FacesTrackerHolder) -> bool:
-        """Check if all edges containing L1 color are paired (reduced to 3x3).
+        """Check if L1 edges are paired AND in position (allowing L1 face rotation).
 
-        Note: Checks by COLOR, not position. After centers are solved but before
-        cross, the 4 L1-color edges may be scattered across the cube.
+        This method checks two conditions:
+        1. All 4 edges on L1 face are paired (is3x3 = reduced to 3x3 state)
+        2. The edges are in correct positions, possibly with L1 face rotated
+
+        The "rotate and check" pattern handles the case where L1 face is rotated:
+        ```
+        Example: Cross solved but D rotated 90°
+        ┌───┐       ┌───┐
+        │ G │       │ R │   ← Green edge on Red face (wrong!)
+        └───┘       └───┘
+        But rotating D by 90° CCW fixes it → edges ARE in position,
+        just the whole L1 face needs alignment.
+        ```
+
+        Uses cube.cqr.rotate_face_and_check() which:
+        - Tries 0, 1, 2, 3 rotations of L1 face
+        - Checks Part.all_match_faces() at each rotation
+        - Returns rotation count (>=0) if found, -1 if none work
+        - Restores cube state (query only, no side effects)
+
+        Returns:
+            True if edges are paired and can be aligned by rotating L1 face
         """
-        l1_color = self._get_layer1_tracker(th).color
-        l1_edges = [e for e in self.cube.edges if l1_color in e.colors_id]
-        # claude: no no this only check if edges are 3x3 but not if they ar ein the right place !!!
-        # also you can use face.edges for it,
-        # what need to be done:
-        #  aask F for faces
-        # check thet the color  and the other ar ebiy
-        # but mach simpler is to use the method of 3x3 solver beginner, rotate and check, there should be al least
-        #  on rotation in which it solved, see cube.domain.solver._3x3.shared.L1Cross.L1Cross.is_cross
-        return all(e.is3x3 for e in l1_edges)
+        l1_tracker = self._get_layer1_tracker(th)
+        l1_face = l1_tracker.face
+        l1_edges = l1_face.edges
+
+        # First check: all edges on L1 face must be paired (reduced to 3x3)
+        if not all(e.is3x3 for e in l1_edges):
+            return False
+
+        # Second check: edges can be aligned by rotating L1 face
+        def _is_cross() -> bool:
+            return Part.all_match_faces(l1_face.edges)
+
+        return self.cube.cqr.rotate_face_and_check(l1_face, _is_cross) >= 0
+
 
     def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 cross is solved (edges paired AND in correct position).
@@ -240,11 +264,14 @@ class LayerByLayerNxNSolver(BaseSolver):
         2. The corner's stickers on adjacent side faces match the corresponding
            edge's stickers on those faces (correct position relative to solved edges)
 
-        Uses Face.edges_of_corner() to find the two edges adjacent to each corner.
-        Since edges are already solved (verified by _is_layer1_cross_solved), we can
-        use the edge's side-face color as the reference for corner validation.
+        Why compare to EDGES instead of FACES?
+        L1 face might be rotated (e.g., D rotated 90°). If we used Part.match_faces,
+        corners would fail even though they're correctly positioned relative to edges.
+        By comparing corner stickers to adjacent edge stickers, we check relative
+        consistency - corners and edges should have the same colors on each side face.
 
-        claude: we cant use it becuase maybe D israoted so it sorner want match the face
+        Uses Face.edges_of_corner() to find the two edges adjacent to each corner.
+
         See: EVEN_CUBE_MATCHING.md for why we can't use Part.match_faces here.
         """
         l1_face = self._get_layer1_tracker(th).face
