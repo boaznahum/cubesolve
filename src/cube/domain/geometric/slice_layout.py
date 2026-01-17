@@ -207,11 +207,7 @@ class SliceLayout(Protocol):
 
     def create_slice_index_computer(self, face_name: FaceName) -> SliceIndexComputerUnit:
         """
-
-        claude: fix it it is not 1 based, search all code for this mistake
-        calude:tis method should be combined with walking info
-
-        Create a function that computes 1-based slice index from (row, col, n_slices).
+        Create a function that computes 0-based slice index from (row, col, n_slices).
 
         The returned function encapsulates the geometry-derived formula for this
         specific slice and face combination.
@@ -222,16 +218,14 @@ class SliceLayout(Protocol):
                - "cuts columns" = horizontal slice → use row coordinate
 
             2. Check if slice indices align with face coordinates
-               - aligned → direct formula (coord + 1)
-               - not aligned → inverted formula (n_slices - coord)
+               - aligned → direct formula (coord)
+               - not aligned → inverted formula (n_slices - 1 - coord)
 
         Args:
-            layout: The CubeLayout for geometry queries
-            slice_name: Which slice type (M, E, S)
             face_name: The face to compute formula for
 
         Returns:
-            A function (row, col, n_slices) -> slice_index (1-based)
+            A function (row, col, n_slices) -> slice_index (0-based)
         """
         ...
 
@@ -482,9 +476,7 @@ class _SliceLayout(SliceLayout):
 
     def create_slice_index_computer(self, face_name: FaceName) -> SliceIndexComputerUnit:
         """
-
-        claude: fix it it is not 1 based, search all code for this mistake
-        Create a function that computes 1-based slice index from (row, col, n_slices).
+        Create a function that computes 0-based slice index from (row, col, n_slices).
 
         The returned function encapsulates the geometry-derived formula for this
         specific slice and face combination.
@@ -495,16 +487,14 @@ class _SliceLayout(SliceLayout):
                - "cuts columns" = horizontal slice → use row coordinate
 
             2. Check if slice indices align with face coordinates
-               - aligned → direct formula (coord + 1)
-               - not aligned → inverted formula (n_slices - coord)
+               - aligned → direct formula (coord)
+               - not aligned → inverted formula (n_slices - 1 - coord)
 
         Args:
-            layout: The CubeLayout for geometry queries
-            slice_name: Which slice type (M, E, S)
             face_name: The face to compute formula for
 
         Returns:
-            A function (row, col, n_slices) -> slice_index (1-based)
+            A function (row, col, n_slices) -> slice_index (0-based)
         """
 
         def compute():
