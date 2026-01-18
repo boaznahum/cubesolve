@@ -144,13 +144,16 @@ class _SizedCubeLayout(SizedCubeLayout):
                 compute_fn: PointComputer = uf.get_compute(n_slices)
                 compute_reverse_fn: ReversePointComputer = uf.get_compute_reverse(n_slices)
 
+                slice_index_to_entry_edge_slice_index_fn = uf.get_compute_slice_index_to_entry_edge_slice_index(n_slices)
+
                 sized_face_info: FaceWalkingInfo = FaceWalkingInfo(
                     face=face,
                     edge=edge,
                     reference_point=reference_point,
                     n_slices=n_slices,
                     slice_to_center=compute_fn,
-                    center_to_slice=compute_reverse_fn
+                    center_to_slice=compute_reverse_fn,
+                    slice_index_to_entry_edge_slice_index_fn=slice_index_to_entry_edge_slice_index_fn
                 )
 
                 sized_faces.append(sized_face_info)

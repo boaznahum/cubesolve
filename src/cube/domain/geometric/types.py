@@ -35,6 +35,8 @@ CenterToSlice = Callable[[int, int, int], Point]
 # Signature: (n_slices, slice_index) -> edge_index
 SliceToEntryEdge = Callable[[int, int], int]
 
+#claude: rename the above to unit, this remove sized
+SliceToEntryEdgeSized = Callable[[int], int]
 # =============================================================================
 # SIZE-BOUND functions - n_slices baked in at creation time
 # =============================================================================

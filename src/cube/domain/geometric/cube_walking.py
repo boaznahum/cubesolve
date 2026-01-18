@@ -125,7 +125,7 @@ from cube.domain.geometric.types import (
     Point,
     PointComputer,
     ReversePointComputer,
-    SliceToCenter,
+    SliceToCenter, SliceToEntryEdge, SliceToEntryEdgeSized,
 )
 
 from cube.domain.model._part import EdgeName
@@ -181,6 +181,7 @@ class FaceWalkingInfo:
     n_slices: int  # boaz:why itis needed per face ?
     slice_to_center: PointComputer = field(compare=False)  # (si, sl) -> (row, col)
     center_to_slice: ReversePointComputer = field(compare=False)  # (row, col) -> (si, sl)
+    slice_index_to_entry_edge_slice_index_fn: SliceToEntryEdgeSized = field(compare=False)  # (row, col) -> (si, sl)
 
     def compute_point(self, slice_index: int, slot: int) -> Point:
         """
@@ -241,6 +242,9 @@ class FaceWalkingInfo:
         """
         return self.center_to_slice(row, col)
 
+    def compute_slice_index_on_entry_edge(self, face_slice_index) -> int:
+        return self.slice_index_to_entry_edge_slice_index_fn(face_slice_index)
+
 @dataclass(frozen=True)
 class FaceWalkingInfoUnit:
     """
@@ -280,6 +284,7 @@ class FaceWalkingInfoUnit:
     n_slices: int
     slice_to_center: UnitPointComputer = field(compare=False)  # (n_slices, si, sl) -> (row, col)
     center_to_slice: UnitReversePointComputer = field(compare=False)  # (n_slices, row, col) -> (si, sl)
+    slice_index_to_entry_edge_index: SliceToEntryEdge = field(compare=False)
 
     def get_reference_point(self, actual_n_slices: int):
         """
@@ -355,6 +360,9 @@ class FaceWalkingInfoUnit:
         """
         # Lambda binds n_slices_actual to create a 2-param function from the 3-param center_to_slice
         return lambda r, c: self.center_to_slice(n_slices_actual, r, c)
+
+    def get_compute_slice_index_to_entry_edge_slice_index(self, n_slices_actual: int) -> SliceToEntryEdgeSized:
+        return lambda slice_index: self.slice_index_to_entry_edge_index(n_slices_actual, slice_index)
 
 
 
