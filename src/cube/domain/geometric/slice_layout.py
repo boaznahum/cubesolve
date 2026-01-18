@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Protocol, Tuple
+from typing import TYPE_CHECKING, Protocol, Tuple, cast
 
 from cube.domain.exceptions import GeometryError, GeometryErrorCode
-from cube.domain.geometric.geometry_types import CLGColRow, SliceIndexComputerUnit
+from cube.domain.geometric.geometry_types import CLGColRow
+from cube.domain.geometric.types import CenterToSliceLegacy
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model._elements import EdgePosition
 from cube.domain.geometric.geometry_utils import inv
@@ -205,27 +206,19 @@ class SliceLayout(Protocol):
         """
         ...
 
-    def create_slice_index_computer(self, face_name: FaceName) -> SliceIndexComputerUnit:
+    def create_slice_index_computer(self, face_name: FaceName) -> CenterToSliceLegacy:
         """
-        Create a function that computes 0-based slice index from (row, col, n_slices).
+        Create a function that computes slice coordinates from (row, col, n_slices).
 
         The returned function encapsulates the geometry-derived formula for this
         specific slice and face combination.
-
-        Derivation logic:
-            1. Check if slice cuts rows or columns on this face
-               - "cuts rows" = vertical slice → use column coordinate
-               - "cuts columns" = horizontal slice → use row coordinate
-
-            2. Check if slice indices align with face coordinates
-               - aligned → direct formula (coord)
-               - not aligned → inverted formula (n_slices - 1 - coord)
 
         Args:
             face_name: The face to compute formula for
 
         Returns:
-            A function (row, col, n_slices) -> slice_index (0-based)
+            A function (row, col, n_slices) -> (slice_index, slot)
+            Caller typically uses result[0] to get just the slice_index.
         """
         ...
 
@@ -474,40 +467,30 @@ class _SliceLayout(SliceLayout):
 
             return inv(n_slices, distance_from_face)
 
-    def create_slice_index_computer(self, face_name: FaceName) -> SliceIndexComputerUnit:
+    def create_slice_index_computer(self, face_name: FaceName) -> CenterToSliceLegacy:
         """
-        Create a function that computes 0-based slice index from (row, col, n_slices).
+        Create a function that computes slice coordinates from (row, col, n_slices).
 
         The returned function encapsulates the geometry-derived formula for this
         specific slice and face combination.
-
-        This uses the centralized center_to_slice logic from create_walking_info_unit(),
-        extracting just the slice_index component.
 
         Args:
             face_name: The face to compute formula for
 
         Returns:
-            A function (row, col, n_slices) -> slice_index (0-based)
+            A function (row, col, n_slices) -> (slice_index, slot)
+            Caller typically uses result[0] to get just the slice_index.
         """
 
-        def compute() -> SliceIndexComputerUnit:
+        def compute() -> CenterToSliceLegacy:
             # Get the walking info which has center_to_slice for all 4 faces
             walking_info_unit = self.create_walking_info_unit()
 
             # Find the face info for this face
             for face_info in walking_info_unit.face_infos:
                 if face_info.face_name == face_name:
-                    # Use _compute_reverse: (row, col, n_slices) -> (slice_index, slot)
-                    # Extract just slice_index (first element)
-                    reverse_fn = face_info._compute_reverse
-
-                    def make_slice_index_fn(rev_fn: Callable[[int, int, int], tuple[int, int]]) -> Callable[[int, int, int], int]:
-                        def compute_slice_index(row: int, col: int, n_slices: int) -> int:
-                            return rev_fn(row, col, n_slices)[0]
-                        return compute_slice_index
-
-                    return SliceIndexComputerUnit(make_slice_index_fn(reverse_fn))
+                    # Return center_to_slice directly: (row, col, n_slices) -> (slice_index, slot)
+                    return face_info.center_to_slice
 
             raise GeometryError(
                 GeometryErrorCode.INVALID_FACE,
@@ -516,8 +499,9 @@ class _SliceLayout(SliceLayout):
 
         # Use cache manager from layout
         cache_key = ("create_slice_index_computer", (face_name,))
-        cache = self._cache_manager.get(cache_key, SliceIndexComputerUnit)
-        return cache.compute(compute)
+        cache = self._cache_manager.get(cache_key, object)  # type: ignore[arg-type]
+        #cluade: lets get rid of the cast !!!
+        return cast(CenterToSliceLegacy, cache.compute(compute))
 
     def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
         """
@@ -612,8 +596,8 @@ class _SliceLayout(SliceLayout):
                     edge_name=current_edge.name,
                     reference_point=reference_point,
                     n_slices=fake_n_slices,
-                    _compute=compute_fn,
-                    _compute_reverse=compute_reverse_fn
+                    slice_to_center=compute_fn,
+                    center_to_slice=compute_reverse_fn
                 ))
 
                 # Move to next face (except after the 4th)
@@ -797,8 +781,8 @@ class _SliceLayout(SliceLayout):
                     edge_name=current_edge.name,
                     reference_point=reference_point,
                     n_slices=fake_n_slices,
-                    _compute=compute_fn,
-                    _compute_reverse=reverse_fn
+                    slice_to_center=compute_fn,
+                    center_to_slice=reverse_fn
                 ))
 
                 # Move to next face (except after the 4th)

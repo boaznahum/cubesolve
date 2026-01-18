@@ -117,10 +117,16 @@ new_point = walk_info.translate_point(source_face, target_face, point)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Iterator
+from typing import TYPE_CHECKING, Iterator
 
 from cube.domain.geometric.FRotation import FUnitRotation
-from cube.domain.geometric.types import Point
+from cube.domain.geometric.types import (
+    CenterToSliceLegacy,
+    Point,
+    PointComputer,
+    ReversePointComputer,
+    SliceToCenter,
+)
 
 from cube.domain.model._part import EdgeName
 from cube.domain.model.FaceName import FaceName
@@ -131,21 +137,9 @@ if TYPE_CHECKING:
     from cube.domain.model.Face import Face
     from cube.domain.model.SliceName import SliceName
 
-
-# Type alias for the point computation function
-PointComputer = Callable[[int, int], Point]  # (slice_index, slot) -> Point
-
-UnitPointComputer = Callable[[int , # n slices
-                              int,  # row
-                              int   # col
-                              ], Point]  # (slice_index, slot) -> Point
-
-# Type alias for reverse computation: (row, col) -> (slice_index, slot) (with n_slices baked in)
-# This is the exact inverse of PointComputer
-ReversePointComputer = Callable[[int, int], tuple[int, int]]  # (row, col) -> (slice_index, slot)
-
-# Type alias for size-independent reverse computation: (row, col, n_slices) -> (slice_index, slot)
-UnitReversePointComputer = Callable[[int, int, int], tuple[int, int]]  # (row, col, n_slices) -> (slice_index, slot)
+# Aliases for backward compatibility
+UnitPointComputer = SliceToCenter
+UnitReversePointComputer = CenterToSliceLegacy
 
 
 @dataclass(frozen=True)
@@ -185,8 +179,8 @@ class FaceWalkingInfo:
     edge: "Edge"
     reference_point: Point
     n_slices: int  # boaz:why itis needed per face ?
-    _compute: PointComputer = field(compare=False)  # Don't compare functions
-    _compute_reverse: ReversePointComputer = field(compare=False)  # (row, col) -> (slice_index, slot)
+    slice_to_center: PointComputer = field(compare=False)  # (si, sl) -> (row, col)
+    center_to_slice: ReversePointComputer = field(compare=False)  # (row, col) -> (si, sl)
 
     def compute_point(self, slice_index: int, slot: int) -> Point:
         """
@@ -209,7 +203,7 @@ class FaceWalkingInfo:
         Returns:
             (row, col) in LTR coordinates on this face
         """
-        return self._compute(slice_index, slot)
+        return self.slice_to_center(slice_index, slot)
 
     def iterate_points(self, slice_index: int) -> Iterator[Point]:
         """
@@ -222,7 +216,7 @@ class FaceWalkingInfo:
             (row, col) for slot 0, 1, ..., n_slices-1
         """
         for slot in range(self.n_slices):
-            yield self._compute(slice_index, slot)
+            yield self.slice_to_center(slice_index, slot)
 
     def compute_reverse(self, row: int, col: int) -> tuple[int, int]:
         """
@@ -245,7 +239,7 @@ class FaceWalkingInfo:
         Returns:
             (slice_index, slot) where both are in range [0, n_slices-1]
         """
-        return self._compute_reverse(row, col)
+        return self.center_to_slice(row, col)
 
 @dataclass(frozen=True)
 class FaceWalkingInfoUnit:
@@ -284,8 +278,8 @@ class FaceWalkingInfoUnit:
     edge_name: EdgeName  # Using EdgeName, not Edge object - CubeLayout must be size-independent
     reference_point: Point
     n_slices: int
-    _compute: UnitPointComputer = field(compare=False)  # Don't compare functions
-    _compute_reverse: UnitReversePointComputer = field(compare=False)  # (row, col, n_slices) -> (slice_index, slot)
+    slice_to_center: UnitPointComputer = field(compare=False)  # (n_slices, si, sl) -> (row, col)
+    center_to_slice: UnitReversePointComputer = field(compare=False)  # (row, col, n_slices) -> (si, sl)
 
     def get_reference_point(self, actual_n_slices: int):
         """
@@ -335,7 +329,7 @@ class FaceWalkingInfoUnit:
         Returns:
             Function (slice_index, slot) -> (row, col) in LTR coordinates
         """
-        return lambda r, c: self._compute(n_slices_actual, r, c)
+        return lambda r, c: self.slice_to_center(n_slices_actual, r, c)
 
     def get_compute_reverse(self, n_slices_actual: int) -> ReversePointComputer:
         """
@@ -359,7 +353,7 @@ class FaceWalkingInfoUnit:
         Returns:
             Function (row, col) -> (slice_index, slot)
         """
-        return lambda r, c: self._compute_reverse(r, c, n_slices_actual)
+        return lambda r, c: self.center_to_slice(r, c, n_slices_actual)
 
 
 

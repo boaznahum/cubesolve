@@ -28,25 +28,23 @@ Documentation:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
+from cube.domain.geometric.types import (
+    CenterToSlice,
+    Point,
+    SliceToCenter,
+    SliceToEntryEdge,
+)
 from cube.domain.model._elements import EdgePosition
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
 
-# Type aliases for coordinates - simple tuples for consistency with existing codebase
-# (row, col) for face coordinates, (slice_index, slot) for slice coordinates
-Point = tuple[int, int]
-
-# Type for coordinate transformation functions that accept n_slices as first parameter
-# This allows the same function to work with any cube size
-SliceToCenterFn = Callable[[int, int, int], Point]  # (n_slices, slice_index, slot) -> (row, col)
-SliceToEntryEdgeFn = Callable[[int, int], int]  # (n_slices, slice_index) -> edge_index
-CenterToSliceFn = Callable[[int, int, int], Point]  # (n_slices, row, col) -> (slice_index, slot)
-
-# Type for unit point computer: (n_slices, slice_index, slot) -> (row, col)
-UnitPointComputer = Callable[[int, int, int], Point]
+# Aliases for backward compatibility with existing code
+SliceToCenterFn = SliceToCenter
+SliceToEntryEdgeFn = SliceToEntryEdge
+CenterToSliceFn = CenterToSlice
 
 
 @dataclass(frozen=True)

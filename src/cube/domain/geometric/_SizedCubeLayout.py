@@ -149,8 +149,8 @@ class _SizedCubeLayout(SizedCubeLayout):
                     edge=edge,
                     reference_point=reference_point,
                     n_slices=n_slices,
-                    _compute=compute_fn,
-                    _compute_reverse=compute_reverse_fn
+                    slice_to_center=compute_fn,
+                    center_to_slice=compute_reverse_fn
                 )
 
                 sized_faces.append(sized_face_info)
