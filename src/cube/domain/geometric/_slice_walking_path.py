@@ -28,34 +28,25 @@ Documentation:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, NamedTuple
+from typing import TYPE_CHECKING, Callable
 
 from cube.domain.model._elements import EdgePosition
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
 
-
-class FaceCoord(NamedTuple):
-    """Face coordinate (row, col) where origin is bottom-left."""
-    row: int
-    col: int
-
-
-class SliceCoord(NamedTuple):
-    """Slice coordinate (slice_index, slot)."""
-    slice_index: int
-    slot: int
-
+# Type aliases for coordinates - simple tuples for consistency with existing codebase
+# (row, col) for face coordinates, (slice_index, slot) for slice coordinates
+Point = tuple[int, int]
 
 # Type for coordinate transformation functions that accept n_slices as first parameter
 # This allows the same function to work with any cube size
-SliceToCenterFn = Callable[[int, int, int], FaceCoord]  # (n_slices, slice_index, slot) -> FaceCoord
+SliceToCenterFn = Callable[[int, int, int], Point]  # (n_slices, slice_index, slot) -> (row, col)
 SliceToEntryEdgeFn = Callable[[int, int], int]  # (n_slices, slice_index) -> edge_index
-CenterToSliceFn = Callable[[int, int, int], SliceCoord]  # (n_slices, row, col) -> SliceCoord
+CenterToSliceFn = Callable[[int, int, int], Point]  # (n_slices, row, col) -> (slice_index, slot)
 
 # Type for unit point computer: (n_slices, slice_index, slot) -> (row, col)
-UnitPointComputer = Callable[[int, int, int], tuple[int, int]]
+UnitPointComputer = Callable[[int, int, int], Point]
 
 
 @dataclass(frozen=True)
@@ -70,13 +61,13 @@ class SliceWalkingInfo:
     the same SliceWalkingInfo to work with any cube size.
     """
 
-    # Convert slice coord to face coord: (n_slices, slice_index, slot) -> FaceCoord
+    # Convert slice coord to face coord: (n_slices, slice_index, slot) -> (row, col)
     slice_to_center: SliceToCenterFn
 
     # Given slice_index, compute piece index on entry edge: (n_slices, slice_index) -> int
     slice_to_entry_edge: SliceToEntryEdgeFn
 
-    # Convert face coord to slice coord: (n_slices, row, col) -> SliceCoord
+    # Convert face coord to slice coord: (n_slices, row, col) -> (slice_index, slot)
     center_to_slice: CenterToSliceFn
 
     # The 3 characteristics that define the formula
@@ -159,81 +150,81 @@ def create_walking_info(
         is_slot_inverted = entry_edge_position == EdgePosition.RIGHT
 
     # Select the appropriate formula based on the 3 characteristics
-    # All functions take n_slices as first parameter
+    # All functions take n_slices as first parameter and return Point (tuple[int, int])
     if is_horizontal:
         # Entry BOTTOM/TOP → VERTICAL slices: row = slot (or inv), col = sindex (or inv)
         if not is_index_inverted and not is_slot_inverted:
             # Case 1: Entry BOTTOM, Rotating LEFT
             # See: _walking_info_case1_entry_bottom_rotating_left.md
-            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> FaceCoord:
-                return FaceCoord(row=slot, col=slice_index)
+            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
+                return (slot, slice_index)  # (row, col)
 
-            def center_to_slice(n_slices: int, row: int, col: int) -> SliceCoord:
-                return SliceCoord(slice_index=col, slot=row)
+            def center_to_slice(n_slices: int, row: int, col: int) -> Point:
+                return (col, row)  # (slice_index, slot)
 
         elif not is_index_inverted and is_slot_inverted:
             # Case 2: Entry TOP, Rotating LEFT
             # See: _walking_info_case2_entry_top_rotating_left.md
-            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> FaceCoord:
-                return FaceCoord(row=n_slices - 1 - slot, col=slice_index)
+            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
+                return (n_slices - 1 - slot, slice_index)  # (row, col)
 
-            def center_to_slice(n_slices: int, row: int, col: int) -> SliceCoord:
-                return SliceCoord(slice_index=col, slot=n_slices - 1 - row)
+            def center_to_slice(n_slices: int, row: int, col: int) -> Point:
+                return (col, n_slices - 1 - row)  # (slice_index, slot)
 
         elif is_index_inverted and not is_slot_inverted:
             # Case 3: Entry BOTTOM, Rotating RIGHT
             # See: _walking_info_case3_entry_bottom_rotating_right.md
-            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> FaceCoord:
-                return FaceCoord(row=slot, col=n_slices - 1 - slice_index)
+            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
+                return (slot, n_slices - 1 - slice_index)  # (row, col)
 
-            def center_to_slice(n_slices: int, row: int, col: int) -> SliceCoord:
-                return SliceCoord(slice_index=n_slices - 1 - col, slot=row)
+            def center_to_slice(n_slices: int, row: int, col: int) -> Point:
+                return (n_slices - 1 - col, row)  # (slice_index, slot)
 
         else:
             # Case 4: Entry TOP, Rotating RIGHT
             # See: _walking_info_case4_entry_top_rotating_right.md
-            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> FaceCoord:
-                return FaceCoord(row=n_slices - 1 - slot, col=n_slices - 1 - slice_index)
+            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
+                return (n_slices - 1 - slot, n_slices - 1 - slice_index)  # (row, col)
 
-            def center_to_slice(n_slices: int, row: int, col: int) -> SliceCoord:
-                return SliceCoord(slice_index=n_slices - 1 - col, slot=n_slices - 1 - row)
+            def center_to_slice(n_slices: int, row: int, col: int) -> Point:
+                return (n_slices - 1 - col, n_slices - 1 - row)  # (slice_index, slot)
     else:
         # Entry LEFT/RIGHT → HORIZONTAL slices: row = sindex (or inv), col = slot (or inv)
         if not is_index_inverted and not is_slot_inverted:
             # Case 5: Entry LEFT, Rotating BOTTOM
             # See: _walking_info_case5_entry_left_rotating_bottom.md
-            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> FaceCoord:
-                return FaceCoord(row=slice_index, col=slot)
+            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
+                return (slice_index, slot)  # (row, col)
 
-            def center_to_slice(n_slices: int, row: int, col: int) -> SliceCoord:
-                return SliceCoord(slice_index=row, slot=col)
+            def center_to_slice(n_slices: int, row: int, col: int) -> Point:
+                return (row, col)  # (slice_index, slot)
 
         elif not is_index_inverted and is_slot_inverted:
             # Case 6: Entry RIGHT, Rotating BOTTOM
             # See: _walking_info_case6_entry_right_rotating_bottom.md
-            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> FaceCoord:
-                return FaceCoord(row=slice_index, col=n_slices - 1 - slot)
+            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
+                return (slice_index, n_slices - 1 - slot)  # (row, col)
 
-            def center_to_slice(n_slices: int, row: int, col: int) -> SliceCoord:
-                return SliceCoord(slice_index=row, slot=n_slices - 1 - col)
+            def center_to_slice(n_slices: int, row: int, col: int) -> Point:
+                return (row, n_slices - 1 - col)  # (slice_index, slot)
 
         elif is_index_inverted and not is_slot_inverted:
             # Case 7: Entry LEFT, Rotating TOP
             # See: _walking_info_case7_entry_left_rotating_top.md
-            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> FaceCoord:
-                return FaceCoord(row=n_slices - 1 - slice_index, col=slot)
+            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
+                return (n_slices - 1 - slice_index, slot)  # (row, col)
 
-            def center_to_slice(n_slices: int, row: int, col: int) -> SliceCoord:
-                return SliceCoord(slice_index=n_slices - 1 - row, slot=col)
+            def center_to_slice(n_slices: int, row: int, col: int) -> Point:
+                return (n_slices - 1 - row, col)  # (slice_index, slot)
 
         else:
             # Case 8: Entry RIGHT, Rotating TOP
             # See: _walking_info_case8_entry_right_rotating_top.md
-            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> FaceCoord:
-                return FaceCoord(row=n_slices - 1 - slice_index, col=n_slices - 1 - slot)
+            def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
+                return (n_slices - 1 - slice_index, n_slices - 1 - slot)  # (row, col)
 
-            def center_to_slice(n_slices: int, row: int, col: int) -> SliceCoord:
-                return SliceCoord(slice_index=n_slices - 1 - row, slot=n_slices - 1 - col)
+            def center_to_slice(n_slices: int, row: int, col: int) -> Point:
+                return (n_slices - 1 - row, n_slices - 1 - col)  # (slice_index, slot)
 
     # slice_to_entry_edge: Given slice_index, compute edge's internal slice index
     #

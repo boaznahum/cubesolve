@@ -386,10 +386,9 @@ class _SliceLayout(SliceLayout):
                 )
 
                 # Get reference point using fake_n_slices
-                _reference_point = walking_info.slice_to_center(fake_n_slices, 0, 0)
-                reference_point = (_reference_point.row, _reference_point.col)
+                reference_point = walking_info.slice_to_center(fake_n_slices, 0, 0)
 
-                # slice_to_center IS the UnitPointComputer (FaceCoord is a NamedTuple = tuple)
+                # slice_to_center IS the UnitPointComputer
                 compute_fn: UnitPointComputer = walking_info.slice_to_center
 
                 # Determine edge properties
