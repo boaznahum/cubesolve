@@ -295,6 +295,7 @@ class Slice(SuperElement):
                     centers.append(center.get_center_slice(point))
 
                 # Get edge wing using the stored edge and local slice index
+                # claude: when time arrives replace with new implementation
                 local_index = face_info.compute_point(slice_index, 0)[1] if face_info.face.is_bottom_or_top(face_info.edge) else face_info.compute_point(slice_index, 0)[0]
                 edge_slice = face_info.edge.get_slice_by_ltr_index(face_info.face, local_index)
                 edges.append(edge_slice)

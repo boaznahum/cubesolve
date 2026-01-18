@@ -93,6 +93,7 @@ class Face(SuperElement, Hashable):
             EdgePosition.BOTTOM: self._edge_bottom,
         }
 
+
         self._corners = [self._corner_top_left,
                          self._corner_top_right,
                          self._corner_bottom_right,
@@ -281,6 +282,16 @@ class Face(SuperElement, Hashable):
             face.get_edge(EdgePosition.LEFT)  # same as face.edge_left
         """
         return self._edge_by_position[position]
+
+    def get_edge_position(self, edge: Edge) -> EdgePosition:
+        """Get the EdgePosition (LEFT, RIGHT, TOP, BOTTOM) for an edge on this face."""
+        p: EdgePosition
+        e: Edge
+        for p, e in self._edge_by_position.items():
+            if e is edge:
+                return p
+
+        raise InternalSWError(f"Edge {edge} is not on face {self.name}")
 
     @property
     def corner_top_right(self) -> Corner:
