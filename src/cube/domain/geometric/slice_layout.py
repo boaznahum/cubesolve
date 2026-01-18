@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Protocol
 
+from cube.domain.geometric._slice_walking_path import SliceWalkingInfo
 from cube.domain.model._elements import EdgePosition
 
 if TYPE_CHECKING:
@@ -367,22 +368,7 @@ class _SliceLayout(SliceLayout):
 
             face_infos: list[FaceWalkingInfoUnit] = []
 
-            # Helper function to compute (row, col) from (slice_index, slot) for any n_slices
-            # See: _walking_info_case{N}_entry_{entry}_rotating_{rotating}.md
-            def compute_point(n: int, si: int, sl: int, h: bool, ii: bool, si_inv: bool) -> Point:
-                """Compute (row, col) from (slice_index, slot) for any n_slices."""
-                def inv(x: int) -> int:
-                    return n - 1 - x
-
-                if h:  # horizontal: row from slot, col from slice_index
-                    row = inv(sl) if si_inv else sl
-                    col = inv(si) if ii else si
-                else:  # vertical: row from slice_index, col from slot
-                    row = inv(si) if ii else si
-                    col = inv(sl) if si_inv else sl
-                return (row, col)
-
-            from cube.domain.model._elements import EdgePosition
+            from cube.domain.geometric._slice_walking_path import create_walking_info
 
             for iteration in range(4):
 
@@ -390,30 +376,21 @@ class _SliceLayout(SliceLayout):
                 rotating_edge = current_face.get_shared_edge(rotation_face)
                 assert rotating_edge is not None, f"No shared edge between {current_face.name} and {rotation_face.name}"
 
-                entry_edge_pos = current_face.get_edge_position(current_edge)
-                rotating_edge_pos = current_face.get_edge_position(rotating_edge)
-
-                # Derive the 3 characteristics (same logic as _slice_walking_path.py)
-                is_horizontal = entry_edge_pos in (EdgePosition.TOP, EdgePosition.BOTTOM)
-
-                if is_horizontal:
-                    is_index_inverted = rotating_edge_pos == EdgePosition.RIGHT
-                    is_slot_inverted = entry_edge_pos == EdgePosition.TOP
-                else:
-                    is_index_inverted = rotating_edge_pos == EdgePosition.TOP
-                    is_slot_inverted = entry_edge_pos == EdgePosition.RIGHT
-
-                reference_point = compute_point(
-                    fake_n_slices, 0, 0, is_horizontal, is_index_inverted, is_slot_inverted
+                # Use centralized logic from _slice_walking_path.py
+                # create_walking_info returns size-independent functions
+                # that accept n_slices as first parameter
+                walking_info: SliceWalkingInfo = create_walking_info(
+                    current_face,
+                    current_face.get_edge_position(current_edge),
+                    current_face.get_edge_position(rotating_edge)
                 )
 
-                # Create compute_fn that works with actual n_slices
-                # Capture the boolean flags in closure
-                compute_fn: UnitPointComputer = (
-                    lambda n_slices, si, slot,
-                           h=is_horizontal, ii=is_index_inverted, si_inv=is_slot_inverted:
-                    compute_point(n_slices, si, slot, h, ii, si_inv)
-                )
+                # Get reference point using fake_n_slices
+                _reference_point = walking_info.slice_to_center(fake_n_slices, 0, 0)
+                reference_point = (_reference_point.row, _reference_point.col)
+
+                # slice_to_center IS the UnitPointComputer (FaceCoord is a NamedTuple = tuple)
+                compute_fn: UnitPointComputer = walking_info.slice_to_center
 
                 # Determine edge properties
 
