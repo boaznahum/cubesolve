@@ -311,7 +311,7 @@ class _SliceLayout(SliceLayout):
         cache = self._layout.cache_manager.get(cache_key, bool)
         return cache.compute(compute)
 
-    def create_walking_info_unit_old(self) -> "CubeWalkingInfoUnit":
+    def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
         """
         Create SIZE-INDEPENDENT walking info for this slice.
 
@@ -367,29 +367,53 @@ class _SliceLayout(SliceLayout):
 
             face_infos: list[FaceWalkingInfoUnit] = []
 
+            # Helper function to compute (row, col) from (slice_index, slot) for any n_slices
+            # See: _walking_info_case{N}_entry_{entry}_rotating_{rotating}.md
+            def compute_point(n: int, si: int, sl: int, h: bool, ii: bool, si_inv: bool) -> Point:
+                """Compute (row, col) from (slice_index, slot) for any n_slices."""
+                def inv(x: int) -> int:
+                    return n - 1 - x
+
+                if h:  # horizontal: row from slot, col from slice_index
+                    row = inv(sl) if si_inv else sl
+                    col = inv(si) if ii else si
+                else:  # vertical: row from slice_index, col from slot
+                    row = inv(si) if ii else si
+                    col = inv(sl) if si_inv else sl
+                return (row, col)
+
+            from cube.domain.model._elements import EdgePosition
 
             for iteration in range(4):
-
-                from cube.domain.geometric._slice_walking_path import create_walking_info
-                from cube.domain.geometric._slice_walking_path import SliceWalkingInfo
 
                 # Get the rotating edge (edge between current_face and rotation_face)
                 rotating_edge = current_face.get_shared_edge(rotation_face)
                 assert rotating_edge is not None, f"No shared edge between {current_face.name} and {rotation_face.name}"
 
-                new_walking_info: SliceWalkingInfo = create_walking_info(
-                    fake_n_slices,
-                    current_face,
-                    current_face.get_edge_position(current_edge),
-                    current_face.get_edge_position(rotating_edge)
+                entry_edge_pos = current_face.get_edge_position(current_edge)
+                rotating_edge_pos = current_face.get_edge_position(rotating_edge)
+
+                # Derive the 3 characteristics (same logic as _slice_walking_path.py)
+                is_horizontal = entry_edge_pos in (EdgePosition.TOP, EdgePosition.BOTTOM)
+
+                if is_horizontal:
+                    is_index_inverted = rotating_edge_pos == EdgePosition.RIGHT
+                    is_slot_inverted = entry_edge_pos == EdgePosition.TOP
+                else:
+                    is_index_inverted = rotating_edge_pos == EdgePosition.TOP
+                    is_slot_inverted = entry_edge_pos == EdgePosition.RIGHT
+
+                reference_point = compute_point(
+                    fake_n_slices, 0, 0, is_horizontal, is_index_inverted, is_slot_inverted
                 )
 
-                _reference_point = new_walking_info.slice_to_center(0, 0)
-                reference_point = (_reference_point.row, _reference_point.col)
-
-                # claude: get rid of double types
-                # Capture new_walking_info in closure with default arg to avoid late binding issue
-                compute_fn: UnitPointComputer = lambda n_slices, si, slot, wi=new_walking_info: wi.slice_to_center(si, slot)
+                # Create compute_fn that works with actual n_slices
+                # Capture the boolean flags in closure
+                compute_fn: UnitPointComputer = (
+                    lambda n_slices, si, slot,
+                           h=is_horizontal, ii=is_index_inverted, si_inv=is_slot_inverted:
+                    compute_point(n_slices, si, slot, h, ii, si_inv)
+                )
 
                 # Determine edge properties
 
@@ -420,7 +444,8 @@ class _SliceLayout(SliceLayout):
         cache_key = ("SliceLayout.create_walking_info_unit", self._slice_name)
         cache = self._layout.cache_manager.get(cache_key, CubeWalkingInfoUnit)
         return cache.compute(compute)
-    def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
+
+    def create_walking_info_unit_original(self) -> "CubeWalkingInfoUnit":
         """
         Create SIZE-INDEPENDENT walking info for this slice.
 
