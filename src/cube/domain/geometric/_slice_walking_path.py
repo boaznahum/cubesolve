@@ -68,11 +68,6 @@ class SliceWalkingInfo:
     # Convert face coord to slice coord: (n_slices, row, col) -> (slice_index, slot)
     center_to_slice: CenterToSliceFn
 
-    # The 3 characteristics that define the formula
-    is_horizontal: bool
-    is_index_inverted: bool
-    is_slot_inverted: bool
-
 
 def create_walking_info(
     face: Face,
@@ -250,7 +245,4 @@ def create_walking_info(
         slice_to_center=slice_to_center,
         slice_to_entry_edge=slice_to_entry_edge,
         center_to_slice=center_to_slice,
-        is_horizontal=is_horizontal,
-        is_index_inverted=is_index_inverted,
-        is_slot_inverted=is_slot_inverted,
     )
