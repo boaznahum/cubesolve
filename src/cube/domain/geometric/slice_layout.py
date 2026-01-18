@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Protocol, Tuple, cast
 
 from cube.domain.exceptions import GeometryError, GeometryErrorCode
 from cube.domain.geometric.geometry_types import CLGColRow
-from cube.domain.geometric.types import CenterToSliceLegacy
+from cube.domain.geometric.types import CenterToSlice
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model._elements import EdgePosition
 from cube.domain.geometric.geometry_utils import inv
@@ -14,7 +14,7 @@ from cube.utils.service_provider import IServiceProvider
 if TYPE_CHECKING:
     from cube.domain.model.SliceName import SliceName
     from cube.domain.geometric._CubeLayout import _CubeLayout
-    from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit, UnitPointComputer
+    from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit
 
 
 class SliceLayout(Protocol):
@@ -206,7 +206,7 @@ class SliceLayout(Protocol):
         """
         ...
 
-    def create_slice_index_computer(self, face_name: FaceName) -> CenterToSliceLegacy:
+    def create_slice_index_computer(self, face_name: FaceName) -> CenterToSlice:
         """
         Create a function that computes slice coordinates from (row, col, n_slices).
 
@@ -467,7 +467,7 @@ class _SliceLayout(SliceLayout):
 
             return inv(n_slices, distance_from_face)
 
-    def create_slice_index_computer(self, face_name: FaceName) -> CenterToSliceLegacy:
+    def create_slice_index_computer(self, face_name: FaceName) -> CenterToSlice:
         """
         Create a function that computes slice coordinates from (row, col, n_slices).
 
@@ -482,7 +482,7 @@ class _SliceLayout(SliceLayout):
             Caller typically uses result[0] to get just the slice_index.
         """
 
-        def compute() -> CenterToSliceLegacy:
+        def compute() -> CenterToSlice:
             # Get the walking info which has center_to_slice for all 4 faces
             walking_info_unit = self.create_walking_info_unit()
 
@@ -501,7 +501,7 @@ class _SliceLayout(SliceLayout):
         cache_key = ("create_slice_index_computer", (face_name,))
         cache = self._cache_manager.get(cache_key, object)  # type: ignore[arg-type]
         #cluade: lets get rid of the cast !!!
-        return cast(CenterToSliceLegacy, cache.compute(compute))
+        return cast(CenterToSlice, cache.compute(compute))
 
     def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
         """
@@ -510,8 +510,7 @@ class _SliceLayout(SliceLayout):
         See SliceLayout protocol docstring for full documentation.
         """
         import random
-        from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit, FaceWalkingInfoUnit, UnitReversePointComputer
-        from cube.domain.geometric._slice_walking_path import CenterToSliceFn
+        from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit, FaceWalkingInfoUnit
         from cube.domain.model.Edge import Edge
         from cube.domain.model.Face import Face
 
@@ -576,28 +575,16 @@ class _SliceLayout(SliceLayout):
                 # Get reference point using fake_n_slices
                 reference_point = walking_info.slice_to_center(fake_n_slices, 0, 0)
 
-                # slice_to_center IS the UnitPointComputer: (n_slices, si, sl) -> (row, col)
-                compute_fn: UnitPointComputer = walking_info.slice_to_center
-
-                # center_to_slice needs arg order adapted for UnitReversePointComputer
-                # Our: (n_slices, row, col) -> (si, sl)
-                # Expected: (row, col, n_slices) -> (si, sl)
-                cts = walking_info.center_to_slice
-
-                def make_reverse(center_to_slice_fn: CenterToSliceFn) -> UnitReversePointComputer:
-                    def reverse(r: int, c: int, n: int) -> tuple[int, int]:
-                        return center_to_slice_fn(n, r, c)
-                    return reverse
-
-                compute_reverse_fn = make_reverse(cts)
-
+                # Both functions have consistent n_slices FIRST convention:
+                # slice_to_center: (n_slices, si, sl) -> (row, col)
+                # center_to_slice: (n_slices, row, col) -> (si, sl)
                 face_infos.append(FaceWalkingInfoUnit(
                     face_name=current_face.name,
                     edge_name=current_edge.name,
                     reference_point=reference_point,
                     n_slices=fake_n_slices,
-                    slice_to_center=compute_fn,
-                    center_to_slice=compute_reverse_fn
+                    slice_to_center=walking_info.slice_to_center,
+                    center_to_slice=walking_info.center_to_slice
                 ))
 
                 # Move to next face (except after the 4th)

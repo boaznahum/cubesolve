@@ -121,7 +121,7 @@ from typing import TYPE_CHECKING, Iterator
 
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.types import (
-    CenterToSliceLegacy,
+    CenterToSlice,
     Point,
     PointComputer,
     ReversePointComputer,
@@ -139,7 +139,7 @@ if TYPE_CHECKING:
 
 # Aliases for backward compatibility
 UnitPointComputer = SliceToCenter
-UnitReversePointComputer = CenterToSliceLegacy
+UnitReversePointComputer = CenterToSlice
 
 
 @dataclass(frozen=True)
@@ -279,7 +279,7 @@ class FaceWalkingInfoUnit:
     reference_point: Point
     n_slices: int
     slice_to_center: UnitPointComputer = field(compare=False)  # (n_slices, si, sl) -> (row, col)
-    center_to_slice: UnitReversePointComputer = field(compare=False)  # (row, col, n_slices) -> (si, sl)
+    center_to_slice: UnitReversePointComputer = field(compare=False)  # (n_slices, row, col) -> (si, sl)
 
     def get_reference_point(self, actual_n_slices: int):
         """
@@ -353,7 +353,8 @@ class FaceWalkingInfoUnit:
         Returns:
             Function (row, col) -> (slice_index, slot)
         """
-        return lambda r, c: self.center_to_slice(r, c, n_slices_actual)
+        # Lambda binds n_slices_actual to create a 2-param function from the 3-param center_to_slice
+        return lambda r, c: self.center_to_slice(n_slices_actual, r, c)
 
 
 

@@ -36,15 +36,6 @@ CenterToSlice = Callable[[int, int, int], Point]
 SliceToEntryEdge = Callable[[int, int], int]
 
 # =============================================================================
-# LEGACY: n_slices LAST (to be migrated to n_slices FIRST)
-# =============================================================================
-
-# Reverse with n_slices LAST - used by FaceWalkingInfoUnit._compute_reverse
-# Signature: (row, col, n_slices) -> (slice_index, slot)
-# TODO: Migrate to CenterToSlice (n_slices FIRST) and remove this
-CenterToSliceLegacy = Callable[[int, int, int], Point]
-
-# =============================================================================
 # SIZE-BOUND functions - n_slices baked in at creation time
 # =============================================================================
 

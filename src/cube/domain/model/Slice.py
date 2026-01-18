@@ -578,5 +578,5 @@ class Slice(SuperElement):
         """
         row, col = coord
         computer = self._slice_layout.create_slice_index_computer(face)
-        # computer returns (slice_index, slot), we only need slice_index
-        return computer(row, col, n_slices)[0]
+        # computer signature: (n_slices, row, col) -> (slice_index, slot)
+        return computer(n_slices, row, col)[0]
