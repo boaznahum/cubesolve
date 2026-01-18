@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, Tuple
+from typing import TYPE_CHECKING, Callable, Protocol, Tuple
 
 from cube.domain.exceptions import GeometryError, GeometryErrorCode
 from cube.domain.geometric.geometry_types import CLGColRow, SliceIndexComputerUnit
 from cube.domain.model.FaceName import FaceName
-from cube.domain.geometric._slice_walking_path import SliceWalkingInfo
 from cube.domain.model._elements import EdgePosition
 from cube.domain.geometric.geometry_utils import inv
 from cube.utils.Cache import CacheManager
@@ -482,14 +481,8 @@ class _SliceLayout(SliceLayout):
         The returned function encapsulates the geometry-derived formula for this
         specific slice and face combination.
 
-        Derivation logic:
-            1. Check if slice cuts rows or columns on this face
-               - "cuts rows" = vertical slice → use column coordinate
-               - "cuts columns" = horizontal slice → use row coordinate
-
-            2. Check if slice indices align with face coordinates
-               - aligned → direct formula (coord)
-               - not aligned → inverted formula (n_slices - 1 - coord)
+        This uses the centralized center_to_slice logic from create_walking_info_unit(),
+        extracting just the slice_index component.
 
         Args:
             face_name: The face to compute formula for
@@ -499,24 +492,29 @@ class _SliceLayout(SliceLayout):
         """
 
         def compute() -> SliceIndexComputerUnit:
-            cuts_rows = self.does_slice_cut_rows_or_columns(face_name) == CLGColRow.ROW
-            starts_aligned = self.does_slice_of_face_start_with_face(face_name)
+            # Get the walking info which has center_to_slice for all 4 faces
+            walking_info_unit = self.create_walking_info_unit()
 
-            # Determine which coordinate to use and whether to invert
-            if cuts_rows:
-                # Vertical slice - column identifies which slice
-                if starts_aligned:
-                    return SliceIndexComputerUnit(lambda row, col, n_slices: col)
-                else:
-                    return SliceIndexComputerUnit(lambda row, col, n_slices: inv(n_slices, col))
-            else:
-                # Horizontal slice - row identifies which slice
-                if starts_aligned:
-                    return SliceIndexComputerUnit(lambda row, col, n_slices: row)
-                else:
-                    return SliceIndexComputerUnit(lambda row, col, n_slices: inv(n_slices, row))
+            # Find the face info for this face
+            for face_info in walking_info_unit.face_infos:
+                if face_info.face_name == face_name:
+                    # Use _compute_reverse: (row, col, n_slices) -> (slice_index, slot)
+                    # Extract just slice_index (first element)
+                    reverse_fn = face_info._compute_reverse
 
-        # Use cache manager from layout - cache by slice_name only (size-independent!)
+                    def make_slice_index_fn(rev_fn: Callable[[int, int, int], tuple[int, int]]) -> Callable[[int, int, int], int]:
+                        def compute_slice_index(row: int, col: int, n_slices: int) -> int:
+                            return rev_fn(row, col, n_slices)[0]
+                        return compute_slice_index
+
+                    return SliceIndexComputerUnit(make_slice_index_fn(reverse_fn))
+
+            raise GeometryError(
+                GeometryErrorCode.INVALID_FACE,
+                f"Face {face_name} is not in the cycle for slice {self._slice_name}"
+            )
+
+        # Use cache manager from layout
         cache_key = ("create_slice_index_computer", (face_name,))
         cache = self._cache_manager.get(cache_key, SliceIndexComputerUnit)
         return cache.compute(compute)
@@ -529,7 +527,7 @@ class _SliceLayout(SliceLayout):
         """
         import random
         from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit, FaceWalkingInfoUnit, UnitReversePointComputer
-        from cube.domain.geometric.types import Point
+        from cube.domain.geometric._slice_walking_path import CenterToSliceFn
         from cube.domain.model.Edge import Edge
         from cube.domain.model.Face import Face
 
@@ -544,9 +542,6 @@ class _SliceLayout(SliceLayout):
             internal_3x3 = self._cube_layout._cube
             slice_name = self._slice_name
             fake_n_slices = 1234  # Arbitrary large value - see UNIT_WALKING_INFO.md
-
-            def inv(x: int) -> int:
-                return fake_n_slices - 1 - x
 
             # Derive starting face and edge from rotation face
             rotation_face_name = self.get_face_name()
@@ -579,7 +574,7 @@ class _SliceLayout(SliceLayout):
 
             from cube.domain.geometric._slice_walking_path import create_walking_info
 
-            for iteration in range(4):
+            for _ in range(4):
 
                 # Get the rotating edge (edge between current_face and rotation_face)
                 rotating_edge = current_face.get_shared_edge(rotation_face)
@@ -588,7 +583,7 @@ class _SliceLayout(SliceLayout):
                 # Use centralized logic from _slice_walking_path.py
                 # create_walking_info returns size-independent functions
                 # that accept n_slices as first parameter
-                walking_info: SliceWalkingInfo = create_walking_info(
+                walking_info = create_walking_info(
                     current_face,
                     current_face.get_edge_position(current_edge),
                     current_face.get_edge_position(rotating_edge)
@@ -604,7 +599,13 @@ class _SliceLayout(SliceLayout):
                 # Our: (n_slices, row, col) -> (si, sl)
                 # Expected: (row, col, n_slices) -> (si, sl)
                 cts = walking_info.center_to_slice
-                compute_reverse_fn: UnitReversePointComputer = lambda r, c, n, _cts=cts: _cts(n, r, c)
+
+                def make_reverse(center_to_slice_fn: CenterToSliceFn) -> UnitReversePointComputer:
+                    def reverse(r: int, c: int, n: int) -> tuple[int, int]:
+                        return center_to_slice_fn(n, r, c)
+                    return reverse
+
+                compute_reverse_fn = make_reverse(cts)
 
                 face_infos.append(FaceWalkingInfoUnit(
                     face_name=current_face.name,
@@ -642,7 +643,7 @@ class _SliceLayout(SliceLayout):
         See SliceLayout protocol docstring for full documentation.
         """
         import random
-        from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit, FaceWalkingInfoUnit, UnitReversePointComputer
+        from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit, FaceWalkingInfoUnit
         from cube.domain.geometric.types import Point
         from cube.domain.model.Edge import Edge
         from cube.domain.model.Face import Face
@@ -761,7 +762,7 @@ class _SliceLayout(SliceLayout):
                 # Forward: (si, sl) -> reverse: (row, col)
                 return (row, col)
 
-            for iteration in range(4):
+            for _ in range(4):
                 # Determine edge properties
                 is_horizontal = current_face.is_bottom_or_top(current_edge)
                 is_slot_inverted = (
