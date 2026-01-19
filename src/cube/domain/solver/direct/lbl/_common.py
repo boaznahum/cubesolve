@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from cube.domain.model import CenterSlice
-from cube.domain.solver.common.tracker import FacesTrackerHolder
+from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
     from cube.domain.solver.common.SolverElement import SolverElement
