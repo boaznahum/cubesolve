@@ -1,4 +1,10 @@
-"""LBL Slices Helper - wraps NxNCenters and NxNEdges for layer-by-layer slice solving.
+"""
+
+claude: # in these files row_index is the distance between l1_face, no metter on which orientation
+go over all methods and checkit match the definition asked me if you are not sue
+
+
+LBL Slices Helper - wraps NxNCenters and NxNEdges for layer-by-layer slice solving.
 
 This helper provides slice-based operations for middle layer solving:
 - Ring center solving (one row on 4 side faces per slice)
@@ -24,6 +30,7 @@ from cube.domain.model.Slice import Slice
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.tracker.trackers import FaceTracker
+from cube.domain.solver.direct.lbl._common import setup_l1, _get_side_face_trackers
 from cube.domain.solver.direct.lbl.NxNCenters2 import NxNCenters2
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 
@@ -86,22 +93,6 @@ class _LBLSlices(SolverElement):
     # =========================================================================
     # Face helpers
     # =========================================================================
-
-    def _get_side_face_trackers(
-            self, th: FacesTrackerHolder, l1_tracker: FaceTracker
-    ) -> list[FaceTracker]:
-        """Get trackers for side faces (not Layer 1 or its opposite).
-
-        Args:
-            th: FacesTrackerHolder with all 6 face trackers
-            l1_tracker: The Layer 1 face tracker (to exclude with its opposite)
-
-        Returns:
-            List of 4 side face trackers
-        """
-        l1_opposite_face = l1_tracker.face.opposite
-        return [t for t in th.trackers
-                if t.face is not l1_tracker.face and t.face is not l1_opposite_face]
 
     # =========================================================================
     # State inspection
@@ -218,7 +209,7 @@ class _LBLSlices(SolverElement):
     # Solving operations
     # =========================================================================
 
-    def _solve_slice_centers(
+    def _solve_slice_row(
             self, slice_index: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
     ) -> None:
         """Solve ring centers for a single slice.
@@ -237,21 +228,20 @@ class _LBLSlices(SolverElement):
             th: FacesTrackerHolder for face color tracking
             l1_white_tracker: Layer 1 face tracker
         """
-        with self._centers._setup_l1(l1_white_tracker, slice_index):
-            # Setup L1 once at the start - positions white face down and will
-            # clear all tracking when done. Individual slices accumulate their
-            # tracking markers during solving.
-            side_trackers = self._get_side_face_trackers(th, l1_white_tracker)
+        side_trackers: list[FaceTracker] = _get_side_face_trackers(th, l1_white_tracker)
 
-            for target_face in side_trackers:
-                self._solve_face_index(l1_white_tracker, target_face, slice_index)
+        for target_face in side_trackers:
+                self._solve_face_row(l1_white_tracker, target_face, slice_index)
 
-    def _solve_face_index(
-            self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int
-    ) -> None:
-        self._centers.solve_single_center_row_slice(l1_white_tracker, target_face, slice_index)
+    def _solve_face_row(self, l1_white_tracker: FaceTracker,
+                        target_face: FaceTracker,
+                        face_row: int
+                        ) -> None:
+        self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
+        self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
 
-    def solve_all_slice_centers(
+
+    def solve_all_faces_all_rows(
             self, face_trackers: FacesTrackerHolder, l1_white_tracker: FaceTracker
     ) -> None:
         """Solve all middle slice ring centers (bottom to top).
@@ -264,5 +254,13 @@ class _LBLSlices(SolverElement):
         """
         # Solve all slices from bottom to top
         from cube.domain.solver.direct.lbl._lbl_config import NUMBER_OF_SLICES_TO_SOLVE
-        for slice_index in range(min(NUMBER_OF_SLICES_TO_SOLVE, self.n_slices)):
-            self._solve_slice_centers(slice_index, face_trackers, l1_white_tracker)
+
+        # in this files row_index is the distance between l1_face, no metter on which orientation
+
+        # Setup L1 once at the start - positions white face down and will
+        # clear all tracking when done. Individual slices accumulate their
+        # tracking markers during solving.
+        with setup_l1(self, l1_white_tracker):
+            for row_index in range(min(NUMBER_OF_SLICES_TO_SOLVE, self.n_slices)):
+                with self._logger.tab(f"Solving face row {row_index}"):
+                    self._solve_slice_row(row_index, face_trackers, l1_white_tracker)

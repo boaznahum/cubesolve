@@ -1,4 +1,8 @@
-"""Layer-by-Layer NxN Solver - solves big cubes one horizontal layer at a time.
+"""
+claude: # in these files row_index is the distance between l1_face, no metter on which orientation
+go over all methods and checkit match the definition asked me if you are not sue
+
+Layer-by-Layer NxN Solver - solves big cubes one horizontal layer at a time.
 
 Unlike the reduction method (centers → edges → 3x3), this solver:
 1. Solves Layer 1 (white face): centers → edges → corners
@@ -172,14 +176,14 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
                     self._solve_layer1_corners(th)
-                    self._solve_slices_centers(th)
+                    self._solve_face_rows(th)
 
                 case SolveStep.ALL:
                     # Full solve (currently only up to Layer 1 + slices centers)
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
                     self._solve_layer1_corners(th)
-                    self._solve_slices_centers(th)
+                    self._solve_face_rows(th)
                     # TODO: Add slice edges, last layer
 
                 case _:
@@ -415,12 +419,11 @@ class LayerByLayerNxNSolver(BaseSolver):
     # Private methods - Middle slices solving
     # =========================================================================
 
-    def _solve_slices_centers(self, face_trackers: FacesTrackerHolder) -> None:
-        """Solve all middle slice ring centers (bottom to top).
+    def _solve_face_rows(self, face_trackers: FacesTrackerHolder) -> None:
+        """Solve all middle slice ring centers + edges (bottom to top).
 
         Delegates to _LBLSlices helper which wraps NxNCenters and NxNEdges.
         """
         l1_tracker = self._get_layer1_tracker(face_trackers)
 
-        with self.op.annotation.annotate(h2="Middle slices centers"):
-            self._lbl_slices.solve_all_slice_centers(face_trackers, l1_tracker)
+        self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)

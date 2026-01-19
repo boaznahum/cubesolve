@@ -9,14 +9,21 @@ from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.solver.common.tracker.trackers import FaceTracker
+from cube.domain.solver.direct.lbl._common import (
+    CENTER_SLICE_TRACK_KEY,
+    clear_all_tracking,
+    clear_center_slice,
+    position_l1,
+)
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils import symbols
-
-CENTER_SLICE_TRACK_KEY = "xxxxxxx"
 
 
 class NxNCenters2(SolverElement):
     """
+    claude: # in these files row_index is the distance between l1_face, no metter on which orientation
+    go over all methods and checkit match the definition asked me if you are not sue
+
     Solves center pieces on NxN cubes (N > 3) using block commutators.
 
     This solver brings center pieces from source faces to target faces using
@@ -107,8 +114,8 @@ class NxNCenters2(SolverElement):
         self._comm_helper = CommunicatorHelper(slv)
 
 
-    def solve_single_center_row_slice(
-            self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int
+    def solve_single_center_face_row(
+            self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int
     ) -> None:
         """
         Solve a single row of center pieces on a face.
@@ -123,8 +130,8 @@ class NxNCenters2(SolverElement):
             :param l1_white_tracker:
         """
 
-        with self._logger.tab(lambda: f"{symbols.green_line(3)} Slice {slice_index} {target_face.color_at_face_str} <-- all faces {symbols.green_line(3)}"):
-            self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, slice_index)
+        with self._logger.tab(lambda: f"{symbols.green_line(3)} Slice {face_row} {target_face.color_at_face_str} <-- all faces {symbols.green_line(3)}"):
+            self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, face_row)
 
     def _slice_on_target_face_solved(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int) -> bool:
 
@@ -255,13 +262,10 @@ class NxNCenters2(SolverElement):
             return None
 
     def _clear_center_slice(self, cs: CenterSlice) -> None:
-        cs.moveable_attributes.pop(CENTER_SLICE_TRACK_KEY, None)
+        clear_center_slice(cs)
 
-    def _clear_all_tracking(self):
-
-        for c in self.cube.centers:
-            for cc in c.all_slices:
-                self._clear_center_slice(cc)
+    def _clear_all_tracking(self) -> None:
+        clear_all_tracking(self)
 
     def _iterate_all_tracked_slices_index(self, target_face: FaceTracker) -> Iterator[Point]:
 
@@ -302,14 +306,9 @@ class NxNCenters2(SolverElement):
 
 
 
-    def _position_l1(self, l1_white_tracker: FaceTracker):
+    def _position_l1(self, l1_white_tracker: FaceTracker) -> None:
         """Position L1 down and target face to front."""
-        # assert target_face is not l1_white_tracker
-        # assert target_face is not l1_white_tracker.opposite
-
-        self.cmn.bring_face_down(l1_white_tracker.face)
-
-        assert l1_white_tracker.face is self.cube.down
+        position_l1(self, l1_white_tracker)
 
     @contextmanager
     def _track_row_slices(self, l1_white_tracker: FaceTracker, slice_index: int) -> Generator[None, None, None]:
@@ -334,21 +333,6 @@ class NxNCenters2(SolverElement):
             # _is_cent_piece_solved() and avoid destroying pieces from earlier slices.
             # Clearing happens only in _setup_l1() when all slices are done.
             pass
-
-    @contextmanager
-    def _setup_l1(self, l1_white_tracker: FaceTracker,
-                  slice_index: int) -> Iterator[None]:
-        """Setup L1 position and manage tracking lifecycle.
-
-        Positions L1 (white face) down for solving. Tracking is accumulated
-        during solving (via _track_row_slices) and cleared only here when
-        all slices are done. This protects solved pieces from being destroyed.
-        """
-        self._position_l1(l1_white_tracker)
-        try:
-            yield
-        finally:
-            self._clear_all_tracking()
 
     def _try_remove_all_pieces_from_target_face_and_other_faces(self, l1_white_tracker: FaceTracker,
                                                                 _target_face_tracker: FaceTracker,

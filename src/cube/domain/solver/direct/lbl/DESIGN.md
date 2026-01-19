@@ -1,3 +1,5 @@
+from cube.domain.solver.direct.lbl._common import _get_side_face_trackers
+
 # Layer-by-Layer NxN Solver Design
 
 > **Issue:** [#48](https://github.com/boaznahum/cubesolve/issues/48)
@@ -455,32 +457,33 @@ For Layer 2:
 
 ```python
 def _solve_slice_centers(self, slice_index: int, th: FacesTrackerHolder) -> None:
-    """Solve the ring of centers for a middle slice.
+   """Solve the ring of centers for a middle slice.
 
-    Args:
-        slice_index: 0 to n_slices-1 (0 = closest to D, n_slices-1 = closest to U)
-        th: FacesTrackerHolder for face color tracking
-    """
-    # Calculate which row on side faces corresponds to this slice
-    n_slices = self.cube.n_slices
-    row_index = n_slices - 1 - slice_index  # slice 0 → bottom row
+   Args:
+       slice_index: 0 to n_slices-1 (0 = closest to D, n_slices-1 = closest to U)
+       th: FacesTrackerHolder for face color tracking
+   """
+   # Calculate which row on side faces corresponds to this slice
+   n_slices = self.cube.n_slices
+   row_index = n_slices - 1 - slice_index  # slice 0 → bottom row
 
-    # For each side face (F, R, B, L)
-    for face_tracker in self._get_side_face_trackers(th):
-        target_face = face_tracker.face
-        target_color = face_tracker.color
+   # For each side face (F, R, B, L)
+   for face_tracker in _get_side_face_trackers(th):
+      target_face = face_tracker.face
+      target_color = face_tracker.color
 
-        # Check which centers in this row need fixing
-        for col in range(n_slices):
-            center = target_face.center.get_center_slice((row_index, col))
-            if center.color != target_color:
-                # Find and move correct piece using commutator
-                self._fix_ring_center(target_face, row_index, col, target_color, th)
+      # Check which centers in this row need fixing
+      for col in range(n_slices):
+         center = target_face.center.get_center_slice((row_index, col))
+         if center.color != target_color:
+            # Find and move correct piece using commutator
+            self._fix_ring_center(target_face, row_index, col, target_color, th)
+
 
 def _solve_all_middle_slices(self, th: FacesTrackerHolder) -> None:
-    """Solve all middle slice centers, bottom to top."""
-    for slice_index in range(self.cube.n_slices):
-        self._solve_slice_centers(slice_index, th)
+   """Solve all middle slice centers, bottom to top."""
+   for slice_index in range(self.cube.n_slices):
+      self._solve_slice_row(slice_index, th)
 ```
 
 #### Key Components Needed

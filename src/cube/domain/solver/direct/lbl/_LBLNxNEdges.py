@@ -15,6 +15,12 @@ from cube.utils.OrderedSet import OrderedSet
 
 
 class _LBLNxNEdges(SolverElement):
+
+    """
+    claude: # in these files row_index is the distance between l1_face, no metter on which orientation
+    go over all methods and checkit match the definition asked me if you are not sue
+
+    """
     work_on_b: bool = True
 
     D_LEVEL = 3
@@ -62,6 +68,23 @@ class _LBLNxNEdges(SolverElement):
             assert self._is_solved()
 
             return True
+
+
+    def solve_single_center_face_row(
+            self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int
+    ) -> None:
+
+        """
+        Solve single face row, meaning try on both sided of face
+        :param l1_white_tracker:
+        :param target_face:
+        :param face_row:
+        :return:
+        """
+
+        # see with _setup_l1
+        assert l1_white_tracker.face is self.cube.down
+
 
     def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
         """Solve only the 4 edges that contain a specific color.
