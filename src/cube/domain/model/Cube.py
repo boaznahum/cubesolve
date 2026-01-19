@@ -327,6 +327,7 @@ class Cube(CubeSupplier):
         "_sp",
         "_layout",
         "_has_visible_presentation",
+        "_has_textures",
         "_is_moves_visible",
     ]
 
@@ -352,7 +353,8 @@ class Cube(CubeSupplier):
         self._original_layout: CubeLayout | None = None
         self._in_query_mode: bool = False  # Skip texture updates during query operations
         self._has_visible_presentation: bool = False  # True if visible backend is connected
-        self._is_moves_visible: bool = False  # Computed: _has_visible_presentation and not _in_query_mode
+        self._has_textures: bool = False  # True if textures are loaded
+        self._is_moves_visible: bool = False  # Computed: visible AND textures AND NOT query_mode
         self._listeners: list["CubeListener"] = []
         self._is_even_cube_shadow: bool = False
 
@@ -532,11 +534,28 @@ class Cube(CubeSupplier):
 
         _is_moves_visible = _has_visible_presentation AND NOT _in_query_mode
 
-        This is called when either:
-        - has_visible_presentation is set
-        - set_in_query_mode() is called
+        This flag indicates whether moves are visible to the user (GUI is showing).
+
+        This is called when any of these change:
+        - has_visible_presentation
+        - set_in_query_mode()
         """
-        self._is_moves_visible = self._has_visible_presentation and not self._in_query_mode
+        self._is_moves_visible = (
+            self._has_visible_presentation
+            and not self._in_query_mode
+        )
+
+    def should_update_texture_directions(self) -> bool:
+        """Check if texture direction updates should be performed.
+
+        Returns True when:
+        - Moves are visible (GUI showing, not in query mode)
+        - AND textures are loaded
+
+        This is the public API for Face/Slice to check before updating
+        texture directions during rotation.
+        """
+        return self._is_moves_visible and self._has_textures
 
     @property
     def has_visible_presentation(self) -> bool:
@@ -547,6 +566,17 @@ class Cube(CubeSupplier):
     def has_visible_presentation(self, value: bool) -> None:
         """Set whether a visible backend is connected."""
         self._has_visible_presentation = value
+        self._update_is_moves_visible()
+
+    @property
+    def has_textures(self) -> bool:
+        """True if textures are loaded and need direction updates."""
+        return self._has_textures
+
+    @has_textures.setter
+    def has_textures(self, value: bool) -> None:
+        """Set whether textures are loaded."""
+        self._has_textures = value
         self._update_is_moves_visible()
 
     def set_in_query_mode(self, value: bool) -> None:

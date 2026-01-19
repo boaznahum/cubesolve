@@ -826,6 +826,8 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             self._texture_mode = False  # Disable old texture mode
             self._texture_directory = directory  # Store for reload on reset/resize
             self._dirty = True
+            # Signal cube that textures are loaded (enables texture direction updates)
+            self._cube.has_textures = True
 
         return loaded
 

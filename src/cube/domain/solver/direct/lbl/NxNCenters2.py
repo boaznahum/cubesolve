@@ -4,7 +4,7 @@ from typing import Generator, Tuple
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.geometry_types import Block, Point
-from cube.domain.model import Color, CenterSlice, CenterSliceIndex, Face
+from cube.domain.model import Color, CenterSlice, Face
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper

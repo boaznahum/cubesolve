@@ -122,7 +122,9 @@ def benchmark(
         cube = Cube(cube_size, sp=sp)
 
         # Set visibility BEFORE any operations
+        # Both flags must be True for texture direction updates to run
         cube.has_visible_presentation = visible_presentation
+        cube.has_textures = visible_presentation
 
         config = AppConfig()
         vs = ApplicationAndViewState(config)

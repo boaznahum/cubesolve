@@ -563,8 +563,8 @@ class Face(SuperElement, Hashable):
         Args:
             quarter_turns: Number of 90° CW rotations (1 for CW, -1 for CCW)
         """
-        # Skip texture updates when moves are not visible (query mode or no visual backend)
-        if not self.cube._is_moves_visible:
+        # Skip texture updates when not needed (no textures, query mode, or no visual backend)
+        if not self.cube.should_update_texture_directions():
             return
 
         # Load config from YAML (cached, reloads on file change)

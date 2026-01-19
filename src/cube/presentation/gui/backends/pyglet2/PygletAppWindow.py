@@ -277,8 +277,9 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         texture_set = self._texture_sets[self._texture_set_index]
 
         if texture_set is None:
-            # Solid colors mode
+            # Solid colors mode - no texture updates needed
             self._modern_viewer.set_texture_mode(False)
+            self._app.cube.has_textures = False
             return "solid"
 
         # Resolve texture path
@@ -314,9 +315,10 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         texture_set = self._texture_sets[self._texture_set_index]
 
         if texture_set is None:
-            # Solid colors mode
+            # Solid colors mode - no texture updates needed
             self._modern_viewer.set_texture_directory(None)
             self._modern_viewer.set_texture_mode(False)
+            self._app.cube.has_textures = False
             self._app.cube.reset()
             return "solid"
 
@@ -353,9 +355,10 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         texture_set = self._texture_sets[self._texture_set_index]
 
         if texture_set is None:
-            # Solid colors mode
+            # Solid colors mode - no texture updates needed
             self._modern_viewer.set_texture_directory(None)
             self._modern_viewer.set_texture_mode(False)
+            self._app.cube.has_textures = False
             self._app.cube.reset()
             return "solid"
 
