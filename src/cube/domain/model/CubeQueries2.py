@@ -20,7 +20,7 @@ from .Cube import Cube
 from cube.domain.geometric.cube_boy import Color
 from .Face import Face
 from .Part import TPartType
-from ..geometric.types import Point
+from ..geometric.geometry_types import Point
 
 T = TypeVar("T")
 Pred = Callable[[T], bool]

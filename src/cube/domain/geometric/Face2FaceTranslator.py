@@ -120,7 +120,7 @@ from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
 from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
 from cube.domain.algs.SliceAlg import SliceAlg
-from cube.domain.geometric.types import Point
+from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import Cube
 from cube.domain.model.Slice import Slice
 from cube.domain.model._elements import AxisName

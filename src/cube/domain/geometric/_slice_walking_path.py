@@ -30,7 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from cube.domain.geometric.types import (
+from cube.domain.geometric.geometry_types import (
     CenterToSlice,
     Point,
     SliceToCenter,

@@ -30,7 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Tuple
 
-from cube.domain.geometric.types import Point
+from cube.domain.geometric.geometry_types import Point
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

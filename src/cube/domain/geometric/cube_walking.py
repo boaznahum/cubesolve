@@ -120,7 +120,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Iterator
 
 from cube.domain.geometric.FRotation import FUnitRotation
-from cube.domain.geometric.types import (
+from cube.domain.geometric.geometry_types import (
     CenterToSlice,
     Point,
     PointComputer,

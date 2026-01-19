@@ -3,8 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, Tuple, cast
 
 from cube.domain.exceptions import GeometryError, GeometryErrorCode
-from cube.domain.geometric.geometry_types import CLGColRow
-from cube.domain.geometric.types import CenterToSlice
+from cube.domain.geometric.geometry_types import CLGColRow, CenterToSlice
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model._elements import EdgePosition
 from cube.domain.geometric.geometry_utils import inv

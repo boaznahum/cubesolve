@@ -18,14 +18,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator
 
-from cube.domain.geometric.geometry_types import CLGColRow
+from cube.domain.geometric.geometry_types import (
+    CLGColRow, Point, PointComputer, ReversePointComputer
+)
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from cube.domain.geometric.cube_walking import (
     CubeWalkingInfo, CubeWalkingInfoUnit, FaceWalkingInfo,
-    PointComputer, ReversePointComputer
 )
 from cube.domain.geometric.FRotation import FUnitRotation
-from cube.domain.geometric.types import Point
 from cube.domain.model.Edge import Edge
 from cube.domain.model.SliceName import SliceName
 from cube.utils.Cache import CacheManager
