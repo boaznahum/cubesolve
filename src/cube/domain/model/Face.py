@@ -1,7 +1,8 @@
 from collections.abc import Hashable, Iterable, Sequence
-from typing import Callable, Tuple, TypeAlias
+from typing import Tuple, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
+from cube.utils.Cache import CacheManager
 
 from ._elements import CenterSliceIndex, Direction, EdgePosition, PartColorsID
 from .PartSlice import CenterSlice, PartSlice
@@ -31,7 +32,8 @@ class Face(SuperElement, Hashable):
                  "_edge_by_position",
                  "_corners",
                  "_edges_of_corner",  # Lookup table: Corner -> (Edge, Edge) for O(1) access
-                 "_opposite"
+                 "_opposite",
+                 "_cache_manager",  # CacheManager for rotation cycle caching
                  ]
 
     _center: Center
@@ -62,6 +64,9 @@ class Face(SuperElement, Hashable):
         self._center = self._create_center(color)
         self._direction = Direction.D0
         self._parts: Tuple[Part]
+
+        # Cache manager for rotation cycles (respects config.enable_cube_cache)
+        self._cache_manager = CacheManager.create(cube.config)
 
         # all others are created by Cube#reset
 
@@ -382,165 +387,153 @@ class Face(SuperElement, Hashable):
     def _get_other_face(self, e: Edge) -> _Face:
         return e.get_other_face(self)
 
-    def rotate(self, n_rotations=1) -> None:
+    def _get_rotation_cycles(self) -> tuple[
+        list[tuple[PartEdge, PartEdge, PartEdge, PartEdge]],
+        list[tuple[PartSlice, PartSlice, PartSlice, PartSlice]]
+    ]:
+        """Get cached rotation cycles for this face.
 
-        # slices_indexes: EdgeSliceIndex = slice(0, self.cube.n_slices)
-        #
-        # to_right__indexes = Edge.inv_index(slices_indexes)
+        Returns precomputed 4-cycles for PartEdge.rotate_4cycle and
+        PartSlice.rotate_4cycle_slice_data. Cache is invalidated on cube reset
+        (new Face objects are created).
 
-        n_slices = self.cube.n_slices
+        Returns:
+            Tuple of (edge_cycles, slice_cycles)
+        """
+        def compute_cycles() -> tuple[
+            list[tuple[PartEdge, PartEdge, PartEdge, PartEdge]],
+            list[tuple[PartSlice, PartSlice, PartSlice, PartSlice]]
+        ]:
+            n_slices = self.cube.n_slices
+            inv = self.inv
 
-        inv: Callable[[int], int] = self.inv
+            left = self._get_other_face(self._edge_left)
+            right = self._get_other_face(self._edge_right)
+            top = self._get_other_face(self._edge_top)
+            bottom = self._get_other_face(self._edge_bottom)
 
-        def _rotate() -> None:
-            left: Face = self._get_other_face(self._edge_left)
-            right: Face = self._get_other_face(self._edge_right)
-            top: Face = self._get_other_face(self._edge_top)
-            bottom: Face = self._get_other_face(self._edge_bottom)
-
-            # CLOCKWISE ROTATION: left → top → right → bottom → left
-            #
-            # Face's LTR coordinate system:
-            # ┌─────────────────────────────────────┐
-            # │            TOP (horizontal)         │
-            # │           ltr: 0 → 1 → 2            │
-            # │         ┌─────────────┐             │
-            # │  LEFT   │             │   RIGHT     │
-            # │  (vert) │      F      │   (vert)    │
-            # │  ltr:   │             │   ltr:      │
-            # │   2 ↑   │             │   2 ↑       │
-            # │   1 │   │             │   1 │       │
-            # │   0 ┘   │             │   0 ┘       │
-            # │         └─────────────┘             │
-            # │           ltr: 0 → 1 → 2            │
-            # │           BOTTOM (horizontal)       │
-            # └─────────────────────────────────────┘
-            #
-            # Clockwise rotation mapping (in face's ltr):
-            #   LEFT[ltr=0] → TOP[ltr=0]      (bottom-left corner stays at ltr=0)
-            #   LEFT[ltr=2] → TOP[ltr=2]      (top-left corner stays at ltr=2)
-            #
-            #   TOP[ltr=0]  → RIGHT[ltr=2]    (left of top → TOP of right = ltr inverts!)
-            #   TOP[ltr=2]  → RIGHT[ltr=0]    (right of top → BOTTOM of right)
-            #
-            # Pattern: LEFT[ltr] → TOP[ltr] → RIGHT[inv(ltr)] → BOTTOM[inv(ltr)] → LEFT[ltr]
-            #
-            # The edge translation layer (get_slice_index_from_ltr_index) handles f1/f2
-            # differences automatically. The face only works in its own ltr system!
-            #
-            # See: docs/design2/edge-face-coordinate-system-approach2.md
-            #
-            # Rotate edges using 4-cycle reference rotation (no cloning needed)
-            # Each EdgeWing has 2 PartEdges: one on self, one on the adjacent face
-            # Pattern: top ← left ← bottom ← right ← top
             e_top = self._edge_top
             e_left = self._edge_left
             e_bottom = self._edge_bottom
             e_right = self._edge_right
 
-            for index in range(n_slices):
-                # Compute index mappings using the face's ltr coordinate system
-                top_ltr_index = e_top.get_ltr_index_from_slice_index(self, index)
+            edge_cycles: list[tuple[PartEdge, PartEdge, PartEdge, PartEdge]] = []
+            slice_cycles: list[tuple[PartSlice, PartSlice, PartSlice, PartSlice]] = []
 
+            # Edge wing cycles
+            for index in range(n_slices):
+                top_ltr_index = e_top.get_ltr_index_from_slice_index(self, index)
                 i_top = index
                 i_left = e_left.get_slice_index_from_ltr_index(self, top_ltr_index)
                 i_right = e_right.get_ltr_index_from_slice_index(self, inv(top_ltr_index))
                 i_bottom = e_bottom.get_ltr_index_from_slice_index(self, inv(top_ltr_index))
 
-                # Get the 4 EdgeWings at their mapped indices
                 ew_top = e_top.get_slice(i_top)
                 ew_left = e_left.get_slice(i_left)
                 ew_bottom = e_bottom.get_slice(i_bottom)
                 ew_right = e_right.get_slice(i_right)
 
-                # Cycle 1: PartEdges on the rotating face (self)
-                # top[self] ← left[self] ← bottom[self] ← right[self]
-                PartEdge.rotate_4cycle(
+                # Edge cycle 1: PartEdges on self
+                edge_cycles.append((
                     ew_top.get_face_edge(self),
                     ew_left.get_face_edge(self),
                     ew_bottom.get_face_edge(self),
                     ew_right.get_face_edge(self)
-                )
+                ))
 
-                # Cycle 2: PartEdges on the adjacent faces
-                # top[top_face] ← left[left_face] ← bottom[bottom_face] ← right[right_face]
-                PartEdge.rotate_4cycle(
+                # Edge cycle 2: PartEdges on adjacent faces
+                edge_cycles.append((
                     ew_top.get_face_edge(top),
                     ew_left.get_face_edge(left),
                     ew_bottom.get_face_edge(bottom),
                     ew_right.get_face_edge(right)
-                )
+                ))
 
-                # Rotate PartSlice tracking data (unique_id, c_attributes)
-                PartSlice.rotate_4cycle_slice_data(ew_top, ew_left, ew_bottom, ew_right)
+                # Slice cycle for edge wings
+                slice_cycles.append((ew_top, ew_left, ew_bottom, ew_right))
 
-            # Rotate corners using 3 independent 4-cycles (no cloning needed)
-            # Each corner has 3 PartEdges on 3 faces: self, and 2 adjacent faces
-            # The 4 corners form 3 separate 4-cycles for their 3 respective PartEdges
+            # Corner cycles
             c_bl = self._corner_bottom_left
             c_br = self._corner_bottom_right
             c_tr = self._corner_top_right
             c_tl = self._corner_top_left
 
-            # Cycle 1: PartEdges on the rotating face (self)
-            # bottom_left[self] ← bottom_right[self] ← top_right[self] ← top_left[self]
-            PartEdge.rotate_4cycle(
+            # Corner edge cycle 1: on self
+            edge_cycles.append((
                 c_bl.get_face_edge(self),
                 c_br.get_face_edge(self),
                 c_tr.get_face_edge(self),
                 c_tl.get_face_edge(self)
-            )
+            ))
 
-            # Cycle 2: PartEdges that form cycle through bottom→right→top→left
-            # bottom_left[bottom] ← bottom_right[right] ← top_right[top] ← top_left[left]
-            PartEdge.rotate_4cycle(
+            # Corner edge cycle 2: bottom→right→top→left
+            edge_cycles.append((
                 c_bl.get_face_edge(bottom),
                 c_br.get_face_edge(right),
                 c_tr.get_face_edge(top),
                 c_tl.get_face_edge(left)
-            )
+            ))
 
-            # Cycle 3: PartEdges that form cycle through left→bottom→right→top
-            # bottom_left[left] ← bottom_right[bottom] ← top_right[right] ← top_left[top]
-            PartEdge.rotate_4cycle(
+            # Corner edge cycle 3: left→bottom→right→top
+            edge_cycles.append((
                 c_bl.get_face_edge(left),
                 c_br.get_face_edge(bottom),
                 c_tr.get_face_edge(right),
                 c_tl.get_face_edge(top)
-            )
+            ))
 
-            # Rotate PartSlice tracking data for corners
-            PartSlice.rotate_4cycle_slice_data(c_bl.slice, c_br.slice, c_tr.slice, c_tl.slice)
+            # Corner slice cycle
+            slice_cycles.append((c_bl.slice, c_br.slice, c_tr.slice, c_tl.slice))
 
-            # rotate center using 4-cycle reference rotation (no cloning needed)
+            # Center cycles
             center = self._center
             is_odd = n_slices % 2
             n_half = n_slices // 2
 
-            def _cs(r: int, c: int) -> None:
-                # Collect the 4 positions in the cycle:
-                # (r, c) ← (c, inv(r)) ← (inv(r), inv(c)) ← (inv(c), r) ← (r, c)
-                r0, c0 = r, c
-                r1, c1 = c0, inv(r0)
-                r2, c2 = inv(r0), inv(c0)
-                r3, c3 = inv(c0), r0
-
-                # Get the 4 PartEdges
-                p0 = center.get_center_slice((r0, c0)).edge
-                p1 = center.get_center_slice((r1, c1)).edge
-                p2 = center.get_center_slice((r2, c2)).edge
-                p3 = center.get_center_slice((r3, c3)).edge
-
-                # Rotate using reference swapping - O(1) for c_attributes
-                PartEdge.rotate_4cycle(p0, p1, p2, p3)
-
             for column in range(n_half):
                 for row in range(n_half):
-                    _cs(row, column)
+                    r0, c0 = row, column
+                    r1, c1 = c0, inv(r0)
+                    r2, c2 = inv(r0), inv(c0)
+                    r3, c3 = inv(c0), r0
+                    edge_cycles.append((
+                        center.get_center_slice((r0, c0)).edge,
+                        center.get_center_slice((r1, c1)).edge,
+                        center.get_center_slice((r2, c2)).edge,
+                        center.get_center_slice((r3, c3)).edge
+                    ))
 
             if is_odd:
                 for column in range(n_half):
-                    _cs(n_half, column)
+                    r0, c0 = n_half, column
+                    r1, c1 = c0, inv(r0)
+                    r2, c2 = inv(r0), inv(c0)
+                    r3, c3 = inv(c0), r0
+                    edge_cycles.append((
+                        center.get_center_slice((r0, c0)).edge,
+                        center.get_center_slice((r1, c1)).edge,
+                        center.get_center_slice((r2, c2)).edge,
+                        center.get_center_slice((r3, c3)).edge
+                    ))
+
+            return edge_cycles, slice_cycles
+
+        cache_key = ("Face._get_rotation_cycles", self._name)
+        cache = self._cache_manager.get(cache_key, tuple)
+        return cache.compute(compute_cycles)
+
+    def rotate(self, n_rotations=1) -> None:
+        # Get cached rotation cycles (computed once, then reused)
+        edge_cycles, slice_cycles = self._get_rotation_cycles()
+
+        def _rotate() -> None:
+            # Apply all precomputed PartEdge 4-cycles
+            for edge_cycle in edge_cycles:
+                PartEdge.rotate_4cycle(*edge_cycle)
+
+            # Apply all precomputed PartSlice 4-cycles
+            for slice_cycle in slice_cycles:
+                PartSlice.rotate_4cycle_slice_data(*slice_cycle)
 
         for _ in range(0, n_rotations % 4):
             # -1 --> 3
