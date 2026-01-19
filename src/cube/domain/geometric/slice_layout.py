@@ -563,29 +563,16 @@ class _SliceLayout(SliceLayout):
                 assert rotating_edge is not None, f"No shared edge between {current_face.name} and {rotation_face.name}"
 
                 # Use centralized logic from _slice_walking_path.py
-                # create_walking_info returns size-independent functions
-                # that accept n_slices as first parameter
-                walking_info = create_walking_info(
-                    current_face,
-                    current_face.get_edge_position(current_edge),
-                    current_face.get_edge_position(rotating_edge)
-                )
-
-                # Get reference point using fake_n_slices
-                reference_point = walking_info.slice_to_center(fake_n_slices, 0, 0)
-
-                # Both functions have consistent n_slices FIRST convention:
-                # slice_to_center: (n_slices, si, sl) -> (row, col)
-                # center_to_slice: (n_slices, row, col) -> (si, sl)
-                face_infos.append(FaceWalkingInfoUnit(
+                # create_walking_info returns FaceWalkingInfoUnit directly
+                face_info = create_walking_info(
+                    face=current_face,
+                    entry_edge_position=current_face.get_edge_position(current_edge),
+                    rotating_edge_position=current_face.get_edge_position(rotating_edge),
                     face_name=current_face.name,
                     edge_name=current_edge.name,
-                    reference_point=reference_point,
                     n_slices=fake_n_slices,
-                    slice_to_center=walking_info.slice_to_center,
-                    center_to_slice=walking_info.center_to_slice,
-                    slice_index_to_entry_edge_index=walking_info.slice_to_entry_edge
-                ))
+                )
+                face_infos.append(face_info)
 
                 # Move to next face (except after the 4th)
                 if len(face_infos) < 4:

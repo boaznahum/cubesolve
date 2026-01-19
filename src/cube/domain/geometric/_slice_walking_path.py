@@ -27,80 +27,70 @@ Documentation:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from cube.domain.geometric.cube_walking import FaceWalkingInfoUnit
 from cube.domain.geometric.geometry_types import (
-    CenterToSlice,
     Point,
     SliceToCenter,
     SliceToEntryEdgeUnit,
 )
 from cube.domain.model._elements import EdgePosition
+from cube.domain.model._part import EdgeName
+from cube.domain.model.FaceName import FaceName
 
 if TYPE_CHECKING:
     from cube.domain.model.Face import Face
 
-# Aliases for backward compatibility with existing code
+# Aliases for documentation (these types are defined in geometry_types.py)
 SliceToCenterFn = SliceToCenter
 SliceToEntryEdgeFn = SliceToEntryEdgeUnit
-CenterToSliceFn = CenterToSlice
-
-
-@dataclass(frozen=True)
-class SliceWalkingInfo:
-    """
-    Coordinate transformation functions for a slice on a face.
-
-    This is the output of create_walking_info() - it provides
-    functions to convert between slice coordinates and face coordinates.
-
-    All functions accept n_slices as their FIRST parameter, allowing
-    the same SliceWalkingInfo to work with any cube size.
-    """
-
-    # Convert slice coord to face coord: (n_slices, slice_index, slot) -> (row, col)
-    slice_to_center: SliceToCenterFn
-
-    # Given slice_index, compute piece index on entry edge: (n_slices, slice_index) -> int
-    slice_to_entry_edge: SliceToEntryEdgeFn
-
-    # Convert face coord to slice coord: (n_slices, row, col) -> (slice_index, slot)
-    center_to_slice: CenterToSliceFn
 
 
 def create_walking_info(
     face: Face,
     entry_edge_position: EdgePosition,
     rotating_edge_position: EdgePosition,
-) -> SliceWalkingInfo:
+    face_name: FaceName,
+    edge_name: EdgeName,
+    n_slices: int,
+) -> FaceWalkingInfoUnit:
     """
     Create coordinate transformation functions for a slice on a face.
 
-    All returned functions accept n_slices as their FIRST parameter, allowing
-    the same SliceWalkingInfo to work with any cube size.
+    All transformation functions in the returned FaceWalkingInfoUnit accept
+    n_slices as their FIRST parameter, allowing the same info to work with
+    any cube size.
 
     Args:
         face: The face that the slice is on
         entry_edge_position: The edge where the slice enters the face (LEFT, RIGHT, TOP, BOTTOM)
         rotating_edge_position: The edge shared with the rotating face - where slice[0] is located
+        face_name: The name of the face (for the returned FaceWalkingInfoUnit)
+        edge_name: The name of the entry edge (for the returned FaceWalkingInfoUnit)
+        n_slices: The number of slices (used to compute reference_point)
 
     Returns:
-        SliceWalkingInfo with the three transformation functions.
+        FaceWalkingInfoUnit with transformation functions and metadata.
 
     Example:
         # Slice enters from BOTTOM, rotating face is on the LEFT
-        info = create_walking_info(face=my_face,
-                                   entry_edge_position=EdgePosition.BOTTOM,
-                                   rotating_edge_position=EdgePosition.LEFT)
+        info = create_walking_info(
+            face=my_face,
+            entry_edge_position=EdgePosition.BOTTOM,
+            rotating_edge_position=EdgePosition.LEFT,
+            face_name=FaceName.F,
+            edge_name=my_edge.name,
+            n_slices=3
+        )
 
         # Convert slice coord to face coord (for a 5x5 cube with n_slices=3)
         face_coord = info.slice_to_center(n_slices=3, slice_index=0, slot=1)
-        # Returns FaceCoord(row=1, col=0)
+        # Returns (row=1, col=0)
 
         # Convert face coord back to slice coord
         slice_coord = info.center_to_slice(n_slices=3, row=1, col=0)
-        # Returns SliceCoord(slice_index=0, slot=1)
+        # Returns (slice_index=0, slot=1)
 
     The 8 cases derived from entry_edge and rotating_edge:
 
@@ -241,8 +231,15 @@ def create_walking_info(
         # Step 2: Translate face's ltr to edge's internal slice index
         return entry_edge.get_slice_index_from_ltr_index_arbitrary_n_slices(n_slices, face, face_ltr)
 
-    return SliceWalkingInfo(
+    # Compute reference point using (slice_index=0, slot=0)
+    reference_point = slice_to_center(n_slices, 0, 0)
+
+    return FaceWalkingInfoUnit(
+        face_name=face_name,
+        edge_name=edge_name,
+        reference_point=reference_point,
+        n_slices=n_slices,
         slice_to_center=slice_to_center,
-        slice_to_entry_edge=slice_to_entry_edge,
         center_to_slice=center_to_slice,
+        slice_index_to_entry_edge_index=slice_to_entry_edge,
     )
