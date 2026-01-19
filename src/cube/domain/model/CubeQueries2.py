@@ -11,6 +11,7 @@ from collections.abc import (
 from typing import Callable, Tuple, TypeVar
 
 from cube.domain.exceptions import InternalSWError
+from cube.domain.geometric.geometry_types import Point
 
 from ..algs import Alg, Algs, NSimpleAlg
 from . import Edge, Part, PartEdge
@@ -171,45 +172,49 @@ class CubeQueries2:
             yield r, c
             (r, c) = (c, inv(r))
 
-    def rotate_point_clockwise(self, rc: Tuple[int, int], n=1) -> Tuple[int, int]:
-
+    def rotate_point_clockwise(self, rc: Tuple[int, int] | Point, n: int = 1) -> Point:
         """
-        claud: also support negative in this case do rotate_point_counterclockwise
-        :param rc:
-        :param n:
-        :return:
-        """
+        Rotate a point clockwise on the face by n * 90 degrees.
 
+        Args:
+            rc: Point (row, col) - accepts both tuple and Point
+            n: Number of 90-degree rotations (supports negative for counterclockwise)
+
+        Returns:
+            Rotated point as Point
+        """
         if n < 0:
             return self.rotate_point_counterclockwise(rc, -n)
 
         cube = self._cube
-
         inv = cube.inv
-        for i in range(0, n % 4):
-            rc = inv(rc[1]), rc[0]
+        r, c = rc[0], rc[1]
+        for _ in range(n % 4):
+            r, c = inv(c), r
 
-        return rc
+        return Point(r, c)
 
-    def rotate_point_counterclockwise(self, rc: Tuple[int, int], n=1) -> Tuple[int, int]:
-
+    def rotate_point_counterclockwise(self, rc: Tuple[int, int] | Point, n: int = 1) -> Point:
         """
-        claud: also support negative in this case do rotate_point_clockwise
-        :param rc:
-        :param n:
-        :return:
-        """
+        Rotate a point counterclockwise on the face by n * 90 degrees.
 
+        Args:
+            rc: Point (row, col) - accepts both tuple and Point
+            n: Number of 90-degree rotations (supports negative for clockwise)
+
+        Returns:
+            Rotated point as Point
+        """
         if n < 0:
             return self.rotate_point_clockwise(rc, -n)
 
         cube = self._cube
-
         inv = cube.inv
-        for i in range(0, n % 4):
-            rc = rc[1], inv(rc[0])
+        r, c = rc[0], rc[1]
+        for _ in range(n % 4):
+            r, c = c, inv(r)
 
-        return rc
+        return Point(r, c)
 
     def get_two_edge_slice_points(self, i) -> Iterable[int]:
 

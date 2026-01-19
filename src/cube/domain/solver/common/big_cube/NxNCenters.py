@@ -680,14 +680,14 @@ class NxNCenters(SolverElement):
         nm1 = cube.n_slices - 1
         source_index = source_slice.index
         if source_slice.is_row:
-            s1 = (source_index, 0)
-            s2 = (source_index, nm1)
+            s1 = Point(source_index, 0)
+            s2 = Point(source_index, nm1)
         else:
-            s1 = (0, source_index)
-            s2 = (nm1, source_index)
+            s1 = Point(0, source_index)
+            s2 = Point(nm1, source_index)
 
         # now we need to bring source slice such that one of its endpoints is (0,  target_index^)
-        required_on_target = (0, cube.inv(target_index))
+        required_on_target = Point(0, cube.inv(target_index))
 
         def is_column(p1: Point, p2: Point):
 
@@ -705,8 +705,8 @@ class NxNCenters(SolverElement):
                     n_rotate = i
                     break
 
-            s1 = cube.cqr.rotate_point_clockwise(s1)
-            s2 = cube.cqr.rotate_point_clockwise(s2)
+            s1 = Point(*cube.cqr.rotate_point_clockwise(s1))
+            s2 = Point(*cube.cqr.rotate_point_clockwise(s2))
 
         assert n_rotate is not None
 
@@ -724,7 +724,7 @@ class NxNCenters(SolverElement):
 
         def ann_target() -> Iterator[CenterSlice]:
 
-            for rc in self._2d_range((0, target_index), (nm1, target_index)):
+            for rc in self._2d_range(Point(0, target_index), Point(nm1, target_index)):
                 yield target_face.center.get_center_slice(rc)
 
         with self.ann.annotate((ann_source(), AnnWhat.Moved), (ann_target(), AnnWhat.FixedPosition)):
@@ -978,8 +978,8 @@ class NxNCenters(SolverElement):
         if c1 > c2:
             c1, c2 = c2, c1
 
-        rc1 = (r1, c1)
-        rc2 = (r2, c2)
+        rc1 = Point(r1, c1)
+        rc2 = Point(r2, c2)
 
         # in case of odd nd (mid, mid), search will fail, nothing to do
         # if we change the order, then block validation below will fail,
@@ -1042,8 +1042,8 @@ class NxNCenters(SolverElement):
             _on_src1_1 = self._point_on_source(is_back, rc1)
             _on_src1_2 = self._point_on_source(is_back, rc2)
             # why - ? because we didn't yet rotate it
-            _on_src1_1 = cube.cqr.rotate_point_clockwise(_on_src1_1, -n_rotate)
-            _on_src1_2 = cube.cqr.rotate_point_clockwise(_on_src1_2, -n_rotate)
+            _on_src1_1 = Point(*cube.cqr.rotate_point_clockwise(_on_src1_1, -n_rotate))
+            _on_src1_2 = Point(*cube.cqr.rotate_point_clockwise(_on_src1_2, -n_rotate))
             for rc in self._2d_range(_on_src1_1, _on_src1_2):
                 yield source_face.center.get_center_slice(rc)
 
@@ -1102,13 +1102,13 @@ class NxNCenters(SolverElement):
             if center.get_center_slice(rc).color == color:
 
                 # collect also 1 size blocks
-                res.append((1, (rc, rc)))
+                res.append((1, Block(rc, rc)))
 
                 # now try to extend it over r
                 r_max = None
                 for r in range(rc[0] + 1, n):
 
-                    if not self._is_valid_and_block_for_search(face, color, rc, (r, rc[1])):
+                    if not self._is_valid_and_block_for_search(face, color, rc, Point(r, rc[1])):
                         break
                     else:
                         r_max = r
@@ -1119,7 +1119,7 @@ class NxNCenters(SolverElement):
                 # now try to extend it over c
                 c_max = None
                 for c in range(rc[1] + 1, n):
-                    if not self._is_valid_and_block_for_search(face, color, rc, (r_max, c)):
+                    if not self._is_valid_and_block_for_search(face, color, rc, Point(r_max, c)):
                         break
                     else:
                         c_max = c
@@ -1127,10 +1127,10 @@ class NxNCenters(SolverElement):
                 if not c_max:
                     c_max = rc[1]
 
-                size = self._block_size(rc, (r_max, c_max))
+                size = self._block_size(rc, Point(r_max, c_max))
 
                 # if size > 1:
-                res.append((size, (rc, (r_max, c_max))))
+                res.append((size, Block(rc, Point(r_max, c_max))))
 
         res = sorted(res, key=lambda s: s[0], reverse=True)
         return res
@@ -1319,10 +1319,10 @@ class NxNCenters(SolverElement):
         # here we assume we work on F, and UP has same coord system as F, and
         # back is mirrored in both direction
         if is_back:
-            return inv(rc[0]), inv(rc[1])
+            return Point(inv(rc[0]), inv(rc[1]))
         else:
             # on up
-            return rc
+            return Point(*rc)
 
     def _point_on_target(self, source_is_back: bool, rc: Tuple[int, int]) -> Point:
 
@@ -1333,14 +1333,14 @@ class NxNCenters(SolverElement):
         # here we assume we work on F, and UP has same coord system as F, and
         # back is mirrored in both direction
         if source_is_back:
-            return inv(rc[0]), inv(rc[1])
+            return Point(inv(rc[0]), inv(rc[1]))
         else:
             # on up
-            return rc
+            return Point(*rc)
 
     def _block_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Block:
 
-        return self._point_on_source(is_back, rc1), self._point_on_source(is_back, rc2)
+        return Block(self._point_on_source(is_back, rc1), self._point_on_source(is_back, rc2))
 
     def _2d_range_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Iterator[Point]:
 
@@ -1381,7 +1381,7 @@ class NxNCenters(SolverElement):
 
         for r in range(r1, r2 + 1):
             for c in range(c1, c2 + 1):
-                yield r, c
+                yield Point(r, c)
 
     def _2d_center_iter(self) -> Iterator[Point]:
 
@@ -1393,7 +1393,7 @@ class NxNCenters(SolverElement):
 
         for r in range(n):
             for c in range(n):
-                yield r, c
+                yield Point(r, c)
 
     @staticmethod
     def _block_size(rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int:
@@ -1432,10 +1432,14 @@ class NxNCenters(SolverElement):
         center = source_face.center
         miss_count = 0
 
+        # Convert tuple to Point for internal functions
+        rc1_pt = Point(*rc1)
+        rc2_pt = Point(*rc2)
+
         if dont_convert_coordinates:
-            _range = self._2d_range(rc1, rc2)
+            _range = self._2d_range(rc1_pt, rc2_pt)
         else:
-            _range = self._2d_range_on_source(source_face is source_face.cube.back, rc1, rc2)
+            _range = self._2d_range_on_source(source_face is source_face.cube.back, rc1_pt, rc2_pt)
 
         for rc in _range:
 

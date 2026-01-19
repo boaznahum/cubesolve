@@ -137,74 +137,74 @@ def create_walking_info(
             # Case 1: Entry BOTTOM, Rotating LEFT
             # See: _walking_info_case1_entry_bottom_rotating_left.md
             def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
-                return (slot, slice_index)  # (row, col)
+                return Point(slot, slice_index)  # (row, col)
 
             def center_to_slice(n_slices: int, row: int, col: int) -> Point:
-                return (col, row)  # (slice_index, slot)
+                return Point(col, row)  # (slice_index, slot)
 
         elif not is_index_inverted and is_slot_inverted:
             # Case 2: Entry TOP, Rotating LEFT
             # See: _walking_info_case2_entry_top_rotating_left.md
             def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
-                return (n_slices - 1 - slot, slice_index)  # (row, col)
+                return Point(n_slices - 1 - slot, slice_index)  # (row, col)
 
             def center_to_slice(n_slices: int, row: int, col: int) -> Point:
-                return (col, n_slices - 1 - row)  # (slice_index, slot)
+                return Point(col, n_slices - 1 - row)  # (slice_index, slot)
 
         elif is_index_inverted and not is_slot_inverted:
             # Case 3: Entry BOTTOM, Rotating RIGHT
             # See: _walking_info_case3_entry_bottom_rotating_right.md
             def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
-                return (slot, n_slices - 1 - slice_index)  # (row, col)
+                return Point(slot, n_slices - 1 - slice_index)  # (row, col)
 
             def center_to_slice(n_slices: int, row: int, col: int) -> Point:
-                return (n_slices - 1 - col, row)  # (slice_index, slot)
+                return Point(n_slices - 1 - col, row)  # (slice_index, slot)
 
         else:
             # Case 4: Entry TOP, Rotating RIGHT
             # See: _walking_info_case4_entry_top_rotating_right.md
             def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
-                return (n_slices - 1 - slot, n_slices - 1 - slice_index)  # (row, col)
+                return Point(n_slices - 1 - slot, n_slices - 1 - slice_index)  # (row, col)
 
             def center_to_slice(n_slices: int, row: int, col: int) -> Point:
-                return (n_slices - 1 - col, n_slices - 1 - row)  # (slice_index, slot)
+                return Point(n_slices - 1 - col, n_slices - 1 - row)  # (slice_index, slot)
     else:
         # Entry LEFT/RIGHT → HORIZONTAL slices: row = sindex (or inv), col = slot (or inv)
         if not is_index_inverted and not is_slot_inverted:
             # Case 5: Entry LEFT, Rotating BOTTOM
             # See: _walking_info_case5_entry_left_rotating_bottom.md
             def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
-                return (slice_index, slot)  # (row, col)
+                return Point(slice_index, slot)  # (row, col)
 
             def center_to_slice(n_slices: int, row: int, col: int) -> Point:
-                return (row, col)  # (slice_index, slot)
+                return Point(row, col)  # (slice_index, slot)
 
         elif not is_index_inverted and is_slot_inverted:
             # Case 6: Entry RIGHT, Rotating BOTTOM
             # See: _walking_info_case6_entry_right_rotating_bottom.md
             def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
-                return (slice_index, n_slices - 1 - slot)  # (row, col)
+                return Point(slice_index, n_slices - 1 - slot)  # (row, col)
 
             def center_to_slice(n_slices: int, row: int, col: int) -> Point:
-                return (row, n_slices - 1 - col)  # (slice_index, slot)
+                return Point(row, n_slices - 1 - col)  # (slice_index, slot)
 
         elif is_index_inverted and not is_slot_inverted:
             # Case 7: Entry LEFT, Rotating TOP
             # See: _walking_info_case7_entry_left_rotating_top.md
             def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
-                return (n_slices - 1 - slice_index, slot)  # (row, col)
+                return Point(n_slices - 1 - slice_index, slot)  # (row, col)
 
             def center_to_slice(n_slices: int, row: int, col: int) -> Point:
-                return (n_slices - 1 - row, col)  # (slice_index, slot)
+                return Point(n_slices - 1 - row, col)  # (slice_index, slot)
 
         else:
             # Case 8: Entry RIGHT, Rotating TOP
             # See: _walking_info_case8_entry_right_rotating_top.md
             def slice_to_center(n_slices: int, slice_index: int, slot: int) -> Point:
-                return (n_slices - 1 - slice_index, n_slices - 1 - slot)  # (row, col)
+                return Point(n_slices - 1 - slice_index, n_slices - 1 - slot)  # (row, col)
 
             def center_to_slice(n_slices: int, row: int, col: int) -> Point:
-                return (n_slices - 1 - row, n_slices - 1 - col)  # (slice_index, slot)
+                return Point(n_slices - 1 - row, n_slices - 1 - col)  # (slice_index, slot)
 
     # slice_to_entry_edge: Given slice_index, compute edge's internal slice index
     #

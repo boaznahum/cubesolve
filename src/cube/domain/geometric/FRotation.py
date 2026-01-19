@@ -28,7 +28,7 @@ Usage::
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Tuple
+from typing import TYPE_CHECKING, ClassVar
 
 from cube.domain.geometric.geometry_types import Point
 
@@ -36,11 +36,11 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
 
 
-def _apply_cw(r: int, c: int, n_slices: int, n_rotation: int) -> Tuple[int, int]:
+def _apply_cw(r: int, c: int, n_slices: int, n_rotation: int) -> Point:
     for _ in range(n_rotation):
         r, c = (n_slices - 1 - c, r)
 
-    return r, c
+    return Point(r, c)
 
 
 @dataclass(frozen=True)
@@ -58,7 +58,7 @@ class FRotation:
     n_slices: int
     n_rotation: int  # 0-3 quarter turns clockwise
 
-    def __call__(self, r: int, c: int) -> Tuple[int, int]:
+    def __call__(self, r: int, c: int) -> Point:
         """Transform a coordinate (r, c) according to this rotation."""
         return _apply_cw(r, c, self.n_slices, self.n_rotation)
 

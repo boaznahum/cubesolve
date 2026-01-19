@@ -19,7 +19,7 @@ Using Protocol classes instead of Callable aliases for better readability:
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import Protocol
+from typing import NamedTuple, Protocol
 
 
 class CLGColRow(Enum):
@@ -28,9 +28,22 @@ class CLGColRow(Enum):
     COL = auto()
 
 
-# Basic coordinate types
-Point = tuple[int, int]  # (row, col) or (slice_index, slot)
-Block = tuple[Point, Point]  # Rectangle defined by two corner points
+# Basic coordinate types using NamedTuple for clarity
+class Point(NamedTuple):
+    """A 2D coordinate point, used for (row, col) or (slice_index, slot)."""
+    row: int
+    col: int
+
+
+class Block(NamedTuple):
+    """A rectangle defined by two corner points.
+
+    Note: The start and end points may not be in normalized order (i.e., start
+    may not be top-left and end may not be bottom-right). Consumers should
+    normalize the coordinates when needed for specific operations.
+    """
+    start: Point
+    end: Point
 
 
 # =============================================================================

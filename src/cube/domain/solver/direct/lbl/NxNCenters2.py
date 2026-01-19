@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from typing import Generator, Tuple
 
 from cube.domain.exceptions import InternalSWError
-from cube.domain.geometric.geometry_types import Point
+from cube.domain.geometric.geometry_types import Block, Point
 from cube.domain.model import Color, CenterSlice, CenterSliceIndex, Face
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverElement import SolverElement
@@ -263,14 +263,14 @@ class NxNCenters2(SolverElement):
             for cc in c.all_slices:
                 self._clear_center_slice(cc)
 
-    def _iterate_all_tracked_slices_index(self, target_face: FaceTracker) -> Iterator[CenterSliceIndex]:
+    def _iterate_all_tracked_slices_index(self, target_face: FaceTracker) -> Iterator[Point]:
 
         for cs in target_face.face.center.all_slices:
 
             if self._is_center_slice(cs) is not None:
                 rc = cs.index
 
-                yield rc
+                yield Point(*rc)
 
     # noinspection PyMethodMayBeStatic
     def _is_cent_piece_solved(self, center_piece: CenterSlice) -> bool:
@@ -425,8 +425,8 @@ class NxNCenters2(SolverElement):
                                 self._comm_helper.execute_communicator(
                                     up_face,  # source
                                     move_from_target_face,  # target
-                                    (candidate_point, candidate_point),  # target point
-                                    (candidate_point, candidate_point),
+                                    Block(candidate_point, candidate_point),  # target point
+                                    Block(candidate_point, candidate_point),
                                     True,
                                     False,
                                     None)
@@ -436,7 +436,7 @@ class NxNCenters2(SolverElement):
                                     return pieces_moved # exactly one
                                 break # the for n in range(3) loop
 
-                    candidate_point = self.cube.cqr.rotate_point_clockwise(candidate_point)
+                    candidate_point = Point(*self.cube.cqr.rotate_point_clockwise(candidate_point))
 
 
 
@@ -578,8 +578,8 @@ class NxNCenters2(SolverElement):
                 else:
                     return s, s2
 
-            s = parent.cube.cqr.rotate_point_clockwise(s)
-            s2 = parent.cube.cqr.rotate_point_clockwise(s2)
+            s = Point(*parent.cube.cqr.rotate_point_clockwise(s))
+            s2 = Point(*parent.cube.cqr.rotate_point_clockwise(s2))
 
         return None
 
@@ -607,10 +607,11 @@ class NxNCenters2(SolverElement):
 
         # OPTIMIZATION: Step 1 - Dry run to get natural source position and cache computation
         # This calls _do_communicator() internally but stores the result for reuse
+        target_pt = Point(*target_point)
         dry_result = self._comm_helper.execute_communicator(
             source_face=source_face,
             target_face=target_face,
-            target_block=(target_point, target_point),
+            target_block=Block(target_pt, target_pt),
             dry_run=True
         )
 
@@ -640,8 +641,8 @@ class NxNCenters2(SolverElement):
         self._comm_helper.execute_communicator(
             source_face=source_face,
             target_face=target_face,
-            target_block=(target_point, target_point),
-            source_block=(source_point_with_color, source_point_with_color),
+            target_block=Block(target_pt, target_pt),
+            source_block=Block(source_point_with_color, source_point_with_color),
             preserve_state=True,
             dry_run=False,
             _cached_secret=dry_result  # ← OPTIMIZATION: Reuse computation from Step 1
@@ -661,6 +662,6 @@ class NxNCenters2(SolverElement):
         """Iterate over all columns in a specific row."""
         n = self.cube.n_slices
         for c in range(n):
-            yield slice_index, c
+            yield Point(slice_index, c)
 
 

@@ -181,7 +181,7 @@ class CommunicatorHelper(SolverElement):
         """
         idx_row = face.edge_left.get_slice_index_from_ltr_index(face, ltr_y)
         idx_col = face.edge_bottom.get_slice_index_from_ltr_index(face, ltr_x)
-        return idx_row, idx_col
+        return Point(idx_row, idx_col)
 
     def index_to_ltr(self, face: Face, idx_row: int, idx_col: int) -> Point:
         """
@@ -197,13 +197,13 @@ class CommunicatorHelper(SolverElement):
         """
         ltr_y = face.edge_left.get_ltr_index_from_slice_index(face, idx_row)
         ltr_x = face.edge_bottom.get_ltr_index_from_slice_index(face, idx_col)
-        return ltr_y, ltr_x
+        return Point(ltr_y, ltr_x)
 
     def ltr_block_to_index(self, face: Face, ltr_block: Block) -> Block:
         """Translate an LTR block to index coordinates."""
         p1 = self.ltr_to_index(face, ltr_block[0][0], ltr_block[0][1])
         p2 = self.ltr_to_index(face, ltr_block[1][0], ltr_block[1][1])
-        return p1, p2
+        return Block(p1, p2)
 
     def get_natural_source_ltr(
             self, source: Face, target: Face, target_ltr: Point
@@ -231,7 +231,7 @@ class CommunicatorHelper(SolverElement):
             Expected source position in LTR on source face
         """
 
-        data = self._do_communicator(source, target, (target_ltr, target_ltr))
+        data = self._do_communicator(source, target, Block(target_ltr, target_ltr))
 
         return data.natural_source_coordinate
 
@@ -407,8 +407,8 @@ class CommunicatorHelper(SolverElement):
         source_setup_n_rotate = self._find_rotation_idx(source_point, natural_source)
 
         # undo the setup  #supports negative
-        xpt_on_source_after_un_setup = cqr.rotate_point_clockwise(xpt_on_source,
-                                                                  - source_setup_n_rotate)
+        xpt_on_source_after_un_setup = Point(*cqr.rotate_point_clockwise(xpt_on_source,
+                                                                  - source_setup_n_rotate))
         # # su' rotates counterclockwise by source_setup_n_rotate (inverse of clockwise)
         # for _ in range(source_setup_n_rotate):
         #     xpt_on_source_after_un_setup = cqr.rotate_point_counterclockwise(xpt_on_source_after_un_setup)
@@ -525,7 +525,7 @@ class CommunicatorHelper(SolverElement):
             r1, r2 = r2, r1
         if c1 > c2:
             c1, c2 = c2, c1
-        return (r1, c1), (r2, c2)
+        return Block(Point(r1, c1), Point(r2, c2))
 
     @staticmethod
     def _1d_intersect(range_1: tuple[int, int], range_2: tuple[int, int]) -> bool:
@@ -785,7 +785,7 @@ class CommunicatorHelper(SolverElement):
 
         # source_coord is on the slice_algorithm, not directly on FaceTranslationResult
         source_coord = translation_result.slice_algorithm.source_coord
-        return _InternalCommData(source_coord, translation_result)
+        return _InternalCommData(Point(*source_coord), translation_result)
 
     def _compute_rotate_on_target(self, cube: Cube,
                                   face_name: FaceName,
@@ -818,17 +818,17 @@ class CommunicatorHelper(SolverElement):
         target_point_end = target_block[1]
 
         cqr = cube.cqr
-        target_begin_rotated_cw = cqr.rotate_point_clockwise(target_point_begin)
-        target_end_rotated_cw = cqr.rotate_point_clockwise(target_point_end)
+        target_begin_rotated_cw = Point(*cqr.rotate_point_clockwise(target_point_begin))
+        target_end_rotated_cw = Point(*cqr.rotate_point_clockwise(target_point_end))
 
         if self._1d_intersect((ex(target_point_begin), ex(target_point_end)),
                               (ex(target_begin_rotated_cw), ex(target_end_rotated_cw))):
 
             on_front_rotate = -1
-            target_begin_rotated_ccw = cqr.rotate_point_counterclockwise(target_point_begin)
-            target_end_rotated_ccw = cqr.rotate_point_counterclockwise(target_point_end)
+            target_begin_rotated_ccw = Point(*cqr.rotate_point_counterclockwise(target_point_begin))
+            target_end_rotated_ccw = Point(*cqr.rotate_point_counterclockwise(target_point_end))
 
-            target_block_after_rotate = (target_begin_rotated_ccw, target_end_rotated_ccw)
+            target_block_after_rotate = Block(target_begin_rotated_ccw, target_end_rotated_ccw)
 
             if self._1d_intersect((ex(target_point_begin), ex(target_point_end)),
                                   (ex(target_begin_rotated_ccw), ex(target_begin_rotated_ccw))):
@@ -841,7 +841,7 @@ class CommunicatorHelper(SolverElement):
                                       f"{(target_end_rotated_ccw[1], target_end_rotated_ccw[1])} ")
         else:
             # clockwise is OK
-            target_block_after_rotate = (target_begin_rotated_cw, target_end_rotated_cw)
+            target_block_after_rotate = Block(target_begin_rotated_cw, target_end_rotated_cw)
             on_front_rotate = 1
 
         return on_front_rotate, target_block_after_rotate

@@ -777,7 +777,7 @@ class Face2FaceTranslator:
 
             # Derive source_coord using CubeWalkingInfo
             # To get source_coord from target_coord, translate from target back to source
-            source_coord = walk_info.translate_point(target_face, source_face, target_coord)
+            source_coord = walk_info.translate_point(target_face, source_face, Point(*target_coord))
 
             # Compute slice index (0-based)
             slice: Slice = sized_layout.get_slice(slice_name)
