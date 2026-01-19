@@ -13,6 +13,7 @@ from .Edge import Edge
 from .Part import Part
 from .PartEdge import PartEdge
 from .SuperElement import SuperElement
+from ._part import EdgeName
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore  # noqa: F821
@@ -30,6 +31,7 @@ class Face(SuperElement, Hashable):
                  "_parts",
                  "_edges",
                  "_edge_by_position",
+                 "_edge_to_position",
                  "_corners",
                  "_edges_of_corner",  # Lookup table: Corner -> (Edge, Edge) for O(1) access
                  "_opposite",
@@ -53,6 +55,8 @@ class Face(SuperElement, Hashable):
     _edge_by_position: dict[EdgePosition, Edge]
     _corners: Sequence[Corner]
     _edges_of_corner: dict[Corner, tuple[Edge, Edge]]
+
+    _edge_to_position: dict[EdgeName, EdgePosition]
 
     _opposite: _Face
 
@@ -98,6 +102,14 @@ class Face(SuperElement, Hashable):
             EdgePosition.BOTTOM: self._edge_bottom,
         }
 
+        self._edge_to_position  = {
+            self._edge_top.name: EdgePosition.TOP,
+            self._edge_left.name: EdgePosition.LEFT,
+            self._edge_right.name: EdgePosition.RIGHT,
+            self._edge_bottom.name: EdgePosition.BOTTOM,
+        }
+
+
 
         self._corners = [self._corner_top_left,
                          self._corner_top_right,
@@ -112,6 +124,7 @@ class Face(SuperElement, Hashable):
             self._corner_bottom_right: (self._edge_bottom, self._edge_right),
             self._corner_bottom_left: (self._edge_bottom, self._edge_left),
         }
+
 
         self.set_parts(self._center, *self._edges, *self._corners)
         super().finish_init()
@@ -290,13 +303,10 @@ class Face(SuperElement, Hashable):
 
     def get_edge_position(self, edge: Edge) -> EdgePosition:
         """Get the EdgePosition (LEFT, RIGHT, TOP, BOTTOM) for an edge on this face."""
-        p: EdgePosition
-        e: Edge
-        for p, e in self._edge_by_position.items():
-            if e is edge:
-                return p
 
-        raise InternalSWError(f"Edge {edge} is not on face {self.name}")
+        return self._edge_to_position[edge.name]
+
+        # raise InternalSWError(f"Edge {edge} is not on face {self.name}")
 
     @property
     def corner_top_right(self) -> Corner:

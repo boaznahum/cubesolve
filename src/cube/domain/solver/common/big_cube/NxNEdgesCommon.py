@@ -3,12 +3,9 @@ from typing import Tuple
 
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import InternalSWError
-from cube.domain.geometric.geometry_types import FaceOrthogonalEdgesInfo
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
-from cube.domain.solver.common.big_cube import NxNEdges
-from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
 from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
@@ -17,35 +14,16 @@ from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
 
-class _LBLNxNEdges(SolverElement):
-    """
-    Edge solver for NxN cubes using layer-by-layer approach.
-
-    Coordinate Convention - row_distance_from_l1:
-    =============================================
-    In this class, `row_distance_from_l1` represents the distance from the L1 (white) face,
-    NOT the row index in the face's LTR coordinate system.
-
-    - row_distance_from_l1=0: The row/column closest to L1 (touching the shared edge)
-    - row_distance_from_l1=1: The next row/column away from L1
-    - row_distance_from_l1=n-1: The row/column furthest from L1
-
-    This abstraction is orientation-independent. See cube_layout.py's
-    get_orthogonal_index_by_distance_from_face() for full documentation with diagrams.
-    """
+class NxNEdgesCommon(SolverElement):
     work_on_b: bool = True
 
     D_LEVEL = 3
 
     def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool) -> None:
         super().__init__(slv)
-        self._set_debug_prefix("LBL-Edges")
-        self._logger.set_level(_LBLNxNEdges.D_LEVEL)
+        self._set_debug_prefix("NxNEdgesCommon")
+        self._logger.set_level(NxNEdgesCommon.D_LEVEL)
         self._advanced_edge_parity = advanced_edge_parity
-
-        # claude: all used methods and their dependencies should be moved to
-        self._edges_helper: NxNEdgesCommon = NxNEdgesCommon(self, False)
-
 
 
     def _is_solved(self):
@@ -84,78 +62,6 @@ class _LBLNxNEdges(SolverElement):
             assert self._is_solved()
 
             return True
-
-
-    def solve_single_center_face_row(
-            self, l1_white_tracker: FaceTracker, target_face_t: FaceTracker, row_distance_from_l1: int
-    ) -> None:
-        """
-        Solve edge slices on a single row of a face, starting from the L1 layer.
-
-        This method solves the edge pieces on both sides (left and right edges) of
-        a horizontal row on the target face. The row is specified by its distance
-        from the L1 (white) face, not by its LTR row index.
-
-        Args:
-            l1_white_tracker: FaceTracker for L1 (white) face. Must currently be at Down.
-            target_face_t: FaceTracker for the face whose edges we're solving.
-            row_distance_from_l1: Distance from L1 face (0 = closest row to L1).
-                See class docstring for full explanation.
-
-        Example (5x5 cube, L1=Down, target=Front):
-            row_distance_from_l1=0 → solves edges on row 4 (bottom row of Front)
-            row_distance_from_l1=1 → solves edges on row 3
-            row_distance_from_l1=2 → solves edges on row 2 (middle)
-        """
-
-        # see with _setup_l1
-        white: Face = l1_white_tracker.face
-        assert white is self.cube.down
-
-
-        with self._logger.tab(f"Solving edges on face {target_face_t} row {row_distance_from_l1}"):
-
-            self.cmn.bring_face_front_preserve_down(target_face_t.face)
-
-            # from now target face is on front
-            # only now we can assign
-            target_face = target_face_t.face
-
-            edge_info: FaceOrthogonalEdgesInfo = self.cube.sized_layout.get_orthogonal_index_by_distance_from_face(target_face,
-                                                                                                                   l1_white_tracker.face,
-                                                                                                                   row_distance_from_l1)
-
-            self.debug(f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
-
-            self._solve_one_side_edge(target_face, edge_info.edge_one, edge_info.index_on_edge_one)
-            self._solve_one_side_edge(target_face, edge_info.edge_two, edge_info.index_on_edge_two)
-
-            pass
-
-
-    def _solve_one_side_edge(self, target_face: Face, edge: Edge, index_on_edge):
-
-        with self._logger.tab(f"Working on edge {target_face.get_edge_position(edge)} / {index_on_edge}"):
-
-            edge_wing: EdgeWing = edge.get_slice(index_on_edge)
-
-            other_face: Face = edge.get_other_face(target_face)
-
-            #unordered mean yello/blue and blue/yello are the same
-            required_color_unordered = frozenset((target_face.color, other_face.color))
-            #required_color_unordered = frozenset(self._edges_helper.get_slice_ordered_color(target_face, edge_wing))
-
-            source_slice: EdgeWing | None = self.cqr.find_slice_in_edges(self.cube.edges,
-                                                           lambda s: s.colors_id == required_color_unordered)
-
-            assert source_slice
-
-            self.debug(f"Found source EdgeWing for target {required_color_unordered} : {source_slice} / {source_slice.index}")
-
-
-
-
-
 
     def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
         """Solve only the 4 edges that contain a specific color.
@@ -262,7 +168,7 @@ class _LBLNxNEdges(SolverElement):
             if n_slices % 2:
                 _slice = edge.get_slice(n_slices // 2)
                 color_un_ordered = _slice.colors_id
-                ordered_color = self._get_slice_ordered_color(face, _slice)
+                ordered_color = self.get_slice_ordered_color(face, _slice)
             else:
                 ordered_color = self._find_max_of_color(face, edge)
                 color_un_ordered = frozenset(ordered_color)
@@ -327,7 +233,7 @@ class _LBLNxNEdges(SolverElement):
             if a_slice_id != color_un_ordered:
                 continue
 
-            ordered = self._get_slice_ordered_color(face, a_slice)
+            ordered = self.get_slice_ordered_color(face, a_slice)
             if ordered == ordered_color:
                 # done
                 continue
@@ -337,7 +243,7 @@ class _LBLNxNEdges(SolverElement):
 
             other_slice_i = inv(i)
             other_slice = edge.get_slice(other_slice_i)
-            other_order = self._get_slice_ordered_color(face, other_slice)
+            other_order = self.get_slice_ordered_color(face, other_slice)
             if other_order == ordered_color:
                 raise InternalSWError("Don't know what to do")
 
@@ -376,7 +282,7 @@ class _LBLNxNEdges(SolverElement):
             self.op.play(slice_alg.prime)  # move me to opposite E begin from D, slice begin with 1
 
         for i in slices_to_fix:
-            assert self._get_slice_ordered_color(face, edge.get_slice(inv(i))) == ordered_color
+            assert self.get_slice_ordered_color(face, edge.get_slice(inv(i))) == ordered_color
 
     def _fix_all_from_other_edges(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                   color_un_ordered: PartColorsID):
@@ -405,7 +311,7 @@ class _LBLNxNEdges(SolverElement):
                 # ok now do for all that color order match
                 # is there one that can be sliced ?
 
-                if not any(self._get_slice_ordered_color(face, s) == ordered_color for s in edge_right.all_slices):
+                if not any(self.get_slice_ordered_color(face, s) == ordered_color for s in edge_right.all_slices):
                     self.op.play(self.rf)
 
                 self._fix_many_from_other_edges_same_order(face, edge, ordered_color, color_un_ordered)
@@ -440,7 +346,7 @@ class _LBLNxNEdges(SolverElement):
             if source_slice.colors_id != color_un_ordered:
                 continue  # skip this one
 
-            if self._get_slice_ordered_color(face, source_slice) != ordered_color:
+            if self.get_slice_ordered_color(face, source_slice) != ordered_color:
                 continue  # we will handle it in next iteration
 
             source_ltr_index = edge_right.get_face_ltr_index_from_edge_slice_index(face, source_index)
@@ -483,7 +389,7 @@ class _LBLNxNEdges(SolverElement):
             self.op.play(slice_alg.prime)
 
         for target_index in target_indices:
-            assert self._get_slice_ordered_color(face, edge.get_slice(target_index)) == ordered_color
+            assert self.get_slice_ordered_color(face, edge.get_slice(target_index)) == ordered_color
 
         return True
 
@@ -523,13 +429,13 @@ class _LBLNxNEdges(SolverElement):
             edge = cube.front.edge_top
 
         if n_slices % 2:
-            required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
+            required_color = self.get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
         else:
             # In even, we can have partial and complete parity in cas eof complete, we reach here from solver after
             # finding edge in 3x3 with partial we reach here from this solver so in first case we need to reverse all
             # slices in second case we have no idea which, so we pick the first one (that can later cause and OLL
             # parity when solving as 3x3)
-            required_color = self._get_slice_ordered_color(face, edge.get_slice(0))
+            required_color = self.get_slice_ordered_color(face, edge.get_slice(0))
             required_color = required_color[::-1]
 
         slices_to_fix: list[EdgeWing] = []
@@ -538,7 +444,7 @@ class _LBLNxNEdges(SolverElement):
         for i in range(n_slices // 2):
 
             s = edge.get_slice(i)
-            color = self._get_slice_ordered_color(face, s)
+            color = self.get_slice_ordered_color(face, s)
             # print(f"{i} ,{required_color}, {color}")
             if color != required_color:
                 slices_indices_to_fix.append(i)
@@ -589,9 +495,9 @@ class _LBLNxNEdges(SolverElement):
                 self.op.play(alg)
 
     @staticmethod
-    def _get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:
+    def get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:
         """
-
+        claud:document this method
         :param f:
         :param s:
         :return:  (on face color, on_other color)
@@ -648,7 +554,7 @@ class _LBLNxNEdges(SolverElement):
 
                 c = edge.get_slice(i).colors_id
 
-                ordered = self._get_slice_ordered_color(face, _slice)
+                ordered = self.get_slice_ordered_color(face, _slice)
 
                 if c == ordered:
                     n_c1 += 1
@@ -665,4 +571,3 @@ class _LBLNxNEdges(SolverElement):
         else:
             assert c2
             return c2
-

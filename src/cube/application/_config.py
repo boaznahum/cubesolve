@@ -18,7 +18,7 @@ from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 7  # Using debug4x4 texture set for 4x4 debugging
+CUBE_SIZE = 5
 
 # Enable cube caching for performance optimization
 # Env override: CUBE_DISABLE_CACHE=1 to disable
