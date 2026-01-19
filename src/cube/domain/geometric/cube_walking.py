@@ -319,7 +319,7 @@ class FaceWalkingInfoUnit:
         Returns:
             Function (slice_index, slot) -> (row, col) in LTR coordinates
         """
-        return lambda r, c: self.slice_to_center(n_slices_actual, r, c)
+        return lambda slice_index, slot: self.slice_to_center(n_slices_actual, slice_index, slot)
 
     def get_compute_reverse(self, n_slices_actual: int) -> ReversePointComputer:
         """
@@ -344,7 +344,7 @@ class FaceWalkingInfoUnit:
             Function (row, col) -> (slice_index, slot)
         """
         # Lambda binds n_slices_actual to create a 2-param function from the 3-param center_to_slice
-        return lambda r, c: self.center_to_slice(n_slices_actual, r, c)
+        return lambda row, col: self.center_to_slice(n_slices_actual, row, col)
 
     def get_compute_slice_index_to_entry_edge_slice_index(self, n_slices_actual: int) -> SliceToEntryEdge:
         return lambda slice_index: self.slice_index_to_entry_edge_index(n_slices_actual, slice_index)
