@@ -248,16 +248,18 @@ class FaceWalkingInfo:
 @dataclass(frozen=True)
 class FaceWalkingInfoUnit:
     """
-    Information about one face in a slice traversal.
+    Size-independent information about one face in a slice traversal.
 
-    This captures where slot=0, slice_index=0 lands on this face (reference_point),
-    and provides a precomputed function to compute any point efficiently.
+    This provides functions to compute coordinates for any cube size.
+    The reference point (where slice_index=0, slot=0 lands) is computed
+    on-demand via get_reference_point(n_slices).
 
     Attributes:
-        face: The Face object
-        edge: The "entry edge" - the edge shared with the PREVIOUS face in the cycle.
-              This is NOT just any edge - it's specifically the edge through which
-              the slice enters this face from the previous face in traversal order.
+        face_name: The face name (not Face object - size-independent)
+        edge_name: The "entry edge" name - the edge shared with the PREVIOUS face
+              in the cycle. This is NOT just any edge - it's specifically the edge
+              through which the slice enters this face from the previous face in
+              traversal order.
 
               For M slice (F→U→B→D), using edge.opposite() to traverse:
               - Front: edge_bottom (starting edge, shared with Down)
@@ -269,49 +271,32 @@ class FaceWalkingInfoUnit:
               1. Whether slice cuts rows or columns (horizontal vs vertical edge)
               2. Whether slot indices are inverted (top/right edges invert)
               3. The local slice_index translation from the previous face
-        reference_point: Where (slice_index=0, slot=0) lands on this face
-        n_slices: Total number of slices
-        _compute: Precomputed function (slice_index, slot) -> Point
-                  All decisions (edge type, inversions) are baked in at construction.
+        slice_to_center: Function (n_slices, slice_index, slot) -> (row, col)
+        center_to_slice: Function (n_slices, row, col) -> (slice_index, slot)
+        slice_index_to_entry_edge_index: Function (n_slices, slice_index) -> edge_index
 
-    The reference_point is used to derive transforms between faces.
-    The _compute function is used to get any point efficiently.
+    Methods like get_reference_point(n_slices) compute size-dependent values on demand.
     """
 
     face_name: FaceName  # Using FaceName, not Face object - CubeLayout must be size-independent
     edge_name: EdgeName  # Using EdgeName, not Edge object - CubeLayout must be size-independent
-    reference_point: Point
-    n_slices: int
     slice_to_center: UnitPointComputer = field(compare=False)  # (n_slices, si, sl) -> (row, col)
     center_to_slice: UnitReversePointComputer = field(compare=False)  # (n_slices, row, col) -> (si, sl)
     slice_index_to_entry_edge_index: SliceToEntryEdgeUnit = field(compare=False)
 
-    def get_reference_point(self, actual_n_slices: int):
+    def get_reference_point(self, n_slices: int) -> Point:
         """
-        get refrenc epoint after extend to n_slices
-        :param actual_n_slices:
-        :param n_slices:
-        :return:
+        Compute reference point for the given n_slices.
+
+        The reference point is where (slice_index=0, slot=0) lands on this face.
+
+        Args:
+            n_slices: The actual cube's n_slices value
+
+        Returns:
+            (row, col) coordinates for slice_index=0, slot=0
         """
-
-        # we assume reference point is on the edge of the slice
-        r = self.reference_point[0]
-
-        if r > 0:
-            assert r == self.n_slices - 1
-            r_actual = actual_n_slices -1
-        else:
-            r_actual = 0
-
-        c = self.reference_point[1]
-
-        if c > 0:
-            assert c == self.n_slices -1
-            c_actual = actual_n_slices - 1
-        else:
-            c_actual = 0
-
-        return r_actual, c_actual
+        return self.slice_to_center(n_slices, 0, 0)
 
 
     def get_compute(self, n_slices_actual: int) -> PointComputer:
@@ -478,7 +463,7 @@ class CubeWalkingInfo:
 @dataclass(frozen=True)
 class CubeWalkingInfoUnit:
     """
-    Complete information about walking a slice through all 4 faces.
+    Size-independent information about walking a slice through all 4 faces.
 
     The face_infos are stored in CONTENT FLOW order - the order content moves
     during a positive (clockwise) rotation of the slice's rotation_face.
@@ -491,8 +476,7 @@ class CubeWalkingInfoUnit:
     Attributes:
         slice_name: Which slice (M, E, or S)
         rotation_face: The face this slice rotates like (M→L, E→D, S→F)
-        n_slices: Total number of slices (cube_size - 2)
-        face_infos: Tuple of 4 FaceWalkingInfo in content flow order
+        face_infos: Tuple of 4 FaceWalkingInfoUnit in content flow order
 
     OBJECT OWNERSHIP PATTERN
     ========================
@@ -520,7 +504,6 @@ class CubeWalkingInfoUnit:
 
     slice_name: "SliceName"
     rotation_face: "FaceName"
-    n_slices: int
     face_infos: tuple[FaceWalkingInfoUnit, ...]
 
     def __post_init__(self):

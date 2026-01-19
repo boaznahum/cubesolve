@@ -523,7 +523,6 @@ class _SliceLayout(SliceLayout):
             assert self._cube_layout is not None
             internal_3x3 = self._cube_layout._cube
             slice_name = self._slice_name
-            fake_n_slices = 1234  # Arbitrary large value - see UNIT_WALKING_INFO.md
 
             # Derive starting face and edge from rotation face
             rotation_face_name = self.get_face_name()
@@ -563,14 +562,13 @@ class _SliceLayout(SliceLayout):
                 assert rotating_edge is not None, f"No shared edge between {current_face.name} and {rotation_face.name}"
 
                 # Use centralized logic from _slice_walking_path.py
-                # create_walking_info returns FaceWalkingInfoUnit directly
+                # create_walking_info returns size-independent FaceWalkingInfoUnit
                 face_info = create_walking_info(
                     face=current_face,
                     entry_edge_position=current_face.get_edge_position(current_edge),
                     rotating_edge_position=current_face.get_edge_position(rotating_edge),
                     face_name=current_face.name,
                     edge_name=current_edge.name,
-                    n_slices=fake_n_slices,
                 )
                 face_infos.append(face_info)
 
@@ -585,9 +583,7 @@ class _SliceLayout(SliceLayout):
             return CubeWalkingInfoUnit(
                 slice_name=slice_name,
                 rotation_face=rotation_face_name,
-                n_slices=fake_n_slices,
-                face_infos=tuple(face_infos)
-
+                face_infos=tuple(face_infos),
             )
 
         # Use cache manager from layout - cache by slice_name only (size-independent!)

@@ -53,10 +53,9 @@ def create_walking_info(
     rotating_edge_position: EdgePosition,
     face_name: FaceName,
     edge_name: EdgeName,
-    n_slices: int,
 ) -> FaceWalkingInfoUnit:
     """
-    Create coordinate transformation functions for a slice on a face.
+    Create size-independent coordinate transformation functions for a slice on a face.
 
     All transformation functions in the returned FaceWalkingInfoUnit accept
     n_slices as their FIRST parameter, allowing the same info to work with
@@ -68,10 +67,9 @@ def create_walking_info(
         rotating_edge_position: The edge shared with the rotating face - where slice[0] is located
         face_name: The name of the face (for the returned FaceWalkingInfoUnit)
         edge_name: The name of the entry edge (for the returned FaceWalkingInfoUnit)
-        n_slices: The number of slices (used to compute reference_point)
 
     Returns:
-        FaceWalkingInfoUnit with transformation functions and metadata.
+        FaceWalkingInfoUnit with size-independent transformation functions.
 
     Example:
         # Slice enters from BOTTOM, rotating face is on the LEFT
@@ -81,7 +79,6 @@ def create_walking_info(
             rotating_edge_position=EdgePosition.LEFT,
             face_name=FaceName.F,
             edge_name=my_edge.name,
-            n_slices=3
         )
 
         # Convert slice coord to face coord (for a 5x5 cube with n_slices=3)
@@ -231,14 +228,9 @@ def create_walking_info(
         # Step 2: Translate face's ltr to edge's internal slice index
         return entry_edge.get_slice_index_from_ltr_index_arbitrary_n_slices(n_slices, face, face_ltr)
 
-    # Compute reference point using (slice_index=0, slot=0)
-    reference_point = slice_to_center(n_slices, 0, 0)
-
     return FaceWalkingInfoUnit(
         face_name=face_name,
         edge_name=edge_name,
-        reference_point=reference_point,
-        n_slices=n_slices,
         slice_to_center=slice_to_center,
         center_to_slice=center_to_slice,
         slice_index_to_entry_edge_index=slice_to_entry_edge,
