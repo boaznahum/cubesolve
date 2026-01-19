@@ -1,8 +1,9 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Tuple, TypeAlias, Generator
+from typing import Generator, Tuple
 
 from cube.domain.exceptions import InternalSWError
+from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import Color, CenterSlice, CenterSliceIndex, Face
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverElement import SolverElement
@@ -12,8 +13,6 @@ from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils import symbols
 
 CENTER_SLICE_TRACK_KEY = "xxxxxxx"
-
-Point: TypeAlias = Tuple[int, int]
 
 
 class NxNCenters2(SolverElement):

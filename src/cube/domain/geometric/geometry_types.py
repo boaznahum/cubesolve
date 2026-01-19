@@ -28,8 +28,9 @@ class CLGColRow(Enum):
     COL = auto()
 
 
-# Basic coordinate type
-Point = tuple[int, int]
+# Basic coordinate types
+Point = tuple[int, int]  # (row, col) or (slice_index, slot)
+Block = tuple[Point, Point]  # Rectangle defined by two corner points
 
 
 # =============================================================================

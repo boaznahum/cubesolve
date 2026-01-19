@@ -1,7 +1,7 @@
 import sys
 from collections.abc import Iterable, Iterator, Sequence, Set
 from enum import Enum, unique
-from typing import Tuple, TypeAlias
+from typing import Tuple
 
 from cube.domain import algs
 from cube.domain.algs import Algs, SeqAlg
@@ -11,6 +11,7 @@ from cube.domain.model.Cube import Cube
 from cube.domain.geometric.cube_boy import color2long
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
+from cube.domain.geometric.geometry_types import Block, Point
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.tracker.trackers import FaceTracker
@@ -18,9 +19,6 @@ from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHol
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
-
-Point: TypeAlias = Tuple[int, int]
-Block: TypeAlias = Tuple[Point, Point]
 
 
 @unique

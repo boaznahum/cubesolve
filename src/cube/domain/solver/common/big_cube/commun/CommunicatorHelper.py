@@ -16,7 +16,7 @@ import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Tuple, TypeAlias
+from typing import Tuple
 
 import yaml
 
@@ -24,7 +24,7 @@ from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
-from cube.domain.geometric.geometry_types import CLGColRow
+from cube.domain.geometric.geometry_types import Block, CLGColRow, Point
 from cube.domain.model import FaceName, Cube, CenterSlice
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
@@ -32,9 +32,6 @@ from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
-
-Point: TypeAlias = Tuple[int, int]  # row , column
-Block: TypeAlias = Tuple[Point, Point]
 
 
 @dataclass(frozen=True)
