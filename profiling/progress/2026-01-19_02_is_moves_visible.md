@@ -1,37 +1,42 @@
-# Performance: Add `_is_moves_visible` Property
+# Performance: Add `_is_moves_visible` and `has_textures` Properties
 
 **Date:** 2026-01-19
 **Branch:** profiling_no_2
 
 ## Change Description
 
-Added `_is_moves_visible` property to `Cube` class that controls whether texture direction updates are performed during rotations.
+Added visibility optimization to `Cube` class that controls whether texture direction updates are performed during rotations.
 
 ### Logic
 ```
 _is_moves_visible = has_visible_presentation AND NOT _in_query_mode
+
+should_update_texture_directions() = _is_moves_visible AND has_textures
 ```
 
-### When `_is_moves_visible = False`:
-- Tests (no backend connected)
-- Headless backend
-- Console backend
-- During `rotate_and_check()` query operations
+### When texture updates are skipped:
+- Tests (no backend connected) - `has_visible_presentation = False`
+- Headless backend - `has_visible_presentation = False`
+- Console backend - `has_visible_presentation = False`
+- During `rotate_and_check()` query operations - `_in_query_mode = True`
+- Solid color mode (no textures loaded) - `has_textures = False`
 
-### When `_is_moves_visible = True`:
-- Pyglet2 GUI
-- Tkinter GUI
-- Web backend
+### When texture updates are performed:
+- Pyglet2 GUI with textures loaded
+- Tkinter GUI with textures loaded
+- Web backend with textures loaded
 
 ## Files Modified
 
-1. `src/cube/domain/model/Cube.py` - Added property and methods
-2. `src/cube/domain/model/Face.py` - Changed check to use `_is_moves_visible`
-3. `src/cube/domain/model/Slice.py` - Changed check to use `_is_moves_visible`
+1. `src/cube/domain/model/Cube.py` - Added `_is_moves_visible`, `has_textures`, `should_update_texture_directions()`
+2. `src/cube/domain/model/Face.py` - Use `should_update_texture_directions()` public method
+3. `src/cube/domain/model/Slice.py` - Use `should_update_texture_directions()` public method
 4. `src/cube/domain/model/CubeQueries2.py` - Use `set_in_query_mode()` method
 5. `src/cube/presentation/gui/GUIBackendFactory.py` - Added `is_headless` property
 6. `src/cube/presentation/gui/backends/headless/__init__.py` - Set `is_headless=True`
 7. `src/cube/presentation/gui/backends/console/__init__.py` - Set `is_headless=True`
+8. `src/cube/presentation/gui/backends/pyglet2/ModernGLCubeViewer.py` - Set `has_textures=True` on load
+9. `src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py` - Set `has_textures=False` for solid mode
 
 ## Performance Results
 
