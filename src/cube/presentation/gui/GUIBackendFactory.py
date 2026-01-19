@@ -40,6 +40,7 @@ class GUIBackendFactory:
         window_factory: Callable[[int, int, str], Window] | None = None,
         animation_factory: Callable[[], AnimationBackend] | None = None,
         app_window_factory: Callable[["AbstractApp", int, int, str, "GUIBackendFactory"], AppWindow] | None = None,
+        is_headless: bool = False,
     ):
         self._name = name
         self._renderer_factory = renderer_factory
@@ -47,6 +48,7 @@ class GUIBackendFactory:
         self._window_factory = window_factory
         self._animation_factory = animation_factory
         self._app_window_factory = app_window_factory
+        self._is_headless = is_headless
         self._renderer: Renderer | None = None
         self._event_loop: EventLoop | None = None
 
@@ -85,6 +87,15 @@ class GUIBackendFactory:
         """Check if this backend supports animation."""
         return self._animation_factory is not None
 
+    @property
+    def is_headless(self) -> bool:
+        """Check if this backend is headless (no visual output).
+
+        Headless backends (e.g., HeadlessBackend, ConsoleBackend) don't produce
+        visual output, so texture direction updates can be skipped during rotations.
+        """
+        return self._is_headless
+
     def create_app_window(
         self,
         app: "AbstractApp",
@@ -94,11 +105,16 @@ class GUIBackendFactory:
     ) -> AppWindow:
         """Create an AppWindow for this backend.
 
-        This also wires up the animation manager to the event loop.
+        This also wires up the animation manager to the event loop
+        and sets cube visibility based on whether the backend is headless.
         """
         # Wire up animation manager to event loop
         if app.am is not None:
             app.am.set_event_loop(self.event_loop)
+
+        # Set cube visibility based on backend type (visual vs headless)
+        # This allows skipping texture direction updates for headless backends
+        app.cube.has_visible_presentation = not self._is_headless
 
         # Create AppWindow
         if self._app_window_factory is None:

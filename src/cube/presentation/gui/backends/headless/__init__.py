@@ -44,4 +44,5 @@ def create_backend() -> "GUIBackendFactory":
         window_factory=HeadlessWindow,
         animation_factory=None,  # Headless doesn't support animation
         app_window_factory=lambda app, w, h, t, backend: HeadlessAppWindow(app, w, h, t, backend),
+        is_headless=True,  # No visual output - skip texture updates
     )

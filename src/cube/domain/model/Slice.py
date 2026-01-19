@@ -499,8 +499,8 @@ class Slice(SuperElement):
             quarter_turns: Number of 90° rotations (already adjusted for direction)
             slices_indexes: Which slice indices were rotated
         """
-        # Skip texture updates during query mode
-        if self.cube._in_query_mode:
+        # Skip texture updates when moves are not visible (query mode or no visual backend)
+        if not self.cube._is_moves_visible:
             return
 
         # Load config from YAML

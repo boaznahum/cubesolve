@@ -51,4 +51,5 @@ def create_backend() -> "GUIBackendFactory":
         window_factory=None,  # Console doesn't use Window protocol
         animation_factory=None,  # Console doesn't support animation
         app_window_factory=lambda app, w, h, t, backend: ConsoleAppWindow(app, w, h, t, backend),
+        is_headless=True,  # No visual output - skip texture updates
     )
