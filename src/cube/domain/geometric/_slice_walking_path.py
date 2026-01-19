@@ -34,7 +34,7 @@ from cube.domain.geometric.geometry_types import (
     CenterToSlice,
     Point,
     SliceToCenter,
-    SliceToEntryEdge,
+    SliceToEntryEdgeUnit,
 )
 from cube.domain.model._elements import EdgePosition
 
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
 # Aliases for backward compatibility with existing code
 SliceToCenterFn = SliceToCenter
-SliceToEntryEdgeFn = SliceToEntryEdge
+SliceToEntryEdgeFn = SliceToEntryEdgeUnit
 CenterToSliceFn = CenterToSlice
 
 

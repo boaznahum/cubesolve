@@ -39,16 +39,17 @@ SliceToCenter = Callable[[int, int, int], Point]
 # Signature: (n_slices, row, col) -> (slice_index, slot)
 CenterToSlice = Callable[[int, int, int], Point]
 
-# Edge index computation
+# Edge index computation (Unit - size-independent)
 # Signature: (n_slices, slice_index) -> edge_index
-SliceToEntryEdge = Callable[[int, int], int]
-
-# claude: rename the above to unit, this remove sized
-SliceToEntryEdgeSized = Callable[[int], int]
+SliceToEntryEdgeUnit = Callable[[int, int], int]
 
 # =============================================================================
 # SIZE-BOUND functions - n_slices baked in at creation time
 # =============================================================================
+
+# Edge index computation (size-bound)
+# Signature: (slice_index) -> edge_index
+SliceToEntryEdge = Callable[[int], int]
 
 # Forward: slice coords -> face coords (size-bound)
 # Signature: (slice_index, slot) -> (row, col)
