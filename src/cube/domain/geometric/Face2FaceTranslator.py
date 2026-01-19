@@ -689,8 +689,8 @@ class Face2FaceTranslator:
         # ============================================================
         # The shared edge is source_edge.opposite(source_face)
         shared_edge = source_edge.opposite(source_face)
-        edge_internal = shared_edge.get_slice_index_from_ltr_index(source_face, current_index)
-        new_index = shared_edge.get_ltr_index_from_slice_index(target_face, edge_internal)
+        edge_internal = shared_edge.get_edge_slice_index_from_face_ltr_index(source_face, current_index)
+        new_index = shared_edge.get_face_ltr_index_from_edge_slice_index(target_face, edge_internal)
 
         # ============================================================
         # STEP 3: Reconstruct coordinates at target

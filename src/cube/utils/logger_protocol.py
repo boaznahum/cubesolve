@@ -16,7 +16,7 @@ DebugFlagType = bool | Callable[[], bool] | None
 
 @runtime_checkable
 class ILogger(Protocol):
-    """Logger protocol - provides debug output control.
+    """Logger protocol - provides debug output control with prefix and indentation.
 
     This protocol defines the interface for debug/logging operations.
     Access via service provider: cube.sp.logger
@@ -28,6 +28,21 @@ class ILogger(Protocol):
     Logic:
         - If quiet_all is True → never output
         - If debug_all is True OR debug_on is True → output
+
+    Example:
+        logger = cube.sp.logger.with_prefix("Solver", lambda: self._is_debug_enabled)
+        logger.set_prefix("MyComponent")
+
+        with logger.tab(lambda: "Processing slice 1") as dbg:
+            logger.debug(None, "nested message")
+            with logger.tab(lambda: "Source face"):
+                logger.debug(None, "deeper nested")
+
+        # Output:
+        # ── Processing slice 1 ──
+        # │  nested message
+        # │  ── Source face ──
+        # │  │  deeper nested
     """
 
     @property
@@ -137,29 +152,7 @@ class ILogger(Protocol):
         """
         ...
 
-
-@runtime_checkable
-class IPrefixLogger(ILogger, Protocol):
-    """Logger with mutable prefix and indented sections support.
-
-    Use this when the prefix isn't known at construction time but will be set later.
-    Extends ILogger with set_prefix() and tab() methods.
-
-    Example:
-        logger: IPrefixLogger = Logger(parent_logger)
-        logger.set_prefix("MyComponent")
-
-        with logger.tab(lambda: "Processing slice 1") as dbg:
-            logger.debug(None, "nested message")
-            with logger.tab(lambda: "Source face"):
-                logger.debug(None, "deeper nested")
-
-        # Output:
-        # ── Processing slice 1 ──
-        # │  nested message
-        # │  ── Source face ──
-        # │  │  deeper nested
-    """
+    # --- Prefix and indentation ---
 
     def set_prefix(self, prefix: str) -> None:
         """Set the prefix for this logger.
@@ -196,3 +189,7 @@ class IPrefixLogger(ILogger, Protocol):
                 logger.debug(None, "processing...")
         """
         ...
+
+
+# Keep IPrefixLogger as an alias for backward compatibility
+IPrefixLogger = ILogger

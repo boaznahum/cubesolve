@@ -176,6 +176,8 @@ class _SizedCubeLayout(SizedCubeLayout):
         layer_slice_index: int,
     ) -> Iterator[tuple[int, int]]:
         """
+
+        There is a dpulication with what is done in cube.domain.solver.direct.lbl._LBLSlices._LBLSlices._is_slice_centers_solved
         Yield (row, col) positions on side_face for the given layer slice.
 
         A "layer slice" is a horizontal layer parallel to layer1_face (L1).
@@ -268,6 +270,21 @@ class _SizedCubeLayout(SizedCubeLayout):
 
         walk_info = self.create_walking_info(slice_name)
         return walk_info.get_transform(source_face, target_face)
+
+    def get_orthogonal_index_by_distance_from_face(
+            self,
+            face: "Face",
+            base_face: "Face",
+            row_distance_from_base: int
+    ) -> tuple[int, Edge, Edge, int, int]:
+        """
+        Find row/column index and orthogonal edges based on distance from a reference face.
+
+        See CubeLayout.get_orthogonal_index_by_distance_from_face() for full documentation.
+
+        This is a stub implementation - TODO: implement the actual logic.
+        """
+        raise NotImplementedError("get_orthogonal_index_by_distance_from_face not yet implemented")
 
 
 __all__ = ['_SizedCubeLayout']

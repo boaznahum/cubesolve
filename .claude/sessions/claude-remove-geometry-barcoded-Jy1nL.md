@@ -97,19 +97,19 @@ current_edge = shared_edge
 ```python
 # Move to next face (except after the 4th)
 if len(face_infos) < 4:
-    # Follow current_edge to next face, then get opposite on new face
-    next_face = current_edge.get_other_face(current_face)
-    next_edge: Edge = current_edge.opposite(next_face)
+   # Follow current_edge to next face, then get opposite on new face
+   next_face = current_edge.get_other_face(current_face)
+   next_edge: Edge = current_edge.opposite(next_face)
 
-    # Translate slice index through the edge
-    next_slice_index = current_edge.get_slice_index_from_ltr_index(
-        current_face, current_index
-    )
-    current_index = current_edge.get_ltr_index_from_slice_index(
-        next_face, next_slice_index
-    )
-    current_edge = next_edge
-    current_face = next_face
+   # Translate slice index through the edge
+   next_slice_index = current_edge.get_edge_slice_index_from_face_ltr_index(
+      current_face, current_index
+   )
+   current_index = current_edge.get_face_ltr_index_from_edge_slice_index(
+      next_face, next_slice_index
+   )
+   current_edge = next_edge
+   current_face = next_face
 ```
 
 ---

@@ -262,7 +262,7 @@ class NxNEdges(SolverElement):
             self.cmn.bring_edge_to_front_right_preserve_front_left(edge_can_destroyed)
 
         slices = [edge.get_slice(i) for i in slices_to_slice]
-        ltrs = [edge.get_ltr_index_from_slice_index(face, i) for i in slices_to_slice]
+        ltrs = [edge.get_face_ltr_index_from_edge_slice_index(face, i) for i in slices_to_slice]
 
         # Now fix
 
@@ -349,10 +349,10 @@ class NxNEdges(SolverElement):
             if self._get_slice_ordered_color(face, source_slice) != ordered_color:
                 continue  # we will handle it in next iteration
 
-            source_ltr_index = edge_right.get_ltr_index_from_slice_index(face, source_index)
+            source_ltr_index = edge_right.get_face_ltr_index_from_edge_slice_index(face, source_index)
 
             # source nad target have the sme lrt
-            target_index = edge.get_slice_index_from_ltr_index(face, source_ltr_index)
+            target_index = edge.get_edge_slice_index_from_face_ltr_index(face, source_ltr_index)
 
             target_index = inv(target_index)  # we want to bring to opposite location
 

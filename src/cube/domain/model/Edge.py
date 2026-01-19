@@ -126,7 +126,7 @@ class Edge(Part):
         assert isinstance(index, int)
         return self._slices[index]
 
-    def get_ltr_index_from_slice_index(self, face: _Face, i: int) -> int:
+    def get_face_ltr_index_from_edge_slice_index(self, face: _Face, i: int) -> int:
         """
         Convert edge's internal slice index to face's ltr coordinate.
 
@@ -160,7 +160,7 @@ class Edge(Part):
             else:
                 return self.inv_index(i)  # type: ignore
 
-    def get_slice_index_from_ltr_index(self, face: _Face, ltr_i: int) -> int:
+    def get_edge_slice_index_from_face_ltr_index(self, face: _Face, ltr_i: int) -> int:
         """
         Convert face's ltr coordinate to edge's internal slice index.
 
@@ -195,11 +195,11 @@ class Edge(Part):
             else:
                 si = self.inv_index(ltr_i)  # type: ignore
 
-        assert ltr_i == self.get_ltr_index_from_slice_index(face, si)
+        assert ltr_i == self.get_face_ltr_index_from_edge_slice_index(face, si)
 
         return si
 
-    def get_slice_index_from_ltr_index_arbitrary_n_slices(self, n_slices: int, face: _Face, ltr_i: int) -> int:
+    def get_edge_slice_index_from_face_ltr_index_arbitrary_n_slices(self, n_slices: int, face: _Face, ltr_i: int) -> int:
         """
         Convert face's ltr coordinate to edge's internal slice index.
 
@@ -288,7 +288,7 @@ class Edge(Part):
         :param i: Left-to-right index
         :return: The edge wing at that position
         """
-        return self.get_slice(self.get_ltr_index_from_slice_index(face, i))
+        return self.get_slice(self.get_face_ltr_index_from_edge_slice_index(face, i))
 
     def get_left_top_left_edge(self, face: _Face, i) -> PartEdge:
         """

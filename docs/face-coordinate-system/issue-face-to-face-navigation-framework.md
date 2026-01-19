@@ -68,13 +68,14 @@ case SliceName.S:
 ```
 
 ### Navigation Logic (Slice.py lines 126-134)
+
 ```python
 next_edge = current_edge.opposite(current_face)
 next_face = next_edge.get_other_face(current_face)
 
 # Translate coordinates through edge
-next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
-current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
+next_slice_index = next_edge.get_edge_slice_index_from_face_ltr_index(current_face, current_index)
+current_index = next_edge.get_face_ltr_index_from_edge_slice_index(next_face, next_slice_index)
 ```
 
 ### Axis Detection (Slice.py lines 98-108)
@@ -203,42 +204,42 @@ opp = opposite (no shared edge, need 2 rotations)
 
 ```python
 def _translate_adjacent(self, source: Face, dest: Face, coord: tuple[int, int]) -> FaceTranslationResult:
-    """
-    For adjacent faces (share an edge):
+  """
+  For adjacent faces (share an edge):
 
-    1. Find shared edge between source and dest
-    2. Determine edge type on each face:
-       - source_edge_type: TOP/BOTTOM/LEFT/RIGHT on source
-       - dest_edge_type: TOP/BOTTOM/LEFT/RIGHT on dest
-    3. Calculate rotation face (the face whose rotation moves the edge)
-    4. Apply axis rule:
-       - Horizontal edge → COLUMN (ltr selects column)
-       - Vertical edge → ROW (ltr selects row)
-    5. Translate coordinate through edge:
-       - source coord → source ltr → edge internal → dest ltr → dest coord
-    """
-    shared_edge = self._find_shared_edge(source, dest)
+  1. Find shared edge between source and dest
+  2. Determine edge type on each face:
+     - source_edge_type: TOP/BOTTOM/LEFT/RIGHT on source
+     - dest_edge_type: TOP/BOTTOM/LEFT/RIGHT on dest
+  3. Calculate rotation face (the face whose rotation moves the edge)
+  4. Apply axis rule:
+     - Horizontal edge → COLUMN (ltr selects column)
+     - Vertical edge → ROW (ltr selects row)
+  5. Translate coordinate through edge:
+     - source coord → source ltr → edge internal → dest ltr → dest coord
+  """
+  shared_edge = self._find_shared_edge(source, dest)
 
-    # Determine which edge this is on each face
-    source_edge_pos = source.get_edge_position(shared_edge)  # TOP/BOTTOM/LEFT/RIGHT
-    dest_edge_pos = dest.get_edge_position(shared_edge)
+  # Determine which edge this is on each face
+  source_edge_pos = source.get_edge_position(shared_edge)  # TOP/BOTTOM/LEFT/RIGHT
+  dest_edge_pos = dest.get_edge_position(shared_edge)
 
-    # Apply axis rule
-    source_axis = COLUMN if source_edge_pos in (TOP, BOTTOM) else ROW
-    dest_axis = COLUMN if dest_edge_pos in (TOP, BOTTOM) else ROW
+  # Apply axis rule
+  source_axis = COLUMN if source_edge_pos in (TOP, BOTTOM) else ROW
+  dest_axis = COLUMN if dest_edge_pos in (TOP, BOTTOM) else ROW
 
-    # Extract coordinate along the edge
-    if source_axis == ROW:
-        source_ltr = coord[1]  # column index for row selection
-    else:
-        source_ltr = coord[0]  # row index for column selection
+  # Extract coordinate along the edge
+  if source_axis == ROW:
+    source_ltr = coord[1]  # column index for row selection
+  else:
+    source_ltr = coord[0]  # row index for column selection
 
-    # Translate through edge
-    edge_index = shared_edge.get_slice_index_from_ltr_index(source, source_ltr)
-    dest_ltr = shared_edge.get_ltr_index_from_slice_index(dest, edge_index)
+  # Translate through edge
+  edge_index = shared_edge.get_edge_slice_index_from_face_ltr_index(source, source_ltr)
+  dest_ltr = shared_edge.get_face_ltr_index_from_edge_slice_index(dest, edge_index)
 
-    # Build destination coordinate
-    # ... (depends on dest_edge_pos and dest_axis)
+  # Build destination coordinate
+  # ... (depends on dest_edge_pos and dest_axis)
 ```
 
 ### Algorithm for Opposite Faces

@@ -125,11 +125,11 @@ The face rotation code works entirely in the face's own LTR system. The `inv()` 
 
 ```python
 for index in range(n_slices):
-    top_ltr_index = saved_top.get_ltr_index_from_slice_index(self, index)
+    top_ltr_index = saved_top.get_face_ltr_index_from_edge_slice_index(self, index)
 
-    i_left   = e_left.get_slice_index_from_ltr_index(self, top_ltr_index)
-    i_right  = e_right.get_slice_index_from_ltr_index(self, inv(top_ltr_index))
-    i_bottom = e_bottom.get_slice_index_from_ltr_index(self, inv(top_ltr_index))
+    i_left = e_left.get_edge_slice_index_from_face_ltr_index(self, top_ltr_index)
+    i_right = e_right.get_edge_slice_index_from_face_ltr_index(self, inv(top_ltr_index))
+    i_bottom = e_bottom.get_edge_slice_index_from_face_ltr_index(self, inv(top_ltr_index))
 ```
 
 ---
@@ -144,8 +144,8 @@ The edge solves this by acting as a bridge. When moving from one face to the nex
 
 ```python
 # Moving from current_face to next_face through shared edge
-next_slice_index = next_edge.get_slice_index_from_ltr_index(current_face, current_index)
-current_index = next_edge.get_ltr_index_from_slice_index(next_face, next_slice_index)
+next_slice_index = next_edge.get_edge_slice_index_from_face_ltr_index(current_face, current_index)
+current_index = next_edge.get_face_ltr_index_from_edge_slice_index(next_face, next_slice_index)
 ```
 
 The LTR system is designed so that the same LTR value on a shared edge means the same physical slice. The translation layer handles the different internal storage orders, preserving physical alignment across all four faces.

@@ -269,12 +269,12 @@ def _rotate(self):
 
     for index in range(n_slices):
         # Get the LEFT-TO-RIGHT index for each edge from THIS face's perspective
-        top_ltr_index = saved_top.get_ltr_index_from_slice_index(self, index)
+        top_ltr_index = saved_top.get_face_ltr_index_from_edge_slice_index(self, index)
 
         # Calculate corresponding indices on other edges
-        i_left = e_left.get_slice_index_from_ltr_index(self, top_ltr_index)
-        i_right = e_right.get_ltr_index_from_slice_index(self, inv(top_ltr_index))
-        i_bottom = e_bottom.get_ltr_index_from_slice_index(self, inv(top_ltr_index))
+        i_left = e_left.get_edge_slice_index_from_face_ltr_index(self, top_ltr_index)
+        i_right = e_right.get_face_ltr_index_from_edge_slice_index(self, inv(top_ltr_index))
+        i_bottom = e_bottom.get_face_ltr_index_from_edge_slice_index(self, inv(top_ltr_index))
 
         # Copy colors with correct index mapping
         self._edge_top.copy_colors_horizontal(e_left, index=i_top, source_index=i_left)

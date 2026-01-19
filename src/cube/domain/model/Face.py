@@ -138,13 +138,13 @@ class Face(SuperElement, Hashable):
 
             # X-axis arrow on bottom edge (LTR index 0 = nearest to origin)
             # Each edge has its own conversion - use the specific edge's method
-            x_slice_idx = self._edge_bottom.get_slice_index_from_ltr_index(self, 0)
+            x_slice_idx = self._edge_bottom.get_edge_slice_index_from_face_ltr_index(self, 0)
             edge_x = self._edge_bottom.get_slice(x_slice_idx).get_face_edge(self)
             mm.add_fixed_marker(edge_x, "ltr_arrow_x", mf.ltr_arrow_x())
 
             # Y-axis arrow on left edge (LTR index 0 = nearest to origin)
             # Each edge has its own conversion - use the specific edge's method
-            y_slice_idx = self._edge_left.get_slice_index_from_ltr_index(self, 0)
+            y_slice_idx = self._edge_left.get_edge_slice_index_from_face_ltr_index(self, 0)
             edge_y = self._edge_left.get_slice(y_slice_idx).get_face_edge(self)
             mm.add_fixed_marker(edge_y, "ltr_arrow_y", mf.ltr_arrow_y())
 
@@ -422,11 +422,11 @@ class Face(SuperElement, Hashable):
 
             # Edge wing cycles
             for index in range(n_slices):
-                top_ltr_index = e_top.get_ltr_index_from_slice_index(self, index)
+                top_ltr_index = e_top.get_face_ltr_index_from_edge_slice_index(self, index)
                 i_top = index
-                i_left = e_left.get_slice_index_from_ltr_index(self, top_ltr_index)
-                i_right = e_right.get_ltr_index_from_slice_index(self, inv(top_ltr_index))
-                i_bottom = e_bottom.get_ltr_index_from_slice_index(self, inv(top_ltr_index))
+                i_left = e_left.get_edge_slice_index_from_face_ltr_index(self, top_ltr_index)
+                i_right = e_right.get_face_ltr_index_from_edge_slice_index(self, inv(top_ltr_index))
+                i_bottom = e_bottom.get_face_ltr_index_from_edge_slice_index(self, inv(top_ltr_index))
 
                 ew_top = e_top.get_slice(i_top)
                 ew_left = e_left.get_slice(i_left)
@@ -811,7 +811,7 @@ class Face(SuperElement, Hashable):
         Returns:
             Internal slice index
         """
-        return self._edge_top.get_slice_index_from_ltr_index(self, ltr_i)
+        return self._edge_top.get_edge_slice_index_from_face_ltr_index(self, ltr_i)
 
     def get_horizontal_ltr_from_slice_index(self, slice_i: int) -> int:
         """
@@ -828,7 +828,7 @@ class Face(SuperElement, Hashable):
         Returns:
             Left-to-right index from this face's perspective
         """
-        return self._edge_top.get_ltr_index_from_slice_index(self, slice_i)
+        return self._edge_top.get_face_ltr_index_from_edge_slice_index(self, slice_i)
 
     def get_vertical_slice_index_from_ltr(self, ltr_i: int) -> int:
         """
@@ -845,7 +845,7 @@ class Face(SuperElement, Hashable):
         Returns:
             Internal slice index
         """
-        return self._edge_left.get_slice_index_from_ltr_index(self, ltr_i)
+        return self._edge_left.get_edge_slice_index_from_face_ltr_index(self, ltr_i)
 
     def get_vertical_ltr_from_slice_index(self, slice_i: int) -> int:
         """
@@ -862,4 +862,4 @@ class Face(SuperElement, Hashable):
         Returns:
             Bottom-to-top index from this face's perspective
         """
-        return self._edge_left.get_ltr_index_from_slice_index(self, slice_i)
+        return self._edge_left.get_face_ltr_index_from_edge_slice_index(self, slice_i)

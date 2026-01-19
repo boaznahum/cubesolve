@@ -15,11 +15,20 @@ from cube.utils.OrderedSet import OrderedSet
 
 
 class _LBLNxNEdges(SolverElement):
-
     """
-    claude: # in these files row_index is the distance between l1_face, no metter on which orientation
-    go over all methods and checkit match the definition asked me if you are not sue
+    Edge solver for NxN cubes using layer-by-layer approach.
 
+    Coordinate Convention - row_distance_from_l1:
+    =============================================
+    In this class, `row_distance_from_l1` represents the distance from the L1 (white) face,
+    NOT the row index in the face's LTR coordinate system.
+
+    - row_distance_from_l1=0: The row/column closest to L1 (touching the shared edge)
+    - row_distance_from_l1=1: The next row/column away from L1
+    - row_distance_from_l1=n-1: The row/column furthest from L1
+
+    This abstraction is orientation-independent. See cube_layout.py's
+    get_orthogonal_index_by_distance_from_face() for full documentation with diagrams.
     """
     work_on_b: bool = True
 
@@ -71,19 +80,37 @@ class _LBLNxNEdges(SolverElement):
 
 
     def solve_single_center_face_row(
-            self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int
+            self, l1_white_tracker: FaceTracker, target_face: FaceTracker, row_distance_from_l1: int
     ) -> None:
-
         """
-        Solve single face row, meaning try on both sided of face
-        :param l1_white_tracker:
-        :param target_face:
-        :param face_row:
-        :return:
+        Solve edge slices on a single row of a face, starting from the L1 layer.
+
+        This method solves the edge pieces on both sides (left and right edges) of
+        a horizontal row on the target face. The row is specified by its distance
+        from the L1 (white) face, not by its LTR row index.
+
+        Args:
+            l1_white_tracker: FaceTracker for L1 (white) face. Must currently be at Down.
+            target_face: FaceTracker for the face whose edges we're solving.
+            row_distance_from_l1: Distance from L1 face (0 = closest row to L1).
+                See class docstring for full explanation.
+
+        Example (5x5 cube, L1=Down, target=Front):
+            row_distance_from_l1=0 → solves edges on row 4 (bottom row of Front)
+            row_distance_from_l1=1 → solves edges on row 3
+            row_distance_from_l1=2 → solves edges on row 2 (middle)
         """
 
         # see with _setup_l1
         assert l1_white_tracker.face is self.cube.down
+
+        with self._logger.tab(f"Solving edges on face {target_face} row {row_distance_from_l1}"):
+
+            _face_center_row = self.cube.layout.get_orthogonal_index_by_distance_from_face(target_face.face,
+                                                                                          l1_white_tracker.face,
+                                                                                          row_distance_from_l1)
+
+            pass
 
 
     def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
@@ -285,7 +312,7 @@ class _LBLNxNEdges(SolverElement):
             self.cmn.bring_edge_to_front_right_preserve_front_left(edge_can_destroyed)
 
         slices = [edge.get_slice(i) for i in slices_to_slice]
-        ltrs = [edge.get_ltr_index_from_slice_index(face, i) for i in slices_to_slice]
+        ltrs = [edge.get_face_ltr_index_from_edge_slice_index(face, i) for i in slices_to_slice]
 
         # Now fix
 
@@ -372,10 +399,10 @@ class _LBLNxNEdges(SolverElement):
             if self._get_slice_ordered_color(face, source_slice) != ordered_color:
                 continue  # we will handle it in next iteration
 
-            source_ltr_index = edge_right.get_ltr_index_from_slice_index(face, source_index)
+            source_ltr_index = edge_right.get_face_ltr_index_from_edge_slice_index(face, source_index)
 
             # source nad target have the sme lrt
-            target_index = edge.get_slice_index_from_ltr_index(face, source_ltr_index)
+            target_index = edge.get_edge_slice_index_from_face_ltr_index(face, source_ltr_index)
 
             target_index = inv(target_index)  # we want to bring to opposite location
 

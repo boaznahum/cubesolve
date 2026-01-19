@@ -65,6 +65,7 @@ class SolverElementsProvider(Protocol, metaclass=ABCMeta):
 
         Created via cube.sp.logger.with_prefix() with debug_flag callback.
         Child elements can chain with: self._logger.with_prefix("ChildName")
+        Supports tab() for indented debug sections.
         """
         ...
 

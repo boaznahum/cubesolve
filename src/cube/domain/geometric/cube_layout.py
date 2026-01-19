@@ -603,6 +603,23 @@ class CubeLayout(Protocol):
         """
         ...
 
+    def get_orthogonal_index_by_distance_from_face(
+            self,
+            face: Face,
+            base_face: Face,
+            row_distance_from_base: int
+    ) -> tuple[int, Edge, Edge, int, int]:
+        """
+        Find row/column index and orthogonal edges based on distance from a reference face.
+
+        This is a delegation method - see SizedCubeLayout.get_orthogonal_index_by_distance_from_face()
+        for full documentation with diagrams and examples.
+
+        Delegates to: cube.sized_layout.get_orthogonal_index_by_distance_from_face()
+        """
+        ...
+
+
     def translate_target_from_source(
             self,
             source_face: Face,
@@ -830,6 +847,7 @@ class CubeLayout(Protocol):
             GeometryError: INVALID_PRESERVE_ROTATION if no valid rotation exists
         """
         ...
+
 
 
 

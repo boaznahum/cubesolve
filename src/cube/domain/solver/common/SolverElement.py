@@ -1,7 +1,9 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
 
+from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.logger import Logger
+from cube.utils.logger_protocol import ILogger
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -21,12 +23,12 @@ if TYPE_CHECKING:
 _Common: TypeAlias = "CommonOp"
 
 
-class SolverElement(CubeSupplier):
+class SolverElement(CubeSupplier, SolverElementsProvider):
     __slots__ = ["_solver", "_ann",
                  "_cmn",
                  "_cube",
                  "_cqr",
-                 "_logger"
+                 "_SolverElement__logger"
                  ]
 
     _solver: SolverElementsProvider
@@ -38,11 +40,15 @@ class SolverElement(CubeSupplier):
         self._cube = solver.cube
         self._cqr = solver.cube.cqr
         # Logger: prefix can be set later via _set_debug_prefix (uses set_prefix())
-        self._logger: Logger = Logger(solver._logger)
+        self.__logger: Logger = Logger(solver._logger)
+
+    @property
+    def _logger(self) -> ILogger:
+        return self.__logger
 
     def _set_debug_prefix(self, prefix: str) -> None:
         """Set the debug prefix for this element's logger."""
-        self._logger.set_prefix(prefix)
+        self.__logger.set_prefix(prefix)
 
     def debug(self, *args, level: int | None = None) -> None:
         """Output debug information with optional level filtering.
@@ -68,6 +74,10 @@ class SolverElement(CubeSupplier):
     @property
     def op(self) -> OperatorProtocol:
         return self._solver.op
+
+    @property
+    def config(self) -> ConfigProtocol:
+        return self._solver.config
 
     def play(self, alg: Alg):
         self.op.play(alg)

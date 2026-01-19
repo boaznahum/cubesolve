@@ -65,9 +65,9 @@ def ltr_to_center_index(face: Face, ltr_y: int, ltr_x: int) -> tuple[int, int]:
         (idx_row, idx_col) for use with face.center.get_center_slice()
     """
     # Use edge_left for Y → row translation
-    idx_row = face.edge_left.get_slice_index_from_ltr_index(face, ltr_y)
+    idx_row = face.edge_left.get_edge_slice_index_from_face_ltr_index(face, ltr_y)
     # Use edge_bottom for X → col translation
-    idx_col = face.edge_bottom.get_slice_index_from_ltr_index(face, ltr_x)
+    idx_col = face.edge_bottom.get_edge_slice_index_from_face_ltr_index(face, ltr_x)
     return idx_row, idx_col
 
 
@@ -83,8 +83,8 @@ def center_index_to_ltr(face: Face, idx_row: int, idx_col: int) -> tuple[int, in
     Returns:
         (ltr_y, ltr_x) in LTR system
     """
-    ltr_y = face.edge_left.get_ltr_index_from_slice_index(face, idx_row)
-    ltr_x = face.edge_bottom.get_ltr_index_from_slice_index(face, idx_col)
+    ltr_y = face.edge_left.get_face_ltr_index_from_edge_slice_index(face, idx_row)
+    ltr_x = face.edge_bottom.get_face_ltr_index_from_edge_slice_index(face, idx_col)
     return ltr_y, ltr_x
 
 

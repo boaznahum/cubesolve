@@ -226,7 +226,7 @@ def create_walking_info(
             face_ltr = slice_index
 
         # Step 2: Translate face's ltr to edge's internal slice index
-        return entry_edge.get_slice_index_from_ltr_index_arbitrary_n_slices(n_slices, face, face_ltr)
+        return entry_edge.get_edge_slice_index_from_face_ltr_index_arbitrary_n_slices(n_slices, face, face_ltr)
 
     return FaceWalkingInfoUnit(
         face_name=face_name,

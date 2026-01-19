@@ -1,10 +1,17 @@
 """
-
-claude: # in these files row_index is the distance between l1_face, no metter on which orientation
-go over all methods and checkit match the definition asked me if you are not sue
-
-
 LBL Slices Helper - wraps NxNCenters and NxNEdges for layer-by-layer slice solving.
+
+Coordinate Convention - row_distance_from_l1:
+=============================================
+In this module, `row_distance_from_l1` (or similar names like `face_row`) represents
+the distance from the L1 (white) face, NOT the row index in the face's LTR system.
+
+- row_distance_from_l1=0: The row/column closest to L1 (touching the shared edge)
+- row_distance_from_l1=1: The next row/column away from L1
+- row_distance_from_l1=n-1: The row/column furthest from L1
+
+This abstraction is orientation-independent. See cube_layout.py's
+get_orthogonal_index_by_distance_from_face() for full documentation with diagrams.
 
 This helper provides slice-based operations for middle layer solving:
 - Ring center solving (one row on 4 side faces per slice)
@@ -61,8 +68,8 @@ class _LBLSlices(SolverElement):
         """
         self._slv = slv
         # preserve_cage=True to preserve Layer 1 edges during center solving
-        self._centers = NxNCenters2(slv, preserve_cage=True)
-        self._edges = _LBLNxNEdges(slv, advanced_edge_parity=False)
+        self._centers = NxNCenters2(self, preserve_cage=True)
+        self._edges = _LBLNxNEdges(self, advanced_edge_parity=False)
 
     @property
     def centers(self) -> NxNCenters2:
@@ -237,7 +244,9 @@ class _LBLSlices(SolverElement):
                         target_face: FaceTracker,
                         face_row: int
                         ) -> None:
-        self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
+
+        if False:
+            self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
         self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
 
 

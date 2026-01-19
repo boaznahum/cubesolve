@@ -379,6 +379,23 @@ class _CubeLayout(CubeLayout):
             layer1_face, side_face, layer_slice_index
         )
 
+    def get_orthogonal_index_by_distance_from_face(
+            self,
+            face: "Face",
+            base_face: "Face",
+            row_distance_from_base: int
+    ) -> tuple[int, "Edge", "Edge", int, int]:
+        """
+        Find row/column index and orthogonal edges based on distance from a reference face.
+
+        See CubeLayout.get_orthogonal_index_by_distance_from_face() for full documentation.
+
+        Delegates to cube.sized_layout for size-aware implementation.
+        """
+        return face.cube.sized_layout.get_orthogonal_index_by_distance_from_face(
+            face, base_face, row_distance_from_base
+        )
+
     def _is_face(self, color: Color) -> FaceName | None:
         """Find which face has the given color, or None if not found."""
         for f, c in self._faces.items():

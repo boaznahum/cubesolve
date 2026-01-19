@@ -230,10 +230,10 @@ See: `docs/face-coordinate-system/edge-face-coordinate-system.md`
 
 ```python
 # Face LTR → Edge internal index
-edge.get_slice_index_from_ltr_index(face, ltr_i)
+edge.get_edge_slice_index_from_face_ltr_index(face, ltr_i)
 
 # Edge internal index → Face LTR
-edge.get_ltr_index_from_slice_index(face, slice_i)
+edge.get_face_ltr_index_from_edge_slice_index(face, slice_i)
 ```
 
 The `same_direction` flag determines if f2 sees inverted indices.

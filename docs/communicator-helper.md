@@ -218,16 +218,17 @@ for n in range(4):
 
 ```python
 def ltr_to_center_index(face: Face, ltr_y: int, ltr_x: int) -> tuple[int, int]:
-    """Translate LTR (y, x) to center index (row, col)."""
-    idx_row = face.edge_left.get_slice_index_from_ltr_index(face, ltr_y)
-    idx_col = face.edge_bottom.get_slice_index_from_ltr_index(face, ltr_x)
-    return idx_row, idx_col
+  """Translate LTR (y, x) to center index (row, col)."""
+  idx_row = face.edge_left.get_edge_slice_index_from_face_ltr_index(face, ltr_y)
+  idx_col = face.edge_bottom.get_edge_slice_index_from_face_ltr_index(face, ltr_x)
+  return idx_row, idx_col
+
 
 def center_index_to_ltr(face: Face, idx_row: int, idx_col: int) -> tuple[int, int]:
-    """Translate center index (row, col) to LTR (y, x)."""
-    ltr_y = face.edge_left.get_ltr_index_from_slice_index(face, idx_row)
-    ltr_x = face.edge_bottom.get_ltr_index_from_slice_index(face, idx_col)
-    return ltr_y, ltr_x
+  """Translate center index (row, col) to LTR (y, x)."""
+  ltr_y = face.edge_left.get_face_ltr_index_from_edge_slice_index(face, idx_row)
+  ltr_x = face.edge_bottom.get_face_ltr_index_from_edge_slice_index(face, idx_col)
+  return ltr_y, ltr_x
 ```
 
 Reference: `Edge.py:127-191` for the `get_ltr_index_from_slice_index` / `get_slice_index_from_ltr_index` methods.

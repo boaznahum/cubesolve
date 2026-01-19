@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING, Iterator, Protocol
 if TYPE_CHECKING:
     from cube.domain.geometric.cube_walking import CubeWalkingInfo
     from cube.domain.geometric.FRotation import FUnitRotation
+    from cube.domain.model.Edge import Edge
     from cube.domain.model.Face import Face
     from cube.domain.model.Slice import Slice
     from cube.domain.model.SliceName import SliceName
@@ -118,5 +119,145 @@ class SizedCubeLayout(Protocol):
 
         Returns:
             FUnitRotation that transforms source coordinates to target
+        """
+        ...
+
+    def get_orthogonal_index_by_distance_from_face(
+            self,
+            face: "Face",
+            base_face: "Face",
+            row_distance_from_base: int
+    ) -> tuple[int, "Edge", "Edge", int, int]:
+        """
+        Find row/column index and orthogonal edges based on distance from a reference face.
+
+        This method is essential for layer-by-layer solving where we process rows/columns
+        of a face starting from the layer closest to a solved layer (e.g., L1/white face).
+
+        Concept - Row Distance from Base Face:
+        ======================================
+        The `row_distance_from_base` is NOT a row index in the face's LTR system.
+        It represents the distance from the shared edge with base_face:
+        - Distance 0 = row/column closest to base_face (touching the shared edge)
+        - Distance 1 = next row/column away from base_face
+        - Distance n-1 = row/column furthest from base_face (touching opposite edge)
+
+        This abstraction is orientation-independent: regardless of which face is the
+        base_face, distance 0 always means "closest to base_face".
+
+        Visual Examples (5x5 cube, looking at Front face from outside):
+        ================================================================
+
+        Case 1: base_face = Down (L1 at bottom)
+        ----------------------------------------
+                    ┌─────────────────────────┐
+                    │  row 0  (distance 4)    │  ← furthest from Down
+                    ├─────────────────────────┤
+                    │  row 1  (distance 3)    │
+            Left    ├─────────────────────────┤    Right
+            Edge    │  row 2  (distance 2)    │    Edge
+                    ├─────────────────────────┤
+                    │  row 3  (distance 1)    │
+                    ├─────────────────────────┤
+                    │  row 4  (distance 0)    │  ← closest to Down (shared edge)
+                    └─────────────────────────┘
+                              Down (base_face)
+
+            row_distance_from_base=0 → returns (row=4, edge_left, edge_right, ...)
+            row_distance_from_base=2 → returns (row=2, edge_left, edge_right, ...)
+
+        Case 2: base_face = Up (L1 at top)
+        -----------------------------------
+                              Up (base_face)
+                    ┌─────────────────────────┐
+                    │  row 0  (distance 0)    │  ← closest to Up (shared edge)
+                    ├─────────────────────────┤
+                    │  row 1  (distance 1)    │
+            Left    ├─────────────────────────┤    Right
+            Edge    │  row 2  (distance 2)    │    Edge
+                    ├─────────────────────────┤
+                    │  row 3  (distance 3)    │
+                    ├─────────────────────────┤
+                    │  row 4  (distance 4)    │  ← furthest from Up
+                    └─────────────────────────┘
+                              Down
+
+            row_distance_from_base=0 → returns (row=0, edge_left, edge_right, ...)
+            row_distance_from_base=2 → returns (row=2, edge_left, edge_right, ...)
+
+        Case 3: base_face = Left (horizontal solving)
+        ----------------------------------------------
+                    ┌───┬───┬───┬───┬───┐
+                    │   │   │   │   │   │  col0 col1 col2 col3 col4
+                    │   │   │   │   │   │   ↑    ↑    ↑    ↑    ↑
+            Left    │   │   │   │   │   │  d=0  d=1  d=2  d=3  d=4
+          (base)    │   │   │   │   │   │
+                    │   │   │   │   │   │
+                    └───┴───┴───┴───┴───┘
+                          Top Edge
+                          Bottom Edge
+
+            row_distance_from_base=0 → returns (col=0, edge_top, edge_bottom, ...)
+            row_distance_from_base=2 → returns (col=2, edge_top, edge_bottom, ...)
+
+        Case 4: base_face = Right
+        --------------------------
+                    ┌───┬───┬───┬───┬───┐
+                    │   │   │   │   │   │  col0 col1 col2 col3 col4
+                    │   │   │   │   │   │   ↑    ↑    ↑    ↑    ↑
+                    │   │   │   │   │   │  d=4  d=3  d=2  d=1  d=0
+                    │   │   │   │   │   │                        Right
+                    │   │   │   │   │   │                       (base)
+                    └───┴───┴───┴───┴───┘
+
+            row_distance_from_base=0 → returns (col=4, edge_top, edge_bottom, ...)
+            row_distance_from_base=2 → returns (col=2, edge_top, edge_bottom, ...)
+
+        Return Values:
+        ==============
+        Returns a 5-tuple:
+        1. row_or_col (int): The row or column index in face's LTR coordinate system
+           - Row index if base_face is above/below (shared edge is horizontal)
+           - Column index if base_face is left/right (shared edge is vertical)
+
+        2. edge_one (Edge): First orthogonal edge (perpendicular to shared edge)
+           - Left edge if base is top/bottom
+           - Top edge if base is left/right
+
+        3. edge_two (Edge): Second orthogonal edge (perpendicular to shared edge)
+           - Right edge if base is top/bottom
+           - Bottom edge if base is left/right
+
+        4. index_on_edge_one (int): Index in edge_one's internal coordinate system
+           (use edge.get_slice(index) to access the actual slice)
+
+        5. index_on_edge_two (int): Index in edge_two's internal coordinate system
+
+        The edge indices are computed using get_edge_slice_index_from_face_ltr_index(),
+        which translates the face's LTR row/column to each edge's internal system.
+
+        Args:
+            face: The face to get row/column information from
+            base_face: The reference face (must share an edge with face)
+            row_distance_from_base: Distance from base_face (0 = closest, n-1 = furthest)
+
+        Returns:
+            Tuple of (row_or_col_index, edge_one, edge_two, index_on_edge_one, index_on_edge_two)
+
+        Raises:
+            ValueError: If face and base_face don't share an edge (are opposite faces)
+            ValueError: If row_distance_from_base is out of range [0, n_slices-1]
+
+        Example:
+            # Solving Front face row by row, starting from Down (L1)
+            for distance in range(cube.n_slices):
+                row, left_edge, right_edge, left_idx, right_idx = (
+                    cube.sized_layout.get_orthogonal_index_by_distance_from_face(
+                        cube.front, cube.down, distance
+                    )
+                )
+                # Process row on front face, with access to edge slices
+                # left_edge.get_slice(left_idx) and right_edge.get_slice(right_idx)
+                # correspond to the same horizontal row on the front face
         """
         ...

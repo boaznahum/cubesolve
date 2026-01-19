@@ -179,8 +179,8 @@ class CommunicatorHelper(SolverElement):
         Returns:
             (idx_row, idx_col) for use with face.center.get_center_slice()
         """
-        idx_row = face.edge_left.get_slice_index_from_ltr_index(face, ltr_y)
-        idx_col = face.edge_bottom.get_slice_index_from_ltr_index(face, ltr_x)
+        idx_row = face.edge_left.get_edge_slice_index_from_face_ltr_index(face, ltr_y)
+        idx_col = face.edge_bottom.get_edge_slice_index_from_face_ltr_index(face, ltr_x)
         return Point(idx_row, idx_col)
 
     def index_to_ltr(self, face: Face, idx_row: int, idx_col: int) -> Point:
@@ -195,8 +195,8 @@ class CommunicatorHelper(SolverElement):
         Returns:
             (ltr_y, ltr_x) in LTR system
         """
-        ltr_y = face.edge_left.get_ltr_index_from_slice_index(face, idx_row)
-        ltr_x = face.edge_bottom.get_ltr_index_from_slice_index(face, idx_col)
+        ltr_y = face.edge_left.get_face_ltr_index_from_edge_slice_index(face, idx_row)
+        ltr_x = face.edge_bottom.get_face_ltr_index_from_edge_slice_index(face, idx_col)
         return Point(ltr_y, ltr_x)
 
     def ltr_block_to_index(self, face: Face, ltr_block: Block) -> Block:

@@ -488,7 +488,7 @@ def _handle_selected_slice(window: AppWindow, slice_face: PartEdge, inv: bool):
             if slice_alg:
 
                 index = _slice.index
-                index = part.get_ltr_index_from_slice_index(face, index)
+                index = part.get_face_ltr_index_from_edge_slice_index(face, index)
 
                 if neg_slice_index:
                     index = face.inv(index)
@@ -544,7 +544,7 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
         raise InternalSWError
 
     if not on_center:
-        index = part.get_ltr_index_from_slice_index(face, index)
+        index = part.get_face_ltr_index_from_edge_slice_index(face, index)
 
     if neg_slice_index:
         index = face.inv(index)
