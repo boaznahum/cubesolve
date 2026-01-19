@@ -18,8 +18,12 @@ Using Protocol classes instead of Callable aliases for better readability:
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import Enum, auto
-from typing import NamedTuple, Protocol
+from typing import TYPE_CHECKING, NamedTuple, Protocol
+
+if TYPE_CHECKING:
+    from cube.domain.model.Edge import Edge
 
 
 class CLGColRow(Enum):
@@ -83,3 +87,43 @@ class PointComputer(Protocol):
 class ReversePointComputer(Protocol):
     """Convert face coords to slice coords (size-bound)."""
     def __call__(self, row: int, col: int) -> Point: ...
+
+
+# =============================================================================
+# Dataclasses for complex return types
+# =============================================================================
+
+@dataclass(frozen=True)
+class FaceOrthogonalEdgesInfo:
+    """
+    Information about a row/column on a face and its orthogonal edges.
+
+    Returned by SizedCubeLayout.get_orthogonal_index_by_distance_from_face().
+
+    This dataclass captures the relationship between a face's row/column and
+    the edges that are orthogonal (perpendicular) to that row/column.
+
+    Attributes:
+        row_or_col: The row or column index in the face's LTR coordinate system.
+            - Row index if base_face is above/below (shared edge is horizontal)
+            - Column index if base_face is left/right (shared edge is vertical)
+
+        edge_one: First orthogonal edge (perpendicular to the shared edge with base_face).
+            - Left edge if base is top/bottom
+            - Top edge if base is left/right
+
+        edge_two: Second orthogonal edge (perpendicular to the shared edge with base_face).
+            - Right edge if base is top/bottom
+            - Bottom edge if base is left/right
+
+        index_on_edge_one: Index in edge_one's internal coordinate system.
+            Use edge_one.get_slice(index_on_edge_one) to access the slice.
+
+        index_on_edge_two: Index in edge_two's internal coordinate system.
+            Use edge_two.get_slice(index_on_edge_two) to access the slice.
+    """
+    row_or_col: int
+    edge_one: "Edge"
+    edge_two: "Edge"
+    index_on_edge_one: int
+    index_on_edge_two: int

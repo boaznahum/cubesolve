@@ -18,8 +18,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator
 
+from cube.domain.exceptions.GeometryError import GeometryError, GeometryErrorCode
 from cube.domain.geometric.geometry_types import (
-    CLGColRow, Point, PointComputer, ReversePointComputer
+    CLGColRow, FaceOrthogonalEdgesInfo, Point, PointComputer, ReversePointComputer
 )
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from cube.domain.geometric.cube_walking import (
@@ -276,15 +277,68 @@ class _SizedCubeLayout(SizedCubeLayout):
             face: "Face",
             base_face: "Face",
             row_distance_from_base: int
-    ) -> tuple[int, Edge, Edge, int, int]:
+    ) -> FaceOrthogonalEdgesInfo:
         """
         Find row/column index and orthogonal edges based on distance from a reference face.
 
-        See CubeLayout.get_orthogonal_index_by_distance_from_face() for full documentation.
-
-        This is a stub implementation - TODO: implement the actual logic.
+        See SizedCubeLayout protocol for full documentation.
         """
-        raise NotImplementedError("get_orthogonal_index_by_distance_from_face not yet implemented")
+        from cube.domain.model._elements import EdgePosition
+
+        n_slices = self.n_slices
+
+        # Validate distance
+        if not (0 <= row_distance_from_base < n_slices):
+            raise ValueError(
+                f"row_distance_from_base={row_distance_from_base} out of range [0, {n_slices - 1}]"
+            )
+
+        # Get the shared edge between face and base_face
+        shared_edge = face.find_shared_edge(base_face)
+        if shared_edge is None:
+            raise GeometryError(
+                GeometryErrorCode.OPPOSITE_FACES,
+                f"{face.name} and {base_face.name} don't share an edge (they are opposite faces)"
+            )
+
+        # Get the position of the shared edge on face
+        shared_position = shared_edge.get_position_on_face(face)
+
+        # Determine row/col index and orthogonal edges based on shared edge position
+        if shared_position == EdgePosition.BOTTOM:
+            # base_face is below → distance 0 = bottom row (n_slices-1)
+            row_or_col = n_slices - 1 - row_distance_from_base
+            edge_one = face.edge_left
+            edge_two = face.edge_right
+        elif shared_position == EdgePosition.TOP:
+            # base_face is above → distance 0 = top row (0)
+            row_or_col = row_distance_from_base
+            edge_one = face.edge_left
+            edge_two = face.edge_right
+        elif shared_position == EdgePosition.LEFT:
+            # base_face is to the left → distance 0 = left col (0)
+            row_or_col = row_distance_from_base
+            edge_one = face.edge_top
+            edge_two = face.edge_bottom
+        else:  # EdgePosition.RIGHT
+            # base_face is to the right → distance 0 = right col (n_slices-1)
+            row_or_col = n_slices - 1 - row_distance_from_base
+            edge_one = face.edge_top
+            edge_two = face.edge_bottom
+
+        # Calculate edge indices using the edge's coordinate translation
+        # For horizontal shared edges (TOP/BOTTOM), we use the row index
+        # For vertical shared edges (LEFT/RIGHT), we use the column index
+        index_on_edge_one = edge_one.get_edge_slice_index_from_face_ltr_index(face, row_or_col)
+        index_on_edge_two = edge_two.get_edge_slice_index_from_face_ltr_index(face, row_or_col)
+
+        return FaceOrthogonalEdgesInfo(
+            row_or_col=row_or_col,
+            edge_one=edge_one,
+            edge_two=edge_two,
+            index_on_edge_one=index_on_edge_one,
+            index_on_edge_two=index_on_edge_two
+        )
 
 
 __all__ = ['_SizedCubeLayout']

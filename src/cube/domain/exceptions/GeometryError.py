@@ -12,6 +12,7 @@ class GeometryErrorCode(Enum):
     """Error codes for geometry operations."""
 
     SAME_FACE = auto()       # source and target are the same face
+    OPPOSITE_FACES = auto()  # faces are opposite (don't share an edge)
     INVALID_FACE = auto()    # unknown or invalid face
     INVALID_PRESERVE_ROTATION = auto()  # can't reach target while preserving face
     FACE_NOT_PARALLEL_TO_SLICE = auto()  # face must be parallel to slice (e.g., L/R for M slice)

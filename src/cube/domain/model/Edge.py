@@ -2,7 +2,7 @@ from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING, Sequence, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model._elements import SliceIndex
+from cube.domain.model._elements import EdgePosition, SliceIndex
 from cube.domain.model.PartSlice import EdgeWing, PartSlice
 from cube.domain.model.Part import Part
 from cube.domain.model.PartEdge import PartEdge
@@ -322,6 +322,27 @@ class Edge(Part):
     def get_other_face(self, f: _Face) -> _Face:
 
         return self.get_other_face_edge(f).face
+
+    def get_position_on_face(self, face: _Face) -> EdgePosition:
+        """
+        Get the position (LEFT, RIGHT, TOP, BOTTOM) of this edge on the given face.
+
+        This is the inverse of Face.get_edge_position(edge).
+
+        Args:
+            face: The face to get the position on (must be one of the two faces this edge belongs to)
+
+        Returns:
+            EdgePosition indicating where this edge is on the face
+
+        Raises:
+            InternalSWError: If this edge doesn't belong to the given face
+
+        Example:
+            edge = cube.front.edge_top
+            pos = edge.get_position_on_face(cube.front)  # Returns EdgePosition.TOP
+        """
+        return face.get_edge_position(self)
 
     def replace_colors(self, on_face: _Face, source: "Edge"):
         """

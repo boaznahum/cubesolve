@@ -38,7 +38,7 @@ from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import setup_l1, _get_side_face_trackers
-from cube.domain.solver.direct.lbl.NxNCenters2 import NxNCenters2
+from cube.domain.solver.direct.lbl._LBLNxNCenters import NxNCenters2
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 
 if TYPE_CHECKING:

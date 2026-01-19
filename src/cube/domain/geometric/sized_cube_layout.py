@@ -29,10 +29,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator, Protocol
 
+from cube.domain.geometric.geometry_types import FaceOrthogonalEdgesInfo
+
 if TYPE_CHECKING:
     from cube.domain.geometric.cube_walking import CubeWalkingInfo
     from cube.domain.geometric.FRotation import FUnitRotation
-    from cube.domain.model.Edge import Edge
     from cube.domain.model.Face import Face
     from cube.domain.model.Slice import Slice
     from cube.domain.model.SliceName import SliceName
@@ -127,7 +128,7 @@ class SizedCubeLayout(Protocol):
             face: "Face",
             base_face: "Face",
             row_distance_from_base: int
-    ) -> tuple[int, "Edge", "Edge", int, int]:
+    ) -> FaceOrthogonalEdgesInfo:
         """
         Find row/column index and orthogonal edges based on distance from a reference face.
 
@@ -215,23 +216,23 @@ class SizedCubeLayout(Protocol):
 
         Return Values:
         ==============
-        Returns a 5-tuple:
-        1. row_or_col (int): The row or column index in face's LTR coordinate system
+        Returns an FaceOrthogonalEdgesInfo dataclass with:
+        - row_or_col (int): The row or column index in face's LTR coordinate system
            - Row index if base_face is above/below (shared edge is horizontal)
            - Column index if base_face is left/right (shared edge is vertical)
 
-        2. edge_one (Edge): First orthogonal edge (perpendicular to shared edge)
+        - edge_one (Edge): First orthogonal edge (perpendicular to shared edge)
            - Left edge if base is top/bottom
            - Top edge if base is left/right
 
-        3. edge_two (Edge): Second orthogonal edge (perpendicular to shared edge)
+        - edge_two (Edge): Second orthogonal edge (perpendicular to shared edge)
            - Right edge if base is top/bottom
            - Bottom edge if base is left/right
 
-        4. index_on_edge_one (int): Index in edge_one's internal coordinate system
+        - index_on_edge_one (int): Index in edge_one's internal coordinate system
            (use edge.get_slice(index) to access the actual slice)
 
-        5. index_on_edge_two (int): Index in edge_two's internal coordinate system
+        - index_on_edge_two (int): Index in edge_two's internal coordinate system
 
         The edge indices are computed using get_edge_slice_index_from_face_ltr_index(),
         which translates the face's LTR row/column to each edge's internal system.
@@ -242,7 +243,7 @@ class SizedCubeLayout(Protocol):
             row_distance_from_base: Distance from base_face (0 = closest, n-1 = furthest)
 
         Returns:
-            Tuple of (row_or_col_index, edge_one, edge_two, index_on_edge_one, index_on_edge_two)
+            FaceOrthogonalEdgesInfo with row/col index, edges, and edge indices
 
         Raises:
             ValueError: If face and base_face don't share an edge (are opposite faces)

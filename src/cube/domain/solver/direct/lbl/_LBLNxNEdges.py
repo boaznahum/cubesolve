@@ -3,7 +3,8 @@ from typing import Tuple
 
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
+from cube.domain.geometric.geometry_types import FaceOrthogonalEdgesInfo
+from cube.domain.model import Color, Edge, EdgeWing, PartColorsID, Face
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.common.tracker.trackers import FaceTracker
@@ -80,7 +81,7 @@ class _LBLNxNEdges(SolverElement):
 
 
     def solve_single_center_face_row(
-            self, l1_white_tracker: FaceTracker, target_face: FaceTracker, row_distance_from_l1: int
+            self, l1_white_tracker: FaceTracker, target_face_t: FaceTracker, row_distance_from_l1: int
     ) -> None:
         """
         Solve edge slices on a single row of a face, starting from the L1 layer.
@@ -91,7 +92,7 @@ class _LBLNxNEdges(SolverElement):
 
         Args:
             l1_white_tracker: FaceTracker for L1 (white) face. Must currently be at Down.
-            target_face: FaceTracker for the face whose edges we're solving.
+            target_face_t: FaceTracker for the face whose edges we're solving.
             row_distance_from_l1: Distance from L1 face (0 = closest row to L1).
                 See class docstring for full explanation.
 
@@ -102,13 +103,22 @@ class _LBLNxNEdges(SolverElement):
         """
 
         # see with _setup_l1
-        assert l1_white_tracker.face is self.cube.down
+        white: Face = l1_white_tracker.face
+        assert white is self.cube.down
+        target_face = target_face_t.face
 
-        with self._logger.tab(f"Solving edges on face {target_face} row {row_distance_from_l1}"):
 
-            _face_center_row = self.cube.layout.get_orthogonal_index_by_distance_from_face(target_face.face,
-                                                                                          l1_white_tracker.face,
-                                                                                          row_distance_from_l1)
+        with self._logger.tab(f"Solving edges on face {target_face_t} row {row_distance_from_l1}"):
+
+            self.cmn.bring_face_front_preserve_down(target_face)
+
+            edge_info: FaceOrthogonalEdgesInfo = self.cube.sized_layout.get_orthogonal_index_by_distance_from_face(target_face_t.face,
+                                                                                                                   l1_white_tracker.face,
+                                                                                                                   row_distance_from_l1)
+
+            self.debug(f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
+
+
 
             pass
 
