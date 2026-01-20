@@ -12,17 +12,45 @@ description: |
 
 This skill provides an iterative workflow for cleaning up git branches by analyzing their merge status and organizing them into appropriate namespaces.
 
+## Step 0: Ask Which Branch to Compare Against
+
+**ALWAYS ask the user first which branch to compare against before running analysis.**
+
+Use AskUserQuestion with these options:
+
+1. **Default branch** - Compare against the repository's default branch (usually `main`)
+2. **Current branch** - Compare against the currently checked-out branch
+3. **Other branch** - Let user specify a different branch name
+
+Show the user the current and default branch names in the question so they know what they're choosing.
+
+To get branch info for the question:
+```bash
+# Get default branch
+gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
+
+# Get current branch
+git branch --show-current
+```
+
 ## Quick Start - Run Analysis Script
 
-**ALWAYS run this script first to save tokens:**
+After the user selects a target branch, run the analysis script with the `--target` flag:
 
 ```bash
+# Compare against default branch (or omit --target)
 python .claude/skills/clean-branches/analyze_branches.py
+
+# Compare against a specific branch
+python .claude/skills/clean-branches/analyze_branches.py --target <branch-name>
+
+# Compare against current branch
+python .claude/skills/clean-branches/analyze_branches.py --target HEAD
 ```
 
 This script:
 - Fetches all branches and analyzes merge/containment status
-- Outputs a formatted markdown report
+- Outputs a formatted markdown report showing which branch is being compared against
 - Identifies branches needing action with recommendations
 
 After reviewing the output, proceed with user approval for any actions (delete, move, archive).
@@ -38,9 +66,9 @@ After reviewing the output, proceed with user approval for any actions (delete, 
 
 ## Workflow
 
-### Step 1: Identify Default Branch
+### Step 1: Identify Target Branch
 
-Query GitHub to determine the default branch:
+The target branch was selected in Step 0. If you need to query the default branch:
 
 ```bash
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
@@ -66,11 +94,11 @@ git branch -r | grep -v HEAD
 
 ### Step 4: Analyze Local Branches
 
-For each LOCAL branch (excluding the default branch and already-archived branches):
+For each LOCAL branch (excluding the target branch and already-archived branches):
 
-1. **Check if merged** into default branch:
+1. **Check if merged** into target branch:
    ```bash
-   git branch --merged <default-branch> | grep -q <branch-name>
+   git branch --merged <target-branch> | grep -q <branch-name>
    ```
 
 2. **Get last commit info**:
@@ -85,11 +113,11 @@ For each LOCAL branch (excluding the default branch and already-archived branche
 
 4. **CRITICAL: For local-only branches, check if contained in other branches**:
 
-   If a branch has no remote, check if its commits are already contained in main or any archived branch:
+   If a branch has no remote, check if its commits are already contained in the target branch or any archived branch:
 
    ```bash
-   # Check if branch is ancestor of (contained in) main
-   git merge-base --is-ancestor <branch> main && echo "Contained in main"
+   # Check if branch is ancestor of (contained in) target branch
+   git merge-base --is-ancestor <branch> <target-branch> && echo "Contained in target"
 
    # Check if branch is ancestor of any archived branch
    for archived in $(git branch -r | grep "origin/archive/"); do
@@ -101,7 +129,7 @@ For each LOCAL branch (excluding the default branch and already-archived branche
    ```
 
    **Interpretation:**
-   - If contained in `main` → Work was merged, safe to delete local branch
+   - If contained in the target branch → Work was merged, safe to delete local branch
    - If contained in `archive/completed/*` → Work was completed, safe to delete local branch
    - If contained in `archive/stopped/*` → Work was archived, safe to delete local branch
    - If NOT contained anywhere → Work may be lost if deleted, ask user carefully
@@ -111,8 +139,8 @@ For each LOCAL branch (excluding the default branch and already-archived branche
 **This step is often missed!** Check remote branches that have NO local copy and are NOT already archived:
 
 ```bash
-# List remote branches not merged into default branch
-git branch -r --no-merged main | grep -v HEAD | grep -v "archive/" | grep -v "wip/"
+# List remote branches not merged into target branch
+git branch -r --no-merged <target-branch> | grep -v HEAD | grep -v "archive/" | grep -v "wip/"
 ```
 
 For each remote-only branch found:
@@ -122,7 +150,7 @@ For each remote-only branch found:
    git log -1 --format="%h %s (%cr by %an)" origin/<branch-name>
    ```
 
-2. **Check if contained in default branch or other branches**:
+2. **Check if contained in target branch or other branches**:
    ```bash
    # Check what branches contain this remote branch
    git branch -a --contains origin/<branch-name>
@@ -130,16 +158,16 @@ For each remote-only branch found:
 
 3. **Check merge status**:
    ```bash
-   # Is it merged into main?
-   git merge-base --is-ancestor origin/<branch-name> main && echo "Merged into main"
+   # Is it merged into the target branch?
+   git merge-base --is-ancestor origin/<branch-name> <target-branch> && echo "Merged into target"
 
    # Is it merged into the current working branch?
    git merge-base --is-ancestor origin/<branch-name> HEAD && echo "Merged into HEAD"
    ```
 
 **Actions for remote-only branches:**
-- If contained in `main` → Move to `archive/completed/` (work was merged)
-- If contained in current branch but not main → Ask user (might be pending merge)
+- If contained in target branch → Move to `archive/completed/` (work was merged)
+- If contained in current branch but not target → Ask user (might be pending merge)
 - If NOT contained anywhere → Ask user: archive/stopped or keep for future work
 
 ```bash
@@ -158,18 +186,18 @@ Present a summary table to the user:
 
 | Branch | Status | Last Commit | Age | Remote | Contained In | Recommendation |
 |--------|--------|-------------|-----|--------|--------------|----------------|
-| feature-x | Merged | abc123 Fix bug | 2 weeks | Yes | main | → delete local (work in main) |
+| feature-x | Merged | abc123 Fix bug | 2 weeks | Yes | target | → delete local (work in target) |
 | experiment-y | Unmerged | def456 WIP | 3 months | No | archive/stopped/exp-y | → delete local (already archived) |
 | new-feature | Unmerged | ghi789 Add X | 1 day | No | (none) | → ask user: WIP/stop/keep |
 
-**Key insight:** If "Contained In" shows another branch, the work is NOT lost - it's safe to delete the local branch.
+**Key insight:** If "Contained In" shows the target branch or another branch, the work is NOT lost - it's safe to delete the local branch.
 
 ### Step 7: Delete Contained Local-Only Branches
 
-For local branches that have no remote but ARE contained in another branch (main or archive/*), the work is already preserved elsewhere. These can be safely deleted:
+For local branches that have no remote but ARE contained in another branch (target branch or archive/*), the work is already preserved elsewhere. These can be safely deleted:
 
 ```bash
-# Delete local branch that's already contained in main or archive
+# Delete local branch that's already contained in target or archive
 git branch -d <branch>
 ```
 

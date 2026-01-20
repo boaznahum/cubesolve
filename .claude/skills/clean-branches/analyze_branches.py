@@ -2,8 +2,15 @@
 """
 Branch analysis script for clean-branches skill.
 Analyzes git branches and generates a cleanup report.
+
+Usage:
+    python analyze_branches.py                    # Compare against default branch
+    python analyze_branches.py --target main      # Compare against 'main'
+    python analyze_branches.py --target HEAD      # Compare against current branch
+    python analyze_branches.py --list-branches    # List available branches for selection
 """
 
+import argparse
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -139,8 +146,12 @@ def find_contained_in(branch: str, ref: str, all_branches: list[str], default_br
     return contained
 
 
-def analyze_branches() -> dict:
-    """Analyze all branches and return report data."""
+def analyze_branches(target_branch: str | None = None) -> dict:
+    """Analyze all branches and return report data.
+
+    Args:
+        target_branch: Branch to compare against. If None, uses the default branch.
+    """
     print("Fetching branches...", file=sys.stderr)
     run_git(["fetch", "--all", "--prune"])
 
@@ -148,6 +159,9 @@ def analyze_branches() -> dict:
     current_branch = get_current_branch()
     local_branches = get_local_branches()
     remote_branches = get_remote_branches()
+
+    # Use target_branch if specified, otherwise use default branch
+    compare_branch = target_branch if target_branch else default_branch
 
     all_branch_names = set(local_branches) | set(remote_branches)
 
@@ -173,7 +187,7 @@ def analyze_branches() -> dict:
         if is_archived:
             contained_in = []
         else:
-            contained_in = find_contained_in(name, ref, remote_branches, default_branch)
+            contained_in = find_contained_in(name, ref, remote_branches, compare_branch)
 
         branches.append(BranchInfo(
             name=name,
@@ -190,6 +204,7 @@ def analyze_branches() -> dict:
     return {
         "default_branch": default_branch,
         "current_branch": current_branch,
+        "compare_branch": compare_branch,
         "branches": branches,
     }
 
@@ -198,32 +213,37 @@ def print_report(data: dict) -> None:
     """Print the branch analysis report."""
     default_branch = data["default_branch"]
     current_branch = data["current_branch"]
+    compare_branch = data["compare_branch"]
     branches = data["branches"]
 
     print(f"\n## Branch Analysis Report\n")
     print(f"**Default branch:** `{default_branch}`")
     print(f"**Current branch:** `{current_branch}`")
+    print(f"**Comparing against:** `{compare_branch}`")
 
     # Separate by category
     active = [b for b in branches if not b.is_archived and b.namespace not in ("wip",)]
     wip = [b for b in branches if b.namespace == "wip"]
     archived = [b for b in branches if b.is_archived]
 
+    # Standard branches that should always be kept
+    standard_branches = {"main", "master", "develop", "dev"}
+
     # Active branches
     print(f"\n### Active Branches ({len(active)})\n")
     if active:
         print("| Branch | Local | Remote | Last Commit | Age | Contained In | Action |")
         print("|--------|-------|--------|-------------|-----|--------------|--------|")
+
         for b in active:
             local = "Yes" if b.is_local else "No"
             remote = "Yes" if b.is_remote else "No"
             contained = ", ".join(b.contained_in) if b.contained_in else "-"
 
             # Determine recommended action
-            # Standard branches that should always be kept
-            standard_branches = {"main", "master", "develop", "dev"}
-
-            if b.name == default_branch:
+            if b.name == compare_branch:
+                action = "Keep (target)"
+            elif b.name == default_branch:
                 action = "Keep (default)"
             elif b.name == current_branch:
                 action = "Keep (current)"
@@ -248,8 +268,8 @@ def print_report(data: dict) -> None:
         print("|--------|-------------|-----|--------------|--------|")
         for b in wip:
             contained = ", ".join(b.contained_in) if b.contained_in else "-"
-            if default_branch in b.contained_in:
-                action = f"-> archive/completed (merged to {default_branch})"
+            if compare_branch in b.contained_in:
+                action = f"-> archive/completed (merged to {compare_branch})"
             elif b.contained_in:
                 action = f"Review (in {b.contained_in[0]})"
             else:
@@ -269,19 +289,19 @@ def print_report(data: dict) -> None:
     print(f"- **Other:** {len(other)}")
 
     # Recommendations
-    standard_branches = {"main", "master", "develop", "dev"}
-    needs_action = [b for b in active if b.name not in (default_branch, current_branch) and b.name not in standard_branches]
+    skip_branches = {default_branch, current_branch, compare_branch}
+    needs_action = [b for b in active if b.name not in skip_branches and b.name not in standard_branches]
 
-    # WIP branches that are merged to default branch need action
-    wip_needs_action = [b for b in wip if default_branch in b.contained_in]
+    # WIP branches that are merged to compare branch need action
+    wip_needs_action = [b for b in wip if compare_branch in b.contained_in]
 
     if needs_action or wip_needs_action:
         print(f"\n### Recommendations\n")
 
-        # WIP branches merged to default
+        # WIP branches merged to compare branch
         for b in wip_needs_action:
             short_name = b.name.replace("wip/", "")
-            print(f"- `{b.name}`: **Merged to {default_branch}** -> move to `archive/completed/{short_name}`")
+            print(f"- `{b.name}`: **Merged to {compare_branch}** -> move to `archive/completed/{short_name}`")
 
         # Active branches
         for b in needs_action:
@@ -297,8 +317,71 @@ def print_report(data: dict) -> None:
                     print(f"- `{b.name}`: Not merged - keep, move to wip/, or archive")
 
 
+def list_branches_for_selection() -> None:
+    """List branches available for selection as target."""
+    print("Fetching branches...", file=sys.stderr)
+    run_git(["fetch", "--all", "--prune"])
+
+    default_branch = get_default_branch()
+    current_branch = get_current_branch()
+    local_branches = get_local_branches()
+    remote_branches = get_remote_branches()
+
+    print("\n## Available Target Branches\n")
+    print(f"**Default branch:** `{default_branch}`")
+    print(f"**Current branch:** `{current_branch}`")
+
+    print("\n### Local Branches")
+    for b in sorted(local_branches):
+        marker = ""
+        if b == default_branch:
+            marker = " (default)"
+        elif b == current_branch:
+            marker = " (current)"
+        print(f"  - `{b}`{marker}")
+
+    # Show remote-only branches
+    remote_only = set(remote_branches) - set(local_branches)
+    if remote_only:
+        print("\n### Remote-Only Branches")
+        for b in sorted(remote_only):
+            if not b.startswith("archive/"):
+                print(f"  - `origin/{b}`")
+
+
 def main() -> None:
-    data = analyze_branches()
+    parser = argparse.ArgumentParser(
+        description="Analyze git branches for cleanup",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python analyze_branches.py                    # Compare against default branch
+  python analyze_branches.py --target main      # Compare against 'main'
+  python analyze_branches.py --target HEAD      # Compare against current branch
+  python analyze_branches.py --list-branches    # List available branches
+        """,
+    )
+    parser.add_argument(
+        "--target", "-t",
+        help="Branch to compare against (use HEAD for current branch)",
+    )
+    parser.add_argument(
+        "--list-branches", "-l",
+        action="store_true",
+        help="List available branches for selection",
+    )
+    args = parser.parse_args()
+
+    if args.list_branches:
+        list_branches_for_selection()
+        return
+
+    # Resolve target branch
+    target_branch: str | None = args.target
+    if target_branch == "HEAD":
+        target_branch = get_current_branch()
+
+    data = analyze_branches(target_branch)
     print_report(data)
 
 
