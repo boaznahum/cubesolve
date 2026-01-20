@@ -27,7 +27,9 @@ Do NOT import these directly - they are implementation details:
 """
 
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.solver.common.tracker.PartSliceTracker import PartSliceTracker
 
 __all__ = [
     "FacesTrackerHolder",
+    "PartSliceTracker",
 ]

@@ -3,7 +3,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Hashable, MutableSequence, Sequence
-from typing import TYPE_CHECKING, Any, Tuple, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any, Self, Tuple, TypeAlias, TypeVar
 
 from cube.domain.geometric.cube_boy import Color, FaceName
 from cube.domain.model.PartEdge import PartEdge
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from .Edge import Edge
     from .Face import Face
     from .Part import Part
+    from cube.domain.solver.common.tracker.PartSliceTracker import PartSliceTracker
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
@@ -450,6 +451,20 @@ class PartSlice(ABC, Hashable):
     @property
     def index(self):
         return self._index
+
+    def tracker(self) -> "PartSliceTracker[Self]":
+        """Create a tracker context manager for this slice.
+
+        Usage:
+            with edge_wing.tracker() as t:
+                # ... cube rotations ...
+                current = t.slice  # finds the slice by marker
+
+        Returns:
+            A PartSliceTracker that tracks this slice through rotations.
+        """
+        from cube.domain.solver.common.tracker.PartSliceTracker import PartSliceTracker
+        return PartSliceTracker.with_tracker(self)
 
 
 class EdgeWing(PartSlice):
