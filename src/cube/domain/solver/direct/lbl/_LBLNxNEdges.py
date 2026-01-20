@@ -197,6 +197,11 @@ class _LBLNxNEdges(SolverElement):
 
             self.debug(lambda: f"on faces {on_faces} {on_edge.name}")
 
+            # # simple case edge is on top
+            cube = self.cube
+            if source_edge_wing.on_face(cube.up):
+                self.debug(lambda: f"on faces {on_faces} {on_edge.name}")
+
             return SmallStepSolveState.NOT_SOLVED
 
     def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
