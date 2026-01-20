@@ -254,12 +254,9 @@ class _LBLNxNEdges(SolverElement):
                         return SmallStepSolveState.SOLVED
 
 
-
-
-
-
                     else:
-                        self.debug(lambda: f"❌❌ Source index and target don't match, will handled later by opposite edge ")
+                        self.debug(lambda: f"❌❌ Source index and target don't match")
+                        assert False
 
 
 
@@ -267,6 +264,8 @@ class _LBLNxNEdges(SolverElement):
                 else:
                     self.debug(
                         lambda: f"❌❌❌ Wing {untracked_source_wing}  doesnt match target color {target_face_color}")
+            else:
+                assert False, f"Source wing {source_edge_wing} is not on up"
 
         return SmallStepSolveState.NOT_SOLVED
 
