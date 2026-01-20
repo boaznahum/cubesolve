@@ -234,9 +234,20 @@ class PartSlice(ABC, Hashable):
     @property
     def colors_id(self) -> PartColorsID:
         """
-        Return the parts actual color
-        the colors of the faces it is currently on
-        :return:
+        Return the actual sticker colors of this slice.
+
+        This is a frozenset of the colors currently visible on this slice's stickers
+        (collected from each PartEdge.color). It identifies WHICH piece this is.
+
+        Changes on ANY rotation (F, R, U, M, E, S, x, y, z, etc.) because
+        PartEdge.color values are swapped during rotation.
+
+        Count of colors depends on slice type:
+        - CenterSlice: 1 color (1 edge)
+        - EdgeWing: 2 colors (2 edges)
+        - CornerSlice: 3 colors (3 edges)
+
+        Compare with Part.position_id which returns face CENTER colors (the slot position).
         """
 
         colors_id: PartColorsID | None = self._colors_id_by_colors

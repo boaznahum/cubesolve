@@ -93,6 +93,15 @@ class PartEdge:
 
     @property
     def color(self) -> Color:
+        """
+        The actual sticker color at this position.
+
+        This is the moveable data - it gets swapped between PartEdges during
+        cube rotations via copy_color() or rotate_4cycle().
+
+        NOT to be confused with self.face.color which is the face's CENTER color
+        (used for position_id calculations).
+        """
         return self._color
 
     def __str__(self) -> str:
