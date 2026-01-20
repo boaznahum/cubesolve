@@ -145,6 +145,7 @@ class MarkedPartTracker(Generic[P]):
 
     # --- of_slice overloads for type-safe slice-to-part tracking ---
 
+    #claude: make PartSlice geenirc over Part and avoid this overloaded
     @overload
     @staticmethod
     def of_slice(part_slice: EdgeWing) -> "MarkedPartTracker[Edge]": ...
