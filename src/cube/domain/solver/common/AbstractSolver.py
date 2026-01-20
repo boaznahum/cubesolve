@@ -9,7 +9,7 @@ from cube.domain.solver import Solver
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
-from cube.utils.logger_protocol import ILogger
+from cube.utils.logger_protocol import ILogger, LazyArg
 
 if TYPE_CHECKING:
     pass
@@ -117,11 +117,12 @@ class AbstractSolver(Solver, ABC):
         """The logger for this solver, with prefix and debug flag."""
         return self.__logger
 
-    def debug(self, *args) -> None:
+    def debug(self, *args: LazyArg) -> None:
         """Output debug information.
 
-        DEPRECATED: Use self._logger.debug(None, ...) instead.
-        Kept for backward compatibility.
+        Args:
+            *args: Arguments to print. Can be regular values or Callable[[], Any]
+                   for lazy evaluation.
         """
         self.__logger.debug(None, *args)
 

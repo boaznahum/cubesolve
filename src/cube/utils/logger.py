@@ -51,8 +51,8 @@ def _resolve_arg(arg: LazyArg, depth: int = 0) -> Any:
     """
     if depth > 10:
         raise RecursionError(
-            f"LazyArg resolution exceeded max depth (10). "
-            f"Possible infinite loop in callable chain."
+            "LazyArg resolution exceeded max depth (10). "
+            "Possible infinite loop in callable chain."
         )
     if callable(arg):
         return _resolve_arg(arg(), depth + 1)

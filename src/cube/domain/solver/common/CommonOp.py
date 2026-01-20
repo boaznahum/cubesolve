@@ -2,6 +2,7 @@ from contextlib import contextmanager
 from typing import Callable, ContextManager, Generator, Sequence, Tuple
 
 from cube.domain.algs import Alg, Algs
+from cube.utils.logger_protocol import LazyArg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Edge, EdgeWing, FaceName
 from cube.domain.model.Cube import Cube
@@ -460,8 +461,8 @@ class CommonOp:
 
         raise ValueError(f"{other} must be L/R/F/B")
 
-    def debug(self, *args):
-        self.slv.debug(args)
+    def debug(self, *args: LazyArg) -> None:
+        self.slv.debug(*args)
 
     @staticmethod
     def face_rotate(face: Face) -> Alg:

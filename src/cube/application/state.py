@@ -388,7 +388,7 @@ class ApplicationAndViewState:
 
     def debug_lazy(self, debug_on: bool, func: Callable[[], Any]) -> None:
         """Print debug information with lazy evaluation."""
-        self._logger.debug_lazy(debug_on, func)
+        self._logger.debug(debug_on, func)
 
     def debug_dump(
         self,

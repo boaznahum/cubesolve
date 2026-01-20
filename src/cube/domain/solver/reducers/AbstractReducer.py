@@ -17,7 +17,7 @@ from cube.domain.solver.protocols.ReducerProtocol import (
     ReductionResults,
 )
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
-from cube.utils.logger_protocol import ILogger
+from cube.utils.logger_protocol import ILogger, LazyArg
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -88,11 +88,12 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         """Common operations helper."""
         return self._cmn
 
-    def debug(self, *args) -> None:
+    def debug(self, *args: LazyArg) -> None:
         """Output debug information.
 
-        DEPRECATED: Use self._logger.debug(None, ...) instead.
-        Kept for backward compatibility.
+        Args:
+            *args: Arguments to print. Can be regular values or Callable[[], Any]
+                   for lazy evaluation.
         """
         self.__logger.debug(None, *args)
 

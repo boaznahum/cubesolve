@@ -37,9 +37,10 @@ from cube.domain.model.Slice import Slice
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.tracker.trackers import FaceTracker
-from cube.domain.solver.direct.lbl._common import setup_l1, _get_side_face_trackers
+from cube.domain.solver.direct.lbl import _lbl_config
 from cube.domain.solver.direct.lbl._LBLNxNCenters import NxNCenters2
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
+from cube.domain.solver.direct.lbl._common import setup_l1, _get_side_face_trackers
 
 if TYPE_CHECKING:
     from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
@@ -245,7 +246,7 @@ class _LBLSlices(SolverElement):
                         face_row: int
                         ) -> None:
 
-        if False:
+        if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
             self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
         self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
 
@@ -262,7 +263,6 @@ class _LBLSlices(SolverElement):
         The commutator uses UP as source, so if Layer 1 is on UP, we'll mess it up.
         """
         # Solve all slices from bottom to top
-        from cube.domain.solver.direct.lbl._lbl_config import NUMBER_OF_SLICES_TO_SOLVE
 
         # in this files row_index is the distance between l1_face, no metter on which orientation
 
@@ -270,6 +270,6 @@ class _LBLSlices(SolverElement):
         # clear all tracking when done. Individual slices accumulate their
         # tracking markers during solving.
         with setup_l1(self, l1_white_tracker):
-            for row_index in range(min(NUMBER_OF_SLICES_TO_SOLVE, self.n_slices)):
+            for row_index in range(min(_lbl_config.NUMBER_OF_SLICES_TO_SOLVE, self.n_slices)):
                 with self._logger.tab(f"Solving face row {row_index}"):
                     self._solve_slice_row(row_index, face_trackers, l1_white_tracker)

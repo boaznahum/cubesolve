@@ -1,9 +1,10 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
+from typing_extensions import deprecated
 
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.logger import Logger
-from cube.utils.logger_protocol import ILogger
+from cube.utils.logger_protocol import ILogger, LazyArg
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -50,23 +51,29 @@ class SolverElement(CubeSupplier, SolverElementsProvider):
         """Set the debug prefix for this element's logger."""
         self.__logger.set_prefix(prefix)
 
-    def debug(self, *args, level: int | None = None) -> None:
+    def debug(self, *args: LazyArg, level: int | None = None) -> None:
         """Output debug information with optional level filtering.
 
         Args:
-            *args: Arguments to print.
+            *args: Arguments to print. Can be regular values or Callable[[], Any]
+                   for lazy evaluation.
             level: Optional debug level. If set, checks level <= threshold.
         """
         self._logger.debug(None, *args, level=level)
 
-    def debug_lazy(self, *args, level: int | None = None) -> None:
+    @deprecated("Use debug() with callable args instead: debug(lambda: value)")
+    def debug_lazy(self, *args: LazyArg, level: int | None = None) -> None:
         """Output debug information with optional level filtering.
 
+        .. deprecated::
+            Use debug() with callable args instead.
+
         Args:
-            *args: Arguments to print.
+            *args: Arguments to print. Can be regular values or Callable[[], Any]
+                   for lazy evaluation.
             level: Optional debug level. If set, checks level <= threshold.
         """
-        self._logger.debug_lazy(None, *args, level=level)
+        self._logger.debug(None, *args, level=level)
 
     @property
     def cube(self) -> Cube:
