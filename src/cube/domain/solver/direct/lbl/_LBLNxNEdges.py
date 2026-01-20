@@ -8,7 +8,7 @@ from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
-from cube.domain.tracker import MultiSliceTracker, PartSliceTracker
+from cube.domain.tracker import PartSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
@@ -138,8 +138,6 @@ class _LBLNxNEdges(SolverElement):
 
         debug = self.debug
 
-        cube = self.cube
-
         target_edge_wing: EdgeWing = edge.get_slice(index_on_edge)
 
         required_color_ordered = self._get_slice_ordered_color(target_face, target_edge_wing)
@@ -225,8 +223,6 @@ class _LBLNxNEdges(SolverElement):
                     # from here it is collection of hard code assumption that we need to generalize
 
                     # bring edge to front
-
-                    edge_index_on_target: int
                     self.cmn.bring_edge_on_up_to_front(self, on_edge)
 
                     # from now, you cannot use untracked_source_wing

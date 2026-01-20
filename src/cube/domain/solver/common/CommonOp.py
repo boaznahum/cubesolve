@@ -5,6 +5,7 @@ from cube.domain.algs import Alg, Algs
 from cube.utils.logger_protocol import LazyArg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Edge, EdgeWing, FaceName
+from cube.domain.tracker.MarkedPartTracker import MarkedPartTracker
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -465,22 +466,28 @@ class CommonOp:
     def debug(self, *args: LazyArg) -> None:
         self.slv.debug(*args)
 
-    def bring_edge_on_up_to_front(self, caller: SolverElementsProvider, edge: Edge) -> None:
+    def bring_edge_on_up_to_front(self, caller: SolverElementsProvider, edge: Edge) -> Edge:
         """Rotate the UP face to bring an edge to the UP-FRONT position.
 
         Given an edge that is currently on the UP face, rotates U to move
         it to the UF position (shared by UP and FRONT faces).
 
+        Note: Uses MarkedPartTracker because Parts are fixed in 3D space.
+        The returned Edge is where the original edge's colors moved to.
+
         Args:
             caller: Solver element for debug output.
             edge: The edge to move. Must already be on the UP face.
+
+        Returns:
+            The Edge at the new position (where the colors moved to).
 
         Raises:
             AssertionError: If edge is not on UP face before, or not on
                            both UP and FRONT faces after.
         """
 
-        caller.debug(lambda : f"Bring edge (on top)  {edge} to FRONT")
+        caller.debug(lambda: f"Bring edge (on top)  {edge} to FRONT")
         cube = self.cube
         up = cube.up
         assert edge.on_face(up)
@@ -488,19 +495,24 @@ class CommonOp:
         # claude: hard coded, find the optimal path to rotate face on edge
         position: EdgePosition = up.get_edge_position(edge)
 
-        match position:
-            case EdgePosition.LEFT:
-                self.op.play(Algs.U.prime)
-            case EdgePosition.RIGHT:
-                self.op.play(Algs.U)
-            case EdgePosition.TOP:
-                self.op.play(Algs.U * 2)
-            case EdgePosition.BOTTOM:
-                pass # nothing to do
+        with MarkedPartTracker.of(edge) as tracker:
+            match position:
+                case EdgePosition.LEFT:
+                    self.op.play(Algs.U.prime)
+                case EdgePosition.RIGHT:
+                    self.op.play(Algs.U)
+                case EdgePosition.TOP:
+                    self.op.play(Algs.U * 2)
+                case EdgePosition.BOTTOM:
+                    pass  # nothing to do
 
+            # Get the tracked edge after rotation
+            tracked_edge = tracker.part
 
-        assert edge.on_face(cube.front)
-        assert edge.on_face(up)
+        assert tracked_edge.on_face(cube.front)
+        assert tracked_edge.on_face(up)
+
+        return tracked_edge
 
 
     @staticmethod

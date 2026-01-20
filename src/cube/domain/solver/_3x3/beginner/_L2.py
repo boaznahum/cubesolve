@@ -6,7 +6,7 @@ from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.solver.common.Tracker import EdgeTracker
+from cube.domain.tracker.Tracker import EdgeTracker
 
 
 class L2(SolverElement):
