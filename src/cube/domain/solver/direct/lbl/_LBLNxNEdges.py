@@ -171,8 +171,7 @@ class _LBLNxNEdges(SolverElement):
 
                 assert source_slices  # at least one
 
-                sts: MultiSliceTracker[EdgeWing]
-                with MultiSliceTracker.with_trackers(source_slices) as sts:
+                with PartSliceTracker.with_trackers(source_slices) as sts:
 
                     st: PartSliceTracker[EdgeWing]
                     for st in sts:
@@ -191,25 +190,38 @@ class _LBLNxNEdges(SolverElement):
     def _solve_edge_wing_by_source(self, target_face: Face,
                                    edge: Edge, index_on_edge,
                                    target_edge_wing: EdgeWing,
-                                   source_edge_wing: EdgeWing) -> SmallStepSolveState:
+                                   source_edge_wing: PartSliceTracker[EdgeWing]) -> SmallStepSolveState:
 
         # if we reach here it is not solved
-        with self._logger.tab(lambda: f"Working with source wing  {source_edge_wing}"):
 
-            on_faces = source_edge_wing.faces()
-            on_edge: Edge = source_edge_wing.parent
+        untruest_source_wing = source_edge_wing.slice
+        with self._logger.tab(lambda: f"Working with source wing  {untruest_source_wing}"):
+
+            on_faces = untruest_source_wing.faces()
+            on_edge: Edge = untruest_source_wing.parent
 
             self.debug(
-                f"Found source EdgeWing for target {target_edge_wing.position_id} : {target_edge_wing} / {source_edge_wing.index}")
+                f"Found source EdgeWing for target {target_edge_wing.position_id} : {target_edge_wing} / {untruest_source_wing.index}")
 
             self.debug(lambda: f"on faces {on_faces} {on_edge.name}")
 
-            # we track it because it now move around:
+            # From here source may move !!!
 
             # # simple case edge is on top
             cube = self.cube
-            if source_edge_wing.on_face(cube.up):
-                self.debug(lambda: f"on faces {on_faces} {on_edge.name}")
+            if untruest_source_wing.on_face(cube.up):
+                self.debug(lambda: f"💚💚 Wing {untruest_source_wing}  is on {cube.up} {on_edge.name}")
+
+                # now check if we can use it ?
+
+                # if the coloron top is not our color then itmust be us
+
+                if untruest_source_wing.get_face_edge(cube.up).color != target_face.color:
+                    assert target_face.color == untruest_source_wing.get_other_face_edge(cube.up).color
+
+                    self.debug(lambda: f"💚💚💚 Wing {untruest_source_wing}  match target color")
+
+
 
 
             return SmallStepSolveState.NOT_SOLVED
