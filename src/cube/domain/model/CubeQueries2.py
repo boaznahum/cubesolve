@@ -8,7 +8,7 @@ from collections.abc import (
     MutableSequence,
     Sequence,
 )
-from typing import Callable, Tuple, TypeVar
+from typing import Callable, Tuple, TypeVar, Generator
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.geometry_types import Point
@@ -69,6 +69,16 @@ class CubeQueries2:
                     return s
 
         return None
+
+    def find_all_slice_in_edges(self, edges: Iterable[Edge], pred: Pred[EdgeWing]) -> Generator[EdgeWing, None, None]:
+
+        for e in edges:
+            for i in range(e.n_slices):
+                s: EdgeWing = e.get_slice(i)
+
+                if pred(s):
+                    yield s
+
 
     def find_edge_slice_in_cube(self, pred: Pred[EdgeWing]) -> EdgeWing | None:
         cube = self._cube

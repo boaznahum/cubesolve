@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import Enum, auto
 
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 from cube.domain.solver.SolverName import SolverName
+
+
 
 
 # Metadata for each SolveStep: (short_code, description)
@@ -33,6 +35,18 @@ _SOLVE_STEP_META: dict[str, tuple[str, str]] = {
     "LBL_S0F3": ("S0F3", "Slice 0 Faces 1-3"),
     "LBL_S0F4": ("S0F4", "Slice 0 Complete"),
 }
+
+class SmallStepSolveState(Enum):
+
+    WAS_SOLVED=auto(),
+    SOLVED=auto(),
+
+    NOT_SOLVED=auto(),
+
+    @property
+    def is_solved(self) -> bool:
+        return (self is SmallStepSolveState.SOLVED or
+                        self is SmallStepSolveState.WAS_SOLVED)
 
 
 class SolveStep(Enum):

@@ -13,6 +13,7 @@ from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
+from cube.domain.solver.solver import SmallStepSolveState
 from cube.utils.OrderedSet import OrderedSet
 
 
@@ -132,30 +133,71 @@ class _LBLNxNEdges(SolverElement):
             pass
 
 
-    def _solve_one_side_edge(self, target_face: Face, edge: Edge, index_on_edge):
+    def _solve_one_side_edge(self, target_face: Face, edge: Edge, index_on_edge) -> SmallStepSolveState:
 
-        with self._logger.tab(f"Working on edge {target_face.get_edge_position(edge)} / {index_on_edge}"):
+        debug = self.debug
 
-            edge_wing: EdgeWing = edge.get_slice(index_on_edge)
+        target_edge_wing: EdgeWing = edge.get_slice(index_on_edge)
 
-            # position_id gives us the face CENTER colors of the slot (where piece SHOULD go)
-            required_color_unordered: PartColorsID = edge_wing.position_id
+        required_color_ordered = self._get_slice_ordered_color(target_face, target_edge_wing)
 
-            source_slice: EdgeWing | None = self.cqr.find_slice_in_edges(self.cube.edges,
-                                                           lambda s: s.colors_id == required_color_unordered)
-
-            assert source_slice
-
-            on_faces = source_slice.faces()
-            on_edge: Edge = source_slice.parent
+        with self._logger.tab(f"Working on edge {target_face.get_edge_position(edge)} / {index_on_edge} wing {required_color_ordered}"):
 
 
-            self.debug(f"Found source EdgeWing for target {required_color_unordered} : {source_slice} / {source_slice.index}")
-            self.debug(lambda : f"on faces {on_faces} {on_edge.name}")
+            if target_edge_wing.match_faces:
+                debug(lambda : f"EdgWing {target_edge_wing} already solved")
+                return SmallStepSolveState.WAS_SOLVED
+
+            # the colors keys of the wing starting from the target face
 
 
 
 
+            with self.ann.annotate(h1=lambda : f"Fixing edge wing {index_on_edge} {required_color_ordered} on {edge.name} "):
+
+
+                # position_id gives us the face CENTER colors of the slot (where piece SHOULD go)
+                required_color_unordered: PartColorsID = target_edge_wing.position_id
+
+                required_indexes = [ index_on_edge, self.cube.inv(index_on_edge)]
+
+                source_slices: list[EdgeWing] = [ * self.cqr.find_all_slice_in_edges(self.cube.edges,
+                                                               lambda s: s.index in required_indexes and s.colors_id == required_color_unordered) ]
+
+                debug(lambda : f"source_slices: {source_slices}")
+
+                assert source_slices  # at least one
+
+                for source_edge_wing in source_slices:
+
+                    status = self._solve_edge_wing_by_source(target_face, edge, index_on_edge,
+                                                             target_edge_wing, source_edge_wing)
+
+                    if status == SmallStepSolveState.SOLVED:
+                        return SmallStepSolveState.SOLVED
+
+
+        return SmallStepSolveState.NOT_SOLVED
+
+
+
+    def _solve_edge_wing_by_source(self, target_face: Face,
+                                   edge: Edge, index_on_edge,
+                                   target_edge_wing: EdgeWing,
+                                   source_edge_wing: EdgeWing) -> SmallStepSolveState:
+
+        # if we reach here it is not solved
+        with self._logger.tab(lambda: f"Working with source wing  {source_edge_wing}"):
+
+            on_faces = source_edge_wing.faces()
+            on_edge: Edge = source_edge_wing.parent
+
+            self.debug(
+                f"Found source EdgeWing for target {target_edge_wing.position_id} : {target_edge_wing} / {source_edge_wing.index}")
+
+            self.debug(lambda: f"on faces {on_faces} {on_edge.name}")
+
+            return SmallStepSolveState.NOT_SOLVED
 
     def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
         """Solve only the 4 edges that contain a specific color.
