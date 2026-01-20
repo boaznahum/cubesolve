@@ -226,6 +226,8 @@ class _LBLNxNEdges(SolverElement):
                     self.cmn.bring_edge_on_up_to_front(self, on_edge)
 
                     # from now, you cannot use untracked_source_wing
+                else:
+                    self.debug(lambda : f"❌❌❌ Wing {untracked_source_wing}  doesnt match target color {target_face_color}")
 
 
 

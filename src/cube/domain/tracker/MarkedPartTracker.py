@@ -41,6 +41,12 @@ Usage:
         # ... cube rotations (whole cube, face rotations, NOT slice moves) ...
         current = t.part  # finds it by marker
 
+    # Track part via one of its slices (type-safe)
+    edge_wing: EdgeWing = ...
+    with MarkedPartTracker.of_slice(edge_wing) as t:
+        # t.part is typed as Edge (inferred from EdgeWing)
+        current_edge = t.part
+
     # Multiple part tracking
     with MultiPartTracker.of(edges) as mt:
         # ... cube rotations ...
@@ -54,12 +60,16 @@ from collections.abc import Iterable, Iterator, Sequence
 from contextlib import ExitStack
 from itertools import chain
 from types import TracebackType
-from typing import TYPE_CHECKING, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from cube.domain.model.Part import Part
+from cube.domain.model.PartSlice import CenterSlice, CornerSlice, EdgeWing, PartSlice
 
 if TYPE_CHECKING:
+    from cube.domain.model.Center import Center
+    from cube.domain.model.Corner import Corner
     from cube.domain.model.Cube import Cube
+    from cube.domain.model.Edge import Edge
 
 P = TypeVar("P", bound=Part)
 
@@ -132,6 +142,45 @@ class MarkedPartTracker(Generic[P]):
             A MultiPartTracker context manager.
         """
         return MultiPartTracker(parts)
+
+    # --- of_slice overloads for type-safe slice-to-part tracking ---
+
+    @overload
+    @staticmethod
+    def of_slice(part_slice: EdgeWing) -> "MarkedPartTracker[Edge]": ...
+
+    @overload
+    @staticmethod
+    def of_slice(part_slice: CornerSlice) -> "MarkedPartTracker[Corner]": ...
+
+    @overload
+    @staticmethod
+    def of_slice(part_slice: CenterSlice) -> "MarkedPartTracker[Center]": ...
+
+    @staticmethod
+    def of_slice(part_slice: PartSlice) -> Any:
+        """Create a tracker for the parent Part of a PartSlice.
+
+        This is useful when you have a specific slice (e.g., EdgeWing) and want
+        to track the entire Part (e.g., Edge) it belongs to.
+
+        Args:
+            part_slice: The PartSlice whose parent Part to track.
+                       Supports EdgeWing, CornerSlice, CenterSlice.
+
+        Returns:
+            A MarkedPartTracker for the parent Part. The type is inferred:
+            - EdgeWing -> MarkedPartTracker[Edge]
+            - CornerSlice -> MarkedPartTracker[Corner]
+            - CenterSlice -> MarkedPartTracker[Center]
+
+        Example:
+            edge_wing: EdgeWing = ...
+            with MarkedPartTracker.of_slice(edge_wing) as t:
+                # t.part is typed as Edge
+                current_edge = t.part
+        """
+        return MarkedPartTracker(part_slice.parent)
 
     @property
     def part(self) -> P:
