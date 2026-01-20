@@ -82,6 +82,8 @@ class ILogger(Protocol):
     def debug(self, debug_on: bool | None, *args: Any, level: int | None = None) -> None:
         """Print debug information if allowed by flags.
 
+        claude: fix impleenat to support args to be also callable so reolve only in case actaully debuging
+
         Args:
             debug_on: Local flag to enable debug for this specific call.
                       If None, uses logger's default (False for root, debug_flag for prefixed).

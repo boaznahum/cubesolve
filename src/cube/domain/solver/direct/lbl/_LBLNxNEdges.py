@@ -146,8 +146,12 @@ class _LBLNxNEdges(SolverElement):
 
             assert source_slice
 
-            self.debug(f"Found source EdgeWing for target {required_color_unordered} : {source_slice} / {source_slice.index}")
+            on_faces = source_slice.faces()
+            on_edge: Edge = source_slice.parent
 
+
+            self.debug(f"Found source EdgeWing for target {required_color_unordered} : {source_slice} / {source_slice.index}")
+            self.debug_lazy(lambda : f"on faces {on_faces} {on_edge.name}")
 
 
 

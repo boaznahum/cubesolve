@@ -37,6 +37,12 @@ class EdgePosition(Enum):
     TOP = "top"
     BOTTOM = "bottom"
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
 
 _Face: TypeAlias = "Face"  # type: ignore  # noqa: F821
 

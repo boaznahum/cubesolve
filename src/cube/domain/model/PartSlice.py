@@ -467,6 +467,15 @@ class EdgeWing(PartSlice):
     def _clone_basic(self: "EdgeWing") -> "EdgeWing":
         return EdgeWing(self.index, *self._clone_edges())
 
+
+    def faces(self) -> Sequence[Face]:
+
+        """
+        Not optimized
+        :return:
+        """
+        return [ e.face for e in self._edges ]
+
     def single_shared_face(self, other: "EdgeWing") -> _Face:
         """
         Return a face that appears in both edges

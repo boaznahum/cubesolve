@@ -59,6 +59,15 @@ class SolverElement(CubeSupplier, SolverElementsProvider):
         """
         self._logger.debug(None, *args, level=level)
 
+    def debug_lazy(self, *args, level: int | None = None) -> None:
+        """Output debug information with optional level filtering.
+
+        Args:
+            *args: Arguments to print.
+            level: Optional debug level. If set, checks level <= threshold.
+        """
+        self._logger.debug_lazy(None, *args, level=level)
+
     @property
     def cube(self) -> Cube:
         return self._cube
