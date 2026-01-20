@@ -1,7 +1,7 @@
-"""PartSlice tracker - tracks a specific PartSlice through cube rotations.
+"""PartSlice tracker - tracks PartSlices through cube rotations.
 
 Usage:
-    # Via static method
+    # Single slice tracking
     with PartSliceTracker.with_tracker(edge_wing) as t:
         # ... cube rotations ...
         current = t.slice  # finds it by marker
@@ -9,11 +9,20 @@ Usage:
     # Via convenience method on PartSlice
     with edge_wing.tracker() as t:
         current = t.slice
+
+    # Multiple slice tracking
+    with MultiSliceTracker.with_trackers(slices) as mt:
+        # ... cube rotations ...
+        first = mt[0].slice   # access by index
+        all_current = mt.slices  # get all current positions
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, TypeVar
+from collections.abc import Iterator, Sequence
+from contextlib import ExitStack
+from types import TracebackType
+from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 from cube.domain.model.PartSlice import PartSlice
 
@@ -103,3 +112,93 @@ class PartSliceTracker(Generic[PS]):
     def __exit__(self, _exc_type: object, _exc_val: object, _exc_tb: object) -> None:
         """Exit context manager - cleanup the marker."""
         self.cleanup()
+
+
+class MultiSliceTracker(Generic[PS]):
+    """Track multiple PartSlices through cube rotations.
+
+    Uses ExitStack internally for proper exception handling and cleanup order.
+
+    Usage:
+        with MultiSliceTracker.with_trackers(slices) as mt:
+            # ... cube rotations ...
+            first = mt[0].slice   # access tracker by index
+            all_current = mt.slices  # get all current positions
+
+    TODO: Support cleaner iteration without nested with/for:
+        for t in MultiSliceTracker.with_trackers(slices):
+            current = t.slice
+        # auto cleanup when loop ends
+    """
+
+    __slots__ = ["_trackers", "_stack"]
+
+    def __init__(self, slices: Sequence[PS]) -> None:
+        """Create trackers for multiple slices.
+
+        Args:
+            slices: Sequence of PartSlices to track.
+        """
+        self._stack = ExitStack()
+        self._trackers: list[PartSliceTracker[PS]] = [
+            self._stack.enter_context(PartSliceTracker(s)) for s in slices
+        ]
+
+    @staticmethod
+    def with_trackers(slices: Sequence[PS]) -> MultiSliceTracker[PS]:
+        """Create a multi-tracker for the given slices.
+
+        Args:
+            slices: Sequence of PartSlices to track.
+
+        Returns:
+            A MultiSliceTracker context manager.
+        """
+        return MultiSliceTracker(slices)
+
+    @overload
+    def __getitem__(self, index: int) -> PartSliceTracker[PS]: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[PartSliceTracker[PS]]: ...
+
+    def __getitem__(self, index: int | slice) -> PartSliceTracker[PS] | list[PartSliceTracker[PS]]:
+        """Access tracker by index.
+
+        Args:
+            index: Index or slice to access.
+
+        Returns:
+            The tracker at the given index, or list of trackers for a slice.
+        """
+        return self._trackers[index]
+
+    def __len__(self) -> int:
+        """Return number of trackers."""
+        return len(self._trackers)
+
+    def __iter__(self) -> Iterator[PartSliceTracker[PS]]:
+        """Iterate over trackers."""
+        return iter(self._trackers)
+
+    @property
+    def slices(self) -> list[PS]:
+        """Get all tracked slices at their current positions.
+
+        Returns:
+            List of all tracked PartSlices.
+        """
+        return [t.slice for t in self._trackers]
+
+    def __enter__(self) -> MultiSliceTracker[PS]:
+        """Enter context manager."""
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool | None:
+        """Exit context manager - delegates to ExitStack for proper cleanup."""
+        return self._stack.__exit__(exc_type, exc_val, exc_tb)

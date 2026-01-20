@@ -8,6 +8,7 @@ from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
+from cube.domain.tracker import MultiSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
@@ -137,6 +138,8 @@ class _LBLNxNEdges(SolverElement):
 
         debug = self.debug
 
+        cube = self.cube
+
         target_edge_wing: EdgeWing = edge.get_slice(index_on_edge)
 
         required_color_ordered = self._get_slice_ordered_color(target_face, target_edge_wing)
@@ -168,9 +171,8 @@ class _LBLNxNEdges(SolverElement):
 
                 assert source_slices  # at least one
 
-
-
-                for source_edge_wing in source_slices:
+                sts: MultiSliceTracker[EdgeWing]
+                with MultiSliceTracker.with_trackers(source_slices) as sts:
 
                     status = self._solve_edge_wing_by_source(target_face, edge, index_on_edge,
                                                              target_edge_wing, source_edge_wing)

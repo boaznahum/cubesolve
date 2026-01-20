@@ -27,9 +27,10 @@ Do NOT import these directly - they are implementation details:
 """
 
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.tracker.PartSliceTracker import PartSliceTracker
+from cube.domain.tracker.PartSliceTracker import MultiSliceTracker, PartSliceTracker
 
 __all__ = [
     "FacesTrackerHolder",
+    "MultiSliceTracker",
     "PartSliceTracker",
 ]
