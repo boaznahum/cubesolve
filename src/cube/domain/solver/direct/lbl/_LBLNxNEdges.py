@@ -8,7 +8,7 @@ from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
-from cube.domain.tracker import MultiSliceTracker
+from cube.domain.tracker import MultiSliceTracker, PartSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
@@ -174,11 +174,14 @@ class _LBLNxNEdges(SolverElement):
                 sts: MultiSliceTracker[EdgeWing]
                 with MultiSliceTracker.with_trackers(source_slices) as sts:
 
-                    status = self._solve_edge_wing_by_source(target_face, edge, index_on_edge,
-                                                             target_edge_wing, source_edge_wing)
+                    st: PartSliceTracker[EdgeWing]
+                    for st in sts:
 
-                    if status == SmallStepSolveState.SOLVED:
-                        return SmallStepSolveState.SOLVED
+                        status = self._solve_edge_wing_by_source(target_face, edge, index_on_edge,
+                                                                 target_edge_wing, st)
+
+                        if status == SmallStepSolveState.SOLVED:
+                            return SmallStepSolveState.SOLVED
 
 
         return SmallStepSolveState.NOT_SOLVED

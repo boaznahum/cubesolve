@@ -77,6 +77,20 @@ class PartSliceTracker(Generic[PS]):
         """
         return PartSliceTracker(part_slice)
 
+    @staticmethod
+    def with_trackers(slices: Sequence[PS]) -> "MultiSliceTracker[PS]":
+        """Create a multi-tracker for multiple slices.
+
+        Convenience method to avoid importing MultiSliceTracker separately.
+
+        Args:
+            slices: Sequence of PartSlices to track.
+
+        Returns:
+            A MultiSliceTracker context manager.
+        """
+        return MultiSliceTracker(slices)
+
     @property
     def slice(self) -> PS:
         """Find and return the tracked slice by searching for the marker.
