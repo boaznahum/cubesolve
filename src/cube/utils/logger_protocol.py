@@ -8,10 +8,16 @@ See Also:
 """
 from __future__ import annotations
 
-from typing import Any, Callable, ContextManager, Protocol, runtime_checkable
+from typing import Any, Callable, ContextManager, Protocol, TypeAlias, runtime_checkable
+
+from typing_extensions import deprecated
 
 # Type for debug flag: static bool, dynamic callable, or None (inherit/ignore)
 DebugFlagType = bool | Callable[[], bool] | None
+
+# Recursive type: a value OR a callable that returns another LazyArg.
+# Allows lazy evaluation of debug arguments - callables are only invoked if debug is enabled.
+LazyArg: TypeAlias = "Callable[[], LazyArg] | Any"
 
 
 @runtime_checkable
@@ -79,26 +85,39 @@ class ILogger(Protocol):
         """Return the standard debug prefix."""
         ...
 
-    def debug(self, debug_on: bool | None, *args: Any, level: int | None = None) -> None:
+    def debug(self, debug_on: bool | None, *args: LazyArg, level: int | None = None) -> None:
         """Print debug information if allowed by flags.
-
-        claude: fix impleenat to support args to be also callable so reolve only in case actaully debuging
 
         Args:
             debug_on: Local flag to enable debug for this specific call.
                       If None, uses logger's default (False for root, debug_flag for prefixed).
-            *args: Arguments to print, same as print() function.
+            *args: Arguments to print. Can be regular values or Callable[[], Any]
+                   for lazy evaluation. Callables are resolved recursively only
+                   when debug output is enabled, avoiding expensive computation
+                   when debugging is off.
             level: Optional debug level. If set, also checks level <= threshold.
 
         Logic:
             - If quiet_all is True → never print
             - If level > threshold → never print
-            - If debug_all is True OR debug_on is True → print
+            - If debug_all is True OR debug_on is True → resolve callables and print
+
+        Example:
+            # Lazy evaluation - lambda only called if debug is on
+            logger.debug(None, "Result:", lambda: expensive_computation())
+
+            # Mix static and lazy args
+            logger.debug(None, "Part", part_num, "colors:", lambda: part.colors_id)
         """
         ...
 
+    @deprecated("Use debug() with callable args instead: debug(None, lambda: value)")
     def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any], *, level: int | None = None) -> None:
         """Print debug information with lazy evaluation.
+
+        .. deprecated::
+            Use debug() with callable args instead. debug() now supports
+            lazy evaluation by passing callables as arguments.
 
         The func is only called if we're actually going to print,
         avoiding expensive computation when debug is disabled.

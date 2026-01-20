@@ -124,7 +124,7 @@ class _LBLNxNEdges(SolverElement):
                                                                                                                    l1_white_tracker.face,
                                                                                                                    row_distance_from_l1)
 
-            self.debug(f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
+            self.debug(lambda : f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
 
             self._solve_one_side_edge(target_face, edge_info.edge_one, edge_info.index_on_edge_one)
             self._solve_one_side_edge(target_face, edge_info.edge_two, edge_info.index_on_edge_two)

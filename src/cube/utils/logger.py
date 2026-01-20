@@ -18,7 +18,9 @@ import os
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Callable, Generator
 
-from cube.utils.logger_protocol import DebugFlagType, ILogger
+from typing_extensions import deprecated
+
+from cube.utils.logger_protocol import DebugFlagType, ILogger, LazyArg
 
 if TYPE_CHECKING:
     pass
@@ -32,6 +34,29 @@ def _env_bool(name: str) -> bool | None:
     if val in ("0", "false", "no"):
         return False
     return None
+
+
+def _resolve_arg(arg: LazyArg, depth: int = 0) -> Any:
+    """Recursively resolve callables until a non-callable value.
+
+    Args:
+        arg: Value or callable to resolve.
+        depth: Current recursion depth (prevents infinite loops).
+
+    Returns:
+        The resolved non-callable value.
+
+    Raises:
+        RecursionError: If callable resolution exceeds max depth (10).
+    """
+    if depth > 10:
+        raise RecursionError(
+            f"LazyArg resolution exceeded max depth (10). "
+            f"Possible infinite loop in callable chain."
+        )
+    if callable(arg):
+        return _resolve_arg(arg(), depth + 1)
+    return arg
 
 
 class Logger(ILogger):
@@ -186,24 +211,32 @@ class Logger(ILogger):
             return f"DEBUG: {self._prefix}:"
         return "DEBUG:"
 
-    def debug(self, debug_on: bool | None, *args: Any, level: int | None = None) -> None:
+    def debug(self, debug_on: bool | None, *args: LazyArg, level: int | None = None) -> None:
         """Print debug information with prefix.
 
         Args:
             debug_on: Override debug flag. If None, uses this logger's debug_flag.
-            *args: Arguments to print.
+            *args: Arguments to print. Can be regular values or Callable[[], Any]
+                   for lazy evaluation. Callables are resolved recursively.
             level: Optional debug level. If set, also checks level <= threshold.
         """
         if not self.is_debug(debug_on, level=level):
             return
+        # Resolve any callables in args (lazy evaluation)
+        resolved_args = [_resolve_arg(a) for a in args]
         # Print directly with prefix
         if self._prefix:
-            print("DEBUG:", f"{self._prefix}:", *args, flush=True)
+            print("DEBUG:", f"{self._prefix}:", *resolved_args, flush=True)
         else:
-            print("DEBUG:", *args, flush=True)
 
+            print("DEBUG:", *resolved_args, flush=True)
+
+    @deprecated("Use debug() with callable args instead: debug(None, lambda: value)")
     def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any], *, level: int | None = None) -> None:
         """Print debug with lazy evaluation.
+
+        .. deprecated::
+            Use debug() with callable args instead.
 
         Args:
             debug_on: Override debug flag. If None, uses this logger's debug_flag.
