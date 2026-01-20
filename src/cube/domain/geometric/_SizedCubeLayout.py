@@ -305,14 +305,15 @@ class _SizedCubeLayout(SizedCubeLayout):
         shared_position = shared_edge.get_position_on_face(face)
 
         # Determine row/col index and orthogonal edges based on shared edge position
+        # Note: LTR coordinate system has row 0 at BOTTOM, row n-1 at TOP
         if shared_position == EdgePosition.BOTTOM:
-            # base_face is below → distance 0 = bottom row (n_slices-1)
-            row_or_col = n_slices - 1 - row_distance_from_base
+            # base_face is below → distance 0 = bottom row (row 0 in LTR)
+            row_or_col = row_distance_from_base
             edge_one = face.edge_left
             edge_two = face.edge_right
         elif shared_position == EdgePosition.TOP:
-            # base_face is above → distance 0 = top row (0)
-            row_or_col = row_distance_from_base
+            # base_face is above → distance 0 = top row (row n-1 in LTR)
+            row_or_col = n_slices - 1 - row_distance_from_base
             edge_one = face.edge_left
             edge_two = face.edge_right
         elif shared_position == EdgePosition.LEFT:

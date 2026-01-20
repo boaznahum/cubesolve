@@ -151,39 +151,41 @@ class SizedCubeLayout(Protocol):
 
         Case 1: base_face = Down (L1 at bottom)
         ----------------------------------------
+        Note: LTR coordinate system has row 0 at BOTTOM, row n-1 at TOP
+
                     ┌─────────────────────────┐
-                    │  row 0  (distance 4)    │  ← furthest from Down
+                    │  row 4  (distance 4)    │  ← furthest from Down (top in LTR)
                     ├─────────────────────────┤
-                    │  row 1  (distance 3)    │
+                    │  row 3  (distance 3)    │
             Left    ├─────────────────────────┤    Right
             Edge    │  row 2  (distance 2)    │    Edge
                     ├─────────────────────────┤
-                    │  row 3  (distance 1)    │
+                    │  row 1  (distance 1)    │
                     ├─────────────────────────┤
-                    │  row 4  (distance 0)    │  ← closest to Down (shared edge)
+                    │  row 0  (distance 0)    │  ← closest to Down (bottom in LTR)
                     └─────────────────────────┘
                               Down (base_face)
 
-            row_distance_from_base=0 → returns (row=4, edge_left, edge_right, ...)
+            row_distance_from_base=0 → returns (row=0, edge_left, edge_right, ...)
             row_distance_from_base=2 → returns (row=2, edge_left, edge_right, ...)
 
         Case 2: base_face = Up (L1 at top)
         -----------------------------------
                               Up (base_face)
                     ┌─────────────────────────┐
-                    │  row 0  (distance 0)    │  ← closest to Up (shared edge)
+                    │  row 4  (distance 0)    │  ← closest to Up (top in LTR)
                     ├─────────────────────────┤
-                    │  row 1  (distance 1)    │
+                    │  row 3  (distance 1)    │
             Left    ├─────────────────────────┤    Right
             Edge    │  row 2  (distance 2)    │    Edge
                     ├─────────────────────────┤
-                    │  row 3  (distance 3)    │
+                    │  row 1  (distance 3)    │
                     ├─────────────────────────┤
-                    │  row 4  (distance 4)    │  ← furthest from Up
+                    │  row 0  (distance 4)    │  ← furthest from Up (bottom in LTR)
                     └─────────────────────────┘
                               Down
 
-            row_distance_from_base=0 → returns (row=0, edge_left, edge_right, ...)
+            row_distance_from_base=0 → returns (row=4, edge_left, edge_right, ...)
             row_distance_from_base=2 → returns (row=2, edge_left, edge_right, ...)
 
         Case 3: base_face = Left (horizontal solving)

@@ -102,6 +102,8 @@ CUBE_QUIET_ALL=1 python -m pytest tests/gui -v --speed-up 5
 
 **ALL FIVE must pass before committing.** Ruff is fastest so run it first. Use `ruff check --fix` to auto-fix issues.
 
+**ALWAYS FIX ALL ERRORS:** When running checks, fix ALL errors you encounter - even if they are pre-existing or unrelated to your current changes. Never say "this error was pre-existing" or "not caused by my change" as an excuse to skip fixing it. Just fix it.
+
 ### Tagging Passing Commits
 
 **IMPORTANT:** When a commit passes ALL checks (all 5 checkers + all tests under tests/), create a git tag and push it:

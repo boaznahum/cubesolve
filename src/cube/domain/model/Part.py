@@ -324,7 +324,10 @@ class Part(ABC, CubeElement):
         return [p.position_id for p in parts]
 
     def reset_after_faces_changes(self):
+        """Reset cached position IDs when face center colors change (M, E, S, x, y, z)."""
         self._colors_id_by_pos = None
+        for s in self.all_slices:
+            s.reset_position_id()
 
     @property
     def colors_id(self) -> PartColorsID:

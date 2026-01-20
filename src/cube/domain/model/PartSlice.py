@@ -71,6 +71,7 @@ class PartSlice(ABC, Hashable):
     __slots__ = ["_cube", "_parent", "_index", "_edges",
                  "_fixed_id",
                  "_colors_id_by_colors",
+                 "_position_id",
                  "_unique_id",
                  "moveable_attributes"
                  ]
@@ -86,6 +87,7 @@ class PartSlice(ABC, Hashable):
         self._edges: MutableSequence[PartEdge] = [*edges]
 
         self._colors_id_by_colors: PartColorsID | None = None
+        self._position_id: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
         self._parent: _Part | None = None
         # attributes(like color) that are move around with the slice
@@ -281,6 +283,37 @@ class PartSlice(ABC, Hashable):
 
     def reset_colors_id(self):
         self._colors_id_by_colors = None
+
+    @property
+    def position_id(self) -> PartColorsID:
+        """
+        Target position identity based on face CENTER colors.
+
+        Returns the colors of the FACES this slice slot is on (not the sticker colors).
+        This tells you where a slice SHOULD go - which slot it belongs to.
+
+        Changes when:
+        - Slice rotation (M, E, S) - moves face centers
+        - Cube rotation (x, y, z) - rotates whole cube including centers
+
+        Does NOT change when:
+        - Face rotation (F, R, U, L, B, D) - centers stay fixed
+
+        Compare with colors_id which returns actual sticker colors (WHICH piece this is).
+
+        See: design2/model-id-system.md for visual diagrams
+        """
+        pos_id: PartColorsID | None = self._position_id
+
+        if not pos_id or self._cube.config.dont_optimized_part_id:
+            pos_id = frozenset(e.face.color for e in self._edges)
+            self._position_id = pos_id
+
+        return pos_id
+
+    def reset_position_id(self) -> None:
+        """Reset cached position_id. Called when face center colors change."""
+        self._position_id = None
 
     @staticmethod
     def rotate_4cycle_slice_data(s0: "PartSlice", s1: "PartSlice", s2: "PartSlice", s3: "PartSlice") -> None:

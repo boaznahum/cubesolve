@@ -7,7 +7,6 @@ from cube.domain.geometric.geometry_types import FaceOrthogonalEdgesInfo
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
-from cube.domain.solver.common.big_cube import NxNEdges
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
 from cube.domain.solver.common.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -139,11 +138,8 @@ class _LBLNxNEdges(SolverElement):
 
             edge_wing: EdgeWing = edge.get_slice(index_on_edge)
 
-            other_face: Face = edge.get_other_face(target_face)
-
-            #unordered mean yello/blue and blue/yello are the same
-            required_color_unordered = frozenset((target_face.color, other_face.color))
-            #required_color_unordered = frozenset(self._edges_helper.get_slice_ordered_color(target_face, edge_wing))
+            # position_id gives us the face CENTER colors of the slot (where piece SHOULD go)
+            required_color_unordered: PartColorsID = edge_wing.position_id
 
             source_slice: EdgeWing | None = self.cqr.find_slice_in_edges(self.cube.edges,
                                                            lambda s: s.colors_id == required_color_unordered)
