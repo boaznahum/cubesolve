@@ -248,6 +248,9 @@ class _LBLNxNEdges(SolverElement):
 
 
                         assert target_edge_wing.match_faces
+
+                        self.debug(lambda: f"✅✅💚💚💚💚💚✅✅ Solved {target_edge_wing}")
+
                         return SmallStepSolveState.SOLVED
 
 
