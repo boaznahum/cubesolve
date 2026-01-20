@@ -8,7 +8,7 @@ from cube.domain.model import Color, CenterSlice, Face
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
-from cube.domain.solver.common.tracker.trackers import FaceTracker
+from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import (
     CENTER_SLICE_TRACK_KEY,
     clear_all_tracking,

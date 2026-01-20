@@ -14,8 +14,8 @@ from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.geometry_types import Block, Point
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.tracker.trackers import FaceTracker
-from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.tracker.trackers import FaceTracker
+from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet

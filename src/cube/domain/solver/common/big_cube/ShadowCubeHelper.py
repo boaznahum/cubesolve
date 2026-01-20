@@ -1,7 +1,7 @@
 # claude document this class
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.protocols import SolverElementsProvider
 
 

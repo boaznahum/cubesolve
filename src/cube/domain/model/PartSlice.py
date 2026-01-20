@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from .Edge import Edge
     from .Face import Face
     from .Part import Part
-    from cube.domain.solver.common.tracker.PartSliceTracker import PartSliceTracker
+    from cube.domain.tracker.PartSliceTracker import PartSliceTracker
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
@@ -463,7 +463,7 @@ class PartSlice(ABC, Hashable):
         Returns:
             A PartSliceTracker that tracks this slice through rotations.
         """
-        from cube.domain.solver.common.tracker.PartSliceTracker import PartSliceTracker
+        from cube.domain.tracker.PartSliceTracker import PartSliceTracker
         return PartSliceTracker.with_tracker(self)
 
 

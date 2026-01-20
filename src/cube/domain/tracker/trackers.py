@@ -32,7 +32,7 @@ from cube.domain.model.PartEdge import PartEdge
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
-    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 # Key prefix for tracker markers in c_attributes
 # Format: "_nxn_centers_track:h{holder_id}:{color}{unique_id}"

@@ -40,8 +40,8 @@ from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
-from cube.domain.solver.common.tracker.trackers import FaceTracker
-from cube.domain.solver.common.tracker._factory import NxNCentersFaceTrackers
+from cube.domain.tracker.trackers import FaceTracker
+from cube.domain.tracker._factory import NxNCentersFaceTrackers
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

@@ -16,7 +16,7 @@ Cannot import: solver implementations (Layer 3)
 """
 
 # Re-export FacesTrackerHolder from tracker package for backward compatibility
-from cube.domain.solver.common.tracker import FacesTrackerHolder
+from cube.domain.tracker import FacesTrackerHolder
 
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners

@@ -39,7 +39,7 @@ if color is not None:
 **Type Hints Only:**
 
 ```python
-from cube.domain.solver.common.tracker.trackers import FaceTracker
+from cube.domain.tracker.trackers import FaceTracker
 
 
 def get_tracker(holder: FacesTrackerHolder) -> FaceTracker:

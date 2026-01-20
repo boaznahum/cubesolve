@@ -35,8 +35,8 @@ from typing import TYPE_CHECKING, Sequence
 from cube.domain.model import CenterSlice, EdgeWing, FaceName, Color
 from cube.domain.model.Slice import Slice
 from cube.domain.solver.common.SolverElement import SolverElement
-from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.solver.common.tracker.trackers import FaceTracker
+from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl import _lbl_config
 from cube.domain.solver.direct.lbl._LBLNxNCenters import NxNCenters2
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges

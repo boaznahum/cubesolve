@@ -11,11 +11,11 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
 from cube.domain.model import CenterSlice
-from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
     from cube.domain.solver.common.SolverElement import SolverElement
-    from cube.domain.solver.common.tracker.trackers import FaceTracker
+    from cube.domain.tracker.trackers import FaceTracker
 
 # Key used in moveable_attributes to track center slices during solving
 CENTER_SLICE_TRACK_KEY = "xxxxxxx"

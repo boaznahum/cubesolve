@@ -8,7 +8,7 @@ from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
-from cube.domain.solver.common.tracker.trackers import FaceTracker
+from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
 from cube.domain.solver.common.SolverElement import SolverElement
@@ -168,6 +168,8 @@ class _LBLNxNEdges(SolverElement):
 
                 assert source_slices  # at least one
 
+
+
                 for source_edge_wing in source_slices:
 
                     status = self._solve_edge_wing_by_source(target_face, edge, index_on_edge,
@@ -197,10 +199,13 @@ class _LBLNxNEdges(SolverElement):
 
             self.debug(lambda: f"on faces {on_faces} {on_edge.name}")
 
+            # we track it because it now move around:
+
             # # simple case edge is on top
             cube = self.cube
             if source_edge_wing.on_face(cube.up):
                 self.debug(lambda: f"on faces {on_faces} {on_edge.name}")
+
 
             return SmallStepSolveState.NOT_SOLVED
 

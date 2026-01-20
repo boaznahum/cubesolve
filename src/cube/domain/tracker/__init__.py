@@ -6,7 +6,7 @@ determine which color belongs on which face during solving.
 PUBLIC API:
 ===========
 
-    from cube.domain.solver.common.tracker import FacesTrackerHolder
+    from cube.domain.tracker import FacesTrackerHolder
 
     # For solving (holder-specific):
     with FacesTrackerHolder(solver) as holder:
@@ -26,8 +26,8 @@ Do NOT import these directly - they are implementation details:
 - NxNCentersFaceTrackers (factory)
 """
 
-from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.solver.common.tracker.PartSliceTracker import PartSliceTracker
+from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.tracker.PartSliceTracker import PartSliceTracker
 
 __all__ = [
     "FacesTrackerHolder",

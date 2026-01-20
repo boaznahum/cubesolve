@@ -118,12 +118,12 @@ from typing import TYPE_CHECKING, Tuple
 from cube.domain.model import CenterSlice, Color
 
 if TYPE_CHECKING:
-    from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
+    from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
-from cube.domain.solver.common.tracker.trackers import (
+from cube.domain.tracker.trackers import (
     FaceTracker,
     MarkedFaceTracker,
     SimpleFaceTracker,

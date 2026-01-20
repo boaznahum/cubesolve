@@ -33,7 +33,7 @@ from numpy import ndarray
 
 from cube.application.markers import MarkerConfig, MarkerShape, get_markers_from_part_edge
 from cube.domain.geometric.cube_boy import Color
-from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
     from cube.domain.model.PartSlice import PartSlice
