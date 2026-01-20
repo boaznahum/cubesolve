@@ -15,12 +15,31 @@ Environment Variables (for root logger):
 from __future__ import annotations
 
 import os
+import sys
 from contextlib import contextmanager
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Generator
 
 from typing_extensions import deprecated
 
 from cube.utils.logger_protocol import DebugFlagType, ILogger, LazyArg
+
+
+class TabExceptionMode(Enum):
+    """Controls how tab() behaves when an exception is propagating.
+
+    NORMAL: Print "end: X" as usual (original behavior)
+    SILENT: Don't print anything on exception
+    ABORTED: Print "❌ ABORTED: X" on exception
+    """
+    NORMAL = "normal"
+    SILENT = "silent"
+    ABORTED = "aborted"
+
+
+# Module-level setting for tab() exception behavior
+# Change this to control what happens when an exception propagates through tab()
+TAB_EXCEPTION_MODE: TabExceptionMode = TabExceptionMode.SILENT
 
 if TYPE_CHECKING:
     pass
@@ -303,21 +322,28 @@ class Logger(ILogger):
         """Context manager for indented debug sections.
 
         Args:
-            headline: Section title (lazy callable or string), printed on entry
+            headline: Section title (lazy callable or string), printed on entry.
+                      Only evaluated if debug is enabled (lazy evaluation).
             char: Indent character ('│' default, ' ' for blank)
 
         Yields:
             bool: True if debug is enabled (caller can skip expensive work)
+
+        Note:
+            Exception behavior is controlled by TAB_EXCEPTION_MODE:
+            - NORMAL: Print "end: X" as usual
+            - SILENT: Don't print anything on exception
+            - ABORTED: Print "❌ ABORTED: X" on exception
         """
         # Check if debug is enabled
         is_enabled = self.is_debug(None)
 
-        # Resolve headline string (for both start and end messages)
+        # Resolve headline string only if debug is enabled (lazy evaluation)
         headline_str: str | None = None
-        if headline:
+        if is_enabled and headline:
             headline_str = headline() if callable(headline) else headline
 
-        if is_enabled and headline_str:
+        if headline_str:
             # Print headline with current prefix
             if self._prefix:
                 print("DEBUG:", f"{self._prefix}:", f"── {headline_str} ──", flush=True)
@@ -337,11 +363,30 @@ class Logger(ILogger):
             # Restore prefix
             self._prefix = saved_prefix
 
-            # Print end message
+            # Check if an exception is propagating
+            exc_type = sys.exc_info()[0]
+            has_exception = exc_type is not None
+
+            # Print end/aborted message based on mode
             if is_enabled and headline_str:
-                if self._prefix:
-                    print("DEBUG:", f"{self._prefix}:", f"── end: {headline_str} ──", flush=True)
+                if has_exception:
+                    # Exception is propagating
+                    if TAB_EXCEPTION_MODE == TabExceptionMode.ABORTED:
+                        if self._prefix:
+                            print("DEBUG:", f"{self._prefix}:", f"── ❌ ABORTED: {headline_str} ──", flush=True)
+                        else:
+                            print("DEBUG:", f"── ❌ ABORTED: {headline_str} ──", flush=True)
+                    elif TAB_EXCEPTION_MODE == TabExceptionMode.NORMAL:
+                        if self._prefix:
+                            print("DEBUG:", f"{self._prefix}:", f"── end: {headline_str} ──", flush=True)
+                        else:
+                            print("DEBUG:", f"── end: {headline_str} ──", flush=True)
+                    # SILENT: don't print anything
                 else:
-                    print("DEBUG:", f"── end: {headline_str} ──", flush=True)
+                    # Normal exit
+                    if self._prefix:
+                        print("DEBUG:", f"{self._prefix}:", f"── end: {headline_str} ──", flush=True)
+                    else:
+                        print("DEBUG:", f"── end: {headline_str} ──", flush=True)
 
 

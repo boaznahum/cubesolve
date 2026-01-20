@@ -16,6 +16,7 @@ from cube.domain.solver.protocols import (
 )
 
 from ...model.CubeQueries2 import Pred
+from ...model._elements import EdgePosition
 
 TRACE_UNIQUE_ID: int = 0
 
@@ -464,8 +465,48 @@ class CommonOp:
     def debug(self, *args: LazyArg) -> None:
         self.slv.debug(*args)
 
+    def bring_edge_on_up_to_front(self, caller: SolverElementsProvider, edge: Edge) -> None:
+        """Rotate the UP face to bring an edge to the UP-FRONT position.
+
+        Given an edge that is currently on the UP face, rotates U to move
+        it to the UF position (shared by UP and FRONT faces).
+
+        Args:
+            caller: Solver element for debug output.
+            edge: The edge to move. Must already be on the UP face.
+
+        Raises:
+            AssertionError: If edge is not on UP face before, or not on
+                           both UP and FRONT faces after.
+        """
+
+        caller.debug(lambda : f"Bring edge (on top)  {edge} to FRONT")
+        cube = self.cube
+        up = cube.up
+        assert edge.on_face(up)
+
+        # claude: hard coded, find the optimal path to rotate face on edge
+        position: EdgePosition = up.get_edge_position(edge)
+
+        match position:
+            case EdgePosition.LEFT:
+                self.op.play(Algs.U.prime)
+            case EdgePosition.RIGHT:
+                self.op.play(Algs.U)
+            case EdgePosition.TOP:
+                self.op.play(Algs.U * 2)
+            case EdgePosition.BOTTOM:
+                pass # nothing to do
+
+
+        assert edge.on_face(cube.front)
+        assert edge.on_face(up)
+
+
     @staticmethod
     def face_rotate(face: Face) -> Alg:
+
+        """claude: hard coded !!!!!! all information in cube and slice layout"""
 
         match face.name:
 

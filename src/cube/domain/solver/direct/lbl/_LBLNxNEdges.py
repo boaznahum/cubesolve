@@ -194,14 +194,15 @@ class _LBLNxNEdges(SolverElement):
 
         # if we reach here it is not solved
 
-        untruest_source_wing = source_edge_wing.slice
-        with self._logger.tab(lambda: f"Working with source wing  {untruest_source_wing}"):
+        untracked_source_wing = source_edge_wing.slice
+        with self._logger.tab(lambda: f"Working with source wing  {untracked_source_wing}"):
 
-            on_faces = untruest_source_wing.faces()
-            on_edge: Edge = untruest_source_wing.parent
+            on_faces = untracked_source_wing.faces()
+            on_edge: Edge = untracked_source_wing.parent
+            target_face_color = target_face.color
 
             self.debug(
-                f"Found source EdgeWing for target {target_edge_wing.position_id} : {target_edge_wing} / {untruest_source_wing.index}")
+                f"Found source EdgeWing for target {target_edge_wing.position_id} : {target_edge_wing} / {untracked_source_wing.index}")
 
             self.debug(lambda: f"on faces {on_faces} {on_edge.name}")
 
@@ -209,17 +210,28 @@ class _LBLNxNEdges(SolverElement):
 
             # # simple case edge is on top
             cube = self.cube
-            if untruest_source_wing.on_face(cube.up):
-                self.debug(lambda: f"💚💚 Wing {untruest_source_wing}  is on {cube.up} {on_edge.name}")
+            if untracked_source_wing.on_face(cube.up):
+                self.debug(lambda: f"💚💚 Wing {untracked_source_wing}  is on {cube.up} {on_edge.name}")
 
                 # now check if we can use it ?
 
                 # if the coloron top is not our color then itmust be us
 
-                if untruest_source_wing.get_face_edge(cube.up).color != target_face.color:
-                    assert target_face.color == untruest_source_wing.get_other_face_edge(cube.up).color
+                if untracked_source_wing.get_face_edge(cube.up).color != target_face.color:
+                    assert target_face.color == untracked_source_wing.get_other_face_edge(cube.up).color
 
-                    self.debug(lambda: f"💚💚💚 Wing {untruest_source_wing}  match target color")
+                    self.debug(lambda: f"💚💚💚 Wing {untracked_source_wing}  match target color {target_face_color}")
+
+                    # from here it is collection of hard code assumption that we need to generalize
+
+                    # bring edge to front
+
+                    edge_index_on_target: int
+                    self.cmn.bring_edge_on_up_to_front(self, on_edge)
+
+                    # from now, you cannot use untracked_source_wing
+
+
 
 
 
