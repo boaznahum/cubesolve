@@ -47,8 +47,6 @@ class _LBLNxNEdges(SolverElement):
         # claude: all used methods and their dependencies should be moved to
         self._edges_helper: NxNEdgesCommon = NxNEdgesCommon(self, False)
 
-
-
     def _is_solved(self):
         return all((e.is3x3 for e in self.cube.edges))
 
@@ -86,7 +84,6 @@ class _LBLNxNEdges(SolverElement):
 
             return True
 
-
     def solve_single_center_face_row(
             self, l1_white_tracker: FaceTracker, target_face_t: FaceTracker, row_distance_from_l1: int
     ) -> None:
@@ -113,26 +110,25 @@ class _LBLNxNEdges(SolverElement):
         white: Face = l1_white_tracker.face
         assert white is self.cube.down
 
-
         with self._logger.tab(f"Solving edges on face {target_face_t} row {row_distance_from_l1}"):
-
             self.cmn.bring_face_front_preserve_down(target_face_t.face)
 
             # from now target face is on front
             # only now we can assign
             target_face = target_face_t.face
 
-            edge_info: FaceOrthogonalEdgesInfo = self.cube.sized_layout.get_orthogonal_index_by_distance_from_face(target_face,
-                                                                                                                   l1_white_tracker.face,
-                                                                                                                   row_distance_from_l1)
+            edge_info: FaceOrthogonalEdgesInfo = self.cube.sized_layout.get_orthogonal_index_by_distance_from_face(
+                target_face,
+                l1_white_tracker.face,
+                row_distance_from_l1)
 
-            self.debug(lambda : lambda :f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
+            self.debug(
+                lambda: lambda: f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
 
             self._solve_one_side_edge(target_face, edge_info.edge_one, edge_info.index_on_edge_one)
             self._solve_one_side_edge(target_face, edge_info.edge_two, edge_info.index_on_edge_two)
 
             pass
-
 
     def _solve_one_side_edge(self, target_face: Face, edge: Edge, index_on_edge) -> SmallStepSolveState:
 
@@ -142,30 +138,28 @@ class _LBLNxNEdges(SolverElement):
 
         required_color_ordered = self._get_slice_ordered_color(target_face, target_edge_wing)
 
-        with self._logger.tab(f"Working on edge {target_face.get_edge_position(edge)} / {index_on_edge} wing {required_color_ordered}"):
-
+        with self._logger.tab(
+                f"Working on edge {target_face.get_edge_position(edge)} / {index_on_edge} wing {required_color_ordered}"):
 
             if target_edge_wing.match_faces:
-                debug(lambda : f"EdgWing {target_edge_wing} already solved")
+                debug(lambda: f"EdgWing {target_edge_wing} already solved")
                 return SmallStepSolveState.WAS_SOLVED
 
             # the colors keys of the wing starting from the target face
 
-
-
-
-            with self.ann.annotate(h1=lambda : f"Fixing edge wing {index_on_edge} {required_color_ordered} on {edge.name} "):
-
+            with self.ann.annotate(
+                    h1=lambda: f"Fixing edge wing {index_on_edge} {required_color_ordered} on {edge.name} "):
 
                 # position_id gives us the face CENTER colors of the slot (where piece SHOULD go)
                 required_color_unordered: PartColorsID = target_edge_wing.position_id
 
-                required_indexes = [ index_on_edge, self.cube.inv(index_on_edge)]
+                required_indexes = [index_on_edge, self.cube.inv(index_on_edge)]
 
-                source_slices: list[EdgeWing] = [ * self.cqr.find_all_slice_in_edges(self.cube.edges,
-                                                               lambda s: s.index in required_indexes and s.colors_id == required_color_unordered) ]
+                source_slices: list[EdgeWing] = [*self.cqr.find_all_slice_in_edges(self.cube.edges,
+                                                                                   lambda
+                                                                                       s: s.index in required_indexes and s.colors_id == required_color_unordered)]
 
-                debug(lambda : f"source_slices: {source_slices}")
+                debug(lambda: f"source_slices: {source_slices}")
 
                 assert source_slices  # at least one
 
@@ -180,10 +174,7 @@ class _LBLNxNEdges(SolverElement):
                         if status == SmallStepSolveState.SOLVED:
                             return SmallStepSolveState.SOLVED
 
-
         return SmallStepSolveState.NOT_SOLVED
-
-
 
     def _solve_edge_wing_by_source(self, target_face: Face,
                                    edge: Edge, index_on_edge,
@@ -225,16 +216,56 @@ class _LBLNxNEdges(SolverElement):
                     # bring edge to front
                     self.cmn.bring_edge_on_up_to_front(self, on_edge)
 
+                    # patch patch patch use cube sized layout to compute this
+                    # it is different logic if it left
+
+                    assert target_edge_wing.parent is not cube.left
+
+                    target_edge = target_edge_wing.parent
+                    face_row_index_on_target_edge = target_edge.get_face_ltr_index_from_edge_slice_index(target_face,
+                                                                                                         target_edge_wing.index)
+                    required_source_wing_face_column_index = cube.inv(face_row_index_on_target_edge)
+                    face_column_on_source_edge = source_edge_wing.slice.parent.get_face_ltr_index_from_edge_slice_index(
+                        target_face, source_edge_wing.slice.index)
+
+                    self.debug(lambda: f"required_source_wing_face_column_index: {required_source_wing_face_column_index}")
+                    self.debug(lambda: f"face_column_on_source_edge: {face_column_on_source_edge}")
+
+                    if required_source_wing_face_column_index == face_column_on_source_edge:
+                        self.debug(lambda: f"💚💚💚💚 Source index and target match")
+
+                        def _do_right_edge_to_edge_communicator():
+
+                            alg_index = face_column_on_source_edge + 1 # one based
+                            with self.annotate(h2=f"Bringing {source_edge_wing.slice} to {target_edge.get_position_on_face(target_face)}"):
+                                # U R U' [2]M' U R' U' [2]M
+                                alg: Alg = (Algs.U + Algs.R + Algs.U.prime + Algs.M[alg_index].prime +
+                                       Algs.U + Algs.R.prime + Algs.M[alg_index]
+                                            )
+                                self.op.play(alg)
+
+                        _do_right_edge_to_edge_communicator()
+
+
+                        assert target_edge_wing.match_faces
+                        return SmallStepSolveState.SOLVED
+
+
+
+
+
+
+                    else:
+                        self.debug(lambda: f"❌❌ Source index and target don't match, will handled later by opposite edge ")
+
+
+
                     # from now, you cannot use untracked_source_wing
                 else:
-                    self.debug(lambda : f"❌❌❌ Wing {untracked_source_wing}  doesnt match target color {target_face_color}")
+                    self.debug(
+                        lambda: f"❌❌❌ Wing {untracked_source_wing}  doesnt match target color {target_face_color}")
 
-
-
-
-
-
-            return SmallStepSolveState.NOT_SOLVED
+        return SmallStepSolveState.NOT_SOLVED
 
     def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
         """Solve only the 4 edges that contain a specific color.
@@ -269,7 +300,7 @@ class _LBLNxNEdges(SolverElement):
             while True:
                 # Find unsolved edges containing target color (re-query each iteration)
                 unsolved = [e for e in self.cube.edges
-                           if target_color in e.colors_id and not e.is3x3]
+                            if target_color in e.colors_id and not e.is3x3]
                 if not unsolved:
                     break
 
@@ -306,7 +337,7 @@ class _LBLNxNEdges(SolverElement):
 
     def _report_done(self, s):
         n_to_fix = sum(not e.is3x3 for e in self.cube.edges)
-        self.debug( f"{s}, Still more to fix {n_to_fix}", level=2)
+        self.debug(f"{s}, Still more to fix {n_to_fix}", level=2)
 
     @property
     def _left_to_fix(self) -> int:
@@ -316,10 +347,10 @@ class _LBLNxNEdges(SolverElement):
     def _do_edge(self, edge: Edge) -> bool:
 
         if edge.is3x3:
-            self.debug( f"Edge {edge} is already solved", level=3)
+            self.debug(f"Edge {edge} is already solved", level=3)
             return False
         else:
-            self.debug( f"Need to work on Edge {edge} ", level=3)
+            self.debug(f"Need to work on Edge {edge} ", level=3)
 
         # if self._left_to_fix < 2:
         #     self.debug( f"But I can't continue because I'm the last {edge} ", level=3)
@@ -333,7 +364,7 @@ class _LBLNxNEdges(SolverElement):
 
         with self.ann.annotate(h2=lambda: f"Fixing {edge.name_n_faces}"):
 
-            self.debug( f"Brining {edge} to front-right", level=3)
+            self.debug(f"Brining {edge} to front-right", level=3)
             self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             edge = self.cube.front.edge_left
 
@@ -371,7 +402,7 @@ class _LBLNxNEdges(SolverElement):
         edge: Edge = face.edge_left
 
         # now start to work
-        self.debug( f"Working on edge {edge} color {ordered_color}", level=3)
+        self.debug(f"Working on edge {edge} color {ordered_color}", level=3)
 
         # first fix all that match color on this edge
         self._fix_all_slices_on_edge(face, edge, ordered_color, color_un_ordered)
@@ -439,7 +470,7 @@ class _LBLNxNEdges(SolverElement):
 
         # Now fix
 
-        self.debug( f"On same edge, going to slice {ltrs}", level=3)
+        self.debug(f"On same edge, going to slice {ltrs}", level=3)
 
         with self.ann.annotate((slices, AnnWhat.Moved),
                                (lambda: (edge.get_slice(inv(i)) for i in slices_to_slice),
@@ -469,11 +500,11 @@ class _LBLNxNEdges(SolverElement):
             edge_right = face.edge_right
             _other_edges = [edge_right, *(other_edges - {edge_right})]
             source_slice = self.cqr.find_slice_in_edges(_other_edges,
-                                                           lambda s: s.colors_id == color_un_ordered)
+                                                        lambda s: s.colors_id == color_un_ordered)
 
             assert source_slice
 
-            self.debug( f"Found source slice {source_slice}", level=3)
+            self.debug(f"Found source slice {source_slice}", level=3)
 
             self.cmn.bring_edge_to_front_right_preserve_front_left(source_slice.parent)
 
@@ -547,7 +578,7 @@ class _LBLNxNEdges(SolverElement):
         if not target_slices:
             return False
 
-        self.debug( f"Going to slice, sources={source_slice_indices}, target={target_indices}", level=3)
+        self.debug(f"Going to slice, sources={source_slice_indices}, target={target_indices}", level=3)
 
         # now slice them all
         with self.ann.annotate((source_slices, AnnWhat.Moved), (target_slices, AnnWhat.FixedPosition)):
@@ -588,7 +619,7 @@ class _LBLNxNEdges(SolverElement):
 
         tracer: EdgeSliceTracker
         with self.cmn.track_e_slice(edge.get_slice(0)) as tracer:
-            self.debug( f"Doing parity on {edge}", level=1)
+            self.debug(f"Doing parity on {edge}", level=1)
             edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             assert edge is face.edge_left
             assert edge is cube.fl
@@ -636,10 +667,10 @@ class _LBLNxNEdges(SolverElement):
             # Advance alg - I don't know, so I'm keeping the index matches R - for the advanced
             # last edge they come in pairs i<->inv(i)
             #
-            plus_one = [ i + 1 for i in slices_indices_to_fix]
+            plus_one = [i + 1 for i in slices_indices_to_fix]
 
             if not self._advanced_edge_parity:
-                self.debug( f"*** Doing parity on M {plus_one}", level=2)
+                self.debug(f"*** Doing parity on M {plus_one}", level=2)
                 for _ in range(4):
                     self.op.play(Algs.M[plus_one].prime)
                     self.op.play(Algs.U * 2)
@@ -648,7 +679,7 @@ class _LBLNxNEdges(SolverElement):
                 # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
                 plus_one = [i + 1 for i in plus_one]
 
-                self.debug( f"*** Doing parity on R {plus_one}", level=2)
+                self.debug(f"*** Doing parity on R {plus_one}", level=2)
                 #  https://speedcubedb.com/a/6x6/6x6L2E
                 # 3R' U2 3L F2 3L' F2 3R2 U2 3R U2 3R' U2 F2 3R2 F2
 
@@ -744,4 +775,3 @@ class _LBLNxNEdges(SolverElement):
         else:
             assert c2
             return c2
-

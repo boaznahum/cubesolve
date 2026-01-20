@@ -56,29 +56,51 @@ Usage:
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterator, Sequence
 from contextlib import ExitStack
-from itertools import chain
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
+from cube.domain.model._elements import CenterSliceIndex, SliceIndex
 from cube.domain.model.Part import Part
 from cube.domain.model.PartSlice import CenterSlice, CornerSlice, EdgeWing, PartSlice
 
 if TYPE_CHECKING:
-    from cube.domain.model.Center import Center
-    from cube.domain.model.Corner import Corner
     from cube.domain.model.Cube import Cube
-    from cube.domain.model.Edge import Edge
+
+from cube.domain.model.Center import Center
+from cube.domain.model.Corner import Corner
+from cube.domain.model.Edge import Edge
 
 P = TypeVar("P", bound=Part)
 
-
-def _all_parts(cube: Cube) -> Iterable[Part]:
-    """Iterate over all parts (edges, corners, centers) in the cube."""
-    return chain(cube.edges, cube.corners, cube.centers)
-
 _MARKED_PART_TRACKER_PREFIX = "_part_track:"
+
+
+def _possible_edge_indices(original: int, n_slices: int) -> tuple[int, int]:
+    """Return the two possible slice indices for an edge after rotation.
+
+    When a face rotates, an edge slice at index x can move to index x or inv(x),
+    where inv(x) = n_slices - 1 - x.
+    """
+    return (original, n_slices - 1 - original)
+
+
+def _possible_center_indices(original: CenterSliceIndex, n: int) -> tuple[CenterSliceIndex, ...]:
+    """Return the four possible slice indices for a center after rotation.
+
+    When a face rotates, a center slice at (r, c) can move to one of four positions
+    corresponding to 0°, 90°, 180°, 270° rotations.
+    """
+    r, c = original
+    inv_r = n - 1 - r
+    inv_c = n - 1 - c
+    return (
+        (r, c),           # 0°
+        (c, inv_r),       # 90° CW
+        (inv_r, inv_c),   # 180°
+        (inv_c, r),       # 270° CW
+    )
 
 
 class MarkedPartTracker(Generic[P]):
@@ -98,24 +120,27 @@ class MarkedPartTracker(Generic[P]):
             current = t.part
     """
 
-    __slots__ = ["_cube", "_key", "_part_type"]
+    __slots__ = ["_cube", "_key", "_part_type", "_slice_index"]
 
-    _global_id: int = 0
-
-    def __init__(self, part: P) -> None:
+    def __init__(self, part: P, *, mark_slice: PartSlice | None = None) -> None:
         """Create a tracker for the given part.
 
         Args:
             part: The Part to track (Edge, Corner, or Center).
+            mark_slice: Optional specific slice to mark. If None, marks the first slice.
+                       When provided via of_slice(), this is the slice that was given.
         """
-        MarkedPartTracker._global_id += 1
-        self._key = f"{_MARKED_PART_TRACKER_PREFIX}{MarkedPartTracker._global_id}"
+        # Use object id for unique key - guaranteed unique for object's lifetime
+        self._key = f"{_MARKED_PART_TRACKER_PREFIX}{id(self):x}"
         self._cube: Cube = part.cube
         self._part_type: type[P] = type(part)  # type: ignore[assignment]
 
-        # Mark the first edge of the first slice
-        first_slice = next(iter(part.all_slices))
-        first_slice.edges[0].moveable_attributes[self._key] = True
+        # Mark the specified slice or the first slice
+        slice_to_mark = mark_slice if mark_slice is not None else next(iter(part.all_slices))
+        slice_to_mark.edges[0].moveable_attributes[self._key] = True
+
+        # Store the slice index for optimized search
+        self._slice_index: SliceIndex = slice_to_mark.index
 
     @staticmethod
     def of(part: P) -> MarkedPartTracker[P]:
@@ -181,11 +206,39 @@ class MarkedPartTracker(Generic[P]):
                 # t.part is typed as Edge
                 current_edge = t.part
         """
-        return MarkedPartTracker(part_slice.parent)
+        return MarkedPartTracker(part_slice.parent, mark_slice=part_slice)
+
+    def _get_parts_by_type(self) -> Iterator[Part]:
+        """Get only parts of the tracked type from the cube."""
+        if issubclass(self._part_type, Edge):
+            return iter(self._cube.edges)
+        elif issubclass(self._part_type, Corner):
+            return iter(self._cube.corners)
+        elif issubclass(self._part_type, Center):
+            return iter(self._cube.centers)
+        else:
+            raise RuntimeError(f"Unknown part type: {self._part_type}")
+
+    def _valid_slice_indices(self) -> frozenset[SliceIndex]:
+        """Get the set of valid slice indices where the marker could be.
+
+        Optimization: After rotations, the marker can only be at specific indices:
+        - Corner: Always index 0 (corners have only one slice)
+        - Edge: index x or inv(x) where inv(x) = n_slices - 1 - x
+        - Center: 4 positions from rotating (r, c) by 0°, 90°, 180°, 270°
+        """
+        if isinstance(self._slice_index, int):
+            # Edge slice index
+            return frozenset(_possible_edge_indices(self._slice_index, self._cube.n_slices))
+        else:
+            # Center slice index (tuple)
+            return frozenset(_possible_center_indices(self._slice_index, self._cube.n_slices))
 
     @property
     def part(self) -> P:
         """Find and return the tracked part by searching for the marker.
+
+        Optimized to only search the relevant part type and valid slice indices.
 
         Returns:
             The tracked Part.
@@ -193,19 +246,29 @@ class MarkedPartTracker(Generic[P]):
         Raises:
             RuntimeError: If the tracked part cannot be found.
         """
-        for part in _all_parts(self._cube):
-            if isinstance(part, self._part_type):
-                for s in part.all_slices:
-                    for edge in s.edges:
-                        if self._key in edge.moveable_attributes:
-                            return part  # type: ignore[return-value]
+        valid_indices = self._valid_slice_indices()
+
+        for part in self._get_parts_by_type():
+            for s in part.all_slices:
+                if s.index not in valid_indices:
+                    continue
+                for edge in s.edges:
+                    if self._key in edge.moveable_attributes:
+                        return part  # type: ignore[return-value]
 
         raise RuntimeError(f"Tracked part not found with key {self._key}")
 
     def cleanup(self) -> None:
-        """Remove the marker from the part."""
-        for part in _all_parts(self._cube):
+        """Remove the marker from the part.
+
+        Optimized to only search the relevant part type and valid slice indices.
+        """
+        valid_indices = self._valid_slice_indices()
+
+        for part in self._get_parts_by_type():
             for s in part.all_slices:
+                if s.index not in valid_indices:
+                    continue
                 for edge in s.edges:
                     if self._key in edge.moveable_attributes:
                         del edge.moveable_attributes[self._key]

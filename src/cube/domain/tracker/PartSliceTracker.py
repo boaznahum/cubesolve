@@ -24,14 +24,33 @@ from contextlib import ExitStack
 from types import TracebackType
 from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
-from cube.domain.model.PartSlice import PartSlice
+from cube.domain.model._elements import CenterSliceIndex, SliceIndex
+from cube.domain.model.PartSlice import CenterSlice, CornerSlice, EdgeWing, PartSlice
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
 
 PS = TypeVar("PS", bound=PartSlice)
 
-_PART_SLICE_TRACKER_PREFIX = "_part_slice_track:"
+_PART_SLICE_TRACKER_PREFIX = "_slice_track:"
+
+
+def _possible_edge_indices(original: int, n_slices: int) -> tuple[int, int]:
+    """Return the two possible slice indices for an edge after rotation."""
+    return (original, n_slices - 1 - original)
+
+
+def _possible_center_indices(original: CenterSliceIndex, n: int) -> tuple[CenterSliceIndex, ...]:
+    """Return the four possible slice indices for a center after rotation."""
+    r, c = original
+    inv_r = n - 1 - r
+    inv_c = n - 1 - c
+    return (
+        (r, c),           # 0°
+        (c, inv_r),       # 90° CW
+        (inv_r, inv_c),   # 180°
+        (inv_c, r),       # 270° CW
+    )
 
 
 class PartSliceTracker(Generic[PS]):
@@ -47,9 +66,7 @@ class PartSliceTracker(Generic[PS]):
             current = t.slice
     """
 
-    __slots__ = ["_cube", "_key", "_slice_type"]
-
-    _global_id: int = 0
+    __slots__ = ["_cube", "_key", "_slice_type", "_slice_index"]
 
     def __init__(self, part_slice: PS) -> None:
         """Create a tracker for the given part slice.
@@ -57,10 +74,11 @@ class PartSliceTracker(Generic[PS]):
         Args:
             part_slice: The PartSlice to track.
         """
-        PartSliceTracker._global_id += 1
-        self._key = f"{_PART_SLICE_TRACKER_PREFIX}{PartSliceTracker._global_id}"
+        # Use object id for unique key - guaranteed unique for object's lifetime
+        self._key = f"{_PART_SLICE_TRACKER_PREFIX}{id(self):x}"
         self._cube: Cube = part_slice.cube
         self._slice_type: type[PS] = type(part_slice)  # type: ignore[assignment]
+        self._slice_index: SliceIndex = part_slice.index
 
         # Mark the first edge
         part_slice.edges[0].moveable_attributes[self._key] = True
@@ -91,11 +109,40 @@ class PartSliceTracker(Generic[PS]):
         """
         return MultiSliceTracker(slices)
 
+    def _get_slices_by_type(self) -> Iterator[PartSlice]:
+        """Get only slices of the tracked type from the cube."""
+        if issubclass(self._slice_type, EdgeWing):
+            for edge in self._cube.edges:
+                yield from edge.all_slices
+        elif issubclass(self._slice_type, CornerSlice):
+            for corner in self._cube.corners:
+                yield from corner.all_slices
+        elif issubclass(self._slice_type, CenterSlice):
+            for center in self._cube.centers:
+                yield from center.all_slices
+        else:
+            raise RuntimeError(f"Unknown slice type: {self._slice_type}")
+
+    def _valid_slice_indices(self) -> frozenset[SliceIndex]:
+        """Get the set of valid slice indices where the marker could be.
+
+        Optimization: After rotations, the marker can only be at specific indices:
+        - Corner: Always index 0 (corners have only one slice)
+        - Edge: index x or inv(x) where inv(x) = n_slices - 1 - x
+        - Center: 4 positions from rotating (r, c) by 0°, 90°, 180°, 270°
+        """
+        if isinstance(self._slice_index, int):
+            # Edge or Corner slice index
+            return frozenset(_possible_edge_indices(self._slice_index, self._cube.n_slices))
+        else:
+            # Center slice index (tuple)
+            return frozenset(_possible_center_indices(self._slice_index, self._cube.n_slices))
+
     @property
     def slice(self) -> PS:
         """Find and return the tracked slice by searching for the marker.
 
-        TODO: Add caching for performance optimization.
+        Optimized to only search the relevant slice type and valid indices.
 
         Returns:
             The tracked PartSlice.
@@ -103,17 +150,27 @@ class PartSliceTracker(Generic[PS]):
         Raises:
             RuntimeError: If the tracked slice cannot be found.
         """
-        for s in self._cube.get_all_part_slices():
-            if isinstance(s, self._slice_type):
-                for edge in s.edges:
-                    if self._key in edge.moveable_attributes:
-                        return s  # type: ignore[return-value]
+        valid_indices = self._valid_slice_indices()
+
+        for s in self._get_slices_by_type():
+            if s.index not in valid_indices:
+                continue
+            for edge in s.edges:
+                if self._key in edge.moveable_attributes:
+                    return s  # type: ignore[return-value]
 
         raise RuntimeError(f"Tracked slice not found with key {self._key}")
 
     def cleanup(self) -> None:
-        """Remove the marker from the slice."""
-        for s in self._cube.get_all_part_slices():
+        """Remove the marker from the slice.
+
+        Optimized to only search the relevant slice type and valid indices.
+        """
+        valid_indices = self._valid_slice_indices()
+
+        for s in self._get_slices_by_type():
+            if s.index not in valid_indices:
+                continue
             for edge in s.edges:
                 if self._key in edge.moveable_attributes:
                     del edge.moveable_attributes[self._key]

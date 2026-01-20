@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from .Edge import Edge
     from .Face import Face
     from .Part import Part
+    from cube.domain.tracker.MarkedPartTracker import MarkedPartTracker
     from cube.domain.tracker.PartSliceTracker import PartSliceTracker
 
 _Face: TypeAlias = "Face"
@@ -465,6 +466,23 @@ class PartSlice(ABC, Hashable):
         """
         from cube.domain.tracker.PartSliceTracker import PartSliceTracker
         return PartSliceTracker.with_tracker(self)
+
+    def part_tracker(self) -> "MarkedPartTracker[Part]":
+        """Create a tracker context manager for this slice's parent Part.
+
+        This marks THIS specific slice and tracks where the parent Part moves.
+        Useful when you have a slice and want to track its parent Edge/Corner/Center.
+
+        Usage:
+            with edge_wing.part_tracker() as t:
+                # ... cube rotations ...
+                current_edge = t.part  # finds the parent Edge by marker on this slice
+
+        Returns:
+            A MarkedPartTracker that tracks the parent Part through rotations.
+        """
+        from cube.domain.tracker.MarkedPartTracker import MarkedPartTracker
+        return MarkedPartTracker(self.parent, mark_slice=self)
 
 
 class EdgeWing(PartSlice):
