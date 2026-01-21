@@ -86,6 +86,27 @@ class AppConfig(ConfigProtocol):
         return cfg.DEFAULT_SOLVER
 
     @property
+    def solver_for_tests(self) -> str:
+        """Solver name for tests (must be implemented).
+
+        Raises:
+            RuntimeError: If the configured test solver is not implemented.
+        """
+        from cube.domain.solver.SolverName import SolverName
+        solver_name = cfg.SOLVER_FOR_TESTS
+        try:
+            solver = SolverName.lookup(solver_name)
+            if not solver.meta.implemented:
+                raise RuntimeError(
+                    f"SOLVER_FOR_TESTS='{solver_name}' is not implemented. "
+                    f"Please set SOLVER_FOR_TESTS to an implemented solver. "
+                    f"Implemented solvers: {', '.join(s.display_name for s in SolverName.implemented())}"
+                )
+            return solver_name
+        except ValueError as e:
+            raise RuntimeError(f"Invalid SOLVER_FOR_TESTS='{solver_name}': {e}") from e
+
+    @property
     def solver_debug(self) -> bool:
         """Enable solver debug output."""
         return cfg.SOLVER_DEBUG
