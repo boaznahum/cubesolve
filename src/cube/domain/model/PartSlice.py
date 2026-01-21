@@ -285,6 +285,22 @@ class PartSlice(ABC, Generic[_TPartType], Hashable):
         """
         ...
 
+    @property
+    @abstractmethod
+    def by_positon_colors(self) -> PartSliceColors:
+        """
+        claude: fix it , this is the required colors on faces,
+        must be the same order as #colors , it is compared to
+        check if slice solved
+        Not optimized, get ordered set of colors.
+        This is actually the state of the slice.
+        When need use :meth:`colors_id`
+
+
+        :return:
+        """
+
+
     def reset_colors_id(self):
         self._colors_id_by_colors = None
 
@@ -631,6 +647,10 @@ class EdgeWing(PartSlice["Edge"]):
         return self.e1.color, self.e2.color
 
     @property
+    def by_positon_colors(self) -> PartSliceColors:
+        return self.e1.face.color, self.e2.face.color
+
+    @property
     def parent_name_and_index(self) -> str:
         """Return formatted string with parent edge name and slice index.
 
@@ -686,6 +706,10 @@ class CenterSlice(PartSlice["Center"]):
     def colors(self) -> PartSliceColors:
         return self.edge.color,
 
+    @property
+    def by_positon_colors(self) -> PartSliceColors:
+        return self.edge.face.color,
+
 
 class CornerSlice(PartSlice["Corner"]):
     """A slice of a Corner part, belonging to exactly three faces."""
@@ -700,3 +724,9 @@ class CornerSlice(PartSlice["Corner"]):
     @property
     def colors(self) -> PartSliceColors:
         return self._edges[0].color, self._edges[1].color, self._edges[2].color
+
+    @property
+    def by_positon_colors(self) -> PartSliceColors:
+        return self._edges[0].face.color, self._edges[1].face.color, self._edges[2].face.color
+
+

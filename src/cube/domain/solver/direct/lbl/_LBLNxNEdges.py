@@ -8,6 +8,7 @@ from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
+from cube.domain.solver.direct.lbl._common import _mark_slice_with_v_mark_if_solved
 from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
@@ -142,7 +143,7 @@ class _LBLNxNEdges(SolverElement):
         with self._logger.tab(
                 f"Working on edge {target_face.get_edge_position(target_edge)} / {index_on_target_edge} wing {required_color_ordered}"):
 
-            if target_edge_wing.match_faces:
+            if _mark_slice_with_v_mark_if_solved(target_edge_wing):
                 debug(lambda: f"EdgWing {target_edge_wing} already solved")
                 return SmallStepSolveState.WAS_SOLVED
 
@@ -173,6 +174,8 @@ class _LBLNxNEdges(SolverElement):
                     )
 
                 self.debug(lambda: f"❓❓❓Solving all source_slices: {source_slices} status: {status}")
+                if _mark_slice_with_v_mark_if_solved(target_edge_wing):
+                    debug(lambda: f"✅✅✅✅ EdgWing {target_edge_wing.parent_name_and_index_colors} solved")
 
                 return status
 
@@ -218,7 +221,7 @@ class _LBLNxNEdges(SolverElement):
         # if we reach here it is not solved
 
         untracked_source_wing = source_edge_wing_t.slice
-        untracked_target_edge_wing = _target_edge_wing  # targe twing is by location not by color, no need to track
+        untracked_target_edge_wing = _target_edge_wing  # target wing is by location not by color, no need to track
         if True:
             with self._logger.tab(lambda: f"Working with source wing  {untracked_source_wing}"):
 
@@ -304,7 +307,7 @@ class _LBLNxNEdges(SolverElement):
 
         target_face_color = target_face.color
 
-        # claude we nned to be able to create single FaceTracker that track face
+        # claude we need to be able to create single FaceTracker that track face
         with FacesTrackerHolder(self) as th:
 
 

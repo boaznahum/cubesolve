@@ -84,12 +84,14 @@ WHY MARKER 2 AND 3 ARE SEPARATE:
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from cube.domain.geometric.geometry_types import Point
-from cube.domain.model import CenterSlice, Color, PartSlice
+from cube.domain.model import CenterSlice, PartSlice
+from cube.domain.solver.direct.lbl._lbl_config import PUT_SOLVED_MARKERS
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
@@ -97,7 +99,7 @@ if TYPE_CHECKING:
     from cube.domain.tracker.trackers import FaceTracker
 
 # Key used in moveable_attributes to track center slices during solving
-__CENTER_SLICE_TRACK_KEY = "xxxxxxx"
+__CENTER_SLICE_TRACK_KEY = str(uuid.uuid4())
 
 
 def position_l1(slv: SolverElement, l1_white_tracker: FaceTracker) -> None:
@@ -181,27 +183,35 @@ def _mark_piece_solved(piece: PartSlice) -> None:
         edge.moveable_attributes["NxNCenters2_center_pice_solved"] = True
 
 
-def _mark_slice_with_v_mark_if_solved(cube, req_color: Sequence[Color], piece: PartSlice) -> None:
+def _mark_slice_with_v_mark_if_solved(piece: PartSlice) -> bool:
 
-    if piece.colors_id != frozenset(req_color):
-        return
+    # if piece.by_positon_colors != frozenset(req_color):
+    #     return
 
-    mf = cube.sp.marker_factory
-    mm = cube.sp.marker_manager
+    if not piece.match_faces:
+        return False
 
-    checkmark = mf.checkmark()  # Green checkmark
+    if PUT_SOLVED_MARKERS:
+        cube = piece.cube
 
-    # visualization only
-    for edge in piece.edges:
-        mm.add_marker(edge, "checkmark", checkmark, moveable=True)
+        mf = cube.sp.marker_factory
+        mm = cube.sp.marker_manager
+
+        checkmark = mf.checkmark()  # Green checkmark
+
+        # visualization only
+        for edge in piece.edges:
+            mm.add_marker(edge, "checkmark", checkmark, moveable=True)
 
     # this is algorithm !!!
     _mark_piece_solved(piece)
 
-def _mark_center_piece_with_v_mark_if_solved(cube, req_color: Color, center_piece: CenterSlice) -> None:
-    _mark_slice_with_v_mark_if_solved(cube, [req_color], center_piece)
+    return True
 
-def _tracke_center_slice(cs: CenterSlice, column: int):
+def _mark_center_piece_with_v_mark_if_solved(center_piece: CenterSlice) -> None:
+    _mark_slice_with_v_mark_if_solved(center_piece)
+
+def _track_center_slice(cs: CenterSlice, column: int):
 
     # self.debug(f"Tracking cent slice {cs.index} column {column}")
 
@@ -221,7 +231,7 @@ def _is_center_slice(cs: CenterSlice) -> int | None:
         return None
 
 
-def _clear_center_slice(cs: CenterSlice) -> None:
+def _clear_is_center_slice(cs: CenterSlice) -> None:
     clear_center_slice(cs)
 
 
