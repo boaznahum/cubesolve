@@ -151,6 +151,10 @@ class Algs:
     def seq_alg(name: str | None, *algs: Alg) -> SeqAlg:
         return SeqAlg(name, *algs)
 
+    @staticmethod
+    def seq(*algs: Alg) -> SeqAlg:
+        return SeqAlg(None, *algs)
+
     Simple: Sequence[NSimpleAlg] = [L, Lw,
                                     R, Rw, X, M,
                                     U, Uw, E, Y,
