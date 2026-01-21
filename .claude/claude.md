@@ -265,7 +265,10 @@ Before committing, ALWAYS do these steps:
 4. **Ask what to do** with each instruction - iterate until user is satisfied
 5. **If user says skip** - leave that comment in place, do NOT remove it
 6. **Never undo user code** - never use `git checkout` or revert user changes without explicit permission
-7. **Only then commit**
+7. **Review for new methods:** Scan modified files for any new methods/functions the user added. If found:
+   - Document what the method does (add docstring if missing)
+   - If the purpose is unclear, ASK the user before committing
+8. **Only then commit**
 
 ### Example Pre-Commit Check:
 ```bash

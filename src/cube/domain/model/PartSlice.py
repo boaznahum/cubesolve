@@ -623,6 +623,14 @@ class EdgeWing(PartSlice):
     def colors(self) -> PartSliceColors:
         return self.e1.color, self.e2.color
 
+    @property
+    def parent_name_and_index(self) -> str:
+        """Return formatted string with parent edge name and slice index.
+
+        Example: "FR[0]" for first slice of front-right edge.
+        """
+        return f"{self.parent.name}[{self.index}]"
+
 
 class CenterSlice(PartSlice):
 
