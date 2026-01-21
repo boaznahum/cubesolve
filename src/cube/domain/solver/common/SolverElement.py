@@ -1,6 +1,5 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
-from typing_extensions import deprecated
 
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.logger import Logger
@@ -53,20 +52,6 @@ class SolverElement(CubeSupplier, SolverElementsProvider):
 
     def debug(self, *args: LazyArg, level: int | None = None) -> None:
         """Output debug information with optional level filtering.
-
-        Args:
-            *args: Arguments to print. Can be regular values or Callable[[], Any]
-                   for lazy evaluation.
-            level: Optional debug level. If set, checks level <= threshold.
-        """
-        self._logger.debug(None, *args, level=level)
-
-    @deprecated("Use debug() with callable args instead: debug(lambda: value)")
-    def debug_lazy(self, *args: LazyArg, level: int | None = None) -> None:
-        """Output debug information with optional level filtering.
-
-        .. deprecated::
-            Use debug() with callable args instead.
 
         Args:
             *args: Arguments to print. Can be regular values or Callable[[], Any]

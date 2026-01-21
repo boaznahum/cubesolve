@@ -212,7 +212,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
 
     def _debug_texture_lazy(self, func) -> None:
         """Debug print with lazy evaluation for expensive texture debug info."""
-        self._vs.debug_lazy(self._cube.config.debug_texture, func)
+        self._vs.debug(self._cube.config.debug_texture, func)
 
     @property
     def renderer(self) -> "ModernGLRenderer":

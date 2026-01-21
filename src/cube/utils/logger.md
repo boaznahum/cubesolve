@@ -79,8 +79,7 @@ All debug methods support an optional `level` parameter for verbosity filtering:
 | Method | Signature |
 |--------|-----------|
 | `set_level(level)` | Set threshold (messages with level <= threshold are shown) |
-| `debug(..., level=N)` | Debug with optional level check |
-| `debug_lazy(..., level=N)` | Lazy debug with optional level check |
+| `debug(..., level=N)` | Debug with optional level check (supports lazy args) |
 | `is_debug(..., level=N)` | Check if debug at level would output |
 
 ### Level Inheritance
@@ -287,7 +286,9 @@ self.debug("message")
 
 ```python
 # Only evaluates expensive_computation() if debug is enabled
-self._logger.debug_lazy(None, lambda: expensive_computation())
+# debug() accepts callables that are resolved only when debug is enabled
+self._logger.debug(None, lambda: expensive_computation())
+self._logger.debug(None, "Result:", lambda: expensive_computation())
 ```
 
 ## Environment Variables

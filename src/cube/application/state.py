@@ -386,10 +386,6 @@ class ApplicationAndViewState:
         """Print debug information if allowed by flags."""
         self._logger.debug(debug_on, *args)
 
-    def debug_lazy(self, debug_on: bool, func: Callable[[], Any]) -> None:
-        """Print debug information with lazy evaluation."""
-        self._logger.debug(debug_on, func)
-
     def debug_dump(
         self,
         cube: Cube,

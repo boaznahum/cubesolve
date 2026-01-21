@@ -30,6 +30,11 @@ ENABLE_CUBE_CACHE = True
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
 DEFAULT_SOLVER = "LBL-Big"
 
+# Solver used by tests (must be implemented - raises error if not)
+# Tests use this instead of DEFAULT_SOLVER to avoid failures when DEFAULT_SOLVER
+# is set to a work-in-progress solver
+SOLVER_FOR_TESTS = "LBL"
+
 # 3x3 solver used by cage method for corner solving (Phase 1b)
 # Options: "beginner", "cfop", "kociemba"
 CAGE_3X3_SOLVER = "cfop"

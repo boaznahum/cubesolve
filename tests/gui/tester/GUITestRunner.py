@@ -137,6 +137,7 @@ class GUITestRunner:
         # Save original config values (only test-specific flags)
         original_test_mode = config.GUI_TEST_MODE
         original_debug = config.KEYBOAD_INPUT_DEBUG
+        original_solver = config.DEFAULT_SOLVER
 
         test_error: Exception | None = None
         test_success = False
@@ -157,6 +158,16 @@ class GUITestRunner:
             # Configure for testing (only test-specific flags)
             config.GUI_TEST_MODE = True
             config.KEYBOAD_INPUT_DEBUG = debug
+            # Use test solver (must be implemented)
+            from cube.domain.solver.SolverName import SolverName
+            test_solver = config.SOLVER_FOR_TESTS
+            solver_name = SolverName.lookup(test_solver)
+            if not solver_name.meta.implemented:
+                raise RuntimeError(
+                    f"SOLVER_FOR_TESTS='{test_solver}' is not implemented. "
+                    f"Set it to one of: {', '.join(s.display_name for s in SolverName.implemented())}"
+                )
+            config.DEFAULT_SOLVER = test_solver
 
             if debug:
                 print(f"Starting GUI test with commands: {cmd_seq}")
@@ -263,6 +274,7 @@ class GUITestRunner:
             # Restore original config
             config.GUI_TEST_MODE = original_test_mode
             config.KEYBOAD_INPUT_DEBUG = original_debug
+            config.DEFAULT_SOLVER = original_solver
 
             if debug:
                 print("Test completed, config restored")

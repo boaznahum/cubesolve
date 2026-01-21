@@ -20,8 +20,6 @@ from contextlib import contextmanager
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Generator
 
-from typing_extensions import deprecated
-
 from cube.utils.logger_protocol import DebugFlagType, ILogger, LazyArg
 
 
@@ -249,26 +247,6 @@ class Logger(ILogger):
         else:
 
             print("DEBUG:", *resolved_args, flush=True)
-
-    @deprecated("Use debug() with callable args instead: debug(None, lambda: value)")
-    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any], *, level: int | None = None) -> None:
-        """Print debug with lazy evaluation.
-
-        .. deprecated::
-            Use debug() with callable args instead.
-
-        Args:
-            debug_on: Override debug flag. If None, uses this logger's debug_flag.
-            func: Callable that returns the message to print.
-            level: Optional debug level. If set, also checks level <= threshold.
-        """
-        if not self.is_debug(debug_on, level=level):
-            return
-        # Print directly with prefix
-        if self._prefix:
-            print("DEBUG:", f"{self._prefix}:", func(), flush=True)
-        else:
-            print("DEBUG:", func(), flush=True)
 
     # --- Prefix operations ---
 

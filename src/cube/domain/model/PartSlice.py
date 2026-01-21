@@ -501,7 +501,7 @@ class EdgeWing(PartSlice):
         return EdgeWing(self.index, *self._clone_edges())
 
 
-    def faces(self) -> Sequence[Face]:
+    def faces(self) -> Sequence[_Face]:
 
         """
         Not optimized
