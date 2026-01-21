@@ -10,10 +10,8 @@ from cube.domain.solver.common.SolverElement import SolverElement
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import (
-    CENTER_SLICE_TRACK_KEY,
-    clear_all_tracking,
-    clear_center_slice,
-    position_l1,
+    position_l1, _is_cent_piece_solved, _mark_piece_with_v_mark_if_solved, _tracke_center_slice,
+    _iterate_all_tracked_slices_index,
 )
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils import symbols
@@ -145,7 +143,7 @@ class NxNCenters2(SolverElement):
         for f in [target_face.face]:
             for point in self._2d_center_row_slice_iter(slice_index):
                 c = f.get_center_slice(point)
-                if not self._is_cent_piece_solved(c):
+                if not _is_cent_piece_solved(c):
                     return False
 
         return True
@@ -243,68 +241,9 @@ class NxNCenters2(SolverElement):
 
         return pieces_solved
 
-    def _tracke_center_slice(self, cs: CenterSlice, column: int):
-
-        # self.debug(f"Tracking cent slice {cs.index} column {column}")
-
-        cs.moveable_attributes[CENTER_SLICE_TRACK_KEY] = column
-
-    def _is_center_slice(self, cs: CenterSlice) -> int | None:
-
-        # the default is boolean False !!!
-        x = cs.moveable_attributes[CENTER_SLICE_TRACK_KEY]
-
-        # print(f"x: {x}")
-
-        if type(x) is int:
-            return x
-        else:
-            return None
-
-    def _clear_center_slice(self, cs: CenterSlice) -> None:
-        clear_center_slice(cs)
-
-    def _clear_all_tracking(self) -> None:
-        clear_all_tracking(self)
-
-    def _iterate_all_tracked_slices_index(self, target_face: FaceTracker) -> Iterator[Point]:
-
-        for cs in target_face.face.center.all_slices:
-
-            if self._is_center_slice(cs) is not None:
-                rc = cs.index
-
-                yield Point(*rc)
+    # noinspection PyMethodMayBeStatic
 
     # noinspection PyMethodMayBeStatic
-    def _is_cent_piece_solved(self, center_piece: CenterSlice) -> bool:
-        # this si solver data not visualization
-        return "NxNCenters2_center_pice_solved" in center_piece.edge.moveable_attributes
-
-    # noinspection PyMethodMayBeStatic
-    def _mark_center_piece_solved(self, center_piece: CenterSlice) -> None:
-        # this si solver data not visualization
-        center_piece.edge.moveable_attributes["NxNCenters2_center_pice_solved"] = True
-
-    def _mark_piece_with_v_mark_if_solved(self, req_color: Color, center_piece: CenterSlice) -> None:
-
-        if center_piece.color != req_color:
-            return
-
-        mf = self.cube.sp.marker_factory
-        mm = self.cube.sp.marker_manager
-
-        checkmark = mf.checkmark()  # Green checkmark
-
-        # visualization only
-        mm.add_marker(center_piece.edge, "checkmark", checkmark, moveable=True)
-
-        # this is algorithm !!!
-        self._mark_center_piece_solved(center_piece)
-
-
-
-
 
     def _position_l1(self, l1_white_tracker: FaceTracker) -> None:
         """Position L1 down and target face to front."""
@@ -320,9 +259,9 @@ class NxNCenters2(SolverElement):
 
                 slice_piece = target_face.face.center.get_center_slice(rc)
 
-                self._mark_piece_with_v_mark_if_solved(target_face.color, slice_piece)
+                _mark_piece_with_v_mark_if_solved(self.cube, target_face.color, slice_piece)
 
-                self._tracke_center_slice(slice_piece, rc[1])
+                _tracke_center_slice(slice_piece, rc[1])
 
         try:
             yield
@@ -374,7 +313,7 @@ class NxNCenters2(SolverElement):
                 # a piece from target_face to up,
                 point_to_solve_piece: CenterSlice = target_face.get_center_slice(point)
 
-                if self._is_cent_piece_solved(point_to_solve_piece):
+                if _is_cent_piece_solved(point_to_solve_piece):
                     continue
 
                 # find candidates on target
@@ -400,7 +339,7 @@ class NxNCenters2(SolverElement):
 
                         # of course for other face then move_from_target_face it cannot be solved it the color is the target
                         # for our target we dont want to ove away solved pieces of course they are of slice < then un
-                        if candidate_piece.color == target_color and (not move_from_target_face_is_target_face or not self._is_cent_piece_solved(candidate_piece) ):
+                        if candidate_piece.color == target_color and (not move_from_target_face_is_target_face or not _is_cent_piece_solved(candidate_piece)):
 
                                 up_face = l1_white_tracker.opposite.face
                                 self.debug(f"‼️‼️‼️ Moving  {candidate_piece} from {move_from_target_face.color_at_face_str} to  {up_face}")
@@ -474,7 +413,7 @@ class NxNCenters2(SolverElement):
 
             slice_piece = target_face.face.center.get_center_slice(rc)
 
-            self._mark_piece_with_v_mark_if_solved(target_face.color, slice_piece)
+            _mark_piece_with_v_mark_if_solved(self.cube, target_face.color, slice_piece)
 
 
         color = target_face.color
@@ -485,7 +424,7 @@ class NxNCenters2(SolverElement):
 
         work_done = False
 
-        for rc in self._iterate_all_tracked_slices_index(target_face):
+        for rc in _iterate_all_tracked_slices_index(target_face):
 
             candidate_piece = target_face.face.center.get_center_slice(rc)
 
@@ -511,7 +450,7 @@ class NxNCenters2(SolverElement):
 
                 self.debug(f"Fixed slice {rc}")
 
-                self._mark_piece_with_v_mark_if_solved(target_face.color, center_slice)
+                _mark_piece_with_v_mark_if_solved(self.cube, target_face.color, center_slice)
 
                 work_done = True
 
@@ -554,7 +493,7 @@ class NxNCenters2(SolverElement):
                 # if second_point_on_source_color == source_face.color:
                 # but if it is the same color as target that is going to replace then it is ok
                 #
-                second_point_is_solved = self._is_cent_piece_solved(second_point_piece)
+                second_point_is_solved = _is_cent_piece_solved(second_point_piece)
                 self.debug(f"Second point {second_point_piece} is solved {second_point_is_solved}", f"Second point color {second_point_on_source_color}")
                 if target_point_color != second_point_on_source_color and second_point_is_solved:
                     parent.debug(
@@ -617,7 +556,7 @@ class NxNCenters2(SolverElement):
         second_point_on_source = source_point_and_second_source_point[1]
 
         second_center_piece: CenterSlice = source_face.get_center_slice(second_point_on_source)
-        second_point_is_solved = self._is_cent_piece_solved(second_center_piece)
+        second_point_is_solved = _is_cent_piece_solved(second_center_piece)
 
         # OPTIMIZATION: Step 3 - Execute with cached computation (_cached_secret)
         # This reuses the _InternalCommData from Step 1, avoiding redundant calculations
@@ -634,8 +573,8 @@ class NxNCenters2(SolverElement):
 
         # if second point on source was replaced by the right color, then it is ok
         if second_point_is_solved:  # was it solved ?
-            self._mark_piece_with_v_mark_if_solved(source_face.color,
-                                                   second_center_piece)
+            _mark_piece_with_v_mark_if_solved(self.cube, source_face.color,
+                                              second_center_piece)
 
         return True
 
