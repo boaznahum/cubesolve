@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING
 
 from typing_extensions import Self
 
-from cube.domain.model import CenterSlice, Color
+from cube.domain.model import CenterSlice, Color, Face
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.FaceName import FaceName
@@ -283,6 +283,12 @@ class FacesTrackerHolder:
                 return tracker
         raise KeyError(f"No tracker for color {color}")
 
+    def get_face_by_color(self, face_color: Color) -> Face:
+
+        return self.get_tracker_by_color(face_color).face
+
+
+
     def part_match_faces(self, part: "Part") -> bool:
         """Check if a part's colors match the tracker-assigned face colors.
 
@@ -474,3 +480,4 @@ class FacesTrackerHolder:
             The Color enum if tracked, None otherwise.
         """
         return FaceTracker.get_edge_tracker_color(edge)
+
