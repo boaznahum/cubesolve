@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from typing import Any, Callable, ContextManager, Protocol, TypeAlias, runtime_checkable
 
-from typing_extensions import deprecated
-
 # Type for debug flag: static bool, dynamic callable, or None (inherit/ignore)
 DebugFlagType = bool | Callable[[], bool] | None
 
@@ -108,30 +106,6 @@ class ILogger(Protocol):
 
             # Mix static and lazy args
             logger.debug(None, "Part", part_num, "colors:", lambda: part.colors_id)
-        """
-        ...
-
-    @deprecated("Use debug() with callable args instead: debug(None, lambda: value)")
-    def debug_lazy(self, debug_on: bool | None, func: Callable[[], Any], *, level: int | None = None) -> None:
-        """Print debug information with lazy evaluation.
-
-        .. deprecated::
-            Use debug() with callable args instead. debug() now supports
-            lazy evaluation by passing callables as arguments.
-
-        The func is only called if we're actually going to print,
-        avoiding expensive computation when debug is disabled.
-
-        Args:
-            debug_on: Local flag to enable debug for this specific call.
-                      If None, uses logger's default.
-            func: Callable that returns the message to print.
-            level: Optional debug level. If set, also checks level <= threshold.
-
-        Logic:
-            - If quiet_all is True → never print, func not called
-            - If level > threshold → never print, func not called
-            - If debug_all is True OR debug_on is True → call func and print
         """
         ...
 

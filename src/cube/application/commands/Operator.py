@@ -150,8 +150,8 @@ class Operator(OperatorProtocol):
                     algs: list[SimpleAlg] = [*alg.flatten()]
 
                     if self._app_state.single_step_mode:
-                        self._app_state.debug_lazy(True,
-                                                   lambda: f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
+                        self._app_state.debug(True,
+                                              lambda: f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
 
                     cube = self.cube
                     op = self.play
