@@ -8,7 +8,8 @@ from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
-from cube.domain.tracker.PartSliceTracker import PartSliceTracker
+from cube.domain.tracker import FacesTrackerHolder
+from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
@@ -130,16 +131,16 @@ class _LBLNxNEdges(SolverElement):
 
             pass
 
-    def _solve_one_side_edge(self, target_face: Face, edge: Edge, index_on_edge) -> SmallStepSolveState:
+    def _solve_one_side_edge(self, target_face: Face, target_edge: Edge, index_on_target_edge) -> SmallStepSolveState:
 
         debug = self.debug
 
-        target_edge_wing: EdgeWing = edge.get_slice(index_on_edge)
+        target_edge_wing: EdgeWing = target_edge.get_slice(index_on_target_edge)
 
-        required_color_ordered = self._get_slice_ordered_color(target_face, target_edge_wing)
+        required_color_ordered = self._get_slice_required_ordered_color(target_face, target_edge_wing)
 
         with self._logger.tab(
-                f"Working on edge {target_face.get_edge_position(edge)} / {index_on_edge} wing {required_color_ordered}"):
+                f"Working on edge {target_face.get_edge_position(target_edge)} / {index_on_target_edge} wing {required_color_ordered}"):
 
             if target_edge_wing.match_faces:
                 debug(lambda: f"EdgWing {target_edge_wing} already solved")
@@ -148,12 +149,12 @@ class _LBLNxNEdges(SolverElement):
             # the colors keys of the wing starting from the target face
 
             with self.ann.annotate(
-                    h1=lambda: f"Fixing edge wing {index_on_edge} {required_color_ordered} on {edge.name} "):
+                    h1=lambda: f"Fixing edge wing {target_edge_wing.parent_name_and_index} -> {required_color_ordered}"):
 
                 # position_id gives us the face CENTER colors of the slot (where piece SHOULD go)
                 required_color_unordered: PartColorsID = target_edge_wing.position_id
 
-                required_indexes = [index_on_edge, self.cube.inv(index_on_edge)]
+                required_indexes = [index_on_target_edge, self.cube.inv(index_on_target_edge)]
 
                 source_slices: list[EdgeWing] = [*self.cqr.find_all_slice_in_edges(self.cube.edges,
                                                                                    lambda
@@ -163,44 +164,95 @@ class _LBLNxNEdges(SolverElement):
 
                 assert source_slices  # at least one
 
-                with PartSliceTracker.with_trackers(source_slices) as sts:
+                status = self._solve_edge_win_all_source(
+                    source_slices,
+                    target_face,
+                    target_edge,
+                    target_edge_wing,
+                    index_on_target_edge
+                    )
 
-                    st: PartSliceTracker[EdgeWing, Edge]
-                    for st in sts:
+                self.debug(lambda: f"❓❓❓Solving all source_slices: {source_slices} status: {status}")
 
-                        status = self._solve_edge_wing_by_source(target_face, edge, index_on_edge,
-                                                                 target_edge_wing, st)
+                return status
 
-                        if status == SmallStepSolveState.SOLVED:
-                            return SmallStepSolveState.SOLVED
+    def _solve_edge_win_all_source(self, source_slices: list[EdgeWing],
+                                   target_face: Face,
+                                   target_edge: Edge,
+                                   target_edge_wing: EdgeWing,  # redundant - you have the index
+                                   index_on_target_edge: int) -> SmallStepSolveState:
+        """Try to solve the target edge wing using any of the source slices.
 
-        return SmallStepSolveState.NOT_SOLVED
+        Iterates through candidate source wings and attempts to solve the target
+        using each one until successful or all sources exhausted.
+
+        Args:
+            source_slices: List of EdgeWing candidates that could solve target.
+            target_face: The face we're solving edges for.
+            target_edge: The edge containing the target wing.
+            target_edge_wing: The specific wing to solve.
+            index_on_target_edge: Slice index within the target edge.
+
+        Returns:
+            SOLVED if target was successfully solved, NOT_SOLVED otherwise.
+        """
+        with self._logger.tab(lambda: f"Working on all sources  {[w.parent_name_and_index for w in source_slices]}"):
+
+            with PartSliceTracker.with_trackers(source_slices) as sts:
+
+                st: EdgeWingTracker
+                for st in sts:
+
+                    status = self._solve_edge_wing_by_source(target_face, target_edge, index_on_target_edge,
+                                                             target_edge_wing, st)
+
+                    if status == SmallStepSolveState.SOLVED:
+                        return SmallStepSolveState.SOLVED
+                return SmallStepSolveState.NOT_SOLVED
 
     def _solve_edge_wing_by_source(self, target_face: Face,
                                    edge: Edge, index_on_edge,
-                                   target_edge_wing: EdgeWing,
-                                   source_edge_wing: PartSliceTracker[EdgeWing, Edge]) -> SmallStepSolveState:
+                                   _target_edge_wing: EdgeWing,
+                                   source_edge_wing_t: EdgeWingTracker) -> SmallStepSolveState:
 
         # if we reach here it is not solved
 
-        untracked_source_wing = source_edge_wing.slice
-        with self._logger.tab(lambda: f"Working with source wing  {untracked_source_wing}"):
+        untracked_source_wing = source_edge_wing_t.slice
+        untracked_target_edge_wing = _target_edge_wing  # targe twing is by location not by color, no need to track
+        if True:
+            with self._logger.tab(lambda: f"Working with source wing  {untracked_source_wing}"):
 
-            on_faces = untracked_source_wing.faces()
-            on_edge: Edge = untracked_source_wing.parent
-            target_face_color = target_face.color
+                untracked_source_edge: Edge = untracked_source_wing.parent
+                target_face_color = target_face.color
 
-            self.debug(
-                f"Found source EdgeWing for target {target_edge_wing.position_id} : {target_edge_wing} / {untracked_source_wing.index}")
+                self.debug(
+                    f"Found source EdgeWing for target {untracked_source_wing.parent_name_and_index_colors} : {untracked_source_wing} / {untracked_source_wing.index}")
 
-            self.debug(lambda: f"on faces {on_faces} {on_edge.name}")
+                self.debug(lambda: f"on faces {untracked_source_wing.faces()} {untracked_source_edge.name}")
 
-            # From here source may move !!!
+                # From here source may move !!!
 
-            # # simple case edge is on top
-            cube = self.cube
-            if untracked_source_wing.on_face(cube.up):
-                self.debug(lambda: f"💚💚 Wing {untracked_source_wing}  is on {cube.up} {on_edge.name}")
+                # # simple case edge is on top
+                cube = self.cube
+                if not untracked_source_wing.on_face(cube.up):
+
+                    #assert False, f"Source wing {source_edge_wing} is not on up"
+                    with self._logger.tab(lambda: f"‼️‼️Trying to bring  {untracked_source_wing.parent_name_and_index} to to top"):
+
+                        self._bring_source_wing_to_top(target_face, source_edge_wing_t)
+
+                        # still same face
+                        assert target_face.color == target_face_color
+
+                        # we should get rid of it
+                        untracked_source_wing = source_edge_wing_t.slice
+                        untracked_source_edge = untracked_source_wing.parent
+
+                        assert untracked_source_wing.on_face(cube.up)
+
+
+
+                self.debug(lambda: f"💚💚 Wing {untracked_source_wing}  is on {cube.up} {untracked_source_edge.name}")
 
                 # now check if we can use it ?
 
@@ -214,112 +266,135 @@ class _LBLNxNEdges(SolverElement):
                     # from here it is collection of hard code assumption that we need to generalize
 
                     # bring edge to front
-                    self.cmn.bring_edge_on_up_to_front(self, on_edge)
+                    self.cmn.bring_edge_on_up_to_front(self, untracked_source_edge)
+
+                    # you can no longer use it
 
                     # patch patch patch use cube sized layout to compute this
                     # it is different logic if it left
 
-                    assert target_edge_wing.parent is not cube.left
 
-                    target_edge = target_edge_wing.parent
-                    face_row_index_on_target_edge = target_edge.get_face_ltr_index_from_edge_slice_index(target_face,
-                                                                                                         target_edge_wing.index)
-                    required_source_wing_face_column_index = cube.inv(face_row_index_on_target_edge)
-                    face_column_on_source_edge = source_edge_wing.slice.parent.get_face_ltr_index_from_edge_slice_index(
-                        target_face, source_edge_wing.slice.index)
+                    # soon it is going to moved
 
-                    self.debug(lambda: f"required_source_wing_face_column_index: {required_source_wing_face_column_index}")
-                    self.debug(lambda: f"face_column_on_source_edge: {face_column_on_source_edge}")
+                    # this move target wing
+                    moved = self._do_right_or_left_edge_to_edge_communicator(untracked_target_edge_wing,
+                                                                             source_edge_wing_t.slice)
 
-                    if required_source_wing_face_column_index == face_column_on_source_edge:
+                    if moved:
                         self.debug(lambda: "💚💚💚💚 Source index and target match")
 
-                        def _do_right_edge_to_edge_communicator():
+                        assert untracked_target_edge_wing.match_faces
 
-                            alg_index = face_column_on_source_edge + 1 # one based
-                            with self.annotate(h2=f"Bringing {source_edge_wing.slice} to {target_edge.get_position_on_face(target_face)}"):
-                                # U R U' [2]M' U R' U' [2]M
-                                alg: Alg = (Algs.U + Algs.R + Algs.U.prime + Algs.M[alg_index].prime +
-                                       Algs.U + Algs.R.prime + Algs.M[alg_index]
-                                            )
-                                self.op.play(alg)
-
-                        _do_right_edge_to_edge_communicator()
-
-
-                        assert target_edge_wing.match_faces
-
-                        self.debug(lambda: f"✅✅💚💚💚💚💚✅✅ Solved {target_edge_wing}")
+                        self.debug(lambda: f"✅✅💚💚💚💚💚✅✅ Solved {untracked_target_edge_wing}")
 
                         return SmallStepSolveState.SOLVED
 
 
                     else:
                         self.debug(lambda: "❌❌ Source index and target don't match")
-                        assert False
-
-
 
                     # from now, you cannot use untracked_source_wing
                 else:
                     self.debug(
                         lambda: f"❌❌❌ Wing {untracked_source_wing}  doesnt match target color {target_face_color}")
-            else:
-                assert False, f"Source wing {source_edge_wing} is not on up"
 
         return SmallStepSolveState.NOT_SOLVED
 
-    def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
-        """Solve only the 4 edges that contain a specific color.
+    def _bring_source_wing_to_top(self, target_face: Face, source_edge_wing_t: EdgeWingTracker):
 
-        Used by layer-by-layer solver to solve one layer's edges at a time.
+        target_face_color = target_face.color
 
-        Args:
-            face_tracker: FaceTracker for the target face (tracks by color).
+        # claude we nned to be able to create single FaceTracker that track face
+        with FacesTrackerHolder(self) as th:
 
-        Returns:
-            True if edge parity was performed, False otherwise.
 
-        Note:
-            Finds edges by COLOR (e.g., all edges containing WHITE for white cross),
-            not by position. This is correct because after centers are solved,
-            the cross edges may be scattered across the cube.
-        """
-        # Find the 4 edges that contain the target color (by color, not position!)
-        # For white cross: finds edges with WHITE in their colors_id
-        target_color = face_tracker.color
-        target_edges_by_color = [e for e in self.cube.edges if target_color in e.colors_id]
+            self.cmn.bring_edge_to_front_right_or_left_preserve_down(source_edge_wing_t.slice.parent)
 
-        assert len(target_edges_by_color) == 4, \
-            f"Expected 4 edges with {target_color}, found {len(target_edges_by_color)}"
+            # yes the source is the target
+            self._do_right_or_left_edge_to_edge_communicator(source_edge_wing_t.slice, None)
 
-        # Check if all target edges are already solved (paired)
-        if all(e.is3x3 for e in target_edges_by_color):
-            return False
+            self.cmn.bring_face_front_preserve_down(th.get_face_by_color(target_face_color))
 
-        with self.ann.annotate(h1=f"Edges for {target_color.name}"):
-            parity_done = False
-            while True:
-                # Find unsolved edges containing target color (re-query each iteration)
-                unsolved = [e for e in self.cube.edges
-                            if target_color in e.colors_id and not e.is3x3]
-                if not unsolved:
-                    break
+            assert th.get_face_by_color(target_face_color) is self.cube.front
 
-                # Check if this is the LAST unsolved edge in the WHOLE cube
-                # (parity can only happen when all other 11 edges are solved)
-                total_cube_unsolved = sum(1 for e in self.cube.edges if not e.is3x3)
-                if total_cube_unsolved == 1 and len(unsolved) == 1:
-                    # Last edge in whole cube AND it's one of our targets - parity
-                    self._do_last_edge_parity()
-                    parity_done = True
-                    continue
 
-                # Solve one edge
-                edge = unsolved[0]
-                self._do_edge(edge)
 
-            return parity_done
+
+
+
+    def _do_right_or_left_edge_to_edge_communicator(self,
+                                                    target_wing:EdgeWing,
+                                                    source_wing: EdgeWing | None) -> bool:
+
+        cube = self.cube
+        # current we only support front
+        target_edge = target_wing.parent
+        target_face = cube.front
+        assert target_edge.on_face(target_face)
+
+        face_row_index_on_target_edge = target_edge.get_face_ltr_index_from_edge_slice_index(target_face,
+                                                                                             target_wing.index)
+
+        assert target_edge in [cube.fl, cube.fr]
+
+        is_target_right_edge = target_edge is cube.fr
+
+        if is_target_right_edge:
+            required_source_wing_face_column_index = cube.inv(face_row_index_on_target_edge)
+        else:
+            required_source_wing_face_column_index = face_row_index_on_target_edge
+
+        source_wing_edge = cube.fu
+        if source_wing is not None:
+            assert source_wing.parent is source_wing_edge
+            source_wing_index = source_wing.index
+            face_column_on_source_edge = source_wing.parent.get_face_ltr_index_from_edge_slice_index(
+                target_face, source_wing_index)
+        else:
+            face_column_on_source_edge = required_source_wing_face_column_index
+            source_wing_index = source_wing_edge.get_edge_slice_index_from_face_ltr_index(target_face, face_column_on_source_edge)
+
+        source_wing =  source_wing_edge.get_slice(source_wing_index)
+
+        with self._logger.tab(
+                    lambda: f"Trying communicator from wing {source_wing.parent_name_and_index} to wing {target_wing.parent_name_and_index}"):
+
+            self.debug(lambda: f"required_source_wing_face_column_index: {required_source_wing_face_column_index}")
+            self.debug(lambda: f"face_column_on_source_edge: {face_column_on_source_edge}")
+
+            if required_source_wing_face_column_index != face_column_on_source_edge:
+                self.debug(lambda: "❌❌ Source index and target don't match")
+                assert source_wing is not None, "We calculate it it must be equal"
+                return False  # can't perform
+
+            alg_index = face_column_on_source_edge + 1  # one based
+            alg: Alg
+            if is_target_right_edge:
+
+                # U R U' [2]M' U R' U' [2]M
+
+                alg= (Algs.U + Algs.R + Algs.U.prime + Algs.M[alg_index].prime +
+                        Algs.U + Algs.R.prime + Algs.M[alg_index]
+                        )
+            else:
+                #  U' L'
+                #  U [1]M'
+                #  U' L
+                #  U [1]M
+                alg = Algs.seq(
+                    Algs.U.prime , Algs.L.prime,
+                    Algs.U , Algs.M[alg_index].prime,
+                    Algs.U.prime , Algs.L,
+                    Algs.U + Algs.M[alg_index]
+                )
+
+
+            with self.annotate(h2=f"Bringing {source_wing.parent_name_and_index_colors} to {target_wing.parent_name_and_index}"):
+                # U R U' [2]M' U R' U' [2]M
+                self.op.play(alg)
+
+            return True
+
 
     def _do_first_11(self):
         """
@@ -711,6 +786,16 @@ class _LBLNxNEdges(SolverElement):
 
         return s.get_face_edge(f).color, s.get_other_face_edge(f).color
 
+    def _get_slice_required_ordered_color(self, f: Face, s: EdgeWing) -> Tuple[Color, Color]:
+        """
+
+        :param f:
+        :param s:
+        :return:  (on face color, on_other color)
+        """
+
+        return f.color, s.get_other_face(f).color
+
     @staticmethod
     def _find_slice_in_edge_by_color_id(edge: Edge, color_un_ordered: PartColorsID) -> EdgeWing | None:
 
@@ -777,3 +862,4 @@ class _LBLNxNEdges(SolverElement):
         else:
             assert c2
             return c2
+

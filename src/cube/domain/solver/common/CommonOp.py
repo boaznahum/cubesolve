@@ -18,6 +18,7 @@ from cube.domain.solver.protocols import (
 
 from ...model.CubeQueries2 import Pred
 from ...model._elements import EdgePosition
+from ...model._part import EdgeName
 
 TRACE_UNIQUE_ID: int = 0
 
@@ -490,7 +491,7 @@ class CommonOp:
         caller.debug(lambda: f"Bring edge (on top)  {edge} to FRONT")
         cube = self.cube
         up = cube.up
-        assert edge.on_face(up)
+        assert edge.on_face(up), f"edge {edge} not on UP face"
 
         # claude: hard coded, find the optimal path to rotate face on edge
         position: EdgePosition = up.get_edge_position(edge)
@@ -561,3 +562,33 @@ class CommonOp:
         finally:
             c_att = tracker.the_slice_nl.moveable_attributes
             del c_att[key]
+
+    def bring_edge_to_front_right_or_left_preserve_down(self, edge: Edge) -> None:
+
+        cube = edge.cube
+        assert not edge.on_face(cube.up) and not edge.on_face(cube.down)
+
+        with MarkedPartTracker.of(edge) as tracker:
+
+            match edge.name:
+                case EdgeName.BR:
+                    self.op.play(Algs.Y)
+
+                case EdgeName.BL:
+                    self.op.play(Algs.Y.prime)
+
+                case EdgeName.FR:
+                    pass
+
+
+                case EdgeName.FL:
+                    pass
+
+            assert tracker.part.on_face(cube.front)
+
+
+
+
+
+
+

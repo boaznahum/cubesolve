@@ -304,7 +304,9 @@ class Face(SuperElement, Hashable):
     def get_edge_position(self, edge: Edge) -> EdgePosition:
         """Get the EdgePosition (LEFT, RIGHT, TOP, BOTTOM) for an edge on this face."""
 
-        return self._edge_to_position[edge.name]
+        pos = self._edge_to_position.get(edge.name)
+        assert pos is not None, f"Edge {edge.name} not on face {self}"
+        return pos
 
         # raise InternalSWError(f"Edge {edge} is not on face {self.name}")
 
