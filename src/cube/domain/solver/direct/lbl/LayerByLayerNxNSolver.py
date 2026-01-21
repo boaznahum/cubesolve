@@ -28,6 +28,7 @@ from __future__ import annotations
 from cube.domain.model import Corner, Part
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
+from cube.domain.solver.direct.lbl import _common
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
@@ -148,6 +149,8 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         if self.is_solved:
             return sr
+
+        _common.clear_all_type_of_markers(self.cube)
 
         # Create fresh tracker holder for this solve operation
         # Note: We rely on tracker majority algorithm being deterministic.

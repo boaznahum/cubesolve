@@ -11,7 +11,7 @@ from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import Communi
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import (
     position_l1, _is_cent_piece_solved, _mark_center_piece_with_v_mark_if_solved, _track_center_slice,
-    _iterate_all_tracked_slices_index,
+    _iterate_all_tracked_center_slices_index,
 )
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils import symbols
@@ -424,7 +424,7 @@ class NxNCenters2(SolverElement):
 
         work_done = False
 
-        for rc in _iterate_all_tracked_slices_index(target_face):
+        for rc in _iterate_all_tracked_center_slices_index(target_face):
 
             candidate_piece = target_face.face.center.get_center_slice(rc)
 

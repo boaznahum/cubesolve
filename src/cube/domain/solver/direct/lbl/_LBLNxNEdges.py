@@ -8,6 +8,7 @@ from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
+from cube.domain.solver.direct.lbl import _common
 from cube.domain.solver.direct.lbl._common import _mark_slice_with_v_mark_if_solved
 from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
@@ -159,7 +160,9 @@ class _LBLNxNEdges(SolverElement):
 
                 source_slices: list[EdgeWing] = [*self.cqr.find_all_slice_in_edges(self.cube.edges,
                                                                                    lambda
-                                                                                       s: s.index in required_indexes and s.colors_id == required_color_unordered)]
+                                                                                       s:
+                                                                                   not _common.is_slice_solved(s) and  # dont touch solved slices !!!
+                                                                                   s.index in required_indexes and s.colors_id == required_color_unordered)]
 
                 debug(lambda: f"source_slices: {source_slices}")
 
