@@ -59,11 +59,11 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 from contextlib import ExitStack
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Generic, TypeVar, overload
 
 from cube.domain.model._elements import CenterSliceIndex, SliceIndex
 from cube.domain.model.Part import Part
-from cube.domain.model.PartSlice import CenterSlice, CornerSlice, EdgeWing, PartSlice
+from cube.domain.model.PartSlice import PartSlice
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -168,45 +168,33 @@ class MarkedPartTracker(Generic[P]):
         """
         return MultiPartTracker(parts)
 
-    # --- of_slice overloads for type-safe slice-to-part tracking ---
-
-    #claude: make PartSlice geenirc over Part and avoid this overloaded
-    @overload
     @staticmethod
-    def of_slice(part_slice: EdgeWing) -> "MarkedPartTracker[Edge]": ...
-
-    @overload
-    @staticmethod
-    def of_slice(part_slice: CornerSlice) -> "MarkedPartTracker[Corner]": ...
-
-    @overload
-    @staticmethod
-    def of_slice(part_slice: CenterSlice) -> "MarkedPartTracker[Center]": ...
-
-    @staticmethod
-    def of_slice(part_slice: PartSlice) -> Any:
+    def of_slice(part_slice: PartSlice[P]) -> "MarkedPartTracker[P]":
         """Create a tracker for the parent Part of a PartSlice.
 
         This is useful when you have a specific slice (e.g., EdgeWing) and want
         to track the entire Part (e.g., Edge) it belongs to.
+
+        The return type is automatically inferred from the slice type because
+        PartSlice is now generic over its parent Part type:
+        - EdgeWing (PartSlice[Edge]) -> MarkedPartTracker[Edge]
+        - CornerSlice (PartSlice[Corner]) -> MarkedPartTracker[Corner]
+        - CenterSlice (PartSlice[Center]) -> MarkedPartTracker[Center]
 
         Args:
             part_slice: The PartSlice whose parent Part to track.
                        Supports EdgeWing, CornerSlice, CenterSlice.
 
         Returns:
-            A MarkedPartTracker for the parent Part. The type is inferred:
-            - EdgeWing -> MarkedPartTracker[Edge]
-            - CornerSlice -> MarkedPartTracker[Corner]
-            - CenterSlice -> MarkedPartTracker[Center]
+            A MarkedPartTracker for the parent Part with correct type inference.
 
         Example:
             edge_wing: EdgeWing = ...
             with MarkedPartTracker.of_slice(edge_wing) as t:
-                # t.part is typed as Edge
+                # t.part is typed as Edge (no overloads needed!)
                 current_edge = t.part
         """
-        return MarkedPartTracker(part_slice.parent, mark_slice=part_slice)
+        return MarkedPartTracker(part_slice.parent, mark_slice=part_slice)  # type: ignore[arg-type]
 
     def _get_parts_by_type(self) -> Iterator[Part]:
         """Get only parts of the tracked type from the cube."""

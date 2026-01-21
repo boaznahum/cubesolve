@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import itertools
 import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Hashable, MutableSequence, Sequence
-from typing import TYPE_CHECKING, Any, Self, Tuple, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Self, Tuple, TypeAlias, TypeVar
 
 from cube.domain.geometric.cube_boy import Color, FaceName
 from cube.domain.model.PartEdge import PartEdge
@@ -19,28 +21,28 @@ from ._elements import (
 
 if TYPE_CHECKING:
     from .Cube import Cube
-    from .Edge import Edge
+    from .Edge import Edge  # noqa: F401 - used in PartSlice["Edge"] generic
     from .Face import Face
     from .Part import Part
+    from .Center import Center  # noqa: F401 - used in PartSlice["Center"] generic
+    from .Corner import Corner  # noqa: F401 - used in PartSlice["Corner"] generic
     from cube.domain.tracker.MarkedPartTracker import MarkedPartTracker
     from cube.domain.tracker.PartSliceTracker import PartSliceTracker
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
-_Part: TypeAlias = "Part"
-_Edge: TypeAlias = "Edge"
 
-_TPartSlice = TypeVar("_TPartSlice", bound="PartSlice")
+_TPartSlice = TypeVar("_TPartSlice", bound="PartSlice[Any]")
+_TPartType = TypeVar("_TPartType", bound="Part")
 
 # a patch
 _SliceUniqueID: int = 0
 
 
-class PartSlice(ABC, Hashable):
-    """
+class PartSlice(ABC, Generic[_TPartType], Hashable):
+    """Generic base class for cube part slices, parameterized by the parent Part type.
 
-
-    Parts never chane position, only the color of the parts.
+    Parts never change position, only the color of the parts.
     The fixed part of: class:`PartSlice` is the: class:'Face's that the part is on
     and the index of the part.
 
@@ -51,13 +53,13 @@ class PartSlice(ABC, Hashable):
     Edge if composed of N slices, each belongs to two faces.
     The Center is composed of NxN slices, each belongs to one face
 
-    As mentioned above, ach slice if fixed in space and never moved.
+    As mentioned above, each slice is fixed in space and never moved.
     So the fixed id of slice is the faces it belongs to and the index of the slice in the cube part: class:`Part`.
 
     Fixed ID is defined as :
         fixed_id == frozenset(tuple([index]) + tuple(p.face.name for p in self._edges))
 
-    Why is it unique? If we consider only the faces, then we have N or NxN with the same faces, so we add the index \
+    Why is it unique? If we consider only the faces, then we have N or NxN with the same faces, so we add the index
     in the slice to make it unique.
 
     Other type of id is: attr:`_colors_id_by_colors`, this is the colors of the faces the slice is on.
@@ -67,8 +69,8 @@ class PartSlice(ABC, Hashable):
     the center, and it is meaningful only when the center has homogeneous color - 3x3 cube.
     3. It is not unique because we have N or NxN slices all with the faces.
 
-
-
+    Type Parameter:
+        _TPartType: The specific Part subclass (Edge, Corner, or Center) that owns this slice.
     """
     __slots__ = ["_cube", "_parent", "_index", "_edges",
                  "_fixed_id",
@@ -91,7 +93,7 @@ class PartSlice(ABC, Hashable):
         self._colors_id_by_colors: PartColorsID | None = None
         self._position_id: PartColorsID | None = None
         self._fixed_id: PartSliceHashID | None = None
-        self._parent: _Part | None = None
+        self._parent: _TPartType | None = None
         # attributes(like color) that are move around with the slice
         self.moveable_attributes: dict[Hashable, Any] = defaultdict(bool)
 
@@ -99,7 +101,7 @@ class PartSlice(ABC, Hashable):
         _SliceUniqueID += 1
         self._unique_id = _SliceUniqueID
 
-    def set_parent(self, p: _Part):
+    def set_parent(self, p: _TPartType) -> None:
         self._parent = p
 
     def finish_init(self):
@@ -382,7 +384,7 @@ class PartSlice(ABC, Hashable):
         raise ValueError(f"No color {c} on {self}")
 
     @classmethod
-    def all_match_faces(cls, parts: Sequence[_Part]):
+    def all_match_faces(cls, parts: Sequence["Part"]) -> bool:
         """
         Return true if all parts match - each part edge matches the face it is located on
         :param parts:
@@ -391,7 +393,7 @@ class PartSlice(ABC, Hashable):
         return all(p.match_faces for p in parts)
 
     @classmethod
-    def all_in_position(cls, parts: Sequence[_Part]):
+    def all_in_position(cls, parts: Sequence["Part"]) -> bool:
         """
         Return true if all parts match - each part edge matches the face it is located on
         :param parts:
@@ -446,28 +448,35 @@ class PartSlice(ABC, Hashable):
         return self._unique_id
 
     @property
-    def parent(self) -> _Part:
-        return self._parent  # type: ignore
+    def parent(self) -> _TPartType:
+        """Return the parent Part that owns this slice.
+
+        Returns:
+            The parent Part (Edge, Corner, or Center) with proper type based on the slice type.
+        """
+        assert self._parent is not None, "parent not set - finish_init() not called"
+        return self._parent
 
     @property
     def index(self):
         return self._index
 
-    def tracker(self) -> "PartSliceTracker[Self]":
+    def tracker(self) -> "PartSliceTracker[Self, _TPartType]":
         """Create a tracker context manager for this slice.
 
         Usage:
             with edge_wing.tracker() as t:
                 # ... cube rotations ...
                 current = t.slice  # finds the slice by marker
+                parent = t.parent  # type-safe: returns Edge/Center/Corner
 
         Returns:
             A PartSliceTracker that tracks this slice through rotations.
         """
         from cube.domain.tracker.PartSliceTracker import PartSliceTracker
-        return PartSliceTracker.with_tracker(self)
+        return PartSliceTracker(self)  # type: ignore[return-value]
 
-    def part_tracker(self) -> "MarkedPartTracker[Part]":
+    def part_tracker(self) -> "MarkedPartTracker[_TPartType]":
         """Create a tracker context manager for this slice's parent Part.
 
         This marks THIS specific slice and tracks where the parent Part moves.
@@ -480,12 +489,17 @@ class PartSlice(ABC, Hashable):
 
         Returns:
             A MarkedPartTracker that tracks the parent Part through rotations.
+            The type is inferred from the slice type:
+            - EdgeWing.part_tracker() -> MarkedPartTracker[Edge]
+            - CenterSlice.part_tracker() -> MarkedPartTracker[Center]
+            - CornerSlice.part_tracker() -> MarkedPartTracker[Corner]
         """
         from cube.domain.tracker.MarkedPartTracker import MarkedPartTracker
-        return MarkedPartTracker(self.parent, mark_slice=self)
+        return MarkedPartTracker(self.parent, mark_slice=self)  # type: ignore[arg-type]
 
 
-class EdgeWing(PartSlice):
+class EdgeWing(PartSlice["Edge"]):
+    """A slice of an Edge part, belonging to exactly two faces."""
 
     def __init__(self, index: int, *edges: PartEdge) -> None:
         super().__init__(index, *edges)
@@ -497,7 +511,7 @@ class EdgeWing(PartSlice):
         # my simple index
         self._my_index = index
 
-    def _clone_basic(self: "EdgeWing") -> "EdgeWing":
+    def _clone_basic(self) -> "EdgeWing":
         return EdgeWing(self.index, *self._clone_edges())
 
 
@@ -605,15 +619,8 @@ class EdgeWing(PartSlice):
         self.copy_colors(source, (source_other, shared_face),
                          (shared_face, dest_other))
 
-    @property
-    def parent(self) -> "Edge":
-
-        p = super().parent
-
-        from . import Edge
-
-        assert isinstance(p, Edge)
-        return p
+    # Note: parent property is now type-safe via PartSlice["Edge"] generic.
+    # No need to override - base class returns Edge type directly.
 
     @property
     def index(self) -> EdgeSliceIndex:
@@ -632,12 +639,13 @@ class EdgeWing(PartSlice):
         return f"{self.parent.name}[{self.index}]"
 
 
-class CenterSlice(PartSlice):
+class CenterSlice(PartSlice["Center"]):
+    """A slice of a Center part, belonging to exactly one face."""
 
     def __init__(self, index: CenterSliceIndex, *edges: PartEdge) -> None:
         super().__init__(index, *edges)
 
-    def _clone_basic(self: "CenterSlice") -> "CenterSlice":
+    def _clone_basic(self) -> "CenterSlice":
         return CenterSlice(self.index, self._edges[0].clone())
 
     @property
@@ -671,12 +679,13 @@ class CenterSlice(PartSlice):
         return self.edge.color,
 
 
-class CornerSlice(PartSlice):
+class CornerSlice(PartSlice["Corner"]):
+    """A slice of a Corner part, belonging to exactly three faces."""
 
     def __init__(self, p1: PartEdge, p2: PartEdge, p3: PartEdge) -> None:
         super().__init__(0, p1, p2, p3)
 
-    def _clone_basic(self: "CornerSlice") -> "CornerSlice":
+    def _clone_basic(self) -> "CornerSlice":
         _edges = self._clone_edges()
         return CornerSlice(_edges[0], _edges[1], _edges[2])
 

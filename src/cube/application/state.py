@@ -3,7 +3,7 @@ import tempfile
 from collections.abc import Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Literal, Tuple
+from typing import Any, Literal, Tuple
 
 from cube.application.animation.AnimationText import AnimationText
 from cube.application.Logger import Logger

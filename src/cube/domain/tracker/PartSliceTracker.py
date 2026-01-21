@@ -22,17 +22,26 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 from contextlib import ExitStack
 from types import TracebackType
-from typing import TYPE_CHECKING, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeAlias, TypeVar, overload
 
 from cube.domain.model._elements import CenterSliceIndex, SliceIndex
+from cube.domain.model.Part import Part
 from cube.domain.model.PartSlice import CenterSlice, CornerSlice, EdgeWing, PartSlice
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
+    from cube.domain.model.Edge import Edge
+    from cube.domain.model.Center import Center
+    from cube.domain.model.Corner import Corner
 
-PS = TypeVar("PS", bound=PartSlice)
+# TypeVars for PartSliceTracker generics
+# PS: The slice type (EdgeWing, CenterSlice, CornerSlice)
+# P: The parent Part type (Edge, Center, Corner)
+PS = TypeVar("PS", bound="PartSlice[Any]")
+P = TypeVar("P", bound=Part)
 
 _PART_SLICE_TRACKER_PREFIX = "_slice_track:"
+
 
 
 def _possible_edge_indices(original: int, n_slices: int) -> tuple[int, int]:
@@ -53,8 +62,12 @@ def _possible_center_indices(original: CenterSliceIndex, n: int) -> tuple[Center
     )
 
 
-class PartSliceTracker(Generic[PS]):
+class PartSliceTracker(Generic[PS, P]):
     """Tracks a PartSlice through cube rotations using markers.
+
+    Generic over two types:
+    - PS: The slice type (EdgeWing, CenterSlice, CornerSlice)
+    - P: The parent Part type (Edge, Center, Corner)
 
     The tracker marks one of the slice's edges with a unique key.
     The `slice` property searches for this marker to find the slice
@@ -64,6 +77,7 @@ class PartSliceTracker(Generic[PS]):
         with PartSliceTracker.with_tracker(my_slice) as t:
             # ... operations ...
             current = t.slice
+            parent = t.parent  # type-safe: returns Edge/Center/Corner
     """
 
     __slots__ = ["_cube", "_key", "_slice_type", "_slice_index"]
@@ -83,17 +97,34 @@ class PartSliceTracker(Generic[PS]):
         # Mark the first edge
         part_slice.edges[0].moveable_attributes[self._key] = True
 
+    # Factory method overloads for type-safe construction
+    @overload
     @staticmethod
-    def with_tracker(part_slice: PS) -> PartSliceTracker[PS]:
+    def with_tracker(part_slice: EdgeWing) -> "PartSliceTracker[EdgeWing, Edge]": ...
+
+    @overload
+    @staticmethod
+    def with_tracker(part_slice: CenterSlice) -> "PartSliceTracker[CenterSlice, Center]": ...
+
+    @overload
+    @staticmethod
+    def with_tracker(part_slice: CornerSlice) -> "PartSliceTracker[CornerSlice, Corner]": ...
+
+    @staticmethod
+    def with_tracker(part_slice: PartSlice[Any]) -> "PartSliceTracker[Any, Any]":
         """Create a tracker for the given part slice.
 
         Args:
             part_slice: The PartSlice to track.
 
         Returns:
-            A PartSliceTracker context manager.
+            A PartSliceTracker context manager with type-safe parent access.
+
+        Example:
+            tracker = PartSliceTracker.with_tracker(edge_wing)
+            edge: Edge = tracker.parent  # Type-safe!
         """
-        return PartSliceTracker(part_slice)
+        return PartSliceTracker(part_slice)  # type: ignore[return-value]
 
     @staticmethod
     def with_trackers(slices: Sequence[PS]) -> "MultiSliceTracker[PS]":
@@ -161,6 +192,23 @@ class PartSliceTracker(Generic[PS]):
 
         raise RuntimeError(f"Tracked slice not found with key {self._key}")
 
+    @property
+    def parent(self) -> P:
+        """Get the parent Part of the tracked slice.
+
+        Returns the exact Part type (Edge/Corner/Center) based on the tracker's
+        type parameters. Use `PartSliceTracker.with_tracker()` factory method
+        for automatic type inference.
+
+        Example:
+            tracker = PartSliceTracker.with_tracker(edge_wing)
+            edge: Edge = tracker.parent  # Type-safe! Returns Edge
+
+        Returns:
+            The parent Part (Edge, Corner, or Center) of the tracked slice.
+        """
+        return self.slice.parent  # type: ignore[return-value]
+
     def cleanup(self) -> None:
         """Remove the marker from the slice.
 
@@ -176,7 +224,7 @@ class PartSliceTracker(Generic[PS]):
                     del edge.moveable_attributes[self._key]
                     return
 
-    def __enter__(self) -> PartSliceTracker[PS]:
+    def __enter__(self) -> "PartSliceTracker[PS, P]":
         """Enter context manager."""
         return self
 
@@ -211,7 +259,7 @@ class MultiSliceTracker(Generic[PS]):
             slices: Sequence of PartSlices to track.
         """
         self._stack = ExitStack()
-        self._trackers: list[PartSliceTracker[PS]] = [
+        self._trackers: list[PartSliceTracker[PS, Any]] = [
             self._stack.enter_context(PartSliceTracker(s)) for s in slices
         ]
 
@@ -228,12 +276,12 @@ class MultiSliceTracker(Generic[PS]):
         return MultiSliceTracker(slices)
 
     @overload
-    def __getitem__(self, index: int) -> PartSliceTracker[PS]: ...
+    def __getitem__(self, index: int) -> PartSliceTracker[PS, Any]: ...
 
     @overload
-    def __getitem__(self, index: slice) -> list[PartSliceTracker[PS]]: ...
+    def __getitem__(self, index: slice) -> list[PartSliceTracker[PS, Any]]: ...
 
-    def __getitem__(self, index: int | slice) -> PartSliceTracker[PS] | list[PartSliceTracker[PS]]:
+    def __getitem__(self, index: int | slice) -> PartSliceTracker[PS, Any] | list[PartSliceTracker[PS, Any]]:
         """Access tracker by index.
 
         Args:
@@ -248,7 +296,7 @@ class MultiSliceTracker(Generic[PS]):
         """Return number of trackers."""
         return len(self._trackers)
 
-    def __iter__(self) -> Iterator[PartSliceTracker[PS]]:
+    def __iter__(self) -> Iterator[PartSliceTracker[PS, Any]]:
         """Iterate over trackers."""
         return iter(self._trackers)
 
@@ -273,3 +321,15 @@ class MultiSliceTracker(Generic[PS]):
     ) -> bool | None:
         """Exit context manager - delegates to ExitStack for proper cleanup."""
         return self._stack.__exit__(exc_type, exc_val, exc_tb)
+
+
+# Convenient type aliases for specific slice+part combinations
+# Use these instead of PartSliceTracker[SliceType, PartType]
+if TYPE_CHECKING:
+    from cube.domain.model.Edge import Edge
+    from cube.domain.model.Center import Center
+    from cube.domain.model.Corner import Corner
+
+EdgeWingTracker: TypeAlias = "PartSliceTracker[EdgeWing, Edge]"
+CenterSliceTracker_: TypeAlias = "PartSliceTracker[CenterSlice, Center]"
+CornerSliceTracker_: TypeAlias = "PartSliceTracker[CornerSlice, Corner]"
