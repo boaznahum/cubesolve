@@ -765,6 +765,7 @@ class Cube(CubeSupplier):
         """
         return self._front.edge_top
 
+    @property
     def fr(self) -> Edge:
         """
 
