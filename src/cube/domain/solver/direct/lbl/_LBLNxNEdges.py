@@ -252,7 +252,7 @@ class _LBLNxNEdges(SolverElement):
 
 
 
-                self.debug(lambda: f"💚💚 Wing {untracked_source_wing}  is on {cube.up} {untracked_source_edge.name}")
+                self.debug(lambda: f"💚💚 Wing {untracked_source_wing.parent_name_and_index_colors}  is on {cube.up} {untracked_source_edge.name}")
 
                 # now check if we can use it ?
 
@@ -371,11 +371,16 @@ class _LBLNxNEdges(SolverElement):
             alg: Alg
             if is_target_right_edge:
 
-                # U R U' [2]M' U R' U' [2]M
+                # U R
+                # U' [2]M'
+                # U R'
+                # U' [2]M
 
-                alg= (Algs.U + Algs.R + Algs.U.prime + Algs.M[alg_index].prime +
-                        Algs.U + Algs.R.prime + Algs.M[alg_index]
-                        )
+                alg = Algs.seq(Algs.U, Algs.R,
+                               Algs.U.prime, Algs.M[alg_index].prime,
+                               Algs.U, Algs.R.prime,
+                               Algs.U.prime, Algs.M[alg_index]
+                               )
             else:
                 #  U' L'
                 #  U [1]M'
