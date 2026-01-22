@@ -6,7 +6,7 @@ by multiple LBL solver components (NxNCenters2, _LBLSlices, etc.).
 MARKER SYSTEM DOCUMENTATION
 ===========================
 
-This module uses THREE distinct marker systems for center piece tracking:
+This module uses THREE distinct marker systems for center-piece tracking:
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ MARKER 1: VISUAL CHECKMARK (Visualization Only)                             │
@@ -86,13 +86,15 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import CenterSlice, PartSlice
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.direct.lbl._lbl_config import PUT_SOLVED_MARKERS
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
+
+_V_CHECKMARK = "checkmark"
 
 if TYPE_CHECKING:
     from cube.domain.solver.common.SolverHelper import SolverHelper
@@ -118,14 +120,14 @@ __SOLVED_FLAG_KEY = "NxNCenters2_center_pice_solved"
 
 
 def _is_cent_piece_solved(center_piece: CenterSlice) -> bool:
-    """Check if a center piece is marked as solved (MARKER 2)."""
-    return __SOLVED_FLAG_KEY in center_piece.edge.moveable_attributes
+    """Check if a center-piece is marked as solved (MARKER 2)."""
+    return is_slice_solved(center_piece)
 
-def is_slice_solved(slice: PartSlice) -> bool:
-    """Check if a center piece is marked as solved (MARKER 2)."""
+def is_slice_solved(part_slice: PartSlice) -> bool:
+    """Check if a center-piece is marked as solved (MARKER 2)."""
 
     # it is enough to search in one edge, they ar enver get apart
-    return __SOLVED_FLAG_KEY in slice.edges[0].moveable_attributes
+    return __SOLVED_FLAG_KEY in part_slice.edges[0].moveable_attributes
 
 
 def _mark_piece_solved(piece: PartSlice) -> None:
@@ -142,11 +144,20 @@ def clear_solved_markers(cube: Cube) -> None:
 
     This clears the algorithm markers from centers, edges, and corners.
 
-    claude: you forget visual markersi thi
     """
+
+    mm = cube.sp.marker_manager
+
+    _PUT_SOLVED_MARKERS = PUT_SOLVED_MARKERS
+
     for part_slice in cube.get_all_part_slices():
         for edge in part_slice.edges:
             edge.moveable_attributes.pop(__SOLVED_FLAG_KEY, None)
+
+            if _PUT_SOLVED_MARKERS:
+                mm.remove_marker(edge,_V_CHECKMARK, moveable=True)
+
+
 
 
 # =============================================================================
@@ -155,7 +166,12 @@ def clear_solved_markers(cube: Cube) -> None:
 # These functions set both visual markers (if enabled) and algorithm markers.
 
 
-def _mark_slice_with_v_mark_if_solved(piece: PartSlice) -> bool:
+def mark_slices_and_v_mark_if_solved(pieces: Iterable[PartSlice]) -> None:
+
+    for part_slice in pieces:
+        mark_slice_and_v_mark_if_solved(part_slice)
+
+def mark_slice_and_v_mark_if_solved(piece: PartSlice) -> bool:
     """Mark a piece with visual checkmark (MARKER 1) and solved flag (MARKER 2).
 
     Only marks if piece.match_faces is True (piece is in correct position).
@@ -177,17 +193,13 @@ def _mark_slice_with_v_mark_if_solved(piece: PartSlice) -> bool:
 
         # visualization only
         for edge in piece.edges:
-            mm.add_marker(edge, "checkmark", checkmark, moveable=True)
+            mm.add_marker(edge, _V_CHECKMARK, checkmark, moveable=True)
 
     # MARKER 2: Algorithm solved flag
     _mark_piece_solved(piece)
 
     return True
 
-
-def _mark_center_piece_with_v_mark_if_solved(center_piece: CenterSlice) -> None:
-    """Convenience wrapper for center pieces."""
-    _mark_slice_with_v_mark_if_solved(center_piece)
 
 
 # =============================================================================

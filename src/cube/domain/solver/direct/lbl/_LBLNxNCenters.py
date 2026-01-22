@@ -10,7 +10,7 @@ from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import (
-    position_l1, _is_cent_piece_solved, _mark_center_piece_with_v_mark_if_solved, _track_center_slice,
+    position_l1, _is_cent_piece_solved, mark_slice_and_v_mark_if_solved, _track_center_slice,
     _iterate_all_tracked_center_slices_index,
 )
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -259,7 +259,7 @@ class NxNCenters2(SolverHelper):
 
                 slice_piece = target_face.face.center.get_center_slice(rc)
 
-                _mark_center_piece_with_v_mark_if_solved(slice_piece)
+                mark_slice_and_v_mark_if_solved(slice_piece)
 
                 _track_center_slice(slice_piece, rc[1])
 
@@ -413,7 +413,7 @@ class NxNCenters2(SolverHelper):
 
             slice_piece = target_face.face.center.get_center_slice(rc)
 
-            _mark_center_piece_with_v_mark_if_solved(slice_piece)
+            mark_slice_and_v_mark_if_solved(slice_piece)
 
 
         color = target_face.color
@@ -450,7 +450,7 @@ class NxNCenters2(SolverHelper):
 
                 self.debug(f"Fixed slice {rc}")
 
-                _mark_center_piece_with_v_mark_if_solved(center_slice)
+                mark_slice_and_v_mark_if_solved(center_slice)
 
                 work_done = True
 
@@ -573,7 +573,7 @@ class NxNCenters2(SolverHelper):
 
         # if second point on source was replaced by the right color, then it is ok
         if second_point_is_solved:  # was it solved ?
-            _mark_center_piece_with_v_mark_if_solved(second_center_piece)
+            mark_slice_and_v_mark_if_solved(second_center_piece)
 
         return True
 

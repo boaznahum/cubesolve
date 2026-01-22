@@ -9,7 +9,7 @@ from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
 from cube.domain.solver.direct.lbl import _common
-from cube.domain.solver.direct.lbl._common import _mark_slice_with_v_mark_if_solved
+from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solved
 from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
@@ -144,7 +144,7 @@ class _LBLNxNEdges(SolverHelper):
         with self._logger.tab(
                 f"Working on edge {target_face.get_edge_position(target_edge)} / {index_on_target_edge} wing {required_color_ordered}"):
 
-            if _mark_slice_with_v_mark_if_solved(target_edge_wing):
+            if mark_slice_and_v_mark_if_solved(target_edge_wing):
                 debug(lambda: f"EdgWing {target_edge_wing} already solved")
                 return SmallStepSolveState.WAS_SOLVED
 
@@ -178,7 +178,7 @@ class _LBLNxNEdges(SolverHelper):
                     )
 
                 self.debug(lambda: f"❓❓❓Solving all source_slices: {source_slices} status: {status}")
-                if _mark_slice_with_v_mark_if_solved(target_edge_wing):
+                if mark_slice_and_v_mark_if_solved(target_edge_wing):
                     debug(lambda: f"✅✅✅✅ EdgWing {target_edge_wing.parent_name_and_index_colors} solved")
 
                 return status

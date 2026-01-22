@@ -31,14 +31,14 @@ Algorithm for ring center solving:
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Sequence, Any, Iterable
+from typing import TYPE_CHECKING, Sequence, Any, Iterable, Generator
 
-from cube.domain.model import CenterSlice, EdgeWing, FaceName, Color, PartSlice
+from cube.domain.model import CenterSlice, EdgeWing, PartSlice
 from cube.domain.model.Slice import Slice
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
-from cube.domain.solver.direct.lbl import _lbl_config
+from cube.domain.solver.direct.lbl import _lbl_config, _common
 from cube.domain.solver.direct.lbl._LBLNxNCenters import NxNCenters2
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.direct.lbl._common import setup_l1, _get_side_face_trackers
@@ -141,7 +141,7 @@ class _LBLSlices(SolverHelper):
 
         # Get edge wings and center slices at this slice index
         # We only care about center slices (index [1])
-        pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj._get_slices_by_index(slice_index)
+        pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj.get_slices_by_index(slice_index)
 
         pieces_to_test: list[Iterable[PartSlice[Any]]] = []
         if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
@@ -162,6 +162,8 @@ class _LBLSlices(SolverHelper):
             self, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> int:
         """Count consecutive solved slice rings starting from Layer 1.
+
+        claud: most of this description should be moved to _get_row_pieces
 
         ORIENTATION-INDEPENDENT DESIGN
         ==============================
@@ -199,24 +201,58 @@ class _LBLSlices(SolverHelper):
             Number of consecutive solved slice rings (0 to n_slices),
             counting from L1 face upward. Stops at first unsolved slice.
         """
-        # Get the slice sandwiched between L1 face and its opposite
-        # (e.g., L1=D → E slice, L1=L → M slice, L1=F → S slice)
-        slice_name = self.cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
-        slice_layout = self.cube.layout.get_slice(slice_name)
-
         count = 0
         for slice_row in range(self.n_slices):
-            # Convert L1-relative distance to slice coordinate system
-            cube_slice_index = slice_layout.distance_from_face_to_slice_index(
-                l1_tracker.face_name, slice_row, self.n_slices
-            )
+            all_solved = all(e.match_faces for e in self._get_row_pieces(l1_tracker, slice_row))
 
-            if self._is_slice_centers_and_edges_solved(cube_slice_index, th, l1_tracker):
+            if all_solved:
                 count += 1
             else:
                 break  # Stop at first unsolved slice
 
         return count
+
+
+    def _get_row_pieces(
+            self, l1_tracker: FaceTracker, slice_row: int
+    ) -> Generator[PartSlice]:
+        """Get all pieces (center slices and/or edge wings) at a given slice row.
+
+        Args:
+            l1_tracker: Face tracker for Layer 1 face
+            slice_row: Distance from L1 face (0 = closest to L1)
+
+        Yields:
+            PartSlice objects at the given row based on config flags
+            (BIG_LBL_RESOLVE_CENTER_SLICES and BIG_LBL_RESOLVE_EDGES_SLICES)
+        """
+
+        # Get the slice sandwiched between L1 face and its opposite
+        # (e.g., L1=D → E slice, L1=L → M slice, L1=F → S slice)
+        slice_name = self.cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
+        slice_layout = self.cube.layout.get_slice(slice_name)
+
+        # Convert L1-relative distance to slice coordinate system
+        cube_slice_index = slice_layout.distance_from_face_to_slice_index(
+            l1_tracker.face_name, slice_row, self.n_slices
+        )
+
+        slice_name = self.cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
+        slice_obj: Slice = self.cube.get_slice(slice_name)
+
+        # Get edge wings and center slices at this slice index
+        # We only care about center slices (index [1])
+        pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj.get_slices_by_index(cube_slice_index)
+
+        pieces_to_test: list[Iterable[PartSlice[Any]]] = []
+        if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
+            pieces_to_test.append(pieces[1])
+        if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
+            pieces_to_test.append(pieces[0])
+
+        yield from chain(*pieces_to_test)
+
+
 
     # =========================================================================
     # Solving operations
@@ -250,6 +286,10 @@ class _LBLSlices(SolverHelper):
                         target_face: FaceTracker,
                         face_row: int
                         ) -> None:
+
+
+        # help solver not to touch already solved
+        _common.mark_slices_and_v_mark_if_solved(self._get_row_pieces(l1_white_tracker, face_row))
 
         if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
             self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)

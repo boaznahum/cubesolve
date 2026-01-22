@@ -243,7 +243,7 @@ class Slice(SuperElement):
         """
         return self.cube.sized_layout.create_walking_info(self._name)
 
-    def _get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
+    def get_slices_by_index(self, slice_index: int) -> Tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
         """
         Get all edge wings and center slices for a given slice index.
 
@@ -356,7 +356,7 @@ class Slice(SuperElement):
             slice_cycles: list[tuple[PartSlice, PartSlice, PartSlice, PartSlice]] = []
 
             for i in s_range:
-                elements: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = self._get_slices_by_index(i)
+                elements: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = self.get_slices_by_index(i)
                 edges: Sequence[EdgeWing] = elements[0]
 
                 # Compute shared/other faces for edge cycles
@@ -516,7 +516,7 @@ class Slice(SuperElement):
         s_range = self._get_index_range(slices_indexes)
 
         for i in s_range:
-            edges, centers = self._get_slices_by_index(i)
+            edges, centers = self.get_slices_by_index(i)
 
             # Update edge stickers
             for edge_wing in edges:
@@ -546,7 +546,7 @@ class Slice(SuperElement):
         s_range = self._get_index_range(slice_indexes)
 
         for i in s_range:
-            elements: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = self._get_slices_by_index(i)
+            elements: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = self.get_slices_by_index(i)
 
             parts.extend(elements[0])
             parts.extend(elements[1])
