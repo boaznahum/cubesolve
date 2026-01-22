@@ -153,17 +153,56 @@ element_logger.debug(None, "solving...")
 # Output: "DEBUG: Solver:LBL:L1Cross: solving..."
 ```
 
+## Solver Logger Hierarchy
+
+All solvers follow a **consistent parent-child logger pattern**:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Root: cube.sp.logger                                                    │
+│  (from ApplicationAndViewState, accessed via factory)                    │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+             Solvers.lbl_big(op) passes op.cube.sp.logger
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  LayerByLayerNxNSolver (prefix: "LBL")                                   │
+│  self._logger = parent_logger.with_prefix("LBL", debug_flag=...)        │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+             shadow_solver = Solvers3x3.beginner(dual_op, self._logger)
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  BeginnerSolver3x3 (prefix: "Beginner3x3")                               │
+│  self._logger = parent_logger.with_prefix("Beginner3x3", debug_flag=...) │
+│  Output: "LBL:Beginner3x3: message"                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Rules:
+1. **`parent_logger` is REQUIRED** - never optional/None
+2. **Root solvers** receive `op.cube.sp.logger` from factory
+3. **Child solvers** receive `parent._logger`
+4. Each solver creates its own logger with its own `debug_flag`
+
 ## AbstractSolver / AbstractReducer Pattern
 
-Both accept `logger_prefix: str | None` in constructor:
+Both **REQUIRE** `parent_logger` parameter in constructor:
 
 ```python
 class AbstractSolver(Solver, ABC):
-    def __init__(self, op: OperatorProtocol, logger_prefix: str | None = None) -> None:
+    def __init__(
+        self,
+        op: OperatorProtocol,
+        parent_logger: ILogger,           # REQUIRED - never None
+        logger_prefix: str | None = None,
+    ) -> None:
         prefix = logger_prefix or "Solver"
-        self.__logger = self._cube.sp.logger.with_prefix(
+        self.__logger = parent_logger.with_prefix(
             prefix,
-            debug_flag=lambda: self._is_debug_enabled
+            debug_flag=lambda: self._is_debug_enabled  # Each solver controls its own debug
         )
 
     @property
@@ -175,11 +214,33 @@ class AbstractSolver(Solver, ABC):
         self._logger.debug(None, *args)
 ```
 
-Subclass passes prefix explicitly:
+### Factory Pattern (Root Solvers)
+
+Root solvers receive `op.cube.sp.logger` from the factory:
+
 ```python
-class NxNSolverOrchestrator(AbstractSolver):
-    def __init__(self, op, reducer, solver_3x3, solver_name):
-        super().__init__(op, logger_prefix=f"Solver:{solver_name.display_name}")
+# Solvers.py (factory)
+class Solvers:
+    @staticmethod
+    def lbl_big(op: OperatorProtocol) -> Solver:
+        parent_logger = op.cube.sp.logger  # Root logger
+        return LayerByLayerNxNSolver(op, parent_logger)
+```
+
+### Child Solver Pattern
+
+Child solvers receive `parent._logger`:
+
+```python
+# LayerByLayerNxNSolver.py
+class LayerByLayerNxNSolver(AbstractSolver):
+    def __init__(self, op: OperatorProtocol, parent_logger: ILogger) -> None:
+        super().__init__(op, parent_logger, logger_prefix="LBL")
+
+    def _solve_layer1_with_shadow(self, ...):
+        # Child solver receives self._logger as parent
+        shadow_solver = Solvers3x3.beginner(dual_op, self._logger)
+        shadow_solver.solve_3x3()  # Debug output: "LBL:Beginner3x3: ..."
 ```
 
 ## SolverElement Pattern
@@ -210,6 +271,100 @@ DebugFlagType = bool | Callable[[], bool] | None
 - `bool`: Static True/False
 - `Callable[[], bool]`: Dynamic evaluation (e.g., `lambda: self._is_debug_enabled`)
 - `None`: Inherit from parent or treat as False
+
+## The `debug_on` Parameter
+
+The first parameter to `debug()` is `debug_on`, which allows per-call control:
+
+```python
+# Signature:
+def debug(self, debug_on: DebugFlagType, *args, level: int = 3) -> None
+
+# Usage:
+logger.debug(True, "always show this")   # Override: always show
+logger.debug(False, "verbose detail")     # Override: only if debug_all
+logger.debug(None, "normal message")      # Use logger's debug_flag (common case)
+```
+
+### `debug_on` Values:
+
+| Value | Behavior |
+|-------|----------|
+| `True` | **Always show** (unless `quiet_all`) - for important messages |
+| `False` | **Only if `debug_all`** - for verbose details |
+| `None` | **Use logger's `debug_flag`** - the common case |
+
+### Use Cases:
+
+```python
+# Important progress message - always show
+logger.debug(True, "Phase 1 complete, starting phase 2")
+
+# Verbose loop details - only in full debug mode
+for i, item in enumerate(items):
+    logger.debug(False, f"Processing item {i}: {item}")
+
+# Normal debug message - uses inherited flag
+logger.debug(None, "Checking orientation...")
+```
+
+## Debug Control Flow
+
+Complete flow when `logger.debug(debug_on, *args)` is called:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ logger.debug(debug_on, "message")                                        │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Step 1: Check `quiet_all` (environment: CUBE_QUIET_ALL)                  │
+│         If True → SUPPRESS (no output)                                   │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ quiet_all is False
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Step 2: Resolve `debug_on` parameter                                     │
+│         debug_on=True  → effective_flag = True                           │
+│         debug_on=False → effective_flag = _debug_all (env var)           │
+│         debug_on=None  → effective_flag = evaluate logger's _debug_flag  │
+│                          (typically lambda: self._is_debug_enabled)      │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Step 3: Check effective_flag                                             │
+│         If False → SUPPRESS (no output)                                  │
+│         If True  → CHECK LEVEL                                           │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ effective_flag is True
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Step 4: Check level (if provided)                                        │
+│         message level > logger level → SUPPRESS                          │
+│         message level <= logger level → OUTPUT                           │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Where `_is_debug_enabled` Comes From (Solvers):
+
+```python
+# AbstractSolver
+@property
+def _is_debug_enabled(self) -> bool:
+    if self._debug_override is not None:
+        return self._debug_override     # Temporary override during solve
+    return self._cube.config.solver_debug  # GUI toggle (Ctrl+O)
+```
+
+This callback is captured when creating the logger:
+```python
+self.__logger = parent_logger.with_prefix(
+    prefix,
+    debug_flag=lambda: self._is_debug_enabled  # Evaluated on each debug() call
+)
+```
 
 ## Two Debug Control Systems
 

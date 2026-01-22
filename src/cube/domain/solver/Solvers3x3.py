@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
+
+if TYPE_CHECKING:
+    from cube.utils.logger_protocol import ILogger
 
 
 class Solvers3x3:
@@ -21,64 +26,59 @@ class Solvers3x3:
     """
 
     @staticmethod
-    def beginner(op: OperatorProtocol) -> Solver3x3Protocol:
+    def beginner(op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
         """
         Get beginner layer-by-layer 3x3 solver.
 
-        Uses the beginner method:
-        L1 Cross -> L1 Corners -> L2 -> L3 Cross -> L3 Corners
-
         Args:
             op: Operator for cube manipulation
+            parent_logger: Parent logger (cube.sp.logger for root, parent._logger for child)
 
         Returns:
             BeginnerSolver3x3 instance
         """
         from cube.domain.solver._3x3.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
-        return BeginnerSolver3x3(op)
+        return BeginnerSolver3x3(op, parent_logger)
 
     @staticmethod
-    def cfop(op: OperatorProtocol) -> Solver3x3Protocol:
+    def cfop(op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
         """
         Get CFOP (Fridrich) 3x3 solver.
 
-        Uses the CFOP method:
-        Cross -> F2L -> OLL -> PLL
-
         Args:
             op: Operator for cube manipulation
+            parent_logger: Parent logger (cube.sp.logger for root, parent._logger for child)
 
         Returns:
             CFOP3x3 instance
         """
         from cube.domain.solver._3x3.cfop.CFOP3x3 import CFOP3x3
-        return CFOP3x3(op)
+        return CFOP3x3(op, parent_logger)
 
     @staticmethod
-    def kociemba(op: OperatorProtocol) -> Solver3x3Protocol:
+    def kociemba(op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
         """
         Get Kociemba near-optimal 3x3 solver.
 
-        Uses Kociemba's two-phase algorithm for near-optimal solutions
-        (18-22 moves).
-
         Args:
             op: Operator for cube manipulation
+            parent_logger: Parent logger (cube.sp.logger for root, parent._logger for child)
 
         Returns:
             Kociemba3x3 instance
         """
         from cube.domain.solver._3x3.kociemba.Kociemba3x3 import Kociemba3x3
-        return Kociemba3x3(op)
+        return Kociemba3x3(op, parent_logger)
 
     @classmethod
-    def by_name(cls, name: str, op: OperatorProtocol) -> Solver3x3Protocol:
+    def by_name(cls, name: str, op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
         """
         Get a 3x3 solver by its name.
 
         Args:
             name: Solver name - "beginner", "cfop", or "kociemba"
             op: Operator for cube manipulation
+            parent_logger: Parent logger (cube.sp.logger for root, parent._logger for child)
 
         Returns:
             Solver3x3Protocol instance
@@ -88,11 +88,11 @@ class Solvers3x3:
         """
         match name:
             case "beginner":
-                return cls.beginner(op)
+                return cls.beginner(op, parent_logger)
             case "cfop":
-                return cls.cfop(op)
+                return cls.cfop(op, parent_logger)
             case "kociemba":
-                return cls.kociemba(op)
+                return cls.kociemba(op, parent_logger)
             case _:
                 raise ValueError(f"Unknown 3x3 solver: {name}. "
                                  f"Options: beginner, cfop, kociemba")

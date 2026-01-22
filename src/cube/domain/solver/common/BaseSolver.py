@@ -8,6 +8,7 @@ from .AbstractSolver import AbstractSolver
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
+    from cube.utils.logger_protocol import ILogger
 
 _Common: TypeAlias = "CommonOp"
 
@@ -15,8 +16,13 @@ _Common: TypeAlias = "CommonOp"
 class BaseSolver(AbstractSolver, ABC):
     __slots__: list[str] = ["_op", "_cube", "_debug_override"]
 
-    def __init__(self, op) -> None:
-        super().__init__(op)
+    def __init__(
+        self,
+        op,
+        parent_logger: "ILogger",
+        logger_prefix: str | None = None,
+    ) -> None:
+        super().__init__(op, parent_logger, logger_prefix=logger_prefix)
 
     def solution(self) -> Alg:
         if self.is_solved:

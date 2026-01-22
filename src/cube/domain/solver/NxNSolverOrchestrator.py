@@ -29,7 +29,7 @@ from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    pass
+    from cube.utils.logger_protocol import ILogger
 
 
 class NxNSolverOrchestrator(AbstractSolver):
@@ -66,6 +66,7 @@ class NxNSolverOrchestrator(AbstractSolver):
     def __init__(
         self,
         op: OperatorProtocol,
+        parent_logger: "ILogger",
         reducer: ReducerProtocol,
         solver_3x3: Solver3x3Protocol,
         solver_name: SolverName
@@ -75,11 +76,12 @@ class NxNSolverOrchestrator(AbstractSolver):
 
         Args:
             op: Operator for cube manipulation
+            parent_logger: Parent logger (cube.sp.logger for root solver)
             reducer: Reducer for NxN -> 3x3 reduction
             solver_3x3: Solver for 3x3 cube
             solver_name: Name identifier for this solver
         """
-        super().__init__(op, logger_prefix=f"Solver:{solver_name.display_name}")
+        super().__init__(op, parent_logger, logger_prefix=f"Solver:{solver_name.display_name}")
         self._op = op
         self._reducer = reducer
         self._solver_3x3 = solver_3x3
@@ -212,7 +214,10 @@ class NxNSolverOrchestrator(AbstractSolver):
         # For solvers that can't detect parity (Kociemba), use BeginnerSolver3x3
         # as a "parity detector" - it will throw exceptions that we catch
         if use_parity_detector:
-            parity_detector: Solver3x3Protocol | None = BeginnerSolver3x3(self._op)
+            # Pass parent_logger so parity detector inherits our debug settings
+            parity_detector: Solver3x3Protocol | None = BeginnerSolver3x3(
+                self._op, parent_logger=self._logger
+            )
         else:
             parity_detector = None
 

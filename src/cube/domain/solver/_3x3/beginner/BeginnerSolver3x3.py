@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from cube.domain.solver._3x3.shared.L1Cross import L1Cross
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
+
+if TYPE_CHECKING:
+    from cube.utils.logger_protocol import ILogger
 
 from ._L1Corners import L1Corners
 from ._L2 import L2
@@ -39,14 +44,19 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
 
     __slots__ = ["l1_cross", "l1_corners", "l2", "l3_cross", "l3_corners"]
 
-    def __init__(self, op: OperatorProtocol) -> None:
+    def __init__(
+        self,
+        op: OperatorProtocol,
+        parent_logger: "ILogger",
+    ) -> None:
         """
         Create a BeginnerSolver3x3.
 
         Args:
             op: Operator for cube manipulation
+            parent_logger: Parent logger (cube.sp.logger for root, parent._logger for child)
         """
-        super().__init__(op)
+        super().__init__(op, parent_logger, logger_prefix="Beginner3x3")
 
         self.l1_cross = L1Cross(self)
         self.l1_corners = L1Corners(self)

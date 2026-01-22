@@ -55,7 +55,7 @@ from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    pass
+    from cube.utils.logger_protocol import ILogger
 
 
 class CageNxNSolver(BaseSolver):
@@ -83,14 +83,15 @@ class CageNxNSolver(BaseSolver):
 
     __slots__ = ["_nxn_edges", "_nxn_corners"]
 
-    def __init__(self, op: OperatorProtocol) -> None:
+    def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
         """
         Create a Cage method solver.
 
         Args:
             op: Operator for cube manipulation
+            parent_logger: Parent logger (cube.sp.logger for root solver)
         """
-        super().__init__(op)
+        super().__init__(op, parent_logger, logger_prefix="Cage")
 
         # NxNCorners provides corner swap parity fix algorithm
         self._nxn_corners = NxNCorners(self)
@@ -502,7 +503,7 @@ class CageNxNSolver(BaseSolver):
         # Create solver with DualOperator
         # Solver sees shadow cube via dual_op.cube
         # But moves and annotations go to real cube too!
-        shadow_solver = Solvers3x3.by_name(solver_name, dual_op)
+        shadow_solver = Solvers3x3.by_name(solver_name, dual_op, self._logger)
         shadow_solver.solve_3x3()
 
         # No need to apply history - DualOperator already played on real cube!

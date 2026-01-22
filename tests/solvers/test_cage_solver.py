@@ -3,6 +3,14 @@
 import pytest
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
+from cube.domain.solver.Solvers import Solvers
+
+
+def _cage(app: AbstractApp) -> CageNxNSolver:
+    """Create CageNxNSolver through factory with correct type hint."""
+    solver = Solvers.cage(app.op)
+    assert isinstance(solver, CageNxNSolver)
+    return solver
 
 
 @pytest.mark.parametrize("size", [5, 7])
@@ -10,7 +18,7 @@ def test_cage_solver_status_on_solved_cube(size: int) -> None:
     """Test status reporting on a solved cube."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
 
     # Solved cube should report "Solved"
     assert solver.status == "Solved"
@@ -24,7 +32,7 @@ def test_cage_solver_status_on_scrambled_cube(size: int) -> None:
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
 
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
 
     # After scramble, status should show pending phases
     status = solver.status
@@ -36,7 +44,7 @@ def test_cage_solver_status_on_scrambled_cube(size: int) -> None:
 def test_cage_solver_state_inspection(size: int) -> None:
     """Test stateless inspection methods."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
 
     # On solved cube
     assert solver._are_edges_solved()
@@ -56,7 +64,7 @@ def test_cage_solver_state_inspection(size: int) -> None:
 def test_cage_solver_on_3x3(size: int) -> None:
     """Test that 3x3 cube is trivially solved (no edges/centers to reduce)."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
 
     # 3x3 has no edge/center reduction needed - is3x3 is always True
     assert solver._are_edges_solved()
@@ -71,7 +79,7 @@ def test_cage_solver_solves_edges(size: int) -> None:
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
 
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
 
     # Edges should not be solved before
     assert not solver._are_edges_solved(), "Edges should not be solved after scramble"
@@ -97,7 +105,7 @@ def test_cage_solver_parity_detection(seed: int) -> None:
     # Scramble with different seeds
     app.scramble(seed, None, animation=False, verbose=False)
 
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
     results = solver.solve()
 
     # Edges should be solved
@@ -122,7 +130,7 @@ def test_cage_solver_solves_corners(size: int) -> None:
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
 
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
 
     # Before solve - corners and edges should be scrambled
     assert not solver._are_corners_solved(), "Corners should not be solved after scramble"
@@ -155,7 +163,7 @@ def test_cage_solver_even_cube_status(size: int) -> None:
     """Test status reporting on even cubes."""
     app = AbstractApp.create_non_default(cube_size=size, animation=False)
 
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
 
     # Solved cube should report "Solved"
     assert solver.status == "Solved"
@@ -170,7 +178,7 @@ def test_cage_solver_even_cube_solves(size: int) -> None:
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
 
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
 
     # Solve
     solver.solve()
@@ -188,7 +196,7 @@ def test_cage_solver_even_cube_multiple_scrambles(seed: int) -> None:
     # Scramble with different seeds
     app.scramble(seed, None, animation=False, verbose=False)
 
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
     solver.solve()
 
     # Cube should be solved

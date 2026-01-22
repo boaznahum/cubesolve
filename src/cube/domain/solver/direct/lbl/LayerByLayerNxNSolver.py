@@ -25,6 +25,8 @@ See docs/design/layer_by_layer_nxn.md for detailed design.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from cube.domain.model import Corner, Part
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
@@ -37,6 +39,9 @@ from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
+
+if TYPE_CHECKING:
+    from cube.utils.logger_protocol import ILogger
 
 class LayerByLayerNxNSolver(BaseSolver):
     """
@@ -59,18 +64,19 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     __slots__ = ["_nxn_edges", "_shadow_helper", "_lbl_slices"]
 
-    def __init__(self, op: OperatorProtocol) -> None:
+    def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
         """
         Create a Layer-by-Layer solver.
 
         Args:
             op: Operator for cube manipulation
+            parent_logger: Parent logger (cube.sp.logger for root solver)
 
         Note:
             Layer 1 color is determined by FIRST_FACE_COLOR config
             (accessed via config.first_face_color and FaceTracker).
         """
-        super().__init__(op)
+        super().__init__(op, parent_logger, logger_prefix="LBL")
 
         # Reuse NxNEdges for edge solving
         self._nxn_edges = NxNEdges(self, advanced_edge_parity=False)
@@ -402,7 +408,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         dual_op = DualOperator(shadow_cube, self._op)
 
         # Use beginner method for L1 solving (same approach as CageNxNSolver)
-        shadow_solver = Solvers3x3.beginner(dual_op)
+        shadow_solver = Solvers3x3.beginner(dual_op, self._logger)
 
         # Solve only L1 (cross + corners)
         shadow_solver.solve_3x3(what=what)

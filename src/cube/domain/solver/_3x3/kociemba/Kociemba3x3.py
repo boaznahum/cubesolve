@@ -139,6 +139,7 @@ from cube.domain.solver.SolverName import SolverName
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
+    from cube.utils.logger_protocol import ILogger
 
 
 # Face order for Kociemba's 54-char string: U R F D L B
@@ -170,9 +171,12 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
 
     __slots__ = ["_op", "_debug_override"]
 
-    def __init__(self, op: OperatorProtocol) -> None:
-        super().__init__(op)
-        self._op = op
+    def __init__(
+        self,
+        op: OperatorProtocol,
+        parent_logger: "ILogger",
+    ) -> None:
+        super().__init__(op, parent_logger, logger_prefix="Kociemba3x3")
         self._op = op
         self._debug_override: bool | None = None
 

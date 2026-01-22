@@ -33,6 +33,15 @@ from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
+from cube.domain.solver.Solvers import Solvers
+
+
+def _cage(app: AbstractApp) -> CageNxNSolver:
+    """Create CageNxNSolver through factory with correct type hint."""
+    solver = Solvers.cage(app.op)
+    assert isinstance(solver, CageNxNSolver)
+    return solver
+
 
 # Get supported pairs for parametrization
 SUPPORTED_PAIRS = _get_supported_pairs()
@@ -190,7 +199,7 @@ def _is_center_position(n_slices: int, ltr_y: int, ltr_x: int) -> bool:
 def test_create_helper(cube_size: int) -> None:
     """Create a cube and instantiate the helper via a solver."""
     app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
     helper = CommunicatorHelper(solver)
 
     assert helper.n_slices == cube_size - 2
@@ -227,7 +236,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
     source_face_name, target_face_name = face_pair
 
     app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
     helper = CommunicatorHelper(solver)
     cube = app.cube
     n_slices = cube.n_slices
@@ -271,7 +280,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     # Reset cube to pristine state for each test iteration
                     cube = app.cube
                     cube.reset()
-                    solver = CageNxNSolver(app.op)
+                    solver = _cage(app)
                     helper = CommunicatorHelper(solver)
 
                     # Re-get faces from reset cube
@@ -508,7 +517,7 @@ def test_communicator_raises_on_incompatible_blocks(cube_size: int) -> None:
     positions (0,1) are in different rotation orbits and cannot be aligned.
     """
     app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
-    solver = CageNxNSolver(app.op)
+    solver = _cage(app)
     helper = CommunicatorHelper(solver)
     cube = app.cube
 

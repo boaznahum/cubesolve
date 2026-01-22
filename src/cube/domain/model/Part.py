@@ -312,7 +312,7 @@ class Part(ABC, CubeElement):
 
         by_pos: PartColorsID | None = self._colors_id_by_pos
 
-        if not by_pos or (False and self.config.dont_optimized_part_id):
+        if not by_pos or (self.config.dont_optimized_part_id):
             by_pos = frozenset(e.face.color for e in self._3x3_representative_edges)
             self._colors_id_by_pos = by_pos
 

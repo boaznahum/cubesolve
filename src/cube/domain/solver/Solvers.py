@@ -42,11 +42,12 @@ class Solvers:
         from .Reducers import Reducers
         from .Solvers3x3 import Solvers3x3
 
-        solver_3x3 = Solvers3x3.beginner(op)
+        parent_logger = op.cube.sp.logger
+        solver_3x3 = Solvers3x3.beginner(op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=False)
 
         return NxNSolverOrchestrator(
-            op, reducer, solver_3x3, SolverName.LBL
+            op, parent_logger, reducer, solver_3x3, SolverName.LBL
         )
 
     @staticmethod
@@ -63,11 +64,12 @@ class Solvers:
         from .Reducers import Reducers
         from .Solvers3x3 import Solvers3x3
 
-        solver_3x3 = Solvers3x3.cfop(op)
+        parent_logger = op.cube.sp.logger
+        solver_3x3 = Solvers3x3.cfop(op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
 
         return NxNSolverOrchestrator(
-            op, reducer, solver_3x3, SolverName.CFOP
+            op, parent_logger, reducer, solver_3x3, SolverName.CFOP
         )
 
     @staticmethod
@@ -84,11 +86,12 @@ class Solvers:
         from .Reducers import Reducers
         from .Solvers3x3 import Solvers3x3
 
-        solver_3x3 = Solvers3x3.kociemba(op)
+        parent_logger = op.cube.sp.logger
+        solver_3x3 = Solvers3x3.kociemba(op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
 
         return NxNSolverOrchestrator(
-            op, reducer, solver_3x3, SolverName.KOCIEMBA
+            op, parent_logger, reducer, solver_3x3, SolverName.KOCIEMBA
         )
 
     @staticmethod
@@ -106,7 +109,8 @@ class Solvers:
         """
         from .direct.cage.CageNxNSolver import CageNxNSolver
 
-        return CageNxNSolver(op)
+        parent_logger = op.cube.sp.logger
+        return CageNxNSolver(op, parent_logger)
 
     @staticmethod
     def lbl_big(op: OperatorProtocol) -> Solver:
@@ -123,7 +127,8 @@ class Solvers:
         """
         from .direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 
-        return LayerByLayerNxNSolver(op)
+        parent_logger = op.cube.sp.logger
+        return LayerByLayerNxNSolver(op, parent_logger)
 
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:

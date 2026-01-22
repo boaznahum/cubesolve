@@ -185,6 +185,3 @@ class ILogger(Protocol):
         """
         ...
 
-
-# Keep IPrefixLogger as an alias for backward compatibility
-IPrefixLogger = ILogger

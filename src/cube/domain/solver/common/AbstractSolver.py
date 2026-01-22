@@ -16,18 +16,35 @@ if TYPE_CHECKING:
 
 
 class AbstractSolver(Solver, ABC):
-    """Abstract base class for all solvers."""
+    """Abstract base class for all solvers.
+
+    Logger Architecture:
+        Every solver receives a parent_logger and creates its own logger via:
+            parent_logger.with_prefix(prefix, debug_flag=lambda: self._is_debug_enabled)
+
+        - Root solver: receives cube.sp.logger as parent_logger
+        - Child solver: receives parent._logger as parent_logger
+
+        Each solver controls its own debug output via its own _is_debug_enabled.
+        Prefix chaining provides context: "LBL:Beginner3x3:L1Cross: message"
+    """
     __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override", "__logger"]
 
-    def __init__(self, op: OperatorProtocol, logger_prefix: str | None = None) -> None:
+    def __init__(
+        self,
+        op: OperatorProtocol,
+        parent_logger: ILogger,
+        logger_prefix: str | None = None,
+    ) -> None:
         super().__init__()
         # Set _op and _cube BEFORE CommonOp - CommonOp needs self.op
         self._op = op
         self._cube = op.cube
         self._debug_override: bool | None = None
-        # Create logger with prefix (passed explicitly by subclass)
+
+        # Create logger from parent with this solver's own debug_flag
         prefix = logger_prefix or "Solver"
-        self.__logger: ILogger = self._cube.sp.logger.with_prefix(
+        self.__logger: ILogger = parent_logger.with_prefix(
             prefix,
             debug_flag=lambda: self._is_debug_enabled
         )

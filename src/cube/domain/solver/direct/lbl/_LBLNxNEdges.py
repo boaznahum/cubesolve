@@ -161,7 +161,7 @@ class _LBLNxNEdges(SolverElement):
                 source_slices: list[EdgeWing] = [*self.cqr.find_all_slice_in_edges(self.cube.edges,
                                                                                    lambda
                                                                                        s:
-                                                                                   s is not target_edge_wing and  # don't select target as source
+                                                                                   #s is not target_edge_wing and  # don't select target as source
                                                                                    not _common.is_slice_solved(s) and  # dont touch solved slices !!!
                                                                                    s.index in required_indexes and s.colors_id == required_color_unordered)]
 
