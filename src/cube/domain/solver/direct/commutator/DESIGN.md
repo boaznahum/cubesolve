@@ -322,21 +322,21 @@ a commutator pattern! We can learn from and reuse this.
 SolverElementsProvider (Protocol)      # Minimal interface for solver components
 ├── BaseSolver                         # Common solver functionality
 │   └── CommutatorNxNSolver            # Our new solver
-│       ├── CommutatorCenters          # SolverElement for centers
-│       ├── CommutatorEdges            # SolverElement for edges
-│       └── CommutatorCorners          # SolverElement for corners
+│       ├── CommutatorCenters          # SolverHelper for centers
+│       ├── CommutatorEdges            # SolverHelper for edges
+│       └── CommutatorCorners          # SolverHelper for corners
 │
 └── AbstractReducer                    # Base class for reducers
     └── BeginnerReducer                # Uses NxNCenters, NxNEdges
 
-SolverElement(provider: SolverElementsProvider)  # Base for solver components
+SolverHelper(provider: SolverElementsProvider)  # Base for solver components
 ├── Provides: cube, op, ann, cmn, cqr
-├── CommutatorCenters(SolverElement)
-├── CommutatorEdges(SolverElement)
-└── CommutatorCorners(SolverElement)
+├── CommutatorCenters(SolverHelper)
+├── CommutatorEdges(SolverHelper)
+└── CommutatorCorners(SolverHelper)
 ```
 
-**Note:** `SolverElement` accepts any `SolverElementsProvider` (not just `BaseSolver`),
+**Note:** `SolverHelper` accepts any `SolverElementsProvider` (not just `BaseSolver`),
 allowing both solvers and reducers to use the same component infrastructure.
 See: `SOLVER_ARCHITECTURE.md` for details.
 
@@ -345,7 +345,7 @@ See: `SOLVER_ARCHITECTURE.md` for details.
 | Component | Location | What it provides |
 |-----------|----------|------------------|
 | `SolverElementsProvider` | `protocols/SolverElementsProvider.py` | Minimal interface for solver components |
-| `SolverElement` | `common/SolverElement.py` | Base class with cube, op, annotations |
+| `SolverHelper` | `common/SolverHelper.py` | Base class with cube, op, annotations |
 | `BaseSolver` | `common/BaseSolver.py` | Solver base with debug, solve interface |
 | `CommonOp` | `common/CommonOp.py` | `bring_face_front()`, `bring_edge_to_front_left_by_whole_rotate()` |
 | `CubeQueries2` | `model/CubeQueries2.py` | `find_edge()`, `rotate_and_check()`, `_count_color_on_face()` |
@@ -727,10 +727,11 @@ class CommutatorNxNSolver(BaseSolver):
 **File:** `CommutatorCenters.py` (new file)
 
 ```python
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
-class CommutatorCenters(SolverElement):
+
+class CommutatorCenters(SolverHelper):
     """Solves center pieces using commutators."""
 
     def __init__(self, solver: SolverElementsProvider) -> None:
@@ -806,7 +807,7 @@ class CommutatorCenters(SolverElement):
 **File:** `CommutatorEdges.py` (new file)
 
 ```python
-class CommutatorEdges(SolverElement):
+class CommutatorEdges(SolverHelper):
     """Solves edge pieces using commutators."""
 
     @property
@@ -845,7 +846,7 @@ class CommutatorEdges(SolverElement):
 **File:** `CommutatorCorners.py` (new file)
 
 ```python
-class CommutatorCorners(SolverElement):
+class CommutatorCorners(SolverHelper):
     """Solves corner pieces using commutators."""
 
     # Classic corner commutators

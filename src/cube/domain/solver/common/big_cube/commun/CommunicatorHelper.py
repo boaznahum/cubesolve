@@ -29,7 +29,7 @@ from cube.domain.model import FaceName, Cube, CenterSlice
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -68,7 +68,7 @@ class CommutatorResult:
     _secret: _InternalCommData | None = None
 
 
-class CommunicatorHelper(SolverElement):
+class CommunicatorHelper(SolverHelper):
     """
     Helper for the block commutator algorithm on NxN cubes.
 

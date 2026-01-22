@@ -36,6 +36,7 @@ from .concrete import (
     ScrambleCommand,
     ScrambleF9Command,
     # Shadow
+    ShadowToggleAllCommand,
     ShadowToggleCommand,
     SingleStepToggleCommand,
     SizeDecCommand,
@@ -218,6 +219,7 @@ class Commands:
     SHADOW_TOGGLE_L = ShadowToggleCommand(FaceName.L)
     SHADOW_TOGGLE_D = ShadowToggleCommand(FaceName.D)
     SHADOW_TOGGLE_B = ShadowToggleCommand(FaceName.B)
+    SHADOW_TOGGLE_ALL = ShadowToggleAllCommand()
 
     # =========================================================================
     # CUBE SIZE

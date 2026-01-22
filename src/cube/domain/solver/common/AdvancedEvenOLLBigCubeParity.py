@@ -1,10 +1,10 @@
 from cube.domain.algs import Algs
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
-class AdvancedEdgeEdgeParity(SolverElement):
+class AdvancedEdgeEdgeParity(SolverHelper):
 
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)

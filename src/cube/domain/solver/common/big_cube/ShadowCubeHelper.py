@@ -1,11 +1,11 @@
 # claude document this class
 from cube.domain.model.Cube import Cube
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
-class ShadowCubeHelper(SolverElement):
+class ShadowCubeHelper(SolverHelper):
     def __init__(self, slv: SolverElementsProvider):
         super().__init__(slv)
 

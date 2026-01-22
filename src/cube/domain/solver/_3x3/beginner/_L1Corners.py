@@ -4,11 +4,11 @@ from cube.domain.algs import Algs
 from cube.domain.model import Corner, Part, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
-class L1Corners(SolverElement):
+class L1Corners(SolverHelper):
     __slots__: list[str] = []
 
     def __init__(self, slv: SolverElementsProvider) -> None:

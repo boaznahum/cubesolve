@@ -240,7 +240,7 @@ SolverElementsProvider (Protocol)    <- Minimal interface for solver components
 └── AbstractReducer                  <- Base class for NxN reducers
     └── BeginnerReducer
 
-SolverElement(provider: SolverElementsProvider)  <- All step solvers
+SolverHelper(provider: SolverElementsProvider)  <- All step solvers
 ├── L1Cross, L1Corners, L2           (Layer 1-2)
 ├── L3Cross, L3Corners               (Layer 3)
 ├── OLL, PLL                         (CFOP steps)
@@ -849,7 +849,7 @@ class BaseSolver(SolverElementsProvider, ABC):
 - ✅ Common functionality in base class
 - ✅ Subclasses only override what's needed
 - ✅ Enforces structure
-- ✅ Both solvers and reducers can use SolverElement subclasses
+- ✅ Both solvers and reducers can use SolverHelper subclasses
 
 ### 7. Flyweight Pattern (Part IDs)
 

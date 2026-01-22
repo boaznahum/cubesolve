@@ -30,11 +30,12 @@ Algorithm for ring center solving:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Sequence
+from itertools import chain
+from typing import TYPE_CHECKING, Sequence, Any, Iterable
 
-from cube.domain.model import CenterSlice, EdgeWing, FaceName, Color
+from cube.domain.model import CenterSlice, EdgeWing, FaceName, Color, PartSlice
 from cube.domain.model.Slice import Slice
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl import _lbl_config
@@ -46,7 +47,7 @@ if TYPE_CHECKING:
     from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 
 
-class _LBLSlices(SolverElement):
+class _LBLSlices(SolverHelper):
     """Helper for solving middle slices in layer-by-layer method.
 
     Wraps NxNCenters and NxNEdges with slice-based operations.
@@ -106,7 +107,7 @@ class _LBLSlices(SolverElement):
     # State inspection
     # =========================================================================
 
-    def _is_slice_centers_solved(
+    def _is_slice_centers_and_edges_solved(
             self, slice_index: int, th: FacesTrackerHolder, l1_tracker: FaceTracker
     ) -> bool:
         """Check if all ring centers for a specific slice are solved.
@@ -141,17 +142,21 @@ class _LBLSlices(SolverElement):
         # Get edge wings and center slices at this slice index
         # We only care about center slices (index [1])
         pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj._get_slices_by_index(slice_index)
-        center_pieces = pieces[1]
 
-        # Build expected color map from trackers (handles even cube color tracking)
-        required_colors: dict[FaceName, Color] = {t.face_name: t.color for t in th.trackers}
+        pieces_to_test: list[Iterable[PartSlice[Any]]] = []
+        if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
+            pieces_to_test.append(pieces[1])
+        if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
+            pieces_to_test.append(pieces[0])
 
-        # Check each center piece has the correct color for its face
-        for center in center_pieces:
-            if center.color != required_colors[center.face.name]:
-                return False
-
-        return True
+        # todo:even: works for odd only, in odd the actual color is from the tracker
+        return all ( slice_piece.match_faces  for slice_piece in chain(*pieces_to_test) )
+        # # Check each center piece has the correct color for its face
+        # for center in center_pieces:
+        #     if center.color != required_colors[center.face.name]:
+        #         return False
+        #
+        # return True
 
     def count_solved_slice_centers(
             self, th: FacesTrackerHolder, l1_tracker: FaceTracker
@@ -206,7 +211,7 @@ class _LBLSlices(SolverElement):
                 l1_tracker.face_name, slice_row, self.n_slices
             )
 
-            if self._is_slice_centers_solved(cube_slice_index, th, l1_tracker):
+            if self._is_slice_centers_and_edges_solved(cube_slice_index, th, l1_tracker):
                 count += 1
             else:
                 break  # Stop at first unsolved slice
@@ -248,7 +253,9 @@ class _LBLSlices(SolverElement):
 
         if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
             self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
-        self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
+
+        if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
+            self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
 
 
     def solve_all_faces_all_rows(

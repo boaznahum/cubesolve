@@ -1,6 +1,6 @@
 """SolverElementsProvider protocol - minimal interface for solver components.
 
-This protocol defines the minimal interface that SolverElement and CommonOp
+This protocol defines the minimal interface that SolverHelper and CommonOp
 need from a solver. It allows components like reducers to use solver elements
 without being full solvers themselves.
 
@@ -25,7 +25,7 @@ class SolverElementsProvider(Protocol, metaclass=ABCMeta):
     """
     Minimal protocol for classes that support solver elements.
 
-    This is the minimal interface that SolverElement and CommonOp need.
+    This is the minimal interface that SolverHelper and CommonOp need.
     Both BaseSolver and AbstractReducer implement this protocol.
 
     This enables reducers to use solver components (like NxNCenters, NxNEdges)

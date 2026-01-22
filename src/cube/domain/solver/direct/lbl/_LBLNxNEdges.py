@@ -15,13 +15,13 @@ from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTrack
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.solver.solver import SmallStepSolveState
 from cube.utils.OrderedSet import OrderedSet
 
 
-class _LBLNxNEdges(SolverElement):
+class _LBLNxNEdges(SolverHelper):
     """
     Edge solver for NxN cubes using layer-by-layer approach.
 

@@ -5,11 +5,11 @@ from cube.domain.model import Color, Edge, Part, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.Tracker import EdgeTracker
 
 
-class L2(SolverElement):
+class L2(SolverHelper):
     __slots__: list[str] = []
 
     def __init__(self, slv: BaseSolver) -> None:

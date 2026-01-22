@@ -3,12 +3,12 @@ from cube.domain.exceptions import EvenCubeCornerSwapException, InternalSWError
 from cube.domain.model import Corner, FaceName, Part
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.Tracker import CornerTracker
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
-class L3Corners(SolverElement):
+class L3Corners(SolverHelper):
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv)

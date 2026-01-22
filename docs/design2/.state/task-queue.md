@@ -93,7 +93,7 @@
 | domain/solver/solver.py                          | Operator                                         |
 | domain/solver/CFOP/CFOP.py                       | Operator                                         |
 | domain/solver/CFOP/F2L.py                        | AnnWhat                                          |
-| domain/solver/common/SolverElement.py            | Operator, SupportsAnnotation, AnnWhat, OpAnnotation |
+| domain/solver/common/SolverHelper.py            | Operator, SupportsAnnotation, AnnWhat, OpAnnotation |
 | domain/solver/common/BaseSolver.py               | Operator                                         |
 | domain/solver/common/CommonOp.py                 | Operator, AnnWhat, SupportsAnnotation, OpAnnotation |
 | domain/solver/common/AdvancedEvenOLLBigCubeParity.py | AnnWhat                                      |

@@ -9,7 +9,7 @@ from cube.domain.exceptions import (
 )
 from cube.domain.model import Part
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.SolverElement import StepSolver
+from cube.domain.solver.common.SolverHelper import StepSolver
 
 
 class PLL(StepSolver):

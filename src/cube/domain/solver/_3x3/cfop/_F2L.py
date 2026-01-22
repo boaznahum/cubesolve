@@ -8,7 +8,7 @@ from cube.domain.model.CubeQueries2 import Pred0
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.Tracker import CornerTracker, EdgeTracker
 from cube.utils.SSCode import SSCode
 
@@ -24,7 +24,7 @@ class EdgePreserveMode(Enum):
     PreserveNone = "3"
 
 
-class F2L(SolverElement):
+class F2L(SolverHelper):
     """
     Credits to https://ruwix.com/the-rubiks-cube/advanced-cfop-fridrich/first-two-layers-f2l/
 

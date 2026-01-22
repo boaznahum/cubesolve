@@ -109,7 +109,7 @@ if logger.is_debug(None, level=5):
 
 **Before (deprecated):**
 ```python
-class NxNCenters(SolverElement):
+class NxNCenters(SolverHelper):
     D_LEVEL = 3
 
     def debug(self, *args, level=3):
@@ -122,7 +122,7 @@ class NxNCenters(SolverElement):
 
 **After (preferred):**
 ```python
-class NxNCenters(SolverElement):
+class NxNCenters(SolverHelper):
     D_LEVEL = 3
 
     def __init__(self, slv):
@@ -145,7 +145,7 @@ solver_logger = root_logger.with_prefix(
     debug_flag=lambda: self._is_debug_enabled  # evaluated on each debug() call
 )
 
-# SolverElement chains further
+# SolverHelper chains further
 element_logger = solver_logger.with_prefix("L1Cross")  # inherits debug_flag
 
 # Usage - pass None to use the logger's debug_flag
@@ -243,12 +243,12 @@ class LayerByLayerNxNSolver(AbstractSolver):
         shadow_solver.solve_3x3()  # Debug output: "LBL:Beginner3x3: ..."
 ```
 
-## SolverElement Pattern
+## SolverHelper Pattern
 
 Uses `Logger` with mutable prefix (prefix is set dynamically):
 
 ```python
-class SolverElement(CubeSupplier):
+class SolverHelper(CubeSupplier):
     def __init__(self, solver: SolverElementsProvider) -> None:
         # Logger: prefix can be set later via _set_debug_prefix (uses set_prefix())
         self._logger: Logger = Logger(solver._logger)

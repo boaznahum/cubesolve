@@ -137,7 +137,7 @@ class Solver(SolverElementsProvider, ABC):
     """
     Base solver interface.
 
-    Implements SolverElementsProvider to allow solver elements (SolverElement subclasses)
+    Implements SolverElementsProvider to allow solver elements (SolverHelper subclasses)
     to work with any Solver implementation. See SOLVER_ARCHITECTURE.md for class hierarchy.
     """
 

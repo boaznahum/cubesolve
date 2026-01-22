@@ -8,7 +8,7 @@ The solver architecture consists of two parallel hierarchies that share common i
 1. **Solvers** - Solve 3x3 cubes (BeginnerSolver3x3, CFOP3x3, Kociemba3x3)
 2. **Reducers** - Reduce NxN cubes to virtual 3x3 state (BeginnerReducer)
 
-Both hierarchies share solver components (SolverElement subclasses) through the `SolverElementsProvider` protocol.
+Both hierarchies share solver components (SolverHelper subclasses) through the `SolverElementsProvider` protocol.
 
 ## Class Hierarchy Diagram
 
@@ -51,7 +51,7 @@ Both hierarchies share solver components (SolverElement subclasses) through the 
 |                           SOLVER ELEMENTS                                    |
 +-----------------------------------------------------------------------------+
 |                                                                              |
-|  SolverElement(provider: SolverElementsProvider)                             |
+|  SolverHelper(provider: SolverElementsProvider)                             |
 |       |                                                                      |
 |       +-- NxNCenters         (center reduction for NxN cubes)                |
 |       +-- NxNEdges           (edge reduction for NxN cubes)                  |
@@ -71,7 +71,7 @@ Both hierarchies share solver components (SolverElement subclasses) through the 
 
 ### 1. SolverElementsProvider Protocol
 
-The `SolverElementsProvider` protocol defines the minimal interface that `SolverElement` and `CommonOp` need from a solver or reducer:
+The `SolverElementsProvider` protocol defines the minimal interface that `SolverHelper` and `CommonOp` need from a solver or reducer:
 
 ```python
 class SolverElementsProvider(Protocol, metaclass=ABCMeta):
@@ -140,7 +140,7 @@ solver/
     common/
         BaseSolver.py                <-- Implements SolverElementsProvider
         CommonOp.py                  <-- Uses SolverElementsProvider
-        SolverElement.py             <-- Uses SolverElementsProvider
+        SolverHelper.py             <-- Uses SolverElementsProvider
         ...
 
     reducers/
@@ -148,10 +148,10 @@ solver/
         BeginnerReducer.py           <-- Extends AbstractReducer
 
     beginner/
-        NxNCenters.py                <-- SolverElement subclass
-        NxNEdges.py                  <-- SolverElement subclass
-        L3Cross.py                   <-- SolverElement subclass
-        L3Corners.py                 <-- SolverElement subclass
+        NxNCenters.py                <-- SolverHelper subclass
+        NxNEdges.py                  <-- SolverHelper subclass
+        L3Cross.py                   <-- SolverHelper subclass
+        L3Corners.py                 <-- SolverHelper subclass
         ...
 
     cfop/

@@ -6,10 +6,10 @@ from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 
 
-class L1Cross(SolverElement):
+class L1Cross(SolverHelper):
 
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)

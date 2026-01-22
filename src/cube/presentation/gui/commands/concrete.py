@@ -362,6 +362,15 @@ class ShadowToggleCommand(Command):
         return CommandResult()
 
 
+@dataclass(frozen=True)
+class ShadowToggleAllCommand(Command):
+    """Command to toggle all face shadows on/off."""
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        ctx.vs.toggle_all_shadows_mode()
+        return CommandResult()
+
+
 # =============================================================================
 # CUBE SIZE COMMANDS
 # =============================================================================

@@ -100,14 +100,14 @@ ReducerProtocol ..> ReductionResults : returns
 
 ' ============ SOLVER ELEMENTS ============
 
-abstract class SolverElement {
+abstract class SolverHelper {
     _solver: SolverElementsProvider
     _cmn: CommonOp
     _ann: AnnotationProtocol
 }
 
-' SolverElement uses SolverElementsProvider (composition)
-SolverElement o-- SolverElementsProvider : uses
+' SolverHelper uses SolverElementsProvider (composition)
+SolverHelper o-- SolverElementsProvider : uses
 
 class CommonOp {
     _slv: SolverElementsProvider
@@ -115,15 +115,15 @@ class CommonOp {
 
 CommonOp o-- SolverElementsProvider : uses
 
-SolverElement <|-- L1Cross
-SolverElement <|-- L1Corners
-SolverElement <|-- L2
-SolverElement <|-- L3Cross
-SolverElement <|-- L3Corners
-SolverElement <|-- NxNCenters
-SolverElement <|-- NxNEdges
-SolverElement <|-- OLL
-SolverElement <|-- PLL
+SolverHelper <|-- L1Cross
+SolverHelper <|-- L1Corners
+SolverHelper <|-- L2
+SolverHelper <|-- L3Cross
+SolverHelper <|-- L3Corners
+SolverHelper <|-- NxNCenters
+SolverHelper <|-- NxNEdges
+SolverHelper <|-- OLL
+SolverHelper <|-- PLL
 
 ' ============ COMPOSITION ============
 
@@ -139,7 +139,7 @@ BeginnerReducer *-- NxNEdges
 BeginnerReducer *-- L3Corners
 
 note right of SolverElementsProvider
-  Minimal interface that SolverElement
+  Minimal interface that SolverHelper
   and CommonOp need. Implemented by
   both BaseSolver and AbstractReducer.
 end note

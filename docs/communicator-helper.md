@@ -311,7 +311,7 @@ The helper is a standalone class that:
   - Use `edge_left` for Y translation
   - Use `edge_bottom` for X translation
   - This leverages existing `get_slice_index_from_ltr_index` / `get_ltr_index_from_slice_index`
-- Updated helper to extend `SolverElement` (standard pattern)
+- Updated helper to extend `SolverHelper` (standard pattern)
 - Updated test to use `cube.faces` iterator instead of custom function
 - Added clear variable naming: `ltr_y`, `ltr_x`, `idx_row`, `idx_col`
 

@@ -574,6 +574,16 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
 
     toolbar.add_separator()
 
+    # Shadow toggle (for L, D, B faces)
+    toolbar.add_button(
+        "Shadow",
+        Commands.SHADOW_TOGGLE_ALL,
+        label_fn=lambda: "Shd:ON" if vs.any_shadow_on else "Shd:OFF",
+        min_width=65,
+    )
+
+    toolbar.add_separator()
+
     # Solver
     toolbar.add_button(
         "Solver",

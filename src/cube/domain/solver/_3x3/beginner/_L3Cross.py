@@ -4,11 +4,11 @@ from cube.domain.model import Edge, FaceName, Part
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.Tracker import EdgeTracker
 
 
-class L3Cross(SolverElement):
+class L3Cross(SolverHelper):
 
     def __init__(self, slv: BaseSolver) -> None:
         super().__init__(slv)

@@ -254,6 +254,19 @@ class ApplicationAndViewState:
     def toggle_shadows_mode(self, face: Literal[FaceName.D, FaceName.B, FaceName.L]):
         self._change_shadows_mode(face, not self.get_draw_shadows_mode(face))
 
+    def toggle_all_shadows_mode(self) -> None:
+        """Toggle all face shadows on/off."""
+        # If any shadow is on, turn all off; otherwise turn all on
+        if self.any_shadow_on:
+            self._draw_shadows = ""
+        else:
+            self._draw_shadows = "LDB"
+
+    @property
+    def any_shadow_on(self) -> bool:
+        """Check if any face shadow is enabled."""
+        return bool(self._draw_shadows)
+
     def _change_shadows_mode(self, face: Literal[FaceName.D, FaceName.B, FaceName.L], add: bool):
 
         s = str(face.value)

@@ -28,7 +28,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
     """
     Abstract base class for reducers that provides SolverElementsProvider interface.
 
-    This class provides the minimal interface that SolverElement and CommonOp need,
+    This class provides the minimal interface that SolverHelper and CommonOp need,
     allowing reducers to use solver components (like NxNCenters, NxNEdges, L3Corners)
     without being full Solver implementations.
 

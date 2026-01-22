@@ -95,7 +95,7 @@ from cube.domain.solver.direct.lbl._lbl_config import PUT_SOLVED_MARKERS
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
-    from cube.domain.solver.common.SolverElement import SolverElement
+    from cube.domain.solver.common.SolverHelper import SolverHelper
     from cube.domain.tracker.trackers import FaceTracker
 
 
@@ -253,7 +253,7 @@ def _iterate_all_tracked_center_slices_index(target_face: FaceTracker) -> Iterat
 # =============================================================================
 
 
-def position_l1(slv: SolverElement, l1_white_tracker: FaceTracker) -> None:
+def position_l1(slv: SolverHelper, l1_white_tracker: FaceTracker) -> None:
     """Position L1 (white face) down.
 
     Args:
@@ -265,7 +265,7 @@ def position_l1(slv: SolverElement, l1_white_tracker: FaceTracker) -> None:
 
 
 @contextmanager
-def setup_l1(slv: SolverElement, l1_white_tracker: FaceTracker) -> Iterator[None]:
+def setup_l1(slv: SolverHelper, l1_white_tracker: FaceTracker) -> Iterator[None]:
     """Setup L1 position and manage tracking lifecycle.
 
     Positions L1 (white face) down for solving. Tracking is accumulated

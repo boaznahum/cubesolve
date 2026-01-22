@@ -64,7 +64,7 @@ solver/
         ┌───────────────────────────────────────────┐
         │ Layer 2: common/                          │
         │   • BaseSolver, AbstractSolver            │
-        │   • SolverElement                         │
+        │   • SolverHelper                         │
         │   • CommonOp, Tracker                     │
         │   • big_cube/                             │
         │       NxNCenters, NxNEdges, NxNCorners    │
@@ -123,7 +123,7 @@ Protocol definitions (interfaces) that define contracts between components:
 Shared utilities and base classes:
 - `BaseSolver` - Base class for all solvers
 - `AbstractSolver` - Abstract solver with common functionality
-- `SolverElement` - Building block for solver algorithms
+- `SolverHelper` - Building block for solver algorithms
 - `CommonOp` - Common cube operations
 - `Tracker`, `FaceTracker` - State tracking utilities
 

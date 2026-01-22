@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 _Common: TypeAlias = "CommonOp"
 
 
-class SolverElement(CubeSupplier, SolverElementsProvider):
+class SolverHelper(CubeSupplier, SolverElementsProvider):
     __slots__ = ["_solver", "_ann",
                  "_cmn",
                  "_cube",
@@ -114,7 +114,7 @@ class SolverElement(CubeSupplier, SolverElementsProvider):
         return self._cmn.white_face.opposite
 
 
-class StepSolver(SolverElement):
+class StepSolver(SolverHelper):
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver)
 

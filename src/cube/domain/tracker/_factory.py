@@ -129,12 +129,12 @@ from cube.domain.tracker.trackers import (
     SimpleFaceTracker,
     get_tracker_key_prefix,
 )
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
 
-class NxNCentersFaceTrackers(SolverElement):
+class NxNCentersFaceTrackers(SolverHelper):
     """Creates face trackers for NxN center solving.
 
     This class determines which color belongs on each face of an even cube

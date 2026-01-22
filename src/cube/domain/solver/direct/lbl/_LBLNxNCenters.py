@@ -6,7 +6,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.geometry_types import Block, Point
 from cube.domain.model import Color, CenterSlice, Face
 from cube.domain.model.Cube import Cube
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import (
@@ -17,7 +17,7 @@ from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils import symbols
 
 
-class NxNCenters2(SolverElement):
+class NxNCenters2(SolverHelper):
     """
     claude: # in these files row_index is the distance between l1_face, no metter on which orientation
     go over all methods and checkit match the definition asked me if you are not sue

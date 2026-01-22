@@ -16,7 +16,7 @@ from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.solver.common.SolverElement import SolverElement
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
@@ -40,7 +40,7 @@ class _CompleteSlice:
         self.contains_track_slice = contains_trackers
 
 
-class NxNCenters(SolverElement):
+class NxNCenters(SolverHelper):
     """
     Solves center pieces on NxN cubes (N > 3).
 
