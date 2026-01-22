@@ -10,31 +10,6 @@ from cube.domain.solver.SolverName import SolverName
 
 
 
-# Metadata for each SolveStep: (short_code, description)
-_SOLVE_STEP_META: dict[str, tuple[str, str]] = {
-    "ALL": ("Solve", "Solve Complete Cube"),
-    "L1x": ("L1x", "Layer 1 Cross"),
-    "L1": ("L1", "Layer 1 Complete"),
-    "L2": ("L2", "Layer 2"),
-    "L3x": ("L3x", "Layer 3 Cross"),
-    "L3": ("L3", "Layer 3 Complete"),
-    "F2L": ("F2L", "First Two Layers"),
-    "OLL": ("OLL", "Orientation Last Layer"),
-    "PLL": ("PLL", "Permutation Last Layer"),
-    "NxNCenters": ("Ctr", "NxN Centers"),
-    "NxNEdges": ("Edg", "NxN Edges"),
-    "Cage": ("Cage", "Cage (Edges + Corners)"),
-    # LBL-Big method steps
-    "LBL_L1_Ctr": ("L1Ctr", "Layer 1 Centers"),
-    "LBL_L1_Edg": ("L1Edg", "Layer 1 Edges"),
-    "LBL_L1": ("L1", "Layer 1 Complete"),
-    "LBL_SLICES_CTR": ("SlCtr", "Middle Slices Centers"),
-    # Slice 0 granular steps (4 faces per slice)
-    "LBL_S0F1": ("S0F1", "Slice 0 Face 1"),
-    "LBL_S0F2": ("S0F2", "Slice 0 Faces 1-2"),
-    "LBL_S0F3": ("S0F3", "Slice 0 Faces 1-3"),
-    "LBL_S0F4": ("S0F4", "Slice 0 Complete"),
-}
 
 class SmallStepSolveState(Enum):
 
@@ -50,46 +25,57 @@ class SmallStepSolveState(Enum):
 
 
 class SolveStep(Enum):
-    """Solve steps with short code and description for UI display."""
-    ALL = "ALL"
-    L1x = "L1x"
-    L1 = "L1"
-    L2 = "L2"
-    L3 = "L3"
-    L3x = "L3x"
+    """Solve steps with short code and description for UI display.
+
+    Each member is defined as: NAME = (value, short_code, description)
+    """
+    _short_code: str
+    _description: str
+
+    # value, short_code, description
+    ALL = ("ALL", "Solve", "Solve Complete Cube")
+    L1x = ("L1x", "L1x", "Layer 1 Cross")
+    L1 = ("L1", "L1", "Layer 1 Complete")
+    L2 = ("L2", "L2", "Layer 2")
+    L3x = ("L3x", "L3x", "Layer 3 Cross")
+    L3 = ("L3", "L3", "Layer 3 Complete")
 
     # CFOP-specific steps
-    F2L = "F2L"
-    OLL = "OLL"
-    PLL = "PLL"
+    F2L = ("F2L", "F2L", "First Two Layers")
+    OLL = ("OLL", "OLL", "Orientation Last Layer")
+    PLL = ("PLL", "PLL", "Permutation Last Layer")
 
     # NxN reduction steps
-    NxNCenters = "NxNCenters"
-    NxNEdges = "NxNEdges"
+    NxNCenters = ("NxNCenters", "Ctr", "NxN Centers")
+    NxNEdges = ("NxNEdges", "Edg", "NxN Edges")
 
     # Cage method step
-    Cage = "Cage"
+    Cage = ("Cage", "Cage", "Cage (Edges + Corners)")
 
     # LBL-Big method steps (layer-by-layer for big cubes)
-    LBL_L1_Ctr = "LBL_L1_Ctr"  # Layer 1 centers only
-    LBL_L1_Edg = "LBL_L1_Edg"  # Layer 1 edges only
-    LBL_L1 = "LBL_L1"          # Layer 1 complete (centers + edges + corners)
-    LBL_SLICES_CTR = "LBL_SLICES_CTR"  # Middle slices centers only (for debugging)
-    # Slice 0 granular steps (4 faces per slice)
-    # LBL_S0F1 = "LBL_S0F1"      # Slice 0, first face center row
-    # LBL_S0F2 = "LBL_S0F2"      # Slice 0, faces 1-2
-    # LBL_S0F3 = "LBL_S0F3"      # Slice 0, faces 1-3
-    # LBL_S0F4 = "LBL_S0F4"      # Slice 0 complete (all 4 faces)
+    LBL_L1_Ctr = ("LBL_L1_Ctr", "L1Ctr", "Layer 1 Centers")
+    LBL_L1_Edg = ("LBL_L1_Edg", "L1Edg", "Layer 1 Edges")
+    LBL_L1 = ("LBL_L1", "L1", "Layer 1 Complete")
+    LBL_SLICES_CTR = ("LBL_SLICES_CTR", "SlCtr", "Middle Slices Centers")
+    LBL_L3_CENTER = ("LBL_L3_CENTER", "L3Ctr", "Layer 3 Centers")
+    LBL_L3_CROSS = ("LBL_L3_CROSS", "L3x", "Layer 3 Cross")
+
+    def __new__(cls, value: str, short_code: str, description: str) -> "SolveStep":
+        obj = object.__new__(cls)
+        obj._value_ = value
+        obj._short_code = short_code
+        obj._description = description
+        return obj
 
     @property
     def short_code(self) -> str:
         """Short code for button label (e.g., 'L1x', 'F2L')."""
-        return _SOLVE_STEP_META.get(self.value, (self.value, ""))[0]
+        return self._short_code
 
     @property
     def description(self) -> str:
         """Long description for tooltip (e.g., 'Layer 1 Cross')."""
-        return _SOLVE_STEP_META.get(self.value, ("", self.value))[1]
+        return self._description
 
 
 class SolverResults:

@@ -210,15 +210,13 @@ class _LBLNxNEdges(SolverHelper):
                 st: EdgeWingTracker
                 for st in sts:
 
-                    status = self._solve_edge_wing_by_source(target_face, target_edge, index_on_target_edge,
-                                                             target_edge_wing, st)
+                    status = self._solve_edge_wing_by_source(target_face, target_edge_wing, st)
 
                     if status == SmallStepSolveState.SOLVED:
                         return SmallStepSolveState.SOLVED
                 return SmallStepSolveState.NOT_SOLVED
 
     def _solve_edge_wing_by_source(self, target_face: Face,
-                                   edge: Edge, index_on_edge,
                                    _target_edge_wing: EdgeWing,
                                    source_edge_wing_t: EdgeWingTracker) -> SmallStepSolveState:
 
@@ -226,6 +224,7 @@ class _LBLNxNEdges(SolverHelper):
 
         untracked_source_wing = source_edge_wing_t.slice
         untracked_target_edge_wing = _target_edge_wing  # target wing is by location not by color, no need to track
+
         if True:
             with self._logger.tab(lambda: f"Working with source wing  {untracked_source_wing}"):
 
