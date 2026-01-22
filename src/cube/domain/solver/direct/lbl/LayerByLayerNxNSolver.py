@@ -427,6 +427,13 @@ class LayerByLayerNxNSolver(BaseSolver):
         if self._is_layer1_edges_solved(th):
             return
 
+        l1_tracker = self._get_layer1_tracker(th)
+        self.debug(f"Solving Layer 1 edges ({l1_tracker.color.name} face only)")
+
+        with self.op.annotation.annotate(h2=f"L1 edges ({l1_tracker.color.name})"):
+            # Use solve_face_edges to solve only Layer 1 face edges
+            self._nxn_edges.solve_face_edges(l1_tracker)
+
     def _solve_layer3_edges(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 1 face edges."""
         if self._is_layer3_edges_solved(th):
