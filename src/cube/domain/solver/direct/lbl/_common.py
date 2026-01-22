@@ -141,6 +141,8 @@ def clear_solved_markers(cube: Cube) -> None:
     """Clear all solved flags (MARKER 2) from all pieces in the cube.
 
     This clears the algorithm markers from centers, edges, and corners.
+
+    claude: you forget visual markersi thi
     """
     for part_slice in cube.get_all_part_slices():
         for edge in part_slice.edges:
