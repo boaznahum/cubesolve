@@ -1,5 +1,30 @@
 # Session: big_lbl Branch - Edge Parity Implementation
 
+## How to Continue Next Session
+
+### Current State
+- Commit `2bd5227`: WIP edge parity detection - has a bug where parity destroys L1 edges
+- Need to move the parity retry loop from `_LBLSlices` to `LayerByLayerNxNSolver`
+
+### Next Steps
+1. **Read this file** to understand context
+2. **Simplify `_LBLSlices.solve_all_faces_all_rows()`**:
+   - Remove the `while True` loop
+   - Keep parity check, but just return True/False if parity was detected
+   - Don't try to re-solve at this level
+3. **Add loop to `LayerByLayerNxNSolver._solve_impl()`**:
+   - Wrap L1 + middle slices solving in a loop
+   - If parity detected, repeat from L1
+   - If parity detected twice, raise error
+4. **Test** with 4x4 or 6x6 cube that triggers parity
+
+### Key Files
+- `src/cube/domain/solver/direct/lbl/LayerByLayerNxNSolver.py` - Add loop here
+- `src/cube/domain/solver/direct/lbl/_LBLSlices.py` - Simplify, return parity status
+- `src/cube/domain/solver/reducers/beginner/BeginnerReducer.py` - Reference for pattern
+
+---
+
 ## Goal
 Implement even cube edge parity detection in LBL solver for middle slice solving.
 
@@ -46,23 +71,25 @@ if not solved:
 
 ### Proposed Change for LBL Solver
 
-1. **Remove loop from `_LBLSlices.solve_all_faces_all_rows()`** - Just solve slices once
+1. **Remove loop from `_LBLSlices.solve_all_faces_all_rows()`** - Just solve slices once, return parity status
 2. **Keep parity check** - `_check_and_fix_edge_parity()` returns True if parity detected
 3. **Move loop to `LayerByLayerNxNSolver._solve_impl()`**:
    ```python
    def _solve_impl(self, what):
        parity_detected = False
        while True:
-           # Solve Layer 1
+           # Clear markers for fresh start
+           _common.clear_all_type_of_markers(self.cube)
+
+           # Solve Layer 1 (will be re-solved after parity)
            self._solve_layer1(th)
 
-           # Solve middle slices
+           # Solve middle slices - returns True if parity detected
            if self._lbl_slices.solve_all_faces_all_rows(...):
-               # Parity was detected and fixed
                if parity_detected:
-                   raise AssertionError("Parity twice")
+                   raise AssertionError("Parity detected twice - bug")
                parity_detected = True
-               continue  # Repeat entire process
+               continue  # Repeat L1 + slices
 
            break
 
@@ -77,13 +104,21 @@ if not solved:
 
 ## Known Issues (Handle Later)
 - Bug in `tab()` method of the logger - needs investigation
+- Claude instruction in LayerByLayerNxNSolver.py line 2-3 about row_index verification
 
-## Files to Check
-- `src/cube/domain/solver/reducers/beginner/BeginnerReducer.py` - Reference implementation
-- `src/cube/domain/solver/common/big_cube/NxNEdges.py` - Parity algorithm
+## Edge Types in LBL (Reference)
+```
+       U face edges: UF, UR, UB, UL (solved in Layer n)
+           ┌─────────┐
+           │    U    │
+      ┌────┼─────────┼────┐
+      │ L  │ FL   FR │ R  │  ← Orthogonal edges (solved in middle slices)
+      │    │ BL   BR │    │
+      └────┼─────────┼────┘
+           │    D    │
+           └─────────┘
+       D face edges: DF, DR, DB, DL (solved in Layer 1)
+```
 
-## Next Steps
-1. Commit current changes (WIP)
-2. Simplify `_LBLSlices.solve_all_faces_all_rows()` - remove loop, return parity status
-3. Add loop to `LayerByLayerNxNSolver._solve_impl()`
-4. Test with both advanced and non-advanced modes
+## Commits
+- `2bd5227` - WIP: Add edge parity detection for even cubes in LBL solver
