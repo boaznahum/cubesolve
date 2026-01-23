@@ -355,7 +355,7 @@ class _LBLSlices(SolverHelper):
     # =========================================================================
 
     def _solve_slice_row(
-            self, slice_index: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
+            self, face_row: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
     ) -> None:
         """Solve ring centers for a single slice.
 
@@ -369,23 +369,23 @@ class _LBLSlices(SolverHelper):
            because solving one face can disturb others)
 
         Args:
-            slice_index: Which slice to solve (0 = closest to D)
+            face_row: Which face row to solve (0 = closest to D)
             th: FacesTrackerHolder for face color tracking
             l1_white_tracker: Layer 1 face tracker
         """
         side_trackers: list[FaceTracker] = _get_side_face_trackers(th, l1_white_tracker)
 
+        # help solver not to touch already solved
+        _common.mark_slices_and_v_mark_if_solved(self._get_row_pieces(l1_white_tracker, face_row))
+
         for target_face in side_trackers:
-                self._solve_face_row(l1_white_tracker, target_face, slice_index)
+                self._solve_face_row(l1_white_tracker, target_face, face_row)
 
     def _solve_face_row(self, l1_white_tracker: FaceTracker,
                         target_face: FaceTracker,
                         face_row: int
                         ) -> None:
 
-
-        # help solver not to touch already solved
-        _common.mark_slices_and_v_mark_if_solved(self._get_row_pieces(l1_white_tracker, face_row))
 
         if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
             self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
