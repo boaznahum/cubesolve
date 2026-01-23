@@ -158,7 +158,7 @@ class NxNCenters2(SolverHelper):
         # maybe not need iterations
 
 
-        with self._track_row_slices(l1_white_tracker, slice_index):
+        with self._track_row_center_slices_nad_mark_if_solved(l1_white_tracker, slice_index):
 
             face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, slice_index)
             if face_slice_solved:
@@ -250,7 +250,7 @@ class NxNCenters2(SolverHelper):
         position_l1(self, l1_white_tracker)
 
     @contextmanager
-    def _track_row_slices(self, l1_white_tracker: FaceTracker, slice_index: int) -> Generator[None, None, None]:
+    def _track_row_center_slices_nad_mark_if_solved(self, l1_white_tracker: FaceTracker, slice_index: int) -> Generator[None, None, None]:
         """Track center slices in a row, cleanup on exit."""
 
         for target_face in l1_white_tracker.adjusted_faces():
@@ -582,6 +582,9 @@ class NxNCenters2(SolverHelper):
 
     def _2d_center_row_slice_iter(self, slice_index: int) -> Iterator[Point]:
         """Iterate over all columns in a specific row."""
+
+        # claude this is accidentally work because slice and face row are the same of front face
+
         n = self.cube.n_slices
         for c in range(n):
             yield Point(slice_index, c)

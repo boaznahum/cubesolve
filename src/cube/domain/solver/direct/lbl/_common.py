@@ -85,11 +85,14 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Iterable
+from itertools import chain
+from typing import TYPE_CHECKING, Iterable, Sequence, Any, Generator
 
 from cube.domain.geometric.geometry_types import Point
-from cube.domain.model import CenterSlice, PartSlice
+from cube.domain.model import CenterSlice, PartSlice, EdgeWing, Face
 from cube.domain.model.Cube import Cube
+from cube.domain.model.Slice import Slice
+from cube.domain.solver.direct.lbl import _lbl_config
 from cube.domain.solver.direct.lbl._lbl_config import PUT_SOLVED_MARKERS
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 
@@ -322,3 +325,83 @@ def _get_side_face_trackers(
     l1_opposite_face = l1_tracker.face.opposite
     return [t for t in th.trackers
             if t.face is not l1_tracker.face and t.face is not l1_opposite_face]
+
+
+def _get_row_pieces(cube, n_slices,
+                    l1_tracker: FaceTracker, slice_row: int
+                    ) -> Generator[PartSlice]:
+    """Get all pieces (center slices and/or edge wings) at a given slice row.
+
+    Args:
+        l1_tracker: Face tracker for Layer 1 face
+        slice_row: Distance from L1 face (0 = closest to L1)
+
+    Yields:
+        PartSlice objects at the given row based on config flags
+        (BIG_LBL_RESOLVE_CENTER_SLICES and BIG_LBL_RESOLVE_EDGES_SLICES)
+    """
+
+    # Get the slice sandwiched between L1 face and its opposite
+    # (e.g., L1=D → E slice, L1=L → M slice, L1=F → S slice)
+    slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
+    slice_layout = cube.layout.get_slice(slice_name)
+
+    # Convert L1-relative distance to slice coordinate system
+    cube_slice_index = slice_layout.distance_from_face_to_slice_index(
+        l1_tracker.face_name, slice_row, n_slices
+    )
+
+    slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
+    slice_obj: Slice = cube.get_slice(slice_name)
+
+    # Get edge wings and center slices at this slice index
+    # We only care about center slices (index [1])
+    pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj.get_slices_by_index(cube_slice_index)
+
+    pieces_to_test: list[Iterable[PartSlice[Any]]] = []
+    if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
+        pieces_to_test.append(pieces[1])
+    if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
+        pieces_to_test.append(pieces[0])
+
+    yield from chain(*pieces_to_test)
+
+
+def _get_center_row_pieces(cube, n_slices,
+                           l1_tracker: FaceTracker, for_face_t: FaceTracker, slice_row: int
+                           ) -> Generator[CenterSlice]:
+    """Get all pieces (center slices and/or edge wings) at a given slice row.
+
+    Args:
+        l1_tracker: Face tracker for Layer 1 face
+        slice_row: Distance from L1 face (0 = closest to L1)
+
+    Yields:
+        PartSlice objects at the given row based on config flags
+        (BIG_LBL_RESOLVE_CENTER_SLICES and BIG_LBL_RESOLVE_EDGES_SLICES)
+    """
+
+    # Get the slice sandwiched between L1 face and its opposite
+    # (e.g., L1=D → E slice, L1=L → M slice, L1=F → S slice)
+    slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
+    slice_layout = cube.layout.get_slice(slice_name)
+
+    # Convert L1-relative distance to slice coordinate system
+    cube_slice_index = slice_layout.distance_from_face_to_slice_index(
+        l1_tracker.face_name, slice_row, n_slices
+    )
+
+    slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
+    slice_obj: Slice = cube.get_slice(slice_name)
+
+    # Get edge wings and center slices at this slice index
+    # We only care about center slices (index [1])
+    pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj.get_slices_by_index(cube_slice_index)
+
+
+    for_face: Face = for_face_t.face
+
+    # claude: to be optimized, most it is duplication of the method above
+    for cs in pieces[1]:
+        if cs.face is for_face:
+            yield cs
