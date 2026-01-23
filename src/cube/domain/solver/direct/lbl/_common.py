@@ -85,7 +85,6 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterator
-from contextlib import contextmanager
 from typing import TYPE_CHECKING, Iterable
 
 from cube.domain.geometric.geometry_types import Point
@@ -276,26 +275,36 @@ def position_l1(slv: SolverHelper, l1_white_tracker: FaceTracker) -> None:
     assert l1_white_tracker.face is slv.cube.down
 
 
-@contextmanager
-def setup_l1(slv: SolverHelper, l1_white_tracker: FaceTracker) -> Iterator[None]:
-    """Setup L1 position and manage tracking lifecycle.
+class setup_l1:
+    """Context manager for L1 position setup and tracking lifecycle.
 
     Positions L1 (white face) down for solving. Tracking is accumulated
     during solving (via _track_row_slices) and cleared only here when
     all slices are done. This protects solved pieces from being destroyed.
 
-    Args:
-        slv: Solver element providing access to cube operations
-        l1_white_tracker: The Layer 1 face tracker
-
-    Yields:
-        None - context manager for setup/cleanup lifecycle
+    Usage:
+        with setup_l1(slv, l1_tracker) as l1_setup:
+            # ... solve slices ...
+            if parity_detected:
+                l1_setup.realign()  # Re-position L1 after parity changed orientation
     """
-    position_l1(slv, l1_white_tracker)
-    try:
-        yield
-    finally:
-        clear_all_center_slices_tracking(slv.cube)
+
+    __slots__ = ["_slv", "_l1_tracker"]
+
+    def __init__(self, slv: SolverHelper, l1_white_tracker: FaceTracker) -> None:
+        self._slv = slv
+        self._l1_tracker = l1_white_tracker
+
+    def __enter__(self) -> "setup_l1":
+        position_l1(self._slv, self._l1_tracker)
+        return self
+
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+        clear_all_center_slices_tracking(self._slv.cube)
+
+    def realign(self) -> None:
+        """Re-position L1 down after cube orientation changed (e.g., after parity fix)."""
+        position_l1(self._slv, self._l1_tracker)
 
 
 def _get_side_face_trackers(

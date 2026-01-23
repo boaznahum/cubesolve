@@ -159,6 +159,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         if self.is_solved:
             return sr
 
+        # it i wll be called agin in the loop in case of parity detection
         _common.clear_all_type_of_markers(self.cube)
 
         # Create fresh tracker holder for this solve operation
