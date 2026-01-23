@@ -7,4 +7,4 @@ PUT_SOLVED_MARKERS=True
 # Edge parity algorithm mode for even cubes:
 # - False (non-advanced): Parity algorithm scrambles edges, must repeat edge solving
 # - True (advanced): Parity algorithm fixes edges completely, just assert after
-ADVANCED_EDGE_PARITY=True
+ADVANCED_EDGE_PARITY=False

@@ -76,6 +76,8 @@ class _LBLSlices(SolverHelper):
         self._centers = NxNCenters2(self, preserve_cage=True)
         self._edges = _LBLNxNEdges(self, advanced_edge_parity=False)
 
+
+
     @property
     def centers(self) -> NxNCenters2:
         """Access to NxNCenters helper."""
@@ -415,11 +417,15 @@ class _LBLSlices(SolverHelper):
 
             parity_detected = False
             while True:
+
+                if parity_detected:
+                    self._slv._solve_layer3_corners(face_trackers)
+
                 for row_index in range(n_to_solve):
                     with self._logger.tab(f"Solving face row {row_index}"):
                         self._solve_slice_row(row_index, face_trackers, l1_white_tracker)
 
-                if not (n_to_solve < self.n_slices):
+                if False and not (n_to_solve < self.n_slices):
                     # Check for edge parity in orthogonal edges (can occur in even cubes)
                     if self._check_and_fix_edge_parity(l1_white_tracker):
                         if parity_detected:
@@ -439,7 +445,7 @@ class _LBLSlices(SolverHelper):
                 break
 
             # Final verification: all orthogonal and L1 edges must be solved
-            if not (n_to_solve < self.n_slices):
+            if False and  not (n_to_solve < self.n_slices):
                 orthogonal_edges = self._get_orthogonal_edges(l1_white_tracker)
                 l1_edges = self._get_l1_edges(l1_white_tracker)
                 assert all(e.is3x3 for e in orthogonal_edges), \

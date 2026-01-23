@@ -23,6 +23,7 @@ CUBE_SIZE = 5
 # Enable cube caching for performance optimization
 # Env override: CUBE_DISABLE_CACHE=1 to disable
 ENABLE_CUBE_CACHE = True
+PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY=True
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
 # Available solvers: LBL, CFOP, Kociemba, Cage
@@ -251,3 +252,5 @@ TEXTURE_SETS: list[str | None] | None = [None, "debug4x4", "debug3x3", "arrows",
 TEXTURE_SET_INDEX: int = 0  # Start with debug4x4 for 4x4 cube debugging
 # Debug texture loading/assignment (controlled by vs.debug with this flag)
 DEBUG_TEXTURE: bool = False
+
+
