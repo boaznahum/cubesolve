@@ -250,18 +250,16 @@ class NxNCenters2(SolverHelper):
         position_l1(self, l1_white_tracker)
 
     @contextmanager
-    def _track_row_center_slices_nad_mark_if_solved(self, l1_white_tracker: FaceTracker, slice_index: int) -> Generator[None, None, None]:
+    def _track_row_center_slices_nad_mark_if_solved(self, l1_white_tracker: FaceTracker, face_row: int) -> Generator[None, None, None]:
         """Track center slices in a row, cleanup on exit."""
 
         for target_face in l1_white_tracker.adjusted_faces():
 
-            for rc in self._2d_center_row_slice_iter(slice_index):
-
-                slice_piece = target_face.face.center.get_center_slice(rc)
+            for slice_piece in _common.get_center_row_pieces(self.cube, l1_white_tracker, target_face, face_row):
 
                 mark_slice_and_v_mark_if_solved(slice_piece)
 
-                _track_center_slice(slice_piece, rc[1])
+                _track_center_slice(slice_piece, 0)
 
         try:
             yield
@@ -275,7 +273,7 @@ class NxNCenters2(SolverHelper):
 
     def _try_remove_all_pieces_from_target_face_and_other_faces(self, l1_white_tracker: FaceTracker,
                                                                 _target_face_tracker: FaceTracker,
-                                                                slice_index: int,
+                                                                face_row: int,
                                                                 remove_all: bool) -> int:
         """
             Go over all unsolved pieces in all faces and try to take out pieces that match them out of the face.
@@ -285,7 +283,7 @@ class NxNCenters2(SolverHelper):
             then go over all other face, and see if thers is candiate there
 
             try to move single piece !!!
-            :param slice_index: The slice index to work on
+            :param face_row: The face row disatnce from white
             :return: Number of pieces moved/removed
         """
 
@@ -302,22 +300,19 @@ class NxNCenters2(SolverHelper):
             target_color: Color = target_face_tracker.color
 
             # now find candidate_point
-            for point in self._2d_center_row_slice_iter(slice_index):
+            for point_to_solve_piece in _common.get_center_row_pieces(self.cube, l1_white_tracker, target_face_tracker, face_row):
+
+                point: tuple[int, int] = point_to_solve_piece.index
 
                 if self.cube.cqr.is_center_in_odd(point):
                     continue  # cant move center
-
-                target_face: Face = target_face_tracker.face
-
-                # the point/piece we want to solve and for it we wan to move
-                # a piece from target_face to up,
-                point_to_solve_piece: CenterSlice = target_face.get_center_slice(point)
 
                 if _is_cent_piece_marked_solved(point_to_solve_piece):
                     continue
 
                 # find candidates on target
-                candidate_point: Point = point
+                # claude: a performance problem here
+                candidate_point: Point = Point(*point)
                 for n in range(4):
 
                     # now try to  move piece with the required color from move_from_target_face
@@ -359,7 +354,7 @@ class NxNCenters2(SolverHelper):
                                     return pieces_moved # exactly one
                                 break # the for n in range(3) loop
 
-                    candidate_point = Point(*self.cube.cqr.rotate_point_clockwise(candidate_point))
+                    candidate_point = self.cube.cqr.rotate_point_clockwise(candidate_point)
 
 
 
@@ -409,9 +404,7 @@ class NxNCenters2(SolverHelper):
         # assert source_face.face in [cube.up, cube.back]
 
         # mark all done
-        for rc in self._2d_center_row_slice_iter(slice_row_index):
-
-            slice_piece = target_face.face.center.get_center_slice(rc)
+        for slice_piece in _common.get_center_row_pieces(cube, l1_white_tracker, target_face, slice_row_index):
 
             mark_slice_and_v_mark_if_solved(slice_piece)
 
