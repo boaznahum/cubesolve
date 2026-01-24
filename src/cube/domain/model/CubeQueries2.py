@@ -456,7 +456,7 @@ class CubeQueries2:
 
         return None
 
-    def is_center_in_odd(self, point: Point) -> bool:
+    def is_center_in_odd(self, point: Point | Tuple[int, int]) -> bool:
 
         r = point[0]
 

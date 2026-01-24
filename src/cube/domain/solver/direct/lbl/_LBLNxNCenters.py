@@ -8,9 +8,10 @@ from cube.domain.model import Color, CenterSlice, Face
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
+from cube.domain.solver.direct.lbl import _common
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import (
-    position_l1, _is_cent_piece_solved, mark_slice_and_v_mark_if_solved, _track_center_slice,
+    position_l1, _is_cent_piece_marked_solved, mark_slice_and_v_mark_if_solved, _track_center_slice,
     _iterate_all_tracked_center_slices_index,
 )
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -131,7 +132,7 @@ class NxNCenters2(SolverHelper):
         with self._logger.tab(lambda: f"{symbols.green_line(3)} Slice {face_row} {target_face.color_at_face_str} <-- all faces {symbols.green_line(3)}"):
             self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, face_row)
 
-    def _slice_on_target_face_solved(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, slice_index: int) -> bool:
+    def _slice_on_target_face_solved(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int) -> bool:
 
         # all over the solution we assume faces botton up is the ltr, but of course this is not true
         # if target was not down
@@ -140,11 +141,10 @@ class NxNCenters2(SolverHelper):
 
         assert l1_white_tracker.face is self.cube.down
 
-        for f in [target_face.face]:
-            for point in self._2d_center_row_slice_iter(slice_index):
-                c = f.get_center_slice(point)
-                if not _is_cent_piece_solved(c):
-                    return False
+        # claud: why just marked solved why not solved ?
+        for c in _common.get_center_row_pieces(self.cube, l1_white_tracker, None, face_row):
+            if not _is_cent_piece_marked_solved(c):
+                return False
 
         return True
 
@@ -250,18 +250,16 @@ class NxNCenters2(SolverHelper):
         position_l1(self, l1_white_tracker)
 
     @contextmanager
-    def _track_row_center_slices_nad_mark_if_solved(self, l1_white_tracker: FaceTracker, slice_index: int) -> Generator[None, None, None]:
+    def _track_row_center_slices_nad_mark_if_solved(self, l1_white_tracker: FaceTracker, face_row: int) -> Generator[None, None, None]:
         """Track center slices in a row, cleanup on exit."""
 
         for target_face in l1_white_tracker.adjusted_faces():
 
-            for rc in self._2d_center_row_slice_iter(slice_index):
-
-                slice_piece = target_face.face.center.get_center_slice(rc)
+            for slice_piece in _common.get_center_row_pieces(self.cube, l1_white_tracker, target_face, face_row):
 
                 mark_slice_and_v_mark_if_solved(slice_piece)
 
-                _track_center_slice(slice_piece, rc[1])
+                _track_center_slice(slice_piece, 0)
 
         try:
             yield
@@ -275,7 +273,7 @@ class NxNCenters2(SolverHelper):
 
     def _try_remove_all_pieces_from_target_face_and_other_faces(self, l1_white_tracker: FaceTracker,
                                                                 _target_face_tracker: FaceTracker,
-                                                                slice_index: int,
+                                                                face_row: int,
                                                                 remove_all: bool) -> int:
         """
             Go over all unsolved pieces in all faces and try to take out pieces that match them out of the face.
@@ -285,7 +283,7 @@ class NxNCenters2(SolverHelper):
             then go over all other face, and see if thers is candiate there
 
             try to move single piece !!!
-            :param slice_index: The slice index to work on
+            :param face_row: The face row disatnce from white
             :return: Number of pieces moved/removed
         """
 
@@ -302,22 +300,19 @@ class NxNCenters2(SolverHelper):
             target_color: Color = target_face_tracker.color
 
             # now find candidate_point
-            for point in self._2d_center_row_slice_iter(slice_index):
+            for point_to_solve_piece in _common.get_center_row_pieces(self.cube, l1_white_tracker, target_face_tracker, face_row):
+
+                point: tuple[int, int] = point_to_solve_piece.index
 
                 if self.cube.cqr.is_center_in_odd(point):
                     continue  # cant move center
 
-                target_face: Face = target_face_tracker.face
-
-                # the point/piece we want to solve and for it we wan to move
-                # a piece from target_face to up,
-                point_to_solve_piece: CenterSlice = target_face.get_center_slice(point)
-
-                if _is_cent_piece_solved(point_to_solve_piece):
+                if _is_cent_piece_marked_solved(point_to_solve_piece):
                     continue
 
                 # find candidates on target
-                candidate_point: Point = point
+                # claude: a performance problem here
+                candidate_point: Point = Point(*point)
                 for n in range(4):
 
                     # now try to  move piece with the required color from move_from_target_face
@@ -339,7 +334,7 @@ class NxNCenters2(SolverHelper):
 
                         # of course for other face then move_from_target_face it cannot be solved it the color is the target
                         # for our target we dont want to ove away solved pieces of course they are of slice < then un
-                        if candidate_piece.color == target_color and (not move_from_target_face_is_target_face or not _is_cent_piece_solved(candidate_piece)):
+                        if candidate_piece.color == target_color and (not move_from_target_face_is_target_face or not _is_cent_piece_marked_solved(candidate_piece)):
 
                                 up_face = l1_white_tracker.opposite.face
                                 self.debug(f"‼️‼️‼️ Moving  {candidate_piece} from {move_from_target_face.color_at_face_str} to  {up_face}")
@@ -359,7 +354,7 @@ class NxNCenters2(SolverHelper):
                                     return pieces_moved # exactly one
                                 break # the for n in range(3) loop
 
-                    candidate_point = Point(*self.cube.cqr.rotate_point_clockwise(candidate_point))
+                    candidate_point = self.cube.cqr.rotate_point_clockwise(candidate_point)
 
 
 
@@ -409,9 +404,7 @@ class NxNCenters2(SolverHelper):
         # assert source_face.face in [cube.up, cube.back]
 
         # mark all done
-        for rc in self._2d_center_row_slice_iter(slice_row_index):
-
-            slice_piece = target_face.face.center.get_center_slice(rc)
+        for slice_piece in _common.get_center_row_pieces(cube, l1_white_tracker, target_face, slice_row_index):
 
             mark_slice_and_v_mark_if_solved(slice_piece)
 
@@ -493,7 +486,7 @@ class NxNCenters2(SolverHelper):
                 # if second_point_on_source_color == source_face.color:
                 # but if it is the same color as target that is going to replace then it is ok
                 #
-                second_point_is_solved = _is_cent_piece_solved(second_point_piece)
+                second_point_is_solved = _is_cent_piece_marked_solved(second_point_piece)
                 self.debug(f"Second point {second_point_piece} is solved {second_point_is_solved}", f"Second point color {second_point_on_source_color}")
                 if target_point_color != second_point_on_source_color and second_point_is_solved:
                     parent.debug(
@@ -556,7 +549,7 @@ class NxNCenters2(SolverHelper):
         second_point_on_source = source_point_and_second_source_point[1]
 
         second_center_piece: CenterSlice = source_face.get_center_slice(second_point_on_source)
-        second_point_is_solved = _is_cent_piece_solved(second_center_piece)
+        second_point_is_solved = _is_cent_piece_marked_solved(second_center_piece)
 
         # OPTIMIZATION: Step 3 - Execute with cached computation (_cached_secret)
         # This reuses the _InternalCommData from Step 1, avoiding redundant calculations
@@ -580,13 +573,13 @@ class NxNCenters2(SolverHelper):
     def _count_color_on_face(self, face: Face, color: Color) -> int:
         return self.cqr.count_color_on_face(face, color)
 
-    def _2d_center_row_slice_iter(self, slice_index: int) -> Iterator[Point]:
-        """Iterate over all columns in a specific row."""
-
-        # claude this is accidentally work because slice and face row are the same of front face
-
-        n = self.cube.n_slices
-        for c in range(n):
-            yield Point(slice_index, c)
+    # def _2d_center_row_slice_iter(self, slice_index: int) -> Iterator[Point]:
+    #     """Iterate over all columns in a specific row."""
+    #
+    #     # claude this is accidentally work because slice and face row are the same of front face
+    #
+    #     n = self.cube.n_slices
+    #     for c in range(n):
+    #         yield Point(slice_index, c)
 
 

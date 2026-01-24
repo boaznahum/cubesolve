@@ -121,7 +121,7 @@ def clear_all_type_of_markers(cube: Cube) -> None:
 __SOLVED_FLAG_KEY = "NxNCenters2_center_pice_solved"
 
 
-def _is_cent_piece_solved(center_piece: CenterSlice) -> bool:
+def _is_cent_piece_marked_solved(center_piece: CenterSlice) -> bool:
     """Check if a center-piece is marked as solved (MARKER 2)."""
     return is_slice_solved(center_piece)
 
@@ -214,11 +214,15 @@ __CENTER_SLICE_TRACK_KEY = str(uuid.uuid4())
 
 
 def _track_center_slice(cs: CenterSlice, column: int) -> None:
+    # boaz remove column it is not used, change from int to bool
     """Mark a center slice as being tracked for the current row (MARKER 3)."""
-    cs.moveable_attributes[__CENTER_SLICE_TRACK_KEY] = column
+    cs.moveable_attributes[__CENTER_SLICE_TRACK_KEY] = 0
 
 
-def _is_center_slice(cs: CenterSlice) -> int | None:
+def _is_center_slice(cs: CenterSlice) -> bool:
+
+    # boaz remove column it is not used
+
     """Check if a center slice is tracked and return its column (MARKER 3).
 
     Returns:
@@ -227,10 +231,11 @@ def _is_center_slice(cs: CenterSlice) -> int | None:
     # the default is boolean False !!!
     x = cs.moveable_attributes[__CENTER_SLICE_TRACK_KEY]
 
+    #boaz: becuase damm moveable_attributes has default bool !!!
     if type(x) is int:
-        return x
+        return True
     else:
-        return None
+        return False
 
 
 def clear_center_slice(cs: CenterSlice) -> None:
@@ -367,9 +372,10 @@ def _get_row_pieces(cube, n_slices,
     yield from chain(*pieces_to_test)
 
 
-def _get_center_row_pieces(cube, n_slices,
-                           l1_tracker: FaceTracker, for_face_t: FaceTracker, slice_row: int
-                           ) -> Generator[CenterSlice]:
+def get_center_row_pieces(cube,
+                          l1_tracker: FaceTracker, for_face_t: FaceTracker | None, slice_row: int
+                          ) -> Generator[CenterSlice]:
+    #boaz: take cube from l1_tracker
     """Get all pieces (center slices and/or edge wings) at a given slice row.
 
     Args:
@@ -379,6 +385,10 @@ def _get_center_row_pieces(cube, n_slices,
     Yields:
         PartSlice objects at the given row based on config flags
         (BIG_LBL_RESOLVE_CENTER_SLICES and BIG_LBL_RESOLVE_EDGES_SLICES)
+        :param cube:
+        :param slice_row:
+        :param l1_tracker:
+        :param for_face_t: if None then for all faces
     """
 
     # Get the slice sandwiched between L1 face and its opposite
@@ -388,7 +398,8 @@ def _get_center_row_pieces(cube, n_slices,
 
     # Convert L1-relative distance to slice coordinate system
     cube_slice_index = slice_layout.distance_from_face_to_slice_index(
-        l1_tracker.face_name, slice_row, n_slices
+
+        l1_tracker.face_name, slice_row, cube.n_slices  # claude: why we need to pass n_slices !!! it should be in sized layout - slice !!
     )
 
     slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
@@ -399,9 +410,13 @@ def _get_center_row_pieces(cube, n_slices,
     pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj.get_slices_by_index(cube_slice_index)
 
 
-    for_face: Face = for_face_t.face
+    if for_face_t is None:
+        yield from pieces[1]
+    else:
 
-    # claude: to be optimized, most it is duplication of the method above
-    for cs in pieces[1]:
-        if cs.face is for_face:
-            yield cs
+        for_face: Face = for_face_t.face
+
+        # claude: to be optimized, most it is duplication of the method above
+        for cs in pieces[1]:
+            if cs.face is for_face:
+                yield cs
