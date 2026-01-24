@@ -23,9 +23,10 @@ so i added a patch:
             # do it with two separated trackers
 
             # it i wll be called agin in the loop in case of parity detection
-            _common.clear_all_type_of_markers(self.cube)
 
             with FacesTrackerHolder(self) as th:
+                
+                
                 self._solve_layer1_centers(th)
                 self._solve_layer1_edges(th)
                 self._solve_layer1_corners(th)
