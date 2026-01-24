@@ -121,7 +121,7 @@ def clear_all_type_of_markers(cube: Cube) -> None:
 __SOLVED_FLAG_KEY = "NxNCenters2_center_pice_solved"
 
 
-def _is_cent_piece_solved(center_piece: CenterSlice) -> bool:
+def _is_cent_piece_marked_solved(center_piece: CenterSlice) -> bool:
     """Check if a center-piece is marked as solved (MARKER 2)."""
     return is_slice_solved(center_piece)
 
@@ -367,9 +367,9 @@ def _get_row_pieces(cube, n_slices,
     yield from chain(*pieces_to_test)
 
 
-def _get_center_row_pieces(cube, n_slices,
-                           l1_tracker: FaceTracker, for_face_t: FaceTracker, slice_row: int
-                           ) -> Generator[CenterSlice]:
+def get_center_row_pieces(cube,
+                          l1_tracker: FaceTracker, for_face_t: FaceTracker | None, slice_row: int
+                          ) -> Generator[CenterSlice]:
     """Get all pieces (center slices and/or edge wings) at a given slice row.
 
     Args:
@@ -379,6 +379,8 @@ def _get_center_row_pieces(cube, n_slices,
     Yields:
         PartSlice objects at the given row based on config flags
         (BIG_LBL_RESOLVE_CENTER_SLICES and BIG_LBL_RESOLVE_EDGES_SLICES)
+        :param l1_tracker:
+        :param for_face_t: if None then for all faces
     """
 
     # Get the slice sandwiched between L1 face and its opposite
@@ -399,9 +401,13 @@ def _get_center_row_pieces(cube, n_slices,
     pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj.get_slices_by_index(cube_slice_index)
 
 
-    for_face: Face = for_face_t.face
+    if for_face_t is None:
+        yield from pieces[1]
+    else:
 
-    # claude: to be optimized, most it is duplication of the method above
-    for cs in pieces[1]:
-        if cs.face is for_face:
-            yield cs
+        for_face: Face = for_face_t.face
+
+        # claude: to be optimized, most it is duplication of the method above
+        for cs in pieces[1]:
+            if cs.face is for_face:
+                yield cs
