@@ -159,6 +159,26 @@ class LayerByLayerNxNSolver(BaseSolver):
         if self.is_solved:
             return sr
 
+
+        # A patch to test my assumption on bug of edges
+        if what == SolveStep.LBL_SLICES_CTR:
+            # do it with two separated trackers
+
+            print("PATCH PATCH ❌❌❌❌❌❌ solving in two phases ❌❌❌❌❌❌❌")
+
+            # it i wll be called agin in the loop in case of parity detection
+            _common.clear_all_type_of_markers(self.cube)
+
+            with FacesTrackerHolder(self) as th:
+                self._solve_layer1_centers(th)
+                self._solve_layer1_edges(th)
+                self._solve_layer1_corners(th)
+
+            with FacesTrackerHolder(self) as th:
+                self._solve_face_rows(th)
+
+            return sr
+
         # it i wll be called agin in the loop in case of parity detection
         _common.clear_all_type_of_markers(self.cube)
 
