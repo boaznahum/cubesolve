@@ -1,6 +1,7 @@
 # The bug
 
-1. 5x5
+1. PATCH_TWO_TRACKERS_PHASES = False
+2. 5x5
 2. Reset
 3. Scramble 0
 4. Solve instant ,midlle slcies centers, centers are diabled _lbl_config.py BIG_LBL_RESOLVE_CENTER_SLICES=False

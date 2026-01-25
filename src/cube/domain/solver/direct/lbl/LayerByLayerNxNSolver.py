@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 from cube.domain.model import Corner, Part
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.direct.lbl import _common
+from cube.domain.solver.direct.lbl import _common, _lbl_config
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
@@ -161,7 +161,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
 
         # A patch to test my assumption on bug of edges
-        if what == SolveStep.LBL_SLICES_CTR:
+        if what == SolveStep.LBL_SLICES_CTR and _lbl_config.PATCH_TWO_TRACKERS_PHASES:
             # do it with two separated trackers
 
             print("PATCH PATCH ❌❌❌❌❌❌ solving in two phases ❌❌❌❌❌❌❌")
