@@ -12,6 +12,8 @@ from cube.application.AbstractApp import AbstractApp
 from cube.domain.model import Color
 from cube.domain.solver import Solvers
 
+from .conftest import CUBE_SIZES_ALL, get_scramble_params, skip_even_cubes
+
 
 def check_edge_wings_on_row_solved(cube, target_face, l1_face, row_distance_from_l1: int) -> list[str]:
     """
@@ -74,49 +76,69 @@ def check_all_side_edges_solved(cube, l1_face) -> list[str]:
 class TestLBLEdges:
     """Test LBL solver edge handling without animation."""
 
-    @pytest.mark.parametrize("cube_size", [5])
-    @pytest.mark.parametrize("seed", [0, 1, 2, 3, 4, 5, 101, 202])
-    def test_lbl_solver_edges(self, cube_size: int, seed: int) -> None:
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_ALL, ids=lambda s: f"size_{s}")
+    @pytest.mark.parametrize(
+        "scramble_name,scramble_seed",
+        get_scramble_params(),
+        ids=lambda x: x if isinstance(x, str) else None,
+    )
+    def test_lbl_solver_edges(
+        self,
+        cube_size: int,
+        scramble_name: str,
+        scramble_seed: int | None,
+        session_random_seed: int,
+    ) -> None:
         """Test that LBL solver correctly solves edges without animation."""
-        # Create app without animation
+        skip_even_cubes(cube_size)
+
+        actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
+
         app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
         cube = app.cube
 
-        # Create LBL solver
         solver = Solvers.lbl_big(app.op)
 
-        # Scramble
-        app.scramble(seed, None, animation=False, verbose=False)
+        app.scramble(actual_seed, None, animation=False, verbose=False)
 
-        # Verify scrambled
-        assert not solver.is_solved, f"Cube should be scrambled (size={cube_size}, seed={seed})"
+        assert not solver.is_solved, f"Cube should be scrambled (size={cube_size}, scramble={scramble_name})"
 
-        # Solve
         solver.solve(debug=False, animation=False)
 
-        # Check orthogonal edges are solved (edges between side faces)
         l1_face = cube.color_2_face(Color.WHITE)
         for edge in get_orthogonal_edges(cube, l1_face):
             assert edge.is3x3, (
                 f"Edge {edge.name} not solved after LBL solver "
-                f"(size={cube_size}, seed={seed})"
+                f"(size={cube_size}, scramble={scramble_name})"
             )
 
-    @pytest.mark.parametrize("cube_size", [5])
-    def test_lbl_edges_detailed(self, cube_size: int) -> None:
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_ALL, ids=lambda s: f"size_{s}")
+    @pytest.mark.parametrize(
+        "scramble_name,scramble_seed",
+        get_scramble_params(),
+        ids=lambda x: x if isinstance(x, str) else None,
+    )
+    def test_lbl_edges_detailed(
+        self,
+        cube_size: int,
+        scramble_name: str,
+        scramble_seed: int | None,
+        session_random_seed: int,
+    ) -> None:
         """Detailed test with edge state logging."""
+        skip_even_cubes(cube_size)
+
+        actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
+
         app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
         cube = app.cube
 
         solver = Solvers.lbl_big(app.op)
 
-        # Use a specific seed for reproducibility
-        app.scramble(42, None, animation=False, verbose=False)
+        app.scramble(actual_seed, None, animation=False, verbose=False)
 
-        # Solve
         solver.solve(debug=False, animation=False)
 
-        # Detailed edge check - only orthogonal edges
         l1_face = cube.down
         unsolved_edges = []
         for edge in get_orthogonal_edges(cube, l1_face):
@@ -124,34 +146,44 @@ class TestLBLEdges:
                 unsolved_edges.append(edge.name)
 
         assert not unsolved_edges, (
-            f"Unsolved edges after LBL: {unsolved_edges} (size={cube_size})"
+            f"Unsolved edges after LBL: {unsolved_edges} (size={cube_size}, scramble={scramble_name})"
         )
 
-    @pytest.mark.parametrize("cube_size", [5])
-    @pytest.mark.parametrize("seed", [0, 1, 42])
-    def test_lbl_solver_full_edges_check(self, cube_size: int, seed: int) -> None:
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_ALL, ids=lambda s: f"size_{s}")
+    @pytest.mark.parametrize(
+        "scramble_name,scramble_seed",
+        get_scramble_params(),
+        ids=lambda x: x if isinstance(x, str) else None,
+    )
+    def test_lbl_solver_full_edges_check(
+        self,
+        cube_size: int,
+        scramble_name: str,
+        scramble_seed: int | None,
+        session_random_seed: int,
+    ) -> None:
         """
         Test full LBL solve with detailed edge checks after completion.
 
         This verifies all edges are properly paired on all 4 side faces.
         """
+        skip_even_cubes(cube_size)
+
+        actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
+
         app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
         cube = app.cube
 
-        # Scramble
-        app.scramble(seed, None, animation=False, verbose=False)
+        app.scramble(actual_seed, None, animation=False, verbose=False)
 
-        # Create solver
         solver = Solvers.lbl_big(app.op)
 
-        # Full solve
         solver.solve(debug=False, animation=False)
 
-        # Check all side edges are solved (all rows)
         l1_face = cube.down
         errors = check_all_side_edges_solved(cube, l1_face)
 
         assert not errors, (
             f"Edges not solved after full LBL solve: {errors} "
-            f"(size={cube_size}, seed={seed})"
+            f"(size={cube_size}, scramble={scramble_name})"
         )
