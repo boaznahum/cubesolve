@@ -21,7 +21,7 @@ from tests.solvers.conftest import skip_if_not_supported
 # =============================================================================
 
 
-@pytest.mark.parametrize("size", [5, 7, 9])
+@pytest.mark.parametrize("size", [5, 7, 9, 11])
 def test_lbl_solver_state_inspection_on_solved_cube(size: int) -> None:
     """Test state inspection methods on a solved cube."""
 

@@ -23,7 +23,7 @@ CUBE_SIZE = 5
 # Enable cube caching for performance optimization
 # Env override: CUBE_DISABLE_CACHE=1 to disable
 ENABLE_CUBE_CACHE = True
-PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY=True
+PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY=False
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
 # Available solvers: LBL, CFOP, Kociemba, Cage
