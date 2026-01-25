@@ -25,6 +25,7 @@ See docs/design/layer_by_layer_nxn.md for detailed design.
 
 from __future__ import annotations
 
+from operator import and_
 from typing import TYPE_CHECKING
 
 from cube.domain.model import Corner, Part
@@ -125,6 +126,18 @@ class LayerByLayerNxNSolver(BaseSolver):
             solved_slices = self._lbl_slices.count_solved_slice_centers(th, l1_tracker)
 
             return f"L1:Done|Sl:{solved_slices}/{n_slices}"
+
+    def is_l2_slices_solved(self) -> bool:
+        with FacesTrackerHolder(self) as th:
+
+            if not self._is_layer1_solved(th):
+                return False
+
+            l1_tracker = self._get_layer1_tracker(th)
+            solved_slices = self._lbl_slices.count_solved_slice_centers(th, l1_tracker)
+
+            return solved_slices == self.cube.n_slices
+
 
     def supported_steps(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.

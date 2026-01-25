@@ -17,6 +17,7 @@ from cube.domain.model.Cube import Cube
 from cube.utils.SSCode import SSCode
 
 from ...domain.solver.protocols.OperatorProtocol import OperatorProtocol
+from ...utils.service_provider import IServiceProvider
 
 if TYPE_CHECKING:
     from cube.application.commands.op_annotation import OpAnnotation
@@ -222,6 +223,12 @@ class Operator(OperatorProtocol):
     @property
     def cube(self) -> Cube:
         return self._cube
+
+    @property
+    def sp(self) -> IServiceProvider:
+        """Get the service provider."""
+        return self.cube.sp
+
 
     def history(self, *, remove_scramble: bool = False) -> Sequence[Alg]:
         """

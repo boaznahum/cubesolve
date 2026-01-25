@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ContextManager, Protocol
 
 from cube.utils.SSCode import SSCode
+from cube.utils.service_provider import IServiceProvider
 
 if TYPE_CHECKING:
     from cube.application.state import ApplicationAndViewState
@@ -27,6 +28,11 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
     @property
     def cube(self) -> "Cube":
         """The cube being operated on."""
+        ...
+
+    @property
+    def sp(self) -> IServiceProvider:
+        """Get the service provider."""
         ...
 
     def play(self, alg: "Alg", inv: Any = False, animation: Any = True) -> None:
