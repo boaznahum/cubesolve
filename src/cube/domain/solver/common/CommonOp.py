@@ -215,6 +215,8 @@ class CommonOp:
         Raises:
             GeometryError: INVALID_PRESERVE_ROTATION if rotation is impossible
         """
+
+        #cluade - not optimized !!!
         if source.name == target.name:
             return  # Already at target, nothing to do
 

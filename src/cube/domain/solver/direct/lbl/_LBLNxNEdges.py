@@ -7,6 +7,7 @@ from cube.domain.geometric.geometry_types import FaceOrthogonalEdgesInfo
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
+from cube.domain.model._part import EdgeName
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
 from cube.domain.solver.direct.lbl import _common
 from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solved
@@ -114,6 +115,7 @@ class _LBLNxNEdges(SolverHelper):
         assert white is self.cube.down
 
         with self._logger.tab(f"Solving edges on face {target_face_t} row {face_row}"):
+
             self.cmn.bring_face_front_preserve_down(target_face_t.face)
 
             # from now target face is on front
@@ -128,8 +130,67 @@ class _LBLNxNEdges(SolverHelper):
             self.debug(
                 lambda: lambda: f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
 
-            self._solve_one_side_edge(l1_white_tracker, target_face, face_row, edge_info.edge_one, edge_info.index_on_edge_one)
-            self._solve_one_side_edge(l1_white_tracker, target_face, face_row, edge_info.edge_two, edge_info.index_on_edge_two)
+            def patch() -> None:
+                # PATCH PATCH PATCH try to solve onw wing both sides
+                # preserve
+                front_color = self.cube.front.color
+
+                assert target_face is self.cube.front
+
+                faces = []
+                edge_wing = edge_info.edge_one.get_slice(edge_info.index_on_edge_one)
+                for f in edge_wing.faces():
+                    faces.append(f.color)
+
+                the_wing = edge_info.edge_one.get_slice(edge_info.index_on_edge_one)
+
+                the_colors = the_wing.colors_id
+
+                self.debug(f"patch: "
+                           f"Wing is {the_wing.parent_name_and_index_colors}")
+
+                assert the_wing.parent.name is EdgeName.FL
+
+                solved: SmallStepSolveState = SmallStepSolveState.NOT_SOLVED
+                fc: Color
+                for fc in faces:
+
+
+                    the_target_face = self.cube.color_2_face(fc)
+
+                    with self._logger.tab(f"patch: Working on {target_face}"):
+
+                        self.cmn.bring_face_front_preserve_down(the_target_face)
+
+                        the_target_face = self.cube.color_2_face(fc)
+
+                        the_edge =  the_target_face.edge_left
+
+                        the_wing = the_edge.get_slice(edge_info.index_on_edge_one)
+
+                        #assert the_wing.colors_id == the_colors, f" {the_wing.colors_id} != {the_colors}"
+
+                        solved = self._solve_one_side_edge(l1_white_tracker, the_target_face, face_row, the_wing.parent,
+                                                  the_wing.index)
+
+                        if solved.is_solved:
+                            break
+
+
+                #restore - we dont know what caller expect
+                self.cmn.bring_face_front_preserve_down(self.cube.color_2_face(front_color))
+
+                assert solved.is_solved
+
+
+            if True:
+                with self._logger.tab("🟰🟰🟰🟰🟰🟰🟰🟰🟰 PATCH !!!!!!!!!!!!!!!!!!!!!!!!"):
+                    patch()
+            else:
+
+                self._solve_one_side_edge(l1_white_tracker, target_face, face_row, edge_info.edge_one, edge_info.index_on_edge_one)
+                self._solve_one_side_edge(l1_white_tracker, target_face, face_row, edge_info.edge_two, edge_info.index_on_edge_two)
+
 
             pass
 
@@ -164,8 +225,7 @@ class _LBLNxNEdges(SolverHelper):
                 required_indexes = [index_on_target_edge, self.cube.inv(index_on_target_edge)]
 
                 source_slices: list[EdgeWing] = [*self.cqr.find_all_slice_in_edges(self.cube.edges,
-                                                                                   lambda
-                                                                                       s:
+                                                                                   lambda s:
                                                                                    #s is not target_edge_wing and  # don't select target as source
                                                                                    not _common.is_slice_solved(s) and  # dont touch solved slices !!!
                                                                                    s.index in required_indexes and s.colors_id == required_color_unordered)]
@@ -216,7 +276,8 @@ class _LBLNxNEdges(SolverHelper):
                 for i in range(face_row + 1):
                     with self._logger.tab(lambda: f"Row {i}"):
                         for edge in _common.get_edge_row_pieces(self.cube, l1_white_tracker, i):
-                            self.debug(lambda : edge.parent_name_and_index_colors)
+                            if edge.match_faces:
+                                self.debug(lambda : edge.parent_name_and_index_colors)
 
 
         with self._logger.tab(lambda: f"Working on all sources  {[w.parent_name_and_index for w in source_slices]}"):
@@ -255,7 +316,7 @@ class _LBLNxNEdges(SolverHelper):
                 self.debug(lambda: f"on faces {untracked_source_wing.faces()} {untracked_source_edge.name}")
 
                 # From here source may move !!!
-
+                # boaz: need to optimzie start with the one thay best match on up at least
                 # # simple case edge is on top
                 cube = self.cube
                 if not untracked_source_wing.on_face(cube.up):
@@ -277,6 +338,26 @@ class _LBLNxNEdges(SolverHelper):
 
 
                 self.debug(lambda: f"💚💚 Wing {untracked_source_wing.parent_name_and_index_colors}  is on {cube.up} {untracked_source_edge.name}")
+
+                #Now it need to be also on front
+                if not untracked_source_wing.on_face(cube.front):
+
+                    #assert False, f"Source wing {source_edge_wing} is not on up"
+                    with self._logger.tab(lambda: f"‼️‼️Trying to bring  {untracked_source_wing.parent_name_and_index} to to front"):
+
+                        for _ in range(3): ### calude: optimize it !!!!
+                            self.op.play(Algs.U)
+                            untracked_source_wing = source_edge_wing_t.slice
+                            if untracked_source_wing.on_face(cube.front):
+                                break
+
+                        untracked_source_wing = source_edge_wing_t.slice
+                        assert untracked_source_wing.on_face(cube.front)
+                        untracked_source_edge = untracked_source_wing.parent
+
+                self.debug(
+                    lambda: f"💚💚 Wing {untracked_source_wing.parent_name_and_index_colors}  is on {cube.front} {untracked_source_edge.name}")
+
 
                 # now check if we can use it ?
 
