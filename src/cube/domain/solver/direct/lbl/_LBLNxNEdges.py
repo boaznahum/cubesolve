@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Tuple
+from typing import Tuple, Any
 
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import InternalSWError
@@ -11,7 +11,7 @@ from cube.domain.model._part import EdgeName
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
 from cube.domain.solver.direct.lbl import _common
 from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solved
-from cube.domain.tracker import FacesTrackerHolder
+from cube.domain.tracker import FacesTrackerHolder, PartSliceTracker
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -133,54 +133,98 @@ class _LBLNxNEdges(SolverHelper):
             def patch() -> None:
                 # PATCH PATCH PATCH try to solve onw wing both sides
                 # preserve
-                front_color = self.cube.front.color
+                cube = self.cube
+                front_color = cube.front.color
 
-                assert target_face is self.cube.front
+                assert target_face is cube.front
 
                 faces = []
-                edge_wing = edge_info.edge_one.get_slice(edge_info.index_on_edge_one)
-                for f in edge_wing.faces():
-                    faces.append(f.color)
+                target_edge_wing = edge_info.edge_one.get_slice(edge_info.index_on_edge_one)
 
-                the_wing = edge_info.edge_one.get_slice(edge_info.index_on_edge_one)
+                if mark_slice_and_v_mark_if_solved(target_edge_wing):
+                    self.debug(lambda: f"EdgWing {target_edge_wing} already solved")
+                else:
 
-                the_colors = the_wing.colors_id
-
-                self.debug(f"patch: "
-                           f"Wing is {the_wing.parent_name_and_index_colors}")
-
-                assert the_wing.parent.name is EdgeName.FL
-
-                solved: SmallStepSolveState = SmallStepSolveState.NOT_SOLVED
-                fc: Color
-                for fc in faces:
+                    for f in target_edge_wing.faces():
+                        faces.append(f.color)
 
 
-                    the_target_face = self.cube.color_2_face(fc)
+                    # we need to trace it we start to move the cube around
+                    target_edge_wing_t: EdgeWingTracker = PartSliceTracker.with_tracker(target_edge_wing)
+                    required_color_unordered: PartColorsID = target_edge_wing.position_id
 
-                    with self._logger.tab(f"patch: Working on {target_face}"):
+                    required_indexes = [target_edge_wing.index, cube.inv(target_edge_wing.index)]
 
-                        self.cmn.bring_face_front_preserve_down(the_target_face)
+                    source_wings: list[EdgeWing] = [*self.cqr.find_all_slice_in_edges(cube.edges,
+                                                                                      lambda s:
+                                                                                       #s is not target_edge_wing and  # don't select target as source
+                                                                                       not _common.is_slice_solved(s) and  # dont touch solved slices !!!
+                                                                                       s.index in required_indexes and s.colors_id == required_color_unordered)]
 
-                        the_target_face = self.cube.color_2_face(fc)
+                    assert source_wings  # at least one
 
-                        the_edge =  the_target_face.edge_left
+                    self.debug(lambda: f"source_slices: {source_wings}")
 
-                        the_wing = the_edge.get_slice(edge_info.index_on_edge_one)
+                    solved: SmallStepSolveState =  SmallStepSolveState.NOT_SOLVED
 
-                        #assert the_wing.colors_id == the_colors, f" {the_wing.colors_id} != {the_colors}"
-
-                        solved = self._solve_one_side_edge(l1_white_tracker, the_target_face, face_row, the_wing.parent,
-                                                  the_wing.index)
-
-                        if solved.is_solved:
-                            break
+                    with PartSliceTracker.with_trackers(source_wings) as sts:
 
 
-                #restore - we dont know what caller expect
-                self.cmn.bring_face_front_preserve_down(self.cube.color_2_face(front_color))
+                        self.debug(f"patch: "
+                                   f"Wing is {target_edge_wing.parent_name_and_index_colors}")
 
-                assert solved.is_solved
+                        assert target_edge_wing.parent.name is EdgeName.FL
+
+                        fc: Color
+                        for fc in faces:
+
+                            with self._logger.tab(
+                                    lambda: f"Working on face {fc}"):
+
+
+                                with self._logger.tab(
+                                        lambda: f"Working on all sources  {[t.slice.parent_name_and_index_position_colors for t in sts]}"):
+
+                                    st: EdgeWingTracker
+                                    for st in sts:
+
+                                        the_target_face = cube.color_2_face(fc)
+
+                                        with self._logger.tab(f"patch: Working on {target_face}"):
+
+                                            self.cmn.bring_face_front_preserve_down(the_target_face)
+
+                                            # we track is colors
+                                            the_wing = target_edge_wing_t.slice
+
+                                            assert the_wing.parent in [cube.fr, cube.fl]
+
+                                            is_fl = the_wing.parent is cube.fl
+
+                                            solved = self._solve_one_side_edge_one_source(l1_white_tracker,
+                                                                                          the_target_face,
+                                                                                          st,
+                                                                                          face_row, the_wing.parent,
+                                                                                          the_wing.index)
+
+                                            if solved.is_solved:
+                                                break
+                                    if solved.is_solved:
+                                        break
+
+
+                    #restore - we dont know what caller expect
+                    self.cmn.bring_face_front_preserve_down(cube.color_2_face(front_color))
+
+                    # if we dont bring it back then this assignment ins invalid
+                    # PATHC we assume same index on both
+                    if is_fl:
+                        the_wing = cube.front.edge_left.get_slice(edge_info.index_on_edge_one)
+                    else:
+                        the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_one)
+
+
+                    assert solved.is_solved, f"Wing {the_wing.parent_name_and_index_position_colors} is not solved"
 
 
             if True:
@@ -194,9 +238,10 @@ class _LBLNxNEdges(SolverHelper):
 
             pass
 
-    def _solve_one_side_edge(self,
+    def _solve_one_side_edge_one_source(self,
                              l1_white_tracker: FaceTracker,
                              target_face: Face,
+                             source_wing_t: EdgeWingTracker,
                              face_row: int, # for now for debug only
                              target_edge: Edge,
                              index_on_target_edge) -> SmallStepSolveState:
@@ -210,48 +255,31 @@ class _LBLNxNEdges(SolverHelper):
         with self._logger.tab(
                 f"Working on edge {target_face.get_edge_position(target_edge)} / {index_on_target_edge} wing {required_color_ordered}"):
 
-            if mark_slice_and_v_mark_if_solved(target_edge_wing):
-                debug(lambda: f"EdgWing {target_edge_wing} already solved")
-                return SmallStepSolveState.WAS_SOLVED
+
 
             # the colors keys of the wing starting from the target face
 
             with self.ann.annotate(
                     h1=lambda: f"Fixing edge wing {target_edge_wing.parent_name_and_index} -> {required_color_ordered}"):
 
-                # position_id gives us the face CENTER colors of the slot (where piece SHOULD go)
-                required_color_unordered: PartColorsID = target_edge_wing.position_id
-
-                required_indexes = [index_on_target_edge, self.cube.inv(index_on_target_edge)]
-
-                source_slices: list[EdgeWing] = [*self.cqr.find_all_slice_in_edges(self.cube.edges,
-                                                                                   lambda s:
-                                                                                   #s is not target_edge_wing and  # don't select target as source
-                                                                                   not _common.is_slice_solved(s) and  # dont touch solved slices !!!
-                                                                                   s.index in required_indexes and s.colors_id == required_color_unordered)]
-
-                debug(lambda: f"source_slices: {source_slices}")
-
-                assert source_slices  # at least one
-
-                status = self._solve_edge_win_all_source(
+                status = self._solve_edge_win_one_source(
                     l1_white_tracker,
-                    source_slices,
+                    source_wing_t,
                     target_face,
                     face_row,
                     target_edge_wing
                 )
 
-                self.debug(lambda: f"❓❓❓Solving all source_slices: {source_slices} status: {status}")
+                self.debug(lambda: f"❓❓❓Solving all source_slices: {source_wing_t.slice.parent_name_and_index_position_colors} status: {status}")
                 if mark_slice_and_v_mark_if_solved(target_edge_wing):
                     debug(lambda: f"✅✅✅✅ EdgWing {target_edge_wing.parent_name_and_index_colors} solved")
 
                 return status
 
-    def _solve_edge_win_all_source(self, l1_white_tracker,
-                                   source_slices: list[EdgeWing],
+    def _solve_edge_win_one_source(self, l1_white_tracker,
+                                   source_slice_t: EdgeWingTracker,
                                    target_face: Face,
-                                   face_row: int, # for now for debug only
+                                   face_row: int,  # for now for debug only
                                    target_edge_wing: EdgeWing,  # redundant - you have the index
                                    ) -> SmallStepSolveState:
         """Try to solve the target edge wing using any of the source slices.
@@ -280,20 +308,15 @@ class _LBLNxNEdges(SolverHelper):
                                 self.debug(lambda : edge.parent_name_and_index_colors)
 
 
-        with self._logger.tab(lambda: f"Working on all sources  {[w.parent_name_and_index for w in source_slices]}"):
+        with self._logger.tab(lambda: f"Working on source  {source_slice_t.slice}"):
 
-            with PartSliceTracker.with_trackers(source_slices) as sts:
+            st = source_slice_t
 
-                st: EdgeWingTracker
-                for st in sts:
+            print_solved_till_now(f"Before solving {target_edge_wing.parent_name_and_index_colors}")
+            status = self._solve_edge_wing_by_source(target_face, target_edge_wing, st)
+            print_solved_till_now(f"After solving ({status}) {target_edge_wing.parent_name_and_index_colors}")
 
-                    print_solved_till_now(f"Before solving {target_edge_wing.parent_name_and_index_colors}")
-                    status = self._solve_edge_wing_by_source(target_face, target_edge_wing, st)
-                    print_solved_till_now(f"After solving ({status}) {target_edge_wing.parent_name_and_index_colors}")
-
-                    if status == SmallStepSolveState.SOLVED:
-                        return SmallStepSolveState.SOLVED
-                return SmallStepSolveState.NOT_SOLVED
+            return status
 
     def _solve_edge_wing_by_source(self, target_face: Face,
                                    _target_edge_wing: EdgeWing,
@@ -339,7 +362,7 @@ class _LBLNxNEdges(SolverHelper):
 
                 self.debug(lambda: f"💚💚 Wing {untracked_source_wing.parent_name_and_index_colors}  is on {cube.up} {untracked_source_edge.name}")
 
-                #Now it need to be also on front
+                #Now it need to be also on front, boaz we can check match before bring to front
                 if not untracked_source_wing.on_face(cube.front):
 
                     #assert False, f"Source wing {source_edge_wing} is not on up"
@@ -371,7 +394,7 @@ class _LBLNxNEdges(SolverHelper):
                     # from here it is collection of hard code assumption that we need to generalize
 
                     # bring edge to front
-                    self.cmn.bring_edge_on_up_to_front(self, untracked_source_edge)
+                   # self.cmn.bring_edge_on_up_to_front(self, untracked_source_edge)
 
                     # you can no longer use it
 
