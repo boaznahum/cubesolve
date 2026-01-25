@@ -332,9 +332,7 @@ def _get_side_face_trackers(
             if t.face is not l1_tracker.face and t.face is not l1_opposite_face]
 
 
-def _get_row_pieces(cube, n_slices,
-                    l1_tracker: FaceTracker, slice_row: int
-                    ) -> Generator[PartSlice]:
+def _get_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> Generator[PartSlice]:
     """Get all pieces (center slices and/or edge wings) at a given slice row.
 
     Args:
@@ -350,6 +348,8 @@ def _get_row_pieces(cube, n_slices,
     # (e.g., L1=D → E slice, L1=L → M slice, L1=F → S slice)
     slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
     slice_layout = cube.layout.get_slice(slice_name)
+
+    n_slices = cube.n_slices
 
     # Convert L1-relative distance to slice coordinate system
     cube_slice_index = slice_layout.distance_from_face_to_slice_index(
@@ -420,3 +420,13 @@ def get_center_row_pieces(cube,
         for cs in pieces[1]:
             if cs.face is for_face:
                 yield cs
+
+def get_edge_row_pieces(cube,
+                          l1_tracker: FaceTracker, slice_row: int
+                          ) -> Generator[EdgeWing]:
+    # calude: patch path third time code is duplicated
+
+
+    for cp in _get_row_pieces(cube, l1_tracker,  slice_row):
+        if isinstance(cp, EdgeWing):
+            yield cp

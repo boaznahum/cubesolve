@@ -88,7 +88,7 @@ class _LBLNxNEdges(SolverHelper):
             return True
 
     def solve_single_center_face_row(
-            self, l1_white_tracker: FaceTracker, target_face_t: FaceTracker, row_distance_from_l1: int
+            self, l1_white_tracker: FaceTracker, target_face_t: FaceTracker, face_row: int
     ) -> None:
         """
         Solve edge slices on a single row of a face, starting from the L1 layer.
@@ -100,7 +100,7 @@ class _LBLNxNEdges(SolverHelper):
         Args:
             l1_white_tracker: FaceTracker for L1 (white) face. Must currently be at Down.
             target_face_t: FaceTracker for the face whose edges we're solving.
-            row_distance_from_l1: Distance from L1 face (0 = closest row to L1).
+            face_row: Distance from L1 face (0 = closest row to L1).
                 See class docstring for full explanation.
 
         Example (5x5 cube, L1=Down, target=Front):
@@ -113,7 +113,7 @@ class _LBLNxNEdges(SolverHelper):
         white: Face = l1_white_tracker.face
         assert white is self.cube.down
 
-        with self._logger.tab(f"Solving edges on face {target_face_t} row {row_distance_from_l1}"):
+        with self._logger.tab(f"Solving edges on face {target_face_t} row {face_row}"):
             self.cmn.bring_face_front_preserve_down(target_face_t.face)
 
             # from now target face is on front
@@ -122,18 +122,23 @@ class _LBLNxNEdges(SolverHelper):
 
             edge_info: FaceOrthogonalEdgesInfo = self.cube.sized_layout.get_orthogonal_index_by_distance_from_face(
                 target_face,
-                l1_white_tracker.face,
-                row_distance_from_l1)
+                l1_white_tracker.face, face_row
+                )
 
             self.debug(
                 lambda: lambda: f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
 
-            self._solve_one_side_edge(target_face, edge_info.edge_one, edge_info.index_on_edge_one)
-            self._solve_one_side_edge(target_face, edge_info.edge_two, edge_info.index_on_edge_two)
+            self._solve_one_side_edge(l1_white_tracker, target_face, face_row, edge_info.edge_one, edge_info.index_on_edge_one)
+            self._solve_one_side_edge(l1_white_tracker, target_face, face_row, edge_info.edge_two, edge_info.index_on_edge_two)
 
             pass
 
-    def _solve_one_side_edge(self, target_face: Face, target_edge: Edge, index_on_target_edge) -> SmallStepSolveState:
+    def _solve_one_side_edge(self,
+                             l1_white_tracker: FaceTracker,
+                             target_face: Face,
+                             face_row: int, # for now for debug only
+                             target_edge: Edge,
+                             index_on_target_edge) -> SmallStepSolveState:
 
         debug = self.debug
 
@@ -170,12 +175,12 @@ class _LBLNxNEdges(SolverHelper):
                 assert source_slices  # at least one
 
                 status = self._solve_edge_win_all_source(
+                    l1_white_tracker,
                     source_slices,
                     target_face,
-                    target_edge,
-                    target_edge_wing,
-                    index_on_target_edge
-                    )
+                    face_row,
+                    target_edge_wing
+                )
 
                 self.debug(lambda: f"❓❓❓Solving all source_slices: {source_slices} status: {status}")
                 if mark_slice_and_v_mark_if_solved(target_edge_wing):
@@ -183,11 +188,12 @@ class _LBLNxNEdges(SolverHelper):
 
                 return status
 
-    def _solve_edge_win_all_source(self, source_slices: list[EdgeWing],
+    def _solve_edge_win_all_source(self, l1_white_tracker,
+                                   source_slices: list[EdgeWing],
                                    target_face: Face,
-                                   target_edge: Edge,
+                                   face_row: int, # for now for debug only
                                    target_edge_wing: EdgeWing,  # redundant - you have the index
-                                   index_on_target_edge: int) -> SmallStepSolveState:
+                                   ) -> SmallStepSolveState:
         """Try to solve the target edge wing using any of the source slices.
 
         Iterates through candidate source wings and attempts to solve the target
@@ -203,6 +209,16 @@ class _LBLNxNEdges(SolverHelper):
         Returns:
             SOLVED if target was successfully solved, NOT_SOLVED otherwise.
         """
+
+        def print_solved_till_now(title: str):
+
+            with self._logger.tab(lambda  : title + " Solved edges"):
+                for i in range(face_row + 1):
+                    with self._logger.tab(lambda: f"Row {i}"):
+                        for edge in _common.get_edge_row_pieces(self.cube, l1_white_tracker, i):
+                            self.debug(lambda : edge.parent_name_and_index_colors)
+
+
         with self._logger.tab(lambda: f"Working on all sources  {[w.parent_name_and_index for w in source_slices]}"):
 
             with PartSliceTracker.with_trackers(source_slices) as sts:
@@ -210,7 +226,9 @@ class _LBLNxNEdges(SolverHelper):
                 st: EdgeWingTracker
                 for st in sts:
 
+                    print_solved_till_now(f"Before solving {target_edge_wing.parent_name_and_index_colors}")
                     status = self._solve_edge_wing_by_source(target_face, target_edge_wing, st)
+                    print_solved_till_now(f"After solving ({status}) {target_edge_wing.parent_name_and_index_colors}")
 
                     if status == SmallStepSolveState.SOLVED:
                         return SmallStepSolveState.SOLVED

@@ -219,7 +219,7 @@ class _LBLSlices(SolverHelper):
         return count
 
     def _row_solved(self, l1_tracker: FaceTracker, slice_row: int) -> bool:
-        return all(e.match_faces for e in _get_row_pieces(self.cube, self.n_slices, l1_tracker, slice_row))
+        return all(e.match_faces for e in _get_row_pieces(self.cube, l1_tracker, slice_row))
 
     # =========================================================================
     # Edge parity detection for even cubes
@@ -338,7 +338,7 @@ class _LBLSlices(SolverHelper):
         side_trackers: list[FaceTracker] = _get_side_face_trackers(th, l1_white_tracker)
 
         # help solver not to touch already solved
-        _common.mark_slices_and_v_mark_if_solved(_get_row_pieces(self.cube, self.n_slices, l1_white_tracker, face_row))
+        _common.mark_slices_and_v_mark_if_solved(_get_row_pieces(self.cube, l1_white_tracker, face_row))
 
         for target_face in side_trackers:
                 self._solve_face_row(l1_white_tracker, target_face, face_row)
