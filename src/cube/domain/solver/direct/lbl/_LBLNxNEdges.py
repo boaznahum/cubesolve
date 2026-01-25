@@ -112,7 +112,9 @@ class _LBLNxNEdges(SolverHelper):
 
         # see with _setup_l1
         white: Face = l1_white_tracker.face
-        assert white is self.cube.down
+        cube = self.cube
+        assert white is cube.down
+
 
         with self._logger.tab(f"Solving edges on face {target_face_t} row {face_row}"):
 
@@ -122,10 +124,14 @@ class _LBLNxNEdges(SolverHelper):
             # only now we can assign
             target_face = target_face_t.face
 
-            edge_info: FaceOrthogonalEdgesInfo = self.cube.sized_layout.get_orthogonal_index_by_distance_from_face(
+            edge_info: FaceOrthogonalEdgesInfo = cube.sized_layout.get_orthogonal_index_by_distance_from_face(
                 target_face,
                 l1_white_tracker.face, face_row
                 )
+
+
+            assert edge_info.edge_one is cube.front.edge_left
+            assert edge_info.edge_two is cube.front.edge_right
 
             self.debug(
                 lambda: lambda: f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
@@ -133,7 +139,6 @@ class _LBLNxNEdges(SolverHelper):
             def patch() -> None:
                 # PATCH PATCH PATCH try to solve onw wing both sides
                 # preserve
-                cube = self.cube
                 front_color = cube.front.color
 
                 assert target_face is cube.front
@@ -150,7 +155,7 @@ class _LBLNxNEdges(SolverHelper):
 
 
                     # we need to trace it we start to move the cube around
-                    target_edge_wing_t: EdgeWingTracker = PartSliceTracker.with_tracker(target_edge_wing)
+                    # we cannot truck it becuase it might moved up becuas eit is a source
                     required_color_unordered: PartColorsID = target_edge_wing.position_id
 
                     required_indexes = [target_edge_wing.index, cube.inv(target_edge_wing.index)]
@@ -176,7 +181,8 @@ class _LBLNxNEdges(SolverHelper):
                         assert target_edge_wing.parent.name is EdgeName.FL
 
                         fc: Color
-                        for fc in faces:
+                        i: int
+                        for i, fc in enumerate(faces):
 
                             with self._logger.tab(
                                     lambda: f"Working on face {fc}"):
@@ -194,12 +200,16 @@ class _LBLNxNEdges(SolverHelper):
 
                                             self.cmn.bring_face_front_preserve_down(the_target_face)
 
+                                            # it was moved
+                                            the_target_face = cube.color_2_face(fc)
+
                                             # we track is colors
-                                            the_wing = target_edge_wing_t.slice
+                                            is_fl = i == 0
+                                            if is_fl:
+                                                the_wing = cube.front.edge_left.get_slice(edge_info.index_on_edge_one)
+                                            else:
+                                                the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_two)
 
-                                            assert the_wing.parent in [cube.fr, cube.fl]
-
-                                            is_fl = the_wing.parent is cube.fl
 
                                             solved = self._solve_one_side_edge_one_source(l1_white_tracker,
                                                                                           the_target_face,
@@ -221,7 +231,7 @@ class _LBLNxNEdges(SolverHelper):
                     if is_fl:
                         the_wing = cube.front.edge_left.get_slice(edge_info.index_on_edge_one)
                     else:
-                        the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_one)
+                        the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_two)
 
 
                     assert solved.is_solved, f"Wing {the_wing.parent_name_and_index_position_colors} is not solved"
