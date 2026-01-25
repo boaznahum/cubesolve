@@ -37,3 +37,11 @@ so i added a patch:
             return sr
 
 ```
+
+I added thisline
+```python
+                        if not self._row_solved(l1_white_tracker, row_index):
+                            raise InternalSWError(f"Row {row_index} not solved")
+
+```
+and it happnes only when l1 and centres are solved with same tracker

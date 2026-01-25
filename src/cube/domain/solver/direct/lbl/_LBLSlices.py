@@ -33,6 +33,7 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Sequence, Any, Iterable
 
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model import CenterSlice, EdgeWing, PartSlice
 from cube.domain.model.Edge import Edge
 from cube.domain.model.Slice import Slice
@@ -208,7 +209,7 @@ class _LBLSlices(SolverHelper):
         """
         count = 0
         for slice_row in range(self.n_slices):
-            all_solved = all(e.match_faces for e in _get_row_pieces(self.cube, self.n_slices, l1_tracker, slice_row))
+            all_solved = self._row_solved(l1_tracker, slice_row)
 
             if all_solved:
                 count += 1
@@ -216,6 +217,9 @@ class _LBLSlices(SolverHelper):
                 break  # Stop at first unsolved slice
 
         return count
+
+    def _row_solved(self, l1_tracker: FaceTracker, slice_row: int) -> bool:
+        return all(e.match_faces for e in _get_row_pieces(self.cube, self.n_slices, l1_tracker, slice_row))
 
     # =========================================================================
     # Edge parity detection for even cubes
@@ -382,6 +386,10 @@ class _LBLSlices(SolverHelper):
                 for row_index in range(n_to_solve):
                     with self._logger.tab(f"Solving face row {row_index}"):
                         self._solve_slice_row(row_index, face_trackers, l1_white_tracker)
+
+                        if not self._row_solved(l1_white_tracker, row_index):
+                            raise InternalSWError(f"Row {row_index} not solved")
+
 
                 if False and not (n_to_solve < self.n_slices):
                     # Check for edge parity in orthogonal edges (can occur in even cubes)
