@@ -262,7 +262,7 @@ def _iterate_all_tracked_center_slices_index(target_face: FaceTracker) -> Iterat
         Point for each center slice that has tracking marker set.
     """
     for cs in target_face.face.center.all_slices:
-        if _is_center_slice(cs) is not None:
+        if _is_center_slice(cs):  # BUG FIX: was "is not None" which is always True
             rc = cs.index
             yield Point(*rc)
 

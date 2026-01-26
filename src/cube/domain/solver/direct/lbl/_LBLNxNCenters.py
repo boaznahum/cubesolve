@@ -310,51 +310,45 @@ class NxNCenters2(SolverHelper):
                 if _is_cent_piece_marked_solved(point_to_solve_piece):
                     continue
 
-                # find candidates on target
-                # claude: a performance problem here
+                # Search for pieces with target_color on OTHER faces (not target face).
+                # We rotate through 4 positions to find pieces at different orientations.
+                # BUG FIX: The original code also operated on target_face at rotated positions,
+                # which caused wrong rows to be solved. Now we ALWAYS skip the target face.
                 candidate_point: Point = Point(*point)
-                for n in range(4):
 
-                    # now try to  move piece with the required color from move_from_target_face
-                    # to up face
+                for n in range(4):
+                    # try to move piece with the required color from other faces to up face
                     move_from_target_face: Face
                     for move_from_target_face in l1_white_tracker.face.adjusted_faces():
 
+                        # ALWAYS skip the target face - operating on it at any position
+                        # would solve pieces in wrong rows
+                        if move_from_target_face is _target_face_tracker.face:
+                            continue
+
                         candidate_piece = move_from_target_face.get_center_slice(candidate_point)
 
-                        # it can be solved only if move_from_target_face is target_face
+                        # Look for pieces with target_color on other faces that we can move out
+                        if candidate_piece.color == target_color and not _is_cent_piece_marked_solved(candidate_piece):
 
-                        move_from_target_face_is_target_face = move_from_target_face is _target_face_tracker.face
+                            up_face = l1_white_tracker.opposite.face
+                            self.debug(f"Moving {candidate_piece} from {move_from_target_face.color_at_face_str} to {up_face}")
+                            # Move piece from up to this face, pushing the target_color piece to up
+                            self._comm_helper.execute_communicator(
+                                up_face,  # source
+                                move_from_target_face,  # target
+                                Block(candidate_point, candidate_point),  # target point
+                                Block(candidate_point, candidate_point),
+                                True,
+                                False,
+                                None)
 
-                        if n == 0 and move_from_target_face_is_target_face:
-                            # n == 0 is the original point we are tying to solve
-                            # so of course there is no point to check it, if it was smae as target
-                            # then it is solved
-                            continue # for n in range(4)
+                            pieces_moved += 1
+                            if not remove_all:
+                                return pieces_moved  # exactly one
+                            break  # break inner loop, continue rotation
 
-                        # of course for other face then move_from_target_face it cannot be solved it the color is the target
-                        # for our target we dont want to ove away solved pieces of course they are of slice < then un
-                        if candidate_piece.color == target_color and (not move_from_target_face_is_target_face or not _is_cent_piece_marked_solved(candidate_piece)):
-
-                                up_face = l1_white_tracker.opposite.face
-                                self.debug(f"‼️‼️‼️ Moving  {candidate_piece} from {move_from_target_face.color_at_face_str} to  {up_face}")
-                                # ok start to work
-                                # bring any face from up to taget, why not the oposite, becuase we dont care if we destory anothe rpoint on source
-                                self._comm_helper.execute_communicator(
-                                    up_face,  # source
-                                    move_from_target_face,  # target
-                                    Block(candidate_point, candidate_point),  # target point
-                                    Block(candidate_point, candidate_point),
-                                    True,
-                                    False,
-                                    None)
-
-                                pieces_moved += 1
-                                if not remove_all:
-                                    return pieces_moved # exactly one
-                                break # the for n in range(3) loop
-
-                    candidate_point = self.cube.cqr.rotate_point_clockwise(candidate_point)
+                    candidate_point = Point(*self.cube.cqr.rotate_point_clockwise(candidate_point))
 
 
 
