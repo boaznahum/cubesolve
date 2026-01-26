@@ -1,11 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git:*)",
-      "Bash(npm:*)",
-      "Bash(python:*)",
-      "Bash(pip:*)",
-      "Bash(node:*)",
+      "Bash",
       "Read",
       "Write",
       "Edit",
