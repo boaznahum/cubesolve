@@ -1,48 +1,12 @@
 # The bug
 
-1. PATCH_TWO_TRACKERS_PHASES = False
-2. 5x5
+1. Patch in cube.domain.solver.direct.lbl._common._get_side_face_trackers
+2. Patch is enabled in: src/cube/domain/solver/direct/lbl/_lbl_config.py:14
+2. test big_lbl.test_lbl_big_cube_solver.TestLBLBigCubeSolver.test_lbl_slices_ctr_5x5
+3. Fails on 5,5 scramble 7, 89, 7: AssertionError: Wing FR[0][ORANGE, GREEN]⬅️[GREEN, ORANGE] is not solved
 2. Reset
-3. Scramble 0
-4. Solve instant ,midlle slcies centers, centers are diabled _lbl_config.py BIG_LBL_RESOLVE_CENTER_SLICES=False
+3. Scramble 7
+4. solve instanct or L1 then centers
 
-state after solving, all edges except one:
-![img.png](img.png)
+**Thanks** to the patch, it is reprodcable even we do it in two steps, becuase the faces are sorted
 
-this is happens also with animation ~~~ (fast on new machine, also on my other)
-
-# New insight !!!
-
-if i first solve L1 and only then slice centres that it works !!!
-In the past I thought it is related to working with/without animation
-
-so what is the diffrent ? one diffrent that we create trackers twice,
-so i added a patch:
-```python
-        # A patch to test my assumption on bug of edges
-        if what == SolveStep.LBL_SLICES_CTR:
-            # do it with two separated trackers
-
-            # it i wll be called agin in the loop in case of parity detection
-
-            with FacesTrackerHolder(self) as th:
-                
-                
-                self._solve_layer1_centers(th)
-                self._solve_layer1_edges(th)
-                self._solve_layer1_corners(th)
-
-            with FacesTrackerHolder(self) as th:
-                self._solve_face_rows(th)
-
-            return sr
-
-```
-
-I added thisline
-```python
-                        if not self._row_solved(l1_white_tracker, row_index):
-                            raise InternalSWError(f"Row {row_index} not solved")
-
-```
-and it happnes only when l1 and centres are solved with same tracker

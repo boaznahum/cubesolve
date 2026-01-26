@@ -48,3 +48,34 @@ class TestLBLBigCubeSolver:
         assert solver.is_l2_slices_solved(), (
             f"L2 slices not solved (size={cube_size}, scramble={scramble_name})"
         )
+    @pytest.mark.parametrize("cube_size", [5], ids=lambda s: f"size_{s}")
+    @pytest.mark.parametrize(
+        "scramble_name,scramble_seed",
+        [ ("f{s}", s) for s in range(0, 300) ],
+        ids=lambda x: x if isinstance(x, str) else None,
+    )
+    # to diacover failing: we found: 9, 18, 42, 48, 138, 260
+    # with sorting, 7, 89
+    def test_lbl_slices_ctr_5x5(
+        self,
+        cube_size: int,
+        scramble_name: str,
+        scramble_seed: int | None,
+        session_random_seed: int,
+    ) -> None:
+        """Test LBL_SLICES_CTR step solves middle slices."""
+        skip_even_cubes(cube_size)
+
+        actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
+
+        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+
+        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+
+        app.scramble(actual_seed, None, animation=False, verbose=False)
+
+        solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
+
+        assert solver.is_l2_slices_solved(), (
+            f"L2 slices not solved (size={cube_size}, scramble={scramble_name})"
+        )

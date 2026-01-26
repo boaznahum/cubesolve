@@ -10,4 +10,5 @@ PUT_SOLVED_MARKERS=True
 ADVANCED_EDGE_PARITY=False
 
 
-PATCH_TWO_TRACKERS_PHASES = False
+PATCH_ORDER_ORTHOGONAL_FACES= True # to ma ebug reproducble even we we split the solution to tworuns
+

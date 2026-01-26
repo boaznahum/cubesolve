@@ -328,8 +328,14 @@ def _get_side_face_trackers(
         List of 4 side face trackers
     """
     l1_opposite_face = l1_tracker.face.opposite
-    return [t for t in th.trackers
-            if t.face is not l1_tracker.face and t.face is not l1_opposite_face]
+    side_trackers = [t for t in th.trackers
+                     if t.face is not l1_tracker.face and t.face is not l1_opposite_face]
+
+
+    # boaz: a patch to make bug reproducable even if we switch solution to diffrent trackers
+    # Sort by color name to ensure consistent processing order
+    if _lbl_config.PATCH_ORDER_ORTHOGONAL_FACES:
+        return sorted(side_trackers, key=lambda t: t.color.name)
 
 
 def _get_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> Generator[PartSlice]:
