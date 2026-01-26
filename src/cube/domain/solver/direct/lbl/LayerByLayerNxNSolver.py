@@ -25,7 +25,6 @@ See docs/design/layer_by_layer_nxn.md for detailed design.
 
 from __future__ import annotations
 
-from operator import and_
 from typing import TYPE_CHECKING
 
 from cube.domain.model import Corner, Part
