@@ -1,4 +1,19 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(npm:*)",
+      "Bash(python:*)",
+      "Bash(pip:*)",
+      "Bash(node:*)",
+      "Read",
+      "Write",
+      "Edit",
+      "WebSearch",
+      "WebFetch",
+      "Task"
+    ]
+  },
   "enabledPlugins": {
     "github@claude-plugins-official": true
   },
