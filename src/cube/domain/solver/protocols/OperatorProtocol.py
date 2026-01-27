@@ -82,6 +82,11 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
         ...
 
     @property
+    def count(self) -> int:
+        """Number of moves executed so far."""
+        ...
+
+    @property
     def app_state(self) -> "ApplicationAndViewState":
         """Application and view state."""
         ...

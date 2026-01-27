@@ -84,7 +84,11 @@ class AbstractSolver(Solver, ABC):
         try:
             with self._op.with_animation(animation=animation):
                 try:
-                    return self._solve_impl(what)
+                    count_before = self._op.count
+                    result = self._solve_impl(what)
+                    count_after = self._op.count
+                    self.debug(f"Solve {what.name} used {count_after - count_before} moves (total: {count_after})")
+                    return result
                 except OpAborted:
                     # User aborted - this is normal, not an error
                     return SolverResults()
