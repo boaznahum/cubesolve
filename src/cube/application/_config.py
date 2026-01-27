@@ -83,7 +83,7 @@ SS_CODES: dict[SSCode, bool] = {
 # Used by: 3x3 beginner solver, LBL-Big cube solver
 from cube.domain.model.Color import Color as _Color  # noqa: E402
 
-FIRST_FACE_COLOR: _Color = _Color.WHITE
+FIRST_FACE_COLOR: _Color = _Color.BLUE
 
 
 SOLVER_DEBUG = True
