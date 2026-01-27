@@ -110,6 +110,25 @@ class AbstractSolver(Solver, ABC):
         """
         pass
 
+    def _run_child_solver(self, child: Solver, what: SolveStep) -> SolverResults:
+        """Run a child solver, propagating debug override if set.
+
+        Use this when calling another solver as a helper (e.g., shadow cube solving).
+        Propagates the parent's debug override to the child, but only if explicitly set.
+        If parent's debug is None (use config), child also uses its own config.
+
+        Args:
+            child: The child solver to run
+            what: Which step to solve
+
+        Returns:
+            SolverResults from child solver
+        """
+        if self._debug_override is not None:
+            return child.solve(debug=self._debug_override, what=what)
+        else:
+            return child.solve(what=what)
+
     # =========================================================================
 
     @final

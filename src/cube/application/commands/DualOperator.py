@@ -94,6 +94,13 @@ class DualOperator(OperatorProtocol):
         return self._real_op.animation_enabled
 
     @property
+    def count(self) -> int:
+        """
+        Return move count from the real operator.
+        """
+        return self._real_op.count
+
+    @property
     def app_state(self) -> "ApplicationAndViewState":
         """
         Return the app state from the real operator.

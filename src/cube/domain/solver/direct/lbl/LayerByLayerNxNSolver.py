@@ -554,7 +554,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         shadow_solver = Solvers3x3.beginner(dual_op, self._logger)
 
         # Solve only L1 (cross + corners)
-        shadow_solver.solve_3x3(what=what)
+        self._run_child_solver(shadow_solver, what)
 
         # Verify shadow cube is still valid after solving
         assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid after solving"
