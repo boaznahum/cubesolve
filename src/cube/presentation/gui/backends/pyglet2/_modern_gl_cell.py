@@ -494,9 +494,8 @@ class ModernGLCell:
     def generate_checkmark_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
         """Generate triangle vertices for checkmark markers.
 
-        Creates a beautiful, rounded 3D checkmark (✓) shape similar to glossy UI icons.
-        Each leg is rendered as a capsule (cylinder with hemispherical ends) for smooth,
-        organic appearance.
+        Creates a sharp 3D plus sign (+) shape as an extruded cross with flat top
+        and vertical sides - matching the ring markers' crisp appearance.
 
         Appends triangles to dest.
         Each vertex: x, y, z, nx, ny, nz, r, g, b (9 floats)
@@ -518,136 +517,91 @@ class ModernGLCell:
         lb, rb, rt, lt = self._corners
         normal_vec = self._normal
 
-        # Calculate cell center and edge vectors
+        # Calculate cell center and size
         center = (lb + rb + rt + lt) / 4.0
-        right_vec = (rb - lb) / 2.0  # Half-width vector pointing right
-        up_vec = (lt - lb) / 2.0     # Half-height vector pointing up
-
-        # Cell size for scaling
         cell_width = float(np.linalg.norm(rb - lb))
         cell_height = float(np.linalg.norm(lt - lb))
         cell_size = min(cell_width, cell_height)
 
-        # Number of segments for rounded shapes
-        segments = 12  # More segments = smoother curves
+        # Normal vector for top face
+        nx, ny, nz = float(normal_vec[0]), float(normal_vec[1]), float(normal_vec[2])
 
         for marker in check_markers:
-            # Get marker color (green by default for checkmarks)
+            # Get marker color (green by default)
             if marker.color is not None:
                 r, g, b = marker.color
             else:
                 r, g, b = 0.0, 0.8, 0.0  # Default green
 
-            # Capsule radius (tube thickness) - bold strokes
-            radius = marker.thickness * 0.14 * cell_size
+            # Plus sign dimensions (75% of original size)
+            outer_radius = cell_size * 0.3 * marker.radius_factor  # Total extent
+            stroke_half_width = cell_size * 0.06 * marker.thickness  # Stroke thickness
+            height = marker.height_offset * cell_size  # Extrusion height
 
-            # Height above surface (center of capsule) - just enough to clear the face
-            height_above = marker.height_offset * cell_size + radius * 0.5
+            # Use the same _generate_3d_ring method as ring markers for consistent style
+            # Draw two perpendicular bars that form the + shape
 
-            # Checkmark dimensions based on radius_factor
-            scale = marker.radius_factor * 0.85
+            # The + is made of two overlapping rectangles:
+            # - Horizontal bar (wide, short)
+            # - Vertical bar (narrow, tall)
+            # We'll generate them as separate 3D boxes
 
-            # Key points of the checkmark (at center height)
-            # Bottom point (where both legs meet)
-            bottom = center + right_vec * (-0.05 * scale) + up_vec * (-0.4 * scale) + normal_vec * height_above
-            # Tip of short leg (going down-left)
-            tip_left = center + right_vec * (-0.35 * scale) + up_vec * (0.05 * scale) + normal_vec * height_above
-            # Tip of long leg (going up-right)
-            tip_right = center + right_vec * (0.45 * scale) + up_vec * (0.6 * scale) + normal_vec * height_above
+            def add_box(
+                half_w: float, half_h: float,  # Half-width and half-height in cell plane
+                box_height: float,  # Height above surface
+            ) -> None:
+                """Add a 3D box centered at the cell center."""
+                # Get the cell's right and up vectors
+                right_vec = (rb - lb)
+                up_vec_local = (lt - lb)
+                right_unit = right_vec / np.linalg.norm(right_vec)
+                up_unit = up_vec_local / np.linalg.norm(up_vec_local)
 
-            # Helper: Generate a capsule (cylinder with hemispherical ends) between two points
-            def add_capsule(p1: ndarray, p2: ndarray, cap_radius: float) -> None:
-                """Add a capsule shape between two 3D points."""
-                # Direction from p1 to p2
-                direction = p2 - p1
-                length = float(np.linalg.norm(direction))
-                if length < 0.001:
-                    return
-                direction = direction / length
+                # Four corners of top face
+                t0 = center + right_unit * (-half_w) + up_unit * (-half_h) + normal_vec * box_height
+                t1 = center + right_unit * (half_w) + up_unit * (-half_h) + normal_vec * box_height
+                t2 = center + right_unit * (half_w) + up_unit * (half_h) + normal_vec * box_height
+                t3 = center + right_unit * (-half_w) + up_unit * (half_h) + normal_vec * box_height
 
-                # Create perpendicular vectors for the circular cross-section
-                if abs(direction[0]) < 0.9:
-                    up = np.array([1.0, 0.0, 0.0])
-                else:
-                    up = np.array([0.0, 1.0, 0.0])
-                perp1 = np.cross(direction, up)
-                perp1 = perp1 / np.linalg.norm(perp1)
-                perp2 = np.cross(direction, perp1)
+                # Four corners of bottom face (at surface)
+                b0 = center + right_unit * (-half_w) + up_unit * (-half_h) + normal_vec * 0.001
+                b1 = center + right_unit * (half_w) + up_unit * (-half_h) + normal_vec * 0.001
+                b2 = center + right_unit * (half_w) + up_unit * (half_h) + normal_vec * 0.001
+                b3 = center + right_unit * (-half_w) + up_unit * (half_h) + normal_vec * 0.001
 
-                # Generate cylinder body
-                for i in range(segments):
-                    angle1 = 2 * math.pi * i / segments
-                    angle2 = 2 * math.pi * (i + 1) / segments
+                # Top face (2 triangles, normal pointing up)
+                dest.extend([t0[0], t0[1], t0[2], nx, ny, nz, r, g, b])
+                dest.extend([t1[0], t1[1], t1[2], nx, ny, nz, r, g, b])
+                dest.extend([t2[0], t2[1], t2[2], nx, ny, nz, r, g, b])
+                dest.extend([t0[0], t0[1], t0[2], nx, ny, nz, r, g, b])
+                dest.extend([t2[0], t2[1], t2[2], nx, ny, nz, r, g, b])
+                dest.extend([t3[0], t3[1], t3[2], nx, ny, nz, r, g, b])
 
-                    cos1, sin1 = math.cos(angle1), math.sin(angle1)
-                    cos2, sin2 = math.cos(angle2), math.sin(angle2)
+                # Four side walls
+                walls = [
+                    (t0, t1, b1, b0, right_unit * 0 - up_unit),   # Bottom wall
+                    (t1, t2, b2, b1, right_unit),                  # Right wall
+                    (t2, t3, b3, b2, up_unit),                     # Top wall
+                    (t3, t0, b0, b3, -right_unit),                 # Left wall
+                ]
+                for wt0, wt1, wb1, wb0, wall_dir in walls:
+                    # Wall normal (outward)
+                    wn = wall_dir / np.linalg.norm(wall_dir) if np.linalg.norm(wall_dir) > 0.001 else normal_vec
+                    wnx, wny, wnz = float(wn[0]), float(wn[1]), float(wn[2])
 
-                    # Points on circle at p1 and p2
-                    offset1 = (cos1 * perp1 + sin1 * perp2) * cap_radius
-                    offset2 = (cos2 * perp1 + sin2 * perp2) * cap_radius
+                    # Two triangles for the wall quad
+                    dest.extend([wt0[0], wt0[1], wt0[2], wnx, wny, wnz, r, g, b])
+                    dest.extend([wb0[0], wb0[1], wb0[2], wnx, wny, wnz, r, g, b])
+                    dest.extend([wb1[0], wb1[1], wb1[2], wnx, wny, wnz, r, g, b])
+                    dest.extend([wt0[0], wt0[1], wt0[2], wnx, wny, wnz, r, g, b])
+                    dest.extend([wb1[0], wb1[1], wb1[2], wnx, wny, wnz, r, g, b])
+                    dest.extend([wt1[0], wt1[1], wt1[2], wnx, wny, wnz, r, g, b])
 
-                    c1_p1 = p1 + offset1
-                    c2_p1 = p1 + offset2
-                    c1_p2 = p2 + offset1
-                    c2_p2 = p2 + offset2
+            # Draw horizontal bar of the + (wide, short)
+            add_box(outer_radius, stroke_half_width, height)
 
-                    # Normal for this segment (outward)
-                    n1 = cos1 * perp1 + sin1 * perp2
-                    n2 = cos2 * perp1 + sin2 * perp2
-
-                    # Two triangles for the quad
-                    # Triangle 1: c1_p1, c2_p1, c2_p2
-                    dest.extend([c1_p1[0], c1_p1[1], c1_p1[2], n1[0], n1[1], n1[2], r, g, b])
-                    dest.extend([c2_p1[0], c2_p1[1], c2_p1[2], n2[0], n2[1], n2[2], r, g, b])
-                    dest.extend([c2_p2[0], c2_p2[1], c2_p2[2], n2[0], n2[1], n2[2], r, g, b])
-                    # Triangle 2: c1_p1, c2_p2, c1_p2
-                    dest.extend([c1_p1[0], c1_p1[1], c1_p1[2], n1[0], n1[1], n1[2], r, g, b])
-                    dest.extend([c2_p2[0], c2_p2[1], c2_p2[2], n2[0], n2[1], n2[2], r, g, b])
-                    dest.extend([c1_p2[0], c1_p2[1], c1_p2[2], n1[0], n1[1], n1[2], r, g, b])
-
-                # Generate hemispherical end caps
-                half_segments = segments // 2
-                for end_point, end_dir in [(p1, -direction), (p2, direction)]:
-                    for j in range(half_segments):
-                        # Latitude angles (0 to 90 degrees)
-                        lat1 = math.pi / 2 * j / half_segments
-                        lat2 = math.pi / 2 * (j + 1) / half_segments
-
-                        cos_lat1, sin_lat1 = math.cos(lat1), math.sin(lat1)
-                        cos_lat2, sin_lat2 = math.cos(lat2), math.sin(lat2)
-
-                        for i in range(segments):
-                            # Longitude angles
-                            lon1 = 2 * math.pi * i / segments
-                            lon2 = 2 * math.pi * (i + 1) / segments
-
-                            cos_lon1, sin_lon1 = math.cos(lon1), math.sin(lon1)
-                            cos_lon2, sin_lon2 = math.cos(lon2), math.sin(lon2)
-
-                            # Four corners of the spherical quad
-                            def sphere_point(cos_lat: float, sin_lat: float, cos_lon: float, sin_lon: float) -> tuple[ndarray, ndarray]:
-                                # Normal direction on sphere
-                                local_n = sin_lat * end_dir + cos_lat * (cos_lon * perp1 + sin_lon * perp2)
-                                point = end_point + cap_radius * local_n
-                                return point, local_n
-
-                            p1_s, n1_s = sphere_point(cos_lat1, sin_lat1, cos_lon1, sin_lon1)
-                            p2_s, n2_s = sphere_point(cos_lat1, sin_lat1, cos_lon2, sin_lon2)
-                            p3_s, n3_s = sphere_point(cos_lat2, sin_lat2, cos_lon2, sin_lon2)
-                            p4_s, n4_s = sphere_point(cos_lat2, sin_lat2, cos_lon1, sin_lon1)
-
-                            # Two triangles
-                            dest.extend([p1_s[0], p1_s[1], p1_s[2], n1_s[0], n1_s[1], n1_s[2], r, g, b])
-                            dest.extend([p2_s[0], p2_s[1], p2_s[2], n2_s[0], n2_s[1], n2_s[2], r, g, b])
-                            dest.extend([p3_s[0], p3_s[1], p3_s[2], n3_s[0], n3_s[1], n3_s[2], r, g, b])
-
-                            dest.extend([p1_s[0], p1_s[1], p1_s[2], n1_s[0], n1_s[1], n1_s[2], r, g, b])
-                            dest.extend([p3_s[0], p3_s[1], p3_s[2], n3_s[0], n3_s[1], n3_s[2], r, g, b])
-                            dest.extend([p4_s[0], p4_s[1], p4_s[2], n4_s[0], n4_s[1], n4_s[2], r, g, b])
-
-            # Draw the two legs of the checkmark as capsules
-            add_capsule(bottom, tip_left, radius)   # Short leg
-            add_capsule(bottom, tip_right, radius)  # Long leg
+            # Draw vertical bar of the + (narrow, tall)
+            add_box(stroke_half_width, outer_radius, height)
 
     def generate_bold_cross_vertices(self, dest: list[float], markers: list[MarkerConfig] | None = None) -> None:
         """Generate triangle vertices for bold cross (X) markers.
