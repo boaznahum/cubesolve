@@ -172,6 +172,7 @@ class OpAnnotation:
             op.play(Algs.AN)
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
+                 additional_markers: list[Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerConfig]]] | None = None,
                  h1: _HEAD = None,
                  h2: _HEAD = None,
                  h3: _HEAD = None,
@@ -188,7 +189,8 @@ class OpAnnotation:
                 if PartColorsID is specified:
                   if by position, element is searched by position(it's destination) and racked by AnnWhat.Position
                   otherwise, current location is searched and tracked by AnnWhat.FixedPosition
-
+        :param additional_markers: Optional list of (PartEdge, AnnWhat, factory_method) tuples
+                for custom markers. Factory method is only called if animation is enabled.
         :param animation:
         :return:
         """
@@ -197,10 +199,11 @@ class OpAnnotation:
         if (not on) or (not animation):
             return nullcontext()
         else:
-            return self._annotate(*elements, h1=h1, h2=h2, h3=h3, animation=animation)
+            return self._annotate(*elements, additional_markers=additional_markers, h1=h1, h2=h2, h3=h3, animation=animation)
 
     @contextmanager
     def _annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
+                  additional_markers: list[Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerConfig]]] | None = None,
                   h1: _HEAD = None,
                   h2: _HEAD = None,
                   h3: _HEAD = None,
@@ -215,7 +218,7 @@ class OpAnnotation:
         # we invoke a specific method, to stop recursively check for type
         # we already know the type
 
-        def process_slice_edge(_e: PartEdge, what: AnnWhat):
+        def process_slice_edge(_e: PartEdge, what: AnnWhat, custom_marker: MarkerConfig | None = None):
             if what == AnnWhat.Moved:
                 by_position = False
             elif what == AnnWhat.FixedPosition:
@@ -223,24 +226,26 @@ class OpAnnotation:
             else:
                 raise InternalSWError("AnnWhat.Both is applicable only for Part or PartColorID")
 
-            if by_position:
+            if custom_marker:
+                marker = custom_marker
+            elif by_position:
                 marker = mf.c2()  # Destination marker (stays at position)
             else:
                 marker = mf.c1()  # Moved marker (follows piece)
 
             edges.append((_e, by_position, marker))
 
-        def process_slice(s: PartSlice, what: AnnWhat):
+        def process_slice(s: PartSlice, what: AnnWhat, custom_marker: MarkerConfig | None = None):
             part_edge: PartEdge
             for part_edge in s.edges:
-                process_slice_edge(part_edge, what)
+                process_slice_edge(part_edge, what, custom_marker)
 
-        def process_part(e: Part, what: AnnWhat):
+        def process_part(e: Part, what: AnnWhat, custom_marker: MarkerConfig | None = None):
             s: PartSlice
             for s in e.all_slices:
-                process_slice(s, what)
+                process_slice(s, what, custom_marker)
 
-        def process_element(e: SupportsAnnotation, _what: AnnWhat):
+        def process_element(e: SupportsAnnotation, _what: AnnWhat, custom_marker: MarkerConfig | None = None):
 
             # check for clor id before iterator iterable
             if isinstance(e, frozenset):  # PartColorsID
@@ -248,33 +253,33 @@ class OpAnnotation:
                 part: Part
                 if _what in [AnnWhat.Moved, AnnWhat.Both]:
                     part = cube.find_part_by_colors(ex)
-                    process_part(part, AnnWhat.Moved)
+                    process_part(part, AnnWhat.Moved, custom_marker)
                 if _what in [AnnWhat.FixedPosition, AnnWhat.Both]:
                     part = cube.find_part_by_pos_colors(ex)
-                    process_part(part, AnnWhat.FixedPosition)
+                    process_part(part, AnnWhat.FixedPosition, custom_marker)
 
             elif isinstance(e, (Iterable, Iterator)):
                 for ee in e:
-                    process_element(ee, _what)  # type: ignore
+                    process_element(ee, _what, custom_marker)  # type: ignore
 
             elif isinstance(e, Part):
                 if _what == AnnWhat.Both:
-                    process_part(e, AnnWhat.Moved)
-                    process_part(e, AnnWhat.FixedPosition)
+                    process_part(e, AnnWhat.Moved, custom_marker)
+                    process_part(e, AnnWhat.FixedPosition, custom_marker)
                 elif _what == AnnWhat.Moved:
-                    process_part(e, AnnWhat.Moved)
+                    process_part(e, AnnWhat.Moved, custom_marker)
                 else:
-                    process_part(e, AnnWhat.FixedPosition)
+                    process_part(e, AnnWhat.FixedPosition, custom_marker)
 
             elif isinstance(e, PartSlice):
-                process_slice(e, _what)
+                process_slice(e, _what, custom_marker)
 
             elif isinstance(e, PartEdge):
                 # finally someone need to do the work
-                process_slice_edge(e, _what)
+                process_slice_edge(e, _what, custom_marker)
 
             elif callable(e):
-                process_element(e(), _what)
+                process_element(e(), _what, custom_marker)
 
             else:
                 raise InternalSWError(f"Unknown type {type(e)}")
@@ -282,13 +287,12 @@ class OpAnnotation:
         for e, what in elements:
             process_element(e, what)
 
-        # if movable:
-        #     for s in movable:
-        #         edges.append((s.edge, False, VMarker.C1))
-        #
-        # if fixed:
-        #     for s in fixed:
-        #         edges.append((s.edge, True, VMarker.C2))
+        # Process additional_markers - call factory methods lazily here
+        # (they were passed as method references to avoid calling when animation is off)
+        if additional_markers:
+            for element, what, factory_method in additional_markers:
+                marker = factory_method()  # Lazy creation - only called when animation is on
+                process_element(element, what, marker)  # Reuse existing processing with custom marker
 
         yield from self._w_slice_edges_annotate(edges,
                                                 text=(h1, h2, h3))

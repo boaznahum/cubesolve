@@ -1,107 +1,118 @@
-# Plan: Add PartSliceTracker
+# Plan: Add Custom Marker Support to Annotation Context Manager
+
+## Problem
+In `CommunicatorHelper.execute_communicator()`, we manually create and manage the `at_risk` marker outside of the annotation context manager:
+
+```python
+# Current code - marker created separately, even if animation disabled
+mf = self.cube.sp.marker_factory
+at_risk_marker = mf.at_risk()  # Called even when animation is off!
+mm.add_marker(s2_edge, "at_risk", at_risk_marker, moveable=True)
+try:
+    with self.ann.annotate(...):
+        ...
+finally:
+    mm.remove_all("at_risk", ...)
+```
 
 ## Goal
-Create a `PartSliceTracker[PS]` class that tracks a specific `PartSlice` through cube rotations using the existing marker mechanism.
+Allow passing additional markers to `annotate()` that are:
+- **Lazily created** - factory method only called if animation is enabled
+- Automatically added when entering context
+- Automatically removed when exiting context
 
-## Usage Pattern
-```python
-# Via static method
-with PartSliceTracker.with_tracker(edge_wing) as t:
-    # edge_wing may have moved
-    current = t.slice  # finds it by marker
+## Proposed API
 
-# Via convenience method on PartSlice
-with edge_wing.tracker() as t:
-    current = t.slice
-```
+### New parameter: `additional_markers`
 
-## Design
-
-### Key Pattern (from existing trackers)
-- Key format: `_part_slice_track:{unique_id}`
-- Store key in `edge.moveable_attributes[key] = True`
-- Search by iterating all slices, checking for key in `edge.moveable_attributes`
-- Cleanup removes the key
-
-### New File: `src/cube/domain/solver/common/tracker/PartSliceTracker.py`
+A list of tuples with:
+1. `element` - The PartEdge to mark
+2. `what` - `AnnWhat.Moved` or `AnnWhat.FixedPosition` (consistent with existing API)
+3. `marker_factory_method` - Callable that returns MarkerConfig (lazy!)
 
 ```python
-from __future__ import annotations
-from typing import TYPE_CHECKING, TypeVar, Generic
-from contextlib import contextmanager
-
-from cube.domain.model.PartSlice import PartSlice
-
-PS = TypeVar("PS", bound=PartSlice)
-
-_PART_SLICE_TRACKER_PREFIX = "_part_slice_track:"
-
-class PartSliceTracker(Generic[PS]):
-    """Tracks a PartSlice through cube rotations using markers."""
-
-    __slots__ = ["_cube", "_key", "_slice_type"]
-
-    _global_id: int = 0
-
-    def __init__(self, part_slice: PS) -> None:
-        PartSliceTracker._global_id += 1
-        self._key = f"{_PART_SLICE_TRACKER_PREFIX}{PartSliceTracker._global_id}"
-        self._cube = part_slice.cube
-        self._slice_type = type(part_slice)
-
-        # Mark the first edge
-        part_slice.edges[0].moveable_attributes[self._key] = True
-
-    @staticmethod
-    def with_tracker(part_slice: PS) -> "PartSliceTracker[PS]":
-        """Create a tracker for the given part slice."""
-        return PartSliceTracker(part_slice)
-
-    @property
-    def slice(self) -> PS:
-        """Find and return the tracked slice by searching for the marker."""
-        # TODO: add caching later
-        for s in self._cube.get_all_parts():
-            if isinstance(s, self._slice_type):
-                for edge in s.edges:
-                    if self._key in edge.moveable_attributes:
-                        return s  # type: ignore
-        raise RuntimeError(f"Tracked slice not found with key {self._key}")
-
-    def cleanup(self) -> None:
-        """Remove the marker from the slice."""
-        for s in self._cube.get_all_parts():
-            for edge in s.edges:
-                if self._key in edge.moveable_attributes:
-                    del edge.moveable_attributes[self._key]
-                    return
-
-    def __enter__(self) -> "PartSliceTracker[PS]":
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        self.cleanup()
+AdditionalMarker = Tuple[PartEdge, AnnWhat, Callable[[], MarkerConfig]]
 ```
 
-### Modify: `src/cube/domain/model/PartSlice.py`
+- `AnnWhat.Moved` → marker follows the piece (moveable=True)
+- `AnnWhat.FixedPosition` → marker stays at position (moveable=False)
+- Marker name is auto-generated internally (like existing annotation system)
 
-Add convenience method to `PartSlice`:
+### Updated annotate() signature
+
 ```python
-def tracker(self: _TPartSlice) -> "PartSliceTracker[_TPartSlice]":
-    """Create a tracker context manager for this slice."""
-    from cube.domain.solver.common.tracker.PartSliceTracker import PartSliceTracker
-    return PartSliceTracker.with_tracker(self)
+def annotate(
+    self,
+    *elements: Tuple[SupportsAnnotation, AnnWhat],
+    additional_markers: list[Tuple[PartEdge, AnnWhat, Callable[[], MarkerConfig]]] | None = None,
+    h1: _HEAD = None,
+    h2: _HEAD = None,
+    h3: _HEAD = None,
+    animation: bool = True
+) -> ContextManager[None]:
 ```
 
-### Export from `__init__.py`
-Add `PartSliceTracker` to the tracker package exports.
+### Usage in CommunicatorHelper
 
-## Files to Create/Modify
-1. **Create**: `src/cube/domain/solver/common/tracker/PartSliceTracker.py` - new tracker class
-2. **Modify**: `src/cube/domain/solver/common/tracker/__init__.py` - export PartSliceTracker
-3. **Modify**: `src/cube/domain/model/PartSlice.py` - add `.tracker()` convenience method
+```python
+# After change - factory method is NOT called if animation disabled
+s2_edge = source_face.center.get_center_slice(xpt_on_source_after_un_setup).edge
+mf = self.cube.sp.marker_factory
 
-## Notes
-- First phase: no caching in `slice` property (TODO for later)
-- Use `edges[0]` for marker storage (simpler than iterating)
-- Generic `PS` type preserves the specific slice type (`EdgeWing`, `CenterSlice`, etc.)
+with self.ann.annotate(
+    (_ann_source, AnnWhat.Moved),
+    (_ann_target, AnnWhat.FixedPosition),
+    additional_markers=[
+        (s2_edge, AnnWhat.Moved, mf.at_risk)  # Pass method, not result!
+    ],
+    h2=_h2
+):
+    if source_setup_n_rotate:
+        self.op.play(source_setup_alg)
+    self.op.play(cum)
+# Markers automatically removed on exit
+```
+
+**Key benefit**: `mf.at_risk` is passed as a method reference. It's only called inside `_annotate()` when animation is enabled.
+
+## Files to Modify
+
+1. **`src/cube/domain/solver/protocols/AnnotationProtocol.py`**
+   - Add type alias for `AdditionalMarker`
+   - Update `annotate()` signature
+
+2. **`src/cube/application/commands/OpAnnotation.py`**
+   - Update `annotate()` signature
+   - Update `_annotate()` to process `additional_markers`
+   - Call factory methods lazily inside `_w_slice_edges_annotate()`
+   - Track additional markers for cleanup
+
+3. **`src/cube/application/commands/DualAnnotation.py`** (if implements protocol)
+   - Update signature to match
+
+4. **`src/cube/domain/solver/common/big_cube/commun/CommunicatorHelper.py`**
+   - Use new `additional_markers` parameter
+
+## Implementation Details
+
+### In `_annotate()`:
+```python
+# Process additional_markers - call factory methods lazily here
+if additional_markers:
+    for element, what, factory_method in additional_markers:
+        marker = factory_method()  # Lazy creation!
+        moveable = (what == AnnWhat.Moved)  # Convert AnnWhat to bool
+        edges.append((element, not moveable, marker))  # Reuse existing edges list
+```
+
+### In `_w_slice_edges_annotate()`:
+- No changes needed! Additional markers are just added to the existing `edges` list
+- They get auto-generated names like regular annotations
+- Cleanup happens automatically in the existing finally block
+
+## Benefits
+
+1. **Lazy creation** - Marker factory only called when animation enabled
+2. **Clean lifecycle** - Markers managed by annotation context
+3. **Custom names** - Caller specifies marker name (e.g., "at_risk")
+4. **Backward compatible** - `additional_markers=None` by default

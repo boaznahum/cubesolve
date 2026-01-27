@@ -21,6 +21,7 @@ from cube.domain.model.PartEdge import PartEdge
 from cube.domain.model.PartSlice import PartSlice
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.protocols.AnnotationProtocol import (
+    AdditionalMarker,
     SupportsAnnotation,
     _HEAD,
 )
@@ -65,6 +66,7 @@ class DualAnnotation:
     def annotate(
         self,
         *elements: Tuple[SupportsAnnotation, AnnWhat],
+        additional_markers: list[AdditionalMarker] | None = None,
         h1: _HEAD = None,
         h2: _HEAD = None,
         h3: _HEAD = None,
@@ -76,6 +78,9 @@ class DualAnnotation:
         Args:
             elements: Tuples of (element, AnnWhat) to annotate.
                       Elements are from shadow cube but will be mapped to real cube.
+            additional_markers: Optional list of (element, AnnWhat, factory_method) tuples
+                for custom markers. Factory method is only called if animation is enabled.
+                Elements will be mapped from shadow cube to real cube.
             h1, h2, h3: Optional header text (passed through unchanged).
             animation: Whether to animate (passed through to real annotation).
 
@@ -92,9 +97,19 @@ class DualAnnotation:
             if mapped is not None:
                 mapped_elements.append((mapped, what))
 
+        # Map additional_markers elements from shadow to real cube
+        mapped_additional: list[AdditionalMarker] | None = None
+        if additional_markers:
+            mapped_additional = []
+            for element, what, factory in additional_markers:
+                mapped = self._map_element(element, what)
+                if mapped is not None:
+                    mapped_additional.append((mapped, what, factory))
+
         # Delegate to real operator's annotation
         return self._real_op.annotation.annotate(
             *mapped_elements,
+            additional_markers=mapped_additional,
             h1=h1,
             h2=h2,
             h3=h3,

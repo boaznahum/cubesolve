@@ -459,31 +459,24 @@ class CommunicatorHelper(SolverHelper):
             s2_center_slice: CenterSlice = source_face.center.get_center_slice(xpt_on_source_after_un_setup)
             s2_edge = s2_center_slice.edge
 
-            # Add at-risk marker for s2 (red X to warn this piece may be destroyed)
-
-            #claude: probelm here we creae even no annoataaatin
+            # Get marker factory for at-risk marker (passed as factory method, not called!)
             mf = self.cube.sp.marker_factory
-            mm = self.cube.sp.marker_manager
-            at_risk_marker = mf.at_risk()
-            mm.add_marker(s2_edge, "at_risk", at_risk_marker, moveable=True)
 
-            try:
-                # Execute with animation annotations
-                with self.ann.annotate(
-                        (_ann_source, AnnWhat.Moved),
-                        (_ann_target, AnnWhat.FixedPosition),
-                        h2=_h2
-                ):
-                    if source_setup_n_rotate:
-                        self.op.play(source_setup_alg)
-                    self.op.play(cum)
+            # Execute with animation annotations
+            # The at-risk marker is passed via additional_markers - factory only called if animation enabled
+            with self.ann.annotate(
+                    (_ann_source, AnnWhat.Moved),
+                    (_ann_target, AnnWhat.FixedPosition),
+                    additional_markers=[(s2_edge, AnnWhat.Moved, mf.at_risk)],
+                    h2=_h2
+            ):
+                if source_setup_n_rotate:
+                    self.op.play(source_setup_alg)
+                self.op.play(cum)
 
-                # CAGE METHOD: Undo source rotation to preserve paired edges
-                if preserve_state and source_setup_n_rotate:
-                    self.op.play(source_setup_alg.prime)
-            finally:
-                # Remove at-risk marker after execution
-                mm.remove_all("at_risk", (s.edge for c in self.cube.centers for s in c.all_slices), moveable=True)
+            # CAGE METHOD: Undo source rotation to preserve paired edges
+            if preserve_state and source_setup_n_rotate:
+                self.op.play(source_setup_alg.prime)
 
         final_algorithm = (source_setup_alg + cum + source_setup_alg.prime).simplify()
 

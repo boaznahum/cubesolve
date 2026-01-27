@@ -5,6 +5,7 @@ from cube.domain.geometric.geometry_types import FaceOrthogonalEdgesInfo
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model._part import EdgeName
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.direct.lbl import _common, _lbl_config
 from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solved
 from cube.domain.tracker import FacesTrackerHolder
@@ -454,8 +455,12 @@ class _LBLNxNEdges(SolverHelper):
                     Algs.U + Algs.M[alg_index]
                 )
 
+            with self.annotate(([source_wing], AnnWhat.Moved),
+                               ([target_wing], AnnWhat.FixedPosition),
+                               h2=f"Bringing {source_wing.parent_name_index_colors}"
+                                  f" to {target_wing.parent_name_and_index}",
 
-            with self.annotate(h2=f"Bringing {source_wing.parent_name_index_colors} to {target_wing.parent_name_and_index}"):
+                               ):
                 # U R U' [2]M' U R' U' [2]M
                 self.op.play(alg)
 

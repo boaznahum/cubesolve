@@ -6,6 +6,7 @@ from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING, Callable, ContextManager, Protocol, Tuple, TypeAlias
 
 if TYPE_CHECKING:
+    from cube.application.markers import MarkerConfig
     from cube.domain.model._elements import PartColorsID
     from cube.domain.model.PartSlice import PartSlice
     from cube.domain.model.Part import Part
@@ -23,6 +24,11 @@ SupportsAnnotation: TypeAlias = "_ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Ite
 
 _HEAD: TypeAlias = "str | Callable[[], str] | None"
 
+# Type alias for additional markers with custom MarkerConfig
+# Tuple of (element, AnnWhat, factory_method that returns MarkerConfig)
+# Element can be any SupportsAnnotation type (Part, PartSlice, PartEdge, etc.)
+AdditionalMarker: TypeAlias = "Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerConfig]]"
+
 
 class AnnotationProtocol(Protocol):
     """
@@ -35,6 +41,7 @@ class AnnotationProtocol(Protocol):
     def annotate(
         self,
         *elements: Tuple["SupportsAnnotation", "AnnWhat"],
+        additional_markers: list["AdditionalMarker"] | None = None,
         h1: _HEAD = None,
         h2: _HEAD = None,
         h3: _HEAD = None,
@@ -45,6 +52,8 @@ class AnnotationProtocol(Protocol):
 
         Args:
             elements: Tuples of (element, AnnWhat) to annotate
+            additional_markers: Optional list of (PartEdge, AnnWhat, factory_method) tuples
+                for custom markers. Factory method is only called if animation is enabled.
             h1, h2, h3: Optional header text
             animation: Whether to animate
 
