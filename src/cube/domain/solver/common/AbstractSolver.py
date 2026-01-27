@@ -116,6 +116,7 @@ class AbstractSolver(Solver, ABC):
         Use this when calling another solver as a helper (e.g., shadow cube solving).
         Propagates the parent's debug override to the child, but only if explicitly set.
         If parent's debug is None (use config), child also uses its own config.
+        Animation is set to None to inherit from parent's current animation state.
 
         Args:
             child: The child solver to run
@@ -125,9 +126,9 @@ class AbstractSolver(Solver, ABC):
             SolverResults from child solver
         """
         if self._debug_override is not None:
-            return child.solve(debug=self._debug_override, what=what)
+            return child.solve(debug=self._debug_override, animation=None, what=what)
         else:
-            return child.solve(what=what)
+            return child.solve(animation=None, what=what)
 
     # =========================================================================
 
