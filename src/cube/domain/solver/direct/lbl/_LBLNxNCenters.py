@@ -10,7 +10,7 @@ from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import Communi
 from cube.domain.solver.direct.lbl import _common
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import (
-    position_l1, _is_cent_piece_marked_solved, mark_slice_and_v_mark_if_solved, _track_center_slice,
+    _is_cent_piece_marked_solved, mark_slice_and_v_mark_if_solved, _track_center_slice,
     _iterate_all_tracked_center_slices_index,
 )
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -234,14 +234,6 @@ class NxNCenters2(SolverHelper):
                             pieces_solved += 1
 
         return pieces_solved
-
-    # noinspection PyMethodMayBeStatic
-
-    # noinspection PyMethodMayBeStatic
-
-    def _position_l1(self, l1_white_tracker: FaceTracker) -> None:
-        """Position L1 down and target face to front."""
-        position_l1(self, l1_white_tracker)
 
     @contextmanager
     def _track_row_center_slices_nad_mark_if_solved(self, l1_white_tracker: FaceTracker, face_row: int) -> Generator[None, None, None]:

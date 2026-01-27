@@ -277,10 +277,8 @@ class setup_l1:
     all slices are done. This protects solved pieces from being destroyed.
 
     Usage:
-        with setup_l1(slv, l1_tracker) as l1_setup:
+        with setup_l1(slv, l1_tracker):
             # ... solve slices ...
-            if parity_detected:
-                l1_setup.realign()  # Re-position L1 after parity changed orientation
     """
 
     __slots__ = ["_slv", "_l1_tracker"]
@@ -295,10 +293,6 @@ class setup_l1:
 
     def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
         clear_all_center_slices_tracking(self._slv.cube)
-
-    def realign(self) -> None:
-        """Re-position L1 down after cube orientation changed (e.g., after parity fix)."""
-        position_l1(self._slv, self._l1_tracker)
 
 
 def _get_side_face_trackers(

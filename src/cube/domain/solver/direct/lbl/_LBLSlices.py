@@ -30,12 +30,9 @@ Algorithm for ring center solving:
 
 from __future__ import annotations
 
-from itertools import chain
-from typing import TYPE_CHECKING, Sequence, Any, Iterable
+from typing import TYPE_CHECKING
 
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model import CenterSlice, EdgeWing, PartSlice
-from cube.domain.model.Slice import Slice
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
@@ -76,87 +73,12 @@ class _LBLSlices(SolverHelper):
 
 
 
-    @property
-    def centers(self) -> NxNCenters2:
-        """Access to NxNCenters helper."""
-        return self._centers
-
-    @property
-    def edges(self) -> _LBLNxNEdges:
-        """Access to NxNEdges helper."""
-        return self._edges
-
-    # =========================================================================
-    # Coordinate conversion
-    # =========================================================================
-
-    def _slice_to_row(self, slice_index: int) -> int:
-        """Convert slice index (0=bottom) to row index on side faces.
-
-        Formula: row = n_slices - 1 - slice_index
-
-        Example for 5x5 (n_slices=3):
-            slice 0 → row 2 (bottom row, closest to D)
-            slice 1 → row 1 (middle row)
-            slice 2 → row 0 (top row, closest to U)
-        """
-        return self.n_slices - 1 - slice_index
-
-    # =========================================================================
-    # Face helpers
-    # =========================================================================
-
     # =========================================================================
     # State inspection
     # =========================================================================
 
-    def _is_slice_centers_and_edges_solved(
-            self, slice_index: int, th: FacesTrackerHolder, l1_tracker: FaceTracker
-    ) -> bool:
-        """Check if all ring centers for a specific slice are solved.
-
-        This method is ORIENTATION-INDEPENDENT: it works regardless of which
-        face is Layer 1 (D, U, F, B, L, or R). The geometry layer handles
-        the coordinate translation.
-
-        A slice's "ring" consists of 4×(n-2) center pieces forming a horizontal
-        band around the cube at a specific height. The ring is solved when every
-        center piece has the correct color for its face.
-
-        How it works:
-        1. Get the slice sandwiched between L1 face and its opposite
-           (e.g., L1=D → E slice, which sits between D and U)
-        2. Query that slice for center pieces at the given slice_index
-        3. Check each center piece's color against the expected face color
-
-        Args:
-            slice_index: 0-based index in the SLICE's coordinate system
-                         (not L1-relative). Use distance_from_face_to_slice_index()
-                         to convert from L1-relative distance.
-            th: FacesTrackerHolder providing face→color mapping for even cubes
-            l1_tracker: Layer 1 face tracker (identifies which face is L1)
-
-        Returns:
-            True if all 4×(n-2) centers in this slice ring have correct colors
-        """
-        slice_name = self.cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
-        slice_obj: Slice = self.cube.get_slice(slice_name)
-
-        # Get edge wings and center slices at this slice index
-        # We only care about center slices (index [1])
-        pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj.get_slices_by_index(slice_index)
-
-        pieces_to_test: list[Iterable[PartSlice[Any]]] = []
-        if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
-            pieces_to_test.append(pieces[1])
-        if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
-            pieces_to_test.append(pieces[0])
-
-        # todo:even: works for odd only, in odd the actual color is from the tracker
-        return all ( slice_piece.match_faces  for slice_piece in chain(*pieces_to_test) )
-
     def count_solved_slice_centers(
-            self, th: FacesTrackerHolder, l1_tracker: FaceTracker
+            self, l1_tracker: FaceTracker
     ) -> int:
         """Count consecutive solved slice rings starting from Layer 1.
 

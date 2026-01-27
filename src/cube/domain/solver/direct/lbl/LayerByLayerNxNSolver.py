@@ -122,7 +122,7 @@ class LayerByLayerNxNSolver(BaseSolver):
             # Layer 1 done - check middle slices
             n_slices = self.cube.n_slices
             l1_tracker = self._get_layer1_tracker(th)
-            solved_slices = self._lbl_slices.count_solved_slice_centers(th, l1_tracker)
+            solved_slices = self._lbl_slices.count_solved_slice_centers(l1_tracker)
 
             return f"L1:Done|Sl:{solved_slices}/{n_slices}"
 
@@ -133,7 +133,7 @@ class LayerByLayerNxNSolver(BaseSolver):
                 return False
 
             l1_tracker = self._get_layer1_tracker(th)
-            solved_slices = self._lbl_slices.count_solved_slice_centers(th, l1_tracker)
+            solved_slices = self._lbl_slices.count_solved_slice_centers(l1_tracker)
 
             return solved_slices == self.cube.n_slices
 
