@@ -486,6 +486,37 @@ class CommonOp(SolverHelper):
         return tracked_edge
 
 
+    def count_u_rotations_between_edges(self, source_edge: Edge, target_edge: Edge) -> int:
+        """Calculate U rotations needed to move source edge to target edge position on UP face.
+
+        Both edges must be on the UP face. Returns the number of U rotations:
+        - 0: Already at target position
+        - 1: One U rotation needed
+        - 2: Two U rotations needed (U2)
+        - -1: One U' rotation needed (more efficient than 3 U rotations)
+
+        Args:
+            source_edge: The edge to move (must be on UP face)
+            target_edge: The target position (must be on UP face)
+
+        Returns:
+            Number of U rotations: 0, 1, 2, or -1
+        """
+        up = self.cube.up
+
+        # Get edges in clockwise rotation order: [top, right, bottom, left]
+        cw_edges = self.cube.layout.get_face_edge_rotation_cw(up)
+
+        source_idx = cw_edges.index(source_edge)
+        target_idx = cw_edges.index(target_edge)
+
+        diff = (target_idx - source_idx) % 4
+
+        # 0 → 0, 1 → 1, 2 → 2, 3 → -1 (U' is more efficient than U*3)
+        if diff == 3:
+            return -1
+        return diff
+
     @staticmethod
     def face_rotate(face: Face) -> Alg:
 

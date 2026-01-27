@@ -6,3 +6,5 @@ PUT_SOLVED_MARKERS=True
 
 PATCH_ORDER_ORTHOGONAL_FACES= False # to make bug reproducible even when we split the solution to two runs
 
+TRACE_SOLVED_EDGES= False
+

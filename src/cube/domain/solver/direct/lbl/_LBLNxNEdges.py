@@ -5,7 +5,7 @@ from cube.domain.geometric.geometry_types import FaceOrthogonalEdgesInfo
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model._part import EdgeName
-from cube.domain.solver.direct.lbl import _common
+from cube.domain.solver.direct.lbl import _common, _lbl_config
 from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solved
 from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
@@ -248,6 +248,9 @@ class _LBLNxNEdges(SolverHelper):
 
         def print_solved_till_now(title: str) -> None:
 
+            if not _lbl_config.TRACE_SOLVED_EDGES:
+                return
+
             with self._logger.tab(lambda  : title + " Solved edges"):
                 for i in range(face_row + 1):
                     with self._logger.tab(lambda: f"Row {i}"):
@@ -304,16 +307,25 @@ class _LBLNxNEdges(SolverHelper):
 
             self.debug(lambda: f"💚💚 Source Wing is now on up {cube.up} {untracked_source_wing.parent_name_index_colors_position}")
 
-            #Now it need to be also on front
+            # Early check: if the color on UP IS our target color, this source won't work
+            # Check before rotating U to bring to front - saves up to 3 U rotations
+            if untracked_source_wing.get_face_edge(cube.up).color == target_face.color:
+                self.debug(
+                    lambda: f"❌❌❌ Wing {untracked_source_wing} color on UP is target color {target_face.color}, giving up early")
+                return SmallStepSolveState.NOT_SOLVED
+
+            # Now it need to be also on front
             if not untracked_source_wing.on_face(cube.front):
 
                 with self._logger.tab(lambda: f"‼️‼️Trying to bring  {untracked_source_wing.parent_name_and_index} to to front"):
 
-                    for _ in range(3):
-                        self.op.play(Algs.U)
-                        untracked_source_wing = source_edge_wing_t.slice
-                        if untracked_source_wing.on_face(cube.front):
-                            break
+                    # Calculate optimal U rotations instead of looping
+                    source_edge = untracked_source_wing.parent
+                    target_edge = cube.fu  # front-up edge
+                    rotations = self.cmn.count_u_rotations_between_edges(source_edge, target_edge)
+
+                    if rotations != 0:
+                        self.op.play(Algs.U * rotations)
 
                     untracked_source_wing = source_edge_wing_t.slice
                     assert untracked_source_wing.on_face(cube.front)
@@ -324,7 +336,7 @@ class _LBLNxNEdges(SolverHelper):
 
             # now check if we can use it ?
 
-            # if the coloron top is not our color then itmust be us
+            # if the coloron top is not our color then it must be us
 
             if untracked_source_wing.get_face_edge(cube.up).color != target_face.color:
                 assert target_face.color == untracked_source_wing.get_other_face_edge(cube.up).color

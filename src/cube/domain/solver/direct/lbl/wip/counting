@@ -1,0 +1,13 @@
+## LBL NxN Edge Solver Optimization Tracking
+
+Test: 11x11 Scramble 0, solve L2
+
+- **Count 1**: Operator count (raw moves played)
+- **Count 2**: After algorithm optimization
+
+| Optimization                              | Count 1 | Count 2 | Δ1   | Δ2   |
+|-------------------------------------------|---------|---------|------|------|
+| Before any fix (baseline)                 | 3944    | 3654    | -    | -    |
+| Check UP color match before U rotation    | 3904    | 3638    | -40  | -16  |
+| Calculate U rotations (use U*n)           | 3884    | 3638    | -20  |  0   |
+

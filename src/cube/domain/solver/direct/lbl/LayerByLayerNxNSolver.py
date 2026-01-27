@@ -25,7 +25,7 @@ See docs/design/layer_by_layer_nxn.md for detailed design.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from cube.domain.model import Corner, Part
 from cube.domain.solver.SolverName import SolverName
@@ -38,7 +38,7 @@ from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.solver import SolverResults, SolveStep
+from cube.domain.solver.solver import Solver, SolverResults, SolveStep
 
 if TYPE_CHECKING:
     from cube.utils.logger_protocol import ILogger
@@ -554,7 +554,8 @@ class LayerByLayerNxNSolver(BaseSolver):
         shadow_solver = Solvers3x3.beginner(dual_op, self._logger)
 
         # Solve only L1 (cross + corners)
-        self._run_child_solver(shadow_solver, what)
+        # Cast: BeginnerSolver3x3 is both Solver3x3Protocol AND Solver (via BaseSolver)
+        self._run_child_solver(cast(Solver, shadow_solver), what)
 
         # Verify shadow cube is still valid after solving
         assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid after solving"
