@@ -98,7 +98,7 @@ class CommunicatorHelper(SolverHelper):
     _test_result_index: int = 0
 
     def __init__(self, solver: SolverElementsProvider) -> None:
-        super().__init__(solver)
+        super().__init__(solver, "CommunicatorHelper")
         self._s2_rotation_table = self._load_s2_rotation_table()
 
     @staticmethod

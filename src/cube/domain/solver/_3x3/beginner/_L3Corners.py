@@ -11,7 +11,7 @@ from cube.domain.solver.protocols import SolverElementsProvider
 class L3Corners(SolverHelper):
 
     def __init__(self, slv: SolverElementsProvider) -> None:
-        super().__init__(slv)
+        super().__init__(slv, "L3Corners")
 
 
     def _is_solved(self):

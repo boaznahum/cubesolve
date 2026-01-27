@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 if TYPE_CHECKING:
     from cube.domain.model.Edge import Edge
+    from cube.domain.model.PartSlice import EdgeWing
 
 
 class CLGColRow(Enum):
@@ -127,3 +128,11 @@ class FaceOrthogonalEdgesInfo:
     edge_two: "Edge"
     index_on_edge_one: int
     index_on_edge_two: int
+
+    @property
+    def wing_one(self) -> "EdgeWing":
+        return self.edge_one.get_slice(self.index_on_edge_one)
+
+    @property
+    def wing_two(self) -> "EdgeWing":
+        return self.edge_two.get_slice(self.index_on_edge_two)

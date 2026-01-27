@@ -30,7 +30,7 @@ Algorithm for ring center solving:
 
 from __future__ import annotations
 
-from itertools import chain
+from itertools import chain, count
 from typing import TYPE_CHECKING, Sequence, Any, Iterable
 
 from cube.domain.exceptions import InternalSWError
@@ -65,7 +65,7 @@ class _LBLSlices(SolverHelper):
 
     def __init__(self, slv: SolverElementsProvider) -> None:
 
-        super().__init__(slv)
+        super().__init__(slv, "_LBLSlices")
 
         """Create LBL slices helper.
 
@@ -348,12 +348,37 @@ class _LBLSlices(SolverHelper):
                         face_row: int
                         ) -> None:
 
+        MAX_ITERATIONS = 10
+        n_iteration = 0
+        n_pieces_were_solved = 0
+        while True:
+            n_iteration += 1
+            if n_iteration > MAX_ITERATIONS:
+                raise InternalSWError("Maximum number of iterations reached")
 
-        if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
-            self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
+            if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
+                self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
 
-        if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
-            self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
+            if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
+                self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
+
+            if self._row_solved(l1_white_tracker, face_row):
+                break
+
+            n_pieces_solved = sum ( e.match_faces for e in _common._get_row_pieces(self.cube, l1_white_tracker, face_row ))
+
+            if n_pieces_solved <=  n_pieces_were_solved:
+                break # no progress
+
+            n_pieces_were_solved = n_pieces_solved
+
+
+
+        # and still i dont understand why !!!!
+        self.debug(lambda : f"Solving row {face_row} took {n_iteration} iterations ‼️‼️‼️")
+
+
+
 
 
     def solve_all_faces_all_rows(

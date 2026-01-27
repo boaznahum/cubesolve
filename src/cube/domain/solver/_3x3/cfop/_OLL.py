@@ -18,8 +18,7 @@ class OLL(StepSolver):
     """
 
     def __init__(self, slv: BaseSolver) -> None:
-        super().__init__(slv)
-        self._set_debug_prefix("OLL")
+        super().__init__(slv, "OLL")
         self._algs_db: list[Tuple[str, str, str]] = []
 
     @property

@@ -11,7 +11,7 @@ from cube.domain.tracker.Tracker import EdgeTracker
 class L3Cross(SolverHelper):
 
     def __init__(self, slv: BaseSolver) -> None:
-        super().__init__(slv)
+        super().__init__(slv, "L3Cross")
 
     def _is_solved(self):
         opposite = self.white_face.opposite

@@ -32,8 +32,7 @@ class F2L(SolverHelper):
     __slots__: list[str] = []
 
     def __init__(self, slv: BaseSolver) -> None:
-        super().__init__(slv)
-        self._set_debug_prefix("F2L")
+        super().__init__(slv, "F2L")
 
     @staticmethod
     def _contains_wide_move(alg: Alg) -> bool:

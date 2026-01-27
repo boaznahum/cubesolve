@@ -7,7 +7,7 @@ from cube.domain.solver.protocols import SolverElementsProvider
 class AdvancedEdgeEdgeParity(SolverHelper):
 
     def __init__(self, solver: SolverElementsProvider) -> None:
-        super().__init__(solver)
+        super().__init__(solver, "AdvancedEdgeEdgeParity")
 
     def do_full_even_edge_parity(self):
         """

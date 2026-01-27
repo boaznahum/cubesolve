@@ -24,7 +24,7 @@ class NxNCorners(SolverHelper):
     """
 
     def __init__(self, slv: SolverElementsProvider) -> None:
-        super().__init__(slv)
+        super().__init__(slv, "NxNCorners")
 
     def fix_corner_parity(self) -> None:
         """Fix corner swap parity on even cube.

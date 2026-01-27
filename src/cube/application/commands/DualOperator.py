@@ -22,6 +22,7 @@ from .DualAnnotation import DualAnnotation
 if TYPE_CHECKING:
     from cube.application.state import ApplicationAndViewState
     from cube.domain.model.Cube import Cube
+    from cube.utils.service_provider import IServiceProvider
 
 
 class DualOperator(OperatorProtocol):
@@ -72,6 +73,11 @@ class DualOperator(OperatorProtocol):
         The solver accesses cube positions, checks states, etc. on this cube.
         """
         return self._shadow_cube
+
+    @property
+    def sp(self) -> IServiceProvider:
+        """Get the service provider."""
+        return self.cube.sp
 
     @property
     def annotation(self) -> DualAnnotation:

@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Tuple, Any
+from typing import Tuple
 
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import InternalSWError
@@ -11,7 +11,7 @@ from cube.domain.model._part import EdgeName
 from cube.domain.solver.common.big_cube.NxNEdgesCommon import NxNEdgesCommon
 from cube.domain.solver.direct.lbl import _common
 from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solved
-from cube.domain.tracker import FacesTrackerHolder, PartSliceTracker
+from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -43,8 +43,7 @@ class _LBLNxNEdges(SolverHelper):
     D_LEVEL = 3
 
     def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool) -> None:
-        super().__init__(slv)
-        self._set_debug_prefix("LBL-Edges")
+        super().__init__(slv, "_LBLNxNEdges")
         self._logger.set_level(_LBLNxNEdges.D_LEVEL)
         self._advanced_edge_parity = advanced_edge_parity
 
@@ -134,7 +133,7 @@ class _LBLNxNEdges(SolverHelper):
             assert edge_info.edge_two is cube.front.edge_right
 
             self.debug(
-                lambda: lambda: f"Working on edges {edge_info.edge_one.name}/{edge_info.index_on_edge_one} {edge_info.edge_two.name}/{edge_info.index_on_edge_two}")
+                lambda: lambda: f"Working on edges {edge_info.wing_one.parent_name_index__position} {edge_info.wing_two.parent_name_index__position}")
 
             if True:
                 with self._logger.tab("🟰🟰🟰🟰🟰🟰🟰🟰🟰 PATCH !!!!!!!!!!!!!!!!!!!!!!!!"):
@@ -152,12 +151,10 @@ class _LBLNxNEdges(SolverHelper):
                                                       edge_info: FaceOrthogonalEdgesInfo, face_row: int) -> None:
         """PATCH PATCH PATCH try to solve one wing both sides."""
         cube = self.cube
-        # preserve
-        front_color = cube.front.color
 
         assert target_face is cube.front
 
-        target_edge_wing = edge_info.edge_one.get_slice(edge_info.index_on_edge_one)
+        target_edge_wing = edge_info.wing_one
 
         if mark_slice_and_v_mark_if_solved(target_edge_wing):
             self.debug(lambda: f"EdgWing {target_edge_wing} already solved")
@@ -174,8 +171,8 @@ class _LBLNxNEdges(SolverHelper):
             source_wings: list[EdgeWing] = [*self.cqr.find_all_slice_in_edges(cube.edges,
                                                                               lambda s:
                                                                                #s is not target_edge_wing and  # don't select target as source
-                                                                               not _common.is_slice_solved(s) and  # dont touch solved slices !!!
-                                                                               s.index in required_indexes and s.colors_id == required_color_unordered)]
+                                                                              not _common.is_slice_marked_solve(s) and  # dont touch solved slices !!!
+                                                                              s.index in required_indexes and s.colors_id == required_color_unordered)]
 
             assert source_wings  # at least one
 
@@ -185,88 +182,101 @@ class _LBLNxNEdges(SolverHelper):
 
             with PartSliceTracker.with_trackers(source_wings) as sts:
 
-                self.debug(f"Working on single wing {target_edge_wing.parent_name_and_index_position_colors} ,"
+                with self._logger.tab(f"Working on single wing {target_edge_wing.parent_name_index_colors_position} ,"
                            f" two faes {faces_colors}"
-                           f"sources: {[t.slice.parent_name_and_index_position_colors for t in sts]}")
+                           f"sources: {[t.slice.parent_name_index_colors_position for t in sts]}"):
 
-                assert target_edge_wing.parent.name is EdgeName.FL
+                    assert target_edge_wing.parent.name is EdgeName.FL
 
-                fc: Color
-                i: int
-                is_fl: bool = True  # Initialize before loop
-                for i, fc in enumerate(faces_colors):
+                    fc: Color
+                    i: int
+                    is_fl: bool = True  # Initialize before loop
+                    for i, fc in enumerate(faces_colors):
 
-                    with self._logger.tab(lambda: f"Working on face {fc}"):
+                        with self._logger.tab(lambda: f"Working on face {fc} for wing {target_edge_wing.parent_name_index_colors_position}"):
 
-                        with self._logger.tab(
-                                lambda: f"Working on all sources  {[t.slice.parent_name_and_index_position_colors for t in sts]}"):
+                            with self._logger.tab(
+                                    lambda: f"Working on all sources  {[t.slice.parent_name_index_colors_position for t in sts]}"):
 
-                            st: EdgeWingTracker
-                            for st in sts:
+                                st: EdgeWingTracker
+                                for st in sts:
 
-                                the_target_face = cube.color_2_face(fc)
+                                    the_target_face = cube.color_2_face(fc)
 
-                                self.cmn.bring_face_front_preserve_down(the_target_face)
+                                    self.cmn.bring_face_front_preserve_down(the_target_face)
 
-                                # it was moved
-                                the_target_face = cube.color_2_face(fc)
+                                    # it was moved
+                                    the_target_face = cube.color_2_face(fc)
 
-                                # we track is colors
-                                is_fl = i == 0
-                                if is_fl:
-                                    the_wing = cube.front.edge_left.get_slice(edge_info.index_on_edge_one)
-                                else:
-                                    the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_two)
+                                    # we track is colors
+                                    is_fl = i == 0
+                                    if is_fl:
+                                        the_wing = cube.front.edge_left.get_slice(edge_info.index_on_edge_one)
+                                    else:
+                                        the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_two)
 
-                                with self._logger.tab(f"patch: Working on {the_target_face} target {the_wing.parent_name_and_index_position_colors} source wing {st.slice.parent_name_and_index_colors}"):
+                                    with self._logger.tab(f"patch: Working on {the_target_face} target {the_wing.parent_name_index_colors_position} source wing {st.slice.parent_name_index_colors}"):
 
 
-                                    solved = self._solve_one_side_edge_one_source(l1_white_tracker,
-                                                                                  the_target_face,
-                                                                                  st,
-                                                                                  face_row, the_wing.parent,
-                                                                                  the_wing.index)
+                                        solved = self._solve_one_side_edge_one_source(l1_white_tracker,
+                                                                                      the_target_face,
+                                                                                      st,
+                                                                                      face_row, the_wing)
 
-                                    if solved.is_solved:
-                                        break
-                            if solved.is_solved:
-                                break
+                                        if solved.is_solved:
+                                            break
+                                if solved.is_solved:
+                                    break
 
-            #restore - we dont know what caller expect
-            self.cmn.bring_face_front_preserve_down(cube.color_2_face(front_color))
+            #restore - we dont know what caller expect, need to check, but if you are not be ware of the assert below
+            # self.cmn.bring_face_front_preserve_down(cube.color_2_face(main_front_color))
 
             # if we dont bring it back then this assignment ins invalid
             # PATHC we assume same index on both
-            if is_fl:
-                the_wing = cube.front.edge_left.get_slice(edge_info.index_on_edge_one)
-            else:
-                the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_two)
+            # if is_fl:
+            #     the_wing = cube.front.edge_left.get_slice(edge_info.index_on_edge_one)
+            # else:
+            #     the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_two)
 
-            assert solved.is_solved, f"Wing {the_wing.parent_name_and_index_position_colors} is not solved"
+
+            # it is back on FL becuase of bring front above
+
+            # assert solved.is_solved, f"Wing {edge_info.wing_one.parent_name_index_colors_position} is not solved"
 
     def _solve_one_side_edge_one_source(self,
                              l1_white_tracker: FaceTracker,
                              target_face: Face,
                              source_wing_t: EdgeWingTracker,
                              face_row: int, # for now for debug only
-                             target_edge: Edge,
-                             index_on_target_edge) -> SmallStepSolveState:
+                             target_edge_wing: EdgeWing,
+                                        ) -> SmallStepSolveState:
+
+        """
+        Assume face is onthe front
+        wing is left or right
+
+        :param l1_white_tracker:
+        :param target_face:
+        :param source_wing_t:
+        :param face_row:
+        :param target_edge:
+        :param index_on_target_edge:
+        :return:
+        """
 
         debug = self.debug
-
-        target_edge_wing: EdgeWing = target_edge.get_slice(index_on_target_edge)
 
         required_color_ordered = self._get_slice_required_ordered_color(target_face, target_edge_wing)
 
         with self._logger.tab(
-                f"Working on edge {target_face.get_edge_position(target_edge)} / {index_on_target_edge} wing {required_color_ordered}"):
+                f"Working on edge {target_edge_wing.parent_name_index_colors_position}"):
 
 
 
             # the colors keys of the wing starting from the target face
 
             with self.ann.annotate(
-                    h1=lambda: f"Fixing edge wing {target_edge_wing.parent_name_and_index} -> {required_color_ordered}"):
+                    h1=lambda: f"Fixing edge wing {target_edge_wing.parent_name_and_index} -> {required_color_ordered} source:{source_wing_t.slice.parent_name_index_colors_position}",):
 
                 status = self._solve_edge_win_one_source(
                     l1_white_tracker,
@@ -276,9 +286,9 @@ class _LBLNxNEdges(SolverHelper):
                     target_edge_wing
                 )
 
-                self.debug(lambda: f"❓❓❓Solving all source_slices: {source_wing_t.slice.parent_name_and_index_position_colors} status: {status}")
+                self.debug(lambda: f"❓❓❓Solving all source_slices: {source_wing_t.slice.parent_name_index_colors_position} status: {status}")
                 if mark_slice_and_v_mark_if_solved(target_edge_wing):
-                    debug(lambda: f"✅✅✅✅ EdgWing {target_edge_wing.parent_name_and_index_colors} solved")
+                    debug(lambda: f"✅✅✅✅ EdgWing {target_edge_wing.parent_name_index_colors} solved")
 
                 return status
 
@@ -288,6 +298,13 @@ class _LBLNxNEdges(SolverHelper):
                                    face_row: int,  # for now for debug only
                                    target_edge_wing: EdgeWing,  # redundant - you have the index
                                    ) -> SmallStepSolveState:
+
+        # this and the above should be one method
+
+        cube = self.cube
+        assert target_face is cube.front
+        assert target_edge_wing.parent in [target_face.edge_left, target_face.edge_right]
+
         """Try to solve the target edge wing using any of the source slices.
 
         Iterates through candidate source wings and attempts to solve the target
@@ -304,25 +321,24 @@ class _LBLNxNEdges(SolverHelper):
             SOLVED if target was successfully solved, NOT_SOLVED otherwise.
         """
 
+
         def print_solved_till_now(title: str):
 
             with self._logger.tab(lambda  : title + " Solved edges"):
                 for i in range(face_row + 1):
                     with self._logger.tab(lambda: f"Row {i}"):
-                        for edge in _common.get_edge_row_pieces(self.cube, l1_white_tracker, i):
+                        for edge in _common.get_edge_row_pieces(cube, l1_white_tracker, i):
                             if edge.match_faces:
-                                self.debug(lambda : edge.parent_name_and_index_colors)
+                                self.debug(lambda : edge.parent_name_index_colors)
 
 
-        with self._logger.tab(lambda: f"Working on source  {source_slice_t.slice}"):
+        st = source_slice_t
 
-            st = source_slice_t
+        print_solved_till_now(f"Before solving {target_edge_wing.parent_name_index_colors}")
+        status = self._solve_edge_wing_by_source(target_face, target_edge_wing, st)
+        print_solved_till_now(f"After solving ({status}) {target_edge_wing.parent_name_index_colors}")
 
-            print_solved_till_now(f"Before solving {target_edge_wing.parent_name_and_index_colors}")
-            status = self._solve_edge_wing_by_source(target_face, target_edge_wing, st)
-            print_solved_till_now(f"After solving ({status}) {target_edge_wing.parent_name_and_index_colors}")
-
-            return status
+        return status
 
     def _solve_edge_wing_by_source(self, target_face: Face,
                                    _target_edge_wing: EdgeWing,
@@ -340,7 +356,7 @@ class _LBLNxNEdges(SolverHelper):
                 target_face_color = target_face.color
 
                 self.debug(
-                    f"Found source EdgeWing for target {untracked_source_wing.parent_name_and_index_colors} : {untracked_source_wing} / {untracked_source_wing.index}")
+                    f"Found source EdgeWing for target {untracked_source_wing.parent_name_index_colors} : {untracked_source_wing} / {untracked_source_wing.index}")
 
                 self.debug(lambda: f"on faces {untracked_source_wing.faces()} {untracked_source_edge.name}")
 
@@ -366,7 +382,7 @@ class _LBLNxNEdges(SolverHelper):
 
 
 
-                self.debug(lambda: f"💚💚 Wing {untracked_source_wing.parent_name_and_index_colors}  is on {cube.up} {untracked_source_edge.name}")
+                self.debug(lambda: f"💚💚 Source Wing is now on up {cube.up} {untracked_source_wing.parent_name_index_colors_position}")
 
                 #Now it need to be also on front, boaz we can check match before bring to front
                 if not untracked_source_wing.on_face(cube.front):
@@ -384,8 +400,7 @@ class _LBLNxNEdges(SolverHelper):
                         assert untracked_source_wing.on_face(cube.front)
                         untracked_source_edge = untracked_source_wing.parent
 
-                self.debug(
-                    lambda: f"💚💚 Wing {untracked_source_wing.parent_name_and_index_colors}  is on {cube.front} {untracked_source_edge.name}")
+                self.debug(lambda: f"💚💚 Source Wing is now on front {cube.front} {untracked_source_wing.parent_name_index_colors_position}")
 
 
                 # now check if we can use it ?
@@ -528,7 +543,7 @@ class _LBLNxNEdges(SolverHelper):
                 )
 
 
-            with self.annotate(h2=f"Bringing {source_wing.parent_name_and_index_colors} to {target_wing.parent_name_and_index}"):
+            with self.annotate(h2=f"Bringing {source_wing.parent_name_index_colors} to {target_wing.parent_name_and_index}"):
                 # U R U' [2]M' U R' U' [2]M
                 self.op.play(alg)
 

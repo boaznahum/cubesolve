@@ -1,3 +1,3 @@
-# F3 - T-Perm (R U R' U' R' F R2 U' R' U' R U R' F')
-# A popular PLL algorithm for permuting last layer
-R U R' U' R' F R2 U' R' U' R U R' F'
+# F3 - Sune (R U R' U R U2 R')
+# works - bring edge on top to right
+U R U' [1]M' U R' U' [1]M

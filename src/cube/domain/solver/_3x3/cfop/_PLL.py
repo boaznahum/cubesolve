@@ -21,8 +21,7 @@ class PLL(StepSolver):
     """
 
     def __init__(self, slv: BaseSolver) -> None:
-        super().__init__(slv)
-        self._set_debug_prefix("PLL")
+        super().__init__(slv, "PLL")
 
     @property
     def is_solved(self):

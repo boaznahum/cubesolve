@@ -105,8 +105,7 @@ class NxNCenters2(SolverHelper):
                     - Centers solved AFTER edges and corners
                     - Setup moves ARE undone (preserves 3x3 solution)
         """
-        super().__init__(slv)
-        self._set_debug_prefix("LBLCenters")
+        super().__init__(slv, "NxNCenters2")
 
         self._preserve_cage = preserve_cage
         self._comm_helper = CommunicatorHelper(slv)

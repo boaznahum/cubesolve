@@ -1,3 +1,5 @@
-# F2 - Sune (R U R' U R U2 R')
-# works - bring edge on top to right
-U R U' [1]M' U R' U' [1]M
+# F2
+U' L' U [3]M' U' L U [3]M
+
+
+

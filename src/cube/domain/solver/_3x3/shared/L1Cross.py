@@ -12,7 +12,7 @@ from cube.domain.solver.common.SolverHelper import SolverHelper
 class L1Cross(SolverHelper):
 
     def __init__(self, slv: BaseSolver) -> None:
-        super().__init__(slv)
+        super().__init__(slv, "L1Cross")
 
 
     def _is_cross(self):

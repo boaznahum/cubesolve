@@ -133,8 +133,7 @@ class NxNCenters(SolverHelper):
                       * _OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES
                       * _OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS
         """
-        super().__init__(slv)
-        self._set_debug_prefix("NxNCenters")
+        super().__init__(slv, "NxNCenters")
         self._logger.set_level(NxNCenters.D_LEVEL)
 
         self._preserve_cage = preserve_cage

@@ -12,7 +12,7 @@ class L1Corners(SolverHelper):
     __slots__: list[str] = []
 
     def __init__(self, slv: SolverElementsProvider) -> None:
-        super().__init__(slv)
+        super().__init__(slv, "L1Corners")
 
 
     def _is_corners(self) -> bool:

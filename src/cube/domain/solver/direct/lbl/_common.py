@@ -123,9 +123,11 @@ __SOLVED_FLAG_KEY = "NxNCenters2_center_pice_solved"
 
 def _is_cent_piece_marked_solved(center_piece: CenterSlice) -> bool:
     """Check if a center-piece is marked as solved (MARKER 2)."""
-    return is_slice_solved(center_piece)
+    return is_slice_marked_solve(center_piece)
 
-def is_slice_solved(part_slice: PartSlice) -> bool:
+
+
+def is_slice_marked_solve(part_slice: PartSlice) -> bool:
     """Check if a center-piece is marked as solved (MARKER 2)."""
 
     # it is enough to search in one edge, they ar enver get apart
@@ -335,7 +337,9 @@ def _get_side_face_trackers(
     # boaz: a patch to make bug reproducable even if we switch solution to diffrent trackers
     # Sort by color name to ensure consistent processing order
     if _lbl_config.PATCH_ORDER_ORTHOGONAL_FACES:
-        return sorted(side_trackers, key=lambda t: t.color.name)
+        side_trackers = sorted(side_trackers, key=lambda t: t.color.name)
+
+    return side_trackers
 
 
 def _get_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> Generator[PartSlice]:

@@ -532,7 +532,7 @@ class EdgeWing(PartSlice["Edge"]):
 
     def __str__(self) -> str:
         #return super().__str__()
-        return self.parent_name_and_index_position_colors
+        return self.parent_name_index_colors_position
 
     def faces(self) -> Sequence[_Face]:
 
@@ -662,7 +662,7 @@ class EdgeWing(PartSlice["Edge"]):
         return f"{self.parent.name}[{self.index}]"
 
     @property
-    def parent_name_and_index_colors(self) -> str:
+    def parent_name_index_colors(self) -> str:
         """Return formatted string with parent edge name and slice index.
 
         Example: "FR[0]" for first slice of front-right edge.
@@ -670,12 +670,21 @@ class EdgeWing(PartSlice["Edge"]):
         return self.parent_name_and_index + f"{[e.color for e in self.edges]}"
 
     @property
-    def parent_name_and_index_position_colors(self) -> str:
+    def parent_name_index_colors_position(self) -> str:
         """Return formatted string with parent edge name and slice index.
+        and face colors and reuiqred cololrs
 
         Example: "FR[0]" for first slice of front-right edge.
         """
-        return self.parent_name_and_index_colors + "⬅️" +  f"{[e.face.color for e in self.edges]}"
+        return self.parent_name_index_colors + "⬅️" + f"{[e.face.color for e in self.edges]}"
+
+    @property
+    def parent_name_index__position(self) -> str:
+        """Return formatted string with parent edge name and slice index. and required colors
+
+        Example: "FR[0]" for first slice of front-right edge.
+        """
+        return self.parent_name_and_index + "⬅️" + f"{[e.face.color for e in self.edges]}"
 
 
 class CenterSlice(PartSlice["Center"]):

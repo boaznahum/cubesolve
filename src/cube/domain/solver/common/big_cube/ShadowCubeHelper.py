@@ -7,7 +7,7 @@ from cube.domain.solver.protocols import SolverElementsProvider
 
 class ShadowCubeHelper(SolverHelper):
     def __init__(self, slv: SolverElementsProvider):
-        super().__init__(slv)
+        super().__init__(slv, "ShadowCubeHelper")
 
     def create_shadow_cube_from_faces_and_cube(self, th: FacesTrackerHolder) -> Cube:
         """

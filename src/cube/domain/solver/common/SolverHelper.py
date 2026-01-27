@@ -33,22 +33,18 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
 
     _solver: SolverElementsProvider
 
-    def __init__(self, solver: SolverElementsProvider) -> None:
+    def __init__(self, solver: SolverElementsProvider, debug_prefix: str) -> None:
         self._solver = solver
         self._ann = solver.op.annotation
         self._cmn = solver.cmn
         self._cube = solver.cube
         self._cqr = solver.cube.cqr
-        # Logger: prefix can be set later via _set_debug_prefix (uses set_prefix())
         self.__logger: Logger = Logger(solver._logger)
+        self.__logger.set_prefix(debug_prefix)
 
     @property
     def _logger(self) -> ILogger:
         return self.__logger
-
-    def _set_debug_prefix(self, prefix: str) -> None:
-        """Set the debug prefix for this element's logger."""
-        self.__logger.set_prefix(prefix)
 
     def debug(self, *args: LazyArg, level: int | None = None) -> None:
         """Output debug information with optional level filtering.
@@ -115,8 +111,8 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
 
 
 class StepSolver(SolverHelper):
-    def __init__(self, solver: SolverElementsProvider) -> None:
-        super().__init__(solver)
+    def __init__(self, solver: SolverElementsProvider, debug_prefix: str) -> None:
+        super().__init__(solver, debug_prefix)
 
     @abstractmethod
     def solve(self):

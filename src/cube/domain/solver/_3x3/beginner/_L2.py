@@ -13,7 +13,7 @@ class L2(SolverHelper):
     __slots__: list[str] = []
 
     def __init__(self, slv: BaseSolver) -> None:
-        super().__init__(slv)
+        super().__init__(slv, "L2")
 
 
     @property

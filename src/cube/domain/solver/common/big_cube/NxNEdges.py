@@ -20,8 +20,7 @@ class NxNEdges(SolverHelper):
     D_LEVEL = 3
 
     def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool) -> None:
-        super().__init__(slv)
-        self._set_debug_prefix("NxNEdges")
+        super().__init__(slv, "NxNEdges")
         self._logger.set_level(NxNEdges.D_LEVEL)
         self._advanced_edge_parity = advanced_edge_parity
 
