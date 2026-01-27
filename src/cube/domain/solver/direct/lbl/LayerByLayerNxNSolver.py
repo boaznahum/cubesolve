@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 from cube.domain.model import Corner, Part
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.direct.lbl import _common, _lbl_config
+from cube.domain.solver.direct.lbl import _common
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters

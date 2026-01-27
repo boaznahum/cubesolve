@@ -30,7 +30,7 @@ Algorithm for ring center solving:
 
 from __future__ import annotations
 
-from itertools import chain, count
+from itertools import chain
 from typing import TYPE_CHECKING, Sequence, Any, Iterable
 
 from cube.domain.exceptions import InternalSWError
@@ -48,7 +48,7 @@ from cube.domain.solver.direct.lbl._common import setup_l1, _get_side_face_track
 from cube.utils.text_cube_viewer import print_cube
 
 if TYPE_CHECKING:
-    from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
+    from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 
 
 class _LBLSlices(SolverHelper):
@@ -63,16 +63,16 @@ class _LBLSlices(SolverHelper):
 
     __slots__ = ["_slv", "_centers", "_edges"]
 
-    def __init__(self, slv: SolverElementsProvider) -> None:
+    def __init__(self, slv: LayerByLayerNxNSolver) -> None:
 
         super().__init__(slv, "_LBLSlices")
 
         """Create LBL slices helper.
 
         Args:
-            slv: Solver elements provider (for cube access and operations)
+            slv: LayerByLayerNxNSolver instance (for cube access and operations)
         """
-        self._slv = slv
+        self._slv: LayerByLayerNxNSolver = slv
         # preserve_cage=True to preserve Layer 1 edges during center solving
         self._centers = NxNCenters2(self, preserve_cage=True)
         self._edges = _LBLNxNEdges(self, advanced_edge_parity=False)
