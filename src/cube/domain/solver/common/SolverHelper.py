@@ -2,7 +2,6 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
 
 from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logger import Logger
 from cube.utils.logger_protocol import ILogger, LazyArg
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
@@ -39,8 +38,7 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
         self._cmn = solver.cmn
         self._cube = solver.cube
         self._cqr = solver.cube.cqr
-        self.__logger: Logger = Logger(solver._logger)
-        self.__logger.set_prefix(debug_prefix)
+        self.__logger: ILogger = solver._logger.with_prefix(debug_prefix)
 
     @property
     def _logger(self) -> ILogger:
