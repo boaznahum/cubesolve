@@ -35,10 +35,10 @@ This module uses THREE distinct marker systems for center-piece tracking:
 │ MARKER 3: ROW TRACKING (Solver Algorithm)                                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ Purpose:   Track which center slices belong to current row being solved     │
-│ Storage:   cs.moveable_attributes[__CENTER_SLICE_TRACK_KEY] = column_index  │
+│ Storage:   cs.moveable_attributes[__CENTER_SLICE_TRACK_KEY] = True          │
 │ Key:       __CENTER_SLICE_TRACK_KEY (UUID generated at module load)         │
-│ Set by:    _track_center_slice(cs, column)                                  │
-│ Checked:   _is_center_slice() returns column or None                        │
+│ Set by:    _track_center_slice(cs)                                          │
+│ Checked:   _is_center_slice() returns True or False                         │
 │ Cleared:   clear_center_slice() / clear_all_tracking() in setup_l1 finally  │
 │ Used for:  _iterate_all_tracked_slices_index() yields Points of tracked     │
 │            slices for the algorithm to process                              │
@@ -215,39 +215,23 @@ def mark_slice_and_v_mark_if_solved(piece: PartSlice) -> bool:
 __CENTER_SLICE_TRACK_KEY = str(uuid.uuid4())
 
 
-def _track_center_slice(cs: CenterSlice, column: int) -> None:
-    # boaz remove column it is not used, change from int to bool
+def _track_center_slice(cs: CenterSlice) -> None:
     """Mark a center slice as being tracked for the current row (MARKER 3)."""
-    cs.moveable_attributes[__CENTER_SLICE_TRACK_KEY] = 0
+    cs.moveable_attributes[__CENTER_SLICE_TRACK_KEY] = True
 
 
 def _is_center_slice(cs: CenterSlice) -> bool:
-
-    # boaz remove column it is not used
-
-    """Check if a center slice is tracked and return its column (MARKER 3).
+    """Check if a center slice is tracked (MARKER 3).
 
     Returns:
-        Column index if tracked, None otherwise.
+        True if tracked, False otherwise.
     """
-    # the default is boolean False !!!
-    x = cs.moveable_attributes[__CENTER_SLICE_TRACK_KEY]
-
-    #boaz: becuase damm moveable_attributes has default bool !!!
-    if type(x) is int:
-        return True
-    else:
-        return False
+    return cs.moveable_attributes[__CENTER_SLICE_TRACK_KEY] is True
 
 
 def clear_center_slice(cs: CenterSlice) -> None:
     """Clear tracking marker from a single center slice (MARKER 3)."""
     cs.moveable_attributes.pop(__CENTER_SLICE_TRACK_KEY, None)
-
-
-def _clear_is_center_slice(cs: CenterSlice) -> None:
-    """Alias for clear_center_slice."""
-    clear_center_slice(cs)
 
 
 def clear_all_center_slices_tracking(cube: Cube) -> None:

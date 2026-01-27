@@ -135,17 +135,8 @@ class _LBLNxNEdges(SolverHelper):
             self.debug(
                 lambda: lambda: f"Working on edges {edge_info.wing_one.parent_name_index__position} {edge_info.wing_two.parent_name_index__position}")
 
-            if True:
-                with self._logger.tab("🟰🟰🟰🟰🟰🟰🟰🟰🟰 PATCH !!!!!!!!!!!!!!!!!!!!!!!!"):
-                    self._solve_single_edge_wing_on_face_try_two_sides(l1_white_tracker, target_face, edge_info, face_row)
-            else:
-
-                # solve two edge wings of FL and FR
-                self._solve_one_side_edge(l1_white_tracker, target_face, face_row, edge_info.edge_one, edge_info.index_on_edge_one)
-                self._solve_one_side_edge(l1_white_tracker, target_face, face_row, edge_info.edge_two, edge_info.index_on_edge_two)
-
-
-            pass
+            with self._logger.tab("🟰🟰🟰🟰🟰🟰🟰🟰🟰 PATCH !!!!!!!!!!!!!!!!!!!!!!!!"):
+                self._solve_single_edge_wing_on_face_try_two_sides(l1_white_tracker, target_face, edge_info, face_row)
 
     def _solve_single_edge_wing_on_face_try_two_sides(self, l1_white_tracker: FaceTracker, target_face: Face,
                                                       edge_info: FaceOrthogonalEdgesInfo, face_row: int) -> None:
@@ -175,8 +166,6 @@ class _LBLNxNEdges(SolverHelper):
                                                                               s.index in required_indexes and s.colors_id == required_color_unordered)]
 
             assert source_wings  # at least one
-
-            #self.debug(lambda: f"source_slices: {source_wings}")
 
             solved: SmallStepSolveState = SmallStepSolveState.NOT_SOLVED
 
@@ -227,21 +216,6 @@ class _LBLNxNEdges(SolverHelper):
                                             break
                                 if solved.is_solved:
                                     break
-
-            #restore - we dont know what caller expect, need to check, but if you are not be ware of the assert below
-            # self.cmn.bring_face_front_preserve_down(cube.color_2_face(main_front_color))
-
-            # if we dont bring it back then this assignment ins invalid
-            # PATHC we assume same index on both
-            # if is_fl:
-            #     the_wing = cube.front.edge_left.get_slice(edge_info.index_on_edge_one)
-            # else:
-            #     the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_two)
-
-
-            # it is back on FL becuase of bring front above
-
-            # assert solved.is_solved, f"Wing {edge_info.wing_one.parent_name_index_colors_position} is not solved"
 
     def _solve_one_side_edge_one_source(self,
                              l1_white_tracker: FaceTracker,
@@ -583,10 +557,6 @@ class _LBLNxNEdges(SolverHelper):
         else:
             self.debug(f"Need to work on Edge {edge} ", level=3)
 
-        # if self._left_to_fix < 2:
-        #     self.debug( f"But I can't continue because I'm the last {edge} ", level=3)
-        #     return False
-
         # find needed color
         n_slices = self.cube.n_slices
         color_un_ordered: PartColorsID
@@ -816,11 +786,8 @@ class _LBLNxNEdges(SolverHelper):
 
             slice_alg = Algs.E[[i + 1 for i in target_indices]]
 
-            # for target_index in target_indices:
-            #     # slice me
             self.op.play(slice_alg)  # slice begin with 1
             self.op.play(self.rf)
-            # for target_index in target_indices:
             self.op.play(slice_alg.prime)
 
         for target_index in target_indices:
@@ -832,8 +799,6 @@ class _LBLNxNEdges(SolverHelper):
 
         assert self._left_to_fix == 1
 
-        # self.op.toggle_animation_on()
-        # still don't know how to handle
         cube = self.cube
 
         edge = self.cqr.find_edge(cube.edges, lambda e: not e.is3x3)
@@ -856,9 +821,6 @@ class _LBLNxNEdges(SolverHelper):
             assert edge is cube.fl
             self.op.play(Algs.F)
 
-            # not true on even, edge is OK
-            # assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
-
             edge = tracer.the_slice_nl.parent
             assert edge is face.edge_top
             edge = cube.front.edge_top
@@ -880,7 +842,6 @@ class _LBLNxNEdges(SolverHelper):
 
             s = edge.get_slice(i)
             color = self._get_slice_ordered_color(face, s)
-            # print(f"{i} ,{required_color}, {color}")
             if color != required_color:
                 slices_indices_to_fix.append(i)
                 slices_to_fix.append(s)
@@ -891,7 +852,6 @@ class _LBLNxNEdges(SolverHelper):
         if n_slices % 2 == 0 and _all:
             ann += "(Full even)"
 
-        # self.op.toggle_animation_on(enable=True)
         with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
             # slices are from [1 nn], so we need to add 1
             # actually, simple alg doesn't care if we fix i or inv(i), because on

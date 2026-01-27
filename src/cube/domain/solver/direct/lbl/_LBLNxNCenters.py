@@ -185,10 +185,6 @@ class NxNCenters2(SolverHelper):
                     if removed_count > 0:
                         raise InternalSWError(f"I moved pieces for {target_face} but still solve nothing")
 
-                # WIP: Commented out - this does position and tracking again !!!
-                # if self._remove_all_pieces_from_target_face(l1_white_tracker, target_face, slice_row_index):
-                #     work_was_done = True
-
                 face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, slice_index)
 
 
@@ -257,7 +253,7 @@ class NxNCenters2(SolverHelper):
 
                 mark_slice_and_v_mark_if_solved(slice_piece)
 
-                _track_center_slice(slice_piece, 0)
+                _track_center_slice(slice_piece)
 
         try:
             yield
@@ -314,7 +310,7 @@ class NxNCenters2(SolverHelper):
                 # which caused wrong rows to be solved. Now we ALWAYS skip the target face.
                 candidate_point: Point = Point(*point)
 
-                for n in range(4):
+                for _ in range(4):
                     # try to move piece with the required color from other faces to up face
                     move_from_target_face: Face
                     for move_from_target_face in l1_white_tracker.face.adjusted_faces():
@@ -386,9 +382,6 @@ class NxNCenters2(SolverHelper):
         assert l1_white_tracker.face is self.cube.down
 
         self.cmn.bring_face_front_preserve_down(target_face.face)
-
-        # if source_face is not target_face.opposite:
-        #     self.cmn.bring_face_up_preserve_front(source_face.face)
 
         cube = self.cube
 
@@ -474,10 +467,6 @@ class NxNCenters2(SolverHelper):
 
                 # we dont want to destroy
                 second_point_on_source_color: Color = second_point_piece.color
-                # !!!!!!!!!!!!!!!!!!!!!!!! bug for even cube
-                # if second_point_on_source_color == source_face.color:
-                # but if it is the same color as target that is going to replace then it is ok
-                #
                 second_point_is_solved = _is_cent_piece_marked_solved(second_point_piece)
                 self.debug(f"Second point {second_point_piece} is solved {second_point_is_solved}", f"Second point color {second_point_on_source_color}")
                 if target_point_color != second_point_on_source_color and second_point_is_solved:
@@ -564,14 +553,5 @@ class NxNCenters2(SolverHelper):
 
     def _count_color_on_face(self, face: Face, color: Color) -> int:
         return self.cqr.count_color_on_face(face, color)
-
-    # def _2d_center_row_slice_iter(self, slice_index: int) -> Iterator[Point]:
-    #     """Iterate over all columns in a specific row."""
-    #
-    #     # claude this is accidentally work because slice and face row are the same of front face
-    #
-    #     n = self.cube.n_slices
-    #     for c in range(n):
-    #         yield Point(slice_index, c)
 
 

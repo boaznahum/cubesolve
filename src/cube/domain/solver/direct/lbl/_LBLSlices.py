@@ -35,9 +35,7 @@ from typing import TYPE_CHECKING, Sequence, Any, Iterable
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import CenterSlice, EdgeWing, PartSlice
-from cube.domain.model.Edge import Edge
 from cube.domain.model.Slice import Slice
-from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
@@ -45,7 +43,6 @@ from cube.domain.solver.direct.lbl import _lbl_config, _common
 from cube.domain.solver.direct.lbl._LBLNxNCenters import NxNCenters2
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.direct.lbl._common import setup_l1, _get_side_face_trackers, _get_row_pieces
-from cube.utils.text_cube_viewer import print_cube
 
 if TYPE_CHECKING:
     from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
@@ -157,12 +154,6 @@ class _LBLSlices(SolverHelper):
 
         # todo:even: works for odd only, in odd the actual color is from the tracker
         return all ( slice_piece.match_faces  for slice_piece in chain(*pieces_to_test) )
-        # # Check each center piece has the correct color for its face
-        # for center in center_pieces:
-        #     if center.color != required_colors[center.face.name]:
-        #         return False
-        #
-        # return True
 
     def count_solved_slice_centers(
             self, th: FacesTrackerHolder, l1_tracker: FaceTracker
@@ -220,97 +211,6 @@ class _LBLSlices(SolverHelper):
 
     def _row_solved(self, l1_tracker: FaceTracker, slice_row: int) -> bool:
         return all(e.match_faces for e in _get_row_pieces(self.cube, l1_tracker, slice_row))
-
-    # =========================================================================
-    # Edge parity detection for even cubes
-    # =========================================================================
-
-    def _get_orthogonal_edges(self, l1_tracker: FaceTracker) -> list[Edge]:
-        """Get the 4 edges orthogonal to Layer 1 (don't touch L1 or L3).
-
-        These are the only edges affected by middle slice solving in LBL method.
-        Dynamically determined based on which face is Layer 1.
-
-        In LBL method:
-        - Layer 1 (D face): edges DF, DR, DB, DL - solved first
-        - Middle slices: only affect orthogonal edges FL, FR, BL, BR
-        - Layer n (U face): edges UF, UR, UB, UL - solved last
-
-        Args:
-            l1_tracker: Face tracker for Layer 1 (determines orientation)
-
-        Returns:
-            List of 4 edges that don't touch L1 face or its opposite.
-        """
-        l1_face = l1_tracker.face
-        l3_face = l1_face.opposite
-
-        # Orthogonal edges don't touch L1 or L3
-        return [e for e in self.cube.edges
-                if e._f1 not in (l1_face, l3_face)
-                and e._f2 not in (l1_face, l3_face)]
-
-    def _check_and_fix_edge_parity(self, l1_tracker: FaceTracker) -> bool:
-        """Check for and fix edge parity in orthogonal edges after solving all slices.
-
-        Only checks the 4 orthogonal edges since those are the only ones
-        solved during middle slice solving in LBL method.
-
-        Edge parity occurs when exactly one edge cannot be fully paired
-        (its wings have mixed colors). This is a mathematical property
-        of even cubes - when it happens, a parity algorithm must be applied.
-
-        Behavior depends on _lbl_config.ADVANCED_EDGE_PARITY:
-        - Non-advanced (False): Parity algorithm scrambles edges, caller must repeat
-        - Advanced (True): Parity algorithm fixes edges completely, we assert after
-
-        Args:
-            l1_tracker: Face tracker for Layer 1 (determines which edges are orthogonal)
-
-        Returns:
-            True if parity was detected and fixed, False otherwise.
-            Caller should repeat edge solving if True and non-advanced mode.
-        """
-        orthogonal_edges = self._get_orthogonal_edges(l1_tracker)
-        unsolved = [e for e in orthogonal_edges if not e.is3x3]
-
-        if len(unsolved) == 1:
-            # Edge parity - exactly one orthogonal edge cannot be paired
-            self.debug(f"Edge parity detected on {unsolved[0]}")
-
-            # Use original NxNEdges class with configured parity mode
-            nxn_edges = NxNEdges(self, advanced_edge_parity=_lbl_config.ADVANCED_EDGE_PARITY)
-
-            print_cube(self.cube, "Before parity")
-            nxn_edges._do_edge_parity_on_edge(unsolved[0])
-            print_cube(self.cube, "After parity")
-
-            if _lbl_config.ADVANCED_EDGE_PARITY:
-                # Advanced mode: parity algorithm should have fixed all edges
-                # Verify orthogonal edges are all fixed
-                assert all(e.is3x3 for e in orthogonal_edges), \
-                    "Advanced parity should fix all orthogonal edges"
-                # Also verify L1 edges are still fixed
-                l1_edges = self._get_l1_edges(l1_tracker)
-                assert all(e.is3x3 for e in l1_edges), \
-                    "Advanced parity should not disturb L1 edges"
-
-            return True
-
-        return False
-
-    def _get_l1_edges(self, l1_tracker: FaceTracker) -> list[Edge]:
-        """Get the 4 edges on Layer 1 face (touch L1 but not L3).
-
-        Args:
-            l1_tracker: Face tracker for Layer 1
-
-        Returns:
-            List of 4 edges that touch L1 face.
-        """
-        l1_face = l1_tracker.face
-        return [e for e in self.cube.edges
-                if e._f1 is l1_face or e._f2 is l1_face]
 
     # =========================================================================
     # Solving operations
@@ -399,47 +299,12 @@ class _LBLSlices(SolverHelper):
         # Setup L1 once at the start - positions white face down and will
         # clear all tracking when done. Individual slices accumulate their
         # tracking markers during solving.
-        with setup_l1(self, l1_white_tracker) as l1_setup:
+        with setup_l1(self, l1_white_tracker):
             n_to_solve = min(_lbl_config.NUMBER_OF_SLICES_TO_SOLVE, self.n_slices)
 
-            parity_detected = False
-            while True:
+            for row_index in range(n_to_solve):
+                with self._logger.tab(f"Solving face row {row_index}"):
+                    self._solve_slice_row(row_index, face_trackers, l1_white_tracker)
 
-                if parity_detected:
-                    self._slv._solve_layer3_corners(face_trackers)
-
-                for row_index in range(n_to_solve):
-                    with self._logger.tab(f"Solving face row {row_index}"):
-                        self._solve_slice_row(row_index, face_trackers, l1_white_tracker)
-
-                        if not self._row_solved(l1_white_tracker, row_index):
-                            raise InternalSWError(f"Row {row_index} not solved")
-
-
-                if False and not (n_to_solve < self.n_slices):
-                    # Check for edge parity in orthogonal edges (can occur in even cubes)
-                    if self._check_and_fix_edge_parity(l1_white_tracker):
-                        if parity_detected:
-                            # Parity detected twice - this is a bug
-                            raise AssertionError("Edge parity detected twice - this should not happen")
-                        parity_detected = True
-                        # Parity algorithm changes cube orientation - realign L1
-                        l1_setup.realign()
-
-                        # becuase we start over, actaully we need tochnage to clean aonly slices pieces
-                        _common.clear_all_type_of_markers(self.cube)
-                        if not _lbl_config.ADVANCED_EDGE_PARITY:
-                            # Non-advanced mode: parity scrambled edges, need to re-solve
-                            self.debug("Non-advanced parity applied, re-solving edges")
-                            continue  # Repeat the edge solving loop
-                # No parity or advanced mode handled it - we're done
-                break
-
-            # Final verification: all orthogonal and L1 edges must be solved
-            if False and  not (n_to_solve < self.n_slices):
-                orthogonal_edges = self._get_orthogonal_edges(l1_white_tracker)
-                l1_edges = self._get_l1_edges(l1_white_tracker)
-                assert all(e.is3x3 for e in orthogonal_edges), \
-                    f"Not all orthogonal edges solved: {[e for e in orthogonal_edges if not e.is3x3]}"
-                assert all(e.is3x3 for e in l1_edges), \
-                    f"Not all L1 (white) edges solved: {[e for e in l1_edges if not e.is3x3]}"
+                    if not self._row_solved(l1_white_tracker, row_index):
+                        raise InternalSWError(f"Row {row_index} not solved")
