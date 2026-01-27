@@ -1,20 +1,14 @@
 from contextlib import contextmanager
-from typing import Callable, ContextManager, Generator, Sequence, Tuple
+from typing import Callable, Generator, Sequence
 
 from cube.domain.algs import Alg, Algs
-from cube.utils.logger_protocol import LazyArg
 from cube.domain.exceptions import InternalSWError
+from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.model import Color, Edge, EdgeWing, FaceName
 from cube.domain.tracker.MarkedPartTracker import MarkedPartTracker
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.protocols import (
-    AnnotationProtocol,
-    OperatorProtocol,
-    SolverElementsProvider,
-    SupportsAnnotation,
-)
+from cube.domain.solver.protocols import SolverElementsProvider
 
 from ...model.CubeQueries2 import Pred
 from ...model._elements import EdgePosition
@@ -42,41 +36,18 @@ class EdgeSliceTracker:
 
 
 #claud: document all methods in this class with diagrams, ask me if something is not cleat
-class CommonOp:
-    __slots__ = ["_slv",
-                 "_start_color",
-                 "_ann"]
+class CommonOp(SolverHelper):
+    __slots__ = ["_start_color"]
 
     def __init__(self, provider: SolverElementsProvider) -> None:
-        super().__init__()
-        self._slv = provider
-        self._ann = provider.op.annotation
+        super().__init__(provider, "CommonOp", _is_common_op=True)
 
         # Get first face color from config (default: WHITE)
         self._start_color = provider.op.app_state.config.first_face_color
 
     @property
     def slv(self) -> SolverElementsProvider:
-        return self._slv
-
-    @property
-    def op(self) -> OperatorProtocol:
-        return self._slv.op
-
-    @property
-    def cube(self) -> Cube:
-        return self._slv.cube
-
-    @property
-    def ann(self) -> AnnotationProtocol:
-        return self._ann
-
-    def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
-                 h1: str | Callable[[], str] | None = None,
-                 h2: str | Callable[[], str] | None = None,
-                 h3: str | Callable[[], str] | None = None,
-                 animation: bool = True) -> ContextManager[None]:
-        return self.ann.annotate(*elements, h1=h1, h2=h2, h3=h3, animation=animation)
+        return self._solver
 
     @property
     def white(self) -> Color:
@@ -465,9 +436,6 @@ class CommonOp:
             return
 
         raise ValueError(f"{other} must be L/R/F/B")
-
-    def debug(self, *args: LazyArg) -> None:
-        self.slv.debug(*args)
 
     def bring_edge_on_up_to_front(self, caller: SolverElementsProvider, edge: Edge) -> Edge:
         """Rotate the UP face to bring an edge to the UP-FRONT position.

@@ -32,13 +32,18 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
 
     _solver: SolverElementsProvider
 
-    def __init__(self, solver: SolverElementsProvider, debug_prefix: str) -> None:
+    def __init__(self, solver: SolverElementsProvider, debug_prefix: str, _is_common_op: bool = False) -> None:
         self._solver = solver
         self._ann = solver.op.annotation
-        self._cmn = solver.cmn
         self._cube = solver.cube
         self._cqr = solver.cube.cqr
         self.__logger: ILogger = solver._logger.with_prefix(debug_prefix)
+
+        if _is_common_op:
+            self._cmn = self  # type: ignore  # CommonOp is its own cmn
+        else:
+            from .CommonOp import CommonOp
+            self._cmn = CommonOp(self)
 
     @property
     def _logger(self) -> ILogger:
@@ -97,7 +102,7 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
     @property
     @final
     def cmn(self) -> _Common:
-        return self._cmn
+        return self._cmn  # type: ignore[return-value]  # CommonOp sets self._cmn = self
 
     @property
     def white_face(self) -> Face:

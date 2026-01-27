@@ -76,7 +76,7 @@ class LayerByLayerNxNSolver(BaseSolver):
             Layer 1 color is determined by FIRST_FACE_COLOR config
             (accessed via config.first_face_color and FaceTracker).
         """
-        super().__init__(op, parent_logger, logger_prefix="LBL")
+        super().__init__(op, parent_logger, logger_prefix="Big-LBL")
 
         # Reuse NxNEdges for edge solving
         self._nxn_edges = NxNEdges(self, advanced_edge_parity=False)
