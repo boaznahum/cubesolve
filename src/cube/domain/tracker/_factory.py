@@ -185,7 +185,7 @@ class NxNCentersFaceTrackers(SolverHelper):
     _global_tracer_id: int = 0
 
     def __init__(self, solver: SolverElementsProvider, holder_id: int) -> None:
-        super().__init__(solver)
+        super().__init__(solver, "NxNCentersFaceTrackers")
         self._holder_id = holder_id
 
     # =========================================================================
