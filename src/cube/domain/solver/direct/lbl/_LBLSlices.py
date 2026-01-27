@@ -72,7 +72,7 @@ class _LBLSlices(SolverHelper):
         self._slv: LayerByLayerNxNSolver = slv
         # preserve_cage=True to preserve Layer 1 edges during center solving
         self._centers = NxNCenters2(self, preserve_cage=True)
-        self._edges = _LBLNxNEdges(self, advanced_edge_parity=False)
+        self._edges = _LBLNxNEdges(self)
 
 
 
