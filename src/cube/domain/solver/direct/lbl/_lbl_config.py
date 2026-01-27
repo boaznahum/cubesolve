@@ -4,11 +4,5 @@ BIG_LBL_RESOLVE_EDGES_SLICES=True
 
 PUT_SOLVED_MARKERS=True
 
-# Edge parity algorithm mode for even cubes:
-# - False (non-advanced): Parity algorithm scrambles edges, must repeat edge solving
-# - True (advanced): Parity algorithm fixes edges completely, just assert after
-ADVANCED_EDGE_PARITY=False
-
-
-PATCH_ORDER_ORTHOGONAL_FACES= True # to ma ebug reproducble even we we split the solution to tworuns
+PATCH_ORDER_ORTHOGONAL_FACES= True # to make bug reproducible even when we split the solution to two runs
 
