@@ -9,6 +9,7 @@ See: .planning/L3_EDGES_DIAGRAMS.md for algorithm details.
 
 from cube.domain.algs import Alg, Algs
 from cube.domain.model import EdgeWing
+from cube.domain.model._part import EdgeName
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -203,8 +204,8 @@ class _LBLL3Edges(SolverHelper):
         si = source_wing.index
 
         # Map source index to target edge coordinate system
-        source_edge_name = source_wing.parent.name.value
-        target_edge_name = target_wing.parent.name.value
+        source_edge_name = source_wing.parent.name
+        target_edge_name = target_wing.parent.name
         mapped_si = self._map_wing_index(source_edge_name, target_edge_name, si)
 
         if needs_flip:
@@ -252,7 +253,7 @@ class _LBLL3Edges(SolverHelper):
                 si = src_t.slice.index
                 self._right_cm_prime(
                     source_index=si,
-                    target_index=self._map_wing_index("FR", "FU", si)
+                    target_index=self._map_wing_index(EdgeName.FR, EdgeName.FU, si)
                 )
 
                 # 3. Check orientation + flip if needed
@@ -262,7 +263,7 @@ class _LBLL3Edges(SolverHelper):
                 si = src_t.slice.index
                 self._left_cm(
                     source_index=si,
-                    target_index=self._map_wing_index("FU", "FL", si)
+                    target_index=self._map_wing_index(EdgeName.FU, EdgeName.FL, si)
                 )
 
                 # 5. Rollback
@@ -290,7 +291,7 @@ class _LBLL3Edges(SolverHelper):
                 si = src_t.slice.index
                 self._left_cm(
                     source_index=si,
-                    target_index=self._map_wing_index("FU", "FL", si)
+                    target_index=self._map_wing_index(EdgeName.FU, EdgeName.FL, si)
                 )
 
                 # 4. Rollback
@@ -319,7 +320,7 @@ class _LBLL3Edges(SolverHelper):
                 si = src_t.slice.index
                 self._left_cm_prime(
                     source_index=si,
-                    target_index=self._map_wing_index("FL", "FU", si)
+                    target_index=self._map_wing_index(EdgeName.FL, EdgeName.FU, si)
                 )
 
                 # 4. F' - undo F rotation, source goes FU → FL
@@ -352,14 +353,14 @@ class _LBLL3Edges(SolverHelper):
                 # 2. First Left CM: FL → BU
                 wing_idx = src_t.slice.index
                 self._left_cm(
-                    source_index=self._map_wing_index("FL", "FU", wing_idx),
+                    source_index=self._map_wing_index(EdgeName.FL, EdgeName.FU, wing_idx),
                     target_index=wing_idx
                 )
 
                 # 3. Second Left CM: BU → FU
                 wing_idx = src_t.slice.index
                 self._left_cm(
-                    source_index=self._map_wing_index("FL", "FU", wing_idx),
+                    source_index=self._map_wing_index(EdgeName.FL, EdgeName.FU, wing_idx),
                     target_index=wing_idx
                 )
 
@@ -370,7 +371,7 @@ class _LBLL3Edges(SolverHelper):
                 wing_idx = src_t.slice.index
                 self._left_cm(
                     source_index=wing_idx,
-                    target_index=self._map_wing_index("FU", "FL", wing_idx)
+                    target_index=self._map_wing_index(EdgeName.FU, EdgeName.FL, wing_idx)
                 )
 
                 # 6. Rollback
@@ -393,7 +394,7 @@ class _LBLL3Edges(SolverHelper):
             source_index: Wing index on FU (source position)
             target_index: Wing index on FL (target position)
         """
-        expected = self._map_wing_index("FU", "FL", source_index)
+        expected = self._map_wing_index(EdgeName.FU, EdgeName.FL, source_index)
         assert target_index == expected, \
             f"Left CM: expected target={expected}, got {target_index}"
 
@@ -417,7 +418,7 @@ class _LBLL3Edges(SolverHelper):
             source_index: Wing index on FL (source position)
             target_index: Wing index on FU (target position)
         """
-        expected = self._map_wing_index("FL", "FU", source_index)
+        expected = self._map_wing_index(EdgeName.FL, EdgeName.FU, source_index)
         assert target_index == expected, \
             f"Left CM': expected target={expected}, got {target_index}"
 
@@ -442,7 +443,7 @@ class _LBLL3Edges(SolverHelper):
             source_index: Wing index on FU (source position)
             target_index: Wing index on FR (target position)
         """
-        expected = self._map_wing_index("FU", "FR", source_index)
+        expected = self._map_wing_index(EdgeName.FU, EdgeName.FR, source_index)
         assert target_index == expected, \
             f"Right CM: expected target={expected}, got {target_index}"
 
@@ -466,7 +467,7 @@ class _LBLL3Edges(SolverHelper):
             source_index: Wing index on FR (source position)
             target_index: Wing index on FU (target position)
         """
-        expected = self._map_wing_index("FR", "FU", source_index)
+        expected = self._map_wing_index(EdgeName.FR, EdgeName.FU, source_index)
         assert target_index == expected, \
             f"Right CM': expected target={expected}, got {target_index}"
 
@@ -563,7 +564,7 @@ class _LBLL3Edges(SolverHelper):
     # Index Mapping
     # =========================================================================
 
-    def _map_wing_index(self, from_edge_name: str, to_edge_name: str, index: int) -> int:
+    def _map_wing_index(self, from_edge: EdgeName, to_edge: EdgeName, index: int) -> int:
         """
         Map wing index from one edge to another on the front face.
 
@@ -571,8 +572,8 @@ class _LBLL3Edges(SolverHelper):
         chains through intermediate edges.
 
         Args:
-            from_edge_name: Source edge ("FL", "FU", "FR", "FD")
-            to_edge_name: Target edge ("FL", "FU", "FR", "FD")
+            from_edge: Source edge (EdgeName.FL, FU, FR, FD)
+            to_edge: Target edge (EdgeName.FL, FU, FR, FD)
             index: Wing index on source edge
 
         Returns:
@@ -580,45 +581,52 @@ class _LBLL3Edges(SolverHelper):
         """
         cube = self.cube
 
-        if from_edge_name == to_edge_name:
+        if from_edge == to_edge:
             return index
 
-        # Adjacent edge mappings (hardcoded for now)
-        # Format: (from, to) -> "same" or "inv"
-        # User-verified values (2025-01-29):
-        adjacent_map: dict[tuple[str, str], str] = {
-            ("FL", "FU"): "same",
-            ("FU", "FL"): "inv",
-            ("FL", "FD"): "inv",
-            ("FD", "FL"): "same",  # Fixed: was "inv"
-            ("FU", "FR"): "inv",   # Fixed: was "same"
-            ("FR", "FU"): "inv",
-            ("FR", "FD"): "same",
-            ("FD", "FR"): "inv",
+        # Adjacent edge mappings
+        # True = same index, False = inverted index
+        # Verified by chaining: FL→FU→FR→FD→FL = same (i → i)
+        _SAME = True
+        _INV = False
+        adjacent_map: dict[tuple[EdgeName, EdgeName], bool] = {
+            # FL ↔ FU: same
+            (EdgeName.FL, EdgeName.FU): _SAME,
+            (EdgeName.FU, EdgeName.FL): _SAME,
+            # FU ↔ FR: inv
+            (EdgeName.FU, EdgeName.FR): _INV,
+            (EdgeName.FR, EdgeName.FU): _INV,
+            # FR ↔ FD: same
+            (EdgeName.FR, EdgeName.FD): _SAME,
+            (EdgeName.FD, EdgeName.FR): _SAME,
+            # FD ↔ FL: inv
+            (EdgeName.FD, EdgeName.FL): _INV,
+            (EdgeName.FL, EdgeName.FD): _INV,
         }
 
-        key = (from_edge_name, to_edge_name)
+        key = (from_edge, to_edge)
 
         if key in adjacent_map:
-            if adjacent_map[key] == "same":
-                return index
-            else:
-                return cube.inv(index)
+            return index if adjacent_map[key] else cube.inv(index)
 
         # Non-adjacent: chain through intermediate edge
-        # FL <-> FR: chain through FU or FD
-        # FU <-> FD: chain through FL or FR
-        if key == ("FL", "FR") or key == ("FR", "FL"):
-            # Chain through FU
-            mid_index = self._map_wing_index(from_edge_name, "FU", index)
-            return self._map_wing_index("FU", to_edge_name, mid_index)
-        elif key == ("FU", "FD") or key == ("FD", "FU"):
-            # Chain through FL
-            mid_index = self._map_wing_index(from_edge_name, "FL", index)
-            return self._map_wing_index("FL", to_edge_name, mid_index)
+        # FL <-> FR: chain through FU
+        # FU <-> FD: chain through FL
+        if from_edge == EdgeName.FL and to_edge == EdgeName.FR:
+            mid_index = self._map_wing_index(from_edge, EdgeName.FU, index)
+            return self._map_wing_index(EdgeName.FU, to_edge, mid_index)
+        elif from_edge == EdgeName.FR and to_edge == EdgeName.FL:
+            mid_index = self._map_wing_index(from_edge, EdgeName.FU, index)
+            return self._map_wing_index(EdgeName.FU, to_edge, mid_index)
+        elif from_edge == EdgeName.FU and to_edge == EdgeName.FD:
+            mid_index = self._map_wing_index(from_edge, EdgeName.FL, index)
+            return self._map_wing_index(EdgeName.FL, to_edge, mid_index)
+        elif from_edge == EdgeName.FD and to_edge == EdgeName.FU:
+            mid_index = self._map_wing_index(from_edge, EdgeName.FL, index)
+            return self._map_wing_index(EdgeName.FL, to_edge, mid_index)
 
         from cube.domain.exceptions.InternalSWError import InternalSWError
-        raise InternalSWError(f"Unknown edge pair: {from_edge_name} -> {to_edge_name}")
+        raise InternalSWError(f"Unknown edge pair: {from_edge} -> {to_edge}")
 
     # =========================================================================
     # Helpers
@@ -636,7 +644,7 @@ class _LBLL3Edges(SolverHelper):
         """
         count = 0
         l3_face = l3_tracker.face
-        for edge in [l3_face.edge_left, l3_face.edge_top, l3_face.edge_right, l3_face.edge_bottom]:
+        for edge in l3_face.edges:
             for wing in edge.all_slices:
                 if wing.match_faces:
                     count += 1
