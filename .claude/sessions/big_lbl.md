@@ -93,37 +93,39 @@ Source wing can be on one of four edges of front face:
 
 ### Key Components
 
-**FB Edge:** The "helper" edge - not involved in FL/FR/FU operations, used as sacrificial edge.
+**FD Edge:** The "helper" edge (front-down) - moved to BU to protect it.
 
-**Right CM (Commutator):** 3-piece chain FU → FR → BU
+**Right CM:** 3-cycle FU → FR → BU → FU
+**(Right CM)':** Reverse 3-cycle FU → BU → FR → FU (so FR → FU!)
 
-**Left CM (Commutator):** Brings FU → FL
+**Left CM:** 3-cycle FU → FL → BU → FU
 
 **Stack:** Track scaffolding moves for rollback (NOT the CMs - those do actual work)
 
-### Algorithm (without flip)
+### Algorithm (CORRECTED - uses (Right CM)')
 
 ```
 STACK: []
 
-1. SETUP: Bring FB to BU
-   STACK: [setup_steps]
+1. SETUP: Bring FD to BU
+   STACK: [setup_alg]
 
-2. RIGHT CM: FU → FR → BU
-   - Source (FR) → BU
+2. (RIGHT CM)': Reverse cycle FR → FU
+   - FU → BU
+   - BU → FR
+   - FR → FU  ← Source moves here!
    (no stack - this is work)
 
-3. U ROTATION: BU → FU
-   - Source (BU) → FU
-   STACK: [setup_steps, U_rotation]
+3. CHECK ORIENTATION + FLIP if needed
+   STACK: [setup_alg, flip_alg] (if flipped)
 
 4. LEFT CM: FU → FL
    - Source (FU) → FL ✓ DONE!
    (no stack - this is work)
 
 5. ROLLBACK (reverse order):
-   - Undo U_rotation
-   - Undo setup_steps
+   - Undo flip_alg.prime (if flipped)
+   - Undo setup_alg.prime
 ```
 
 ### Orientation Check (after step 3)
@@ -216,31 +218,32 @@ STACK: []
 ```
 STACK: []
 
-1. SETUP: Bring FB to BU (protect BU)
-   STACK: [setup_steps]
+1. F rotation - frees up FD
+   - Source (FD) → FL
+   - Target wing (FL) → FU
+   - FD is now FREE
+   STACK: [F]
 
-2. F
-   - SI (FD) → FL
-   - TI (FL) → FU
-   STACK: [setup_steps, F]
+2. SETUP: Bring FD to BU (FD is now available!)
+   STACK: [F, setup_alg]
 
-3. (left CM)': FU ← FL ← BU ← FU
-   - SI (FL) → FU
-   - TI (FU) → BU
-   - BU → FL
+3. (LEFT CM)': Reverse cycle FL → FU
+   - FU → BU (target wing)
+   - BU → FL (helper from FD)
+   - FL → FU ← Source moves here!
    (no stack - this is work)
 
-4. F' (undo F)
-   - SI (FU) → FL ✓ TARGET!
-   (pop F from stack)
+4. F' (undo F rotation)
+   - Source (FU) → FL ✓ TARGET!
+   (pop F from stack, now: [setup_alg])
 
 5. CHECK orientation - if needs flip on FL:
-   FLIP algorithm for FL (TBD - different from FU flip)
-   STACK: [setup_steps, flip_steps]
+   FLIP FL algorithm (TBD)
+   STACK: [setup_alg, flip_fl_alg]
 
 6. ROLLBACK:
-   - Undo flip steps (if any)
-   - Undo setup_steps
+   - Undo flip_fl_alg.prime (if flipped)
+   - Undo setup_alg.prime
 ```
 
 ## Case 4: FL → FL (Source on Same Edge as Target)
