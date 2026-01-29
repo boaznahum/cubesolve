@@ -282,7 +282,7 @@ BU: [ T ]
 ### Step 5: Check Orientation + Flip if needed
 ```
 If source needs flip:
-   → FLIP FL (TBD algorithm)
+   → FLIP FL (algorithm: L² B' U' L U)
    → STACK: [setup_alg, flip_fl_alg]
 ```
 

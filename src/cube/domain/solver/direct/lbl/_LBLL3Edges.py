@@ -352,12 +352,17 @@ class _LBLL3Edges(SolverHelper):
         """
         Bring FD wing to BU to protect it from CM destruction.
 
+        Alg: D² B²
+        Path: FD → BD → BU
+        Does NOT touch FL, FR, FU.
+
         Returns:
             The algorithm used (for .prime undo).
         """
-        # TODO: Implement proper algorithm
-        # For now, placeholder - need to determine exact moves
-        alg = Algs.seq()  # Placeholder
+        alg = Algs.seq(
+            Algs.D, Algs.D,  # D²
+            Algs.B, Algs.B   # B²
+        )
         self.op.play(alg)
         return alg
 
@@ -394,13 +399,18 @@ class _LBLL3Edges(SolverHelper):
         """
         Flip the wing on FL (preserves other L3 edges).
 
-        TBD: Algorithm to be defined.
+        Alg: L² B' U' L U
 
         Returns:
             The algorithm used (for .prime undo).
         """
-        # TODO: Define FL flip algorithm
-        alg = Algs.seq()  # Placeholder
+        alg = Algs.seq(
+            Algs.L, Algs.L,  # L²
+            Algs.B.prime,
+            Algs.U.prime,
+            Algs.L,
+            Algs.U
+        )
         self.op.play(alg)
         return alg
 
