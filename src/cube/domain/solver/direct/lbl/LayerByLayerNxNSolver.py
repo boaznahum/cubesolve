@@ -37,6 +37,7 @@ from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
+from cube.domain.solver.direct.lbl._LBLL3Edges import _LBLL3Edges
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import Solver, SolverResults, SolveStep
 
@@ -85,6 +86,9 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         # LBL slices helper - wraps NxNCenters and NxNEdges for slice operations
         self._lbl_slices = _LBLSlices(self)
+
+        # L3 edges helper - solves L3 edges without disturbing L1/middle
+        self._l3_edges = _LBLL3Edges(self)
 
     # =========================================================================
     # Public properties/methods (Solver protocol order)
@@ -503,8 +507,8 @@ class LayerByLayerNxNSolver(BaseSolver):
     def _solve_layer3_edges(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 3 face edges using safe algorithms.
 
-        Uses preserve_lower_layers=True to ensure L1 and middle slices
-        are not disturbed by the edge solving algorithms.
+        Uses _LBLL3Edges helper which uses commutator-based algorithms
+        that preserve L1 and middle layer edges.
         """
         if self._is_layer3_edges_solved(th):
             return
@@ -513,8 +517,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         self.debug(f"Solving Layer 3 edges ({l3_tracker.color.name} face only)")
 
         with self.op.annotation.annotate(h2=f"L3 edges ({l3_tracker.color.name})"):
-            # solve_face_edges auto-detects when 8 edges are solved and protects them
-            self._nxn_edges.solve_face_edges(l3_tracker)
+            self._l3_edges.do_l3_edges(l3_tracker)
 
     def _solve_layer1_cross(self, th: FacesTrackerHolder) -> None:
         """Solve Layer 1 cross (position edges) using shadow 3x3 approach."""
