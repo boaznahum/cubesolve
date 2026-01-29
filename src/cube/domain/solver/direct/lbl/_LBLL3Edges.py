@@ -8,7 +8,7 @@ See: .planning/L3_EDGES_DIAGRAMS.md for algorithm details.
 """
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.model import EdgeWing
+from cube.domain.model import Edge, EdgeWing
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -58,7 +58,7 @@ class _LBLL3Edges(SolverHelper):
                     from cube.domain.exceptions.InternalSWError import InternalSWError
                     raise InternalSWError("L3 edges: Maximum iterations reached")
 
-                n_solved_before = self._count_solved_l3_edges()
+                n_solved_before = self._count_solved_l3_wings(l3_tracker)
 
                 # Rotate 4 times around front face, solve left edge each time
                 for rotation_i in range(4):
@@ -69,7 +69,7 @@ class _LBLL3Edges(SolverHelper):
                         if rotation_i < 3:  # Don't rotate after last iteration
                             self.op.play(Algs.Z)
 
-                n_solved_after = self._count_solved_l3_edges()
+                n_solved_after = self._count_solved_l3_wings(l3_tracker)
 
                 if n_solved_after == n_solved_before:
                     self.debug(f"No progress, stopping. Solved: {n_solved_after}")
@@ -180,9 +180,9 @@ class _LBLL3Edges(SolverHelper):
         """
         Check if source wing can solve target based on orientation.
 
-        Returns True if:
-        - Color on front == L3 color AND source_index == target_index, OR
-        - Color on front != L3 color AND source_index == inv(target_index)
+        Maps source index to target edge coordinate system, then checks:
+        - Color on front == L3 color AND mapped_si == ti, OR
+        - Color on front != L3 color AND mapped_si == inv(ti)
         """
         cube = self.cube
         l3_color = cube.front.color
@@ -193,106 +193,218 @@ class _LBLL3Edges(SolverHelper):
         ti = target_wing.index
         si = source_wing.index
 
+        # Map source index to target edge coordinate system
+        source_edge_name = self._get_front_edge_name(source_wing.parent)
+        target_edge_name = self._get_front_edge_name(target_wing.parent)
+        mapped_si = self._map_wing_index(source_edge_name, target_edge_name, si)
+
         if needs_flip:
-            return si == cube.inv(ti)
+            return mapped_si == cube.inv(ti)
         else:
-            return si == ti
+            return mapped_si == ti
+
+    def _get_front_edge_name(self, edge: "Edge") -> str:
+        """Get edge name relative to front face (FL, FU, FR, FD)."""
+        cube = self.cube
+        front = cube.front
+        if edge is front.edge_left:
+            return "FL"
+        elif edge is front.edge_top:
+            return "FU"
+        elif edge is front.edge_right:
+            return "FR"
+        elif edge is front.edge_bottom:
+            return "FD"
+        else:
+            from cube.domain.exceptions.InternalSWError import InternalSWError
+            raise InternalSWError(f"Edge {edge.name} is not on front face")
 
     # =========================================================================
     # Case Handlers
     # =========================================================================
 
     def _handle_fr_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
-        """Case 1: Source on FR → Target on FL."""
-        with self._logger.tab(f"Case FR→FL: {source.parent_name_and_index}"):
-            # 1. Setup: Bring FD to BU
-            setup_alg = self._protect_bu()
+        """
+        Case 1: Source on FR → Target on FL.
 
-            # 2. (Right CM)': FR → FU
-            self._right_cm_prime(source.index)
+        Diagram:
+        ```
+                ┌─────────┐
+                │   FU    │
+                │   [?]   │
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │  [T]  │  FRONT  │  [S]  │  ← S=Source, T=Target
+        └───────┼─────────┼───────┘
+                │   FD    │
+                │   [H]   │  ← H=Helper (goes to BU)
+                └─────────┘
+        ```
 
-            # 3. Check orientation + flip if needed
-            flip_alg = self._flip_fu_if_needed(target)
+        Steps:
+        1. protect_bu: FD[H] → BU         (preserves FL/FR/FU)
+        2. (Right CM)': FR[S] → FU        (preserves FL)
+        3. flip FU if needed              (preserves FL)
+        4. Left CM: FU[S] → FL            (work - moves to target)
+        5. Rollback: undo flip, undo protect_bu
+        """
+        ti = target.index  # Target position index (recalculate if target edge moves)
 
-            # 4. Left CM: FU → FL
-            self._left_cm(target.index)
+        with self._logger.tab(f"Case FR→FL: source={source.index}, target={ti}"):
+            with source.tracker() as src_t:
+                # 1. Setup: Bring FD to BU (doesn't affect FL/FR/FU)
+                setup_alg = self._protect_bu()
 
-            # 5. Rollback
-            if flip_alg:
+                # 2. (Right CM)': FR → FU
+                si = src_t.slice.index
+                self._right_cm_prime(
+                    source_index=si,
+                    target_index=self._map_wing_index("FR", "FU", si)
+                )
+
+                # 3. Check orientation + flip if needed
+                flip_alg = self._flip_fu_if_needed(target)
+
+                # 4. Left CM: FU → FL
+                si = src_t.slice.index
+                self._left_cm(
+                    source_index=si,
+                    target_index=self._map_wing_index("FU", "FL", si)
+                )
+
+                # 5. Rollback
                 self.op.play(flip_alg.prime)
-            self.op.play(setup_alg.prime)
+                self.op.play(setup_alg.prime)
 
     def _handle_fu_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
-        """Case 2: Source on FU → Target on FL."""
-        with self._logger.tab(f"Case FU→FL: {source.parent_name_and_index}"):
-            # 1. Setup: Bring FD to BU
-            setup_alg = self._protect_bu()
+        """
+        Case 2: Source on FU → Target on FL.
 
-            # 2. Check orientation + flip if needed
-            flip_alg = self._flip_fu_if_needed(target)
+        Path: FU → FL (Left CM)
+        Target position FL is not affected by protect_bu.
+        """
+        ti = target.index
 
-            # 3. Left CM: FU → FL
-            self._left_cm(target.index)
+        with self._logger.tab(f"Case FU→FL: source={source.index}, target={ti}"):
+            with source.tracker() as src_t:
+                # 1. Setup: Bring FD to BU (doesn't affect FL/FU)
+                setup_alg = self._protect_bu()
 
-            # 4. Rollback
-            if flip_alg:
+                # 2. Check orientation + flip if needed
+                flip_alg = self._flip_fu_if_needed(target)
+
+                # 3. Left CM: FU → FL
+                si = src_t.slice.index
+                self._left_cm(
+                    source_index=si,
+                    target_index=self._map_wing_index("FU", "FL", si)
+                )
+
+                # 4. Rollback
                 self.op.play(flip_alg.prime)
-            self.op.play(setup_alg.prime)
+                self.op.play(setup_alg.prime)
 
     def _handle_fd_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
-        """Case 3: Source on FD → Target on FL."""
-        with self._logger.tab(f"Case FD→FL: {source.parent_name_and_index}"):
-            # 1. F rotation - frees up FD
-            self.op.play(Algs.F)
+        """
+        Case 3: Source on FD → Target on FL.
 
-            # 2. Setup: Bring FD to BU (FD is now free)
-            setup_alg = self._protect_bu()
+        Path: FD → FL (F) → FU ((Left CM)') → FL (F')
+        F rotation moves target: FL → FU
+        F' moves target back: FU → FL
+        """
+        ti = target.index
 
-            # 3. (Left CM)': FL → FU
-            self._left_cm_prime(target.index)
+        with self._logger.tab(f"Case FD→FL: source={source.index}, target={ti}"):
+            with source.tracker() as src_t:
+                # 1. F rotation - moves source FD → FL, target FL → FU
+                self.op.play(Algs.F)
 
-            # 4. F' - undo F rotation, source lands at FL
-            self.op.play(Algs.F.prime)
+                # 2. Setup: Bring FD to BU (FD is now free, doesn't affect FL/FU)
+                setup_alg = self._protect_bu()
 
-            # 5. Check orientation + flip if needed (on FL now)
-            flip_alg = self._flip_fl_if_needed(target)
+                # 3. (Left CM)': FL → FU
+                si = src_t.slice.index
+                self._left_cm_prime(
+                    source_index=si,
+                    target_index=self._map_wing_index("FL", "FU", si)
+                )
 
-            # 6. Rollback
-            if flip_alg:
+                # 4. F' - undo F rotation, source goes FU → FL
+                self.op.play(Algs.F.prime)
+
+                # 5. Check orientation + flip if needed (on FL now)
+                flip_alg = self._flip_fl_if_needed(target)
+
+                # 6. Rollback
                 self.op.play(flip_alg.prime)
-            self.op.play(setup_alg.prime)
+                self.op.play(setup_alg.prime)
 
     def _handle_fl_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
-        """Case 4: Source on FL → Target on FL (same edge, different index)."""
-        with self._logger.tab(f"Case FL→FL: {source.parent_name_and_index}"):
-            # 1. Setup: Bring FD to BU
-            setup_alg = self._protect_bu()
+        """
+        Case 4: Source on FL → Target on FL (same edge, different index).
 
-            # 2. Left CM x2: FL → BU → FU
-            self._left_cm(source.index)  # FL → BU
-            self._left_cm(source.index)  # BU → FU
+        Path: FL → BU (Left CM) → FU (Left CM) → flip → FL (Left CM)
+        Source is at inv(ti), always needs flip.
 
-            # 3. Flip FU (always required for this case)
-            flip_alg = self._flip_fu()
+        Left CM is a 3-cycle: FU → FL → BU → FU (all use same M[k] slice)
+        """
+        ti = target.index
+        si = source.index
 
-            # 4. Left CM: FU → FL
-            self._left_cm(target.index)
+        with self._logger.tab(f"Case FL→FL: source={si}, target={ti}"):
+            with source.tracker() as src_t:
+                # 1. Setup: Bring FD to BU (doesn't affect FL)
+                setup_alg = self._protect_bu()
 
-            # 5. Rollback
-            self.op.play(flip_alg.prime)
-            self.op.play(setup_alg.prime)
+                # 2. First Left CM: FL → BU
+                wing_idx = src_t.slice.index
+                self._left_cm(
+                    source_index=self._map_wing_index("FL", "FU", wing_idx),
+                    target_index=wing_idx
+                )
+
+                # 3. Second Left CM: BU → FU
+                wing_idx = src_t.slice.index
+                self._left_cm(
+                    source_index=self._map_wing_index("FL", "FU", wing_idx),
+                    target_index=wing_idx
+                )
+
+                # 4. Flip FU (always required for this case)
+                flip_alg = self._flip_fu()
+
+                # 5. Third Left CM: FU → FL
+                wing_idx = src_t.slice.index
+                self._left_cm(
+                    source_index=wing_idx,
+                    target_index=self._map_wing_index("FU", "FL", wing_idx)
+                )
+
+                # 6. Rollback
+                self.op.play(flip_alg.prime)
+                self.op.play(setup_alg.prime)
 
     # =========================================================================
     # Commutator Algorithms
     # =========================================================================
 
-    def _left_cm(self, wing_index: int) -> None:
+    def _left_cm(self, source_index: int, target_index: int) -> None:
         """
         Left Commutator: 3-cycle FU → FL → BU → FU
 
+        FU[source_index] → FL[target_index]
+
         Alg: U' L' U M[k]' U' L U M[k]
+
+        Args:
+            source_index: Wing index on FU (source position)
+            target_index: Wing index on FL (target position)
         """
-        k = wing_index + 1  # 1-based for M slice
+        expected = self._map_wing_index("FU", "FL", source_index)
+        assert target_index == expected, \
+            f"Left CM: expected target={expected}, got {target_index}"
+
+        k = source_index + 1  # 1-based for M slice
         alg = Algs.seq(
             Algs.U.prime, Algs.L.prime,
             Algs.U, Algs.M[k].prime,
@@ -301,12 +413,22 @@ class _LBLL3Edges(SolverHelper):
         )
         self.op.play(alg)
 
-    def _left_cm_prime(self, wing_index: int) -> None:
+    def _left_cm_prime(self, source_index: int, target_index: int) -> None:
         """
         Left Commutator Inverse: 3-cycle FU → BU → FL → FU
         (Reverse direction: FL → FU)
+
+        FL[source_index] → FU[target_index]
+
+        Args:
+            source_index: Wing index on FL (source position)
+            target_index: Wing index on FU (target position)
         """
-        k = wing_index + 1
+        expected = self._map_wing_index("FL", "FU", source_index)
+        assert target_index == expected, \
+            f"Left CM': expected target={expected}, got {target_index}"
+
+        k = source_index + 1
         alg = Algs.seq(
             Algs.U.prime, Algs.L.prime,
             Algs.U, Algs.M[k].prime,
@@ -315,13 +437,23 @@ class _LBLL3Edges(SolverHelper):
         )
         self.op.play(alg.prime)
 
-    def _right_cm(self, wing_index: int) -> None:
+    def _right_cm(self, source_index: int, target_index: int) -> None:
         """
         Right Commutator: 3-cycle FU → FR → BU → FU
 
+        FU[source_index] → FR[target_index]
+
         Alg: U R U' M[k]' U R' U' M[k]
+
+        Args:
+            source_index: Wing index on FU (source position)
+            target_index: Wing index on FR (target position)
         """
-        k = wing_index + 1
+        expected = self._map_wing_index("FU", "FR", source_index)
+        assert target_index == expected, \
+            f"Right CM: expected target={expected}, got {target_index}"
+
+        k = source_index + 1
         alg = Algs.seq(
             Algs.U, Algs.R,
             Algs.U.prime, Algs.M[k].prime,
@@ -330,12 +462,22 @@ class _LBLL3Edges(SolverHelper):
         )
         self.op.play(alg)
 
-    def _right_cm_prime(self, wing_index: int) -> None:
+    def _right_cm_prime(self, source_index: int, target_index: int) -> None:
         """
         Right Commutator Inverse: 3-cycle FU → BU → FR → FU
         (Reverse direction: FR → FU)
+
+        FR[source_index] → FU[target_index]
+
+        Args:
+            source_index: Wing index on FR (source position)
+            target_index: Wing index on FU (target position)
         """
-        k = wing_index + 1
+        expected = self._map_wing_index("FR", "FU", source_index)
+        assert target_index == expected, \
+            f"Right CM': expected target={expected}, got {target_index}"
+
+        k = source_index + 1
         alg = Algs.seq(
             Algs.U, Algs.R,
             Algs.U.prime, Algs.M[k].prime,
@@ -385,15 +527,15 @@ class _LBLL3Edges(SolverHelper):
         self.op.play(alg)
         return alg
 
-    def _flip_fu_if_needed(self, target: EdgeWing) -> Alg | None:
-        """Flip FU wing if orientation is wrong. Returns alg or None."""
+    def _flip_fu_if_needed(self, target: EdgeWing) -> Alg:
+        """Flip FU wing if orientation is wrong. Returns alg or noop."""
         cube = self.cube
         fu_wing = cube.fu.get_slice(target.index)
         l3_color = cube.front.color
 
         if fu_wing.get_face_edge(cube.front).color != l3_color:
             return self._flip_fu()
-        return None
+        return Algs.NOOP
 
     def _flip_fl(self) -> Alg:
         """
@@ -414,26 +556,94 @@ class _LBLL3Edges(SolverHelper):
         self.op.play(alg)
         return alg
 
-    def _flip_fl_if_needed(self, target: EdgeWing) -> Alg | None:
-        """Flip FL wing if orientation is wrong. Returns alg or None."""
+    def _flip_fl_if_needed(self, target: EdgeWing) -> Alg:
+        """Flip FL wing if orientation is wrong. Returns alg or noop."""
         cube = self.cube
         fl_wing = cube.fl.get_slice(target.index)
         l3_color = cube.front.color
 
         if fl_wing.get_face_edge(cube.front).color != l3_color:
             return self._flip_fl()
-        return None
+        return Algs.NOOP
+
+    # =========================================================================
+    # Index Mapping
+    # =========================================================================
+
+    def _map_wing_index(self, from_edge_name: str, to_edge_name: str, index: int) -> int:
+        """
+        Map wing index from one edge to another on the front face.
+
+        Both edges must be on the front face. For non-adjacent edges,
+        chains through intermediate edges.
+
+        Args:
+            from_edge_name: Source edge ("FL", "FU", "FR", "FD")
+            to_edge_name: Target edge ("FL", "FU", "FR", "FD")
+            index: Wing index on source edge
+
+        Returns:
+            Corresponding wing index on target edge
+        """
+        cube = self.cube
+
+        if from_edge_name == to_edge_name:
+            return index
+
+        # Adjacent edge mappings (hardcoded for now)
+        # Format: (from, to) -> "same" or "inv"
+        # User-verified values (2025-01-29):
+        adjacent_map: dict[tuple[str, str], str] = {
+            ("FL", "FU"): "same",
+            ("FU", "FL"): "inv",
+            ("FL", "FD"): "inv",
+            ("FD", "FL"): "same",  # Fixed: was "inv"
+            ("FU", "FR"): "inv",   # Fixed: was "same"
+            ("FR", "FU"): "inv",
+            ("FR", "FD"): "same",
+            ("FD", "FR"): "inv",
+        }
+
+        key = (from_edge_name, to_edge_name)
+
+        if key in adjacent_map:
+            if adjacent_map[key] == "same":
+                return index
+            else:
+                return cube.inv(index)
+
+        # Non-adjacent: chain through intermediate edge
+        # FL <-> FR: chain through FU or FD
+        # FU <-> FD: chain through FL or FR
+        if key == ("FL", "FR") or key == ("FR", "FL"):
+            # Chain through FU
+            mid_index = self._map_wing_index(from_edge_name, "FU", index)
+            return self._map_wing_index("FU", to_edge_name, mid_index)
+        elif key == ("FU", "FD") or key == ("FD", "FU"):
+            # Chain through FL
+            mid_index = self._map_wing_index(from_edge_name, "FL", index)
+            return self._map_wing_index("FL", to_edge_name, mid_index)
+
+        from cube.domain.exceptions.InternalSWError import InternalSWError
+        raise InternalSWError(f"Unknown edge pair: {from_edge_name} -> {to_edge_name}")
 
     # =========================================================================
     # Helpers
     # =========================================================================
 
-    def _count_solved_l3_edges(self) -> int:
-        """Count number of solved edge wings on front face (L3)."""
-        cube = self.cube
+    def _count_solved_l3_wings(self, l3_tracker: FaceTracker) -> int:
+        """
+        Count number of solved edge wings on L3 face.
+
+        Args:
+            l3_tracker: Tracker for L3 face (can be anywhere on cube).
+
+        Returns:
+            Number of wings with matching colors on L3 edges.
+        """
         count = 0
-        front = cube.front
-        for edge in [front.edge_left, front.edge_top, front.edge_right, front.edge_bottom]:
+        l3_face = l3_tracker.face
+        for edge in [l3_face.edge_left, l3_face.edge_top, l3_face.edge_right, l3_face.edge_bottom]:
             for wing in edge.all_slices:
                 if wing.match_faces:
                     count += 1
