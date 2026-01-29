@@ -1,124 +1,328 @@
-# Session: big_lbl Branch - Edge Parity Implementation
+# Big-LBL L3 Edges Fix - Session Notes
 
-## How to Continue Next Session
+## Task Summary
 
-### Current State
-- Commit `2bd5227`: WIP edge parity detection - has a bug where parity destroys L1 edges
-- Need to move the parity retry loop from `_LBLSlices` to `LayerByLayerNxNSolver`
+**Goal:** Implement L3 edge pairing in big-lbl solver using new approach based on `_LBLNxNEdges` patterns.
 
-### Next Steps
-1. **Read this file** to understand context
-2. **Simplify `_LBLSlices.solve_all_faces_all_rows()`**:
-   - Remove the `while True` loop
-   - Keep parity check, but just return True/False if parity was detected
-   - Don't try to re-solve at this level
-3. **Add loop to `LayerByLayerNxNSolver._solve_impl()`**:
-   - Wrap L1 + middle slices solving in a loop
-   - If parity detected, repeat from L1
-   - If parity detected twice, raise error
-4. **Test** with 4x4 or 6x6 cube that triggers parity
+**Scope:**
+- L3 edges only (not corners)
+- Edges just need to be paired (position flexible)
+- Must NOT disturb L1 or middle layer edges
 
-### Key Files
-- `src/cube/domain/solver/direct/lbl/LayerByLayerNxNSolver.py` - Add loop here
-- `src/cube/domain/solver/direct/lbl/_LBLSlices.py` - Simplify, return parity status
-- `src/cube/domain/solver/reducers/beginner/BeginnerReducer.py` - Reference for pattern
+## Solution Architecture
+
+### New Helper Class
+
+Create `_LBLL3Edges.py` in `src/cube/domain/solver/direct/lbl/`:
+- Initially a copy of `_LBLNxNEdges`
+- Later: extract common methods to `_common.py`
+
+### Method Contract (Default Invariant)
+
+Every method returns cube to known state:
+- L3 on front
+- Below L3 intact
+
+Unless explicitly stated otherwise or method's purpose is to change state.
+
+### Main Method Structure
+
+```python
+def do_l3_edges(faces_tracker):
+    bring_l3_to_front()
+
+    MAX_ITERATIONS = 10
+    n_iteration = 0
+
+    while True:
+        n_iteration += 1
+        if n_iteration > MAX_ITERATIONS:
+            raise InternalSWError("Maximum iterations reached")
+
+        for _ in range(4):  # rotate around front face
+            self._logger.tab(lambda: ...)
+            solve_left_edge()  # always works on LEFT
+            rotate_cube_around_front_center()
+
+        if no_increase_in_solved_l3_edges:
+            break
+```
+
+### solve_left_edge() Structure
+
+```python
+def solve_left_edge():
+    for left_edge_slice_index in range(n_slices):
+        # delegate to method that handles one slice
+        solve_left_edge_slice(left_edge_slice_index)
+```
+
+### solve_left_edge_slice() Logic
+
+```python
+def solve_left_edge_slice(slice_index):
+    # 1. If wing already solved → skip
+
+    # 2. Find source wings matching this target:
+    #    - required_indexes = [i, inv(i)]  (for middle wing on odd cube, inv(i) == i)
+    #    - match: s.index in required_indexes AND s.colors_id == target.position_id
+    #    - DON'T check is_slice_marked_solve yet (more filtering comes later)
+
+    # 3. Filter: Check if source is usable without rotation
+    #    - ti = target index, si = source index
+    #    - If source wing color on front == L3 color:
+    #        → usable if ti == si
+    #    - Else (wrong orientation, needs flip):
+    #        → usable if ti == inv(si)
+
+    # 4. Handle based on source position (FL, FR, FU, FD)
+```
+
+### Source Position Cases
+
+Source wing can be on one of four edges of front face:
+
+| Case | Source Edge | Status |
+|------|-------------|--------|
+| FR → FL | Right | DEFINED (see below) |
+| FU → FL | Top | TODO |
+| FD → FL | Bottom | TODO |
+| FL → FL | Left (same as target) | TODO |
+
+## Case 1: FR → FL (Right to Left)
+
+### Key Components
+
+**FB Edge:** The "helper" edge - not involved in FL/FR/FU operations, used as sacrificial edge.
+
+**Right CM (Commutator):** 3-piece chain FU → FR → BU
+
+**Left CM (Commutator):** Brings FU → FL
+
+**Stack:** Track scaffolding moves for rollback (NOT the CMs - those do actual work)
+
+### Algorithm (without flip)
+
+```
+STACK: []
+
+1. SETUP: Bring FB to BU
+   STACK: [setup_steps]
+
+2. RIGHT CM: FU → FR → BU
+   - Source (FR) → BU
+   (no stack - this is work)
+
+3. U ROTATION: BU → FU
+   - Source (BU) → FU
+   STACK: [setup_steps, U_rotation]
+
+4. LEFT CM: FU → FL
+   - Source (FU) → FL ✓ DONE!
+   (no stack - this is work)
+
+5. ROLLBACK (reverse order):
+   - Undo U_rotation
+   - Undo setup_steps
+```
+
+### Orientation Check (after step 3)
+
+After source is on FU, check orientation:
+
+```
+IF source color on front == L3 color:
+   - Correct orientation
+   - ti == si required
+   - Proceed to Left CM
+
+ELSE (wrong orientation):
+   - ti == inv(si) required
+   - FLIP source first, then Left CM
+```
+
+### Flip Algorithm (source on FU, preserve FL)
+
+```
+1. U' U'  → FU → BU
+2. B'     → BU → RB
+3. R'     → RB → RU
+4. U      → RU → FU (now flipped!)
+
+Path: FU → BU → RB → RU → FU
+All steps go on stack, undo with .prime
+```
+
+### Full FR → FL with Flip
+
+```
+STACK: []
+
+Setup:     FB → BU                    (stack)
+Right CM:  FR → BU                    (work)
+U rotate:  BU → FU                    (stack)
+
+CHECK orientation - needs flip:
+   U' U'                              (stack)
+   B'                                 (stack)
+   R'                                 (stack)
+   U                                  (stack)
+
+Left CM:   FU → FL                    (work) ✓
+
+Rollback:  Undo all stack in reverse:
+   U', R, B, U U, U_rotate_undo, setup_undo
+```
+
+## Dependencies to Implement
+
+1. **`scl.map_wing_index_between_edges(from_edge, to_edge, index)`** - Map wing index from one edge to another on same face
+
+2. **Flip algorithm** - As defined above
+
+3. **Left CM** - Commutator to bring FU → FL
+
+4. **Right CM** - Already exists in `_LBLNxNEdges`
+
+## Case 2: FU → FL (Top to Left)
+
+Source already on FU, but still need protection (left CM is 3-cycle) and maybe flip.
+
+```
+STACK: []
+
+1. SETUP: Bring FB to BU
+   STACK: [setup_steps]
+
+2. CHECK orientation - if needs flip:
+   U' U'                              (stack)
+   B'                                 (stack)
+   R'                                 (stack)
+   U                                  (stack)
+
+3. LEFT CM: FU → FL
+   - Source (FU) → FL ✓ DONE!
+   (no stack - this is work)
+
+4. ROLLBACK (reverse order):
+   - Undo flip steps (if any)
+   - Undo setup_steps
+```
+
+**Difference from FR → FL:** Skip right CM and U rotation (source already on top).
+
+## Case 3: FD → FL (Bottom to Left)
+
+```
+STACK: []
+
+1. SETUP: Bring FB to BU (protect BU)
+   STACK: [setup_steps]
+
+2. F
+   - SI (FD) → FL
+   - TI (FL) → FU
+   STACK: [setup_steps, F]
+
+3. (left CM)': FU ← FL ← BU ← FU
+   - SI (FL) → FU
+   - TI (FU) → BU
+   - BU → FL
+   (no stack - this is work)
+
+4. F' (undo F)
+   - SI (FU) → FL ✓ TARGET!
+   (pop F from stack)
+
+5. CHECK orientation - if needs flip on FL:
+   FLIP algorithm for FL (TBD - different from FU flip)
+   STACK: [setup_steps, flip_steps]
+
+6. ROLLBACK:
+   - Undo flip steps (if any)
+   - Undo setup_steps
+```
+
+## Case 4: FL → FL (Source on Same Edge as Target)
+
+SI is on FL (same edge as target TI), but different wing index.
+
+**Key insight:** If SI is on FL and usable, it must have index `inv(ti)` (can't be `ti` or it would BE the target). From matching check, this means colors didn't match → **flip always required**.
+
+```
+STACK: []
+
+1. SETUP: Bring FB to BU
+   STACK: [setup_steps]
+
+2. LEFT CM twice
+   - First: SI (FL) → BU
+   - Second: SI (BU) → FU
+   (no stack - this is work)
+
+3. FLIP (always required - no check needed)
+   U' U', B', R', U
+   STACK: [setup_steps, flip_steps]
+
+4. LEFT CM
+   - SI (FU) → FL ✓ TARGET!
+   (no stack - this is work)
+
+5. ROLLBACK:
+   - Undo flip_steps
+   - Undo setup_steps
+```
+
+Math: `inv(inv(si)) == ti` confirms indices match after flip.
 
 ---
 
-## Goal
-Implement even cube edge parity detection in LBL solver for middle slice solving.
+## Complete Algorithm Summary
 
-## Key Files Modified
-- `src/cube/domain/solver/direct/lbl/_LBLSlices.py` - Parity detection and fix methods
-- `src/cube/domain/solver/direct/lbl/_common.py` - Converted `setup_l1` to class with `realign()`
-- `src/cube/domain/solver/direct/lbl/_lbl_config.py` - Added `ADVANCED_EDGE_PARITY` flag
-- `src/cube/domain/solver/direct/lbl/LayerByLayerNxNSolver.py` - Minor comment
+### All Four Cases: Source → Target (FL)
 
-## Current Implementation Status
+| Case | Source | Path | Flip Check |
+|------|--------|------|------------|
+| 1 | FR (right) | FR → BU (right CM) → FU (U rot) → FL (left CM) | Check orientation |
+| 2 | FU (top) | FU → FL (left CM) | Check orientation |
+| 3 | FD (bottom) | FD → FL (F) → FU ((left CM)') → FL (F') | TBD flip on FL |
+| 4 | FL (left) | FL → BU → FU (left CM x2) → FL (left CM) | Always flip |
 
-### What's Implemented
-1. `_get_orthogonal_edges(l1_tracker)` - Gets 4 edges orthogonal to L1
-2. `_get_l1_edges(l1_tracker)` - Gets 4 edges on L1 (white) face
-3. `_check_and_fix_edge_parity(l1_tracker)` - Detects and applies parity fix
-4. `ADVANCED_EDGE_PARITY=True` flag in `_lbl_config.py`
-5. `setup_l1` class with `realign()` method
-6. Retry loop in `solve_all_faces_all_rows()` with parity handling
+### Common Elements
 
-### Current Problem
-**Both advanced and non-advanced parity algorithms destroy L1 edges**
+1. **Setup:** Always bring FB to BU first (protect BU from CM destruction)
+2. **Stack:** Track scaffolding moves for rollback (NOT the CMs)
+3. **Rollback:** Undo stack in reverse order after work is done
 
-The parity algorithm (`NxNEdges._do_edge_parity_on_edge()`) disturbs the already-solved L1 edges, regardless of which mode is used. Attempting to fix this at the `_LBLSlices` level is too complicated.
+### Flip Algorithm (source on FU, preserve FL)
 
-## Plan: Move Parity Loop to Solver Level
-
-Like `BeginnerReducer`, move the parity retry loop to `LayerByLayerNxNSolver._solve_impl()` so we can repeat the ENTIRE solving process after parity.
-
-### How BeginnerReducer Does It
-```python
-# In BeginnerReducer.reduce():
-self.solve_centers()
-if self.solve_edges():  # Returns True if parity was detected/fixed
-    results.partial_edge_parity_detected = True
 ```
-
-The `NxNEdges.solve()` method has internal loop:
-```python
-self._do_first_11()  # Solve 11 edges
-if not solved:
-    self._do_last_edge_parity()  # Apply parity
-    self._do_first_11()  # Repeat - solve the remaining edge
+U' U'  → FU → BU
+B'     → BU → RB
+R'     → RB → RU
+U      → RU → FU (now flipped!)
 ```
+All steps go on stack, undo with `.prime`
 
-### Proposed Change for LBL Solver
+### Flip Algorithm for FL (TBD)
 
-1. **Remove loop from `_LBLSlices.solve_all_faces_all_rows()`** - Just solve slices once, return parity status
-2. **Keep parity check** - `_check_and_fix_edge_parity()` returns True if parity detected
-3. **Move loop to `LayerByLayerNxNSolver._solve_impl()`**:
-   ```python
-   def _solve_impl(self, what):
-       parity_detected = False
-       while True:
-           # Clear markers for fresh start
-           _common.clear_all_type_of_markers(self.cube)
+Needed for Case 3 (FD → FL) - different from FU flip.
 
-           # Solve Layer 1 (will be re-solved after parity)
-           self._solve_layer1(th)
+---
 
-           # Solve middle slices - returns True if parity detected
-           if self._lbl_slices.solve_all_faces_all_rows(...):
-               if parity_detected:
-                   raise AssertionError("Parity detected twice - bug")
-               parity_detected = True
-               continue  # Repeat L1 + slices
+## Dependencies to Implement
 
-           break
+1. **`scl.map_wing_index_between_edges(from_edge, to_edge, index)`** - Map wing index from one edge to another on same face
 
-       # Continue with Layer 3...
-   ```
+2. **Flip algorithm for FU** - Defined above
 
-### Benefits
-- Simpler logic at slice level
-- L1 gets re-solved after parity (no need to preserve it)
-- Follows same pattern as BeginnerReducer
-- Easier to debug and maintain
+3. **Flip algorithm for FL** - TBD
 
-## Known Issues (Handle Later)
-- Bug in `tab()` method of the logger - needs investigation
-- Claude instruction in LayerByLayerNxNSolver.py line 2-3 about row_index verification
+4. **Left CM** - Commutator: FU → FL → BU → FU
 
-## Edge Types in LBL (Reference)
-```
-       U face edges: UF, UR, UB, UL (solved in Layer n)
-           ┌─────────┐
-           │    U    │
-      ┌────┼─────────┼────┐
-      │ L  │ FL   FR │ R  │  ← Orthogonal edges (solved in middle slices)
-      │    │ BL   BR │    │
-      └────┼─────────┼────┘
-           │    D    │
-           └─────────┘
-       D face edges: DF, DR, DB, DL (solved in Layer 1)
-```
+5. **Right CM** - Already exists in `_LBLNxNEdges`: FU → FR → BU
 
-## Commits
-- `2bd5227` - WIP: Add edge parity detection for even cubes in LBL solver
+6. **Stack-based move tracking** - Track scaffolding, undo with `.prime`
+
+---
+*Last updated: 2025-01-29*
