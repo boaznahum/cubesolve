@@ -105,20 +105,24 @@ class _LBLL3Edges(SolverHelper):
             self.debug(f"Wing {target_wing.parent_name_and_index} already solved")
             return
 
-        # Find matching source wing
-        source_wing = self._find_source_for_target(target_wing)
-        if source_wing is None:
-            self.debug(f"No source found for {target_wing.parent_name_and_index}")
-            return
+        # Find all matching source wings (may be 1 or 2)
+        source_wings = self._find_sources_for_target(target_wing)
 
-        # Assert source is on front face (L3)
-        assert source_wing.parent.on_face(cube.front), \
-            f"L3 source wing must be on front face, got {source_wing.parent.name}"
+        self.debug(f"Found {len(source_wings)} sources for {target_wing.parent_name_and_index}")
 
-        # Dispatch to appropriate case handler
+        # Try each source until one works
+        for source_wing in source_wings:
+            self._dispatch_to_case_handler(source_wing, target_wing)
+            # After handling, the target should be solved
+            # (future: could check and try next source if failed)
+            break  # For now, just use the first one
+
+    def _dispatch_to_case_handler(self, source_wing: EdgeWing, target_wing: EdgeWing) -> None:
+        """Dispatch to appropriate case handler based on source edge position."""
+        cube = self.cube
         source_edge = source_wing.parent
-
         front = cube.front
+
         if source_edge is front.edge_right:  # FR
             self._handle_fr_to_fl(source_wing, target_wing)
         elif source_edge is front.edge_top:  # FU
@@ -135,27 +139,29 @@ class _LBLL3Edges(SolverHelper):
     # Source Matching
     # =========================================================================
 
-    def _find_source_for_target(self, target_wing: EdgeWing) -> EdgeWing | None:
+    def _find_sources_for_target(self, target_wing: EdgeWing) -> list[EdgeWing]:
         """
-        Find a source wing that can solve the target.
+        Find all source wings that can solve the target.
 
         Matching criteria:
         - colors_id matches target.position_id
         - index is target_index or inv(target_index)
-        - Orientation check determines if flip needed
+        - Not already solved
+        - On front face (L3)
 
         Returns:
-            Matching source wing, or None if not found.
+            List of matching source wings (never empty - asserts if none found).
         """
         cube = self.cube
         target_colors = target_wing.position_id
         target_index = target_wing.index
         required_indices = [target_index, cube.inv(target_index)]
 
-        # Search all edges on front face (L3)
+        # Search ONLY front face edges (L3)
         front = cube.front
         front_edges = [front.edge_left, front.edge_top, front.edge_right, front.edge_bottom]
 
+        sources: list[EdgeWing] = []
         for edge in front_edges:
             for wing in edge.all_slices:
                 # Skip already solved
@@ -170,11 +176,14 @@ class _LBLL3Edges(SolverHelper):
                 if wing.index not in required_indices:
                     continue
 
-                # Found a candidate - check orientation
+                # Check if usable based on orientation
                 if self._is_source_usable(wing, target_wing):
-                    return wing
+                    sources.append(wing)
 
-        return None
+        # There must always be at least one source
+        assert sources, f"No source found for {target_wing.parent_name_and_index} - this is a bug"
+
+        return sources
 
     def _is_source_usable(self, source_wing: EdgeWing, target_wing: EdgeWing) -> bool:
         """
