@@ -137,6 +137,58 @@ class LayerByLayerNxNSolver(BaseSolver):
 
             return solved_slices == self.cube.n_slices
 
+    def is_solved_phase(self, what: SolveStep) -> bool:
+        """Check if a specific solving phase is complete.
+
+        Args:
+            what: The solve step to check.
+
+        Returns:
+            True if the phase is solved, False otherwise.
+
+        Note:
+            This will be made abstract in a future refactor.
+        """
+        with FacesTrackerHolder(self) as th:
+            match what:
+                case SolveStep.LBL_L1_Ctr:
+                    return self._is_layer1_centers_solved(th)
+
+                case SolveStep.L1x:
+                    return self._is_layer1_cross_solved(th)
+
+                case SolveStep.LBL_L1:
+                    return self._is_layer1_solved(th)
+
+                case SolveStep.LBL_SLICES_CTR:
+                    if not self._is_layer1_solved(th):
+                        return False
+                    l1_tracker = self._get_layer1_tracker(th)
+                    return self._lbl_slices.count_solved_slice_centers(l1_tracker) == self.cube.n_slices
+
+                case SolveStep.LBL_L3_CENTER:
+                    if not self._is_layer1_solved(th):
+                        return False
+                    l1_tracker = self._get_layer1_tracker(th)
+                    if self._lbl_slices.count_solved_slice_centers(l1_tracker) != self.cube.n_slices:
+                        return False
+                    return self._is_layer3_centers_solved(th)
+
+                case SolveStep.LBL_L3_CROSS:
+                    if not self._is_layer1_solved(th):
+                        return False
+                    l1_tracker = self._get_layer1_tracker(th)
+                    if self._lbl_slices.count_solved_slice_centers(l1_tracker) != self.cube.n_slices:
+                        return False
+                    if not self._is_layer3_centers_solved(th):
+                        return False
+                    return self._is_layer3_cross_solved(th)
+
+                case SolveStep.ALL:
+                    return self.is_solved
+
+                case _:
+                    raise ValueError(f"Unsupported step for is_solved_phase: {what}")
 
     def supported_steps(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
@@ -449,7 +501,11 @@ class LayerByLayerNxNSolver(BaseSolver):
             self._nxn_edges.solve_face_edges(l1_tracker)
 
     def _solve_layer3_edges(self, th: FacesTrackerHolder) -> None:
-        """Solve only the Layer 1 face edges."""
+        """Solve only the Layer 3 face edges using safe algorithms.
+
+        Uses preserve_lower_layers=True to ensure L1 and middle slices
+        are not disturbed by the edge solving algorithms.
+        """
         if self._is_layer3_edges_solved(th):
             return
 
@@ -457,7 +513,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         self.debug(f"Solving Layer 3 edges ({l3_tracker.color.name} face only)")
 
         with self.op.annotation.annotate(h2=f"L3 edges ({l3_tracker.color.name})"):
-            # Use solve_face_edges to solve only Layer 1 face edges
+            # solve_face_edges auto-detects when 8 edges are solved and protects them
             self._nxn_edges.solve_face_edges(l3_tracker)
 
     def _solve_layer1_cross(self, th: FacesTrackerHolder) -> None:
