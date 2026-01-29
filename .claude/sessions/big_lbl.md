@@ -15,16 +15,16 @@
 
 ### What's Done
 1. Infrastructure with composition pattern
-2. Main loop with 4x rotation
-3. Source matching with `_find_source_for_target()` and `_is_source_usable()`
-4. All 4 case handlers implemented with trackers
-5. Commutators use `_map_wing_index()` (not hardcoded `cube.inv()`)
-6. Flip methods return `Algs.NOOP` instead of `None`
-7. Started adding diagrams to case handlers
+2. Main loop with 4x rotation and `_count_solved_l3_wings(tracker)`
+3. Source matching: `_find_sources_for_target()` returns LIST, asserts non-empty
+4. All 4 case handlers with source.tracker()
+5. Commutators use `_map_wing_index()` with EdgeName enum
+6. Type-safe code: EdgeName enum, bool for same/inv
+7. Correct mapping values (verified by chaining FL→FU→FR→FD→FL = same)
 
 ### TODO for Next Session
-1. **Fix helper name**: Line 31 has `super().__init__(slv, "_LBLL3Edges")` - should match actual class name
-2. **Add diagrams**: Complete diagrams for Cases 2, 3, 4
+1. **Fix helper name**: Line 31 has wrong name in `super().__init__()`
+2. **Add diagrams**: Complete diagrams for Cases 2, 3, 4 (Case 1 done)
 3. **Add L3 preservation docs**: Document which methods preserve L3 layer
 4. **Integration**: Wire into `LayerByLayerNxNSolver._solve_layer3_edges()`
 5. **Testing**: Run actual solver tests
@@ -33,35 +33,42 @@
 
 1. **Source tracking**: Use `source.tracker()` to follow physical piece
 2. **Target tracking**: Use `_map_wing_index()` to calculate index after moves
-3. **Commutator parameters**: Pass both indices, use `_map_wing_index()` for assertions
-4. **No hardcoded `cube.inv()`**: Always use `_map_wing_index()` for index transformations
+3. **Multiple sources**: `_find_sources_for_target()` returns list (may be 1 or 2)
+4. **Assert on no source**: No source = bug, so assert instead of return None
+5. **Type safety**: EdgeName enum, bool instead of strings
+
+## Wing Index Mapping
+
+**Verified by chaining: FL→FU→FR→FD→FL returns same index (i → i)**
+
+```python
+adjacent_map = {
+    # FL ↔ FU: same
+    (EdgeName.FL, EdgeName.FU): True,
+    (EdgeName.FU, EdgeName.FL): True,
+    # FU ↔ FR: inv
+    (EdgeName.FU, EdgeName.FR): False,
+    (EdgeName.FR, EdgeName.FU): False,
+    # FR ↔ FD: same
+    (EdgeName.FR, EdgeName.FD): True,
+    (EdgeName.FD, EdgeName.FR): True,
+    # FD ↔ FL: inv
+    (EdgeName.FD, EdgeName.FL): False,
+    (EdgeName.FL, EdgeName.FD): False,
+}
+```
 
 ## Commutators Reference
 
 ```
 LEFT CM:   FU → FL → BU → FU
            Alg: U' L' U M[k]' U' L U M[k]
-           FU[i] → FL[map("FU","FL",i)]
 
 RIGHT CM:  FU → FR → BU → FU
            Alg: U R U' M[k]' U R' U' M[k]
-           FU[i] → FR[map("FU","FR",i)]
 
 (LEFT CM)':  FL → FU (reverse)
 (RIGHT CM)': FR → FU (reverse)
-```
-
-## Wing Index Mapping (User-Verified)
-
-```
-FL → FU: same
-FU → FL: inv
-FL → FD: inv
-FD → FL: same
-FU → FR: inv
-FR → FU: inv
-FR → FD: same
-FD → FR: inv
 ```
 
 ## Case Summary
@@ -73,11 +80,10 @@ FD → FR: inv
 | 3 | FD | F → FL → FU ((Left CM)') → F' → FL |
 | 4 | FL | FL → BU → FU (Left CM x2) → flip → FL |
 
-## Files Modified
+## Files
 
-1. `src/cube/domain/solver/direct/lbl/_LBLL3Edges.py` - Main implementation
-2. `.planning/L3_EDGES_DIAGRAMS.md` - Algorithm diagrams
-3. `.planning/STATE.md` - Progress tracking
+- `src/cube/domain/solver/direct/lbl/_LBLL3Edges.py` - Main implementation
+- `.planning/L3_EDGES_DIAGRAMS.md` - Algorithm diagrams
 
 ---
-*Last updated: 2025-01-29*
+*Last updated: 2025-01-30*
