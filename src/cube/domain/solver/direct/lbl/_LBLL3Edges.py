@@ -8,7 +8,7 @@ See: .planning/L3_EDGES_DIAGRAMS.md for algorithm details.
 """
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.model import Edge, EdgeWing
+from cube.domain.model import EdgeWing
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -203,30 +203,14 @@ class _LBLL3Edges(SolverHelper):
         si = source_wing.index
 
         # Map source index to target edge coordinate system
-        source_edge_name = self._get_front_edge_name(source_wing.parent)
-        target_edge_name = self._get_front_edge_name(target_wing.parent)
+        source_edge_name = source_wing.parent.name.value
+        target_edge_name = target_wing.parent.name.value
         mapped_si = self._map_wing_index(source_edge_name, target_edge_name, si)
 
         if needs_flip:
             return mapped_si == cube.inv(ti)
         else:
             return mapped_si == ti
-
-    def _get_front_edge_name(self, edge: "Edge") -> str:
-        """Get edge name relative to front face (FL, FU, FR, FD)."""
-        cube = self.cube
-        front = cube.front
-        if edge is front.edge_left:
-            return "FL"
-        elif edge is front.edge_top:
-            return "FU"
-        elif edge is front.edge_right:
-            return "FR"
-        elif edge is front.edge_bottom:
-            return "FD"
-        else:
-            from cube.domain.exceptions.InternalSWError import InternalSWError
-            raise InternalSWError(f"Edge {edge.name} is not on front face")
 
     # =========================================================================
     # Case Handlers
