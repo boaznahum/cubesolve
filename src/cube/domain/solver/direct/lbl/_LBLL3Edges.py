@@ -554,7 +554,6 @@ class _LBLL3Edges(SolverHelper):
                     
                                                                                                                                 
              """)
-        self.op.play(alg)
         return alg
 
     def _flip_fu(self) -> Alg:
