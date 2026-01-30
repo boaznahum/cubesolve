@@ -3,10 +3,7 @@
 Algorithm files are loaded as Python resources so they work when the package
 is installed via pip. Files are named f1.txt through f5.txt.
 
-Format:
-    - Lines starting with # (after stripping whitespace) are comments
-    - Empty lines are ignored
-    - All other lines are concatenated with spaces and parsed as algorithms
+Format: See Algs.parse_multiline() for format documentation.
 """
 from __future__ import annotations
 
@@ -48,14 +45,7 @@ def load_file_alg(slot: int) -> Alg:
     if content is None:
         raise FileNotFoundError(f"Algorithm file '{filename}' not found")
 
-    lines = []
-    for line in content.splitlines():
-        stripped = line.strip()
-        if stripped and not stripped.startswith("#"):
-            lines.append(stripped)
-
-    if not lines:
+    try:
+        return Algs.parse_multiline(content)
+    except ValueError:
         raise ValueError(f"Algorithm file '{filename}' is empty")
-
-    alg_string = " ".join(lines)
-    return Algs.parse(alg_string)

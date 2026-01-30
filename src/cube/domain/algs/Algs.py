@@ -252,3 +252,39 @@ class Algs:
     @classmethod
     def parse(cls, alg: str) -> Alg:
         return parse_alg(alg)
+
+    @classmethod
+    def parse_multiline(cls, text: str) -> Alg:
+        """Parse a multi-line algorithm string.
+
+        Supports:
+            - Lines starting with # are comments (ignored)
+            - Empty lines are ignored (use for readability)
+            - All non-empty, non-comment lines are concatenated into ONE algorithm
+
+        Example:
+            alg = Algs.parse_multiline('''
+                # Flip FU edge
+                U'2 B'
+                R' U R
+            ''')
+
+        Args:
+            text: Multi-line string containing the algorithm
+
+        Returns:
+            Parsed Alg object
+
+        Raises:
+            ValueError: If text is empty or contains only comments
+        """
+        lines: list[str] = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#"):
+                lines.append(stripped)
+
+        if not lines:
+            raise ValueError("Algorithm text is empty or contains only comments")
+
+        return parse_alg(" ".join(lines))

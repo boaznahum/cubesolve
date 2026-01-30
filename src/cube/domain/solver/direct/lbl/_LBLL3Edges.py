@@ -258,11 +258,14 @@ class _LBLL3Edges(SolverHelper):
         5. Rollback: undo flip, undo protect_bu
         """
         ti = target.index  # Target position index (recalculate if target edge moves)
+        cube = source.cube
+
+        assert target.parent is cube.front.edge_left
 
         with self._logger.tab(f"Case FR→FL: source={source.index}, target={ti}"):
             with source.tracker() as src_t:
                 # 1. Setup: Bring FD to BU (doesn't affect FL/FR/FU)
-                setup_alg = self._protect_bu()
+                protect_bu_alg = self._protect_bu()
 
                 # 2. (Right CM)': FR → FU ✅
                 si = src_t.slice.index
@@ -272,8 +275,9 @@ class _LBLL3Edges(SolverHelper):
                     target_index=fu_target
                 )
 
+                assert src_t.parent is cube.front.edge_top
                 # 3. Check orientation + flip if needed
-                flip_alg = self._flip_fu_if_needed(target)
+                flip_alg = self._flip_fu_if_needed(src_t.slice)
 
                 # 4. Left CM: FU → FL
                 si = src_t.slice.index
@@ -284,7 +288,7 @@ class _LBLL3Edges(SolverHelper):
 
                 # 5. Rollback
                 self.op.play(flip_alg.prime)
-                self.op.play(setup_alg.prime)
+                self.op.play(protect_bu_alg.prime)
 
     def _handle_fu_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
         """
@@ -297,10 +301,10 @@ class _LBLL3Edges(SolverHelper):
         with self._logger.tab(f"Case FU→FL: source={source.parent_name_index_colors}, target={target.parent_name_index_colors_position}"):
             with source.tracker() as src_t:
                 # 1. Setup: Bring FD to BU (doesn't affect FL/FU)
-                setup_alg = self._protect_bu()
+                protect_bu_alg = self._protect_bu()
 
                 # 2. Check orientation + flip if needed
-                flip_alg = self._flip_fu_if_needed(target)
+                flip_alg = self._flip_fu_if_needed(src_t.slice)
 
                 # 3. Left CM: FU → FL
                 si = src_t.slice.index
@@ -311,7 +315,7 @@ class _LBLL3Edges(SolverHelper):
 
                 # 4. Rollback
                 self.op.play(flip_alg.prime)
-                self.op.play(setup_alg.prime)
+                self.op.play(protect_bu_alg.prime)
 
     def _handle_fd_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
         """
@@ -329,7 +333,7 @@ class _LBLL3Edges(SolverHelper):
                 self.op.play(Algs.F)
 
                 # 2. Setup: Bring FD to BU (FD is now free, doesn't affect FL/FU)
-                setup_alg = self._protect_bu()
+                protect_bu_alg = self._protect_bu()
 
                 # 3. (Left CM)': FL → FU
                 si = src_t.slice.index
@@ -346,7 +350,7 @@ class _LBLL3Edges(SolverHelper):
 
                 # 6. Rollback
                 self.op.play(flip_alg.prime)
-                self.op.play(setup_alg.prime)
+                self.op.play(protect_bu_alg.prime)
 
     def _handle_fl_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
         """
@@ -363,7 +367,7 @@ class _LBLL3Edges(SolverHelper):
         with self._logger.tab(f"Case FL→FL: source={si}, target={ti}"):
             with source.tracker() as src_t:
                 # 1. Setup: Bring FD to BU (doesn't affect FL)
-                setup_alg = self._protect_bu()
+                protect_bu_alg = self._protect_bu()
 
                 # 2. First Left CM: FL → BU
                 wing_idx = src_t.slice.index
@@ -391,7 +395,7 @@ class _LBLL3Edges(SolverHelper):
 
                 # 6. Rollback
                 self.op.play(flip_alg.prime)
-                self.op.play(setup_alg.prime)
+                self.op.play(protect_bu_alg.prime)
 
     # =========================================================================
     # Commutator Algorithms
@@ -522,6 +526,31 @@ class _LBLL3Edges(SolverHelper):
         self.op.play(alg)
         return alg
 
+    def _get_flip_fu_alg(self) -> Alg:
+
+        alg = Algs.parse_multiline("""                                                                                                              
+                    # flip FU, U edges are swapped , UL->UR->UB->Ul
+                    # front edges are untouched,
+                    # other edges swapped, not intersting
+                    U2  B'   R'  U   R
+                    
+                    # These were swapped UL->UR->UB->UL
+                    # we only intersing in bringing UB to place it is the one that touched by comminacor abont FU
+                    #  and FR/FL
+                    # bring FU to FR,
+                    U'
+                    # swap UL and FU
+                    R U R' U R U2 R' U
+                    
+                    #bring FU back
+                    U
+                    
+                    
+                                                                                                                                
+             """)
+        self.op.play(alg)
+        return alg
+
     def _flip_fu(self) -> Alg:
         """
         Flip the wing on FU (preserves FL).
@@ -532,22 +561,18 @@ class _LBLL3Edges(SolverHelper):
         Returns:
             The algorithm used (for .prime undo).
         """
-        alg = Algs.seq(
-            Algs.U.prime, Algs.U.prime,  # U'²
-            Algs.B.prime,
-            Algs.R.prime,
-            Algs.U
-        )
+        alg = self._get_flip_fu_alg()
         self.op.play(alg)
         return alg
 
-    def _flip_fu_if_needed(self, target: EdgeWing) -> Alg:
+    def _flip_fu_if_needed(self, source_on_fu: EdgeWing) -> Alg:
         """Flip FU wing if orientation is wrong. Returns alg or noop."""
         cube = self.cube
-        fu_wing = cube.fu.get_slice(target.index)
+
+        assert source_on_fu.parent is cube.front.edge_top
         l3_color = cube.front.color
 
-        if fu_wing.get_face_edge(cube.front).color != l3_color:
+        if source_on_fu.get_face_edge(cube.front).color != l3_color:
             return self._flip_fu()
         return Algs.NOOP
 
