@@ -72,7 +72,7 @@ class _LBLL3Edges(SolverHelper):
                 # Rotate 4 times around front face, solve left edge each time
                 for rotation_i in range(4):
                     with self._logger.tab(f"Rotation {rotation_i + 1}/4"):
-                        self._solve_left_edge(l3_tracker.parent)
+                        self._solve_left_edge(l3_tracker)
 
                         # Rotate cube around front center (z rotation)
                         if rotation_i < 3:  # Don't rotate after last iteration
@@ -90,15 +90,15 @@ class _LBLL3Edges(SolverHelper):
     # Left Edge Solving
     # =========================================================================
 
-    def _solve_left_edge(self, th:FacesTrackerHolder) -> None:
+    def _solve_left_edge(self, l3t:FaceTracker) -> None:
         """Solve all wings on the left edge (FL) of front face."""
         cube = self.cube
         n_slices = cube.n_slices
 
         for slice_index in range(n_slices):
-                self._solve_left_edge_slice(th, slice_index)
+                self._solve_left_edge_slice(l3t, slice_index)
 
-    def _solve_left_edge_slice(self, th:FacesTrackerHolder, target_index: int) -> None:
+    def _solve_left_edge_slice(self, l3t:FaceTracker, target_index: int) -> None:
         """
         Solve a single wing on FL edge at given index.
 
@@ -122,7 +122,7 @@ class _LBLL3Edges(SolverHelper):
 
             # Try each source until one works
             for source_wing in source_wings:
-                self._dispatch_to_case_handler(th, source_wing, target_wing)
+                self._dispatch_to_case_handler(l3t, source_wing, target_wing)
 
                 if target_wing.match_faces:
                     self.debug(f"✅✅✅ Wing {target_wing.parent_name_index_colors_position} solved")
@@ -133,14 +133,14 @@ class _LBLL3Edges(SolverHelper):
                 # (future: could check and try next source if failed)
                 break  # For now, just use the first one
 
-    def _dispatch_to_case_handler(self, th:FacesTrackerHolder, source_wing: EdgeWing, target_wing: EdgeWing) -> None:
+    def _dispatch_to_case_handler(self, l3t:FaceTracker, source_wing: EdgeWing, target_wing: EdgeWing) -> None:
         """Dispatch to appropriate case handler based on source edge position."""
         cube = self.cube
         source_edge = source_wing.parent
         front = cube.front
 
         if source_edge is front.edge_right:  # FR ✅`with  flip ✅
-            self._handle_fr_to_fl(source_wing, target_wing)
+            self._handle_fr_to_fl(l3t, source_wing, target_wing)
         elif source_edge is front.edge_top:  # FU ✅`no flip
             self._handle_fu_to_fl(source_wing, target_wing)
         elif source_edge is front.edge_bottom:  # FD
@@ -151,7 +151,7 @@ class _LBLL3Edges(SolverHelper):
             from cube.domain.exceptions.InternalSWError import InternalSWError
             raise InternalSWError(f"Unexpected source edge: {source_edge.name}")
 
-        self._assert_all_edges_below_l3_are_ok(th)
+        self._assert_all_edges_below_l3_are_ok(l3t.parent)
 
     # =========================================================================
     # Source Matching
@@ -232,7 +232,7 @@ class _LBLL3Edges(SolverHelper):
     # Case Handlers
     # =========================================================================
 
-    def _handle_fr_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
+    def _handle_fr_to_fl(self, l3t: FaceTracker, source: EdgeWing, target: EdgeWing) -> None:
         """
         Case 1: Source on FR → Target on FL.
 
@@ -275,9 +275,12 @@ class _LBLL3Edges(SolverHelper):
                     target_index=fu_target
                 )
 
+                self._asser_more_aggressive_all_other_edges_ok(l3t)
+
                 assert src_t.parent is cube.front.edge_top
                 # 3. Check orientation + flip if needed
                 flip_alg = self._flip_fu_if_needed(src_t.slice)
+                self._asser_more_aggressive_all_other_edges_ok(l3t)
 
                 # 4. Left CM: FU → FL
                 si = src_t.slice.index
@@ -285,10 +288,13 @@ class _LBLL3Edges(SolverHelper):
                     source_index=si,
                     target_index=self._map_wing_index_to_wing_name(src_t.slice, EdgeName.FL)
                 )
+                self._asser_more_aggressive_all_other_edges_ok(l3t)
 
                 # 5. Rollback
                 self.op.play(flip_alg.prime)
+                self._asser_more_aggressive_all_other_edges_ok(l3t)
                 self.op.play(protect_bu_alg.prime)
+                self._asser_more_aggressive_all_other_edges_ok(l3t)
 
     def _handle_fu_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
         """
@@ -723,3 +729,33 @@ class _LBLL3Edges(SolverHelper):
     def _assert_all_edges_below_l3_are_ok(self, th:FacesTrackerHolder):
 
         assert self._parent.is_solved_phase_with_tracker(th, SolveStep.LBL_L3_CENTER)
+
+    def _more_aggressive_all_other_edges_ok(self, l3_tracker: FaceTracker) -> Edge | None:
+
+        cube = self.cube
+
+        l3_color = l3_tracker.face.color
+
+        edges: set[Edge] = set()
+
+        e: Edge
+        for e in cube.edges:
+            s: EdgeWing
+            for s in e.all_slices:
+                if l3_color not in s.colors:
+                    edges.add(e)
+
+        for edge in edges:
+            if not edge.is3x3:
+                return edge
+
+        return None
+
+    def _asser_more_aggressive_all_other_edges_ok(self, l3_tracker: FaceTracker) -> None:
+
+        assert self._more_aggressive_all_other_edges_ok(l3_tracker) is None
+
+        return None
+
+
+
