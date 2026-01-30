@@ -608,7 +608,9 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
             toolbar.add_button(
                 label=f"F{slot}",
                 command=ExecuteFileAlgCommand(slot=slot),
-                tooltip=f"Execute algorithm from f{slot}.txt",
+                tooltip=f"Execute algorithm from f{slot}.txt (Shift: inverse)",
+                shift_label=f"F{slot}'",
+                shift_command=ExecuteFileAlgCommand(slot=slot, inverse=True),
             )
 
     return toolbar

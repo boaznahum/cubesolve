@@ -704,14 +704,21 @@ class ExecuteFileAlgCommand(Command):
 
     Loads algorithm from f{slot}.txt resource file and executes it on the cube.
     Respects current animation setting.
+
+    Args:
+        slot: File number 1-5
+        inverse: If True, play the inverse (prime) of the algorithm
     """
     slot: int
+    inverse: bool = False
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         from cube.domain.exceptions import InternalSWError
         from cube.resources.algs import load_file_alg
         try:
             alg = load_file_alg(self.slot)
+            if self.inverse:
+                alg = alg.prime
             ctx.op.play(alg)  # Respects current animation setting
         except FileNotFoundError as e:
             ctx.app.set_error(f"File not found: {e}")
