@@ -30,16 +30,16 @@ from typing import TYPE_CHECKING, cast
 from cube.domain.model import Corner, Part
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.direct.lbl import _common
-from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
-from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
+from cube.domain.solver.direct.lbl import _common
 from cube.domain.solver.direct.lbl._LBLL3Edges import _LBLL3Edges
+from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import Solver, SolverResults, SolveStep
+from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.tracker.trackers import FaceTracker
 
 if TYPE_CHECKING:
     from cube.utils.logger_protocol import ILogger
@@ -142,6 +142,10 @@ class LayerByLayerNxNSolver(BaseSolver):
             return solved_slices == self.cube.n_slices
 
     def is_solved_phase(self, what: SolveStep) -> bool:
+        with FacesTrackerHolder(self) as th:
+            return self.is_solved_phase_with_tracker(th, what)
+
+    def is_solved_phase_with_tracker(self, th:FacesTrackerHolder, what: SolveStep) -> bool:
         """Check if a specific solving phase is complete.
 
         Args:
@@ -152,47 +156,48 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         Note:
             This will be made abstract in a future refactor.
+            :param what:
+            :param th:
         """
-        with FacesTrackerHolder(self) as th:
-            match what:
-                case SolveStep.LBL_L1_Ctr:
-                    return self._is_layer1_centers_solved(th)
+        match what:
+            case SolveStep.LBL_L1_Ctr:
+                return self._is_layer1_centers_solved(th)
 
-                case SolveStep.L1x:
-                    return self._is_layer1_cross_solved(th)
+            case SolveStep.L1x:
+                return self._is_layer1_cross_solved(th)
 
-                case SolveStep.LBL_L1:
-                    return self._is_layer1_solved(th)
+            case SolveStep.LBL_L1:
+                return self._is_layer1_solved(th)
 
-                case SolveStep.LBL_SLICES_CTR:
-                    if not self._is_layer1_solved(th):
-                        return False
-                    l1_tracker = self._get_layer1_tracker(th)
-                    return self._lbl_slices.count_solved_slice_centers(l1_tracker) == self.cube.n_slices
+            case SolveStep.LBL_SLICES_CTR:
+                if not self._is_layer1_solved(th):
+                    return False
+                l1_tracker = self._get_layer1_tracker(th)
+                return self._lbl_slices.count_solved_slice_centers(l1_tracker) == self.cube.n_slices
 
-                case SolveStep.LBL_L3_CENTER:
-                    if not self._is_layer1_solved(th):
-                        return False
-                    l1_tracker = self._get_layer1_tracker(th)
-                    if self._lbl_slices.count_solved_slice_centers(l1_tracker) != self.cube.n_slices:
-                        return False
-                    return self._is_layer3_centers_solved(th)
+            case SolveStep.LBL_L3_CENTER:
+                if not self._is_layer1_solved(th):
+                    return False
+                l1_tracker = self._get_layer1_tracker(th)
+                if self._lbl_slices.count_solved_slice_centers(l1_tracker) != self.cube.n_slices:
+                    return False
+                return self._is_layer3_centers_solved(th)
 
-                case SolveStep.LBL_L3_CROSS:
-                    if not self._is_layer1_solved(th):
-                        return False
-                    l1_tracker = self._get_layer1_tracker(th)
-                    if self._lbl_slices.count_solved_slice_centers(l1_tracker) != self.cube.n_slices:
-                        return False
-                    if not self._is_layer3_centers_solved(th):
-                        return False
-                    return self._is_layer3_cross_solved(th)
+            case SolveStep.LBL_L3_CROSS:
+                if not self._is_layer1_solved(th):
+                    return False
+                l1_tracker = self._get_layer1_tracker(th)
+                if self._lbl_slices.count_solved_slice_centers(l1_tracker) != self.cube.n_slices:
+                    return False
+                if not self._is_layer3_centers_solved(th):
+                    return False
+                return self._is_layer3_cross_solved(th)
 
-                case SolveStep.ALL:
-                    return self.is_solved
+            case SolveStep.ALL:
+                return self.is_solved
 
-                case _:
-                    raise ValueError(f"Unsupported step for is_solved_phase: {what}")
+            case _:
+                raise ValueError(f"Unsupported step for is_solved_phase: {what}")
 
     def supported_steps(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.

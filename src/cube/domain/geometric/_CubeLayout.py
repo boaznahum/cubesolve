@@ -735,7 +735,7 @@ class _CubeLayout(CubeLayout):
                 axis_face = self.get_axis_face(base_alg.axis_name)
                 axis_opposite = self.opposite(axis_face)
                 if preserve == axis_face or preserve == axis_opposite:
-                    return alg  # type: ignore[return-value]
+                    return alg.simplify()  # type: ignore[return-value]
 
             # No algorithm preserves the requested face
             raise GeometryError(

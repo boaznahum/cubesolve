@@ -6,13 +6,16 @@ L1 or middle layer edges. Uses commutator-based algorithms.
 
 See: .planning/L3_EDGES_DIAGRAMS.md for algorithm details.
 """
+from typing import cast
 
 from cube.domain.algs import Alg, Algs, SeqAlg
 from cube.domain.model import EdgeWing, Edge
 from cube.domain.model._part import EdgeName
+from cube.domain.solver import SolveStep
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
+from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
 
 
@@ -39,6 +42,11 @@ class _LBLL3Edges(SolverHelper):
     # Main Entry Point
     # =========================================================================
 
+    @property
+    def _parent(self):
+        from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+        return cast(LayerByLayerNxNSolver, self._solver)
+
     def do_l3_edges(self, l3_tracker: FaceTracker) -> None:
         """
         Solve all L3 edges (pair edge wings on last layer).
@@ -64,7 +72,7 @@ class _LBLL3Edges(SolverHelper):
                 # Rotate 4 times around front face, solve left edge each time
                 for rotation_i in range(4):
                     with self._logger.tab(f"Rotation {rotation_i + 1}/4"):
-                        self._solve_left_edge()
+                        self._solve_left_edge(l3_tracker.parent)
 
                         # Rotate cube around front center (z rotation)
                         if rotation_i < 3:  # Don't rotate after last iteration
@@ -82,15 +90,15 @@ class _LBLL3Edges(SolverHelper):
     # Left Edge Solving
     # =========================================================================
 
-    def _solve_left_edge(self) -> None:
+    def _solve_left_edge(self, th:FacesTrackerHolder) -> None:
         """Solve all wings on the left edge (FL) of front face."""
         cube = self.cube
         n_slices = cube.n_slices
 
         for slice_index in range(n_slices):
-                self._solve_left_edge_slice(slice_index)
+                self._solve_left_edge_slice(th, slice_index)
 
-    def _solve_left_edge_slice(self, target_index: int) -> None:
+    def _solve_left_edge_slice(self, th:FacesTrackerHolder, target_index: int) -> None:
         """
         Solve a single wing on FL edge at given index.
 
@@ -114,7 +122,7 @@ class _LBLL3Edges(SolverHelper):
 
             # Try each source until one works
             for source_wing in source_wings:
-                self._dispatch_to_case_handler(source_wing, target_wing)
+                self._dispatch_to_case_handler(th, source_wing, target_wing)
 
                 if target_wing.match_faces:
                     self.debug(f"✅✅✅ Wing {target_wing.parent_name_index_colors_position} solved")
@@ -125,15 +133,15 @@ class _LBLL3Edges(SolverHelper):
                 # (future: could check and try next source if failed)
                 break  # For now, just use the first one
 
-    def _dispatch_to_case_handler(self, source_wing: EdgeWing, target_wing: EdgeWing) -> None:
+    def _dispatch_to_case_handler(self, th:FacesTrackerHolder, source_wing: EdgeWing, target_wing: EdgeWing) -> None:
         """Dispatch to appropriate case handler based on source edge position."""
         cube = self.cube
         source_edge = source_wing.parent
         front = cube.front
 
-        if source_edge is front.edge_right:  # FR
+        if source_edge is front.edge_right:  # FR ✅`with  flip ✅
             self._handle_fr_to_fl(source_wing, target_wing)
-        elif source_edge is front.edge_top:  # FU
+        elif source_edge is front.edge_top:  # FU ✅`no flip
             self._handle_fu_to_fl(source_wing, target_wing)
         elif source_edge is front.edge_bottom:  # FD
             self._handle_fd_to_fl(source_wing, target_wing)
@@ -142,6 +150,8 @@ class _LBLL3Edges(SolverHelper):
         else:
             from cube.domain.exceptions.InternalSWError import InternalSWError
             raise InternalSWError(f"Unexpected source edge: {source_edge.name}")
+
+        self._assert_all_edges_below_l3_are_ok(th)
 
     # =========================================================================
     # Source Matching
@@ -169,7 +179,7 @@ class _LBLL3Edges(SolverHelper):
         front = cube.front
 
         sources: list[EdgeWing] = []
-        for edge in front.edges:
+        for edge in cube.edges:
             for wing in edge.all_slices:
                 # Skip already solved
                 if wing.match_faces:
@@ -178,6 +188,8 @@ class _LBLL3Edges(SolverHelper):
                 # Check colors match
                 if wing.colors_id != target_colors:
                     continue
+
+                assert edge.on_face(front)
 
                 # Check index compatibility
                 if wing.index not in required_indices:
@@ -252,11 +264,12 @@ class _LBLL3Edges(SolverHelper):
                 # 1. Setup: Bring FD to BU (doesn't affect FL/FR/FU)
                 setup_alg = self._protect_bu()
 
-                # 2. (Right CM)': FR → FU
+                # 2. (Right CM)': FR → FU ✅
                 si = src_t.slice.index
+                fu_target = self._map_wing_index_to_wing_name(src_t.slice, EdgeName.FU)
                 self._right_cm_prime(
                     source_index=si,
-                    target_index=self._map_wing_index_to_wing_name(src_t.slice, EdgeName.FU)
+                    target_index=fu_target
                 )
 
                 # 3. Check orientation + flip if needed
@@ -280,9 +293,8 @@ class _LBLL3Edges(SolverHelper):
         Path: FU → FL (Left CM)
         Target position FL is not affected by protect_bu.
         """
-        ti = target.index
 
-        with self._logger.tab(f"Case FU→FL: source={source.index}, target={ti}"):
+        with self._logger.tab(f"Case FU→FL: source={source.parent_name_index_colors}, target={target.parent_name_index_colors_position}"):
             with source.tracker() as src_t:
                 # 1. Setup: Bring FD to BU (doesn't affect FL/FU)
                 setup_alg = self._protect_bu()
@@ -474,11 +486,18 @@ class _LBLL3Edges(SolverHelper):
             source_index: Wing index on FR (source position)
             target_index: Wing index on FU (target position)
         """
+
         expected = self._map_wing_index_by_name(EdgeName.FR, EdgeName.FU, source_index)
         assert target_index == expected, \
             f"Right CM': expected target={expected}, got {target_index}"
 
-        alg = self._get_right_cm_alg(source_index)
+
+        # claude: the CM index is detreimned by the taget of FU !!!
+        # the index is detrimnd by the index on FU, and in this case it is the target!!!
+        # so i changed to target
+
+
+        alg = self._get_right_cm_alg(target_index)
         self.op.play(alg.prime)
 
     # =========================================================================
@@ -675,3 +694,7 @@ class _LBLL3Edges(SolverHelper):
                 if wing.match_faces:
                     count += 1
         return count
+
+    def _assert_all_edges_below_l3_are_ok(self, th:FacesTrackerHolder):
+
+        assert self._parent.is_solved_phase_with_tracker(th, SolveStep.LBL_L3_CENTER)
