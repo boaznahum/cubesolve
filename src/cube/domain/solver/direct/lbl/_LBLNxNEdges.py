@@ -85,7 +85,7 @@ class _LBLNxNEdges(SolverHelper):
             assert edge_info.edge_two is cube.front.edge_right
 
             self.debug(
-                lambda: lambda: f"Working on edges {edge_info.wing_one.parent_name_index__position} {edge_info.wing_two.parent_name_index__position}")
+                lambda: lambda: f"Working on edges {edge_info.wing_one.parent_name_index_position} {edge_info.wing_two.parent_name_index_position}")
 
             with self._logger.tab("🟰🟰🟰🟰🟰🟰🟰🟰🟰 PATCH !!!!!!!!!!!!!!!!!!!!!!!!"):
                 self._solve_single_edge_wing_on_face_try_two_sides(l1_white_tracker, target_face, edge_info, face_row)
