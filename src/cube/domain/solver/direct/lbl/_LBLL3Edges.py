@@ -384,9 +384,13 @@ class _LBLL3Edges(SolverHelper):
                 self.op.play(flip_alg.prime)
                 self.op.play(protect_bu_alg.prime)
 
-    def _handle_fd_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
+    def _handle_fd_to_fl(self, _source: EdgeWing, target: EdgeWing) -> None:
         """
         Case 3: Source on FD → Target on FL.
+
+        Note: _source is prefixed with underscore because we track it via tracker.
+        The source wing moves during rotations, so we use src_t.slice to get
+        its current position after each move.
 
         Initial State::
 
@@ -401,19 +405,20 @@ class _LBLL3Edges(SolverHelper):
                 │   [S]   │  ← Source on bottom
                 └─────────┘
 
-        Steps:
-        1. F rotation: FD[S] → FL, FL[T] → FU  (frees FD)
-        2. protect_bu: FD → BU                 (FD is now free)
-        3. (Left CM)': FL[S] → FU              (preserves new FL)
-        4. F' rotation: FU[S] → FL             (source to target!)
-        5. flip FL if needed
-        6. Rollback: undo flip, undo protect_bu
+        Algorithm Steps:
+        1. F rotation: FD[S] → FL, FL[T] → FU  (source now on FL, target on FU)
+        2. protect_bu: FD → BU                 (save FD to BU, FD is now free)
+        3. flip_fl_if_needed: fix orientation  (flip source on FL if wrong color facing front)
+        4. (Left CM)': FL[S] → FU              (move source from FL to FU via commutator)
+        5. Undo flip                           (restore orientation setup)
+        6. Undo protect_bu                     (restore BU → FD)
+        7. F' rotation: FU[S] → FL             (source arrives at target position!)
 
-        After F rotation::
+        After F rotation (step 1)::
 
                 ┌─────────┐
                 │   FU    │
-                │   [T]   │  ← Target wing moved here
+                │   [T]   │  ← Target wing moved here temporarily
         ┌───────┼─────────┼───────┐
         │  FL   │         │  FR   │
         │  [S]  │  FRONT  │   ?   │  ← Source now here!
@@ -422,25 +427,29 @@ class _LBLL3Edges(SolverHelper):
                 │   [?]   │  ← FD is now FREE
                 └─────────┘
 
-        Final State (after F')::
+        Final State (after F' in step 7)::
 
                 ┌─────────┐
                 │   FU    │
-                │   [H]   │
+                │   [?]   │
         ┌───────┼─────────┼───────┐
         │  FL   │         │  FR   │
-        │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
+        │  [S]  │  FRONT  │   ?   │  ← Source at target position! ✓
         └───────┼─────────┼───────┘
         """
-        ti = target.index
 
-        with self._logger.tab(f"Case FD→FL: source={source.index}, target={ti}"):
-            with source.tracker() as src_t:
+        with self._logger.tab(f"Case FD→FL: source={_source.parent_name_index_colors_position}, target={target.parent_name_index_position}"):
+            # source is moved around !!
+            with _source.tracker() as src_t:
                 # 1. F rotation - moves source FD → FL, target FL → FU
                 self.op.play(Algs.F)
 
                 # 2. Setup: Bring FD to BU (FD is now free, doesn't affect FL/FU)
                 protect_bu_alg = self._protect_bu()
+
+                # 5. Check orientation + flip if needed (on FL now)
+                flip_alg = self._flip_fl_if_needed(src_t.slice)
+
 
                 # 3. (Left CM)': FL → FU
                 si = src_t.slice.index
@@ -449,15 +458,16 @@ class _LBLL3Edges(SolverHelper):
                     target_index=self._map_wing_index_to_wing_name(src_t.slice, EdgeName.FU)
                 )
 
+                self.op.play(flip_alg.prime)
+
+
+                # 6. Rollback
+                self.op.play(protect_bu_alg.prime)
+
                 # 4. F' - undo F rotation, source goes FU → FL
                 self.op.play(Algs.F.prime)
 
-                # 5. Check orientation + flip if needed (on FL now)
-                flip_alg = self._flip_fl_if_needed(target)
 
-                # 6. Rollback
-                self.op.play(flip_alg.prime)
-                self.op.play(protect_bu_alg.prime)
 
     def _handle_fl_to_fl(self, source: EdgeWing, target: EdgeWing) -> None:
         """
@@ -643,11 +653,8 @@ class _LBLL3Edges(SolverHelper):
             f"Right CM': expected target={expected}, got {target_index}"
 
 
-        # claude: the CM index is detreimned by the taget of FU !!!
-        # the index is detrimnd by the index on FU, and in this case it is the target!!!
-        # so i changed to target
-
-
+        # The M[k] slice used by the commutator is determined by the wing index on FU.
+        # For CM' (inverse), the wing arriving at FU is the target, so use target_index.
         alg = self._get_right_cm_alg(target_index)
         self.op.play(alg.prime)
 
@@ -673,29 +680,45 @@ class _LBLL3Edges(SolverHelper):
         self.op.play(alg)
         return alg
 
-    def _get_flip_fu_alg(self) -> Alg:
+    # Class-level cache for flip_FU algorithm (computed once, reused)
+    _FLIP_FU_ALG: Alg | None = None
 
-        alg = Algs.parse_multiline("""                                                                                                              
-                    # flip FU, U edges are swapped , UL->UR->UB->Ul
-                    # front edges are untouched,
-                    # other edges swapped, not intersting
-                    U2  B'   R'  U   R
-                    
-                    # These were swapped UL->UR->UB->UL
-                    # we only intersing in bringing UB to place it is the one that touched by comminacor abont FU
-                    #  and FR/FL
-                    # bring FU to FR,
-                    U'
-                    # swap UL and FU
-                    R U R' U R U2 R' U
-                    
-                    #bring FU back
-                    U
-                    
-                    
-                                                                                                                                
-             """)
-        return alg
+    @staticmethod
+    def _get_flip_fu_alg() -> Alg:
+        """
+        Get the flip_FU algorithm (cached).
+
+        This algorithm flips the edge wing on FU in place while preserving
+        FL and other L3 edges. The algorithm is parsed once and cached at
+        class level for performance.
+
+        Returns:
+            The flip_FU algorithm.
+        """
+        if _LBLL3Edges._FLIP_FU_ALG is None:
+            _LBLL3Edges._FLIP_FU_ALG = Algs.parse_multiline("""                                                                                                              
+                        # flip FU, U edges are swapped , UL->UR->UB->Ul
+                        # front edges are untouched,
+                        # other edges swapped, not intersting
+                        U2  B'   R'  U   R
+                        
+                        # These were swapped UL->UR->UB->UL
+                        # we only intersing in bringing UB to place it is the one that touched by comminacor abont FU
+                        #  and FR/FL
+                        # bring FU to FR,
+                        U'
+                        # swap UL and FU
+                        R U R' U R U2 R' U
+                        
+                        #bring FU back
+                        U
+                        
+                        
+                                                                                                                                    
+                 """)
+
+
+        return _LBLL3Edges._FLIP_FU_ALG
 
     def _flip_fu(self) -> Alg:
         """
@@ -726,28 +749,48 @@ class _LBLL3Edges(SolverHelper):
         """
         Flip the wing on FL (preserves other L3 edges).
 
-        Alg: L² B' U' L U
+        Uses conjugation with flip_FU algorithm:
+            flip_FL = F + flip_FU + F'
+
+        This works because:
+        1. F moves FL → FU (wing to flip is now on FU)
+        2. flip_FU flips the wing in place
+        3. F' moves FU → FL (flipped wing back to original position)
 
         Returns:
             The algorithm used (for .prime undo).
         """
-        alg = Algs.seq(
-            Algs.L, Algs.L,  # L²
-            Algs.B.prime,
-            Algs.U.prime,
-            Algs.L,
-            Algs.U
-        )
+        alg = self._get_flip_fl_alg()
         self.op.play(alg)
         return alg
 
-    def _flip_fl_if_needed(self, target: EdgeWing) -> Alg:
-        """Flip FL wing if orientation is wrong. Returns alg or noop."""
+    @staticmethod
+    def _get_flip_fl_alg() -> SeqAlg:
+        """Build flip_FL algorithm via conjugation: F + flip_FU + F'."""
+        return Algs.F + _LBLL3Edges._get_flip_fu_alg() + Algs.F.prime
+
+    def _flip_fl_if_needed(self, source: EdgeWing) -> Alg:
+        """
+        Flip FL wing if orientation is wrong.
+
+        Checks if the source wing (which must be on FL) has the correct
+        L3 color (front face color) facing the front face. If not, flips it.
+
+        Args:
+            source: EdgeWing that must be on FL (asserted).
+
+        Returns:
+            The flip algorithm if orientation was wrong, Algs.NOOP otherwise.
+            Caller can use .prime to undo the flip.
+        """
         cube = self.cube
-        fl_wing = cube.fl.get_slice(target.index)
+
+        assert source.parent is cube.front.edge_left, \
+            f"source must be on FL, got {source.parent.name}"
+
         l3_color = cube.front.color
 
-        if fl_wing.get_face_edge(cube.front).color != l3_color:
+        if source.get_face_edge(cube.front).color != l3_color:
             return self._flip_fl()
         return Algs.NOOP
 

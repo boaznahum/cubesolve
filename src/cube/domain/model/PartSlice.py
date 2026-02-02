@@ -289,15 +289,16 @@ class PartSlice(ABC, Generic[_TPartType], Hashable):
     @abstractmethod
     def by_positon_colors(self) -> PartSliceColors:
         """
-        claude: fix it , this is the required colors on faces,
-        must be the same order as #colors , it is compared to
-        check if slice solved
-        Not optimized, get ordered set of colors.
-        This is actually the state of the slice.
-        When need use :meth:`colors_id`
+        Get the target colors for this slice's position (what colors SHOULD be here).
 
+        Returns the colors of the faces this slice sits on, in the same order
+        as :meth:`colors`. When `colors == by_positon_colors`, the slice is solved.
 
-        :return:
+        Example: An EdgeWing on the FR edge returns (Front.color, Right.color).
+        If the stickers match these colors, the wing is correctly placed.
+
+        Returns:
+            Tuple of face colors in same order as :meth:`colors`.
         """
 
 
@@ -490,7 +491,7 @@ class PartSlice(ABC, Generic[_TPartType], Hashable):
             A PartSliceTracker that tracks this slice through rotations.
         """
         from cube.domain.tracker.PartSliceTracker import PartSliceTracker
-        return PartSliceTracker(self)  # type: ignore[return-value]
+        return PartSliceTracker(self)
 
     def part_tracker(self) -> "MarkedPartTracker[_TPartType]":
         """Create a tracker context manager for this slice's parent Part.
