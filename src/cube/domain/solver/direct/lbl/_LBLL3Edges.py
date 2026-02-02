@@ -814,6 +814,8 @@ class _LBLL3Edges(SolverHelper):
 
         index = from_wing.index
 
+        if from_wing.parent is to_edge:
+            return index # same index
 
         assert from_wing.parent.single_shared_face(to_edge) is not None
 

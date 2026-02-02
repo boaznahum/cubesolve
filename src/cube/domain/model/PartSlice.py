@@ -551,6 +551,10 @@ class EdgeWing(PartSlice["Edge"]):
         :return:
         """
 
+        if self.parent is other.parent:
+            raise RuntimeError(f"self={self.parent_name_index_colors_position} "
+                               f"other={other.parent_name_index_colors_position} on the same parent edge")
+
         f1: _Face = self.e1.face
         f2: _Face = self.e2.face
 
@@ -569,7 +573,7 @@ class EdgeWing(PartSlice["Edge"]):
             raise RuntimeError(f"No matches: {f1} {f2} and {of1} {of2}")
 
         if count > 1:
-            raise RuntimeError(f"Too many matches: {f1} {f2} and {of1} {of2}")
+            raise RuntimeError(f"self={self.parent_name_index_colors_position} other={other.parent_name_index_colors_position} Too many matches: {f1} {f2} and {of1} {of2}")
 
         if e11 or e12:
             return f1
