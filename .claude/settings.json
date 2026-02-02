@@ -4,10 +4,16 @@
       "Bash",
       "Read",
       "Write",
+      "Glob",
+      "Grep",
       "Edit",
       "WebSearch",
       "WebFetch",
-      "Task"
+      "Task",
+      "KillShell",
+      "NotebookEdit",
+      "Skill",
+      "TodoWrite"
     ]
   },
   "enabledPlugins": {
