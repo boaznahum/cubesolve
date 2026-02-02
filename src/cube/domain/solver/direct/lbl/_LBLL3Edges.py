@@ -10,6 +10,7 @@ from typing import cast
 
 from cube.domain.algs import Alg, Algs, SeqAlg
 from cube.domain.model import EdgeWing, Edge
+from cube.domain.model._elements import EdgePosition
 from cube.domain.model._part import EdgeName
 from cube.domain.solver import SolveStep
 from cube.domain.solver.common.SolverHelper import SolverHelper
@@ -17,6 +18,8 @@ from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
+from gui.test_checkmark_markers import test_checkmark_markers_on_centers
+from performance.test_slice_cache_perf import test_slice_only_rotations
 
 
 class _LBLL3Edges(SolverHelper):
@@ -526,14 +529,15 @@ class _LBLL3Edges(SolverHelper):
                 # 1. Setup: Bring FD to BU (doesn't affect FL)
                 protect_bu_alg = self._protect_bu()
 
-                # 2. First Left CM: FL → BU
+                # 2. First Left CM: FU(destroying) -> FL → BU -> FU
+                # now source  is on BU
                 wing_idx = src_t.slice.index
                 self._left_cm(
                     source_index=self._map_wing_index_to_wing_name(src_t.slice, EdgeName.FU),
                     target_index=wing_idx
                 )
 
-                # 3. Second Left CM: BU → FU
+                # 3. Second Left CM: FU -> FL -> BU → FU
                 wing_idx = src_t.slice.index
                 self._left_cm(
                     source_index=self._map_wing_index_to_wing_name(src_t.slice, EdgeName.FU),
@@ -543,7 +547,7 @@ class _LBLL3Edges(SolverHelper):
                 # 4. Flip FU (always required for this case)
                 flip_alg = self._flip_fu()
 
-                # 5. Third Left CM: FU → FL
+                # 5. Third Left CM: FU → FL -> BU -> FU
                 wing_idx = src_t.slice.index
                 self._left_cm(
                     source_index=wing_idx,
@@ -798,6 +802,13 @@ class _LBLL3Edges(SolverHelper):
     # Index Mapping
     # =========================================================================
 
+    @staticmethod
+    def _sorted_edge_key(a: EdgePosition, b: EdgePosition) -> tuple[EdgePosition, EdgePosition]:
+        """Create a canonical sorted key for edge pairs (avoids duplicate entries)."""
+        if a.value <= b.value:
+            return a, b
+        else:
+            return b, a
 
     def _map_wing_index_to_wing_name(self, from_wing: EdgeWing, to_edge_name: EdgeName) -> int:
 
@@ -826,6 +837,8 @@ class _LBLL3Edges(SolverHelper):
         to_edge_name: EdgeName, index: int) -> int:
 
         """
+
+        Actual this is complete mess, itmap the face ltr index to , not the wing index !!!
         Map wing index from one edge to another on the front face.
 
         Both edges must be on the front face. For non-adjacent edges,
@@ -839,52 +852,113 @@ class _LBLL3Edges(SolverHelper):
         Returns:
             Corresponding wing index on target edge
         """
-        cube = self.cube
-
 
         if from_edge_name == to_edge_name:
+            # to prevent the assert below !!
             return index
 
-        # Adjacent edge mappings
+        cube = self.cube
+
+        from_edge = cube.edge(from_edge_name)
+        to_edge = cube.edge(to_edge_name)
+        assert from_edge.single_shared_face(to_edge) is not None
+
+        return self._map_wing_face_ltr_index_by_name(from_edge_name, to_edge_name, index)
+
+    def _map_wing_face_ltr_index_by_name(self, from_edge_name: EdgeName,
+        to_edge_name: EdgeName, index: int) -> int:
+
+        """
+
+        The wing ltr index !!! the ltr index on the face, not the wing index !!!
+        Map wing index from one edge to another on the front face.
+
+        Both edges must be on the front face. For non-adjacent edges,
+        chains through intermediate edges.
+
+        Args:
+            from_edge_name: Source edge (EdgeName.FL, FU, FR, FD)
+            to_edge_name: Target edge (EdgeName.FL, FU, FR, FD)
+            index: Wing index on source edge
+
+        Returns:
+            Corresponding wing index on target edge
+        """
+        if from_edge_name == to_edge_name:
+            # other wise assert below fails
+            return index
+
+        cube = self.cube
+
+        # actually it cant return None but it will fail if not on the same face
+        from_edge = cube.edge(from_edge_name)
+        to_edge = cube.edge(to_edge_name)
+        shared_face = from_edge.single_shared_face(to_edge)
+
+        assert shared_face is not None
+
+        from_positon: EdgePosition = shared_face.get_edge_position(from_edge)
+        to_positon: EdgePosition = shared_face.get_edge_position(to_edge)
+
+        return self._map_wing_face_ltr_index_by_edge_position(from_positon, to_positon, index)
+
+    def _map_wing_face_ltr_index_by_edge_position(self, from_position: EdgePosition,
+        to_position: EdgePosition, index: int) -> int:
+
+        """
+
+        The wing ltr index !!! the ltr index on the face, not the wing index !!!
+        Map wing index from one edge to another on the front face.
+
+        Both edges must be on the front face. For non-adjacent edges,
+        chains through intermediate edges.
+
+        Args:
+            from_edge_name: Source edge (EdgeName.FL, FU, FR, FD)
+            to_edge_name: Target edge (EdgeName.FL, FU, FR, FD)
+            index: Wing index on source edge
+
+        Returns:
+            Corresponding wing index on target edge
+        """
+        if to_position == from_position:
+            return index
+
+
+
+        # Adjacent edge mappings (keys are sorted to avoid duplicate entries)
         # True = same index, False = inverted index
         # Verified by chaining: FL→FU→FR→FD→FL = same (i → i)
         _SAME = True
         _INV = False
-        adjacent_map: dict[tuple[EdgeName, EdgeName], bool] = {
-            # FL ↔ FU: same
-            (EdgeName.FL, EdgeName.FU): _SAME,
-            (EdgeName.FU, EdgeName.FL): _SAME,
-            # FU ↔ FR: inv
-            (EdgeName.FU, EdgeName.FR): _INV,
-            (EdgeName.FR, EdgeName.FU): _INV,
-            # FR ↔ FD: same
-            (EdgeName.FR, EdgeName.FD): _SAME,
-            (EdgeName.FD, EdgeName.FR): _SAME,
-            # FD ↔ FL: inv
-            (EdgeName.FD, EdgeName.FL): _INV,
-            (EdgeName.FL, EdgeName.FD): _INV,
+        _key = self._sorted_edge_key
+        adjacent_map: dict[tuple[EdgePosition, EdgePosition], bool] = {
+
+            # actually 3 is enough
+
+            # F Face
+            _key(EdgePosition.LEFT, EdgePosition.TOP): _SAME,  # FL ↔ FU: same
+            _key(EdgePosition.TOP, EdgePosition.RIGHT): _INV,   # FU ↔ FR: inv
+            _key(EdgePosition.RIGHT, EdgePosition.BOTTOM): _SAME,  # FR ↔ FD: same
+            _key(EdgePosition.BOTTOM, EdgePosition.LEFT): _INV,   # FD ↔ FL: inv
+
+
         }
 
-        key = (from_edge_name, to_edge_name)
-
+        key = _key(from_position, to_position)
         if key in adjacent_map:
-            return index if adjacent_map[key] else cube.inv(index)
+            return index if adjacent_map[key] else self.cube.inv(index)
 
-        # Non-adjacent: chain through intermediate edge
-        # FL <-> FR: chain through FU
-        # FU <-> FD: chain through FL
-        if from_edge_name == EdgeName.FL and to_edge_name == EdgeName.FR:
-            mid_index = self._map_wing_index_by_name(from_edge_name, EdgeName.FU, index)
-            return self._map_wing_index_by_name(EdgeName.FU, to_edge_name, mid_index)
-        elif from_edge_name == EdgeName.FR and to_edge_name == EdgeName.FL:
-            mid_index = self._map_wing_index_by_name(from_edge_name, EdgeName.FU, index)
-            return self._map_wing_index_by_name(EdgeName.FU, to_edge_name, mid_index)
-        elif from_edge_name == EdgeName.FU and to_edge_name == EdgeName.FD:
-            mid_index = self._map_wing_index_by_name(from_edge_name, EdgeName.FL, index)
-            return self._map_wing_index_by_name(EdgeName.FL, to_edge_name, mid_index)
-        elif from_edge_name == EdgeName.FD and to_edge_name == EdgeName.FU:
-            mid_index = self._map_wing_index_by_name(from_edge_name, EdgeName.FL, index)
-            return self._map_wing_index_by_name(EdgeName.FL, to_edge_name, mid_index)
+        # Local helper: chain through intermediate edge
+        def _chain_via(mid_edge: EdgePosition) -> int:
+            mid_index = self._map_wing_face_ltr_index_by_edge_position(from_position, mid_edge, index)
+            return self._map_wing_face_ltr_index_by_edge_position(mid_edge, to_position, mid_index)
+
+        # Non-adjacent: chain through intermediate edge (compare sorted keys)
+        if key == _key(EdgePosition.LEFT, EdgePosition.RIGHT):
+            return _chain_via(EdgePosition.TOP)
+        elif key == _key(EdgePosition.TOP, EdgePosition.BOTTOM):
+            return _chain_via(EdgePosition.LEFT)
 
         from cube.domain.exceptions.InternalSWError import InternalSWError
         raise InternalSWError(f"Unknown edge pair: {from_edge_name} -> {to_edge_name}")

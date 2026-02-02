@@ -570,10 +570,14 @@ class EdgeWing(PartSlice["Edge"]):
         count = sum([e11, e12, e21, e22])
 
         if count == 0:
-            raise RuntimeError(f"No matches: {f1} {f2} and {of1} {of2}")
+            raise RuntimeError(f"self={self.parent_name_index_colors_position} "
+                               f"other={other.parent_name_index_colors_position} "
+                               f"No matches: {f1} {f2} and {of1} {of2}")
 
         if count > 1:
-            raise RuntimeError(f"self={self.parent_name_index_colors_position} other={other.parent_name_index_colors_position} Too many matches: {f1} {f2} and {of1} {of2}")
+            raise RuntimeError(f"self={self.parent_name_index_colors_position} "
+                               f"other={other.parent_name_index_colors_position} "
+                               f"Too many matches: {f1} {f2} and {of1} {of2}")
 
         if e11 or e12:
             return f1
