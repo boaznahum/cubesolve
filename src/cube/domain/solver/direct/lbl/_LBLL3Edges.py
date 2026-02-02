@@ -136,6 +136,12 @@ class _LBLL3Edges(SolverHelper):
         for slice_index in range(n_slices):
                 self._solve_left_edge_slice(l3t, slice_index)
 
+        left = cube.front.edge_left
+        if self._is_edge_solved(left):
+            self.debug(lambda : f"✅✅💚💚 {left.name} is solved 💚💚💚")
+
+
+
     def _solve_left_edge_slice(self, l3t:FaceTracker, target_index: int) -> None:
         """
         Solve a single wing on FL edge at given index.
@@ -993,6 +999,23 @@ class _LBLL3Edges(SolverHelper):
                 if wing.match_faces:
                     count += 1
         return count
+
+    def _is_edge_solved(self, edge: Edge) -> int:
+        """
+
+        Count number of solved edge wings on L3 face.
+
+        Args:
+            l3_tracker: Tracker for L3 face (can be anywhere on cube).
+
+        Returns:
+            Number of wings with matching colors on L3 edges.
+        """
+        for wing in edge.all_slices:
+            if not wing.match_faces:
+                return False
+
+        return True
 
     def _assert_all_edges_below_l3_are_ok(self, th:FacesTrackerHolder):
 
