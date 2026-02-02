@@ -340,10 +340,10 @@ class _LBLL3Edges(SolverHelper):
                 ┌─────────┐
                 │   FU    │
                 │   [S]   │  ← Source already on top!
-            ┌───────┼─────────┼───────┐
-            │  FL   │         │  FR   │
-            │  [T]  │  FRONT  │   ?   │
-            └───────┼─────────┼───────┘
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │  [T]  │  FRONT  │   ?   │
+        └───────┼─────────┼───────┘
                 │   FD    │
                 │   [H]   │  ← H=Helper
                 └─────────┘
@@ -359,10 +359,10 @@ class _LBLL3Edges(SolverHelper):
                 ┌─────────┐
                 │   FU    │
                 │   [H]   │
-            ┌───────┼─────────┼───────┐
-            │  FL   │         │  FR   │
-            │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
-            └───────┼─────────┼───────┘
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
+        └───────┼─────────┼───────┘
         """
 
         with self._logger.tab(f"Case FU→FL: source={source.parent_name_index_colors}, target={target.parent_name_index_colors_position}"):
@@ -393,10 +393,10 @@ class _LBLL3Edges(SolverHelper):
                 ┌─────────┐
                 │   FU    │
                 │    ?    │
-            ┌───────┼─────────┼───────┐
-            │  FL   │         │  FR   │
-            │  [T]  │  FRONT  │   ?   │
-            └───────┼─────────┼───────┘
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │  [T]  │  FRONT  │   ?   │
+        └───────┼─────────┼───────┘
                 │   FD    │
                 │   [S]   │  ← Source on bottom
                 └─────────┘
@@ -414,10 +414,10 @@ class _LBLL3Edges(SolverHelper):
                 ┌─────────┐
                 │   FU    │
                 │   [T]   │  ← Target wing moved here
-            ┌───────┼─────────┼───────┐
-            │  FL   │         │  FR   │
-            │  [S]  │  FRONT  │   ?   │  ← Source now here!
-            └───────┼─────────┼───────┘
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │  [S]  │  FRONT  │   ?   │  ← Source now here!
+        └───────┼─────────┼───────┘
                 │   FD    │
                 │   [?]   │  ← FD is now FREE
                 └─────────┘
@@ -427,10 +427,10 @@ class _LBLL3Edges(SolverHelper):
                 ┌─────────┐
                 │   FU    │
                 │   [H]   │
-            ┌───────┼─────────┼───────┐
-            │  FL   │         │  FR   │
-            │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
-            └───────┼─────────┼───────┘
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
+        └───────┼─────────┼───────┘
         """
         ti = target.index
 
@@ -471,11 +471,11 @@ class _LBLL3Edges(SolverHelper):
                 ┌─────────┐
                 │   FU    │
                 │    ?    │
-            ┌───────┼─────────┼───────┐
-            │  FL   │         │  FR   │
-            │[T][S] │  FRONT  │   ?   │  ← Both on same edge!
-            │       │         │       │    T at index ti
-            └───────┼─────────┼───────┘    S at index inv(ti)
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │[T][S] │  FRONT  │   ?   │  ← Both on same edge!
+        │       │         │       │    T at index ti
+        └───────┼─────────┼───────┘    S at index inv(ti)
                 │   FD    │
                 │   [H]   │
                 └─────────┘
@@ -493,20 +493,20 @@ class _LBLL3Edges(SolverHelper):
                 ┌─────────┐
                 │   FU    │
                 │   [S]   │  ← Source now on top!
-            ┌───────┼─────────┼───────┐
-            │  FL   │         │  FR   │
-            │  [H]  │  FRONT  │   ?   │
-            └───────┼─────────┼───────┘
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │  [H]  │  FRONT  │   ?   │
+        └───────┼─────────┼───────┘
 
         Final State::
 
                 ┌─────────┐
                 │   FU    │
                 │   [?]   │
-            ┌───────┼─────────┼───────┐
-            │  FL   │         │  FR   │
-            │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
-            └───────┼─────────┼───────┘
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
+        └───────┼─────────┼───────┘
         """
         ti = target.index
         si = source.index
