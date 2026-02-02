@@ -4,7 +4,7 @@ L3 Edge solver for NxN cubes using layer-by-layer approach.
 This helper solves L3 edges (last layer edges) without disturbing
 L1 or middle layer edges. Uses commutator-based algorithms.
 
-See: .planning/L3_EDGES_DIAGRAMS.md for algorithm details.
+See: L3_EDGES_DIAGRAMS.md (same directory) for full algorithm details.
 """
 from typing import cast
 
@@ -27,6 +27,41 @@ class _LBLL3Edges(SolverHelper):
     unless explicitly stated otherwise.
 
     Uses composition with _LBLNxNEdges to reuse existing commutator methods.
+
+    Front Face Edge Layout::
+
+            ┌─────────┐
+            │   FU    │  (front-up edge)
+            │ 0  1  2 │  (wing indices for 5x5)
+        ┌───────┼─────────┼───────┐
+        │  FL   │         │  FR   │
+        │ 0     │  FRONT  │     0 │
+        │ 1     │  FACE   │     1 │
+        │ 2     │  (L3)   │     2 │
+        └───────┼─────────┼───────┘
+            │ 0  1  2 │
+            │   FD    │  (front-down edge)
+            └─────────┘
+
+    Commutators Reference::
+
+        LEFT CM:   FU → FL → BU → FU  (3-cycle)
+                   Alg: U' L' U M[k]' U' L U M[k]
+
+        RIGHT CM:  FU → FR → BU → FU  (3-cycle)
+                   Alg: U R U' M[k]' U R' U' M[k]
+
+        (LEFT CM)':  FU → BU → FL → FU  (reverse)
+        (RIGHT CM)': FU → BU → FR → FU  (reverse)
+
+    Case Summary:
+
+        | Case | Source | Steps |
+        |------|--------|-------|
+        | 1 | FR | Setup → (Right CM)' → [Flip?] → Left CM → Rollback |
+        | 2 | FU | Setup → [Flip?] → Left CM → Rollback |
+        | 3 | FD | F → Setup → (Left CM)' → F' → [Flip FL?] → Rollback |
+        | 4 | FL | Setup → Left CM x2 → Flip → Left CM → Rollback |
     """
 
     D_LEVEL = 3
@@ -300,8 +335,34 @@ class _LBLL3Edges(SolverHelper):
         """
         Case 2: Source on FU → Target on FL.
 
-        Path: FU → FL (Left CM)
-        Target position FL is not affected by protect_bu.
+        Initial State::
+
+                ┌─────────┐
+                │   FU    │
+                │   [S]   │  ← Source already on top!
+            ┌───────┼─────────┼───────┐
+            │  FL   │         │  FR   │
+            │  [T]  │  FRONT  │   ?   │
+            └───────┼─────────┼───────┘
+                │   FD    │
+                │   [H]   │  ← H=Helper
+                └─────────┘
+
+        Steps:
+        1. protect_bu: FD[H] → BU         (preserves FL/FU)
+        2. flip FU if needed              (preserves FL)
+        3. Left CM: FU[S] → FL            (work - moves to target)
+        4. Rollback: undo flip, undo protect_bu
+
+        Final State::
+
+                ┌─────────┐
+                │   FU    │
+                │   [H]   │
+            ┌───────┼─────────┼───────┐
+            │  FL   │         │  FR   │
+            │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
+            └───────┼─────────┼───────┘
         """
 
         with self._logger.tab(f"Case FU→FL: source={source.parent_name_index_colors}, target={target.parent_name_index_colors_position}"):
@@ -327,9 +388,49 @@ class _LBLL3Edges(SolverHelper):
         """
         Case 3: Source on FD → Target on FL.
 
-        Path: FD → FL (F) → FU ((Left CM)') → FL (F')
-        F rotation moves target: FL → FU
-        F' moves target back: FU → FL
+        Initial State::
+
+                ┌─────────┐
+                │   FU    │
+                │    ?    │
+            ┌───────┼─────────┼───────┐
+            │  FL   │         │  FR   │
+            │  [T]  │  FRONT  │   ?   │
+            └───────┼─────────┼───────┘
+                │   FD    │
+                │   [S]   │  ← Source on bottom
+                └─────────┘
+
+        Steps:
+        1. F rotation: FD[S] → FL, FL[T] → FU  (frees FD)
+        2. protect_bu: FD → BU                 (FD is now free)
+        3. (Left CM)': FL[S] → FU              (preserves new FL)
+        4. F' rotation: FU[S] → FL             (source to target!)
+        5. flip FL if needed
+        6. Rollback: undo flip, undo protect_bu
+
+        After F rotation::
+
+                ┌─────────┐
+                │   FU    │
+                │   [T]   │  ← Target wing moved here
+            ┌───────┼─────────┼───────┐
+            │  FL   │         │  FR   │
+            │  [S]  │  FRONT  │   ?   │  ← Source now here!
+            └───────┼─────────┼───────┘
+                │   FD    │
+                │   [?]   │  ← FD is now FREE
+                └─────────┘
+
+        Final State (after F')::
+
+                ┌─────────┐
+                │   FU    │
+                │   [H]   │
+            ┌───────┼─────────┼───────┐
+            │  FL   │         │  FR   │
+            │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
+            └───────┼─────────┼───────┘
         """
         ti = target.index
 
@@ -362,10 +463,50 @@ class _LBLL3Edges(SolverHelper):
         """
         Case 4: Source on FL → Target on FL (same edge, different index).
 
-        Path: FL → BU (Left CM) → FU (Left CM) → flip → FL (Left CM)
         Source is at inv(ti), always needs flip.
-
         Left CM is a 3-cycle: FU → FL → BU → FU (all use same M[k] slice)
+
+        Initial State::
+
+                ┌─────────┐
+                │   FU    │
+                │    ?    │
+            ┌───────┼─────────┼───────┐
+            │  FL   │         │  FR   │
+            │[T][S] │  FRONT  │   ?   │  ← Both on same edge!
+            │       │         │       │    T at index ti
+            └───────┼─────────┼───────┘    S at index inv(ti)
+                │   FD    │
+                │   [H]   │
+                └─────────┘
+
+        Steps:
+        1. protect_bu: FD[H] → BU
+        2. Left CM (1st): FL[S] → BU       (S leaves FL)
+        3. Left CM (2nd): BU[S] → FU       (S now on top)
+        4. flip FU (always needed)
+        5. Left CM (3rd): FU[S] → FL       (S to target!)
+        6. Rollback: undo flip, undo protect_bu
+
+        After Left CM x2::
+
+                ┌─────────┐
+                │   FU    │
+                │   [S]   │  ← Source now on top!
+            ┌───────┼─────────┼───────┐
+            │  FL   │         │  FR   │
+            │  [H]  │  FRONT  │   ?   │
+            └───────┼─────────┼───────┘
+
+        Final State::
+
+                ┌─────────┐
+                │   FU    │
+                │   [?]   │
+            ┌───────┼─────────┼───────┐
+            │  FL   │         │  FR   │
+            │  [S]  │  FRONT  │   ?   │  ← Source at target! ✓
+            └───────┼─────────┼───────┘
         """
         ti = target.index
         si = source.index
