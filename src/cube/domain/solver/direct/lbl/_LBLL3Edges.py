@@ -96,33 +96,26 @@ class _LBLL3Edges(SolverHelper):
             # Bring L3 to front
             self.cmn.bring_face_front(l3_tracker.face)
 
-            MAX_ITERATIONS = 20
-            n_iteration = 0
+            # we have for edges  Left A  Bottom B Right C  Top D
+            # Start from A, solving it, B is buttonis destroyes
+            # move A to right, A->Right C Right->Left,
+            # B and D swapped not D on Button, it is destroyes
+            # Solve Left C
+            # if it solved, it means on top / botton there only top / button colors so
+            # we can use RF' method to solve then
 
-            while True:
-                n_iteration += 1
-                if n_iteration > MAX_ITERATIONS:
-                    from cube.domain.exceptions.InternalSWError import InternalSWError
-                    raise InternalSWError("L3 edges: Maximum iterations reached")
+            for _ in range(2): # i still dont know why 2
+                with self._logger.tab(lambda : f"Solving first edge"):
+                    self._solve_left_edge(l3_tracker)
 
-                n_solved_before = self._count_solved_l3_wings(l3_tracker)
+                self.op.play(Algs.Z * 2)
+                with self._logger.tab(lambda : f"Solving second opposite edge"):
+                    self._solve_left_edge(l3_tracker)
 
-                # Rotate 4 times around front face, solve left edge each time
-                for rotation_i in range(4):
-                    with self._logger.tab(f"Rotation {rotation_i + 1}/4"):
-                        self._solve_left_edge(l3_tracker)
+                self.op.play(Algs.Z * 2)
 
-                        # Rotate cube around front center (z rotation)
-                        if rotation_i < 3:  # Don't rotate after last iteration
-                            self.op.play(Algs.Z)
+            #now i ready to second phase, solving by RF' algorithm
 
-                n_solved_after = self._count_solved_l3_wings(l3_tracker)
-
-                if n_solved_after == n_solved_before:
-                    self.debug(f"No progress, stopping. Solved: {n_solved_after}")
-                    break
-
-                self.debug(f"Progress: {n_solved_before} -> {n_solved_after}")
 
     # =========================================================================
     # Left Edge Solving

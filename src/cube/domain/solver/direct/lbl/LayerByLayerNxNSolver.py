@@ -538,6 +538,10 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     def _solve_layer3_cross(self, th: FacesTrackerHolder) -> None:
         """Solve Layer 1 cross (position edges) using shadow 3x3 approach."""
+
+        assert self._is_layer3_edges_solved(th)
+
+        l3_tracker = self._get_layer1_tracker(th)
         if self._is_layer3_cross_solved(th):
             return
 
