@@ -532,16 +532,19 @@ class _LBLL3Edges(SolverHelper):
                 # 2. First Left CM: FU(destroying) -> FL → BU -> FU
                 # now source  is on BU
                 wing_idx = src_t.slice.index
+                source_index_on_fu = self._map_wing_index_to_wing_name(src_t.slice, EdgeName.FU)
+                target_index_on_fl = self._map_wing_index_by_name(EdgeName.FU, EdgeName.FL, source_index_on_fu)
                 self._left_cm(
-                    source_index=self._map_wing_index_to_wing_name(src_t.slice, EdgeName.FU),
-                    target_index=wing_idx
+                    source_index=source_index_on_fu,
+                    target_index=target_index_on_fl
                 )
 
                 # 3. Second Left CM: FU -> FL -> BU → FU
+                # now source is On FU
                 wing_idx = src_t.slice.index
                 self._left_cm(
-                    source_index=self._map_wing_index_to_wing_name(src_t.slice, EdgeName.FU),
-                    target_index=wing_idx
+                    source_index=source_index_on_fu,
+                    target_index=target_index_on_fl
                 )
 
                 # 4. Flip FU (always required for this case)
@@ -838,11 +841,10 @@ class _LBLL3Edges(SolverHelper):
 
         """
 
-        Actual this is complete mess, itmap the face ltr index to , not the wing index !!!
-        Map wing index from one edge to another on the front face.
+        Given index of wing on edge, return the index of target edge, assume the source edge is rotated
+        into the target edge
 
-        Both edges must be on the front face. For non-adjacent edges,
-        chains through intermediate edges.
+        Both edges must be on same face. .
 
         Args:
             from_edge_name: Source edge (EdgeName.FL, FU, FR, FD)
@@ -861,12 +863,19 @@ class _LBLL3Edges(SolverHelper):
 
         from_edge = cube.edge(from_edge_name)
         to_edge = cube.edge(to_edge_name)
-        assert from_edge.single_shared_face(to_edge) is not None
+        on_face = from_edge.single_shared_face(to_edge)
+        assert on_face is not None
 
-        return self._map_wing_face_ltr_index_by_name(from_edge_name, to_edge_name, index)
+        from_face_ltr_index=from_edge.get_face_ltr_index_from_edge_slice_index(on_face, index)
+
+        to_face_ltr_index = self._map_wing_face_ltr_index_by_name(from_edge_name, to_edge_name, from_face_ltr_index)
+
+        to_wing_internal_index = to_edge.get_edge_slice_index_from_face_ltr_index(on_face, to_face_ltr_index)
+
+        return to_wing_internal_index
 
     def _map_wing_face_ltr_index_by_name(self, from_edge_name: EdgeName,
-        to_edge_name: EdgeName, index: int) -> int:
+                                         to_edge_name: EdgeName, face_ltr_index: int) -> int:
 
         """
 
@@ -879,14 +888,14 @@ class _LBLL3Edges(SolverHelper):
         Args:
             from_edge_name: Source edge (EdgeName.FL, FU, FR, FD)
             to_edge_name: Target edge (EdgeName.FL, FU, FR, FD)
-            index: Wing index on source edge
+            face_ltr_index: Wing index on source edge
 
         Returns:
             Corresponding wing index on target edge
         """
         if from_edge_name == to_edge_name:
             # other wise assert below fails
-            return index
+            return face_ltr_index
 
         cube = self.cube
 
@@ -900,7 +909,7 @@ class _LBLL3Edges(SolverHelper):
         from_positon: EdgePosition = shared_face.get_edge_position(from_edge)
         to_positon: EdgePosition = shared_face.get_edge_position(to_edge)
 
-        return self._map_wing_face_ltr_index_by_edge_position(from_positon, to_positon, index)
+        return self._map_wing_face_ltr_index_by_edge_position(from_positon, to_positon, face_ltr_index)
 
     def _map_wing_face_ltr_index_by_edge_position(self, from_position: EdgePosition,
         to_position: EdgePosition, index: int) -> int:
@@ -961,7 +970,7 @@ class _LBLL3Edges(SolverHelper):
             return _chain_via(EdgePosition.LEFT)
 
         from cube.domain.exceptions.InternalSWError import InternalSWError
-        raise InternalSWError(f"Unknown edge pair: {from_edge_name} -> {to_edge_name}")
+        raise InternalSWError(f"Unknown edge pair: {from_position} -> {to_position}")
 
     # =========================================================================
     # Helpers
