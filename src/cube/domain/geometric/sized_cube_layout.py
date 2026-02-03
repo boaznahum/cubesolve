@@ -34,6 +34,8 @@ from cube.domain.geometric.geometry_types import FaceOrthogonalEdgesInfo
 if TYPE_CHECKING:
     from cube.domain.geometric.cube_walking import CubeWalkingInfo
     from cube.domain.geometric.FRotation import FUnitRotation
+    from cube.domain.model._elements import EdgePosition
+    from cube.domain.model._part import EdgeName
     from cube.domain.model.Face import Face
     from cube.domain.model.Slice import Slice
     from cube.domain.model.SliceName import SliceName
@@ -262,5 +264,50 @@ class SizedCubeLayout(Protocol):
                 # Process row on front face, with access to edge slices
                 # left_edge.get_slice(left_idx) and right_edge.get_slice(right_idx)
                 # correspond to the same horizontal row on the front face
+        """
+        ...
+
+    @staticmethod
+    def sorted_edge_key(a: "EdgePosition", b: "EdgePosition") -> tuple["EdgePosition", "EdgePosition"]:
+        """Create a canonical sorted key for edge pairs (avoids duplicate entries)."""
+        ...
+
+    def map_wing_face_ltr_index_by_name(self, from_edge_name: "EdgeName",
+                                        to_edge_name: "EdgeName", face_ltr_index: int) -> int:
+        """
+        Map wing LTR index from one edge to another on the same face.
+
+        The wing ltr index is the ltr index on the face, not the wing index.
+
+        Both edges must be on the same face. For non-adjacent edges,
+        chains through intermediate edges.
+
+        Args:
+            from_edge_name: Source edge (e.g., EdgeName.FL, FU, FR, FD)
+            to_edge_name: Target edge (e.g., EdgeName.FL, FU, FR, FD)
+            face_ltr_index: LTR index on source edge
+
+        Returns:
+            Corresponding LTR index on target edge
+        """
+        ...
+
+    def map_wing_face_ltr_index_by_edge_position(self, from_position: "EdgePosition",
+                                                  to_position: "EdgePosition", index: int) -> int:
+        """
+        Map wing LTR index from one edge position to another on the same face.
+
+        The wing ltr index is the ltr index on the face, not the wing index.
+
+        Both edges must be on the same face. For non-adjacent edges,
+        chains through intermediate edges.
+
+        Args:
+            from_position: Source edge position (EdgePosition.LEFT, TOP, RIGHT, BOTTOM)
+            to_position: Target edge position
+            index: LTR index on source edge
+
+        Returns:
+            Corresponding LTR index on target edge
         """
         ...

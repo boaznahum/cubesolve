@@ -10,10 +10,9 @@ from typing import cast
 
 from cube.domain.algs import Alg, Algs, SeqAlg
 from cube.domain.model import EdgeWing, Edge
-from cube.domain.model._elements import EdgePosition
 from cube.domain.model._part import EdgeName
 from cube.domain.solver import SolveStep
-from cube.domain.solver.common.E2ECommunicator import E2ECommunicator
+from cube.domain.solver.direct.commutator.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -74,7 +73,7 @@ class _LBLL3Edges(SolverHelper):
 
         # Composition: reuse existing edge methods
         self._nxn_edges = _LBLNxNEdges(slv)
-        self._e2e_comm = E2ECommunicator(slv)
+        self._e2e_comm = E2ECommutator(slv)
 
     # =========================================================================
     # Main Entry Point
@@ -804,14 +803,6 @@ class _LBLL3Edges(SolverHelper):
     # Index Mapping
     # =========================================================================
 
-    @staticmethod
-    def _sorted_edge_key(a: EdgePosition, b: EdgePosition) -> tuple[EdgePosition, EdgePosition]:
-        """Create a canonical sorted key for edge pairs (avoids duplicate entries)."""
-        if a.value <= b.value:
-            return a, b
-        else:
-            return b, a
-
     def _map_wing_index_to_wing_name(self, from_wing: EdgeWing, to_edge_name: EdgeName) -> int:
 
         from_edge_name: EdgeName = from_wing.parent.name
@@ -867,109 +858,11 @@ class _LBLL3Edges(SolverHelper):
 
         from_face_ltr_index=from_edge.get_face_ltr_index_from_edge_slice_index(on_face, index)
 
-        to_face_ltr_index = self._map_wing_face_ltr_index_by_name(from_edge_name, to_edge_name, from_face_ltr_index)
+        to_face_ltr_index = self.cube.sized_layout.map_wing_face_ltr_index_by_name(from_edge_name, to_edge_name, from_face_ltr_index)
 
         to_wing_internal_index = to_edge.get_edge_slice_index_from_face_ltr_index(on_face, to_face_ltr_index)
 
         return to_wing_internal_index
-
-    def _map_wing_face_ltr_index_by_name(self, from_edge_name: EdgeName,
-                                         to_edge_name: EdgeName, face_ltr_index: int) -> int:
-
-        """
-
-        The wing ltr index !!! the ltr index on the face, not the wing index !!!
-        Map wing index from one edge to another on the front face.
-
-        Both edges must be on the front face. For non-adjacent edges,
-        chains through intermediate edges.
-
-        Args:
-            from_edge_name: Source edge (EdgeName.FL, FU, FR, FD)
-            to_edge_name: Target edge (EdgeName.FL, FU, FR, FD)
-            face_ltr_index: Wing index on source edge
-
-        Returns:
-            Corresponding wing index on target edge
-        """
-        if from_edge_name == to_edge_name:
-            # other wise assert below fails
-            return face_ltr_index
-
-        cube = self.cube
-
-        # actually it cant return None but it will fail if not on the same face
-        from_edge = cube.edge(from_edge_name)
-        to_edge = cube.edge(to_edge_name)
-        shared_face = from_edge.single_shared_face(to_edge)
-
-        assert shared_face is not None
-
-        from_positon: EdgePosition = shared_face.get_edge_position(from_edge)
-        to_positon: EdgePosition = shared_face.get_edge_position(to_edge)
-
-        return self._map_wing_face_ltr_index_by_edge_position(from_positon, to_positon, face_ltr_index)
-
-    def _map_wing_face_ltr_index_by_edge_position(self, from_position: EdgePosition,
-        to_position: EdgePosition, index: int) -> int:
-
-        """
-
-        The wing ltr index !!! the ltr index on the face, not the wing index !!!
-        Map wing index from one edge to another on the front face.
-
-        Both edges must be on the front face. For non-adjacent edges,
-        chains through intermediate edges.
-
-        Args:
-            from_edge_name: Source edge (EdgeName.FL, FU, FR, FD)
-            to_edge_name: Target edge (EdgeName.FL, FU, FR, FD)
-            index: Wing index on source edge
-
-        Returns:
-            Corresponding wing index on target edge
-        """
-        if to_position == from_position:
-            return index
-
-
-
-        # Adjacent edge mappings (keys are sorted to avoid duplicate entries)
-        # True = same index, False = inverted index
-        # Verified by chaining: FL→FU→FR→FD→FL = same (i → i)
-        _SAME = True
-        _INV = False
-        _key = self._sorted_edge_key
-        adjacent_map: dict[tuple[EdgePosition, EdgePosition], bool] = {
-
-            # actually 3 is enough
-
-            # F Face
-            _key(EdgePosition.LEFT, EdgePosition.TOP): _SAME,  # FL ↔ FU: same
-            _key(EdgePosition.TOP, EdgePosition.RIGHT): _INV,   # FU ↔ FR: inv
-            _key(EdgePosition.RIGHT, EdgePosition.BOTTOM): _SAME,  # FR ↔ FD: same
-            _key(EdgePosition.BOTTOM, EdgePosition.LEFT): _INV,   # FD ↔ FL: inv
-
-
-        }
-
-        key = _key(from_position, to_position)
-        if key in adjacent_map:
-            return index if adjacent_map[key] else self.cube.inv(index)
-
-        # Local helper: chain through intermediate edge
-        def _chain_via(mid_edge: EdgePosition) -> int:
-            mid_index = self._map_wing_face_ltr_index_by_edge_position(from_position, mid_edge, index)
-            return self._map_wing_face_ltr_index_by_edge_position(mid_edge, to_position, mid_index)
-
-        # Non-adjacent: chain through intermediate edge (compare sorted keys)
-        if key == _key(EdgePosition.LEFT, EdgePosition.RIGHT):
-            return _chain_via(EdgePosition.TOP)
-        elif key == _key(EdgePosition.TOP, EdgePosition.BOTTOM):
-            return _chain_via(EdgePosition.LEFT)
-
-        from cube.domain.exceptions.InternalSWError import InternalSWError
-        raise InternalSWError(f"Unknown edge pair: {from_position} -> {to_position}")
 
     # =========================================================================
     # Helpers

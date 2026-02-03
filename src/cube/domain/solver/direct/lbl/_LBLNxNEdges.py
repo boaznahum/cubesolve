@@ -10,7 +10,7 @@ from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solve
 from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
-from cube.domain.solver.common.E2ECommunicator import E2ECommunicator
+from cube.domain.solver.direct.commutator.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.solver.solver import SmallStepSolveState
@@ -38,7 +38,7 @@ class _LBLNxNEdges(SolverHelper):
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "_LBLNxNEdges")
         self._logger.set_level(_LBLNxNEdges.D_LEVEL)
-        self._e2e_comm = E2ECommunicator(slv)
+        self._e2e_comm = E2ECommutator(slv)
 
     def solve_single_center_face_row(
             self, l1_white_tracker: FaceTracker, target_face_t: FaceTracker, face_row: int
@@ -346,7 +346,7 @@ class _LBLNxNEdges(SolverHelper):
                 self.debug(lambda: f"💚💚💚 Wing {untracked_source_wing}  match target color {target_face_color}")
 
                 # this move target wing
-                moved = self._e2e_comm.try_right_or_left_edge_to_edge_communicator_by_wings(untracked_target_edge_wing,
+                moved = self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(untracked_target_edge_wing,
                                                                                   source_edge_wing_t.slice)
 
                 if moved:
@@ -378,7 +378,7 @@ class _LBLNxNEdges(SolverHelper):
             self.cmn.bring_edge_to_front_right_or_left_preserve_down(source_edge_wing_t.slice.parent)
 
             # yes the source is the target
-            self._e2e_comm.try_right_or_left_edge_to_edge_communicator_by_wings(source_edge_wing_t.slice, None)
+            self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(source_edge_wing_t.slice, None)
 
             self.cmn.bring_face_front_preserve_down(th.get_face_by_color(target_face_color))
 

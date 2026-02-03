@@ -1,7 +1,7 @@
 """
-Edge-to-Edge Communicator for NxN cubes.
+Edge-to-Edge Commutator for NxN cubes.
 
-This helper provides communication/coordination between edge solvers
+This helper provides commutator algorithms for edge solving
 in the layer-by-layer approach.
 """
 from cube.domain.algs import Alg, Algs
@@ -11,23 +11,22 @@ from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
-class E2ECommunicator(SolverHelper):
+class E2ECommutator(SolverHelper):
     """
-    Edge-to-Edge Communicator - coordinates edge solving operations.
+    Edge-to-Edge Commutator - executes commutator algorithms for edge solving.
 
-    This helper provides shared functionality for edge solvers that need
-    to communicate or coordinate their operations.
+    This helper provides shared commutator functionality for edge solvers.
     """
 
     D_LEVEL = 3
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "E2EComm")
-        self._logger.set_level(E2ECommunicator.D_LEVEL)
+        self._logger.set_level(E2ECommutator.D_LEVEL)
 
-    def try_right_or_left_edge_to_edge_communicator_by_wings(self,
-                                                            target_wing: EdgeWing,
-                                                            source_wing: EdgeWing | None) -> bool:
+    def try_right_or_left_edge_to_edge_commutator_by_wings(self,
+                                                           target_wing: EdgeWing,
+                                                           source_wing: EdgeWing | None) -> bool:
 
         cube = self.cube
         # current we only support front
@@ -60,7 +59,7 @@ class E2ECommunicator(SolverHelper):
         source_wing = source_wing_edge.get_slice(source_wing_index)
 
         with self._logger.tab(
-                    lambda: f"Trying communicator from wing {source_wing.parent_name_and_index} to wing {target_wing.parent_name_and_index}"):
+                    lambda: f"Trying commutator from wing {source_wing.parent_name_and_index} to wing {target_wing.parent_name_and_index}"):
 
             self.debug(lambda: f"required_source_wing_face_column_index: {required_source_wing_face_column_index}")
             self.debug(lambda: f"face_column_on_source_edge: {face_column_on_source_edge}")
@@ -70,19 +69,19 @@ class E2ECommunicator(SolverHelper):
                 assert source_wing is not None, "We calculate it it must be equal"
                 return False  # can't perform
 
-            self.do_right_or_left_comm_by_source_ltr_index(
+            self.do_right_or_left_commutator_by_source_ltr_index(
                 face_column_on_source_edge, is_target_right_edge, source_wing, target_wing
             )
 
             return True
 
-    def do_right_or_left_comm_by_source_ltr_index(self,
-                                                   source_ltr_index: int,
-                                                   is_right: bool,
-                                                   source_wing: EdgeWing,
-                                                   target_wing: EdgeWing) -> None:
+    def do_right_or_left_commutator_by_source_ltr_index(self,
+                                                        source_ltr_index: int,
+                                                        is_right: bool,
+                                                        source_wing: EdgeWing,
+                                                        target_wing: EdgeWing) -> None:
         """
-        Execute the actual communicator algorithm.
+        Execute the actual commutator algorithm.
 
         Args:
             source_ltr_index: The LTR index on the source edge (0-based)
