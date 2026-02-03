@@ -70,26 +70,41 @@ class E2ECommutator(SolverHelper):
                 return False  # can't perform
 
             self.do_right_or_left_commutator_by_source_ltr_index(
-                face_column_on_source_edge, is_target_right_edge, source_wing, target_wing
+                face_column_on_source_edge, is_target_right_edge
             )
 
             return True
 
     def do_right_or_left_commutator_by_source_ltr_index(self,
-                                                        source_ltr_index: int,
-                                                        is_right: bool,
-                                                        source_wing: EdgeWing,
-                                                        target_wing: EdgeWing) -> None:
+                                                        source_ltr_index_on_fu: int,
+                                                        is_right: bool) -> None:
         """
         Execute the actual commutator algorithm.
 
         Args:
-            source_ltr_index: The LTR index on the source edge (0-based)
+            source_ltr_index_on_fu: The LTR index on the FU (front-up) edge (0-based)
             is_right: True for right edge target, False for left edge target
-            source_wing: The source wing being moved
-            target_wing: The target wing position
         """
-        alg_index = source_ltr_index + 1  # one based
+        from cube.domain.model import EdgePosition
+
+        cube = self.cube
+        front = cube.front
+
+        # Derive source_wing from FU edge
+        fu_edge = cube.fu
+        source_wing_index = fu_edge.get_edge_slice_index_from_face_ltr_index(front, source_ltr_index_on_fu)
+        source_wing = fu_edge.get_slice(source_wing_index)
+
+        # Derive target_wing from FR or FL edge
+        target_edge = cube.fr if is_right else cube.fl
+        target_position = EdgePosition.RIGHT if is_right else EdgePosition.LEFT
+        target_ltr_index = cube.sized_layout.map_wing_face_ltr_index_by_edge_position(
+            EdgePosition.TOP, target_position, source_ltr_index_on_fu
+        )
+        target_wing_index = target_edge.get_edge_slice_index_from_face_ltr_index(front, target_ltr_index)
+        target_wing = target_edge.get_slice(target_wing_index)
+
+        alg_index = source_ltr_index_on_fu + 1  # one based
         alg: Alg
         if is_right:
 

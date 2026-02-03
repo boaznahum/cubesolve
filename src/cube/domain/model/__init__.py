@@ -5,6 +5,9 @@ from ._elements import (
     CenterSliceIndex as CenterSliceIndex,
 )
 from ._elements import (
+    EdgePosition as EdgePosition,
+)
+from ._elements import (
     PartColorsID as PartColorsID,
 )
 from ._elements import (
