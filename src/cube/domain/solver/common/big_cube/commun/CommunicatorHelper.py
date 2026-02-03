@@ -34,6 +34,7 @@ from cube.domain.solver.protocols import SolverElementsProvider
 @dataclass(frozen=True)
 class _InternalCommData:
     natural_source_coordinate: Point  # point on the source from where communicator will bring the data, before source setup alg
+    natural_source_block: Block  # full block on source (for multi-cell blocks)
     trans_data: FaceTranslationResult
 
 
@@ -47,13 +48,19 @@ class CommutatorResult:
     The 3-cycle points represent the three pieces affected by the block commutator:
     s1 → t → s2 → s1 (cycle pattern)
 
+    For multi-cell blocks, the cycle operates on entire blocks:
+    s1_block → t_block → s2_block → s1_block
+
     Attributes:
         slice_name: that use in the communicator algorithm
         source_point: The computed source LTR position (where the piece naturally is before setup)
         algorithm: The algorithm to execute (None if dry_run=True)
-        natural_source: Source point (s1) - the first piece in the 3-cycle
-        target_point: Target point (t) - the second piece in the 3-cycle
-        second_replaced_with_target_point_on_source: Intermediate point (s2) - the third piece in the 3-cycle
+        natural_source: Source point (s1) - the first piece in the 3-cycle (legacy, for 1x1 compatibility)
+        target_point: Target point (t) - the second piece in the 3-cycle (legacy, for 1x1 compatibility)
+        second_replaced_with_target_point_on_source: Intermediate point (s2) - the third piece in the 3-cycle (legacy)
+        natural_source_block: Source block (s1_block) - full block in the 3-cycle
+        target_block: Target block (t_block) - full block in the 3-cycle
+        second_block: Intermediate block (s2_block) - full block in the 3-cycle
         _secret: Internal cache secret for optimization (avoid re-computation on second call)
     """
     slice_name: SliceName
@@ -62,6 +69,9 @@ class CommutatorResult:
     natural_source: Point
     target_point: Point
     second_replaced_with_target_point_on_source: Point
+    natural_source_block: Block | None = None
+    target_block: Block | None = None
+    second_block: Block | None = None
     _secret: _InternalCommData | None = None
 
 
@@ -226,9 +236,20 @@ class CommunicatorHelper(SolverHelper):
         This is the PRIMARY API for communicator operations. It combines the functionality
         of get_natural_source_ltr() and do_communicator() into a single method.
 
+        MULTI-CELL BLOCK SUPPORT:
+        =========================
+        This method supports blocks of any valid size (not just 1x1). For multi-cell
+        blocks, all pieces in the block cycle together as a unit. The result includes:
+        - natural_source_block: Full block on source face (all cells)
+        - target_block: Full block on target face (all cells)
+        - second_block: Full block for the intermediate position (all cells)
+
+        Block validity is determined by is_valid_block(), which checks that the
+        block won't self-intersect after rotation during the commutator pattern.
+
         THE 3-CYCLE PATTERN:
         ===================
-        The block commutator moves exactly 3 pieces in a cycle: s1 → t → s2 → s1
+        The block commutator moves exactly 3 pieces (or blocks) in a cycle: s1 → t → s2 → s1
 
         ```
         SOURCE FACE          TARGET FACE
@@ -301,11 +322,17 @@ class CommunicatorHelper(SolverHelper):
         RETURNS:
         ========
         CommutatorResult containing:
-            - source_ltr: The computed source LTR position
+            - source_point: The computed source LTR position (first corner)
             - algorithm: The algorithm (None if dry_run=True)
-            - natural_source: Source point - NATURAL SOURCE position (after setup, not input source_block)
-            - target_point: Target point - the target block position
-            - xpt_on_source_after_un_setup: Intermediate point - computed via target rotation on source face
+            - natural_source: Source point (s1) - NATURAL SOURCE position for 3-cycle
+            - target_point: Target point (t) - target block first corner
+            - second_replaced_with_target_point_on_source: Intermediate point (s2)
+
+            For multi-cell blocks (new fields):
+            - natural_source_block: Block(s1_start, s1_end) - full source block
+            - target_block: Block(t_start, t_end) - full target block
+            - second_block: Block(s2_start, s2_end) - full intermediate block
+
             - _secret: Internal cache for optimization (do not use directly)
 
         NOTE on natural_source vs source_block parameter:
@@ -326,9 +353,8 @@ class CommunicatorHelper(SolverHelper):
         if source_block is None:
             source_block = target_block
 
-        # Validate blocks (currently supporting size 1 only)
-        assert source_block[0] == source_block[1]
-        assert target_block[0] == target_block[1]
+        # Multi-cell blocks are now supported - no 1x1 assertion needed
+        # Validation is done by is_valid_block() during search
 
         # Check if this pair is supported
         if not self.is_supported(source_face, target_face):
@@ -356,8 +382,9 @@ class CommunicatorHelper(SolverHelper):
         # Compute xp (s2) using correct algorithm:
         # xp = su'(translator(tf, sf, f(tp)))
 
-        # Step 1: Get tp (target point)
-        tp: Point = target_block[0]
+        # Step 1: Get tp (target point) - for multi-cell blocks, process both corners
+        tp_begin: Point = target_block[0]
+        tp_end: Point = target_block[1]
 
         # Step 2: Apply f (face rotation on target) to tp
         on_front_rotate_n, target_block_after_rotate = self._compute_rotate_on_target(
@@ -369,21 +396,34 @@ class CommunicatorHelper(SolverHelper):
         # Apply f(tp): rotate tp by on_front_rotate_n on the target face
         # the second point on target that will be moved to source
         cqr = self.cube.cqr
-        xpt = cqr.rotate_point_clockwise(tp, on_front_rotate_n) #supports negative
+        xpt_begin = cqr.rotate_point_clockwise(tp_begin, on_front_rotate_n)  # supports negative
+        xpt_end = cqr.rotate_point_clockwise(tp_end, on_front_rotate_n) if tp_begin != tp_end else xpt_begin
 
         # Step 3: xpt is on target_face, find where it maps to on source_face translate_target_from_source(
         # source_face, target_face, coord) finds where coord on target_face goes on source_face
         slice_name = internal_data.trans_data.slice_algorithm.whole_slice_alg.slice_name
-        xpt_on_source = Face2FaceTranslator.translate_target_from_source(
-            target_face, source_face, xpt, slice_name
+        xpt_on_source_begin = Face2FaceTranslator.translate_target_from_source(
+            target_face, source_face, xpt_begin, slice_name
         )
+        xpt_on_source_end = Face2FaceTranslator.translate_target_from_source(
+            target_face, source_face, xpt_end, slice_name
+        ) if tp_begin != tp_end else xpt_on_source_begin
 
         # Step 4: Apply su' (inverse setup) to get final xp in original coordinates
         source_setup_n_rotate = self._find_rotation_idx(source_point, natural_source)
 
-        # undo the setup  #supports negative
-        xpt_on_source_after_un_setup = Point(*cqr.rotate_point_clockwise(xpt_on_source,
-                                                                  - source_setup_n_rotate))
+        # undo the setup - supports negative
+        xpt_on_source_after_un_setup = Point(*cqr.rotate_point_clockwise(xpt_on_source_begin,
+                                                                  -source_setup_n_rotate))
+        xpt_on_source_after_un_setup_end = Point(*cqr.rotate_point_clockwise(xpt_on_source_end,
+                                                                  -source_setup_n_rotate)) if tp_begin != tp_end else xpt_on_source_after_un_setup
+
+        # Build the full second_block for multi-cell blocks
+        second_block_result = Block(xpt_on_source_after_un_setup, xpt_on_source_after_un_setup_end)
+
+        # Build the natural_source_block (accounting for source setup rotation)
+        # The natural_source_block is the block AFTER source setup rotation
+        natural_source_block_result = internal_data.natural_source_block
         # # su' rotates counterclockwise by source_setup_n_rotate (inverse of clockwise)
         # for _ in range(source_setup_n_rotate):
         #     xpt_on_source_after_un_setup = cqr.rotate_point_counterclockwise(xpt_on_source_after_un_setup)
@@ -462,6 +502,9 @@ class CommunicatorHelper(SolverHelper):
             natural_source=natural_source,
             target_point=target_point,
             second_replaced_with_target_point_on_source=xpt_on_source_after_un_setup,
+            natural_source_block=natural_source_block_result,
+            target_block=target_block,
+            second_block=second_block_result,
             _secret=None  # Don't cache after execution
         )
 
@@ -732,8 +775,7 @@ class CommunicatorHelper(SolverHelper):
         if source_face is target_face:
             raise ValueError("Source and target must be different faces")
 
-        # currently we support  only blockof size 1
-        assert target_block[0] == target_block[1]
+        # Multi-cell blocks are now supported
 
         # Check if this pair is supported
         if not self.is_supported(source_face, target_face):
@@ -741,8 +783,8 @@ class CommunicatorHelper(SolverHelper):
                 f"Face pair ({source_face}, {target_face}) not yet implemented"
             )
 
-        # now we assume block of size 1
         target_point_begin: Point = target_block[0]
+        target_point_end: Point = target_block[1]
 
         # translate_source_from_target returns list (1 for adjacent, 2 for opposite faces)
         all_results: list[FaceTranslationResult] = Face2FaceTranslator.translate_source_from_target(
@@ -752,8 +794,32 @@ class CommunicatorHelper(SolverHelper):
         translation_result: FaceTranslationResult = self._select_translation_result(all_results)
 
         # source_coord is on the slice_algorithm, not directly on FaceTranslationResult
-        source_coord = translation_result.slice_algorithm.source_coord
-        return _InternalCommData(Point(*source_coord), translation_result)
+        source_coord_begin = Point(*translation_result.slice_algorithm.source_coord)
+
+        # For multi-cell blocks, translate the second corner as well
+        if target_point_begin != target_point_end:
+            # Translate the second corner using the same slice
+            # We need to find the result that uses the same slice as the first corner
+            selected_slice_name = translation_result.slice_algorithm.whole_slice_alg.slice_name
+            all_results_end: list[FaceTranslationResult] = Face2FaceTranslator.translate_source_from_target(
+                target_face, source_face, target_point_end
+            )
+            # Find the result with matching slice name
+            matching_results = [
+                r for r in all_results_end
+                if r.slice_algorithm.whole_slice_alg.slice_name == selected_slice_name
+            ]
+            if not matching_results:
+                raise InternalSWError(
+                    f"No matching slice for second corner: {target_point_end} with slice {selected_slice_name}"
+                )
+            source_coord_end = Point(*matching_results[0].slice_algorithm.source_coord)
+        else:
+            # 1x1 block - both corners are the same
+            source_coord_end = source_coord_begin
+
+        natural_source_block = Block(source_coord_begin, source_coord_end)
+        return _InternalCommData(source_coord_begin, natural_source_block, translation_result)
 
     def _compute_rotate_on_target(self, cube: Cube,
                                   face_name: FaceName,
