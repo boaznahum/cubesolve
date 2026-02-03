@@ -33,6 +33,7 @@ from cube.domain.model._elements import EdgePosition
 from cube.utils.Cache import CacheManager
 
 if TYPE_CHECKING:
+    from cube.domain.model import EdgeWing
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.domain.model.Slice import Slice
@@ -440,6 +441,63 @@ class _SizedCubeLayout(SizedCubeLayout):
 
         from cube.domain.exceptions.InternalSWError import InternalSWError
         raise InternalSWError(f"Unknown edge pair: {from_position} -> {to_position}")
+
+    # =========================================================================
+    # Wing Index Mapping (internal edge slice indices)
+    # =========================================================================
+
+    def map_wing_index_by_name(self, from_edge_name: "EdgeName",
+                               to_edge_name: "EdgeName", wing_index: int) -> int:
+        """
+        Map wing internal index from one edge to another on the same face.
+
+        See SizedCubeLayout.map_wing_index_by_name() for full documentation.
+        """
+        if from_edge_name == to_edge_name:
+            return wing_index
+
+        cube = self._cube
+
+        from_edge = cube.edge(from_edge_name)
+        to_edge = cube.edge(to_edge_name)
+        on_face = from_edge.single_shared_face(to_edge)
+        assert on_face is not None
+
+        from_face_ltr_index = from_edge.get_face_ltr_index_from_edge_slice_index(on_face, wing_index)
+
+        to_face_ltr_index = self.map_wing_face_ltr_index_by_name(from_edge_name, to_edge_name, from_face_ltr_index)
+
+        to_wing_internal_index = to_edge.get_edge_slice_index_from_face_ltr_index(on_face, to_face_ltr_index)
+
+        return to_wing_internal_index
+
+    def map_wing_index_by_wing(self, from_wing: "EdgeWing", to_edge: "Edge") -> int:
+        """
+        Map wing internal index from a wing to another edge on the same face.
+
+        See SizedCubeLayout.map_wing_index_by_wing() for full documentation.
+        """
+        from_edge_name = from_wing.parent.name
+        to_edge_name = to_edge.name
+        wing_index = from_wing.index
+
+        if from_wing.parent is to_edge:
+            return wing_index  # same edge, same index
+
+        assert from_wing.parent.single_shared_face(to_edge) is not None
+
+        return self.map_wing_index_by_name(from_edge_name, to_edge_name, wing_index)
+
+    def map_wing_index_to_edge_name(self, from_wing: "EdgeWing", to_edge_name: "EdgeName") -> int:
+        """
+        Map wing internal index from a wing to another edge by name.
+
+        See SizedCubeLayout.map_wing_index_to_edge_name() for full documentation.
+        """
+        from_edge_name = from_wing.parent.name
+        wing_index = from_wing.index
+
+        return self.map_wing_index_by_name(from_edge_name, to_edge_name, wing_index)
 
 
 __all__ = ['_SizedCubeLayout']

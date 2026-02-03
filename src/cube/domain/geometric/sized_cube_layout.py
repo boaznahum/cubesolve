@@ -36,7 +36,9 @@ if TYPE_CHECKING:
     from cube.domain.geometric.FRotation import FUnitRotation
     from cube.domain.model._elements import EdgePosition
     from cube.domain.model._part import EdgeName
+    from cube.domain.model.Edge import Edge
     from cube.domain.model.Face import Face
+    from cube.domain.model.PartSlice import EdgeWing
     from cube.domain.model.Slice import Slice
     from cube.domain.model.SliceName import SliceName
 
@@ -309,5 +311,56 @@ class SizedCubeLayout(Protocol):
 
         Returns:
             Corresponding LTR index on target edge
+        """
+        ...
+
+    def map_wing_index_by_name(self, from_edge_name: "EdgeName",
+                               to_edge_name: "EdgeName", wing_index: int) -> int:
+        """
+        Map wing internal index from one edge to another on the same face.
+
+        Given the internal wing index on the source edge, returns the corresponding
+        internal wing index on the target edge, assuming the source edge is rotated
+        into the target edge position.
+
+        Both edges must share a common face.
+
+        Args:
+            from_edge_name: Source edge name (e.g., EdgeName.FL, FU, FR, FD)
+            to_edge_name: Target edge name
+            wing_index: Internal wing index on source edge (0-based)
+
+        Returns:
+            Corresponding internal wing index on target edge
+        """
+        ...
+
+    def map_wing_index_by_wing(self, from_wing: "EdgeWing", to_edge: "Edge") -> int:
+        """
+        Map wing internal index from a wing to another edge on the same face.
+
+        Convenience method that extracts edge names from the wing and edge objects.
+
+        Args:
+            from_wing: Source wing
+            to_edge: Target edge (must share a face with from_wing's edge)
+
+        Returns:
+            Corresponding internal wing index on target edge
+        """
+        ...
+
+    def map_wing_index_to_edge_name(self, from_wing: "EdgeWing", to_edge_name: "EdgeName") -> int:
+        """
+        Map wing internal index from a wing to another edge by name.
+
+        Convenience method that extracts edge name from the wing object.
+
+        Args:
+            from_wing: Source wing
+            to_edge_name: Target edge name
+
+        Returns:
+            Corresponding internal wing index on target edge
         """
         ...
