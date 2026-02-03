@@ -889,6 +889,20 @@ class CommunicatorHelper(SolverHelper):
         """
         return (abs(rc2[0] - rc1[0]) + 1) * (abs(rc2[1] - rc1[1]) + 1)
 
+    @staticmethod
+    def block_size2(rc1: tuple[int, int], rc2: tuple[int, int]) -> tuple[int, int]:
+        """
+        Calculate the dimensions of a block (rows, cols).
+
+        Args:
+            rc1: First corner (row, col)
+            rc2: Second corner (row, col)
+
+        Returns:
+            Tuple of (num_rows, num_cols)
+        """
+        return (abs(rc2[0] - rc1[0]) + 1), (abs(rc2[1] - rc1[1]) + 1)
+
     def _rotate_point_clockwise(self, r: int, c: int) -> Point:
         """
         Rotate a point 90 degrees clockwise on the center grid.
