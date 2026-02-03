@@ -541,7 +541,6 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         assert self._is_layer3_edges_solved(th)
 
-        l3_tracker = self._get_layer1_tracker(th)
         if self._is_layer3_cross_solved(th):
             return
 

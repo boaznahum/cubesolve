@@ -18,8 +18,6 @@ from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
-from gui.test_checkmark_markers import test_checkmark_markers_on_centers
-from performance.test_slice_cache_perf import test_slice_only_rotations
 
 
 class _LBLL3Edges(SolverHelper):
@@ -105,11 +103,11 @@ class _LBLL3Edges(SolverHelper):
             # we can use RF' method to solve then
 
             for _ in range(2): # i still dont know why 2
-                with self._logger.tab(lambda : f"Solving first edge"):
+                with self._logger.tab(lambda : "Solving first edge"):
                     self._solve_left_edge(l3_tracker)
 
                 self.op.play(Algs.Z * 2)
-                with self._logger.tab(lambda : f"Solving second opposite edge"):
+                with self._logger.tab(lambda : "Solving second opposite edge"):
                     self._solve_left_edge(l3_tracker)
 
                 self.op.play(Algs.Z * 2)
