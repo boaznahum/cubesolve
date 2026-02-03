@@ -1,4 +1,4 @@
-# Commutator Mathematics & CommunicatorHelper Implementation
+# Commutator Mathematics & CommutatorHelper Implementation
 
 ## Mathematical Foundation
 
@@ -93,7 +93,7 @@ All other pieces remain undisturbed.
 
 ---
 
-## How CommunicatorHelper Implements This
+## How CommutatorHelper Implements This
 
 ### The Algorithm (3 Phases)
 
@@ -176,11 +176,11 @@ So we can cache this expensive computation:
 
 ```python
 # First call (dry_run=True)
-dry_result = execute_communicator(..., dry_run=True)
+dry_result = execute_commutator(..., dry_run=True)
 # Stores: translation_result in dry_result._secret
 
 # Subsequent calls (dry_run=False, _cached_secret=dry_result)
-execute_communicator(..., _cached_secret=dry_result)
+execute_commutator(..., _cached_secret=dry_result)
 # Reuses: translation_result, avoiding redundant calculation
 ```
 
@@ -198,7 +198,7 @@ This is why we see **20-45% performance improvement** - we're eliminating redund
 | **Preservation** | Pieces outside overlap untouched | Cage preserved (edges/corners) |
 | **Optimization** | Reuse overlap computation | Cache Face2Face translation |
 
-The CommunicatorHelper is a direct implementation of the mathematical principles described in your tutorial and the authoritative sources, combined with performance optimizations that leverage the mathematical structure.
+The CommutatorHelper is a direct implementation of the mathematical principles described in your tutorial and the authoritative sources, combined with performance optimizations that leverage the mathematical structure.
 
 ---
 

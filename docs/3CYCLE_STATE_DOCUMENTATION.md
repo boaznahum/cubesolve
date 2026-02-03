@@ -22,7 +22,7 @@ t  = (0, 0) on FRONT face - has piece B
 s2 = (0, 2) on UP face   - has piece C
 ```
 
-**After communicator execution:**
+**After commutator execution:**
 ```
 s1 = (0, 0) on UP face   - NOW has piece C (moved from s2)
 t  = (0, 0) on FRONT face - NOW has piece A (moved from s1)
@@ -36,7 +36,7 @@ s2 = (0, 2) on UP face   - NOW has piece B (moved from t)
 
 ## How the Algorithm Implements the 3-Cycle
 
-### Location: CommunicatorHelper.execute_communicator() (line 270-328)
+### Location: CommutatorHelper.execute_commutator() (line 270-328)
 
 The commutator sequence is built as:
 
@@ -90,7 +90,7 @@ This is the **block commutator** formula: `[M', F]²` applied to the selected bl
    if preserve_state and source_setup_n_rotate:
        self.op.play(source_setup_alg.prime)  # Undo source rotation
    ```
-   - After communicator, if source was rotated, undo it
+   - After commutator, if source was rotated, undo it
    - This preserves paired edges on source face
 
 ## Verification: The 3-Cycle is Working
@@ -99,13 +99,13 @@ This is the **block commutator** formula: `[M', F]²` applied to the selected bl
 
 **Test Case: t=(0,1)**
 
-**Before communicator:**
+**Before commutator:**
 - s1=(0,1) on UP: marker "s1_c1b4" placed
 - t=(0,1) on FRONT: marker "t_837b" placed
 - s2=(1,0) on FRONT: marker "s2_cw_819d" placed
 - s2=(1,2) on FRONT: marker "s2_ccw_ad7f" placed
 
-**After communicator execution:**
+**After commutator execution:**
 
 Console output shows:
 ```
@@ -128,7 +128,7 @@ Searching ALL FACES for t_837b...
 ```
 Initial:     s1_piece at s1, t_piece at t, s2_piece at s2
 
-            +------ execute_communicator ------+
+            +------ execute_commutator ------+
             |                                  |
             v                                  v
 

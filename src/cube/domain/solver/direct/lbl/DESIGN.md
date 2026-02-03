@@ -400,7 +400,7 @@ Ring for slice 1 on 5x5 (row 1 of each side face):
 - Rotates cube to access all source faces
 - Uses `B[1:n]` rotations which DON'T disturb D corners/edges
 
-**Good news:** The `_block_communicator()` and `_swap_slice()` methods use inner slices and F rotations, which preserve D face.
+**Good news:** The `_block_commutator()` and `_swap_slice()` methods use inner slices and F rotations, which preserve D face.
 
 **Approach:** Use `preserve_cage=True` mode which already exists in NxNCenters for cage solver.
 
@@ -513,7 +513,7 @@ def _solve_all_middle_slices(self, th: FacesTrackerHolder) -> None:
    ```
 
 4. **Ring-preserving commutator:**
-   - Adapt `_block_communicator()` to work with row constraints
+   - Adapt `_block_commutator()` to work with row constraints
    - Ensure moves don't disturb completed slices (rows below current)
 
 #### Implementation Order

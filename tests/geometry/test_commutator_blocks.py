@@ -1,13 +1,13 @@
 """
-Tests for CommunicatorHelper block operations.
+Tests for CommutatorHelper block operations.
 
 This test file validates:
 1. Block searching - finding blocks sorted by size (largest first)
 2. Block validation - ensuring blocks won't intersect after rotation
 3. Multi-cell block commutators - blocks larger than 1x1
 
-Note: Migration tests that compared old NxNCenters with new CommunicatorHelper
-have been converted to tests that verify the CommunicatorHelper implementation.
+Note: Migration tests that compared old NxNCenters with new CommutatorHelper
+have been converted to tests that verify the CommutatorHelper implementation.
 """
 
 import random
@@ -19,8 +19,8 @@ from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.Color import Color
-from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
-from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
+from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
+from cube.domain.solver.common.big_cube.commutator._supported_faces import _get_supported_pairs
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 from cube.domain.solver.Solvers import Solvers
 
@@ -72,10 +72,10 @@ def _cage(app: AbstractApp) -> CageNxNSolver:
     return solver
 
 
-def get_new_comm_helper(app: AbstractApp) -> CommunicatorHelper:
-    """Get new CommunicatorHelper instance."""
+def get_new_comm_helper(app: AbstractApp) -> CommutatorHelper:
+    """Get new CommutatorHelper instance."""
     solver = _cage(app)
-    return CommunicatorHelper(solver)
+    return CommutatorHelper(solver)
 
 
 # =============================================================================
@@ -113,12 +113,12 @@ def blocks_equal(b1: Block, b2: Block) -> bool:
 
 
 # =============================================================================
-# SECTION 1: Block Search Tests - CommunicatorHelper
+# SECTION 1: Block Search Tests - CommutatorHelper
 # =============================================================================
 
-class TestCommunicatorBlockSearch:
+class TestCommutatorBlockSearch:
     """
-    Tests for CommunicatorHelper.search_big_block() functionality.
+    Tests for CommutatorHelper.search_big_block() functionality.
 
     These tests verify the block search implementation works correctly.
     """
@@ -141,7 +141,7 @@ class TestCommunicatorBlockSearch:
         face = cube.front
         color = face.color
 
-        # Get blocks from CommunicatorHelper
+        # Get blocks from CommutatorHelper
         blocks = comm_helper.search_big_block(face, color)
 
         # Verify implementation works and returns valid results
@@ -178,7 +178,7 @@ class TestCommunicatorBlockSearch:
         face = cube.face(face_name)
         color = face.color
 
-        # Get blocks from CommunicatorHelper
+        # Get blocks from CommutatorHelper
         blocks = comm_helper.search_big_block(face, color)
 
         # Verify implementation returns valid results
@@ -213,7 +213,7 @@ class TestCommunicatorBlockSearch:
             face = cube.face(face_name)
             color = face.color
 
-            # Get blocks from CommunicatorHelper
+            # Get blocks from CommutatorHelper
             blocks = comm_helper.search_big_block(face, color)
 
             # blocks can be empty list if no matching colors
@@ -414,7 +414,7 @@ class TestBlockValidation:
         ]
 
         for rc1, rc2, expected_size in test_cases:
-            actual_size = CommunicatorHelper.block_size(rc1, rc2)
+            actual_size = CommutatorHelper.block_size(rc1, rc2)
             assert actual_size == expected_size, \
                 f"Block {rc1}->{rc2} should have size {expected_size}, got {actual_size}"
 
@@ -439,7 +439,7 @@ class TestMultiCellBlockCommutator:
         Plan:
         1. Iterate over all points on center face
         2. For each point, find the largest block starting at that point
-        3. Pass the block to execute_communicator to get s1_block, t_block, s2_block
+        3. Pass the block to execute_commutator to get s1_block, t_block, s2_block
         4. Place unique markers on all cells in all 3 blocks
         5. Execute the commutator
         6. Verify cycle: s1_block → t_block, t_block → s2_block, s2_block → s1_block
@@ -490,7 +490,7 @@ class TestMultiCellBlockCommutator:
                 source_face = cube.up
 
                 # Get the 3-cycle blocks using dry_run
-                dry_result = comm_helper.execute_communicator(
+                dry_result = comm_helper.execute_commutator(
                     source_face=source_face,
                     target_face=target_face,
                     target_block=target_block,
@@ -557,7 +557,7 @@ class TestMultiCellBlockCommutator:
                     s2_markers[idx] = marker_value
 
                 # Execute the commutator (source_block = natural_source_block for this test)
-                comm_helper.execute_communicator(
+                comm_helper.execute_commutator(
                     source_face=source_face,
                     target_face=target_face,
                     target_block=target_block,
@@ -653,10 +653,10 @@ class TestMultiCellBlockCommutator:
 
         # Take the largest block
         _, target_block = large_blocks[0]
-        block_size = CommunicatorHelper.block_size(target_block[0], target_block[1])
+        block_size = CommutatorHelper.block_size(target_block[0], target_block[1])
 
         # Get the 3-cycle blocks
-        dry_result = comm_helper.execute_communicator(
+        dry_result = comm_helper.execute_commutator(
             source_face=source_face,
             target_face=target_face,
             target_block=target_block,
@@ -721,7 +721,7 @@ class TestMultiCellBlockCommutator:
             s2_markers[idx] = marker_value
 
         # Execute commutator
-        comm_helper.execute_communicator(
+        comm_helper.execute_commutator(
             source_face=source_face,
             target_face=target_face,
             target_block=target_block,

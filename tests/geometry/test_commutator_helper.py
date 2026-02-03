@@ -1,12 +1,12 @@
 """
-Tests for CommunicatorHelper.
+Tests for CommutatorHelper.
 
 Test structure:
 - Iterate all source/target face pairs
 - For each (y, x) position in LTR coordinates
 - For each of 4 rotations, get source position
 - Set a unique attribute on source piece
-- Call the communicator helper
+- Call the commutator helper
 - Verify attribute moved to target, not on source
 - Verify cube state preserved (edges in position)
 
@@ -30,8 +30,8 @@ from cube.domain.geometric.cube_boy import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
-from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
-from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
+from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
+from cube.domain.solver.common.big_cube.commutator._supported_faces import _get_supported_pairs
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 from cube.domain.solver.Solvers import Solvers
 
@@ -200,20 +200,20 @@ def test_create_helper(cube_size: int) -> None:
     """Create a cube and instantiate the helper via a solver."""
     app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
     solver = _cage(app)
-    helper = CommunicatorHelper(solver)
+    helper = CommutatorHelper(solver)
 
     assert helper.n_slices == cube_size - 2
 
 
 @pytest.mark.parametrize("cube_size", range(3, 9))  # All cube sizes
 @pytest.mark.parametrize("face_pair", SUPPORTED_PAIRS, ids=_face_pair_id)
-def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
+def test_commutator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, FaceName]) -> None:
     """
-    Test communicator for a specific face pair using the new execute_communicator API.
+    Test commutator for a specific face pair using the new execute_commutator API.
 
     VALIDATES THE 3-CYCLE PATTERN: s1 → t → s2 → s1
     ==================================================
-    The block communicator moves exactly 3 pieces in a cycle:
+    The block commutator moves exactly 3 pieces in a cycle:
     - s1: source point (natural source position)
     - t: target point (target block position)
     - s2: intermediate point (computed via target rotation on source face)
@@ -221,9 +221,9 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
     For the given source/target pair:
     - Iterate all translation results (1 for adjacent, 2 for opposite faces)
     - Iterate all (ltr_y, ltr_x) positions in LTR coordinates
-    - For each of 4 rotations, compute source position via execute_communicator (dry_run)
+    - For each of 4 rotations, compute source position via execute_commutator (dry_run)
     - Place unique attribute on source piece
-    - Execute communicator with new API
+    - Execute commutator with new API
     - VERIFY 3-CYCLE POINTS: s1, t, s2 are correctly computed
     - Verify attribute moved from s1 to t (via s2)
     - Verify cube state preserved
@@ -237,7 +237,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
 
     app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
     solver = _cage(app)
-    helper = CommunicatorHelper(solver)
+    helper = CommutatorHelper(solver)
     cube = app.cube
     n_slices = cube.n_slices
 
@@ -259,7 +259,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
     # to ensure no bugs are hidden by lucky ordering.
     for result_index in range(result_count):
         # Set the class variable to select which result to use
-        CommunicatorHelper._test_result_index = result_index
+        CommutatorHelper._test_result_index = result_index
 
         for ltr_y in range(n_slices):
             for ltr_x in range(n_slices):
@@ -272,7 +272,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
 
                 target_point = (ltr_y, ltr_x)
 
-                # Use NEW API: execute_communicator with dry_run to get natural source
+                # Use NEW API: execute_commutator with dry_run to get natural source
                 # and the 3-cycle points (s1, t, s2) WITHOUT modifying the cube
                 target_block = (target_point, target_point)
 
@@ -281,7 +281,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     cube = app.cube
                     cube.reset()
                     solver = _cage(app)
-                    helper = CommunicatorHelper(solver)
+                    helper = CommutatorHelper(solver)
 
                     # Re-get faces from reset cube
                     source_face = cube.face(source_face_name)
@@ -290,7 +290,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     target_block = (target_point, target_point)
 
                     # Get the cycle points from dry_run
-                    dry_result = helper.execute_communicator(
+                    dry_result = helper.execute_commutator(
                         source_face=source_face,
                         target_face=target_face,
                         target_block=target_block,
@@ -336,9 +336,9 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
                     second_source_point_piece.moveable_attributes[marker_second_key] = marker_second_value
 
                     # ================================================================
-                    # EXECUTE COMMUNICATOR
+                    # EXECUTE COMMUTATOR
                     # ================================================================
-                    result = helper.execute_communicator(
+                    result = helper.execute_commutator(
                         source_face=source_face,
                         target_face=target_face,
                         target_block=target_block,
@@ -508,7 +508,7 @@ def test_communicator_supported_pairs(cube_size: int, face_pair: tuple[FaceName,
 
 
 @pytest.mark.parametrize("cube_size", [5])
-def test_communicator_raises_on_incompatible_blocks(cube_size: int) -> None:
+def test_commutator_raises_on_incompatible_blocks(cube_size: int) -> None:
     """
     Test that ValueError is raised when source block cannot be mapped
     to target block with 0-3 rotations.
@@ -518,7 +518,7 @@ def test_communicator_raises_on_incompatible_blocks(cube_size: int) -> None:
     """
     app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
     solver = _cage(app)
-    helper = CommunicatorHelper(solver)
+    helper = CommutatorHelper(solver)
     cube = app.cube
 
     source_face = cube.up
@@ -532,7 +532,7 @@ def test_communicator_raises_on_incompatible_blocks(cube_size: int) -> None:
     source_block = ((0, 1), (0, 1))  # Edge in LTR (different orbit)
 
     with pytest.raises(ValueError, match="Cannot align"):
-        helper.do_communicator(
+        helper.do_commutator(
             source_face=source_face,
             target_face=target_face,
             target_block=target_block,

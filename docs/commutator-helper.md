@@ -1,7 +1,7 @@
-# Communicator Helper - Development Tracking
+# Commutator Helper - Development Tracking
 
 > **INSTRUCTIONS FOR CLAUDE (future sessions):**
-> This document tracks the development of a CommunicatorHelper class for big cube solving.
+> This document tracks the development of a CommutatorHelper class for big cube solving.
 > When continuing work on this feature:
 > 1. Read this file first to understand goals and progress
 > 2. Update the "Current Status" and "Progress Log" sections after each session
@@ -14,7 +14,7 @@
 
 ## Goal
 
-Create a `CommunicatorHelper` class that provides utilities for working with the **block commutator algorithm** used to solve center pieces on big cubes (NxN, where N > 3).
+Create a `CommutatorHelper` class that provides utilities for working with the **block commutator algorithm** used to solve center pieces on big cubes (NxN, where N > 3).
 
 The core commutator is: `[M', F, M', F', M, F, M, F']`
 
@@ -24,7 +24,7 @@ The core commutator is: `[M', F, M', F', M, F, M, F']`
 
 ### Key Differences: Old vs New Helper
 
-| Aspect | Old (NxNCenters) | New (CommunicatorHelper) |
+| Aspect | Old (NxNCenters) | New (CommutatorHelper) |
 |--------|------------------|--------------------------|
 | Target face | Front only | Any face |
 | Source face | Up or Back only | Any face (different from target) |
@@ -38,7 +38,7 @@ The core commutator is: `[M', F, M', F', M, F, M, F']`
 2. **Block specification**:
    - Block on source and destination
    - If source block not given, assumes same coordinates as target block
-3. **No face positioning**: The helper does the communicator WITHOUT first rotating to position faces - this is the core challenge
+3. **No face positioning**: The helper does the commutator WITHOUT first rotating to position faces - this is the core challenge
 4. **Cage preservation**: If requested, preserve cube state (faces and edges return to original position)
 5. **Coordinate system**: **Bottom-up, Left-to-right** - this is important!
 6. **Rotation mapping**: If source block cannot be mapped to target block by 0..3 rotations, throw exception
@@ -92,8 +92,8 @@ for source_face in all_cube_faces:
 ### Phase 1: Foundation (COMPLETE)
 - [x] Explore existing test structure and patterns
 - [x] Create this tracking document
-- [x] Create `CommunicatorHelper` class skeleton
-- [x] Create test file `tests/solvers/test_communicator_helper.py`
+- [x] Create `CommutatorHelper` class skeleton
+- [x] Create test file `tests/solvers/test_commutator_helper.py`
 - [x] Instantiate 7x7 cube in test
 - [x] Instantiate helper in test and verify basic functionality
 
@@ -108,8 +108,8 @@ for source_face in all_cube_faces:
 - [x] Implement get_expected_source_ltr() for face pair mapping
 - [x] Helper handles all coordinate translations internally
 
-### Phase 4: Communicator Implementation (COMPLETE for Front target)
-- [x] Implement main communicator method with LTR coordinates
+### Phase 4: Commutator Implementation (COMPLETE for Front target)
+- [x] Implement main commutator method with LTR coordinates
 - [x] Handle Up→Front and Back→Front pairs
 - [x] Handle Down→Front pair
 - [x] Handle Left→Front and Right→Front pairs (E-based algorithm)
@@ -129,7 +129,7 @@ for source_face in all_cube_faces:
 
 ### Phase 6: Integration
 - [ ] Ensure all existing tests still pass
-- [ ] Optional: Refactor `NxNCenters.py` to use `CommunicatorHelper`
+- [ ] Optional: Refactor `NxNCenters.py` to use `CommutatorHelper`
 
 ---
 
@@ -177,7 +177,7 @@ M rotations:  M' + M' + M + M = 0 (edges preserved in reduction mode)
    - Row increases downward
    - Column increases rightward
 
-### New Coordinate System (CommunicatorHelper)
+### New Coordinate System (CommutatorHelper)
 
 **Bottom-Up, Left-to-Right (BULR):**
 - `(0,0)` is at **bottom-left**
@@ -270,7 +270,7 @@ The new helper must handle ALL 30 face pairs (6 faces × 5 other faces).
 ```
 src/cube/domain/solver/common/big_cube/
 ├── NxNCenters.py           # Old - solves centers (uses commutator)
-├── CommunicatorHelper.py   # NEW - general commutator utilities
+├── CommutatorHelper.py   # NEW - general commutator utilities
 ├── NxNEdges.py             # Existing - solves edges
 ├── ...
 ```
@@ -290,7 +290,7 @@ The helper is a standalone class that:
 - Explored codebase structure
 - Analyzed `NxNCenters.py` in detail (1487 lines)
 - Created tracking document
-- Created `CommunicatorHelper` class skeleton
+- Created `CommutatorHelper` class skeleton
 - Created basic test file
 
 ### Session 2 (2025-12-26)
@@ -300,13 +300,13 @@ The helper is a standalone class that:
 - Key insight: NO face positioning - this is the challenge
 - Documented coordinate translation methods from CubeQueries2
 - Documented rotation usage from old helper (_search_block pattern)
-- **Wrote comprehensive test** `test_communicator_all_face_pairs`:
+- **Wrote comprehensive test** `test_commutator_all_face_pairs`:
   - Iterates all 30 face pairs (6×5)
   - Tests all (y, x) positions in LTR coordinates
   - Tests all 4 rotations for source positions
   - Sets unique c_attribute on source, verifies it moves to target
   - Verifies cube state preserved (edges/corners in position)
-- Test calls `helper.do_communicator()` which needs to be implemented
+- Test calls `helper.do_commutator()` which needs to be implemented
 - **Key discovery: LTR ↔ Index translation using edge methods!**
   - Use `edge_left` for Y translation
   - Use `edge_bottom` for X translation
@@ -319,7 +319,7 @@ The helper is a standalone class that:
 - **Added helper announcement methods**:
   - `get_supported_pairs()` - returns list of (source, target) face pairs
   - `is_supported(source, target)` - checks if a specific pair is supported
-- **Implemented do_communicator() for Up→Front and Back→Front**:
+- **Implemented do_commutator() for Up→Front and Back→Front**:
   - Full LTR coordinate support - helper handles all translations internally
   - Added `ltr_to_index()` and `index_to_ltr()` translation methods
   - Added `rotate_ltr_point()` for rotating LTR coordinates
@@ -331,8 +331,8 @@ The helper is a standalone class that:
   - Test skips center positions using `_is_center_position()` helper
 - **All tests pass**:
   - ✅ `test_create_helper[5,7]` - PASSED
-  - ✅ `test_communicator_supported_pairs[5,7]` - PASSED (all positions, all rotations)
-  - ✅ `test_communicator_simple_case[5]` - PASSED
+  - ✅ `test_commutator_supported_pairs[5,7]` - PASSED (all positions, all rotations)
+  - ✅ `test_commutator_simple_case[5]` - PASSED
 - Updated class docstring to document LTR coordinate API
 
 ### Session 4 (2025-12-26)
@@ -461,7 +461,7 @@ On 6x6 cubes (4x4 center grid), the **inner 2x2 positions** fail:
 2. ⚠️ Fix even cube inner 2x2 position issue
 3. Consider adding other target faces (currently only Front is supported)
 4. Integration: ensure existing tests still pass
-5. Optional: Refactor NxNCenters to use CommunicatorHelper
+5. Optional: Refactor NxNCenters to use CommutatorHelper
 
 ---
 
@@ -469,15 +469,15 @@ On 6x6 cubes (4x4 center grid), the **inner 2x2 positions** fail:
 
 | File | Purpose |
 |------|---------|
-| `docs/communicator-helper.md` | This tracking document |
-| `src/cube/domain/solver/common/big_cube/CommunicatorHelper.py` | The helper class |
-| `tests/solvers/test_communicator_helper.py` | Test file |
+| `docs/commutator-helper.md` | This tracking document |
+| `src/cube/domain/solver/common/big_cube/CommutatorHelper.py` | The helper class |
+| `tests/solvers/test_commutator_helper.py` | Test file |
 
 ---
 
 ## References
 
-- `NxNCenters.py:890-1041` - `_block_communicator()` - the old algorithm
+- `NxNCenters.py:890-1041` - `_block_commutator()` - the old algorithm
 - `NxNCenters.py:1282-1308` - `_point_on_source/_point_on_target`
 - `Cube.py:570-571` - `inv()` function definition
 - `Face.py` - Face class definition

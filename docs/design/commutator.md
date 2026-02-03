@@ -1,12 +1,12 @@
 # Block Commutator for NxN Cubes
 
-**Module:** `src/cube/domain/solver/common/big_cube/commun/CommunicatorHelper.py`
+**Module:** `src/cube/domain/solver/common/big_cube/commutator/CommutatorHelper.py`
 
 ---
 
-## What is CommunicatorHelper?
+## What is CommutatorHelper?
 
-**CommunicatorHelper** is a tool that moves center pieces from one face to another on big cubes (4x4, 5x5, etc.).
+**CommutatorHelper** is a tool that moves center pieces from one face to another on big cubes (4x4, 5x5, etc.).
 
 ```
 Example: Move center piece from UP to FRONT
@@ -99,7 +99,7 @@ This theorem is the foundation of center solving on big cubes: we use M-slice mo
 
 ## The Block Commutator Pattern
 
-For NxN cubes, the CommunicatorHelper uses this pattern:
+For NxN cubes, the CommutatorHelper uses this pattern:
 
 ```
 [m, F, m2, F', m', F, m2', F']
@@ -183,7 +183,7 @@ So corners return to their original positions after the commutator.
 
 ## Coordinate System
 
-The CommunicatorHelper uses **LTR (Left-to-Right)** coordinates:
+The CommutatorHelper uses **LTR (Left-to-Right)** coordinates:
 
 ```
 Looking at any face:
@@ -384,13 +384,13 @@ The `_is_inner_position()` method detects these cases.
 
 ---
 
-## CommunicatorHelper Method Reference
+## CommutatorHelper Method Reference
 
 ### Public API
 
 | Method | Purpose |
 |--------|---------|
-| `do_communicator()` | Execute commutator to move piece from source to target |
+| `do_commutator()` | Execute commutator to move piece from source to target |
 | `get_natural_source_ltr()` | Get expected source position for a target (debug) |
 | `ltr_to_index()` | Convert LTR coordinates to center index |
 | `index_to_ltr()` | Convert center index to LTR coordinates |
@@ -400,7 +400,7 @@ The `_is_inner_position()` method detects these cases.
 
 | Method | Purpose |
 |--------|---------|
-| `_do_communicator()` | Internal: compute translation data |
+| `_do_commutator()` | Internal: compute translation data |
 | `_find_rotation_idx()` | Find rotation to align actual→expected |
 | `_compute_rotate_on_target()` | Determine F or F' based on intersection |
 | `_get_slice_alg()` | Get slice algorithm for block position |
@@ -413,13 +413,13 @@ The `_is_inner_position()` method detects these cases.
 ## Usage Example
 
 ```python
-from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
+from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 
-helper = CommunicatorHelper(solver)
+helper = CommutatorHelper(solver)
 
 # Move piece from Up(1,1) to Front(1,1)
 target_block = ((1, 1), (1, 1))  # LTR coordinates (single point)
-helper.do_communicator(
+helper.do_commutator(
     source_face=cube.up,
     target_face=cube.front,
     target_block=target_block,

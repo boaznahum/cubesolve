@@ -1,5 +1,5 @@
 """
-Communicator Helper for NxN Big Cubes.
+Commutator Helper for NxN Big Cubes.
 
 See docs/design/commutator.md for full documentation with theory and diagrams.
 
@@ -28,20 +28,20 @@ from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverHelper import SolverHelper
-from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
+from cube.domain.solver.common.big_cube.commutator._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
 @dataclass(frozen=True)
 class _InternalCommData:
-    natural_source_coordinate: Point  # point on the source from where communicator will bring the data, before source setup alg
+    natural_source_coordinate: Point  # point on the source from where commutator will bring the data, before source setup alg
     natural_source_block: Block  # full block on source (for multi-cell blocks)
     trans_data: FaceTranslationResult
 
 
 @dataclass(frozen=True)
 class CommutatorResult:
-    """Result of execute_communicator method.
+    """Result of execute_commutator method.
 
     Contains both computed data (for dry_run) and execution algorithm (for actual execution).
     This result can be cached and reused to avoid redundant calculations.
@@ -53,7 +53,7 @@ class CommutatorResult:
     s1_block → t_block → s2_block → s1_block
 
     Attributes:
-        slice_name: that use in the communicator algorithm
+        slice_name: that use in the commutator algorithm
         source_point: The computed source LTR position (where the piece naturally is before setup)
         algorithm: The algorithm to execute (None if dry_run=True)
         natural_source: Source point (s1) - the first piece in the 3-cycle (legacy, for 1x1 compatibility)
@@ -76,7 +76,7 @@ class CommutatorResult:
     _secret: _InternalCommData | None = None
 
 
-class CommunicatorHelper(SolverHelper):
+class CommutatorHelper(SolverHelper):
     """
     Helper for the block commutator algorithm on NxN cubes.
 
@@ -95,7 +95,7 @@ class CommunicatorHelper(SolverHelper):
     Clients should NOT use index coordinates directly.
 
     Key methods:
-    - do_communicator(): Execute commutator with LTR block coordinates
+    - do_commutator(): Execute commutator with LTR block coordinates
     - get_expected_source_ltr(): Map target LTR to source LTR
     - rotate_ltr_on_face(): Rotate LTR on a face (physical rotation)
     - ltr_to_index() / index_to_ltr(): Coordinate translation
@@ -106,7 +106,7 @@ class CommunicatorHelper(SolverHelper):
     _test_result_index: int = 0
 
     def __init__(self, solver: SolverElementsProvider) -> None:
-        super().__init__(solver, "CommunicatorHelper")
+        super().__init__(solver, "CommutatorHelper")
 
     @property
     def n_slices(self) -> int:
@@ -196,14 +196,14 @@ class CommunicatorHelper(SolverHelper):
     ) -> Point:
         """
 
-        For debug only, it is done by the communicator
+        For debug only, it is done by the commutator
 
         Get the expected source LTR position for a given target LTR.
 
         Given a target LTR return the source on target that a single slice movemnt brinngs
         into target without source setup.
 
-        Before the communicator do the source setup algorithm
+        Before the commutator do the source setup algorithm
 
         This is where the source piece should be (before rotation) to move
         to the target position.
@@ -217,11 +217,11 @@ class CommunicatorHelper(SolverHelper):
             Expected source position in LTR on source face
         """
 
-        data = self._do_communicator(source, target, Block(target_ltr, target_ltr))
+        data = self._do_commutator(source, target, Block(target_ltr, target_ltr))
 
         return data.natural_source_coordinate
 
-    def execute_communicator(
+    def execute_commutator(
             self,
             source_face: Face,
             target_face: Face,
@@ -232,10 +232,10 @@ class CommunicatorHelper(SolverHelper):
             _cached_secret: CommutatorResult | None = None
     ) -> CommutatorResult:
         """
-        Unified communicator execution method with optional dry_run and optimization.
+        Unified commutator execution method with optional dry_run and optimization.
 
-        This is the PRIMARY API for communicator operations. It combines the functionality
-        of get_natural_source_ltr() and do_communicator() into a single method.
+        This is the PRIMARY API for commutator operations. It combines the functionality
+        of get_natural_source_ltr() and do_commutator() into a single method.
 
         MULTI-CELL BLOCK SUPPORT:
         =========================
@@ -277,7 +277,7 @@ class CommunicatorHelper(SolverHelper):
         ===================================
 
         Step 1: Dry run to get natural source position and 3-cycle points
-            >>> result = helper.execute_communicator(
+            >>> result = helper.execute_commutator(
             ...     source_face=cube.up,
             ...     target_face=cube.front,
             ...     target_block=((1,1), (1,1)),
@@ -298,7 +298,7 @@ class CommunicatorHelper(SolverHelper):
             ...     source_point = cube.cqr.rotate_point_clockwise(source_point)
 
         Step 3: Execute with cached computation (reuse the dry_run result)
-            >>> final_result = helper.execute_communicator(
+            >>> final_result = helper.execute_commutator(
             ...     source_face=cube.up,
             ...     target_face=cube.front,
             ...     target_block=((1,1), (1,1)),
@@ -371,11 +371,11 @@ class CommunicatorHelper(SolverHelper):
         #     internal_data = _cached_secret._secret
         # else:
 
-        internal_data = self._do_communicator(source_face, target_face, target_block)
+        internal_data = self._do_commutator(source_face, target_face, target_block)
 
         # Compute the 3-cycle points (s1, t, s2)
         # CRITICAL: These are the ACTUAL points in the 3-cycle after any source setup rotation
-        # s1 is ALWAYS the natural source position where the communicator actually operates
+        # s1 is ALWAYS the natural source position where the commutator actually operates
         # The input source_point is only for source face SETUP, not the cycle itself
         natural_source: Point = internal_data.natural_source_coordinate  # Natural source position
         target_point: Point = target_block[0]  # Target position
@@ -429,7 +429,7 @@ class CommunicatorHelper(SolverHelper):
         # for _ in range(source_setup_n_rotate):
         #     xpt_on_source_after_un_setup = cqr.rotate_point_counterclockwise(xpt_on_source_after_un_setup)
 
-        # Build and execute the full algorithm (same as original do_communicator)
+        # Build and execute the full algorithm (same as original do_commutator)
 
         source_setup_alg = Algs.of_face(
             source_face.name) * source_setup_n_rotate if source_setup_n_rotate else Algs.NOOP
@@ -440,7 +440,7 @@ class CommunicatorHelper(SolverHelper):
 
         on_front_rotate: Alg = Algs.of_face(target_face.name) * on_front_rotate_n
 
-        # Build the communicator
+        # Build the commutator
         inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block, target_face.name) * slice_alg_data.n
         second_inner_slice_alg: Alg = self._get_slice_alg(slice_base_alg, target_block_after_rotate,
                                                           target_face.name) * slice_alg_data.n
@@ -469,7 +469,7 @@ class CommunicatorHelper(SolverHelper):
 
             def _h2() -> str:
                 """Headline for annotation - block size info."""
-                return ", 1x1 communicator"  # pragma: no cover
+                return ", 1x1 commutator"  # pragma: no cover
 
             # Get s2 piece for at-risk marker (piece that will be replaced by target)
             s2_center_slice: CenterSlice = source_face.center.get_center_slice(xpt_on_source_after_un_setup)
@@ -572,11 +572,15 @@ class CommunicatorHelper(SolverHelper):
     def _get_slice_alg(self, base_slice_alg: SliceAlg,
                        target_block: Block, on_face: FaceName):
 
-        """
+        """Get slice algorithm for block position.
 
-        :param target_block_begin_column: Center Slice index [0, n)
-        :param target_block_end_column: Center Slice index [0, n)
-        :return: m slice in range suitable for [c1, c2]
+        Args:
+            base_slice_alg: Base slice algorithm (M, E, or S)
+            target_block: Block coordinates on target face
+            on_face: Target face name
+
+        Returns:
+            Slice algorithm covering the block's column/row range
         """
 
         def exc(point: Point) -> int:
@@ -723,7 +727,7 @@ class CommunicatorHelper(SolverHelper):
         """
         Return list of (source, target) face pairs that are currently supported.
 
-        These are the combinations that do_communicator() can handle.
+        These are the combinations that do_commutator() can handle.
         Other combinations will raise NotImplementedError.
 
         Returns:
@@ -747,7 +751,7 @@ class CommunicatorHelper(SolverHelper):
                 return True
         return False
 
-    def _do_communicator(
+    def _do_commutator(
             self,
             source_face: Face,
             target_face: Face,
@@ -767,7 +771,7 @@ class CommunicatorHelper(SolverHelper):
             preserve_state: If True, preserve cube state (edges and corners return)
 
         Returns:
-            True if the communicator was executed, False if not needed
+            True if the commutator was executed, False if not needed
 
         Raises:
             ValueError: If source and target are the same, face
@@ -826,12 +830,18 @@ class CommunicatorHelper(SolverHelper):
                                   face_name: FaceName,
                                   slice_name: SliceName, target_block: Block) -> Tuple[int, Block]:
 
-        """
+        """Compute rotation direction on target face to avoid slice intersection.
 
-        :param cube:
-        :param target_block:
-        :param slice_name: the slice thet is used to do th epeuce move from source to target
-        :return: [n times to roate, targte blcok after rotate]
+        Args:
+            cube: The cube instance
+            face_name: Target face name
+            slice_name: The slice used to move pieces from source to target
+            target_block: Block coordinates on target face
+
+        Returns:
+            Tuple of (rotation_count, target_block_after_rotate):
+            - rotation_count: 1 for clockwise, -1 for counter-clockwise
+            - target_block_after_rotate: Block coordinates after rotation
         """
 
         def exc(point: Point) -> int:
@@ -881,7 +891,7 @@ class CommunicatorHelper(SolverHelper):
 
         return on_front_rotate, target_block_after_rotate
 
-    def do_communicator(
+    def do_commutator(
             self,
             source_face: Face,
             target_face: Face,
@@ -890,9 +900,9 @@ class CommunicatorHelper(SolverHelper):
             preserve_state: bool = True
     ) -> Alg:
         """
-        Convenience wrapper - delegates to execute_communicator().
+        Convenience wrapper - delegates to execute_commutator().
 
-        DEPRECATED: Use execute_communicator() for new code with dry_run support.
+        DEPRECATED: Use execute_commutator() for new code with dry_run support.
 
         Execute a block commutator to move pieces from source to target.
 
@@ -913,7 +923,7 @@ class CommunicatorHelper(SolverHelper):
             ValueError: If source and target are the same, face
             NotImplementedError: If face pair is not supported
         """
-        result = self.execute_communicator(
+        result = self.execute_commutator(
             source_face=source_face,
             target_face=target_face,
             target_block=target_block,

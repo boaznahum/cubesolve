@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-The CommunicatorHelper needed to compute **s2** (the third affected piece in the 3-cycle movement pattern). The 3-cycle is: **s1 → t → s2 → s1**, where:
+The CommutatorHelper needed to compute **s2** (the third affected piece in the 3-cycle movement pattern). The 3-cycle is: **s1 → t → s2 → s1**, where:
 - **s1** = source point (natural source position on source face)
 - **t** = target point (on target face)
 - **s2** = intermediate point (on source face) - the one we needed to compute
@@ -51,17 +51,17 @@ Where:
 
 ## Discovery Process
 
-### Key Insight from Communicator Mathematics
+### Key Insight from Commutator Mathematics
 
 When executing the block commutator, we:
 1. Apply **su** (setup operation) to align source point
 2. Apply **m1** (move np → tp) and **f** (face rotation on target)
-3. The communicator moves pieces in 3-cycle
+3. The commutator moves pieces in 3-cycle
 4. Apply **su'** (inverse setup) to restore coordinate system
 
 The third piece (s2) follows a specific path based on these operations:
-- **Before communicator executes:** position is computed via f and translator
-- **After communicator executes:** position lands at the predicted location
+- **Before commutator executes:** position is computed via f and translator
+- **After commutator executes:** position lands at the predicted location
 - **After su' is applied:** position is in the original coordinate system = **s2**
 
 ### Implementation Details
@@ -122,7 +122,7 @@ Front/Back with Left/Right:
 
 ### Modified Files
 
-**src/cube/domain/solver/common/big_cube/commun/CommunicatorHelper.py**
+**src/cube/domain/solver/common/big_cube/commun/CommutatorHelper.py**
 
 The s2 computation (lines 337-370) now implements the complete algorithm:
 
@@ -168,7 +168,7 @@ The `s2_rotation_table.yaml` file is now **obsolete** since we implemented the c
 
 The algorithm is based on the block commutator mathematics:
 - The commutator moves pieces in a fixed 3-cycle
-- The positions are determined by the operations applied before and after the communicator
+- The positions are determined by the operations applied before and after the commutator
 - The setup and inverse-setup operations are crucial for coordinate transformation
 
-See the referenced documentation link in the CommunicatorHelper docstring for complete mathematical derivation.
+See the referenced documentation link in the CommutatorHelper docstring for complete mathematical derivation.

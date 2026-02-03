@@ -38,7 +38,7 @@ Given:
 
 ### Why This Is Hard
 
-The pieces move in 3D space during the communicator execution:
+The pieces move in 3D space during the commutator execution:
 - s1 is on source face → moves to target face at position t
 - t is on target face → moves to source face at computed position
 - The computed position depends on face rotations and coordinate transformations
@@ -98,7 +98,7 @@ When we perform multiple operations on a point p:
 
 ### The 3 Key Transformations
 
-Before the communicator executes, three transformations happen:
+Before the commutator executes, three transformations happen:
 
 #### 1. Setup Operation (su)
 **Purpose:** Move source point sp to the natural source position np
@@ -142,7 +142,7 @@ su_rotate = 3  (rotates CW 3 times = 1 time CCW)
 
 #### Step 1: Understanding the Problem
 We knew:
-- s1 (source point after setup) → moves to t (target point) during communicator
+- s1 (source point after setup) → moves to t (target point) during commutator
 - t (target point) → moves to some position s2 on source face
 - The question: **How do we compute s2?**
 
@@ -167,7 +167,7 @@ User explained step-by-step:
 2. Apply m1 (move np → tp)
 3. Apply f (face rotation)
    - **At this point:** xpt is computed on target face
-4. The communicator moves xpt to source face (unnamed transformation)
+4. The commutator moves xpt to source face (unnamed transformation)
 5. Apply su' (inverse setup) to get final xp in original coordinates
 
 #### Step 5: Testing with Identity Translator
@@ -207,7 +207,7 @@ elif on_front_rotate_n < 0:
 ```
 
 **Why rotate tp?**
-- During the communicator, the target piece moves
+- During the commutator, the target piece moves
 - The direction it moves depends on the face rotation `f`
 - We need to rotate tp to where it will end up = xpt
 
@@ -255,13 +255,13 @@ for _ in range(source_setup_n_rotate):
 ### Code Structure
 
 ```python
-def execute_communicator(..., target_block, source_block=None):
+def execute_commutator(..., target_block, source_block=None):
     """
-    Main entry point. Computes s1, t, s2 and executes communicator.
+    Main entry point. Computes s1, t, s2 and executes commutator.
     """
 
     # Step 1: Get np (natural source) via translator
-    internal_data = self._do_communicator(sf, tf, target_block)
+    internal_data = self._do_commutator(sf, tf, target_block)
     np = internal_data.natural_source_coordinate
 
     # Step 2: Set up the 3-cycle points
@@ -395,12 +395,12 @@ Since there's only one center piece position:
 
 ### Test Structure
 
-**Test file:** `tests/solvers/test_communicator_helper.py::test_communicator_supported_pairs`
+**Test file:** `tests/solvers/test_commutator_helper.py::test_commutator_supported_pairs`
 
 **For each test:**
-1. Get natural source via dry_run: `np = execute_communicator(..., dry_run=True).s1_point`
+1. Get natural source via dry_run: `np = execute_commutator(..., dry_run=True).s1_point`
 2. Place markers on all 3 cycle points: s1, t, s2
-3. Execute communicator with various rotations
+3. Execute commutator with various rotations
 4. Verify markers moved: s1→t, t→s2, s2→s1
 
 **Test coverage:**
@@ -524,6 +524,6 @@ def translate_LEFT_to_UP(point_on_left):
 - **Original problem:** Find s2 in 3-cycle movement pattern
 - **Mathematical basis:** Block commutator theory
 - **Key insight:** Clock rotation addition (not multiplication)
-- **Implementation:** CommunicatorHelper.py lines 337-370
-- **Test validation:** test_communicator_helper.py with marker tracking
+- **Implementation:** CommutatorHelper.py lines 337-370
+- **Test validation:** test_commutator_helper.py with marker tracking
 

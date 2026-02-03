@@ -6,7 +6,7 @@ from cube.domain.geometric.geometry_types import Block, Point
 from cube.domain.model import Color, CenterSlice, Face
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverHelper import SolverHelper
-from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
+from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.direct.lbl import _common
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import (
@@ -52,7 +52,7 @@ class NxNCenters2(SolverHelper):
     This has 2 F rotations and 2 F' rotations, so corners return to position.
 
     However, SETUP MOVES are used to align pieces before the commutator:
-    - In _block_communicator: source_face * n_rotate to align blocks
+    - In _block_commutator: source_face * n_rotate to align blocks
 
     These setup moves are NOT balanced - they permanently move corners.
     When preserve_cage=True, we track these moves and UNDO them after.
@@ -108,7 +108,7 @@ class NxNCenters2(SolverHelper):
         super().__init__(slv, "NxNCenters2")
 
         self._preserve_cage = preserve_cage
-        self._comm_helper = CommunicatorHelper(slv)
+        self._comm_helper = CommutatorHelper(slv)
 
 
     def solve_single_center_face_row(
@@ -320,7 +320,7 @@ class NxNCenters2(SolverHelper):
                             up_face = l1_white_tracker.opposite.face
                             self.debug(f"Moving {candidate_piece} from {move_from_target_face.color_at_face_str} to {up_face}")
                             # Move piece from up to this face, pushing the target_color piece to up
-                            self._comm_helper.execute_communicator(
+                            self._comm_helper.execute_commutator(
                                 up_face,  # source
                                 move_from_target_face,  # target
                                 Block(candidate_point, candidate_point),  # target point
@@ -403,7 +403,7 @@ class NxNCenters2(SolverHelper):
             if candidate_piece.color == color:
                 continue
 
-            wd = self._block_communicator(color,
+            wd = self._block_commutator(color,
                                           target_face.face,
                                           source_face.face,
                                           rc)
@@ -472,13 +472,13 @@ class NxNCenters2(SolverHelper):
 
         return None
 
-    def _block_communicator(self,
+    def _block_commutator(self,
                             required_color: Color,
                             target_face: Face, source_face: Face, target_point: Tuple[int, int]) -> bool:
         """
         Execute block commutator to move pieces from source to target.
 
-        OPTIMIZED: Uses execute_communicator() with caching for 20%+ performance improvement.
+        OPTIMIZED: Uses execute_commutator() with caching for 20%+ performance improvement.
 
         Workflow:
         1. Dry run to get natural source position (computes and caches)
@@ -495,9 +495,9 @@ class NxNCenters2(SolverHelper):
         assert target_face is cube.front
 
         # OPTIMIZATION: Step 1 - Dry run to get natural source position and cache computation
-        # This calls _do_communicator() internally but stores the result for reuse
+        # This calls _do_commutator() internally but stores the result for reuse
         target_pt = Point(*target_point)
-        dry_result = self._comm_helper.execute_communicator(
+        dry_result = self._comm_helper.execute_commutator(
             source_face=source_face,
             target_face=target_face,
             target_block=Block(target_pt, target_pt),
@@ -527,7 +527,7 @@ class NxNCenters2(SolverHelper):
         # OPTIMIZATION: Step 3 - Execute with cached computation (_cached_secret)
         # This reuses the _InternalCommData from Step 1, avoiding redundant calculations
         # Performance improvement: ~20% on 5x5, ~2-3% on 7x7+ cubes
-        self._comm_helper.execute_communicator(
+        self._comm_helper.execute_commutator(
             source_face=source_face,
             target_face=target_face,
             target_block=Block(target_pt, target_pt),

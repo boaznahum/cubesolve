@@ -17,7 +17,7 @@ from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverHelper import SolverHelper
-from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
+from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
@@ -77,7 +77,7 @@ class NxNCenters(SolverHelper):
     However, SETUP MOVES are used to align pieces before the commutator:
     - In _swap_slice: F' to convert row alignment to column
     - In _swap_slice: source_face * n_rotate to align columns
-    - In _block_communicator: source_face * n_rotate to align blocks
+    - In _block_commutator: source_face * n_rotate to align blocks
     - In __do_center: B[1:n] rotations to bring faces up
 
     These setup moves are NOT balanced - they permanently move corners.
@@ -155,8 +155,8 @@ class NxNCenters(SolverHelper):
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = cfg.optimize_big_cube_centers_search_complete_slices_only_target_zero
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
 
-        # Use CommunicatorHelper for block search operations
-        self._comm_helper = CommunicatorHelper(slv)
+        # Use CommutatorHelper for block search operations
+        self._comm_helper = CommutatorHelper(slv)
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy
@@ -488,7 +488,7 @@ class NxNCenters(SolverHelper):
 
             on_source = self.count_color_on_face(source_face, color)
 
-            if on_source - ok_on_this > 2:  # swap two faces is about two communicators
+            if on_source - ok_on_this > 2:  # swap two faces is about two commutators
                 self._swap_entire_face_odd_cube(color, face, source_face)
                 work_done = True
 
@@ -510,7 +510,7 @@ class NxNCenters(SolverHelper):
             # the above also did a 1 size block
             for rc in self._comm_helper._2d_center_iter():
 
-                if self._block_communicator(color,
+                if self._block_commutator(color,
                                             face,
                                             source_face,
                                             rc, rc,
@@ -761,7 +761,7 @@ class NxNCenters(SolverHelper):
             return False
 
         # Log found blocks
-        block_sizes = [(CommunicatorHelper.block_size(b[0], b[1]), b) for _, b in big_blocks]
+        block_sizes = [(CommutatorHelper.block_size(b[0], b[1]), b) for _, b in big_blocks]
         large_blocks = [(s, b) for s, b in block_sizes if s > 1]
         self.debug(f"  Found {len(big_blocks)} blocks on {source_face.name}, "
                    f"{len(large_blocks)} larger than 1x1", level=1)
@@ -772,14 +772,14 @@ class NxNCenters(SolverHelper):
         for _, big_block in big_blocks:
             rc1 = big_block[0]
             rc2 = big_block[1]
-            block_size = CommunicatorHelper.block_size(rc1, rc2)
-            block_dims = CommunicatorHelper.block_size2(rc1, rc2)
+            block_size = CommutatorHelper.block_size(rc1, rc2)
+            block_dims = CommutatorHelper.block_size2(rc1, rc2)
 
             rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
             rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
 
             for rotation in range(4):
-                if self._block_communicator(color,
+                if self._block_commutator(color,
                                             face,
                                             source_face,
                                             rc1_on_target, rc2_on_target,
@@ -906,27 +906,27 @@ class NxNCenters(SolverHelper):
                       ]
         op.op(Algs.seq_alg(None, *swap_faces))
 
-        # communicator 1, upper block about center
-        self._block_communicator(required_color, face, source,
+        # commutator 1, upper block about center
+        self._block_commutator(required_color, face, source,
                                  (mid + 1, mid), (nn - 1, mid),
                                  _SearchBlockMode.BigThanSource)
 
-        # communicator 2, lower block below center
-        self._block_communicator(required_color, face, source,
+        # commutator 2, lower block below center
+        self._block_commutator(required_color, face, source,
                                  (0, mid), (mid - 1, mid),
                                  _SearchBlockMode.BigThanSource)
 
-        # communicator 3, left to center
-        self._block_communicator(required_color, face, source,
+        # commutator 3, left to center
+        self._block_commutator(required_color, face, source,
                                  (mid, 0), (mid, mid - 1),
                                  _SearchBlockMode.BigThanSource)
 
-        # communicator 4, right ot center
-        self._block_communicator(required_color, face, source,
+        # commutator 4, right ot center
+        self._block_commutator(required_color, face, source,
                                  (mid, mid + 1), (mid, nn - 1),
                                  _SearchBlockMode.BigThanSource)
 
-    def _block_communicator(self,
+    def _block_commutator(self,
                             required_color: Color,
                             face: Face, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
                             mode: _SearchBlockMode) -> bool:
@@ -1061,8 +1061,8 @@ class NxNCenters(SolverHelper):
                 yield source_face.center.get_center_slice(rc)
 
         def _h2():
-            size_ = CommunicatorHelper.block_size2(rc1, rc2)
-            return f", {size_[0]}x{size_[1]} communicator"
+            size_ = CommutatorHelper.block_size2(rc1, rc2)
+            return f", {size_[0]}x{size_[1]} commutator"
 
         with self.ann.annotate((_ann_source, AnnWhat.Moved),
                                (_ann_target, AnnWhat.FixedPosition),
@@ -1189,7 +1189,7 @@ class NxNCenters(SolverHelper):
 
             n, t = self._count_colors_on_block_and_tracker(color, face, (r, 0), (r, nm1), ignore_if_back=True)
 
-            if n > 1 or not search_max:  # one is not interesting, will be handled by communicator
+            if n > 1 or not search_max:  # one is not interesting, will be handled by commutator
                 # if we search for minimum than we want zero too
                 _slice = _CompleteSlice(True, r, n, t > 0)
                 _slices.append(_slice)
@@ -1198,7 +1198,7 @@ class NxNCenters(SolverHelper):
 
             n, t = self._count_colors_on_block_and_tracker(color, face, (0, c), (nm1, c), ignore_if_back=True)
 
-            if n > 1 or not search_max:  # one is not interesting, will be handled by communicator
+            if n > 1 or not search_max:  # one is not interesting, will be handled by commutator
                 # if we search for minimum than we want zero too
                 _slice = _CompleteSlice(False, c, n, t > 0)
                 _slices.append(_slice)
@@ -1330,7 +1330,7 @@ class NxNCenters(SolverHelper):
         """
 
         # Number of points in block
-        _max = CommunicatorHelper.block_size(rc1, rc2)
+        _max = CommutatorHelper.block_size(rc1, rc2)
 
         if min_points is None:
             min_points = _max
@@ -1376,7 +1376,7 @@ class NxNCenters(SolverHelper):
         :return: How many source clockwise rotate in order to match the block to source
         """
 
-        block_size = CommunicatorHelper.block_size(rc1, rc2)
+        block_size = CommutatorHelper.block_size(rc1, rc2)
 
         n_ok = self._count_colors_on_block(required_color, target_face, rc1, rc2)
 
@@ -1386,7 +1386,7 @@ class NxNCenters(SolverHelper):
         if mode == _SearchBlockMode.CompleteBlock:
             min_required = block_size
         elif mode == _SearchBlockMode.BigThanSource:
-            # The number of communicators before > after
+            # The number of commutators before > after
             # before = size - n_ok
             # after  = n_ok  - because the need somehow to get back
             # size-n_ok > n_ok
