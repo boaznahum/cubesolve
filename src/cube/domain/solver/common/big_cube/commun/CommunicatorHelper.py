@@ -23,6 +23,7 @@ from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
 from cube.domain.geometric.geometry_types import Block, CLGColRow, Point
 from cube.domain.model import FaceName, Cube, CenterSlice
+from cube.domain.model.Color import Color
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -855,3 +856,249 @@ class CommunicatorHelper(SolverHelper):
             dry_run=False
         )
         return result.algorithm or Algs.NOOP
+
+    # =========================================================================
+    # BLOCK SEARCH METHODS
+    # Migrated from NxNCenters._search_big_block and related methods.
+    # These methods find valid blocks on a face for commutator operations.
+    # =========================================================================
+
+    def _2d_center_iter(self) -> Iterator[Point]:
+        """
+        Iterate over all points in the center grid.
+
+        Yields:
+            Point(row, col) for each position in the n_slices x n_slices grid.
+        """
+        n = self.n_slices
+        for r in range(n):
+            for c in range(n):
+                yield Point(r, c)
+
+    @staticmethod
+    def block_size(rc1: tuple[int, int], rc2: tuple[int, int]) -> int:
+        """
+        Calculate the size of a block (number of cells).
+
+        Args:
+            rc1: First corner (row, col)
+            rc2: Second corner (row, col)
+
+        Returns:
+            Number of cells in the block: (rows+1) * (cols+1)
+        """
+        return (abs(rc2[0] - rc1[0]) + 1) * (abs(rc2[1] - rc1[1]) + 1)
+
+    def _rotate_point_clockwise(self, r: int, c: int) -> Point:
+        """
+        Rotate a point 90 degrees clockwise on the center grid.
+
+        For a grid of size n, rotating (r, c) clockwise gives (c, n-1-r).
+
+        Args:
+            r: Row coordinate
+            c: Column coordinate
+
+        Returns:
+            Rotated Point(row, col)
+        """
+        n = self.n_slices
+        return Point(c, n - 1 - r)
+
+    def _rotate_point_counterclockwise(self, r: int, c: int) -> Point:
+        """
+        Rotate a point 90 degrees counterclockwise on the center grid.
+
+        For a grid of size n, rotating (r, c) counterclockwise gives (n-1-c, r).
+
+        Args:
+            r: Row coordinate
+            c: Column coordinate
+
+        Returns:
+            Rotated Point(row, col)
+        """
+        n = self.n_slices
+        return Point(n - 1 - c, r)
+
+    def _1d_intersect(self, range_1: tuple[int, int], range_2: tuple[int, int]) -> bool:
+        """
+        Check if two 1D ranges intersect.
+
+        Ranges are inclusive: (a, b) includes all integers from min(a,b) to max(a,b).
+
+        Args:
+            range_1: First range (start, end)
+            range_2: Second range (start, end)
+
+        Returns:
+            True if ranges overlap, False otherwise
+        """
+        # Normalize ranges
+        a1, a2 = min(range_1), max(range_1)
+        b1, b2 = min(range_2), max(range_2)
+
+        # Ranges intersect if neither is completely before the other
+        return not (a2 < b1 or b2 < a1)
+
+    def is_valid_block(self, rc1: tuple[int, int], rc2: tuple[int, int]) -> bool:
+        """
+        Check if a block is valid for commutator operations.
+
+        A block is invalid if rotating it by F would cause its columns to
+        intersect with the original columns. This is because the commutator
+        uses column-based slice moves, and intersection would corrupt the cycle.
+
+        The check tries both clockwise and counterclockwise rotations.
+        If both rotations cause intersection, the block is invalid.
+
+        Args:
+            rc1: First corner (row, col)
+            rc2: Second corner (row, col)
+
+        Returns:
+            True if the block is valid, False if it would self-intersect
+        """
+        r1, c1 = rc1
+        r2, c2 = rc2
+
+        # Try clockwise rotation first
+        rc1_rotated = self._rotate_point_clockwise(r1, c1)
+        rc2_rotated = self._rotate_point_clockwise(r2, c2)
+
+        # Check if columns intersect
+        if self._1d_intersect((c1, c2), (rc1_rotated[1], rc2_rotated[1])):
+            # Clockwise causes intersection, try counterclockwise
+            rc1_rotated = self._rotate_point_counterclockwise(r1, c1)
+            rc2_rotated = self._rotate_point_counterclockwise(r2, c2)
+
+            if self._1d_intersect((c1, c2), (rc1_rotated[1], rc2_rotated[1])):
+                # Both rotations cause intersection - block is invalid
+                return False
+
+        return True
+
+    def _is_block(
+        self,
+        face: Face,
+        color: Color,
+        rc1: tuple[int, int],
+        rc2: tuple[int, int]
+    ) -> bool:
+        """
+        Check if all cells in a block have the specified color.
+
+        Args:
+            face: Face to check
+            color: Required color for all cells
+            rc1: First corner (row, col)
+            rc2: Second corner (row, col)
+
+        Returns:
+            True if all cells in the block have the specified color
+        """
+        center = face.center
+
+        # Iterate over all cells in the block
+        r1, r2 = min(rc1[0], rc2[0]), max(rc1[0], rc2[0])
+        c1, c2 = min(rc1[1], rc2[1]), max(rc1[1], rc2[1])
+
+        for r in range(r1, r2 + 1):
+            for c in range(c1, c2 + 1):
+                if center.get_center_slice((r, c)).color != color:
+                    return False
+
+        return True
+
+    def _is_valid_and_block_for_search(
+        self,
+        face: Face,
+        color: Color,
+        rc1: tuple[int, int],
+        rc2: tuple[int, int]
+    ) -> bool:
+        """
+        Check if a block is both valid (no self-intersection) and has correct colors.
+
+        Args:
+            face: Face to check
+            color: Required color for all cells
+            rc1: First corner (row, col)
+            rc2: Second corner (row, col)
+
+        Returns:
+            True if block is valid and all cells have the correct color
+        """
+        if not self.is_valid_block(rc1, rc2):
+            return False
+
+        return self._is_block(face, color, rc1, rc2)
+
+    def search_big_block(
+        self,
+        face: Face,
+        color: Color
+    ) -> list[tuple[int, Block]]:
+        """
+        Search for all possible blocks of a color on a face, sorted by size.
+
+        For each matching position, this method:
+        1. Adds a 1x1 block starting at that position
+        2. Tries to extend the block horizontally (increasing row)
+        3. Then extends vertically (increasing col) based on max row reached
+        4. Adds the extended block
+
+        Blocks are validated using is_valid_block() to ensure they won't
+        self-intersect during commutator operations.
+
+        MIGRATION NOTE: This replicates NxNCenters._search_big_block() exactly.
+        Extension order: horizontal (rows) FIRST, then vertical (columns).
+
+        Args:
+            face: Face to search on
+            color: Color to search for
+
+        Returns:
+            List of (size, Block) tuples, sorted by size descending.
+            Each starting point may yield multiple blocks (1x1 and extended).
+        """
+        center = face.center
+        res: list[tuple[int, Block]] = []
+        n = self.n_slices
+
+        for rc in self._2d_center_iter():
+            if center.get_center_slice(rc).color == color:
+                # Always collect 1x1 block
+                res.append((1, Block(rc, rc)))
+
+                # Try to extend horizontally (over rows)
+                r_max: int | None = None
+                for r in range(rc[0] + 1, n):
+                    if not self._is_valid_and_block_for_search(
+                        face, color, rc, Point(r, rc[1])
+                    ):
+                        break
+                    r_max = r
+
+                if r_max is None:
+                    r_max = rc[0]
+
+                # Try to extend vertically (over columns)
+                c_max: int | None = None
+                for c in range(rc[1] + 1, n):
+                    if not self._is_valid_and_block_for_search(
+                        face, color, rc, Point(r_max, c)
+                    ):
+                        break
+                    c_max = c
+
+                if c_max is None:
+                    c_max = rc[1]
+
+                # Calculate size and add extended block
+                size = self.block_size(rc, (r_max, c_max))
+                res.append((size, Block(rc, Point(r_max, c_max))))
+
+        # Sort by size descending (largest blocks first)
+        res = sorted(res, key=lambda s: s[0], reverse=True)
+        return res

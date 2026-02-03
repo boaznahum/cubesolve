@@ -182,8 +182,10 @@ class TestMigrationBlockSearch:
         single_blocks = [b for b in old_blocks if b[0] == 1]
         assert len(single_blocks) > 0, "Should find at least some 1x1 blocks"
 
-        # TODO: Once new implementation exists:
-        # assert normalize_block_list(old_blocks) == normalize_block_list(new_blocks)
+        # Compare with new implementation
+        new_blocks = new_impl.search_big_block(face, color)
+        assert normalize_block_list(old_blocks) == normalize_block_list(new_blocks), \
+            "New implementation should return same blocks as old"
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
     @pytest.mark.parametrize("face_name", [FaceName.F, FaceName.U, FaceName.R])
@@ -208,9 +210,10 @@ class TestMigrationBlockSearch:
         # Verify old implementation returns valid results
         assert old_blocks is not None
 
-        # TODO: Once new implementation exists:
-        # new_blocks = new_impl.search_big_block(face, color)
-        # assert normalize_block_list(old_blocks) == normalize_block_list(new_blocks)
+        # Compare with new implementation
+        new_blocks = new_impl.search_big_block(face, color)
+        assert normalize_block_list(old_blocks) == normalize_block_list(new_blocks), \
+            f"Mismatch on face {face_name}"
 
     @pytest.mark.parametrize("cube_size", [5, 6, 7])
     @pytest.mark.parametrize("seed", range(3))
@@ -245,10 +248,10 @@ class TestMigrationBlockSearch:
             # old_blocks can be empty list if no matching colors
             assert old_blocks is not None
 
-            # TODO: Once new implementation exists:
-            # new_blocks = new_impl.search_big_block(face, color)
-            # assert normalize_block_list(old_blocks) == normalize_block_list(new_blocks), \
-            #     f"Mismatch on face {face_name} with seed {seed}"
+            # Compare with new implementation
+            new_blocks = new_impl.search_big_block(face, color)
+            assert normalize_block_list(old_blocks) == normalize_block_list(new_blocks), \
+                f"Mismatch on face {face_name} with seed {seed}"
 
     @pytest.mark.parametrize("cube_size", [5, 6, 7])
     def test_migration_block_extension_order(self, cube_size: int):
@@ -262,6 +265,7 @@ class TestMigrationBlockSearch:
         cube = app.cube
 
         old_impl = get_old_nxn_centers(app)
+        new_impl = get_new_comm_helper(app)
 
         # Get blocks from solved cube
         face = cube.front
@@ -274,7 +278,12 @@ class TestMigrationBlockSearch:
         assert sizes == sorted(sizes, reverse=True), \
             "Blocks should be sorted largest-first"
 
-        # TODO: Once new implementation exists, verify same ordering
+        # Verify new implementation has same ordering
+        new_blocks = new_impl.search_big_block(face, color)
+        new_sizes = [b[0] for b in new_blocks]
+        assert new_sizes == sorted(new_sizes, reverse=True), \
+            "New blocks should also be sorted largest-first"
+        assert sizes == new_sizes, "Old and new should have same size ordering"
 
     @pytest.mark.parametrize("cube_size", [5, 6])
     def test_migration_largest_block_priority(self, cube_size: int):
