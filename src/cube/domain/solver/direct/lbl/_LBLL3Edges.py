@@ -305,11 +305,7 @@ class _LBLL3Edges(SolverHelper):
 
                 # 2. (Right CM)': FR → FU ✅
                 si = src_t.slice.index
-                fu_target = self.cube.sized_layout.map_wing_index_to_edge_name(src_t.slice, EdgeName.FU)
-                self._right_cm_prime(
-                    source_index=si,
-                    target_index=fu_target
-                )
+                self._right_cm_prime(source_index=si)
 
                 self._asser_more_aggressive_all_other_edges_ok(l3t)
 
@@ -320,10 +316,7 @@ class _LBLL3Edges(SolverHelper):
 
                 # 4. Left CM: FU → FL
                 si = src_t.slice.index
-                self._left_cm(
-                    source_index=si,
-                    target_index=self.cube.sized_layout.map_wing_index_to_edge_name(src_t.slice, EdgeName.FL)
-                )
+                self._left_cm(source_index=si)
                 self._asser_more_aggressive_all_other_edges_ok(l3t)
 
                 # 5. Rollback
@@ -376,10 +369,7 @@ class _LBLL3Edges(SolverHelper):
 
                 # 3. Left CM: FU → FL
                 si = src_t.slice.index
-                self._left_cm(
-                    source_index=si,
-                    target_index=self.cube.sized_layout.map_wing_index_to_edge_name(src_t.slice, EdgeName.FL)
-                )
+                self._left_cm(source_index=si)
 
                 # 4. Rollback
                 self.op.play(flip_alg.prime)
@@ -454,10 +444,7 @@ class _LBLL3Edges(SolverHelper):
 
                 # 3. (Left CM)': FL → FU
                 si = src_t.slice.index
-                self._left_cm_prime(
-                    source_index=si,
-                    target_index=self.cube.sized_layout.map_wing_index_to_edge_name(src_t.slice, EdgeName.FU)
-                )
+                self._left_cm_prime(source_index=si)
 
                 self.op.play(flip_alg.prime)
 
@@ -528,140 +515,88 @@ class _LBLL3Edges(SolverHelper):
                 protect_bu_alg = self._protect_bu()
 
                 # 2. First Left CM: FU(destroying) -> FL → BU -> FU
-                # now source  is on BU
-                wing_idx = src_t.slice.index
+                # now source is on BU
                 source_index_on_fu = self.cube.sized_layout.map_wing_index_to_edge_name(src_t.slice, EdgeName.FU)
-                target_index_on_fl = self.cube.sized_layout.map_wing_index_by_name(EdgeName.FU, EdgeName.FL, source_index_on_fu)
-                self._left_cm(
-                    source_index=source_index_on_fu,
-                    target_index=target_index_on_fl
-                )
+                self._left_cm(source_index=source_index_on_fu)
 
                 # 3. Second Left CM: FU -> FL -> BU → FU
                 # now source is On FU
-                wing_idx = src_t.slice.index
-                self._left_cm(
-                    source_index=source_index_on_fu,
-                    target_index=target_index_on_fl
-                )
+                self._left_cm(source_index=source_index_on_fu)
 
                 # 4. Flip FU (always required for this case)
                 flip_alg = self._flip_fu()
 
                 # 5. Third Left CM: FU → FL -> BU -> FU
                 wing_idx = src_t.slice.index
-                self._left_cm(
-                    source_index=wing_idx,
-                    target_index=self.cube.sized_layout.map_wing_index_to_edge_name(src_t.slice, EdgeName.FL)
-                )
+                self._left_cm(source_index=wing_idx)
 
                 # 6. Rollback
                 self.op.play(flip_alg.prime)
                 self.op.play(protect_bu_alg.prime)
 
     # =========================================================================
-    # Commutator Algorithms
+    # Commutator Algorithms (delegate to E2ECommutator for proper annotation)
     # =========================================================================
 
-    def _left_cm(self, source_index: int, target_index: int) -> None:
+    def _left_cm(self, source_index: int) -> None:
         """
         Left Commutator: 3-cycle FU → FL → BU → FU
 
-        FU[source_index] → FL[target_index]
-
-        Alg: U' L' U M[k]' U' L U M[k]
+        Delegates to E2ECommutator which handles the algorithm, target derivation, and annotation.
 
         Args:
             source_index: Wing index on FU (source position)
-            target_index: Wing index on FL (target position)
         """
-        expected = self.cube.sized_layout.map_wing_index_by_name(EdgeName.FU, EdgeName.FL, source_index)
-        assert target_index == expected, \
-            f"Left CM: expected target={expected}, got {target_index}"
+        # Convert wing index to face LTR index for E2ECommutator
+        front = self.cube.front
+        face_ltr_index = self.cube.fu.get_face_ltr_index_from_edge_slice_index(front, source_index)
+        self._e2e_comm.do_right_or_left_commutator_by_source_ltr_index(face_ltr_index, is_right=False)
 
-        k = source_index + 1  # 1-based for M slice
-        alg = Algs.seq(
-            Algs.U.prime, Algs.L.prime,
-            Algs.U, Algs.M[k].prime,
-            Algs.U.prime, Algs.L,
-            Algs.U, Algs.M[k]
-        )
-        self.op.play(alg)
-
-    def _left_cm_prime(self, source_index: int, target_index: int) -> None:
+    def _left_cm_prime(self, source_index: int) -> None:
         """
         Left Commutator Inverse: 3-cycle FU → BU → FL → FU
         (Reverse direction: FL → FU)
 
-        FL[source_index] → FU[target_index]
+        Delegates to E2ECommutator with is_prime=True.
 
         Args:
             source_index: Wing index on FL (source position)
-            target_index: Wing index on FU (target position)
         """
-        expected = self.cube.sized_layout.map_wing_index_by_name(EdgeName.FL, EdgeName.FU, source_index)
-        assert target_index == expected, \
-            f"Left CM': expected target={expected}, got {target_index}"
+        # For prime, map FL index to FU to determine face LTR index
+        front = self.cube.front
+        fu_index = self.cube.sized_layout.map_wing_index_by_name(EdgeName.FL, EdgeName.FU, source_index)
+        face_ltr_index = self.cube.fu.get_face_ltr_index_from_edge_slice_index(front, fu_index)
+        self._e2e_comm.do_right_or_left_commutator_by_source_ltr_index(face_ltr_index, is_right=False, is_prime=True)
 
-        k = source_index + 1
-        alg = Algs.seq(
-            Algs.U.prime, Algs.L.prime,
-            Algs.U, Algs.M[k].prime,
-            Algs.U.prime, Algs.L,
-            Algs.U, Algs.M[k]
-        )
-        self.op.play(alg.prime)
-
-    def _right_cm(self, source_index: int, target_index: int) -> None:
+    def _right_cm(self, source_index: int) -> None:
         """
         Right Commutator: 3-cycle FU → FR → BU → FU
 
-        FU[source_index] → FR[target_index]
-
-        Alg: U R U' M[k]' U R' U' M[k]
+        Delegates to E2ECommutator which handles the algorithm, target derivation, and annotation.
 
         Args:
             source_index: Wing index on FU (source position)
-            target_index: Wing index on FR (target position)
         """
-        expected = self.cube.sized_layout.map_wing_index_by_name(EdgeName.FU, EdgeName.FR, source_index)
-        assert target_index == expected, \
-            f"Right CM: expected target={expected}, got {target_index}"
+        # Convert wing index to face LTR index for E2ECommutator
+        front = self.cube.front
+        face_ltr_index = self.cube.fu.get_face_ltr_index_from_edge_slice_index(front, source_index)
+        self._e2e_comm.do_right_or_left_commutator_by_source_ltr_index(face_ltr_index, is_right=True)
 
-        alg = self._get_right_cm_alg(source_index)
-        self.op.play(alg)
-
-    def _get_right_cm_alg(self, source_index: int) -> SeqAlg:
-        k = source_index + 1
-        alg = Algs.seq(
-            Algs.U, Algs.R,
-            Algs.U.prime, Algs.M[k].prime,
-            Algs.U, Algs.R.prime,
-            Algs.U.prime, Algs.M[k]
-        )
-        return alg
-
-    def _right_cm_prime(self, source_index: int, target_index: int) -> None:
+    def _right_cm_prime(self, source_index: int) -> None:
         """
         Right Commutator Inverse: 3-cycle FU → BU → FR → FU
         (Reverse direction: FR → FU)
 
-        FR[source_index] → FU[target_index]
+        Delegates to E2ECommutator with is_prime=True.
 
         Args:
             source_index: Wing index on FR (source position)
-            target_index: Wing index on FU (target position)
         """
-
-        expected = self.cube.sized_layout.map_wing_index_by_name(EdgeName.FR, EdgeName.FU, source_index)
-        assert target_index == expected, \
-            f"Right CM': expected target={expected}, got {target_index}"
-
-
-        # The M[k] slice used by the commutator is determined by the wing index on FU.
-        # For CM' (inverse), the wing arriving at FU is the target, so use target_index.
-        alg = self._get_right_cm_alg(target_index)
-        self.op.play(alg.prime)
+        # For prime, map FR index to FU to determine face LTR index
+        front = self.cube.front
+        fu_index = self.cube.sized_layout.map_wing_index_by_name(EdgeName.FR, EdgeName.FU, source_index)
+        face_ltr_index = self.cube.fu.get_face_ltr_index_from_edge_slice_index(front, fu_index)
+        self._e2e_comm.do_right_or_left_commutator_by_source_ltr_index(face_ltr_index, is_right=True, is_prime=True)
 
     # =========================================================================
     # Setup & Flip Algorithms
