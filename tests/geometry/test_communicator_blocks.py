@@ -2,18 +2,15 @@
 Tests for CommunicatorHelper block operations.
 
 This test file validates:
-1. Migration tests - comparing old NxNCenters block search with new CommunicatorHelper
-2. Block searching - finding blocks sorted by size (largest first)
-3. Block validation - ensuring blocks won't intersect after rotation
-4. Multi-cell block commutators - blocks larger than 1x1
+1. Block searching - finding blocks sorted by size (largest first)
+2. Block validation - ensuring blocks won't intersect after rotation
+3. Multi-cell block commutators - blocks larger than 1x1
 
-The migration tests ensure the new CommunicatorHelper produces identical results
-to the old NxNCenters implementation for block operations.
+Note: Migration tests that compared old NxNCenters with new CommunicatorHelper
+have been converted to tests that verify the CommunicatorHelper implementation.
 """
 
 import random
-from typing import Sequence
-
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
@@ -22,7 +19,6 @@ from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.Color import Color
-from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.solver.common.big_cube.commun._supported_faces import _get_supported_pairs
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
@@ -76,12 +72,6 @@ def _cage(app: AbstractApp) -> CageNxNSolver:
     return solver
 
 
-def get_old_nxn_centers(app: AbstractApp) -> NxNCenters:
-    """Get old NxNCenters instance for comparison."""
-    solver = _cage(app)
-    return NxNCenters(solver, preserve_cage=True)
-
-
 def get_new_comm_helper(app: AbstractApp) -> CommunicatorHelper:
     """Get new CommunicatorHelper instance."""
     solver = _cage(app)
@@ -122,106 +112,91 @@ def blocks_equal(b1: Block, b2: Block) -> bool:
     return b1[0] == b2[0] and b1[1] == b2[1]
 
 
-def normalize_block_list(blocks: Sequence[tuple[int, Block]]) -> list[tuple[int, Block]]:
-    """Normalize block list for comparison (sort by size desc, then by position)."""
-    return sorted(blocks, key=lambda x: (-x[0], x[1][0], x[1][1]))
-
-
 # =============================================================================
-# SECTION 1: Migration Tests - Old vs New Comparison
+# SECTION 1: Block Search Tests - CommunicatorHelper
 # =============================================================================
 
-class TestMigrationBlockSearch:
+class TestCommunicatorBlockSearch:
     """
-    Migration tests that compare old NxNCenters._search_big_block()
-    with new CommunicatorHelper.search_big_block().
+    Tests for CommunicatorHelper.search_big_block() functionality.
 
-    These tests ensure the new implementation produces identical results.
+    These tests verify the block search implementation works correctly.
     """
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
-    def test_migration_search_big_block_solved_cube(self, cube_size: int):
+    def test_search_big_block_solved_cube(self, cube_size: int):
         """
-        On a solved cube, both implementations should find identical blocks.
+        On a solved cube, search finds valid blocks.
 
-        Note: The maximum block size is limited by _is_valid_block() which
+        Note: The maximum block size is limited by is_valid_block() which
         rejects blocks that would intersect with themselves after F rotation.
         This means the largest block is typically NOT the entire center.
         """
         app = create_app(cube_size)
         cube = app.cube
 
-        old_impl = get_old_nxn_centers(app)
-        new_impl = get_new_comm_helper(app)
+        comm_helper = get_new_comm_helper(app)
 
         # Test on front face (most common target)
         face = cube.front
         color = face.color
 
-        # Get blocks from old implementation
-        old_blocks = old_impl._search_big_block(face, color)
+        # Get blocks from CommunicatorHelper
+        blocks = comm_helper.search_big_block(face, color)
 
-        # Get blocks from new implementation (to be implemented)
-        # new_blocks = new_impl.search_big_block(face, color)
-
-        # Verify old implementation works and returns valid results
-        assert old_blocks is not None
-        assert len(old_blocks) > 0
+        # Verify implementation works and returns valid results
+        assert blocks is not None
+        assert len(blocks) > 0
 
         # Blocks should be sorted by size (largest first)
-        sizes = [b[0] for b in old_blocks]
+        sizes = [b[0] for b in blocks]
         assert sizes == sorted(sizes, reverse=True), \
             "Blocks should be sorted by size descending"
 
         # Verify blocks are found (the search adds both 1x1 and extended for each position)
         n = cube.n_slices
-        assert len(old_blocks) > 0, "Should find some blocks"
+        assert len(blocks) > 0, "Should find some blocks"
 
         # On a solved cube, should find blocks for most positions
-        # (some may be excluded by _is_valid_block intersection check)
-        single_blocks = [b for b in old_blocks if b[0] == 1]
+        # (some may be excluded by is_valid_block intersection check)
+        single_blocks = [b for b in blocks if b[0] == 1]
         assert len(single_blocks) > 0, "Should find at least some 1x1 blocks"
-
-        # Compare with new implementation
-        new_blocks = new_impl.search_big_block(face, color)
-        assert normalize_block_list(old_blocks) == normalize_block_list(new_blocks), \
-            "New implementation should return same blocks as old"
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
     @pytest.mark.parametrize("face_name", [FaceName.F, FaceName.U, FaceName.R])
-    def test_migration_search_big_block_same_results(self, cube_size: int, face_name: FaceName):
+    def test_search_big_block_multiple_faces(self, cube_size: int, face_name: FaceName):
         """
-        New search_big_block must return identical blocks to old NxNCenters.
+        search_big_block works correctly on multiple faces.
 
         Test on multiple faces to ensure coordinate handling is correct.
         """
         app = create_app(cube_size)
         cube = app.cube
 
-        old_impl = get_old_nxn_centers(app)
-        new_impl = get_new_comm_helper(app)
+        comm_helper = get_new_comm_helper(app)
 
         face = cube.face(face_name)
         color = face.color
 
-        # Get blocks from old implementation
-        old_blocks = old_impl._search_big_block(face, color)
+        # Get blocks from CommunicatorHelper
+        blocks = comm_helper.search_big_block(face, color)
 
-        # Verify old implementation returns valid results
-        assert old_blocks is not None
+        # Verify implementation returns valid results
+        assert blocks is not None
+        assert len(blocks) > 0, f"Should find blocks on face {face_name}"
 
-        # Compare with new implementation
-        new_blocks = new_impl.search_big_block(face, color)
-        assert normalize_block_list(old_blocks) == normalize_block_list(new_blocks), \
-            f"Mismatch on face {face_name}"
+        # Verify sorted by size
+        sizes = [b[0] for b in blocks]
+        assert sizes == sorted(sizes, reverse=True), \
+            f"Blocks should be sorted on face {face_name}"
 
     @pytest.mark.parametrize("cube_size", [5, 6, 7])
     @pytest.mark.parametrize("seed", range(3))
-    def test_migration_random_scramble_same_blocks(self, cube_size: int, seed: int):
+    def test_search_after_random_scramble(self, cube_size: int, seed: int):
         """
-        After random scrambles, new finds same blocks as old.
+        After random scrambles, search correctly finds remaining matching blocks.
 
-        This tests that both implementations handle mixed colors correctly.
+        This tests that the implementation handles mixed colors correctly.
         """
         app = create_app(cube_size)
         cube = app.cube
@@ -231,32 +206,29 @@ class TestMigrationBlockSearch:
         scramble = Algs.scramble(cube_size, seed)
         app.op.play(scramble)
 
-        old_impl = get_old_nxn_centers(app)
-        new_impl = get_new_comm_helper(app)
+        comm_helper = get_new_comm_helper(app)
 
         # Test on each face
         for face_name in [FaceName.F, FaceName.U, FaceName.R]:
             face = cube.face(face_name)
+            color = face.color
 
-            # Search for the face's original color (from BOY layout)
-            # After scramble, use the face's original color, not current
-            color = face.color  # Current face color (may have changed from scramble)
+            # Get blocks from CommunicatorHelper
+            blocks = comm_helper.search_big_block(face, color)
 
-            # Get blocks from old implementation
-            old_blocks = old_impl._search_big_block(face, color)
+            # blocks can be empty list if no matching colors
+            assert blocks is not None
 
-            # old_blocks can be empty list if no matching colors
-            assert old_blocks is not None
-
-            # Compare with new implementation
-            new_blocks = new_impl.search_big_block(face, color)
-            assert normalize_block_list(old_blocks) == normalize_block_list(new_blocks), \
-                f"Mismatch on face {face_name} with seed {seed}"
+            # If blocks found, they should be sorted
+            if len(blocks) > 0:
+                sizes = [b[0] for b in blocks]
+                assert sizes == sorted(sizes, reverse=True), \
+                    f"Blocks should be sorted on face {face_name} with seed {seed}"
 
     @pytest.mark.parametrize("cube_size", [5, 6, 7])
-    def test_migration_block_extension_order(self, cube_size: int):
+    def test_block_extension_order(self, cube_size: int):
         """
-        Verify new extends horizontal THEN vertical (like old).
+        Verify search extends horizontal THEN vertical.
 
         The extension order matters for L-shaped patterns where
         different orders produce different maximum rectangles.
@@ -264,31 +236,23 @@ class TestMigrationBlockSearch:
         app = create_app(cube_size)
         cube = app.cube
 
-        old_impl = get_old_nxn_centers(app)
-        new_impl = get_new_comm_helper(app)
+        comm_helper = get_new_comm_helper(app)
 
         # Get blocks from solved cube
         face = cube.front
         color = face.color
 
-        old_blocks = old_impl._search_big_block(face, color)
+        blocks = comm_helper.search_big_block(face, color)
 
         # Verify blocks are sorted by size (largest first)
-        sizes = [b[0] for b in old_blocks]
+        sizes = [b[0] for b in blocks]
         assert sizes == sorted(sizes, reverse=True), \
             "Blocks should be sorted largest-first"
 
-        # Verify new implementation has same ordering
-        new_blocks = new_impl.search_big_block(face, color)
-        new_sizes = [b[0] for b in new_blocks]
-        assert new_sizes == sorted(new_sizes, reverse=True), \
-            "New blocks should also be sorted largest-first"
-        assert sizes == new_sizes, "Old and new should have same size ordering"
-
     @pytest.mark.parametrize("cube_size", [5, 6])
-    def test_migration_largest_block_priority(self, cube_size: int):
+    def test_largest_block_priority(self, cube_size: int):
         """
-        New must return blocks sorted largest-first (like old).
+        Blocks are returned sorted largest-first.
 
         This is critical for efficiency - processing larger blocks first
         solves more pieces per commutator operation.
@@ -296,25 +260,25 @@ class TestMigrationBlockSearch:
         app = create_app(cube_size)
         cube = app.cube
 
-        old_impl = get_old_nxn_centers(app)
+        comm_helper = get_new_comm_helper(app)
 
         face = cube.front
         color = face.color
 
-        old_blocks = old_impl._search_big_block(face, color)
+        blocks = comm_helper.search_big_block(face, color)
 
         # Check descending order by size
-        for i in range(len(old_blocks) - 1):
-            assert old_blocks[i][0] >= old_blocks[i + 1][0], \
-                f"Block {i} (size {old_blocks[i][0]}) should be >= block {i+1} (size {old_blocks[i+1][0]})"
+        for i in range(len(blocks) - 1):
+            assert blocks[i][0] >= blocks[i + 1][0], \
+                f"Block {i} (size {blocks[i][0]}) should be >= block {i+1} (size {blocks[i+1][0]})"
 
 
 # =============================================================================
-# SECTION 2: Block Searching Tests
+# SECTION 2: Block Searching Details Tests
 # =============================================================================
 
 class TestBlockSearching:
-    """Tests for block searching functionality."""
+    """Tests for block searching functionality details."""
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
     def test_search_finds_single_cell_blocks(self, cube_size: int):
@@ -327,12 +291,12 @@ class TestBlockSearching:
         app = create_app(cube_size)
         cube = app.cube
 
-        old_impl = get_old_nxn_centers(app)
+        comm_helper = get_new_comm_helper(app)
 
         face = cube.front
         color = face.color
 
-        blocks = old_impl._search_big_block(face, color)
+        blocks = comm_helper.search_big_block(face, color)
 
         # Count 1x1 blocks - there will be duplicates because the search
         # adds both 1x1 and extended blocks for each position
@@ -352,18 +316,18 @@ class TestBlockSearching:
         """
         On solved cube, search finds blocks up to maximum valid size.
 
-        Note: Maximum block size is limited by _is_valid_block() which
+        Note: Maximum block size is limited by is_valid_block() which
         rejects blocks that would intersect with themselves after F rotation.
         """
         app = create_app(cube_size)
         cube = app.cube
 
-        old_impl = get_old_nxn_centers(app)
+        comm_helper = get_new_comm_helper(app)
 
         face = cube.front
         color = face.color
 
-        blocks = old_impl._search_big_block(face, color)
+        blocks = comm_helper.search_big_block(face, color)
 
         # Verify blocks are found and sorted
         assert len(blocks) > 0
@@ -384,12 +348,12 @@ class TestBlockSearching:
         # Do a simple move that affects centers
         app.op.play(Algs.M)
 
-        old_impl = get_old_nxn_centers(app)
+        comm_helper = get_new_comm_helper(app)
 
         face = cube.front
         color = face.color
 
-        blocks = old_impl._search_big_block(face, color)
+        blocks = comm_helper.search_big_block(face, color)
 
         # Should still find some blocks (the move only affects middle slice)
         assert len(blocks) > 0, "Should find some matching blocks after M move"
@@ -416,7 +380,7 @@ class TestBlockValidation:
         """
         app = create_app(cube_size)
 
-        old_impl = get_old_nxn_centers(app)
+        comm_helper = get_new_comm_helper(app)
 
         # Test various single-cell positions
         n = app.cube.n_slices
@@ -425,7 +389,7 @@ class TestBlockValidation:
         for r in range(n):
             for c in range(n):
                 rc = (r, c)
-                is_valid = old_impl._is_valid_block(rc, rc)
+                is_valid = comm_helper.is_valid_block(rc, rc)
 
                 # Center position on odd cubes is invalid (maps to itself after rotation)
                 is_center = (n % 2 == 1) and (r == mid) and (c == mid)
@@ -450,7 +414,7 @@ class TestBlockValidation:
         ]
 
         for rc1, rc2, expected_size in test_cases:
-            actual_size = NxNCenters._block_size(rc1, rc2)
+            actual_size = CommunicatorHelper.block_size(rc1, rc2)
             assert actual_size == expected_size, \
                 f"Block {rc1}->{rc2} should have size {expected_size}, got {actual_size}"
 
@@ -492,19 +456,17 @@ class TestBlockIntegration:
     """Integration tests for block processing workflow."""
 
     @pytest.mark.parametrize("cube_size", [5, 6])
-    def test_do_blocks_processes_largest_first(self, cube_size: int):
-        """_do_blocks processes largest block before smaller ones."""
+    def test_search_returns_largest_first(self, cube_size: int):
+        """Block search returns largest block first for efficient processing."""
         app = create_app(cube_size)
         cube = app.cube
 
-        # This test verifies the workflow order
-        # The old implementation processes blocks in size order
-        old_impl = get_old_nxn_centers(app)
+        comm_helper = get_new_comm_helper(app)
 
         face = cube.front
         color = face.color
 
-        blocks = old_impl._search_big_block(face, color)
+        blocks = comm_helper.search_big_block(face, color)
 
         # First block should be the largest
         if len(blocks) > 1:
@@ -517,15 +479,15 @@ class TestBlockIntegration:
         app = create_app(cube_size)
         cube = app.cube
 
-        old_impl = get_old_nxn_centers(app)
+        comm_helper = get_new_comm_helper(app)
 
         face = cube.front
         color = face.color
 
         # Search multiple times
-        blocks1 = old_impl._search_big_block(face, color)
-        blocks2 = old_impl._search_big_block(face, color)
-        blocks3 = old_impl._search_big_block(face, color)
+        blocks1 = comm_helper.search_big_block(face, color)
+        blocks2 = comm_helper.search_big_block(face, color)
+        blocks3 = comm_helper.search_big_block(face, color)
 
         # All should be identical
         assert blocks1 == blocks2 == blocks3, \
@@ -545,7 +507,7 @@ class TestBlockCoordinates:
         app = create_app(cube_size)
         cube = app.cube
 
-        old_impl = get_old_nxn_centers(app)
+        comm_helper = get_new_comm_helper(app)
 
         n = cube.n_slices
 
@@ -553,7 +515,7 @@ class TestBlockCoordinates:
             face = cube.face(face_name)
             color = face.color
 
-            blocks = old_impl._search_big_block(face, color)
+            blocks = comm_helper.search_big_block(face, color)
 
             for size, block in blocks:
                 rc1, rc2 = block
@@ -574,12 +536,12 @@ class TestBlockCoordinates:
         app = create_app(cube_size)
         cube = app.cube
 
-        old_impl = get_old_nxn_centers(app)
+        comm_helper = get_new_comm_helper(app)
 
         face = cube.front
         color = face.color
 
-        blocks = old_impl._search_big_block(face, color)
+        blocks = comm_helper.search_big_block(face, color)
 
         for reported_size, block in blocks:
             rc1, rc2 = block

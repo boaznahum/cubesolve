@@ -17,6 +17,7 @@ from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverHelper import SolverHelper
+from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
@@ -153,6 +154,9 @@ class NxNCenters(SolverHelper):
 
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = cfg.optimize_big_cube_centers_search_complete_slices_only_target_zero
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
+
+        # Use CommunicatorHelper for block search operations
+        self._comm_helper = CommunicatorHelper(slv)
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy
@@ -750,7 +754,7 @@ class NxNCenters(SolverHelper):
 
         cube = self.cube
 
-        big_blocks = self._search_big_block(source_face, color)
+        big_blocks = self._comm_helper.search_big_block(source_face, color)
 
         if not big_blocks:
             return False
@@ -1069,70 +1073,6 @@ class NxNCenters(SolverHelper):
             self.op.play(undo_alg)
 
         return True
-
-    def _is_valid_and_block_for_search(self, face: Face, color: Color, rc1: Point, rc2: Point):
-
-        is_valid_block = self._is_valid_block(rc1, rc2)
-
-        if not is_valid_block:
-            return False
-
-        is_block = self._is_block(face, color, None, rc1, rc2, dont_convert_coordinates=True)
-
-        return is_block
-
-    def _search_big_block(self, face: Face, color: Color) -> Sequence[Tuple[int, Block]] | None:
-
-        """
-        Rerun all possible blocks, 1 size too, sorted from big to small
-        :param face:
-        :param color:
-        :return:
-        """
-
-        center = face.center
-
-        res: list[Tuple[int, Block]] = []
-
-        n = self.cube.n_slices
-
-        for rc in self._2d_center_iter():
-
-            if center.get_center_slice(rc).color == color:
-
-                # collect also 1 size blocks
-                res.append((1, Block(rc, rc)))
-
-                # now try to extend it over r
-                r_max = None
-                for r in range(rc[0] + 1, n):
-
-                    if not self._is_valid_and_block_for_search(face, color, rc, Point(r, rc[1])):
-                        break
-                    else:
-                        r_max = r
-
-                if not r_max:
-                    r_max = rc[0]
-
-                # now try to extend it over c
-                c_max = None
-                for c in range(rc[1] + 1, n):
-                    if not self._is_valid_and_block_for_search(face, color, rc, Point(r_max, c)):
-                        break
-                    else:
-                        c_max = c
-
-                if not c_max:
-                    c_max = rc[1]
-
-                size = self._block_size(rc, Point(r_max, c_max))
-
-                # if size > 1:
-                res.append((size, Block(rc, Point(r_max, c_max))))
-
-        res = sorted(res, key=lambda s: s[0], reverse=True)
-        return res
 
     def _is_valid_block(self, rc1: Point, rc2: Point):
 
