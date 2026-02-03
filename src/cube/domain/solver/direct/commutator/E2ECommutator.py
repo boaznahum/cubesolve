@@ -76,15 +76,109 @@ class E2ECommutator(SolverHelper):
 
             return True
 
+    def do_left_commutator(self, source_wing_index: int, target_wing_index: int) -> None:
+        """
+        Left Commutator: 3-cycle FU → FL → BU → FU
+
+        Args:
+            source_wing_index: Wing index on FU (source position)
+            target_wing_index: Wing index on FL (target position)
+        """
+        from cube.domain.model._part import EdgeName
+
+        cube = self.cube
+        front = cube.front
+
+        # Validate indices match
+        expected_target = cube.sized_layout.map_wing_index_by_name(
+            EdgeName.FU, EdgeName.FL, source_wing_index)
+        assert target_wing_index == expected_target, \
+            f"Left CM: expected target index {expected_target}, got {target_wing_index}"
+
+        face_ltr_index = cube.fu.get_face_ltr_index_from_edge_slice_index(front, source_wing_index)
+        self.do_right_or_left_commutator_by_source_ltr_index(face_ltr_index, is_right=False)
+
+    def do_left_commutator_prime(self, source_wing_index: int, target_wing_index: int) -> None:
+        """
+        Left Commutator Inverse: 3-cycle FU → BU → FL → FU
+        (Reverse direction: FL → FU)
+
+        Args:
+            source_wing_index: Wing index on FL (source position)
+            target_wing_index: Wing index on FU (target position)
+        """
+        from cube.domain.model._part import EdgeName
+
+        cube = self.cube
+        front = cube.front
+
+        # Validate indices match
+        expected_target = cube.sized_layout.map_wing_index_by_name(
+            EdgeName.FL, EdgeName.FU, source_wing_index)
+        assert target_wing_index == expected_target, \
+            f"Left CM': expected target index {expected_target}, got {target_wing_index}"
+
+        face_ltr_index = cube.fu.get_face_ltr_index_from_edge_slice_index(front, target_wing_index)
+        self.do_right_or_left_commutator_by_source_ltr_index(face_ltr_index, is_right=False, is_prime=True)
+
+    def do_right_commutator(self, source_wing_index: int, target_wing_index: int) -> None:
+        """
+        Right Commutator: 3-cycle FU → FR → BU → FU
+
+        Args:
+            source_wing_index: Wing index on FU (source position)
+            target_wing_index: Wing index on FR (target position)
+        """
+        from cube.domain.model._part import EdgeName
+
+        cube = self.cube
+        front = cube.front
+
+        # Validate indices match
+        expected_target = cube.sized_layout.map_wing_index_by_name(
+            EdgeName.FU, EdgeName.FR, source_wing_index)
+        assert target_wing_index == expected_target, \
+            f"Right CM: expected target index {expected_target}, got {target_wing_index}"
+
+        face_ltr_index = cube.fu.get_face_ltr_index_from_edge_slice_index(front, source_wing_index)
+        self.do_right_or_left_commutator_by_source_ltr_index(face_ltr_index, is_right=True)
+
+    def do_right_commutator_prime(self, source_wing_index: int, target_wing_index: int) -> None:
+        """
+        Right Commutator Inverse: 3-cycle FU → BU → FR → FU
+        (Reverse direction: FR → FU)
+
+        Args:
+            source_wing_index: Wing index on FR (source position)
+            target_wing_index: Wing index on FU (target position)
+        """
+        from cube.domain.model._part import EdgeName
+
+        cube = self.cube
+        front = cube.front
+
+        # Validate indices match
+        expected_target = cube.sized_layout.map_wing_index_by_name(
+            EdgeName.FR, EdgeName.FU, source_wing_index)
+        assert target_wing_index == expected_target, \
+            f"Right CM': expected target index {expected_target}, got {target_wing_index}"
+
+        face_ltr_index = cube.fu.get_face_ltr_index_from_edge_slice_index(front, target_wing_index)
+        self.do_right_or_left_commutator_by_source_ltr_index(face_ltr_index, is_right=True, is_prime=True)
+
     def do_right_or_left_commutator_by_source_ltr_index(self,
                                                         source_ltr_index_on_fu: int,
-                                                        is_right: bool) -> None:
+                                                        is_right: bool,
+                                                        is_prime: bool = False) -> None:
         """
         Execute the actual commutator algorithm.
 
         Args:
             source_ltr_index_on_fu: The LTR index on the FU (front-up) edge (0-based)
             is_right: True for right edge target, False for left edge target
+            is_prime: If True, play the inverse (prime) of the commutator algorithm.
+                     Forward: FU → FL/FR → BU → FU
+                     Prime:   FU → BU → FL/FR → FU (reverse direction)
         """
         from cube.domain.model import EdgePosition
         from cube.domain.model.FaceName import FaceName
@@ -158,14 +252,23 @@ class E2ECommutator(SolverHelper):
         # Get marker factory for at-risk marker (third wing in 3-cycle)
         mf = cube.sp.marker_factory
 
+        # Build annotation headline based on direction
+        def get_h2_text() -> str:
+            if is_prime:
+                # Prime reverses cycle: FU → BU → FL/FR → FU
+                return (f"3-cycle (prime): {source_wing.parent_name_index_colors}"
+                        f" → {get_third_wing().parent_name_and_index}"
+                        f" → {target_wing.parent_name_and_index}")
+            else:
+                # Forward cycle: FU → FL/FR → BU → FU
+                return (f"3-cycle: {source_wing.parent_name_index_colors}"
+                        f" → {target_wing.parent_name_and_index}"
+                        f" → {get_third_wing().parent_name_and_index}")
+
         with self.annotate(([source_wing], AnnWhat.Moved),
                            ([target_wing], AnnWhat.FixedPosition),
-                           additional_markers=[(get_third_wing, AnnWhat.Moved, mf.at_risk)],
-                           h2=lambda: f"3-cycle: {source_wing.parent_name_index_colors}"
-                              f" → {target_wing.parent_name_and_index}"
-                              f" → {get_third_wing().parent_name_and_index}",
-
+                           additional_markers=[(get_third_wing, AnnWhat.FixedPosition, mf.at_risk)],
+                           h2=get_h2_text,
                            ):
-            # 3-cycle: FU → FL/FR → BU → FU
-            # U R U' [2]M' U R' U' [2]M
-            self.op.play(alg)
+            # 3-cycle: FU → FL/FR → BU → FU (or reverse for prime)
+            self.op.play(alg.prime if is_prime else alg)
