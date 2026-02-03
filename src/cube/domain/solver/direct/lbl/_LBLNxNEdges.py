@@ -10,7 +10,7 @@ from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solve
 from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
 from cube.domain.tracker.trackers import FaceTracker
-from cube.domain.solver.direct.commutator.E2ECommutator import E2ECommutator
+from cube.domain.solver.common.big_cube.commun.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.solver.solver import SmallStepSolveState

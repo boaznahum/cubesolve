@@ -12,7 +12,7 @@ from cube.domain.algs import Alg, Algs, SeqAlg
 from cube.domain.model import EdgeWing, Edge
 from cube.domain.model._part import EdgeName
 from cube.domain.solver import SolveStep
-from cube.domain.solver.direct.commutator.E2ECommutator import E2ECommutator
+from cube.domain.solver.common.big_cube.commun.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
