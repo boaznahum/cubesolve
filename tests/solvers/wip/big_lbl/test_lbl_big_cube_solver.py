@@ -45,7 +45,7 @@ class TestLBLBigCubeSolver:
 
         solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
 
-        assert solver.is_l2_slices_solved(), (
+        assert solver._is_l2_slices_solved(), (
             f"L2 slices not solved (size={cube_size}, scramble={scramble_name})"
         )
     @pytest.mark.parametrize("cube_size", [5], ids=lambda s: f"size_{s}")
@@ -76,6 +76,6 @@ class TestLBLBigCubeSolver:
 
         solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
 
-        assert solver.is_l2_slices_solved(), (
+        assert solver._is_l2_slices_solved(), (
             f"L2 slices not solved (size={cube_size}, scramble={scramble_name})"
         )
