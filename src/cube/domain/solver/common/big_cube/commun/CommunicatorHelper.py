@@ -15,10 +15,7 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Tuple
-
-import yaml
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
@@ -99,28 +96,6 @@ class CommunicatorHelper(SolverHelper):
 
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver, "CommunicatorHelper")
-        self._s2_rotation_table = self._load_s2_rotation_table()
-
-    @staticmethod
-    def _load_s2_rotation_table() -> dict:
-        """Load s2 rotation direction lookup table from YAML file."""
-        table_file = Path(__file__).parent / "s2_rotation_table.yaml"
-        try:
-            with open(table_file, 'r') as f:
-                return yaml.safe_load(f) or {}
-        except FileNotFoundError:
-            # If table not found, return empty dict (will use default behavior)
-            return {}
-
-    def _get_s2_rotation_multiplier(self, source_face_name: FaceName, target_face_name: FaceName) -> int:
-        """Get the s2 rotation multiplier from the lookup table.
-
-        Returns:
-            Multiplier value (typically 1 or -1)
-            Default is 1 if not found in table
-        """
-        key = f"{source_face_name.name}-{target_face_name.name}"
-        return self._s2_rotation_table.get(key, 1)
 
     @property
     def n_slices(self) -> int:
