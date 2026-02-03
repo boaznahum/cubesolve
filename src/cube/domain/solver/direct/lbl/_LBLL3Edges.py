@@ -12,6 +12,7 @@ from cube.domain.algs import Alg, Algs, SeqAlg
 from cube.domain.model import EdgeWing, Edge
 from cube.domain.model._part import EdgeName
 from cube.domain.solver import SolveStep
+from cube.domain.solver.common.big_cube import NxNEdges
 from cube.domain.solver.common.big_cube.commun.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
@@ -91,6 +92,7 @@ class _LBLL3Edges(SolverHelper):
         Args:
             l3_tracker: FaceTracker for L3 face. Will be brought to front.
         """
+
         with self._logger.tab("Solving L3 edges"):
             # Bring L3 to front
             self.cmn.bring_face_front(l3_tracker.face)
@@ -114,6 +116,9 @@ class _LBLL3Edges(SolverHelper):
                 self.op.play(Algs.Z * 2)
 
             #now i ready to second phase, solving by RF' algorithm
+
+            helper:NxNEdges = NxNEdges(self, advanced_edge_parity=True, preserve_other_edges=True)
+            helper.solve_face_edges(l3_tracker)
 
 
     # =========================================================================

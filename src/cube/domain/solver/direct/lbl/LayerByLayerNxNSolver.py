@@ -211,6 +211,7 @@ class LayerByLayerNxNSolver(BaseSolver):
             SolveStep.LBL_L1,         # Layer 1 complete
             SolveStep.LBL_SLICES_CTR, # All middle slices centers
             SolveStep.LBL_L3_CENTER,
+            SolveStep.LBL_L3_EDGES,
             SolveStep.LBL_L3_CROSS
 
         ]
@@ -272,6 +273,14 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_face_rows(th)
                     self._solve_layer3_centers(th)
 
+
+                case SolveStep.LBL_L3_EDGES:
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
+                    self._solve_layer1_corners(th)
+                    self._solve_face_rows(th)
+                    self._solve_layer3_centers(th)
+                    self._solve_layer3_edges(th)
 
                 case SolveStep.LBL_L3_CROSS:
                     self._solve_layer1_centers(th)
@@ -364,14 +373,9 @@ class LayerByLayerNxNSolver(BaseSolver):
         l3_edges = l3_face.edges
 
         # First check: all edges on L1 face must be paired (reduced to 3x3)
-        if not all(e.is3x3 for e in l3_edges):
-            return False
+        return all(e.is3x3 for e in l3_edges)
 
-        # Second check: edges can be aligned by rotating L1 face
-        def _is_cross() -> bool:
-            return Part.all_match_faces(l3_face.edges)
 
-        return self.cube.cqr.rotate_face_and_check(l3_face, _is_cross) >= 0
 
     def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 cross is solved (edges paired AND in correct position).

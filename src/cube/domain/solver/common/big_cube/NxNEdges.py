@@ -19,10 +19,13 @@ class NxNEdges(SolverHelper):
 
     D_LEVEL = 3
 
-    def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool) -> None:
+    def __init__(self, slv: SolverElementsProvider,
+                 advanced_edge_parity: bool,
+                 preserve_other_edges: bool = False) -> None:
         super().__init__(slv, "NxNEdges")
         self._logger.set_level(NxNEdges.D_LEVEL)
         self._advanced_edge_parity = advanced_edge_parity
+        self._preserve_other_edges = preserve_other_edges
 
 
     def _is_solved(self):
@@ -83,36 +86,38 @@ class NxNEdges(SolverHelper):
         target_color = face_tracker.color
         target_edges_by_color = [e for e in self.cube.edges if target_color in e.colors_id]
 
-        assert len(target_edges_by_color) == 4, \
-            f"Expected 4 edges with {target_color}, found {len(target_edges_by_color)}"
+        with self._logger.tab(lambda : f"Doing face {target_color} edges"):
 
-        # Check if all target edges are already solved (paired)
-        if all(e.is3x3 for e in target_edges_by_color):
-            return False
+            assert len(target_edges_by_color) == 4, \
+                f"Expected 4 edges with {target_color}, found {len(target_edges_by_color)}"
 
-        with self.ann.annotate(h1=f"Edges for {target_color.name}"):
-            parity_done = False
-            while True:
-                # Find unsolved edges containing target color (re-query each iteration)
-                unsolved = [e for e in self.cube.edges
-                           if target_color in e.colors_id and not e.is3x3]
-                if not unsolved:
-                    break
+            # Check if all target edges are already solved (paired)
+            if all(e.is3x3 for e in target_edges_by_color):
+                return False
 
-                # Check if this is the LAST unsolved edge in the WHOLE cube
-                # (parity can only happen when all other 11 edges are solved)
-                total_cube_unsolved = sum(1 for e in self.cube.edges if not e.is3x3)
-                if total_cube_unsolved == 1 and len(unsolved) == 1:
-                    # Last edge in whole cube AND it's one of our targets - parity
-                    self._do_last_edge_parity()
-                    parity_done = True
-                    continue
+            with self.ann.annotate(h1=f"Edges for {target_color.name}"):
+                parity_done = False
+                while True:
+                    # Find unsolved edges containing target color (re-query each iteration)
+                    unsolved = [e for e in self.cube.edges
+                               if target_color in e.colors_id and not e.is3x3]
+                    if not unsolved:
+                        break
 
-                # Solve one edge
-                edge = unsolved[0]
-                self._do_edge(edge)
+                    # Check if this is the LAST unsolved edge in the WHOLE cube
+                    # (parity can only happen when all other 11 edges are solved)
+                    total_cube_unsolved = sum(1 for e in self.cube.edges if not e.is3x3)
+                    if total_cube_unsolved == 1 and len(unsolved) == 1:
+                        # Last edge in whole cube AND it's one of our targets - parity
+                        self._do_last_edge_parity()
+                        parity_done = True
+                        continue
 
-            return parity_done
+                    # Solve one edge
+                    edge = unsolved[0]
+                    self._do_edge(edge)
+
+                return parity_done
 
     def _do_first_11(self):
         """
@@ -280,6 +285,11 @@ class NxNEdges(SolverHelper):
             # bring them back
             self.op.play(slice_alg.prime)  # move me to opposite E begin from D, slice begin with 1
 
+            if self._preserve_other_edges:
+                # ig LBL want sits edges to be preserved
+                self.op.play(self.rf.prime)
+
+
         for i in slices_to_fix:
             assert self._get_slice_ordered_color(face, edge.get_slice(inv(i))) == ordered_color
 
@@ -310,10 +320,15 @@ class NxNEdges(SolverHelper):
                 # ok now do for all that color order match
                 # is there one that can be sliced ?
 
+                rf: Alg | None = None
                 if not any(self._get_slice_ordered_color(face, s) == ordered_color for s in edge_right.all_slices):
-                    self.op.play(self.rf)
+                    rf = self.rf
+                    self.op.play(rf)
 
                 self._fix_many_from_other_edges_same_order(face, edge, ordered_color, color_un_ordered)
+
+                if rf is not None and self._preserve_other_edges:
+                    self.op.play(rf.prime)
 
     def _fix_many_from_other_edges_same_order(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                               color_un_ordered: PartColorsID):
@@ -387,6 +402,9 @@ class NxNEdges(SolverHelper):
             # for target_index in target_indices:
             self.op.play(slice_alg.prime)
 
+            if self._preserve_other_edges:
+                self.op.play(self.rf.prime)
+
         for target_index in target_indices:
             assert self._get_slice_ordered_color(face, edge.get_slice(target_index)) == ordered_color
 
@@ -407,91 +425,93 @@ class NxNEdges(SolverHelper):
 
     def _do_edge_parity_on_edge(self, edge) -> None:
 
-        cube = self.cube
-        n_slices = cube.n_slices
+        with self._logger.tab(lambda : f"Doing odd edge parity on edge: {edge}"):
 
-        face = cube.front
+            cube = self.cube
+            n_slices = cube.n_slices
 
-        tracer: EdgeSliceTracker
-        with self.cmn.track_e_slice(edge.get_slice(0)) as tracer:
-            self.debug( f"Doing parity on {edge}", level=1)
-            edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
-            assert edge is face.edge_left
-            assert edge is cube.fl
-            self.op.play(Algs.F)
+            face = cube.front
 
-            # not true on even, edge is OK
-            # assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
+            tracer: EdgeSliceTracker
+            with self.cmn.track_e_slice(edge.get_slice(0)) as tracer:
+                self.debug( f"Doing parity on {edge}", level=1)
+                edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
+                assert edge is face.edge_left
+                assert edge is cube.fl
+                self.op.play(Algs.F)
 
-            edge = tracer.the_slice_nl.parent
-            assert edge is face.edge_top
-            edge = cube.front.edge_top
+                # not true on even, edge is OK
+                # assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
 
-        if n_slices % 2:
-            required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
-        else:
-            # In even, we can have partial and complete parity in cas eof complete, we reach here from solver after
-            # finding edge in 3x3 with partial we reach here from this solver so in first case we need to reverse all
-            # slices in second case we have no idea which, so we pick the first one (that can later cause and OLL
-            # parity when solving as 3x3)
-            required_color = self._get_slice_ordered_color(face, edge.get_slice(0))
-            required_color = required_color[::-1]
+                edge = tracer.the_slice_nl.parent
+                assert edge is face.edge_top
+                edge = cube.front.edge_top
 
-        slices_to_fix: list[EdgeWing] = []
-        slices_indices_to_fix: list[int] = []
-        _all = True
-        for i in range(n_slices // 2):
-
-            s = edge.get_slice(i)
-            color = self._get_slice_ordered_color(face, s)
-            # print(f"{i} ,{required_color}, {color}")
-            if color != required_color:
-                slices_indices_to_fix.append(i)
-                slices_to_fix.append(s)
+            if n_slices % 2:
+                required_color = self._get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
             else:
-                _all = False
+                # In even, we can have partial and complete parity in cas eof complete, we reach here from solver after
+                # finding edge in 3x3 with partial we reach here from this solver so in first case we need to reverse all
+                # slices in second case we have no idea which, so we pick the first one (that can later cause and OLL
+                # parity when solving as 3x3)
+                required_color = self._get_slice_ordered_color(face, edge.get_slice(0))
+                required_color = required_color[::-1]
 
-        ann = "Fixing edge(OLL) Parity"
-        if n_slices % 2 == 0 and _all:
-            ann += "(Full even)"
+            slices_to_fix: list[EdgeWing] = []
+            slices_indices_to_fix: list[int] = []
+            _all = True
+            for i in range(n_slices // 2):
 
-        # self.op.toggle_animation_on(enable=True)
-        with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
-            # slices are from [1 nn], so we need to add 1
-            # actually, simple alg doesn't care if we fix i or inv(i), because on
-            # Advance alg - I don't know, so I'm keeping the index matches R - for the advanced
-            # last edge they come in pairs i<->inv(i)
-            #
-            plus_one = [ i + 1 for i in slices_indices_to_fix]
+                s = edge.get_slice(i)
+                color = self._get_slice_ordered_color(face, s)
+                # print(f"{i} ,{required_color}, {color}")
+                if color != required_color:
+                    slices_indices_to_fix.append(i)
+                    slices_to_fix.append(s)
+                else:
+                    _all = False
 
-            if not self._advanced_edge_parity:
-                self.debug( f"*** Doing parity on M {plus_one}", level=2)
-                for _ in range(4):
+            ann = "Fixing edge(OLL) Parity"
+            if n_slices % 2 == 0 and _all:
+                ann += "(Full even)"
+
+            # self.op.toggle_animation_on(enable=True)
+            with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
+                # slices are from [1 nn], so we need to add 1
+                # actually, simple alg doesn't care if we fix i or inv(i), because on
+                # Advance alg - I don't know, so I'm keeping the index matches R - for the advanced
+                # last edge they come in pairs i<->inv(i)
+                #
+                plus_one = [ i + 1 for i in slices_indices_to_fix]
+
+                if not self._advanced_edge_parity:
+                    self.debug( f"*** Doing parity on M {plus_one}", level=2)
+                    for _ in range(4):
+                        self.op.play(Algs.M[plus_one].prime)
+                        self.op.play(Algs.U * 2)
                     self.op.play(Algs.M[plus_one].prime)
-                    self.op.play(Algs.U * 2)
-                self.op.play(Algs.M[plus_one].prime)
-            else:
-                # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
-                plus_one = [i + 1 for i in plus_one]
+                else:
+                    # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
+                    plus_one = [i + 1 for i in plus_one]
 
-                self.debug( f"*** Doing parity on R {plus_one}", level=2)
-                #  https://speedcubedb.com/a/6x6/6x6L2E
-                # 3R' U2 3L F2 3L' F2 3R2 U2 3R U2 3R' U2 F2 3R2 F2
+                    self.debug( f"*** Doing parity on R {plus_one}", level=2)
+                    #  https://speedcubedb.com/a/6x6/6x6L2E
+                    # 3R' U2 3L F2 3L' F2 3R2 U2 3R U2 3R' U2 F2 3R2 F2
 
-                # noinspection PyPep8Naming
-                Rs = Algs.R[plus_one]
-                # noinspection PyPep8Naming
-                Ls = Algs.L[plus_one]
+                    # noinspection PyPep8Naming
+                    Rs = Algs.R[plus_one]
+                    # noinspection PyPep8Naming
+                    Ls = Algs.L[plus_one]
 
-                # noinspection PyPep8Naming
-                U = Algs.U
-                # noinspection PyPep8Naming
-                F = Algs.F
+                    # noinspection PyPep8Naming
+                    U = Algs.U
+                    # noinspection PyPep8Naming
+                    F = Algs.F
 
-                alg = Rs.prime + U * 2 + Ls + F * 2 + Ls.prime + F * 2 + Rs * 2 + U * 2 + Rs + U * 2 + Rs.p + U * 2 + F * 2
-                alg += Rs * 2 + F * 2
+                    alg = Rs.prime + U * 2 + Ls + F * 2 + Ls.prime + F * 2 + Rs * 2 + U * 2 + Rs + U * 2 + Rs.p + U * 2 + F * 2
+                    alg += Rs * 2 + F * 2
 
-                self.op.play(alg)
+                    self.op.play(alg)
 
     @staticmethod
     def _get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:
