@@ -78,17 +78,13 @@ class E2ECommutator(SolverHelper):
 
     def do_right_or_left_commutator_by_source_ltr_index(self,
                                                         source_ltr_index_on_fu: int,
-                                                        is_right: bool,
-                                                        is_prime: bool = False) -> None:
+                                                        is_right: bool) -> None:
         """
         Execute the actual commutator algorithm.
 
         Args:
             source_ltr_index_on_fu: The LTR index on the FU (front-up) edge (0-based)
             is_right: True for right edge target, False for left edge target
-            is_prime: If True, play the inverse (prime) of the commutator algorithm.
-                     Forward: FU → FL/FR → BU → FU
-                     Prime:   FU → BU → FL/FR → FU (reverse direction)
         """
         from cube.domain.model import EdgePosition
         from cube.domain.model.FaceName import FaceName
@@ -162,23 +158,14 @@ class E2ECommutator(SolverHelper):
         # Get marker factory for at-risk marker (third wing in 3-cycle)
         mf = cube.sp.marker_factory
 
-        # Build annotation headline based on direction
-        def get_h2_text() -> str:
-            if is_prime:
-                # Prime reverses cycle: FU → BU → FL/FR → FU
-                return (f"3-cycle (prime): {source_wing.parent_name_index_colors}"
-                        f" → {get_third_wing().parent_name_and_index}"
-                        f" → {target_wing.parent_name_and_index}")
-            else:
-                # Forward cycle: FU → FL/FR → BU → FU
-                return (f"3-cycle: {source_wing.parent_name_index_colors}"
-                        f" → {target_wing.parent_name_and_index}"
-                        f" → {get_third_wing().parent_name_and_index}")
-
         with self.annotate(([source_wing], AnnWhat.Moved),
                            ([target_wing], AnnWhat.FixedPosition),
-                           additional_markers=[(get_third_wing, AnnWhat.FixedPosition, mf.at_risk)],
-                           h2=get_h2_text,
+                           additional_markers=[(get_third_wing, AnnWhat.Moved, mf.at_risk)],
+                           h2=lambda: f"3-cycle: {source_wing.parent_name_index_colors}"
+                              f" → {target_wing.parent_name_and_index}"
+                              f" → {get_third_wing().parent_name_and_index}",
+
                            ):
-            # 3-cycle: FU → FL/FR → BU → FU (or reverse for prime)
-            self.op.play(alg.prime if is_prime else alg)
+            # 3-cycle: FU → FL/FR → BU → FU
+            # U R U' [2]M' U R' U' [2]M
+            self.op.play(alg)
