@@ -208,17 +208,56 @@ class SliceLayout(Protocol):
 
     def create_slice_index_computer(self, face_name: FaceName) -> CenterToSlice:
         """
-        Create a function that computes slice coordinates from (row, col, n_slices).
+        Create a function that computes slice coordinates from face coordinates.
 
         The returned function encapsulates the geometry-derived formula for this
-        specific slice and face combination.
+        specific slice and face combination. It converts a face's (row, col) position
+        to the corresponding slice index and slot within that slice.
 
         Args:
-            face_name: The face to compute formula for
+            face_name: The face to compute formula for (must be cut by this slice)
 
         Returns:
-            A function (row, col, n_slices) -> (slice_index, slot)
-            Caller typically uses result[0] to get just the slice_index.
+            A function with signature: (n_slices, row, col) -> (slice_index, slot)
+            - n_slices: Number of inner slices (cube.size - 2)
+            - row, col: 0-based coordinates on the face
+            - slice_index: 0-based index of the slice [0, n_slices-1]
+            - slot: Position within the slice on that face
+
+        Usage:
+            To get just the slice_index from a coordinate:
+
+                computer = slice_layout.create_slice_index_computer(FaceName.F)
+                slice_index = computer(n_slices, row, col)[0]
+
+            Or use the convenience method compute_slice_index() which does this for you.
+
+        Example:
+            For M slice on Front face (5x5 cube, n_slices=3):
+            - M cuts columns on Front face
+            - computer(3, row=1, col=0)[0] -> 0  (leftmost column = M[0])
+            - computer(3, row=1, col=2)[0] -> 2  (rightmost column = M[2])
+        """
+        ...
+
+    def compute_slice_index(self, face_name: FaceName, coord: tuple[int, int], n_slices: int) -> int:
+        """
+        Compute the 0-based slice index for a given face and coordinate.
+
+        This is a convenience method that wraps create_slice_index_computer().
+
+        Args:
+            face_name: The face where the coordinate originates
+            coord: 0-based (row, col) on the face
+            n_slices: Number of inner slices (cube.n_slices = cube.size - 2)
+
+        Returns:
+            0-based slice index in range [0, n_slices-1]
+
+        Example:
+            slice_layout = cube.layout.get_slice(SliceName.M)
+            slice_index = slice_layout.compute_slice_index(FaceName.F, (row, col), n_slices)
+            alg = Algs.of_slice(SliceName.M)[slice_index + 1]  # 1-based for algorithm
         """
         ...
 
@@ -502,6 +541,16 @@ class _SliceLayout(SliceLayout):
         cache = self._cache_manager.get(cache_key, object)  # type: ignore[arg-type]
         #cluade: lets get rid of the cast !!!
         return cast(CenterToSlice, cache.compute(compute))
+
+    def compute_slice_index(self, face_name: FaceName, coord: tuple[int, int], n_slices: int) -> int:
+        """
+        Compute the 0-based slice index for a given face and coordinate.
+
+        See SliceLayout.compute_slice_index() for full documentation.
+        """
+        row, col = coord
+        computer = self.create_slice_index_computer(face_name)
+        return computer(n_slices, row, col)[0]
 
     def create_walking_info_unit(self) -> "CubeWalkingInfoUnit":
         """

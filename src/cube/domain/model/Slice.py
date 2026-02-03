@@ -576,6 +576,8 @@ class Slice(SuperElement):
         """
         Compute the 0-based slice index for a given face and coordinate.
 
+        Delegates to slice_layout.compute_slice_index().
+
         Args:
             face: The face where the coordinate originates
             coord: 0-based (row, col) on the face
@@ -584,7 +586,4 @@ class Slice(SuperElement):
         Returns:
             0-based slice index in range [0, n_slices-1]
         """
-        row, col = coord
-        computer = self._slice_layout.create_slice_index_computer(face)
-        # computer signature: (n_slices, row, col) -> (slice_index, slot)
-        return computer(n_slices, row, col)[0]
+        return self._slice_layout.compute_slice_index(face, coord, n_slices)

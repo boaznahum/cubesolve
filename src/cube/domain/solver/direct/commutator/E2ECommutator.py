@@ -86,9 +86,11 @@ class E2ECommutator(SolverHelper):
             is_right: True for right edge target, False for left edge target
         """
         from cube.domain.model import EdgePosition
+        from cube.domain.model.FaceName import FaceName
 
         cube = self.cube
         front = cube.front
+        n_slices = cube.n_slices
 
         # Derive source_wing from FU edge
         fu_edge = cube.fu
@@ -104,30 +106,43 @@ class E2ECommutator(SolverHelper):
         target_wing_index = target_edge.get_edge_slice_index_from_face_ltr_index(front, target_ltr_index)
         target_wing = target_edge.get_slice(target_wing_index)
 
-        alg_index = source_ltr_index_on_fu + 1  # one based
+        # Get slice name between L and R (which is M)
+        slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(FaceName.L)
+
+        # Compute slice index from face coordinates
+        # The source is on FU edge, so we use the column index on the front face
+        slice_layout = cube.layout.get_slice(slice_name)
+        # For FU edge, LTR index corresponds to column on front face, row is n_slices-1 (top)
+        coord = (n_slices - 1, source_ltr_index_on_fu)
+        slice_index = slice_layout.compute_slice_index(FaceName.F, coord, n_slices)
+
+        # Get slice algorithm and apply index (1-based for algorithm)
+        slice_alg = Algs.of_slice(slice_name)
+        alg_index = slice_index + 1
+
         alg: Alg
         if is_right:
 
             # U R
-            # U' [2]M'
+            # U' [k]M'
             # U R'
-            # U' [2]M
+            # U' [k]M
 
             alg = Algs.seq(Algs.U, Algs.R,
-                           Algs.U.prime, Algs.M[alg_index].prime,
+                           Algs.U.prime, slice_alg[alg_index].prime,
                            Algs.U, Algs.R.prime,
-                           Algs.U.prime, Algs.M[alg_index]
+                           Algs.U.prime, slice_alg[alg_index]
                            )
         else:
             #  U' L'
-            #  U [1]M'
+            #  U [k]M'
             #  U' L
-            #  U [1]M
+            #  U [k]M
             alg = Algs.seq(
                 Algs.U.prime, Algs.L.prime,
-                Algs.U, Algs.M[alg_index].prime,
+                Algs.U, slice_alg[alg_index].prime,
                 Algs.U.prime, Algs.L,
-                Algs.U + Algs.M[alg_index]
+                Algs.U + slice_alg[alg_index]
             )
 
         with self.annotate(([source_wing], AnnWhat.Moved),
