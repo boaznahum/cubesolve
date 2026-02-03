@@ -757,21 +757,28 @@ class NxNCenters(SolverHelper):
         big_blocks = self._comm_helper.search_big_block(source_face, color)
 
         if not big_blocks:
+            self.debug(f"  No blocks found for {color} on {source_face.name}", level=2)
             return False
+
+        # Log found blocks
+        block_sizes = [(self._block_size(b[0], b[1]), b) for _, b in big_blocks]
+        large_blocks = [(s, b) for s, b in block_sizes if s > 1]
+        self.debug(f"  Found {len(big_blocks)} blocks on {source_face.name}, "
+                   f"{len(large_blocks)} larger than 1x1", level=1)
 
         # because we do exact match, there is no risk that that new blocks will be constructed,
         # so we try all
 
         for _, big_block in big_blocks:
-            # print(f"@@@@@@@@@@@ Found big block: {big_block}")
-
             rc1 = big_block[0]
             rc2 = big_block[1]
+            block_size = self._block_size(rc1, rc2)
+            block_dims = self._block_size2(rc1, rc2)
 
             rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
             rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
 
-            for _ in range(4):
+            for rotation in range(4):
                 if self._block_communicator(color,
                                             face,
                                             source_face,
@@ -780,7 +787,10 @@ class NxNCenters(SolverHelper):
                                             # it still doesn't work, we need another mode, Source and Target Match
                                             # but for this we need to search source only
                                             _SearchBlockMode.ExactMatch):
-                    # this is much far then true, we need to search new block
+                    # Log successful block commutator
+                    self.debug(f"    ✓ Block {block_dims[0]}x{block_dims[1]} ({block_size} pieces) "
+                               f"from {source_face.name}{rc1}->{rc2} to {face.name} "
+                               f"(rotation={rotation})", level=1)
                     work_done = True
                     break
 
