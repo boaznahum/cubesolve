@@ -6,6 +6,7 @@ in the layer-by-layer approach.
 """
 from cube.domain.algs import Alg, Algs
 from cube.domain.model import EdgeWing
+from cube.domain.model.Slice import Slice
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -111,10 +112,9 @@ class E2ECommutator(SolverHelper):
 
         # Compute slice index from face coordinates
         # The source is on FU edge, so we use the column index on the front face
-        slice_layout = cube.layout.get_slice(slice_name)
+        the_slice: Slice = cube.sized_layout.get_slice(slice_name)
         # For FU edge, LTR index corresponds to column on front face, row is n_slices-1 (top)
-        coord = (n_slices - 1, source_ltr_index_on_fu)
-        slice_index = slice_layout.compute_slice_index(FaceName.F, coord, n_slices)
+        slice_index = the_slice.compute_slice_index(FaceName.F, (0, source_ltr_index_on_fu), n_slices)
 
         # Get slice algorithm and apply index (1-based for algorithm)
         slice_alg = Algs.of_slice(slice_name)
