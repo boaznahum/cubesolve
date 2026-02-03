@@ -513,7 +513,49 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
     # Reset button only (Solve moved to Row 3)
     toolbar.add_button("Reset", Commands.RESET_CUBE)
 
-    # === ROW 2: Animation, Speed, Debug, SS, Stop, Quit ===
+    # === ROW 2: Texture, Shadow, Solver, Quit ===
+    toolbar.new_row()
+
+    # Texture controls
+    toolbar.add_label("Tex")
+    toolbar.add_button("<", Commands.TEXTURE_SET_PREV)
+    toolbar.add_button(">", Commands.TEXTURE_SET_NEXT)
+    toolbar.add_button(
+        "On",
+        Commands.TEXTURE_TOGGLE,
+        label_fn=lambda: "ON" if window._modern_viewer.textures_enabled else "OFF",
+        min_width=40,
+    )
+
+    toolbar.add_separator()
+
+    # Shadow toggle (for L, D, B faces)
+    toolbar.add_button(
+        "Shadow",
+        Commands.SHADOW_TOGGLE_ALL,
+        label_fn=lambda: "Shd:ON" if vs.any_shadow_on else "Shd:OFF",
+        min_width=65,
+    )
+
+    toolbar.add_separator()
+
+    # Solver
+    toolbar.add_button(
+        "Solver",
+        Commands.SWITCH_SOLVER,
+        label_fn=lambda: f"Slv:{app.slv.name[:6]}",
+        min_width=75,
+    )
+
+    toolbar.add_separator()
+
+    toolbar.add_button("Quit", Commands.QUIT)
+
+    # === ROW 3: Solver Step Buttons (dynamic based on current solver) ===
+    toolbar.new_row()
+    toolbar.rebuild_solver_buttons(app)
+
+    # === ROW 4: Animation, Debug, and File Algorithm Buttons ===
     toolbar.new_row()
 
     # Animation controls
@@ -559,51 +601,12 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
         enabled_fn=lambda: window.animation_running,
     )
 
-    toolbar.add_separator()
-
-    # Texture controls
-    toolbar.add_label("Tex")
-    toolbar.add_button("<", Commands.TEXTURE_SET_PREV)
-    toolbar.add_button(">", Commands.TEXTURE_SET_NEXT)
-    toolbar.add_button(
-        "On",
-        Commands.TEXTURE_TOGGLE,
-        label_fn=lambda: "ON" if window._modern_viewer.textures_enabled else "OFF",
-        min_width=40,
-    )
-
-    toolbar.add_separator()
-
-    # Shadow toggle (for L, D, B faces)
-    toolbar.add_button(
-        "Shadow",
-        Commands.SHADOW_TOGGLE_ALL,
-        label_fn=lambda: "Shd:ON" if vs.any_shadow_on else "Shd:OFF",
-        min_width=65,
-    )
-
-    toolbar.add_separator()
-
-    # Solver
-    toolbar.add_button(
-        "Solver",
-        Commands.SWITCH_SOLVER,
-        label_fn=lambda: f"Slv:{app.slv.name[:6]}",
-        min_width=75,
-    )
-
-    toolbar.add_separator()
-
-    toolbar.add_button("Quit", Commands.QUIT)
-
-    # === ROW 3: Solver Step Buttons (dynamic based on current solver) ===
-    toolbar.new_row()
-    toolbar.rebuild_solver_buttons(app)
-
-    # === ROW 4: File Algorithm Buttons (optional, based on config) ===
+    # File algorithm buttons (optional, based on config)
     if app.config.show_file_algs:
         from cube.presentation.gui.commands.concrete import ExecuteFileAlgCommand
-        toolbar.new_row()
+
+        toolbar.add_separator()
+
         for slot in range(1, 6):
             toolbar.add_button(
                 label=f"F{slot}",
