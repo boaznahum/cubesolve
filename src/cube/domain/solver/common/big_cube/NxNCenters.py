@@ -17,6 +17,7 @@ from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverHelper import SolverHelper
+from cube.domain.solver.common.big_cube.commun.CommunicatorHelper import CommunicatorHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
@@ -153,6 +154,9 @@ class NxNCenters(SolverHelper):
 
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = cfg.optimize_big_cube_centers_search_complete_slices_only_target_zero
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
+
+        # Use CommunicatorHelper for block search operations
+        self._comm_helper = CommunicatorHelper(slv)
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy
@@ -504,7 +508,7 @@ class NxNCenters(SolverHelper):
         else:
 
             # the above also did a 1 size block
-            for rc in self._2d_center_iter():
+            for rc in self._comm_helper._2d_center_iter():
 
                 if self._block_communicator(color,
                                             face,
@@ -528,10 +532,10 @@ class NxNCenters(SolverHelper):
         if not work_done:
             self.debug( f"Internal error, no work was done on face {face} required color {color}, "
                                f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}", level=3)
-            for rc in self._2d_center_iter():
+            for rc in self._comm_helper._2d_center_iter():
                 if center.get_center_slice(rc).color != color:
                     print(f"Missing: {rc}  {[*self._get_four_center_points(rc[0], rc[1])]}")
-            for rc in self._2d_center_iter():
+            for rc in self._comm_helper._2d_center_iter():
                 if source_face.center.get_center_slice(rc).color == color:
                     print(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
 
@@ -750,24 +754,31 @@ class NxNCenters(SolverHelper):
 
         cube = self.cube
 
-        big_blocks = self._search_big_block(source_face, color)
+        big_blocks = self._comm_helper.search_big_block(source_face, color)
 
         if not big_blocks:
+            self.debug(f"  No blocks found for {color} on {source_face.name}", level=2)
             return False
+
+        # Log found blocks
+        block_sizes = [(CommunicatorHelper.block_size(b[0], b[1]), b) for _, b in big_blocks]
+        large_blocks = [(s, b) for s, b in block_sizes if s > 1]
+        self.debug(f"  Found {len(big_blocks)} blocks on {source_face.name}, "
+                   f"{len(large_blocks)} larger than 1x1", level=1)
 
         # because we do exact match, there is no risk that that new blocks will be constructed,
         # so we try all
 
         for _, big_block in big_blocks:
-            # print(f"@@@@@@@@@@@ Found big block: {big_block}")
-
             rc1 = big_block[0]
             rc2 = big_block[1]
+            block_size = CommunicatorHelper.block_size(rc1, rc2)
+            block_dims = CommunicatorHelper.block_size2(rc1, rc2)
 
             rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
             rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
 
-            for _ in range(4):
+            for rotation in range(4):
                 if self._block_communicator(color,
                                             face,
                                             source_face,
@@ -776,7 +787,10 @@ class NxNCenters(SolverHelper):
                                             # it still doesn't work, we need another mode, Source and Target Match
                                             # but for this we need to search source only
                                             _SearchBlockMode.ExactMatch):
-                    # this is much far then true, we need to search new block
+                    # Log successful block commutator
+                    self.debug(f"    ✓ Block {block_dims[0]}x{block_dims[1]} ({block_size} pieces) "
+                               f"from {source_face.name}{rc1}->{rc2} to {face.name} "
+                               f"(rotation={rotation})", level=1)
                     work_done = True
                     break
 
@@ -1047,7 +1061,7 @@ class NxNCenters(SolverHelper):
                 yield source_face.center.get_center_slice(rc)
 
         def _h2():
-            size_ = self._block_size2(rc1, rc2)
+            size_ = CommunicatorHelper.block_size2(rc1, rc2)
             return f", {size_[0]}x{size_[1]} communicator"
 
         with self.ann.annotate((_ann_source, AnnWhat.Moved),
@@ -1067,91 +1081,6 @@ class NxNCenters(SolverHelper):
             undo_alg = Algs.of_face(source_face.name).prime * n_rotate
             self.debug( f"  [CAGE] Undoing source rotation: {undo_alg}", level=1)
             self.op.play(undo_alg)
-
-        return True
-
-    def _is_valid_and_block_for_search(self, face: Face, color: Color, rc1: Point, rc2: Point):
-
-        is_valid_block = self._is_valid_block(rc1, rc2)
-
-        if not is_valid_block:
-            return False
-
-        is_block = self._is_block(face, color, None, rc1, rc2, dont_convert_coordinates=True)
-
-        return is_block
-
-    def _search_big_block(self, face: Face, color: Color) -> Sequence[Tuple[int, Block]] | None:
-
-        """
-        Rerun all possible blocks, 1 size too, sorted from big to small
-        :param face:
-        :param color:
-        :return:
-        """
-
-        center = face.center
-
-        res: list[Tuple[int, Block]] = []
-
-        n = self.cube.n_slices
-
-        for rc in self._2d_center_iter():
-
-            if center.get_center_slice(rc).color == color:
-
-                # collect also 1 size blocks
-                res.append((1, Block(rc, rc)))
-
-                # now try to extend it over r
-                r_max = None
-                for r in range(rc[0] + 1, n):
-
-                    if not self._is_valid_and_block_for_search(face, color, rc, Point(r, rc[1])):
-                        break
-                    else:
-                        r_max = r
-
-                if not r_max:
-                    r_max = rc[0]
-
-                # now try to extend it over c
-                c_max = None
-                for c in range(rc[1] + 1, n):
-                    if not self._is_valid_and_block_for_search(face, color, rc, Point(r_max, c)):
-                        break
-                    else:
-                        c_max = c
-
-                if not c_max:
-                    c_max = rc[1]
-
-                size = self._block_size(rc, Point(r_max, c_max))
-
-                # if size > 1:
-                res.append((size, Block(rc, Point(r_max, c_max))))
-
-        res = sorted(res, key=lambda s: s[0], reverse=True)
-        return res
-
-    def _is_valid_block(self, rc1: Point, rc2: Point):
-
-        r1 = rc1[0]
-        c1 = rc1[1]
-
-        r2 = rc2[0]
-        c2 = rc2[1]
-
-        rc1_f_rotated = self.rotate_point_clockwise(r1, c1)
-        rc2_f_rotated = self.rotate_point_clockwise(r2, c2)
-
-        # the columns ranges must not intersect
-        if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-            rc1_f_rotated = self.rotate_point_counterclockwise(r1, c1)
-            rc2_f_rotated = self.rotate_point_counterclockwise(r2, c2)
-
-            if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-                return False
 
         return True
 
@@ -1382,26 +1311,6 @@ class NxNCenters(SolverHelper):
             for c in range(c1, c2 + 1):
                 yield Point(r, c)
 
-    def _2d_center_iter(self) -> Iterator[Point]:
-
-        """
-        Walk on all points in center of size n_slices
-        """
-
-        n = self.cube.n_slices
-
-        for r in range(n):
-            for c in range(n):
-                yield Point(r, c)
-
-    @staticmethod
-    def _block_size(rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int:
-        return (abs(rc2[0] - rc1[0]) + 1) * (abs(rc2[1] - rc1[1]) + 1)
-
-    @staticmethod
-    def _block_size2(rc1: Tuple[int, int], rc2: Tuple[int, int]) -> Tuple[int, int]:
-        return (abs(rc2[0] - rc1[0]) + 1), (abs(rc2[1] - rc1[1]) + 1)
-
     def _is_block(self,
                   source_face: Face,
                   required_color: Color,
@@ -1421,7 +1330,7 @@ class NxNCenters(SolverHelper):
         """
 
         # Number of points in block
-        _max = self._block_size(rc1, rc2)
+        _max = CommunicatorHelper.block_size(rc1, rc2)
 
         if min_points is None:
             min_points = _max
@@ -1467,7 +1376,7 @@ class NxNCenters(SolverHelper):
         :return: How many source clockwise rotate in order to match the block to source
         """
 
-        block_size = self._block_size(rc1, rc2)
+        block_size = CommunicatorHelper.block_size(rc1, rc2)
 
         n_ok = self._count_colors_on_block(required_color, target_face, rc1, rc2)
 
