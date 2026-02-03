@@ -650,4 +650,8 @@ class LayerByLayerNxNSolver(BaseSolver):
         """
         l1_tracker = self._get_layer1_tracker(face_trackers)
 
+        # bug here, maybe need rotation
+        if self.is_l2_slices_solved():
+            return
+
         self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
