@@ -27,6 +27,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from cube.domain.algs import Algs
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Corner, Part
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
@@ -130,11 +132,30 @@ class LayerByLayerNxNSolver(BaseSolver):
 
             return f"L1:Done|Sl:{solved_slices}/{n_slices}"
 
-    def is_l2_slices_solved(self) -> bool:
+    def _is_l2_slices_solved(self) -> bool:
+
+        """
+        Take to account L1 orientation
+        :return:
+        """
         with FacesTrackerHolder(self) as th:
 
             if not self._is_layer1_solved(th):
                 return False
+
+            if not self._is_l2_slices_solved_ignore_rotation():
+                return False
+
+
+            # l1 solved, L2 slices solved
+
+            # so now make sure l1 edges are on faces
+
+            return all(e.match_faces for e in self._get_layer1_tracker(th).face.edges)
+
+    def _is_l2_slices_solved_ignore_rotation(self) -> bool:
+        with FacesTrackerHolder(self) as th:
+
 
             l1_tracker = self._get_layer1_tracker(th)
             solved_slices = self._lbl_slices.count_solved_slice_centers(l1_tracker)
@@ -264,13 +285,13 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
                     self._solve_layer1_corners(th)
-                    self._solve_face_rows(th)
+                    self._solve_l2_slices(th)
 
                 case SolveStep.LBL_L3_CENTER:
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
                     self._solve_layer1_corners(th)
-                    self._solve_face_rows(th)
+                    self._solve_l2_slices(th)
                     self._solve_layer3_centers(th)
 
 
@@ -278,7 +299,7 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
                     self._solve_layer1_corners(th)
-                    self._solve_face_rows(th)
+                    self._solve_l2_slices(th)
                     self._solve_layer3_centers(th)
                     self._solve_layer3_edges(th)
 
@@ -286,7 +307,7 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
                     self._solve_layer1_corners(th)
-                    self._solve_face_rows(th)
+                    self._solve_l2_slices(th)
                     self._solve_layer3_centers(th)
                     self._solve_layer3_edges(th)
                     self._solve_layer3_cross(th)
@@ -296,7 +317,7 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
                     self._solve_layer1_corners(th)
-                    self._solve_face_rows(th)
+                    self._solve_l2_slices(th)
 
                     self._solve_layer3_centers(th)
                     self._solve_layer3_edges(th)
@@ -643,7 +664,7 @@ class LayerByLayerNxNSolver(BaseSolver):
     # Private methods - Middle slices solving
     # =========================================================================
 
-    def _solve_face_rows(self, face_trackers: FacesTrackerHolder) -> None:
+    def _solve_l2_slices(self, face_trackers: FacesTrackerHolder) -> None:
         """Solve all middle slice ring centers + edges (bottom to top).
 
         Delegates to _LBLSlices helper which wraps NxNCenters and NxNEdges.
@@ -651,7 +672,17 @@ class LayerByLayerNxNSolver(BaseSolver):
         l1_tracker = self._get_layer1_tracker(face_trackers)
 
         # bug here, maybe need rotation
-        if self.is_l2_slices_solved():
+        if self._is_l2_slices_solved():
             return
 
-        self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
+        # this should be done in the helper, not here:
+        if self._is_l2_slices_solved_ignore_rotation():
+            for _ in range(3):
+                self.op.play(Algs.of_face(l1_tracker.face.name))
+                if self._is_l2_slices_solved():
+                    return
+
+            raise InternalSWError("How di we reach here?")
+
+        else:
+            self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
