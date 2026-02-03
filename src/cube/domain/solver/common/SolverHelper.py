@@ -7,6 +7,7 @@ from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.protocols import (
+    AdditionalMarker,
     AnnotationProtocol,
     OperatorProtocol,
     SolverElementsProvider,
@@ -86,17 +87,18 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
     @property
     def ann(self) -> AnnotationProtocol:
         """
-        :deprecated, use annotate() directly
-        :return:
+        :deprecated: use annotate() directly
         """
         return self._ann
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
+                 additional_markers: list[AdditionalMarker] | None = None,
                  h1: str | Callable[[], str] | None = None,
                  h2: str | Callable[[], str] | None = None,
                  h3: str | Callable[[], str] | None = None,
                  animation: bool = True) -> ContextManager[None]:
-        return self.ann.annotate(*elements, h1=h1, h2=h2, h3=h3, animation=animation)
+        return self._ann.annotate(*elements, additional_markers=additional_markers,
+                                  h1=h1, h2=h2, h3=h3, animation=animation)
 
 
     @property

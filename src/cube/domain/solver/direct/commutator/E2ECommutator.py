@@ -158,14 +158,14 @@ class E2ECommutator(SolverHelper):
         # Get marker factory for at-risk marker (third wing in 3-cycle)
         mf = cube.sp.marker_factory
 
-        with self.ann.annotate(([source_wing], AnnWhat.Moved),
-                               ([target_wing], AnnWhat.FixedPosition),
-                               additional_markers=[(get_third_wing, AnnWhat.Moved, mf.at_risk)],
-                               h2=lambda: f"3-cycle: {source_wing.parent_name_index_colors}"
-                                  f" → {target_wing.parent_name_and_index}"
-                                  f" → {get_third_wing().parent_name_and_index}",
+        with self.annotate(([source_wing], AnnWhat.Moved),
+                           ([target_wing], AnnWhat.FixedPosition),
+                           additional_markers=[(get_third_wing, AnnWhat.Moved, mf.at_risk)],
+                           h2=lambda: f"3-cycle: {source_wing.parent_name_index_colors}"
+                              f" → {target_wing.parent_name_and_index}"
+                              f" → {get_third_wing().parent_name_and_index}",
 
-                               ):
+                           ):
             # 3-cycle: FU → FL/FR → BU → FU
             # U R U' [2]M' U R' U' [2]M
             self.op.play(alg)
