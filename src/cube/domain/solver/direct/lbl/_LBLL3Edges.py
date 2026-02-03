@@ -13,6 +13,7 @@ from cube.domain.model import EdgeWing, Edge
 from cube.domain.model._elements import EdgePosition
 from cube.domain.model._part import EdgeName
 from cube.domain.solver import SolveStep
+from cube.domain.solver.common.E2ECommunicator import E2ECommunicator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -73,6 +74,7 @@ class _LBLL3Edges(SolverHelper):
 
         # Composition: reuse existing edge methods
         self._nxn_edges = _LBLNxNEdges(slv)
+        self._e2e_comm = E2ECommunicator(slv)
 
     # =========================================================================
     # Main Entry Point
