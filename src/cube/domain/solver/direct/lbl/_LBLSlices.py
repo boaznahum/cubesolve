@@ -162,6 +162,10 @@ class _LBLSlices(SolverHelper):
         # help solver not to touch already solved
         _common.mark_slices_and_v_mark_if_solved(_get_row_pieces(self.cube, l1_white_tracker, face_row))
 
+        # avoid rotations later we will add more in centers and edges
+        if self._row_solved(l1_white_tracker, face_row):
+            return
+
         for target_face in side_trackers:
                 self._solve_face_row(l1_white_tracker, target_face, face_row)
 
