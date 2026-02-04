@@ -125,6 +125,9 @@ class GUIToolbar:
         self._tooltip_label: pyglet.text.Label | None = None
         self._tooltip_bg: shapes.Rectangle | None = None
 
+        # Store window reference for rebuild (set by create_toolbar)
+        self._window: "PygletAppWindow | None" = None
+
     def add_button(
             self,
             label: str,
@@ -392,7 +395,7 @@ class GUIToolbar:
             SolveStepNoAnimationCommand,
         )
 
-        # Remove existing Row 3 buttons (if any)
+        # Remove existing Row 3+ buttons (if any)
         if self._solver_row_start >= 0:
             self._buttons = self._buttons[:self._solver_row_start]
 
@@ -427,7 +430,86 @@ class GUIToolbar:
                 shift_command=SolveStepNoAnimationCommand(step),
             )
 
+        # Rebuild Row 4 (animation/debug buttons) after solver buttons
+        self._build_row4_buttons()
+
         self._shapes_dirty = True
+
+    def _build_row4_buttons(self) -> None:
+        """Build Row 4: Animation, Debug, and File Algorithm buttons.
+
+        Called from rebuild_solver_buttons to ensure Row 4 is rebuilt
+        when solver changes (since Row 3+ gets truncated).
+        """
+        from cube.presentation.gui.commands import Commands
+        from cube.presentation.gui.commands.concrete import ExecuteFileAlgCommand
+
+        if self._window is None:
+            return  # Not initialized yet
+
+        window = self._window
+        app = window.app
+        vs = app.vs
+        op = app.op
+
+        # === ROW 4: Animation, Debug, and File Algorithm Buttons ===
+        self.new_row()
+
+        # Animation controls
+        self.add_button(
+            "Anim",
+            Commands.TOGGLE_ANIMATION,
+            label_fn=lambda: "Anim:ON" if op.animation_enabled else "Anim:OFF",
+            min_width=70,
+        )
+
+        # Speed controls
+        self.add_label("Spd", label_fn=lambda: f"[{vs.get_speed_index}]", min_width=40)
+        self.add_button("-", Commands.SPEED_DOWN)
+        self.add_button("+", Commands.SPEED_UP)
+
+        self.add_separator()
+
+        # Debug and single-step
+        self.add_button(
+            "Debug",
+            Commands.TOGGLE_DEBUG,
+            label_fn=lambda: "Dbg:ON" if app.slv.is_debug_config_mode else "Dbg:OFF",
+            min_width=65,
+        )
+        self.add_button(
+            "SS",
+            Commands.SINGLE_STEP_TOGGLE,
+            label_fn=lambda: "SS:ON" if vs.single_step_mode else "SS:OFF",
+            min_width=55,
+        )
+
+        # Next step (enabled when paused)
+        self.add_button(
+            "Next",
+            Commands.PAUSE_TOGGLE,
+            enabled_fn=lambda: vs.paused_on_single_step_mode is not None,
+        )
+
+        # Stop (enabled when animation running)
+        self.add_button(
+            "Stop",
+            Commands.STOP_ANIMATION,
+            enabled_fn=lambda: window.animation_running,
+        )
+
+        # File algorithm buttons (optional, based on config)
+        if app.config.show_file_algs:
+            self.add_separator()
+
+            for slot in range(1, 6):
+                self.add_button(
+                    label=f"F{slot}",
+                    command=ExecuteFileAlgCommand(slot=slot),
+                    tooltip=f"Execute algorithm from f{slot}.txt (Shift: inverse)",
+                    shift_label=f"F{slot}'",
+                    shift_command=ExecuteFileAlgCommand(slot=slot, inverse=True),
+                )
 
     def draw_tooltip(self) -> None:
         """Draw tooltip for hovered button (called after batch.draw)."""
@@ -485,7 +567,6 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
     toolbar = GUIToolbar(window.width, window.height)
     app = window.app
     vs = app.vs
-    op = app.op
 
     # === ROW 1: Size, Scramble, Solve/Reset ===
 
@@ -551,69 +632,11 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
 
     toolbar.add_button("Quit", Commands.QUIT)
 
-    # === ROW 3: Solver Step Buttons (dynamic based on current solver) ===
+    # === ROW 3: Solver Step Buttons + ROW 4: Animation/Debug ===
+    # Store window reference for _build_row4_buttons (called by rebuild_solver_buttons)
+    toolbar._window = window
     toolbar.new_row()
+    # rebuild_solver_buttons also builds Row 4 via _build_row4_buttons
     toolbar.rebuild_solver_buttons(app)
-
-    # === ROW 4: Animation, Debug, and File Algorithm Buttons ===
-    toolbar.new_row()
-
-    # Animation controls
-    toolbar.add_button(
-        "Anim",
-        Commands.TOGGLE_ANIMATION,
-        label_fn=lambda: "Anim:ON" if op.animation_enabled else "Anim:OFF",
-        min_width=70,
-    )
-
-    # Speed controls
-    toolbar.add_label("Spd", label_fn=lambda: f"[{vs.get_speed_index}]", min_width=40)
-    toolbar.add_button("-", Commands.SPEED_DOWN)
-    toolbar.add_button("+", Commands.SPEED_UP)
-
-    toolbar.add_separator()
-
-    # Debug and single-step
-    toolbar.add_button(
-        "Debug",
-        Commands.TOGGLE_DEBUG,
-        label_fn=lambda: "Dbg:ON" if app.slv.is_debug_config_mode else "Dbg:OFF",
-        min_width=65,
-    )
-    toolbar.add_button(
-        "SS",
-        Commands.SINGLE_STEP_TOGGLE,
-        label_fn=lambda: "SS:ON" if vs.single_step_mode else "SS:OFF",
-        min_width=55,
-    )
-
-    # Next step (enabled when paused)
-    toolbar.add_button(
-        "Next",
-        Commands.PAUSE_TOGGLE,
-        enabled_fn=lambda: vs.paused_on_single_step_mode is not None,
-    )
-
-    # Stop (enabled when animation running)
-    toolbar.add_button(
-        "Stop",
-        Commands.STOP_ANIMATION,
-        enabled_fn=lambda: window.animation_running,
-    )
-
-    # File algorithm buttons (optional, based on config)
-    if app.config.show_file_algs:
-        from cube.presentation.gui.commands.concrete import ExecuteFileAlgCommand
-
-        toolbar.add_separator()
-
-        for slot in range(1, 6):
-            toolbar.add_button(
-                label=f"F{slot}",
-                command=ExecuteFileAlgCommand(slot=slot),
-                tooltip=f"Execute algorithm from f{slot}.txt (Shift: inverse)",
-                shift_label=f"F{slot}'",
-                shift_command=ExecuteFileAlgCommand(slot=slot, inverse=True),
-            )
 
     return toolbar
