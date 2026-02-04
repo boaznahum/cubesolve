@@ -15,6 +15,7 @@ import pytest
 
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
+from cube.domain.geometric.geometry_types import Block, Point
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
@@ -24,9 +25,6 @@ from cube.domain.solver.common.big_cube.commutator._supported_faces import _get_
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 from cube.domain.solver.Solvers import Solvers
 
-# Type aliases
-Point = tuple[int, int]
-Block = tuple[Point, Point]
 
 # Get supported pairs for parametrization
 SUPPORTED_PAIRS = _get_supported_pairs()
@@ -414,7 +412,7 @@ class TestBlockValidation:
         ]
 
         for rc1, rc2, expected_size in test_cases:
-            actual_size = CommutatorHelper.block_size(rc1, rc2)
+            actual_size = Block(Point(*rc1), Point(*rc2)).size
             assert actual_size == expected_size, \
                 f"Block {rc1}->{rc2} should have size {expected_size}, got {actual_size}"
 
@@ -653,7 +651,7 @@ class TestMultiCellBlockCommutator:
 
         # Take the largest block
         _, target_block = large_blocks[0]
-        block_size = CommutatorHelper.block_size(target_block[0], target_block[1])
+        block_size = target_block.size
 
         # Get the 3-cycle blocks
         dry_result = comm_helper.execute_commutator(

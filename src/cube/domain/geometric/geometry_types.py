@@ -111,6 +111,20 @@ class Block(NamedTuple):
         r2, c2 = self.end
         return (abs(r2 - r1) + 1) * (abs(c2 - c1) + 1)
 
+
+    @property
+    def dim(self) -> tuple[int, int]:
+        """
+        Calculate the dimensions of a block (rows, cols).
+
+        Returns:
+            Tuple of (num_rows, num_cols)
+        """
+        rc1 = self.start
+        rc2 = self.end
+        return (abs(rc2[0] - rc1[0]) + 1), (abs(rc2[1] - rc1[1]) + 1)
+
+
     def rotate_clockwise(self, n_slices: int, n_rotations: int = 1) -> Block:
         """Return a new Block rotated clockwise by n rotations."""
         # Late import to avoid circular dependency

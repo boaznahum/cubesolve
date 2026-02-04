@@ -602,7 +602,7 @@ class NxNCenters2(SolverHelper):
                     break
 
             block = Block(start_pt, Point(max_r, max_c))
-            block_size = self._comm_helper.block_size(block[0], block[1])
+            block_size = block.size
 
             if block_size > 1 and self._comm_helper.is_valid_block(block[0], block[1]):
                 blocks.append(block)
@@ -612,7 +612,7 @@ class NxNCenters2(SolverHelper):
                         checked.add(Point(r, c))
 
         # Sort by size descending
-        blocks.sort(key=lambda b: self._comm_helper.block_size(b[0], b[1]), reverse=True)
+        blocks.sort(key=lambda b: b.size, reverse=True)
         return blocks
 
     def _try_blocks_from_target(

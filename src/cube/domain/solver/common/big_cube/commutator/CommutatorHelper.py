@@ -484,7 +484,7 @@ class CommutatorHelper(SolverHelper):
 
             def _h2() -> str:
                 """Headline for annotation - block size info."""
-                block_size = self.block_size(target_block[0], target_block[1])
+                block_size = target_block.size
                 if block_size == 1:
                     return ", 1x1 commutator"
                 dims = self.block_size2(target_block[0], target_block[1])
@@ -1236,8 +1236,9 @@ class CommutatorHelper(SolverHelper):
                     c_max = rc[1]
 
                 # Calculate size and add extended block
-                size = self.block_size(rc, (r_max, c_max))
-                res.append((size, Block(rc, Point(r_max, c_max))))
+                b = Block(rc, Point(r_max, c_max))
+                size = b.size
+                res.append((size, b))
 
         # Sort by size descending (largest blocks first)
         res = sorted(res, key=lambda s: s[0], reverse=True)

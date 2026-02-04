@@ -761,7 +761,7 @@ class NxNCenters(SolverHelper):
             return False
 
         # Log found blocks
-        block_sizes = [(CommutatorHelper.block_size(b[0], b[1]), b) for _, b in big_blocks]
+        block_sizes = [(b.size, b) for _, b in big_blocks]
         large_blocks = [(s, b) for s, b in block_sizes if s > 1]
         self.debug(f"  Found {len(big_blocks)} blocks on {source_face.name}, "
                    f"{len(large_blocks)} larger than 1x1", level=1)
@@ -772,8 +772,8 @@ class NxNCenters(SolverHelper):
         for _, big_block in big_blocks:
             rc1 = big_block[0]
             rc2 = big_block[1]
-            block_size = CommutatorHelper.block_size(rc1, rc2)
-            block_dims = CommutatorHelper.block_size2(rc1, rc2)
+            block_size = big_block.size
+            block_dims = big_block.dim
 
             rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
             rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
