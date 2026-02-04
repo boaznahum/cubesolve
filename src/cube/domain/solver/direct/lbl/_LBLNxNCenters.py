@@ -534,6 +534,23 @@ class NxNCenters2(SolverHelper):
 
         return True
 
+    def _source_block_has_color_with_rotation(
+        self,
+        required_color: Color,
+        source_face: Face,
+        source_block: Block,
+        second_block: Block
+    ) -> Block | None:
+
+        for _ in range(4):
+            if self._source_block_has_color_no_rotation(required_color, source_face, source_block, second_block):
+                return source_block
+
+            source_block = source_block.rotate_clockwise(self.n_slices)
+            second_block = second_block.rotate_clockwise(self.n_slices)
+
+        return None
+
     def _find_target_blocks(
         self,
         required_color: Color,
@@ -672,9 +689,9 @@ class NxNCenters2(SolverHelper):
 
                 # Check if natural source block has required colors (NO rotation search)
                 # For multi-cell blocks, rotation would change shape which breaks the algorithm
-                if not self._source_block_has_color_no_rotation(
-                    required_color, source_face, natural_source_block, second_block
-                ):
+                valid_source_with_colors = self._source_block_has_color_with_rotation(required_color,
+                                                                                      source_face, natural_source_block, second_block)
+                if valid_source_with_colors is None:
                     self.debug(f"‼️‼️‼️‼️‼️‼️‼️‼️ Target block {target_block} skipped - natural source doesn't have required colors")
                     continue
                 else:
@@ -690,7 +707,7 @@ class NxNCenters2(SolverHelper):
                     source_face=source_face,
                     target_face=target_face,
                     target_block=target_block,
-                    source_block=natural_source_block,  # Use natural position, no rotation
+                    source_block=valid_source_with_colors,  # Use natural position, no rotation
                     preserve_state=True,
                     dry_run=False,
                     _cached_secret=dry_result

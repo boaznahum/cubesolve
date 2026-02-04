@@ -364,7 +364,7 @@ class CommutatorHelper(SolverHelper):
             )
 
         # Get source point from input
-        source_point: Point = source_block[0]
+        #xsource_point: Point = source_block[0]
 
         # OPTIMIZATION: Use cached secret from dry_run to avoid recomputation
         # if _cached_secret is not None and _cached_secret._secret is not None:
@@ -377,7 +377,7 @@ class CommutatorHelper(SolverHelper):
         # CRITICAL: These are the ACTUAL points in the 3-cycle after any source setup rotation
         # s1 is ALWAYS the natural source position where the commutator actually operates
         # The input source_point is only for source face SETUP, not the cycle itself
-        natural_source: Point = internal_data.natural_source_coordinate  # Natural source position
+        natural_source_block: Block = internal_data.natural_source_block  # Natural source position
         target_point: Point = target_block[0]  # Target position
 
         # Compute xp (s2) using correct algorithm:
@@ -411,7 +411,7 @@ class CommutatorHelper(SolverHelper):
         ) if tp_begin != tp_end else xpt_on_source_begin
 
         # Step 4: Apply su' (inverse setup) to get final xp in original coordinates
-        source_setup_n_rotate = self._find_rotation_idx(source_point, natural_source)
+        source_setup_n_rotate = self._find_rotation_idx(source_block, natural_source_block)
 
         # undo the setup - supports negative
         xpt_on_source_after_un_setup = Point(*cqr.rotate_point_clockwise(xpt_on_source_begin,
@@ -517,9 +517,11 @@ class CommutatorHelper(SolverHelper):
 
         return CommutatorResult(
             slice_name=slice_name,
-            source_point=source_point,
+            #boaz: claude: bug here should be a block !!!
+            source_point=source_block.start,
             algorithm=final_algorithm,
-            natural_source=natural_source,
+            #boaz: claude: bug here should be a block see below!!!
+            natural_source=natural_source_block[0],
             target_point=target_point,
             second_replaced_with_target_point_on_source=xpt_on_source_after_un_setup,
             natural_source_block=natural_source_block_result,
@@ -714,7 +716,7 @@ class CommutatorHelper(SolverHelper):
         # S[n:n] notation works for single slice at position n
         return Algs.S[r1 + 1:r2 + 1]
 
-    def _find_rotation_idx(self, actual_source_idx: Point, expected_source_idx: Point) -> int:
+    def _find_rotation_idx(self, actual_source_block: Block, natural_source_block: Block) -> int:
         """
         Find how many clockwise rotations of source face align actual to expected.
 
@@ -722,8 +724,8 @@ class CommutatorHelper(SolverHelper):
         will move to expected_source_idx.
 
         Args:
-            actual_source_idx: Where the piece actually is (index coords)
-            expected_source_idx: Where commutator expects it (index coords)
+            actual_source_block: Where the piece actually is (index coords)
+            natural_source_block: Where commutator expects it (index coords)
 
         Returns:
             Number of clockwise rotations (0-3)
@@ -732,13 +734,16 @@ class CommutatorHelper(SolverHelper):
             ValueError: If positions cannot be mapped by rotation
         """
         cqr = self.cube.cqr
+        rotated = actual_source_block.normalize  # normalize so we can compare
         for n in range(4):
             # After n clockwise rotations, actual moves to rotated
-            rotated = cqr.rotate_point_clockwise(actual_source_idx, n)
-            if rotated == expected_source_idx:
+            if rotated == natural_source_block:
                 return n
+            #normalized !!! so we can compare !!!
+            rotated = rotated.rotate_clockwise(self.n_slices)
+
         raise ValueError(
-            f"Cannot align {actual_source_idx} to {expected_source_idx} by rotation"
+            f"Cannot align {actual_source_block} to {natural_source_block} by rotation"
         )
 
     # =========================================================================
