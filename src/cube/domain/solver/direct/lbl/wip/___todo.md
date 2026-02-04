@@ -1,4 +1,4 @@
-1. add animation to edge communicator
+1. add animation to edge commutator
 2. Count operations i solver
    3. check up color before rotation
 3. dead code

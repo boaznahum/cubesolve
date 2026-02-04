@@ -100,7 +100,7 @@ Example for 5x5 (n=5, n_slices=3):
 
 ### Next Steps
 
-- [ ] Study `NxNCenters._block_communicator()` for adaptation
+- [ ] Study `NxNCenters._block_commutator()` for adaptation
 - [ ] Implement actual solving logic in `_solve_single_slice_centers()`
 - [ ] Write tests for slice center solving
 

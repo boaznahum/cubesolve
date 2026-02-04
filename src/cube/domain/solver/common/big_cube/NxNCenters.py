@@ -17,6 +17,7 @@ from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverHelper import SolverHelper
+from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
 
@@ -76,7 +77,7 @@ class NxNCenters(SolverHelper):
     However, SETUP MOVES are used to align pieces before the commutator:
     - In _swap_slice: F' to convert row alignment to column
     - In _swap_slice: source_face * n_rotate to align columns
-    - In _block_communicator: source_face * n_rotate to align blocks
+    - In _block_commutator: source_face * n_rotate to align blocks
     - In __do_center: B[1:n] rotations to bring faces up
 
     These setup moves are NOT balanced - they permanently move corners.
@@ -153,6 +154,9 @@ class NxNCenters(SolverHelper):
 
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = cfg.optimize_big_cube_centers_search_complete_slices_only_target_zero
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
+
+        # Use CommutatorHelper for block search operations
+        self._comm_helper = CommutatorHelper(slv)
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy
@@ -484,7 +488,7 @@ class NxNCenters(SolverHelper):
 
             on_source = self.count_color_on_face(source_face, color)
 
-            if on_source - ok_on_this > 2:  # swap two faces is about two communicators
+            if on_source - ok_on_this > 2:  # swap two faces is about two commutators
                 self._swap_entire_face_odd_cube(color, face, source_face)
                 work_done = True
 
@@ -504,9 +508,9 @@ class NxNCenters(SolverHelper):
         else:
 
             # the above also did a 1 size block
-            for rc in self._2d_center_iter():
+            for rc in self._comm_helper._2d_center_iter():
 
-                if self._block_communicator(color,
+                if self._block_commutator(color,
                                             face,
                                             source_face,
                                             rc, rc,
@@ -528,10 +532,10 @@ class NxNCenters(SolverHelper):
         if not work_done:
             self.debug( f"Internal error, no work was done on face {face} required color {color}, "
                                f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}", level=3)
-            for rc in self._2d_center_iter():
+            for rc in self._comm_helper._2d_center_iter():
                 if center.get_center_slice(rc).color != color:
                     print(f"Missing: {rc}  {[*self._get_four_center_points(rc[0], rc[1])]}")
-            for rc in self._2d_center_iter():
+            for rc in self._comm_helper._2d_center_iter():
                 if source_face.center.get_center_slice(rc).color == color:
                     print(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
 
@@ -750,25 +754,32 @@ class NxNCenters(SolverHelper):
 
         cube = self.cube
 
-        big_blocks = self._search_big_block(source_face, color)
+        big_blocks = self._comm_helper.search_big_block(source_face, color)
 
         if not big_blocks:
+            self.debug(f"  No blocks found for {color} on {source_face.name}", level=2)
             return False
+
+        # Log found blocks
+        block_sizes = [(CommutatorHelper.block_size(b[0], b[1]), b) for _, b in big_blocks]
+        large_blocks = [(s, b) for s, b in block_sizes if s > 1]
+        self.debug(f"  Found {len(big_blocks)} blocks on {source_face.name}, "
+                   f"{len(large_blocks)} larger than 1x1", level=1)
 
         # because we do exact match, there is no risk that that new blocks will be constructed,
         # so we try all
 
         for _, big_block in big_blocks:
-            # print(f"@@@@@@@@@@@ Found big block: {big_block}")
-
             rc1 = big_block[0]
             rc2 = big_block[1]
+            block_size = CommutatorHelper.block_size(rc1, rc2)
+            block_dims = CommutatorHelper.block_size2(rc1, rc2)
 
             rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
             rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
 
-            for _ in range(4):
-                if self._block_communicator(color,
+            for rotation in range(4):
+                if self._block_commutator(color,
                                             face,
                                             source_face,
                                             rc1_on_target, rc2_on_target,
@@ -776,7 +787,10 @@ class NxNCenters(SolverHelper):
                                             # it still doesn't work, we need another mode, Source and Target Match
                                             # but for this we need to search source only
                                             _SearchBlockMode.ExactMatch):
-                    # this is much far then true, we need to search new block
+                    # Log successful block commutator
+                    self.debug(f"    ✓ Block {block_dims[0]}x{block_dims[1]} ({block_size} pieces) "
+                               f"from {source_face.name}{rc1}->{rc2} to {face.name} "
+                               f"(rotation={rotation})", level=1)
                     work_done = True
                     break
 
@@ -835,17 +849,6 @@ class NxNCenters(SolverHelper):
         self.op.play(alg_to_play)
         return alg_to_play
 
-    def _find_matching_slice(self, f: Face, r: int, c: int, required_color: Color) -> CenterSlice | None:
-
-        for i in self._get_four_center_points(r, c):
-
-            cs = f.center.get_center_slice(i)
-
-            if cs.color == required_color:
-                return cs
-
-        return None
-
     def _get_four_center_points(self, r, c) -> Iterator[Tuple[int, int]]:
 
         inv = self.cube.inv
@@ -853,13 +856,6 @@ class NxNCenters(SolverHelper):
         for _ in range(4):
             yield r, c
             (r, c) = (c, inv(r))
-
-    def rotate_point_clockwise(self, row: int, column: int, n=1) -> Tuple[int, int]:
-
-        return self.cube.cqr.rotate_point_clockwise((row, column), n)
-
-    def rotate_point_counterclockwise(self, row: int, column: int, n=1) -> Tuple[int, int]:
-        return self.cube.cqr.rotate_point_counterclockwise((row, column), n)
 
     def _swap_entire_face_odd_cube(self, required_color: Color, face: Face, source: Face):
 
@@ -892,65 +888,37 @@ class NxNCenters(SolverHelper):
                       ]
         op.op(Algs.seq_alg(None, *swap_faces))
 
-        # communicator 1, upper block about center
-        self._block_communicator(required_color, face, source,
+        # commutator 1, upper block about center
+        self._block_commutator(required_color, face, source,
                                  (mid + 1, mid), (nn - 1, mid),
                                  _SearchBlockMode.BigThanSource)
 
-        # communicator 2, lower block below center
-        self._block_communicator(required_color, face, source,
+        # commutator 2, lower block below center
+        self._block_commutator(required_color, face, source,
                                  (0, mid), (mid - 1, mid),
                                  _SearchBlockMode.BigThanSource)
 
-        # communicator 3, left to center
-        self._block_communicator(required_color, face, source,
+        # commutator 3, left to center
+        self._block_commutator(required_color, face, source,
                                  (mid, 0), (mid, mid - 1),
                                  _SearchBlockMode.BigThanSource)
 
-        # communicator 4, right ot center
-        self._block_communicator(required_color, face, source,
+        # commutator 4, right ot center
+        self._block_commutator(required_color, face, source,
                                  (mid, mid + 1), (mid, nn - 1),
                                  _SearchBlockMode.BigThanSource)
 
-    def _block_communicator(self,
+    def _block_commutator(self,
                             required_color: Color,
                             face: Face, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
                             mode: _SearchBlockMode) -> bool:
         """
         Execute block commutator to move pieces from source to target.
 
-        The commutator is: [M', F, M', F', M, F, M, F']
-        This is BALANCED (2 F + 2 F' = 0), so corners return to their position.
-
-        CAGE METHOD (preserve_cage=True):
-        =================================
-        The commutator itself is balanced, but the SOURCE ROTATION setup move
-        (line: source_face * n_rotate) is NOT balanced. This permanently moves corners.
-        With preserve_cage=True: We undo this rotation after the commutator.
-
-        WHY THE COMMUTATOR IS BALANCED - VISUAL:
-        ----------------------------------------
-        The commutator cycles 3 positions:
-
-           Source (UP)          Front (F)
-           ┌─┬─┬─┐              ┌─┬─┬─┐
-           │ │A│ │              │ │C│ │
-           ├─┼─┼─┤              ├─┼─┼─┤
-           │ │ │ │              │ │ │ │
-           ├─┼─┼─┤              ├─┼─┼─┤
-           │ │ │ │              │ │B│ │
-           └─┴─┴─┘              └─┴─┴─┘
-
-        After [M', F, M', F', M, F, M, F']:
-        - A (from UP) -> C position (on F)
-        - C (from F)  -> B position (on F after rotation)
-        - B (from F)  -> A position (on UP)
-
-        The F rotations happen in pairs: F + F' and F + F' = 0 net rotation.
-        So corners end up back where they started.
-
-        BUT: If we first played source_face * n_rotate to align the block,
-        that rotation is NOT undone by the commutator. We must undo it manually.
+        Delegates to CommutatorHelper.execute_commutator() which handles:
+        - The 3-cycle algorithm: [M', F, M', F', M, F, M, F']
+        - Animation annotations including s2 (at-risk) marker
+        - Cage preservation (preserve_state parameter)
 
         :param face: Target face (must be front)
         :param source_face: Source face (must be up or back)
@@ -980,178 +948,34 @@ class NxNCenters(SolverHelper):
         rc1 = Point(r1, c1)
         rc2 = Point(r2, c2)
 
-        # in case of odd nd (mid, mid), search will fail, nothing to do
+        # in case of odd and (mid, mid), search will fail, nothing to do
         # if we change the order, then block validation below will fail,
-        #  so we need to check for case odd (mid, mid) somewhere else
+        # so we need to check for case odd (mid, mid) somewhere else
         # now search block
         n_rotate = self._search_block(face, source_face, required_color, mode, rc1, rc2)
 
         if n_rotate is None:
             return False
 
-        on_front_rotate: algs.Alg
+        # Compute source block: rotate the target block position by -n_rotate
+        # to find where the source block is BEFORE the source face setup rotation
+        cqr = cube.cqr
+        _on_src1_1 = self._point_on_source(is_back, rc1)
+        _on_src1_2 = self._point_on_source(is_back, rc2)
+        # Apply inverse rotation to get original source position
+        source_rc1 = Point(*cqr.rotate_point_clockwise(_on_src1_1, -n_rotate))
+        source_rc2 = Point(*cqr.rotate_point_clockwise(_on_src1_2, -n_rotate))
 
-        # assume we rotate F clockwise
-        rc1_f_rotated = self.rotate_point_clockwise(r1, c1)
-        rc2_f_rotated = self.rotate_point_clockwise(r2, c2)
-
-        # the columns ranges must not intersect
-        # c1 column sart of block
-        # c2 column end of block
-        # rc1_f_rotated[1] columns start  after rotating
-        # rc2_f_rotated[1] columns end  after rotating
-
-        if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-            on_front_rotate = Algs.F.prime
-            rc1_f_rotated = self.rotate_point_counterclockwise(r1, c1)
-            rc2_f_rotated = self.rotate_point_counterclockwise(r2, c2)
-
-            if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-                print("Intersection still exists after rotation", file=sys.stderr)
-            assert not self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1]))
-        else:
-            # clockwise is OK
-            on_front_rotate = Algs.F
-
-        # center indexes are in opposite direction of R
-        #   index is from left to right, R is from right to left
-        rotate_on_cell = self._get_slice_m_alg(rc1[1], rc2[1])
-        rotate_on_second = self._get_slice_m_alg(rc1_f_rotated[1], rc2_f_rotated[1])
-
-        if is_back:
-            rotate_mul = 2
-        else:
-            rotate_mul = 1
-
-        cum = [rotate_on_cell.prime * rotate_mul,
-               on_front_rotate,
-               rotate_on_second.prime * rotate_mul,
-               on_front_rotate.prime,
-               rotate_on_cell * rotate_mul,
-               on_front_rotate,
-               rotate_on_second * rotate_mul,
-               on_front_rotate.prime]
-
-        def _ann_target():
-
-            for rc in self._2d_range_on_source(False, rc1, rc2):
-                yield face.center.get_center_slice(rc)
-
-        def _ann_source():
-            _on_src1_1 = self._point_on_source(is_back, rc1)
-            _on_src1_2 = self._point_on_source(is_back, rc2)
-            # why - ? because we didn't yet rotate it
-            _on_src1_1 = Point(*cube.cqr.rotate_point_clockwise(_on_src1_1, -n_rotate))
-            _on_src1_2 = Point(*cube.cqr.rotate_point_clockwise(_on_src1_2, -n_rotate))
-            for rc in self._2d_range(_on_src1_1, _on_src1_2):
-                yield source_face.center.get_center_slice(rc)
-
-        def _h2():
-            size_ = self._block_size2(rc1, rc2)
-            return f", {size_[0]}x{size_[1]} communicator"
-
-        with self.ann.annotate((_ann_source, AnnWhat.Moved),
-                               (_ann_target, AnnWhat.FixedPosition),
-                               h2=_h2
-                               ):
-            if n_rotate:
-                self.op.play(Algs.of_face(source_face.name) * n_rotate)
-            self.op.play(Algs.seq_alg(None, *cum))
-
-        # =========================================================
-        # CAGE METHOD: Undo source rotation to preserve paired edges
-        # =========================================================
-        # The commutator itself is balanced (F rotations cancel out).
-        # But the source face rotation setup is NOT balanced - undo it.
-        if self._preserve_cage and n_rotate:
-            undo_alg = Algs.of_face(source_face.name).prime * n_rotate
-            self.debug( f"  [CAGE] Undoing source rotation: {undo_alg}", level=1)
-            self.op.play(undo_alg)
-
-        return True
-
-    def _is_valid_and_block_for_search(self, face: Face, color: Color, rc1: Point, rc2: Point):
-
-        is_valid_block = self._is_valid_block(rc1, rc2)
-
-        if not is_valid_block:
-            return False
-
-        is_block = self._is_block(face, color, None, rc1, rc2, dont_convert_coordinates=True)
-
-        return is_block
-
-    def _search_big_block(self, face: Face, color: Color) -> Sequence[Tuple[int, Block]] | None:
-
-        """
-        Rerun all possible blocks, 1 size too, sorted from big to small
-        :param face:
-        :param color:
-        :return:
-        """
-
-        center = face.center
-
-        res: list[Tuple[int, Block]] = []
-
-        n = self.cube.n_slices
-
-        for rc in self._2d_center_iter():
-
-            if center.get_center_slice(rc).color == color:
-
-                # collect also 1 size blocks
-                res.append((1, Block(rc, rc)))
-
-                # now try to extend it over r
-                r_max = None
-                for r in range(rc[0] + 1, n):
-
-                    if not self._is_valid_and_block_for_search(face, color, rc, Point(r, rc[1])):
-                        break
-                    else:
-                        r_max = r
-
-                if not r_max:
-                    r_max = rc[0]
-
-                # now try to extend it over c
-                c_max = None
-                for c in range(rc[1] + 1, n):
-                    if not self._is_valid_and_block_for_search(face, color, rc, Point(r_max, c)):
-                        break
-                    else:
-                        c_max = c
-
-                if not c_max:
-                    c_max = rc[1]
-
-                size = self._block_size(rc, Point(r_max, c_max))
-
-                # if size > 1:
-                res.append((size, Block(rc, Point(r_max, c_max))))
-
-        res = sorted(res, key=lambda s: s[0], reverse=True)
-        return res
-
-    def _is_valid_block(self, rc1: Point, rc2: Point):
-
-        r1 = rc1[0]
-        c1 = rc1[1]
-
-        r2 = rc2[0]
-        c2 = rc2[1]
-
-        rc1_f_rotated = self.rotate_point_clockwise(r1, c1)
-        rc2_f_rotated = self.rotate_point_clockwise(r2, c2)
-
-        # the columns ranges must not intersect
-        if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-            rc1_f_rotated = self.rotate_point_counterclockwise(r1, c1)
-            rc2_f_rotated = self.rotate_point_counterclockwise(r2, c2)
-
-            if self._1_d_intersect((c1, c2), (rc1_f_rotated[1], rc2_f_rotated[1])):
-                return False
+        # Use CommutatorHelper to execute the commutator
+        # This handles the algorithm, annotations (including s2), and cage preservation
+        self._comm_helper.execute_commutator(
+            source_face=source_face,
+            target_face=face,
+            target_block=Block(rc1, rc2),
+            source_block=Block(source_rc1, source_rc2),
+            preserve_state=self._preserve_cage,
+            dry_run=False
+        )
 
         return True
 
@@ -1260,7 +1084,7 @@ class NxNCenters(SolverHelper):
 
             n, t = self._count_colors_on_block_and_tracker(color, face, (r, 0), (r, nm1), ignore_if_back=True)
 
-            if n > 1 or not search_max:  # one is not interesting, will be handled by communicator
+            if n > 1 or not search_max:  # one is not interesting, will be handled by commutator
                 # if we search for minimum than we want zero too
                 _slice = _CompleteSlice(True, r, n, t > 0)
                 _slices.append(_slice)
@@ -1269,7 +1093,7 @@ class NxNCenters(SolverHelper):
 
             n, t = self._count_colors_on_block_and_tracker(color, face, (0, c), (nm1, c), ignore_if_back=True)
 
-            if n > 1 or not search_max:  # one is not interesting, will be handled by communicator
+            if n > 1 or not search_max:  # one is not interesting, will be handled by commutator
                 # if we search for minimum than we want zero too
                 _slice = _CompleteSlice(False, c, n, t > 0)
                 _slices.append(_slice)
@@ -1277,37 +1101,6 @@ class NxNCenters(SolverHelper):
         _slices = sorted(_slices, key=lambda s: s.n_matches, reverse=search_max)
 
         return _slices
-
-    @staticmethod
-    def _1_d_intersect(range_1: Tuple[int, int], range_2: Tuple[int, int]):
-
-        """
-                 x3--------------x4
-           x1--------x2
-        :param range_1:  x1, x2
-        :param range_2:  x3, x4
-        :return:  not ( x3  > x2 or x4 < x1 )
-        """
-
-        x1 = range_1[0]
-        x2 = range_1[1]
-        x3 = range_2[0]
-        x4 = range_2[1]
-
-        # after rotation points swap coordinates
-        if x1 > x2:
-            x1, x2 = x2, x1
-
-        if x3 > x4:
-            x3, x4 = x4, x3
-
-        if x3 > x2:
-            return False
-
-        if x4 < x1:
-            return False
-
-        return True
 
     def _point_on_source(self, is_back: bool, rc: Tuple[int, int]) -> Point:
 
@@ -1336,10 +1129,6 @@ class NxNCenters(SolverHelper):
         else:
             # on up
             return Point(*rc)
-
-    def _block_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Block:
-
-        return Block(self._point_on_source(is_back, rc1), self._point_on_source(is_back, rc2))
 
     def _2d_range_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Iterator[Point]:
 
@@ -1382,26 +1171,6 @@ class NxNCenters(SolverHelper):
             for c in range(c1, c2 + 1):
                 yield Point(r, c)
 
-    def _2d_center_iter(self) -> Iterator[Point]:
-
-        """
-        Walk on all points in center of size n_slices
-        """
-
-        n = self.cube.n_slices
-
-        for r in range(n):
-            for c in range(n):
-                yield Point(r, c)
-
-    @staticmethod
-    def _block_size(rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int:
-        return (abs(rc2[0] - rc1[0]) + 1) * (abs(rc2[1] - rc1[1]) + 1)
-
-    @staticmethod
-    def _block_size2(rc1: Tuple[int, int], rc2: Tuple[int, int]) -> Tuple[int, int]:
-        return (abs(rc2[0] - rc1[0]) + 1), (abs(rc2[1] - rc1[1]) + 1)
-
     def _is_block(self,
                   source_face: Face,
                   required_color: Color,
@@ -1421,7 +1190,7 @@ class NxNCenters(SolverHelper):
         """
 
         # Number of points in block
-        _max = self._block_size(rc1, rc2)
+        _max = CommutatorHelper.block_size(rc1, rc2)
 
         if min_points is None:
             min_points = _max
@@ -1467,7 +1236,7 @@ class NxNCenters(SolverHelper):
         :return: How many source clockwise rotate in order to match the block to source
         """
 
-        block_size = self._block_size(rc1, rc2)
+        block_size = CommutatorHelper.block_size(rc1, rc2)
 
         n_ok = self._count_colors_on_block(required_color, target_face, rc1, rc2)
 
@@ -1477,7 +1246,7 @@ class NxNCenters(SolverHelper):
         if mode == _SearchBlockMode.CompleteBlock:
             min_required = block_size
         elif mode == _SearchBlockMode.BigThanSource:
-            # The number of communicators before > after
+            # The number of commutators before > after
             # before = size - n_ok
             # after  = n_ok  - because the need somehow to get back
             # size-n_ok > n_ok

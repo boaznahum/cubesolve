@@ -5,7 +5,7 @@ def _get_supported_pairs() -> list[tuple[FaceName, FaceName]]:
     """
     Return list of (source, target) face pairs that are currently supported.
 
-    These are the combinations that do_communicator() can handle.
+    These are the combinations that do_commutator() can handle.
     Other combinations will raise NotImplementedError.
 
     Returns:
