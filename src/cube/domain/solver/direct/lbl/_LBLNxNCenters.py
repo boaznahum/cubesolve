@@ -401,38 +401,39 @@ class NxNCenters2(SolverHelper):
             color, target_face, source_face.face
         )
 
-        # Fall back to piece-by-piece for remaining positions
-        for rc in _iterate_all_tracked_center_slices_index(target_face):
+        if True:
+            # Fall back to piece-by-piece for remaining positions
+            for rc in _iterate_all_tracked_center_slices_index(target_face):
 
-            candidate_piece = target_face.face.center.get_center_slice(rc)
+                candidate_piece = target_face.face.center.get_center_slice(rc)
 
-            self.debug(f"Working on slice {slice_row_index} Found piece candidate {candidate_piece}")
+                self.debug(f"Working on slice {slice_row_index} Found piece candidate {candidate_piece}")
 
-            if candidate_piece.color == color:
-                continue
+                if candidate_piece.color == color:
+                    continue
 
-            wd = self._block_commutator(color,
-                                          target_face.face,
-                                          source_face.face,
-                                          rc)
-            center_slice = candidate_piece
-            after_fixed_color = center_slice.color
+                wd = self._block_commutator(color,
+                                              target_face.face,
+                                              source_face.face,
+                                              rc)
+                center_slice = candidate_piece
+                after_fixed_color = center_slice.color
 
-            if wd:
+                if wd:
 
 
-                if after_fixed_color != color:
-                    raise InternalSWError(f"Slice was not fixed {rc}, " +
-                                          f"required={color}, " +
-                                          f"actual={after_fixed_color}")
+                    if after_fixed_color != color:
+                        raise InternalSWError(f"Slice was not fixed {rc}, " +
+                                              f"required={color}, " +
+                                              f"actual={after_fixed_color}")
 
-                self.debug(f"Fixed slice {rc}")
+                    self.debug(f"Fixed slice {rc}")
 
-                mark_slice_and_v_mark_if_solved(center_slice)
+                    mark_slice_and_v_mark_if_solved(center_slice)
 
-                work_done = True
+                    work_done = True
 
-            # in this step we dont know to give a warning if not yet solved it is only single source
+                # in this step we dont know to give a warning if not yet solved it is only single source
 
 
 
@@ -648,86 +649,96 @@ class NxNCenters2(SolverHelper):
         # Find target blocks from tracked positions
         target_blocks = self._find_target_blocks(required_color, target_face_tracker)
 
+        self.debug(lambda : f"target_blocks: {target_blocks}")
+
         for target_block in target_blocks:
             block_size = target_block.size
             # if block_size <= 1:
             #     continue  # Only multi-cell blocks
 
-            self.debug(lambda : f"Working on block {target_block} size {block_size}")
+            with self._logger.tab(lambda : f"‼️‼️‼️‼️‼️‼️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ Working on block {target_block} size {block_size}"):
 
-            # Do dry run to find the natural source block
-            dry_result = self._comm_helper.execute_commutator(
-                source_face=source_face,
-                target_face=target_face,
-                target_block=target_block,
-                dry_run=True
-            )
+                # Do dry run to find the natural source block
+                dry_result = self._comm_helper.execute_commutator(
+                    source_face=source_face,
+                    target_face=target_face,
+                    target_block=target_block,
+                    dry_run=True
+                )
 
-            natural_source_block = dry_result.natural_source_block
-            second_block = dry_result.second_block
+                natural_source_block = dry_result.natural_source_block
+                second_block = dry_result.second_block
 
-            assert natural_source_block
-            assert second_block
+                assert natural_source_block
+                assert second_block
 
-            # Verify natural_source_block has same dimensions as target_block
-            # Face-to-face translation might change orientation!
-            target_dims = target_block.dim
-            source_dims = natural_source_block.dim
-            if target_dims != source_dims:
-                self.debug(f"Target block {target_block} skipped - shape mismatch: "
-                           f"target {target_dims} vs source {source_dims}")
-                continue
+                # Verify natural_source_block has same dimensions as target_block
+                # Face-to-face translation might change orientation!
+                target_dims = target_block.dim
+                source_dims = natural_source_block.dim
+                if target_dims != source_dims:
+                    self.debug(f"Target block {target_block} skipped - shape mismatch: "
+                               f"target {target_dims} vs source {source_dims}")
+                    assert False
+                    continue
 
-            # Re-verify is_valid_block for the target (should have been checked in _find_target_blocks)
-            if not self._comm_helper.is_valid_block(target_block[0], target_block[1]):
-                self.debug(f"Target block {target_block} skipped - invalid block (would self-intersect)")
-                continue
+                # Re-verify is_valid_block for the target (should have been checked in _find_target_blocks)
+                if not self._comm_helper.is_valid_block(target_block[0], target_block[1]):
+                    self.debug(f"ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ Target block {target_block} skipped - invalid block (would self-intersect)")
+                    assert False, "It was checked above"
+                    continue
 
-            # Check if natural source block has required colors (NO rotation search)
-            # For multi-cell blocks, rotation would change shape which breaks the algorithm
-            if not self._source_block_has_color_no_rotation(
-                required_color, source_face, natural_source_block, second_block
-            ):
-                self.debug(f"Target block {target_block} skipped - natural source doesn't have required colors")
-                continue
+                # Check if natural source block has required colors (NO rotation search)
+                # For multi-cell blocks, rotation would change shape which breaks the algorithm
+                if not self._source_block_has_color_no_rotation(
+                    required_color, source_face, natural_source_block, second_block
+                ):
+                    self.debug(f"‼️‼️‼️‼️‼️‼️‼️‼️ Target block {target_block} skipped - natural source doesn't have required colors")
+                    continue
 
-            # Execute the block commutator (source_block = natural_source_block, no rotation needed)
-            self._comm_helper.execute_commutator(
-                source_face=source_face,
-                target_face=target_face,
-                target_block=target_block,
-                source_block=natural_source_block,  # Use natural position, no rotation
-                preserve_state=True,
-                dry_run=False,
-                _cached_secret=dry_result
-            )
+                # Execute the block commutator (source_block = natural_source_block, no rotation needed)
 
-            # Verify that ALL pieces in target block were actually solved
-            all_solved = True
-            for pt in self._block_iter(target_block):
-                piece = target_face.center.get_center_slice(pt)
-                if piece.color != required_color:
-                    all_solved = False
-                    self.debug(f"⚠️ Block {target_block} piece at {pt} has wrong color "
-                               f"{piece.color} != {required_color}")
-                    break
+                self.debug(
+                    f"💕💕💕💕💕💕💕💕 execute_commutator Target block {target_block} ")
+                self._comm_helper.execute_commutator(
+                    source_face=source_face,
+                    target_face=target_face,
+                    target_block=target_block,
+                    source_block=natural_source_block,  # Use natural position, no rotation
+                    preserve_state=True,
+                    dry_run=False,
+                    _cached_secret=dry_result
+                )
 
-            if not all_solved:
-                # Block commutator failed - don't mark work_done
-                # Let piece-by-piece fallback handle this
-                self.debug(f"❌ Block commutator FAILED for {target_block}")
-                continue
+                # Verify that ALL pieces in target block were actually solved
+                all_solved = True
+                for pt in self._block_iter(target_block):
+                    piece = target_face.center.get_center_slice(pt)
+                    if piece.color != required_color:
+                        all_solved = False
+                        self.debug(f"⚠️ Block {target_block} piece at {pt} has wrong color "
+                                   f"{piece.color} != {required_color}")
 
-            # Mark solved pieces on target only
-            # NOTE: Do NOT mark second_block pieces! Those are on the source face,
-            # and marking them would prevent future block commutators from using
-            # those positions for their second_block (3-cycle intermediate).
-            for pt in target_block.cells:
-                piece = target_face.center.get_center_slice(pt)
-                mark_slice_and_v_mark_if_solved(piece)
+                        assert False
+                        break
 
-            self.debug(f"✅ Block commutator solved {block_size} pieces: {target_block}")
-            work_done = True
+                if not all_solved:
+                    # Block commutator failed - don't mark work_done
+                    # Let piece-by-piece fallback handle this
+                    self.debug(f"❌ Block commutator FAILED for {target_block}")
+                    assert False
+                    continue
+
+                # Mark solved pieces on target only
+                # NOTE: Do NOT mark second_block pieces! Those are on the source face,
+                # and marking them would prevent future block commutators from using
+                # those positions for their second_block (3-cycle intermediate).
+                for pt in target_block.cells:
+                    piece = target_face.center.get_center_slice(pt)
+                    mark_slice_and_v_mark_if_solved(piece)
+
+                self.debug(f"✅ Block commutator solved {block_size} pieces: {target_block}")
+                work_done = True
 
         return work_done
 

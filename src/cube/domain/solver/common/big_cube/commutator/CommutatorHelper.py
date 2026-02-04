@@ -70,9 +70,9 @@ class CommutatorResult:
     natural_source: Point
     target_point: Point
     second_replaced_with_target_point_on_source: Point
-    natural_source_block: Block | None = None
-    target_block: Block | None = None
-    second_block: Block | None = None
+    natural_source_block: Block
+    target_block: Block
+    second_block: Block
     _secret: _InternalCommData | None = None
 
 
