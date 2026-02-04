@@ -13,7 +13,7 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 - X increases rightward (ltr_x)
 """
 import sys
-from collections.abc import Iterator
+from collections.abc import Collection, Iterable, Iterator
 from dataclasses import dataclass
 from typing import Tuple
 
@@ -420,7 +420,7 @@ class CommutatorHelper(SolverHelper):
                                                                   -source_setup_n_rotate)) if tp_begin != tp_end else xpt_on_source_after_un_setup
 
         # Build the full second_block for multi-cell blocks
-        second_block_result = Block(xpt_on_source_after_un_setup, xpt_on_source_after_un_setup_end)
+        second_block_result = Block(xpt_on_source_after_un_setup, xpt_on_source_after_un_setup_end).normalize
 
         # Build the natural_source_block (accounting for source setup rotation)
         # The natural_source_block is the block AFTER source setup rotation
@@ -551,14 +551,12 @@ class CommutatorHelper(SolverHelper):
 
         Returns:
             Normalized block with r1 <= r2 and c1 <= c2
+
+        See Also:
+            cube.domain.geometric.geometry_types.Block.normalize
+
         """
-        r1, c1 = block[0]
-        r2, c2 = block[1]
-        if r1 > r2:
-            r1, r2 = r2, r1
-        if c1 > c2:
-            c1, c2 = c2, c1
-        return Block(Point(r1, c1), Point(r2, c2))
+        return block.normalize
 
     @staticmethod
     def _1d_intersect(range_1: tuple[int, int], range_2: tuple[int, int]) -> bool:
@@ -640,6 +638,7 @@ class CommutatorHelper(SolverHelper):
 
     def _get_slice_m_alg(self, c1: int, c2: int):
         """
+        claude: get rid of this method
         Get M slice algorithm for column range.
 
         Returns M' (prime) for use in commutator pattern. The algorithm uses
@@ -663,6 +662,8 @@ class CommutatorHelper(SolverHelper):
     def _get_slice_e_alg(self, r1: int, r2: int):
         """
         Get E slice algorithm for row range.
+        claude: get rid of this method
+
 
         Returns E' (prime) for use in commutator pattern. The algorithm uses
         e.prime and e directly, where e = E':
@@ -684,6 +685,8 @@ class CommutatorHelper(SolverHelper):
 
     def _get_slice_s_alg(self, r1: int, r2: int):
         """
+        claude: get rid of this method
+
         Get S slice algorithm for row range.
 
         Returns S' (prime) for use in commutator pattern when Right is target.
@@ -844,7 +847,7 @@ class CommutatorHelper(SolverHelper):
             # 1x1 block - both corners are the same
             source_coord_end = source_coord_begin
 
-        natural_source_block = Block(source_coord_begin, source_coord_end)
+        natural_source_block = Block(source_coord_begin, source_coord_end).normalize
         return _InternalCommData(source_coord_begin, natural_source_block, translation_result)
 
     def _compute_rotate_on_target(self, cube: Cube,
@@ -960,16 +963,28 @@ class CommutatorHelper(SolverHelper):
     # These methods find valid blocks on a face for commutator operations.
     # =========================================================================
 
-    def _2d_center_iter(self) -> Iterator[Point]:
+    def _2d_center_iter(
+        self,
+        row_indices: Collection[int] | None = None,
+        col_indices: Collection[int] | None = None
+    ) -> Iterator[Point]:
         """
-        Iterate over all points in the center grid.
+        Iterate over points in the center grid, optionally filtered.
+
+        Args:
+            row_indices: If provided, only iterate over these row indices.
+                         If None, iterate over all rows [0, n_slices).
+            col_indices: If provided, only iterate over these column indices.
+                         If None, iterate over all columns [0, n_slices).
 
         Yields:
-            Point(row, col) for each position in the n_slices x n_slices grid.
+            Point(row, col) for each position in the filtered grid.
         """
         n = self.n_slices
-        for r in range(n):
-            for c in range(n):
+        rows: Iterable[int] = row_indices if row_indices is not None else range(n)
+        cols_range: Collection[int] = col_indices if col_indices is not None else range(n)
+        for r in rows:
+            for c in cols_range:
                 yield Point(r, c)
 
     @staticmethod
@@ -1128,7 +1143,11 @@ class CommutatorHelper(SolverHelper):
     def search_big_block(
         self,
         face: Face,
-        color: Color
+        color: Color,
+        row_indices: Collection[int] | None = None,
+        col_indices: Collection[int] | None = None,
+        max_rows: int | None = None,
+        max_cols: int | None = None
     ) -> list[tuple[int, Block]]:
         """
         Search for all possible blocks of a color on a face, sorted by size.
@@ -1148,23 +1167,48 @@ class CommutatorHelper(SolverHelper):
         Args:
             face: Face to search on
             color: Color to search for
+            row_indices: If provided, only search starting positions in these rows.
+                         If None, search all rows.
+            col_indices: If provided, only search starting positions in these columns.
+                         If None, search all columns.
+            max_rows: If provided, limit block height to this many rows.
+                      If None, blocks can extend to the full grid height.
+            max_cols: If provided, limit block width to this many columns.
+                      If None, blocks can extend to the full grid width.
 
         Returns:
             List of (size, Block) tuples, sorted by size descending.
             Each starting point may yield multiple blocks (1x1 and extended).
+
+        Examples:
+            # Current behavior (unchanged)
+            blocks = helper.search_big_block(face, color)
+
+            # LBL: Search row 0 only, max height 1 (horizontal strips)
+            blocks = helper.search_big_block(face, color, row_indices=[0], max_rows=1)
+
+            # Search column 2 only, max width 1 (vertical strips)
+            blocks = helper.search_big_block(face, color, col_indices=[2], max_cols=1)
         """
         center = face.center
         res: list[tuple[int, Block]] = []
         n = self.n_slices
 
-        for rc in self._2d_center_iter():
+        # Calculate extension limits based on max_rows/max_cols
+        # r_limit and c_limit are computed per starting position
+        for rc in self._2d_center_iter(row_indices, col_indices):
             if center.get_center_slice(rc).color == color:
                 # Always collect 1x1 block
                 res.append((1, Block(rc, rc)))
 
+                # Calculate row extension limit
+                # If max_rows is set, limit to rc[0] + max_rows
+                # Otherwise, extend to n
+                r_limit = min(n, rc[0] + max_rows) if max_rows else n
+
                 # Try to extend horizontally (over rows)
                 r_max: int | None = None
-                for r in range(rc[0] + 1, n):
+                for r in range(rc[0] + 1, r_limit):
                     if not self._is_valid_and_block_for_search(
                         face, color, rc, Point(r, rc[1])
                     ):
@@ -1174,9 +1218,14 @@ class CommutatorHelper(SolverHelper):
                 if r_max is None:
                     r_max = rc[0]
 
+                # Calculate column extension limit
+                # If max_cols is set, limit to rc[1] + max_cols
+                # Otherwise, extend to n
+                c_limit = min(n, rc[1] + max_cols) if max_cols else n
+
                 # Try to extend vertically (over columns)
                 c_max: int | None = None
-                for c in range(rc[1] + 1, n):
+                for c in range(rc[1] + 1, c_limit):
                     if not self._is_valid_and_block_for_search(
                         face, color, rc, Point(r_max, c)
                     ):

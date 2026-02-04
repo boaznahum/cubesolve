@@ -85,8 +85,8 @@ def get_new_comm_helper(app: AbstractApp) -> CommutatorHelper:
 def set_center_color(face: Face, row: int, col: int, color: Color) -> None:
     """Set a specific center piece to a color."""
     center_slice = face.center.get_center_slice((row, col))
-    # We need to manipulate the cube to set colors - use the underlying part
-    center_slice._color = color
+    # We need to manipulate the cube to set colors - use the underlying edge
+    center_slice.edge._color = color
 
 
 def get_center_color(face: Face, row: int, col: int) -> Color:
@@ -872,3 +872,300 @@ class TestBlockCoordinates:
 
             assert reported_size == calculated_size, \
                 f"Block {block}: reported size {reported_size} != calculated {calculated_size}"
+
+
+# =============================================================================
+# SECTION 7: Dimension-Limited Block Search Tests
+# =============================================================================
+
+class TestDimensionLimitedSearch:
+    """
+    Tests for search_big_block() with row_indices, col_indices, max_rows, max_cols.
+
+    These parameters enable the LBL solver to search for blocks within a specific
+    row (height=1) instead of piece-by-piece iteration.
+    """
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_row_indices_filtering(self, cube_size: int):
+        """
+        row_indices parameter filters starting positions to specified rows.
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+        n = cube.n_slices
+
+        # Search only in row 0
+        blocks = comm_helper.search_big_block(face, color, row_indices=[0])
+
+        # All blocks should start in row 0
+        for size, block in blocks:
+            rc1, rc2 = block
+            assert rc1[0] == 0, f"Block {block} should start in row 0"
+
+        # Compare with full search - row 0 blocks should be subset
+        full_blocks = comm_helper.search_big_block(face, color)
+        row0_from_full = [(s, b) for s, b in full_blocks if b[0][0] == 0]
+
+        # Same blocks found (sorted by size)
+        assert len(blocks) == len(row0_from_full), \
+            f"Expected {len(row0_from_full)} blocks in row 0, got {len(blocks)}"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_col_indices_filtering(self, cube_size: int):
+        """
+        col_indices parameter filters starting positions to specified columns.
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # Search only in column 0
+        blocks = comm_helper.search_big_block(face, color, col_indices=[0])
+
+        # All blocks should start in column 0
+        for size, block in blocks:
+            rc1, rc2 = block
+            assert rc1[1] == 0, f"Block {block} should start in column 0"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_max_rows_limits_height(self, cube_size: int):
+        """
+        max_rows parameter limits block height (number of rows).
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # Search with max_rows=1 (only 1x? blocks)
+        blocks = comm_helper.search_big_block(face, color, max_rows=1)
+
+        # All blocks should have height 1
+        for size, block in blocks:
+            rc1, rc2 = block
+            height = rc2[0] - rc1[0] + 1
+            assert height == 1, f"Block {block} should have height 1, got {height}"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_max_cols_limits_width(self, cube_size: int):
+        """
+        max_cols parameter limits block width (number of columns).
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # Search with max_cols=1 (only ?x1 blocks)
+        blocks = comm_helper.search_big_block(face, color, max_cols=1)
+
+        # All blocks should have width 1
+        for size, block in blocks:
+            rc1, rc2 = block
+            width = rc2[1] - rc1[1] + 1
+            assert width == 1, f"Block {block} should have width 1, got {width}"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_combined_row_and_max_rows(self, cube_size: int):
+        """
+        LBL use case: row_indices=[0] with max_rows=1 finds horizontal strips in row 0.
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # LBL pattern: search only in row 0, with max height 1
+        blocks = comm_helper.search_big_block(
+            face, color, row_indices=[0], max_rows=1
+        )
+
+        # All blocks should:
+        # 1. Start in row 0
+        # 2. Have height 1
+        for size, block in blocks:
+            rc1, rc2 = block
+            assert rc1[0] == 0, f"Block {block} should start in row 0"
+            height = rc2[0] - rc1[0] + 1
+            assert height == 1, f"Block {block} should have height 1, got {height}"
+
+        # Should find at least n blocks (one 1x1 per position, plus extended)
+        n = cube.n_slices
+        assert len(blocks) >= n, \
+            f"Expected at least {n} blocks in row 0, got {len(blocks)}"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_max_rows_2_allows_2_row_blocks(self, cube_size: int):
+        """
+        max_rows=2 allows blocks up to 2 rows tall.
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # Search with max_rows=2
+        blocks = comm_helper.search_big_block(face, color, max_rows=2)
+
+        # All blocks should have height <= 2
+        for size, block in blocks:
+            rc1, rc2 = block
+            height = rc2[0] - rc1[0] + 1
+            assert height <= 2, f"Block {block} should have height <= 2, got {height}"
+
+        # Should find some 2-row blocks (unless blocked by is_valid_block)
+        two_row_blocks = [
+            (s, b) for s, b in blocks
+            if b[1][0] - b[0][0] + 1 == 2
+        ]
+        # On a solved cube, we expect to find some 2-row blocks
+        assert len(two_row_blocks) > 0, "Expected to find 2-row blocks on solved cube"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_multiple_row_indices(self, cube_size: int):
+        """
+        row_indices=[0, 1] searches in multiple rows.
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # Search in rows 0 and 1
+        blocks = comm_helper.search_big_block(face, color, row_indices=[0, 1])
+
+        # All blocks should start in row 0 or 1
+        for size, block in blocks:
+            rc1, rc2 = block
+            assert rc1[0] in [0, 1], f"Block {block} should start in row 0 or 1"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_dimension_limits_backward_compatible(self, cube_size: int):
+        """
+        Calling without new parameters behaves identically to before.
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # Call without any new parameters
+        blocks_default = comm_helper.search_big_block(face, color)
+
+        # Call with all parameters as None (explicit default)
+        blocks_explicit = comm_helper.search_big_block(
+            face, color,
+            row_indices=None,
+            col_indices=None,
+            max_rows=None,
+            max_cols=None
+        )
+
+        # Results should be identical
+        assert blocks_default == blocks_explicit, \
+            "Default and explicit None parameters should produce identical results"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_empty_row_indices_returns_empty(self, cube_size: int):
+        """
+        Empty row_indices list returns empty results (no starting positions).
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # Search with empty row_indices
+        blocks = comm_helper.search_big_block(face, color, row_indices=[])
+
+        assert len(blocks) == 0, "Empty row_indices should return no blocks"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_combined_col_and_max_cols(self, cube_size: int):
+        """
+        col_indices=[0] with max_cols=1 finds vertical strips in column 0.
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # Search only in column 0, with max width 1
+        blocks = comm_helper.search_big_block(
+            face, color, col_indices=[0], max_cols=1
+        )
+
+        # All blocks should:
+        # 1. Start in column 0
+        # 2. Have width 1
+        for size, block in blocks:
+            rc1, rc2 = block
+            assert rc1[1] == 0, f"Block {block} should start in column 0"
+            width = rc2[1] - rc1[1] + 1
+            assert width == 1, f"Block {block} should have width 1, got {width}"
+
+    @pytest.mark.parametrize("cube_size", [6, 7, 8])
+    def test_2x2_region_search(self, cube_size: int):
+        """
+        Combined row_indices, col_indices, max_rows, max_cols for 2x2 region.
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+
+        # Search 2x2 region in top-left, max 2x2 blocks
+        blocks = comm_helper.search_big_block(
+            face, color,
+            row_indices=[0, 1],
+            col_indices=[0, 1],
+            max_rows=2,
+            max_cols=2
+        )
+
+        # All blocks should be within the 2x2 region
+        for size, block in blocks:
+            rc1, rc2 = block
+            # Start position in rows [0,1] and cols [0,1]
+            assert rc1[0] in [0, 1], f"Block {block} should start in row 0 or 1"
+            assert rc1[1] in [0, 1], f"Block {block} should start in col 0 or 1"
+            # End position within 2 rows/cols of start
+            assert rc2[0] <= rc1[0] + 1, f"Block {block} height exceeds 2"
+            assert rc2[1] <= rc1[1] + 1, f"Block {block} width exceeds 2"

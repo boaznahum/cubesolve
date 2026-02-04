@@ -455,6 +455,143 @@ Frame 2: F rotation
 
 ---
 
+## Block Search Integration in LBL Solver
+
+**Module:** `src/cube/domain/solver/direct/lbl/_LBLNxNCenters.py`
+
+### Overview
+
+The LBL solver can optionally search for rectangular blocks of same-color pieces and solve them with a single commutator operation instead of piece-by-piece iteration. This feature is **currently disabled** pending investigation of edge cases.
+
+### The Challenge: Block Rotation Changes Shape
+
+**Critical Insight:** When searching for source blocks, we cannot rotate block COORDINATES like we do with single points. Rotating a block's coordinates changes its SHAPE:
+
+```
+Original 1x3 horizontal block at positions:
+  (1,0), (1,1), (1,2)    ← Row 1, columns 0-2
+
+After 90° clockwise coordinate rotation:
+  (0,1), (1,1), (2,1)    ← Column 1, rows 0-2
+
+This is now a 3x1 VERTICAL block!
+```
+
+The commutator's slice algorithm depends on the target block's shape to determine which slice to use. A 1x3 horizontal block uses different slices than a 3x1 vertical block. Therefore, **source blocks cannot be rotated** - we must find them at their natural position.
+
+### Algorithm: Target-First Block Search
+
+1. **Find target blocks** from tracked unsolved positions on target face
+2. **Dry run commutator** to compute the "natural source block" position
+3. **Check source face** at natural position (NO rotation search)
+4. **Verify** second_block won't destroy solved pieces
+5. **Execute** if valid
+
+```python
+def _try_blocks_from_target(
+    self,
+    required_color: Color,
+    target_face_tracker: FaceTracker,
+    source_face: Face
+) -> bool:
+    """
+    Block-based solving: find target blocks first, check natural source.
+
+    Unlike single-piece solving which can search 4 rotations,
+    multi-cell blocks CANNOT be rotated because that changes shape.
+    """
+    target_blocks = self._find_target_blocks(required_color, target_face_tracker)
+
+    for target_block in target_blocks:
+        # Dry run to get natural source position
+        dry_result = self._comm_helper.execute_commutator(
+            source_face=source_face,
+            target_face=target_face_tracker.face,
+            target_block=target_block,
+            dry_run=True
+        )
+
+        natural_source = dry_result.source_block
+        second_block = dry_result.second_block
+
+        # Check WITHOUT rotation (critical for multi-cell blocks)
+        if self._source_block_has_color_no_rotation(
+            required_color, source_face, natural_source, second_block
+        ):
+            self._comm_helper.execute_commutator(
+                dry_run=False,
+                _cached_secret=dry_result
+            )
+            return True
+
+    return False
+```
+
+### Key Methods Added
+
+| Method | Purpose |
+|--------|---------|
+| `_block_iter(block)` | Iterate over all cells in a rectangular block |
+| `_rotate_block_clockwise(block, n)` | Rotate block coordinates (for future use) |
+| `_source_block_has_color_no_rotation()` | Check source block WITHOUT rotation search |
+| `_find_target_blocks()` | Find potential target blocks from tracked positions |
+| `_try_blocks_from_target()` | Main entry point for block-based solving |
+
+### Why No Rotation Search for Blocks
+
+Single piece solving in `_source_point_has_color()`:
+```python
+# Single point: can search 4 rotations
+for n in range(4):
+    rotated_point = rotate_point_clockwise(source_point, n)
+    if source_face.get(rotated_point).color == required_color:
+        return n  # Found at rotation n
+```
+
+Multi-cell block solving in `_source_block_has_color_no_rotation()`:
+```python
+# Block: NO rotation search - shape would change
+all_match = all(
+    source_face.center.get_center_slice(pt).color == required_color
+    for pt in self._block_iter(source_block)
+)
+if not all_match:
+    return False  # Block not found at natural position
+```
+
+### Current Status
+
+**Status:** Infrastructure implemented but disabled
+
+The block search is disabled in `_solve_single_center_piece_from_source_face_impl()`:
+
+```python
+# Block-based solving infrastructure is implemented but temporarily disabled.
+# To enable, uncomment:
+# work_done = self._try_blocks_from_target(
+#     color, target_face, source_face.face
+# )
+```
+
+**Known Issues:** ~3% of test cases (9 out of ~300) fail when enabled. Investigation needed for edge cases where the commutator executes but pieces don't end up with correct colors.
+
+### The 3-Cycle for Blocks
+
+Block commutators work the same as single-piece commutators:
+
+```
+3-CYCLE: source1 → target → source2 → source1
+
+For a 1x3 block:
+┌───┬───┬───┐    ┌───┬───┬───┐
+│ A │ A │ A │ →  │ T │ T │ T │   (source1 → target)
+└───┴───┴───┘    └───┴───┴───┘
+
+The entire block moves as a unit, preserving relative positions.
+```
+
+---
+
 ## Further Reading
 
 - [MIT: Mathematics of the Rubik's Cube (PDF)](https://web.mit.edu/sp.268/www/rubik.pdf)

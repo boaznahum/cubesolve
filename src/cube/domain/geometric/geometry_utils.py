@@ -1,6 +1,9 @@
 from collections.abc import Sequence
+from typing import Tuple
 
 import numpy as np
+
+from cube.domain.geometric.geometry_types import Point
 
 
 def in_box(x, y, z, bottom_quad: Sequence[np.ndarray],
@@ -78,3 +81,22 @@ def in_box(x, y, z, bottom_quad: Sequence[np.ndarray],
 
 def inv(n_slices:int, x: int) -> int:
     return n_slices - x -1
+
+
+def rotate_point_clockwise(rc: Tuple[int, int] | Point, n_slices: int, n_rotations: int = 1) -> Point:
+    """
+    Rotate a point clockwise on the face by n * 90 degrees.
+
+    Args:
+        rc: Point (row, col) - accepts both tuple and Point
+        n_rotations: Number of 90-degree rotations (supports negative for counterclockwise)
+
+    Returns:
+        Rotated point as Point
+    """
+
+    r, c = rc[0], rc[1]
+    for _ in range(n_rotations % 4):
+        r, c = inv(n_slices, c), r
+
+    return Point(r, c)

@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Generator, Tuple
 
@@ -131,6 +132,7 @@ class NxNCenters2(SolverHelper):
             self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, face_row)
 
     def _slice_on_target_face_solved(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int) -> bool:
+        #del _target_face  # Unused - checks all faces, not just target
 
         # all over the solution we assume faces botton up is the ltr, but of course this is not true
         # if target was not down
@@ -140,7 +142,7 @@ class NxNCenters2(SolverHelper):
         assert l1_white_tracker.face is self.cube.down
 
         # claud: why just marked solved why not solved ?
-        for c in _common.get_center_row_pieces(self.cube, l1_white_tracker, None, face_row):
+        for c in _common.get_center_row_pieces(self.cube, l1_white_tracker, target_face, face_row):
             if not _is_cent_piece_marked_solved(c):
                 return False
 
@@ -149,18 +151,18 @@ class NxNCenters2(SolverHelper):
 
 
     def _solve_single_center_slice_all_sources(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
-                                               slice_index: int) -> bool:
+                                               face_row: int) -> bool:
 
         work_was_done = False
 
         # maybe not need iterations
 
 
-        with self._track_row_center_slices_nad_mark_if_solved(l1_white_tracker, slice_index):
+        with self._track_row_center_slices_nad_mark_if_solved(l1_white_tracker, face_row):
 
-            face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, slice_index)
+            face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, face_row)
             if face_slice_solved:
-                self.debug(f"✅✅✅✅ All slices solved {slice_index} ✅✅✅✅✅")
+                self.debug(f"✅✅✅✅ All slices solved on face {target_face.face} row {face_row} ✅✅✅✅✅")
                 return  False
 
             max_iter = 10000
@@ -175,8 +177,8 @@ class NxNCenters2(SolverHelper):
 
                 # position and tracking need to go inside
                 solved_count = self._solve_single_center_slice_all_sources_impl(l1_white_tracker, target_face,
-                                                                    slice_index)
-                self.debug(f"‼✅✅{solved_count} piece(s) solved {slice_index} ‼✅✅")
+                                                                                face_row)
+                self.debug(f"‼✅✅{solved_count} piece(s) solved {face_row} ‼✅✅")
 
                 if solved_count > 0:
                     work_was_done = True
@@ -185,25 +187,25 @@ class NxNCenters2(SolverHelper):
                     if removed_count > 0:
                         raise InternalSWError(f"I moved pieces for {target_face} but still solve nothing")
 
-                face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, slice_index)
+                face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, face_row)
 
 
                 if face_slice_solved:
-                    self.debug(f"✅✅✅✅ Face {target_face} slice solved {slice_index} ✅✅✅✅✅")
+                    self.debug(f"✅✅✅✅ Face {target_face} slice solved {face_row} ✅✅✅✅✅")
                     return work_was_done
                 else:
                     self.debug(f"‼️‼️‼️‼️Face {target_face} slice NOT  solved, trying to remove from some face ‼️‼️‼️‼️")
 
                     removed_count = self._try_remove_all_pieces_from_target_face_and_other_faces(l1_white_tracker,
                                                                                                  target_face,
-                                                                                                 slice_index,
+                                                                                                 face_row,
                                                                                                  False)
 
                     if removed_count == 0:
-                        self.debug(f"‼️‼️‼️‼️Nothing was removed_count, aborting face {target_face} slice {slice_index} ‼️‼️‼️‼️")
+                        self.debug(f"‼️‼️‼️‼️Nothing was removed_count, aborting face {target_face} slice {face_row} ‼️‼️‼️‼️")
                         return work_was_done
                     else:
-                        self.debug(f"‼️‼️‼️‼️{removed_count} piece(s) moved, trying again slice {slice_index} ‼️‼️‼️‼️")
+                        self.debug(f"‼️‼️‼️‼️{removed_count} piece(s) moved, trying again slice {face_row} ‼️‼️‼️‼️")
 
     def _solve_single_center_slice_all_sources_impl(self, l1_white_tracker: FaceTracker,
                                                     target_face: FaceTracker,
@@ -394,6 +396,12 @@ class NxNCenters2(SolverHelper):
 
         work_done = False
 
+        # Try block-based solving first (multi-cell commutators)
+        work_done = self._try_blocks_from_target(
+            color, target_face, source_face.face
+        )
+
+        # Fall back to piece-by-piece for remaining positions
         for rc in _iterate_all_tracked_center_slices_index(target_face):
 
             candidate_piece = target_face.face.center.get_center_slice(rc)
@@ -471,6 +479,256 @@ class NxNCenters2(SolverHelper):
             s2 = Point(*parent.cube.cqr.rotate_point_clockwise(s2))
 
         return None
+
+    @staticmethod
+    def _block_iter(block: Block) -> Iterator[Point]:
+        """Iterate over all cells in a block."""
+
+        return block.cells
+
+
+    def _source_block_has_color_no_rotation(
+        self,
+        required_color: Color,
+        source_face: Face,
+        source_block: Block,
+        second_block: Block
+    ) -> bool:
+        """
+        Check if source block has required color WITHOUT rotation search.
+
+        For multi-cell blocks, we cannot search rotations because rotating
+        block coordinates changes the block's SHAPE (e.g., 1x3 horizontal
+        becomes 3x1 vertical). The commutator's slice algorithm is computed
+        based on the target block's shape, so the source block must have
+        the same shape.
+
+        For single-cell blocks, use _source_point_has_color which can search
+        rotations since 1x1 shape is rotation-invariant.
+
+        Args:
+            required_color: Color required for all cells in source block
+            source_face: Face to check
+            source_block: Block to check (natural source position)
+            second_block: Block that will be displaced
+
+        Returns:
+            True if source_block has required colors AND second_block is safe
+        """
+        # Check if ALL cells in source block have required color
+        all_match = all(
+            source_face.center.get_center_slice(pt).color == required_color
+            for pt in self._block_iter(source_block)
+        )
+
+        if not all_match:
+            return False
+
+        # Check that second_block won't destroy solved pieces
+        for pt in self._block_iter(second_block):
+            second_piece = source_face.center.get_center_slice(pt)
+            if _is_cent_piece_marked_solved(second_piece):
+                # Would destroy a solved piece - not safe
+                return False
+
+        return True
+
+    def _find_target_blocks(
+        self,
+        required_color: Color,
+        target_face_tracker: FaceTracker
+    ) -> list[Block]:
+        """
+        Find potential target blocks from tracked positions that need solving.
+
+        Searches among tracked positions (the row being solved) for contiguous
+        blocks that need solving (color != required_color).
+
+        Args:
+            required_color: Color pieces should be (target face color)
+            target_face_tracker: Target face tracker
+
+        Returns:
+            List of target blocks (largest first), containing only tracked
+            positions that need solving.
+        """
+        target_face = target_face_tracker.face
+        n = self.cube.n_slices
+
+        # Collect all tracked positions that need solving
+        unsolved_positions: set[Point] = set()
+        for pt in _iterate_all_tracked_center_slices_index(target_face_tracker):
+            piece = target_face.center.get_center_slice(pt)
+            if piece.color != required_color:
+                unsolved_positions.add(pt)
+
+        if not unsolved_positions:
+            return []
+
+        # Build blocks from unsolved positions
+        # Try to find rectangular blocks
+        blocks: list[Block] = []
+
+        # For each unsolved position, try to extend horizontally and vertically
+        checked: set[Point] = set()
+        for start_pt in sorted(unsolved_positions):  # Process in order
+            if start_pt in checked:
+                continue
+
+            # Find the maximum block starting from this position
+            # that only contains unsolved, tracked positions
+            max_r, max_c = start_pt[0], start_pt[1]
+
+            # Extend right (column direction)
+            while max_c + 1 < n:
+                next_pt = Point(start_pt[0], max_c + 1)
+                if next_pt in unsolved_positions:
+                    max_c += 1
+                else:
+                    break
+
+            # Extend down (row direction), checking entire width
+            while max_r + 1 < n:
+                # Check if entire row can be extended
+                can_extend = True
+                for c in range(start_pt[1], max_c + 1):
+                    next_pt = Point(max_r + 1, c)
+                    if next_pt not in unsolved_positions:
+                        can_extend = False
+                        break
+                if can_extend:
+                    max_r += 1
+                else:
+                    break
+
+            block = Block(start_pt, Point(max_r, max_c))
+            block_size = self._comm_helper.block_size(block[0], block[1])
+
+            if block_size > 1 and self._comm_helper.is_valid_block(block[0], block[1]):
+                blocks.append(block)
+                # Mark positions as checked
+                for r in range(start_pt[0], max_r + 1):
+                    for c in range(start_pt[1], max_c + 1):
+                        checked.add(Point(r, c))
+
+        # Sort by size descending
+        blocks.sort(key=lambda b: self._comm_helper.block_size(b[0], b[1]), reverse=True)
+        return blocks
+
+    def _try_blocks_from_target(
+        self,
+        required_color: Color,
+        target_face_tracker: FaceTracker,
+        source_face: Face
+    ) -> bool:
+        """
+        Try block-based solving by finding target blocks first, then checking source.
+
+        This method:
+        1. Finds target blocks from tracked positions that need solving
+        2. For each target block, does a dry_run to find the natural source block
+        3. Checks if the natural source block has the required color (NO rotation)
+        4. Executes the block commutator if valid
+
+        IMPORTANT: For multi-cell blocks, we do NOT search rotations because
+        rotating block coordinates changes the block's SHAPE. The commutator's
+        slice algorithm depends on the target block's shape, so source must match.
+
+        Args:
+            required_color: Color to move (target face color)
+            target_face_tracker: Target face tracker
+            source_face: Source face
+
+        Returns:
+            True if any work was done, False otherwise
+        """
+        target_face = target_face_tracker.face
+        work_done = False
+
+        # Find target blocks from tracked positions
+        target_blocks = self._find_target_blocks(required_color, target_face_tracker)
+
+        for target_block in target_blocks:
+            block_size = target_block.size
+            if block_size <= 1:
+                continue  # Only multi-cell blocks
+
+            # Do dry run to find the natural source block
+            dry_result = self._comm_helper.execute_commutator(
+                source_face=source_face,
+                target_face=target_face,
+                target_block=target_block,
+                dry_run=True
+            )
+
+            natural_source_block = dry_result.natural_source_block
+            second_block = dry_result.second_block
+
+            if natural_source_block is None or second_block is None:
+                self.debug(f"Target block {target_block} skipped - no natural source/second block")
+                continue
+
+            # Verify natural_source_block has same dimensions as target_block
+            # Face-to-face translation might change orientation!
+            target_dims = self._comm_helper.block_size2(target_block[0], target_block[1])
+            source_dims = self._comm_helper.block_size2(natural_source_block[0], natural_source_block[1])
+            if target_dims != source_dims:
+                self.debug(f"Target block {target_block} skipped - shape mismatch: "
+                           f"target {target_dims} vs source {source_dims}")
+                continue
+
+            # Re-verify is_valid_block for the target (should have been checked in _find_target_blocks)
+            if not self._comm_helper.is_valid_block(target_block[0], target_block[1]):
+                self.debug(f"Target block {target_block} skipped - invalid block (would self-intersect)")
+                continue
+
+            # Check if natural source block has required colors (NO rotation search)
+            # For multi-cell blocks, rotation would change shape which breaks the algorithm
+            if not self._source_block_has_color_no_rotation(
+                required_color, source_face, natural_source_block, second_block
+            ):
+                self.debug(f"Target block {target_block} skipped - natural source doesn't have required colors")
+                continue
+
+            # Execute the block commutator (source_block = natural_source_block, no rotation needed)
+            self._comm_helper.execute_commutator(
+                source_face=source_face,
+                target_face=target_face,
+                target_block=target_block,
+                source_block=natural_source_block,  # Use natural position, no rotation
+                preserve_state=True,
+                dry_run=False,
+                _cached_secret=dry_result
+            )
+
+            # Verify that ALL pieces in target block were actually solved
+            all_solved = True
+            for pt in self._block_iter(target_block):
+                piece = target_face.center.get_center_slice(pt)
+                if piece.color != required_color:
+                    all_solved = False
+                    self.debug(f"⚠️ Block {target_block} piece at {pt} has wrong color "
+                               f"{piece.color} != {required_color}")
+                    break
+
+            if not all_solved:
+                # Block commutator failed - don't mark work_done
+                # Let piece-by-piece fallback handle this
+                self.debug(f"❌ Block commutator FAILED for {target_block}")
+                continue
+
+            # Mark solved pieces on target only
+            # NOTE: Do NOT mark second_block pieces! Those are on the source face,
+            # and marking them would prevent future block commutators from using
+            # those positions for their second_block (3-cycle intermediate).
+            for pt in target_block.cells:
+                piece = target_face.center.get_center_slice(pt)
+                mark_slice_and_v_mark_if_solved(piece)
+
+            self.debug(f"✅ Block commutator solved {block_size} pieces: {target_block}")
+            work_done = True
+
+        return work_done
 
     def _block_commutator(self,
                             required_color: Color,

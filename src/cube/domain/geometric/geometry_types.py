@@ -18,6 +18,7 @@ Using Protocol classes instead of Callable aliases for better readability:
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import TYPE_CHECKING, NamedTuple, Protocol
@@ -50,6 +51,73 @@ class Block(NamedTuple):
     start: Point
     end: Point
 
+    @property
+    def cells(self) -> Iterator[Point]:
+
+        """
+        iterate over normalize block
+        see #normalzie
+        """
+
+        r1, c1 = self.start
+        r2, c2 = self.end
+
+        _c1 = min(c1, c2)
+        _c2 = max(c1, c2)
+
+        for r in range(min(r1, r2), max(r1, r2) + 1):
+            for c in range(_c1, _c2 + 1):
+                yield Point(r, c)
+
+    @property
+    def normalize(self) -> Block:
+
+        """Normalize block coordinates so min values come first.
+
+        A block is defined by two corner points: (r1, c1) and (r2, c2).
+        This method ensures that r1 <= r2 and c1 <= c2 after normalization.
+
+        This is critical for commutator algorithms because:
+        1. M-slice selection depends on column ordering
+        2. Block iteration assumes normalized coordinates
+        3. Intersection checks require consistent ordering
+
+        Returns:
+            Normalized block with r1 <= r2 and c1 <= c2
+        """
+        r1, c1 = self.start
+        r2, c2 = self.end
+        if r1 > r2:
+            r1, r2 = r2, r1
+        if c1 > c2:
+            c1, c2 = c2, c1
+        return Block(Point(r1, c1), Point(r2, c2))
+
+    @staticmethod
+    def _normalize(start:Point, end: Point)-> Block:
+
+        r1, c1 = start
+        r2, c2 = end
+        if r1 > r2:
+            r1, r2 = r2, r1
+        if c1 > c2:
+            c1, c2 = c2, c1
+        return Block(Point(r1, c1), Point(r2, c2))
+
+    @property
+    def size(self) -> int:
+        """Number of cells in the block."""
+        r1, c1 = self.start
+        r2, c2 = self.end
+        return (abs(r2 - r1) + 1) * (abs(c2 - c1) + 1)
+
+    def rotate_clockwise(self, n_slices: int, n_rotations: int = 1) -> Block:
+        """Return a new Block rotated clockwise by n rotations."""
+        # Late import to avoid circular dependency
+        from cube.domain.geometric import geometry_utils
+        new_start = geometry_utils.rotate_point_clockwise(self.start, n_slices, n_rotations=n_rotations)
+        new_end = geometry_utils.rotate_point_clockwise(self.end, n_slices, n_rotations=n_rotations)
+        return Block._normalize(new_start, new_end)
 
 # =============================================================================
 # SIZE-INDEPENDENT functions (Unit functions) - accept n_slices as parameter
