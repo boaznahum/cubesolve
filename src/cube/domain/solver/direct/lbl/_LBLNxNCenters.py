@@ -540,21 +540,24 @@ class NxNCenters2(SolverHelper):
         target_face_tracker: FaceTracker
     ) -> list[Block]:
         """
-        Find potential target blocks from tracked positions that need solving.
+        Find ALL potential target blocks from tracked positions that need solving.
 
-        Searches among tracked positions (the row being solved) for contiguous
-        blocks that need solving (color != required_color).
+        Searches among tracked positions (the row being solved) for ALL contiguous
+        rectangular blocks that need solving (color != required_color).
+
+        This returns ALL valid blocks (including overlapping ones), not just the
+        maximal non-overlapping blocks. This is important because the largest block
+        might fail source validation, and we need smaller alternatives to try.
 
         Args:
             required_color: Color pieces should be (target face color)
             target_face_tracker: Target face tracker
 
         Returns:
-            List of target blocks (largest first), containing only tracked
-            positions that need solving.
+            List of ALL valid target blocks (largest first), containing only tracked
+            positions that need solving. Blocks may overlap.
         """
         target_face = target_face_tracker.face
-        n = self.cube.n_slices
 
         # Collect all tracked positions that need solving
         unsolved_positions: set[Point] = set()
@@ -566,51 +569,30 @@ class NxNCenters2(SolverHelper):
         if not unsolved_positions:
             return []
 
-        # Build blocks from unsolved positions
-        # Try to find rectangular blocks
+        # Generate ALL possible rectangular blocks from unsolved positions
         blocks: list[Block] = []
 
-        # For each unsolved position, try to extend horizontally and vertically
-        checked: set[Point] = set()
-        for start_pt in sorted(unsolved_positions):  # Process in order
-            if start_pt in checked:
-                continue
+        # For each possible top-left corner
+        for start_pt in unsolved_positions:
+            # For each possible bottom-right corner
+            for end_pt in unsolved_positions:
+                if end_pt[0] < start_pt[0] or end_pt[1] < start_pt[1]:
+                    continue  # end must be >= start
 
-            # Find the maximum block starting from this position
-            # that only contains unsolved, tracked positions
-            max_r, max_c = start_pt[0], start_pt[1]
-
-            # Extend right (column direction)
-            while max_c + 1 < n:
-                next_pt = Point(start_pt[0], max_c + 1)
-                if next_pt in unsolved_positions:
-                    max_c += 1
-                else:
-                    break
-
-            # Extend down (row direction), checking entire width
-            while max_r + 1 < n:
-                # Check if entire row can be extended
-                can_extend = True
-                for c in range(start_pt[1], max_c + 1):
-                    next_pt = Point(max_r + 1, c)
-                    if next_pt not in unsolved_positions:
-                        can_extend = False
+                # Check if ALL positions in rectangle are unsolved
+                all_unsolved = True
+                for r in range(start_pt[0], end_pt[0] + 1):
+                    for c in range(start_pt[1], end_pt[1] + 1):
+                        if Point(r, c) not in unsolved_positions:
+                            all_unsolved = False
+                            break
+                    if not all_unsolved:
                         break
-                if can_extend:
-                    max_r += 1
-                else:
-                    break
 
-            block = Block(start_pt, Point(max_r, max_c))
-            block_size = block.size
-
-            if block_size > 1 and self._comm_helper.is_valid_block(block[0], block[1]):
-                blocks.append(block)
-                # Mark positions as checked
-                for r in range(start_pt[0], max_r + 1):
-                    for c in range(start_pt[1], max_c + 1):
-                        checked.add(Point(r, c))
+                if all_unsolved:
+                    block = Block(start_pt, end_pt)
+                    if block.size >= 1 and self._comm_helper.is_valid_block(block[0], block[1]):
+                        blocks.append(block)
 
         # Sort by size descending
         blocks.sort(key=lambda b: b.size, reverse=True)
@@ -695,6 +677,10 @@ class NxNCenters2(SolverHelper):
                 ):
                     self.debug(f"‼️‼️‼️‼️‼️‼️‼️‼️ Target block {target_block} skipped - natural source doesn't have required colors")
                     continue
+                else:
+                    self.debug(
+                        f"❤️❤️❤️❤️❤️❤️❤️ Target block {target_block} skipped - natural source has required colors")
+
 
                 # Execute the block commutator (source_block = natural_source_block, no rotation needed)
 
