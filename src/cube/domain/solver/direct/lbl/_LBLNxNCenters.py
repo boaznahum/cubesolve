@@ -650,8 +650,10 @@ class NxNCenters2(SolverHelper):
 
         for target_block in target_blocks:
             block_size = target_block.size
-            if block_size <= 1:
-                continue  # Only multi-cell blocks
+            # if block_size <= 1:
+            #     continue  # Only multi-cell blocks
+
+            self.debug(lambda : f"Working on block {target_block} size {block_size}")
 
             # Do dry run to find the natural source block
             dry_result = self._comm_helper.execute_commutator(
@@ -664,14 +666,13 @@ class NxNCenters2(SolverHelper):
             natural_source_block = dry_result.natural_source_block
             second_block = dry_result.second_block
 
-            if natural_source_block is None or second_block is None:
-                self.debug(f"Target block {target_block} skipped - no natural source/second block")
-                continue
+            assert natural_source_block
+            assert second_block
 
             # Verify natural_source_block has same dimensions as target_block
             # Face-to-face translation might change orientation!
-            target_dims = self._comm_helper.block_size2(target_block[0], target_block[1])
-            source_dims = self._comm_helper.block_size2(natural_source_block[0], natural_source_block[1])
+            target_dims = target_block.dim
+            source_dims = natural_source_block.dim
             if target_dims != source_dims:
                 self.debug(f"Target block {target_block} skipped - shape mismatch: "
                            f"target {target_dims} vs source {source_dims}")

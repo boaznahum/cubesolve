@@ -484,11 +484,9 @@ class CommutatorHelper(SolverHelper):
 
             def _h2() -> str:
                 """Headline for annotation - block size info."""
-                block_size = target_block.size
-                if block_size == 1:
+                if target_block.size == 1:
                     return ", 1x1 commutator"
-                dims = self.block_size2(target_block[0], target_block[1])
-                return f", {dims[0]}x{dims[1]} block commutator"
+                return f", {target_block.dim[0]}x{target_block.dim[1]} block commutator"
 
             def _ann_s2() -> Iterator[CenterSlice]:
                 """Yield ALL s2 CenterSlice objects in the block (lazy - only called if animation enabled)."""
@@ -987,34 +985,6 @@ class CommutatorHelper(SolverHelper):
             for c in cols_range:
                 yield Point(r, c)
 
-    @staticmethod
-    def block_size(rc1: tuple[int, int], rc2: tuple[int, int]) -> int:
-        """
-        Calculate the size of a block (number of cells).
-
-        Args:
-            rc1: First corner (row, col)
-            rc2: Second corner (row, col)
-
-        Returns:
-            Number of cells in the block: (rows+1) * (cols+1)
-        """
-        return (abs(rc2[0] - rc1[0]) + 1) * (abs(rc2[1] - rc1[1]) + 1)
-
-    @staticmethod
-    def block_size2(rc1: tuple[int, int], rc2: tuple[int, int]) -> tuple[int, int]:
-        """
-        Calculate the dimensions of a block (rows, cols).
-
-        Args:
-            rc1: First corner (row, col)
-            rc2: Second corner (row, col)
-
-        Returns:
-            Tuple of (num_rows, num_cols)
-        """
-        return (abs(rc2[0] - rc1[0]) + 1), (abs(rc2[1] - rc1[1]) + 1)
-
     def _rotate_point_clockwise(self, r: int, c: int) -> Point:
         """
         Rotate a point 90 degrees clockwise on the center grid.
@@ -1088,8 +1058,7 @@ class CommutatorHelper(SolverHelper):
         self,
         face: Face,
         color: Color,
-        rc1: tuple[int, int],
-        rc2: tuple[int, int]
+        block: Block
     ) -> bool:
         """
         Check if all cells in a block have the specified color.
@@ -1097,22 +1066,16 @@ class CommutatorHelper(SolverHelper):
         Args:
             face: Face to check
             color: Required color for all cells
-            rc1: First corner (row, col)
-            rc2: Second corner (row, col)
+            block: Block to check
 
         Returns:
             True if all cells in the block have the specified color
         """
         center = face.center
 
-        # Iterate over all cells in the block
-        r1, r2 = min(rc1[0], rc2[0]), max(rc1[0], rc2[0])
-        c1, c2 = min(rc1[1], rc2[1]), max(rc1[1], rc2[1])
-
-        for r in range(r1, r2 + 1):
-            for c in range(c1, c2 + 1):
-                if center.get_center_slice((r, c)).color != color:
-                    return False
+        for cell in block.cells:
+            if center.get_center_slice(cell).color != color:
+                return False
 
         return True
 
@@ -1120,8 +1083,7 @@ class CommutatorHelper(SolverHelper):
         self,
         face: Face,
         color: Color,
-        rc1: tuple[int, int],
-        rc2: tuple[int, int]
+        block: Block
     ) -> bool:
         """
         Check if a block is both valid (no self-intersection) and has correct colors.
@@ -1129,16 +1091,15 @@ class CommutatorHelper(SolverHelper):
         Args:
             face: Face to check
             color: Required color for all cells
-            rc1: First corner (row, col)
-            rc2: Second corner (row, col)
+            block: Block to check
 
         Returns:
             True if block is valid and all cells have the correct color
         """
-        if not self.is_valid_block(rc1, rc2):
+        if not self.is_valid_block(block.start, block.end):
             return False
 
-        return self._is_block(face, color, rc1, rc2)
+        return self._is_block(face, color, block)
 
     def search_big_block(
         self,
@@ -1210,7 +1171,7 @@ class CommutatorHelper(SolverHelper):
                 r_max: int | None = None
                 for r in range(rc[0] + 1, r_limit):
                     if not self._is_valid_and_block_for_search(
-                        face, color, rc, Point(r, rc[1])
+                        face, color, Block(rc, Point(r, rc[1]))
                     ):
                         break
                     r_max = r
@@ -1227,7 +1188,7 @@ class CommutatorHelper(SolverHelper):
                 c_max: int | None = None
                 for c in range(rc[1] + 1, c_limit):
                     if not self._is_valid_and_block_for_search(
-                        face, color, rc, Point(r_max, c)
+                        face, color, Block(rc, Point(r_max, c))
                     ):
                         break
                     c_max = c

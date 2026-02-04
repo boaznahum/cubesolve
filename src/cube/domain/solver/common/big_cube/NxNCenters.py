@@ -947,12 +947,13 @@ class NxNCenters(SolverHelper):
 
         rc1 = Point(r1, c1)
         rc2 = Point(r2, c2)
+        normalized_block = Block(rc1, rc2)
 
         # in case of odd and (mid, mid), search will fail, nothing to do
         # if we change the order, then block validation below will fail,
         # so we need to check for case odd (mid, mid) somewhere else
         # now search block
-        n_rotate = self._search_block(face, source_face, required_color, mode, rc1, rc2)
+        n_rotate = self._search_block(face, source_face, required_color, mode, normalized_block)
 
         if n_rotate is None:
             return False
@@ -1175,7 +1176,7 @@ class NxNCenters(SolverHelper):
                   source_face: Face,
                   required_color: Color,
                   min_points: int | None,
-                  rc1: Tuple[int, int], rc2: Tuple[int, int],
+                  block: Block,
                   dont_convert_coordinates: bool = False) -> bool:
 
         """
@@ -1183,14 +1184,13 @@ class NxNCenters(SolverHelper):
         :param source_face:
         :param required_color:
         :param min_points: If None that all block , min = block size
-        :param rc1:
-        :param rc2:
+        :param block: Block to check
         :param dont_convert_coordinates if True then don't convert coordinates according to source face
         :return:
         """
 
         # Number of points in block
-        _max = CommutatorHelper.block_size(rc1, rc2)
+        _max = block.size
 
         if min_points is None:
             min_points = _max
@@ -1200,14 +1200,10 @@ class NxNCenters(SolverHelper):
         center = source_face.center
         miss_count = 0
 
-        # Convert tuple to Point for internal functions
-        rc1_pt = Point(*rc1)
-        rc2_pt = Point(*rc2)
-
         if dont_convert_coordinates:
-            _range = self._2d_range(rc1_pt, rc2_pt)
+            _range = self._2d_range(block.start, block.end)
         else:
-            _range = self._2d_range_on_source(source_face is source_face.cube.back, rc1_pt, rc2_pt)
+            _range = self._2d_range_on_source(source_face is source_face.cube.back, block.start, block.end)
 
         for rc in _range:
 
@@ -1224,27 +1220,24 @@ class NxNCenters(SolverHelper):
                       source_face: Face,
                       required_color: Color,
                       mode: _SearchBlockMode,
-                      rc1: Tuple[int, int], rc2: Tuple[int, int]) -> int | None:
+                      block: Block) -> int | None:
 
         """
         Search block according to mode, if target is already satisfied, then return not found
         :param source_face:
         :param required_color:
         :param mode:
-        :param rc1:
-        :param rc2:
+        :param block: Block to search for
         :return: How many source clockwise rotate in order to match the block to source
         """
 
-        block_size = CommutatorHelper.block_size(rc1, rc2)
+        n_ok = self._count_colors_on_block(required_color, target_face, block.start, block.end)
 
-        n_ok = self._count_colors_on_block(required_color, target_face, rc1, rc2)
-
-        if n_ok == block_size:
+        if n_ok == block.size:
             return None  # nothing to do
 
         if mode == _SearchBlockMode.CompleteBlock:
-            min_required = block_size
+            min_required = block.size
         elif mode == _SearchBlockMode.BigThanSource:
             # The number of commutators before > after
             # before = size - n_ok
@@ -1254,19 +1247,19 @@ class NxNCenters(SolverHelper):
         elif mode == _SearchBlockMode.ExactMatch:
             if n_ok:
                 return None
-            min_required = block_size
+            min_required = block.size
 
         else:
             raise InternalSWError
 
-        cube = self.cube
+        n_slices = self.cube.n_slices
+        rotated_block = block
 
         for n in range(4):
-            if self._is_block(source_face, required_color, min_required, rc1, rc2):
+            if self._is_block(source_face, required_color, min_required, rotated_block):
                 # we rotate n to find the block, so client need to rotate -n
                 return (-n) % 4
-            rc1 = cube.cqr.rotate_point_clockwise(rc1)
-            rc2 = cube.cqr.rotate_point_clockwise(rc2)
+            rotated_block = rotated_block.rotate_clockwise(n_slices)
 
         return None
 
