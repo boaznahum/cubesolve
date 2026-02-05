@@ -517,13 +517,13 @@ class CommutatorHelper(SolverHelper):
 
         return CommutatorResult(
             slice_name=slice_name,
-            #boaz: claude: bug here should be a block !!!
+            # Legacy point fields for 1x1 compatibility (block fields below are preferred)
             source_point=source_block.start,
             algorithm=final_algorithm,
-            #boaz: claude: bug here should be a block see below!!!
             natural_source=natural_source_block[0],
             target_point=target_point,
             second_replaced_with_target_point_on_source=xpt_on_source_after_un_setup,
+            # Block fields (preferred for multi-cell blocks)
             natural_source_block=natural_source_block_result,
             target_block=target_block,
             second_block=second_block_result,
@@ -635,86 +635,6 @@ class CommutatorHelper(SolverHelper):
 
         # M[n:n] notation works for a single slice at position n
         return base_slice_alg[v1 + 1:v2 + 1]
-
-    def _get_slice_m_alg(self, c1: int, c2: int):
-        """
-        claude: get rid of this method
-        Get M slice algorithm for column range.
-
-        Returns M' (prime) for use in commutator pattern. The algorithm uses
-        m.prime and m directly, where m = M':
-        [m', F, m', F', m, F, m, F'] = [M, F, M, F', M', F, M', F']
-
-        This matches NxNCenters._get_slice_m_alg() behavior.
-
-        Args:
-            c1: Center slice index [0, n)
-            c2: Center slice index [0, n)
-
-        Returns:
-            M' slice algorithm for the range
-        """
-        if c1 > c2:
-            c1, c2 = c2, c1
-        # M[n:n] notation works for a single slice at position n
-        return Algs.M[c1 + 1:c2 + 1]
-
-    def _get_slice_e_alg(self, r1: int, r2: int):
-        """
-        Get E slice algorithm for row range.
-        claude: get rid of this method
-
-
-        Returns E' (prime) for use in commutator pattern. The algorithm uses
-        e.prime and e directly, where e = E':
-        [e', F, e2', F', e, F, e2, F'] = [E, F, E, F', E', F, E', F']
-
-        This matches the pattern used by _get_slice_m_alg for M slices.
-
-        Args:
-            r1: Center slice index [0, n)
-            r2: Center slice index [0, n)
-
-        Returns:
-            E' slice algorithm for the range
-        """
-        if r1 > r2:
-            r1, r2 = r2, r1
-        # E[n:n] notation works for single slice at position n
-        return Algs.E[r1 + 1:r2 + 1]
-
-    def _get_slice_s_alg(self, r1: int, r2: int):
-        """
-        claude: get rid of this method
-
-        Get S slice algorithm for row range.
-
-        Returns S' (prime) for use in commutator pattern when Right is target.
-        The algorithm uses s.prime and s directly, where s = S':
-        [s', R, s2', R', s, R, s2, R'] = [S, R, S, R', S', R, S', R']
-
-        S slice follows F direction: U→R→D→L (clockwise looking at F).
-        S' direction: U→L→D→R (counter-clockwise looking at F).
-
-        For Right target with Up source: S' brings U→R (since S' moves U→L not U→R)
-        Wait, need to verify the direction...
-
-        Actually S (positive) moves: U→R (pieces on U face move to R face)
-        So for Up→Right, we need S, not S'.
-        But to match the pattern of other methods, we return S' and let the caller
-        use .prime to get S.
-
-        Args:
-            r1: Center slice index [0, n)
-            r2: Center slice index [0, n)
-
-        Returns:
-            S' slice algorithm for the range
-        """
-        if r1 > r2:
-            r1, r2 = r2, r1
-        # S[n:n] notation works for single slice at position n
-        return Algs.S[r1 + 1:r2 + 1]
 
     def _find_rotation_idx(self, actual_source_block: Block, natural_source_block: Block) -> int:
         """
