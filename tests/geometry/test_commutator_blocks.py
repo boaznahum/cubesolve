@@ -361,6 +361,56 @@ class TestBlockSearching:
         assert blocks[0][0] < n * n, \
             "After M move, largest block should be smaller than full center"
 
+    @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
+    def test_search_with_indices_matches_filtered_search(self, cube_size: int):
+        """
+        search_big_block with row_indices/col_indices produces same results
+        as filtering the full search by starting position.
+
+        This verifies that:
+            search_big_block(face, color, row_indices=[r], col_indices=[c])
+        returns the same blocks as:
+            [b for b in search_big_block(face, color) if b[1][0] == (r, c)]
+        """
+        app = create_app(cube_size)
+        cube = app.cube
+
+        comm_helper = get_new_comm_helper(app)
+
+        face = cube.front
+        color = face.color
+        n = cube.n_slices
+
+        # Get full search results
+        all_blocks = comm_helper.search_big_block(face, color)
+
+        # For each position, compare filtered results with targeted search
+        for r in range(n):
+            for c in range(n):
+                # Method 1: Filter full search by starting position
+                filtered_blocks = [
+                    (size, blk) for size, blk in all_blocks
+                    if blk[0] == (r, c)
+                ]
+
+                # Method 2: Search with row_indices and col_indices
+                targeted_blocks = comm_helper.search_big_block(
+                    face, color, row_indices=[r], col_indices=[c]
+                )
+
+                # Both methods should return the same blocks
+                assert len(filtered_blocks) == len(targeted_blocks), \
+                    f"Position ({r},{c}): filtered={len(filtered_blocks)}, targeted={len(targeted_blocks)}"
+
+                # Compare each block (both lists are sorted by size descending)
+                for i, (f_block, t_block) in enumerate(zip(filtered_blocks, targeted_blocks)):
+                    f_size, f_blk = f_block
+                    t_size, t_blk = t_block
+                    assert f_size == t_size, \
+                        f"Position ({r},{c}) block {i}: size mismatch {f_size} vs {t_size}"
+                    assert f_blk == t_blk, \
+                        f"Position ({r},{c}) block {i}: block mismatch {f_blk} vs {t_blk}"
+
 
 # =============================================================================
 # SECTION 3: Block Validation Tests

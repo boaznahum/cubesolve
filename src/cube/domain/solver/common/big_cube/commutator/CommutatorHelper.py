@@ -972,14 +972,12 @@ class CommutatorHelper(SolverHelper):
         ```
             col 0   1   2
         row  ┌───┬───┬───┐
-          0  │ X │ X │ X │   X = original block spans cols {0,1,2}
+          0  │ X │ X │X/X'│   X = original block spans cols {0,1,2}
+             ├───┼───┼───┤   X'= after CW rotation (right column)
+          1  │   │   │ X'│   CW: (0,0)→(0,2), (0,1)→(1,2), (0,2)→(2,2)
              ├───┼───┼───┤
-          1  │   │   │   │   CW: (0,0)→(0,2), (0,2)→(2,2)
-             ├───┼───┼───┤        rotated cols = {2}
-          2  │ X'│ X'│ X'│   But full row after CW = cols {0,1,2}
-             └───┴───┴───┘
-                             Columns: {0,1,2} vs {0,1,2} -> INTERSECTION
-                             INVALID - rotated block overlaps original
+          2  │   │   │ X'│   Original cols: {0,1,2}, Rotated cols: {2}
+             └───┴───┴───┘   Intersection at col 2 -> INVALID
         ```
 
         Args:
@@ -1123,11 +1121,15 @@ class CommutatorHelper(SolverHelper):
                 r_limit = min(n, rc[0] + max_rows) if max_rows else n
 
                 # Try to extend horizontally (over rows)
+                # Only check the NEW row being added, not the entire block
                 r_max: int | None = None
                 for r in range(rc[0] + 1, r_limit):
-                    if not self._is_valid_and_block_for_search(
-                        face, color, Block(rc, Point(r, rc[1]))
-                    ):
+                    extended_block = Block(rc, Point(r, rc[1]))
+                    # Check validity of extended block
+                    if not self.is_valid_block(extended_block.start, extended_block.end):
+                        break
+                    # Only check color of the newly added cell (r, rc[1])
+                    if center.get_center_slice((r, rc[1])).color != color:
                         break
                     r_max = r
 
@@ -1140,11 +1142,19 @@ class CommutatorHelper(SolverHelper):
                 c_limit = min(n, rc[1] + max_cols) if max_cols else n
 
                 # Try to extend vertically (over columns)
+                # Only check the NEW column being added, not the entire block
                 c_max: int | None = None
                 for c in range(rc[1] + 1, c_limit):
-                    if not self._is_valid_and_block_for_search(
-                        face, color, Block(rc, Point(r_max, c))
-                    ):
+                    extended_block = Block(rc, Point(r_max, c))
+                    # Check validity of extended block
+                    if not self.is_valid_block(extended_block.start, extended_block.end):
+                        break
+                    # Only check color of the newly added column cells
+                    new_col_valid = all(
+                        center.get_center_slice((row, c)).color == color
+                        for row in range(rc[0], r_max + 1)
+                    )
+                    if not new_col_valid:
                         break
                     c_max = c
 
