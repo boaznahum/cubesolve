@@ -27,6 +27,7 @@ from tabulate import tabulate
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
 from cube.domain.geometric.cube_boy import FaceName
+from cube.domain.geometric.geometry_types import Point, Block
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
@@ -270,7 +271,7 @@ def test_commutator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, F
                 source_face: Face = cube.face(source_face_name)
                 target_face: Face = cube.face(target_face_name)
 
-                target_point = (ltr_y, ltr_x)
+                target_point = Point(ltr_y, ltr_x)
 
                 # Use NEW API: execute_commutator with dry_run to get natural source
                 # and the 3-cycle points (s1, t, s2) WITHOUT modifying the cube
@@ -287,7 +288,7 @@ def test_commutator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, F
                     source_face = cube.face(source_face_name)
                     target_face = cube.face(target_face_name)
 
-                    target_block = (target_point, target_point)
+                    target_block = Block(target_point, target_point)
 
                     # Get the cycle points from dry_run
                     dry_result = helper.execute_commutator(
@@ -342,7 +343,7 @@ def test_commutator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, F
                         source_face=source_face,
                         target_face=target_face,
                         target_block=target_block,
-                        source_block=(source_point, source_point),
+                        source_block=Block(source_point, source_point),
                         preserve_state=True,
                         dry_run=False
                     )
@@ -528,8 +529,8 @@ def test_commutator_raises_on_incompatible_blocks(cube_size: int) -> None:
     # Source at edge position (0,1) - edge orbit: (0,1)→(1,0)→(2,1)→(1,2)
     # These are in different rotation orbits and cannot be aligned
 
-    target_block = ((0, 0), (0, 0))  # Corner in LTR
-    source_block = ((0, 1), (0, 1))  # Edge in LTR (different orbit)
+    target_block = Block.of((0, 0), (0, 0))  # Corner in LTR
+    source_block = Block.of((0, 1), (0, 1))  # Edge in LTR (different orbit)
 
     with pytest.raises(ValueError, match="Cannot align"):
         helper.do_commutator(
