@@ -79,9 +79,21 @@ class _LBLSlices(SolverHelper):
         """Reset statistics for all sub-helpers."""
         self._centers.reset_statistics()
 
-    def get_block_statistics(self) -> dict[int, int]:
-        """Get block solving statistics from centers helper."""
-        return self._centers.get_statistics()
+    def display_statistics(self) -> None:
+        """Display block solving statistics."""
+        stats = self._centers.get_statistics()
+
+        if not stats:
+            return  # No blocks solved
+
+        # Build display string (sorted by block size)
+        parts = [f"{size}x1:{count}" for size, count in sorted(stats.items())]
+        total = sum(stats.values())
+
+        self.debug(f"Block statistics: {', '.join(parts)} (total: {total} blocks)")
+
+        # Also print to console for visibility
+        print(f"[LBL] Block statistics: {', '.join(parts)} (total: {total} blocks)")
 
     # =========================================================================
     # State inspection

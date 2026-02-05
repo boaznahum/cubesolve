@@ -733,7 +733,6 @@ class CommutatorHelper(SolverHelper):
         Raises:
             ValueError: If positions cannot be mapped by rotation
         """
-        cqr = self.cube.cqr
         rotated = actual_source_block.normalize  # normalize so we can compare
         for n in range(4):
             # After n clockwise rotations, actual moves to rotated

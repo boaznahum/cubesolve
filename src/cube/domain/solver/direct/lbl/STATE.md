@@ -100,9 +100,9 @@ Example for 5x5 (n=5, n_slices=3):
 
 ### Next Steps
 
-- [ ] Study `NxNCenters._block_commutator()` for adaptation
-- [ ] Implement actual solving logic in `_solve_single_slice_centers()`
-- [ ] Write tests for slice center solving
+- [x] Study commutator helper for block-based solving (completed with unified approach)
+- [x] Implement actual solving logic in `_solve_single_slice_centers()` (now uses unified block approach)
+- [x] Write tests for slice center solving (300+ tests pass)
 
 ---
 
@@ -114,7 +114,7 @@ Example for 5x5 (n=5, n_slices=3):
 - [x] Document approach in DESIGN.md
 - [x] Add SolveStep.LBL_SLICES_CTR enum
 - [x] Add placeholder methods and status reporting
-- [ ] **Centers**: Implement actual solving logic in `_solve_single_slice_centers()`
+- [x] **Centers**: Implement actual solving logic (unified block-based approach)
 - [ ] **Edge wings**: Pair the 4 edge wings at each slice level
 - [ ] **Loop**: Solve all slices 0 → n_slices-1
 
