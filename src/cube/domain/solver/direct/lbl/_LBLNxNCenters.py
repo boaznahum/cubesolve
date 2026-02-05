@@ -558,9 +558,12 @@ class NxNCenters2(SolverHelper):
         natural_source_block = dry_result.natural_source_block
         second_block = dry_result.second_block
 
+        # Get the target piece color (for 1x1 optimization, see _source_block_has_color_no_rotation)
+        target_piece_color = target_face.center.get_center_slice(block.start).color
+
         # Check if natural source block has required colors (with rotation search)
         valid_source = self._source_block_has_color_with_rotation(
-            required_color, source_face, natural_source_block, second_block
+            required_color, source_face, natural_source_block, second_block, target_piece_color
         )
 
         if valid_source is None:
@@ -602,25 +605,45 @@ class NxNCenters2(SolverHelper):
         required_color: Color,
         source_face: Face,
         source_block: Block,
-        second_block: Block
+        second_block: Block,
+        target_piece_color: Color | None = None
     ) -> bool:
         """
         Check if source block has required color WITHOUT rotation search.
 
-        For multi-cell blocks, we cannot search rotations because rotating
-        block coordinates changes the block's SHAPE (e.g., 1x3 horizontal
-        becomes 3x1 vertical). The commutator's slice algorithm is computed
-        based on the target block's shape, so the source block must have
-        the same shape.
+        THE 3-CYCLE COMMUTATOR:
+        =======================
+        The commutator performs: s1 → t → s2 → s1
+        After execution:
+          - t (target) receives color from s1 (this is `required_color`)
+          - s2 (second) receives color from t (this is `target_piece_color`)
+          - s1 (source) receives color from s2
 
-        For single-cell blocks, use _source_point_has_color which can search
-        rotations since 1x1 shape is rotation-invariant.
+        WHAT WE CHECK:
+        ==============
+        1. s1 (source_block) must have required_color - so target gets correct color
+        2. s2 (second_block) must be "safe" to overwrite
+
+        WHEN IS s2 "SAFE"?
+        ==================
+        - If s2 is NOT solved: always safe (we can overwrite unsolved pieces)
+        - If s2 IS solved: only safe if incoming color equals current color
+          (replacing RED with RED = no change = safe)
+
+        WHY ONLY FOR 1x1 BLOCKS?
+        ========================
+        For multi-cell blocks (e.g., 2x3), we cannot easily map which target cell
+        color goes to which s2 cell after rotation. The mapping depends on block
+        orientation. For 1x1 blocks, there's only one cell, so no mapping needed.
+
+        For multi-cell blocks, we use strict check: never touch solved pieces.
 
         Args:
             required_color: Color required for all cells in source block
             source_face: Face to check
             source_block: Block to check (natural source position)
-            second_block: Block that will be displaced
+            second_block: Block that will be displaced (receives target's color)
+            target_piece_color: Color of target piece (only used for 1x1 blocks)
 
         Returns:
             True if source_block has required colors AND second_block is safe
@@ -635,11 +658,20 @@ class NxNCenters2(SolverHelper):
             return False
 
         # Check that second_block won't destroy solved pieces
+        is_single_cell = second_block.size == 1
+
         for pt in self._block_iter(second_block):
             second_piece = source_face.center.get_center_slice(pt)
 
             if _common.is_slice_solved_and_marked_solve(second_piece):
-                # Would destroy a solved piece - not safe
+                # s2 is solved - check if we can safely overwrite it
+
+                if is_single_cell and target_piece_color is not None:
+                    # 1x1 block: check if incoming color matches current color
+                    if target_piece_color == second_piece.color:
+                        continue  # Same color - safe, no actual change
+
+                # Multi-cell block OR color would change: not safe
                 return False
 
         return True
@@ -649,11 +681,30 @@ class NxNCenters2(SolverHelper):
         required_color: Color,
         source_face: Face,
         source_block: Block,
-        second_block: Block
+        second_block: Block,
+        target_piece_color: Color | None = None
     ) -> Block | None:
+        """
+        Search for valid source block by rotating up to 4 times.
 
+        For 1x1 blocks: rotation search makes sense (shape is invariant).
+        For multi-cell blocks: rotation changes shape, but we still try
+        (the shape check happens elsewhere).
+
+        Args:
+            required_color: Color required in source block
+            source_face: Face to search on
+            source_block: Starting source block position
+            second_block: Second block (rotates with source)
+            target_piece_color: Target piece color (for 1x1 same-color optimization)
+
+        Returns:
+            Valid source block position, or None if not found
+        """
         for _ in range(4):
-            if self._source_block_has_color_no_rotation(required_color, source_face, source_block, second_block):
+            if self._source_block_has_color_no_rotation(
+                required_color, source_face, source_block, second_block, target_piece_color
+            ):
                 return source_block
 
             source_block = source_block.rotate_clockwise(self.n_slices)

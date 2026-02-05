@@ -44,6 +44,43 @@ def _cage(app: AbstractApp) -> CageNxNSolver:
     return solver
 
 
+@pytest.fixture(autouse=True)
+def reset_test_result_index():
+    """Reset CommutatorHelper._test_result_index before and after each test.
+
+    WHAT IS _test_result_index?
+    For opposite faces (F↔B, U↔D, L↔R), there are TWO valid translation results.
+    _test_result_index controls which one is selected (0 or 1).
+
+    WHY DO COMMUTATOR TESTS MODIFY IT?
+    Tests iterate both results to verify correctness:
+        for result_index in range(result_count):
+            CommutatorHelper._test_result_index = result_index
+            # ... run test ...
+
+    THE BUG (without this fixture):
+    After the loop, _test_result_index stays at 1, never reset to 0.
+
+    WHY DOES THIS CAUSE PARALLEL TEST FAILURES?
+    pytest-xdist runs tests in separate processes, but within ONE process,
+    multiple tests run sequentially:
+        Worker gw0:
+          1. test_commutator_helper (sets _test_result_index = 1)
+          2. test_lbl_slices_ctr (expects 0, but it's 1!)
+             → Uses wrong translation result → solver fails
+
+    THE FIX:
+    autouse=True makes pytest run this fixture for EVERY test in this file.
+    The yield pattern ensures cleanup:
+        1. Set to 0 (before test)
+        2. yield - test runs
+        3. Set to 0 (after test, cleanup)
+    """
+    CommutatorHelper._test_result_index = 0
+    yield
+    CommutatorHelper._test_result_index = 0
+
+
 # Get supported pairs for parametrization
 SUPPORTED_PAIRS = _get_supported_pairs()
 
