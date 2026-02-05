@@ -686,3 +686,27 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         else:
             self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
+
+    # =========================================================================
+    # Statistics (override AbstractSolver)
+    # =========================================================================
+
+    def reset_statistics(self) -> None:
+        """Reset solver statistics before solving."""
+        self._lbl_slices.reset_statistics()
+
+    def display_statistics(self) -> None:
+        """Display block solving statistics after solving."""
+        stats = self._lbl_slices.get_block_statistics()
+
+        if not stats:
+            return  # No blocks solved
+
+        # Build display string (sorted by block size)
+        parts = [f"{size}x1:{count}" for size, count in sorted(stats.items())]
+        total = sum(stats.values())
+
+        self.debug(f"Block statistics: {', '.join(parts)} (total: {total} blocks)")
+
+        # Also print to console for visibility
+        print(f"[LBL] Block statistics: {', '.join(parts)} (total: {total} blocks)")

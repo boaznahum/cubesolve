@@ -71,7 +71,17 @@ class _LBLSlices(SolverHelper):
         self._centers = NxNCenters2(self, preserve_cage=True)
         self._edges = _LBLNxNEdges(self)
 
+    # =========================================================================
+    # Statistics
+    # =========================================================================
 
+    def reset_statistics(self) -> None:
+        """Reset statistics for all sub-helpers."""
+        self._centers.reset_statistics()
+
+    def get_block_statistics(self) -> dict[int, int]:
+        """Get block solving statistics from centers helper."""
+        return self._centers.get_statistics()
 
     # =========================================================================
     # State inspection

@@ -112,6 +112,21 @@ class NxNCenters2(SolverHelper):
         self._preserve_cage = preserve_cage
         self._comm_helper = CommutatorHelper(slv)
 
+        # Statistics: count of blocks solved by size
+        self._block_stats: dict[int, int] = {}
+
+    def reset_statistics(self) -> None:
+        """Reset block solving statistics."""
+        self._block_stats = {}
+
+    def get_statistics(self) -> dict[int, int]:
+        """Get block solving statistics (size -> count)."""
+        return self._block_stats.copy()
+
+    def _record_block_solved(self, block_size: int) -> None:
+        """Record that a block of given size was solved."""
+        self._block_stats[block_size] = self._block_stats.get(block_size, 0) + 1
+
 
     def solve_single_center_face_row(
             self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int
@@ -553,6 +568,7 @@ class NxNCenters2(SolverHelper):
 
                 self.debug(f"Fixed slice {rc}")
                 mark_slice_and_v_mark_if_solved(center_slice)
+                self._record_block_solved(1)
                 return True
             return False
 
@@ -621,6 +637,7 @@ class NxNCenters2(SolverHelper):
             mark_slice_and_v_mark_if_solved(piece)
 
         self.debug(f"✅ Block {block} solved ({block.size} pieces)")
+        self._record_block_solved(block.size)
         return True
 
     def _source_point_has_color(self, target_point_color: Color,

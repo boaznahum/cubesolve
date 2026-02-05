@@ -69,6 +69,7 @@ class AbstractSolver(Solver, ABC):
         1. Animation flag is properly applied via with_animation()
         2. OpAborted is caught and handled cleanly (no red traceback)
         3. Debug flag is managed
+        4. Statistics are reset before and displayed after solving
 
         Args:
             debug: Override debug mode (None = use config)
@@ -84,10 +85,12 @@ class AbstractSolver(Solver, ABC):
         try:
             with self._op.with_animation(animation=animation):
                 try:
+                    self.reset_statistics()
                     count_before = self._op.count
                     result = self._solve_impl(what)
                     count_after = self._op.count
                     self.debug(f"Solve {what.name} used {count_after - count_before} moves (total: {count_after})")
+                    self.display_statistics()
                     return result
                 except OpAborted:
                     # User aborted - this is normal, not an error
@@ -107,6 +110,26 @@ class AbstractSolver(Solver, ABC):
 
         Returns:
             SolverResults with parity information
+        """
+        pass
+
+    def reset_statistics(self) -> None:
+        """Reset solver statistics before solving.
+
+        Override in subclasses to reset any statistics counters.
+        Called automatically by solve() before _solve_impl().
+
+        Default implementation does nothing.
+        """
+        pass
+
+    def display_statistics(self) -> None:
+        """Display solver statistics after solving.
+
+        Override in subclasses to display any collected statistics.
+        Called automatically by solve() after _solve_impl().
+
+        Default implementation does nothing.
         """
         pass
 
