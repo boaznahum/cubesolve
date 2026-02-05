@@ -9,6 +9,7 @@ from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.direct.lbl import _common
+from cube.domain.solver.direct.lbl import _lbl_config
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl._common import (
     _is_cent_piece_marked_solved, mark_slice_and_v_mark_if_solved, _track_center_slice,
@@ -397,51 +398,230 @@ class NxNCenters2(SolverHelper):
 
         work_done = False
 
-        if False:  # try blocks
+        max_block_size = _lbl_config.LBL_MAX_BLOCK_SIZE
 
-            # Try block-based solving first (multi-cell commutators)
-            work_done = self._try_blocks_from_target(
-                color, target_face, source_face.face
+        # Unified approach: iterate piece-by-piece, try blocks starting at each position
+        for rc in _iterate_all_tracked_center_slices_index(target_face):
+
+            candidate_piece = target_face.face.center.get_center_slice(rc)
+
+            # Skip if already correct color
+            if candidate_piece.color == color:
+                continue
+
+            # Skip if already solved by a previous block in this iteration
+            if _is_cent_piece_marked_solved(candidate_piece):
+                continue
+
+            self.debug(f"Working on slice {slice_row_index} Found piece candidate {candidate_piece}")
+
+            # Search for blocks starting at rc (size controlled by config)
+            blocks = self._search_blocks_starting_at(
+                rc, target_face, color, max_size=max_block_size
             )
 
-        if True:
-            # Fall back to piece-by-piece for remaining positions
-            for rc in _iterate_all_tracked_center_slices_index(target_face):
-
-                candidate_piece = target_face.face.center.get_center_slice(rc)
-
-                self.debug(f"Working on slice {slice_row_index} Found piece candidate {candidate_piece}")
-
-                if candidate_piece.color == color:
-                    continue
-
-                wd = self._block_commutator(color,
-                                              target_face.face,
-                                              source_face.face,
-                                              rc)
-                center_slice = candidate_piece
-                after_fixed_color = center_slice.color
-
-                if wd:
-
-
-                    if after_fixed_color != color:
-                        raise InternalSWError(f"Slice was not fixed {rc}, " +
-                                              f"required={color}, " +
-                                              f"actual={after_fixed_color}")
-
-                    self.debug(f"Fixed slice {rc}")
-
-                    mark_slice_and_v_mark_if_solved(center_slice)
-
+            # Try blocks largest first
+            solved_block = False
+            for block in blocks:
+                if self._try_solve_block(
+                    block, color, target_face.face, source_face.face
+                ):
                     work_done = True
+                    solved_block = True
+                    break  # Move to next rc
 
-                # in this step we dont know to give a warning if not yet solved it is only single source
-
-
-
+            if not solved_block and len(blocks) > 0:
+                # All blocks failed - this shouldn't happen for 1x1 blocks
+                # but may happen for larger blocks if source doesn't have colors
+                self.debug(f"No block starting at {rc} could be solved")
 
         return work_done
+
+    def _search_blocks_starting_at(
+        self,
+        start_point: Point,
+        target_face: FaceTracker,
+        required_color: Color,
+        max_size: int = 1
+    ) -> list[Block]:
+        """
+        Search for valid blocks starting at start_point that need solving.
+
+        Returns blocks sorted by size descending (largest first).
+        If max_size=1, only returns the 1x1 block at start_point.
+
+        Args:
+            start_point: Point where block must start
+            target_face: Target face tracker
+            required_color: Color that pieces should have (target face color)
+            max_size: Maximum block size (1 = single piece only)
+
+        Returns:
+            List of valid blocks, largest first. Always includes 1x1 if point needs solving.
+        """
+        face = target_face.face
+        blocks: list[Block] = []
+
+        # Always include the 1x1 block (single piece)
+        blocks.append(Block(start_point, start_point))
+
+        if max_size <= 1:
+            return blocks
+
+        # Try to extend to larger blocks
+        n = self.n_slices
+
+        # Find all unsolved positions in the tracked row
+        unsolved_positions: set[Point] = set()
+        for pt in _iterate_all_tracked_center_slices_index(target_face):
+            piece = face.center.get_center_slice(pt)
+            if piece.color != required_color and not _is_cent_piece_marked_solved(piece):
+                unsolved_positions.add(pt)
+
+        # Generate blocks starting at start_point
+        for end_row in range(start_point[0], min(n, start_point[0] + max_size)):
+            for end_col in range(start_point[1], min(n, start_point[1] + max_size)):
+                end_point = Point(end_row, end_col)
+
+                # Skip the 1x1 block (already added)
+                if end_point == start_point:
+                    continue
+
+                # Check all positions in rectangle are unsolved
+                all_unsolved = True
+                for r in range(start_point[0], end_row + 1):
+                    for c in range(start_point[1], end_col + 1):
+                        if Point(r, c) not in unsolved_positions:
+                            all_unsolved = False
+                            break
+                    if not all_unsolved:
+                        break
+
+                if not all_unsolved:
+                    continue
+
+                block = Block(start_point, end_point)
+
+                # Check block is valid (won't self-intersect during commutator)
+                if not self._comm_helper.is_valid_block(block[0], block[1]):
+                    continue
+
+                blocks.append(block)
+
+        # Sort by size descending (largest first)
+        blocks.sort(key=lambda b: b.size, reverse=True)
+        return blocks
+
+    def _try_solve_block(
+        self,
+        block: Block,
+        required_color: Color,
+        target_face: Face,
+        source_face: Face
+    ) -> bool:
+        """
+        Try to solve a block using block commutator.
+
+        Args:
+            block: Block to solve (can be 1x1 or larger)
+            required_color: Color that pieces should have
+            target_face: Target face
+            source_face: Source face
+
+        Returns:
+            True if block was successfully solved, False otherwise
+        """
+        # For 1x1 blocks, use existing _block_commutator logic
+        if block.size == 1:
+            rc = block[0]
+            wd = self._block_commutator(
+                required_color,
+                target_face,
+                source_face,
+                rc
+            )
+            if wd:
+                center_slice = target_face.center.get_center_slice(rc)
+                after_fixed_color = center_slice.color
+
+                if after_fixed_color != required_color:
+                    raise InternalSWError(
+                        f"Slice was not fixed {rc}, "
+                        f"required={required_color}, "
+                        f"actual={after_fixed_color}"
+                    )
+
+                self.debug(f"Fixed slice {rc}")
+                mark_slice_and_v_mark_if_solved(center_slice)
+                return True
+            return False
+
+        # For multi-cell blocks, use block commutator logic
+        # (This path is only taken when max_size > 1)
+        return self._try_solve_multi_cell_block(
+            block, required_color, target_face, source_face
+        )
+
+    def _try_solve_multi_cell_block(
+        self,
+        block: Block,
+        required_color: Color,
+        target_face: Face,
+        source_face: Face
+    ) -> bool:
+        """
+        Try to solve a multi-cell block using block commutator.
+
+        Args:
+            block: Block to solve (must be > 1x1)
+            required_color: Color that pieces should have
+            target_face: Target face
+            source_face: Source face
+
+        Returns:
+            True if block was successfully solved, False otherwise
+        """
+        # Do dry run to find the natural source block
+        dry_result = self._comm_helper.execute_commutator(
+            source_face=source_face,
+            target_face=target_face,
+            target_block=block,
+            dry_run=True
+        )
+
+        natural_source_block = dry_result.natural_source_block
+        second_block = dry_result.second_block
+
+        # Check if natural source block has required colors (with rotation search)
+        valid_source = self._source_block_has_color_with_rotation(
+            required_color, source_face, natural_source_block, second_block
+        )
+
+        if valid_source is None:
+            self.debug(f"Block {block} skipped - source doesn't have required colors")
+            return False
+
+        # Execute the block commutator
+        self._comm_helper.execute_commutator(
+            source_face=source_face,
+            target_face=target_face,
+            target_block=block,
+            source_block=valid_source,
+            preserve_state=True,
+            dry_run=False,
+            _cached_secret=dry_result
+        )
+
+        # Verify all pieces in block were solved
+        for pt in block.cells:
+            piece = target_face.center.get_center_slice(pt)
+            if piece.color != required_color:
+                self.debug(f"Block {block} failed - piece at {pt} has wrong color")
+                return False
+            mark_slice_and_v_mark_if_solved(piece)
+
+        self.debug(f"✅ Block {block} solved ({block.size} pieces)")
+        return True
 
     def _source_point_has_color(self, target_point_color: Color,
                                 required_color, source_face, s: Point, s2: Point) -> Tuple[Point, Point] | None:
