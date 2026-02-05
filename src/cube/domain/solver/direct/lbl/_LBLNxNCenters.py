@@ -394,12 +394,15 @@ class NxNCenters2(SolverHelper):
             self.debug(f"Working on slice {slice_row_index} @ {target_face.color_at_face_str} Found no piece {color} on {source_face.face.color_at_face_str}")
             return False  # nothing can be done here
 
+
         work_done = False
 
-        # Try block-based solving first (multi-cell commutators)
-        work_done = self._try_blocks_from_target(
-            color, target_face, source_face.face
-        )
+        if False:  # try blocks
+
+            # Try block-based solving first (multi-cell commutators)
+            work_done = self._try_blocks_from_target(
+                color, target_face, source_face.face
+            )
 
         if True:
             # Fall back to piece-by-piece for remaining positions
@@ -528,7 +531,8 @@ class NxNCenters2(SolverHelper):
         # Check that second_block won't destroy solved pieces
         for pt in self._block_iter(second_block):
             second_piece = source_face.center.get_center_slice(pt)
-            if _is_cent_piece_marked_solved(second_piece):
+
+            if _common.is_slice_solved_and_marked_solve(second_piece):
                 # Would destroy a solved piece - not safe
                 return False
 

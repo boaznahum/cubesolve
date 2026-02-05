@@ -21,7 +21,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import TYPE_CHECKING, NamedTuple, Protocol
+from typing import TYPE_CHECKING, NamedTuple, Protocol, Tuple
 
 if TYPE_CHECKING:
     from cube.domain.model.Edge import Edge
@@ -50,6 +50,19 @@ class Block(NamedTuple):
     """
     start: Point
     end: Point
+
+
+
+    @staticmethod
+    def of(start: Point | Tuple[int, int], end: Point | Tuple[int, int])-> Block:
+
+        if not isinstance(start, Point):
+            start = Point(*start)
+
+        if not isinstance(end, Point):
+            end = Point(*start)
+
+        return Block(start=start, end=end)
 
     @property
     def cells(self) -> Iterator[Point]:

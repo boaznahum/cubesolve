@@ -133,6 +133,12 @@ def is_slice_marked_solve(part_slice: PartSlice) -> bool:
     # it is enough to search in one edge, they ar enver get apart
     return __SOLVED_FLAG_KEY in part_slice.edges[0].moveable_attributes
 
+def is_slice_solved_and_marked_solve(part_slice: PartSlice) -> bool:
+    """Check if a center-piece is marked as solved (MARKER 2)."""
+
+
+    return part_slice.match_faces and is_slice_marked_solve(part_slice)
+
 
 def _mark_piece_solved(piece: PartSlice) -> None:
     """Mark a piece as solved in the algorithm (MARKER 2).
