@@ -46,30 +46,25 @@ class CommutatorResult:
     Contains both computed data (for dry_run) and execution algorithm (for actual execution).
     This result can be cached and reused to avoid redundant calculations.
 
-    The 3-cycle points represent the three pieces affected by the block commutator:
-    s1 → t → s2 → s1 (cycle pattern)
+    THE 3-CYCLE:
+    ============
+    The commutator performs: s1 → t → s2 → s1
+    - natural_source_block (s1): Source block - pieces move TO target
+    - target_block (t): Target block - receives pieces from source
+    - second_block (s2): Intermediate block - temporarily holds target's pieces
 
-    For multi-cell blocks, the cycle operates on entire blocks:
-    s1_block → t_block → s2_block → s1_block
+    For 1x1 blocks, use .as_point to get the Point coordinate.
 
     Attributes:
-        slice_name: that use in the commutator algorithm
-        source_point: The computed source LTR position (where the piece naturally is before setup)
+        slice_name: Slice used in the commutator algorithm
         algorithm: The algorithm to execute (None if dry_run=True)
-        natural_source: Source point (s1) - the first piece in the 3-cycle (legacy, for 1x1 compatibility)
-        target_point: Target point (t) - the second piece in the 3-cycle (legacy, for 1x1 compatibility)
-        second_replaced_with_target_point_on_source: Intermediate point (s2) - the third piece in the 3-cycle (legacy)
-        natural_source_block: Source block (s1_block) - full block in the 3-cycle
-        target_block: Target block (t_block) - full block in the 3-cycle
-        second_block: Intermediate block (s2_block) - full block in the 3-cycle
-        _secret: Internal cache secret for optimization (avoid re-computation on second call)
+        natural_source_block: Source block (s1) in the 3-cycle
+        target_block: Target block (t) in the 3-cycle
+        second_block: Intermediate block (s2) in the 3-cycle
+        _secret: Internal cache for optimization (avoid re-computation on second call)
     """
     slice_name: SliceName
-    source_point: Point
     algorithm: Alg
-    natural_source: Point
-    target_point: Point
-    second_replaced_with_target_point_on_source: Point
     natural_source_block: Block
     target_block: Block
     second_block: Block
@@ -283,10 +278,10 @@ class CommutatorHelper(SolverHelper):
             ...     target_block=((1,1), (1,1)),
             ...     dry_run=True
             ... )
-            >>> natural_source = result.source_point
+            >>> # For 1x1 blocks, use .as_point to get the Point coordinate
+            >>> natural_source = result.natural_source_block.as_point
             >>> print(f"Natural source: {natural_source}")
-            >>> print(f"3-cycle: s1={result.natural_source}, t={result.target_point}, s2={result.xpt_on_source_after_un_setup}")
-            >>> # s1, t, s2 are the actual cycle points after any source setup rotation
+            >>> print(f"3-cycle: s1={result.natural_source_block}, t={result.target_block}, s2={result.second_block}")
             >>> assert result.algorithm is None  # No algorithm in dry_run
 
         Step 2: Manipulate/search the source position (e.g., rotate to find color)
@@ -378,7 +373,6 @@ class CommutatorHelper(SolverHelper):
         # s1 is ALWAYS the natural source position where the commutator actually operates
         # The input source_point is only for source face SETUP, not the cycle itself
         natural_source_block: Block = internal_data.natural_source_block  # Natural source position
-        target_point: Point = target_block[0]  # Target position
 
         # Compute xp (s2) using correct algorithm:
         # xp = su'(translator(tf, sf, f(tp)))
@@ -517,13 +511,7 @@ class CommutatorHelper(SolverHelper):
 
         return CommutatorResult(
             slice_name=slice_name,
-            # Legacy point fields for 1x1 compatibility (block fields below are preferred)
-            source_point=source_block.start,
             algorithm=final_algorithm,
-            natural_source=natural_source_block[0],
-            target_point=target_point,
-            second_replaced_with_target_point_on_source=xpt_on_source_after_un_setup,
-            # Block fields (preferred for multi-cell blocks)
             natural_source_block=natural_source_block_result,
             target_block=target_block,
             second_block=second_block_result,
@@ -952,6 +940,48 @@ class CommutatorHelper(SolverHelper):
         The check tries both clockwise and counterclockwise rotations.
         If both rotations cause intersection, the block is invalid.
 
+        VISUAL EXPLANATION (3x3 center grid, n_slices=3):
+        =================================================
+
+        VALID BLOCK - Corner (0,0):
+        ```
+            col 0   1   2
+        row  ┌───┬───┬───┐
+          0  │ X │   │ X'│   X = original block at (0,0)
+             ├───┼───┼───┤   X'= after CW rotation -> (0,2)
+          1  │   │   │   │
+             ├───┼───┼───┤   Columns: {0} vs {2} -> NO intersection
+          2  │   │   │   │   VALID - can use either rotation
+             └───┴───┴───┘
+        ```
+
+        INVALID BLOCK - Center (1,1) on odd grid:
+        ```
+            col 0   1   2
+        row  ┌───┬───┬───┐
+          0  │   │   │   │
+             ├───┼───┼───┤   X = original block at (1,1)
+          1  │   │ X │   │   CW rotation: (1,1) -> (1,1) SAME!
+             ├───┼───┼───┤   CCW rotation: (1,1) -> (1,1) SAME!
+          2  │   │   │   │
+             └───┴───┴───┘   Columns: {1} vs {1} -> INTERSECTION
+                             INVALID - center maps to itself
+        ```
+
+        INVALID BLOCK - Full row (0,0)-(0,2):
+        ```
+            col 0   1   2
+        row  ┌───┬───┬───┐
+          0  │ X │ X │ X │   X = original block spans cols {0,1,2}
+             ├───┼───┼───┤
+          1  │   │   │   │   CW: (0,0)→(0,2), (0,2)→(2,2)
+             ├───┼───┼───┤        rotated cols = {2}
+          2  │ X'│ X'│ X'│   But full row after CW = cols {0,1,2}
+             └───┴───┴───┘
+                             Columns: {0,1,2} vs {0,1,2} -> INTERSECTION
+                             INVALID - rotated block overlaps original
+        ```
+
         Args:
             rc1: First corner (row, col)
             rc2: Second corner (row, col)
@@ -1083,8 +1113,9 @@ class CommutatorHelper(SolverHelper):
         # r_limit and c_limit are computed per starting position
         for rc in self._2d_center_iter(row_indices, col_indices):
             if center.get_center_slice(rc).color == color:
-                # Always collect 1x1 block
-                res.append((1, Block(rc, rc)))
+                # Collect 1x1 block only if valid (e.g., center on odd cube is invalid)
+                if self.is_valid_block(rc, rc):
+                    res.append((1, Block(rc, rc)))
 
                 # Calculate row extension limit
                 # If max_rows is set, limit to rc[0] + max_rows
@@ -1120,10 +1151,11 @@ class CommutatorHelper(SolverHelper):
                 if c_max is None:
                     c_max = rc[1]
 
-                # Calculate size and add extended block
+                # Calculate size and add extended block (only if valid)
                 b = Block(rc, Point(r_max, c_max))
-                size = b.size
-                res.append((size, b))
+                if self.is_valid_block(b.start, b.end):
+                    size = b.size
+                    res.append((size, b))
 
         # Sort by size descending (largest blocks first)
         res = sorted(res, key=lambda s: s[0], reverse=True)

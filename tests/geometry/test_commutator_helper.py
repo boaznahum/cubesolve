@@ -339,9 +339,11 @@ def test_commutator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, F
                     #     continue
 
                     # but we should also rotate source point
-                    source_point = dry_result.source_point  # Natural source position
-                    assert target_point == dry_result.target_point
-                    second_replaced_with_target_point_on_source = dry_result.second_replaced_with_target_point_on_source  # Intermediate position on source
+                    # In dry_run, source_block defaults to target_block, so source_point = target_block.start
+                    # Use .as_point for 1x1 blocks to get Point coordinate
+                    source_point = dry_result.target_block.as_point  # In dry_run, source = target
+                    assert target_point == dry_result.target_block.as_point
+                    second_replaced_with_target_point_on_source = dry_result.second_block.as_point  # Intermediate position on source
 
                     # When we rotate the natural source, we also rotate s1 and s2 (both on source)
                     rotated_s1 = cube.cqr.rotate_point_clockwise(source_point, rotation)
@@ -394,8 +396,8 @@ def test_commutator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, F
                     record = {
                         "rotation": rotation,
                         "target_point": target_point,
-                        "natural_source_point": result.natural_source,
-                        "source_point": result.natural_source,
+                        "natural_source_point": result.natural_source_block.as_point,
+                        "source_point": result.natural_source_block.as_point,
                         "second_point_on_source": second_replaced_with_target_point_on_source,
                         "rotated_s1": rotated_s1,
                         "rotated_s2": rotated_s2,

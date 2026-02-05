@@ -467,161 +467,161 @@ class TestMultiCellBlockCommutator:
                 color = target_face.center.get_center_slice(target_point).color
                 all_blocks = comm_helper.search_big_block(target_face, color)
 
-                # Find a block starting at this point that is larger than 1x1
+                # Find ALL blocks starting at this point (including size=1)
+                # search_big_block already filters invalid blocks (e.g., center on odd cubes)
                 matching_blocks = [
                     (size, blk) for size, blk in all_blocks
-                    if blk[0] == target_point and size > 1
+                    if blk[0] == target_point
                 ]
 
+                # Center position on odd cubes has no valid blocks
                 if not matching_blocks:
-                    # No multi-cell block at this position, skip
                     continue
 
-                # Take the largest multi-cell block starting at this position
-                _, target_block = matching_blocks[0]
+                # Test ALL blocks at this point, not just the largest
+                for _, target_block in matching_blocks:
+                    # Reset cube for clean test
+                    cube.reset()
 
-                # Reset cube for clean test
-                cube.reset()
+                    # Refresh face references after reset (they become stale)
+                    target_face = cube.front
+                    source_face = cube.up
 
-                # Refresh face references after reset (they become stale)
-                target_face = cube.front
-                source_face = cube.up
+                    # Get the 3-cycle blocks using dry_run
+                    dry_result = comm_helper.execute_commutator(
+                        source_face=source_face,
+                        target_face=target_face,
+                        target_block=target_block,
+                        dry_run=True
+                    )
 
-                # Get the 3-cycle blocks using dry_run
-                dry_result = comm_helper.execute_commutator(
-                    source_face=source_face,
-                    target_face=target_face,
-                    target_block=target_block,
-                    dry_run=True
-                )
+                    s1_block = dry_result.natural_source_block
+                    t_block = dry_result.target_block
+                    s2_block = dry_result.second_block
 
-                s1_block = dry_result.natural_source_block
-                t_block = dry_result.target_block
-                s2_block = dry_result.second_block
+                    if s1_block is None or t_block is None or s2_block is None:
+                        failures.append({
+                            "target_block": target_block,
+                            "error": "Block fields not populated in result"
+                        })
+                        continue
 
-                if s1_block is None or t_block is None or s2_block is None:
-                    failures.append({
-                        "target_block": target_block,
-                        "error": "Block fields not populated in result"
-                    })
-                    continue
+                    # Helper function to iterate over all cells in a block
+                    def block_cells(block: GeomBlock) -> list[tuple[int, int]]:
+                        """Return list of all (row, col) in the block."""
+                        r1 = min(block[0][0], block[1][0])
+                        r2 = max(block[0][0], block[1][0])
+                        c1 = min(block[0][1], block[1][1])
+                        c2 = max(block[0][1], block[1][1])
+                        return [(r, c) for r in range(r1, r2 + 1) for c in range(c1, c2 + 1)]
 
-                # Helper function to iterate over all cells in a block
-                def block_cells(block: GeomBlock) -> list[tuple[int, int]]:
-                    """Return list of all (row, col) in the block."""
-                    r1 = min(block[0][0], block[1][0])
-                    r2 = max(block[0][0], block[1][0])
-                    c1 = min(block[0][1], block[1][1])
-                    c2 = max(block[0][1], block[1][1])
-                    return [(r, c) for r in range(r1, r2 + 1) for c in range(c1, c2 + 1)]
+                    s1_cells = block_cells(s1_block)
+                    t_cells = block_cells(t_block)
+                    s2_cells = block_cells(s2_block)
 
-                s1_cells = block_cells(s1_block)
-                t_cells = block_cells(t_block)
-                s2_cells = block_cells(s2_block)
+                    # All blocks should have the same number of cells
+                    if len(s1_cells) != len(t_cells) or len(t_cells) != len(s2_cells):
+                        failures.append({
+                            "target_block": target_block,
+                            "error": f"Block sizes don't match: s1={len(s1_cells)}, t={len(t_cells)}, s2={len(s2_cells)}"
+                        })
+                        continue
 
-                # All blocks should have the same number of cells
-                if len(s1_cells) != len(t_cells) or len(t_cells) != len(s2_cells):
-                    failures.append({
-                        "target_block": target_block,
-                        "error": f"Block sizes don't match: s1={len(s1_cells)}, t={len(t_cells)}, s2={len(s2_cells)}"
-                    })
-                    continue
+                    # Place unique markers on all cells in all 3 blocks
+                    marker_key = f"marker_{uuid.uuid4().hex[:8]}"
 
-                # Place unique markers on all cells in all 3 blocks
-                marker_key = f"marker_{uuid.uuid4().hex[:8]}"
+                    # Markers for s1 cells (on source face)
+                    s1_markers = {}
+                    for idx, cell in enumerate(s1_cells):
+                        marker_value = f"s1_{idx}"
+                        piece = source_face.center.get_center_slice(cell).edge
+                        piece.moveable_attributes[marker_key] = marker_value
+                        s1_markers[idx] = marker_value
 
-                # Markers for s1 cells (on source face)
-                s1_markers = {}
-                for idx, cell in enumerate(s1_cells):
-                    marker_value = f"s1_{idx}"
-                    piece = source_face.center.get_center_slice(cell).edge
-                    piece.moveable_attributes[marker_key] = marker_value
-                    s1_markers[idx] = marker_value
+                    # Markers for t cells (on target face)
+                    t_markers = {}
+                    for idx, cell in enumerate(t_cells):
+                        marker_value = f"t_{idx}"
+                        piece = target_face.center.get_center_slice(cell).edge
+                        piece.moveable_attributes[marker_key] = marker_value
+                        t_markers[idx] = marker_value
 
-                # Markers for t cells (on target face)
-                t_markers = {}
-                for idx, cell in enumerate(t_cells):
-                    marker_value = f"t_{idx}"
-                    piece = target_face.center.get_center_slice(cell).edge
-                    piece.moveable_attributes[marker_key] = marker_value
-                    t_markers[idx] = marker_value
+                    # Markers for s2 cells (on source face)
+                    s2_markers = {}
+                    for idx, cell in enumerate(s2_cells):
+                        marker_value = f"s2_{idx}"
+                        piece = source_face.center.get_center_slice(cell).edge
+                        piece.moveable_attributes[marker_key] = marker_value
+                        s2_markers[idx] = marker_value
 
-                # Markers for s2 cells (on source face)
-                s2_markers = {}
-                for idx, cell in enumerate(s2_cells):
-                    marker_value = f"s2_{idx}"
-                    piece = source_face.center.get_center_slice(cell).edge
-                    piece.moveable_attributes[marker_key] = marker_value
-                    s2_markers[idx] = marker_value
+                    # Execute the commutator (source_block = natural_source_block for this test)
+                    comm_helper.execute_commutator(
+                        source_face=source_face,
+                        target_face=target_face,
+                        target_block=target_block,
+                        source_block=s1_block,  # Use the natural source block
+                        preserve_state=True,
+                        dry_run=False
+                    )
 
-                # Execute the commutator (source_block = natural_source_block for this test)
-                comm_helper.execute_commutator(
-                    source_face=source_face,
-                    target_face=target_face,
-                    target_block=target_block,
-                    source_block=s1_block,  # Use the natural source block
-                    preserve_state=True,
-                    dry_run=False
-                )
+                    # Verify the 3-cycle
+                    # The cells within blocks may be reordered during transformation,
+                    # so we check that the SET of markers is correct, not the order.
 
-                # Verify the 3-cycle
-                # The cells within blocks may be reordered during transformation,
-                # so we check that the SET of markers is correct, not the order.
+                    # Collect all markers found at each block position
+                    t_block_markers_found = set()
+                    for cell in t_cells:
+                        piece = target_face.center.get_center_slice(cell).edge
+                        marker = piece.moveable_attributes.get(marker_key)
+                        if marker:
+                            t_block_markers_found.add(marker)
 
-                # Collect all markers found at each block position
-                t_block_markers_found = set()
-                for cell in t_cells:
-                    piece = target_face.center.get_center_slice(cell).edge
-                    marker = piece.moveable_attributes.get(marker_key)
-                    if marker:
-                        t_block_markers_found.add(marker)
+                    s2_block_markers_found = set()
+                    for cell in s2_cells:
+                        piece = source_face.center.get_center_slice(cell).edge
+                        marker = piece.moveable_attributes.get(marker_key)
+                        if marker:
+                            s2_block_markers_found.add(marker)
 
-                s2_block_markers_found = set()
-                for cell in s2_cells:
-                    piece = source_face.center.get_center_slice(cell).edge
-                    marker = piece.moveable_attributes.get(marker_key)
-                    if marker:
-                        s2_block_markers_found.add(marker)
+                    s1_block_markers_found = set()
+                    for cell in s1_cells:
+                        piece = source_face.center.get_center_slice(cell).edge
+                        marker = piece.moveable_attributes.get(marker_key)
+                        if marker:
+                            s1_block_markers_found.add(marker)
 
-                s1_block_markers_found = set()
-                for cell in s1_cells:
-                    piece = source_face.center.get_center_slice(cell).edge
-                    marker = piece.moveable_attributes.get(marker_key)
-                    if marker:
-                        s1_block_markers_found.add(marker)
+                    # s1 → t: all s1 markers should now be at t positions
+                    s1_marker_set = set(s1_markers.values())
+                    s1_to_t_ok = t_block_markers_found == s1_marker_set
 
-                # s1 → t: all s1 markers should now be at t positions
-                s1_marker_set = set(s1_markers.values())
-                s1_to_t_ok = t_block_markers_found == s1_marker_set
+                    # t → s2: all t markers should now be at s2 positions
+                    t_marker_set = set(t_markers.values())
+                    t_to_s2_ok = s2_block_markers_found == t_marker_set
 
-                # t → s2: all t markers should now be at s2 positions
-                t_marker_set = set(t_markers.values())
-                t_to_s2_ok = s2_block_markers_found == t_marker_set
+                    # s2 → s1: all s2 markers should now be at s1 positions
+                    s2_marker_set = set(s2_markers.values())
+                    s2_to_s1_ok = s1_block_markers_found == s2_marker_set
 
-                # s2 → s1: all s2 markers should now be at s1 positions
-                s2_marker_set = set(s2_markers.values())
-                s2_to_s1_ok = s1_block_markers_found == s2_marker_set
-
-                if s1_to_t_ok and t_to_s2_ok and s2_to_s1_ok:
-                    successes.append({
-                        "target_block": target_block,
-                        "block_size": len(t_cells)
-                    })
-                else:
-                    failures.append({
-                        "target_block": target_block,
-                        "s1_to_t": s1_to_t_ok,
-                        "t_to_s2": t_to_s2_ok,
-                        "s2_to_s1": s2_to_s1_ok
-                    })
+                    if s1_to_t_ok and t_to_s2_ok and s2_to_s1_ok:
+                        successes.append({
+                            "target_block": target_block,
+                            "block_size": len(t_cells)
+                        })
+                    else:
+                        failures.append({
+                            "target_block": target_block,
+                            "s1_to_t": s1_to_t_ok,
+                            "t_to_s2": t_to_s2_ok,
+                            "s2_to_s1": s2_to_s1_ok
+                        })
 
         # Report results
         assert len(failures) == 0, \
             f"Block commutator 3-cycle failed for {len(failures)} blocks: {failures[:5]}"
 
-        # Verify we actually tested some multi-cell blocks
+        # Verify we actually tested some blocks
         assert len(successes) > 0, \
-            f"No multi-cell blocks found to test on {cube_size}x{cube_size} cube"
+            f"No blocks found to test on {cube_size}x{cube_size} cube"
 
     @pytest.mark.parametrize("cube_size", [6, 7, 8])
     def test_large_block_commutator(self, cube_size: int):

@@ -124,6 +124,22 @@ class Block(NamedTuple):
         r2, c2 = self.end
         return (abs(r2 - r1) + 1) * (abs(c2 - c1) + 1)
 
+    @property
+    def as_point(self) -> Point:
+        """Return the block as a single Point, asserting it is a 1x1 block.
+
+        Use this when you expect a block to be a single cell and want to
+        get its coordinate as a Point. Raises AssertionError if block
+        contains more than one cell.
+
+        Returns:
+            The single Point in this block
+
+        Raises:
+            AssertionError: If block is not a 1x1 block
+        """
+        assert self.size == 1, f"Block {self} is not a point (size={self.size})"
+        return self.start
 
     @property
     def dim(self) -> tuple[int, int]:
