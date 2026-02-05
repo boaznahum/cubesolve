@@ -537,59 +537,10 @@ class NxNCenters2(SolverHelper):
         """
         Try to solve a block using block commutator.
 
-        Args:
-            block: Block to solve (can be 1x1 or larger)
-            required_color: Color that pieces should have
-            target_face: Target face
-            source_face: Source face
-
-        Returns:
-            True if block was successfully solved, False otherwise
-        """
-        # For 1x1 blocks, use existing _block_commutator logic
-        if block.size == 1:
-            rc = block[0]
-            wd = self._block_commutator(
-                required_color,
-                target_face,
-                source_face,
-                rc
-            )
-            if wd:
-                center_slice = target_face.center.get_center_slice(rc)
-                after_fixed_color = center_slice.color
-
-                if after_fixed_color != required_color:
-                    raise InternalSWError(
-                        f"Slice was not fixed {rc}, "
-                        f"required={required_color}, "
-                        f"actual={after_fixed_color}"
-                    )
-
-                self.debug(f"Fixed slice {rc}")
-                mark_slice_and_v_mark_if_solved(center_slice)
-                self._record_block_solved(1)
-                return True
-            return False
-
-        # For multi-cell blocks, use block commutator logic
-        # (This path is only taken when max_size > 1)
-        return self._try_solve_multi_cell_block(
-            block, required_color, target_face, source_face
-        )
-
-    def _try_solve_multi_cell_block(
-        self,
-        block: Block,
-        required_color: Color,
-        target_face: Face,
-        source_face: Face
-    ) -> bool:
-        """
-        Try to solve a multi-cell block using block commutator.
+        Unified code path for ALL block sizes (1x1, 2x1, etc.).
 
         Args:
-            block: Block to solve (must be > 1x1)
+            block: Block to solve (any size including 1x1)
             required_color: Color that pieces should have
             target_face: Target face
             source_face: Source face
