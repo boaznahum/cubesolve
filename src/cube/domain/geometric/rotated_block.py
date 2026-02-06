@@ -63,91 +63,49 @@ class RotatedBlock:
     def points(self) -> Iterator[Point]:
         """Yield points in the order that preserves original relative positions.
 
-        This is the KEY property that fixes the rotation bug!
-
-        When a block rotates, the corners move to new positions. A regular
-        Block.cells iterator would yield in row-by-row order of the normalized
-        block, which loses the cell-to-cell mapping.
-
-        This property uses the unnormalized corner positions to determine
-        the correct iteration direction:
-        - If start.row > end.row: iterate bottom-to-top
-        - If start.col > end.col: iterate right-to-left
-
-        This preserves the relative cell positions from the original block.
-
-        Example:
-            >>> from cube.domain.geometric.geometry_types import Block, Point
-            >>> # Original 2x3 block: cells at [1,2], [1,3], [1,4], [2,2], [2,3], [2,4]
-            >>> original = Block(Point(1, 2), Point(2, 4))
-            >>> # After 90° CW rotation
-            >>> rotated = RotatedBlock.from_block(original, n_slices=7, n_rotations=1)
-            >>> # rotated.start = Point(4, 1), rotated.end = Point(2, 2)
-            >>> # start.row (4) > end.row (2) → iterate bottom-to-top
-            >>> list(rotated.points)
-            [Point(4, 1), Point(4, 2), Point(3, 1), Point(3, 2), Point(2, 1), Point(2, 2)]
+        Delegates to iterate_points() static method for the actual logic.
 
         Returns:
             Iterator of Points in order that preserves original relative positions
         """
-        # Late import to avoid circular dependency
-        from cube.domain.geometric.geometry_utils import rotate_point_clockwise
-
-        # Get the normalized original block's cells
-        # We need to iterate over the ORIGINAL block in its normalized state
-        r1, c1 = self.start.row, self.start.col
-        r2, c2 = self.end.row, self.end.col
-
-        # Normalize to get the original cell positions (before rotation)
-        orig_r1, orig_c1 = min(r1, r2), min(c1, c2)
-        orig_r2, orig_c2 = max(r1, r2), max(c1, c2)
-
-        # Iterate over the original normalized block's cells
-        for r in range(orig_r1, orig_r2 + 1):
-            for c in range(orig_c1, orig_c2 + 1):
-                # Transform each original cell by the rotation
-                rotated_point = rotate_point_clockwise(
-                    Point(r, c),
-                    n_slices=self.n_slices,
-                    n_rotations=self.n_rotations
-                )
-                yield rotated_point
+        return RotatedBlock.iterate_points(self.start, self.end, self.n_slices)
 
     @staticmethod
-    def iterate_points(start: Point, end: Point) -> Iterator[Point]:
+    def iterate_points(start: Point, end: Point, n_slices: int) -> Iterator[Point]:
         """Iterate over points in order that preserves original relative positions.
 
-        Uses the unnormalized corner positions to determine the correct
-        iteration direction, avoiding code duplication with Block.
+        This is the CORE logic that both Block and RotatedBlock delegate to.
+        It detects n_rotations from corner positions, then iterates over the
+        original block's cells and transforms each by the rotation.
 
         Args:
-            start: First corner of the block
-            end: Second corner of the block
+            start: First corner of the block (may be rotated)
+            end: Second corner of the block (may be rotated)
+            n_slices: Face size (e.g., 7 for a 7x7 face)
 
         Yields:
             Points in order that preserves original relative positions
         """
-        r1, c1 = start.row, start.col
-        r2, c2 = end.row, end.col
+        from cube.domain.geometric.geometry_utils import rotate_point_clockwise
+        from cube.domain.geometric.geometry_types import Block, Point
 
-        # Determine iteration direction based on corner positions
-        row_step = 1 if r1 <= r2 else -1
-        col_step = 1 if c1 <= c2 else -1
+        # Step 1: Detect n_rotations from corner positions
+        n_rot = RotatedBlock.detect_n_rotations(start, end)
 
-        # Iterate rows (from start.row to end.row in the correct direction)
-        r = r1
-        while True:
-            c = c1
-            # Iterate cols (from start.col to end.col in the correct direction)
-            while True:
-                from cube.domain.geometric.geometry_types import Point
-                yield Point(r, c)
-                if c == c2:
-                    break
-                c += col_step
-            if r == r2:
-                break
-            r += row_step
+        # Step 2: Get the original block by reverse-rotating the corners
+        # This preserves the original block's corner order
+        reverse_n_rot = (-n_rot) % 4
+        orig_start = rotate_point_clockwise(start, n_slices, n_rotations=reverse_n_rot)
+        orig_end = rotate_point_clockwise(end, n_slices, n_rotations=reverse_n_rot)
+
+        # Step 3: Iterate over the original block's cells (preserves order)
+        # and rotate each by n_rotations
+        original_block = Block(orig_start, orig_end)
+        for orig_point in original_block.cells:
+            rotated_point = rotate_point_clockwise(
+                orig_point, n_slices, n_rotations=n_rot
+            )
+            yield rotated_point
 
     @property
     def is_normalized(self) -> bool:

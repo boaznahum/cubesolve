@@ -258,10 +258,7 @@ class Block:
     def points(self, n_slices: int) -> Iterator[Point]:
         """Yield points in the order that preserves original relative positions.
 
-        UNOPTIMIZED implementation:
-        1. Detect the original normalized block
-        2. Iterate over original cells
-        3. Rotate each point by n_rotations
+        Delegates to RotatedBlock.iterate_points() for the actual logic.
 
         Args:
             n_slices: Face size (e.g., 7 for a 7x7 face)
@@ -271,20 +268,7 @@ class Block:
         """
         # Late import to avoid circular dependency
         from cube.domain.geometric.rotated_block import RotatedBlock
-        from cube.domain.geometric import geometry_utils
-
-        # Step 1: Detect n_rotations
-        n_rot = RotatedBlock.detect_n_rotations(self.start, self.end)
-
-        # Step 2: Detect the original normalized block
-        original_block = self.detect_original(n_slices)
-
-        # Step 3: Iterate over original cells and rotate each
-        for orig_point in original_block.cells:
-            rotated_point = geometry_utils.rotate_point_clockwise(
-                orig_point, n_slices, n_rotations=n_rot
-            )
-            yield rotated_point
+        return RotatedBlock.iterate_points(self.start, self.end, n_slices)
 
     def pieces(self, face: Face) -> Iterator[CenterSlice]:
         """Yield center slices from the face in original relative order.
