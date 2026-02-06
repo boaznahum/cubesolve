@@ -351,16 +351,16 @@ class Block:
             yield from self.cells
             return
 
-        from cube.domain.geometric.geometry_utils import rotate_point_clockwise
-
         n_rot = self._detect_rotation_from(order_by, n_slices)
 
         if n_rot == 0:
             yield from self.cells
             return
 
-        for point in order_by.cells:
-            yield rotate_point_clockwise(point, n_slices, n_rot)
+        # Create an unnormalized block whose corners encode the rotation,
+        # then use the optimized points() iterator (inlined rotation math)
+        rotated = order_by.rotate_preserve_original(n_slices, n_rot)
+        yield from rotated.points(n_slices)
 
     def pieces_by(self, face: Face, order_by: Block | None = None) -> Iterator[CenterSlice]:
         """Yield center slices of self in the order defined by order_by.
