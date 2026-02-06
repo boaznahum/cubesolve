@@ -198,46 +198,27 @@ class Block(NamedTuple):
     def is_normalized(self) -> bool:
         """Check if the block is in normalized orientation.
 
-        A normalized block has start.row <= end.row and start.col <= end.col.
+        Delegates to RotatedBlock for consistency.
 
         Returns:
             True if the block is normalized, False otherwise
         """
-        r1, c1 = self.start
-        r2, c2 = self.end
-        return r1 <= r2 and c1 <= c2
-
-    @staticmethod
-    def _detect_n_rotations(start: Point, end: Point) -> int:
-        """Detect the number of rotations based on corner orientation.
-
-        See RotatedBlock.md section "Detecting Block Orientation" for the
-        mathematical proof behind this detection logic.
-        """
-        r1, c1 = start.row, start.col
-        r2, c2 = end.row, end.col
-
-        # Normalized: start.row <= end.row AND start.col <= end.col
-        if r1 <= r2 and c1 <= c2:
-            return 0
-        # After 90° or 270° CW: start.row > end.row (unnormalized in rows)
-        elif r1 > r2:
-            # Check column relationship to distinguish 90° from 270°
-            return 1 if c1 <= c2 else 3
-        # After 180°: start.col > end.col (unnormalized in cols only)
-        else:  # r1 <= r2 and c1 > c2
-            return 2
+        # Late import to avoid circular dependency
+        from cube.domain.geometric.rotated_block import RotatedBlock
+        return RotatedBlock._detect_n_rotations(self.start, self.end) == 0
 
     @property
     def n_rotations(self) -> int:
         """Detect and return the number of rotations from original normalized state.
 
-        Uses corner orientation to detect how many 90° CW rotations were applied.
+        Delegates to RotatedBlock._detect_n_rotations() for the actual logic.
 
         Returns:
             Detected n_rotations value (0, 1, 2, or 3)
         """
-        return Block._detect_n_rotations(self.start, self.end)
+        # Late import to avoid circular dependency
+        from cube.domain.geometric.rotated_block import RotatedBlock
+        return RotatedBlock._detect_n_rotations(self.start, self.end)
 
     @property
     def points(self) -> Iterator[Point]:
