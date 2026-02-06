@@ -93,8 +93,7 @@ class TestBlockRotationIterator:
 
         # Step 3: Rotate the face n_rotations times (90° clockwise F move each time)
         from cube.domain.algs import Algs
-        for _ in range(n_rotations):
-            app.op.play(Algs.F)
+        app.op.play(Algs.F * n_rotations)
 
         # Step 4: Rotate the block using rotate_preserve_original
         rotated_block = original_block.rotate_preserve_original(n_slices=n, n_rotations=n_rotations)
