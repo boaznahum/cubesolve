@@ -556,18 +556,10 @@ class TestMultiCellBlockCommutator:
                         })
                         continue
 
-                    # Helper function to iterate over all cells in a block
-                    def block_cells(block: GeomBlock) -> list[tuple[int, int]]:
-                        """Return list of all (row, col) in the block."""
-                        r1 = min(block[0][0], block[1][0])
-                        r2 = max(block[0][0], block[1][0])
-                        c1 = min(block[0][1], block[1][1])
-                        c2 = max(block[0][1], block[1][1])
-                        return [(r, c) for r in range(r1, r2 + 1) for c in range(c1, c2 + 1)]
-
-                    s1_cells = block_cells(s1_block)
-                    t_cells = block_cells(t_block)
-                    s2_cells = block_cells(s2_block)
+                    # Iterate all blocks ordered by t_block for aligned cell-to-cell mapping
+                    s1_cells = list(s1_block.points_by(n, order_by=t_block))
+                    t_cells = list(t_block.points_by(n, order_by=t_block))
+                    s2_cells = list(s2_block.points_by(n, order_by=t_block))
 
                     # All blocks should have the same number of cells
                     if len(s1_cells) != len(t_cells) or len(t_cells) != len(s2_cells):
@@ -682,6 +674,7 @@ class TestMultiCellBlockCommutator:
 
         app = create_app(cube_size)
         cube = app.cube
+        n = cube.n_slices
 
         comm_helper = get_new_comm_helper(app)
 
@@ -732,16 +725,10 @@ class TestMultiCellBlockCommutator:
         # Place markers and execute
         marker_key = f"marker_{uuid.uuid4().hex[:8]}"
 
-        def block_cells(block: GeomBlock) -> list[tuple[int, int]]:
-            r1 = min(block[0][0], block[1][0])
-            r2 = max(block[0][0], block[1][0])
-            c1 = min(block[0][1], block[1][1])
-            c2 = max(block[0][1], block[1][1])
-            return [(r, c) for r in range(r1, r2 + 1) for c in range(c1, c2 + 1)]
-
-        s1_cells = block_cells(s1_block)
-        t_cells = block_cells(t_block)
-        s2_cells = block_cells(s2_block)
+        # Iterate all blocks ordered by t_block for aligned cell-to-cell mapping
+        s1_cells = list(s1_block.points_by(n, order_by=t_block))
+        t_cells = list(t_block.points_by(n, order_by=t_block))
+        s2_cells = list(s2_block.points_by(n, order_by=t_block))
 
         # Place markers
         s1_markers = {}
