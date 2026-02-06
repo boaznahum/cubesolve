@@ -78,6 +78,10 @@ class RotatedBlock:
         It detects n_rotations from corner positions, then iterates over the
         original block's cells and transforms each by the rotation.
 
+        Optimized: all rotation math is inlined to avoid per-point function
+        call overhead. The original block corners are recovered via direct
+        formulas and iteration applies the forward rotation inline.
+
         Args:
             start: First corner of the block (may be rotated)
             end: Second corner of the block (may be rotated)
@@ -86,26 +90,53 @@ class RotatedBlock:
         Yields:
             Points in order that preserves original relative positions
         """
-        from cube.domain.geometric.geometry_utils import rotate_point_clockwise
-        from cube.domain.geometric.geometry_types import Block, Point
+        from cube.domain.geometric.geometry_types import Point
 
-        # Step 1: Detect n_rotations from corner positions
-        n_rot = RotatedBlock.detect_n_rotations(start, end)
+        r1, c1 = start
+        r2, c2 = end
+        nm1 = n_slices - 1
 
-        # Step 2: Get the original block by reverse-rotating the corners
-        # This preserves the original block's corner order
-        reverse_n_rot = (-n_rot) % 4
-        orig_start = rotate_point_clockwise(start, n_slices, n_rotations=reverse_n_rot)
-        orig_end = rotate_point_clockwise(end, n_slices, n_rotations=reverse_n_rot)
+        # Detect n_rotations from corner orientation and iterate with
+        # inlined rotation formulas. The original (pre-rotation) block is
+        # always normalized, so we can iterate without min/max.
+        #
+        # Rotation formulas (CW):
+        #   0: (r, c) -> (r, c)
+        #   1: (r, c) -> (nm1-c, r)
+        #   2: (r, c) -> (nm1-r, nm1-c)
+        #   3: (r, c) -> (c, nm1-r)
+        #
+        # Reverse rotation formulas (to recover original corners):
+        #   reverse of 1 = 3 CW: (r, c) -> (c, nm1-r)
+        #   reverse of 2 = 2 CW: (r, c) -> (nm1-r, nm1-c)
+        #   reverse of 3 = 1 CW: (r, c) -> (nm1-c, r)
 
-        # Step 3: Iterate over the original block's cells (preserves order)
-        # and rotate each by n_rotations
-        original_block = Block(orig_start, orig_end)
-        for orig_point in original_block.cells:
-            rotated_point = rotate_point_clockwise(
-                orig_point, n_slices, n_rotations=n_rot
-            )
-            yield rotated_point
+        if r1 <= r2 and c1 <= c2:
+            # n_rot == 0: no rotation, iterate directly
+            for r in range(r1, r2 + 1):
+                for c in range(c1, c2 + 1):
+                    yield Point(r, c)
+
+        elif r1 > r2 and c1 < c2:
+            # n_rot == 1: reverse corners via 3 CW, then apply 1 CW per point
+            # original corners: (c1, nm1-r1) to (c2, nm1-r2) — already normalized
+            for r in range(c1, c2 + 1):
+                for c in range(nm1 - r1, nm1 - r2 + 1):
+                    yield Point(nm1 - c, r)
+
+        elif r1 > r2 and c1 > c2:
+            # n_rot == 2: reverse corners via 2 CW, then apply 2 CW per point
+            # original corners: (nm1-r1, nm1-c1) to (nm1-r2, nm1-c2) — already normalized
+            for r in range(nm1 - r1, nm1 - r2 + 1):
+                for c in range(nm1 - c1, nm1 - c2 + 1):
+                    yield Point(nm1 - r, nm1 - c)
+
+        else:
+            # n_rot == 3 (r1 < r2 and c1 > c2): reverse corners via 1 CW, then apply 3 CW per point
+            # original corners: (nm1-c1, r1) to (nm1-c2, r2) — already normalized
+            for r in range(nm1 - c1, nm1 - c2 + 1):
+                for c in range(r1, r2 + 1):
+                    yield Point(c, nm1 - r)
 
     @property
     def is_normalized(self) -> bool:

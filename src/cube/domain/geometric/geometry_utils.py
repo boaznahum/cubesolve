@@ -96,7 +96,13 @@ def rotate_point_clockwise(rc: Tuple[int, int] | Point, n_slices: int, n_rotatio
     """
 
     r, c = rc[0], rc[1]
-    for _ in range(n_rotations % 4):
-        r, c = inv(n_slices, c), r
-
-    return Point(r, c)
+    nm1 = n_slices - 1
+    rot = n_rotations % 4
+    if rot == 0:
+        return Point(r, c)
+    if rot == 1:
+        return Point(nm1 - c, r)
+    if rot == 2:
+        return Point(nm1 - r, nm1 - c)
+    # rot == 3
+    return Point(c, nm1 - r)
