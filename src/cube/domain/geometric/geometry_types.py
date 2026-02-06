@@ -59,6 +59,24 @@ class Block:
     start: Point
     end: Point
 
+    def __getitem__(self, index: int) -> Point:
+        """Support tuple-style indexing for backward compatibility.
+
+        Block[0] returns start, Block[1] returns end.
+
+        Args:
+            index: 0 for start, 1 for end
+
+        Returns:
+            The Point at the specified index
+        """
+        if index == 0:
+            return self.start
+        elif index == 1:
+            return self.end
+        else:
+            raise IndexError("Block index out of range (use 0 or 1)")
+
 
 
     @staticmethod

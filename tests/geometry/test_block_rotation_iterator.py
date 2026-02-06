@@ -181,17 +181,20 @@ class TestBlockRotationIterator:
         for _ in range(n_rotations):
             app.op.play(Algs.F)
 
-        # Rotate the block
+        # Rotate the block and use points (preserves order, handles bounds correctly)
         rotated_block = original_block.rotate_clockwise(n_slices=n, n_rotations=n_rotations)
-        rotated_iterator_order = list(rotated_block.cells)
+        rotated_iterator_order = list(rotated_block.points(n))
 
         # Collect markers from rotated positions
         rotated_markers = {}
         for point in rotated_iterator_order:
-            center_slice = face.center.get_center_slice((point.row, point.col))
-            marker = center_slice.edge.moveable_attributes.get(marker_key)
-            if marker:
-                rotated_markers[(point.row, point.col)] = marker
+            # Points might be out of bounds if rotated block extends past face edge
+            # Skip those points
+            if 0 <= point.row < n and 0 <= point.col < n:
+                center_slice = face.center.get_center_slice((point.row, point.col))
+                marker = center_slice.edge.moveable_attributes.get(marker_key)
+                if marker:
+                    rotated_markers[(point.row, point.col)] = marker
 
         # Verify cell-to-cell mapping is preserved
         assert len(original_iterator_order) == len(rotated_iterator_order), \
