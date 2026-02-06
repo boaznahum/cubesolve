@@ -19,8 +19,12 @@ from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.Color import Color
-from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
-from cube.domain.solver.common.big_cube.commutator._supported_faces import _get_supported_pairs
+from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import (
+    CommutatorHelper,
+)
+from cube.domain.solver.common.big_cube.commutator._supported_faces import (
+    _get_supported_pairs,
+)
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 from cube.domain.solver.Solvers import Solvers
 
@@ -41,6 +45,7 @@ def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:
 # =============================================================================
 # Test Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def app_4x4() -> AbstractApp:
@@ -82,6 +87,7 @@ def get_new_comm_helper(app: AbstractApp) -> CommutatorHelper:
 # Helper Functions
 # =============================================================================
 
+
 def set_center_color(face: Face, row: int, col: int, color: Color) -> None:
     """Set a specific center piece to a color."""
     center_slice = face.center.get_center_slice((row, col))
@@ -115,6 +121,7 @@ def blocks_equal(b1: Block, b2: Block) -> bool:
 # =============================================================================
 # SECTION 1: Block Search Tests - CommutatorHelper
 # =============================================================================
+
 
 class TestCommutatorBlockSearch:
     """
@@ -150,8 +157,9 @@ class TestCommutatorBlockSearch:
 
         # Blocks should be sorted by size (largest first)
         sizes = [b[0] for b in blocks]
-        assert sizes == sorted(sizes, reverse=True), \
+        assert sizes == sorted(sizes, reverse=True), (
             "Blocks should be sorted by size descending"
+        )
 
         # Verify blocks are found (the search adds both 1x1 and extended for each position)
         n = cube.n_slices
@@ -187,8 +195,9 @@ class TestCommutatorBlockSearch:
 
         # Verify sorted by size
         sizes = [b[0] for b in blocks]
-        assert sizes == sorted(sizes, reverse=True), \
+        assert sizes == sorted(sizes, reverse=True), (
             f"Blocks should be sorted on face {face_name}"
+        )
 
     @pytest.mark.parametrize("cube_size", [5, 6, 7])
     @pytest.mark.parametrize("seed", range(3))
@@ -222,8 +231,9 @@ class TestCommutatorBlockSearch:
             # If blocks found, they should be sorted
             if len(blocks) > 0:
                 sizes = [b[0] for b in blocks]
-                assert sizes == sorted(sizes, reverse=True), \
+                assert sizes == sorted(sizes, reverse=True), (
                     f"Blocks should be sorted on face {face_name} with seed {seed}"
+                )
 
     @pytest.mark.parametrize("cube_size", [5, 6, 7])
     def test_block_extension_order(self, cube_size: int):
@@ -246,8 +256,9 @@ class TestCommutatorBlockSearch:
 
         # Verify blocks are sorted by size (largest first)
         sizes = [b[0] for b in blocks]
-        assert sizes == sorted(sizes, reverse=True), \
+        assert sizes == sorted(sizes, reverse=True), (
             "Blocks should be sorted largest-first"
+        )
 
     @pytest.mark.parametrize("cube_size", [5, 6])
     def test_largest_block_priority(self, cube_size: int):
@@ -269,13 +280,15 @@ class TestCommutatorBlockSearch:
 
         # Check descending order by size
         for i in range(len(blocks) - 1):
-            assert blocks[i][0] >= blocks[i + 1][0], \
-                f"Block {i} (size {blocks[i][0]}) should be >= block {i+1} (size {blocks[i+1][0]})"
+            assert blocks[i][0] >= blocks[i + 1][0], (
+                f"Block {i} (size {blocks[i][0]}) should be >= block {i + 1} (size {blocks[i + 1][0]})"
+            )
 
 
 # =============================================================================
 # SECTION 2: Block Searching Details Tests
 # =============================================================================
+
 
 class TestBlockSearching:
     """Tests for block searching functionality details."""
@@ -308,8 +321,9 @@ class TestBlockSearching:
 
         # The total blocks should be roughly 2x the number of positions
         # (1x1 + extended for each), minus some exclusions
-        assert len(blocks) >= n * n, \
-            f"Expected at least {n*n} blocks (1 per position), got {len(blocks)}"
+        assert len(blocks) >= n * n, (
+            f"Expected at least {n * n} blocks (1 per position), got {len(blocks)}"
+        )
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
     def test_search_finds_maximum_block(self, cube_size: int):
@@ -332,12 +346,12 @@ class TestBlockSearching:
         # Verify blocks are found and sorted
         assert len(blocks) > 0
         sizes = [b[0] for b in blocks]
-        assert sizes == sorted(sizes, reverse=True), \
+        assert sizes == sorted(sizes, reverse=True), (
             "Blocks should be sorted by size descending"
+        )
 
         # The largest block should be at least size 1
-        assert blocks[0][0] >= 1, \
-            f"Expected at least size 1 block, got {blocks[0][0]}"
+        assert blocks[0][0] >= 1, f"Expected at least size 1 block, got {blocks[0][0]}"
 
     @pytest.mark.parametrize("cube_size", [5, 6, 7])
     def test_search_after_partial_scramble(self, cube_size: int):
@@ -360,13 +374,15 @@ class TestBlockSearching:
 
         # Maximum block should be smaller than n*n
         n = cube.n_slices
-        assert blocks[0][0] < n * n, \
+        assert blocks[0][0] < n * n, (
             "After M move, largest block should be smaller than full center"
+        )
 
 
 # =============================================================================
 # SECTION 3: Block Validation Tests
 # =============================================================================
+
 
 class TestBlockValidation:
     """Tests for block validation (intersection checking)."""
@@ -395,7 +411,9 @@ class TestBlockValidation:
                 is_center = (n % 2 == 1) and (r == mid) and (c == mid)
 
                 if is_center:
-                    assert not is_valid, f"Center block at {rc} should be invalid (self-intersection)"
+                    assert not is_valid, (
+                        f"Center block at {rc} should be invalid (self-intersection)"
+                    )
                 else:
                     assert is_valid, f"Non-center block at {rc} should be valid"
 
@@ -404,24 +422,26 @@ class TestBlockValidation:
         """Block size = (rows+1) * (cols+1)."""
         # Test various block shapes
         test_cases = [
-            ((0, 0), (0, 0), 1),    # 1x1 → size 1
-            ((0, 0), (1, 0), 2),    # 2x1 → size 2
-            ((0, 0), (0, 1), 2),    # 1x2 → size 2
-            ((0, 0), (1, 1), 4),    # 2x2 → size 4
-            ((0, 0), (2, 1), 6),    # 3x2 → size 6
-            ((0, 0), (2, 2), 9),    # 3x3 → size 9
-            ((1, 1), (2, 3), 6),    # 2x3 → size 6 (offset start)
+            ((0, 0), (0, 0), 1),  # 1x1 → size 1
+            ((0, 0), (1, 0), 2),  # 2x1 → size 2
+            ((0, 0), (0, 1), 2),  # 1x2 → size 2
+            ((0, 0), (1, 1), 4),  # 2x2 → size 4
+            ((0, 0), (2, 1), 6),  # 3x2 → size 6
+            ((0, 0), (2, 2), 9),  # 3x3 → size 9
+            ((1, 1), (2, 3), 6),  # 2x3 → size 6 (offset start)
         ]
 
         for rc1, rc2, expected_size in test_cases:
             actual_size = CommutatorHelper.block_size(rc1, rc2)
-            assert actual_size == expected_size, \
+            assert actual_size == expected_size, (
                 f"Block {rc1}->{rc2} should have size {expected_size}, got {actual_size}"
+            )
 
 
 # =============================================================================
 # SECTION 4: Multi-Cell Block Commutator Tests
 # =============================================================================
+
 
 class TestMultiCellBlockCommutator:
     """
@@ -471,7 +491,8 @@ class TestMultiCellBlockCommutator:
 
                 # Find a block starting at this point that is larger than 1x1
                 matching_blocks = [
-                    (size, blk) for size, blk in all_blocks
+                    (size, blk)
+                    for size, blk in all_blocks
                     if blk[0] == target_point and size > 1
                 ]
 
@@ -494,7 +515,7 @@ class TestMultiCellBlockCommutator:
                     source_face=source_face,
                     target_face=target_face,
                     target_block=target_block,
-                    dry_run=True
+                    dry_run=True,
                 )
 
                 s1_block = dry_result.natural_source_block
@@ -502,10 +523,12 @@ class TestMultiCellBlockCommutator:
                 s2_block = dry_result.second_block
 
                 if s1_block is None or t_block is None or s2_block is None:
-                    failures.append({
-                        "target_block": target_block,
-                        "error": "Block fields not populated in result"
-                    })
+                    failures.append(
+                        {
+                            "target_block": target_block,
+                            "error": "Block fields not populated in result",
+                        }
+                    )
                     continue
 
                 # Helper function to iterate over all cells in a block
@@ -515,7 +538,9 @@ class TestMultiCellBlockCommutator:
                     r2 = max(block[0][0], block[1][0])
                     c1 = min(block[0][1], block[1][1])
                     c2 = max(block[0][1], block[1][1])
-                    return [(r, c) for r in range(r1, r2 + 1) for c in range(c1, c2 + 1)]
+                    return [
+                        (r, c) for r in range(r1, r2 + 1) for c in range(c1, c2 + 1)
+                    ]
 
                 s1_cells = block_cells(s1_block)
                 t_cells = block_cells(t_block)
@@ -523,10 +548,12 @@ class TestMultiCellBlockCommutator:
 
                 # All blocks should have the same number of cells
                 if len(s1_cells) != len(t_cells) or len(t_cells) != len(s2_cells):
-                    failures.append({
-                        "target_block": target_block,
-                        "error": f"Block sizes don't match: s1={len(s1_cells)}, t={len(t_cells)}, s2={len(s2_cells)}"
-                    })
+                    failures.append(
+                        {
+                            "target_block": target_block,
+                            "error": f"Block sizes don't match: s1={len(s1_cells)}, t={len(t_cells)}, s2={len(s2_cells)}",
+                        }
+                    )
                     continue
 
                 # Place unique markers on all cells in all 3 blocks
@@ -563,67 +590,95 @@ class TestMultiCellBlockCommutator:
                     target_block=target_block,
                     source_block=s1_block,  # Use the natural source block
                     preserve_state=True,
-                    dry_run=False
+                    dry_run=False,
                 )
 
-                # Verify the 3-cycle
-                # The cells within blocks may be reordered during transformation,
-                # so we check that the SET of markers is correct, not the order.
+                # Verify the 3-cycle with exact cell-to-cell mapping
+                # The markers should preserve their relative positions within blocks.
+                # For example, if s1_0 was at (r1,c1) in s1_block, it should now be
+                # at the same relative position (r1,c1) in t_block.
 
-                # Collect all markers found at each block position
-                t_block_markers_found = set()
-                for cell in t_cells:
+                # Collect markers at each specific cell position
+                t_cell_markers = {}
+                for idx, cell in enumerate(t_cells):
                     piece = target_face.center.get_center_slice(cell).edge
                     marker = piece.moveable_attributes.get(marker_key)
                     if marker:
-                        t_block_markers_found.add(marker)
+                        t_cell_markers[idx] = marker
 
-                s2_block_markers_found = set()
-                for cell in s2_cells:
+                s2_cell_markers = {}
+                for idx, cell in enumerate(s2_cells):
                     piece = source_face.center.get_center_slice(cell).edge
                     marker = piece.moveable_attributes.get(marker_key)
                     if marker:
-                        s2_block_markers_found.add(marker)
+                        s2_cell_markers[idx] = marker
 
-                s1_block_markers_found = set()
-                for cell in s1_cells:
+                s1_cell_markers = {}
+                for idx, cell in enumerate(s1_cells):
                     piece = source_face.center.get_center_slice(cell).edge
                     marker = piece.moveable_attributes.get(marker_key)
                     if marker:
-                        s1_block_markers_found.add(marker)
+                        s1_cell_markers[idx] = marker
 
-                # s1 → t: all s1 markers should now be at t positions
-                s1_marker_set = set(s1_markers.values())
-                s1_to_t_ok = t_block_markers_found == s1_marker_set
+                # s1 → t: each s1 marker at position i should be at t position i
+                s1_to_t_ok = all(
+                    s1_cell_markers.get(i) == s1_markers.get(i) for i in s1_markers
+                )
 
-                # t → s2: all t markers should now be at s2 positions
-                t_marker_set = set(t_markers.values())
-                t_to_s2_ok = s2_block_markers_found == t_marker_set
+                # t → s2: each t marker at position i should be at s2 position i
+                t_to_s2_ok = all(
+                    s2_cell_markers.get(i) == t_markers.get(i) for i in t_markers
+                )
 
-                # s2 → s1: all s2 markers should now be at s1 positions
-                s2_marker_set = set(s2_markers.values())
-                s2_to_s1_ok = s1_block_markers_found == s2_marker_set
+                # s2 → s1: each s2 marker at position i should be at s1 position i
+                s2_to_s1_ok = all(
+                    s1_cell_markers.get(i) == s2_markers.get(i) for i in s2_markers
+                )
 
                 if s1_to_t_ok and t_to_s2_ok and s2_to_s1_ok:
-                    successes.append({
-                        "target_block": target_block,
-                        "block_size": len(t_cells)
-                    })
+                    successes.append(
+                        {"target_block": target_block, "block_size": len(t_cells)}
+                    )
                 else:
-                    failures.append({
+                    details = {
                         "target_block": target_block,
                         "s1_to_t": s1_to_t_ok,
                         "t_to_s2": t_to_s2_ok,
-                        "s2_to_s1": s2_to_s1_ok
-                    })
+                        "s2_to_s1": s2_to_s1_ok,
+                    }
+                    # Add specific mismatch details for debugging
+                    if not s1_to_t_ok:
+                        mismatches = [
+                            (i, s1_markers[i], t_cell_markers.get(i))
+                            for i in s1_markers
+                            if t_cell_markers.get(i) != s1_markers[i]
+                        ]
+                        details["s1_to_t_mismatches"] = mismatches[:3]  # First 3
+                    if not t_to_s2_ok:
+                        mismatches = [
+                            (i, t_markers[i], s2_cell_markers.get(i))
+                            for i in t_markers
+                            if s2_cell_markers.get(i) != t_markers[i]
+                        ]
+                        details["t_to_s2_mismatches"] = mismatches[:3]
+                    if not s2_to_s1_ok:
+                        mismatches = [
+                            (i, s2_markers[i], s1_cell_markers.get(i))
+                            for i in s2_markers
+                            if s1_cell_markers.get(i) != s2_markers[i]
+                        ]
+                        details["s2_to_s1_mismatches"] = mismatches[:3]
+                    failures.append(details)
 
         # Report results
-        assert len(failures) == 0, \
+        assert len(failures) == 0, (
             f"Block commutator 3-cycle failed for {len(failures)} blocks: {failures[:5]}"
+        )
 
         # Verify we actually tested some multi-cell blocks
-        assert len(successes) > 0, \
+        assert len(successes) > 0, (
             f"No multi-cell blocks found to test on {cube_size}x{cube_size} cube"
+        )
 
     @pytest.mark.parametrize("cube_size", [6, 7, 8])
     def test_large_block_commutator(self, cube_size: int):
@@ -660,7 +715,7 @@ class TestMultiCellBlockCommutator:
             source_face=source_face,
             target_face=target_face,
             target_block=target_block,
-            dry_run=True
+            dry_run=True,
         )
 
         s1_block = dry_result.natural_source_block
@@ -677,12 +732,15 @@ class TestMultiCellBlockCommutator:
             r2, c2 = block[1]
             return (abs(r2 - r1) + 1) * (abs(c2 - c1) + 1)
 
-        assert block_cell_count(s1_block) == block_size, \
+        assert block_cell_count(s1_block) == block_size, (
             f"s1_block size mismatch: expected {block_size}, got {block_cell_count(s1_block)}"
-        assert block_cell_count(t_block) == block_size, \
+        )
+        assert block_cell_count(t_block) == block_size, (
             f"t_block size mismatch: expected {block_size}, got {block_cell_count(t_block)}"
-        assert block_cell_count(s2_block) == block_size, \
+        )
+        assert block_cell_count(s2_block) == block_size, (
             f"s2_block size mismatch: expected {block_size}, got {block_cell_count(s2_block)}"
+        )
 
         # Place markers and execute
         marker_key = f"marker_{uuid.uuid4().hex[:8]}"
@@ -727,7 +785,7 @@ class TestMultiCellBlockCommutator:
             target_block=target_block,
             source_block=s1_block,
             preserve_state=True,
-            dry_run=False
+            dry_run=False,
         )
 
         # Verify 3-cycle - check that SET of markers cycles correctly
@@ -757,23 +815,27 @@ class TestMultiCellBlockCommutator:
 
         # Verify s1 markers moved to t
         s1_marker_set = set(s1_markers.values())
-        assert t_block_markers == s1_marker_set, \
+        assert t_block_markers == s1_marker_set, (
             f"s1→t failed: expected {s1_marker_set}, got {t_block_markers}"
+        )
 
         # Verify t markers moved to s2
         t_marker_set = set(t_markers.values())
-        assert s2_block_markers == t_marker_set, \
+        assert s2_block_markers == t_marker_set, (
             f"t→s2 failed: expected {t_marker_set}, got {s2_block_markers}"
+        )
 
         # Verify s2 markers moved to s1
         s2_marker_set = set(s2_markers.values())
-        assert s1_block_markers == s2_marker_set, \
+        assert s1_block_markers == s2_marker_set, (
             f"s2→s1 failed: expected {s2_marker_set}, got {s1_block_markers}"
+        )
 
 
 # =============================================================================
 # SECTION 5: Integration Tests
 # =============================================================================
+
 
 class TestBlockIntegration:
     """Integration tests for block processing workflow."""
@@ -793,8 +855,7 @@ class TestBlockIntegration:
 
         # First block should be the largest
         if len(blocks) > 1:
-            assert blocks[0][0] >= blocks[1][0], \
-                "First block should be largest"
+            assert blocks[0][0] >= blocks[1][0], "First block should be largest"
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6])
     def test_search_returns_consistent_results(self, cube_size: int):
@@ -813,13 +874,13 @@ class TestBlockIntegration:
         blocks3 = comm_helper.search_big_block(face, color)
 
         # All should be identical
-        assert blocks1 == blocks2 == blocks3, \
-            "Block search should be deterministic"
+        assert blocks1 == blocks2 == blocks3, "Block search should be deterministic"
 
 
 # =============================================================================
 # SECTION 6: Coordinate System Tests
 # =============================================================================
+
 
 class TestBlockCoordinates:
     """Tests for coordinate handling in block operations."""
@@ -870,5 +931,6 @@ class TestBlockCoordinates:
             rc1, rc2 = block
             calculated_size = (rc2[0] - rc1[0] + 1) * (rc2[1] - rc1[1] + 1)
 
-            assert reported_size == calculated_size, \
+            assert reported_size == calculated_size, (
                 f"Block {block}: reported size {reported_size} != calculated {calculated_size}"
+            )
