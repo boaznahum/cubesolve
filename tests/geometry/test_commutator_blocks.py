@@ -615,42 +615,39 @@ class TestMultiCellBlockCommutator:
                     )
 
                     # Verify the 3-cycle
-                    # The cells within blocks may be reordered during transformation,
-                    # so we check that the SET of markers is correct, not the order.
+                    # Check that markers match by INDEX (ordered), not just as a set.
+                    # cell[i] in s1 must map to cell[i] in t, etc.
 
-                    # Collect all markers found at each block position
-                    t_block_markers_found = set()
+                    # Collect markers found at each block position (ordered)
+                    t_block_markers_found = []
                     for cell in t_cells:
                         piece = target_face.center.get_center_slice(cell).edge
                         marker = piece.moveable_attributes.get(marker_key)
-                        if marker:
-                            t_block_markers_found.add(marker)
+                        t_block_markers_found.append(marker)
 
-                    s2_block_markers_found = set()
+                    s2_block_markers_found = []
                     for cell in s2_cells:
                         piece = source_face.center.get_center_slice(cell).edge
                         marker = piece.moveable_attributes.get(marker_key)
-                        if marker:
-                            s2_block_markers_found.add(marker)
+                        s2_block_markers_found.append(marker)
 
-                    s1_block_markers_found = set()
+                    s1_block_markers_found = []
                     for cell in s1_cells:
                         piece = source_face.center.get_center_slice(cell).edge
                         marker = piece.moveable_attributes.get(marker_key)
-                        if marker:
-                            s1_block_markers_found.add(marker)
+                        s1_block_markers_found.append(marker)
 
-                    # s1 → t: all s1 markers should now be at t positions
-                    s1_marker_set = set(s1_markers.values())
-                    s1_to_t_ok = t_block_markers_found == s1_marker_set
+                    # s1 → t: s1 markers should now be at t positions, in order
+                    s1_marker_list = list(s1_markers.values())
+                    s1_to_t_ok = t_block_markers_found == s1_marker_list
 
-                    # t → s2: all t markers should now be at s2 positions
-                    t_marker_set = set(t_markers.values())
-                    t_to_s2_ok = s2_block_markers_found == t_marker_set
+                    # t → s2: t markers should now be at s2 positions, in order
+                    t_marker_list = list(t_markers.values())
+                    t_to_s2_ok = s2_block_markers_found == t_marker_list
 
-                    # s2 → s1: all s2 markers should now be at s1 positions
-                    s2_marker_set = set(s2_markers.values())
-                    s2_to_s1_ok = s1_block_markers_found == s2_marker_set
+                    # s2 → s1: s2 markers should now be at s1 positions, in order
+                    s2_marker_list = list(s2_markers.values())
+                    s2_to_s1_ok = s1_block_markers_found == s2_marker_list
 
                     if s1_to_t_ok and t_to_s2_ok and s2_to_s1_ok:
                         successes.append({
@@ -781,42 +778,39 @@ class TestMultiCellBlockCommutator:
         # Verify 3-cycle - check that SET of markers cycles correctly
         # (cells within blocks may be reordered during transformation)
 
-        # Collect markers found at each block
-        t_block_markers = set()
+        # Collect markers found at each block (ordered)
+        t_block_markers = []
         for cell in t_cells:
             piece = target_face.center.get_center_slice(cell).edge
             marker = piece.moveable_attributes.get(marker_key)
-            if marker:
-                t_block_markers.add(marker)
+            t_block_markers.append(marker)
 
-        s2_block_markers = set()
+        s2_block_markers = []
         for cell in s2_cells:
             piece = source_face.center.get_center_slice(cell).edge
             marker = piece.moveable_attributes.get(marker_key)
-            if marker:
-                s2_block_markers.add(marker)
+            s2_block_markers.append(marker)
 
-        s1_block_markers = set()
+        s1_block_markers = []
         for cell in s1_cells:
             piece = source_face.center.get_center_slice(cell).edge
             marker = piece.moveable_attributes.get(marker_key)
-            if marker:
-                s1_block_markers.add(marker)
+            s1_block_markers.append(marker)
 
-        # Verify s1 markers moved to t
-        s1_marker_set = set(s1_markers.values())
-        assert t_block_markers == s1_marker_set, \
-            f"s1→t failed: expected {s1_marker_set}, got {t_block_markers}"
+        # Verify s1 markers moved to t, in order
+        s1_marker_list = list(s1_markers.values())
+        assert t_block_markers == s1_marker_list, \
+            f"s1→t failed: expected {s1_marker_list}, got {t_block_markers}"
 
-        # Verify t markers moved to s2
-        t_marker_set = set(t_markers.values())
-        assert s2_block_markers == t_marker_set, \
-            f"t→s2 failed: expected {t_marker_set}, got {s2_block_markers}"
+        # Verify t markers moved to s2, in order
+        t_marker_list = list(t_markers.values())
+        assert s2_block_markers == t_marker_list, \
+            f"t→s2 failed: expected {t_marker_list}, got {s2_block_markers}"
 
-        # Verify s2 markers moved to s1
-        s2_marker_set = set(s2_markers.values())
-        assert s1_block_markers == s2_marker_set, \
-            f"s2→s1 failed: expected {s2_marker_set}, got {s1_block_markers}"
+        # Verify s2 markers moved to s1, in order
+        s2_marker_list = list(s2_markers.values())
+        assert s1_block_markers == s2_marker_list, \
+            f"s2→s1 failed: expected {s2_marker_list}, got {s1_block_markers}"
 
 
 # =============================================================================
