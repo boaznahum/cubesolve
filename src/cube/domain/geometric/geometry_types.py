@@ -351,6 +351,9 @@ class Block:
             yield from self.cells
             return
 
+        # Normalize order_by to ensure its corners don't encode a prior rotation
+        order_by = order_by.normalize
+
         n_rot = self._detect_rotation_from(order_by, n_slices)
 
         if n_rot == 0:
