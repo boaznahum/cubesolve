@@ -26,6 +26,8 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol, Tuple
 if TYPE_CHECKING:
     from cube.domain.model.Edge import Edge
     from cube.domain.model.PartSlice import EdgeWing
+    from cube.domain.model.Face import Face
+    from cube.domain.model.PartSlice import CenterSlice
 
 
 class CLGColRow(Enum):
@@ -205,30 +207,83 @@ class Block(NamedTuple):
         r2, c2 = self.end
         return r1 <= r2 and c1 <= c2
 
+    @staticmethod
+    def _detect_n_rotations(start: Point, end: Point) -> int:
+        """Detect the number of rotations based on corner orientation.
+
+        See RotatedBlock.md section "Detecting Block Orientation" for the
+        mathematical proof behind this detection logic.
+        """
+        r1, c1 = start.row, start.col
+        r2, c2 = end.row, end.col
+
+        # Normalized: start.row <= end.row AND start.col <= end.col
+        if r1 <= r2 and c1 <= c2:
+            return 0
+        # After 90° or 270° CW: start.row > end.row (unnormalized in rows)
+        elif r1 > r2:
+            # Check column relationship to distinguish 90° from 270°
+            return 1 if c1 <= c2 else 3
+        # After 180°: start.col > end.col (unnormalized in cols only)
+        else:  # r1 <= r2 and c1 > c2
+            return 2
+
     @property
     def n_rotations(self) -> int:
-        """Return the number of rotations from the original normalized state.
+        """Detect and return the number of rotations from original normalized state.
 
-        For a regular Block (not RotatedBlock), this is always 0.
+        Uses corner orientation to detect how many 90° CW rotations were applied.
 
         Returns:
-            Always 0 for a regular Block
+            Detected n_rotations value (0, 1, 2, or 3)
         """
-        return 0
+        return Block._detect_n_rotations(self.start, self.end)
 
     @property
     def points(self) -> Iterator[Point]:
         """Yield points in the order that preserves original relative positions.
 
-        For a regular Block, this is the same as the cells property since
-        n_rotations is always 0. This property exists for API compatibility
-        with RotatedBlock.
+        Uses the unnormalized corner positions to determine the correct
+        iteration direction, preserving the cell-to-cell mapping.
 
         Returns:
-            Iterator of Points in row-by-row order
+            Iterator of Points in order that preserves original relative positions
         """
-        # For a regular Block, points = cells (normalized order)
-        return self.cells
+        r1, c1 = self.start
+        r2, c2 = self.end
+
+        # Determine iteration direction based on corner positions
+        row_step = 1 if r1 <= r2 else -1
+        col_step = 1 if c1 <= c2 else -1
+
+        # Iterate rows (from start.row to end.row in the correct direction)
+        r = r1
+        while True:
+            c = c1
+            # Iterate cols (from start.col to end.col in the correct direction)
+            while True:
+                yield Point(r, c)
+                if c == c2:
+                    break
+                c += col_step
+            if r == r2:
+                break
+            r += row_step
+
+    def pieces(self, face: Face) -> Iterator[CenterSlice]:
+        """Yield center slices from the face in original relative order.
+
+        Iterates over the block's points (which preserve the original relative
+        positions) and yields the corresponding center slices from the face.
+
+        Args:
+            face: The cube face to iterate over
+
+        Yields:
+            CenterSlice objects from the face at the block's point positions
+        """
+        for point in self.points:
+            yield face.center.get_center_slice((point.row, point.col))
 
 # =============================================================================
 # SIZE-INDEPENDENT functions (Unit functions) - accept n_slices as parameter
