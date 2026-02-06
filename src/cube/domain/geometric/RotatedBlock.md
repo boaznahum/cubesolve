@@ -277,3 +277,143 @@ cells at positions:    14,    24,    13,    23,    12,    22
 2. All 6 original cells are preserved in the rotated block
 3. Iterator yields all 6 positions, each with a block cell
 4. Cell order in iterator: `14, 24, 13, 23, 12, 22` (completely different from original `12, 13, 14, 22, 23, 24`)
+
+---
+
+### Step 3: After 180° face rotation
+
+**Rotation call:** `block.rotate_clockwise(n_slices=7, n_rotations=2)`
+
+**Rotation formula:** `(r, c) → (6-r, 6-c)` (applies 90° rotation twice)
+
+**Result:** `Block([4,2], [5,4])` - 2×3 horizontal block at cols 2-4, rows 4-5
+
+**BLOCK cells (at new positions):**
+```
+14@[5,2] │ 13@[5,3] │ 12@[5,4]
+24@[4,2] │ 23@[4,3] │ 22@[4,4]
+```
+
+**cells iterator order (row by row):**
+```
+[4,2] → cell 24
+[4,3] → cell 23
+[4,4] → cell 22
+[5,2] → cell 14
+[5,3] → cell 13
+[5,4] → cell 12
+```
+
+---
+
+### Step 4: After 270° CW face rotation (or 90° CCW)
+
+**Rotation call:** `block.rotate_clockwise(n_slices=7, n_rotations=3)`
+
+**Rotation formula:** `(r, c) → (c, 6-r)` (applies 90° rotation three times)
+
+**Result:** `Block([2,4], [4,5])` - 3×2 vertical block at cols 4-5, rows 2-4
+
+**BLOCK cells (at new positions):**
+```
+24@[2,4] │ 14@[2,5]
+23@[3,4] │ 13@[3,5]
+22@[4,4] │ 12@[4,5]
+```
+
+**cells iterator order (row by row):**
+```
+[2,4] → cell 24
+[2,5] → cell 14
+[3,4] → cell 23
+[3,5] → cell 13
+[4,4] → cell 22
+[4,5] → cell 12
+```
+
+---
+
+## Summary of All Rotations
+
+| Rotation | Formula | Result Block | Shape | Cell Order (iterator) |
+|----------|---------|--------------|-------|----------------------|
+| 0° (original) | - | `Block([1,2], [2,4])` | 2×3 horizontal | 12, 13, 14, 22, 23, 24 |
+| 90° CW | `(r,c) → (6-c, r)` | `Block([2,1], [4,2])` | 3×2 vertical | 14, 24, 13, 23, 12, 22 |
+| 180° | `(r,c) → (6-r, 6-c)` | `Block([4,2], [5,4])` | 2×3 horizontal | 24, 23, 22, 14, 13, 12 |
+| 270° CW | `(r,c) → (c, 6-r)` | `Block([2,4], [4,5])` | 3×2 vertical | 24, 14, 23, 13, 22, 12 |
+
+**Key Insight:** The cell order in the iterator changes with each rotation, even though all 6 cells are always preserved.
+
+---
+
+## Detecting Block Orientation
+
+### Mathematical Foundation
+
+**Definitions:**
+- A **normalized** block has: `start.row <= end.row` AND `start.col <= end.col`
+- A **rotated** block (unnormalized) violates these constraints
+
+**Corner Exchange During 90° CW Rotation:**
+
+When a normalized block rotates 90° clockwise, the corners exchange positions:
+
+| Original Corner | After 90° CW | New Corner Position |
+|-----------------|--------------|---------------------|
+| Top-Left `[r1, c1]` | `[N-1-c1, r1]` | **Top-Right** |
+| Bottom-Left `[r2, c1]` | `[N-1-c1, r2]` | **Bottom-Right** |
+| Top-Right `[r1, c2]` | `[N-1-c2, r1]` | **Top-Left** |
+| Bottom-Right `[r2, c2]` | `[N-1-c2, r2]` | **Bottom-Left** |
+
+**Key Observation:** The rotated (unnormalized) block has:
+- **start point** = the former **Top-Right corner** `[r1, c2]`
+- **end point** = the former **Bottom-Left corner** `[r2, c1]`
+
+### The Detection Signal
+
+**For a 90° CW rotation:**
+
+```
+Unnormalized rotated block: Block((N-1-c1, r1), (N-1-c2, r2))
+
+Check if normalized in rows:
+  Is (N-1-c1) <= (N-1-c2)?
+  → -c1 <= -c2
+  → c1 >= c2
+
+This is TRUE only when c1 = c2 (width = 1, single column)
+```
+
+**Theorem:** For any normalized block with **height > 1** AND **width > 1**:
+- After 90° CW rotation: `start.row > end.row` (unnormalized in rows)
+- After 270° CW rotation: `start.row > end.row` (unnormalized in rows)
+
+**Proof:**
+1. Original block has `r1 < r2` (height ≥ 2) and `c1 < c2` (width ≥ 2)
+2. After 90° CW: start.row = N-1-c1, end.row = N-1-c2
+3. Since `c1 < c2`, we have `N-1-c1 > N-1-c2`
+4. Therefore: **start.row > end.row**
+
+### Summary Table
+
+| Block Type | After 90° CW | After 180° | After 270° CW |
+|------------|--------------|------------|---------------|
+| height=1 (single row) | `start.row < end.row` | `start.row < end.row` | `start.row < end.row` |
+| width=1 (single column) | `start.row < end.row` | `start.row < end.row` | `start.row < end.row` |
+| **height>1 AND width>1** | **`start.row > end.row`** ❗ | `start.row < end.row` | **`start.row > end.row`** ❗ |
+
+### Practical Application
+
+**Detection Rule:**
+```python
+def is_rotated_unnormal(block: Block) -> bool:
+    """Detect if block was rotated (unnormalized in rows)."""
+    return block.start.row > block.end.row
+```
+
+**Iterator Behavior:**
+- **Normalized block** (`start.row <= end.row`): Iterate **top-to-bottom**
+- **Unnormalized block** (`start.row > end.row`): Iterate **bottom-to-top**
+
+This signal allows us to determine the correct iteration order without storing additional metadata!
+
