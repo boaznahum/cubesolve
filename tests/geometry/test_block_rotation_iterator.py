@@ -101,8 +101,18 @@ class TestBlockRotationIterator:
         # Assert the rotation is correctly detected
         assert rotated_block.n_rotations == n_rotations
 
+        # Verify that we can detect the original normalized block
+        # from the rotated corners
+        original_detected = rotated_block.detect_original(n_slices=n)
+
+        # Verify that the detected original block matches the original block
+        # The detected original should be exactly the same as the original_block
+        assert original_detected == original_block, \
+            f"Detected original block {original_detected} doesn't match original block {original_block}"
+
+
         # Step 5: Iterate over rotated block using points (preserves original order)
-        rotated_iterator_order = list(rotated_block.points)
+        rotated_iterator_order = list(rotated_block.points(n))
         rotated_markers = {}
 
         for idx, point in enumerate(rotated_iterator_order):
@@ -137,14 +147,6 @@ class TestBlockRotationIterator:
                     f"Cell {i}: marker at rotated[{i}] ({rot_point}) should be '{orig_marker}' but got '{rot_marker}'. " \
                     f"Original was at {orig_point}."
 
-        # Verify that we can detect the original normalized block
-        # from the rotated corners
-        original_detected = rotated_block.detect_original(n_slices=n)
-
-        # Verify that the detected original block matches the original block
-        # The detected original should be exactly the same as the original_block
-        assert original_detected == original_block, \
-            f"Detected original block {original_detected} doesn't match original block {original_block}"
 
     @pytest.mark.parametrize("cube_size", [6, 7])  # Only larger cubes to avoid out-of-bounds
     @pytest.mark.parametrize("n_rotations", [1, 2, 3])  # 90°, 180°, 270°
