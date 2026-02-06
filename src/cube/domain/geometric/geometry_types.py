@@ -304,6 +304,81 @@ class Block:
         for point in self.points(n_slices):
             yield face.center.get_center_slice((point.row, point.col))
 
+    def _detect_rotation_from(self, order_by: Block, n_slices: int) -> int:
+        """Detect the rotation count from order_by to self.
+
+        Tries all 4 rotations of order_by and returns the one that matches
+        self (after normalization).
+
+        Args:
+            order_by: The reference block
+            n_slices: Face size
+
+        Returns:
+            n_rot such that order_by.rotate_clockwise(n_slices, n_rot) == self.normalize
+
+        Raises:
+            ValueError: If self is not a rotation of order_by
+        """
+        from cube.domain.geometric.geometry_utils import rotate_point_clockwise
+
+        self_norm = self.normalize
+        for n_rot in range(4):
+            rotated_start = rotate_point_clockwise(order_by.start, n_slices, n_rot)
+            rotated_end = rotate_point_clockwise(order_by.end, n_slices, n_rot)
+            if Block._normalize(rotated_start, rotated_end) == self_norm:
+                return n_rot
+
+        raise ValueError(f"Block {self} is not a rotation of {order_by}")
+
+    def points_by(self, n_slices: int, order_by: Block | None = None) -> Iterator[Point]:
+        """Yield points of self in the order defined by order_by.
+
+        Iterates over order_by's cells and rotates each point to self's
+        coordinate space. This ensures that when multiple blocks (which are
+        rotations of each other) are iterated with the same order_by,
+        cell[i] from each block corresponds to the same original cell.
+
+        Args:
+            n_slices: Face size (e.g., 7 for a 7x7 face)
+            order_by: The block that defines iteration order. Must be a rotation
+                of self. Defaults to self (plain row-by-row iteration).
+
+        Yields:
+            Points of self, ordered by order_by's cell ordering
+        """
+        if order_by is None or order_by is self:
+            yield from self.cells
+            return
+
+        from cube.domain.geometric.geometry_utils import rotate_point_clockwise
+
+        n_rot = self._detect_rotation_from(order_by, n_slices)
+
+        if n_rot == 0:
+            yield from self.cells
+            return
+
+        for point in order_by.cells:
+            yield rotate_point_clockwise(point, n_slices, n_rot)
+
+    def pieces_by(self, face: Face, order_by: Block | None = None) -> Iterator[CenterSlice]:
+        """Yield center slices of self in the order defined by order_by.
+
+        Same as points_by but yields CenterSlice objects from the face.
+
+        Args:
+            face: The cube face to iterate over
+            order_by: The block that defines iteration order. Must be a rotation
+                of self. Defaults to self (plain row-by-row iteration).
+
+        Yields:
+            CenterSlice objects from the face, ordered by order_by's cell ordering
+        """
+        n_slices = face.cube.n_slices
+        for point in self.points_by(n_slices, order_by):
+            yield face.center.get_center_slice((point.row, point.col))
+
 # =============================================================================
 # SIZE-INDEPENDENT functions (Unit functions) - accept n_slices as parameter
 # These have n_slices as FIRST parameter (consistent convention)
