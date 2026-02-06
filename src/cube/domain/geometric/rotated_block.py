@@ -237,14 +237,15 @@ class RotatedBlock:
         # Normalized: start.row <= end.row AND start.col <= end.col
         if r1 <= r2 and c1 <= c2:
             return 0
-        # After 90° or 270° CW: start.row > end.row (unnormalized in rows)
-        elif r1 > r2:
-            # Check column relationship to distinguish 90° from 270°
-            # 90° CW: c1 < c2, 270° CW: c1 > c2
-            return 1 if c1 <= c2 else 3
-        # After 180°: start.col > end.col (unnormalized in cols only)
-        else:  # r1 <= r2 and c1 > c2
-            return 2
+        # After 90° CW: start.row > end.row, start.col < end.col
+        if r1 > r2 and c1 < c2:
+            return 1
+        # After 270° CW: start.row < end.row, start.col > end.col
+        if r1 < r2 and c1 > c2:
+            return 3
+        # After 180°: both inverted (start.row > end.row AND start.col > end.col)
+        # OR the alternative corner ordering for 180°
+        return 2
 
     @staticmethod
     def from_points(start: Point, end: Point, n_slices: int, n_rotations: int = 0) -> RotatedBlock:

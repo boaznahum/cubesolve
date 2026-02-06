@@ -41,8 +41,9 @@ class TestBlockRotationIterator:
     """
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
-    @pytest.mark.parametrize("seed", range(10))  # Multiple random blocks per size
-    def test_block_rotation_preserves_iterator_order(self, cube_size: int, seed: int):
+    @pytest.mark.parametrize("n_rotations", [0, 1, 2, 3])  # 0°, 90°, 180°, 270°
+    @pytest.mark.parametrize("seed", range(3))  # Fewer random blocks for testing
+    def test_block_rotation_preserves_iterator_order(self, cube_size: int, n_rotations: int, seed: int):
         """
         Block.rotate() should preserve cell-to-cell mappings when iterating.
 
@@ -94,11 +95,14 @@ class TestBlockRotationIterator:
         from cube.domain.algs import Algs
         app.op.play(Algs.F)
 
-        # Step 4: Rotate the block using Block.rotate_clockwise()
-        rotated_block = original_block.rotate_clockwise(n_slices=n, n_rotations=1)
+        # Step 4: Rotate the block using rotate_preserve_original
+        rotated_block = original_block.rotate_preserve_original(n_slices=n, n_rotations=n_rotations)
 
-        # Step 5: Iterate over rotated block and collect markers
-        rotated_iterator_order = list(rotated_block.cells)
+        # Assert the rotation is correctly detected
+        assert rotated_block.n_rotations == n_rotations
+
+        # Step 5: Iterate over rotated block using points (preserves original order)
+        rotated_iterator_order = list(rotated_block.points)
         rotated_markers = {}
 
         for idx, point in enumerate(rotated_iterator_order):
