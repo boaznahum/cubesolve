@@ -452,7 +452,8 @@ class TestMultiCellBlockCommutator:
     """
 
     @pytest.mark.parametrize("cube_size", [5, 6, 7])
-    def test_block_commutator_3_cycle(self, cube_size: int):
+    @pytest.mark.parametrize("face_pair", SUPPORTED_PAIRS, ids=_face_pair_id)
+    def test_block_commutator_3_cycle(self, cube_size: int, face_pair: tuple[FaceName, FaceName]):
         """
         Block commutator correctly cycles all cells in the block.
 
@@ -472,9 +473,9 @@ class TestMultiCellBlockCommutator:
 
         comm_helper = get_new_comm_helper(app)
 
-        # Use Front as target, Up as source (a common pair)
-        target_face = cube.front
-        source_face = cube.up
+        # Extract source and target faces from pair
+        source_face = cube.face(face_pair[0])
+        target_face = cube.face(face_pair[1])
         n = cube.n_slices
 
         failures = []
@@ -505,10 +506,6 @@ class TestMultiCellBlockCommutator:
 
                 # Reset cube for clean test
                 cube.reset()
-
-                # Refresh face references after reset (they become stale)
-                target_face = cube.front
-                source_face = cube.up
 
                 # Get the 3-cycle blocks using dry_run
                 dry_result = comm_helper.execute_commutator(
