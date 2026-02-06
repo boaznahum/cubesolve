@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, NamedTuple, Protocol, Tuple
 if TYPE_CHECKING:
     from cube.domain.model.Edge import Edge
     from cube.domain.model.PartSlice import EdgeWing
+    from cube.domain.geometric.rotated_block import RotatedBlock
 
 
 class CLGColRow(Enum):
@@ -155,12 +156,79 @@ class Block(NamedTuple):
 
 
     def rotate_clockwise(self, n_slices: int, n_rotations: int = 1) -> Block:
-        """Return a new Block rotated clockwise by n rotations."""
+        """Return a new Block rotated clockwise by n rotations.
+
+        Note: This normalizes the result, losing cell-to-cell mapping information.
+        Use rotate_preserve_original() to preserve the original relative positions.
+        """
         # Late import to avoid circular dependency
         from cube.domain.geometric import geometry_utils
         new_start = geometry_utils.rotate_point_clockwise(self.start, n_slices, n_rotations=n_rotations)
         new_end = geometry_utils.rotate_point_clockwise(self.end, n_slices, n_rotations=n_rotations)
         return Block._normalize(new_start, new_end)
+
+    def rotate_preserve_original(self, n_slices: int, n_rotations: int = 1) -> RotatedBlock:
+        """Return a RotatedBlock that preserves original cell-to-cell mappings.
+
+        Unlike rotate_clockwise() which normalizes the result and loses the
+        cell-to-cell mapping, this method returns a RotatedBlock that tracks
+        the rotation and enables iteration in the original relative order.
+
+        See RotatedBlock.md for details on how the orientation is detected
+        and how cell order is preserved.
+
+        Args:
+            n_slices: Face size (e.g., 7 for a 7x7 face)
+            n_rotations: Number of 90° CW rotations (default: 1)
+
+        Returns:
+            A RotatedBlock with rotated corners and tracking n_rotations,
+            enabling the points/pieces properties to preserve original order
+        """
+        # Late import to avoid circular dependency
+        from cube.domain.geometric import geometry_utils
+        new_start = geometry_utils.rotate_point_clockwise(self.start, n_slices, n_rotations=n_rotations)
+        new_end = geometry_utils.rotate_point_clockwise(self.end, n_slices, n_rotations=n_rotations)
+        from cube.domain.geometric.rotated_block import RotatedBlock
+        return RotatedBlock.from_points(new_start, new_end, n_slices=n_slices, n_rotations=n_rotations)
+
+    @property
+    def is_normalized(self) -> bool:
+        """Check if the block is in normalized orientation.
+
+        A normalized block has start.row <= end.row and start.col <= end.col.
+
+        Returns:
+            True if the block is normalized, False otherwise
+        """
+        r1, c1 = self.start
+        r2, c2 = self.end
+        return r1 <= r2 and c1 <= c2
+
+    @property
+    def n_rotations(self) -> int:
+        """Return the number of rotations from the original normalized state.
+
+        For a regular Block (not RotatedBlock), this is always 0.
+
+        Returns:
+            Always 0 for a regular Block
+        """
+        return 0
+
+    @property
+    def points(self) -> Iterator[Point]:
+        """Yield points in the order that preserves original relative positions.
+
+        For a regular Block, this is the same as the cells property since
+        n_rotations is always 0. This property exists for API compatibility
+        with RotatedBlock.
+
+        Returns:
+            Iterator of Points in row-by-row order
+        """
+        # For a regular Block, points = cells (normalized order)
+        return self.cells
 
 # =============================================================================
 # SIZE-INDEPENDENT functions (Unit functions) - accept n_slices as parameter
