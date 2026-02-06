@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from cube.domain.model.PartSlice import EdgeWing
     from cube.domain.model.Face import Face
     from cube.domain.model.PartSlice import CenterSlice
+    from cube.domain.geometric.rotated_block import RotatedBlock
 
 
 class CLGColRow(Enum):
@@ -224,6 +225,24 @@ class Block:
         # Late import to avoid circular dependency
         from cube.domain.geometric.rotated_block import RotatedBlock
         return RotatedBlock.detect_n_rotations(self.start, self.end)
+
+    def detect_original(self, n_slices: int) -> RotatedBlock:
+        """Detect the original normalized block and create a RotatedBlock.
+
+        Analyzes the corner positions to determine how many rotations have
+        been applied and returns a RotatedBlock with the detected n_rotations.
+
+        Delegates to RotatedBlock.from_block() for the actual logic.
+
+        Args:
+            n_slices: Face size (e.g., 7 for a 7x7 face)
+
+        Returns:
+            A RotatedBlock with the detected n_rotations
+        """
+        # Late import to avoid circular dependency
+        from cube.domain.geometric.rotated_block import RotatedBlock
+        return RotatedBlock.from_block(self, n_slices=n_slices)
 
     @property
     def points(self) -> Iterator[Point]:
