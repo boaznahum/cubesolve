@@ -140,8 +140,11 @@ class TestBlockRotationIterator:
         # Verify that we can detect the original normalized block
         # from the rotated corners
         original_detected = rotated_block.detect_original(n_slices=n)
-        assert original_detected.n_rotations == n_rotations, \
-            f"Detected n_rotations should be {n_rotations} but got {original_detected.n_rotations}"
+
+        # Verify that the detected original block matches the original block
+        # The detected original should be exactly the same as the original_block
+        assert original_detected == original_block, \
+            f"Detected original block {original_detected} doesn't match original block {original_block}"
 
     @pytest.mark.parametrize("cube_size", [6, 7])  # Only larger cubes to avoid out-of-bounds
     @pytest.mark.parametrize("n_rotations", [1, 2, 3])  # 90°, 180°, 270°

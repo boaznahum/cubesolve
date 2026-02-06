@@ -226,23 +226,34 @@ class Block:
         from cube.domain.geometric.rotated_block import RotatedBlock
         return RotatedBlock.detect_n_rotations(self.start, self.end)
 
-    def detect_original(self, n_slices: int) -> RotatedBlock:
-        """Detect the original normalized block and create a RotatedBlock.
+    def detect_original(self, n_slices: int) -> Block:
+        """Detect and return the original normalized block.
 
         Analyzes the corner positions to determine how many rotations have
-        been applied and returns a RotatedBlock with the detected n_rotations.
-
-        Delegates to RotatedBlock.from_block() for the actual logic.
+        been applied, then reverse-rotates the corners to recover the original
+        normalized block (n_rotations=0).
 
         Args:
             n_slices: Face size (e.g., 7 for a 7x7 face)
 
         Returns:
-            A RotatedBlock with the detected n_rotations
+            The original normalized Block (with n_rotations=0)
         """
         # Late import to avoid circular dependency
         from cube.domain.geometric.rotated_block import RotatedBlock
-        return RotatedBlock.from_block(self, n_slices=n_slices)
+        from cube.domain.geometric import geometry_utils
+
+        # Detect how many rotations were applied
+        n_rot = RotatedBlock.detect_n_rotations(self.start, self.end)
+
+        # Reverse-rotate the corners to get the original normalized block
+        # If we rotated 90° CW (n_rot=1), reverse by rotating 270° CW (n_rot=-1 or 3)
+        reverse_n_rot = (-n_rot) % 4
+        orig_start = geometry_utils.rotate_point_clockwise(self.start, n_slices, n_rotations=reverse_n_rot)
+        orig_end = geometry_utils.rotate_point_clockwise(self.end, n_slices, n_rotations=reverse_n_rot)
+
+        # The original block is always normalized (that's the definition)
+        return Block(orig_start, orig_end)
 
     @property
     def points(self) -> Iterator[Point]:

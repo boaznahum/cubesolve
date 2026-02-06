@@ -201,6 +201,25 @@ class RotatedBlock:
         for point in self.points:
             yield face.center.get_center_slice((point.row, point.col))
 
+    @property
+    def normalize(self) -> Block:
+        """Return a normalized Block from this RotatedBlock.
+
+        Creates a regular Block with the corners normalized (start.row <= end.row
+        and start.col <= end.col).
+
+        Returns:
+            A normalized Block with the same corner positions
+        """
+        from cube.domain.geometric.geometry_types import Block, Point
+        r1, c1 = self.start.row, self.start.col
+        r2, c2 = self.end.row, self.end.col
+        if r1 > r2:
+            r1, r2 = r2, r1
+        if c1 > c2:
+            c1, c2 = c2, c1
+        return Block(Point(r1, c1), Point(r2, c2))
+
     def rotate(self, n_rotations: int) -> RotatedBlock:
         """Return a new RotatedBlock with adjusted rotation count.
 
