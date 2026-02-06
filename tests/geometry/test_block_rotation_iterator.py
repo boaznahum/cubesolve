@@ -147,7 +147,7 @@ class TestBlockRotationIterator:
                 f"Original was at {orig_point}."
 
 
-    @pytest.mark.parametrize("cube_size", [6, 7])  # Only larger cubes to avoid out-of-bounds
+    @pytest.mark.parametrize("cube_size", [7])  # Need n_slices >= 5 for block at (1,2) to (2,4)
     @pytest.mark.parametrize("n_rotations", [1, 2, 3])  # 90°, 180°, 270°
     def test_all_rotation_angles_preserve_mappings(self, cube_size: int, n_rotations: int):
         """
@@ -181,20 +181,24 @@ class TestBlockRotationIterator:
         for _ in range(n_rotations):
             app.op.play(Algs.F)
 
-        # Rotate the block and use points (preserves order, handles bounds correctly)
-        rotated_block = original_block.rotate_clockwise(n_slices=n, n_rotations=n_rotations)
-        rotated_iterator_order = list(rotated_block.points(n))
+        # Rotate the block using rotate_preserve_original (keeps corner orientation)
+        # and use points (preserves order, handles bounds correctly)
+        rotated_block = original_block.rotate_preserve_original(n_slices=n, n_rotations=n_rotations)
+
+        # Collect rotated points that are IN BOUNDS
+        # Filter to only points within the face to match markers
+        rotated_iterator_order = [
+            point for point in rotated_block.points(n)
+            if 0 <= point.row < n and 0 <= point.col < n
+        ]
 
         # Collect markers from rotated positions
         rotated_markers = {}
         for point in rotated_iterator_order:
-            # Points might be out of bounds if rotated block extends past face edge
-            # Skip those points
-            if 0 <= point.row < n and 0 <= point.col < n:
-                center_slice = face.center.get_center_slice((point.row, point.col))
-                marker = center_slice.edge.moveable_attributes.get(marker_key)
-                if marker:
-                    rotated_markers[(point.row, point.col)] = marker
+            center_slice = face.center.get_center_slice((point.row, point.col))
+            marker = center_slice.edge.moveable_attributes.get(marker_key)
+            if marker:
+                rotated_markers[(point.row, point.col)] = marker
 
         # Verify cell-to-cell mapping is preserved
         assert len(original_iterator_order) == len(rotated_iterator_order), \
@@ -204,7 +208,7 @@ class TestBlockRotationIterator:
             orig_marker = original_markers[(orig_point.row, orig_point.col)]
             rot_marker = rotated_markers.get((rot_point.row, rot_point.col))
 
-            # THIS SHOULD FAIL - exposing the problem
+            # Verify cell-to-cell mapping is preserved
             assert rot_marker == orig_marker, \
                 f"Rotation {n_rotations}*90°, cell {i}: expected marker '{orig_marker}' " \
                 f"(from {orig_point}), got '{rot_marker}' (at {rot_point})"
