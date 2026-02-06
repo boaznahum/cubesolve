@@ -90,8 +90,24 @@ class RotatedBlock:
         Returns:
             Iterator of Points in order that preserves original relative positions
         """
-        r1, c1 = self.start.row, self.start.col
-        r2, c2 = self.end.row, self.end.col
+        return RotatedBlock.iterate_points(self.start, self.end)
+
+    @staticmethod
+    def iterate_points(start: Point, end: Point) -> Iterator[Point]:
+        """Iterate over points in order that preserves original relative positions.
+
+        Uses the unnormalized corner positions to determine the correct
+        iteration direction, avoiding code duplication with Block.
+
+        Args:
+            start: First corner of the block
+            end: Second corner of the block
+
+        Yields:
+            Points in order that preserves original relative positions
+        """
+        r1, c1 = start.row, start.col
+        r2, c2 = end.row, end.col
 
         # Determine iteration direction based on corner positions
         row_step = 1 if r1 <= r2 else -1
@@ -199,7 +215,7 @@ class RotatedBlock:
         )
 
     @staticmethod
-    def _detect_n_rotations(start: Point, end: Point) -> int:
+    def detect_n_rotations(start: Point, end: Point) -> int:
         """Detect the number of rotations based on corner orientation.
 
         Analyzes the relationship between start and end points to determine
@@ -249,7 +265,7 @@ class RotatedBlock:
         Returns:
             A new RotatedBlock with computed n_rotations
         """
-        detected = RotatedBlock._detect_n_rotations(start, end)
+        detected = RotatedBlock.detect_n_rotations(start, end)
         total_n_rotations = (detected + n_rotations) % 4
 
         return RotatedBlock(

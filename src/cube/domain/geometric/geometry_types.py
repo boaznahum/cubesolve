@@ -205,51 +205,33 @@ class Block(NamedTuple):
         """
         # Late import to avoid circular dependency
         from cube.domain.geometric.rotated_block import RotatedBlock
-        return RotatedBlock._detect_n_rotations(self.start, self.end) == 0
+        return RotatedBlock.detect_n_rotations(self.start, self.end) == 0
 
     @property
     def n_rotations(self) -> int:
         """Detect and return the number of rotations from original normalized state.
 
-        Delegates to RotatedBlock._detect_n_rotations() for the actual logic.
+        Delegates to RotatedBlock.detect_n_rotations() for the actual logic.
 
         Returns:
             Detected n_rotations value (0, 1, 2, or 3)
         """
         # Late import to avoid circular dependency
         from cube.domain.geometric.rotated_block import RotatedBlock
-        return RotatedBlock._detect_n_rotations(self.start, self.end)
+        return RotatedBlock.detect_n_rotations(self.start, self.end)
 
     @property
     def points(self) -> Iterator[Point]:
         """Yield points in the order that preserves original relative positions.
 
-        Uses the unnormalized corner positions to determine the correct
-        iteration direction, preserving the cell-to-cell mapping.
+        Delegates to RotatedBlock.iterate_points() to avoid code duplication.
 
         Returns:
             Iterator of Points in order that preserves original relative positions
         """
-        r1, c1 = self.start
-        r2, c2 = self.end
-
-        # Determine iteration direction based on corner positions
-        row_step = 1 if r1 <= r2 else -1
-        col_step = 1 if c1 <= c2 else -1
-
-        # Iterate rows (from start.row to end.row in the correct direction)
-        r = r1
-        while True:
-            c = c1
-            # Iterate cols (from start.col to end.col in the correct direction)
-            while True:
-                yield Point(r, c)
-                if c == c2:
-                    break
-                c += col_step
-            if r == r2:
-                break
-            r += row_step
+        # Late import to avoid circular dependency
+        from cube.domain.geometric.rotated_block import RotatedBlock
+        return RotatedBlock.iterate_points(self.start, self.end)
 
     def pieces(self, face: Face) -> Iterator[CenterSlice]:
         """Yield center slices from the face in original relative order.
