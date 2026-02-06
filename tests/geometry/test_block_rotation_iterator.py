@@ -91,9 +91,10 @@ class TestBlockRotationIterator:
         # Record the iterator order (this is what we want to preserve)
         original_iterator_order = list(original_block.cells)
 
-        # Step 3: Rotate the face (90° clockwise F move)
+        # Step 3: Rotate the face n_rotations times (90° clockwise F move each time)
         from cube.domain.algs import Algs
-        app.op.play(Algs.F)
+        for _ in range(n_rotations):
+            app.op.play(Algs.F)
 
         # Step 4: Rotate the block using rotate_preserve_original
         rotated_block = original_block.rotate_preserve_original(n_slices=n, n_rotations=n_rotations)
