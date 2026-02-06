@@ -43,12 +43,17 @@ class Point(NamedTuple):
     col: int
 
 
-class Block(NamedTuple):
+@dataclass(frozen=True)
+class Block:
     """A rectangle defined by two corner points.
 
     Note: The start and end points may not be in normalized order (i.e., start
     may not be top-left and end may not be bottom-right). Consumers should
     normalize the coordinates when needed for specific operations.
+
+    Attributes:
+        start: First corner of the block
+        end: Second corner of the block
     """
     start: Point
     end: Point
@@ -224,7 +229,7 @@ class Block(NamedTuple):
     def points(self) -> Iterator[Point]:
         """Yield points in the order that preserves original relative positions.
 
-        Delegates to RotatedBlock.iterate_points() to avoid code duplication.
+        Delegates to RotatedBlock.iterate_points for the actual logic.
 
         Returns:
             Iterator of Points in order that preserves original relative positions
@@ -236,8 +241,8 @@ class Block(NamedTuple):
     def pieces(self, face: Face) -> Iterator[CenterSlice]:
         """Yield center slices from the face in original relative order.
 
-        Iterates over the block's points (which preserve the original relative
-        positions) and yields the corresponding center slices from the face.
+        Uses Block.points (which delegates to RotatedBlock.iterate_points)
+        to get the correct order, then yields center slices from the face.
 
         Args:
             face: The cube face to iterate over

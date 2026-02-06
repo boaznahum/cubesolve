@@ -90,7 +90,28 @@ class RotatedBlock:
         Returns:
             Iterator of Points in order that preserves original relative positions
         """
-        return RotatedBlock.iterate_points(self.start, self.end)
+        # Late import to avoid circular dependency
+        from cube.domain.geometric.geometry_utils import rotate_point_clockwise
+
+        # Get the normalized original block's cells
+        # We need to iterate over the ORIGINAL block in its normalized state
+        r1, c1 = self.start.row, self.start.col
+        r2, c2 = self.end.row, self.end.col
+
+        # Normalize to get the original cell positions (before rotation)
+        orig_r1, orig_c1 = min(r1, r2), min(c1, c2)
+        orig_r2, orig_c2 = max(r1, r2), max(c1, c2)
+
+        # Iterate over the original normalized block's cells
+        for r in range(orig_r1, orig_r2 + 1):
+            for c in range(orig_c1, orig_c2 + 1):
+                # Transform each original cell by the rotation
+                rotated_point = rotate_point_clockwise(
+                    Point(r, c),
+                    n_slices=self.n_slices,
+                    n_rotations=self.n_rotations
+                )
+                yield rotated_point
 
     @staticmethod
     def iterate_points(start: Point, end: Point) -> Iterator[Point]:
