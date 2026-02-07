@@ -38,6 +38,7 @@ from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.direct.lbl import _common
 from cube.domain.solver.direct.lbl._LBLL3Edges import _LBLL3Edges
 from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
+from cube.domain.solver.exceptions import SolverFaceColorsChangedNeedRestartException
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import Solver, SolverResults, SolveStep
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -244,6 +245,29 @@ class LayerByLayerNxNSolver(BaseSolver):
     # =========================================================================
 
     def _solve_impl(self, what: SolveStep) -> SolverResults:
+
+        max_iterations = 3
+        iterations = 0
+
+
+        while True:
+            # 1. first iteration
+            # 2. Retry after face changed
+            # 3 Error
+            iterations += 1
+            if iterations >= max_iterations:
+                raise InternalSWError("Too many iterations for solver")
+
+            try:
+                return self._solve_impl2(what)
+            except SolverFaceColorsChangedNeedRestartException as _:
+                self.debug("Retrying after face colors changed")
+                continue
+
+        assert False # to satisfy pyCharm we not really can reach here
+
+
+    def _solve_impl2(self, what: SolveStep) -> SolverResults:
         """Solve using Layer-by-Layer method.
 
         Args:
@@ -685,18 +709,7 @@ class LayerByLayerNxNSolver(BaseSolver):
             raise InternalSWError("How di we reach here?")
 
         else:
-            # Global center-slice pre-alignment: rotate the center E-slice
-            # to maximize total solved pieces across all rows.
-            # This changes face.color, so trackers must be rebuilt.
-            rotated = self._lbl_slices.global_center_slice_prealign(l1_tracker)
-
-            if rotated:
-                # Face colors changed — rebuild trackers with new face colors
-                with FacesTrackerHolder(self) as new_th:
-                    new_l1 = self._get_layer1_tracker(new_th)
-                    self._lbl_slices.solve_all_faces_all_rows(new_th, new_l1)
-            else:
-                self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
+            self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
 
         # After solving, L1 edges may not match equatorial face colors
         # (e.g. if global prealign changed face colors). Fix with D rotation.

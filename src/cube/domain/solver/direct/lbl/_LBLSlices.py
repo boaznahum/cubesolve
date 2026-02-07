@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING
 from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.solver.common.SolverHelper import SolverHelper
+from cube.domain.solver.exceptions import SolverFaceColorsChangedNeedRestartException
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl import _lbl_config, _common
@@ -168,7 +169,7 @@ class _LBLSlices(SolverHelper):
             for r in range(n_rows)
         )
 
-    def global_center_slice_prealign(self, l1_white_tracker: FaceTracker) -> bool:
+    def _global_center_slice_prealign(self, l1_white_tracker: FaceTracker) -> bool:
         """Try rotating the center E-slice for global alignment.
 
         The center E-slice contains the face center pieces that determine
@@ -221,13 +222,15 @@ class _LBLSlices(SolverHelper):
                     best_rot = n_rot
 
         if best_rot > 0:
-            self.debug(f"Global center-slice pre-align: {best_rot}x rotation "
+            self.debug(lambda : f"Global center-slice pre-align: {best_rot}x rotation "
                        f"({best_count} total pieces aligned)")
-            print(f"[LBL] Global center-slice pre-align: {best_rot}x rotation "
+            self.debug(lambda :f"[LBL] Global center-slice pre-align: {best_rot}x rotation "
                   f"({best_count} total pieces aligned)")
             # Rotate the center E-slice to change equatorial face colors
             for _ in range(best_rot):
                 self.play(center_slice_alg)
+
+            # caller will raise exception to restart solver
             return True
 
         return False
@@ -404,6 +407,19 @@ class _LBLSlices(SolverHelper):
         The commutator uses UP as source, so if Layer 1 is on UP, we'll mess it up.
         """
         # Solve all slices from bottom to top
+
+        # Global center-slice pre-alignment: rotate the center E-slice
+        # to maximize total solved pieces across all rows.
+        # This changes face.color, so trackers must be rebuilt.
+        rotated = self._global_center_slice_prealign(l1_white_tracker)
+
+        if rotated:
+            raise SolverFaceColorsChangedNeedRestartException()
+            # Face colors changed — rebuild trackers with new face colors
+            with FacesTrackerHolder(self) as new_th:
+                new_l1 = self._get_layer1_tracker(new_th)
+                self._lbl_slices.solve_all_faces_all_rows(new_th, new_l1)
+
 
         # in this files row_index is the distance between l1_face, no metter on which orientation
 
