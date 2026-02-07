@@ -117,7 +117,7 @@ class RotatedBlock:
                 for c in range(c1, c2 + 1):
                     yield Point(r, c)
 
-        elif r1 > r2 and c1 < c2:
+        elif r1 > r2 and c1 <= c2:
             # n_rot == 1: reverse corners via 3 CW, then apply 1 CW per point
             # original corners: (c1, nm1-r1) to (c2, nm1-r2) — already normalized
             for r in range(c1, c2 + 1):
@@ -266,11 +266,13 @@ class RotatedBlock:
         # Normalized: start.row <= end.row AND start.col <= end.col
         if r1 <= r2 and c1 <= c2:
             return 0
-        # After 90° CW: start.row > end.row, start.col < end.col
-        if r1 > r2 and c1 < c2:
+        # After 90° CW: start.row > end.row, start.col <= end.col
+        # (includes c1 == c2 for single-column blocks rotated to single-row)
+        if r1 > r2 and c1 <= c2:
             return 1
-        # After 270° CW: start.row < end.row, start.col > end.col
-        if r1 < r2 and c1 > c2:
+        # After 270° CW: start.row <= end.row, start.col > end.col
+        # (includes r1 == r2 for single-row blocks rotated to single-column)
+        if r1 <= r2 and c1 > c2:
             return 3
         # After 180°: both inverted (start.row > end.row AND start.col > end.col)
         # OR the alternative corner ordering for 180°
