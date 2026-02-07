@@ -269,6 +269,30 @@ class Block:
         # The kernel is always normalized (by definition)
         return Block(kernel_start, kernel_end)
 
+    def same_kernel(self, other: Block, n_slices: int) -> Block | None:
+        """Return the shared kernel if self and other are rotations of the same kernel.
+
+        Two blocks share a kernel if one can be obtained from the other by
+        0, 1, 2, or 3 clockwise 90° rotations on an n_slices × n_slices face.
+
+        Args:
+            other: The other block to compare with
+            n_slices: Face size (e.g., 7 for a 7x7 face)
+
+        Returns:
+            The shared kernel Block if they are rotations of each other, None otherwise
+        """
+        from cube.domain.geometric.geometry_utils import rotate_point_clockwise
+
+        self_norm = self.normalize
+        other_norm = other.normalize
+        for n_rot in range(4):
+            rotated_start = rotate_point_clockwise(other_norm.start, n_slices, n_rot)
+            rotated_end = rotate_point_clockwise(other_norm.end, n_slices, n_rot)
+            if Block._normalize(rotated_start, rotated_end) == self_norm:
+                return self_norm
+        return None
+
     def _detect_rotation_from(self, order_by: Block, n_slices: int) -> int:
         """Detect the rotation count from order_by to self.
 
@@ -297,21 +321,42 @@ class Block:
         raise ValueError(f"Block {self} is not a rotation of {order_by}")
 
     def points_by(self, n_slices: int, order_by: Block | None = None) -> Iterator[Point]:
-        """Yield points of self in kernel order.
+        """Yield points of self in kernel order defined by order_by.
 
-        The kernel is determined by order_by (normalized to its kernel form).
-        All blocks that are rotations of the same kernel can be iterated with
-        the same order_by, ensuring cell[i] from each block corresponds to
-        the same kernel cell.
+        **What is order_by?**
+
+        When multiple blocks are rotations of the same kernel (verified by
+        same_kernel()), they cover the same cells at different positions.
+        Passing the same order_by to each block's points_by ensures that
+        cell[i] from every block corresponds to the same kernel cell —
+        regardless of whether self is normalized or not.
+
+        order_by is always normalized to its kernel internally. Self and
+        order_by must share a kernel (be rotations of each other), otherwise
+        _detect_rotation_from raises ValueError.
+
+        **Example — commutator 3-cycle with aligned iteration:**
+
+        Given blocks s1, t, s2 that are rotations of the same kernel::
+
+            kernel = s1.same_kernel(t, n)  # verify they share a kernel
+            s1_cells = list(s1.points_by(n, order_by=t))
+            t_cells  = list(t.points_by(n, order_by=t))
+            s2_cells = list(s2.points_by(n, order_by=t))
+            # Now s1_cells[i], t_cells[i], s2_cells[i] all refer to the
+            # same kernel cell — enabling correct marker comparison.
 
         Args:
             n_slices: Face size (e.g., 7 for a 7x7 face)
-            order_by: The kernel that defines iteration order. Must be a rotation
-                of self. Gets normalized if not already. Defaults to self
-                (plain row-by-row iteration).
+            order_by: Block that defines the iteration order (normalized to its
+                kernel). Must share a kernel with self. Defaults to None
+                (plain row-by-row iteration of self).
 
         Yields:
             Points of self in kernel order
+
+        Raises:
+            ValueError: If self and order_by don't share a kernel
         """
         if order_by is None or order_by is self:
             yield from self.cells
@@ -333,18 +378,22 @@ class Block:
         yield from RotatedBlock.iterate_points(rotated.start, rotated.end, n_slices)
 
     def pieces_by(self, face: Face, order_by: Block | None = None) -> Iterator[CenterSlice]:
-        """Yield center slices of self in kernel order.
+        """Yield center slices of self in kernel order defined by order_by.
 
         Same as points_by but yields CenterSlice objects from the face.
+        See points_by for full documentation of order_by semantics.
 
         Args:
             face: The cube face to iterate over
-            order_by: The kernel that defines iteration order. Must be a rotation
-                of self. Gets normalized if not already. Defaults to self
-                (plain row-by-row iteration).
+            order_by: Block that defines the iteration order (normalized to its
+                kernel). Must share a kernel with self. Defaults to None
+                (plain row-by-row iteration of self).
 
         Yields:
             CenterSlice objects from the face in kernel order
+
+        Raises:
+            ValueError: If self and order_by don't share a kernel
         """
         n_slices = face.cube.n_slices
         for point in self.points_by(n_slices, order_by):
