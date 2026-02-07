@@ -559,12 +559,11 @@ class NxNCenters2(SolverHelper):
         natural_source_block = dry_result.natural_source_block
         second_block = dry_result.second_block
 
-        # Get the target piece color (for 1x1 optimization, see _source_block_has_color_no_rotation)
-        target_piece_color = target_face.center.get_center_slice(block.start).color
-
         # Check if natural source block has required colors (with rotation search)
+        # Cell-to-cell mapping uses points_by to align target and s2 cells
         valid_source = self._source_block_has_color_with_rotation(
-            required_color, source_face, natural_source_block, second_block, target_piece_color
+            required_color, source_face, natural_source_block, second_block,
+            target_face, block
         )
 
         if valid_source is None:
@@ -607,7 +606,8 @@ class NxNCenters2(SolverHelper):
         source_face: Face,
         source_block: Block,
         second_block: Block,
-        target_piece_color: Color | None = None
+        target_face: Face,
+        target_block: Block,
     ) -> bool:
         """
         Check if source block has required color WITHOUT rotation search.
@@ -617,7 +617,7 @@ class NxNCenters2(SolverHelper):
         The commutator performs: s1 → t → s2 → s1
         After execution:
           - t (target) receives color from s1 (this is `required_color`)
-          - s2 (second) receives color from t (this is `target_piece_color`)
+          - s2 (second) receives color from t (cell-by-cell in kernel order)
           - s1 (source) receives color from s2
 
         WHAT WE CHECK:
@@ -631,20 +631,20 @@ class NxNCenters2(SolverHelper):
         - If s2 IS solved: only safe if incoming color equals current color
           (replacing RED with RED = no change = safe)
 
-        WHY ONLY FOR 1x1 BLOCKS?
-        ========================
-        For multi-cell blocks (e.g., 2x3), we cannot easily map which target cell
-        color goes to which s2 cell after rotation. The mapping depends on block
-        orientation. For 1x1 blocks, there's only one cell, so no mapping needed.
-
-        For multi-cell blocks, we use strict check: never touch solved pieces.
+        CELL-TO-CELL MAPPING:
+        =====================
+        The commutator moves colors in kernel order: t_cell[i] → s2_cell[i].
+        Using points_by(n, order_by=target_block) on both target_block and
+        second_block gives aligned cell indices, enabling per-cell color check
+        for blocks of ANY size (1x1, 2x1, 2x3, etc.).
 
         Args:
             required_color: Color required for all cells in source block
-            source_face: Face to check
-            source_block: Block to check (natural source position)
+            source_face: Face containing source and second blocks
+            source_block: Block to check (source position)
             second_block: Block that will be displaced (receives target's color)
-            target_piece_color: Color of target piece (only used for 1x1 blocks)
+            target_face: Face containing the target block
+            target_block: Target block (defines kernel ordering for cell mapping)
 
         Returns:
             True if source_block has required colors AND second_block is safe
@@ -658,21 +658,22 @@ class NxNCenters2(SolverHelper):
         if not all_match:
             return False
 
-        # Check that second_block won't destroy solved pieces
-        is_single_cell = second_block.size == 1
+        n = self.n_slices
 
-        for pt in self._block_iter(second_block):
+        # Check that second_block won't destroy solved pieces.
+        # Get target colors in kernel order (aligned with second_block cells).
+        t_colors = [target_face.center.get_center_slice(pt).color
+                     for pt in target_block.points_by(n, order_by=target_block)]
+
+        for i, pt in enumerate(second_block.points_by(n, order_by=target_block)):
             second_piece = source_face.center.get_center_slice(pt)
 
             if _common.is_slice_solved_and_marked_solve(second_piece):
-                # s2 is solved - check if we can safely overwrite it
+                # s2 is solved - check if incoming color (from target) matches
+                if t_colors[i] == second_piece.color:
+                    continue  # Same color - safe, no actual change
 
-                if is_single_cell and target_piece_color is not None:
-                    # 1x1 block: check if incoming color matches current color
-                    if target_piece_color == second_piece.color:
-                        continue  # Same color - safe, no actual change
-
-                # Multi-cell block OR color would change: not safe
+                # Color would change: not safe
                 return False
 
         return True
@@ -683,28 +684,31 @@ class NxNCenters2(SolverHelper):
         source_face: Face,
         source_block: Block,
         second_block: Block,
-        target_piece_color: Color | None = None
+        target_face: Face,
+        target_block: Block,
     ) -> Block | None:
         """
         Search for valid source block by rotating up to 4 times.
 
-        For 1x1 blocks: rotation search makes sense (shape is invariant).
-        For multi-cell blocks: rotation changes shape, but we still try
-        (the shape check happens elsewhere).
+        Tries rotating source_block and second_block together up to 4 times
+        (0°, 90°, 180°, 270°). The commutator adds a matching setup rotation
+        to compensate.
 
         Args:
             required_color: Color required in source block
             source_face: Face to search on
             source_block: Starting source block position
             second_block: Second block (rotates with source)
-            target_piece_color: Target piece color (for 1x1 same-color optimization)
+            target_face: Face containing the target block
+            target_block: Target block (for cell-to-cell color mapping)
 
         Returns:
             Valid source block position, or None if not found
         """
         for _ in range(4):
             if self._source_block_has_color_no_rotation(
-                required_color, source_face, source_block, second_block, target_piece_color
+                required_color, source_face, source_block, second_block,
+                target_face, target_block
             ):
                 return source_block
 
