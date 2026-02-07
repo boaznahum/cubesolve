@@ -294,27 +294,28 @@ class Block:
         return None
 
     def _detect_rotation_from(self, order_by: Block, n_slices: int) -> int:
-        """Detect the rotation count from order_by to self.
+        """Detect the rotation count from order_by's kernel to self's kernel.
 
-        Tries all 4 rotations of order_by and returns the one that matches
-        self (after normalization).
+        Normalizes both self and order_by to their kernels, then finds which
+        rotation of order_by's kernel matches self's kernel.
 
         Args:
-            order_by: The reference block
+            order_by: The reference block (normalized to kernel internally)
             n_slices: Face size
 
         Returns:
-            n_rot such that order_by.rotate_clockwise(n_slices, n_rot) == self.normalize
+            n_rot such that order_by.kernel.rotate_clockwise(n_slices, n_rot) == self.kernel
 
         Raises:
-            ValueError: If self is not a rotation of order_by
+            ValueError: If self and order_by don't share a kernel
         """
         from cube.domain.geometric.geometry_utils import rotate_point_clockwise
 
         self_norm = self.normalize
+        order_by_norm = order_by.normalize
         for n_rot in range(4):
-            rotated_start = rotate_point_clockwise(order_by.start, n_slices, n_rot)
-            rotated_end = rotate_point_clockwise(order_by.end, n_slices, n_rot)
+            rotated_start = rotate_point_clockwise(order_by_norm.start, n_slices, n_rot)
+            rotated_end = rotate_point_clockwise(order_by_norm.end, n_slices, n_rot)
             if Block._normalize(rotated_start, rotated_end) == self_norm:
                 return n_rot
 
@@ -362,9 +363,6 @@ class Block:
             yield from self.cells
             return
 
-        # Normalize order_by to its kernel
-        order_by = order_by.normalize
-
         n_rot = self._detect_rotation_from(order_by, n_slices)
 
         if n_rot == 0:
@@ -373,7 +371,8 @@ class Block:
 
         # Create an unnormalized block whose corners encode the rotation,
         # then use iterate_points (fused kernel-order iteration)
-        rotated = order_by.rotate_preserve_original(n_slices, n_rot)
+        kernel = order_by.normalize
+        rotated = kernel.rotate_preserve_original(n_slices, n_rot)
         from cube.domain.geometric.rotated_block import RotatedBlock
         yield from RotatedBlock.iterate_points(rotated.start, rotated.end, n_slices)
 
