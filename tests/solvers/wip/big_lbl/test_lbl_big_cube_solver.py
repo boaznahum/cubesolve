@@ -62,18 +62,22 @@ class TestLBLBigCubeSolver:
         E[6] is one slice below center — same effect without that issue.
         """
         app = AbstractApp.create_non_default(cube_size=15, animation=False)
-        cube = app.cube
+        op = app.op
 
-        # Rotate a single E slice near the center (not E[7] which moves face centers)
-        Algs.E[6:6].play(cube)
-        assert not cube.solved
+        solver = LayerByLayerNxNSolver(op, op.sp.logger)
 
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
-        solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
+        with op.with_query_restore_state():
+            # Rotate a single E slice near the center (not E[7] which moves face centers)
+            Algs.E[6:6].play(app.cube)
+            assert not app.cube.solved
 
-        assert solver._is_l2_slices_solved(), "15x15 single E-slice not solved"
+            solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
 
-        stats = solver._lbl_slices._centers.get_statistics()
+            assert solver._is_l2_slices_solved(), "15x15 single E-slice not solved"
+
+            stats = solver._lbl_slices._centers.get_statistics()
+
+        # Cube is restored here
 
         # Must find blocks larger than 1x1 — the disruption is a full row
         max_block_size = max(stats.keys())
