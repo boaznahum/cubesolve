@@ -1,10 +1,10 @@
 """
 Test for Block rotation and cell iterator behavior.
 
-Verifies that RotatedBlock preserves cell-to-cell mappings when iterating:
-- rotate_preserve_original() returns a RotatedBlock that tracks rotation state
-- RotatedBlock.points(n) yields cells in the order that preserves
-  the original relative positions (not just row-by-row order)
+Verifies that Block preserves cell-to-cell mappings when iterating:
+- rotate_preserve_original() returns a Block that encodes rotation state
+- Block.iterate_points() yields cells in the order that preserves
+  the kernel's relative positions (not just row-by-row order)
 """
 
 import random
@@ -12,7 +12,8 @@ import pytest
 import uuid
 
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.geometric.geometry_types import Block, Point
+from cube.domain.geometric.block import Block
+from cube.domain.geometric.geometry_types import Point
 
 
 def create_app(cube_size: int) -> AbstractApp:
@@ -95,8 +96,7 @@ class TestBlockRotationIterator:
 
 
         # Step 5: Iterate over rotated block in kernel order
-        from cube.domain.geometric.rotated_block import RotatedBlock
-        rotated_iterator_order = list(RotatedBlock.iterate_points(rotated_block.start, rotated_block.end, n))
+        rotated_iterator_order = list(Block.iterate_points(rotated_block.start, rotated_block.end, n))
         rotated_markers = {}
 
         for idx, point in enumerate(rotated_iterator_order):

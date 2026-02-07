@@ -11,7 +11,8 @@ from cube.domain.model.Cube import Cube
 from cube.domain.geometric.cube_boy import color2long
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
-from cube.domain.geometric.geometry_types import Block, Point
+from cube.domain.geometric.block import Block
+from cube.domain.geometric.geometry_types import Point
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.tracker.trackers import FaceTracker

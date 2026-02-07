@@ -3,7 +3,8 @@ from contextlib import contextmanager
 from typing import Generator
 
 from cube.domain.exceptions import InternalSWError
-from cube.domain.geometric.geometry_types import Block, Point
+from cube.domain.geometric.block import Block
+from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import Color, Face
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper

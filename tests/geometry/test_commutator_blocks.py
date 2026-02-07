@@ -15,7 +15,8 @@ import pytest
 
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
-from cube.domain.geometric.geometry_types import Block, Point
+from cube.domain.geometric.block import Block
+from cube.domain.geometric.geometry_types import Point
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
@@ -493,7 +494,7 @@ class TestMultiCellBlockCommutator:
         6. Verify cycle: s1_block → t_block, t_block → s2_block, s2_block → s1_block
         """
         import uuid
-        from cube.domain.geometric.geometry_types import Block as GeomBlock
+        from cube.domain.geometric.block import Block as GeomBlock
 
         app = create_app(cube_size)
         cube = app.cube
@@ -670,7 +671,7 @@ class TestMultiCellBlockCommutator:
         Finds the largest valid block on a solved cube and tests the 3-cycle.
         """
         import uuid
-        from cube.domain.geometric.geometry_types import Block as GeomBlock
+        from cube.domain.geometric.block import Block as GeomBlock
 
         app = create_app(cube_size)
         cube = app.cube

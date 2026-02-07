@@ -27,7 +27,8 @@ from tabulate import tabulate
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
 from cube.domain.geometric.cube_boy import FaceName
-from cube.domain.geometric.geometry_types import Point, Block
+from cube.domain.geometric.block import Block
+from cube.domain.geometric.geometry_types import Point
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName

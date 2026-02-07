@@ -21,7 +21,8 @@ from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult, SliceAlgorithmResult
-from cube.domain.geometric.geometry_types import Block, CLGColRow, Point
+from cube.domain.geometric.block import Block
+from cube.domain.geometric.geometry_types import CLGColRow, Point
 from cube.domain.model import FaceName, Cube, CenterSlice
 from cube.domain.model.Color import Color
 from cube.domain.model.Face import Face
