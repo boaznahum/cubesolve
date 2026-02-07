@@ -685,7 +685,18 @@ class LayerByLayerNxNSolver(BaseSolver):
             raise InternalSWError("How di we reach here?")
 
         else:
-            self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
+            # Global center-slice pre-alignment: rotate the center E-slice
+            # to maximize total solved pieces across all rows.
+            # This changes face.color, so trackers must be rebuilt.
+            rotated = self._lbl_slices.global_center_slice_prealign(l1_tracker)
+
+            if rotated:
+                # Face colors changed — rebuild trackers with new face colors
+                with FacesTrackerHolder(self) as new_th:
+                    new_l1 = self._get_layer1_tracker(new_th)
+                    self._lbl_slices.solve_all_faces_all_rows(new_th, new_l1)
+            else:
+                self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
 
     # =========================================================================
     # Statistics (override AbstractSolver)

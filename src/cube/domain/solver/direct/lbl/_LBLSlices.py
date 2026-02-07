@@ -161,6 +161,83 @@ class _LBLSlices(SolverHelper):
     # Pre-alignment
     # =========================================================================
 
+    def _count_all_rows_solved(self, l1_white_tracker: FaceTracker, n_rows: int) -> int:
+        """Count total solved pieces across all rows."""
+        return sum(
+            sum(1 for e in _get_row_pieces(self.cube, l1_white_tracker, r) if e.match_faces)
+            for r in range(n_rows)
+        )
+
+    def global_center_slice_prealign(self, l1_white_tracker: FaceTracker) -> bool:
+        """Try rotating the center E-slice for global alignment.
+
+        The center E-slice contains the face center pieces that determine
+        face.color. Rotating it changes which face has which color. If the
+        cube's equatorial faces are misaligned by 1-3 rotations, this fixes
+        ALL rows at once.
+
+        Must be called BEFORE solve_all_faces_all_rows. If this returns True,
+        face colors changed and the caller must rebuild FacesTrackerHolder.
+
+        Only applies to odd cubes (even cubes have no fixed center piece).
+
+        Returns:
+            True if the center slice was rotated (face colors changed).
+        """
+        n_slices = self.n_slices
+
+        # Only odd cubes have a center slice
+        if n_slices % 2 == 0:
+            return False
+
+        # Position L1 on D for correct row indexing
+        from cube.domain.solver.direct.lbl._common import position_l1
+        position_l1(self, l1_white_tracker)
+
+        center_row = n_slices // 2
+
+        # Get center E-slice alg (bypass _get_slice_alg which skips center)
+        cube = self.cube
+        slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_white_tracker.face_name)
+        slice_layout = cube.layout.get_slice(slice_name)
+        cube_slice_index = slice_layout.distance_from_face_to_slice_index(
+            l1_white_tracker.face_name, center_row, n_slices
+        )
+        center_slice_alg = Algs.of_slice(slice_name)[cube_slice_index + 1]
+
+        n_to_solve = min(_lbl_config.NUMBER_OF_SLICES_TO_SOLVE, n_slices)
+
+        # Count total solved pieces across all rows (rotation 0)
+        best_count = self._count_all_rows_solved(l1_white_tracker, n_to_solve)
+        best_rot = 0
+
+        for n_rot in range(1, 4):
+            with self.op.with_query_restore_state():
+                for _ in range(n_rot):
+                    self.play(center_slice_alg)
+                count = self._count_all_rows_solved(l1_white_tracker, n_to_solve)
+                if count > best_count:
+                    best_count = count
+                    best_rot = n_rot
+
+        if best_rot > 0:
+            self.debug(f"Global center-slice pre-align: {best_rot}x rotation "
+                       f"({best_count} total pieces aligned)")
+            print(f"[LBL] Global center-slice pre-align: {best_rot}x rotation "
+                  f"({best_count} total pieces aligned)")
+            # Rotate the center E-slice to change equatorial face colors
+            for _ in range(best_rot):
+                self.play(center_slice_alg)
+            # Also rotate D (L1) by the same amount so L1 edges stay aligned
+            # with the new equatorial face colors. E rotates like D, so both
+            # shift equatorial faces in the same direction.
+            l1_face_alg = Algs.of_face(l1_white_tracker.face.name)
+            for _ in range(best_rot):
+                self.play(l1_face_alg)
+            return True
+
+        return False
+
     def _get_slice_alg(self, face_row: int, l1_white_tracker: FaceTracker):
         """Get the slice algorithm for a given row.
 
