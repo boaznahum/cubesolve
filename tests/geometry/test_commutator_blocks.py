@@ -576,19 +576,11 @@ class TestMultiCellBlockCommutator:
                     # Assert: second_block is rotated from natural_second_block by src_rot
                     # _detect_rotation_from(order_by) finds n_rot such that
                     # rotate(order_by, n_rot) == self
-                    # So s2_block._detect_rotation_from(natural_s2) should == src_rot
-                    s2_rot = s2_block._detect_rotation_from(natural_s2, n) if src_rot != 0 else 0
-                    assert s2_rot == src_rot or src_rot == 0, (
+                    s2_rot = s2_block._detect_rotation_from(natural_s2, n)
+                    assert s2_rot == src_rot, (
                         f"Expected s2 rotated by {src_rot} from natural, "
                         f"got {s2_rot}: s2={s2_block}, natural_s2={natural_s2}"
                     )
-
-                    # When src_rot=0, second_block must equal natural_second_block
-                    if src_rot == 0:
-                        assert s2_block == natural_s2, (
-                            f"src_rot=0: second_block {s2_block} != "
-                            f"natural_second_block {natural_s2}"
-                        )
 
                     # Use rotated_s1 and the execution result's s2 for cell iteration
                     s1_cells = list(rotated_s1.points_by(n, order_by=t_block))
