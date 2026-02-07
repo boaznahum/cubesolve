@@ -91,6 +91,41 @@ class TestLBLBigCubeSolver:
             # Pre-alignment solved it directly — optimal outcome
             print("\n[15x15 E-slice test] Pre-alignment solved it (0 blocks needed)")
 
+    def test_center_e_slice_global_prealign(self) -> None:
+        """Center E-slice rotation on 15x15 is solved by global pre-alignment.
+
+        Rotating E[7] (the center slice) moves the face center pieces,
+        changing face.color. The global center-slice pre-alignment detects
+        this and reverses it with a single E-slice rotation (3x = inverse
+        of 1x forward), requiring 0 commutator blocks.
+        """
+        app = AbstractApp.create_non_default(cube_size=15, animation=False)
+        cube = app.cube
+
+        # Rotate the center E-slice (E[7] on 15x15 moves face centers)
+        Algs.E[7:7].play(cube)
+        assert not cube.solved
+
+        op_count_before = app.op.count
+
+        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
+
+        assert solver._is_l2_slices_solved(), "15x15 center E-slice not solved"
+
+        solve_ops = app.op.count - op_count_before
+        stats = solver._lbl_slices._centers.get_statistics()
+
+        assert not stats, (
+            f"Expected global pre-alignment to solve center E-slice with 0 blocks, "
+            f"but got: {stats}"
+        )
+        # Global pre-align reverses with 3 E-slice rotations, no commutators
+        assert solve_ops <= 4, (
+            f"Expected center E-slice to be solved in ~3 operations, got {solve_ops}"
+        )
+        print(f"\n[15x15 center E-slice test] Solved with {solve_ops} operations, 0 blocks")
+
     @pytest.mark.parametrize("cube_size", [5], ids=lambda s: f"size_{s}")
     @pytest.mark.parametrize(
         "scramble_name,scramble_seed",

@@ -228,12 +228,6 @@ class _LBLSlices(SolverHelper):
             # Rotate the center E-slice to change equatorial face colors
             for _ in range(best_rot):
                 self.play(center_slice_alg)
-            # Also rotate D (L1) by the same amount so L1 edges stay aligned
-            # with the new equatorial face colors. E rotates like D, so both
-            # shift equatorial faces in the same direction.
-            l1_face_alg = Algs.of_face(l1_white_tracker.face.name)
-            for _ in range(best_rot):
-                self.play(l1_face_alg)
             return True
 
         return False

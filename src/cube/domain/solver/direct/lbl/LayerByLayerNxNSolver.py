@@ -698,6 +698,17 @@ class LayerByLayerNxNSolver(BaseSolver):
             else:
                 self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
 
+        # After solving, L1 edges may not match equatorial face colors
+        # (e.g. if global prealign changed face colors). Fix with D rotation.
+        if not self._is_l2_slices_solved():
+            if self._is_l2_slices_solved_ignore_rotation():
+                with FacesTrackerHolder(self) as fix_th:
+                    fix_l1 = self._get_layer1_tracker(fix_th)
+                    for _ in range(3):
+                        self.op.play(Algs.of_face(fix_l1.face.name))
+                        if self._is_l2_slices_solved():
+                            return
+
     # =========================================================================
     # Statistics (override AbstractSolver)
     # =========================================================================
