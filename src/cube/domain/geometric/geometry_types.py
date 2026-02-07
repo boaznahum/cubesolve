@@ -324,34 +324,63 @@ class Block:
     def points_by(self, n_slices: int, order_by: Block | None = None) -> Iterator[Point]:
         """Yield points of self in kernel order defined by order_by.
 
-        **What is order_by?**
+        **The ordering concept:**
 
-        When multiple blocks are rotations of the same kernel (verified by
-        same_kernel()), they cover the same cells at different positions.
-        Passing the same order_by to each block's points_by ensures that
-        cell[i] from every block corresponds to the same kernel cell —
-        regardless of whether self is normalized or not.
+        A kernel (normalized block) has a natural row-by-row ordering.
+        For example, kernel Block([1,2], [2,4]) on a 7x7 face defines::
 
-        order_by is always normalized to its kernel internally. Self and
-        order_by must share a kernel (be rotations of each other), otherwise
-        _detect_rotation_from raises ValueError.
+            index 0 → (1,2)  cell 12
+            index 1 → (1,3)  cell 13
+            index 2 → (1,4)  cell 14
+            index 3 → (2,2)  cell 22
+            index 4 → (2,3)  cell 23
+            index 5 → (2,4)  cell 24
+
+        When the face rotates 90° CW, the cells move to new positions, but
+        each cell retains its kernel index. Cell 12 (index 0) moves to (4,1),
+        cell 13 (index 1) moves to (3,1), etc.
+
+        points_by(n, order_by) maps the kernel ordering onto self: the i-th
+        yielded point is the position where kernel cell[i] ended up in self's
+        block after rotation.
+
+        **Why this matters — shared ordering guarantee:**
+
+        If blocks A and B share the same kernel, then::
+
+            A.points_by(n, order_by=K)[i]  →  position of kernel cell[i] in A
+            B.points_by(n, order_by=K)[i]  →  position of kernel cell[i] in B
+
+        The same kernel cell[i] is at index i in both. Any block passed as
+        order_by is normalized to its kernel internally, so passing A, B, or K
+        directly as order_by all produce the same ordering — they share the
+        same kernel implicitly.
 
         **Example — commutator 3-cycle with aligned iteration:**
 
-        Given blocks s1, t, s2 that are rotations of the same kernel::
+        Given blocks s1, t, s2 that are rotations of the same kernel on a
+        7x7 face. Kernel is Block([1,2], [2,4])::
 
-            kernel = s1.same_kernel(t, n)  # verify they share a kernel
+            # All three blocks share the kernel:
+            assert s1.same_kernel(t, n) is not None
+
             s1_cells = list(s1.points_by(n, order_by=t))
             t_cells  = list(t.points_by(n, order_by=t))
             s2_cells = list(s2.points_by(n, order_by=t))
-            # Now s1_cells[i], t_cells[i], s2_cells[i] all refer to the
-            # same kernel cell — enabling correct marker comparison.
+
+            # s1_cells[0], t_cells[0], s2_cells[0] all correspond to
+            # kernel cell 12 (index 0) — at their respective rotated positions.
+            # s1_cells[1], t_cells[1], s2_cells[1] → kernel cell 13 (index 1).
+            # etc.
+
+            # This enables correct marker comparison: markers placed at
+            # s1_cells[i] should appear at t_cells[i] after the commutator.
 
         Args:
             n_slices: Face size (e.g., 7 for a 7x7 face)
             order_by: Block that defines the iteration order (normalized to its
-                kernel). Must share a kernel with self. Defaults to None
-                (plain row-by-row iteration of self).
+                kernel internally). Must share a kernel with self. Defaults to
+                None (plain row-by-row iteration of self).
 
         Yields:
             Points of self in kernel order
@@ -379,8 +408,8 @@ class Block:
     def pieces_by(self, face: Face, order_by: Block | None = None) -> Iterator[CenterSlice]:
         """Yield center slices of self in kernel order defined by order_by.
 
-        Same as points_by but yields CenterSlice objects from the face.
-        See points_by for full documentation of order_by semantics.
+        Same as points_by but yields CenterSlice objects instead of Points.
+        See points_by for the full explanation of the ordering concept.
 
         Args:
             face: The cube face to iterate over
