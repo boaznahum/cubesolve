@@ -49,26 +49,75 @@ class CommutatorResult:
 
     THE 3-CYCLE:
     ============
-    The commutator performs: s1 → t → s2 → s1
-    - natural_source_block (s1): Source block - pieces move TO target
-    - target_block (t): Target block - receives pieces from source
-    - second_block (s2): Intermediate block - temporarily holds target's pieces
+    The commutator performs a 3-cycle: s1 → t → s2 → s1
 
-    For 1x1 blocks, use .as_point to get the Point coordinate.
+    The three blocks occupy positions on two faces:
+    - s1 and s2 are on the **source face**
+    - t is on the **target face**
+
+    NATURAL vs ROTATED SOURCE:
+    ==========================
+    The commutator's geometry determines a **natural source position** — where
+    the target block maps to on the source face via face-to-face translation.
+    This is ``natural_source_block``.
+
+    The caller may pass a **rotated** source block (any 90° rotation of the
+    natural source on the source face). The commutator handles this by adding
+    a setup rotation of the source face before the commutator moves, and
+    undoing it afterward. This setup rotation conjugates the 3-cycle:
+
+    - Without setup (natural source):  s1_natural → t → s2_natural → s1_natural
+    - With setup (rotated source):     s1_rotated → t → s2_rotated → s1_rotated
+
+    The relationship:
+    - ``s1_rotated = rotate(s1_natural, src_rot)``
+    - ``s2_rotated = rotate(s2_natural, src_rot)``    (same rotation!)
+
+    Both ``natural_second_block`` and ``second_block`` are returned so that
+    the caller can work with either the natural or rotated 3-cycle.
+
+    FIELDS — RELATIONSHIP TABLE:
+    ============================
+    ::
+
+        source_block param    natural_source_block    second_block    natural_second_block
+        ──────────────────    ────────────────────    ────────────    ────────────────────
+        natural (rot=0)       s1                      s2_natural      s2_natural  (same)
+        rotated (rot=1)       s1                      s2_rotated      s2_natural
+        rotated (rot=2)       s1                      s2_rotated      s2_natural
+        rotated (rot=3)       s1                      s2_rotated      s2_natural
+
+    - ``natural_source_block`` is ALWAYS the natural s1, regardless of source_block
+    - ``second_block`` is the s2 that matches the ACTUAL source_block passed
+    - ``natural_second_block`` is the s2 for the natural (unrotated) case
+    - When source_block is natural: ``second_block == natural_second_block``
 
     Attributes:
-        slice_name: Slice used in the commutator algorithm
-        algorithm: The algorithm to execute (None if dry_run=True)
-        natural_source_block: Source block (s1) in the 3-cycle
-        target_block: Target block (t) in the 3-cycle
-        second_block: Intermediate block (s2) in the 3-cycle
-        _secret: Internal cache for optimization (avoid re-computation on second call)
+        slice_name: Slice used in the commutator algorithm (E, S, or M).
+        algorithm: The full algorithm including setup/undo
+            (meaningful even for dry_run — can be inspected).
+        natural_source_block: The natural source position (s1). Determined
+            purely by geometry — where target_block maps to on source_face
+            via face-to-face translation. Always the same regardless of
+            the source_block parameter.
+        target_block: The target block (t). Same as the input parameter.
+        second_block: The second source position (s2) adjusted for the
+            actual source_block rotation. This is where target pieces
+            temporarily land during the 3-cycle. When source_block is
+            rotated by N from natural, second_block is also rotated by N
+            from natural_second_block.
+        natural_second_block: The second source position (s2) for the
+            natural (unrotated) source case. Always the same regardless
+            of the source_block parameter. Equals second_block when
+            source_block is natural.
+        _secret: Internal cache (unused, reserved for future optimization).
     """
     slice_name: SliceName
     algorithm: Alg
     natural_source_block: Block
     target_block: Block
     second_block: Block
+    natural_second_block: Block
     _secret: _InternalCommData | None = None
 
 
@@ -414,7 +463,12 @@ class CommutatorHelper(SolverHelper):
         xpt_on_source_after_un_setup_end = Point(*cqr.rotate_point_clockwise(xpt_on_source_end,
                                                                   -source_setup_n_rotate)) if tp_begin != tp_end else xpt_on_source_after_un_setup
 
-        # Build the full second_block for multi-cell blocks
+        # Natural second block: s2 for the unrotated source case (before un-setup)
+        natural_second_block_result = Block(
+            Point(*xpt_on_source_begin), Point(*xpt_on_source_end)
+        ).normalize
+
+        # Actual second block: s2 adjusted for the source rotation (after un-setup)
         second_block_result = Block(xpt_on_source_after_un_setup, xpt_on_source_after_un_setup_end).normalize
 
         # Build the natural_source_block (accounting for source setup rotation)
@@ -516,6 +570,7 @@ class CommutatorHelper(SolverHelper):
             natural_source_block=natural_source_block_result,
             target_block=target_block,
             second_block=second_block_result,
+            natural_second_block=natural_second_block_result,
             _secret=None  # Don't cache after execution
         )
 

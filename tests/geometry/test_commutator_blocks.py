@@ -487,11 +487,11 @@ class TestMultiCellBlockCommutator:
         Block commutator correctly cycles all cells in the block.
 
         For each target block, rotates the natural source block by src_rot
-        before passing it to execute_commutator. The dry_run's s1/t/s2 are
-        computed for the natural (src_rot=0) case.
+        before passing it to execute_commutator. Uses the execution result's
+        second_block (adjusted for source rotation) for marker verification.
 
-        src_rot=0: should pass (natural source)
-        src_rot=1,2,3: expected to fail (rotated source, but s1/t/s2 from natural)
+        Also verifies that the returned second_block is rotated from
+        natural_second_block by the same src_rot as the source.
         """
         import uuid
         from cube.domain.geometric.block import Block as GeomBlock
@@ -538,7 +538,8 @@ class TestMultiCellBlockCommutator:
                     target_face = cube.front
                     source_face = cube.up
 
-                    # Get the 3-cycle blocks using dry_run (always natural source)
+                    # Rotate the natural source block by src_rot
+                    # First get natural source from dry_run
                     dry_result = comm_helper.execute_commutator(
                         source_face=source_face,
                         target_face=target_face,
@@ -548,20 +549,49 @@ class TestMultiCellBlockCommutator:
 
                     s1_block = dry_result.natural_source_block
                     t_block = dry_result.target_block
-                    s2_block = dry_result.second_block
 
-                    if s1_block is None or t_block is None or s2_block is None:
+                    if s1_block is None or t_block is None:
                         failures.append({
                             "target_block": target_block,
                             "error": "Block fields not populated in result"
                         })
                         continue
 
-                    # Rotate the natural source block by src_rot
                     rotated_s1 = s1_block.rotate_clockwise(n, src_rot)
 
-                    # Iterate all blocks ordered by t_block for aligned cell-to-cell mapping
-                    s1_cells = list(s1_block.points_by(n, order_by=t_block))
+                    # Execute the commutator with rotated source block
+                    # Use the result's second_block (adjusted for source rotation)
+                    exec_result = comm_helper.execute_commutator(
+                        source_face=source_face,
+                        target_face=target_face,
+                        target_block=target_block,
+                        source_block=rotated_s1,
+                        preserve_state=True,
+                        dry_run=False
+                    )
+
+                    s2_block = exec_result.second_block
+                    natural_s2 = exec_result.natural_second_block
+
+                    # Assert: second_block is rotated from natural_second_block by src_rot
+                    # _detect_rotation_from(order_by) finds n_rot such that
+                    # rotate(order_by, n_rot) == self
+                    # So s2_block._detect_rotation_from(natural_s2) should == src_rot
+                    s2_rot = s2_block._detect_rotation_from(natural_s2, n) if src_rot != 0 else 0
+                    assert s2_rot == src_rot or src_rot == 0, (
+                        f"Expected s2 rotated by {src_rot} from natural, "
+                        f"got {s2_rot}: s2={s2_block}, natural_s2={natural_s2}"
+                    )
+
+                    # When src_rot=0, second_block must equal natural_second_block
+                    if src_rot == 0:
+                        assert s2_block == natural_s2, (
+                            f"src_rot=0: second_block {s2_block} != "
+                            f"natural_second_block {natural_s2}"
+                        )
+
+                    # Use rotated_s1 and the execution result's s2 for cell iteration
+                    s1_cells = list(rotated_s1.points_by(n, order_by=t_block))
                     t_cells = list(t_block.points_by(n, order_by=t_block))
                     s2_cells = list(s2_block.points_by(n, order_by=t_block))
 
@@ -576,7 +606,7 @@ class TestMultiCellBlockCommutator:
                     # Place unique markers on all cells in all 3 blocks
                     marker_key = f"marker_{uuid.uuid4().hex[:8]}"
 
-                    # Markers for s1 cells (on source face)
+                    # Markers for s1 cells (on source face — using rotated_s1 positions)
                     s1_markers = {}
                     for idx, cell in enumerate(s1_cells):
                         marker_value = f"s1_{idx}"
@@ -592,7 +622,7 @@ class TestMultiCellBlockCommutator:
                         piece.moveable_attributes[marker_key] = marker_value
                         t_markers[idx] = marker_value
 
-                    # Markers for s2 cells (on source face)
+                    # Markers for s2 cells (on source face — using execution result's s2)
                     s2_markers = {}
                     for idx, cell in enumerate(s2_cells):
                         marker_value = f"s2_{idx}"
@@ -600,7 +630,23 @@ class TestMultiCellBlockCommutator:
                         piece.moveable_attributes[marker_key] = marker_value
                         s2_markers[idx] = marker_value
 
-                    # Execute the commutator with rotated source block
+                    # Execute the commutator again with rotated source block
+                    # (cube was already modified by first execution, reset first)
+                    cube.reset()
+                    target_face = cube.front
+                    source_face = cube.up
+
+                    # Re-place markers on the clean cube
+                    for idx, cell in enumerate(s1_cells):
+                        piece = source_face.center.get_center_slice(cell).edge
+                        piece.moveable_attributes[marker_key] = f"s1_{idx}"
+                    for idx, cell in enumerate(t_cells):
+                        piece = target_face.center.get_center_slice(cell).edge
+                        piece.moveable_attributes[marker_key] = f"t_{idx}"
+                    for idx, cell in enumerate(s2_cells):
+                        piece = source_face.center.get_center_slice(cell).edge
+                        piece.moveable_attributes[marker_key] = f"s2_{idx}"
+
                     comm_helper.execute_commutator(
                         source_face=source_face,
                         target_face=target_face,
@@ -610,11 +656,7 @@ class TestMultiCellBlockCommutator:
                         dry_run=False
                     )
 
-                    # Verify the 3-cycle
-                    # Check that markers match by INDEX (ordered), not just as a set.
-                    # cell[i] in s1 must map to cell[i] in t, etc.
-
-                    # Collect markers found at each block position (ordered)
+                    # Verify the 3-cycle with the correct (rotated) positions
                     t_block_markers_found = []
                     for cell in t_cells:
                         piece = target_face.center.get_center_slice(cell).edge
@@ -658,16 +700,11 @@ class TestMultiCellBlockCommutator:
                             "s2_to_s1": s2_to_s1_ok
                         })
 
-        if src_rot == 0:
-            # Natural source: all should pass
-            assert len(failures) == 0, \
-                f"src_rot=0: 3-cycle failed for {len(failures)} blocks: {failures[:5]}"
-            assert len(successes) > 0, \
-                f"No blocks found to test on {cube_size}x{cube_size} cube"
-        else:
-            # Rotated source: expect failures
-            assert len(failures) > 0, \
-                f"src_rot={src_rot}: expected failures but all {len(successes)} passed!"
+        # All rotations should pass now — using correct s2 from execution result
+        assert len(failures) == 0, \
+            f"src_rot={src_rot}: 3-cycle failed for {len(failures)} blocks: {failures[:5]}"
+        assert len(successes) > 0, \
+            f"No blocks found to test on {cube_size}x{cube_size} cube"
 
     @pytest.mark.parametrize("cube_size", [6, 7, 8])
     def test_large_block_commutator(self, cube_size: int):
