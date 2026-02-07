@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
+from cube.domain.algs import Algs
 from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
 
@@ -48,6 +49,43 @@ class TestLBLBigCubeSolver:
         assert solver._is_l2_slices_solved(), (
             f"L2 slices not solved (size={cube_size}, scramble={scramble_name})"
         )
+    def test_single_e_slice_big_blocks(self) -> None:
+        """Big blocks are found when solving a single E-slice rotation on a 15x15.
+
+        Instead of scrambling, rotate a single E slice near the center.
+        This displaces one row of 13 center pieces on each equatorial face,
+        creating a highly structured disruption that should be solvable
+        with large blocks.
+
+        We avoid E[7] (the exact center slice) because it moves the face
+        center piece, changing face.color and confusing the solver.
+        E[6] is one slice below center — same effect without that issue.
+        """
+        app = AbstractApp.create_non_default(cube_size=15, animation=False)
+        cube = app.cube
+
+        # Rotate a single E slice near the center (not E[7] which moves face centers)
+        Algs.E[6:6].play(cube)
+        assert not cube.solved
+
+        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
+
+        assert solver._is_l2_slices_solved(), "15x15 single E-slice not solved"
+
+        stats = solver._lbl_slices._centers.get_statistics()
+
+        # Must find blocks larger than 1x1 — the disruption is a full row
+        max_block_size = max(stats.keys())
+        assert max_block_size > 1, (
+            f"Expected big blocks for structured single-slice disruption, "
+            f"got only 1x1: {stats}"
+        )
+
+        # Print statistics for visibility
+        parts = [f"{size}x1:{count}" for size, count in sorted(stats.items())]
+        print(f"\n[15x15 E-slice test] Block statistics: {', '.join(parts)}")
+
     @pytest.mark.parametrize("cube_size", [5], ids=lambda s: f"size_{s}")
     @pytest.mark.parametrize(
         "scramble_name,scramble_seed",
