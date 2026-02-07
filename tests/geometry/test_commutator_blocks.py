@@ -481,17 +481,17 @@ class TestMultiCellBlockCommutator:
     """
 
     @pytest.mark.parametrize("cube_size", [5, 6, 7])
-    def test_block_commutator_3_cycle(self, cube_size: int):
+    @pytest.mark.parametrize("src_rot", [0, 1, 2, 3])
+    def test_block_commutator_3_cycle(self, cube_size: int, src_rot: int):
         """
         Block commutator correctly cycles all cells in the block.
 
-        Plan:
-        1. Iterate over all points on center face
-        2. For each point, find the largest block starting at that point
-        3. Pass the block to execute_commutator to get s1_block, t_block, s2_block
-        4. Place unique markers on all cells in all 3 blocks
-        5. Execute the commutator
-        6. Verify cycle: s1_block → t_block, t_block → s2_block, s2_block → s1_block
+        For each target block, rotates the natural source block by src_rot
+        before passing it to execute_commutator. The dry_run's s1/t/s2 are
+        computed for the natural (src_rot=0) case.
+
+        src_rot=0: should pass (natural source)
+        src_rot=1,2,3: expected to fail (rotated source, but s1/t/s2 from natural)
         """
         import uuid
         from cube.domain.geometric.block import Block as GeomBlock
@@ -538,7 +538,7 @@ class TestMultiCellBlockCommutator:
                     target_face = cube.front
                     source_face = cube.up
 
-                    # Get the 3-cycle blocks using dry_run
+                    # Get the 3-cycle blocks using dry_run (always natural source)
                     dry_result = comm_helper.execute_commutator(
                         source_face=source_face,
                         target_face=target_face,
@@ -556,6 +556,9 @@ class TestMultiCellBlockCommutator:
                             "error": "Block fields not populated in result"
                         })
                         continue
+
+                    # Rotate the natural source block by src_rot
+                    rotated_s1 = s1_block.rotate_clockwise(n, src_rot)
 
                     # Iterate all blocks ordered by t_block for aligned cell-to-cell mapping
                     s1_cells = list(s1_block.points_by(n, order_by=t_block))
@@ -597,12 +600,12 @@ class TestMultiCellBlockCommutator:
                         piece.moveable_attributes[marker_key] = marker_value
                         s2_markers[idx] = marker_value
 
-                    # Execute the commutator (source_block = natural_source_block for this test)
+                    # Execute the commutator with rotated source block
                     comm_helper.execute_commutator(
                         source_face=source_face,
                         target_face=target_face,
                         target_block=target_block,
-                        source_block=s1_block,  # Use the natural source block
+                        source_block=rotated_s1,
                         preserve_state=True,
                         dry_run=False
                     )
@@ -655,13 +658,16 @@ class TestMultiCellBlockCommutator:
                             "s2_to_s1": s2_to_s1_ok
                         })
 
-        # Report results
-        assert len(failures) == 0, \
-            f"Block commutator 3-cycle failed for {len(failures)} blocks: {failures[:5]}"
-
-        # Verify we actually tested some blocks
-        assert len(successes) > 0, \
-            f"No blocks found to test on {cube_size}x{cube_size} cube"
+        if src_rot == 0:
+            # Natural source: all should pass
+            assert len(failures) == 0, \
+                f"src_rot=0: 3-cycle failed for {len(failures)} blocks: {failures[:5]}"
+            assert len(successes) > 0, \
+                f"No blocks found to test on {cube_size}x{cube_size} cube"
+        else:
+            # Rotated source: expect failures
+            assert len(failures) > 0, \
+                f"src_rot={src_rot}: expected failures but all {len(successes)} passed!"
 
     @pytest.mark.parametrize("cube_size", [6, 7, 8])
     def test_large_block_commutator(self, cube_size: int):
