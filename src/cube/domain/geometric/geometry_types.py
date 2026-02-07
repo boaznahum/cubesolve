@@ -196,7 +196,7 @@ class Block:
 
         Unlike rotate_clockwise() which returns a kernel, this method returns
         an unnormalized Block whose corner ordering encodes the rotation.
-        This enables iterate_points/points() to recover the kernel and iterate
+        This enables iterate_points() to recover the kernel and iterate
         in kernel order.
 
         See RotatedBlock.md section "Detecting Block Orientation" for details.
@@ -269,37 +269,6 @@ class Block:
         # The kernel is always normalized (by definition)
         return Block(kernel_start, kernel_end)
 
-    def points(self, n_slices: int) -> Iterator[Point]:
-        """Yield points in kernel order at rotated positions.
-
-        Delegates to RotatedBlock.iterate_points() for the actual logic.
-
-        Args:
-            n_slices: Face size (e.g., 7 for a 7x7 face)
-
-        Returns:
-            Iterator of Points in kernel order at rotated positions
-        """
-        # Late import to avoid circular dependency
-        from cube.domain.geometric.rotated_block import RotatedBlock
-        return RotatedBlock.iterate_points(self.start, self.end, n_slices)
-
-    def pieces(self, face: Face) -> Iterator[CenterSlice]:
-        """Yield center slices from the face in kernel order.
-
-        Uses Block.points(n_slices) to get the kernel order, then yields
-        center slices from the face.
-
-        Args:
-            face: The cube face to iterate over
-
-        Yields:
-            CenterSlice objects from the face at the block's point positions
-        """
-        n_slices = face.cube.n_slices
-        for point in self.points(n_slices):
-            yield face.center.get_center_slice((point.row, point.col))
-
     def _detect_rotation_from(self, order_by: Block, n_slices: int) -> int:
         """Detect the rotation count from order_by to self.
 
@@ -328,26 +297,27 @@ class Block:
         raise ValueError(f"Block {self} is not a rotation of {order_by}")
 
     def points_by(self, n_slices: int, order_by: Block | None = None) -> Iterator[Point]:
-        """Yield points of self in the order defined by order_by.
+        """Yield points of self in kernel order.
 
-        Iterates over order_by's cells and rotates each point to self's
-        coordinate space. This ensures that when multiple blocks (which are
-        rotations of each other) are iterated with the same order_by,
-        cell[i] from each block corresponds to the same original cell.
+        The kernel is determined by order_by (normalized to its kernel form).
+        All blocks that are rotations of the same kernel can be iterated with
+        the same order_by, ensuring cell[i] from each block corresponds to
+        the same kernel cell.
 
         Args:
             n_slices: Face size (e.g., 7 for a 7x7 face)
-            order_by: The block that defines iteration order. Must be a rotation
-                of self. Defaults to self (plain row-by-row iteration).
+            order_by: The kernel that defines iteration order. Must be a rotation
+                of self. Gets normalized if not already. Defaults to self
+                (plain row-by-row iteration).
 
         Yields:
-            Points of self, ordered by order_by's cell ordering
+            Points of self in kernel order
         """
         if order_by is None or order_by is self:
             yield from self.cells
             return
 
-        # Normalize order_by to ensure its corners don't encode a prior rotation
+        # Normalize order_by to its kernel
         order_by = order_by.normalize
 
         n_rot = self._detect_rotation_from(order_by, n_slices)
@@ -357,22 +327,24 @@ class Block:
             return
 
         # Create an unnormalized block whose corners encode the rotation,
-        # then use the optimized points() iterator (inlined rotation math)
+        # then use iterate_points (fused kernel-order iteration)
         rotated = order_by.rotate_preserve_original(n_slices, n_rot)
-        yield from rotated.points(n_slices)
+        from cube.domain.geometric.rotated_block import RotatedBlock
+        yield from RotatedBlock.iterate_points(rotated.start, rotated.end, n_slices)
 
     def pieces_by(self, face: Face, order_by: Block | None = None) -> Iterator[CenterSlice]:
-        """Yield center slices of self in the order defined by order_by.
+        """Yield center slices of self in kernel order.
 
         Same as points_by but yields CenterSlice objects from the face.
 
         Args:
             face: The cube face to iterate over
-            order_by: The block that defines iteration order. Must be a rotation
-                of self. Defaults to self (plain row-by-row iteration).
+            order_by: The kernel that defines iteration order. Must be a rotation
+                of self. Gets normalized if not already. Defaults to self
+                (plain row-by-row iteration).
 
         Yields:
-            CenterSlice objects from the face, ordered by order_by's cell ordering
+            CenterSlice objects from the face in kernel order
         """
         n_slices = face.cube.n_slices
         for point in self.points_by(n_slices, order_by):

@@ -94,8 +94,9 @@ class TestBlockRotationIterator:
             f"Detected original block {original_detected} doesn't match original block {original_block}"
 
 
-        # Step 5: Iterate over rotated block using points (preserves original order)
-        rotated_iterator_order = list(rotated_block.points(n))
+        # Step 5: Iterate over rotated block in kernel order
+        from cube.domain.geometric.rotated_block import RotatedBlock
+        rotated_iterator_order = list(RotatedBlock.iterate_points(rotated_block.start, rotated_block.end, n))
         rotated_markers = {}
 
         for idx, point in enumerate(rotated_iterator_order):
