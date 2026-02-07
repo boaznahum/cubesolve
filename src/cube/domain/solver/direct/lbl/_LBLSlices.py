@@ -302,13 +302,15 @@ class _LBLSlices(SolverHelper):
     def _solve_slice_row(
             self, face_row: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
     ) -> None:
-        """Solve ring centers for a single slice with pre-alignment.
+        """Solve ring centers for a single slice with optional pre-alignment.
 
         Strategy:
         1. Find the best pre-alignment rotation (0-3) using query mode
-        2. If improvement found: apply pre-alignment, solve, verify
-        3. If solve fails after pre-alignment: rollback all moves, clean up
-           stale markers, re-mark previous rows, and retry without pre-alignment
+        2. If improvement found: apply pre-alignment rotation
+        3. Run the core solver (which handles the rest regardless)
+
+        Note: _find_best_pre_alignment returns 0 for center slices on odd cubes
+        (rotating them would change face.color and break tracker mapping).
 
         Args:
             face_row: Which face row to solve (0 = closest to D)
@@ -319,16 +321,18 @@ class _LBLSlices(SolverHelper):
 
         if best_rotations > 0:
             slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
-
-            # Save history length for potential rollback
-            history_len_before = len(self.op.history())
-
-            # Apply pre-alignment
             self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
             self.play(slice_alg * best_rotations)
 
+            # Pre-alignment rotation moved pieces — clean up tracking state
+            # so the solver doesn't get confused by stale markers
+            _common.clear_solved_markers(self.cube)
+            _common.clear_all_center_slices_tracking(self.cube)
+            for prev_row in range(face_row):
+                _common.mark_slices_and_v_mark_if_solved(
+                    _get_row_pieces(self.cube, l1_white_tracker, prev_row)
+                )
 
-        # Solve without pre-alignment (or as fallback after rollback)
         self._solve_row_core(face_row, th, l1_white_tracker)
 
     def _solve_face_row(self, l1_white_tracker: FaceTracker,
