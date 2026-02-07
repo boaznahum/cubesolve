@@ -1,23 +1,10 @@
 """
 Test for Block rotation and cell iterator behavior.
 
-This test exposes the problem: when a face rotates, the block's cells rotate
-with it, but Block.cells iterator always yields cells in row-by-row order based on
-the rotated block's coordinates. This means the iterator order does NOT preserve
-the relative cell-to-cell mapping - it yields cells at positions [r1,c1], [r1,c2], etc.
-rather than following where the original cells actually moved.
-
-EXPECTED BEHAVIOR (what we want):
-- Block.rotate() should return a RotatedBlock that tracks cell-to-cell mappings
-- Iterating over rotated block should yield cells in the order that preserves
-  the original relative positions
-
-ACTUAL BEHAVIOR (what currently fails):
-- Block.rotate() just returns a new Block with rotated corner coordinates
-- Iterating over rotated block yields cells in row-by-row order of new block
-- This does NOT preserve the iterator-to-cell mapping
-
-The test should FAIL until RotatedBlock is properly implemented.
+Verifies that RotatedBlock preserves cell-to-cell mappings when iterating:
+- rotate_preserve_original() returns a RotatedBlock that tracks rotation state
+- RotatedBlock.points(n) yields cells in the order that preserves
+  the original relative positions (not just row-by-row order)
 """
 
 import random
@@ -34,11 +21,7 @@ def create_app(cube_size: int) -> AbstractApp:
 
 
 class TestBlockRotationIterator:
-    """
-    Test that Block.rotation preserves cell-to-cell mappings in iterator.
-
-    This test should FAIL until RotatedBlock is properly implemented.
-    """
+    """Test that Block.rotation preserves cell-to-cell mappings in iterator."""
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
     @pytest.mark.parametrize("n_rotations", [0, 1, 2, 3])  # 0°, 90°, 180°, 270°
@@ -147,53 +130,3 @@ class TestBlockRotationIterator:
                 f"Original was at {orig_point}."
 
 
-    @pytest.mark.parametrize("cube_size", [5, 6, 7])
-    def test_iterator_order_changes_with_rotation(self, cube_size: int):
-        """
-        Document that the iterator order DOES change after rotation.
-
-        This test documents the CURRENT (incorrect) behavior to understand
-        what needs to be fixed.
-        """
-        app = create_app(cube_size)
-        cube = app.cube
-        n = cube.n_slices
-
-        # Use a 2x3 block for clear demonstration
-        original_block = Block(Point(1, 2), Point(2, 4))
-
-        # Original iterator order
-        original_order = list(original_block.cells)
-
-        # Rotate the block (without rotating the face) - for documentation
-        rotated_90 = original_block.rotate_clockwise(n_slices=n, n_rotations=1)
-        rotated_180 = original_block.rotate_clockwise(n_slices=n, n_rotations=2)
-        rotated_270 = original_block.rotate_clockwise(n_slices=n, n_rotations=3)
-        rotated_90 = original_block.rotate_clockwise(n_slices=n, n_rotations=1)
-        rotated_180 = original_block.rotate_clockwise(n_slices=n, n_rotations=2)
-        rotated_270 = original_block.rotate_clockwise(n_slices=n, n_rotations=3)
-
-        order_90 = list(rotated_90.cells)
-        order_180 = list(rotated_180.cells)
-        order_270 = list(rotated_270.cells)
-
-        # The iterator orders are all different - documenting the problem
-        # What we observe: the iterator yields positions in row-by-row order
-        # based on the rotated block's corner coordinates
-        # It does NOT track where each original cell moved to
-
-        # Document that the orders are different
-        # This is EXPECTED to fail until we implement RotatedBlock properly
-
-        # The blocks have different shapes after rotation
-        # (2x3 horizontal) -> (3x2 vertical) -> (2x3 horizontal) -> (3x2 vertical)
-
-        # What we observe: the iterator just yields positions in row-by-row order
-        # based on the rotated block's corner coordinates
-        # It does NOT track where each original cell moved to
-
-        # This test documents the problem - we need RotatedBlock to track cell mappings
-        pytest.fail("TODO: Implement RotatedBlock that tracks cell-to-cell mappings. "
-                     "Current Block.rotate() only changes corner coordinates, "
-                     "so the iterator yields positions in row-by-row order of the new block shape, "
-                     "not following where original cells actually moved.")
