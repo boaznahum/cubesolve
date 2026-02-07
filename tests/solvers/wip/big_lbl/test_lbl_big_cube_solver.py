@@ -50,12 +50,15 @@ class TestLBLBigCubeSolver:
             f"L2 slices not solved (size={cube_size}, scramble={scramble_name})"
         )
     def test_single_e_slice_big_blocks(self) -> None:
-        """Big blocks are found when solving a single E-slice rotation on a 15x15.
+        """Single E-slice rotation on 15x15 is solved efficiently.
 
         Instead of scrambling, rotate a single E slice near the center.
         This displaces one row of 13 center pieces on each equatorial face,
-        creating a highly structured disruption that should be solvable
-        with large blocks.
+        creating a highly structured disruption.
+
+        With pre-alignment optimization, the solver detects this is a simple
+        rotation and reverses it directly (0 blocks needed). Without pre-alignment,
+        it would use big blocks (7x1, 6x1, etc.).
 
         We avoid E[7] (the exact center slice) because it moves the face
         center piece, changing face.color and confusing the solver.
@@ -75,16 +78,18 @@ class TestLBLBigCubeSolver:
 
         stats = solver._lbl_slices._centers.get_statistics()
 
-        # Must find blocks larger than 1x1 — the disruption is a full row
-        max_block_size = max(stats.keys())
-        assert max_block_size > 1, (
-            f"Expected big blocks for structured single-slice disruption, "
-            f"got only 1x1: {stats}"
-        )
-
-        # Print statistics for visibility
-        parts = [f"{size}x1:{count}" for size, count in sorted(stats.items())]
-        print(f"\n[15x15 E-slice test] Block statistics: {', '.join(parts)}")
+        if stats:
+            # If blocks were used, verify big blocks were found
+            max_block_size = max(stats.keys())
+            assert max_block_size > 1, (
+                f"Expected big blocks for structured single-slice disruption, "
+                f"got only 1x1: {stats}"
+            )
+            parts = [f"{size}x1:{count}" for size, count in sorted(stats.items())]
+            print(f"\n[15x15 E-slice test] Block statistics: {', '.join(parts)}")
+        else:
+            # Pre-alignment solved it directly — optimal outcome
+            print("\n[15x15 E-slice test] Pre-alignment solved it (0 blocks needed)")
 
     @pytest.mark.parametrize("cube_size", [5], ids=lambda s: f"size_{s}")
     @pytest.mark.parametrize(

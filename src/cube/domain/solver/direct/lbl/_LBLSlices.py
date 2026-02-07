@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -157,28 +158,66 @@ class _LBLSlices(SolverHelper):
         return all(e.match_faces for e in _get_row_pieces(self.cube, l1_tracker, slice_row))
 
     # =========================================================================
+    # Pre-alignment
+    # =========================================================================
+
+    def _get_slice_alg(self, face_row: int, l1_white_tracker: FaceTracker):
+        """Get the slice algorithm for a given row.
+
+        Returns None for center slice on odd cubes (rotating it would move
+        face center pieces, changing face.color and breaking tracker mapping).
+        """
+        cube = self.cube
+        n_slices = self.n_slices
+
+        # Skip center slice on odd cubes
+        if n_slices % 2 == 1 and face_row == n_slices // 2:
+            return None
+
+        slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_white_tracker.face_name)
+        slice_layout = cube.layout.get_slice(slice_name)
+        cube_slice_index = slice_layout.distance_from_face_to_slice_index(
+            l1_white_tracker.face_name, face_row, n_slices
+        )
+        return Algs.of_slice(slice_name)[cube_slice_index + 1]  # 1-based
+
+    def _find_best_pre_alignment(self, face_row: int, l1_white_tracker: FaceTracker) -> int:
+        """Find the best slice pre-alignment rotation count (0-3).
+
+        Uses with_query_restore_state() to test each rotation without
+        affecting the cube. Returns the number of rotations that maximizes
+        already-correct pieces, or 0 if no rotation helps.
+        """
+        slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
+        if slice_alg is None:
+            return 0
+
+        cube = self.cube
+
+        # Count currently solved pieces (rotation 0)
+        best_count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
+        best_rotations = 0
+
+        # Try rotations 1, 2, 3
+        for n_rotations in range(1, 4):
+            with self.op.with_query_restore_state():
+                for _ in range(n_rotations):
+                    self.play(slice_alg)
+                count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
+                if count > best_count:
+                    best_count = count
+                    best_rotations = n_rotations
+
+        return best_rotations
+
+    # =========================================================================
     # Solving operations
     # =========================================================================
 
-    def _solve_slice_row(
+    def _solve_row_core(
             self, face_row: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
     ) -> None:
-        """Solve ring centers for a single slice.
-
-        Simple approach (no optimization):
-        1. For each side face, bring to front
-        2. For each piece in row that needs fixing:
-           - Search on UP (rotate adjacent faces to UP)
-           - Search on BACK
-           - If still missing, move from same face to adjacent, then bring from there
-        3. Repeat until all 4 faces are solved (may need multiple iterations
-           because solving one face can disturb others)
-
-        Args:
-            face_row: Which face row to solve (0 = closest to D)
-            th: FacesTrackerHolder for face color tracking
-            l1_white_tracker: Layer 1 face tracker
-        """
+        """Core solve logic for a single row (no pre-alignment)."""
         side_trackers: list[FaceTracker] = _get_side_face_trackers(th, l1_white_tracker)
 
         # help solver not to touch already solved
@@ -189,7 +228,60 @@ class _LBLSlices(SolverHelper):
             return
 
         for target_face in side_trackers:
-                self._solve_face_row(l1_white_tracker, target_face, face_row)
+            self._solve_face_row(l1_white_tracker, target_face, face_row)
+
+    def _solve_slice_row(
+            self, face_row: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
+    ) -> None:
+        """Solve ring centers for a single slice with pre-alignment.
+
+        Strategy:
+        1. Find the best pre-alignment rotation (0-3) using query mode
+        2. If improvement found: apply pre-alignment, solve, verify
+        3. If solve fails after pre-alignment: rollback all moves, clean up
+           stale markers, re-mark previous rows, and retry without pre-alignment
+
+        Args:
+            face_row: Which face row to solve (0 = closest to D)
+            th: FacesTrackerHolder for face color tracking
+            l1_white_tracker: Layer 1 face tracker
+        """
+        best_rotations = self._find_best_pre_alignment(face_row, l1_white_tracker)
+
+        if best_rotations > 0:
+            slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
+
+            # Save history length for potential rollback
+            history_len_before = len(self.op.history())
+
+            # Apply pre-alignment
+            self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
+            for _ in range(best_rotations):
+                self.play(slice_alg)
+
+            # Solve with pre-alignment
+            self._solve_row_core(face_row, th, l1_white_tracker)
+
+            if self._row_solved(l1_white_tracker, face_row):
+                return  # Success with pre-alignment
+
+            # Pre-alignment made the row unsolvable - rollback and retry
+            self.debug(f"Pre-align row {face_row}: rolling back (row not fully solved)")
+            while len(self.op.history()) > history_len_before:
+                self.op.undo(animation=False)
+
+            # Clear stale markers left by the failed attempt, then
+            # re-mark all previously solved rows so the solver still
+            # protects them.
+            _common.clear_solved_markers(self.cube)
+            _common.clear_all_center_slices_tracking(self.cube)
+            for prev_row in range(face_row):
+                _common.mark_slices_and_v_mark_if_solved(
+                    _get_row_pieces(self.cube, l1_white_tracker, prev_row)
+                )
+
+        # Solve without pre-alignment (or as fallback after rollback)
+        self._solve_row_core(face_row, th, l1_white_tracker)
 
     def _solve_face_row(self, l1_white_tracker: FaceTracker,
                         target_face: FaceTracker,
