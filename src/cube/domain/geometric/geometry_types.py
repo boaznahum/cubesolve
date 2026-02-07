@@ -48,9 +48,10 @@ class Point(NamedTuple):
 class Block:
     """A rectangle defined by two corner points.
 
-    Note: The start and end points may not be in normalized order (i.e., start
-    may not be top-left and end may not be bottom-right). Consumers should
-    normalize the coordinates when needed for specific operations.
+    A normalized block (kernel) has start.row <= end.row AND start.col <= end.col.
+    An unnormalized block encodes rotation state in its corner ordering —
+    the relationship between start and end reveals how many 90° CW rotations
+    have been applied from the kernel.
 
     Attributes:
         start: First corner of the block
@@ -86,16 +87,15 @@ class Block:
             start = Point(*start)
 
         if not isinstance(end, Point):
-            end = Point(*start)
+            end = Point(*end)
 
         return Block(start=start, end=end)
 
     @property
     def cells(self) -> Iterator[Point]:
+        """Iterate over the kernel (normalized block) in row-by-row order.
 
-        """
-        iterate over normalize block
-        see #normalzie
+        See #normalize
         """
 
         r1, c1 = self.start
@@ -110,19 +110,18 @@ class Block:
 
     @property
     def normalize(self) -> Block:
-
-        """Normalize block coordinates so min values come first.
+        """Return the kernel — normalized block with min values first.
 
         A block is defined by two corner points: (r1, c1) and (r2, c2).
-        This method ensures that r1 <= r2 and c1 <= c2 after normalization.
+        The kernel has r1 <= r2 and c1 <= c2.
 
         This is critical for commutator algorithms because:
         1. M-slice selection depends on column ordering
-        2. Block iteration assumes normalized coordinates
+        2. Block iteration assumes kernel coordinates
         3. Intersection checks require consistent ordering
 
         Returns:
-            Normalized block with r1 <= r2 and c1 <= c2
+            Kernel block with r1 <= r2 and c1 <= c2
         """
         r1, c1 = self.start
         r2, c2 = self.end
@@ -181,10 +180,10 @@ class Block:
 
 
     def rotate_clockwise(self, n_slices: int, n_rotations: int = 1) -> Block:
-        """Return a new Block rotated clockwise by n rotations.
+        """Return a new normalized Block rotated clockwise by n rotations.
 
-        Note: This normalizes the result, losing cell-to-cell mapping information.
-        Use rotate_preserve_original() to preserve the original relative positions.
+        Note: This normalizes the result (returns a kernel), losing the rotation
+        encoding. Use rotate_preserve_original() to preserve kernel-order iteration.
         """
         # Late import to avoid circular dependency
         from cube.domain.geometric import geometry_utils
@@ -193,15 +192,12 @@ class Block:
         return Block._normalize(new_start, new_end)
 
     def rotate_preserve_original(self, n_slices: int, n_rotations: int = 1) -> Block:
-        """Return a rotated Block WITHOUT normalizing the result.
+        """Return a rotated Block WITHOUT normalizing — preserves rotation encoding.
 
-        Unlike rotate_clockwise() which normalizes the result, this method
-        returns an unnormalized Block that preserves the corner positions
-        after rotation. This enables detecting the rotation from the
-        corner relationships (start.row > end.row indicates rotation).
-
-        The returned unnormalized Block can be used with RotatedBlock
-        to preserve cell-to-cell mappings.
+        Unlike rotate_clockwise() which returns a kernel, this method returns
+        an unnormalized Block whose corner ordering encodes the rotation.
+        This enables iterate_points/points() to recover the kernel and iterate
+        in kernel order.
 
         See RotatedBlock.md section "Detecting Block Orientation" for details.
 
@@ -233,7 +229,7 @@ class Block:
 
     @property
     def n_rotations(self) -> int:
-        """Detect and return the number of rotations from original normalized state.
+        """Detect and return the number of rotations from the kernel.
 
         Delegates to RotatedBlock.detect_n_rotations() for the actual logic.
 
@@ -245,36 +241,36 @@ class Block:
         return RotatedBlock.detect_n_rotations(self.start, self.end)
 
     def detect_original(self, n_slices: int) -> Block:
-        """Detect and return the original normalized block.
+        """Recover the kernel from a rotated block.
 
         Analyzes the corner positions to determine how many rotations have
-        been applied, then reverse-rotates the corners to recover the original
-        normalized block (n_rotations=0).
+        been applied from the kernel, then reverse-rotates the corners to
+        recover it.
 
         Args:
             n_slices: Face size (e.g., 7 for a 7x7 face)
 
         Returns:
-            The original normalized Block (with n_rotations=0)
+            The kernel Block (normalized, n_rotations=0)
         """
         # Late import to avoid circular dependency
         from cube.domain.geometric.rotated_block import RotatedBlock
         from cube.domain.geometric import geometry_utils
 
-        # Detect how many rotations were applied
+        # Detect how many rotations from the kernel
         n_rot = RotatedBlock.detect_n_rotations(self.start, self.end)
 
-        # Reverse-rotate the corners to get the original normalized block
+        # Reverse-rotate the corners to recover the kernel
         # If we rotated 90° CW (n_rot=1), reverse by rotating 270° CW (n_rot=-1 or 3)
         reverse_n_rot = (-n_rot) % 4
-        orig_start = geometry_utils.rotate_point_clockwise(self.start, n_slices, n_rotations=reverse_n_rot)
-        orig_end = geometry_utils.rotate_point_clockwise(self.end, n_slices, n_rotations=reverse_n_rot)
+        kernel_start = geometry_utils.rotate_point_clockwise(self.start, n_slices, n_rotations=reverse_n_rot)
+        kernel_end = geometry_utils.rotate_point_clockwise(self.end, n_slices, n_rotations=reverse_n_rot)
 
-        # The original block is always normalized (that's the definition)
-        return Block(orig_start, orig_end)
+        # The kernel is always normalized (by definition)
+        return Block(kernel_start, kernel_end)
 
     def points(self, n_slices: int) -> Iterator[Point]:
-        """Yield points in the order that preserves original relative positions.
+        """Yield points in kernel order at rotated positions.
 
         Delegates to RotatedBlock.iterate_points() for the actual logic.
 
@@ -282,16 +278,16 @@ class Block:
             n_slices: Face size (e.g., 7 for a 7x7 face)
 
         Returns:
-            Iterator of Points in order that preserves original relative positions
+            Iterator of Points in kernel order at rotated positions
         """
         # Late import to avoid circular dependency
         from cube.domain.geometric.rotated_block import RotatedBlock
         return RotatedBlock.iterate_points(self.start, self.end, n_slices)
 
     def pieces(self, face: Face) -> Iterator[CenterSlice]:
-        """Yield center slices from the face in original relative order.
+        """Yield center slices from the face in kernel order.
 
-        Uses Block.points(n_slices) to get the correct order, then yields
+        Uses Block.points(n_slices) to get the kernel order, then yields
         center slices from the face.
 
         Args:
