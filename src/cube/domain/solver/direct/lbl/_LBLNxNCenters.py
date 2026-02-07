@@ -486,6 +486,10 @@ class NxNCenters2(SolverHelper):
         # Try to extend to larger blocks
         n = self.n_slices
 
+        # Max block width (columns) — see _lbl_config for the n/2 explanation.
+        # (n+1)//2 covers slightly-off-center rows; is_valid_block still filters per block.
+        max_cols = _lbl_config.LBL_MAX_BLOCK_COLS if _lbl_config.LBL_MAX_BLOCK_COLS > 0 else (n + 1) // 2
+
         # Find all unsolved positions in the tracked row
         unsolved_positions: set[Point] = set()
         for pt in _iterate_all_tracked_center_slices_index(target_face):
@@ -494,8 +498,9 @@ class NxNCenters2(SolverHelper):
                 unsolved_positions.add(pt)
 
         # Generate blocks starting at start_point
+        # max_cols limits width to avoid blocks that is_valid_block will reject (see n/2 limit)
         for end_row in range(start_point[0], min(n, start_point[0] + max_size)):
-            for end_col in range(start_point[1], min(n, start_point[1] + max_size)):
+            for end_col in range(start_point[1], min(n, start_point[1] + max_cols)):
                 end_point = Point(end_row, end_col)
 
                 # Skip the 1x1 block (already added)
