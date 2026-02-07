@@ -27,6 +27,8 @@ class BranchInfo:
     contained_in: list[str]
     is_archived: bool
     namespace: str  # 'archive/completed', 'archive/stopped', 'wip', 'feature', or ''
+    ff_relation: str  # 'same', 'behind' (contained in target), 'ahead' (target FF to branch), 'diverged'
+    ahead_behind: str  # e.g. "3 ahead, 2 behind" relative to target
 
 
 def run_git(args: list[str], check: bool = True) -> str:
@@ -106,6 +108,58 @@ def is_ancestor(branch: str, target: str) -> bool:
         return True
     except subprocess.CalledProcessError:
         return False
+
+
+def get_ff_relation(ref: str, target: str) -> tuple[str, str]:
+    """Determine fast-forward relationship between ref and target.
+
+    Returns (relation, ahead_behind) where relation is one of:
+    - 'same': ref and target point to the same commit
+    - 'behind': ref is ancestor of target (contained in target)
+    - 'ahead': target is ancestor of ref (target can FF to ref)
+    - 'diverged': neither is ancestor of the other
+    """
+    # Check if same commit
+    try:
+        ref_sha = run_git(["rev-parse", ref])
+        target_sha = run_git(["rev-parse", target])
+        if ref_sha == target_sha:
+            return "same", "0 ahead, 0 behind"
+    except subprocess.CalledProcessError:
+        return "diverged", "unknown"
+
+    # Get ahead/behind counts
+    try:
+        output = run_git(["rev-list", "--left-right", "--count", f"{target}...{ref}"])
+        parts = output.split()
+        if len(parts) == 2:
+            behind = int(parts[0])  # commits in target not in ref
+            ahead = int(parts[1])   # commits in ref not in target
+            ahead_behind = f"{ahead} ahead, {behind} behind"
+
+            if ahead == 0 and behind == 0:
+                return "same", ahead_behind
+            elif ahead == 0:
+                return "behind", ahead_behind
+            elif behind == 0:
+                return "ahead", ahead_behind
+            else:
+                return "diverged", ahead_behind
+    except subprocess.CalledProcessError:
+        pass
+
+    # Fallback to merge-base checks
+    branch_in_target = is_ancestor(ref, target)
+    target_in_branch = is_ancestor(target, ref)
+
+    if branch_in_target and target_in_branch:
+        return "same", "0 ahead, 0 behind"
+    elif branch_in_target:
+        return "behind", "unknown"
+    elif target_in_branch:
+        return "ahead", "unknown"
+    else:
+        return "diverged", "unknown"
 
 
 def get_namespace(branch: str) -> str:
@@ -189,6 +243,14 @@ def analyze_branches(target_branch: str | None = None) -> dict:
         else:
             contained_in = find_contained_in(name, ref, remote_branches, compare_branch)
 
+        # Get fast-forward relationship to compare branch
+        if name == compare_branch:
+            ff_relation, ahead_behind = "same", "0 ahead, 0 behind"
+        elif is_archived:
+            ff_relation, ahead_behind = "", ""
+        else:
+            ff_relation, ahead_behind = get_ff_relation(ref, compare_branch)
+
         branches.append(BranchInfo(
             name=name,
             is_local=is_local,
@@ -199,6 +261,8 @@ def analyze_branches(target_branch: str | None = None) -> dict:
             contained_in=contained_in,
             is_archived=is_archived,
             namespace=namespace,
+            ff_relation=ff_relation,
+            ahead_behind=ahead_behind,
         ))
 
     return {
@@ -231,14 +295,38 @@ def print_report(data: dict) -> None:
 
     # Active branches
     print(f"\n### Active Branches ({len(active)})\n")
+    print(f"**Legend:** Unique = commits only on this branch (not in `{compare_branch}`). "
+          f"Missing = commits in `{compare_branch}` not on this branch.\n")
     if active:
-        print("| Branch | Local | Remote | Last Commit | Age | Contained In | Action |")
-        print("|--------|-------|--------|-------------|-----|--------------|--------|")
+        print("| Branch | Local | Remote | Last Commit | Age | Unique | Missing | Can FF? | Action |")
+        print("|--------|-------|--------|-------------|-----|--------|---------|---------|--------|")
 
         for b in active:
             local = "Yes" if b.is_local else "No"
             remote = "Yes" if b.is_remote else "No"
-            contained = ", ".join(b.contained_in) if b.contained_in else "-"
+
+            # Parse ahead/behind into unique and missing counts
+            unique = "-"
+            missing = "-"
+            can_ff = "-"
+            if b.ahead_behind and b.ahead_behind != "unknown":
+                parts = b.ahead_behind.split(", ")
+                if len(parts) == 2:
+                    unique = parts[0].split()[0]   # "N ahead" -> "N"
+                    missing = parts[1].split()[0]   # "M behind" -> "M"
+
+            # Can FF? logic:
+            # - unique=0: all work in target, can FF (or already same)
+            # - missing=0: target can FF to this branch
+            # - both >0: diverged, no FF possible
+            if b.ff_relation == "same":
+                can_ff = "= same"
+            elif b.ff_relation == "behind":
+                can_ff = "YES (all work in target)"
+            elif b.ff_relation == "ahead":
+                can_ff = "YES (target can FF here)"
+            elif b.ff_relation == "diverged":
+                can_ff = "NO (diverged)"
 
             # Determine recommended action
             if b.name == compare_branch:
@@ -249,6 +337,18 @@ def print_report(data: dict) -> None:
                 action = "Keep (current)"
             elif b.name in standard_branches:
                 action = "Keep (standard)"
+            elif b.ff_relation == "behind":
+                if b.is_local and not b.is_remote:
+                    action = "Delete local (in target)"
+                else:
+                    action = "Archive? (in target)"
+            elif b.ff_relation == "same":
+                if b.is_local and not b.is_remote:
+                    action = "Delete local (same as target)"
+                else:
+                    action = "Archive? (same as target)"
+            elif b.ff_relation == "ahead":
+                action = "Review (ahead of target)"
             elif b.contained_in:
                 if b.is_local and not b.is_remote:
                     action = "Delete local (in " + b.contained_in[0] + ")"
@@ -257,7 +357,7 @@ def print_report(data: dict) -> None:
             else:
                 action = "Review"
 
-            print(f"| `{b.name}` | {local} | {remote} | {b.last_commit_hash} {b.last_commit_msg} | {b.last_commit_age} | {contained} | {action} |")
+            print(f"| `{b.name}` | {local} | {remote} | {b.last_commit_hash} {b.last_commit_msg} | {b.last_commit_age} | {unique} | {missing} | {can_ff} | {action} |")
     else:
         print("*No active branches*")
 

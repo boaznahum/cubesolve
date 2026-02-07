@@ -94,9 +94,6 @@ class _LBLSlices(SolverHelper):
 
         self.debug(f"Block statistics: {', '.join(parts)} (total: {total} blocks)")
 
-        # Also print to console for visibility
-        print(f"[LBL] Block statistics: {', '.join(parts)} (total: {total} blocks)")
-
     # =========================================================================
     # State inspection
     # =========================================================================
@@ -212,14 +209,13 @@ class _LBLSlices(SolverHelper):
         best_count = self._count_all_rows_solved(l1_white_tracker, n_to_solve)
         best_rot = 0
 
-        for n_rot in range(1, 4):
-            with self.op.with_query_restore_state():
-                for _ in range(n_rot):
+        with self.op.with_query_restore_state():
+            for n_rot in range(1, 4):
                     self.play(center_slice_alg)
-                count = self._count_all_rows_solved(l1_white_tracker, n_to_solve)
-                if count > best_count:
-                    best_count = count
-                    best_rot = n_rot
+                    count = self._count_all_rows_solved(l1_white_tracker, n_to_solve)
+                    if count > best_count:
+                        best_count = count
+                        best_rot = n_rot
 
         if best_rot > 0:
             self.debug(lambda : f"Global center-slice pre-align: {best_rot}x rotation "
@@ -227,8 +223,8 @@ class _LBLSlices(SolverHelper):
             self.debug(lambda :f"[LBL] Global center-slice pre-align: {best_rot}x rotation "
                   f"({best_count} total pieces aligned)")
             # Rotate the center E-slice to change equatorial face colors
-            for _ in range(best_rot):
-                self.play(center_slice_alg)
+
+            self.play(center_slice_alg * best_rot)
 
             # caller will raise exception to restart solver
             return True
@@ -273,10 +269,9 @@ class _LBLSlices(SolverHelper):
         best_rotations = 0
 
         # Try rotations 1, 2, 3
-        for n_rotations in range(1, 4):
-            with self.op.with_query_restore_state():
-                for _ in range(n_rotations):
-                    self.play(slice_alg)
+        with self.op.with_query_restore_state():
+            for n_rotations in range(1, 4):
+                self.play(slice_alg)
                 count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
                 if count > best_count:
                     best_count = count
@@ -330,29 +325,8 @@ class _LBLSlices(SolverHelper):
 
             # Apply pre-alignment
             self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
-            for _ in range(best_rotations):
-                self.play(slice_alg)
+            self.play(slice_alg * best_rotations)
 
-            # Solve with pre-alignment
-            self._solve_row_core(face_row, th, l1_white_tracker)
-
-            if self._row_solved(l1_white_tracker, face_row):
-                return  # Success with pre-alignment
-
-            # Pre-alignment made the row unsolvable - rollback and retry
-            self.debug(f"Pre-align row {face_row}: rolling back (row not fully solved)")
-            while len(self.op.history()) > history_len_before:
-                self.op.undo(animation=False)
-
-            # Clear stale markers left by the failed attempt, then
-            # re-mark all previously solved rows so the solver still
-            # protects them.
-            _common.clear_solved_markers(self.cube)
-            _common.clear_all_center_slices_tracking(self.cube)
-            for prev_row in range(face_row):
-                _common.mark_slices_and_v_mark_if_solved(
-                    _get_row_pieces(self.cube, l1_white_tracker, prev_row)
-                )
 
         # Solve without pre-alignment (or as fallback after rollback)
         self._solve_row_core(face_row, th, l1_white_tracker)
