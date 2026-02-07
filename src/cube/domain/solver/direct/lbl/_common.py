@@ -110,7 +110,7 @@ if TYPE_CHECKING:
 def clear_all_type_of_markers(cube: Cube) -> None:
     """Clear all types of markers from the cube (MARKER 2 + MARKER 3)."""
     clear_all_center_slices_tracking(cube)
-    clear_solved_markers(cube)
+    clear_cube_solved_flags_and_markers(cube)
 
 # =============================================================================
 # MARKER 2: SOLVED FLAG (Solver Algorithm)
@@ -149,23 +149,32 @@ def _mark_piece_solved(piece: PartSlice) -> None:
         edge.moveable_attributes[__SOLVED_FLAG_KEY] = True
 
 
-def clear_solved_markers(cube: Cube) -> None:
+def clear_cube_solved_flags_and_markers(cube: Cube) -> None:
     """Clear all solved flags (MARKER 2) from all pieces in the cube.
 
     This clears the algorithm markers from centers, edges, and corners.
 
     """
+    clear_pieces_solved_flags_and_markers(cube.get_all_part_slices())
 
-    mm = cube.sp.marker_manager
+
+def clear_pieces_solved_flags_and_markers(pieces: Iterable[PartSlice]) -> None:
+    """Clear solved flags (MARKER 2) from specific pieces only.
+
+    """
+
+    mm = None
 
     _PUT_SOLVED_MARKERS = PUT_SOLVED_MARKERS
 
-    for part_slice in cube.get_all_part_slices():
+    for part_slice in pieces:
+        if mm is None:
+            mm = part_slice.cube.sp.marker_manager
         for edge in part_slice.edges:
             edge.moveable_attributes.pop(__SOLVED_FLAG_KEY, None)
 
             if _PUT_SOLVED_MARKERS:
-                mm.remove_marker(edge,_V_CHECKMARK, moveable=True)
+                mm.remove_marker(edge, _V_CHECKMARK, moveable=True)
 
 
 

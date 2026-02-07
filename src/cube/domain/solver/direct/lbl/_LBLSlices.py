@@ -324,14 +324,12 @@ class _LBLSlices(SolverHelper):
             self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
             self.play(slice_alg * best_rotations)
 
-            # Pre-alignment rotation moved pieces — clean up tracking state
-            # so the solver doesn't get confused by stale markers
-            _common.clear_solved_markers(self.cube)
-            _common.clear_all_center_slices_tracking(self.cube)
-            for prev_row in range(face_row):
-                _common.mark_slices_and_v_mark_if_solved(
-                    _get_row_pieces(self.cube, l1_white_tracker, prev_row)
-                )
+            # Pre-alignment rotation moved pieces in this row — clear stale
+            # solved markers so the solver doesn't skip unsolved pieces.
+            # Only the current row is affected (slice rotation is per-row).
+            # Boaz: Is till dont understand it, how row that we first reach can have solved markers ? maybe we
+            # we have some outer loop ? or moving center pieces move a solved pieces to other place ?
+            _common.clear_pieces_solved_flags_and_markers(_get_row_pieces(self.cube, l1_white_tracker, face_row))
 
         self._solve_row_core(face_row, th, l1_white_tracker)
 
