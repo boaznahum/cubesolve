@@ -225,6 +225,17 @@ class FacesTrackerHolder(FacesColorsProvider):
         for tracker in self._trackers:
             self._face_colors_cache[tracker.face.name] = tracker.color
         self._cache_modify_counter = current_counter
+
+        # Validate trackers if configured (safe: cache is set, no recursion risk)
+        if self._cube.config.face_tracker_validate:
+            # Check no duplicate faces (two trackers on same face = dict key collision → fewer entries)
+            assert len(self._face_colors_cache) == 6, (
+                f"Tracker face collision: expected 6 faces, got {len(self._face_colors_cache)}. "
+                f"Two trackers report the same face."
+            )
+            # Check valid BOY layout (reads tracker.face/color directly, not get_face_colors)
+            self.assert_is_boy()
+
         return self._face_colors_cache
 
     @property
@@ -481,4 +492,10 @@ class FacesTrackerHolder(FacesColorsProvider):
             The Color enum if tracked, None otherwise.
         """
         return FaceTracker.get_edge_tracker_color(edge)
+
+    def get_debug_str_faces(self):
+        faces: dict[FaceName, Color] = { f.face_name:f.color for f in self.trackers}
+        s = f"is boy={self._trackers_layout().is_boy()} {faces}"
+
+        return s
 

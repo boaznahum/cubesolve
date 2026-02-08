@@ -23,6 +23,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
+from cube.application import _config
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.model import CenterSlice, Color
 from cube.domain.model.CubeQueries2 import Pred
@@ -30,13 +31,27 @@ from cube.domain.model.Face import Face
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 
+# Visual marker key for rendering tracker dots on center slices.
+# This is ONLY for on-screen display (marker_manager) — NOT used for solver logic.
+# Solver logic uses moveable_attributes with _TRACKER_KEY_PREFIX instead.
+_TRACKER_VISUAL_MARKER = "tracker_ct"
+
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 
-# Key prefix for tracker markers in c_attributes
+# Key prefix for logical tracker data in moveable_attributes.
 # Format: "_nxn_centers_track:h{holder_id}:{color}{unique_id}"
+# This is the actual tracking mechanism — determines which face owns which color.
 _TRACKER_KEY_PREFIX = "_nxn_centers_track:"
+
+
+def search_and_remove_center_visible_markers(face: Face) -> None:
+    """Remove all visual tracker dots from center slices on the given face."""
+    mm = face.cube.sp.marker_manager
+
+    for s in face.center.all_slices:
+        mm.remove_marker(s.edge, _TRACKER_VISUAL_MARKER, moveable=True)
 
 
 def get_tracker_key_prefix() -> str:
@@ -280,12 +295,16 @@ class MarkedFaceTracker(FaceTracker):
 
         return self._cube.cqr.find_face(_face_pred)
 
-    def cleanup(self) -> None:
-        """Search for and remove the specific key from the marked slice."""
+
+    def cleanup(self, force_remove_visible:bool = False) -> None:
+        """Search for and remove the specific key and visual marker from the marked slice."""
+        mm = self._cube.sp.marker_manager
         for f in self._cube.faces:
             for s in f.center.all_slices:
                 if self._key in s.edge.moveable_attributes:
                     del s.edge.moveable_attributes[self._key]
+                    if force_remove_visible or  not _config.FACE_TRACKER_LEAVE_LAST_ANNOTATION:
+                        mm.remove_marker(s.edge, _TRACKER_VISUAL_MARKER, moveable=True)
                     return
 
     def restore_to_physical_face(self, saved_face_name: FaceName) -> None:
@@ -300,8 +319,8 @@ class MarkedFaceTracker(FaceTracker):
         Args:
             saved_face_name: The FaceName of the physical face to restore to.
         """
-        # 1. Cleanup existing marker
-        self.cleanup()
+        # 1. Cleanup existing marker, also visible one
+        self.cleanup(force_remove_visible=True) # force because we are going to put new one
 
         # 2. Find face by saved name
         face = self._cube.face(saved_face_name)
@@ -310,7 +329,13 @@ class MarkedFaceTracker(FaceTracker):
         center_slice = self._find_markable_center_slice(face)
 
         # 4. Mark it with our color (reuse existing key)
-        center_slice.edge.moveable_attributes[self._key] = self._color
+        edge = center_slice.edge
+        edge.moveable_attributes[self._key] = self._color
+
+        # 5. Re-add visual marker on the new edge
+        cube = self._cube
+        if cube.config.face_tracker_annotate:
+            cube.sp.marker_manager.add_marker(edge, _TRACKER_VISUAL_MARKER, cube.sp.marker_factory.center_tracker(), moveable=True)
 
     def _find_markable_center_slice(self, face: Face) -> CenterSlice:
         """Find a center slice on the given face to mark.

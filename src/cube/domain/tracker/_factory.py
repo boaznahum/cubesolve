@@ -124,6 +124,7 @@ from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.tracker.trackers import (
+    _TRACKER_VISUAL_MARKER,
     FaceTracker,
     MarkedFaceTracker,
     SimpleFaceTracker,
@@ -213,6 +214,8 @@ class NxNCentersFaceTrackers(SolverHelper):
         cube = _slice.parent.cube
         if cube.config.solver_annotate_trackers:
             cube.sp.marker_manager.add_marker(edge, "tracker_c0", cube.sp.marker_factory.c0(), moveable=True)
+        if cube.config.face_tracker_annotate:
+            cube.sp.marker_manager.add_marker(edge, _TRACKER_VISUAL_MARKER, cube.sp.marker_factory.center_tracker(), moveable=True)
 
         return MarkedFaceTracker(cube, parent_container, _slice.color, key)
 

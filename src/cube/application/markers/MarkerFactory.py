@@ -30,6 +30,23 @@ class MarkerFactory(IMarkerFactory):
     # Animation Markers (used by solver/animation system)
     # ============================================================
 
+    def center_tracker(self) -> MarkerConfig:
+        """Center tracker marker - small filled circle on tracked center slices.
+
+        Shows "this piece is being tracked" with a small complementary-color dot.
+        Distinct from c0() which marks the tracker anchor for animation.
+        """
+        key = ("center_tracker",)
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = MarkerConfig(
+                shape=MarkerShape.FILLED_CIRCLE,
+                radius_factor=0.4,
+                thickness=1.0,
+                height_offset=0.12,
+                use_complementary_color=True,
+            )
+        return MarkerFactory._cache[key]
+
     def c0(self) -> MarkerConfig:
         """C0 marker - tracker anchor indicator.
 

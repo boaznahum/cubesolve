@@ -159,6 +159,16 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
+    def face_tracker_annotate(self) -> bool:
+        """Add visual markers on tracked center slices."""
+        ...
+
+    @property
+    def face_tracker_validate(self) -> bool:
+        """Validate trackers on cache rebuild (no duplicates, valid BOY)."""
+        ...
+
+    @property
     def solver_sanity_check_is_a_boy(self) -> bool:
         """Check if cube is in BOY orientation."""
         ...

@@ -18,7 +18,7 @@ from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 4
+CUBE_SIZE = 6
 
 # Enable cube caching for performance optimization
 # Env override: CUBE_DISABLE_CACHE=1 to disable
@@ -209,6 +209,10 @@ OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True
 SOLVER_SANITY_CHECK_IS_A_BOY = False
 
 SOLVER_ANNOTATE_TRACKERS = False
+
+FACE_TRACKER_ANNOTATE = True
+FACE_TRACKER_VALIDATE = True
+FACE_TRACKER_LEAVE_LAST_ANNOTATION = True
 
 SOLVER_PLL_ROTATE_WHILE_SEARCH = False
 

@@ -858,6 +858,9 @@ class Cube(CubeSupplier):
         for f in self.faces:
             f.reset_after_faces_changes()
 
+        # and make if some watch me
+        self.modified()
+
     @contextmanager
     def with_faces_color_provider(self, provider: "FacesColorsProvider") -> Generator[None, None, None]:
         """Set a FacesColorsProvider on all faces for the duration of the block.

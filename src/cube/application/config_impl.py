@@ -128,6 +128,16 @@ class AppConfig(ConfigProtocol):
         return cfg.SOLVER_PLL_ROTATE_WHILE_SEARCH
 
     @property
+    def face_tracker_annotate(self) -> bool:
+        """Add visual markers on tracked center slices."""
+        return cfg.FACE_TRACKER_ANNOTATE
+
+    @property
+    def face_tracker_validate(self) -> bool:
+        """Validate trackers on cache rebuild (no duplicates, valid BOY)."""
+        return cfg.FACE_TRACKER_VALIDATE
+
+    @property
     def solver_sanity_check_is_a_boy(self) -> bool:
         """Check if cube is in BOY orientation."""
         return cfg.SOLVER_SANITY_CHECK_IS_A_BOY
