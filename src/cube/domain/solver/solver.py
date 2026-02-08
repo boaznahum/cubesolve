@@ -183,6 +183,10 @@ class Solver(SolverElementsProvider, ABC):
     def op(self) -> OperatorProtocol:
         pass
 
+    def get_statistics(self) -> dict[int, int]:
+        """Return block solving statistics. Override in subclasses that track stats."""
+        return {}
+
     @abstractmethod
     def supported_steps(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.

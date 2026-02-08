@@ -87,6 +87,12 @@ class _LBLSlices(SolverHelper):
         if self._last_centers is not None:
             self._last_centers.reset_statistics()
 
+    def get_statistics(self) -> dict[int, int]:
+        """Return block solving statistics (empty dict if no centers created)."""
+        if self._last_centers is None:
+            return {}
+        return self._last_centers.get_statistics()
+
     def display_statistics(self) -> None:
         """Display block solving statistics."""
         if self._last_centers is None:

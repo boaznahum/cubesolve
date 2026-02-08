@@ -390,7 +390,7 @@ class Face(SuperElement, Hashable):
         Args:
             provider: Provider to set, or None to clear.
         """
-        self._color_provider = provider
+        pass  # noop for now - investigating if this causes solver failures
 
     def __str__(self) -> str:
         # return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"

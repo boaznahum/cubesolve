@@ -103,7 +103,7 @@ class TestLBLBigCubeSolver:
 
         assert solver._is_l2_slices_solved(), "15x15 single E-slice not solved"
 
-        stats = solver._lbl_slices._centers.get_statistics()
+        stats = solver.get_statistics()
 
         if stats:
             # If blocks were used, verify big blocks were found
@@ -141,7 +141,7 @@ class TestLBLBigCubeSolver:
         assert solver._is_l2_slices_solved(), "15x15 center E-slice not solved"
 
         solve_ops = app.op.count - op_count_before
-        stats = solver._lbl_slices._centers.get_statistics()
+        stats = solver.get_statistics()
 
         assert not stats, (
             f"Expected global pre-alignment to solve center E-slice with 0 blocks, "

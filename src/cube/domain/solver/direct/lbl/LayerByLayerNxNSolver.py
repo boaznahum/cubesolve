@@ -732,6 +732,10 @@ class LayerByLayerNxNSolver(BaseSolver):
         """Reset solver statistics before solving."""
         self._lbl_slices.reset_statistics()
 
+    def get_statistics(self) -> dict[int, int]:
+        """Return block solving statistics."""
+        return self._lbl_slices.get_statistics()
+
     def display_statistics(self) -> None:
         """Display solver statistics after solving."""
         self._lbl_slices.display_statistics()
