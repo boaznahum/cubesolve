@@ -28,8 +28,44 @@ with a static `_create_tracker_on_face` method. Face 5 was tracked using a
 - Removed `_create_tracker_on_face` method (new, didn't exist before)
 - Removed `FaceName` import (added only for the new code)
 
-**Why it broke things:** The change to face 5/6 tracking affected ALL even cube solvers
-(not just LBL), since `_factory.py` is shared tracker infrastructure used by all solvers.
+**Why it broke things — Root Cause Analysis:**
+
+The fundamental problem is the difference between how `SimpleFaceTracker` and
+`MarkedFaceTracker` find their face:
+
+**SimpleFaceTracker (original, face 5):**
+- `face` property calls `cube.cqr.find_face(self._pred)` every time
+- The predicate re-evaluates: "which of the remaining 2 faces, when assigned
+  this color, creates a valid BOY layout?"
+- It reads the CURRENT positions of faces 1-4 trackers dynamically
+- Cube rotations, commutators, any operation — the predicate adapts because
+  it recalculates from scratch each time
+- **Self-healing:** Even if the cube state changes dramatically, the predicate
+  always finds the correct face by checking the BOY constraint
+
+**MarkedFaceTracker (attempted, face 5):**
+- `face` property searches ALL faces for the slice containing `self._key`
+  in `moveable_attributes`
+- It follows a PHYSICAL center slice piece
+- When commutators move center pieces between faces, the marked slice moves
+  with the piece — potentially to the WRONG face
+- **Fragile for face 5:** Unlike faces 1-4 where we mark a slice of the
+  CORRECT majority color (likely to be placed back on its face during solving),
+  face 5's color is assigned by BOY constraint, not majority. The marked
+  slice might be of a completely different color and move unpredictably.
+
+**Why faces 1-4 work with MarkedFaceTracker but face 5 doesn't:**
+- Faces 1-4: Selected by MAJORITY color — the marked slice's color matches
+  the face's target color. During solving, that slice is actively being
+  collected TO this face, so the marker stays stable.
+- Face 5: Selected by BOY CONSTRAINT — the target color may be a MINORITY
+  on the face. `_create_tracker_on_face` falls back to marking ANY available
+  slice. This arbitrary slice has no affinity to the face and drifts away
+  during commutators.
+
+**The deeper issue:** `_factory.py` is shared infrastructure used by ALL solvers
+(Cage, Beginner, LBL). Changing face 5 tracking from a self-healing predicate
+to a fragile physical marker broke every even-cube solver, not just LBL.
 
 ### 2. `Face.set_color_provider` in `Face.py` - Made NO-OP
 
@@ -84,8 +120,13 @@ To re-enable even cube support, investigate:
    - Only using provider within LBL solver scope (not globally on Face)
    - Or ensuring provider returns correct colors for all solver contexts
 
-2. **Face 5/6 tracking:** The `_create_tracker_on_face` approach (marking any slice, not
-   necessarily matching color) may be needed for even cubes where the target color isn't
-   on the face yet. But it changes tracker behavior for ALL solvers. Consider:
-   - Making this LBL-specific rather than changing shared `_factory.py`
-   - Or ensuring `_create_f5_pred` works correctly for even cubes too
+2. **Face 5/6 tracking — keep predicate approach:** The `SimpleFaceTracker` with
+   `_create_f5_pred` is the correct design for face 5 because:
+   - The BOY predicate is self-healing (re-evaluates from current state)
+   - It doesn't depend on any physical piece staying in place
+   - It works for ALL solvers, not just LBL
+
+   If `_create_f5_pred` has bugs for even cubes, fix the predicate logic itself
+   rather than switching to `MarkedFaceTracker`. The predicate approach is
+   architecturally sound — `MarkedFaceTracker` is fundamentally wrong for face 5
+   because BOY-assigned colors have no majority affinity to their face.

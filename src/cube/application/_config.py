@@ -210,9 +210,32 @@ SOLVER_SANITY_CHECK_IS_A_BOY = False
 
 SOLVER_ANNOTATE_TRACKERS = False
 
-FACE_TRACKER_ANNOTATE = True
-FACE_TRACKER_VALIDATE = True
-FACE_TRACKER_LEAVE_LAST_ANNOTATION = True
+##############  FaceTracer  ##################
+
+
+@dataclass
+class FaceTrackerConfig:
+    """Configuration for face tracker visual annotations and validation.
+
+    Access via ConfigProtocol.face_tracker property.
+    """
+    # Add visual markers (dots) on tracked center slices for debugging
+    annotate: bool = True
+
+    # Validate trackers on cache rebuild (no duplicates, valid BOY layout)
+    validate: bool = True
+
+    # When cleaning up trackers, leave the last visual annotation on screen
+    leave_last_annotation: bool = True
+
+    use_simple_f5_tracker: bool = True
+
+
+FACE_TRACKER = FaceTrackerConfig(
+    annotate=True,
+    validate=True,
+    leave_last_annotation=True,
+)
 
 SOLVER_PLL_ROTATE_WHILE_SEARCH = False
 

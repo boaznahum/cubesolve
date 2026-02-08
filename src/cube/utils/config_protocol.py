@@ -15,6 +15,29 @@ if TYPE_CHECKING:
 
 
 @runtime_checkable
+class FaceTrackerConfigProtocol(Protocol):
+    """Protocol for face tracker configuration.
+
+    Controls visual annotations and validation of face trackers.
+    """
+
+    @property
+    def annotate(self) -> bool:
+        """Add visual markers (dots) on tracked center slices."""
+        ...
+
+    @property
+    def validate(self) -> bool:
+        """Validate trackers on cache rebuild (no duplicates, valid BOY)."""
+        ...
+
+    @property
+    def leave_last_annotation(self) -> bool:
+        """When cleaning up, leave the last visual annotation on screen."""
+        ...
+
+
+@runtime_checkable
 class ArrowConfigProtocol(Protocol):
     """Protocol for 3D arrow configuration.
 
@@ -159,13 +182,8 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
-    def face_tracker_annotate(self) -> bool:
-        """Add visual markers on tracked center slices."""
-        ...
-
-    @property
-    def face_tracker_validate(self) -> bool:
-        """Validate trackers on cache rebuild (no duplicates, valid BOY)."""
+    def face_tracker(self) -> FaceTrackerConfigProtocol:
+        """Face tracker configuration (annotations, validation)."""
         ...
 
     @property

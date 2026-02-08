@@ -11,7 +11,7 @@ import os
 
 from cube.application import _config as cfg
 from cube.domain.model.Color import Color
-from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, MarkerDef
+from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, FaceTrackerConfigProtocol, MarkerDef
 from cube.utils.markers_config import MarkersConfig
 from cube.utils.SSCode import SSCode
 
@@ -128,14 +128,9 @@ class AppConfig(ConfigProtocol):
         return cfg.SOLVER_PLL_ROTATE_WHILE_SEARCH
 
     @property
-    def face_tracker_annotate(self) -> bool:
-        """Add visual markers on tracked center slices."""
-        return cfg.FACE_TRACKER_ANNOTATE
-
-    @property
-    def face_tracker_validate(self) -> bool:
-        """Validate trackers on cache rebuild (no duplicates, valid BOY)."""
-        return cfg.FACE_TRACKER_VALIDATE
+    def face_tracker(self) -> FaceTrackerConfigProtocol:
+        """Face tracker configuration (annotations, validation)."""
+        return cfg.FACE_TRACKER
 
     @property
     def solver_sanity_check_is_a_boy(self) -> bool:

@@ -23,7 +23,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
-from cube.application import _config
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.model import CenterSlice, Color
 from cube.domain.model.CubeQueries2 import Pred
@@ -303,7 +302,7 @@ class MarkedFaceTracker(FaceTracker):
             for s in f.center.all_slices:
                 if self._key in s.edge.moveable_attributes:
                     del s.edge.moveable_attributes[self._key]
-                    if force_remove_visible or  not _config.FACE_TRACKER_LEAVE_LAST_ANNOTATION:
+                    if force_remove_visible or not self._cube.config.face_tracker.leave_last_annotation:
                         mm.remove_marker(s.edge, _TRACKER_VISUAL_MARKER, moveable=True)
                     return
 
@@ -334,7 +333,7 @@ class MarkedFaceTracker(FaceTracker):
 
         # 5. Re-add visual marker on the new edge
         cube = self._cube
-        if cube.config.face_tracker_annotate:
+        if cube.config.face_tracker.annotate:
             cube.sp.marker_manager.add_marker(edge, _TRACKER_VISUAL_MARKER, cube.sp.marker_factory.center_tracker(), moveable=True)
 
     def _find_markable_center_slice(self, face: Face) -> CenterSlice:

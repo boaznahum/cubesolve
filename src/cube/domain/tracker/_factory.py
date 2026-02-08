@@ -214,7 +214,7 @@ class NxNCentersFaceTrackers(SolverHelper):
         cube = _slice.parent.cube
         if cube.config.solver_annotate_trackers:
             cube.sp.marker_manager.add_marker(edge, "tracker_c0", cube.sp.marker_factory.c0(), moveable=True)
-        if cube.config.face_tracker_annotate:
+        if cube.config.face_tracker.annotate:
             cube.sp.marker_manager.add_marker(edge, _TRACKER_VISUAL_MARKER, cube.sp.marker_factory.center_tracker(), moveable=True)
 
         return MarkedFaceTracker(cube, parent_container, _slice.color, key)

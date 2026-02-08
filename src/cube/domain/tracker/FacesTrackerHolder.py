@@ -227,7 +227,7 @@ class FacesTrackerHolder(FacesColorsProvider):
         self._cache_modify_counter = current_counter
 
         # Validate trackers if configured (safe: cache is set, no recursion risk)
-        if self._cube.config.face_tracker_validate:
+        if self._cube.config.face_tracker.validate:
             # Check no duplicate faces (two trackers on same face = dict key collision → fewer entries)
             assert len(self._face_colors_cache) == 6, (
                 f"Tracker face collision: expected 6 faces, got {len(self._face_colors_cache)}. "
