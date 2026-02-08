@@ -43,6 +43,9 @@ it remeber on whicg pysical face it track
 and when context finshed it chak if the mark moved to other face, if yes, then it choose other piece on the face
 it supposed to track ad MOVE the marker to it
 
+Please note only trackers that trace piece need to od something, odd face trackers and oposite trackers
+done use piece marker to track pieces
+
 this and the face color charting suppose to solve th evevn cube case
 
 I want you to think hard !!! plan, make sure the problem is clear and start to implement
