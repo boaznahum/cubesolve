@@ -131,7 +131,8 @@ The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
 - Back (B) = Green
 """
 
-from collections.abc import Iterable, MutableSequence
+from collections.abc import Generator, Iterable, MutableSequence
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Collection, Protocol, Tuple
 
 from cube.domain.exceptions import InternalSWError
@@ -157,6 +158,7 @@ if TYPE_CHECKING:
     from .Cube3x3Colors import Cube3x3Colors
     from .CubeListener import CubeListener
     from .CubeQueries2 import CubeQueries2
+    from .FacesColorsProvider import FacesColorsProvider
 
 
 class CubeSupplier(Protocol):
@@ -855,6 +857,30 @@ class Cube(CubeSupplier):
 
         for f in self.faces:
             f.reset_after_faces_changes()
+
+    @contextmanager
+    def with_faces_color_provider(self, provider: "FacesColorsProvider") -> Generator[None, None, None]:
+        """Set a FacesColorsProvider on all faces for the duration of the block.
+
+        On even cubes, Face.color reads from a center piece that moves during
+        solving. This context manager overrides Face.color to return
+        tracker-assigned colors instead.
+
+        Args:
+            provider: A FacesColorsProvider (e.g., FacesTrackerHolder).
+
+        Yields:
+            None -- all faces use provider colors within the block.
+        """
+        try:
+            for f in self.faces:
+                f.set_color_provider(provider)
+            self.reset_after_faces_changes()
+            yield
+        finally:
+            for f in self.faces:
+                f.set_color_provider(None)
+            self.reset_after_faces_changes()
 
     def clear_moveable_attributes(self) -> None:
         """

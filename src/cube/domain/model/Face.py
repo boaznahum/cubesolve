@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 from collections.abc import Hashable, Iterable, Sequence
-from typing import Tuple, TypeAlias
+from typing import TYPE_CHECKING, Tuple, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
 from cube.utils.Cache import CacheManager
+
+if TYPE_CHECKING:
+    from .FacesColorsProvider import FacesColorsProvider
 
 from ._elements import CenterSliceIndex, Direction, EdgePosition, PartColorsID
 from .PartSlice import CenterSlice, PartSlice
@@ -36,6 +41,7 @@ class Face(SuperElement, Hashable):
                  "_edges_of_corner",  # Lookup table: Corner -> (Edge, Edge) for O(1) access
                  "_opposite",
                  "_cache_manager",  # CacheManager for rotation cycle caching
+                 "_color_provider",  # FacesColorsProvider | None - overrides color property on even cubes
                  ]
 
     _center: Center
@@ -68,6 +74,7 @@ class Face(SuperElement, Hashable):
         self._center = self._create_center(color)
         self._direction = Direction.D0
         self._parts: Tuple[Part]
+        self._color_provider: FacesColorsProvider | None = None
 
         # Cache manager for rotation cycles (respects config.enable_cube_cache)
         self._cache_manager = CacheManager.create(cube.config)
@@ -329,28 +336,18 @@ class Face(SuperElement, Hashable):
     @property
     def color(self) -> Color:
         """
-        The DYNAMIC color of the face's center - reads from center piece at (n//2, n//2).
+        The DYNAMIC color of the face's center.
 
-        WARNING - UNRELIABLE DURING BIG CUBE CENTER SOLVING:
-        =====================================================
-        On even cubes (4x4, 6x6, etc.), this reads from ONE center piece
-        at position (n_slices//2, n_slices//2). When centers are being
-        moved by commutators, this value changes dynamically!
+        When a FacesColorsProvider is set (via Cube.with_faces_color_provider),
+        returns the tracker-assigned color -- reliable on even cubes during solving.
 
-        Example: On a 4x4 cube, if a commutator moves the center piece at
-        position (1,1) from U to F, then U.color suddenly returns BLUE
-        instead of YELLOW - even though U face edges are still Yellow!
+        Otherwise reads from center piece at (n//2, n//2), which is unreliable
+        on even cubes when commutators move center pieces.
 
-        Use cases:
-        - Valid: After full reduction (all centers same color)
-        - Valid: On odd cubes (center piece is fixed)
-        - INVALID: During center solving on even cubes
-
-        For checking state during center solving, use relative consistency
-        between edges and corners instead of comparing to face colors.
-
-        :return: Color of center piece at (n_slices//2, n_slices//2)
+        :return: Tracker-assigned color if provider set, else center piece color
         """
+        if self._color_provider is not None:
+            return self._color_provider.get_face_color(self._name)
         return self.center.color
 
     @property
@@ -383,6 +380,17 @@ class Face(SuperElement, Hashable):
         :return: The face's birth color (constant)
         """
         return self._original_color
+
+    def set_color_provider(self, provider: FacesColorsProvider | None) -> None:
+        """Set or clear the face color provider.
+
+        When set, Face.color returns tracker-assigned colors instead of
+        reading from the center piece. Used on even cubes during solving.
+
+        Args:
+            provider: Provider to set, or None to clear.
+        """
+        self._color_provider = provider
 
     def __str__(self) -> str:
         # return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"

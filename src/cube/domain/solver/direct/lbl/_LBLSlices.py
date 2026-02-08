@@ -57,7 +57,7 @@ class _LBLSlices(SolverHelper):
         edges: NxNEdges helper for edge pairing
     """
 
-    __slots__ = ["_slv", "_centers", "_edges"]
+    __slots__ = ["_slv", "_last_centers", "_edges"]
 
     def __init__(self, slv: LayerByLayerNxNSolver) -> None:
 
@@ -69,9 +69,14 @@ class _LBLSlices(SolverHelper):
             slv: LayerByLayerNxNSolver instance (for cube access and operations)
         """
         self._slv: LayerByLayerNxNSolver = slv
-        # preserve_cage=True to preserve Layer 1 edges during center solving
-        self._centers = NxNCenters2(self, preserve_cage=True)
+        self._last_centers: NxNCenters2 | None = None
         self._edges = _LBLNxNEdges(self)
+
+    def _create_centers(self, th: FacesTrackerHolder) -> NxNCenters2:
+        """Create fresh NxNCenters2 with the given tracker holder."""
+        centers = NxNCenters2(self, tracker_holder=th, preserve_cage=True)
+        self._last_centers = centers
+        return centers
 
     # =========================================================================
     # Statistics
@@ -79,11 +84,14 @@ class _LBLSlices(SolverHelper):
 
     def reset_statistics(self) -> None:
         """Reset statistics for all sub-helpers."""
-        self._centers.reset_statistics()
+        if self._last_centers is not None:
+            self._last_centers.reset_statistics()
 
     def display_statistics(self) -> None:
         """Display block solving statistics."""
-        stats = self._centers.get_statistics()
+        if self._last_centers is None:
+            return
+        stats = self._last_centers.get_statistics()
 
         if not stats:
             return  # No blocks solved
@@ -297,7 +305,7 @@ class _LBLSlices(SolverHelper):
             return
 
         for target_face in side_trackers:
-            self._solve_face_row(l1_white_tracker, target_face, face_row)
+            self._solve_face_row(l1_white_tracker, target_face, face_row, th)
 
     def _solve_slice_row(
             self, face_row: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
@@ -335,7 +343,8 @@ class _LBLSlices(SolverHelper):
 
     def _solve_face_row(self, l1_white_tracker: FaceTracker,
                         target_face: FaceTracker,
-                        face_row: int
+                        face_row: int,
+                        th: FacesTrackerHolder,
                         ) -> None:
 
         MAX_ITERATIONS = 10
@@ -347,7 +356,7 @@ class _LBLSlices(SolverHelper):
                 raise InternalSWError("Maximum number of iterations reached")
 
             if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
-                self._centers.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
+                self._create_centers(th).solve_single_center_face_row(l1_white_tracker, target_face, face_row)
 
             if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
                 self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row)

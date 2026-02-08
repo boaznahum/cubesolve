@@ -1,5 +1,6 @@
 import sys
 from collections.abc import Iterable, Iterator, Sequence, Set
+from contextlib import AbstractContextManager, nullcontext
 from enum import Enum, unique
 from typing import Tuple
 
@@ -114,6 +115,7 @@ class NxNCenters(SolverHelper):
         self,
         slv: SolverElementsProvider,
         preserve_cage: bool = False,
+        tracker_holder: FacesTrackerHolder | None = None,
     ) -> None:
         """
         Initialize the center solver.
@@ -134,11 +136,18 @@ class NxNCenters(SolverHelper):
                     - Disables certain optimizations that break the cage:
                       * _OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES
                       * _OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS
+
+            tracker_holder: Optional FacesTrackerHolder. When provided,
+                each commutator execution is wrapped with
+                preserve_physical_faces() to restore tracker markers
+                to their correct physical faces. Required for even cubes
+                where face 5/6 use MarkedFaceTracker.
         """
         super().__init__(slv, "NxNCenters")
         self._logger.set_level(NxNCenters.D_LEVEL)
 
         self._preserve_cage = preserve_cage
+        self._tracker_holder: FacesTrackerHolder | None = tracker_holder
 
         cfg = self.cube.config
         self._sanity_check_is_a_boy = cfg.solver_sanity_check_is_a_boy
@@ -970,16 +979,36 @@ class NxNCenters(SolverHelper):
 
         # Use CommutatorHelper to execute the commutator
         # This handles the algorithm, annotations (including s2), and cage preservation
-        self._comm_helper.execute_commutator(
-            source_face=source_face,
-            target_face=face,
-            target_block=Block(rc1, rc2),
-            source_block=Block(source_rc1, source_rc2),
-            preserve_state=self._preserve_cage,
-            dry_run=False
-        )
+        self._execute_commutator(source_face, face, rc1, rc2, source_rc1, source_rc2)
 
         return True
+
+    def _preserve_trackers(self) -> AbstractContextManager[object]:
+        """Return context manager that preserves tracker markers, or no-op.
+
+        When tracker_holder is set (even cubes), returns
+        preserve_physical_faces() to restore MarkedFaceTracker markers
+        after commutators move center pieces between faces.
+        Otherwise returns nullcontext() (no-op).
+        """
+        th = self._tracker_holder
+        if th is not None:
+            return th.preserve_physical_faces()
+        return nullcontext()
+
+    def _execute_commutator(self, source_face: Face, target_face: Face,
+                            rc1: Point, rc2: Point,
+                            source_rc1: Point, source_rc2: Point) -> None:
+        """Execute a commutator, wrapping with preserve_physical_faces if needed."""
+        with self._preserve_trackers():
+            self._comm_helper.execute_commutator(
+                source_face=source_face,
+                target_face=target_face,
+                target_block=Block(rc1, rc2),
+                source_block=Block(source_rc1, source_rc2),
+                preserve_state=self._preserve_cage,
+                dry_run=False
+            )
 
     @staticmethod
     def count_missing(face: Face, color: Color) -> int:

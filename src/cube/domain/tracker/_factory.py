@@ -123,6 +123,7 @@ from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
+from cube.domain.model.FaceName import FaceName
 from cube.domain.tracker.trackers import (
     FaceTracker,
     MarkedFaceTracker,
@@ -221,6 +222,38 @@ class NxNCentersFaceTrackers(SolverHelper):
         _slice = face.cube.cqr.find_slice_in_face_center(face, lambda s: s.color == color)
         assert _slice
         return self._create_tracker_by_center_piece(parent_container, _slice)
+
+    def _create_tracker_on_face(self, parent_container: FacesTrackerHolder, face: Face, color: Color) -> MarkedFaceTracker:
+        """Mark any center slice on face and assign a specific tracker color.
+
+        Unlike _create_tracker_by_color which requires a slice of the target
+        color to exist on the face, this marks any available center slice.
+        Used for the last two faces where the BOY-determined color may not
+        be present on the face yet (it will be placed there during solving).
+        """
+        NxNCentersFaceTrackers._global_tracer_id += 1
+        unique_id = NxNCentersFaceTrackers._global_tracer_id
+
+        prefix = get_tracker_key_prefix()
+        key = f"{prefix}h{self._holder_id}:{color}{unique_id}"
+
+        # Prefer a slice matching our target color (more stable during solving),
+        # fall back to any available center slice.
+        _slice = None
+        for s in face.center.all_slices:
+            if s.color == color:
+                _slice = s
+                break
+        if _slice is None:
+            _slice = next(iter(face.center.all_slices))
+        edge = _slice.edge
+        edge.moveable_attributes[key] = color  # Store assigned color
+
+        cube = face.cube
+        if cube.config.solver_annotate_trackers:
+            cube.sp.marker_manager.add_marker(edge, "tracker_c0", cube.sp.marker_factory.c0(), moveable=True)
+
+        return MarkedFaceTracker(cube, parent_container, color, key)
 
     def _create_tracker_odd(self, parent_container: FacesTrackerHolder, f: Face) -> SimpleFaceTracker:
         """Create tracker for odd cube using fixed center."""
@@ -409,96 +442,40 @@ class NxNCentersFaceTrackers(SolverHelper):
         c5: Color = left_two_colors.pop()
         c6: Color = left_two_colors.pop()
 
-        f5: Face = left_two_faces.pop()
+        f5: Face = left_two_faces[0]
+        f6: Face = left_two_faces[1]
 
-        color = c5
-        pred = self._create_f5_pred(four_first, color)
+        # Determine which assignment makes a valid BOY layout (one-time check).
+        # Build a trial layout: first 4 trackers' face→color + f5=c5, f6=c6.
+        trial: dict[FaceName, Color] = {ft.face.name: ft.color for ft in four_first}
+        trial[f5.name] = c5
+        trial[f6.name] = c6
+        cl: CubeLayout = create_layout(False, trial, cube.sp)
 
-        if pred(f5):
-            # f5/c5 make it a BOY
-            pass
+        if cl.same(cube.original_layout):
+            # f5→c5 is BOY-valid
+            f5_color = c5
         else:
-            color = c6
-            # other = c5
-            # f5/c5 make it a BOY
-            pred = self._create_f5_pred(four_first, color)
-            assert pred(f5)
+            # Swap: f5→c6 must be BOY-valid
+            f5_color = c6
+            trial2: dict[FaceName, Color] = {ft.face.name: ft.color for ft in four_first}
+            trial2[f5.name] = c6
+            trial2[f6.name] = c5
+            cl2: CubeLayout = create_layout(False, trial2, cube.sp)
+            assert cl2.same(cube.original_layout), (
+                f"Neither assignment creates valid BOY: "
+                f"f5={f5.name} f6={f6.name} c5={c5} c6={c6}"
+            )
 
-        f5_track = self._create_tracker(parent_container, color, pred)
+        # Use MarkedFaceTracker (like faces 1-3) instead of a recalculating
+        # BOY predicate. Once we know f5_color belongs on f5, mark a center
+        # slice on that face to track it stably during solving.
+        # We use _create_tracker_on_face because the target color may not be
+        # present on this face yet (assignment is by BOY constraint, not majority).
+        f5_track = self._create_tracker_on_face(parent_container, f5, f5_color)
         f6_track = f5_track._track_opposite()
 
         return f5_track, f6_track
-
-    def _create_f5_pred(self, four_first: Sequence[FaceTracker], color: Color) -> Pred[Face]:
-        """Create a predicate that tests if a face/color assignment makes valid BOY.
-
-        This predicate is used by FaceTracker.by_pred() to dynamically track face 5.
-        It returns True if assigning `color` to face `f` creates a valid BOY layout.
-
-        The predicate is evaluated each time we need to locate face 5, allowing
-        the tracker to follow the face even as the cube rotates.
-
-        Args:
-            four_first: Already assigned trackers for faces 1-4.
-            color: The color we're testing for face 5.
-
-        Returns:
-            Predicate function that takes a Face and returns bool.
-        """
-        cube = self.cube
-
-        four_first = [*four_first]
-
-        first_4_colors: set[Color] = set((f.color for f in four_first))
-
-        def _pred(f: Face) -> bool:
-
-            """
-
-            :param f:
-            :return: True if f/color make it a boy
-            """
-
-            left_two_faces: set[Face] = {*cube.faces} - {f.face for f in four_first}
-
-            if f not in left_two_faces:
-                return False
-
-            left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - first_4_colors
-
-            assert color in left_two_colors
-
-            c5: Color = left_two_colors.pop()
-            c6: Color = left_two_colors.pop()
-
-            f5: Face = left_two_faces.pop()
-            f6: Face = left_two_faces.pop()
-
-            # make f as f5
-            if f5 is not f:
-                f5, f6 = f, f5
-
-            if c5 is not color:
-                c5, c6 = color, c5
-
-            try1 = {f.face.name: f.color for f in four_first}
-            try1[f5.name] = c5
-            try1[f6.name] = c6
-            cl: CubeLayout = create_layout(False, try1, self.cube.sp)
-
-            if cl.same(self.cube.original_layout):
-                return True  # f/color make it a BOY
-
-            f5, f6 = (f6, f5)
-            try1 = {f.face.name: f.color for f in four_first}
-            try1[f5.name] = c5
-            try1[f6.name] = c6
-            cl = create_layout(False, try1, self.cube.sp)
-            assert cl.same(self.cube.original_layout)
-
-            return False
-
-        return _pred
 
     @staticmethod
     def _is_track_slice(s: CenterSlice) -> bool:

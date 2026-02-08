@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
 from typing import Generator
 
 from cube.domain.exceptions import InternalSWError
@@ -11,6 +11,7 @@ from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import Commu
 from cube.domain.solver.direct.lbl import _common
 from cube.domain.solver.direct.lbl import _lbl_config
 from cube.domain.tracker.trackers import FaceTracker
+from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.direct.lbl._common import (
     _is_cent_piece_marked_solved, mark_slice_and_v_mark_if_solved, _track_center_slice,
     _iterate_all_tracked_center_slices_index,
@@ -88,6 +89,7 @@ class NxNCenters2(SolverHelper):
     def __init__(
             self,
             slv: SolverElementsProvider,
+            tracker_holder: FacesTrackerHolder,
             preserve_cage: bool = False,
     ) -> None:
         """
@@ -95,6 +97,9 @@ class NxNCenters2(SolverHelper):
 
         Args:
             slv: Solver elements provider (cube, operator, etc.)
+
+            tracker_holder: FacesTrackerHolder for tracker marker preservation.
+                Commutators are wrapped with preserve_physical_faces().
 
             preserve_cage: Controls whether setup moves are undone.
 
@@ -110,6 +115,7 @@ class NxNCenters2(SolverHelper):
         super().__init__(slv, "NxNCenters2")
 
         self._preserve_cage = preserve_cage
+        self._tracker_holder: FacesTrackerHolder = tracker_holder
         self._comm_helper = CommutatorHelper(slv)
 
         # Statistics: count of blocks solved by size
@@ -127,6 +133,9 @@ class NxNCenters2(SolverHelper):
         """Record that a block of given size was solved."""
         self._block_stats[block_size] = self._block_stats.get(block_size, 0) + 1
 
+    def _preserve_trackers(self) -> AbstractContextManager[object]:
+        """Return context manager that preserves tracker markers around commutators."""
+        return self._tracker_holder.preserve_physical_faces()
 
     def solve_single_center_face_row(
             self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int
@@ -338,14 +347,15 @@ class NxNCenters2(SolverHelper):
                             up_face = l1_white_tracker.opposite.face
                             self.debug(f"Moving {candidate_piece} from {move_from_target_face.color_at_face_str} to {up_face}")
                             # Move piece from up to this face, pushing the target_color piece to up
-                            self._comm_helper.execute_commutator(
-                                up_face,  # source
-                                move_from_target_face,  # target
-                                Block(candidate_point, candidate_point),  # target point
-                                Block(candidate_point, candidate_point),
-                                True,
-                                False,
-                                None)
+                            with self._preserve_trackers():
+                                self._comm_helper.execute_commutator(
+                                    up_face,  # source
+                                    move_from_target_face,  # target
+                                    Block(candidate_point, candidate_point),  # target point
+                                    Block(candidate_point, candidate_point),
+                                    True,
+                                    False,
+                                    None)
 
                             pieces_moved += 1
                             if not remove_all:
@@ -576,15 +586,16 @@ class NxNCenters2(SolverHelper):
             return False
 
         # Execute the block commutator
-        self._comm_helper.execute_commutator(
-            source_face=source_face,
-            target_face=target_face,
-            target_block=block,
-            source_block=valid_source,
-            preserve_state=True,
-            dry_run=False,
-            _cached_secret=dry_result
-        )
+        with self._preserve_trackers():
+            self._comm_helper.execute_commutator(
+                source_face=source_face,
+                target_face=target_face,
+                target_block=block,
+                source_block=valid_source,
+                preserve_state=True,
+                dry_run=False,
+                _cached_secret=dry_result
+            )
 
         # Verify all pieces in block were solved
         for pt in block.cells:

@@ -39,6 +39,7 @@ from cube.domain.model import CenterSlice, Color, Face
 from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.FaceName import FaceName
+from cube.domain.model.FacesColorsProvider import FacesColorsProvider
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.tracker._factory import NxNCentersFaceTrackers
@@ -49,7 +50,7 @@ if TYPE_CHECKING:
     from cube.domain.solver.protocols import SolverElementsProvider
 
 
-class FacesTrackerHolder:
+class FacesTrackerHolder(FacesColorsProvider):
     """Holds 6 face trackers and provides operations on them.
 
     This class encapsulates the tracker lifecycle:

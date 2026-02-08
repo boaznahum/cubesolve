@@ -112,6 +112,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         # If issue #51 (tracker majority bug) is real, trackers might not be
         # reproducible across calls, causing inconsistent status reports.
         with FacesTrackerHolder(self) as th:
+          with self.cube.with_faces_color_provider(th):
             layer1_done = self._is_layer1_solved(th)
 
             if not layer1_done:
@@ -140,6 +141,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         :return:
         """
         with FacesTrackerHolder(self) as th:
+          with self.cube.with_faces_color_provider(th):
 
             if not self._is_layer1_solved(th):
                 return False
@@ -156,7 +158,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     def _is_l2_slices_solved_ignore_rotation(self) -> bool:
         with FacesTrackerHolder(self) as th:
-
+          with self.cube.with_faces_color_provider(th):
 
             l1_tracker = self._get_layer1_tracker(th)
             solved_slices = self._lbl_slices.count_solved_slice_centers(l1_tracker)
@@ -165,6 +167,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     def is_solved_phase(self, what: SolveStep) -> bool:
         with FacesTrackerHolder(self) as th:
+          with self.cube.with_faces_color_provider(th):
             return self.is_solved_phase_with_tracker(th, what)
 
     def is_solved_phase_with_tracker(self, th:FacesTrackerHolder, what: SolveStep) -> bool:
@@ -287,6 +290,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         # If issue #51 (tracker majority bug) is real, trackers might not be
         # reproducible across calls, causing solving to fail.
         with FacesTrackerHolder(self) as th:
+          with self.cube.with_faces_color_provider(th):
             match what:
                 case SolveStep.LBL_L1_Ctr:
                     # Layer 1 centers only
@@ -529,12 +533,11 @@ class LayerByLayerNxNSolver(BaseSolver):
         self.debug(f"Solving Layer 1 centers ({l1_tracker.color.name} face only)")
 
         with self.op.annotation.annotate(h2=f"L1 centers ({l1_tracker.color.name})"):
-            # Use NxNCenters.solve_single_face to solve just the Layer 1 face
-            centers = NxNCenters(self, preserve_cage=False)
+            centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
             centers.solve_single_face(th, l1_tracker)
 
     def _solve_layer3_centers(self, th: FacesTrackerHolder) -> None:
-        """Solve only the Layer 1 face centers."""
+        """Solve only the Layer 3 face centers."""
         if self._is_layer3_centers_solved(th):
             return
 
@@ -542,8 +545,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         self.debug(f"Solving Layer 3 centers ({l3_tracker.color.name} face only)")
 
         with self.op.annotation.annotate(h2=f"L3 centers ({l3_tracker.color.name})"):
-            # Use NxNCenters.solve_single_face to solve just the Layer 1 face
-            centers = NxNCenters(self, preserve_cage=False)
+            centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
             centers.solve_single_face(th, l3_tracker)
 
     def _solve_layer1_edges(self, th: FacesTrackerHolder) -> None:
