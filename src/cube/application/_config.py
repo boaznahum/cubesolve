@@ -19,7 +19,7 @@ from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 6
+CUBE_SIZE = 4
 
 # Enable cube caching for performance optimization
 # Env override: CUBE_DISABLE_CACHE=1 to disable

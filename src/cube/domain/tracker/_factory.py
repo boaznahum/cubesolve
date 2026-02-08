@@ -226,6 +226,8 @@ class NxNCentersFaceTrackers(SolverHelper):
         assert _slice
         return self._create_tracker_by_center_piece(parent_container, _slice)
 
+    # boaz: why we need both this _create_tracker_by_color
+    # even if yes they are almost identical
     def _create_tracker_on_face(self, parent_container: FacesTrackerHolder, face: Face, color: Color) -> MarkedFaceTracker:
         """Mark any center slice on face and assign a specific tracker color.
 
@@ -382,7 +384,7 @@ class NxNCentersFaceTrackers(SolverHelper):
 
         return self._create_tracker_by_color(parent_container, f3, f3_color)
 
-    def _track_two_last(self, parent_container: FacesTrackerHolder, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
+    def _track_two_last_even_cube(self, parent_container: FacesTrackerHolder, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
         """Create trackers for faces 5 and 6 - the final BOY-constrained assignment.
 
         After 4 faces are assigned, we have:
@@ -437,39 +439,51 @@ class NxNCentersFaceTrackers(SolverHelper):
         if not cube.config.face_tracker.use_simple_f5_tracker:
             return self._track_two_last_old(parent_container, four_first)
         else:
+            return self._track_two_last_simple(parent_container, four_first)
+
+    def _track_two_last_simple(self, parent_container: FacesTrackerHolder, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
 
 
-            assert cube.n_slices % 2 == 0
+        cube = self.cube
 
-            left_two_faces: list[Face] = list(OrderedSet(cube.faces) - {f.face for f in four_first})
+        four_first = [*four_first]
 
-            assert len(left_two_faces) == 2
+        first_4_colors: set[Color] = set((f.color for f in four_first))
 
-            first_4_colors: set[Color] = set((f.color for f in four_first))
 
-            left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - first_4_colors
+        left_two_faces: set[Face] = {*cube.faces} - {f.face for f in four_first}
 
-            c5: Color = left_two_colors.pop()
-            c6: Color = left_two_colors.pop()
+        left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - first_4_colors
 
-            f5 = left_two_faces.pop()
+        c5: Color = left_two_colors.pop()
+        c6: Color = left_two_colors.pop()
 
-            color = c5
-            pred = self._create_f5_pred(four_first, color)
+        f5: Face = left_two_faces.pop()
+        f6: Face = left_two_faces.pop()
 
-            if pred(f5):
-                # f5/c5 make it a BOY
-                pass
-            else:
-                color = c6
-                pred = self._create_f5_pred(four_first, color)
-                assert pred(f5)
+        # try 1 f5:c5 , f6:c6
+        try1 = {f.face.name: f.color for f in four_first}
+        try1[f5.name] = c5
+        try1[f6.name] = c6
+        cl: CubeLayout = create_layout(False, try1, self.cube.sp)
 
-            f5_track = self._create_tracker(parent_container, color, pred)
+        if not cl.same(self.cube.original_layout):
+            # try 2
 
+            f5, f6 = (f6, f5)
+            try1 = {f.face.name: f.color for f in four_first}
+            try1[f5.name] = c5
+            try1[f6.name] = c6
+            cl = create_layout(False, try1, self.cube.sp)
+            assert cl.same(self.cube.original_layout)
+
+
+        f5_track = self._create_tracker_on_face(parent_container, f5, c5)
         f6_track = f5_track._track_opposite()
 
         return f5_track, f6_track
+
+        return False
 
     def _track_two_last_old(self, parent_container: FacesTrackerHolder, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
         """Create trackers for faces 5 and 6 - the final BOY-constrained assignment.
