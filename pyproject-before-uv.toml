@@ -42,9 +42,28 @@ dependencies = [
     "kociemba",  # Near-optimal Rubik's cube solver (18-22 moves)
 ]
 
-# Dev dependencies — install with: uv sync --group dev
-# (or with pip: pip install -e ".[dev]")
-[dependency-groups]
+#[project.optional-dependencies]
+## Pyglet backends - install ONE of these:
+##   pip install -e ".[pyglet1]"   # Legacy OpenGL (display lists)
+##   pip install -e ".[pyglet2]"   # Modern OpenGL (shaders/VBOs)
+#pyglet1 = ["pyglet>=1.5,<2.0"]
+#pyglet2 = ["pyglet>=2.0"]
+
+# Install with pyglet 1.x (legacy OpenGL)
+# pip install -e ".[pyglet1]" --force-reinstall
+
+  # Install with pyglet 2.x (modern OpenGL)
+#  pip install -e ".[pyglet2]"
+
+  # Install with dev tools + pyglet2
+#  pip install -e ".[pyglet2,dev]"
+
+# Yes, pip install -e ".[pyglet1]" installs:
+#  1. All base dependencies (PyOpenGL, numpy, PyYAML, colorama, vecrec, typeguard, keyboard)
+#  2. Plus the pyglet1 extra (pyglet>=1.5,<2.0)
+#  Extras are additive - they add to the base dependencies, never replace them.
+
+
 dev = [
     "pytest",
     "pytest-xdist",
