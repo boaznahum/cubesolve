@@ -10,8 +10,9 @@ Environment Variables:
 import os
 
 from cube.application import _config as cfg
+from cube.config.face_tracer_config import FaceTrackerConfig
 from cube.domain.model.Color import Color
-from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, FaceTrackerConfigProtocol, MarkerDef
+from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, MarkerDef
 from cube.utils.markers_config import MarkersConfig
 from cube.utils.SSCode import SSCode
 
@@ -128,7 +129,7 @@ class AppConfig(ConfigProtocol):
         return cfg.SOLVER_PLL_ROTATE_WHILE_SEARCH
 
     @property
-    def face_tracker(self) -> FaceTrackerConfigProtocol:
+    def face_tracker(self) -> FaceTrackerConfig:
         """Face tracker configuration (annotations, validation)."""
         return cfg.FACE_TRACKER
 

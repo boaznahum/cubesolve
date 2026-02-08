@@ -8,33 +8,12 @@ All other code must access config through this protocol via context.
 
 from typing import TYPE_CHECKING, Protocol, Tuple, runtime_checkable
 
+from cube.config.face_tracer_config import FaceTrackerConfig
+
 if TYPE_CHECKING:
     from cube.domain.model.Color import Color
     from cube.utils.SSCode import SSCode
     from cube.utils.markers_config import MarkersConfig
-
-
-@runtime_checkable
-class FaceTrackerConfigProtocol(Protocol):
-    """Protocol for face tracker configuration.
-
-    Controls visual annotations and validation of face trackers.
-    """
-
-    @property
-    def annotate(self) -> bool:
-        """Add visual markers (dots) on tracked center slices."""
-        ...
-
-    @property
-    def validate(self) -> bool:
-        """Validate trackers on cache rebuild (no duplicates, valid BOY)."""
-        ...
-
-    @property
-    def leave_last_annotation(self) -> bool:
-        """When cleaning up, leave the last visual annotation on screen."""
-        ...
 
 
 @runtime_checkable
@@ -182,7 +161,7 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
-    def face_tracker(self) -> FaceTrackerConfigProtocol:
+    def face_tracker(self) -> FaceTrackerConfig:
         """Face tracker configuration (annotations, validation)."""
         ...
 

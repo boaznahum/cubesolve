@@ -14,6 +14,7 @@ Access config values through the ConfigProtocol interface instead.
 from dataclasses import dataclass
 from typing import Tuple
 
+from cube.config.face_tracer_config import FaceTrackerConfig
 from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
@@ -208,33 +209,19 @@ OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True
 
 SOLVER_SANITY_CHECK_IS_A_BOY = False
 
-SOLVER_ANNOTATE_TRACKERS = False
 
 ##############  FaceTracer  ##################
 
 
-@dataclass
-class FaceTrackerConfig:
-    """Configuration for face tracker visual annotations and validation.
-
-    Access via ConfigProtocol.face_tracker property.
-    """
-    # Add visual markers (dots) on tracked center slices for debugging
-    annotate: bool = True
-
-    # Validate trackers on cache rebuild (no duplicates, valid BOY layout)
-    validate: bool = True
-
-    # When cleaning up trackers, leave the last visual annotation on screen
-    leave_last_annotation: bool = True
-
-    use_simple_f5_tracker: bool = True
+# bug to remove
+SOLVER_ANNOTATE_TRACKERS = False
 
 
 FACE_TRACKER = FaceTrackerConfig(
     annotate=True,
     validate=True,
     leave_last_annotation=True,
+    use_simple_f5_tracker=False
 )
 
 SOLVER_PLL_ROTATE_WHILE_SEARCH = False

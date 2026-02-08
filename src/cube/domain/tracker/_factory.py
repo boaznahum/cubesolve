@@ -123,6 +123,7 @@ from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
+from cube.domain.model.FaceName import FaceName
 from cube.domain.tracker.trackers import (
     _TRACKER_VISUAL_MARKER,
     FaceTracker,
@@ -224,6 +225,40 @@ class NxNCentersFaceTrackers(SolverHelper):
         _slice = face.cube.cqr.find_slice_in_face_center(face, lambda s: s.color == color)
         assert _slice
         return self._create_tracker_by_center_piece(parent_container, _slice)
+
+    def _create_tracker_on_face(self, parent_container: FacesTrackerHolder, face: Face, color: Color) -> MarkedFaceTracker:
+        """Mark any center slice on face and assign a specific tracker color.
+
+        Unlike _create_tracker_by_color which requires a slice of the target
+        color to exist on the face, this marks any available center slice.
+        Used for the last two faces where the BOY-determined color may not
+        be present on the face yet (it will be placed there during solving).
+        """
+        NxNCentersFaceTrackers._global_tracer_id += 1
+        unique_id = NxNCentersFaceTrackers._global_tracer_id
+
+        prefix = get_tracker_key_prefix()
+        key = f"{prefix}h{self._holder_id}:{color}{unique_id}"
+
+        # Prefer a slice matching our target color (more stable during solving),
+        # fall back to any available center slice.
+        _slice = None
+        for s in face.center.all_slices:
+            if s.color == color:
+                _slice = s
+                break
+        if _slice is None:
+            _slice = next(iter(face.center.all_slices))
+        edge = _slice.edge
+        edge.moveable_attributes[key] = color  # Store assigned color
+
+        cube = face.cube
+        if cube.config.solver_annotate_trackers:
+            cube.sp.marker_manager.add_marker(edge, "tracker_c0", cube.sp.marker_factory.c0(), moveable=True)
+        if cube.config.face_tracker.annotate:
+            cube.sp.marker_manager.add_marker(edge, _TRACKER_VISUAL_MARKER, cube.sp.marker_factory.center_tracker(), moveable=True)
+
+        return MarkedFaceTracker(cube, parent_container, color, key)
 
     def _create_tracker_odd(self, parent_container: FacesTrackerHolder, f: Face) -> SimpleFaceTracker:
         """Create tracker for odd cube using fixed center."""
@@ -399,6 +434,95 @@ class NxNCentersFaceTrackers(SolverHelper):
         """
         cube = self.cube
 
+        if not cube.config.face_tracker.use_simple_f5_tracker:
+            return self._track_two_last_old(parent_container, four_first)
+        else:
+
+
+            assert cube.n_slices % 2 == 0
+
+            left_two_faces: list[Face] = list(OrderedSet(cube.faces) - {f.face for f in four_first})
+
+            assert len(left_two_faces) == 2
+
+            first_4_colors: set[Color] = set((f.color for f in four_first))
+
+            left_two_colors: set[Color] = set(self.cube.original_layout.colors()) - first_4_colors
+
+            c5: Color = left_two_colors.pop()
+            c6: Color = left_two_colors.pop()
+
+            f5 = left_two_faces.pop()
+
+            color = c5
+            pred = self._create_f5_pred(four_first, color)
+
+            if pred(f5):
+                # f5/c5 make it a BOY
+                pass
+            else:
+                color = c6
+                pred = self._create_f5_pred(four_first, color)
+                assert pred(f5)
+
+            f5_track = self._create_tracker(parent_container, color, pred)
+
+        f6_track = f5_track._track_opposite()
+
+        return f5_track, f6_track
+
+    def _track_two_last_old(self, parent_container: FacesTrackerHolder, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
+        """Create trackers for faces 5 and 6 - the final BOY-constrained assignment.
+
+        After 4 faces are assigned, we have:
+        - 2 remaining faces (f5, f6)
+        - 2 remaining colors (c5, c6)
+
+        THE CRITICAL BOY CONSTRAINT:
+        ============================
+
+        We can't just randomly assign colors to the last 2 faces!
+        The assignment must result in a valid BOY (Blue-Orange-Yellow) layout.
+
+        Example - why this matters:
+            Already assigned:
+                Up = Green, Down = Blue       (opposites ✓)
+                Front = Red, Back = Orange    (opposites ✓)
+
+            Remaining:
+                Faces: Left, Right
+                Colors: White, Yellow
+
+            Two possible assignments:
+                Option A: Left=White, Right=Yellow
+                Option B: Left=Yellow, Right=White
+
+            Only ONE of these creates a valid BOY cube!
+            (In standard layout: Left=Yellow opposite Right=White is wrong)
+
+        ALGORITHM:
+        ----------
+        1. Get remaining 2 faces and 2 colors
+        2. Try assigning color c5 to face f5
+        3. Check if this creates valid BOY layout using CubeLayout.same()
+        4. If not valid, swap: assign c6 to f5 instead
+        5. f6 automatically gets the remaining color (opposite of f5)
+
+        WHY THIS WORKS:
+        ---------------
+        With 2 faces and 2 colors, there are only 2 possible assignments.
+        Exactly ONE of them is valid BOY (or both if cube was not properly shuffled).
+        We try one, verify with CubeLayout, and use the other if invalid.
+
+        Args:
+            parent_container: The FacesTrackerHolder that owns this tracker.
+            four_first: Trackers for faces 1-4.
+
+        Returns:
+            Tuple of (face_5_tracker, face_6_tracker).
+        """
+        cube = self.cube
+
         assert cube.n_slices % 2 == 0
 
         left_two_faces: list[Face] = list(OrderedSet(cube.faces) - {f.face for f in four_first})
@@ -431,6 +555,7 @@ class NxNCentersFaceTrackers(SolverHelper):
         f6_track = f5_track._track_opposite()
 
         return f5_track, f6_track
+
 
     def _create_f5_pred(self, four_first: Sequence[FaceTracker], color: Color) -> Pred[Face]:
         """Create a predicate that tests if a face/color assignment makes valid BOY.
