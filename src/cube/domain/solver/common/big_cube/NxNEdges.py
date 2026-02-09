@@ -103,8 +103,9 @@ class NxNEdges(SolverHelper):
                 parity_done = False
                 while True:
                     # Find unsolved edges containing target color (re-query each iteration)
+                    # For scrambled even cubes, check ANY slice (not just colors_id representative)
                     unsolved = [e for e in self.cube.edges
-                               if target_color in e.colors_id and not e.is3x3]
+                               if NxNEdges._edge_contains_color(e, target_color) and not e.is3x3]
                     if not unsolved:
                         break
 
@@ -547,6 +548,26 @@ class NxNEdges(SolverHelper):
         """
 
         return s.get_face_edge(f).color, s.get_other_face_edge(f).color
+
+    @staticmethod
+    def _edge_contains_color(edge: Edge, color: Color) -> bool:
+        """Check if any slice on this edge contains the given color.
+
+        For scrambled even cubes, different slices may have different color-pairs.
+        edge.colors_id only reflects the representative slice, so we must check
+        all slices to see if any contain the target color.
+
+        Args:
+            edge: The edge to check.
+            color: The color to look for.
+
+        Returns:
+            True if any slice on the edge contains this color.
+        """
+        for i in range(edge.n_slices):
+            if color in edge.get_slice(i).colors_id:
+                return True
+        return False
 
     @staticmethod
     def _find_slice_in_edge_by_color_id(edge: Edge, color_un_ordered: PartColorsID) -> EdgeWing | None:
