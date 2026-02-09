@@ -124,20 +124,51 @@ LayerByLayerNxNSolver._solve_layer1_edges()
 6. ✅ Fix L2 face mismatch (commit 70fa3b3b)
 7. ✅ Fix shadow cube edge orientation (commit f67798ad)
 
+### 3. NEW DISCOVERY: Edge Orientation Bug (2026-02-09 - ACTIVE)
+
+**Status:** Root cause identified
+
+**Findings from debug output (seed_0-size_4):**
+
+After L1 edge solving completes:
+- L1 color: WHITE
+- L1 face: L (left face)
+- 4 edges contain WHITE: FL, LU, RD, BL
+- **Only 3 edges on L1 face**: FL, LU, BL (RD is at wrong position!)
+- **Only 1 edge has correct orientation**: LU
+
+**Edge details:**
+```
+FL: e1=(WHITE@F), e2=(RED@L)     - WHITE on F side, not L ❌
+LU: e1=(GREEN@U), e2=(WHITE@L)   - WHITE on L side ✓
+RD: e1=(BLUE@D), e2=(WHITE@R)    - Not even on L1 face!
+BL: e1=(ORANGE@L), e2=(WHITE@B)  - ORANGE on L, WHITE on B ❌
+```
+
+**Analysis:**
+1. **Wrong positions**: Edge RD should be at DL, but it's at RD
+2. **Wrong orientations**: FL and BL have WHITE on the WRONG side of the edge
+3. Shadow cube correctly reflects this broken state - it's not a shadow bug!
+
+**Root cause:** `NxNEdges.solve_face_edges()` pairs edges correctly (all slices have same colors) but:
+1. Places edges at WRONG positions (RD instead of DL)
+2. Places edges with WRONG orientation (WHITE on opposite side)
+
+**The fix for shadow cube remapping was WRONG** - we don't need remapping at all! The shadow cube correctly reflects the big cube state. The bug is in edge solving, not shadow creation.
+
 ## Next Steps
 
-1. **Debug `_determine_ordered_color_for_required_color()`:**
-   - Add debug logging to show `n_required_on_face` and `n_required_on_other` counts
-   - Check what `face` parameter is being passed
-   - Verify `_get_slice_ordered_color()` returns correct order
+1. **Fix edge placement in `NxNEdges.solve_face_edges()`:**
+   - Ensure all 4 edges with L1 color are placed on the L1 face
+   - Currently only 3 edges on L1 face, one is at wrong position
 
-2. **Verify face parameter:**
-   - Check if `face` in `_determine_ordered_color_for_required_color()` is actually the L1 WHITE face
-   - Or if it's been rotated to a different position
+2. **Fix edge orientation in `NxNEdges._do_edge()`:**
+   - Ensure L1 color is on the L1 FACE SIDE of the edge
+   - Currently FL and BL have L1 color on opposite side
 
-3. **Add unit tests:**
-   - Test `_determine_ordered_color_for_required_color()` in isolation
-   - Test with known edge configurations
+3. **Remove remapping code:**
+   - Revert `with_remapped_edges_by_sticker_colors()` - not needed!
+   - Keep `with_fixed_non_3x3_edges()` - this is correct
 
 ## Debug Commands
 

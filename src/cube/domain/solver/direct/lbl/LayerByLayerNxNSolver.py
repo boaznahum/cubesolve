@@ -118,7 +118,7 @@ class LayerByLayerNxNSolver(BaseSolver):
             if not layer1_done:
                 # Check Layer 1 sub-steps
                 centers_done = self._is_layer1_centers_solved(th)
-                edges_done = self._is_layer1_edges_solved(th)
+                edges_done = self._is_layer1_edges_and_cross_solved(th)
 
                 if centers_done and edges_done:
                     return "L1:Ctr+Edg"
@@ -232,6 +232,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         """
         steps = [
             SolveStep.LBL_L1_Ctr,     # Layer 1 centers only
+            SolveStep.LBL_L1_Edg,
             SolveStep.L1x,            # Layer 1 cross (centers + edges)
             SolveStep.LBL_L1,         # Layer 1 complete
             SolveStep.LBL_SLICES_CTR, # All middle slices centers
@@ -301,6 +302,11 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
                     self._solve_layer1_cross(th)
+
+                case SolveStep.LBL_L1_Edg:
+                    # Layer 1 complete (centers + edges + corners)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
 
                 case SolveStep.LBL_L1:
                     # Layer 1 complete (centers + edges + corners)
@@ -375,7 +381,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         l3_face = self._get_layer1_tracker(th).face.opposite
         return l3_face.center.is3x3
 
-    def _is_layer1_edges_solved(self, th: FacesTrackerHolder) -> bool:
+    def _is_layer1_edges_and_cross_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if L1 edges are paired AND in position (allowing L1 face rotation).
 
         This method checks two conditions:
@@ -434,7 +440,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         See: EVEN_CUBE_MATCHING.md for why we can't use Part.match_faces here.
         """
-        if not self._is_layer1_edges_solved(th):
+        if not self._is_layer1_edges_and_cross_solved(th):
             return False
 
         l1_face = self._get_layer1_tracker(th).face
@@ -517,7 +523,7 @@ class LayerByLayerNxNSolver(BaseSolver):
     def _is_layer1_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 is completely solved (centers + edges + corners)."""
         return (self._is_layer1_centers_solved(th) and
-                self._is_layer1_edges_solved(th) and
+                self._is_layer1_edges_and_cross_solved(th) and
                 self._is_layer1_corners_solved(th))
 
     # =========================================================================
@@ -550,7 +556,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     def _solve_layer1_edges(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 1 face edges."""
-        if self._is_layer1_edges_solved(th):
+        if self._is_layer1_edges_and_cross_solved(th):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
@@ -642,7 +648,6 @@ class LayerByLayerNxNSolver(BaseSolver):
         # Verify source cube is valid before creating shadow
         assert self.cube.is_sanity(force_check=True), "Source NxN cube invalid before shadow creation"
 
-        # this is a copy of cage is doing, why not add an helper for shadow operations !!!
         # Create shadow 3x3 cube (includes sanity check via set_3x3_colors)
         shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
         assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid before solving"

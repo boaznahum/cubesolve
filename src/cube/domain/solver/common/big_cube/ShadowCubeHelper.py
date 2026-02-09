@@ -56,14 +56,17 @@ class ShadowCubeHelper(SolverHelper):
                 but can be False for testing/debugging.
         """
         # Step 1: Get colors from even cube as 3x3 snapshot
+        # NOTE: This uses POSITION-based keys (F, L, U, R, D, B) which may not
+        # match reference layout after rotations
         colors_3x3 = self._cube.get_3x3_colors()
 
         # Step 2: Override centers with face_colors mapping from trackers
         modified = colors_3x3.with_centers(th.get_face_colors())
 
-        # Step 3: For even cubes, fix non-3x3 edges if requested
-        # This is required during L1 solving when some edges are scrambled (non-3x3)
-        # Without this fix, sanity check will fail with duplicate color-pairs
+        # Step 3: For even cubes, fix non-3x3 edges
+        # - Keep 3x3-valid edges (is3x3=True) with their actual colors
+        # - Replace non-3x3 edges with unused valid color-pairs from BOY layout
+        # This ensures all 12 edges have valid, unique color-pairs for sanity check
         if self._cube.is_even and fix_non_3x3_edges:
             modified = modified.with_fixed_non_3x3_edges(
                 cube=self._cube,

@@ -97,108 +97,79 @@ class Cube3x3Colors:
         cube: "Cube",
         reference_layout: "CubeLayout"
     ) -> "Cube3x3Colors":
-        """Replace non-3x3 edge colors with valid reference colors.
+        """Build valid 3x3 edge colors by matching big cube edges to template edges.
 
-        Used when creating shadow cubes from even cubes during L1 solving, where
-        some edges are 3x3-valid but others are still scrambled.
+        Used when creating shadow cubes from even cubes during L1 solving.
+        Matches 3x3-valid edges from big cube to template edges by color-pair,
+        ignoring position and orientation.
 
         Args:
-            cube: The source cube to check edge validity (via edge.is3x3)
-            reference_layout: Layout providing valid edge color-pairs (via edge_colors())
+            cube: The source cube to get 3x3-valid edges from (via edge.is3x3)
+            reference_layout: BOY layout template providing edge color-pairs
 
         Returns:
-            New Cube3x3Colors with non-3x3 edges replaced by unused valid color-pairs.
+            New Cube3x3Colors with all 12 edges having valid template color-pairs.
 
         Algorithm:
-            1. Build set of available edge color-pairs from reference_layout.edge_colors()
-            2. For each edge in self.edges:
-                a. Look up Edge object in cube by EdgeName
-                b. Get the two faces from edge.e1.face.name and edge.e2.face.name
-                c. If edge.is3x3: keep current colors, remove from available set
-                d. If not edge.is3x3: pop unused color-pair, create new EdgeColors
-            3. Return new Cube3x3Colors with updated edges dict
+            1. Get template: 12 edge names → color-pairs (frozenset) from BOY layout
+            2. Get big cube: 3x3-valid edges → color-pairs (frozenset)
+            3. Match by color-pair: template edge with {WHITE,RED} ← big cube edge with {WHITE,RED}
+            4. For unmatched template edges: use template colors
+
+        Position and orientation don't matter - 3x3 solver will fix positions!
 
         Example - 4x4 cube during L1:
-            - Edge FU: is3x3=True (both slices RED-GREEN) → keep RED-GREEN
-            - Edge FR: is3x3=False (slices RED-BLUE, ORANGE-WHITE) → replace with unused pair like BLUE-ORANGE
-            - Edge FL: is3x3=True (both slices RED-ORANGE) → keep RED-ORANGE
-            - Edge FD: is3x3=False → replace with another unused pair
-            Result: All 12 edges have valid, unique color-pairs, passes sanity check
+            - Big cube edge at FL: frozenset({WHITE, RED}), is3x3=True
+            - Template edge DR: frozenset({WHITE, RED})
+            - Match: DR ← {WHITE, RED} from big cube edge at FL
+            - Shadow cube edge DR will have WHITE and RED (order doesn't matter)
         """
         from cube.domain.exceptions import InternalSWError
 
-        # Get edge-to-faces mapping from the layout (the authoritative source)
-        edge_faces_map: dict[EdgeName, tuple[FaceName, FaceName]] = reference_layout.edge_faces()
-
-        # Build set of available color-pairs from BOY layout
-        # Each frozenset contains exactly 2 colors (one edge color-pair)
+        # Get all template color-pairs from BOY layout
         available_pairs: set[frozenset[Color]] = set(reference_layout.edge_colors())
 
-        # Track which color-pairs have been used to detect duplicates
-        used_pairs: set[frozenset[Color]] = set()
+        # TWO-PASS algorithm to prioritize 3x3-valid edges:
+        # Pass 1: Keep all 3x3-valid edges with valid color-pairs
+        # Pass 2: Fill in non-3x3 edges with unused template pairs
 
-        # Build new edges dict, preserving valid 3x3-edges and replacing invalid/non-3x3 edges
         new_edges: dict[EdgeName, EdgeColors] = {}
 
+        # PASS 1: Process 3x3-valid edges first
         for edge_name, edge_colors in self.edges.items():
-            # Look up Edge object in cube to check is3x3 property
             edge = cube.edge(edge_name)
+            current_pair = frozenset(edge_colors.colors.values())
 
-            # Get the two faces for this edge from the layout
-            f1, f2 = edge_faces_map[edge_name]
-
-            # Get the current color-pair for this edge
-            current_pair = frozenset([
-                edge_colors.colors[f1],
-                edge_colors.colors[f2]
-            ])
-
-            # Keep the edge only if:
-            # 1. It's 3x3-valid (all slices have same colors)
-            # 2. Its color-pair hasn't been used yet (no duplicates)
-            # 3. Its color-pair is valid (exists in BOY layout)
-            if edge.is3x3 and current_pair not in used_pairs and current_pair in available_pairs:
-                # Keep existing colors
+            # If edge is 3x3-valid AND its color-pair is in template AND not yet used:
+            if edge.is3x3 and current_pair in available_pairs:
+                # Keep the extracted colors
                 available_pairs.remove(current_pair)
-                used_pairs.add(current_pair)
                 new_edges[edge_name] = edge_colors
-            else:
-                # Replace with unused color-pair
-                # This handles: non-3x3 edges, duplicate color-pairs, invalid color-pairs
-                if not available_pairs:
-                    raise InternalSWError(
-                        f"No available edge color-pairs for replacement. "
-                        f"Already processed {len(new_edges)} edges, "
-                        f"{len(self.edges) - len(new_edges)} remaining. "
-                        f"Edge {edge_name}: is3x3={edge.is3x3}, current_pair={current_pair}, "
-                        f"used_pairs={used_pairs}"
-                    )
 
-                # Pop any unused pair
-                color_pair = available_pairs.pop()
-                used_pairs.add(color_pair)
+        # PASS 2: Fill in remaining edges (non-3x3) with unused template pairs
+        for edge_name, edge_colors in self.edges.items():
+            if edge_name in new_edges:
+                continue  # Already processed in pass 1
 
-                # Assign colors to faces based on reference layout orientation
-                # The reference layout knows which color belongs on which face
-                ref_color_f1 = reference_layout[f1]
-                ref_color_f2 = reference_layout[f2]
+            # Edge is non-3x3 or has invalid/duplicate color-pair
+            # Pick unused template color-pair
+            if not available_pairs:
+                raise InternalSWError(
+                    f"No available template color-pairs. "
+                    f"Edge {edge_name}: is3x3={cube.edge(edge_name).is3x3}"
+                )
 
-                # Check which orientation matches the reference layout
-                if {ref_color_f1, ref_color_f2} == color_pair:
-                    # This pair belongs to this edge in the reference layout - use correct orientation
-                    new_edge_colors = EdgeColors({
-                        f1: ref_color_f1,
-                        f2: ref_color_f2
-                    })
-                else:
-                    # This pair is for a different edge - assign arbitrarily but consistently
-                    # Convert frozenset to sorted list for deterministic assignment
-                    colors_list = sorted(list(color_pair), key=lambda c: c.value)
-                    new_edge_colors = EdgeColors({
-                        f1: colors_list[0],
-                        f2: colors_list[1]
-                    })
-                new_edges[edge_name] = new_edge_colors
+            # Pick any unused pair
+            color_pair = available_pairs.pop()
+
+            # Assign colors to faces (order doesn't matter for 3x3 solver)
+            colors_list = sorted(list(color_pair), key=lambda c: c.value)
+            face_list = sorted(list(edge_colors.colors.keys()), key=lambda f: f.value)
+
+            new_edges[edge_name] = EdgeColors({
+                face_list[0]: colors_list[0],
+                face_list[1]: colors_list[1]
+            })
 
         return replace(self, edges=new_edges)
 
