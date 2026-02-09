@@ -29,8 +29,9 @@ PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY=False
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
 # Available solvers: LBL, CFOP, Kociemba, Cage
 # Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba)
+# "LBL-Big"
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "LBL-Big"
+DEFAULT_SOLVER = "lbl"
 
 # Solver used by tests (must be implemented - raises error if not)
 # Tests use this instead of DEFAULT_SOLVER to avoid failures when DEFAULT_SOLVER
@@ -51,7 +52,48 @@ PRINT_CUBE_AS_TEXT_DURING_SOLVE = False
 CHECK_CUBE_SANITY = False
 
 
-###### Operator ####
+######### Solvers  Solvers Solvers Solvers########
+
+# First face color - the color that determines Layer 1 for 3x3 beginner and LBL solvers
+# This is the color to start with, not a fixed face position (cube may be rotated)
+# Used by: 3x3 beginner solver, LBL-Big cube solver
+from cube.domain.model.Color import Color as _Color  # noqa: E402
+
+#L1 color
+FIRST_FACE_COLOR: _Color = _Color.WHITE
+
+SOLVER_DEBUG = True
+
+############## Operator ##############
+OPERATOR_SHOW_ALG_ANNOTATION = True
+
+##############  Solver  ##################
+OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False  # under test doesn't work well
+
+OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True
+OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = True
+OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True
+
+SOLVER_SANITY_CHECK_IS_A_BOY = True # NON-DEFAULT
+
+
+##############  FaceTracer  ##################
+
+
+# bug to remove
+SOLVER_ANNOTATE_TRACKERS = False
+
+
+FACE_TRACKER = FaceTrackerConfig(
+    annotate=True,
+    validate=True,
+    leave_last_annotation=True,
+    use_simple_f5_tracker=False
+)
+
+SOLVER_PLL_ROTATE_WHILE_SEARCH = False
+
+###### Operator   and  Animation ####
 
 # Only initial value, can be changed
 animation_enabled = True
@@ -77,18 +119,7 @@ SS_CODES: dict[SSCode, bool] = {
     SSCode.F2L_WIDE_MOVE: False,  # Pause before wide move in F2L
 }
 
-######### Solvers  ########
 
-# First face color - the color that determines Layer 1 for 3x3 beginner and LBL solvers
-# This is the color to start with, not a fixed face position (cube may be rotated)
-# Used by: 3x3 beginner solver, LBL-Big cube solver
-from cube.domain.model.Color import Color as _Color  # noqa: E402
-
-#L1 color
-FIRST_FACE_COLOR: _Color = _Color.WHITE
-
-
-SOLVER_DEBUG = True
 
 ######  Viewer ########
 
@@ -197,34 +228,6 @@ INPUT_MOUSE_ROTATE_ADJUSTED_FACE = True
 
 INPUT_MOUSE_DEBUG = False
 
-############## Operator ##############
-OPERATOR_SHOW_ALG_ANNOTATION = True
-
-##############  Solver  ##################
-OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False  # under test doesn't work well
-
-OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True
-OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = True
-OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True
-
-SOLVER_SANITY_CHECK_IS_A_BOY = False
-
-
-##############  FaceTracer  ##################
-
-
-# bug to remove
-SOLVER_ANNOTATE_TRACKERS = False
-
-
-FACE_TRACKER = FaceTrackerConfig(
-    annotate=True,
-    validate=True,
-    leave_last_annotation=True,
-    use_simple_f5_tracker=False
-)
-
-SOLVER_PLL_ROTATE_WHILE_SEARCH = False
 
 ##############  Testing
 TEST_NUMBER_OF_SCRAMBLE_ITERATIONS = 20
