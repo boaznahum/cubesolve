@@ -174,17 +174,30 @@ class Cube3x3Colors:
                         f"used_pairs={used_pairs}"
                     )
 
-                # Pop any unused pair (order doesn't matter for validity)
+                # Pop any unused pair
                 color_pair = available_pairs.pop()
                 used_pairs.add(color_pair)
-                colors_list = list(color_pair)
 
-                # Create new EdgeColors with this pair
-                # Assign the two colors from the pair to the two faces
-                new_edge_colors = EdgeColors({
-                    f1: colors_list[0],
-                    f2: colors_list[1]
-                })
+                # Assign colors to faces based on reference layout orientation
+                # The reference layout knows which color belongs on which face
+                ref_color_f1 = reference_layout[f1]
+                ref_color_f2 = reference_layout[f2]
+
+                # Check which orientation matches the reference layout
+                if {ref_color_f1, ref_color_f2} == color_pair:
+                    # This pair belongs to this edge in the reference layout - use correct orientation
+                    new_edge_colors = EdgeColors({
+                        f1: ref_color_f1,
+                        f2: ref_color_f2
+                    })
+                else:
+                    # This pair is for a different edge - assign arbitrarily but consistently
+                    # Convert frozenset to sorted list for deterministic assignment
+                    colors_list = sorted(list(color_pair), key=lambda c: c.value)
+                    new_edge_colors = EdgeColors({
+                        f1: colors_list[0],
+                        f2: colors_list[1]
+                    })
                 new_edges[edge_name] = new_edge_colors
 
         return replace(self, edges=new_edges)
