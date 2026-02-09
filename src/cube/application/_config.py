@@ -88,7 +88,7 @@ FACE_TRACKER = FaceTrackerConfig(
     annotate=True,
     validate=True,
     leave_last_annotation=True,
-    use_simple_f5_tracker=False
+    use_simple_f5_tracker=True
 )
 
 SOLVER_PLL_ROTATE_WHILE_SEARCH = False

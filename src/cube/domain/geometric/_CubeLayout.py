@@ -523,12 +523,19 @@ class _CubeLayout(CubeLayout):
     def __str__(self) -> str:
         faces: dict[FaceName, Color] = self._faces
 
+        def get_face_str(face_name: FaceName) -> str:
+            """Safely get face color value as string, or error message if missing."""
+            if face_name in faces:
+                return "[" + str(faces[face_name].value) + "]"
+            else:
+                return f"[{face_name.value} ❌❌]"
+
         s = ""
 
-        s += "-" + str(faces[FaceName.B].value) + "-" + "\n"
-        s += "-" + str(faces[FaceName.U].value) + "-" + "\n"
-        s += str(faces[FaceName.L].value) + str(faces[FaceName.F].value) + str(faces[FaceName.R].value) + "\n"
-        s += "-" + str(faces[FaceName.D].value) + "-" + "\n"
+        s += "-" + get_face_str(FaceName.B) + "-" + "\n"
+        s += "-" + get_face_str(FaceName.U) + "-" + "\n"
+        s += get_face_str(FaceName.L) + get_face_str(FaceName.F) + get_face_str(FaceName.R) + "\n"
+        s += "-" + get_face_str(FaceName.D) + "-" + "\n"
 
         return s
 
