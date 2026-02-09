@@ -119,9 +119,12 @@ class NxNEdges(SolverHelper):
                         parity_done = True
                         continue
 
-                    # Solve one edge with the required target color
+                    # Solve one edge
                     edge = unsolved[0]
-                    self._do_edge(edge, required_color=target_color)
+                    # For even cubes: specify required_color to force correct orientation
+                    # For odd cubes: use auto-detection (None) because middle slice defines identity
+                    required_color_param = target_color if self.cube.is_even else None
+                    self._do_edge(edge, required_color=required_color_param)
 
                 return parity_done
 
@@ -582,19 +585,29 @@ class NxNEdges(SolverHelper):
 
     @staticmethod
     def _edge_contains_color(edge: Edge, color: Color) -> bool:
-        """Check if any slice on this edge contains the given color.
+        """Check if this edge contains the given color.
 
-        For scrambled even cubes, different slices may have different color-pairs.
-        edge.colors_id only reflects the representative slice, so we must check
-        all slices to see if any contain the target color.
+        For odd cubes (3x3, 5x5, 7x7):
+            Only check the middle/representative slice (edge.colors_id).
+            The middle slice defines the edge's identity. Other slices may have
+            different colors during scrambling, but they don't change what edge this is.
+
+        For even cubes (4x4, 6x6, 8x8):
+            Check ALL slices. During scrambling, slices can have different color-pairs,
+            so we need to check if any slice contains the target color.
 
         Args:
             edge: The edge to check.
             color: The color to look for.
 
         Returns:
-            True if any slice on the edge contains this color.
+            True if the edge contains this color.
         """
+        # Odd cube: Only check representative slice (middle slice)
+        if edge.n_slices % 2 == 1:
+            return color in edge.colors_id
+
+        # Even cube: Check all slices
         for i in range(edge.n_slices):
             if color in edge.get_slice(i).colors_id:
                 return True
