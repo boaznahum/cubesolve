@@ -47,7 +47,7 @@ without corresponding swap), sanity check will catch it.
 
 Example corruption: After a bug, blue face has 5 blue + 11 red centers.
 - _check_nxn_centers will detect: blue has only 5 pieces (should be 16)
-- Raises: "Too few entries for color BLUE"
+- Raises: "CENTER pieces: Invalid count for color BLUE. Expected 16, found 5. Distribution by orbit: {...}"
 """
 
 import sys
@@ -165,7 +165,12 @@ class CubeSanity:
             clr_n = sum(len(s) for s in clr_dist.values())
 
             if clr_n != n_slices * n_slices:
-                s = f"Too few entries for color {clr}"
+                expected = n_slices * n_slices
+                orbit_info = {f"positions {k}": f"{len(v)} pieces at {list(v)}"
+                              for k, v in clr_dist.items()}
+                s = (f"CENTER pieces: Invalid count for color {clr}. "
+                     f"Expected {expected}, found {clr_n}. "
+                     f"Distribution by orbit (position groups that rotate together): {orbit_info}")
                 _print_clr()
                 print(s, file=sys.stderr)
                 raise InternalSWError(s)
@@ -174,13 +179,15 @@ class CubeSanity:
                     if n_slices % 2 and k == frozenset(
                             [*cube.cqr.get_four_center_points(n_slices // 2, n_slices // 2)]):
                         if len(v) != 1:
-                            s = f"Wrong middle center {k} entries for color {clr}"
+                            s = (f"CENTER pieces: Wrong middle center orbit count for color {clr}. "
+                                 f"Orbit at positions {k}: expected 1 (fixed center), found {len(v)} pieces at {list(v)}")
                             _print_clr()
                             print(s, file=sys.stderr)
                             raise InternalSWError(s)
 
                     else:
-                        s = f"Too few point {k} entries for color {clr}"
+                        s = (f"CENTER pieces: Invalid orbit count for color {clr}. "
+                             f"Orbit at positions {k}: expected 4 pieces (one per rotation), found {len(v)} pieces at {list(v)}")
                         _print_clr()
                         print(s, file=sys.stderr)
                         raise InternalSWError(s)
@@ -221,7 +228,11 @@ class CubeSanity:
             clr_n = sum(len(s) for s in clr_dist.values())
 
             if clr_n != n_slices:
-                s = f"Too few entries for color {clr}"
+                orbit_info = {f"slices {k}": f"{len(v)} pieces at slices {list(v)}"
+                              for k, v in clr_dist.items()}
+                s = (f"EDGE pieces: Invalid count for color-pair {clr}. "
+                     f"Expected {n_slices}, found {clr_n}. "
+                     f"Distribution by orbit (slice groups that flip together): {orbit_info}")
                 _print_clr()
                 print(s, file=sys.stderr)
                 raise InternalSWError(s)
@@ -229,13 +240,15 @@ class CubeSanity:
                 if len(v) != 2:
                     if n_slices % 2 and k == frozenset([*cqr.get_two_edge_slice_points(n_slices//2)]):
                         if len(v) != 1:
-                            s = f"Wrong middle center {k} entries for color {clr}"
+                            s = (f"EDGE pieces: Wrong middle edge orbit count for color-pair {clr}. "
+                                 f"Orbit at slices {k}: expected 1 (fixed middle slice), found {len(v)} pieces at slices {list(v)}")
                             _print_clr()
                             print(s, file=sys.stderr)
                             raise InternalSWError(s)
 
                     else:
-                        s = f"Too few point {k} entries for color {clr}"
+                        s = (f"EDGE pieces: Invalid orbit count for color-pair {clr}. "
+                             f"Orbit at slices {k}: expected 2 pieces (one per flip), found {len(v)} pieces at slices {list(v)}")
                         _print_clr()
                         print(s, file=sys.stderr)
                         raise InternalSWError(s)

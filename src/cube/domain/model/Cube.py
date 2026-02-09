@@ -1549,7 +1549,7 @@ class Cube(CubeSupplier):
         return
 
     @property
-    def solved(self):
+    def solved(self) -> bool:
         return (self._front.solved and
                 self._left.solved and
                 self._right.solved and

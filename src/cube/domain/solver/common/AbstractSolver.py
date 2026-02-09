@@ -157,7 +157,7 @@ class AbstractSolver(Solver, ABC):
 
     @final
     @property
-    def is_solved(self):
+    def is_solved(self) -> bool:
         return self._cube.solved
 
     @property

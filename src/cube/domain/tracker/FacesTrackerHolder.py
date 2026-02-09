@@ -364,52 +364,6 @@ class FacesTrackerHolder(FacesColorsProvider):
         for tracker in self._trackers:
             tracker.cleanup()
 
-    @staticmethod
-    @contextmanager
-    def preserve_physical_faces_static(faces: Iterable[FaceTracker]) -> Generator[None, None, None]:
-        """Static context manager preserving face->color mapping across operations.
-
-        Use when running algorithms (like commutators) that:
-        1. Move center pieces (which moves markers)
-        2. Preserve the cage (cube orientation unchanged after)
-
-        Each tracker saves/restores according to its own rules:
-        - SimpleFaceTracker: no-op (predicates are stable)
-        - MarkedFaceTracker: saves face name, restores marker to same physical face
-
-        Args:
-            faces: Iterable of FaceTracker instances to preserve.
-
-        Usage:
-            with FacesTrackerHolder.preserve_physical_faces_static(faces):
-                commutator.execute()  # Moves centers
-            # Markers now restored to original physical faces
-
-        Example:
-            # Before: marker on UP tracking WHITE
-            with FacesTrackerHolder.preserve_physical_faces_static(faces):
-                alg.play()  # Commutator moves centers
-                # Marker may now be on FRONT (followed the piece)
-            # After: marker back on UP (same physical face)
-
-        Yields:
-            None
-        """
-        # Convert to list to allow multiple iterations
-        trackers_list = list(faces)
-
-        # Save state for each tracker (physical face name)
-        saved_states: list[FaceName] = [
-            tracker.save_physical_face() for tracker in trackers_list
-        ]
-
-        try:
-            yield
-        finally:
-            # Restore each tracker to its saved physical face
-            for tracker, saved_face in zip(trackers_list, saved_states):
-                tracker.restore_to_physical_face(saved_face)
-
     @contextmanager
     def preserve_physical_faces(self) -> Generator[Self, None, None]:
         """Context manager preserving face->color mapping across operations.

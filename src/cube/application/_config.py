@@ -31,7 +31,7 @@ PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY=False
 # Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba)
 # "LBL-Big"
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "lbl"
+DEFAULT_SOLVER = "lbl-big"
 
 # Solver used by tests (must be implemented - raises error if not)
 # Tests use this instead of DEFAULT_SOLVER to avoid failures when DEFAULT_SOLVER

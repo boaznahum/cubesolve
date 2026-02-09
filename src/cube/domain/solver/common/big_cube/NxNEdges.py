@@ -88,8 +88,12 @@ class NxNEdges(SolverHelper):
 
         with self._logger.tab(lambda : f"Doing face {target_color} edges"):
 
-            assert len(target_edges_by_color) == 4, \
+            # in cas eof even cube it might that two edges ahve the same color , becuase
+            # we dont have middle slice
+            assert (self.cube.is_even and len(target_edges_by_color) >= 4) or len(target_edges_by_color) == 4, \
                 f"Expected 4 edges with {target_color}, found {len(target_edges_by_color)}"
+
+            target_edges_by_color = target_edges_by_color[:4]
 
             # Check if all target edges are already solved (paired)
             if all(e.is3x3 for e in target_edges_by_color):
