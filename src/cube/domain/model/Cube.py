@@ -144,7 +144,6 @@ from .PartSlice import CornerSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Corner import Corner
 from cube.domain.geometric.cube_boy import Color, FaceName
-from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from ._part import EdgeName
@@ -1932,7 +1931,7 @@ class Cube(CubeSupplier):
 
         if not self._original_layout:
             faces: dict[FaceName, Color] = {f.name: f.original_color for f in self._faces.values()}
-            lo = create_layout(True, faces, self._sp)
+            lo = CubeLayout.create_layout(True, faces, self._sp)
 
             self._original_layout = lo
 
@@ -1946,7 +1945,7 @@ class Cube(CubeSupplier):
         """
 
         faces: dict[FaceName, Color] = {f.name: f.center.color for f in self._faces.values()}
-        return create_layout(False, faces, self._sp)
+        return CubeLayout.create_layout(False, faces, self._sp)
 
     @property
     def is_boy(self) -> bool:

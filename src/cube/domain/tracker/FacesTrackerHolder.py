@@ -31,18 +31,17 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Iterable
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from typing_extensions import Self
 
-from cube.domain.model import CenterSlice, Color, Face
-from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
+from cube.domain.model import CenterSlice, Color, Face
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.FacesColorsProvider import FacesColorsProvider
 from cube.domain.model.PartEdge import PartEdge
-from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.tracker._factory import NxNCentersFaceTrackers
+from cube.domain.tracker.trackers import FaceTracker
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -180,6 +179,7 @@ class FacesTrackerHolder(FacesColorsProvider):
         """Get the list of face trackers (read-only access)."""
         return self._trackers
 
+    # noinspection PyUnnecessaryCast  # pycharm is wrong
     def get_face_colors(self) -> dict[FaceName, Color]:
         """Get current face→color mapping from trackers (cached with auto-invalidation).
 
@@ -226,15 +226,11 @@ class FacesTrackerHolder(FacesColorsProvider):
             self._face_colors_cache[tracker.face.name] = tracker.color
         self._cache_modify_counter = current_counter
 
-        # Validate trackers if configured (safe: cache is set, no recursion risk)
-        if self._cube.config.face_tracker.validate:
-            # Check no duplicate faces (two trackers on same face = dict key collision → fewer entries)
-            assert len(self._face_colors_cache) == 6, (
-                f"Tracker face collision: expected 6 faces, got {len(self._face_colors_cache)}. "
-                f"Two trackers report the same face."
-            )
-            # Check valid BOY layout (reads tracker.face/color directly, not get_face_colors)
-            self.assert_is_boy()
+        CubeLayout.sanity_cost_assert_is_boy(
+            self.cube.sp,
+            # to get rid of the pyright complains it can be null
+            lambda: cast(dict[FaceName, Color], self._face_colors_cache)
+        )
 
         return self._face_colors_cache
 
@@ -350,21 +346,9 @@ class FacesTrackerHolder(FacesColorsProvider):
         Returns:
             CubeLayout representing current tracker state.
         """
-        layout = {tracker.face.name: tracker.color for tracker in self._trackers}
-        return create_layout(False, layout, self._cube.sp)
+        layout: dict[FaceName, Color] = self.face_colors
+        return CubeLayout.create_layout(False, layout, self._cube.sp)
 
-    def assert_is_boy(self) -> None:
-        """Assert that trackers represent valid BOY layout.
-
-        Raises:
-            AssertionError: If layout is not valid BOY.
-        """
-        cl = self._trackers_layout()
-        if not cl.is_boy():
-            import sys
-            print(cl, file=sys.stderr)
-            print(file=sys.stderr)
-        assert cl.is_boy(), "Trackers do not represent valid BOY layout"
 
     def cleanup(self) -> None:
         """Remove tracker marks from center slices.

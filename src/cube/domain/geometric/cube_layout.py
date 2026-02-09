@@ -9,9 +9,10 @@ See cube_boy.py for the canonical BOY definition.
 """
 from __future__ import annotations
 
+import sys
 from abc import abstractmethod
-from collections.abc import Collection, Iterator
-from typing import TYPE_CHECKING, Protocol, runtime_checkable, Tuple
+from collections.abc import Collection, Iterator, Mapping
+from typing import TYPE_CHECKING, Protocol, runtime_checkable, Tuple, Callable
 
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.geometry_types import CLGColRow
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from cube.domain.model.Edge import Edge
     from cube.utils.config_protocol import ConfigProtocol
     from cube.utils.Cache import CacheManager
+    from cube.utils.service_provider import IServiceProvider
 
 
 # ============================================================================
@@ -60,6 +62,80 @@ class CubeLayout(Protocol):
         is_adj = layout.is_adjacent(FaceName.F, FaceName.U)  # Returns True
         adjacent = layout.get_adjacent_faces(FaceName.F)  # (U, R, D, L)
     """
+
+    @staticmethod
+    def create_layout(
+        read_only: bool,
+        faces: "Mapping[FaceName, Color]",
+        sp: "IServiceProvider"
+    ) -> "CubeLayout":
+        """Create a CubeLayout from face-color mapping.
+
+        Factory method to create layout instances without exposing
+        the private implementation class.
+
+        Args:
+            read_only: If True, layout cannot be modified (used for singletons).
+            faces: Mapping of each face to its color.
+            sp: Service provider for configuration access.
+
+        Returns:
+            CubeLayout instance with the given configuration.
+        """
+        from cube.domain.geometric._CubeLayout import _CubeLayout
+        return _CubeLayout(read_only, faces, sp)
+
+    @staticmethod
+    def sanity_cost_assert_match_cube_layout(
+            cube: "Cube",
+            faces: Callable[[], "Mapping[FaceName, Color]"]) -> None:
+
+        sp = cube.sp
+        if not sp.config.solver_sanity_check_is_a_boy:
+            return
+
+        layout = faces()
+
+        cl: CubeLayout = CubeLayout.create_layout(False, layout, sp)
+
+        # acquittal we cheat here, we dont know that cube is a boy
+        c_layout = cube.original_layout
+        match_cube_layout = cl.same(c_layout)
+
+        if not match_cube_layout:
+            print(cl, file=sys.stderr)
+            print(file=sys.stderr)
+
+        assert match_cube_layout, f"\n{cl} \n-->\n{c_layout}"
+    @staticmethod
+    def sanity_cost_assert_is_boy(
+            sp: "IServiceProvider",
+            faces: Callable[[], "Mapping[FaceName, Color]"]) -> None:
+
+        """
+        But in some cases you want to check that it matches specif cube layout, but this is not the case
+        See Above
+        """
+
+
+        if not sp.config.solver_sanity_check_is_a_boy:
+            return
+
+        layout = faces()
+
+
+
+        cl: CubeLayout = CubeLayout.create_layout(False, layout, sp)
+
+        # acquittal we cheat here, we dont know that cube is a boy
+        is_boy = cl.is_boy()
+
+        if not is_boy:
+            print(cl, file=sys.stderr)
+            print(file=sys.stderr)
+
+        assert is_boy, f"Faces {layout} do not represent valid BOY layout"
+
 
     @property
     @abstractmethod

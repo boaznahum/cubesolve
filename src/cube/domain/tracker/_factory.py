@@ -119,11 +119,9 @@ from cube.domain.model import CenterSlice, Color
 
 if TYPE_CHECKING:
     from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
-from cube.domain.model.FaceName import FaceName
 from cube.domain.tracker.trackers import (
     _TRACKER_VISUAL_MARKER,
     FaceTracker,
@@ -465,7 +463,7 @@ class NxNCentersFaceTrackers(SolverHelper):
         try1 = {f.face.name: f.color for f in four_first}
         try1[f5.name] = c5
         try1[f6.name] = c6
-        cl: CubeLayout = create_layout(False, try1, self.cube.sp)
+        cl: CubeLayout = CubeLayout.create_layout(False, try1, self.cube.sp)
 
         if not cl.same(self.cube.original_layout):
             # try 2
@@ -474,7 +472,7 @@ class NxNCentersFaceTrackers(SolverHelper):
             try1 = {f.face.name: f.color for f in four_first}
             try1[f5.name] = c5
             try1[f6.name] = c6
-            cl = create_layout(False, try1, self.cube.sp)
+            cl = CubeLayout.create_layout(False, try1, self.cube.sp)
             assert cl.same(self.cube.original_layout)
 
 
@@ -626,7 +624,7 @@ class NxNCentersFaceTrackers(SolverHelper):
             try1 = {f.face.name: f.color for f in four_first}
             try1[f5.name] = c5
             try1[f6.name] = c6
-            cl: CubeLayout = create_layout(False, try1, self.cube.sp)
+            cl: CubeLayout = CubeLayout.create_layout(False, try1, self.cube.sp)
 
             if cl.same(self.cube.original_layout):
                 return True  # f/color make it a BOY
@@ -635,7 +633,7 @@ class NxNCentersFaceTrackers(SolverHelper):
             try1 = {f.face.name: f.color for f in four_first}
             try1[f5.name] = c5
             try1[f6.name] = c6
-            cl = create_layout(False, try1, self.cube.sp)
+            cl = CubeLayout.create_layout(False, try1, self.cube.sp)
             assert cl.same(self.cube.original_layout)
 
             return False

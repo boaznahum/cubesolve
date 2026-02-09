@@ -28,6 +28,10 @@ def create_layout(
 ) -> CubeLayout:
     """Create a CubeLayout from face-color mapping.
 
+    .. deprecated::
+        Use CubeLayout.create_layout() instead. This function is kept for
+        backward compatibility and will be removed in a future version.
+
     Factory function to create layout instances without exposing
     the private implementation class.
 
@@ -39,8 +43,8 @@ def create_layout(
     Returns:
         CubeLayout instance with the given configuration.
     """
-    from cube.domain.geometric._CubeLayout import _CubeLayout
-    return _CubeLayout(read_only, faces, sp)
+    from cube.domain.geometric.cube_layout import CubeLayout
+    return CubeLayout.create_layout(read_only, faces, sp)
 
 
 __all__ = [

@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Iterable, Iterator, Sequence, Set
 from contextlib import AbstractContextManager, nullcontext
 from enum import Enum, unique
@@ -7,20 +6,19 @@ from typing import Tuple
 from cube.domain import algs
 from cube.domain.algs import Algs, SeqAlg
 from cube.domain.exceptions import InternalSWError
+from cube.domain.geometric.block import Block
+from cube.domain.geometric.cube_boy import color2long
+from cube.domain.geometric.cube_layout import CubeLayout
+from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import CenterSlice, Color, FaceName
 from cube.domain.model.Cube import Cube
-from cube.domain.geometric.cube_boy import color2long
-from cube.domain.geometric import create_layout
-from cube.domain.geometric.cube_layout import CubeLayout
-from cube.domain.geometric.block import Block
-from cube.domain.geometric.geometry_types import Point
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.tracker.trackers import FaceTracker
-from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.protocols import SolverElementsProvider
+from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.tracker.trackers import FaceTracker
 from cube.utils.OrderedSet import OrderedSet
 
 
@@ -312,20 +310,8 @@ class NxNCenters(SolverHelper):
     # noinspection PyUnreachableCode,PyUnusedLocal
     def _asserts_is_boy(self, faces: Iterable[FaceTracker]):
 
-        if not self._sanity_check_is_a_boy:
-            return
-
-        layout = {f.face.name: f.color for f in faces}
-
-        cl: CubeLayout = create_layout(False, layout, self.cube.sp)
-
-        is_boy = cl.same(self.cube.original_layout)
-
-        if not is_boy:
-            print(cl, file=sys.stderr)
-            print(file=sys.stderr)
-
-        assert is_boy
+        CubeLayout.sanity_cost_assert_match_cube_layout(self.cube,
+                                                        lambda: {f.face.name: f.color for f in faces} )
 
     def _do_center(self, face_loc: FaceTracker, minimal_bring_one_color, use_back_too: bool) -> bool:
 

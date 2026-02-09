@@ -6,7 +6,6 @@ from dataclasses import dataclass, replace
 
 from cube.domain.model._part import CornerName, EdgeName
 from cube.domain.model.Color import Color
-from cube.domain.geometric import create_layout
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.FaceName import FaceName
 from cube.utils.service_provider import IServiceProvider
@@ -118,7 +117,7 @@ class Cube3x3Colors:
         Returns:
             CubeLayout representing the current center configuration.
         """
-        return create_layout(False, self.centers, sp)
+        return CubeLayout.create_layout(False, self.centers, sp)
 
     def is_boy(self, sp: IServiceProvider) -> bool:
         """Check if centers match the standard BOY layout.

@@ -109,8 +109,8 @@ def get_boy_layout(sp: IServiceProvider) -> CubeLayout:
     global _boy_layout
     if _boy_layout is None:
         # Import here to avoid circular import
-        from cube.domain.geometric import create_layout
-        _boy_layout = create_layout(True, {
+        from cube.domain.geometric.cube_layout import CubeLayout
+        _boy_layout = CubeLayout.create_layout(True, {
             FaceName.F: Color.BLUE,
             FaceName.R: Color.RED,
             FaceName.U: Color.YELLOW,
