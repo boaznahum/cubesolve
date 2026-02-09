@@ -669,6 +669,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         dual_op = DualOperator(shadow_cube, self._op)
 
         # Use beginner method for L1 solving (same approach as CageNxNSolver)
+        # we cannot use kochima becuase it konw to solve only valid cube and only whole cube
         shadow_solver = Solvers3x3.beginner(dual_op, self._logger)
 
         # Solve only L1 (cross + corners)

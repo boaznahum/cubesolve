@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
+    from cube.domain.model._part import EdgeName, CornerName
     from cube.utils.config_protocol import ConfigProtocol
     from cube.utils.Cache import CacheManager
     from cube.utils.service_provider import IServiceProvider
@@ -194,6 +195,32 @@ class CubeLayout(Protocol):
         Returns:
             Collection of frozensets, each containing 2 colors that can
             appear together on an edge piece.
+        """
+        ...
+
+    @abstractmethod
+    def edge_faces(self) -> dict["EdgeName", tuple[FaceName, FaceName]]:
+        """Get mapping from EdgeName to the two faces it connects.
+
+        Returns:
+            Dictionary mapping each EdgeName to a tuple of (face1, face2).
+            The two faces are adjacent (share an edge) and non-opposite.
+
+        Example:
+            edge_faces()[EdgeName.FU] = (FaceName.F, FaceName.U)
+        """
+        ...
+
+    @abstractmethod
+    def corner_faces(self) -> dict["CornerName", tuple[FaceName, FaceName, FaceName]]:
+        """Get mapping from CornerName to the three faces it connects.
+
+        Returns:
+            Dictionary mapping each CornerName to a tuple of (face1, face2, face3).
+            The three faces meet at a corner (all mutually adjacent).
+
+        Example:
+            corner_faces()[CornerName.FRU] = (FaceName.F, FaceName.R, FaceName.U)
         """
         ...
 

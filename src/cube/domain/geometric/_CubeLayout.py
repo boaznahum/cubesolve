@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
+    from cube.domain.model._part import EdgeName, CornerName
 
 
 class _CubeLayout(CubeLayout):
@@ -173,6 +174,69 @@ class _CubeLayout(CubeLayout):
         self._edge_colors = colors
 
         return self._edge_colors
+
+    def edge_faces(self) -> dict["EdgeName", tuple[FaceName, FaceName]]:
+        """Get mapping from EdgeName to the two faces it connects.
+
+        Uses the internal 3x3 cube to iterate through all edges and extract
+        their face relationships. This ensures the mapping always matches the
+        actual cube structure.
+
+        Returns:
+            Dictionary mapping each EdgeName to a tuple of (face1, face2).
+            The two faces are adjacent (share an edge) and non-opposite.
+
+        Example:
+            edge_faces()[EdgeName.FU] = (FaceName.F, FaceName.U)
+        """
+        from cube.domain.model._part import EdgeName
+
+        result: dict[EdgeName, tuple[FaceName, FaceName]] = {}
+
+        # Iterate through all edges in the internal 3x3 cube
+        for face in self._cube.faces:
+            for edge in face.edges:
+                edge_name: EdgeName = edge.name
+                if edge_name not in result:
+                    # Get the two faces this edge connects
+                    f1 = edge.e1.face.name
+                    f2 = edge.e2.face.name
+                    result[edge_name] = (f1, f2)
+
+        return result
+
+    def corner_faces(self) -> dict["CornerName", tuple[FaceName, FaceName, FaceName]]:
+        """Get mapping from CornerName to the three faces it connects.
+
+        Uses the internal 3x3 cube to iterate through all corners and extract
+        their face relationships. This ensures the mapping always matches the
+        actual cube structure.
+
+        Returns:
+            Dictionary mapping each CornerName to a tuple of (face1, face2, face3).
+            The three faces meet at a corner (all mutually adjacent).
+
+        Example:
+            corner_faces()[CornerName.FRU] = (FaceName.F, FaceName.R, FaceName.U)
+        """
+        from cube.domain.model._part import CornerName
+
+        result: dict[CornerName, tuple[FaceName, FaceName, FaceName]] = {}
+
+        # Iterate through all corners in the internal 3x3 cube
+        for face in self._cube.faces:
+            for corner in face.corners:
+                corner_name: CornerName = corner.name
+                if corner_name not in result:
+                    # Get the three faces this corner connects
+                    # Corner has a single slice with 3 edges (one per face)
+                    edges = corner._3x3_representative_edges
+                    f1 = edges[0].face.name
+                    f2 = edges[1].face.name
+                    f3 = edges[2].face.name
+                    result[corner_name] = (f1, f2, f3)
+
+        return result
 
     def opposite_color(self, color: Color) -> Color:
         """Get the color on the face opposite to the given color's face."""

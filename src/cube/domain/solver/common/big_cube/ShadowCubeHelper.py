@@ -36,22 +36,44 @@ class ShadowCubeHelper(SolverHelper):
 
         return shadow_cube
 
-    def _copy_state_to_shadow(self, shadow: "Cube", th: FacesTrackerHolder ) -> None:
-        """Copy corner/edge state from even cube to shadow 3x3.
+    def _copy_state_to_shadow(
+        self,
+        shadow: "Cube",
+        th: FacesTrackerHolder,
+        fix_non_3x3_edges: bool = True
+    ) -> None:
+        """Copy corner/edge state from big cube to shadow 3x3.
 
-        Uses the type-safe Cube3x3Colors mechanism to transfer state.
-        The even cube's edge/corner colors are extracted, centers are replaced
-        with face_colors, and the result is applied to the shadow cube.
+        For even cubes during L1 solving, some edges may be non-3x3 (scrambled).
+        These can be replaced with valid reference colors to pass sanity checks.
+        Odd cubes don't need this fix - their edges are always 3x3-valid.
+
+        Args:
+            shadow: The shadow 3x3 cube to populate.
+            th: Face tracker holder providing face→color mapping.
+            fix_non_3x3_edges: If True, replace non-3x3 edges with valid reference
+                colors for even cubes. Should always be True for production use,
+                but can be False for testing/debugging.
         """
-        # Get colors from even cube as 3x3 snapshot
+        # Step 1: Get colors from even cube as 3x3 snapshot
         colors_3x3 = self._cube.get_3x3_colors()
 
-        # Override centers with face_colors mapping
+        # Step 2: Override centers with face_colors mapping from trackers
         modified = colors_3x3.with_centers(th.get_face_colors())
 
-        # Verify the modified colors represent a valid BOY layout
+        # Step 3: For even cubes, fix non-3x3 edges if requested
+        # This is required during L1 solving when some edges are scrambled (non-3x3)
+        # Without this fix, sanity check will fail with duplicate color-pairs
+        if self._cube.is_even and fix_non_3x3_edges:
+            modified = modified.with_fixed_non_3x3_edges(
+                cube=self._cube,
+                reference_layout=self._cube.original_layout
+            )
+        # Note: Odd cubes don't need this fix - their edges are always 3x3-valid
+
+        # Step 4: Verify BOY layout (centers only)
         assert modified.is_boy(self._cube.sp), \
             "Shadow cube colors must maintain BOY layout"
 
-        # Apply to shadow cube (includes sanity check)
+        # Step 5: Apply to shadow cube (includes sanity check)
         shadow.set_3x3_colors(modified)

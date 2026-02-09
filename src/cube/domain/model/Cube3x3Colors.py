@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING
 
 from cube.domain.model._part import CornerName, EdgeName
 from cube.domain.model.Color import Color
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.FaceName import FaceName
 from cube.utils.service_provider import IServiceProvider
+
+if TYPE_CHECKING:
+    from cube.domain.model.Cube import Cube
 
 
 @dataclass(frozen=True)
@@ -87,6 +91,103 @@ class Cube3x3Colors:
     def with_centers(self, centers: dict[FaceName, Color]) -> "Cube3x3Colors":
         """Return new Cube3x3Colors with centers replaced."""
         return replace(self, centers=dict(centers))
+
+    def with_fixed_non_3x3_edges(
+        self,
+        cube: "Cube",
+        reference_layout: "CubeLayout"
+    ) -> "Cube3x3Colors":
+        """Replace non-3x3 edge colors with valid reference colors.
+
+        Used when creating shadow cubes from even cubes during L1 solving, where
+        some edges are 3x3-valid but others are still scrambled.
+
+        Args:
+            cube: The source cube to check edge validity (via edge.is3x3)
+            reference_layout: Layout providing valid edge color-pairs (via edge_colors())
+
+        Returns:
+            New Cube3x3Colors with non-3x3 edges replaced by unused valid color-pairs.
+
+        Algorithm:
+            1. Build set of available edge color-pairs from reference_layout.edge_colors()
+            2. For each edge in self.edges:
+                a. Look up Edge object in cube by EdgeName
+                b. Get the two faces from edge.e1.face.name and edge.e2.face.name
+                c. If edge.is3x3: keep current colors, remove from available set
+                d. If not edge.is3x3: pop unused color-pair, create new EdgeColors
+            3. Return new Cube3x3Colors with updated edges dict
+
+        Example - 4x4 cube during L1:
+            - Edge FU: is3x3=True (both slices RED-GREEN) → keep RED-GREEN
+            - Edge FR: is3x3=False (slices RED-BLUE, ORANGE-WHITE) → replace with unused pair like BLUE-ORANGE
+            - Edge FL: is3x3=True (both slices RED-ORANGE) → keep RED-ORANGE
+            - Edge FD: is3x3=False → replace with another unused pair
+            Result: All 12 edges have valid, unique color-pairs, passes sanity check
+        """
+        from cube.domain.exceptions import InternalSWError
+
+        # Get edge-to-faces mapping from the layout (the authoritative source)
+        edge_faces_map: dict[EdgeName, tuple[FaceName, FaceName]] = reference_layout.edge_faces()
+
+        # Build set of available color-pairs from BOY layout
+        # Each frozenset contains exactly 2 colors (one edge color-pair)
+        available_pairs: set[frozenset[Color]] = set(reference_layout.edge_colors())
+
+        # Track which color-pairs have been used to detect duplicates
+        used_pairs: set[frozenset[Color]] = set()
+
+        # Build new edges dict, preserving valid 3x3-edges and replacing invalid/non-3x3 edges
+        new_edges: dict[EdgeName, EdgeColors] = {}
+
+        for edge_name, edge_colors in self.edges.items():
+            # Look up Edge object in cube to check is3x3 property
+            edge = cube.edge(edge_name)
+
+            # Get the two faces for this edge from the layout
+            f1, f2 = edge_faces_map[edge_name]
+
+            # Get the current color-pair for this edge
+            current_pair = frozenset([
+                edge_colors.colors[f1],
+                edge_colors.colors[f2]
+            ])
+
+            # Keep the edge only if:
+            # 1. It's 3x3-valid (all slices have same colors)
+            # 2. Its color-pair hasn't been used yet (no duplicates)
+            # 3. Its color-pair is valid (exists in BOY layout)
+            if edge.is3x3 and current_pair not in used_pairs and current_pair in available_pairs:
+                # Keep existing colors
+                available_pairs.remove(current_pair)
+                used_pairs.add(current_pair)
+                new_edges[edge_name] = edge_colors
+            else:
+                # Replace with unused color-pair
+                # This handles: non-3x3 edges, duplicate color-pairs, invalid color-pairs
+                if not available_pairs:
+                    raise InternalSWError(
+                        f"No available edge color-pairs for replacement. "
+                        f"Already processed {len(new_edges)} edges, "
+                        f"{len(self.edges) - len(new_edges)} remaining. "
+                        f"Edge {edge_name}: is3x3={edge.is3x3}, current_pair={current_pair}, "
+                        f"used_pairs={used_pairs}"
+                    )
+
+                # Pop any unused pair (order doesn't matter for validity)
+                color_pair = available_pairs.pop()
+                used_pairs.add(color_pair)
+                colors_list = list(color_pair)
+
+                # Create new EdgeColors with this pair
+                # Assign the two colors from the pair to the two faces
+                new_edge_colors = EdgeColors({
+                    f1: colors_list[0],
+                    f2: colors_list[1]
+                })
+                new_edges[edge_name] = new_edge_colors
+
+        return replace(self, edges=new_edges)
 
     def with_edge_color(
         self, edge: EdgeName, face: FaceName, color: Color
@@ -175,48 +276,44 @@ class Cube3x3Colors:
         return color_count
 
     @staticmethod
-    def create_empty() -> "Cube3x3Colors":
-        """Create a Cube3x3Colors with all None placeholders.
+    def create_empty(sp: IServiceProvider) -> "Cube3x3Colors":
+        """Create a Cube3x3Colors with all WHITE placeholders using the global BOY layout.
 
-        Useful as a starting point when building from face tracker input.
-        Note: The resulting structure won't be valid until all colors are set.
+        All colors are initialized to WHITE and should be overwritten with actual colors.
+        The structure (which edges connect which faces) comes from the global BOY layout,
+        making CubeLayout the authority for all layout questions.
+
+        Args:
+            sp: Service provider to access the global BOY layout.
+
+        Returns:
+            Cube3x3Colors with all edges/corners/centers initialized to WHITE.
+
+        Note: The resulting structure won't be valid until all colors are set to actual values.
+
+        Example:
+            empty = Cube3x3Colors.create_empty(sp)
         """
         from cube.domain.model._part import CornerName, EdgeName
+        from cube.domain.geometric import cube_boy
+
+        # Get the global BOY layout (cached singleton)
+        boy_layout = cube_boy.get_boy_layout(sp)
+
+        # Get edge-to-faces mapping from layout (the authoritative source)
+        edge_faces_map = boy_layout.edge_faces()
 
         # Create empty edge colors for all 12 edges
-        # Edge names: FL, FU, FR, FD, BL, BU, BR, BD, UR, RD, DL, LU
         edges: dict[EdgeName, EdgeColors] = {}
-        edge_faces = {
-            EdgeName.FU: (FaceName.F, FaceName.U),
-            EdgeName.FR: (FaceName.F, FaceName.R),
-            EdgeName.FD: (FaceName.F, FaceName.D),
-            EdgeName.FL: (FaceName.F, FaceName.L),
-            EdgeName.BU: (FaceName.B, FaceName.U),
-            EdgeName.BR: (FaceName.B, FaceName.R),
-            EdgeName.BD: (FaceName.B, FaceName.D),
-            EdgeName.BL: (FaceName.B, FaceName.L),
-            EdgeName.LU: (FaceName.L, FaceName.U),
-            EdgeName.UR: (FaceName.U, FaceName.R),
-            EdgeName.DL: (FaceName.D, FaceName.L),
-            EdgeName.RD: (FaceName.R, FaceName.D),
-        }
-        # Use WHITE as placeholder (will be overwritten)
-        for edge_name, (f1, f2) in edge_faces.items():
+        for edge_name, (f1, f2) in edge_faces_map.items():
             edges[edge_name] = EdgeColors({f1: Color.WHITE, f2: Color.WHITE})
+
+        # Get corner-to-faces mapping from layout (the authoritative source)
+        corner_faces_map = boy_layout.corner_faces()
 
         # Create empty corner colors for all 8 corners
         corners: dict[CornerName, CornerColors] = {}
-        corner_faces = {
-            CornerName.FLU: (FaceName.F, FaceName.L, FaceName.U),
-            CornerName.FRU: (FaceName.F, FaceName.R, FaceName.U),
-            CornerName.FRD: (FaceName.F, FaceName.R, FaceName.D),
-            CornerName.FLD: (FaceName.F, FaceName.L, FaceName.D),
-            CornerName.BLU: (FaceName.B, FaceName.L, FaceName.U),
-            CornerName.BRU: (FaceName.B, FaceName.R, FaceName.U),
-            CornerName.BRD: (FaceName.B, FaceName.R, FaceName.D),
-            CornerName.BLD: (FaceName.B, FaceName.L, FaceName.D),
-        }
-        for corner_name, (f1, f2, f3) in corner_faces.items():
+        for corner_name, (f1, f2, f3) in corner_faces_map.items():
             corners[corner_name] = CornerColors({f1: Color.WHITE, f2: Color.WHITE, f3: Color.WHITE})
 
         # Create empty centers (WHITE placeholder)
