@@ -1,7 +1,7 @@
 """Common utilities for LBL (Layer-By-Layer) NxN solver.
 
 This module contains shared context managers and helper functions used
-by multiple LBL solver components (NxNCenters2, _LBLSlices, etc.).
+by multiple LBL solver components (_LBLNxNCenters, _LBLSlices, etc.).
 
 MARKER SYSTEM DOCUMENTATION
 ===========================
@@ -22,7 +22,7 @@ This module uses THREE distinct marker systems for center-piece tracking:
 │ MARKER 2: SOLVED FLAG (Solver Algorithm)                                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ Purpose:   Track which pieces are solved to avoid destroying them           │
-│ Storage:   piece.edge.moveable_attributes["NxNCenters2_center_pice_solved"] │
+│ Storage:   piece.edge.moveable_attributes["_LBLNxNCenters_center_pice_solved"] │
 │            = True                                                           │
 │ Set by:    _mark_piece_solved() [via _mark_slice_with_v_mark_if_solved()]   │
 │ Checked:   _is_cent_piece_solved()                                          │
@@ -118,7 +118,7 @@ def clear_all_type_of_markers(cube: Cube) -> None:
 # Tracks which pieces are solved to avoid destroying them.
 # Persists until cube reset.
 
-__SOLVED_FLAG_KEY = "NxNCenters2_center_pice_solved"
+__SOLVED_FLAG_KEY = "_LBLNxNCenters_center_pice_solved"
 
 
 def _is_cent_piece_marked_solved(center_piece: CenterSlice) -> bool:

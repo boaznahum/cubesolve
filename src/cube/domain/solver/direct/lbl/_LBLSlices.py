@@ -39,7 +39,7 @@ from cube.domain.solver.exceptions import SolverFaceColorsChangedNeedRestartExce
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl import _lbl_config, _common
-from cube.domain.solver.direct.lbl._LBLNxNCenters import NxNCenters2
+from cube.domain.solver.direct.lbl._LBLNxNCenters import _LBLNxNCenters
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.direct.lbl._common import setup_l1, _get_side_face_trackers, _get_row_pieces
 
@@ -69,12 +69,12 @@ class _LBLSlices(SolverHelper):
             slv: LayerByLayerNxNSolver instance (for cube access and operations)
         """
         self._slv: LayerByLayerNxNSolver = slv
-        self._last_centers: NxNCenters2 | None = None
+        self._last_centers: _LBLNxNCenters | None = None
         self._edges = _LBLNxNEdges(self)
 
-    def _create_centers(self, th: FacesTrackerHolder) -> NxNCenters2:
-        """Create fresh NxNCenters2 with the given tracker holder."""
-        centers = NxNCenters2(self, tracker_holder=th, preserve_cage=True)
+    def _create_centers(self, th: FacesTrackerHolder) -> _LBLNxNCenters:
+        """Create fresh _LBLNxNCenters with the given tracker holder."""
+        centers = _LBLNxNCenters(self, tracker_holder=th, preserve_cage=True)
         self._last_centers = centers
         return centers
 

@@ -442,6 +442,10 @@ class FacesTrackerHolder(FacesColorsProvider):
             tracker.save_physical_face() for tracker in self._trackers
         ]
 
+        # this will trigger sanity check
+        self.get_face_colors()
+
+
         try:
             yield self
         finally:
@@ -451,6 +455,9 @@ class FacesTrackerHolder(FacesColorsProvider):
 
             # Invalidate cache (tracker->face mappings may have changed)
             self._face_colors_cache = None
+
+            # this will trigger sanity check
+            self.get_face_colors()
 
     def __iter__(self) -> Iterator[FaceTracker]:
         """Iterate over the 6 face trackers."""

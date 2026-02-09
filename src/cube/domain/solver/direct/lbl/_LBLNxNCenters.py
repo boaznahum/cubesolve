@@ -20,7 +20,7 @@ from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils import symbols
 
 
-class NxNCenters2(SolverHelper):
+class _LBLNxNCenters(SolverHelper):
     """
     claude: # in these files row_index is the distance between l1_face, no metter on which orientation
     go over all methods and checkit match the definition asked me if you are not sue
@@ -112,7 +112,7 @@ class NxNCenters2(SolverHelper):
                     - Centers solved AFTER edges and corners
                     - Setup moves ARE undone (preserves 3x3 solution)
         """
-        super().__init__(slv, "NxNCenters2")
+        super().__init__(slv, "_LBLNxNCenters")
 
         self._preserve_cage = preserve_cage
         self._tracker_holder: FacesTrackerHolder = tracker_holder
