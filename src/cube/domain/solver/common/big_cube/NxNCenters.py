@@ -220,14 +220,14 @@ class NxNCenters(SolverHelper):
 
             # Solve only the target face
             while True:
-                if not self._do_faces([target_tracker], False, False):
+                if not self._do_faces(holder, [target_tracker], False, False):
                     break
                 self._asserts_is_boy(all_faces)
 
             self._asserts_is_boy(all_faces)
 
             # Final pass with back face too
-            self._do_faces([target_tracker], False, True)
+            self._do_faces(holder, [target_tracker], False, True)
 
             self._asserts_is_boy(all_faces)
 
@@ -273,29 +273,29 @@ class NxNCenters(SolverHelper):
         #   this slice is swapped, and not filled by other step(becuase it's sources are on back)
         # To overcome it we swap only if number sources is > n//2
         while True:
-            if not self._do_faces(faces, False, False):
+            if not self._do_faces(holder, faces, False, False):
                 break
             self._asserts_is_boy(faces)
 
         self._asserts_is_boy(faces)
 
-        self._do_faces(faces, False, True)
+        self._do_faces(holder, faces, False, True)
 
         self._asserts_is_boy(faces)
 
         assert self._is_solved()
 
-    def _do_faces(self, faces: Sequence[FaceTracker], minimal_bring_one_color, use_back_too: bool) -> bool:
+    def _do_faces(self, tracker_holder: "FacesTrackerHolder", faces: Sequence[FaceTracker], minimal_bring_one_color, use_back_too: bool) -> bool:
         # while True:
         self.debug( "_do_faces:", *faces, level=3)
         work_done = False
         for f in faces:
             # we must trace faces, because they are moved by algorith
             # we need to locate the face by original_color, b ut on odd cube, the color is of the center
-            if self._do_center(f, minimal_bring_one_color, use_back_too, faces):
+            if self._do_center(tracker_holder, f, minimal_bring_one_color, use_back_too, faces):
                 work_done = True
                 if len(faces) == 6:
-                    self._asserts_is_boy(faces)
+                    self._asserts_is_boy(list(tracker_holder))
             # if NxNCenters.work_on_b or not work_done:
             #     break
 
@@ -313,7 +313,7 @@ class NxNCenters(SolverHelper):
         CubeLayout.sanity_cost_assert_match_cube_layout(self.cube,
                                                         lambda: {f.face.name: f.color for f in faces} )
 
-    def _do_center(self, face_loc: FaceTracker, minimal_bring_one_color, use_back_too: bool, faces: Iterable[FaceTracker]) -> bool:
+    def _do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker, minimal_bring_one_color, use_back_too: bool, faces: Iterable[FaceTracker]) -> bool:
 
         if self._is_face_solved(face_loc.face, face_loc.color):
             self.debug( f"Face is already done {face_loc.face}", level=1)
@@ -335,14 +335,14 @@ class NxNCenters(SolverHelper):
 
         self.debug( f"Need to work on {face_loc.face}", level=1)
 
-        work_done = self.__do_center(face_loc, minimal_bring_one_color, use_back_too, faces)
+        work_done = self.__do_center(tracker_holder, face_loc, minimal_bring_one_color, use_back_too, faces)
 
         self.debug( f"After working on {face_loc.face} {work_done=}, "
                            f"solved={self._is_face_solved(face_loc.face, face_loc.color)}", level=1)
 
         return work_done
 
-    def __do_center(self, face_loc: FaceTracker, minimal_bring_one_color: bool, use_back_too: bool, faces: Iterable[FaceTracker]) -> bool:
+    def __do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker, minimal_bring_one_color: bool, use_back_too: bool, faces: Iterable[FaceTracker]) -> bool:
         """
         Process one face - bring correct colored pieces from adjacent faces.
 
@@ -409,7 +409,7 @@ class NxNCenters(SolverHelper):
 
                 for _ in range(3):  # 3 faces: L, D, R brought to UP
                     # don't use face - it was moved !!!
-                    if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up, faces):
+                    if self._do_center_from_face(tracker_holder, cube.front, minimal_bring_one_color, color, cube.up, faces):
                         work_done = True
                         if minimal_bring_one_color:
                             if self._preserve_cage:
@@ -427,7 +427,7 @@ class NxNCenters(SolverHelper):
 
                 # on the last face (4th iteration)
                 # don't use face - it was moved !!!
-                if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.up, faces):
+                if self._do_center_from_face(tracker_holder, cube.front, minimal_bring_one_color, color, cube.up, faces):
                     work_done = True
                     if minimal_bring_one_color:
                         if self._preserve_cage:
@@ -448,12 +448,12 @@ class NxNCenters(SolverHelper):
             if use_back_too:
                 # now from back
                 # don't use face - it was moved !!!
-                if self._do_center_from_face(cube.front, minimal_bring_one_color, color, cube.back, faces):
+                if self._do_center_from_face(tracker_holder, cube.front, minimal_bring_one_color, color, cube.back, faces):
                     work_done = True
 
             return work_done
 
-    def _do_center_from_face(self, face: Face, minimal_bring_one_color, color: Color, source_face: Face, faces: Iterable[FaceTracker]) -> bool:
+    def _do_center_from_face(self, tracker_holder: "FacesTrackerHolder", face: Face, minimal_bring_one_color, color: Color, source_face: Face, faces: Iterable[FaceTracker]) -> bool:
 
         """
         The sources are on source_face !!! source face is in its location up /back
@@ -485,7 +485,7 @@ class NxNCenters(SolverHelper):
             on_source = self.count_color_on_face(source_face, color)
 
             if on_source - ok_on_this > 2:  # swap two faces is about two commutators
-                self._swap_entire_face_odd_cube(color, face, source_face, faces)
+                self._swap_entire_face_odd_cube(tracker_holder, color, face, source_face, faces)
                 work_done = True
 
         if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
@@ -496,7 +496,7 @@ class NxNCenters(SolverHelper):
 
         if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
             # should move minimal_bring_one_color into _do_blocks, because ein case of back, it can do too much
-            if self._do_blocks(color, face, source_face, faces):
+            if self._do_blocks(tracker_holder, color, face, source_face, faces):
                 work_done = True
                 if minimal_bring_one_color:
                     return work_done
@@ -506,7 +506,7 @@ class NxNCenters(SolverHelper):
             # the above also did a 1 size block
             for rc in self._comm_helper._2d_center_iter():
 
-                if self._block_commutator(color,
+                if self._block_commutator(tracker_holder, color,
                                             face,
                                             source_face,
                                             rc, rc,
@@ -744,7 +744,7 @@ class NxNCenters(SolverHelper):
                 self.debug( "  [CAGE] Undoing F' setup: F", level=1)
                 op.play(Algs.F)
 
-    def _do_blocks(self, color, face, source_face, faces: Iterable[FaceTracker]):
+    def _do_blocks(self, tracker_holder: "FacesTrackerHolder", color, face, source_face, faces: Iterable[FaceTracker]):
 
         work_done = False
 
@@ -775,7 +775,7 @@ class NxNCenters(SolverHelper):
             rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
 
             for rotation in range(4):
-                if self._block_commutator(color,
+                if self._block_commutator(tracker_holder, color,
                                             face,
                                             source_face,
                                             rc1_on_target, rc2_on_target,
@@ -853,7 +853,7 @@ class NxNCenters(SolverHelper):
             yield r, c
             (r, c) = (c, inv(r))
 
-    def _swap_entire_face_odd_cube(self, required_color: Color, face: Face, source: Face, faces: Iterable[FaceTracker]):
+    def _swap_entire_face_odd_cube(self, tracker_holder: "FacesTrackerHolder", required_color: Color, face: Face, source: Face, faces: Iterable[FaceTracker]):
 
         cube = self.cube
         nn = cube.n_slices
@@ -885,26 +885,27 @@ class NxNCenters(SolverHelper):
         op.op(Algs.seq_alg(None, *swap_faces))
 
         # commutator 1, upper block about center
-        self._block_commutator(required_color, face, source,
+        self._block_commutator(tracker_holder, required_color, face, source,
                                  (mid + 1, mid), (nn - 1, mid),
                                  _SearchBlockMode.BigThanSource, faces)
 
         # commutator 2, lower block below center
-        self._block_commutator(required_color, face, source,
+        self._block_commutator(tracker_holder, required_color, face, source,
                                  (0, mid), (mid - 1, mid),
                                  _SearchBlockMode.BigThanSource, faces)
 
         # commutator 3, left to center
-        self._block_commutator(required_color, face, source,
+        self._block_commutator(tracker_holder, required_color, face, source,
                                  (mid, 0), (mid, mid - 1),
                                  _SearchBlockMode.BigThanSource, faces)
 
         # commutator 4, right ot center
-        self._block_commutator(required_color, face, source,
+        self._block_commutator(tracker_holder, required_color, face, source,
                                  (mid, mid + 1), (mid, nn - 1),
                                  _SearchBlockMode.BigThanSource, faces)
 
     def _block_commutator(self,
+                            tracker_holder: "FacesTrackerHolder",
                             required_color: Color,
                             face: Face, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
                             mode: _SearchBlockMode, faces: Iterable[FaceTracker]) -> bool:
@@ -965,10 +966,10 @@ class NxNCenters(SolverHelper):
 
         # Use CommutatorHelper to execute the commutator
         # This handles the algorithm, annotations (including s2), and cage preservation
-        self._asserts_is_boy(faces)
-        with FacesTrackerHolder.preserve_physical_faces_static(faces):
+        self._asserts_is_boy(list(tracker_holder))
+        with tracker_holder.preserve_physical_faces():
             self._execute_commutator(source_face, face, rc1, rc2, source_rc1, source_rc2)
-        self._asserts_is_boy(faces)
+        self._asserts_is_boy(list(tracker_holder))
 
         return True
 
