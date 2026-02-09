@@ -196,36 +196,6 @@ class NxNCentersFaceTrackers(SolverHelper):
         """Create a SimpleFaceTracker."""
         return SimpleFaceTracker(self.cube, parent_container, color, pred)
 
-    def _create_tracker_by_center_piece(self, parent_container: "FacesTrackerHolder",_slice: CenterSlice) -> MarkedFaceTracker:
-        """Mark a center slice and create a MarkedFaceTracker for it.
-
-        Returns MarkedFaceTracker which stores the key for cleanup.
-        """
-        NxNCentersFaceTrackers._global_tracer_id += 1
-        unique_id = NxNCentersFaceTrackers._global_tracer_id
-
-        prefix = get_tracker_key_prefix()
-        key = f"{prefix}h{self._holder_id}:{_slice.color}{unique_id}"
-
-        edge = _slice.edge
-        edge.moveable_attributes[key] = _slice.color  # Store Color for renderer
-
-        cube = _slice.parent.cube
-        if cube.config.solver_annotate_trackers:
-            cube.sp.marker_manager.add_marker(edge, "tracker_c0", cube.sp.marker_factory.c0(), moveable=True)
-        if cube.config.face_tracker.annotate:
-            cube.sp.marker_manager.add_marker(edge, _TRACKER_VISUAL_MARKER, cube.sp.marker_factory.center_tracker(), moveable=True)
-
-        return MarkedFaceTracker(cube, parent_container, _slice.color, key)
-
-    def _create_tracker_by_color(self, parent_container: FacesTrackerHolder, face: Face, color: Color) -> MarkedFaceTracker:
-        """Find slice with color on face and create tracker for it."""
-        _slice = face.cube.cqr.find_slice_in_face_center(face, lambda s: s.color == color)
-        assert _slice
-        return self._create_tracker_by_center_piece(parent_container, _slice)
-
-    # boaz: why we need both this _create_tracker_by_color
-    # even if yes they are almost identical
     def _create_tracker_on_face(self, parent_container: FacesTrackerHolder, face: Face, color: Color) -> MarkedFaceTracker:
         """Mark any center slice on face and assign a specific tracker color.
 
@@ -312,7 +282,7 @@ class NxNCentersFaceTrackers(SolverHelper):
             return self._create_tracker_odd(parent_container, cube.front)
         else:
             f, c = self._find_face_with_max_colors()
-            return self._create_tracker_by_color(parent_container, f, c)
+            return self._create_tracker_on_face(parent_container, f, c)
 
     def _track_no_3(self, parent_container: FacesTrackerHolder, two_first: Sequence[FaceTracker]) -> FaceTracker:
         """Create tracker for face 3 - highest majority from remaining faces/colors.
@@ -380,7 +350,7 @@ class NxNCentersFaceTrackers(SolverHelper):
         # because f1, f2 contains only 1/3 of all pieces
         f3, f3_color = self._find_face_with_max_colors(left, left_colors)
 
-        return self._create_tracker_by_color(parent_container, f3, f3_color)
+        return self._create_tracker_on_face(parent_container, f3, f3_color)
 
     def _track_two_last_even_cube(self, parent_container: FacesTrackerHolder, four_first: Sequence[FaceTracker]) -> Tuple[FaceTracker, FaceTracker]:
         """Create trackers for faces 5 and 6 - the final BOY-constrained assignment.
