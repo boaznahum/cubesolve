@@ -731,15 +731,25 @@ class NxNEdges(SolverHelper):
             ordered = self._get_slice_ordered_color(face, _slice)
             face_color, other_face_color = ordered
 
+            self.debug(f"  Slice {i}: face={face}, ordered={ordered}, face_color={face_color}, other_face_color={other_face_color}, required={required_color}")
+
             if face_color == required_color:
                 n_required_on_face += 1
             elif other_face_color == required_color:
                 n_required_on_other += 1
 
-        # Prefer orientation with required_color on face (even if it's minority)
-        # This ensures the edge is solved for the correct face
-        if n_required_on_face > 0:
-            return (required_color, other_color)
-        else:
-            # All slices have required_color on OTHER face - use that orientation
-            return (other_color, required_color)
+        self.debug(f"  Counts: n_required_on_face={n_required_on_face}, n_required_on_other={n_required_on_other}")
+
+        # CRITICAL: We want required_color on the face (e.g., WHITE on F for white cross).
+        # The counting tells us the CURRENT state of scrambled edge, not the TARGET state!
+        #
+        # If n_required_on_face > 0: Some slices already have correct orientation
+        # If n_required_on_other > 0: Some/all slices have WRONG orientation (flipped)
+        #
+        # We ALWAYS want (required_color, other_color) to solve edge with required_color on face!
+        #
+        # The old logic was: if all slices have required_color on OTHER face, return (other_color, required_color)
+        # This is WRONG because it tells the solver to KEEP the wrong orientation!
+
+        self.debug(f"  Returning: (required_color={required_color}, other_color={other_color})")
+        return (required_color, other_color)
