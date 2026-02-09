@@ -966,7 +966,8 @@ class NxNCenters(SolverHelper):
         # Use CommutatorHelper to execute the commutator
         # This handles the algorithm, annotations (including s2), and cage preservation
         self._asserts_is_boy(faces)
-        self._execute_commutator(source_face, face, rc1, rc2, source_rc1, source_rc2)
+        with FacesTrackerHolder.preserve_physical_faces_static(faces):
+            self._execute_commutator(source_face, face, rc1, rc2, source_rc1, source_rc2)
         self._asserts_is_boy(faces)
 
         return True
