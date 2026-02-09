@@ -550,6 +550,36 @@ class NxNEdges(SolverHelper):
 
         return s.get_face_edge(f).color, s.get_other_face_edge(f).color
 
+    def _find_most_common_pair_with_color(self, edge: Edge, required_color: Color) -> Color:
+        """Find the color that most commonly pairs with required_color on this edge.
+
+        For very scrambled edges, multiple colors may appear. This finds which
+        color appears most often paired with the required_color.
+
+        Args:
+            edge: The edge to analyze.
+            required_color: The color we're solving for.
+
+        Returns:
+            The color that most frequently pairs with required_color.
+        """
+        pair_counts: dict[Color, int] = defaultdict(int)
+
+        for i in range(edge.n_slices):
+            slice_colors = edge.get_slice(i).colors_id
+            if required_color in slice_colors:
+                # This slice contains required_color - count its pair
+                other = next(c for c in slice_colors if c != required_color)
+                pair_counts[other] += 1
+
+        if not pair_counts:
+            raise InternalSWError(
+                f"Edge {edge} has no slices containing {required_color}"
+            )
+
+        # Return the most common pairing
+        return max(pair_counts, key=pair_counts.get)  # type: ignore
+
     @staticmethod
     def _edge_contains_color(edge: Edge, color: Color) -> bool:
         """Check if any slice on this edge contains the given color.
@@ -665,26 +695,38 @@ class NxNEdges(SolverHelper):
         Raises:
             InternalSWError: If required_color is not in the edge's colors.
         """
-        # Verify the edge contains the required color
-        edge_colors = edge.colors_id
-        if required_color not in edge_colors:
+        # Verify the edge contains the required color (check ALL slices, not just representative)
+        if not NxNEdges._edge_contains_color(edge, required_color):
             raise InternalSWError(
-                f"Edge {edge} does not contain required color {required_color}. "
-                f"Edge colors: {edge_colors}"
+                f"Edge {edge} does not contain required color {required_color} in any slice. "
+                f"Representative colors: {edge.colors_id}"
             )
 
-        # Get the other color in this edge
-        other_color = next(c for c in edge_colors if c != required_color)
+        # Find all colors that appear on this edge (across all slices)
+        all_colors: set[Color] = set()
+        for i in range(edge.n_slices):
+            all_colors.update(edge.get_slice(i).colors_id)
+
+        # Get the other color(s) that appear with required_color
+        other_colors = all_colors - {required_color}
+        if len(other_colors) != 1:
+            # Edge is very scrambled - has more than 2 unique colors total
+            # Pick the most common pairing with required_color
+            other_color = self._find_most_common_pair_with_color(edge, required_color)
+        else:
+            other_color = next(iter(other_colors))
 
         # Count orientations: how many slices have required_color on face vs other face
+        # Only count slices that have the required_color paired with other_color
         # We want to pick the majority orientation, preferring required_color on face
         n_required_on_face = 0
         n_required_on_other = 0
+        target_pair = frozenset({required_color, other_color})
 
         for i in range(edge.n_slices):
             _slice = edge.get_slice(i)
-            if _slice.colors_id != edge_colors:
-                continue  # Skip slices with different color-pair (scrambled edge)
+            if _slice.colors_id != target_pair:
+                continue  # Skip slices with different color-pair (very scrambled edge)
 
             ordered = self._get_slice_ordered_color(face, _slice)
             face_color, other_face_color = ordered

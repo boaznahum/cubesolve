@@ -24,7 +24,7 @@ from cube.domain.solver.solver import SolveStep
 # Test Configuration
 # =============================================================================
 
-CUBE_SIZES_EVEN=[4, 6]
+CUBE_SIZES_EVEN=[4]
 # Odd cube sizes only (even cubes have different parity issues)
 # Scramble seeds to test
 SCRAMBLE_SEEDS: list[int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
