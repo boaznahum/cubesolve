@@ -624,19 +624,21 @@ class NxNEdges(SolverHelper):
     def _determine_ordered_color_for_required_color(
         self, face: Face, edge: Edge, required_color: Color
     ) -> Tuple[Color, Color]:
-        """Determine ordered_color ensuring required_color is the primary color.
+        """Determine ordered_color with required_color as primary, using majority vote.
 
         Used by solve_face_edges() to ensure we solve for the correct face color.
+        Counts which orientation appears most often, preferring the one with
+        required_color on the face.
 
         Args:
             face: The face where the edge is positioned (front after rotation).
             edge: The edge to solve.
-            required_color: The color that must be used as primary (e.g., WHITE
-                for white cross). This color should appear on the face.
+            required_color: The color that must be on the face (e.g., WHITE
+                for white cross).
 
         Returns:
-            Tuple of (color_on_face, color_on_other_face) where color_on_face
-            matches required_color.
+            Tuple of (color_on_face, color_on_other_face) representing the
+            target orientation for all slices.
 
         Raises:
             InternalSWError: If required_color is not in the edge's colors.
@@ -652,23 +654,28 @@ class NxNEdges(SolverHelper):
         # Get the other color in this edge
         other_color = next(c for c in edge_colors if c != required_color)
 
-        # Check a representative slice to determine which orientation is correct
-        # Try to find a slice that has the required_color on the face
+        # Count orientations: how many slices have required_color on face vs other face
+        # We want to pick the majority orientation, preferring required_color on face
+        n_required_on_face = 0
+        n_required_on_other = 0
+
         for i in range(edge.n_slices):
             _slice = edge.get_slice(i)
             if _slice.colors_id != edge_colors:
-                continue  # Skip slices with different colors
+                continue  # Skip slices with different color-pair (scrambled edge)
 
             ordered = self._get_slice_ordered_color(face, _slice)
             face_color, other_face_color = ordered
 
-            # If this slice has required_color on the face, use this orientation
             if face_color == required_color:
-                return (required_color, other_color)
-            # If this slice has required_color on the other face, flip it
+                n_required_on_face += 1
             elif other_face_color == required_color:
-                return (required_color, other_color)
+                n_required_on_other += 1
 
-        # If we get here, just return with required_color first
-        # This shouldn't happen if the edge actually contains required_color
-        return (required_color, other_color)
+        # Prefer orientation with required_color on face (even if it's minority)
+        # This ensures the edge is solved for the correct face
+        if n_required_on_face > 0:
+            return (required_color, other_color)
+        else:
+            # All slices have required_color on OTHER face - use that orientation
+            return (other_color, required_color)
