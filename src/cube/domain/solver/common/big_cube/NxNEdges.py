@@ -82,9 +82,10 @@ class NxNEdges(SolverHelper):
             the cross edges may be scattered across the cube.
         """
         # Find the 4 edges that contain the target color (by color, not position!)
-        # For white cross: finds edges with WHITE in their colors_id
+        # For white cross: finds edges with WHITE (checking ALL slices, not just representative)
         target_color = face_tracker.color
-        target_edges_by_color = [e for e in self.cube.edges if target_color in e.colors_id]
+        target_edges_by_color = [e for e in self.cube.edges
+                                if NxNEdges._edge_contains_color(e, target_color)]
 
         with self._logger.tab(lambda : f"Doing face {target_color} edges"):
 
