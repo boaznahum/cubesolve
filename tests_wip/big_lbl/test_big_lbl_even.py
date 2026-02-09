@@ -39,6 +39,28 @@ class TestBigLBLEven:
 
     @pytest.mark.parametrize("cube_size", CUBE_SIZES_EVEN, ids=lambda s: f"size_{s}")
     @pytest.mark.parametrize("scramble_seed", SCRAMBLE_SEEDS, ids=lambda s: f"seed_{s}")
+    def test_big_lbl_even_l1_only(
+        self,
+        cube_size: int,
+        scramble_seed: int,
+    ) -> None:
+        """Test L1 solving on even cubes."""
+
+        # Setup
+        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+
+        # Scramble
+        app.scramble(scramble_seed, None, animation=False, verbose=False)
+
+        # Solve L1 only (centers + edges + corners)
+        solver.solve(what=SolveStep.LBL_L1)
+
+        # Verify L1 is solved
+        assert solver.is_solved_phase(SolveStep.LBL_L1)
+
+    @pytest.mark.parametrize("cube_size", CUBE_SIZES_EVEN, ids=lambda s: f"size_{s}")
+    @pytest.mark.parametrize("scramble_seed", SCRAMBLE_SEEDS, ids=lambda s: f"seed_{s}")
     def test_big_lbl_even(
         self,
         cube_size: int,
