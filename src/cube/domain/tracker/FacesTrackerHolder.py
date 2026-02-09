@@ -35,7 +35,6 @@ from typing import TYPE_CHECKING, cast
 
 from typing_extensions import Self
 
-from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model import CenterSlice, Color, Face
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.FacesColorsProvider import FacesColorsProvider
@@ -44,6 +43,7 @@ from cube.domain.tracker._factory import NxNCentersFaceTrackers
 from cube.domain.tracker.trackers import FaceTracker
 
 if TYPE_CHECKING:
+    from cube.domain.geometric.cube_layout import CubeLayout
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Part import Part
     from cube.domain.solver.protocols import SolverElementsProvider
@@ -226,6 +226,7 @@ class FacesTrackerHolder(FacesColorsProvider):
             self._face_colors_cache[tracker.face.name] = tracker.color
         self._cache_modify_counter = current_counter
 
+        from cube.domain.geometric.cube_layout import CubeLayout
         CubeLayout.sanity_cost_assert_is_boy(
             self.cube.sp,
             # to get rid of the pyright complains it can be null
@@ -346,6 +347,7 @@ class FacesTrackerHolder(FacesColorsProvider):
         Returns:
             CubeLayout representing current tracker state.
         """
+        from cube.domain.geometric.cube_layout import CubeLayout
         layout: dict[FaceName, Color] = self.face_colors
         return CubeLayout.create_layout(False, layout, self._cube.sp)
 

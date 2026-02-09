@@ -144,7 +144,6 @@ from .PartSlice import CornerSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Corner import Corner
 from cube.domain.geometric.cube_boy import Color, FaceName
-from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from ._part import EdgeName
 from .cube_slice import Slice, SliceName
@@ -154,6 +153,7 @@ from .Part import Part
 from .PartEdge import PartEdge
 
 if TYPE_CHECKING:
+    from cube.domain.geometric.cube_layout import CubeLayout
     from .Cube3x3Colors import Cube3x3Colors
     from .CubeListener import CubeListener
     from .CubeQueries2 import CubeQueries2
@@ -1930,6 +1930,7 @@ class Cube(CubeSupplier):
         """
 
         if not self._original_layout:
+            from cube.domain.geometric.cube_layout import CubeLayout
             faces: dict[FaceName, Color] = {f.name: f.original_color for f in self._faces.values()}
             lo = CubeLayout.create_layout(True, faces, self._sp)
 
@@ -1943,7 +1944,7 @@ class Cube(CubeSupplier):
 
         :return: current layout, valid only in case of 3x3, guess center color by taking middle slice
         """
-
+        from cube.domain.geometric.cube_layout import CubeLayout
         faces: dict[FaceName, Color] = {f.name: f.center.color for f in self._faces.values()}
         return CubeLayout.create_layout(False, faces, self._sp)
 
