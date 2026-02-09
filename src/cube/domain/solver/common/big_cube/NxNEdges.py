@@ -117,9 +117,9 @@ class NxNEdges(SolverHelper):
                         parity_done = True
                         continue
 
-                    # Solve one edge
+                    # Solve one edge with the required target color
                     edge = unsolved[0]
-                    self._do_edge(edge)
+                    self._do_edge(edge, required_color=target_color)
 
                 return parity_done
 
@@ -148,7 +148,19 @@ class NxNEdges(SolverHelper):
         n_to_fix = sum(not e.is3x3 for e in self.cube.edges)
         return n_to_fix
 
-    def _do_edge(self, edge: Edge) -> bool:
+    def _do_edge(self, edge: Edge, required_color: Color | None = None) -> bool:
+        """Solve a single edge by pairing all its slices.
+
+        Args:
+            edge: The edge to solve.
+            required_color: If provided, ensure this color is used as the primary
+                color when determining ordered_color. Used by solve_face_edges()
+                to solve edges for a specific face. If None, auto-detects the
+                best color (existing behavior).
+
+        Returns:
+            True if the edge was solved, False if already solved.
+        """
 
         if edge.is3x3:
             self.debug( f"Edge {edge} is already solved", level=3)
@@ -172,12 +184,20 @@ class NxNEdges(SolverHelper):
             self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             edge = self.cube.front.edge_left
 
-            # We can't do  it before  bringing to front because we don't know which edge will be on front
-            if n_slices % 2:
+            # Determine the ordered color to solve for
+            if required_color is not None:
+                # Use the specified required color (from solve_face_edges)
+                ordered_color = self._determine_ordered_color_for_required_color(
+                    face, edge, required_color
+                )
+                color_un_ordered = frozenset(ordered_color)
+            elif n_slices % 2:
+                # Odd cube: use middle slice color (auto-detect)
                 _slice = edge.get_slice(n_slices // 2)
                 color_un_ordered = _slice.colors_id
                 ordered_color = self._get_slice_ordered_color(face, _slice)
             else:
+                # Even cube: find most common color (auto-detect)
                 ordered_color = self._find_max_of_color(face, edge)
                 color_un_ordered = frozenset(ordered_color)
 
@@ -548,6 +568,12 @@ class NxNEdges(SolverHelper):
         self._do_edge_parity_on_edge(self.cube.front.edge_left)
 
     def _find_max_of_color(self, face, edge) -> Tuple[Color, Color]:
+        """Auto-detect the most common color pair on an edge.
+
+        Used for even cubes when no required color is specified.
+        Counts which color-pair appears most frequently and picks the
+        orientation that appears most often.
+        """
         c_max = None
         n_max = 0
 
@@ -594,3 +620,55 @@ class NxNEdges(SolverHelper):
         else:
             assert c2
             return c2
+
+    def _determine_ordered_color_for_required_color(
+        self, face: Face, edge: Edge, required_color: Color
+    ) -> Tuple[Color, Color]:
+        """Determine ordered_color ensuring required_color is the primary color.
+
+        Used by solve_face_edges() to ensure we solve for the correct face color.
+
+        Args:
+            face: The face where the edge is positioned (front after rotation).
+            edge: The edge to solve.
+            required_color: The color that must be used as primary (e.g., WHITE
+                for white cross). This color should appear on the face.
+
+        Returns:
+            Tuple of (color_on_face, color_on_other_face) where color_on_face
+            matches required_color.
+
+        Raises:
+            InternalSWError: If required_color is not in the edge's colors.
+        """
+        # Verify the edge contains the required color
+        edge_colors = edge.colors_id
+        if required_color not in edge_colors:
+            raise InternalSWError(
+                f"Edge {edge} does not contain required color {required_color}. "
+                f"Edge colors: {edge_colors}"
+            )
+
+        # Get the other color in this edge
+        other_color = next(c for c in edge_colors if c != required_color)
+
+        # Check a representative slice to determine which orientation is correct
+        # Try to find a slice that has the required_color on the face
+        for i in range(edge.n_slices):
+            _slice = edge.get_slice(i)
+            if _slice.colors_id != edge_colors:
+                continue  # Skip slices with different colors
+
+            ordered = self._get_slice_ordered_color(face, _slice)
+            face_color, other_face_color = ordered
+
+            # If this slice has required_color on the face, use this orientation
+            if face_color == required_color:
+                return (required_color, other_color)
+            # If this slice has required_color on the other face, flip it
+            elif other_face_color == required_color:
+                return (required_color, other_color)
+
+        # If we get here, just return with required_color first
+        # This shouldn't happen if the edge actually contains required_color
+        return (required_color, other_color)
