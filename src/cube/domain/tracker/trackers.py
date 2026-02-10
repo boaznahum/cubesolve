@@ -42,13 +42,6 @@ if TYPE_CHECKING:
 _TRACKER_KEY_PREFIX = "_nxn_centers_track:"
 
 
-def search_and_remove_center_visible_markers(face: Face) -> None:
-    """Remove all visual tracker dots from center slices on the given face."""
-    mm = face.cube.sp.marker_manager
-
-    for s in face.center.all_slices:
-        mm.remove_marker(s.edge, _TRACKER_VISUAL_MARKER, moveable=True)
-
 
 def get_tracker_key_prefix() -> str:
     """Get the tracker key prefix for creating marker keys.
@@ -111,7 +104,7 @@ class FaceTracker(ABC):
         return self.__str__()
 
     @abstractmethod
-    def cleanup(self) -> None:
+    def cleanup(self, force_remove_visible:bool = False) -> None:
         """Remove any marks this tracker created. Abstract - must be implemented."""
         pass
 
@@ -258,7 +251,7 @@ class SimpleFaceTracker(FaceTracker):
         """Find face using stored predicate."""
         return self._cube.cqr.find_face(self._pred)
 
-    def cleanup(self) -> None:
+    def cleanup(self, force_remove_visible:bool = False) -> None:
         """No-op - simple trackers don't mark anything."""
         pass
 
@@ -300,7 +293,7 @@ class MarkedFaceTracker(FaceTracker):
                 if self._key in s.edge.moveable_attributes:
                     del s.edge.moveable_attributes[self._key]
                     if force_remove_visible or not self._cube.config.face_tracker.leave_last_annotation:
-                        mm.remove_marker(s.edge, _TRACKER_VISUAL_MARKER, moveable=True)
+                        mm.remove_marker(s.edge, _helper.tracer_visual_key(self._key), moveable=True)
                     return
 
     def restore_to_physical_face(self, saved_face_name: FaceName) -> None:

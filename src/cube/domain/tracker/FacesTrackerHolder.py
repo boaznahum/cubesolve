@@ -106,12 +106,15 @@ class FacesTrackerHolder(FacesColorsProvider):
 
     _holder_unique_id: int = 0  # Class variable for generating unique holder IDs
 
-    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter", "_holder_id", "_frozen_colors"]
+    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter",
+                 "_holder_id", "_frozen_colors",
+                 "_is_for_status_querying"]
 
     def __init__(
         self,
         slv: SolverElementsProvider,
-        trackers: list[FaceTracker] | None = None
+        trackers: list[FaceTracker] | None = None,
+            is_for_status_querying = False
     ) -> None:
         """Create or accept face trackers for all 6 faces.
 
@@ -131,6 +134,7 @@ class FacesTrackerHolder(FacesColorsProvider):
         FacesTrackerHolder._holder_unique_id += 1
         self._holder_id = FacesTrackerHolder._holder_unique_id
 
+        self._is_for_status_querying = is_for_status_querying
         self._cube = slv.cube
         self._is_even = self._cube.n_slices % 2 == 0
         self._face_colors_cache: dict[FaceName, Color] | None = None
@@ -382,7 +386,7 @@ class FacesTrackerHolder(FacesColorsProvider):
         This MUST be called when done with the holder (or use context manager).
         """
         for tracker in self._trackers:
-            tracker.cleanup()
+            tracker.cleanup(force_remove_visible=self._is_for_status_querying)
 
     @contextmanager
     def preserve_physical_faces(self) -> Generator[Self, None, None]:

@@ -6,6 +6,9 @@ from cube.domain.model import Face, CenterSlice, Color
 _TRACKER_VISUAL_MARKER = "tracker_ct"
 
 
+def tracer_visual_key(tracer_key: str) -> str:
+    return _TRACKER_VISUAL_MARKER + tracer_key
+
 def _find_markable_center_slice(face: Face, color: Color) -> CenterSlice:
     """Find a center slice on the given face to mark.
 
@@ -36,4 +39,4 @@ def find_and_track_slice(face: Face, key: str, color: Color) -> None:
         # 5. Re-add visual marker on the new edge
         cube = face.cube
         if cube.config.face_tracker.annotate:
-            cube.sp.marker_manager.add_marker(edge, _TRACKER_VISUAL_MARKER, cube.sp.marker_factory.center_tracker(), moveable=True)
+            cube.sp.marker_manager.add_marker(edge, tracer_visual_key(key), cube.sp.marker_factory.center_tracker(), moveable=True)

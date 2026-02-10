@@ -113,7 +113,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         # Note: We rely on tracker majority algorithm being deterministic.
         # If issue #51 (tracker majority bug) is real, trackers might not be
         # reproducible across calls, causing inconsistent status reports.
-        with FacesTrackerHolder(self) as th:
+        with FacesTrackerHolder(self, is_for_status_querying=True) as th:
           with self.cube.with_faces_color_provider(th):
             layer1_done = self._is_layer1_solved(th)
 

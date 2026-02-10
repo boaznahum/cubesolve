@@ -124,7 +124,6 @@ from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.tracker.trackers import (
-    _TRACKER_VISUAL_MARKER,
     FaceTracker,
     MarkedFaceTracker,
     SimpleFaceTracker,
