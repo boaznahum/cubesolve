@@ -31,10 +31,13 @@ from typing_extensions import deprecated
 
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
+from cube.domain.exceptions.EvenCubeCornerSwapException import EvenCubeCornerSwapException
+from cube.domain.exceptions.EvenCubeEdgeParityException import EvenCubeEdgeParityException
 from cube.domain.model import Corner, Part, Color
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
+from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.direct.lbl import _common
@@ -68,7 +71,7 @@ class LayerByLayerNxNSolver(BaseSolver):
     - Like Layer 1 but with restricted moves
     """
 
-    __slots__ = ["_nxn_edges", "_shadow_helper", "_lbl_slices"]
+    __slots__ = ["_nxn_edges", "_nxn_corners", "_shadow_helper", "_lbl_slices"]
 
     def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
         """
@@ -86,6 +89,9 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         # Reuse NxNEdges for edge solving
         self._nxn_edges = NxNEdges(self, advanced_edge_parity=False)
+
+        # NxNCorners for even cube corner parity fix
+        self._nxn_corners = NxNCorners(self)
 
         self._shadow_helper = ShadowCubeHelper(self)
 
@@ -258,25 +264,39 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     def _solve_impl(self, what: SolveStep) -> SolverResults:
 
-        max_iterations = 3
-        iterations = 0
+        max_iterations = 6
+        even_edge_parity_detected = False
+        corner_swap_detected = False
 
+        for iteration in range(1, max_iterations + 1):
 
-        while True:
-            # 1. first iteration
-            # 2. Retry after face changed
-            # 3 Error
-            iterations += 1
-            if iterations >= max_iterations:
-                raise InternalSWError("Too many iterations for solver")
+            if self.cube.solved:
+                return SolverResults()
 
             try:
                 return self._solve_impl2(what)
-            except SolverFaceColorsChangedNeedRestartException as _:
+
+            except SolverFaceColorsChangedNeedRestartException:
                 self.debug("Retrying after face colors changed")
                 continue
 
-        assert False # to satisfy pyCharm we not really can reach here
+            except EvenCubeEdgeParityException:
+                if even_edge_parity_detected:
+                    raise InternalSWError("Edge parity detected twice")
+                even_edge_parity_detected = True
+                self.debug("Even cube edge parity detected, fixing...")
+                self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+                continue
+
+            except EvenCubeCornerSwapException:
+                if corner_swap_detected:
+                    raise InternalSWError("Corner swap parity detected twice")
+                corner_swap_detected = True
+                self.debug("Even cube corner swap parity detected, fixing...")
+                self._nxn_corners.fix_corner_parity()
+                continue
+
+        raise InternalSWError(f"Too many iterations ({max_iterations}) for solver")
 
 
     def _solve_impl2(self, what: SolveStep) -> SolverResults:
