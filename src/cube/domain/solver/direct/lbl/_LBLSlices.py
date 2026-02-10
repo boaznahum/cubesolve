@@ -265,12 +265,17 @@ class _LBLSlices(SolverHelper):
         )
         return Algs.of_slice(slice_name)[cube_slice_index + 1]  # 1-based
 
-    def _find_best_pre_alignment(self, face_row: int, l1_white_tracker: FaceTracker) -> int:
+    def _find_best_pre_alignment(self, face_row: int, l1_white_tracker: FaceTracker,
+                                 th: FacesTrackerHolder) -> int:
         """Find the best slice pre-alignment rotation count (0-3).
 
         Uses with_query_restore_state() to test each rotation without
         affecting the cube. Returns the number of rotations that maximizes
         already-correct pieces, or 0 if no rotation helps.
+
+        Face colors are frozen during the query to prevent tracker displacement:
+        slice rotations move center pieces (and their tracker marks), which can
+        cause two trackers to temporarily point to the same face.
         """
         slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
         if slice_alg is None:
@@ -282,14 +287,17 @@ class _LBLSlices(SolverHelper):
         best_count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
         best_rotations = 0
 
-        # Try rotations 1, 2, 3
-        with self.op.with_query_restore_state():
-            for n_rotations in range(1, 4):
-                self.play(slice_alg)
-                count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
-                if count > best_count:
-                    best_count = count
-                    best_rotations = n_rotations
+        # Freeze face colors during query rotations. Slice rotations move
+        # tracker-marked center slices, temporarily displacing trackers.
+        # Frozen colors ensure match_faces uses the correct pre-rotation mapping.
+        with th.frozen_face_colors():
+            with self.op.with_query_restore_state():
+                for n_rotations in range(1, 4):
+                    self.play(slice_alg)
+                    count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
+                    if count > best_count:
+                        best_count = count
+                        best_rotations = n_rotations
 
         return best_rotations
 
@@ -331,12 +339,17 @@ class _LBLSlices(SolverHelper):
             th: FacesTrackerHolder for face color tracking
             l1_white_tracker: Layer 1 face tracker
         """
-        best_rotations = self._find_best_pre_alignment(face_row, l1_white_tracker)
+        best_rotations = self._find_best_pre_alignment(face_row, l1_white_tracker, th)
 
         if best_rotations > 0:
             slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
             self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
-            self.play(slice_alg * best_rotations)
+            # Preserve tracker positions across the slice rotation.
+            # The rotation moves center pieces (and their tracker marks) between
+            # faces. We want the pieces to move, but tracker marks must stay on
+            # their original faces so face-color mapping remains valid.
+            with th.preserve_physical_faces():
+                self.play(slice_alg * best_rotations)
 
             # Pre-alignment rotation moved pieces in this row — clear stale
             # solved markers so the solver doesn't skip unsolved pieces.
