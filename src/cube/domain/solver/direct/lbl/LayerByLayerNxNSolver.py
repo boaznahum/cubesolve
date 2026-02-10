@@ -328,7 +328,6 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_l2_slices(th)
                     self._solve_layer3_centers(th)
 
-
                 case SolveStep.LBL_L3_EDGES:
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
@@ -347,12 +346,11 @@ class LayerByLayerNxNSolver(BaseSolver):
                     self._solve_layer3_cross(th)
 
                 case SolveStep.ALL:
-                    # Full solve (currently only up to Layer 1 + slices centers)
+                    # Full solve
                     self._solve_layer1_centers(th)
                     self._solve_layer1_edges(th)
                     self._solve_layer1_corners(th)
                     self._solve_l2_slices(th)
-
                     self._solve_layer3_centers(th)
                     self._solve_layer3_edges(th)
                     self._solve_layer3_cross(th)
@@ -701,6 +699,20 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         Delegates to _LBLSlices helper which wraps NxNCenters and NxNEdges.
         """
+        # On even cubes, NxNCenters changes the center piece distribution
+        # during L1 solving (moving white centers to L1 face, redistributing
+        # others). The original tracker's marks are preserved (via
+        # preserve_physical_faces on each commutator), but the underlying
+        # piece distribution changed. A fresh tracker would do new majority
+        # voting and may pick a different (but valid) BOY side-face
+        # arrangement. Detect this divergence and restart with a fresh
+        # tracker that reflects the post-L1 reality.
+        # See: probelm-state/even_cube_tracker_drift_analysis.md
+        if face_trackers.is_even_cube:
+            with FacesTrackerHolder(self) as fresh_th:
+                if face_trackers.face_colors != fresh_th.face_colors:
+                    raise SolverFaceColorsChangedNeedRestartException()
+
         l1_tracker = self._get_layer1_tracker(face_trackers)
 
         # bug here, maybe need rotation

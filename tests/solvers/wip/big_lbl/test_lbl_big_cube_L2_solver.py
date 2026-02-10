@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from conftest import get_scramble_params, CUBE_SIZES_EVEN
+from .conftest import get_scramble_params, CUBE_SIZES_EVEN
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
@@ -28,17 +28,14 @@ class TestLBLBigCubeSolver:
         self,
         cube_size: int,
         scramble_name: str,
-        scramble_seed: int | None,
-        session_random_seed: int,
+        scramble_seed: int,
     ) -> None:
         """Test LBL_L1_Ctr step solves Layer 1 centers (even + odd cubes)."""
-        actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
-
         app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
 
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
-        app.scramble(actual_seed, None, animation=False, verbose=False)
+        app.scramble(scramble_seed, None, animation=False, verbose=False)
 
         solver.solve(what=SolveStep.LBL_L2_SLICES, debug=False, animation=False)
 

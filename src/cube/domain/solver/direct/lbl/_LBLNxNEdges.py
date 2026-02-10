@@ -41,7 +41,8 @@ class _LBLNxNEdges(SolverHelper):
         self._e2e_comm = E2ECommutator(slv)
 
     def solve_single_center_face_row(
-            self, l1_white_tracker: FaceTracker, target_face_t: FaceTracker, face_row: int
+            self, l1_white_tracker: FaceTracker, target_face_t: FaceTracker, face_row: int,
+            outer_th: FacesTrackerHolder | None = None
     ) -> None:
         """
         Solve edge slices on a single row of a face, starting from the L1 layer.
@@ -61,6 +62,8 @@ class _LBLNxNEdges(SolverHelper):
             row_distance_from_l1=1 → solves edges on row 3
             row_distance_from_l1=2 → solves edges on row 2 (middle)
         """
+
+        self._outer_th = outer_th  # For preserving tracker marks across E2E commutators
 
         # see with _setup_l1
         white: Face = l1_white_tracker.face
@@ -295,7 +298,15 @@ class _LBLNxNEdges(SolverHelper):
 
                 with self._logger.tab(lambda: f"‼️‼️Trying to bring  {untracked_source_wing.parent_name_and_index} to to top"):
 
-                    self._bring_source_wing_to_top(target_face, source_edge_wing_t)
+                    # _bring_source_wing_to_top uses Y rotations + E2E commutator
+                    # that permanently displace center pieces (M-slice rotations).
+                    # The method is orientation-preserving, so preserve_physical_faces
+                    # correctly restores outer tracker marks afterward.
+                    if self._outer_th is not None:
+                        with self._outer_th.preserve_physical_faces():
+                            self._bring_source_wing_to_top(target_face, source_edge_wing_t)
+                    else:
+                        self._bring_source_wing_to_top(target_face, source_edge_wing_t)
 
                     # still same face
                     assert target_face.color == target_face_color
@@ -347,8 +358,16 @@ class _LBLNxNEdges(SolverHelper):
                 self.debug(lambda: f"💚💚💚 Wing {untracked_source_wing}  match target color {target_face_color}")
 
                 # this move target wing
-                moved = self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(untracked_target_edge_wing,
-                                                                                  source_edge_wing_t.slice)
+                # E2E commutator uses M-slice rotations that permanently displace
+                # center pieces (and outer tracker marks). Preserve marks so that
+                # match_faces and subsequent operations see correct face colors.
+                if self._outer_th is not None:
+                    with self._outer_th.preserve_physical_faces():
+                        moved = self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(untracked_target_edge_wing,
+                                                                                          source_edge_wing_t.slice)
+                else:
+                    moved = self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(untracked_target_edge_wing,
+                                                                                      source_edge_wing_t.slice)
 
                 if moved:
                     self.debug(lambda: "💚💚💚💚 Source index and target match")
@@ -378,8 +397,11 @@ class _LBLNxNEdges(SolverHelper):
 
             self.cmn.bring_edge_to_front_right_or_left_preserve_down(source_edge_wing_t.slice.parent)
 
-            # yes the source is the target
-            self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(source_edge_wing_t.slice, None)
+            # E2E commutator uses M-slice rotations that permanently displace
+            # center pieces. Preserve inner tracker marks so get_face_by_color
+            # below can find the correct face after the commutator.
+            with th.preserve_physical_faces():
+                self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(source_edge_wing_t.slice, None)
 
             self.cmn.bring_face_front_preserve_down(th.get_face_by_color(target_face_color))
 

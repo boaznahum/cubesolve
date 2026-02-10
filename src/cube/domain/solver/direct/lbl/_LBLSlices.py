@@ -308,7 +308,13 @@ class _LBLSlices(SolverHelper):
     def _solve_row_core(
             self, face_row: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
     ) -> None:
-        """Core solve logic for a single row (no pre-alignment)."""
+        """Core solve logic for a single row (no pre-alignment).
+
+        Iterates over all 4 side faces, solving centers then edges for each.
+        Retries the full pass if progress was made but the row isn't solved,
+        since solving one face's edges can temporarily displace pieces on
+        other faces (E2E commutator side-effects on even cubes).
+        """
         side_trackers: list[FaceTracker] = _get_side_face_trackers(th, l1_white_tracker)
 
         # help solver not to touch already solved
@@ -318,8 +324,23 @@ class _LBLSlices(SolverHelper):
         if self._row_solved(l1_white_tracker, face_row):
             return
 
-        for target_face in side_trackers:
-            self._solve_face_row(l1_white_tracker, target_face, face_row, th)
+        MAX_PASSES = 4
+        prev_solved = 0
+        for _pass in range(MAX_PASSES):
+            for target_face in side_trackers:
+                self._solve_face_row(l1_white_tracker, target_face, face_row, th)
+
+            if self._row_solved(l1_white_tracker, face_row):
+                return
+
+            n_solved = sum(1 for e in _get_row_pieces(self.cube, l1_white_tracker, face_row) if e.match_faces)
+            if n_solved <= prev_solved:
+                return  # no progress
+            prev_solved = n_solved
+
+            # Clear stale solved markers before retrying — pieces may have
+            # been disrupted by E2E commutators on other faces.
+            _common.clear_pieces_solved_flags_and_markers(_get_row_pieces(self.cube, l1_white_tracker, face_row))
 
     def _solve_slice_row(
             self, face_row: int, th: FacesTrackerHolder, l1_white_tracker: FaceTracker
@@ -378,7 +399,7 @@ class _LBLSlices(SolverHelper):
                 self._create_centers(th).solve_single_center_face_row(l1_white_tracker, target_face, face_row)
 
             if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
-                self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row)
+                self._edges.solve_single_center_face_row(l1_white_tracker, target_face, face_row, outer_th=th)
 
             if self._row_solved(l1_white_tracker, face_row):
                 break
