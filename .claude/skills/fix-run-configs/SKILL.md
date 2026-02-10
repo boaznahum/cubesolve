@@ -11,7 +11,7 @@ description: |
 
 # Fix Run Configurations Skill
 
-Fix PyCharm run configurations to use `$PROJECT_DIR$/.venv/Scripts/python.exe` as the interpreter, making them portable across worktrees and machines.
+Fix PyCharm run configurations to use `$PROJECT_DIR$/.venv/Scripts/python.exe` as the interpreter, making them portable across worktrees and machines (Windows AND Linux).
 
 ## Background
 
@@ -21,6 +21,17 @@ PyCharm run configurations can reference interpreters in fragile ways:
 
 The portable solution: set `SDK_HOME=$PROJECT_DIR$/.venv/Scripts/python.exe` and `IS_MODULE_SDK=false`.
 
+## Cross-Platform Compatibility
+
+The canonical path in run configs is always the **Windows-style** path: `$PROJECT_DIR$/.venv/Scripts/python.exe`.
+This works natively on Windows. On Linux, we create a symlink so the same path resolves:
+
+```
+.venv/Scripts/python.exe -> ../bin/python
+```
+
+This way the **same** run configuration XML works on both platforms without modification.
+
 ## Workflow
 
 ### Step 1: Scan and Report
@@ -28,9 +39,8 @@ The portable solution: set `SDK_HOME=$PROJECT_DIR$/.venv/Scripts/python.exe` and
 1. Glob for all `.idea/runConfigurations/*.xml` files.
 2. Read each XML file. Only consider files with `type="PythonConfigurationType"` or `type="tests"` (skip non-Python configs).
 3. For each Python/test config, check whether it needs fixing:
-   - `SDK_HOME` is empty or missing
+   - `SDK_HOME` is empty, missing, or doesn't contain `.venv/Scripts/python.exe`
    - `IS_MODULE_SDK` is `true`
-   - `SDK_NAME` contains a hardcoded interpreter name
 4. Display a table showing ALL configs and their current status:
 
 ```
@@ -50,7 +60,22 @@ Use `AskUserQuestion` to ask the user:
 
 If the user picks "Let me pick", use `AskUserQuestion` with `multiSelect: true` listing only the configs that need fixing.
 
-### Step 3: Apply Fixes
+### Step 3: Ensure Cross-Platform Symlink (Linux only)
+
+If running on Linux (check with `uname -s`), ensure the compatibility symlink exists:
+
+1. Check if `.venv/Scripts/python.exe` exists and is a valid symlink.
+2. If not, create it:
+   ```bash
+   mkdir -p .venv/Scripts
+   ln -sf ../bin/python .venv/Scripts/python.exe
+   ```
+3. Verify the symlink works by running `.venv/Scripts/python.exe --version`.
+4. Report: "Created cross-platform symlink: .venv/Scripts/python.exe -> ../bin/python"
+
+**Note:** This symlink is lost when the venv is recreated (e.g., `uv sync`). This skill re-creates it each time.
+
+### Step 4: Apply Fixes
 
 For each selected config, apply these three XML transformations:
 
@@ -70,13 +95,14 @@ For each selected config, apply these three XML transformations:
 <option name="IS_MODULE_SDK" value="false" />
 ```
 
-**c) Remove SDK_NAME entirely:**
-Remove any line matching `<option name="SDK_NAME" value="..." />`.
-PyCharm may re-add it on next run — that is fine, `SDK_HOME` takes priority.
+**c) Leave SDK_NAME alone:**
+Do NOT remove `SDK_NAME`. PyCharm auto-regenerates it on every save, so removing it just creates git noise.
+`SDK_HOME` takes priority over `SDK_NAME` for interpreter resolution, so `SDK_NAME` is harmless.
 
-### Step 4: Report Results
+### Step 5: Report Results
 
 Show a summary of what was changed:
 - "Fixed N run configurations."
+- On Linux: "Created cross-platform symlink: .venv/Scripts/python.exe -> ../bin/python"
 - "Close and reopen run configs in PyCharm for changes to take effect."
-- "If PyCharm re-adds SDK_NAME, that's fine — SDK_HOME takes priority."
+- "Note: If you recreate the venv (uv sync), run /fix-run-configs again to restore the Linux symlink."
