@@ -61,7 +61,7 @@ class TestL3EdgesPreserveOthers:
         assert solver.is_solved_phase(SolveStep.LBL_L1), (
             f"Pre-condition failed: L1 not solved (size={cube_size}, seed={scramble_seed})"
         )
-        assert solver.is_solved_phase(SolveStep.LBL_SLICES_CTR), (
+        assert solver.is_solved_phase(SolveStep.LBL_L2_SLICES), (
             f"Pre-condition failed: middle slices not solved (size={cube_size}, seed={scramble_seed})"
         )
         assert solver.is_solved_phase(SolveStep.LBL_L3_CENTER), (
@@ -75,7 +75,7 @@ class TestL3EdgesPreserveOthers:
         assert solver.is_solved_phase(SolveStep.LBL_L1), (
             f"BUG: L3 edge solving destroyed L1! (size={cube_size}, seed={scramble_seed})"
         )
-        assert solver.is_solved_phase(SolveStep.LBL_SLICES_CTR), (
+        assert solver.is_solved_phase(SolveStep.LBL_L2_SLICES), (
             f"BUG: L3 edge solving destroyed middle slices! (size={cube_size}, seed={scramble_seed})"
         )
 
@@ -111,7 +111,7 @@ class TestL3EdgesPreserveOthersExtended:
 
         # Check L1 and middle slices preserved
         l1_ok = solver.is_solved_phase(SolveStep.LBL_L1)
-        slices_ok = solver.is_solved_phase(SolveStep.LBL_SLICES_CTR)
+        slices_ok = solver.is_solved_phase(SolveStep.LBL_L2_SLICES)
 
         assert l1_ok and slices_ok, (
             f"BUG: L3 edge solving destroyed earlier phases! "

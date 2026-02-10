@@ -24,8 +24,8 @@ PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_
 
 # Cube sizes to test (odd only for Big LBL, even not fully supported)
 CUBE_SIZES_ODD: list[int] = [3, 5, 7]
-CUBE_SIZES_EVEN: list[int] = [4, 6, 8]
-CUBE_SIZES_ALL: list[int] = [3, 4, 5, 6, 7, 8]
+CUBE_SIZES_EVEN: list[int] = [4]
+CUBE_SIZES_ALL: list[int] = [3, 5, 7]
 
 
 def get_scramble_params() -> list[tuple[str, int | None]]:

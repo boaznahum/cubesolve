@@ -70,7 +70,7 @@ class TestLBLBigCubeSolver:
 
         app.scramble(actual_seed, None, animation=False, verbose=False)
 
-        solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
+        solver.solve(what=SolveStep.LBL_L2_SLICES, debug=False, animation=False)
 
         assert solver._is_l2_slices_solved(), (
             f"L2 slices not solved (size={cube_size}, scramble={scramble_name})"
@@ -99,7 +99,7 @@ class TestLBLBigCubeSolver:
         assert not cube.solved
 
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
-        solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
+        solver.solve(what=SolveStep.LBL_L2_SLICES, debug=False, animation=False)
 
         assert solver._is_l2_slices_solved(), "15x15 single E-slice not solved"
 
@@ -136,7 +136,7 @@ class TestLBLBigCubeSolver:
         op_count_before = app.op.count
 
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
-        solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
+        solver.solve(what=SolveStep.LBL_L2_SLICES, debug=False, animation=False)
 
         assert solver._is_l2_slices_solved(), "15x15 center E-slice not solved"
 
@@ -177,7 +177,7 @@ class TestLBLBigCubeSolver:
 
         app.scramble(actual_seed, None, animation=False, verbose=False)
 
-        solver.solve(what=SolveStep.LBL_SLICES_CTR, debug=False, animation=False)
+        solver.solve(what=SolveStep.LBL_L2_SLICES, debug=False, animation=False)
 
         assert solver._is_l2_slices_solved(), (
             f"L2 slices not solved (size={cube_size}, scramble={scramble_name})"
