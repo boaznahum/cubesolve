@@ -277,8 +277,8 @@ class _LBLSlices(SolverHelper):
         cause two trackers to temporarily point to the same face.
         """
         #boaz: patch
-        # if True:
-        #     return 0
+        if True:
+            return 0
 
         slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
         if slice_alg is None:
