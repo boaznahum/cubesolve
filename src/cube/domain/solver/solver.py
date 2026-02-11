@@ -54,7 +54,7 @@ class SolveStep(Enum):
 
     # LBL-Big method steps (layer-by-layer for big cubes)
     LBL_L1_Ctr = ("LBL_L1_Ctr", "L1Ctr", "Layer 1 Centers")
-    LBL_L1_Edg = ("LBL_L1_Edg", "L1Edg", "Layer 1 Edges")
+    LBL_L1_EDGES = ("LBL_L1_Edges", "L1Edg", "Layer 1 Edges")
     LBL_L1 = ("LBL_L1", "L1", "Layer 1 Complete")
     LBL_SLICES_CTR = ("LBL_SLICES_CTR", "SlCtr", "Middle Slices Centers")
     LBL_L3_CENTER = ("LBL_L3_CENTER", "L3Ctr", "Layer 3 Centers")

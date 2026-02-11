@@ -188,6 +188,9 @@ class LayerByLayerNxNSolver(BaseSolver):
             case SolveStep.LBL_L1_Ctr:
                 return self._is_layer1_centers_solved(th)
 
+            case SolveStep.LBL_L1_EDGES:
+                return self._is_layer1_edges_solved(th)
+
             case SolveStep.L1x:
                 return self._is_layer1_cross_solved(th)
 
@@ -232,6 +235,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         """
         steps = [
             SolveStep.LBL_L1_Ctr,     # Layer 1 centers only
+            SolveStep.LBL_L1_EDGES,            # Layer 1 cross (centers + edges)
             SolveStep.L1x,            # Layer 1 cross (centers + edges)
             SolveStep.LBL_L1,         # Layer 1 complete
             SolveStep.LBL_SLICES_CTR, # All middle slices centers
@@ -295,6 +299,11 @@ class LayerByLayerNxNSolver(BaseSolver):
                 case SolveStep.LBL_L1_Ctr:
                     # Layer 1 centers only
                     self._solve_layer1_centers(th)
+
+                case SolveStep.LBL_L1_EDGES:
+                    # Layer 1 cross (centers + edges paired + edges positioned)
+                    self._solve_layer1_centers(th)
+                    self._solve_layer1_edges(th)
 
                 case SolveStep.L1x:
                     # Layer 1 cross (centers + edges paired + edges positioned)
