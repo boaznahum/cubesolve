@@ -56,7 +56,7 @@ class SolveStep(Enum):
     LBL_L1_Ctr = ("LBL_L1_Ctr", "L1Ctr", "Layer 1 Centers")
     LBL_L1_EDGES = ("LBL_L1_Edges", "L1Edg", "Layer 1 Edges")
     LBL_L1 = ("LBL_L1", "L1", "Layer 1 Complete")
-    LBL_SLICES_CTR = ("LBL_SLICES_CTR", "SlCtr", "Middle Slices Centers")
+    LBL_L2_SLICES = ("LBL_SLICES_CTR", "SlCtr", "Middle Slices Centers")
     LBL_L3_CENTER = ("LBL_L3_CENTER", "L3Ctr", "Layer 3 Centers")
     LBL_L3_EDGES = ("LBL_L3_EDGES", "L3Ed", "Layer 3 Edges")
     LBL_L3_CROSS = ("LBL_L3_CROSS", "L3x", "Layer 3 Cross")
