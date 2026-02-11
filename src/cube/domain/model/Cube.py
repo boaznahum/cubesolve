@@ -868,12 +868,17 @@ class Cube(CubeSupplier):
         solving. This context manager overrides Face.color to return
         tracker-assigned colors instead.
 
+        Stack-safe: nested contexts save and restore the previous provider,
+        so inner contexts don't destroy the outer provider.
+
         Args:
             provider: A FacesColorsProvider (e.g., FacesTrackerHolder).
 
         Yields:
             None -- all faces use provider colors within the block.
         """
+        # Save previous providers (for stack safety with nested contexts)
+        prev_providers = {f: f._color_provider for f in self.faces}
         try:
             for f in self.faces:
                 f.set_color_provider(provider)
@@ -881,7 +886,7 @@ class Cube(CubeSupplier):
             yield
         finally:
             for f in self.faces:
-                f.set_color_provider(None)
+                f.set_color_provider(prev_providers[f])
             self.reset_after_faces_changes()
 
     def clear_moveable_attributes(self) -> None:

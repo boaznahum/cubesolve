@@ -106,7 +106,7 @@ class FacesTrackerHolder(FacesColorsProvider):
 
     _holder_unique_id: int = 0  # Class variable for generating unique holder IDs
 
-    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter", "_holder_id"]
+    __slots__ = ["_cube", "_trackers", "_is_even", "_face_colors_cache", "_cache_modify_counter", "_holder_id", "_frozen_colors"]
 
     def __init__(
         self,
@@ -135,6 +135,7 @@ class FacesTrackerHolder(FacesColorsProvider):
         self._is_even = self._cube.n_slices % 2 == 0
         self._face_colors_cache: dict[FaceName, Color] | None = None
         self._cache_modify_counter: int = -1  # Invalid counter to force first rebuild
+        self._frozen_colors: dict[FaceName, Color] | None = None
 
         if trackers is not None:
             assert len(trackers) == 6, f"Expected 6 trackers, got {len(trackers)}"
@@ -183,6 +184,10 @@ class FacesTrackerHolder(FacesColorsProvider):
     def get_face_colors(self) -> dict[FaceName, Color]:
         """Get current face→color mapping from trackers (cached with auto-invalidation).
 
+        When frozen (via frozen_face_colors context), returns the frozen snapshot
+        without querying tracker positions. This is essential during L2 slice
+        solving where slice rotations displace tracker-marked center slices.
+
         Cache Invalidation Pattern:
         ===========================
         Uses cube._modify_counter to detect when cube has changed:
@@ -214,6 +219,10 @@ class FacesTrackerHolder(FacesColorsProvider):
         Returns:
             Dictionary mapping face names to their target colors.
         """
+        # When frozen, return the frozen snapshot
+        if self._frozen_colors is not None:
+            return self._frozen_colors
+
         # Check if cache is valid using cube's modification counter
         # noinspection PyProtectedMember
         current_counter = self._cube._modify_counter
@@ -247,6 +256,11 @@ class FacesTrackerHolder(FacesColorsProvider):
     def get_face_color(self, face_name: FaceName) -> Color:
         """Get the target color for a specific face.
 
+        When frozen (via frozen_face_colors context), returns the pre-computed
+        color without querying tracker positions. This is essential during
+        query-mode slice rotations where tracker marks may be temporarily
+        displaced.
+
         Args:
             face_name: The face to query.
 
@@ -256,6 +270,12 @@ class FacesTrackerHolder(FacesColorsProvider):
         Raises:
             KeyError: If no tracker exists for that face.
         """
+        if self._frozen_colors is not None:
+            color = self._frozen_colors.get(face_name)
+            if color is not None:
+                return color
+            raise KeyError(f"No tracker for face {face_name}")
+
         for tracker in self._trackers:
             if tracker.face.name == face_name:
                 return tracker.color
@@ -412,6 +432,35 @@ class FacesTrackerHolder(FacesColorsProvider):
 
             # this will trigger sanity check
             self.get_face_colors()
+
+    @contextmanager
+    def frozen_face_colors(self) -> Generator[dict[FaceName, Color], None, None]:
+        """Freeze face-color mapping for the duration of the context.
+
+        During query-mode slice rotations, tracker marks move with center
+        pieces, temporarily displacing them to wrong faces. This causes
+        get_face_color() to fail with KeyError when two trackers end up
+        on the same face.
+
+        This context manager snapshots the current face-color mapping
+        and makes get_face_color() return from the snapshot instead of
+        doing live tracker searches.
+
+        Usage:
+            with holder.frozen_face_colors():
+                with op.with_query_restore_state():
+                    play(slice_rotation)
+                    # match_faces now uses frozen colors — safe!
+
+        Yields:
+            The frozen face-color mapping dict.
+        """
+        frozen = self.get_face_colors().copy()
+        self._frozen_colors = frozen
+        try:
+            yield frozen
+        finally:
+            self._frozen_colors = None
 
     def __iter__(self) -> Iterator[FaceTracker]:
         """Iterate over the 6 face trackers."""

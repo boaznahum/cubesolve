@@ -1,6 +1,12 @@
 # On this branch - redo
 
 L1 Edges aggressive test passed
+L1 Aggressive Passed
+L2 from aggressive 4 fails:  
+    cube_size = 6, scramble_name = 'rnd_1937644683', scramble_seed = 1937644683
+    cube_size = 4, scramble_name = 'seed_124826159', scramble_seed = 124826159
+    cube_size = 4, scramble_name = 'seed_1794630359', scramble_seed = 1794630359
+    ube_size = 6, scramble_name = 'seed_1838264046', scramble_seed = 1838264046
 
 # in ahead commits
 All L1 tests fail
