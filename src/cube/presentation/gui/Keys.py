@@ -47,6 +47,7 @@ class Keys:
     PAGE_DOWN = 271
 
     # Punctuation (commonly used in cube notation)
+    GRAVE = 96  # '`' - backtick/grave accent (left of 1)
     SLASH = 47  # '/' - often used for solve command
     QUESTION = 47  # Same as slash (shift+/)
     APOSTROPHE = 39  # "'" - prime moves

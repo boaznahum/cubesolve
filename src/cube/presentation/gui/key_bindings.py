@@ -85,6 +85,7 @@ KEY_BINDINGS_NORMAL: list[KeyBinding] = [
     # -------------------------------------------------------------------------
     # Scrambles
     # -------------------------------------------------------------------------
+    (Keys.GRAVE, 0, Commands.SCRAMBLE_F),  # Backtick (`) - scramble from F.txt
     (Keys._0, 0, Commands.SCRAMBLE_0),
     (Keys._1, 0, Commands.SCRAMBLE_1),
     (Keys._2, 0, Commands.SCRAMBLE_2),

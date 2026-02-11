@@ -52,6 +52,7 @@ _PYGLET_TO_KEYS: dict[int, int] = {
     pyglet_key.F10: Keys.F10, pyglet_key.F11: Keys.F11, pyglet_key.F12: Keys.F12,
     pyglet_key.HOME: Keys.HOME, pyglet_key.END: Keys.END,
     pyglet_key.PAGEUP: Keys.PAGE_UP, pyglet_key.PAGEDOWN: Keys.PAGE_DOWN,
+    pyglet_key.GRAVE: Keys.GRAVE,
     pyglet_key.SLASH: Keys.SLASH, pyglet_key.APOSTROPHE: Keys.APOSTROPHE,
     pyglet_key.MINUS: Keys.MINUS, pyglet_key.EQUAL: Keys.EQUAL,
     pyglet_key.COMMA: Keys.COMMA, pyglet_key.PERIOD: Keys.PERIOD,

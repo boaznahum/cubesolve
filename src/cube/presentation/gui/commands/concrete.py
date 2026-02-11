@@ -92,6 +92,28 @@ class ScrambleF9Command(Command):
         return CommandResult()
 
 
+@dataclass(frozen=True)
+class ScrambleFromFileCommand(Command):
+    """Command to scramble with seed from F.txt file.
+
+    Loads scramble seed from resources/scramble/F.txt and scrambles the cube.
+    File is read each time, allowing dynamic seed changes without restart.
+    """
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        from cube.resources.scramble import load_scramble_seed
+        try:
+            seed = load_scramble_seed()
+            ctx.app.scramble(seed, None, animation=False, verbose=True)
+        except FileNotFoundError as e:
+            ctx.app.set_error(f"File not found: {e}")
+        except ValueError as e:
+            ctx.app.set_error(f"Invalid seed: {e}")
+        except Exception as e:
+            ctx.app.set_error(f"Error loading seed: {e}")
+        return CommandResult()
+
+
 # =============================================================================
 # SOLVE COMMANDS
 # =============================================================================

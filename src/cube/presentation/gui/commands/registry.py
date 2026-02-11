@@ -35,6 +35,7 @@ from .concrete import (
     # Scramble
     ScrambleCommand,
     ScrambleF9Command,
+    ScrambleFromFileCommand,
     # Shadow
     ShadowToggleAllCommand,
     ShadowToggleCommand,
@@ -146,6 +147,7 @@ class Commands:
     # =========================================================================
     # SCRAMBLES
     # =========================================================================
+    SCRAMBLE_F = ScrambleFromFileCommand()
     SCRAMBLE_0 = ScrambleCommand(0)
     SCRAMBLE_1 = ScrambleCommand(1)
     SCRAMBLE_2 = ScrambleCommand(2)

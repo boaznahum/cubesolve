@@ -577,7 +577,8 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
 
     toolbar.add_separator()
 
-    # Scramble buttons 0-9
+    # Scramble buttons F, 0-9
+    toolbar.add_button("F", Commands.SCRAMBLE_F)
     toolbar.add_button("0", Commands.SCRAMBLE_0)
     toolbar.add_button("1", Commands.SCRAMBLE_1)
     toolbar.add_button("2", Commands.SCRAMBLE_2)
