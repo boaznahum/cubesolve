@@ -8,6 +8,9 @@ L2 from aggressive 4 fails:
     cube_size = 4, scramble_name = 'seed_1794630359', scramble_seed = 1794630359
     ube_size = 6, scramble_name = 'seed_1838264046', scramble_seed = 1838264046
 
+Removed the code in cube.domain.solver.direct.lbl._LBLSlices._LBLSlices._find_best_pre_alignment
+# this increase the number of failures
+
 # in ahead commits
 All L1 tests fail
 tests_wip/big_lbl_2/test_lbl_big_cube_full_solver.py
