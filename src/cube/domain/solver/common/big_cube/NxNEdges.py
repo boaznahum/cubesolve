@@ -119,9 +119,12 @@ class NxNEdges(SolverHelper):
                         parity_done = True
                         continue
 
-                    # Solve one edge with the required target color
+                    # Solve one edge
                     edge = unsolved[0]
-                    self._do_edge(edge, required_color=target_color)
+                    # For even cubes: specify required_color to force correct orientation
+                    # For odd cubes: use auto-detection (None) because middle slice defines identity
+                    required_color_param = target_color if self.cube.is_even else None
+                    self._do_edge(edge, required_color=required_color_param)
 
                 return parity_done
 
@@ -582,19 +585,29 @@ class NxNEdges(SolverHelper):
 
     @staticmethod
     def _edge_contains_color(edge: Edge, color: Color) -> bool:
-        """Check if any slice on this edge contains the given color.
+        """Check if this edge contains the given color.
 
-        For scrambled even cubes, different slices may have different color-pairs.
-        edge.colors_id only reflects the representative slice, so we must check
-        all slices to see if any contain the target color.
+        For odd cubes (3x3, 5x5, 7x7):
+            Only check the middle/representative slice (edge.colors_id).
+            The middle slice defines the edge's identity. Other slices may have
+            different colors during scrambling, but they don't change what edge this is.
+
+        For even cubes (4x4, 6x6, 8x8):
+            Check ALL slices. During scrambling, slices can have different color-pairs,
+            so we need to check if any slice contains the target color.
 
         Args:
             edge: The edge to check.
             color: The color to look for.
 
         Returns:
-            True if any slice on the edge contains this color.
+            True if the edge contains this color.
         """
+        # Odd cube: Only check representative slice (middle slice)
+        if edge.n_slices % 2 == 1:
+            return color in edge.colors_id
+
+        # Even cube: Check all slices
         for i in range(edge.n_slices):
             if color in edge.get_slice(i).colors_id:
                 return True
@@ -731,15 +744,25 @@ class NxNEdges(SolverHelper):
             ordered = self._get_slice_ordered_color(face, _slice)
             face_color, other_face_color = ordered
 
+            self.debug(f"  Slice {i}: face={face}, ordered={ordered}, face_color={face_color}, other_face_color={other_face_color}, required={required_color}")
+
             if face_color == required_color:
                 n_required_on_face += 1
             elif other_face_color == required_color:
                 n_required_on_other += 1
 
-        # Prefer orientation with required_color on face (even if it's minority)
-        # This ensures the edge is solved for the correct face
-        if n_required_on_face > 0:
-            return (required_color, other_color)
-        else:
-            # All slices have required_color on OTHER face - use that orientation
-            return (other_color, required_color)
+        self.debug(f"  Counts: n_required_on_face={n_required_on_face}, n_required_on_other={n_required_on_other}")
+
+        # CRITICAL: We want required_color on the face (e.g., WHITE on F for white cross).
+        # The counting tells us the CURRENT state of scrambled edge, not the TARGET state!
+        #
+        # If n_required_on_face > 0: Some slices already have correct orientation
+        # If n_required_on_other > 0: Some/all slices have WRONG orientation (flipped)
+        #
+        # We ALWAYS want (required_color, other_color) to solve edge with required_color on face!
+        #
+        # The old logic was: if all slices have required_color on OTHER face, return (other_color, required_color)
+        # This is WRONG because it tells the solver to KEEP the wrong orientation!
+
+        self.debug(f"  Returning: (required_color={required_color}, other_color={other_color})")
+        return (required_color, other_color)

@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING, cast
 
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
-from cube.domain.model import Corner, Part
+from cube.domain.model import Corner, Part, Color
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
@@ -118,12 +118,15 @@ class LayerByLayerNxNSolver(BaseSolver):
             if not layer1_done:
                 # Check Layer 1 sub-steps
                 centers_done = self._is_layer1_centers_solved(th)
-                edges_done = self._is_layer1_edges_solved(th)
+                l1_edges=self._is_layer1_edges_solved(th)
+                l1_cross = self._is_layer1_edges_and_cross_solved(th)
 
-                if centers_done and edges_done:
-                    return "L1:Ctr+Edg"
+                if centers_done and l1_cross:
+                    return "L1:Cross"
+                elif centers_done and l1_edges:
+                    return "L1:Edges"
                 elif centers_done:
-                    return "L1:Ctr"
+                    return "L1:Center"
                 else:
                     return "L1:Pending"
 
@@ -385,6 +388,28 @@ class LayerByLayerNxNSolver(BaseSolver):
         return l3_face.center.is3x3
 
     def _is_layer1_edges_solved(self, th: FacesTrackerHolder) -> bool:
+        l1_tracker = self._get_layer1_tracker(th)
+        l1_face = l1_tracker.face
+        l1_edges = l1_face.edges
+
+        # they are not necessarily on face
+        l1_color: Color = self.config.first_face_color
+        white_edges = []
+        for e in self.cube.edges:
+            if e.is3x3 and l1_color in e.colors_id:
+                white_edges.append(e)
+
+        return len(white_edges) == 4
+
+
+        # find all wing with l1 color
+
+        # First check: all edges on L1 face must be paired (reduced to 3x3)
+        return all(e.is3x3 for e in l1_edges)
+
+
+
+    def _is_layer1_edges_and_cross_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if L1 edges are paired AND in position (allowing L1 face rotation).
 
         This method checks two conditions:
@@ -412,11 +437,10 @@ class LayerByLayerNxNSolver(BaseSolver):
         """
         l1_tracker = self._get_layer1_tracker(th)
         l1_face = l1_tracker.face
-        l1_edges = l1_face.edges
 
-        # First check: all edges on L1 face must be paired (reduced to 3x3)
-        if not all(e.is3x3 for e in l1_edges):
+        if not self._is_layer1_edges_solved(th):
             return False
+
 
         # Second check: edges can be aligned by rotating L1 face
         def _is_cross() -> bool:
@@ -526,7 +550,7 @@ class LayerByLayerNxNSolver(BaseSolver):
     def _is_layer1_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 is completely solved (centers + edges + corners)."""
         return (self._is_layer1_centers_solved(th) and
-                self._is_layer1_edges_solved(th) and
+                self._is_layer1_edges_and_cross_solved(th) and
                 self._is_layer1_corners_solved(th))
 
     # =========================================================================

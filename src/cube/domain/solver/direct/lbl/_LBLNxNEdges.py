@@ -146,8 +146,9 @@ class _LBLNxNEdges(SolverHelper):
 
                                     self.cmn.bring_face_front_preserve_down(the_target_face)
 
-                                    # it was moved
-                                    the_target_face = cube.color_2_face(fc)
+                                    # After rotation, use the FRONT face (where we brought it to),
+                                    # not the face with color fc (which might be anywhere now)
+                                    the_target_face = cube.front
 
                                     # we track is colors
                                     is_fl = i == 0
