@@ -30,7 +30,6 @@ from cube.domain.model.Face import Face
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.tracker import _helper
-from cube.domain.tracker._helper import _TRACKER_VISUAL_MARKER
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

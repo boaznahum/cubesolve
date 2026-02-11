@@ -390,9 +390,6 @@ class LayerByLayerNxNSolver(BaseSolver):
         return l3_face.center.is3x3
 
     def _is_layer1_edges_solved(self, th: FacesTrackerHolder) -> bool:
-        l1_tracker = self._get_layer1_tracker(th)
-        l1_face = l1_tracker.face
-
         # they are not necessarily on face
         l1_color: Color = self.config.first_face_color
         white_edges = []
@@ -401,12 +398,6 @@ class LayerByLayerNxNSolver(BaseSolver):
                 white_edges.append(e)
 
         return len(white_edges) == 4
-
-
-        # find all wing with l1 color
-
-        # First check: all edges on L1 face must be paired (reduced to 3x3)
-        return all(e.is3x3 for e in l1_edges)
 
     @deprecated("Use _is_layer1_edges_and_cross_solved")
     def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:

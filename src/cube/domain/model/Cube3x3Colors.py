@@ -278,7 +278,6 @@ class Cube3x3Colors:
         Example:
             empty = Cube3x3Colors.create_empty(sp)
         """
-        from cube.domain.model._part import CornerName, EdgeName
         from cube.domain.geometric import cube_boy
 
         # Get the global BOY layout (cached singleton)

@@ -189,7 +189,6 @@ class _CubeLayout(CubeLayout):
         Example:
             edge_faces()[EdgeName.FU] = (FaceName.F, FaceName.U)
         """
-        from cube.domain.model._part import EdgeName
 
         result: dict[EdgeName, tuple[FaceName, FaceName]] = {}
 
@@ -219,7 +218,6 @@ class _CubeLayout(CubeLayout):
         Example:
             corner_faces()[CornerName.FRU] = (FaceName.F, FaceName.R, FaceName.U)
         """
-        from cube.domain.model._part import CornerName
 
         result: dict[CornerName, tuple[FaceName, FaceName, FaceName]] = {}
 
