@@ -27,6 +27,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from typing_extensions import deprecated
+
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Corner, Part, Color
@@ -390,7 +392,6 @@ class LayerByLayerNxNSolver(BaseSolver):
     def _is_layer1_edges_solved(self, th: FacesTrackerHolder) -> bool:
         l1_tracker = self._get_layer1_tracker(th)
         l1_face = l1_tracker.face
-        l1_edges = l1_face.edges
 
         # they are not necessarily on face
         l1_color: Color = self.config.first_face_color
@@ -407,6 +408,10 @@ class LayerByLayerNxNSolver(BaseSolver):
         # First check: all edges on L1 face must be paired (reduced to 3x3)
         return all(e.is3x3 for e in l1_edges)
 
+    @deprecated("Use _is_layer1_edges_and_cross_solved")
+    def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:
+
+        return self._is_layer1_edges_and_cross_solved(th)
 
 
     def _is_layer1_edges_and_cross_solved(self, th: FacesTrackerHolder) -> bool:
@@ -459,20 +464,6 @@ class LayerByLayerNxNSolver(BaseSolver):
 
 
 
-    def _is_layer1_cross_solved(self, th: FacesTrackerHolder) -> bool:
-        """Check if Layer 1 cross is solved (edges paired AND in correct position).
-
-        Uses tracker's face→color mapping for even cubes where only L1 centers
-        are solved (other centers are still scrambled).
-
-        See: EVEN_CUBE_MATCHING.md for why we can't use Part.match_faces here.
-        """
-        if not self._is_layer1_edges_solved(th):
-            return False
-
-        l1_face = self._get_layer1_tracker(th).face
-        # Use tracker colors instead of center colors for matching
-        return all(th.part_match_faces(e) for e in l1_face.edges)
 
     def _is_layer3_cross_solved(self, th: FacesTrackerHolder) -> bool:
         """Check if Layer 1 cross is solved (edges paired AND in correct position).
@@ -610,7 +601,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     def _solve_layer1_cross(self, th: FacesTrackerHolder) -> None:
         """Solve Layer 1 cross (position edges) using shadow 3x3 approach."""
-        if self._is_layer1_cross_solved(th):
+        if self._is_layer1_edges_and_cross_solved(th):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
