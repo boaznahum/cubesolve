@@ -5,6 +5,9 @@ L1 Aggressive Passed
 L2 Aggressive Passed, still dead code below 1000 random see fix in this commit
 Full solver  Aggressive 1000 Passed , still dead code below 1000 random see fix in this commit
 
+Full solver 10000 fails
+    cube_size = 6, scramble_name = 'rnd_413547559', scramble_seed = 413547559
+
 Need to work on dead code below
 
 # What i took from claude branch tha almost all passes ? 
