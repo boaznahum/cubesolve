@@ -6,7 +6,11 @@ L2 Aggressive Passed, still dead code below 1000 random see fix in this commit
 Full solver  Aggressive 1000 Passed , still dead code below 1000 random see fix in this commit
 Full solver 10000 fails, rare case 1/5000 tests
 
-Solve rare case, more than 8000(still running)  tests passed (random = 3000)
+6. Solve rare case, more than 8000(still running)  tests passed (random = 3000)
+
+## #current state
+After merging from 6, full lbl (random=1000)  5075 tests passed 
+But Still dead code below
 
 ## Need to work on dead code below
 After some changes 2/5000 full solver failed, c
