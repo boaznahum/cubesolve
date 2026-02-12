@@ -278,6 +278,10 @@ class _LBLSlices(SolverHelper):
         cause two trackers to temporarily point to the same face.
         """
 
+        # boaz: patch
+        if True:
+            return 0
+
         slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
         # Also None for odd middle slice
         if slice_alg is None:
@@ -287,7 +291,7 @@ class _LBLSlices(SolverHelper):
 
         parent: FacesTrackerHolder = l1_white_tracker.parent
 
-        contains_center_tracer = any(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if parent.contain_center_tracker(e))
+        contains_center_tracer = any(1 for e in _common.get_center_row_pieces(cube, l1_white_tracker, None, face_row) if parent.contain_center_tracker(e))
         if contains_center_tracer:
             return 0
 

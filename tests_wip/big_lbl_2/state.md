@@ -5,6 +5,19 @@ L1 Aggressive Passed
 L2 Aggressive Passed, still dead code below 1000 random see fix in this commit
 Full solver  Aggressive 1000 Passed , still dead code below 1000 random see fix in this commit
 
+After some changes 2/5000 full solver failed, c
+comparing to f45f50f54656b44b55c62088c998a3388c3f1ac1 which all passed
+
+## removing  dead code
+```python
+        # boaz: patch
+        if False:
+            return 0
+
+```
+
+L2 100 Aggressive passed,  1000 Failed
+
 Need to work on dead code below
 
 # What i took from claude branch tha almost all passes ? 

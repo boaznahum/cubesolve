@@ -335,7 +335,7 @@ def _get_side_face_trackers(
     return side_trackers
 
 
-def _get_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> Generator[PartSlice]:
+def _get_all_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
     """Get all pieces (center slices and/or edge wings) at a given slice row.
 
     Args:
@@ -365,6 +365,29 @@ def _get_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> Generator[
     # Get edge wings and center slices at this slice index
     # We only care about center slices (index [1])
     pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = slice_obj.get_slices_by_index(cube_slice_index)
+
+    return pieces
+
+
+
+def _get_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> Generator[PartSlice]:
+    """Get all pieces (center slices and/or edge wings) at a given slice row.
+
+    Args:
+        l1_tracker: Face tracker for Layer 1 face
+        slice_row: Distance from L1 face (0 = closest to L1)
+
+    Yields:
+        PartSlice objects at the given row based on config flags
+        (BIG_LBL_RESOLVE_CENTER_SLICES and BIG_LBL_RESOLVE_EDGES_SLICES)
+    """
+
+
+    # Get edge wings and center slices at this slice index
+    # We only care about center slices (index [1])
+    pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = _get_all_row_pieces(cube, l1_tracker, slice_row)
+
+
 
     pieces_to_test: list[Iterable[PartSlice[Any]]] = []
     if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
