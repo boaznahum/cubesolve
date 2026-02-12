@@ -15,28 +15,58 @@ class L1Cross(SolverHelper):
         super().__init__(slv, "L1Cross")
 
 
-    def _is_cross(self):
+    def is_cross(self) -> bool:
+        """Check if Layer 1 cross is solved in the current orientation only.
+
+        This method checks if all four cross edges match their target positions
+        in the EXACT current position, without trying any rotations. The cross
+        must be perfectly aligned with the middle layer to return True.
+
+        Returns:
+            True if cross is solved in current position (no rotation needed).
+            False if cross needs solving or rotation.
+
+        Note:
+            To check if the cross is solved but possibly rotated (ignoring
+            whole-layer rotation), use is_cross_rotate_and_check() instead,
+            which tries all four rotations (0°, 90°, 180°, 270°).
+        """
         return Part.all_match_faces(self.white_face.edges)
 
-    def is_cross(self) -> bool:
-        """
+    def is_cross_rotate_and_check(self) -> bool:
+        """Check if cross is solved, IGNORING whole-layer rotation.
 
-        :return: true if all edges matches ignoring cross orientation.
-        so you must call solve even if this return true
+        This method checks if all four cross edges are correctly positioned
+        relative to each other, but IGNORES the overall rotation of the cross.
+        The cross may be rotated by 90°, 180°, or 270° relative to the middle
+        layer and still return True.
+
+        The method tries all four possible rotations (0°, 90°, 180°, 270°) and
+        returns True if ANY rotation results in a correctly aligned cross. This
+        prevents false negatives where the cross is correct but needs rotation.
+
+        Returns:
+            True if cross edges are correctly positioned (ignoring rotation).
+            False if cross needs solving.
+
+        Note:
+            This happens during big cube Layer-by-Layer solving when centers and
+            edges are solved independently, allowing the whole layer to end up
+            rotated while the cross remains correctly positioned.
         """
 
         wf: Face = self.white_face
-        return self.cqr.rotate_face_and_check(wf, self._is_cross) >= 0
+        return self.cqr.rotate_face_and_check(wf, self.is_cross) >= 0
 
-    def solve(self):
+    def solve(self, with_rotations: bool = False):
 
-        if self._is_cross():  #
-            return  # avoid rotating cube
+        if self.is_cross():  #
+            return
 
         with self.ann.annotate(h1="Doing L1 Cross"):
 
             # before rotating
-            n = self.cqr.rotate_face_and_check(self.white_face, self._is_cross)
+            n = self.cqr.rotate_face_and_check(self.white_face, self.is_cross)
             if n >= 0:
                 if n > 0:
                     # the query solves by rotate  n, so we need

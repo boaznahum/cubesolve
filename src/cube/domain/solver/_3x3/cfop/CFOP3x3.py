@@ -149,7 +149,7 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
                 s += ","
             s += x
 
-        cross = self.l1_cross.is_cross()
+        cross = self.l1_cross.is_cross_rotate_and_check()
         f2f = self.f2l.solved()
 
         if cross and f2f:

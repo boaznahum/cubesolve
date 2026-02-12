@@ -109,22 +109,22 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
 
             case SolveStep.L1:
                 self.l1_cross.solve()
-                self.l1_corners.solve()
+                self.l1_corners.solve(self.l1_cross)
 
             case SolveStep.L2:
                 self.l1_cross.solve()
-                self.l1_corners.solve()
+                self.l1_corners.solve(self.l1_cross)
                 self.l2.solve()
 
             case SolveStep.L3x:
                 self.l1_cross.solve()
-                self.l1_corners.solve()
+                self.l1_corners.solve(self.l1_cross)
                 self.l2.solve()
                 self.l3_cross.solve()
 
             case SolveStep.ALL | SolveStep.L3:
                 self.l1_cross.solve()
-                self.l1_corners.solve()
+                self.l1_corners.solve(self.l1_cross)
                 self.l2.solve()
                 self.l3_cross.solve()
                 self.l3_corners.solve()
@@ -132,7 +132,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
             case SolveStep.F2L:
                 # F2L is CFOP terminology, but support it here too
                 self.l1_cross.solve()
-                self.l1_corners.solve()
+                self.l1_corners.solve(self.l1_cross)
                 self.l2.solve()
 
         return sr
@@ -143,8 +143,8 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         if self._cube.solved:
             return "Solved"
 
-        cross = self.l1_cross.is_cross()
-        corners = self.l1_corners.is_corners()
+        cross = self.l1_cross.is_cross_rotate_and_check()
+        corners = self.l1_corners.is_corners(self.l1_cross)
 
         if cross and corners:
             s = "L1"

@@ -1,4 +1,6 @@
-U' L' U [1]M' U' L U [1]M
+# UR
+
+U  R U' L'  U  R' U' L
 
 
 

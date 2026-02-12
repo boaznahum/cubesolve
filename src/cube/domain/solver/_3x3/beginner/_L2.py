@@ -45,7 +45,7 @@ class L2(SolverHelper):
         """
 
         if self.solved():
-            return  # avoid rotating cube
+            return
 
         with self.ann.annotate(h1="Doing L2"):
             self.cmn.bring_face_up(self.white_face.opposite)

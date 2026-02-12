@@ -4,7 +4,11 @@ L1 Edges aggressive test passed
 L1 Aggressive Passed
 L2 Aggressive Passed, still dead code below 1000 random see fix in this commit
 Full solver  Aggressive 1000 Passed , still dead code below 1000 random see fix in this commit
+Full solver 10000 fails, rare case 1/5000 tests
 
+Solve rare case, more than 8000(still running)  tests passed (random = 3000)
+
+## Need to work on dead code below
 After some changes 2/5000 full solver failed, c
 comparing to f45f50f54656b44b55c62088c998a3388c3f1ac1 which all passed
 

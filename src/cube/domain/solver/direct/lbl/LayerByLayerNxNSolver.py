@@ -145,6 +145,18 @@ class LayerByLayerNxNSolver(BaseSolver):
 
             return f"L1:Done|Sl:{solved_slices}/{n_slices}"
 
+    def diagnostic(self) -> None:
+        """Print current state of tracker holder and cube."""
+        with FacesTrackerHolder(self, is_for_status_querying=True) as th:
+            with self.cube.with_faces_color_provider(th):
+                # Print formatted state table
+                state_table = th.format_current_state(include_cube_faces=True)
+                print("\n" + "="*80)
+                print("DIAGNOSTICS: LayerByLayer Solver State")
+                print("="*80)
+                print(state_table)
+                print("="*80 + "\n")
+
     def _is_l2_slices_solved(self) -> bool:
 
         """
@@ -203,7 +215,7 @@ class LayerByLayerNxNSolver(BaseSolver):
                 return self._is_layer1_edges_solved(th)
 
             case SolveStep.L1x:
-                return self._is_layer1_cross_solved(th)
+                return self._is_layer1_edges_and_cross_solved(th)
 
             case SolveStep.LBL_L1:
                 return self._is_layer1_solved(th)
@@ -680,7 +692,6 @@ class LayerByLayerNxNSolver(BaseSolver):
         # this is a copy of cage is doing, why not add an helper for shadow operations !!!
         # Create shadow 3x3 cube (includes sanity check via set_3x3_colors)
         shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
-        assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid before solving"
 
         if shadow_cube.solved:
             self.debug("Shadow cube already solved")

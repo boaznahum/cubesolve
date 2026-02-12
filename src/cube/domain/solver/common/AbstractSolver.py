@@ -133,6 +133,10 @@ class AbstractSolver(Solver, ABC):
         """
         pass
 
+    def diagnostic(self) -> None:
+        """Default no-op diagnostic. Override in subclasses for detailed diagnostics."""
+        print(f"No diagnostics available for {self.name}")
+
     def _run_child_solver(self, child: Solver, what: SolveStep) -> SolverResults:
         """Run a child solver, propagating debug override if set.
 
