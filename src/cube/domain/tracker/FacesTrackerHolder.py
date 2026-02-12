@@ -700,3 +700,15 @@ class FacesTrackerHolder(FacesColorsProvider):
 
         return s
 
+    @staticmethod
+    def contain_center_tracker(c: CenterSlice) -> bool:
+        """Check if a center slice is tracked by any tracker.
+
+        Args:
+            c: CenterSlice to check.
+
+        Returns:
+            True if any tracker has marked this center slice.
+        """
+        return FaceTracker.is_track_slice(c)
+
