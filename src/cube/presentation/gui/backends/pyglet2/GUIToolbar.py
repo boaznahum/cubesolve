@@ -389,6 +389,7 @@ class GUIToolbar:
         - Solver is switched
         """
         from cube.presentation.gui.commands.concrete import (
+            DiagnosticsCommand,
             SolveAllCommand,
             SolveAllNoAnimationCommand,
             SolveStepCommand,
@@ -404,6 +405,14 @@ class GUIToolbar:
 
         # Ensure we're on Row 3 (0-indexed, so row 2)
         self._current_row = 2
+
+        # Add "Diag" button (left of Solve)
+        self.add_button(
+            label="Diag",
+            command=DiagnosticsCommand(),
+            tooltip="Print current solver state to console",
+            min_width=45,
+        )
 
         # Add "Solve" button with Shift = Instant
         self.add_button(

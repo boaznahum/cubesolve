@@ -167,6 +167,16 @@ class SolveEdgesCommand(Command):
         return CommandResult()
 
 
+@dataclass(frozen=True)
+class DiagnosticsCommand(Command):
+    """Command to print solver diagnostics to console."""
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        """Call solver's diagnostic() method."""
+        ctx.slv.diagnostic()
+        return CommandResult(no_gui_update=True)  # No visual change needed
+
+
 # =============================================================================
 # VIEW COMMANDS
 # =============================================================================
@@ -741,6 +751,11 @@ class ExecuteFileAlgCommand(Command):
             alg = load_file_alg(self.slot)
             if self.inverse:
                 alg = alg.prime
+
+            # Log file name and algorithm
+            file_name = f"f{self.slot}.txt"
+            ctx.cube.sp.logger.debug(None, f"Executing algorithm from {file_name}: {alg}")
+
             ctx.op.play(alg)  # Respects current animation setting
         except FileNotFoundError as e:
             ctx.app.set_error(f"File not found: {e}")

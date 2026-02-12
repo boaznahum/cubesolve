@@ -112,7 +112,6 @@ CLEANUP: After solving, these tracker marks must be removed (cleanup_trackers).
 
 from __future__ import annotations
 
-import traceback
 from collections.abc import Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Tuple
 
@@ -125,7 +124,6 @@ if TYPE_CHECKING:
     from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
-from cube.domain.model.Face import Face
 from cube.domain.tracker.trackers import (
     FaceTracker,
     MarkedFaceTracker,

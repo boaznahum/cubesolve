@@ -145,6 +145,18 @@ class LayerByLayerNxNSolver(BaseSolver):
 
             return f"L1:Done|Sl:{solved_slices}/{n_slices}"
 
+    def diagnostic(self) -> None:
+        """Print current state of tracker holder and cube."""
+        with FacesTrackerHolder(self, is_for_status_querying=True) as th:
+            with self.cube.with_faces_color_provider(th):
+                # Print formatted state table
+                state_table = th.format_current_state(include_cube_faces=True)
+                print("\n" + "="*80)
+                print("DIAGNOSTICS: LayerByLayer Solver State")
+                print("="*80)
+                print(state_table)
+                print("="*80 + "\n")
+
     def _is_l2_slices_solved(self) -> bool:
 
         """
@@ -203,7 +215,7 @@ class LayerByLayerNxNSolver(BaseSolver):
                 return self._is_layer1_edges_solved(th)
 
             case SolveStep.L1x:
-                return self._is_layer1_cross_solved(th)
+                return self._is_layer1_edges_and_cross_solved(th)
 
             case SolveStep.LBL_L1:
                 return self._is_layer1_solved(th)

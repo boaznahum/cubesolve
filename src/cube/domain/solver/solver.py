@@ -173,6 +173,18 @@ class Solver(SolverElementsProvider, ABC):
         """
         pass
 
+    @abstractmethod
+    def diagnostic(self) -> None:
+        """Print diagnostic information about current solver state.
+
+        Called by diagnostics button in GUI. Default implementations do nothing.
+        Solvers that have detailed state (like LayerByLayerNxNSolver) can override
+        to print tracker holder state, layer progress, etc.
+
+        Output goes to stdout/stderr for debugging.
+        """
+        pass
+
     @property
     @abstractmethod
     def is_debug_config_mode(self) -> bool:

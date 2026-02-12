@@ -4,13 +4,11 @@ L1 Edges aggressive test passed
 L1 Aggressive Passed
 L2 Aggressive Passed, still dead code below 1000 random see fix in this commit
 Full solver  Aggressive 1000 Passed , still dead code below 1000 random see fix in this commit
+Full solver 10000 fails, rare case 1/5000 tests
 
-Full solver 10000 fails
-    reproducible in tests
-    reproducible in GUI F.txt
-    cube_size = 6, scramble_name = 'rnd_413547559', scramble_seed = 413547559
+Solve rare case, more then 8000(still running)  tests passed (random = 3000)
 
-Need to work on dead code below
+## Need to work on dead code below
 
 # What i took from claude branch tha almost all passes ? 
 ##  0885fbfac55d03615daccab0406c93c61ac495aa

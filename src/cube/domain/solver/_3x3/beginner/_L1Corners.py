@@ -4,6 +4,7 @@ from cube.domain.algs import Algs
 from cube.domain.model import Corner, Part, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
+from cube.domain.solver._3x3.shared import L1Cross
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -18,24 +19,57 @@ class L1Corners(SolverHelper):
     def _is_corners(self) -> bool:
         return Part.all_match_faces(self.white_face.corners)
 
-    def is_corners(self) -> bool:
-        """
-        :return: true if 4 corners are in right place ignoring cross orientation
-        So you must call solve even if this return true
+    def is_corners(self, l1_cross: L1Cross) -> bool:
+        """Check if Layer 1 corners are solved, accounting for whole-layer rotation.
+
+        This method handles a rare edge case (~1 in 5000 solves) where the four
+        corners are correctly positioned and oriented relative to each other, but
+        the entire Layer 1 (including the cross) is rotated by 90°, 180°, or 270°
+        relative to the rest of the cube.
+
+        The method tries all four possible rotations (0°, 90°, 180°, 270°) and
+        returns true if ANY rotation results in both corners AND cross being
+        correctly aligned. This prevents false positives where corners appear
+        solved but the layer needs rotation to align the cross with middle layer.
+
+        Args:
+            l1_cross: The Layer 1 cross solver. Required to check cross alignment
+                      alongside corner positions, ensuring the entire layer is
+                      correctly oriented, not just the corners.
+
+        Returns:
+            True if corners are solved (possibly after layer rotation to align cross).
+            False if corners need solving.
+
+        Note:
+            This happens during big cube Layer-by-Layer solving when centers and
+            edges are solved independently before corners, allowing the whole layer
+            to end up rotated while corners remain correctly positioned.
         """
 
         wf: Face = self.white_face
 
-        return self.cqr.rotate_face_and_check(wf, self._is_corners) >= 0
+        return self.cqr.rotate_face_and_check(wf, lambda: self._is_corners() and l1_cross.is_cross()) >= 0
 
-    def solve(self):
-        """
-        Must be called after cross is solved
-        :return:
+    def solve(self, l1_cross: L1Cross) -> None:
+        """Solve Layer 1 corners using the beginner method.
+
+        Positions and orients all four Layer 1 corners correctly. Must be called
+        AFTER the Layer 1 cross is solved, as corner solving preserves the cross.
+
+        Args:
+            l1_cross: The Layer 1 cross solver. Passed to is_corners() to handle
+                      the rare case where corners are positioned correctly but the
+                      entire layer needs rotation. See is_corners() docstring for
+                      detailed explanation.
+
+        Note:
+            If corners are already solved (checked via is_corners()), this method
+            returns immediately without making any moves.
         """
 
-        if self.is_corners():
-            return  # avoid rotating cube
+        if self.is_corners(l1_cross):
+            return
 
         with self.ann.annotate(h1="Doing L1 Corners"):
             self.cmn.bring_face_up(self.white_face)
