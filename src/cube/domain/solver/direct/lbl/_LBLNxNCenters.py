@@ -10,7 +10,7 @@ from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.direct.lbl import _common
 from cube.domain.solver.direct.lbl import _lbl_config
-from cube.domain.tracker.trackers import FaceTracker
+from cube.domain.tracker.face_trackers import FaceTracker
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.direct.lbl._common import (
     _is_cent_piece_marked_solved, mark_slice_and_v_mark_if_solved, _track_center_slice,

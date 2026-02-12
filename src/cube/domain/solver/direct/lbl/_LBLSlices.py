@@ -36,9 +36,8 @@ from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.exceptions import SolverFaceColorsChangedNeedRestartException
-from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.tracker.trackers import FaceTracker
+from cube.domain.tracker.face_trackers import FaceTracker
 from cube.domain.solver.direct.lbl import _lbl_config, _common
 from cube.domain.solver.direct.lbl._LBLNxNCenters import _LBLNxNCenters
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges

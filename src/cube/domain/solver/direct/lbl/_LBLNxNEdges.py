@@ -8,7 +8,7 @@ from cube.domain.model._part import EdgeName
 from cube.domain.solver.direct.lbl import _common, _lbl_config
 from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solved
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
-from cube.domain.tracker.trackers import FaceTracker
+from cube.domain.tracker.face_trackers import FaceTracker
 from cube.domain.solver.common.big_cube.commutator.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider

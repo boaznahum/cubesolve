@@ -37,11 +37,10 @@ from typing import TYPE_CHECKING, cast
 from typing_extensions import Self
 
 from cube.domain.model import CenterSlice, Color, Face, FaceName
-from cube.domain.model.FaceName import FaceName
 from cube.domain.model.FacesColorsProvider import FacesColorsProvider
 from cube.domain.model.PartEdge import PartEdge
-from cube.domain.tracker._factory import NxNCentersFaceTrackers
-from cube.domain.tracker.trackers import FaceTracker
+from cube.domain.tracker._face_trackers_factory import NxNCentersFaceTrackers
+from cube.domain.tracker.face_trackers import FaceTracker
 
 if TYPE_CHECKING:
     from cube.domain.geometric.cube_layout import CubeLayout
@@ -561,6 +560,7 @@ class FacesTrackerHolder(FacesColorsProvider):
             after_trackers = self.face_colors
 
             # Get cube colors if checking
+            after_cube: dict[FaceName, Color] | None
             if also_assert_cube_faces:
                 after_cube = cube.faces_colors
             else:
@@ -699,6 +699,66 @@ class FacesTrackerHolder(FacesColorsProvider):
         s = f"is boy={self._trackers_layout().is_boy()} {faces}"
 
         return s
+
+    def format_current_state(self, include_cube_faces: bool = True) -> str:
+        """Format current tracker and cube state as a human-readable table.
+
+        Shows:
+        - Tracker colors (immutable target colors)
+        - Current faces where those colors are tracked (dynamic, changes with rotations)
+        - Optional: Actual cube face colors
+
+        This is a snapshot of the current state, with no before/after comparison.
+
+        Args:
+            include_cube_faces: If True, include actual cube face colors.
+
+        Returns:
+            Formatted string with current state table.
+        """
+        lines: list[str] = []
+
+        # Get current tracker state: face→color mapping
+        tracker_current: dict[FaceName, Color] = dict(self.get_face_colors())
+
+        # Invert to get color→face mapping for the tracker state table
+        color_to_face: dict[Color, FaceName] = {color: face for face, color in tracker_current.items()}
+
+        # Show tracker state
+        lines.append("Tracker State:")
+        lines.append("  ┌──────────────┬────────┐")
+        lines.append("  │ Tracking     │ Face   │")
+        lines.append("  ├──────────────┼────────┤")
+        for tracker in self._trackers:
+            color = tracker.color
+            color_str = str(color)
+            face = color_to_face.get(color)
+            face_str = face.name if face is not None else "???"
+            lines.append(f"  │ {color_str:12s} │ {face_str:6s} │")
+        lines.append("  └──────────────┴────────┘")
+
+        if include_cube_faces:
+            lines.append("")
+            # Get actual cube face colors
+            cube_current: dict[FaceName, Color] = dict(self.cube.faces_colors)
+
+            # Full table with both cube and tracker
+            lines.append("  ┌──────┬──────────────┬──────────────┐")
+            lines.append("  │ Face │ Cube Color   │ Trkr Color   │")
+            lines.append("  ├──────┼──────────────┼──────────────┤")
+
+            for face_name in [FaceName.U, FaceName.D, FaceName.F, FaceName.B, FaceName.L, FaceName.R]:
+                cube_color = str(cube_current.get(face_name, "???"))
+                tracker_color = str(tracker_current.get(face_name, "???"))
+
+                # Mark mismatches
+                mark = " ⚠" if cube_color != tracker_color else ""
+
+                lines.append(f"  │ {face_name.name:4s} │ {cube_color:12s} │ {tracker_color:12s} │{mark}")
+
+            lines.append("  └──────┴──────────────┴──────────────┘")
+
+        return "\n".join(lines)
 
     @staticmethod
     def contain_center_tracker(c: CenterSlice) -> bool:

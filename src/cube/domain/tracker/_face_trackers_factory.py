@@ -124,7 +124,7 @@ if TYPE_CHECKING:
     from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.CubeQueries2 import Pred
-from cube.domain.tracker.trackers import (
+from cube.domain.tracker.face_trackers import (
     FaceTracker,
     MarkedFaceTracker,
     SimpleFaceTracker,

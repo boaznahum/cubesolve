@@ -100,7 +100,7 @@ _V_CHECKMARK = "checkmark"
 
 if TYPE_CHECKING:
     from cube.domain.solver.common.SolverHelper import SolverHelper
-    from cube.domain.tracker.trackers import FaceTracker
+    from cube.domain.tracker.face_trackers import FaceTracker
 
 
 # =============================================================================

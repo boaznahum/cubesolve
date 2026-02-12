@@ -18,7 +18,7 @@ from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.tracker import FacesTrackerHolder
-from cube.domain.tracker.trackers import FaceTracker
+from cube.domain.tracker.face_trackers import FaceTracker
 
 
 class _LBLL3Edges(SolverHelper):

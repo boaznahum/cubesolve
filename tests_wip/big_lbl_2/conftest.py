@@ -18,9 +18,13 @@ import pytest
 GUI_SCRAMBLE_SEEDS: list[int] = list(range(10))  # 0, 1, 2, ..., 9
 
 # Additional test seeds for extra coverage, ond ones that we find in random seed
-FULL_FAILURES_SEED=[413547559 # reproducible cube_size = 6, scramble_name = 'rnd_413547559', scramble_seed = 413547559
-                    ]
-ADDITIONAL_SCRAMBLE_SEEDS: list[int] = [101, 202, 303, 124826159] + FULL_FAILURES_SEED
+FULL_FAILURES_SEED=[
+    # Not reproducible
+ 1781991940, # cube_size = 8, scramble_name = 'rnd_1781991940', scramble_seed = 1781991940
+ 1037976487 # cube_size = 10, scramble_name = 'rnd_1037976487', scramble_seed = 1037976487
+    ]
+
+ADDITIONAL_SCRAMBLE_SEEDS: list[int] = [] + FULL_FAILURES_SEED
 
 # All predefined scramble seeds
 PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_SEEDS

@@ -8,6 +8,14 @@ Full solver 10000 fails, rare case 1/5000 tests
 
 6. Solve rare case, more than 8000(still running)  tests passed (random = 3000)
 
+## 7 No dead code in cube.domain.solver.direct.lbl._LBLSlices._LBLSlices._find_best_pre_alignment
+
+Running L2 tests Random=1000 , 2 of 5073 fail
+cube_size = 8, scramble_name = 'rnd_1781991940', scramble_seed = 1781991940
+cube_size = 10, scramble_name = 'rnd_1037976487', scramble_seed = 1037976487
+
+Not reproducible , second run 5 tests fail
+
 ## #current state
 After merging from 6, full lbl (random=1000)  5075 tests passed 
 But Still dead code below
