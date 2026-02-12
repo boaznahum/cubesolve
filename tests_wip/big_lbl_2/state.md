@@ -2,17 +2,7 @@
 
 L1 Edges aggressive test passed
 L1 Aggressive Passed
-‼️‼️‼️ Any change in code change this list ‼️‼️‼️
-L2 from aggressive 6 fails, among them reproduced in gui (F):  
-    cube_size = 4, scramble_name = 'rnd_1539464596', scramble_seed = 1539464596
-    cube_size = 6, scramble_name = 'rnd_793592993', scramble_seed = 793592993
-
-ile "D:\dev\code\python\cubesolve3\src\cube\domain\solver\direct\lbl\_LBLNxNEdges.py", line 268, in _solve_edge_win_one_source
-    status = self._solve_edge_wing_by_source(target_face, target_edge_wing, st)
-  File "D:\dev\code\python\cubesolve3\src\cube\domain\solver\direct\lbl\_LBLNxNEdges.py", line 301, in _solve_edge_wing_by_source
-    assert target_face.color == target_face_color
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+L2 Aggressive Passed, still dead code below 1000 random see fix in this commit
 
 # What i took from claude branch tha almost all passes ? 
 ##  0885fbfac55d03615daccab0406c93c61ac495aa
@@ -32,6 +22,9 @@ take nothing seems to me bullishit, some thing else solve, lets try do l1 l2 sep
 ### Handle even cube parity exceptions in BigLBL solver Yesterday 21:49 be108435
 took all but not the test
 handed even and corner swap parity
+
+# Tie in colors
+we sort according to color, still fail
 
 # in ahead commits
 All L1 tests fail

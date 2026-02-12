@@ -10,7 +10,7 @@ class FaceTrackerConfig:
     # Add visual markers (dots) on tracked center slices for debugging
     annotate: bool
 
-    # Validate trackers on cache rebuild (no duplicates, valid BOY layout)
+    # Validate trackers on cache rebuild (no duplicates, valid BOY layout, before after)
     validate: bool
 
     # When cleaning up trackers, leave the last visual annotation on screen

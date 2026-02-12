@@ -112,10 +112,13 @@ CLEANUP: After solving, these tracker marks must be removed (cleanup_trackers).
 
 from __future__ import annotations
 
+import traceback
 from collections.abc import Collection, Iterable, Sequence
 from typing import TYPE_CHECKING, Tuple
 
-from cube.domain.model import CenterSlice, Color
+from cube.domain.model.FaceName import FaceName
+
+from cube.domain.model import CenterSlice, Color, Face
 from cube.domain.tracker import _helper
 
 if TYPE_CHECKING:
@@ -569,9 +572,6 @@ class NxNCentersFaceTrackers(SolverHelper):
         Returns:
             Tuple of (face, color) with highest count.
         """
-        n_max = -1
-        f_max: Face | None = None
-        c_max: Color | None = None
         cube = self.cube
 
         if colors is None:
@@ -580,16 +580,39 @@ class NxNCentersFaceTrackers(SolverHelper):
         if faces is None:
             faces = cube.faces
 
-        self.debug("_find_face_with_max_colors:", [*faces])
+        self.debug("_find_face_with_max_colors:", [*faces], "colors:", [*colors])
 
+        # Collect all (face, color, count) combinations
+        results: list[Tuple[Face, Color, int]] = []
         for f in faces:
             for c in colors:
                 n = self.cqr.count_color_on_face(f, c)
-                if n > n_max:
-                    n_max = n
-                    f_max = f
-                    c_max = c
+                results.append((f, c, n))
+        # Find maximum count
+        n_max = max(count for _, _, count in results)
 
-        assert f_max and c_max  # mypy
+        # Find all combinations with maximum count
+        max_results: list[tuple[Face, Color, int]] = [(f, c, n) for f, c, n in results if n == n_max]
+
+        # Check for tie and log warning
+        if len(max_results) > 1:
+            # Calculate center pieces per face: (N-2)^2
+            n_center_pieces = (cube.n_slices - 2) ** 2
+
+            # If count equals all center pieces, cube is solved - ignore tie
+            if n_max == n_center_pieces:
+                # Solved state - all faces have full color, expected 6-way tie
+                pass
+            else:
+                # Real tie during scramble/solving - log it!
+                tie_info = ", ".join(f"{f.name}:{c} ({n})" for f, c, n in max_results)
+                self.debug(f"‼️‼️‼️‼️‼️ TIE between majority colors! {tie_info}")
+
+            # Sort by face ordinal for deterministic tie-breaking
+            face_ordinal = {fn: i for i, fn in enumerate(FaceName)}
+            max_results.sort(key=lambda x: face_ordinal[x[0].name])
+
+        # Return the first (face, color) with max count (after sorting if tie)
+        f_max, c_max, _ = max_results[0]
         return f_max, c_max
 

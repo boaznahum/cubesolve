@@ -827,6 +827,10 @@ class Cube(CubeSupplier):
         return self._faces.values()
 
     @property
+    def faces_colors(self) -> dict[FaceName, Color]:
+        return { f.name:f.color for f in self.faces }
+
+    @property
     def edges(self) -> Iterable[Edge]:
         return self._edges
 

@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from cube.domain.algs import Algs
+from cube.domain.algs import Algs, Alg
 from cube.domain.geometric.geometry_types import FaceOrthogonalEdgesInfo
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
@@ -265,12 +265,13 @@ class _LBLNxNEdges(SolverHelper):
         st = source_slice_t
 
         print_solved_till_now(f"Before solving {target_edge_wing.parent_name_index_colors}")
-        status = self._solve_edge_wing_by_source(target_face, target_edge_wing, st)
+        status = self._solve_edge_wing_by_source(l1_white_tracker, target_face, target_edge_wing, st)
         print_solved_till_now(f"After solving ({status}) {target_edge_wing.parent_name_index_colors}")
 
         return status
 
-    def _solve_edge_wing_by_source(self, target_face: Face,
+    def _solve_edge_wing_by_source(self, l1_white_tracker: FaceTracker,
+                                   target_face: Face,
                                    _target_edge_wing: EdgeWing,
                                    source_edge_wing_t: EdgeWingTracker) -> SmallStepSolveState:
 
@@ -295,10 +296,15 @@ class _LBLNxNEdges(SolverHelper):
 
                 with self._logger.tab(lambda: f"‼️‼️Trying to bring  {untracked_source_wing.parent_name_and_index} to to top"):
 
-                    self._bring_source_wing_to_top(target_face, source_edge_wing_t)
+                    # boaz: sanity
+                    assert target_face.color == target_face_color
+
+                    self.debug(lambda : f"Before _bring_source_wing_to_top {target_face.name}={target_face.color}")
+
+                    self._bring_source_wing_to_top(l1_white_tracker, target_face, source_edge_wing_t)
 
                     # still same face
-                    assert target_face.color == target_face_color
+                    assert target_face.color == target_face_color, f"After _bring_source_wing_to_top {target_face.name}={target_face.color}!={target_face_color}"
 
                     # we should get rid of it
                     untracked_source_wing = source_edge_wing_t.slice
@@ -370,18 +376,31 @@ class _LBLNxNEdges(SolverHelper):
 
         return SmallStepSolveState.NOT_SOLVED
 
-    def _bring_source_wing_to_top(self, target_face: Face, source_edge_wing_t: EdgeWingTracker) -> None:
+    def _bring_source_wing_to_top(self, l1_white_tracker: FaceTracker, target_face: Face, source_edge_wing_t: EdgeWingTracker) -> None:
 
         target_face_color = target_face.color
 
-        with FacesTrackerHolder(self) as th:
 
-            self.cmn.bring_edge_to_front_right_or_left_preserve_down(source_edge_wing_t.slice.parent)
+        with l1_white_tracker.parent.sanity_check_before_after_same_colors("_bring_source_wing_to_top", also_assert_cube_faces=True) as th:
+
+            assert th.get_face_by_color(target_face_color) is self.cube.front
+
+            bring_edge_to_front_setup: Alg # whole cube rotation
+            with th.sanity_check_before_after_same_colors("bring_edge_to_front_right_or_left_preserve_down",
+                                                          also_assert_cube_faces=True,
+                                                          disable=True):
+
+                bring_edge_to_front_setup = self.cmn.bring_edge_to_front_right_or_left_preserve_down(source_edge_wing_t.slice.parent)
 
             # yes the source is the target
-            self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(source_edge_wing_t.slice, None)
+            with th.sanity_check_before_after_same_colors("try_right_or_left_edge_to_edge_commutator_by_wings", also_assert_cube_faces=True):
+                self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(source_edge_wing_t.slice, None)
 
-            self.cmn.bring_face_front_preserve_down(th.get_face_by_color(target_face_color))
+            # with th.sanity_check_before_after_same_colors("bring_face_front_preserve_down", also_assert_cube_faces=True):
+            #     self.cmn.bring_face_front_preserve_down(th.get_face_by_color(target_face_color))
+
+            # bring original face to front again
+            self.op.play(bring_edge_to_front_setup.prime)
 
             assert th.get_face_by_color(target_face_color) is self.cube.front
 

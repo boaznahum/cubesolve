@@ -564,19 +564,21 @@ class CommonOp(SolverHelper):
             c_att = tracker.the_slice_nl.moveable_attributes
             del c_att[key]
 
-    def bring_edge_to_front_right_or_left_preserve_down(self, edge: Edge) -> None:
+    def bring_edge_to_front_right_or_left_preserve_down(self, edge: Edge) -> Alg:
 
         cube = edge.cube
         assert not edge.on_face(cube.up) and not edge.on_face(cube.down)
+
+        alg: Alg = Algs.no_op()
 
         with MarkedPartTracker.of(edge) as tracker:
 
             match edge.name:
                 case EdgeName.BR:
-                    self.op.play(Algs.Y)
+                    alg = Algs.Y
 
                 case EdgeName.BL:
-                    self.op.play(Algs.Y.prime)
+                    alg = Algs.Y.prime
 
                 case EdgeName.FR:
                     pass
@@ -585,7 +587,14 @@ class CommonOp(SolverHelper):
                 case EdgeName.FL:
                     pass
 
+                case _:
+                    raise InternalSWError(f"Unknown edge {edge.name}")
+
+            self.op.play(alg)
+
             assert tracker.part.on_face(cube.front)
+
+            return alg
 
 
 

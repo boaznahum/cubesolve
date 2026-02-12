@@ -29,13 +29,14 @@ Or manually:
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterator, Iterable, Generator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, cast
 
 from typing_extensions import Self
 
-from cube.domain.model import CenterSlice, Color, Face
+from cube.domain.model import CenterSlice, Color, Face, FaceName
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.FacesColorsProvider import FacesColorsProvider
 from cube.domain.model.PartEdge import PartEdge
@@ -433,6 +434,160 @@ class FacesTrackerHolder(FacesColorsProvider):
 
             # Invalidate cache (tracker->face mappings may have changed)
             self._face_colors_cache = None
+
+            # this will trigger sanity check
+            self.get_face_colors()
+
+    def _format_comparison_table(
+        self,
+        tracker_before: dict[FaceName, Color],
+        tracker_after: dict[FaceName, Color],
+        cube_before: dict[FaceName, Color] | None,
+        cube_after: dict[FaceName, Color] | None,
+        op_name: str
+    ) -> str:
+        """Format before/after comparison as a unified table for stderr output.
+
+        Args:
+            tracker_before: Tracker colors before operation.
+            tracker_after: Tracker colors after operation.
+            cube_before: Cube face colors before operation (or None).
+            cube_after: Cube face colors after operation (or None).
+            op_name: Name of the operation.
+
+        Returns:
+            Formatted string with comparison table.
+        """
+        lines = [f"\n{'='*80}"]
+        lines.append(f"SANITY CHECK FAILED: {op_name}")
+        lines.append("")
+
+        # Build color->face mappings from the before/after dicts
+        # tracker_before/after are dict[FaceName, Color], we need to invert to dict[Color, FaceName]
+        color_to_face_before: dict[Color, FaceName] = {color: face for face, color in tracker_before.items()}
+        color_to_face_after: dict[Color, FaceName] = {color: face for face, color in tracker_after.items()}
+
+        # Show tracker state comparison
+        lines.append("Tracker State:")
+        lines.append("  ┌──────────────┬───────────────┬───────────────┐")
+        lines.append("  │ Tracking     │ Face (BEFORE) │ Face (AFTER)  │")
+        lines.append("  ├──────────────┼───────────────┼───────────────┤")
+        for tracker in self._trackers:
+            color = tracker.color
+            color_str = str(color)
+            face_before = color_to_face_before.get(color, "???")
+            face_after = color_to_face_after.get(color, "???")
+            face_before_str = face_before.name if hasattr(face_before, 'name') else str(face_before)
+            face_after_str = face_after.name if hasattr(face_after, 'name') else str(face_after)
+
+            # Mark if tracker moved to different face
+            mark = " ⚠" if face_before != face_after else ""
+
+            lines.append(f"  │ {color_str:12s} │ {face_before_str:13s} │ {face_after_str:13s} │{mark}")
+        lines.append("  └──────────────┴───────────────┴───────────────┘")
+        lines.append("")
+
+        if cube_before is not None and cube_after is not None:
+            # Full table with both cube and tracker
+            lines.append("  ┌──────┬──────────────┬──────────────┬──────────────┬──────────────┐")
+            lines.append("  │ Face │ Cube Before  │ Cube After   │ Trkr Before  │ Trkr After   │")
+            lines.append("  ├──────┼──────────────┼──────────────┼──────────────┼──────────────┤")
+
+            for face_name in [FaceName.U, FaceName.D, FaceName.F, FaceName.B, FaceName.L, FaceName.R]:
+                cb = str(cube_before.get(face_name, "???"))
+                ca = str(cube_after.get(face_name, "???"))
+                tb = str(tracker_before.get(face_name, "???"))
+                ta = str(tracker_after.get(face_name, "???"))
+
+                # Mark mismatches
+                cube_changed = cb != ca
+                tracker_changed = tb != ta
+                mark = ""
+                if cube_changed or tracker_changed:
+                    mark = " ⚠"
+
+                lines.append(f"  │ {face_name.name:4s} │ {cb:12s} │ {ca:12s} │ {tb:12s} │ {ta:12s} │{mark}")
+
+            lines.append("  └──────┴──────────────┴──────────────┴──────────────┴──────────────┘")
+        else:
+            # Tracker-only table
+            lines.append("  ┌──────┬──────────────┬──────────────┐")
+            lines.append("  │ Face │ Trkr Before  │ Trkr After   │")
+            lines.append("  ├──────┼──────────────┼──────────────┤")
+
+            for face_name in [FaceName.U, FaceName.D, FaceName.F, FaceName.B, FaceName.L, FaceName.R]:
+                tb = str(tracker_before.get(face_name, "???"))
+                ta = str(tracker_after.get(face_name, "???"))
+
+                # Mark mismatches
+                tracker_changed = tb != ta
+                mark = " ⚠" if tracker_changed else ""
+
+                lines.append(f"  │ {face_name.name:4s} │ {tb:12s} │ {ta:12s} │{mark}")
+
+            lines.append("  └──────┴──────────────┴──────────────┘")
+
+        lines.append(f"{'='*80}\n")
+        return "\n".join(lines)
+
+    @contextmanager
+    def sanity_check_before_after_same_colors(self,op_name: str,
+                                              also_assert_cube_faces,
+                                              disable: bool =False) -> Generator[Self, None, None]:
+
+        """
+
+        Args:
+            disable Pass true if you want to disable the chek , if the changed is expected
+
+
+        """
+        cube = self.cube
+        if disable or not cube.sp.config.face_tracker.validate:
+            yield self
+            return
+
+        before_trackers: dict[FaceName, Color] = dict(self.get_face_colors())
+
+        if also_assert_cube_faces:
+            before_cube_colors = dict(cube.faces_colors)
+        else:
+            before_cube_colors = None
+
+
+        try:
+            yield self
+        finally:
+            after_trackers = self.face_colors
+
+            # Get cube colors if checking
+            if also_assert_cube_faces:
+                after_cube = cube.faces_colors
+            else:
+                after_cube = None
+
+            # Check for any changes
+            tracker_changed = after_trackers != before_trackers
+            cube_changed = also_assert_cube_faces and before_cube_colors != after_cube
+
+            # Print unified table to stderr BEFORE any assertions if anything changed
+            if tracker_changed or cube_changed:
+                table = self._format_comparison_table(
+                    tracker_before=before_trackers,
+                    tracker_after=after_trackers,
+                    cube_before=before_cube_colors,
+                    cube_after=after_cube,
+                    op_name=op_name
+                )
+                print(table, file=sys.stderr)
+
+            # Now do assertions
+            assert after_trackers == before_trackers, f"Trackers changed due to {op_name}, before={before_trackers}, after={after_trackers}"
+
+            if also_assert_cube_faces:
+                assert before_cube_colors == after_cube, (f"Cube faces changed due to {op_name}:,\n"
+                                                          f"   before={before_cube_colors},\n"
+                                                          f"   after={after_cube}")
 
             # this will trigger sanity check
             self.get_face_colors()
