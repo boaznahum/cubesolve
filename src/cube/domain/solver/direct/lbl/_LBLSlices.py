@@ -281,6 +281,7 @@ class _LBLSlices(SolverHelper):
             return 0
 
         slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
+        # Also None for odd middle slice
         if slice_alg is None:
             return 0
 

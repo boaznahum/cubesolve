@@ -3,6 +3,9 @@
 L1 Edges aggressive test passed
 L1 Aggressive Passed
 L2 Aggressive Passed, still dead code below 1000 random see fix in this commit
+Full solver  Aggressive 1000 Passed , still dead code below 1000 random see fix in this commit
+
+Need to work on dead code below
 
 # What i took from claude branch tha almost all passes ? 
 ##  0885fbfac55d03615daccab0406c93c61ac495aa
