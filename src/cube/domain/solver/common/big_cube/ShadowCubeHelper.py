@@ -34,6 +34,9 @@ class ShadowCubeHelper(SolverHelper):
 
         assert shadow_cube.is_boy, f"Shadow cube must be valid boy pattern, face_colors={th.get_face_colors()}"
 
+        assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid before solving"
+
+
         return shadow_cube
 
     def _copy_state_to_shadow(
