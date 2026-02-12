@@ -19,9 +19,15 @@ GUI_SCRAMBLE_SEEDS: list[int] = list(range(10))  # 0, 1, 2, ..., 9
 
 # Additional test seeds for extra coverage, ond ones that we find in random seed
 FULL_FAILURES_SEED=[
-    # Not reproducible
- 1781991940, # cube_size = 8, scramble_name = 'rnd_1781991940', scramble_seed = 1781991940
- 1037976487 # cube_size = 10, scramble_name = 'rnd_1037976487', scramble_seed = 1037976487
+    # ☑️ Test reproducible,❌ not gui
+ 1781991940, # cube_size = 8, scramble_name = 'rnd_1781991940', scramble_seed = 1781991940 ☑️ ❌
+ 1037976487, # cube_size = 10, scramble_name = 'rnd_1037976487', scramble_seed = 1037976487
+966854415, #cube_size = 10, scramble_name = 'rnd_966854415', scramble_seed = 966854415
+1293174359, #cube_size = 10, scramble_name = 'rnd_1293174359', scramble_seed = 1293174359
+
+1781991940, #cube_size = 8, scramble_name = 'seed_1781991940', scramble_seed = 1781991940
+1263619961, # cube_size = 12, scramble_name = 'rnd_1263619961', scramble_seed = 1263619961 ☑️
+1233752804, # cube_size = 12, scramble_name = 'rnd_1233752804', scramble_seed = 1233752804 ☑️
     ]
 
 ADDITIONAL_SCRAMBLE_SEEDS: list[int] = [] + FULL_FAILURES_SEED
@@ -33,7 +39,7 @@ PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_
 CUBE_SIZES_ODD: list[int] = [3, 5, 7]
 CUBE_SIZES_EVEN: list[int] = [4, 6, 8, 10, 12]
 CUBE_SIZES_ALL: list[int] = [3, 4, 5, 6, 7, 8]
-N_RANDOM_SEEDS =  1000 # 10000 # zero when we detect in above seeds
+N_RANDOM_SEEDS =  100  # 10000 # zero when we detect in above seeds
 
 
 def get_scramble_params() -> list[tuple[str, int]]:

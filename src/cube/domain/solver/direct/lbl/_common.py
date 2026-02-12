@@ -359,7 +359,6 @@ def _get_all_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> tuple[
         l1_tracker.face_name, slice_row, n_slices
     )
 
-    slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
     slice_obj: Slice = cube.get_slice(slice_name)
 
     # Get edge wings and center slices at this slice index

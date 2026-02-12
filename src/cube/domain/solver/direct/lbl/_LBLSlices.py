@@ -292,6 +292,7 @@ class _LBLSlices(SolverHelper):
 
         contains_center_tracer = any(1 for e in _common.get_center_row_pieces(cube, l1_white_tracker, None, face_row) if parent.contain_center_tracker(e))
         if contains_center_tracer:
+            self.debug(lambda : f"☑️☑️☑️☑️☑️☑️☑️☑️☑️ Protecting row {face_row} it contains center tracker ☑️☑️☑️☑️☑️☑️☑️☑️☑️ ")
             return 0
 
         # Count currently solved pieces (rotation 0)
