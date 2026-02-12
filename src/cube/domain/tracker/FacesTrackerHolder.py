@@ -34,6 +34,7 @@ from collections.abc import Iterator, Iterable, Generator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, cast
 
+from cube.domain.tracker import trackers
 from typing_extensions import Self
 
 from cube.domain.model import CenterSlice, Color, Face, FaceName
@@ -475,10 +476,10 @@ class FacesTrackerHolder(FacesColorsProvider):
         for tracker in self._trackers:
             color = tracker.color
             color_str = str(color)
-            face_before = color_to_face_before.get(color, "???")
-            face_after = color_to_face_after.get(color, "???")
-            face_before_str = face_before.name if hasattr(face_before, 'name') else str(face_before)
-            face_after_str = face_after.name if hasattr(face_after, 'name') else str(face_after)
+            face_before : FaceName | str = color_to_face_before.get(color, "???")
+            face_after : FaceName | str = color_to_face_after.get(color, "???")
+            face_before_str = face_before.name if isinstance(face_before, FaceName) else str(face_before)
+            face_after_str = face_after.name if isinstance(face_after, FaceName) else str(face_after)
 
             # Mark if tracker moved to different face
             mark = " ⚠" if face_before != face_after else ""
@@ -699,4 +700,10 @@ class FacesTrackerHolder(FacesColorsProvider):
         s = f"is boy={self._trackers_layout().is_boy()} {faces}"
 
         return s
+
+    @staticmethod
+    def contain_center_tracker(c: CenterSlice) -> bool:
+        return FaceTracker.is_track_slice(c)
+
+
 

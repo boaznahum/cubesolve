@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 # Key prefix for logical tracker data in moveable_attributes.
 # Format: "_nxn_centers_track:h{holder_id}:{color}{unique_id}"
 # This is the actual tracking mechanism — determines which face owns which color.
-_TRACKER_KEY_PREFIX = "_nxn_centers_track:"
+_CENTER_TRACKER_KEY_PREFIX = "_nxn_centers_track:"
 
 
 
@@ -47,7 +47,7 @@ def get_tracker_key_prefix() -> str:
 
     Used by factory classes that create MarkedFaceTracker instances.
     """
-    return _TRACKER_KEY_PREFIX
+    return _CENTER_TRACKER_KEY_PREFIX
 
 
 class FaceTracker(ABC):
@@ -156,7 +156,7 @@ class FaceTracker(ABC):
             True if any tracker has marked this slice.
         """
         for k in s.edge.moveable_attributes.keys():
-            if isinstance(k, str) and k.startswith(_TRACKER_KEY_PREFIX):
+            if isinstance(k, str) and k.startswith(_CENTER_TRACKER_KEY_PREFIX):
                 return True
         return False
 
@@ -197,7 +197,7 @@ class FaceTracker(ABC):
             The Color enum if tracked, None otherwise.
         """
         for key, value in edge.moveable_attributes.items():
-            if isinstance(key, str) and key.startswith(_TRACKER_KEY_PREFIX):
+            if isinstance(key, str) and key.startswith(_CENTER_TRACKER_KEY_PREFIX):
                 return value  # Value is the Color enum
         return None
 

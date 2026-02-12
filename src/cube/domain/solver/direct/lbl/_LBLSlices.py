@@ -36,6 +36,7 @@ from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.exceptions import SolverFaceColorsChangedNeedRestartException
+from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.trackers import FaceTracker
 from cube.domain.solver.direct.lbl import _lbl_config, _common
@@ -276,9 +277,6 @@ class _LBLSlices(SolverHelper):
         slice rotations move center pieces (and their tracker marks), which can
         cause two trackers to temporarily point to the same face.
         """
-        #boaz: patch
-        if True:
-            return 0
 
         slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
         # Also None for odd middle slice
@@ -287,6 +285,12 @@ class _LBLSlices(SolverHelper):
 
         cube = self.cube
 
+        parent: FacesTrackerHolder = l1_white_tracker.parent
+
+        contains_center_tracer = any(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if parent.contain_center_tracker(e))
+        if contains_center_tracer:
+            return 0
+
         # Count currently solved pieces (rotation 0)
         best_count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
         best_rotations = 0
@@ -294,14 +298,13 @@ class _LBLSlices(SolverHelper):
         # Freeze face colors during query rotations. Slice rotations move
         # tracker-marked center slices, temporarily displacing trackers.
         # Frozen colors ensure match_faces uses the correct pre-rotation mapping.
-        with l1_white_tracker.parent.frozen_face_colors():
-            with self.op.with_query_restore_state():
-                for n_rotations in range(1, 4):
-                    self.play(slice_alg)
-                    count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
-                    if count > best_count:
-                        best_count = count
-                        best_rotations = n_rotations
+        with self.op.with_query_restore_state():
+            for n_rotations in range(1, 4):
+                self.play(slice_alg)
+                count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
+                if count > best_count:
+                    best_count = count
+                    best_rotations = n_rotations
 
         return best_rotations
 
