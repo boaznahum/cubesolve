@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
-from typing import Generator
+from typing import Generator, cast
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.block import Block
@@ -121,6 +121,12 @@ class _LBLNxNCenters(SolverHelper):
         # Statistics: count of blocks solved by size
         self._block_stats: dict[int, int] = {}
 
+    @property
+    def _parent(self):
+        from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
+        return cast(_LBLSlices, self._solver)
+
+
     def reset_statistics(self) -> None:
         """Reset block solving statistics."""
         self._block_stats = {}
@@ -148,13 +154,16 @@ class _LBLNxNCenters(SolverHelper):
 
         Args:
             face_tracker: Face to solve
-            slice_index: Slice index to solve  zeo based
+            face_row: row index as defined in this package
             :param target_face:
             :param l1_white_tracker:
         """
 
         with self._logger.tab(lambda: f"{symbols.green_line(3)} Slice {face_row} {target_face.color_at_face_str} <-- all faces {symbols.green_line(3)}"):
-            self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, face_row)
+
+            with self._parent.with_sanity_check_previous_are_solved(l1_white_tracker, face_row, "_solve_single_center_slice_all_sources"):
+                self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, face_row)
+
 
     def _slice_on_target_face_solved(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int) -> bool:
         #del _target_face  # Unused - checks all faces, not just target
@@ -347,15 +356,18 @@ class _LBLNxNCenters(SolverHelper):
                             up_face = l1_white_tracker.opposite.face
                             self.debug(f"Moving {candidate_piece} from {move_from_target_face.color_at_face_str} to {up_face}")
                             # Move piece from up to this face, pushing the target_color piece to up
-                            with self._preserve_trackers():
-                                self._comm_helper.execute_commutator(
-                                    up_face,  # source
-                                    move_from_target_face,  # target
-                                    Block(candidate_point, candidate_point),  # target point
-                                    Block(candidate_point, candidate_point),
-                                    True,
-                                    False,
-                                    None)
+
+                            with self._parent.with_sanity_check_previous_are_solved(l1_white_tracker, face_row, "removing piece from face"):
+                                with self._preserve_trackers():
+                                    self._comm_helper.execute_commutator(
+                                        up_face,  # source
+                                        move_from_target_face,  # target
+                                        Block(candidate_point, candidate_point),  # target point
+                                        Block(candidate_point, candidate_point),
+                                        True,
+                                        False,
+                                        None)
+
 
                             pieces_moved += 1
                             if not remove_all:
@@ -368,7 +380,7 @@ class _LBLNxNCenters(SolverHelper):
 
         return pieces_moved
 
-    def _solve_single_center_slice_single_source_face(self, l1_white_tracker: FaceTracker,
+    def _solve_single_center_slice_single_source_face(self, l1_tracker: FaceTracker,
                                                       target_face: FaceTracker,
                                                       source_face: FaceTracker,
                                                       slice_row_index: int) -> bool:
@@ -388,7 +400,8 @@ class _LBLNxNCenters(SolverHelper):
             self.cmn.bring_face_front_preserve_down(target_face.face)
             assert target_face.face is self.cube.front
 
-            return self._solve_single_center_piece_from_source_face_impl(l1_white_tracker,
+            with self._parent.with_sanity_check_previous_are_solved(l1_tracker, slice_row_index, "_solve_single_center_piece_from_source_face_impl"):
+                return self._solve_single_center_piece_from_source_face_impl(l1_tracker,
                                                                              target_face, source_face,
                                                                              slice_row_index)
 
