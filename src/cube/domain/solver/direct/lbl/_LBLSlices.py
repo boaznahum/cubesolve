@@ -57,7 +57,7 @@ class _LBLSlices(SolverHelper):
         edges: NxNEdges helper for edge pairing
     """
 
-    __slots__ = ["_slv", "_last_centers", "_edges"]
+    __slots__ = ["_slv", "_last_centers", "_edges", "_sanity_check"]
 
     def __init__(self, slv: LayerByLayerNxNSolver) -> None:
 
@@ -71,6 +71,7 @@ class _LBLSlices(SolverHelper):
         self._slv: LayerByLayerNxNSolver = slv
         self._last_centers: _LBLNxNCenters | None = None
         self._edges = _LBLNxNEdges(self)
+        self._sanity_check: bool = slv.config.lbl_sanity_check
 
     def _create_centers(self, th: FacesTrackerHolder) -> _LBLNxNCenters:
         """Create fresh _LBLNxNCenters with the given tracker holder."""
@@ -173,12 +174,23 @@ class _LBLSlices(SolverHelper):
     # Pre-alignment
     # =========================================================================
 
-    def _count_all_rows_solved(self, l1_white_tracker: FaceTracker, n_rows: int) -> int:
-        """Count total solved pieces across all rows."""
-        return sum(
-            sum(1 for e in _get_row_pieces(self.cube, l1_white_tracker, r) if e.match_faces)
-            for r in range(n_rows)
-        )
+    def count_all_rows_solved(self, l1_tracker: FaceTracker, n_rows: int) -> int:
+        """Count solved rows.
+        stop on first not solved roe
+        """
+
+        count = 0
+        for slice_row in range(n_rows):
+            all_solved = self._row_solved(l1_tracker, slice_row)
+
+            if all_solved:
+                count += 1
+            else:
+                break  # Stop at first unsolved slice
+
+        return count
+
+
 
     def _global_center_slice_prealign(self, l1_white_tracker: FaceTracker) -> bool:
         """Try rotating the center E-slice for global alignment.
@@ -220,13 +232,13 @@ class _LBLSlices(SolverHelper):
         n_to_solve = min(_lbl_config.NUMBER_OF_SLICES_TO_SOLVE, n_slices)
 
         # Count total solved pieces across all rows (rotation 0)
-        best_count = self._count_all_rows_solved(l1_white_tracker, n_to_solve)
+        best_count = self.count_all_rows_solved(l1_white_tracker, n_to_solve)
         best_rot = 0
 
         with self.op.with_query_restore_state():
             for n_rot in range(1, 4):
                     self.play(center_slice_alg)
-                    count = self._count_all_rows_solved(l1_white_tracker, n_to_solve)
+                    count = self.count_all_rows_solved(l1_white_tracker, n_to_solve)
                     if count > best_count:
                         best_count = count
                         best_rot = n_rot
@@ -265,7 +277,7 @@ class _LBLSlices(SolverHelper):
         )
         return Algs.of_slice(slice_name)[cube_slice_index + 1]  # 1-based
 
-    def _find_best_pre_alignment(self, face_row: int, l1_white_tracker: FaceTracker) -> int:
+    def _find_row_best_pre_alignment(self, face_row: int, l1_white_tracker: FaceTracker) -> int:
         """Find the best slice pre-alignment rotation count (0-3).
 
         Uses with_query_restore_state() to test each rotation without
@@ -278,7 +290,7 @@ class _LBLSlices(SolverHelper):
         """
 
         # boaz: patch
-        if True:
+        if False:
             return 0
 
         slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
@@ -350,24 +362,26 @@ class _LBLSlices(SolverHelper):
             th: FacesTrackerHolder for face color tracking
             l1_white_tracker: Layer 1 face tracker
         """
-        best_rotations = self._find_best_pre_alignment(face_row, l1_white_tracker)
 
-        if best_rotations > 0:
-            slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
-            self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
-            # Preserve tracker positions across the slice rotation.
-            # The rotation moves center pieces (and their tracker marks) between
-            # faces. We want the pieces to move, but tracker marks must stay on
-            # their original faces so face-color mapping remains valid.
-            with th.preserve_physical_faces():
-                self.play(slice_alg * best_rotations)
+        with l1_white_tracker.parent.sanity_check_before_after_same_colors("slice optimization", also_assert_cube_faces=True):
+            best_rotations = self._find_row_best_pre_alignment(face_row, l1_white_tracker)
 
-            # Pre-alignment rotation moved pieces in this row — clear stale
-            # solved markers so the solver doesn't skip unsolved pieces.
-            # Only the current row is affected (slice rotation is per-row).
-            # Boaz: Is till dont understand it, how row that we first reach can have solved markers ? maybe we
-            # we have some outer loop ? or moving center pieces move a solved pieces to other place ?
-            _common.clear_pieces_solved_flags_and_markers(_get_row_pieces(self.cube, l1_white_tracker, face_row))
+            if best_rotations > 0:
+                slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
+                self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
+                # Preserve tracker positions across the slice rotation.
+                # The rotation moves center pieces (and their tracker marks) between
+                # faces. We want the pieces to move, but tracker marks must stay on
+                # their original faces so face-color mapping remains valid.
+                with th.preserve_physical_faces():
+                    self.play(slice_alg * best_rotations)
+
+                # Pre-alignment rotation moved pieces in this row — clear stale
+                # solved markers so the solver doesn't skip unsolved pieces.
+                # Only the current row is affected (slice rotation is per-row).
+                # Boaz: Is till dont understand it, how row that we first reach can have solved markers ? maybe we
+                # we have some outer loop ? or moving center pieces move a solved pieces to other place ?
+                _common.clear_pieces_solved_flags_and_markers(_get_row_pieces(self.cube, l1_white_tracker, face_row))
 
         self._solve_row_core(face_row, th, l1_white_tracker)
 
@@ -426,14 +440,14 @@ class _LBLSlices(SolverHelper):
         # Global center-slice pre-alignment: rotate the center E-slice
         # to maximize total solved pieces across all rows.
         # This changes face.color, so trackers must be rebuilt.
-        rotated = self._global_center_slice_prealign(l1_white_tracker)
+        self._global_center_slice_prealign(l1_white_tracker)
 
-        if rotated:
-            raise SolverFaceColorsChangedNeedRestartException()
-            # Face colors changed — rebuild trackers with new face colors
-            with FacesTrackerHolder(self) as new_th:
-                new_l1 = self._get_layer1_tracker(new_th)
-                self._lbl_slices.solve_all_faces_all_rows(new_th, new_l1)
+        # if rotated:
+        #     raise SolverFaceColorsChangedNeedRestartException()
+        #     # Face colors changed — rebuild trackers with new face colors
+        #     with FacesTrackerHolder(self) as new_th:
+        #         new_l1 = self._get_layer1_tracker(new_th)
+        #         self._lbl_slices.solve_all_faces_all_rows(new_th, new_l1)
 
 
         # in this files row_index is the distance between l1_face, no metter on which orientation
@@ -441,12 +455,25 @@ class _LBLSlices(SolverHelper):
         # Setup L1 once at the start - positions white face down and will
         # clear all tracking when done. Individual slices accumulate their
         # tracking markers during solving.
+        n_to_solve = min(_lbl_config.NUMBER_OF_SLICES_TO_SOLVE, self.n_slices)
+
         with setup_l1(self, l1_white_tracker):
-            n_to_solve = min(_lbl_config.NUMBER_OF_SLICES_TO_SOLVE, self.n_slices)
 
             for row_index in range(n_to_solve):
                 with self._logger.tab(f"Solving face row {row_index}"):
+
+                    if self._sanity_check:
+                        for prev_row_index in range(row_index):
+                            assert self._row_solved(l1_white_tracker, prev_row_index), f"Before solving {row_index}, found previous not solved {prev_row_index}"
+
                     self._solve_slice_row(row_index, face_trackers, l1_white_tracker)
 
                     if not self._row_solved(l1_white_tracker, row_index):
                         raise InternalSWError(f"Row {row_index} not solved")
+
+                    if self._sanity_check:
+                        for prev_row_index in range(row_index):
+                            assert self._row_solved(l1_white_tracker, prev_row_index), f"After solving {row_index}, found previous not solved {prev_row_index}"
+
+
+            assert self.count_all_rows_solved(l1_white_tracker, n_to_solve) == n_to_solve, f"Solved={self.count_all_rows_solved(l1_white_tracker, n_to_solve)} / {n_to_solve}"

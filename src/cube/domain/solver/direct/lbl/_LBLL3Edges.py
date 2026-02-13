@@ -6,7 +6,7 @@ L1 or middle layer edges. Uses commutator-based algorithms.
 
 See: L3_EDGES_DIAGRAMS.md (same directory) for full algorithm details.
 """
-from typing import cast
+from typing import cast, TYPE_CHECKING
 
 from cube.domain.algs import Alg, Algs, SeqAlg
 from cube.domain.model import EdgeWing, Edge
@@ -16,9 +16,11 @@ from cube.domain.solver.common.big_cube import NxNEdges
 from cube.domain.solver.common.big_cube.commutator.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
-from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker.face_trackers import FaceTracker
+
+if TYPE_CHECKING:
+    from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 
 
 class _LBLL3Edges(SolverHelper):
@@ -68,7 +70,7 @@ class _LBLL3Edges(SolverHelper):
 
     D_LEVEL = 3
 
-    def __init__(self, slv: SolverElementsProvider) -> None:
+    def __init__(self, slv: LayerByLayerNxNSolver) -> None:
         super().__init__(slv, "_LBLL3Edges")
         self._logger.set_level(_LBLL3Edges.D_LEVEL)
 
@@ -157,7 +159,8 @@ class _LBLL3Edges(SolverHelper):
                 return
 
             # Find all matching source wings (may be 1 or 2)
-            source_wings = self._find_sources_for_target(target_wing)
+            assert l3t.face is cube.front  # that what _find_sources_for_target excepts
+            source_wings = self._find_sources_for_target(l3t.parent, target_wing)
 
             self.debug(f"Found {len(source_wings)} sources for {target_wing.parent_name_and_index}")
 
@@ -198,7 +201,7 @@ class _LBLL3Edges(SolverHelper):
     # Source Matching
     # =========================================================================
 
-    def _find_sources_for_target(self, target_wing: EdgeWing) -> list[EdgeWing]:
+    def _find_sources_for_target(self, face_trackers: FacesTrackerHolder, target_wing: EdgeWing) -> list[EdgeWing]:
         """
         Find all source wings that can solve the target.
 
@@ -230,7 +233,10 @@ class _LBLL3Edges(SolverHelper):
                 if wing.colors_id != target_colors:
                     continue
 
-                assert edge.on_face(front)
+                # if L2 is solved, then L3 wings must be on L3, which is on front
+                assert edge.on_face(front), (f"Wing {wing.parent_name_index_colors_position}"
+                                             f" is not on {front.name}"
+                                             f"L2 is solved={self._parent._is_l2_slices_solved(face_trackers)}")
 
                 # Check index compatibility
                 if wing.index not in required_indices:

@@ -139,6 +139,11 @@ class AppConfig(ConfigProtocol):
         return cfg.SOLVER_SANITY_CHECK_IS_A_BOY
 
     @property
+    def lbl_sanity_check(self) -> bool:
+        """Enable LBL solver sanity checks (performance impact)."""
+        return cfg.LBL_SANITY_CHECK
+
+    @property
     def cage_3x3_solver(self) -> str:
         """3x3 solver used by cage method for corner solving (Phase 1b)."""
         return cfg.CAGE_3X3_SOLVER

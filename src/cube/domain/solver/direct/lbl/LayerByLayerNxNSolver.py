@@ -157,36 +157,53 @@ class LayerByLayerNxNSolver(BaseSolver):
                 print(state_table)
                 print("="*80 + "\n")
 
-    def _is_l2_slices_solved(self) -> bool:
+    def _is_l2_slices_not_solved_reason(self, face_trackers: FacesTrackerHolder) -> str | None:
 
         """
         Take to account L1 orientation
         :return:
         """
-        with FacesTrackerHolder(self) as th:
-          with self.cube.with_faces_color_provider(th):
+#        with FacesTrackerHolder(self) as th:
 
-            if not self._is_layer1_solved(th):
-                return False
+        with self.cube.with_faces_color_provider(face_trackers):
 
-            if not self._is_l2_slices_solved_ignore_rotation():
-                return False
+            if not self._is_layer1_solved(face_trackers):
+                return "L1 is not solved"
 
+            if not self._is_l2_slices_solved_ignore_rotation(face_trackers):
+
+                reason =  "L2 slices are not solved ["
+                l1t = self._get_layer1_tracker(face_trackers)
+                for row_index in range(self.cube.n_slices):
+                    if self._lbl_slices._row_solved(l1t, row_index):
+                        reason += str(row_index) + ","
+                reason += "]"
+
+                return reason
 
             # l1 solved, L2 slices solved
 
             # so now make sure l1 edges are on faces
 
-            return all(e.match_faces for e in self._get_layer1_tracker(th).face.edges)
+            l1_edges_on_place =  all(e.match_faces for e in self._get_layer1_tracker(face_trackers).face.edges)
 
-    def _is_l2_slices_solved_ignore_rotation(self) -> bool:
-        with FacesTrackerHolder(self) as th:
-          with self.cube.with_faces_color_provider(th):
+            if not l1_edges_on_place:
+                return "L1 edges are not on place"
 
-            l1_tracker = self._get_layer1_tracker(th)
-            solved_slices = self._lbl_slices.count_solved_slice_centers(l1_tracker)
+            return None
 
-            return solved_slices == self.cube.n_slices
+    def _is_l2_slices_solved(self, face_trackers: FacesTrackerHolder) -> bool:
+        return self._is_l2_slices_not_solved_reason(face_trackers) is None
+
+
+    def _is_l2_slices_solved_ignore_rotation(self, face_trackers: FacesTrackerHolder) -> bool:
+
+      with self.cube.with_faces_color_provider(face_trackers):
+
+        l1_tracker = self._get_layer1_tracker(face_trackers)
+        solved_slices = self._lbl_slices.count_solved_slice_centers(l1_tracker)
+
+        return solved_slices == self.cube.n_slices
 
     def is_solved_phase(self, what: SolveStep) -> bool:
         with FacesTrackerHolder(self) as th:
@@ -613,6 +630,9 @@ class LayerByLayerNxNSolver(BaseSolver):
         Uses _LBLL3Edges helper which uses commutator-based algorithms
         that preserve L1 and middle layer edges.
         """
+
+        assert self._is_l2_slices_solved(th)
+
         if self._is_layer3_edges_solved(th):
             return
 
@@ -745,31 +765,34 @@ class LayerByLayerNxNSolver(BaseSolver):
         l1_tracker = self._get_layer1_tracker(face_trackers)
 
         # bug here, maybe need rotation
-        if self._is_l2_slices_solved():
+        if self._is_l2_slices_solved(face_trackers):
             return
 
         # this should be done in the helper, not here:
-        if self._is_l2_slices_solved_ignore_rotation():
+        if self._is_l2_slices_solved_ignore_rotation(face_trackers):
             for _ in range(3):
                 self.op.play(Algs.of_face(l1_tracker.face.name))
-                if self._is_l2_slices_solved():
+                if self._is_l2_slices_solved(face_trackers):
                     return
 
             raise InternalSWError("How di we reach here?")
 
         else:
             self._lbl_slices.solve_all_faces_all_rows(face_trackers, l1_tracker)
+            assert self._is_l2_slices_solved(
+                face_trackers), f"L2 not solve={self._is_l2_slices_not_solved_reason(face_trackers)}"
 
         # After solving, L1 edges may not match equatorial face colors
         # (e.g. if global prealign changed face colors). Fix with D rotation.
-        if not self._is_l2_slices_solved():
-            if self._is_l2_slices_solved_ignore_rotation():
-                with FacesTrackerHolder(self) as fix_th:
-                    fix_l1 = self._get_layer1_tracker(fix_th)
-                    for _ in range(3):
-                        self.op.play(Algs.of_face(fix_l1.face.name))
-                        if self._is_l2_slices_solved():
-                            return
+        if not self._is_l2_slices_solved(face_trackers):
+            if self._is_l2_slices_solved_ignore_rotation(face_trackers):
+                fix_l1 = self._get_layer1_tracker(face_trackers)
+                for _ in range(3):
+                    self.op.play(Algs.of_face(fix_l1.face.name))
+                    if self._is_l2_slices_solved(face_trackers):
+                        break
+
+        assert self._is_l2_slices_solved(face_trackers), f"L2 not solve={self._is_l2_slices_not_solved_reason(face_trackers)}"
 
     # =========================================================================
     # Statistics (override AbstractSolver)

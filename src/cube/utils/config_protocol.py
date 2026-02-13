@@ -171,6 +171,11 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
+    def lbl_sanity_check(self) -> bool:
+        """Enable LBL solver sanity checks (performance impact)."""
+        ...
+
+    @property
     def cage_3x3_solver(self) -> str:
         """3x3 solver used by cage method for corner solving (Phase 1b).
 

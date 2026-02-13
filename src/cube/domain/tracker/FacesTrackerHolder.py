@@ -694,7 +694,7 @@ class FacesTrackerHolder(FacesColorsProvider):
         """
         return FaceTracker.get_edge_tracker_color(edge)
 
-    def get_debug_str_faces(self):
+    def get_debug_str_faces(self) -> str:
         faces: dict[FaceName, Color] = { f.face_name:f.color for f in self.trackers}
         s = f"is boy={self._trackers_layout().is_boy()} {faces}"
 

@@ -76,6 +76,8 @@ OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True
 
 SOLVER_SANITY_CHECK_IS_A_BOY = True # NON-DEFAULT
 
+LBL_SANITY_CHECK = True  # performance
+
 
 ##############  FaceTracer  ##################
 
@@ -86,7 +88,7 @@ SOLVER_ANNOTATE_TRACKERS = False
 
 FACE_TRACKER = FaceTrackerConfig(
     annotate=True,
-    validate=True,  # no longer used
+    validate=True,  # various  validations, performance cost
     leave_last_annotation=True,
     use_simple_f5_tracker=True,  # no longer used
     enable_track_piece_caching=False,

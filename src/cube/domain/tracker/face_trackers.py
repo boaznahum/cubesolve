@@ -21,7 +21,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Generator
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.model import CenterSlice, Color
@@ -226,6 +227,17 @@ class FaceTracker(ABC):
                 return t
 
         raise InternalSWError(f"Cant find opposite for {self} in {self.parent.trackers} ")
+
+    @contextmanager
+    def sanity_check_before_after_same_colors(self,op_name: str,
+                                              also_assert_cube_faces,
+                                              disable: bool =False) -> Generator[FacesTrackerHolder, None, None]:
+
+        with self.parent.sanity_check_before_after_same_colors(op_name,
+                                                               also_assert_cube_faces=also_assert_cube_faces,
+                                                               disable=disable) as holder:
+            yield holder
+
 
 
 class SimpleFaceTracker(FaceTracker):
