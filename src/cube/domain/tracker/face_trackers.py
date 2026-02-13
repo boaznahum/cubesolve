@@ -265,23 +265,51 @@ class MarkedFaceTracker(FaceTracker):
     cleanup() searches for and removes that specific key.
     """
 
-    __slots__ = ["_key"]
+    __slots__ = ["_key", "_enable_track_piece_caching", "_cache_face", "_cache_piece"]
 
     def __init__(self, cube: "Cube", parent: FacesTrackerHolder, color: Color, key: str) -> None:
         super().__init__(cube, parent, color)
         self._key = key
+        self._enable_track_piece_caching = cube.config.face_tracker.enable_track_piece_caching
+        self._cache_face : Face | None = None
+        self._cache_piece : CenterSlice | None = None
 
     @property
     def face(self) -> Face:
         """Find face containing the marked slice."""
 
-        def _slice_pred(s: CenterSlice) -> bool:
-            return self._key in s.edge.moveable_attributes
 
-        def _face_pred(_f: Face) -> bool:
-            return _f.cube.cqr.find_slice_in_face_center(_f, _slice_pred) is not None
+        caching = self._enable_track_piece_caching
 
-        return self._cube.cqr.find_face(_face_pred)
+        cube = self._cube
+        if not caching:
+            # old behavior
+            def _slice_pred(s: CenterSlice) -> bool:
+                return self._key in s.edge.moveable_attributes
+
+            def _face_pred(_f: Face) -> bool:
+                return _f.cube.cqr.find_slice_in_face_center(_f, _slice_pred) is not None
+
+            return self._cube.cqr.find_face(_face_pred)
+
+
+        else:
+            # caching doesnt work
+
+            def _slice_pred(s: CenterSlice) -> bool:
+                return self._key in s.edge.moveable_attributes
+
+
+            cs = self._cache_piece
+            if cs is not None and _slice_pred(cs):
+                return cs.face
+
+            found_cs: CenterSlice = cube.cqr.find_center_slice(_slice_pred)
+
+            # even if not caching
+            self._cache_piece = found_cs
+
+            return found_cs.face
 
 
     def cleanup(self, force_remove_visible:bool = False) -> None:

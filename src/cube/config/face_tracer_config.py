@@ -19,3 +19,5 @@ class FaceTrackerConfig:
     # Use SimpleFaceTracker with BOY predicate for face 5 (self-healing).
     # When False, use MarkedFaceTracker on face 5 (like faces 1-4).
     use_simple_f5_tracker: bool
+
+    enable_track_piece_caching:bool

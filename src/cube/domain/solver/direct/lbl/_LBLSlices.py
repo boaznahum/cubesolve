@@ -278,7 +278,7 @@ class _LBLSlices(SolverHelper):
         """
 
         # boaz: patch
-        if False:
+        if True:
             return 0
 
         slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
