@@ -396,6 +396,20 @@ def _get_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> Generator[
 
     yield from chain(*pieces_to_test)
 
+def get_expected_number_of_row_pieces(cube: Cube) -> int:
+
+    n_slices = cube.n_slices
+
+    n = 0
+    if _lbl_config.BIG_LBL_RESOLVE_CENTER_SLICES:
+        n += 4 * n_slices
+    if _lbl_config.BIG_LBL_RESOLVE_EDGES_SLICES:
+        n += 4
+
+    return n
+
+
+
 
 def get_center_row_pieces(cube,
                           l1_tracker: FaceTracker, for_face_t: FaceTracker | None, slice_row: int

@@ -10,6 +10,8 @@ from random import Random
 
 import pytest
 
+from tests_wip.seed_sequences import load_seeds
+
 # =============================================================================
 # Scramble Configuration (same as test_all_solvers.py)
 # =============================================================================
@@ -39,7 +41,19 @@ PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_
 CUBE_SIZES_ODD: list[int] = [3, 5, 7]
 CUBE_SIZES_EVEN: list[int] = [4, 6, 8, 10, 12]
 CUBE_SIZES_ALL: list[int] = [3, 4, 5, 6, 7, 8]
-N_RANDOM_SEEDS =  700  # 10000 # zero when we detect in above seeds
+N_RANDOM_SEEDS =  0  # 10000 # zero when we detect in above seeds
+
+# =============================================================================
+# Seed Sequence Configuration
+# =============================================================================
+# Load seeds from pre-generated files in tests_wip/sequences/
+# Set SEED_SEQUENCE_FILE to None to disable, or to a tuple (filename, count)
+# to load count seeds from the specified file.
+#
+# Example:
+#   SEED_SEQUENCE_CONFIG = ("failures_8x_100", 50)  # Load first 50 seeds
+#   SEED_SEQUENCE_CONFIG = None                      # Disable
+SEED_SEQUENCE_CONFIG: tuple[str, int] | None = ("s1", 100)  # ("example_100", 50)
 
 
 def get_scramble_params() -> list[tuple[str, int]]:
@@ -49,18 +63,40 @@ def get_scramble_params() -> list[tuple[str, int]]:
     Each random seed appears in the test name (e.g. rnd_1839271), so
     if a test fails you can copy the seed into ADDITIONAL_SCRAMBLE_SEEDS
     to reproduce it permanently.
+
+    Additionally, loads seeds from SEED_SEQUENCE_CONFIG if configured.
     """
     params: list[tuple[str, int]] = []
-    for seed in PREDEFINED_SCRAMBLE_SEEDS:
-        params.append((f"seed_{seed}", seed))
+    seen_seeds: set[int] = set()  # Track seeds to eliminate duplicates
 
-    # Seed from current minute — deterministic across xdist workers (they start
-    # within the same second), but varies between test sessions.
+    # Add predefined seeds
+    for seed in PREDEFINED_SCRAMBLE_SEEDS:
+        if seed not in seen_seeds:
+            params.append((f"seed_{seed}", seed))
+            seen_seeds.add(seed)
+
+    # Load seeds from sequence file if configured
+    if SEED_SEQUENCE_CONFIG is not None:
+        filename, count = SEED_SEQUENCE_CONFIG
+        try:
+            file_seeds = load_seeds(filename, count)
+            for seed in file_seeds:
+                if seed not in seen_seeds:
+                    # Use 'seq_' prefix to distinguish from other seeds
+                    params.append((f"seq_{seed}", seed))
+                    seen_seeds.add(seed)
+        except (FileNotFoundError, ValueError) as e:
+            # Warn but don't fail - tests can still run with other seeds
+            print(f"Warning: Failed to load seed sequence: {e}")
+
+    # Generate random seeds
     base_seed = int(time.time()) // 60
     rng = Random(base_seed)
     for _ in range(N_RANDOM_SEEDS):
         seed = rng.randint(0, 2**31 - 1)
-        params.append((f"rnd_{seed}", seed))
+        if seed not in seen_seeds:
+            params.append((f"rnd_{seed}", seed))
+            seen_seeds.add(seed)
 
     return params
 

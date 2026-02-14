@@ -374,11 +374,14 @@ class _LBLSlices(SolverHelper):
             self.debug(lambda : f"☑️☑️☑️☑️☑️☑️☑️☑️☑️ Protecting row {face_row} it contains center tracker ☑️☑️☑️☑️☑️☑️☑️☑️☑️ ")
             return None
 
-        # Count currently solved pieces (rotation 0)
+        # Count currently solved pieces (rotation 0) #claude: skip if it is the max available
         best_count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
+        if best_count == _common.get_expected_number_of_row_pieces(cube):
+            return None  # already solved
+
         best_rotations = 0
 
-        if False:
+        if True:
             with self.op.with_query_restore_state():
                 for n_rotations in range(1, 4):
                     self.play(slice_alg)
@@ -393,8 +396,8 @@ class _LBLSlices(SolverHelper):
                 if count > best_count:
                     best_count = count
                     best_rotations = n_rotations
-            if best_rotations > 0:
-                self.play((slice_alg*best_rotations).prime)
+            #undo all
+            self.play((slice_alg*3).prime)
 
         if best_rotations == 0:
             return None

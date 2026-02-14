@@ -462,6 +462,7 @@ class _LBLNxNCenters(SolverHelper):
             solved_block = False
             for block in blocks:
                 if self._try_solve_block(
+                    l1_white_tracker, slice_row_index,
                     block, color, target_face.face, source_face.face
                 ):
                     work_done = True
@@ -557,6 +558,8 @@ class _LBLNxNCenters(SolverHelper):
 
     def _try_solve_block(
         self,
+        l1_tracker: FaceTracker,
+        row_index: int,
         block: Block,
         required_color: Color,
         target_face: Face,
@@ -568,6 +571,8 @@ class _LBLNxNCenters(SolverHelper):
         Unified code path for ALL block sizes (1x1, 2x1, etc.).
 
         Args:
+            l1_tracker: Layer 1 face tracker (for sanity checks) - context parameter
+            row_index: Row index being solved (for sanity checks) - context parameter
             block: Block to solve (any size including 1x1)
             required_color: Color that pieces should have
             target_face: Target face
@@ -598,17 +603,18 @@ class _LBLNxNCenters(SolverHelper):
             self.debug(f"Block {block} skipped - source doesn't have required colors")
             return False
 
-        # Execute the block commutator
-        with self._preserve_trackers():
-            self._comm_helper.execute_commutator(
-                source_face=source_face,
-                target_face=target_face,
-                target_block=block,
-                source_block=valid_source,
-                preserve_state=True,
-                dry_run=False,
-                _cached_secret=dry_result
-            )
+        # Execute the block commutator with sanity check
+        with self._parent.with_sanity_check_previous_are_solved(l1_tracker, row_index, f"_try_solve_block[{block}]size:{block.size}, second={second_block}"):
+            with self._preserve_trackers():
+                self._comm_helper.execute_commutator(
+                    source_face=source_face,
+                    target_face=target_face,
+                    target_block=block,
+                    source_block=valid_source,
+                    preserve_state=True,
+                    dry_run=False,
+                    _cached_secret=dry_result
+                )
 
         # Verify all pieces in block were solved
         for pt in block.cells:
