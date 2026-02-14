@@ -62,12 +62,14 @@ from cube.domain.model.Color import Color as _Color  # noqa: E402
 #L1 color
 FIRST_FACE_COLOR: _Color = _Color.WHITE
 
-SOLVER_DEBUG = True
 
 ############## Operator ##############
 OPERATOR_SHOW_ALG_ANNOTATION = True
 
 ##############  Solver  ##################
+
+SOLVER_DEBUG = True
+
 OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False  # under test doesn't work well
 
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True

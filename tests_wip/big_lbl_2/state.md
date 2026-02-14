@@ -27,6 +27,11 @@ AssertionError: op name: after _try_solve_block[Block(start=Point(row=3, col=7),
                     _cached_secret=dry_result
                 )
 
+Comment out this code, 2000 full solver tests passed
+    # TODO: Debug the mapping and re-enable optimization:
+    # if t_colors[i] == second_piece.color:
+    #     continue  # Same color - safe, no actual change
+
 
 
 
