@@ -39,7 +39,7 @@ PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_
 CUBE_SIZES_ODD: list[int] = [3, 5, 7]
 CUBE_SIZES_EVEN: list[int] = [4, 6, 8, 10, 12]
 CUBE_SIZES_ALL: list[int] = [3, 4, 5, 6, 7, 8]
-N_RANDOM_SEEDS =  300  # 10000 # zero when we detect in above seeds
+N_RANDOM_SEEDS =  700  # 10000 # zero when we detect in above seeds
 
 
 def get_scramble_params() -> list[tuple[str, int]]:

@@ -303,8 +303,15 @@ class _LBLSlices(SolverHelper):
         n_slices = self.n_slices
 
         # Skip center slice on odd cubes
-        if n_slices % 2 == 1 and face_row == n_slices // 2:
-            return None
+        middle = n_slices // 2
+        if n_slices % 2 == 1:
+            # 5: middle=2:  0 1 [2] 3 4
+            if face_row == middle:
+                return None
+        else:
+            # 6: middle=3:  0 1 [2] [3] 4 5
+            if face_row == middle or face_row == middle - 1:
+                return None
 
         slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_white_tracker.face_name)
         slice_layout = cube.layout.get_slice(slice_name)
