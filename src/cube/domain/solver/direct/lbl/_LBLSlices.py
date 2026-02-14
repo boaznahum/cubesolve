@@ -445,7 +445,7 @@ class _LBLSlices(SolverHelper):
                 alg_best_rotations: tuple[SlicedSliceAlg, int] | None = self._find_row_best_pre_alignment(face_row, l1_white_tracker)
 
                 if alg_best_rotations is not None:
-                    slice_alg: alg_best_rotations[0]
+                    slice_alg = alg_best_rotations[0]
                     best_rotations = alg_best_rotations[1]
                     self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
                     # Preserve tracker positions across the slice rotation.

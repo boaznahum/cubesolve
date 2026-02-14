@@ -553,44 +553,43 @@ class FacesTrackerHolder(FacesColorsProvider):
         else:
             before_cube_colors = None
 
+        # why not try / finally becuas ein case of exception like abort or other we just want tht
+        # original exception and ont to continue with the checl
+        yield self
+        after_trackers = self.face_colors
 
-        try:
-            yield self
-        finally:
-            after_trackers = self.face_colors
+        # Get cube colors if checking
+        after_cube: dict[FaceName, Color] | None
+        if also_assert_cube_faces:
+            after_cube = cube.faces_colors
+        else:
+            after_cube = None
 
-            # Get cube colors if checking
-            after_cube: dict[FaceName, Color] | None
-            if also_assert_cube_faces:
-                after_cube = cube.faces_colors
-            else:
-                after_cube = None
+        # Check for any changes
+        tracker_changed = after_trackers != before_trackers
+        cube_changed = also_assert_cube_faces and before_cube_colors != after_cube
 
-            # Check for any changes
-            tracker_changed = after_trackers != before_trackers
-            cube_changed = also_assert_cube_faces and before_cube_colors != after_cube
+        # Print unified table to stderr BEFORE any assertions if anything changed
+        if tracker_changed or cube_changed:
+            table = self._format_comparison_table(
+                tracker_before=before_trackers,
+                tracker_after=after_trackers,
+                cube_before=before_cube_colors,
+                cube_after=after_cube,
+                op_name=op_name
+            )
+            print(table, file=sys.stderr)
 
-            # Print unified table to stderr BEFORE any assertions if anything changed
-            if tracker_changed or cube_changed:
-                table = self._format_comparison_table(
-                    tracker_before=before_trackers,
-                    tracker_after=after_trackers,
-                    cube_before=before_cube_colors,
-                    cube_after=after_cube,
-                    op_name=op_name
-                )
-                print(table, file=sys.stderr)
+        # Now do assertions
+        assert after_trackers == before_trackers, f"Trackers changed due to {op_name}, before={before_trackers}, after={after_trackers}"
 
-            # Now do assertions
-            assert after_trackers == before_trackers, f"Trackers changed due to {op_name}, before={before_trackers}, after={after_trackers}"
+        if also_assert_cube_faces:
+            assert before_cube_colors == after_cube, (f"Cube faces changed due to {op_name}:,\n"
+                                                      f"   before={before_cube_colors},\n"
+                                                      f"   after={after_cube}")
 
-            if also_assert_cube_faces:
-                assert before_cube_colors == after_cube, (f"Cube faces changed due to {op_name}:,\n"
-                                                          f"   before={before_cube_colors},\n"
-                                                          f"   after={after_cube}")
-
-            # this will trigger sanity check
-            self.get_face_colors()
+        # this will trigger sanity check
+        self.get_face_colors()
 
     @contextmanager
     def frozen_face_colors(self) -> Generator[dict[FaceName, Color], None, None]:
