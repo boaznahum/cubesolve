@@ -378,16 +378,23 @@ class _LBLSlices(SolverHelper):
         best_count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
         best_rotations = 0
 
-        # Freeze face colors during query rotations. Slice rotations move
-        # tracker-marked center slices, temporarily displacing trackers.
-        # Frozen colors ensure match_faces uses the correct pre-rotation mapping.
-        with self.op.with_query_restore_state():
+        if False:
+            with self.op.with_query_restore_state():
+                for n_rotations in range(1, 4):
+                    self.play(slice_alg)
+                    count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
+                    if count > best_count:
+                        best_count = count
+                        best_rotations = n_rotations
+        else:
             for n_rotations in range(1, 4):
                 self.play(slice_alg)
                 count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
                 if count > best_count:
                     best_count = count
                     best_rotations = n_rotations
+            if best_rotations > 0:
+                self.play((slice_alg*best_rotations).prime)
 
         if best_rotations == 0:
             return None
