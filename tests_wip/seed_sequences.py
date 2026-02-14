@@ -12,25 +12,35 @@ from pathlib import Path
 def load_seeds(filename: str, n: int) -> list[int]:
     """Load up to n seeds from a seed sequence file.
 
+    File lookup strategies (in order):
+    1. Exact match: Try "<filename>.txt" and "<filename>"
+    2. Pattern match: Try "<filename>_<n>.txt" (generated file naming)
+    3. Fallback: Find any file matching "<filename>_*.txt" (uses first match)
+
     Args:
         filename: Name of file in tests_wip/sequences/
                  Can be:
-                   - Full name: "s1_1000.txt" or "s1_1000"
-                   - Base name: "s1" (will try to find "s1_<count>.txt")
+                   - Full name: "s1_1000.txt" or "s1_1000" → finds s1_1000.txt
+                   - Base name: "s1" → tries s1_<n>.txt, then any s1_*.txt
         n: Number of seeds to load
 
     Returns:
         List of seeds (up to n seeds)
 
     Raises:
-        FileNotFoundError: If the file doesn't exist
+        FileNotFoundError: If no matching file exists
         ValueError: If n > available seeds in file
 
-    Example:
-        # These are all equivalent:
-        seeds = load_seeds("s1_1000", 100)      # Exact file name
-        seeds = load_seeds("s1_1000.txt", 100)  # With extension
-        seeds = load_seeds("s1", 1000)          # Base name, will find s1_1000.txt
+    Examples:
+        # Load 1000 seeds - tries s1_1000.txt (exact match)
+        seeds = load_seeds("s1", 1000)
+
+        # Load 100 seeds - tries s1_100.txt, then fallback to s1_1000.txt
+        seeds = load_seeds("s1", 100)
+
+        # Explicit filename
+        seeds = load_seeds("s1_1000", 50)      # Exact: s1_1000.txt
+        seeds = load_seeds("s1_1000.txt", 50)  # Exact: s1_1000.txt
     """
     # Find the file
     sequences_dir = Path(__file__).parent / "sequences"
