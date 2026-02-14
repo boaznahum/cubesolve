@@ -31,8 +31,9 @@ Algorithm for ring center solving:
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Generator, Tuple
 
+from cube.domain.algs import SlicedSliceAlg
 from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.solver.common.SolverHelper import SolverHelper
@@ -207,6 +208,31 @@ class _LBLSlices(SolverHelper):
         """Context manager that performs before/after sanity checks.
 
         Checks that previous rows are solved before and after the operation.
+        If an exception occurs during the operation, the after check is skipped.
+
+        IMPORTANT PATTERN - Exception-aware context manager:
+        =====================================================
+        This context manager uses a subtle but powerful Python pattern:
+        Code AFTER yield only runs if the with-block completes normally.
+
+        Execution flow:
+        1. Code BEFORE yield: Always runs (setup/before-check)
+        2. yield: Transfers control to the with-block
+        3. Code AFTER yield: Only runs if with-block completes WITHOUT exception
+
+        If an exception is raised in the with-block:
+        - Execution does NOT continue after yield
+        - Exception propagates immediately
+        - After-check is skipped (preventing cascading errors)
+
+        Why this matters here:
+        - User presses abort button → exception raised
+        - Without this pattern: after-check would also fail, creating second error
+        - With this pattern: after-check is skipped, only original exception shown
+
+        Note: If you need cleanup that ALWAYS runs (even on exception), use
+        try-finally around yield. Here we intentionally want to skip the
+        after-check on exceptions.
 
         Args:
             l1_tracker: Layer 1 face tracker
@@ -218,14 +244,14 @@ class _LBLSlices(SolverHelper):
                 # Your code here
                 pass
         """
-        # Before check
+        # Before check - always runs
         self.sanity_check_previous_are_solved(l1_tracker, row_index, f"before {operation_name}")
 
-        try:
-            yield
-        finally:
-            # After check
-            self.sanity_check_previous_are_solved(l1_tracker, row_index, f"after {operation_name}")
+        yield
+
+        # After check - only runs if no exception occurred during yield
+        # (If user pressed abort, execution never reaches here)
+        self.sanity_check_previous_are_solved(l1_tracker, row_index, f"after {operation_name}")
 
     def _global_center_slice_prealign(self, l1_white_tracker: FaceTracker) -> bool:
         """Try rotating the center E-slice for global alignment.
@@ -255,7 +281,6 @@ class _LBLSlices(SolverHelper):
 
         center_row = n_slices // 2
 
-        # Get center E-slice alg (bypass _get_slice_alg which skips center)
         cube = self.cube
         slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_white_tracker.face_name)
         slice_layout = cube.layout.get_slice(slice_name)
@@ -292,7 +317,7 @@ class _LBLSlices(SolverHelper):
 
         return False
 
-    def _get_slice_alg(self, face_row: int, l1_white_tracker: FaceTracker):
+    def _get_slice_alg_for_slice_optimization(self, face_row: int, l1_white_tracker: FaceTracker) -> SlicedSliceAlg | None:
         """Get the slice algorithm for a given row.
 
         Returns None for center slice on odd cubes (rotating it would move
@@ -319,7 +344,7 @@ class _LBLSlices(SolverHelper):
         )
         return Algs.of_slice(slice_name)[cube_slice_index + 1]  # 1-based
 
-    def _find_row_best_pre_alignment(self, face_row: int, l1_white_tracker: FaceTracker) -> int:
+    def _find_row_best_pre_alignment(self, face_row: int, l1_white_tracker: FaceTracker) -> Tuple[SlicedSliceAlg, int] | None:
         """Find the best slice pre-alignment rotation count (0-3).
 
         Uses with_query_restore_state() to test each rotation without
@@ -335,10 +360,10 @@ class _LBLSlices(SolverHelper):
         if False:
             return 0
 
-        slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
+        slice_alg: SlicedSliceAlg | None = self._get_slice_alg_for_slice_optimization(face_row, l1_white_tracker)
         # Also None for odd middle slice
         if slice_alg is None:
-            return 0
+            return None
 
         cube = self.cube
 
@@ -347,7 +372,7 @@ class _LBLSlices(SolverHelper):
         contains_center_tracer = any(1 for e in _common.get_center_row_pieces(cube, l1_white_tracker, None, face_row) if parent.contain_center_tracker(e))
         if contains_center_tracer:
             self.debug(lambda : f"☑️☑️☑️☑️☑️☑️☑️☑️☑️ Protecting row {face_row} it contains center tracker ☑️☑️☑️☑️☑️☑️☑️☑️☑️ ")
-            return 0
+            return None
 
         # Count currently solved pieces (rotation 0)
         best_count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
@@ -364,7 +389,10 @@ class _LBLSlices(SolverHelper):
                     best_count = count
                     best_rotations = n_rotations
 
-        return best_rotations
+        if best_rotations == 0:
+            return None
+        else:
+            return slice_alg, best_rotations
 
     # =========================================================================
     # Solving operations
@@ -407,10 +435,11 @@ class _LBLSlices(SolverHelper):
 
         with self.with_sanity_check_previous_are_solved(l1_white_tracker, face_row, "optimization"):
             with l1_white_tracker.parent.sanity_check_before_after_same_colors("slice optimization", also_assert_cube_faces=True):
-                best_rotations = self._find_row_best_pre_alignment(face_row, l1_white_tracker)
+                alg_best_rotations: tuple[SlicedSliceAlg, int] | None = self._find_row_best_pre_alignment(face_row, l1_white_tracker)
 
-                if best_rotations > 0:
-                    slice_alg = self._get_slice_alg(face_row, l1_white_tracker)
+                if alg_best_rotations is not None:
+                    slice_alg: alg_best_rotations[0]
+                    best_rotations = alg_best_rotations[1]
                     self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
                     # Preserve tracker positions across the slice rotation.
                     # The rotation moves center pieces (and their tracker marks) between
