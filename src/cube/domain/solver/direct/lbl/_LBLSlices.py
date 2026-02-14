@@ -192,11 +192,94 @@ class _LBLSlices(SolverHelper):
         return count
 
 
+    def _format_piece_info(self, piece) -> str:
+        """Format detailed information about a piece for debugging.
+
+        Returns string like:
+          CenterSlice @ idx=(3,7): expected=RED, actual=BLUE [face=F]
+          EdgeWing @ idx=(2,5): expected=[RED,GREEN], actual=[BLUE,GREEN] [faces=F,R] (1/2 wrong)
+        """
+        from cube.domain.model.PartSlice import CenterSlice, EdgeWing
+
+        # Determine piece type
+        if isinstance(piece, CenterSlice):
+            piece_type = "CenterSlice"
+        elif isinstance(piece, EdgeWing):
+            piece_type = "EdgeWing"
+        else:
+            piece_type = type(piece).__name__
+
+        # Get index
+        idx = piece.index if hasattr(piece, 'index') else "?"
+
+        # Collect edge information
+        edges = piece._edges
+        expected_colors = [edge.face.color for edge in edges]
+        actual_colors = [edge.color for edge in edges]
+        face_names = [edge.face.name.name for edge in edges]
+
+        # Count wrong edges
+        wrong_count = sum(1 for exp, act in zip(expected_colors, actual_colors) if exp != act)
+
+        # Format colors
+        if len(edges) == 1:
+            # Center slice - single color
+            expected_str = f"{expected_colors[0].name}"
+            actual_str = f"{actual_colors[0].name}"
+            faces_str = f"face={face_names[0]}"
+        else:
+            # Edge wing - multiple colors
+            expected_str = f"[{','.join(c.name for c in expected_colors)}]"
+            actual_str = f"[{','.join(c.name for c in actual_colors)}]"
+            faces_str = f"faces={','.join(face_names)}"
+
+        # Build info string
+        info = f"{piece_type} @ idx={idx}: expected={expected_str}, actual={actual_str} [{faces_str}]"
+
+        if len(edges) > 1:
+            info += f" ({wrong_count}/{len(edges)} wrong)"
+
+        return info
+
+    def _get_destroyed_pieces_in_row(self, l1_tracker: FaceTracker, row_index: int) -> list[tuple[object, str]]:
+        """Get all unsolved pieces in a row with their details.
+
+        Returns:
+            List of (piece, formatted_info) tuples for pieces that don't match their faces
+        """
+        destroyed = []
+        for piece in _get_row_pieces(self.cube, l1_tracker, row_index):
+            if not piece.match_faces:
+                info = self._format_piece_info(piece)
+                destroyed.append((piece, info))
+        return destroyed
+
     def sanity_check_previous_are_solved(self, l1_tracker: FaceTracker, row_index: int, op_name: str) -> None:
         if self._sanity_check:
             for prev_row_index in range(row_index):
-                assert self._row_solved(l1_tracker,
-                                        prev_row_index), f"op name: {op_name} @ row={row_index}, found previous not solved {prev_row_index}"
+                if not self._row_solved(l1_tracker, prev_row_index):
+                    # Collect destroyed pieces with details
+                    destroyed = self._get_destroyed_pieces_in_row(l1_tracker, prev_row_index)
+
+                    # Format detailed error message
+                    error_lines = [
+                        "",
+                        "=" * 80,
+                        "SANITY CHECK FAILED: Previous row corrupted",
+                        f"  Operation: {op_name}",
+                        f"  Working on row: {row_index}",
+                        f"  Corrupted row: {prev_row_index}",
+                        f"  Destroyed pieces: {len(destroyed)}",
+                        "-" * 80,
+                    ]
+
+                    for piece, info in destroyed:
+                        error_lines.append(f"  • {info}")
+
+                    error_lines.append("=" * 80)
+                    error_lines.append("")
+
+                    raise AssertionError("\n".join(error_lines))
 
     @contextmanager
     def with_sanity_check_previous_are_solved(

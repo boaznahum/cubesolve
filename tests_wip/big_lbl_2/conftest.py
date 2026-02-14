@@ -53,7 +53,7 @@ N_RANDOM_SEEDS =  0  # 10000 # zero when we detect in above seeds
 # Example:
 #   SEED_SEQUENCE_CONFIG = ("failures_8x_100", 50)  # Load first 50 seeds
 #   SEED_SEQUENCE_CONFIG = None                      # Disable
-SEED_SEQUENCE_CONFIG: tuple[str, int] | None = ("s1", 100)  # ("example_100", 50)
+SEED_SEQUENCE_CONFIG: tuple[str, int] | None = ("s1", 1000)  # ("example_100", 50)
 
 
 def get_scramble_params() -> list[tuple[str, int]]:

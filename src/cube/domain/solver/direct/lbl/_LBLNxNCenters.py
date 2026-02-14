@@ -604,7 +604,7 @@ class _LBLNxNCenters(SolverHelper):
             return False
 
         # Execute the block commutator with sanity check
-        with self._parent.with_sanity_check_previous_are_solved(l1_tracker, row_index, f"_try_solve_block[{block}]size:{block.size}, second={second_block}"):
+        with self._parent.with_sanity_check_previous_are_solved(l1_tracker, row_index, f"_try_solve_block(commutator)[{block}]size:{block.size}, second={second_block}"):
             with self._preserve_trackers():
                 self._comm_helper.execute_commutator(
                     source_face=source_face,
@@ -704,11 +704,24 @@ class _LBLNxNCenters(SolverHelper):
             second_piece = source_face.center.get_center_slice(pt)
 
             if _common.is_slice_solved_and_marked_solve(second_piece):
-                # s2 is solved - check if incoming color (from target) matches
-                if t_colors[i] == second_piece.color:
-                    continue  # Same color - safe, no actual change
-
-                # Color would change: not safe
+                # TEMPORARY PATCH: Optimization disabled due to piece corruption
+                # ============================================================
+                # s2 is solved - ideally we should allow overwriting with same color.
+                # However, this optimization currently causes previously solved rows
+                # to become corrupted (see state.md: GUI seed 1, size 12).
+                #
+                # Suspected issue: Cell-to-cell mapping via second_block.points_by(n, order_by=target_block)
+                # may not correctly align target colors with second_block positions, causing wrong color
+                # checks and allowing destructive moves.
+                #
+                # Current behavior: Reject ALL moves that would touch solved pieces in s2,
+                # even if the incoming color matches. This is conservative but safe.
+                #
+                # TODO: Debug the mapping and re-enable optimization:
+                # if t_colors[i] == second_piece.color:
+                #     continue  # Same color - safe, no actual change
+                #
+                # For now: treat any solved piece in s2 as unsafe
                 return False
 
         return True
