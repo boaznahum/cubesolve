@@ -89,6 +89,14 @@ class Center(Part):
         """
         return self._slices[index[0]][index[1]]
 
+    def get_center_slices(self, points: Iterable[CenterSliceIndex | Point]) -> Iterator["CenterSlice"]:
+        """
+        :param points:
+        :return:
+        """
+        slices = self._slices
+        return (slices[p[0]][p[1]] for p in points)
+
     def edg(self) -> PartEdge:
         return self._3x3_representative_edges[0]
 

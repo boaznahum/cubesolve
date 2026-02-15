@@ -619,8 +619,62 @@ class _LBLNxNCenters(SolverHelper):
                     _cached_secret=dry_result
                 )
 
-        # CRITICAL FIX: Restore "marked as solved" status ONLY for pieces that were solved before
+        # ============================================================================
+        # CRITICAL FIX #2: Clear stale markings in source_block (s2 → s1 movement)
+        # ============================================================================
+        # THE BUG:
+        #   After 3-cycle execution (s1 → t → s2 → s1), pieces from second_block
+        #   (s2) physically move to source_block (s1) position. These pieces may
+        #   have been marked as solved for their OLD position (s2), but now they're
+        #   in a NEW position (s1) with DIFFERENT expected color.
+        #
+        # THE PROBLEM:
+        #   If we leave them marked as solved, these pieces will have INVALID markers
+        #   (marked for position s2 but physically in position s1 with wrong color).
+        #
+        #   NOTE: The solver logic won't be fooled - it checks actual colors, not just
+        #   markers. However, the ANIMATION SYSTEM displays these invalid markers to
+        #   the user, showing pieces as "solved" when they're actually in the wrong
+        #   position with wrong colors. This creates visual confusion during debugging.
+        #
+        #   Clearing the markers ensures both solver correctness AND accurate visual
+        #   feedback during animated solving.
+        #
+        # THE FIX:
+        #   Clear "marked as solved" flag for ALL pieces in source_block after
+        #   commutator execution. These pieces are definitely not solved in their
+        #   new position.
+        # ============================================================================
+        # order doesnt matter
+        _common.clear_pieces_solved_flags_and_markers(source_face.center.get_center_slices(valid_source.cells))
+
+        # ============================================================================
+        # CRITICAL FIX #1: Restore lost markings in second_block (s2 → t movement)
+        # ============================================================================
+        # THE BUG:
+        #   Before commutator: Pieces in second_block (s2) are marked as solved.
+        #   During commutator: The 3-cycle (s1 → t → s2 → s1) PHYSICALLY MOVES
+        #                      pieces through rotations.
+        #   After commutator:  Pieces that were in s2 are now in target (t) position.
+        #                      They LOSE their "marked as solved" flag due to the
+        #                      physical movement, even when the incoming color matches!
+        #
+        # THE PROBLEM:
+        #   The optimizer in _source_block_has_color_no_rotation() checks if s2
+        #   pieces are marked as solved and only allows overwriting if colors match.
+        #   But after the commutator, these pieces (now in position t) are no longer
+        #   marked. On the next pass, the optimizer sees them as unmarked, allows
+        #   overwriting with wrong colors, and corrupts previously solved rows.
+        #
+        # THE FIX:
+        #   BEFORE commutator: Save which s2 pieces are marked (done in check function)
+        #   AFTER commutator:  Restore "marked as solved" ONLY for pieces that were
+        #                      marked before. This preserves the protection through
+        #                      the 3-cycle movement.
+        #
         # IMPORTANT: Use same iteration order as in _source_block_has_color_no_rotation()
+        #            (points_by with kernel ordering) to match indices correctly.
+        # ============================================================================
         for i, pt in enumerate(valid_second.points_by(self.n_slices, order_by=block)):
             if second_block_was_solved[i]:
                 piece = source_face.center.get_center_slice(pt)
