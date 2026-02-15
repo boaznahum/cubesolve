@@ -589,22 +589,36 @@ class _LBLNxNCenters(SolverHelper):
             dry_run=True
         )
 
+        # We must use both natural blocks so they are aligned
         natural_source_block = dry_result.natural_source_block
-        second_block = dry_result.second_block
+        natural_second_block = dry_result.natural_second_block
 
         # Check if natural source block has required colors (with rotation search)
         # Cell-to-cell mapping uses points_by to align target and s2 cells
-        valid_source = self._source_block_has_color_with_rotation(
-            required_color, source_face, natural_source_block, second_block,
+        valid_blocks = self._source_block_has_color_with_rotation(
+            required_color, source_face, natural_source_block, natural_second_block,
             target_face, block
         )
 
-        if valid_source is None:
-            self.debug(f"Block {block} skipped - source doesn't have required colors")
+        if valid_blocks is None:
+            self.debug(f"Block {block} skipped - source doesn't have required colors or would destroy solved pieces")
             return False
 
+        valid_source, valid_second = valid_blocks
+
         # Execute the block commutator with sanity check
-        with self._parent.with_sanity_check_previous_are_solved(l1_tracker, row_index, f"_try_solve_block(commutator)[{block}]size:{block.size}, second={second_block}"):
+
+        # CRITICAL FIX: Save which pieces in second_block are marked as solved
+        # The 3-cycle physically moves pieces, causing them to lose their "marked as solved" flag
+        # even when colors match. We must restore the marking ONLY for pieces that were already solved.
+        second_block_was_solved = [
+            _common.is_slice_solved_and_marked_solve(
+                source_face.center.get_center_slice(pt)
+            )
+            for pt in valid_second.cells
+        ]
+
+        with self._parent.with_sanity_check_previous_are_solved(l1_tracker, row_index, f"_try_solve_block(commutator)[{block}]size:{block.size}, source={valid_source} second={valid_second}"):
             with self._preserve_trackers():
                 self._comm_helper.execute_commutator(
                     source_face=source_face,
@@ -615,6 +629,12 @@ class _LBLNxNCenters(SolverHelper):
                     dry_run=False,
                     _cached_secret=dry_result
                 )
+
+        # CRITICAL FIX: Restore "marked as solved" status ONLY for pieces that were solved before
+        for i, pt in enumerate(valid_second.cells):
+            if second_block_was_solved[i]:
+                piece = source_face.center.get_center_slice(pt)
+                mark_slice_and_v_mark_if_solved(piece)
 
         # Verify all pieces in block were solved
         for pt in block.cells:
@@ -704,25 +724,11 @@ class _LBLNxNCenters(SolverHelper):
             second_piece = source_face.center.get_center_slice(pt)
 
             if _common.is_slice_solved_and_marked_solve(second_piece):
-                # TEMPORARY PATCH: Optimization disabled due to piece corruption
-                # ============================================================
-                # s2 is solved - ideally we should allow overwriting with same color.
-                # However, this optimization currently causes previously solved rows
-                # to become corrupted (see state.md: GUI seed 1, size 12).
-                #
-                # Suspected issue: Cell-to-cell mapping via second_block.points_by(n, order_by=target_block)
-                # may not correctly align target colors with second_block positions, causing wrong color
-                # checks and allowing destructive moves.
-                #
-                # Current behavior: Reject ALL moves that would touch solved pieces in s2,
-                # even if the incoming color matches. This is conservative but safe.
-                #
-                # TODO: Debug the mapping and re-enable optimization:
-                # if t_colors[i] == second_piece.color:
-                #     continue  # Same color - safe, no actual change
-                #
-                # For now: treat any solved piece in s2 as unsafe
-                return False
+                # Second block piece is marked as solved.
+                # The commutator will overwrite it with target's color.
+                # Only allow if incoming color matches (no actual change).
+                if t_colors[i] != second_piece.color:
+                    return False  # Would corrupt solved piece
 
         return True
 
@@ -734,7 +740,7 @@ class _LBLNxNCenters(SolverHelper):
         second_block: Block,
         target_face: Face,
         target_block: Block,
-    ) -> Block | None:
+    ) -> tuple[Block, Block]  | None:
         """
         Search for valid source block by rotating up to 4 times.
 
@@ -758,7 +764,7 @@ class _LBLNxNCenters(SolverHelper):
                 required_color, source_face, source_block, second_block,
                 target_face, target_block
             ):
-                return source_block
+                return source_block, second_block
 
             source_block = source_block.rotate_clockwise(self.n_slices)
             second_block = second_block.rotate_clockwise(self.n_slices)
