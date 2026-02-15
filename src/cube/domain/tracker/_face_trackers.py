@@ -26,11 +26,9 @@ from typing import TYPE_CHECKING, Generator
 
 from cube.application.exceptions.ExceptionInternalSWError import InternalSWError
 from cube.domain.model import CenterSlice, Color
-from cube.domain.model.CubeQueries2 import Pred
 from cube.domain.model.Face import Face
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
-from cube.domain.tracker import _helper
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
