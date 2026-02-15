@@ -66,7 +66,8 @@ class SolverName(Enum):
     LBL_BIG = SolverMeta("LBL-Big",
                          #implemented=False,  # Not yet fully implemented
                          #skip_3x3="LBL-Big is for NxN cubes only",
-                         skip_even="WIP: Even cubes not fully tested")  # Layer-by-layer for big cubes
+                         #skip_even="WIP: Even cubes not fully tested"
+              )  # Layer-by-layer for big cubes
 
     @property
     def display_name(self) -> str:

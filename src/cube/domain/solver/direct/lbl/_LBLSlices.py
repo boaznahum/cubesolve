@@ -297,6 +297,8 @@ class _LBLSlices(SolverHelper):
             # 5: middle=2:  0 1 [2] 3 4
             if face_row == middle:
                 return None
+        # not need to protect even cube, it is done by cube.domain.tracker.FacesTrackerHolder.FacesTrackerHolder.preserve_physical_faces
+        #  yES, BUT IT CONFUsed edges, and i dont want to invetigate it right now
         else:
             # 6: middle=3:  0 1 [2] [3] 4 5
             if face_row == middle or face_row == middle - 1:
@@ -321,9 +323,6 @@ class _LBLSlices(SolverHelper):
         cause two trackers to temporarily point to the same face.
         """
 
-        # boaz: patch
-        if False:
-            return 0
 
         slice_alg: SlicedSliceAlg | None = self._get_slice_alg_for_slice_optimization(face_row, l1_white_tracker)
         # Also None for odd middle slice
@@ -346,23 +345,13 @@ class _LBLSlices(SolverHelper):
 
         best_rotations = 0
 
-        if True:
-            with self.op.with_query_restore_state():
-                for n_rotations in range(1, 4):
-                    self.play(slice_alg)
-                    count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
-                    if count > best_count:
-                        best_count = count
-                        best_rotations = n_rotations
-        else:
+        with self.op.with_query_restore_state():
             for n_rotations in range(1, 4):
                 self.play(slice_alg)
                 count = sum(1 for e in _get_row_pieces(cube, l1_white_tracker, face_row) if e.match_faces)
                 if count > best_count:
                     best_count = count
                     best_rotations = n_rotations
-            #undo all
-            self.play((slice_alg*3).prime)
 
         if best_rotations == 0:
             return None
@@ -421,7 +410,7 @@ class _LBLSlices(SolverHelper):
                     # faces. We want the pieces to move, but tracker marks must stay on
                     # their original faces so face-color mapping remains valid.
                     with th.preserve_physical_faces():
-                        self.play(slice_alg * best_rotations)
+                        self.play((slice_alg * best_rotations).simplify())
 
                     # Pre-alignment rotation moved pieces in this row — clear stale
                     # solved markers so the solver doesn't skip unsolved pieces.
