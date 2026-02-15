@@ -604,20 +604,9 @@ class _LBLNxNCenters(SolverHelper):
             self.debug(f"Block {block} skipped - source doesn't have required colors or would destroy solved pieces")
             return False
 
-        valid_source, valid_second = valid_blocks
+        valid_source, valid_second, second_block_was_solved = valid_blocks
 
         # Execute the block commutator with sanity check
-
-        # CRITICAL FIX: Save which pieces in second_block are marked as solved
-        # The 3-cycle physically moves pieces, causing them to lose their "marked as solved" flag
-        # even when colors match. We must restore the marking ONLY for pieces that were already solved.
-        second_block_was_solved = [
-            _common.is_slice_solved_and_marked_solve(
-                source_face.center.get_center_slice(pt)
-            )
-            for pt in valid_second.cells
-        ]
-
         with self._parent.with_sanity_check_previous_are_solved(l1_tracker, row_index, f"_try_solve_block(commutator)[{block}]size:{block.size}, source={valid_source} second={valid_second}"):
             with self._preserve_trackers():
                 self._comm_helper.execute_commutator(
@@ -631,7 +620,8 @@ class _LBLNxNCenters(SolverHelper):
                 )
 
         # CRITICAL FIX: Restore "marked as solved" status ONLY for pieces that were solved before
-        for i, pt in enumerate(valid_second.cells):
+        # IMPORTANT: Use same iteration order as in _source_block_has_color_no_rotation()
+        for i, pt in enumerate(valid_second.points_by(self.n_slices, order_by=block)):
             if second_block_was_solved[i]:
                 piece = source_face.center.get_center_slice(pt)
                 mark_slice_and_v_mark_if_solved(piece)
@@ -663,7 +653,7 @@ class _LBLNxNCenters(SolverHelper):
         second_block: Block,
         target_face: Face,
         target_block: Block,
-    ) -> bool:
+    ) -> list[bool] | None:
         """
         Check if source block has required color WITHOUT rotation search.
 
@@ -702,7 +692,8 @@ class _LBLNxNCenters(SolverHelper):
             target_block: Target block (defines kernel ordering for cell mapping)
 
         Returns:
-            True if source_block has required colors AND second_block is safe
+            List of booleans (one per second_block piece) indicating which pieces
+            were marked as solved, or None if checks failed
         """
         # Check if ALL cells in source block have required color
         all_match = all(
@@ -711,7 +702,7 @@ class _LBLNxNCenters(SolverHelper):
         )
 
         if not all_match:
-            return False
+            return None
 
         n = self.n_slices
 
@@ -720,17 +711,23 @@ class _LBLNxNCenters(SolverHelper):
         t_colors = [target_face.center.get_center_slice(pt).color
                      for pt in target_block.points_by(n, order_by=target_block)]
 
+        # Track which pieces in second_block are marked as solved
+        # (needed to restore marking after commutator execution)
+        second_block_was_solved: list[bool] = []
+
         for i, pt in enumerate(second_block.points_by(n, order_by=target_block)):
             second_piece = source_face.center.get_center_slice(pt)
+            is_marked = _common.is_slice_solved_and_marked_solve(second_piece)
+            second_block_was_solved.append(is_marked)
 
-            if _common.is_slice_solved_and_marked_solve(second_piece):
+            if is_marked:
                 # Second block piece is marked as solved.
                 # The commutator will overwrite it with target's color.
                 # Only allow if incoming color matches (no actual change).
                 if t_colors[i] != second_piece.color:
-                    return False  # Would corrupt solved piece
+                    return None  # Would corrupt solved piece
 
-        return True
+        return second_block_was_solved
 
     def _source_block_has_color_with_rotation(
         self,
@@ -740,7 +737,7 @@ class _LBLNxNCenters(SolverHelper):
         second_block: Block,
         target_face: Face,
         target_block: Block,
-    ) -> tuple[Block, Block]  | None:
+    ) -> tuple[Block, Block, list[bool]] | None:
         """
         Search for valid source block by rotating up to 4 times.
 
@@ -757,14 +754,16 @@ class _LBLNxNCenters(SolverHelper):
             target_block: Target block (for cell-to-cell color mapping)
 
         Returns:
-            Valid source block position, or None if not found
+            Tuple of (source_block, second_block, list of which pieces were marked as solved),
+            or None if not found
         """
         for _ in range(4):
-            if self._source_block_has_color_no_rotation(
+            second_block_was_solved = self._source_block_has_color_no_rotation(
                 required_color, source_face, source_block, second_block,
                 target_face, target_block
-            ):
-                return source_block, second_block
+            )
+            if second_block_was_solved is not None:
+                return source_block, second_block, second_block_was_solved
 
             source_block = source_block.rotate_clockwise(self.n_slices)
             second_block = second_block.rotate_clockwise(self.n_slices)

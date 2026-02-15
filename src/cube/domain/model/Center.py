@@ -6,6 +6,7 @@ from cube.domain.model.PartSlice import CenterSlice
 from cube.domain.geometric.cube_boy import FaceName
 from cube.domain.model.Part import Part
 from cube.domain.model.PartEdge import PartEdge
+from ..geometric.geometry_types import Point
 
 if TYPE_CHECKING:
     from .Face import Face
@@ -80,7 +81,7 @@ class Center(Part):
         else:
             yield from self.all_slices
 
-    def get_center_slice(self, index: CenterSliceIndex) -> "CenterSlice":
+    def get_center_slice(self, index: CenterSliceIndex | Point) -> "CenterSlice":
         """
         Row, Column
         :param index:
