@@ -23,6 +23,7 @@ import pytest
 from cube.domain.solver.SolverName import SolverName
 from cube.utils.service_provider import IServiceProvider
 
+from tests.seed_sequences import get_scramble_params as _get_scramble_params
 from tests.test_utils import _test_sp
 
 if TYPE_CHECKING:
@@ -43,6 +44,13 @@ ADDITIONAL_SCRAMBLE_SEEDS: list[int] = [101, 202, 303]
 
 # All predefined scramble seeds
 PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_SEEDS
+
+# =============================================================================
+# Seed Sequence Configuration (optional)
+# =============================================================================
+# Set to None to disable, or to ("filename", count) to load seeds from tests/sequences/
+# Example: SEED_SEQUENCE_CONFIG = ("s1", 200)
+SEED_SEQUENCE_CONFIG: tuple[str, int] | None = None  # Disabled by default
 
 
 # =============================================================================
@@ -91,15 +99,19 @@ def skip_if_not_supported(solver_name: SolverName, cube_size: int) -> None:
 def get_scramble_params() -> list[tuple[str, int | None]]:
     """Generate scramble parameters for test parametrization.
 
+    Uses shared implementation from tests.seed_sequences.get_scramble_params()
+    with optional sequence file loading support.
+
     Returns list of (name, seed) tuples:
     - Predefined seeds: ("seed_101", 101), ("seed_202", 202), etc.
+    - Sequence seeds: ("seq_12345", 12345), etc. (if SEED_SEQUENCE_CONFIG is set)
     - Random: ("random", None) - actual seed comes from session_random_seed fixture
     """
-    params: list[tuple[str, int | None]] = []
+    # Get params from shared function
+    params_with_seeds = _get_scramble_params(PREDEFINED_SCRAMBLE_SEEDS, SEED_SEQUENCE_CONFIG)
 
-    # Add predefined scrambles
-    for seed in PREDEFINED_SCRAMBLE_SEEDS:
-        params.append((f"seed_{seed}", seed))
+    # Convert to list[tuple[str, int | None]] (add None type for random)
+    params: list[tuple[str, int | None]] = list(params_with_seeds)
 
     # Add random scramble marker (actual seed injected via fixture)
     params.append(("random", None))

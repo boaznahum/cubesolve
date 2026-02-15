@@ -5,7 +5,7 @@ Usage:
 
 Example:
     python -m tests_wip.generate_seed_file failures_8x 100
-    Creates: tests_wip/sequences/failures_8x_100.txt with 100 random seeds
+    Creates: tests/sequences/failures_8x_100.txt with 100 random seeds
 """
 from __future__ import annotations
 
@@ -35,7 +35,8 @@ def generate_seed_file(name: str, count: int, base_seed: int | None = None) -> P
         ...
     """
     # Create sequences directory if it doesn't exist
-    sequences_dir = Path(__file__).parent / "sequences"
+    # Create in tests/sequences/ (one level up from tests_wip)
+    sequences_dir = Path(__file__).parent.parent / "tests" / "sequences"
     sequences_dir.mkdir(exist_ok=True)
 
     # Generate filename

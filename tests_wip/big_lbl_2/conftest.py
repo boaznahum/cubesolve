@@ -10,7 +10,7 @@ from random import Random
 
 import pytest
 
-from tests_wip.seed_sequences import load_seeds
+from tests.seed_sequences import get_scramble_params as _get_scramble_params
 
 # =============================================================================
 # Scramble Configuration (same as test_all_solvers.py)
@@ -46,7 +46,7 @@ N_RANDOM_SEEDS =  0  # 10000 # zero when we detect in above seeds
 # =============================================================================
 # Seed Sequence Configuration
 # =============================================================================
-# Load seeds from pre-generated files in tests_wip/sequences/
+# Load seeds from pre-generated files in tests/sequences/
 # Set SEED_SEQUENCE_FILE to None to disable, or to a tuple (filename, count)
 # to load count seeds from the specified file.
 #
@@ -59,44 +59,27 @@ SEED_SEQUENCE_CONFIG: tuple[str, int] | None = ("s1", 200)  # ("example_100", 50
 def get_scramble_params() -> list[tuple[str, int]]:
     """Generate scramble parameters for test parametrization.
 
+    Uses shared implementation from tests.seed_sequences.get_scramble_params()
+    with predefined seeds and optional sequence file loading.
+
     Random seeds are generated at import time using a UUID-based RNG.
     Each random seed appears in the test name (e.g. rnd_1839271), so
     if a test fails you can copy the seed into ADDITIONAL_SCRAMBLE_SEEDS
     to reproduce it permanently.
-
-    Additionally, loads seeds from SEED_SEQUENCE_CONFIG if configured.
     """
-    params: list[tuple[str, int]] = []
-    seen_seeds: set[int] = set()  # Track seeds to eliminate duplicates
+    # Get params from shared function
+    params = _get_scramble_params(PREDEFINED_SCRAMBLE_SEEDS, SEED_SEQUENCE_CONFIG)
 
-    # Add predefined seeds
-    for seed in PREDEFINED_SCRAMBLE_SEEDS:
-        if seed not in seen_seeds:
-            params.append((f"seed_{seed}", seed))
-            seen_seeds.add(seed)
-
-    # Load seeds from sequence file if configured
-    if SEED_SEQUENCE_CONFIG is not None:
-        filename, count = SEED_SEQUENCE_CONFIG
-        try:
-            file_seeds = load_seeds(filename, count)
-            for seed in file_seeds:
-                if seed not in seen_seeds:
-                    # Use 'seq_' prefix to distinguish from other seeds
-                    params.append((f"seq_{seed}", seed))
-                    seen_seeds.add(seed)
-        except (FileNotFoundError, ValueError) as e:
-            # Warn but don't fail - tests can still run with other seeds
-            print(f"Warning: Failed to load seed sequence: {e}")
-
-    # Generate random seeds
-    base_seed = int(time.time()) // 60
-    rng = Random(base_seed)
-    for _ in range(N_RANDOM_SEEDS):
-        seed = rng.randint(0, 2**31 - 1)
-        if seed not in seen_seeds:
-            params.append((f"rnd_{seed}", seed))
-            seen_seeds.add(seed)
+    # Add random seeds (if configured)
+    if N_RANDOM_SEEDS > 0:
+        seen_seeds = {seed for _, seed in params}
+        base_seed = int(time.time()) // 60
+        rng = Random(base_seed)
+        for _ in range(N_RANDOM_SEEDS):
+            seed = rng.randint(0, 2**31 - 1)
+            if seed not in seen_seeds:
+                params.append((f"rnd_{seed}", seed))
+                seen_seeds.add(seed)
 
     return params
 

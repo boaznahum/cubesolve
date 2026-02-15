@@ -1,7 +1,7 @@
 """Load seed sequences from files for reproducible testing.
 
 This module provides utilities to load seed sequences from files in the
-tests_wip/sequences/ directory. Seed files are text files with one seed
+tests/sequences/ directory. Seed files are text files with one seed
 per line (ignoring comments starting with #).
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ def load_seeds(filename: str, n: int) -> list[int]:
     3. Fallback: Find any file matching "<filename>_*.txt" (uses first match)
 
     Args:
-        filename: Name of file in tests_wip/sequences/
+        filename: Name of file in tests/sequences/
                  Can be:
                    - Full name: "s1_1000.txt" or "s1_1000" → finds s1_1000.txt
                    - Base name: "s1" → tries s1_<n>.txt, then any s1_*.txt
@@ -130,3 +130,51 @@ def list_seed_files() -> list[tuple[str, int]]:
         files.append((filepath.name, count))
 
     return sorted(files)
+
+
+def get_scramble_params(
+    predefined_seeds: list[int],
+    seed_sequence_config: tuple[str, int] | None = None
+) -> list[tuple[str, int]]:
+    """Generate scramble parameters combining predefined seeds and sequence file.
+
+    This is the common implementation used by both tests/solvers/conftest.py
+    and tests_wip/big_lbl_2/conftest.py.
+
+    Args:
+        predefined_seeds: List of predefined seeds to include
+        seed_sequence_config: Optional (filename, count) tuple to load from tests/sequences/
+
+    Returns:
+        List of (name, seed) tuples with duplicates removed
+
+    Example:
+        params = get_scramble_params(
+            predefined_seeds=[0, 1, 2, 101, 202],
+            seed_sequence_config=("s1", 200)
+        )
+    """
+    params: list[tuple[str, int]] = []
+    seen_seeds: set[int] = set()
+
+    # Add predefined seeds
+    for seed in predefined_seeds:
+        if seed not in seen_seeds:
+            params.append((f"seed_{seed}", seed))
+            seen_seeds.add(seed)
+
+    # Load seeds from sequence file if configured
+    if seed_sequence_config is not None:
+        filename, count = seed_sequence_config
+        try:
+            file_seeds = load_seeds(filename, count)
+            for seed in file_seeds:
+                if seed not in seen_seeds:
+                    # Use 'seq_' prefix to distinguish from predefined seeds
+                    params.append((f"seq_{seed}", seed))
+                    seen_seeds.add(seed)
+        except (FileNotFoundError, ValueError) as e:
+            # Warn but don't fail - tests can still run with other seeds
+            print(f"Warning: Failed to load seed sequence: {e}")
+
+    return params
