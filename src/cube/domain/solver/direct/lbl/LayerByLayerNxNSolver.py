@@ -148,7 +148,6 @@ class LayerByLayerNxNSolver(BaseSolver):
     def diagnostic(self) -> None:
         """Print current state of tracker holder and cube."""
         with FacesTrackerHolder(self, is_for_status_querying=True) as th:
-            with self.cube.with_faces_color_provider(th):
                 # Print formatted state table
                 state_table = th.format_current_state(include_cube_faces=True)
                 print("\n" + "="*80)

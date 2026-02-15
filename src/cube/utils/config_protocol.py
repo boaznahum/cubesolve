@@ -151,11 +151,6 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
-    def solver_annotate_trackers(self) -> bool:
-        """Annotate trackers during solve."""
-        ...
-
-    @property
     def solver_pll_rotate_while_search(self) -> bool:
         """Rotate during PLL search."""
         ...

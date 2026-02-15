@@ -699,18 +699,21 @@ class FacesTrackerHolder(FacesColorsProvider):
 
         return s
 
-    def format_current_state(self, include_cube_faces: bool = True) -> str:
+    def format_current_state(self, include_cube_faces: bool = True, include_provider_view: bool = True) -> str:
         """Format current tracker and cube state as a human-readable table.
 
         Shows:
         - Tracker colors (immutable target colors)
         - Current faces where those colors are tracked (dynamic, changes with rotations)
         - Optional: Actual cube face colors
+        - Optional: What cube returns as face colors when using this holder as provider
 
         This is a snapshot of the current state, with no before/after comparison.
 
         Args:
             include_cube_faces: If True, include actual cube face colors.
+            include_provider_view: If True, include what cube.faces_colors returns
+                when using with_faces_color_provider(self).
 
         Returns:
             Formatted string with current state table.
@@ -741,21 +744,47 @@ class FacesTrackerHolder(FacesColorsProvider):
             # Get actual cube face colors
             cube_current: dict[FaceName, Color] = dict(self.cube.faces_colors)
 
-            # Full table with both cube and tracker
-            lines.append("  ┌──────┬──────────────┬──────────────┐")
-            lines.append("  │ Face │ Cube Color   │ Trkr Color   │")
-            lines.append("  ├──────┼──────────────┼──────────────┤")
+            # Get provider view if requested
+            provider_current: dict[FaceName, Color] | None = None
+            if include_provider_view:
+                with self.cube.with_faces_color_provider(self):
+                    provider_current = dict(self.cube.faces_colors)
 
-            for face_name in [FaceName.U, FaceName.D, FaceName.F, FaceName.B, FaceName.L, FaceName.R]:
-                cube_color = str(cube_current.get(face_name, "???"))
-                tracker_color = str(tracker_current.get(face_name, "???"))
+            # Build table with cube, tracker, and optionally provider columns
+            if include_provider_view and provider_current is not None:
+                lines.append("  ┌──────┬──────────────┬──────────────┬──────────────┐")
+                lines.append("  │ Face │ Cube Color   │ Trkr Color   │ Prvdr Color  │")
+                lines.append("  ├──────┼──────────────┼──────────────┼──────────────┤")
 
-                # Mark mismatches
-                mark = " ⚠" if cube_color != tracker_color else ""
+                for face_name in [FaceName.U, FaceName.D, FaceName.F, FaceName.B, FaceName.L, FaceName.R]:
+                    cube_color = str(cube_current.get(face_name, "???"))
+                    tracker_color = str(tracker_current.get(face_name, "???"))
+                    provider_color = str(provider_current.get(face_name, "???"))
 
-                lines.append(f"  │ {face_name.name:4s} │ {cube_color:12s} │ {tracker_color:12s} │{mark}")
+                    # Mark mismatches
+                    mark = ""
+                    if cube_color != tracker_color or cube_color != provider_color:
+                        mark = " ⚠"
 
-            lines.append("  └──────┴──────────────┴──────────────┘")
+                    lines.append(f"  │ {face_name.name:4s} │ {cube_color:12s} │ {tracker_color:12s} │ {provider_color:12s} │{mark}")
+
+                lines.append("  └──────┴──────────────┴──────────────┴──────────────┘")
+            else:
+                # Original 3-column table
+                lines.append("  ┌──────┬──────────────┬──────────────┐")
+                lines.append("  │ Face │ Cube Color   │ Trkr Color   │")
+                lines.append("  ├──────┼──────────────┼──────────────┤")
+
+                for face_name in [FaceName.U, FaceName.D, FaceName.F, FaceName.B, FaceName.L, FaceName.R]:
+                    cube_color = str(cube_current.get(face_name, "???"))
+                    tracker_color = str(tracker_current.get(face_name, "???"))
+
+                    # Mark mismatches
+                    mark = " ⚠" if cube_color != tracker_color else ""
+
+                    lines.append(f"  │ {face_name.name:4s} │ {cube_color:12s} │ {tracker_color:12s} │{mark}")
+
+                lines.append("  └──────┴──────────────┴──────────────┘")
 
         return "\n".join(lines)
 
