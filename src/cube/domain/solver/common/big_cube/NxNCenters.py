@@ -19,7 +19,7 @@ from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.tracker.face_trackers import FaceTracker
+from cube.domain.tracker._face_trackers import FaceTracker
 from cube.utils.OrderedSet import OrderedSet
 
 

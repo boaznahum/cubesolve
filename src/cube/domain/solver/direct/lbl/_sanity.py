@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Generator
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
-    from cube.domain.tracker.face_trackers import FaceTracker
+    from cube.domain.tracker._face_trackers import FaceTracker
 
 
 class SanityChecker:

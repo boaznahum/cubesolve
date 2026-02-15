@@ -1,3 +1,6 @@
+
+
+# The bug below solved m 1080 full solver tests passed
 # On this branch - redo
 
 L1 Edges aggressive test passed

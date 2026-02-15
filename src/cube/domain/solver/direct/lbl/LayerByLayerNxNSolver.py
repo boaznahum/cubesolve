@@ -47,7 +47,7 @@ from cube.domain.solver.exceptions import SolverFaceColorsChangedNeedRestartExce
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import Solver, SolverResults, SolveStep
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.tracker.face_trackers import FaceTracker
+from cube.domain.tracker._face_trackers import FaceTracker
 
 if TYPE_CHECKING:
     from cube.utils.logger_protocol import ILogger

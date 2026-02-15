@@ -40,7 +40,7 @@ from cube.domain.model import CenterSlice, Color, Face, FaceName
 from cube.domain.model.FacesColorsProvider import FacesColorsProvider
 from cube.domain.model.PartEdge import PartEdge
 from cube.domain.tracker._face_trackers_factory import NxNCentersFaceTrackers
-from cube.domain.tracker.face_trackers import FaceTracker
+from cube.domain.tracker._face_trackers import FaceTracker
 
 if TYPE_CHECKING:
     from cube.domain.geometric.cube_layout import CubeLayout

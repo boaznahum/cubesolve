@@ -17,7 +17,7 @@ from cube.domain.solver.common.big_cube.commutator.E2ECommutator import E2ECommu
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
 from cube.domain.tracker import FacesTrackerHolder
-from cube.domain.tracker.face_trackers import FaceTracker
+from cube.domain.tracker._face_trackers import FaceTracker
 
 if TYPE_CHECKING:
     from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
