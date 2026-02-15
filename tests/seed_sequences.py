@@ -177,15 +177,12 @@ def get_scramble_params(
     # Load seeds from sequence file if configured
     if seed_sequence_config is not None:
         filename, count = seed_sequence_config
-        try:
-            file_seeds = load_seeds(filename, count)
-            for seed in file_seeds:
-                if seed not in seen_seeds:
-                    # Use 'seq_' prefix to distinguish from predefined seeds
-                    params.append((f"seq_{seed}", seed))
-                    seen_seeds.add(seed)
-        except (FileNotFoundError, ValueError) as e:
-            # Warn but don't fail - tests can still run with other seeds
-            print(f"Warning: Failed to load seed sequence: {e}")
+        # Let FileNotFoundError and ValueError propagate - fail fast if config is wrong
+        file_seeds = load_seeds(filename, count)
+        for seed in file_seeds:
+            if seed not in seen_seeds:
+                # Use 'seq_' prefix to distinguish from predefined seeds
+                params.append((f"seq_{seed}", seed))
+                seen_seeds.add(seed)
 
     return params
