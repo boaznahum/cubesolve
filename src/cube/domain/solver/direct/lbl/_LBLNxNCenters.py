@@ -624,7 +624,8 @@ class _LBLNxNCenters(SolverHelper):
         for i, pt in enumerate(valid_second.points_by(self.n_slices, order_by=block)):
             if second_block_was_solved[i]:
                 piece = source_face.center.get_center_slice(pt)
-                mark_slice_and_v_mark_if_solved(piece)
+                yet_solved = mark_slice_and_v_mark_if_solved(piece)
+                assert yet_solved
 
         # Verify all pieces in block were solved
         for pt in block.cells:
@@ -632,7 +633,8 @@ class _LBLNxNCenters(SolverHelper):
             if piece.color != required_color:
                 self.debug(f"Block {block} failed - piece at {pt} has wrong color")
                 return False
-            mark_slice_and_v_mark_if_solved(piece)
+            solved = mark_slice_and_v_mark_if_solved(piece)
+            assert solved
 
         self.debug(f"✅ Block {block} solved ({block.size} pieces)")
         self._record_block_solved(block.size)

@@ -43,6 +43,8 @@ Not reproducible , second run 5 tests fail
 
 ## #current state
 
+Bug solved, the failure
+
 see in cube.domain.solver.direct.lbl._LBLSlices._LBLSlices._find_row_best_pre_alignment
 ```python
         if False:
