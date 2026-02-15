@@ -953,7 +953,7 @@ class F2L(SolverHelper):
         corner_id: frozenset[Color] = corner.colors_id
         assert white in corner_id
 
-        # pyright doesn't understand frozenset - ?
-        edge_id = corner_id - white  # type: ignore[reportOperatorIssue]
+        # Remove white color from corner to get the two edge colors
+        edge_id = corner_id - {white}
 
         return cube.find_edge_by_color(edge_id)

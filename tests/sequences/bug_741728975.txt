@@ -1,0 +1,5 @@
+# Minimal seed file for reproducing bug
+# Error: TypeError: unsupported operand type(s) for -: 'frozenset' and 'Color'
+# Location: src/cube/domain/solver/_3x3/cfop/_F2L.py:957
+# Created: 2026-02-15
+741728975

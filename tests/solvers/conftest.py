@@ -50,7 +50,7 @@ PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_
 # =============================================================================
 # Set to None to disable, or to ("filename", count) to load seeds from tests/sequences/
 # Example: SEED_SEQUENCE_CONFIG = ("s1", 200)
-SEED_SEQUENCE_CONFIG: tuple[str, int] | None = None  # Disabled by default
+SEED_SEQUENCE_CONFIG: tuple[str, int] | None = ("s1", 300)  # Disabled by default
 
 
 # =============================================================================
