@@ -144,15 +144,26 @@ def get_scramble_params(
     Args:
         predefined_seeds: List of predefined seeds to include
         seed_sequence_config: Optional (filename, count) tuple to load from tests/sequences/
+                             Uses load_seeds() with smart file lookup:
+                             1. Exact match: "<filename>.txt" or "<filename>"
+                             2. Pattern match: "<filename>_<count>.txt" (generated file naming)
+                             3. Fallback: Any "<filename>_*.txt" (uses first match)
+
+                             Examples:
+                               ("s1", 1000) → tries s1_1000.txt (exact), then s1.txt
+                               ("s1", 100)  → tries s1_100.txt, then any s1_*.txt
+                               ("example_20", 50) → tries example_20.txt exactly
 
     Returns:
-        List of (name, seed) tuples with duplicates removed
+        List of (name, seed) tuples with duplicates removed.
+        Sequence seeds are prefixed with "seq_" (e.g., "seq_12345")
 
     Example:
         params = get_scramble_params(
             predefined_seeds=[0, 1, 2, 101, 202],
-            seed_sequence_config=("s1", 200)
+            seed_sequence_config=("s1", 200)  # Load 200 seeds from s1_*.txt
         )
+        # Returns: [("seed_0", 0), ("seed_1", 1), ..., ("seq_12345", 12345), ...]
     """
     params: list[tuple[str, int]] = []
     seen_seeds: set[int] = set()
