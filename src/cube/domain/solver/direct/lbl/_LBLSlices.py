@@ -191,6 +191,33 @@ class _LBLSlices(SolverHelper):
 
         return count
 
+    # =========================================================================
+    # Sanity check delegation (public API for child helpers)
+    # =========================================================================
+
+    def with_sanity_check_previous_are_solved(
+        self,
+        l1_tracker: FaceTracker,
+        row_index: int,
+        operation_name: str
+    ):
+        """Public delegation to sanity checker context manager.
+
+        This allows child helpers (_LBLNxNCenters, _LBLNxNEdges) to use
+        sanity checks without accessing the protected _sanity attribute.
+
+        Args:
+            l1_tracker: Layer 1 face tracker
+            row_index: Current row index being worked on
+            operation_name: Description of the operation
+
+        Returns:
+            Context manager for before/after sanity checks
+        """
+        return self._sanity.with_sanity_check_previous_are_solved(
+            l1_tracker, row_index, operation_name, self._row_solved
+        )
+
     def _global_center_slice_prealign(self, l1_white_tracker: FaceTracker) -> bool:
         """Try rotating the center E-slice for global alignment.
 
@@ -381,7 +408,7 @@ class _LBLSlices(SolverHelper):
             l1_white_tracker: Layer 1 face tracker
         """
 
-        with self._sanity.with_sanity_check_previous_are_solved(l1_white_tracker, face_row, "optimization", self._row_solved):
+        with self.with_sanity_check_previous_are_solved(l1_white_tracker, face_row, "optimization"):
             with l1_white_tracker.parent.sanity_check_before_after_same_colors("slice optimization", also_assert_cube_faces=True):
                 alg_best_rotations: tuple[SlicedSliceAlg, int] | None = self._find_row_best_pre_alignment(face_row, l1_white_tracker)
 
@@ -403,7 +430,7 @@ class _LBLSlices(SolverHelper):
                     # we have some outer loop ? or moving center pieces move a solved pieces to other place ?
                     _common.clear_pieces_solved_flags_and_markers(_get_row_pieces(self.cube, l1_white_tracker, face_row))
 
-        with self._sanity.with_sanity_check_previous_are_solved(l1_white_tracker, face_row, "_solve_row_core", self._row_solved):
+        with self.with_sanity_check_previous_are_solved(l1_white_tracker, face_row, "_solve_row_core"):
             self._solve_row_core(face_row, th, l1_white_tracker)
 
     def _solve_face_row(self, l1_white_tracker: FaceTracker,
@@ -483,7 +510,7 @@ class _LBLSlices(SolverHelper):
             for row_index in range(n_to_solve):
                 with self._logger.tab(f"Solving face row {row_index}"):
 
-                    with self._sanity.with_sanity_check_previous_are_solved(l1_white_tracker, row_index, "solving row", self._row_solved):
+                    with self.with_sanity_check_previous_are_solved(l1_white_tracker, row_index, "solving row"):
                         self._solve_slice_row(row_index, face_trackers, l1_white_tracker)
 
                         if not self._row_solved(l1_white_tracker, row_index):
