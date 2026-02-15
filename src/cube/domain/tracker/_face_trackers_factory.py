@@ -578,7 +578,7 @@ class NxNCentersFaceTrackers(SolverHelper):
         if faces is None:
             faces = cube.faces
 
-        self.debug("_find_face_with_max_colors:", [*faces], "colors:", [*colors])
+        # self.debug("_find_face_with_max_colors:", [*faces], "colors:", [*colors])
 
         # Collect all (face, color, count) combinations
         results: list[Tuple[Face, Color, int]] = []
@@ -595,16 +595,16 @@ class NxNCentersFaceTrackers(SolverHelper):
         # Check for tie and log warning
         if len(max_results) > 1:
             # Calculate center pieces per face: (N-2)^2
-            n_center_pieces = (cube.n_slices - 2) ** 2
-
-            # If count equals all center pieces, cube is solved - ignore tie
-            if n_max == n_center_pieces:
-                # Solved state - all faces have full color, expected 6-way tie
-                pass
-            else:
-                # Real tie during scramble/solving - log it!
-                tie_info = ", ".join(f"{f.name}:{c} ({n})" for f, c, n in max_results)
-                self.debug(f"‼️‼️‼️‼️‼️ TIE between majority colors! {tie_info}")
+            # n_center_pieces = (cube.n_slices - 2) ** 2
+            #
+            # # If count equals all center pieces, cube is solved - ignore tie
+            # if n_max == n_center_pieces:
+            #     # Solved state - all faces have full color, expected 6-way tie
+            #     pass
+            # else:
+            #     # Real tie during scramble/solving - log it!
+            #     tie_info = ", ".join(f"{f.name}:{c} ({n})" for f, c, n in max_results)
+            #     self.debug(f"‼️‼️‼️‼️‼️ TIE between majority colors! {tie_info}")
 
             # Sort by face ordinal for deterministic tie-breaking
             face_ordinal = {fn: i for i, fn in enumerate(FaceName)}
